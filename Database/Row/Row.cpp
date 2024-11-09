@@ -4,58 +4,56 @@ Row::Row()
 {
     this->rowSize = new size_t(0);
     this->maxRowSize = new size_t(0);
-    this->data = nullptr;
+    // this->data = nullptr;
 }
 
 Row::Row(const size_t& numberOfColumns)
 {
     this->rowSize = new size_t(0);
     this->maxRowSize = new size_t(0);
-    this->data = new vector<Block*>(numberOfColumns);
+    this->data.resize(numberOfColumns);
+    // this->data = new vector<Block*>(numberOfColumns);
 }
 
 Row::Row(const Row* row)
 {
     this->rowSize = new size_t(*row->rowSize);
     this->maxRowSize = new size_t(*row->maxRowSize);
-    this->data = new vector<Block*>(*row->data);
+    this->data = row->data;
+    // this->data = new vector<Block*>(*row->data);
 
     delete row;
 }
 
 Row::~Row()
 {
-    for (const auto& columnData : *this->data)
+    for (const auto& columnData : this->data)
         delete columnData;
 
-    delete this->data;
+    // delete this->data;
     delete this->rowSize;
     delete this->maxRowSize;
 }
 
-vector<Block*>& Row::GetRowData() const { return *this->data; }
+vector<Block*>& Row::GetRowData() { return this->data; }
 
-void Row::InsertColumnData(const Block* block) const
+void Row::InsertColumnData(Block* block)
 {
     const size_t hashIndex = block->GetBlockColumnHashIndex();
 
     this->ValidateOutOfBoundColumnHashIndex(hashIndex);
 
-    Block* vectorBlock = this->GetBlock(hashIndex);
-
-    delete vectorBlock;
-
-    vectorBlock = new Block(block);
+    this->data[hashIndex] = new Block(block);
 
     delete block;
 
     //update current block size
-    const size_t newRowSize = *this->rowSize + vectorBlock->GetBlockSize();
+    const size_t newRowSize = *this->rowSize + this->data[hashIndex]->GetBlockSize();
     this->SetRowSize(newRowSize);
 }
 
 //copies data from inserted block to the existing one to keep the same memory positions
-void Row::UpdateColumnData(Block* block) const
+void Row::UpdateColumnData(Block* block)
 {
     const size_t hashIndex = block->GetBlockColumnHashIndex();
 
@@ -66,7 +64,7 @@ void Row::UpdateColumnData(Block* block) const
     delete block;
 }
 
-void Row::DeleteColumnData(const size_t& columnHashIndex) const
+void Row::DeleteColumnData(const size_t& columnHashIndex)
 {
     this->ValidateOutOfBoundColumnHashIndex(columnHashIndex);
 
@@ -85,16 +83,16 @@ void Row::DeleteColumn(const size_t& columnHashIndex)
 {
     this->DeleteColumnData(columnHashIndex);
 
-    this->data->erase(this->data->begin() + columnHashIndex);
+    this->data.erase(this->data.begin() + columnHashIndex);
 }
 
 void Row::ValidateOutOfBoundColumnHashIndex(const size_t& hashIndex) const
 {
-    if(hashIndex >= this->data->size())
+    if(hashIndex >= this->data.size())
         throw invalid_argument("Invalid Column specified");
 }
 
-Block* Row::GetBlock(const size_t& index) const { return data->at(index); }
+Block* Row::GetBlock(const size_t& index) { return data[index]; }
 
 void Row::SetRowSize(const size_t& rowSize) const { *this->rowSize = rowSize; }
 

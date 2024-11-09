@@ -19,7 +19,7 @@ private:
     string tableName;
     size_t tableSize;
     vector<Column*> columns;
-    vector<Row*>* rows;
+    vector<Row*> rows;
 
 protected:
     static void CastPropertyToAppropriateType(void* data, Column* column, size_t& dataSize);
@@ -32,7 +32,7 @@ public:
 
     ~Table();
 
-    void InsertRow() const;
+    void InsertRow();
 
     string& GetTableName();
 

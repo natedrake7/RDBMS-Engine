@@ -2,7 +2,7 @@
 
 Block::Block(void* data, const size_t& size, Column* column)
 {
-    this->data = data;
+    this->SetData(data, size);
     this->size = size;
     this->column = column;
 }
@@ -23,15 +23,16 @@ Block::Block(const Block* block)
 
 Block::~Block()
 {
-    free(this->data);
+    delete[] this->data;
+    this->data = nullptr;
 }
 
-void Block::SetData(void* inputData, const size_t& inputSize)
+void Block::SetData(const void* inputData, const size_t& inputSize)
 {
-    if(this->data != nullptr)
-        free(this->data);
+    // if(this->data)
+    //     delete[] this->data;
 
-    this->data = malloc(inputSize);
+    this->data = new unsigned char[inputSize];
     memcpy(this->data, inputData, inputSize);
 
     this->size = inputSize;
@@ -45,7 +46,7 @@ size_t& Block::GetBlockColumnHashIndex() const { return this->column->GetColumnH
 
 size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
-void Block::PrintBlockData() const
+void Block::PrintBlockData()
 {
     if(this->data == nullptr)
         return;
@@ -54,13 +55,17 @@ void Block::PrintBlockData() const
 
     if(columnType == "int")
     {
-        int* intValue = static_cast<int*>(this->data);
-        cout << *intValue << " ";;
+        int intData = *reinterpret_cast<int *>(this->data);
+        cout << intData << " ";;
     }
     else if(columnType == "string")
     {
-        string* stringValue = static_cast<string*>(this->data);
-        cout << *stringValue << " ";
+        char* temp = new char[this->size];
+        memcpy(temp, this->data, this->size);
+
+        std::cout << temp << " ";
+
+        delete[] temp;
     }
 
     cout << " || ";

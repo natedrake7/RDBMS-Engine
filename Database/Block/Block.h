@@ -10,19 +10,19 @@ class Column;
 
 class Block {
     private:
-        void* data;
+        unsigned char* data;
         size_t size;
         Column* column;
     public:
-        Block(Column* column);
+        explicit Block(Column* column);
 
-        Block(const Block* block);
+        explicit Block(const Block* block);
 
         Block(void* data, const size_t& size, Column* column);
 
         ~Block();
 
-        void SetData(void* inputData, const size_t& inputSize);
+        void SetData(const void* inputData, const size_t& inputSize);
 
         void* GetBlockData() const;
 
@@ -32,7 +32,7 @@ class Block {
 
         size_t& GetColumnSize() const;
 
-        void PrintBlockData() const;
+        void PrintBlockData();
 };
 
 #endif

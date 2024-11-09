@@ -15,7 +15,7 @@ Table::Table(const string& tableName, const vector<Column*>& columns)
         column->SetColumnHashIndex(columnHash);
     }
 
-    this->rows = new vector<Row*>();
+    // this->rows = new vector<Row*>();
 }
 
 Table::~Table()
@@ -23,13 +23,13 @@ Table::~Table()
     for(const auto& column : columns)
         delete column;
 
-    for(const auto& row : *rows)
-        delete row;
-
-    delete rows;
+    // for(const auto& row : *rows)
+    //     delete row;
+    //
+    // delete rows;
 }
 
-void Table::InsertRow() const
+void Table::InsertRow()
 {
     string input = "4 NickTheGreek69";
 
@@ -54,28 +54,33 @@ void Table::InsertRow() const
             block->SetData(&convertedInt, sizeof(int));
         }
         else if(columnType == "string")
-            block->SetData(&words[i], words[i].length());
+        {
+            char* temp = new char[words[i].length() + 1];
+            strcpy(temp, words[i].c_str());
+            temp[words[i].length()] = '\0';
+            block->SetData(temp, words[i].length());
+        }
         else
             throw invalid_argument("Unsupported column type");
 
         row->InsertColumnData(block);
     }
 
-    this->rows->push_back(row);
+    this->rows.push_back(row);
     cout<<"Row Affected: 1"<<'\n';
 }
 
 void Table::PrintTable(size_t maxNumberOfItems) const
 {
     if(maxNumberOfItems == -1)
-        maxNumberOfItems = this->rows->size();
+        maxNumberOfItems = this->rows.size();
 
     for (const auto& column : columns)
         cout << column->GetColumnName() << " || ";
 
     for(size_t i = 0;i < maxNumberOfItems; i++)
     {
-        const vector<Block*> data = this->rows->at(i)->GetRowData();
+        const vector<Block*> data = this->rows[i]->GetRowData();
 
         for(const auto& block : data)
             block->PrintBlockData();

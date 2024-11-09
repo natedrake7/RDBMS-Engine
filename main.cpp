@@ -11,7 +11,7 @@ int main()
     const string dbName = "stakosDb";
     try
     {
-        CreateDatabase(dbName);
+        // CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
         //
