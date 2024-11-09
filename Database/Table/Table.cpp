@@ -31,7 +31,7 @@ Table::~Table()
 
 void Table::InsertRow()
 {
-    string input = "4 NickTheGreek69";
+    string input = "42222 Καλησπέρα";
 
     regex words_regex("\\S+");
     auto words_begin = sregex_iterator(input.begin(), input.end(), words_regex);
@@ -51,14 +51,16 @@ void Table::InsertRow()
         {
             //set size only not convert to int
             int convertedInt = stoi(words[i]);
+
             block->SetData(&convertedInt, sizeof(int));
         }
         else if(columnType == "string")
         {
-            char* temp = new char[words[i].length() + 1];
-            strcpy(temp, words[i].c_str());
-            temp[words[i].length()] = '\0';
-            block->SetData(temp, words[i].length());
+            words[i] += '\0';
+
+            const char* temp = words[i].c_str();
+                            
+            block->SetData(temp, words[i].length() + 1);
         }
         else
             throw invalid_argument("Unsupported column type");

@@ -56,17 +56,10 @@ void Block::PrintBlockData()
     if(columnType == "int")
     {
         int intData = *reinterpret_cast<int *>(this->data);
-        cout << intData << " ";;
+        cout << intData << " ";
     }
     else if(columnType == "string")
-    {
-        char* temp = new char[this->size];
-        memcpy(temp, this->data, this->size);
+        cout << this->data << " ";
 
-        std::cout << temp << " ";
-
-        delete[] temp;
-    }
-
-    cout << " || ";
+    cout << "|| ";
 }

@@ -13,7 +13,7 @@ class Row {
         size_t* maxRowSize;
         size_t* rowSize;
         vector<Block*> data;
-
+    
     protected:
         void ValidateOutOfBoundColumnHashIndex(const size_t& hashIndex) const;
         Block* GetBlock(const size_t& index);
