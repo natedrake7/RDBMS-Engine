@@ -31,7 +31,7 @@ Table::~Table()
 
 void Table::InsertRow()
 {
-    string input = "42222 Καλησπέρα";
+    string input = "4 HelloWorld";
 
     regex words_regex("\\S+");
     auto words_begin = sregex_iterator(input.begin(), input.end(), words_regex);
@@ -80,6 +80,7 @@ void Table::PrintTable(size_t maxNumberOfItems) const
     for (const auto& column : columns)
         cout << column->GetColumnName() << " || ";
 
+    cout << endl;
     for(size_t i = 0;i < maxNumberOfItems; i++)
     {
         const vector<Block*> data = this->rows[i]->GetRowData();
@@ -87,7 +88,7 @@ void Table::PrintTable(size_t maxNumberOfItems) const
         for(const auto& block : data)
             block->PrintBlockData();
 
-        cout << "\n";
+        cout << endl;
     }
 }
 

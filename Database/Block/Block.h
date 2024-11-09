@@ -32,7 +32,7 @@ class Block {
 
         size_t& GetColumnSize() const;
 
-        void PrintBlockData();
+        void PrintBlockData() const;
 };
 
 #endif

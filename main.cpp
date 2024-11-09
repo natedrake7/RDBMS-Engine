@@ -24,12 +24,13 @@ int main()
         Table* table = new Table("Movies", columns);
         db->CreateTable(table);
 
+        // for(int i = 0;i < 100; i++)
         table->InsertRow();
 
         table->PrintTable();
 
-        cout<<"Table created"<<endl;
-
+        //always happens to avoid memory leaks
+        delete db;
         // auto row = new Row (data, sizeof(int), sizeof(*value), dataSizes);
 
         // free(data);

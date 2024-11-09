@@ -46,7 +46,7 @@ size_t& Block::GetBlockColumnHashIndex() const { return this->column->GetColumnH
 
 size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
-void Block::PrintBlockData()
+void Block::PrintBlockData() const
 {
     if(this->data == nullptr)
         return;
@@ -55,8 +55,7 @@ void Block::PrintBlockData()
 
     if(columnType == "int")
     {
-        int intData = *reinterpret_cast<int *>(this->data);
-        cout << intData << " ";
+        cout << *reinterpret_cast<const int*>(this->data) << " ";
     }
     else if(columnType == "string")
         cout << this->data << " ";
