@@ -42,7 +42,7 @@ void* Block::GetBlockData() const { return this->data; }
 
 size_t& Block::GetBlockSize(){ return this->size; }
 
-size_t& Block::GetBlockColumnHashIndex() const { return this->column->GetColumnHashIndex(); }
+size_t& Block::GetBlockIndex() const { return this->column->GetColumnIndex(); }
 
 size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
@@ -51,13 +51,11 @@ void Block::PrintBlockData() const
     if(this->data == nullptr)
         return;
 
-    const string& columnType = this->column->GetColumnType();
+    const ColumnType columnType = this->column->GetColumnType();
 
-    if(columnType == "int")
-    {
+    if(columnType == ColumnType::Integer)
         cout << *reinterpret_cast<const int*>(this->data) << " ";
-    }
-    else if(columnType == "string")
+    else if(columnType == ColumnType::String)
         cout << this->data << " ";
 
     cout << "|| ";

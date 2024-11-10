@@ -4,18 +4,15 @@ Table::Table(const string& tableName, const vector<Column*>& columns)
 {
     this->tableName = tableName;
     this->columns = columns;
-    this->tableSize = 0;
-    const size_t numberOfColumns = columns.size();
+    this->maxRowSize = 0;
 
     size_t counter = 0;
     for(const auto& column : columns)
     {
-        this->tableSize += column->GetColumnSize();
+        this->maxRowSize += column->GetColumnSize();
         const size_t columnHash = counter++;
-        column->SetColumnHashIndex(columnHash);
+        column->SetColumnIndex(columnHash);
     }
-
-    // this->rows = new vector<Row*>();
 }
 
 Table::~Table()
@@ -23,44 +20,32 @@ Table::~Table()
     for(const auto& column : columns)
         delete column;
 
-    // for(const auto& row : *rows)
-    //     delete row;
-    //
-    // delete rows;
+    for(const auto& row : this->rows)
+        delete row;
 }
 
-void Table::InsertRow()
+void Table::InsertRow(vector<string>& inputData)
 {
-    string input = "4 HelloWorld";
-
-    regex words_regex("\\S+");
-    auto words_begin = sregex_iterator(input.begin(), input.end(), words_regex);
-    auto words_end = sregex_iterator();
-
-    vector<string> words;
-    for (auto i = words_begin; i != words_end; ++i)
-        words.push_back(i->str());
-
-    Row* row = new Row(this->columns.size());
-    for(size_t i = 0;i < words.size(); ++i)
+    Row* row = new Row(*this);
+    for(size_t i = 0;i < inputData.size(); ++i)
     {
         Block* block = new Block(columns[i]);
-        const string columnType = columns[i]->GetColumnType();
+        const ColumnType columnType = columns[i]->GetColumnType();
 
-        if(columnType == "int")
+        if(columnType == ColumnType::Integer)
         {
             //set size only not convert to int
-            int convertedInt = stoi(words[i]);
+            int convertedInt = stoi(inputData[i]);
 
             block->SetData(&convertedInt, sizeof(int));
         }
-        else if(columnType == "string")
+        else if(columnType == ColumnType::String)
         {
-            words[i] += '\0';
+            inputData[i] += '\0';
 
-            const char* temp = words[i].c_str();
+            const char* temp = inputData[i].c_str();
                             
-            block->SetData(temp, words[i].length() + 1);
+            block->SetData(temp, inputData[i].length() + 1);
         }
         else
             throw invalid_argument("Unsupported column type");
@@ -69,7 +54,7 @@ void Table::InsertRow()
     }
 
     this->rows.push_back(row);
-    cout<<"Row Affected: 1"<<'\n';
+    // cout<<"Row Affected: 1"<<'\n';
 }
 
 void Table::PrintTable(size_t maxNumberOfItems) const
@@ -94,11 +79,11 @@ void Table::PrintTable(size_t maxNumberOfItems) const
 
 void Table::CastPropertyToAppropriateType(void* data, Column* column, size_t& dataSize)
 {
-    const string columnType = column->GetColumnType();
+    const ColumnType columnType = column->GetColumnType();
 
-    if(columnType == "int")
+    if(columnType == ColumnType::Integer)
         cout<< *static_cast<int*>(data) << "\n";
-    else if(columnType == "string")
+    else if(columnType == ColumnType::String)
         cout<< *static_cast<string*>(data) << '\n';
     else
         throw invalid_argument("Unsupported column type");
@@ -116,7 +101,7 @@ size_t generateRandomSeed() {
 //have a hashing algorithm for the table to map the properties to the table
 size_t Table::HashColumn(Column* column, const size_t& numOfColumns)
 {
-    string columnData = column->GetColumnName() + to_string(column->GetColumnSize()) + column->GetColumnType();
+    string columnData = column->GetColumnName() + to_string(column->GetColumnSize()); //+ column->GetColumnType();
     const uint8_t* data = reinterpret_cast<const uint8_t*>(columnData.c_str());
     uint32_t len = columnData.length();
     uint32_t hash = 31;
@@ -156,6 +141,8 @@ size_t Table::HashColumn(Column* column, const size_t& numOfColumns)
     return hash % numOfColumns;
 }
 
+size_t Table::GetNumberOfColumns() const { return this->columns.size();}
+
 string& Table::GetTableName(){ return this->tableName; }
 
-size_t& Table::GetTableSize(){ return this->tableSize; }
+size_t& Table::GetMaxRowSize(){ return this->maxRowSize; }

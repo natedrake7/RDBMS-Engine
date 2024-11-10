@@ -6,7 +6,7 @@ void Database::ValidateTableCreation(Table* table) const
         if(dbTable->GetTableName() == table->GetTableName())
             throw runtime_error("Table already exists");
 
-    if(table->GetTableSize() > MAX_TABLE_SIZE)
+    if(table->GetMaxRowSize() > MAX_TABLE_SIZE)
         throw runtime_error("Table size exceeds limit");
 
 }

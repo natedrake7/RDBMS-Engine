@@ -3,8 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
-#include <regex>
 #include <random>
 #include "../Column/Column.h"
 #include "../Row/Row.h"
@@ -15,30 +13,32 @@ class Row;
 
 class Table {
 
-private:
-    string tableName;
-    size_t tableSize;
-    vector<Column*> columns;
-    vector<Row*> rows;
+    private:
+        string tableName;
+        size_t maxRowSize;
+        vector<Column*> columns;
+        vector<Row*> rows;
 
-protected:
-    static void CastPropertyToAppropriateType(void* data, Column* column, size_t& dataSize);
-    static int* CastPropertyToInt(void* data);
-    static string* CastPropertyToString(void* data);
-    static size_t HashColumn(Column* column, const size_t& numOfColumns);
+    protected:
+        static void CastPropertyToAppropriateType(void* data, Column* column, size_t& dataSize);
+        static int* CastPropertyToInt(void* data);
+        static string* CastPropertyToString(void* data);
+        static size_t HashColumn(Column* column, const size_t& numOfColumns);
 
-public:
-    Table(const string& tableName,const vector<Column*>& columns);
+    public:
+        Table(const string& tableName,const vector<Column*>& columns);
 
-    ~Table();
+        ~Table();
 
-    void InsertRow();
+        void InsertRow(vector<string>& inputData);
 
-    string& GetTableName();
+        string& GetTableName();
 
-    size_t& GetTableSize();
+        size_t& GetMaxRowSize();
 
-    void PrintTable(size_t maxNumberOfItems = -1) const;
+        void PrintTable(size_t maxNumberOfItems = -1) const;
+
+        size_t GetNumberOfColumns() const;
 };
 
 

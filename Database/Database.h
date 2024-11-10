@@ -10,7 +10,7 @@ using namespace std;
 
 enum
 {
-    MAX_TABLE_SIZE = 1024
+    MAX_TABLE_SIZE = 10*1024
 };
 
 

@@ -28,7 +28,7 @@ class Block {
 
         size_t& GetBlockSize();
 
-        size_t& GetBlockColumnHashIndex() const;
+        size_t& GetBlockIndex() const;
 
         size_t& GetColumnSize() const;
 
