@@ -17,6 +17,7 @@ Block::Block(Column* column)
 Block::~Block()
 {
     delete[] this->data;
+
     this->data = nullptr;
 
     delete this->size;

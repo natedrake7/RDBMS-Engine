@@ -51,9 +51,9 @@ void Table::InsertRow(vector<string>& inputData)
     // cout<<"Row Affected: 1"<<'\n';
 }
 
-vector<Row*> Table::GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns) const
+vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns) const
 {
-    vector<Row*> selectedRows;
+    vector<Row> selectedRows;
     const size_t& blockIndex = block.GetBlockIndex();
     const auto searchBlockData = block.GetBlockData();
 
@@ -64,7 +64,21 @@ vector<Row*> Table::GetRowByBlock(const Block& block, const vector<Column*>& sel
         //take into account Like statements LIKE '%hello%'
 
         if(memcmp(rowBlock->GetBlockData(), searchBlockData, rowBlock->GetBlockSize()) == 0)
-            selectedRows.push_back(row);
+        {
+            if(selectedColumns.empty())
+            {
+                selectedRows.emplace_back(*this, row->GetRowData());
+                continue;
+            }
+
+            vector<Block*> selectedBlocks;
+
+            for(const auto& column : selectedColumns)
+                selectedBlocks.push_back(row->GetBlock(column->GetColumnIndex()));
+
+            selectedRows.emplace_back(*this, selectedBlocks);
+            // selectedRows.emplace_back(*this, selectedBlocks);
+        }
     }
 
     return selectedRows;

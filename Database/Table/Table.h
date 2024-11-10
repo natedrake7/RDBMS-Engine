@@ -33,7 +33,7 @@ class Table {
 
         void InsertRow(vector<string>& inputData);
 
-        vector<Row*> GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns) const;
+        vector<Row> GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns = vector<Column*>()) const;
 
         string& GetTableName();
 

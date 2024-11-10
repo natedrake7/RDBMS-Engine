@@ -41,7 +41,7 @@ int main()
 
         auto insertStart = chrono::high_resolution_clock::now();
 
-        for(int i = 0;i < 1000000; i++) {
+        for(int i = 0;i < 1000; i++) {
             words[0] = to_string(i);
             table->InsertRow(words);
         }
@@ -59,7 +59,7 @@ int main()
         int value = 10;
 
         const Block searchBlock(&value, sizeof(int), columns[0]);
-        vector<Column*> selectedColumns = {columns[0], columns[1]};
+        vector<Column*> selectedColumns = { columns[0], columns[1] };
         const auto results = table->GetRowByBlock(searchBlock);
 
         auto end = chrono::high_resolution_clock::now();
@@ -67,13 +67,11 @@ int main()
         chrono::duration<double, milli> duration = end - start;
         cout << "Duration: " << duration.count() << " ms\n";
 
-        for(const auto& row : results) {
-            const auto& rowData = row->GetRowData();
-            for(const auto& column : rowData)
-                column->PrintBlockData();
-        }
-
-
+        // for(const auto& row : results) {
+        //     const auto& rowData = row.GetRowData();
+        //     for(const auto& column : rowData)
+        //         column->PrintBlockData();
+        // }
 
         // table->PrintTable();
 

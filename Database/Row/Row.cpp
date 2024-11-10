@@ -5,17 +5,26 @@ Row::Row(const Table& table)
     this->rowSize = new size_t(0);
     this->table = &table;
     this->data.resize(this->table->GetNumberOfColumns());
+    this->isInitialRow = true;
+}
+
+Row::Row(const Table& table, const vector<Block*>& data) {
+    this->table = &table;
+    this->data = data;
+    this->rowSize = nullptr;
+    this->isInitialRow = false;
 }
 
 Row::~Row()
 {
-    for (const auto& columnData : this->data)
-        delete columnData;
+    if(this->isInitialRow)
+        for (const auto& columnData : this->data)
+            delete columnData;
 
     delete this->rowSize;
 }
 
-vector<Block*>& Row::GetRowData() { return this->data; }
+const vector<Block*>& Row::GetRowData() const { return this->data; }
 
 void Row::InsertColumnData(Block* block)
 {
@@ -73,6 +82,6 @@ void Row::ValidateOutOfBoundColumnIndex(const size_t& columnIndex) const
         throw invalid_argument("Invalid Column specified");
 }
 
-const Block* Row::GetBlock(const size_t& index) const { return data[index]; }
+Block* Row::GetBlock(const size_t& index) const { return data[index]; }
 
 void Row::SetRowSize(const size_t& rowSize) const { *this->rowSize = rowSize; }

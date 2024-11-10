@@ -13,7 +13,8 @@ class Row {
         size_t* rowSize;
         vector<Block*> data;
         const Table* table;
-    
+        bool isInitialRow;
+
     protected:
         void ValidateOutOfBoundColumnIndex(const size_t& columnIndex) const;
         void SetRowSize(const size_t& rowSize) const;
@@ -21,9 +22,11 @@ class Row {
     public:
         explicit Row(const Table& table);
 
+        explicit Row(const Table& table, const vector<Block*>& data);
+
         ~Row();
 
-        vector<Block*>& GetRowData();
+        const vector<Block*>& GetRowData() const;
 
         void InsertColumnData(Block* block);
 
@@ -33,7 +36,7 @@ class Row {
 
         void DeleteColumn(const size_t& columnIndex);
 
-        const Block* GetBlock(const size_t& index) const;
+        Block* GetBlock(const size_t& index) const;
 };
 
 
