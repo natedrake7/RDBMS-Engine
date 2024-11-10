@@ -60,17 +60,19 @@ int main()
 
         const Block searchBlock(&value, sizeof(int), columns[0]);
         vector<Column*> selectedColumns = { columns[0], columns[1] };
-        const auto results = table->GetRowByBlock(searchBlock);
+        const auto results = table->GetRowByBlock(searchBlock, selectedColumns);
 
         auto end = chrono::high_resolution_clock::now();
 
         chrono::duration<double, milli> duration = end - start;
         cout << "Duration: " << duration.count() << " ms\n";
 
-        // for(const auto& row : results) {
+        // for(const auto& row : results)
+        // {
         //     const auto& rowData = row.GetRowData();
-        //     for(const auto& column : rowData)
-        //         column->PrintBlockData();
+        //
+        //     for(const auto& columnData : rowData)
+        //         columnData->PrintBlockData();
         // }
 
         // table->PrintTable();
