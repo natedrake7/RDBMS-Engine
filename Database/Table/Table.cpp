@@ -40,13 +40,7 @@ void Table::InsertRow(vector<string>& inputData)
             block->SetData(&convertedInt, sizeof(int));
         }
         else if(columnType == ColumnType::String)
-        {
-            inputData[i] += '\0';
-
-            const char* temp = inputData[i].c_str();
-                            
-            block->SetData(temp, inputData[i].length() + 1);
-        }
+            block->SetData(inputData[i].c_str(), inputData[i].length() + 1);
         else
             throw invalid_argument("Unsupported column type");
 
@@ -55,6 +49,25 @@ void Table::InsertRow(vector<string>& inputData)
 
     this->rows.push_back(row);
     // cout<<"Row Affected: 1"<<'\n';
+}
+
+vector<Row*> Table::GetRowByBlock(const Block &block) const
+{
+    vector<Row*> selectedRows;
+    const size_t& blockIndex = block.GetBlockIndex();
+    const auto searchBlockData = block.GetBlockData();
+
+    for(const auto& row : this->rows)
+    {
+        const Block* rowBlock = row->GetBlock(blockIndex);
+
+        //take into account Like statements LIKE '%hello%'
+
+        if(memcmp(rowBlock->GetBlockData(), searchBlockData, rowBlock->GetBlockSize()) == 0)
+            selectedRows.push_back(row);
+    }
+
+    return selectedRows;
 }
 
 void Table::PrintTable(size_t maxNumberOfItems) const

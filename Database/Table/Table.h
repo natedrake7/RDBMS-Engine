@@ -10,6 +10,7 @@
 using namespace std;
 
 class Row;
+class Block;
 
 class Table {
 
@@ -31,6 +32,8 @@ class Table {
         ~Table();
 
         void InsertRow(vector<string>& inputData);
+
+        vector<Row*> GetRowByBlock(const Block &block) const;
 
         string& GetTableName();
 

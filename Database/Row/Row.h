@@ -15,8 +15,7 @@ class Row {
         const Table* table;
     
     protected:
-        void ValidateOutOfBoundColumnHashIndex(const size_t& hashIndex) const;
-        Block* GetBlock(const size_t& index) const;
+        void ValidateOutOfBoundColumnIndex(const size_t& columnIndex) const;
         void SetRowSize(const size_t& rowSize) const;
 
     public:
@@ -30,9 +29,11 @@ class Row {
 
         void UpdateColumnData(Block* block);
 
-        void DeleteColumnData(const size_t& columnHashIndex);
+        void DeleteColumnData(const size_t& columnIndex);
 
-        void DeleteColumn(const size_t& columnHashIndex);
+        void DeleteColumn(const size_t& columnIndex);
+
+        const Block* GetBlock(const size_t& index) const;
 };
 
 

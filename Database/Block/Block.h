@@ -11,7 +11,7 @@ class Column;
 class Block {
     private:
         unsigned char* data;
-        size_t size;
+        size_t* size;
         Column* column;
     public:
         explicit Block(Column* column);
@@ -24,9 +24,9 @@ class Block {
 
         void SetData(const void* inputData, const size_t& inputSize);
 
-        void* GetBlockData() const;
+        unsigned char* GetBlockData() const;
 
-        size_t& GetBlockSize();
+        size_t& GetBlockSize() const;
 
         size_t& GetBlockIndex() const;
 

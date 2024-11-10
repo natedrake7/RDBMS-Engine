@@ -19,14 +19,14 @@ vector<Block*>& Row::GetRowData() { return this->data; }
 
 void Row::InsertColumnData(Block* block)
 {
-    const size_t hashIndex = block->GetBlockIndex();
+    const size_t blockIndex = block->GetBlockIndex();
 
-    this->ValidateOutOfBoundColumnHashIndex(hashIndex);
+    this->ValidateOutOfBoundColumnIndex(blockIndex);
 
-    this->data[hashIndex] = block;
+    this->data[blockIndex] = block;
 
     //update current block size
-    const size_t newRowSize = *this->rowSize + this->data[hashIndex]->GetBlockSize();
+    const size_t newRowSize = *this->rowSize + this->data[blockIndex]->GetBlockSize();
 
     this->SetRowSize(newRowSize);
 }
@@ -34,45 +34,45 @@ void Row::InsertColumnData(Block* block)
 //copies data from inserted block to the existing one to keep the same memory positions
 void Row::UpdateColumnData(Block* block)
 {
-    const size_t hashIndex = block->GetBlockIndex();
+    const size_t blockIndex = block->GetBlockIndex();
 
-    this->ValidateOutOfBoundColumnHashIndex(hashIndex);
+    this->ValidateOutOfBoundColumnIndex(blockIndex);
 
-    delete this->data[hashIndex];
+    delete this->data[blockIndex];
 
-    this->data[hashIndex] = block;
+    this->data[blockIndex] = block;
 
     // this->data[hashIndex]->SetData(block->GetBlockData(), block->GetBlockSize());
 
     // delete block;
 }
 
-void Row::DeleteColumnData(const size_t& columnHashIndex)
+void Row::DeleteColumnData(const size_t& columnIndex)
 {
-    this->ValidateOutOfBoundColumnHashIndex(columnHashIndex);
+    this->ValidateOutOfBoundColumnIndex(columnIndex);
 
-    Block* block = this->GetBlock(columnHashIndex);
+    Block* block = this->data[columnIndex];
 
     const size_t currentRowSize = *this->rowSize - block->GetBlockSize();
 
     this->SetRowSize(currentRowSize);
 
-    delete this->GetBlock(columnHashIndex);
+    delete block;
 }
 
-void Row::DeleteColumn(const size_t& columnHashIndex)
+void Row::DeleteColumn(const size_t& columnIndex)
 {
-    this->DeleteColumnData(columnHashIndex);
+    this->DeleteColumnData(columnIndex);
 
-    this->data.erase(this->data.begin() + columnHashIndex);
+    this->data.erase(this->data.begin() + columnIndex);
 }
 
-void Row::ValidateOutOfBoundColumnHashIndex(const size_t& hashIndex) const
+void Row::ValidateOutOfBoundColumnIndex(const size_t& columnIndex) const
 {
-    if(hashIndex >= this->data.size())
+    if(columnIndex >= this->data.size())
         throw invalid_argument("Invalid Column specified");
 }
 
-Block* Row::GetBlock(const size_t& index) const { return data[index]; }
+const Block* Row::GetBlock(const size_t& index) const { return data[index]; }
 
 void Row::SetRowSize(const size_t& rowSize) const { *this->rowSize = rowSize; }

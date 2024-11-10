@@ -39,17 +39,40 @@ int main()
             , "2 Hours And 15 Minutes"
         };
 
-        auto start = chrono::high_resolution_clock::now();
+        auto insertStart = chrono::high_resolution_clock::now();
 
-        for(int i = 0;i < 1000; i++) {
+        for(int i = 0;i < 1000000; i++) {
             words[0] = to_string(i);
             table->InsertRow(words);
         }
+
+        auto insertEnd = chrono::high_resolution_clock::now();
+
+        chrono::duration<double, milli> insertDuration = insertEnd - insertStart;
+        cout << "Duration: " << insertDuration.count() << " ms\n";
+
+        auto start = chrono::high_resolution_clock::now();
+
+        char* searchTerm = "A detective searches for a serial killer after conducting an experiment with Dr Hannibal Lecter and uncovers some harsh truths(that blacks do die first)";
+        size_t length = strlen(searchTerm) + 1;
+
+        int value = 10;
+
+        const Block searchBlock(&value, sizeof(int), columns[0]);
+        const auto results = table->GetRowByBlock(searchBlock);
 
         auto end = chrono::high_resolution_clock::now();
 
         chrono::duration<double, milli> duration = end - start;
         cout << "Duration: " << duration.count() << " ms\n";
+
+        // for(const auto& row : results) {
+        //     const auto& rowData = row->GetRowData();
+        //     for(const auto& column : rowData)
+        //         column->PrintBlockData();
+        // }
+
+
 
         // table->PrintTable();
 
