@@ -59,6 +59,7 @@ int main()
         int value = 10;
 
         const Block searchBlock(&value, sizeof(int), columns[0]);
+        vector<Column*> selectedColumns = {columns[0], columns[1]};
         const auto results = table->GetRowByBlock(searchBlock);
 
         auto end = chrono::high_resolution_clock::now();
@@ -66,11 +67,11 @@ int main()
         chrono::duration<double, milli> duration = end - start;
         cout << "Duration: " << duration.count() << " ms\n";
 
-        // for(const auto& row : results) {
-        //     const auto& rowData = row->GetRowData();
-        //     for(const auto& column : rowData)
-        //         column->PrintBlockData();
-        // }
+        for(const auto& row : results) {
+            const auto& rowData = row->GetRowData();
+            for(const auto& column : rowData)
+                column->PrintBlockData();
+        }
 
 
 
@@ -78,11 +79,6 @@ int main()
 
         //always happens to avoid memory leaks
         delete db;
-        // auto row = new Row (data, sizeof(int), sizeof(*value), dataSizes);
-
-        // free(data);
-        //
-        // row->PrintRow();
     }
     catch (const exception& exception)
     {

@@ -51,7 +51,7 @@ void Table::InsertRow(vector<string>& inputData)
     // cout<<"Row Affected: 1"<<'\n';
 }
 
-vector<Row*> Table::GetRowByBlock(const Block &block) const
+vector<Row*> Table::GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns) const
 {
     vector<Row*> selectedRows;
     const size_t& blockIndex = block.GetBlockIndex();
