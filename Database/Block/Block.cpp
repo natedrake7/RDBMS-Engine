@@ -1,18 +1,26 @@
 ﻿#include "Block.h"
 
-Block::Block(void* data, const size_t& size, Column* column)
+Block::Block(const void* data, const size_t& size, const Column* column)
 {
-    this->size = new size_t(0);
+    this->size = new size_t(size);
     this->column = column;
     this->SetData(data, size);
 }
 
-Block::Block(Column* column)
+Block::Block(const Column* column)
 {
-    this->data = nullptr;
     this->size = new size_t(0);
     this->column = column;
+    this->data = nullptr;
+    // this->SetData(data, size);
 }
+
+// Block::Block(Column* column)
+// {
+//     this->data = nullptr;
+//     this->size = new size_t(0);
+//     this->column = column;
+// }
 
 Block::~Block()
 {
@@ -38,9 +46,9 @@ unsigned char* Block::GetBlockData() const { return this->data; }
 
 size_t& Block::GetBlockSize() const { return *this->size; }
 
-size_t& Block::GetBlockIndex() const { return this->column->GetColumnIndex(); }
+const size_t& Block::GetColumnIndex() const { return this->column->GetColumnIndex(); }
 
-size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
+const size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
 void Block::PrintBlockData() const
 {

@@ -12,13 +12,17 @@ Column::Column(const string& columnName, const string&  columnTypeLiteral, const
 
 string& Column::GetColumnName() { return this->columnName; }
 
-ColumnType& Column::GetColumnType() { return this->columnType; }
+const ColumnType& Column::GetColumnType() const { return this->columnType; }
 
-size_t& Column::GetColumnSize() { return this->recordSize; }
+const size_t& Column::GetColumnSize() const { return this->recordSize; }
 
 bool& Column::GetAllowNulls() { return this->allowNulls;}
 
-size_t& Column::GetColumnIndex() { return this->columnIndex; }
+const size_t& Column::GetColumnIndex() const { return this->columnIndex; }
+
+void Column::InsertBlock(Block *block) { this->data.push_back(block); }
+
+const vector<Block*>& Column::GetData() const { return this->data; }
 
 void Column::SetColumnIndex(const size_t& columnIndex) { this->columnIndex = columnIndex; }
 

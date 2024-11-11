@@ -41,11 +41,10 @@ int main()
 
         auto insertStart = chrono::high_resolution_clock::now();
 
-        for(int i = 0;i < 1000; i++) {
+        for(int i = 0;i < 100; i++) {
             words[0] = to_string(i);
             table->InsertRow(words);
         }
-
         auto insertEnd = chrono::high_resolution_clock::now();
 
         chrono::duration<double, milli> insertDuration = insertEnd - insertStart;

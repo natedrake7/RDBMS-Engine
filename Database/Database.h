@@ -20,6 +20,7 @@ class Database {
         string filename;
         string fileExtension = ".db";
         vector<Table*> tables;
+
     protected:
         void ValidateTableCreation(Table* table) const;
 

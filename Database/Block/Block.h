@@ -12,13 +12,14 @@ class Block {
     private:
         unsigned char* data;
         size_t* size;
-        Column* column;
+        const Column* column;
+
     public:
-        explicit Block(Column* column);
+        explicit Block(const Column* column);
 
-        explicit Block(const Block* block);
+        // explicit Block(const Block* block);
 
-        Block(void* data, const size_t& size, Column* column);
+        Block(const void* data, const size_t& size,const Column* column);
 
         ~Block();
 
@@ -28,9 +29,9 @@ class Block {
 
         size_t& GetBlockSize() const;
 
-        size_t& GetBlockIndex() const;
+        const size_t& GetColumnIndex() const;
 
-        size_t& GetColumnSize() const;
+        const size_t& GetColumnSize() const;
 
         void PrintBlockData() const;
 };

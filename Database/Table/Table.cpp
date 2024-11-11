@@ -20,13 +20,13 @@ Table::~Table()
     for(const auto& column : columns)
         delete column;
 
-    for(const auto& row : this->rows)
-        delete row;
+    // for(const auto& row : this->rows)
+    //     delete row;
 }
 
 void Table::InsertRow(vector<string>& inputData)
 {
-    Row* row = new Row(*this);
+    // Row* row = new Row(*this);
     for(size_t i = 0;i < inputData.size(); ++i)
     {
         Block* block = new Block(columns[i]);
@@ -35,50 +35,43 @@ void Table::InsertRow(vector<string>& inputData)
         if(columnType == ColumnType::Integer)
         {
             //set size only not convert to int
+            //bitoperations to make value smaller
             int convertedInt = stoi(inputData[i]);
 
             block->SetData(&convertedInt, sizeof(int));
         }
-        else if(columnType == ColumnType::String)
+        else if(columnType == ColumnType::String)//ths poutanas tha ginei dictionary encoding incoming
             block->SetData(inputData[i].c_str(), inputData[i].length() + 1);
         else
             throw invalid_argument("Unsupported column type");
 
-        row->InsertColumnData(block);
+        this->columns[i]->InsertBlock(block);
     }
-
-    this->rows.push_back(row);
     // cout<<"Row Affected: 1"<<'\n';
 }
 
 vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns) const
 {
     vector<Row> selectedRows;
-    const size_t& blockIndex = block.GetBlockIndex();
+    const size_t& blockIndex = block.GetColumnIndex();
     const auto searchBlockData = block.GetBlockData();
 
-    for(const auto& row : this->rows)
+    int rowIndex = 0;
+    for(const auto& columnBlock : this->columns[blockIndex]->GetData())
     {
-        const Block* rowBlock = row->GetBlock(blockIndex);
-
-        //take into account Like statements LIKE '%hello%'
-
-        if(memcmp(rowBlock->GetBlockData(), searchBlockData, rowBlock->GetBlockSize()) == 0)
+        if(memcmp(columnBlock->GetBlockData(), searchBlockData, columnBlock->GetBlockSize()) == 0)
         {
-            if(selectedColumns.empty())
-            {
-                selectedRows.emplace_back(*this, row->GetRowData());
-                continue;
-            }
-
             vector<Block*> selectedBlocks;
-
-            for(const auto& column : selectedColumns)
-                selectedBlocks.push_back(row->GetBlock(column->GetColumnIndex()));
+            if(selectedColumns.empty())
+                for(const auto& column : this->columns)
+                       selectedBlocks.push_back(column->GetData()[rowIndex]);
+            else
+                for(const auto& column : selectedColumns)
+                    selectedBlocks.push_back(this->columns[column->GetColumnIndex()]->GetData()[rowIndex]);
 
             selectedRows.emplace_back(*this, selectedBlocks);
-            // selectedRows.emplace_back(*this, selectedBlocks);
         }
+        rowIndex++;
     }
 
     return selectedRows;
@@ -87,20 +80,12 @@ vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& sele
 void Table::PrintTable(size_t maxNumberOfItems) const
 {
     if(maxNumberOfItems == -1)
-        maxNumberOfItems = this->rows.size();
+        maxNumberOfItems = this->columns[0]->GetData().size();
 
     for (const auto& column : columns)
-        cout << column->GetColumnName() << " || ";
-
-    cout << endl;
-    for(size_t i = 0;i < maxNumberOfItems; i++)
     {
-        const vector<Block*> data = this->rows[i]->GetRowData();
-
-        for(const auto& block : data)
-            block->PrintBlockData();
-
-        cout << endl;
+        const auto& columnData = column->GetData();
+        cout << column->GetColumnName() << " || ";
     }
 }
 
