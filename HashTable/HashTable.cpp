@@ -13,33 +13,35 @@ HashTable::~HashTable()
             delete[] element;
 }
 
-uint32_t HashTable::Insert(const char* input)
+uint64_t HashTable::Insert(const char* input)
 {
-    const uint32_t hashKey = Hash(input);
-    const uint32_t index = this->HashToBucket(hashKey);
+    const uint64_t hashKey = Hash(input);
+    const uint64_t index = this->HashToBucket(hashKey);
 
     for(const auto& element : this->table[index])
-        if(memcmp(element, &hashKey, sizeof(uint32_t)) == 0)
+        if(memcmp(element, &hashKey, sizeof(uint64_t)) == 0)
             return hashKey;
 
-    unsigned char* hashValue = new unsigned char[sizeof(uint32_t)];
+    unsigned char* hashValue = new unsigned char[sizeof(uint64_t)];
 
-    memcpy(hashValue, &hashKey, sizeof(uint32_t));
+    memcpy(hashValue, &hashKey, sizeof(uint64_t));
     this->table[index].push_back(hashValue);
 
     return hashKey;
 }
 
-void HashTable::Insert(const uint32_t &input, const char* inputString)
+void HashTable::Insert(const uint64_t &input, const char* inputString)
 {
-    const uint32_t hashKey = Hash(input);
-    const uint32_t index = this->HashToBucket(hashKey);
+    const uint64_t hashKey = Hash(input);
+
+    //hash current hashKey to secondary index (collisions not lessened)
+    const uint64_t index = this->HashToBucket(hashKey);
 
     for(const auto& element : this->table[index])
     {
         const char* value = reinterpret_cast<char*>(element);
 
-        if(input == Hash(value))
+        if(input == strcmp(inputString, value) == 0)
             return;
     }
 
@@ -49,14 +51,14 @@ void HashTable::Insert(const uint32_t &input, const char* inputString)
     this->table[index].push_back(hashValue);
 }
 
-const char* HashTable::GetStringBySecondaryHashTableKey(const uint32_t &primaryHashKey, const uint32_t& secondaryHashKey)
+const char* HashTable::GetStringBySecondaryHashTableKey(const uint64_t &primaryHashKey, const uint64_t& secondaryHashKey)
 {
-    const uint32_t bucket = HashToBucket(secondaryHashKey);
+    const uint64_t bucket = HashToBucket(secondaryHashKey);
 
     for(const auto& element : this->table[bucket])
     {
         const char* value = reinterpret_cast<char*>(element);
-        const uint32_t hashKey = Hash(value);
+        const uint64_t hashKey = Hash(value);
 
         if(hashKey == primaryHashKey)
             return value;
@@ -66,69 +68,81 @@ const char* HashTable::GetStringBySecondaryHashTableKey(const uint32_t &primaryH
 }
 
 bool HashTable::ContainsPrimaryHashTableKey(const char *inputString) {
-    const uint32_t hashKey = Hash(inputString);
+    const uint64_t hashKey = Hash(inputString);
 
-    const uint32_t index = HashToBucket(hashKey);
+    const uint64_t index = HashToBucket(hashKey);
 
     for(const auto& element : this->table[index])
-        if(memcmp(element, inputString, sizeof(uint32_t)) == 0)
+        if(memcmp(element, inputString, sizeof(uint64_t)) == 0)
             return true;
 
     return false;
 }
 
-uint32_t HashTable::Hash(const char* stringData)
-{
+uint64_t HashTable::Hash(const char* stringData) {
     const uint8_t* data = reinterpret_cast<const uint8_t*>(stringData);
-    uint32_t len = strlen(stringData);
-    uint32_t hash = 31;
-    uint32_t c1 = 0xcc9e2d51;
-    uint32_t c2 = 0x1b873593;
+    uint64_t len = strlen(stringData);
+    uint64_t hash = 31;
+    uint64_t c1 = 0x87c37b91114253d5ULL;
+    uint64_t c2 = 0x4cf5ad432745937fULL;
 
-    uint32_t roundedEnd = len / 4 * 4;
-    for (uint32_t i = 0; i < roundedEnd; i += 4) {
-        uint32_t k = data[i] | (data[i+1] << 8) | (data[i+2] << 16) | (data[i+3] << 24);
+    uint64_t roundedEnd = len / 8 * 8;  // Process in 8-byte chunks for 64-bit version
+    for (uint64_t i = 0; i < roundedEnd; i += 8) {
+        uint64_t k = static_cast<uint64_t>(data[i]) |
+                     (static_cast<uint64_t>(data[i + 1]) << 8) |
+                     (static_cast<uint64_t>(data[i + 2]) << 16) |
+                     (static_cast<uint64_t>(data[i + 3]) << 24) |
+                     (static_cast<uint64_t>(data[i + 4]) << 32) |
+                     (static_cast<uint64_t>(data[i + 5]) << 40) |
+                     (static_cast<uint64_t>(data[i + 6]) << 48) |
+                     (static_cast<uint64_t>(data[i + 7]) << 56);
+
         k *= c1;
-        k = (k << 15) | (k >> 17);
+        k = (k << 31) | (k >> 33);  // ROTL 31
         k *= c2;
 
         hash ^= k;
-        hash = (hash << 13) | (hash >> 19);
-        hash = hash * 5 + 0xe6546b64;
+        hash = (hash << 27) | (hash >> 37);  // ROTL 27
+        hash = hash * 5 + 0x52dce729;
     }
 
-    uint32_t k = 0;
-    switch (len & 3) {
-        case 3: k ^= data[roundedEnd + 2] << 16;
-        case 2: k ^= data[roundedEnd + 1] << 8;
-        case 1: k ^= data[roundedEnd];
-        k *= c1;
-        k = (k << 15) | (k >> 17);
-        k *= c2;
-        hash ^= k;
+    uint64_t k = 0;
+    switch (len & 7) {  // Handle remaining bytes if any
+        case 7: k ^= static_cast<uint64_t>(data[roundedEnd + 6]) << 48;
+        case 6: k ^= static_cast<uint64_t>(data[roundedEnd + 5]) << 40;
+        case 5: k ^= static_cast<uint64_t>(data[roundedEnd + 4]) << 32;
+        case 4: k ^= static_cast<uint64_t>(data[roundedEnd + 3]) << 24;
+        case 3: k ^= static_cast<uint64_t>(data[roundedEnd + 2]) << 16;
+        case 2: k ^= static_cast<uint64_t>(data[roundedEnd + 1]) << 8;
+        case 1: k ^= static_cast<uint64_t>(data[roundedEnd]);
+            k *= c1;
+            k = (k << 31) | (k >> 33);  // ROTL 31
+            k *= c2;
+            hash ^= k;
     }
 
+    // Finalization mix - force all bits of a hash block to avalanche
     hash ^= len;
-    hash ^= (hash >> 16);
-    hash *= 0x85ebca6b;
-    hash ^= (hash >> 13);
-    hash *= 0xc2b2ae35;
-    hash ^= (hash >> 16);
+    hash ^= (hash >> 33);
+    hash *= 0xff51afd7ed558ccdULL;
+    hash ^= (hash >> 33);
+    hash *= 0xc4ceb9fe1a85ec53ULL;
+    hash ^= (hash >> 33);
 
     return hash;
 }
 
-uint32_t HashTable::Hash(const uint32_t &integerData) {
-    const uint32_t seed = 0x9747b28c;
-    const uint32_t c1 = 0xcc9e2d51;
-    const uint32_t c2 = 0x1b873593;
-    const uint32_t r1 = 15;
-    const uint32_t r2 = 13;
-    const uint32_t m = 5;
-    const uint32_t n = 0xe6546b64;
+uint64_t HashTable::Hash(const uint64_t &integerData) {
+    const uint64_t seed = 0x9747b28c;
+    const uint64_t c1 = 0xcc9e2d51;
+    const uint64_t c2 = 0x1b873593;
+    const uint64_t r1 = 15;
+    const uint64_t r2 = 13;
+    const uint64_t m = 5;
+    const uint64_t n = 0xe6546b64;
 
-    uint32_t h = seed;
-    uint32_t k = integerData;
+    uint64_t h = seed;
+    uint64_t k = integerData;
 
     // Mixing step 1
     k *= c1;
@@ -150,8 +164,8 @@ uint32_t HashTable::Hash(const uint32_t &integerData) {
     return h;
 }
 
-uint32_t HashTable::HashToBucket(const char* string) { return Hash(string) & this->numOfBuckets; }
+uint64_t HashTable::HashToBucket(const char* string) { return Hash(string) & this->numOfBuckets; }
 
-uint32_t HashTable::HashToBucket(const uint32_t& hashValue) { return hashValue % this->numOfBuckets; }
+uint64_t HashTable::HashToBucket(const uint64_t& hashValue) { return hashValue % this->numOfBuckets; }
 
 

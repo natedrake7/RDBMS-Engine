@@ -45,8 +45,8 @@ void Table::InsertRow(const vector<string>& inputData)
         else if(columnType == ColumnType::String)//ths poutanas tha ginei dictionary encoding incoming
         {
 
-            const uint32_t primaryHashKey = this->database->InsertToHashTables(inputData[i].c_str());
-            block->SetData(&primaryHashKey, sizeof(uint32_t));
+            const uint64_t primaryHashKey = this->database->InsertToHashTables(inputData[i].c_str());
+            block->SetData(&primaryHashKey, sizeof(uint64_t));
         }
         else
             throw invalid_argument("Unsupported column type");
@@ -71,7 +71,7 @@ vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& sele
     {
         const char* castBlockData = reinterpret_cast<const char*>(searchBlockData);
 
-        const uint32_t primaryHashKey = this->database->Hash(castBlockData);
+        const uint64_t primaryHashKey = this->database->Hash(castBlockData);
 
         temp = reinterpret_cast<const unsigned char*>(&primaryHashKey);
     }

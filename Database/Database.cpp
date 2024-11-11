@@ -79,14 +79,14 @@ void Database::DeleteDatabase() const
         throw runtime_error("Database " + this->filename + " could not be deleted");
 }
 
-uint32_t Database::InsertToHashTables(const char *inputString) const {
-    const uint32_t primaryHashKey = this->primaryHashTable->Insert(inputString);
+uint64_t Database::InsertToHashTables(const char *inputString) const {
+    const uint64_t primaryHashKey = this->primaryHashTable->Insert(inputString);
     this->secondaryHashTable->Insert(primaryHashKey, inputString);
 
     return primaryHashKey;
 }
 
-uint32_t Database::Hash(const char *inputString) const { return this->primaryHashTable->Hash(inputString); }
+uint64_t Database::Hash(const char *inputString) const { return this->primaryHashTable->Hash(inputString); }
 
 //Creates new file in db storage
 //1 file for each db? 1.000.000 1 gb

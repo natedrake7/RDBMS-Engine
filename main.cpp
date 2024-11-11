@@ -39,10 +39,24 @@ int main()
             , "2 Hours And 15 Minutes"
         };
 
+        const string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        string randomString;
+
+        // Generate random string of the given length
+
+
         auto insertStart = chrono::high_resolution_clock::now();
 
-        for(int i = 0;i < 100; i++) {
+        for(int i = 0;i < 10000; i++) {
+            for (int j = 0; j < i % 13; ++j) {
+                // Generate a random index into the characters string
+                const int randomIndex = rand() % characters.length();
+                randomString += characters[randomIndex];
+            }
             words[0] = to_string(i);
+            words[1] = randomString;
+            randomString.clear();
+
             table->InsertRow(words);
         }
 

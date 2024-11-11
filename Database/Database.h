@@ -39,9 +39,9 @@ class Database {
 
         void DeleteDatabase() const;
 
-        uint32_t InsertToHashTables(const char* inputString) const;
+        uint64_t InsertToHashTables(const char* inputString) const;
 
-        uint32_t Hash(const char* inputString) const;
+        uint64_t Hash(const char* inputString) const;
 
 };
 
