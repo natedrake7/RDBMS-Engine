@@ -15,6 +15,8 @@ Database::Database(fstream* fileDescriptor,const string& dbName)
 {
     this->fileDescriptor = fileDescriptor;
     this->filename = dbName;
+    this->primaryHashTable = new HashTable(10);
+    this->secondaryHashTable = new HashTable(100);
 }
 
 Database::~Database()
@@ -24,6 +26,9 @@ Database::~Database()
 
     for (const auto& dbTable : this->tables)
         delete dbTable;
+
+    delete this->primaryHashTable;
+    delete this->secondaryHashTable;
 }
 
 void Database:: CreateTable(Table* table)
@@ -73,6 +78,15 @@ void Database::DeleteDatabase() const
     if(remove(path.c_str()) != 0)
         throw runtime_error("Database " + this->filename + " could not be deleted");
 }
+
+uint32_t Database::InsertToHashTables(const char *inputString) const {
+    const uint32_t primaryHashKey = this->primaryHashTable->Insert(inputString);
+    this->secondaryHashTable->Insert(primaryHashKey, inputString);
+
+    return primaryHashKey;
+}
+
+uint32_t Database::Hash(const char *inputString) const { return this->primaryHashTable->Hash(inputString); }
 
 //Creates new file in db storage
 //1 file for each db? 1.000.000 1 gb

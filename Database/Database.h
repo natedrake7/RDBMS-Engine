@@ -4,6 +4,8 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+
+#include "../HashTable/HashTable.h"
 #include "Table/Table.h"
 
 using namespace std;
@@ -20,6 +22,8 @@ class Database {
         string filename;
         string fileExtension = ".db";
         vector<Table*> tables;
+        HashTable* primaryHashTable;
+        HashTable* secondaryHashTable;
 
     protected:
         void ValidateTableCreation(Table* table) const;
@@ -34,6 +38,11 @@ class Database {
         void InsertRecord();
 
         void DeleteDatabase() const;
+
+        uint32_t InsertToHashTables(const char* inputString) const;
+
+        uint32_t Hash(const char* inputString) const;
+
 };
 
 void CreateDatabase(const string& dbName);

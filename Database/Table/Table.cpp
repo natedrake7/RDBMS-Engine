@@ -1,10 +1,13 @@
 ﻿#include "Table.h"
 
-Table::Table(const string& tableName, const vector<Column*>& columns)
+#include "../Database.h"
+
+Table::Table(const string& tableName, const vector<Column*>& columns, const Database* database)
 {
     this->tableName = tableName;
     this->columns = columns;
     this->maxRowSize = 0;
+    this->database = database;
 
     size_t counter = 0;
     for(const auto& column : columns)
@@ -24,7 +27,7 @@ Table::~Table()
     //     delete row;
 }
 
-void Table::InsertRow(vector<string>& inputData)
+void Table::InsertRow(const vector<string>& inputData)
 {
     // Row* row = new Row(*this);
     for(size_t i = 0;i < inputData.size(); ++i)
@@ -36,12 +39,15 @@ void Table::InsertRow(vector<string>& inputData)
         {
             //set size only not convert to int
             //bitoperations to make value smaller
-            int convertedInt = stoi(inputData[i]);
-
+            long long int convertedInt = stoi(inputData[i]);
             block->SetData(&convertedInt, sizeof(int));
         }
         else if(columnType == ColumnType::String)//ths poutanas tha ginei dictionary encoding incoming
-            block->SetData(inputData[i].c_str(), inputData[i].length() + 1);
+        {
+
+            const uint32_t primaryHashKey = this->database->InsertToHashTables(inputData[i].c_str());
+            block->SetData(&primaryHashKey, sizeof(uint32_t));
+        }
         else
             throw invalid_argument("Unsupported column type");
 
@@ -54,12 +60,28 @@ vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& sele
 {
     vector<Row> selectedRows;
     const size_t& blockIndex = block.GetColumnIndex();
+    const ColumnType& columnType = this->columns[blockIndex]->GetColumnType();
     const auto searchBlockData = block.GetBlockData();
+
+
+
+    const unsigned char* temp;
+
+    if(columnType == ColumnType::String)
+    {
+        const char* castBlockData = reinterpret_cast<const char*>(searchBlockData);
+
+        const uint32_t primaryHashKey = this->database->Hash(castBlockData);
+
+        temp = reinterpret_cast<const unsigned char*>(&primaryHashKey);
+    }
+    else
+        temp = searchBlockData;
 
     int rowIndex = 0;
     for(const auto& columnBlock : this->columns[blockIndex]->GetData())
     {
-        if(memcmp(columnBlock->GetBlockData(), searchBlockData, columnBlock->GetBlockSize()) == 0)
+        if(memcmp(columnBlock->GetBlockData(), temp, columnBlock->GetBlockSize()) == 0)
         {
             vector<Block*> selectedBlocks;
             if(selectedColumns.empty())
@@ -108,49 +130,6 @@ size_t generateRandomSeed() {
     // Generate a random seed using the current time or another source
     std::random_device rd;
     return rd();  // Random seed
-}
-
-//have a hashing algorithm for the table to map the properties to the table
-size_t Table::HashColumn(Column* column, const size_t& numOfColumns)
-{
-    string columnData = column->GetColumnName() + to_string(column->GetColumnSize()); //+ column->GetColumnType();
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(columnData.c_str());
-    uint32_t len = columnData.length();
-    uint32_t hash = 31;
-    uint32_t c1 = 0xcc9e2d51;
-    uint32_t c2 = 0x1b873593;
-
-    uint32_t roundedEnd = len / 4 * 4;
-    for (uint32_t i = 0; i < roundedEnd; i += 4) {
-        uint32_t k = data[i] | (data[i+1] << 8) | (data[i+2] << 16) | (data[i+3] << 24);
-        k *= c1;
-        k = (k << 15) | (k >> 17);
-        k *= c2;
-
-        hash ^= k;
-        hash = (hash << 13) | (hash >> 19);
-        hash = hash * 5 + 0xe6546b64;
-    }
-
-    uint32_t k = 0;
-    switch (len & 3) {
-    case 3: k ^= data[roundedEnd + 2] << 16;
-    case 2: k ^= data[roundedEnd + 1] << 8;
-    case 1: k ^= data[roundedEnd];
-        k *= c1;
-        k = (k << 15) | (k >> 17);
-        k *= c2;
-        hash ^= k;
-    }
-
-    hash ^= len;
-    hash ^= (hash >> 16);
-    hash *= 0x85ebca6b;
-    hash ^= (hash >> 13);
-    hash *= 0xc2b2ae35;
-    hash ^= (hash >> 16);
-
-    return hash % numOfColumns;
 }
 
 size_t Table::GetNumberOfColumns() const { return this->columns.size();}

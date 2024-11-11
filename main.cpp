@@ -27,7 +27,7 @@ int main()
         columns.push_back(new Column("MovieActors", "String", 100, true));
         columns.push_back(new Column("MovieLength", "String", 100, true));
 
-        Table* table = new Table("Movies", columns);
+        Table* table = new Table("Movies", columns, db);
         db->CreateTable(table);
 
         vector<string> words = {
@@ -45,6 +45,7 @@ int main()
             words[0] = to_string(i);
             table->InsertRow(words);
         }
+
         auto insertEnd = chrono::high_resolution_clock::now();
 
         chrono::duration<double, milli> insertDuration = insertEnd - insertStart;
@@ -59,7 +60,13 @@ int main()
 
         const Block searchBlock(&value, sizeof(int), columns[0]);
         vector<Column*> selectedColumns = { columns[0], columns[1] };
-        const auto results = table->GetRowByBlock(searchBlock, selectedColumns);
+        const auto results = table->GetRowByBlock(searchBlock);
+
+        for(const auto& row : results) {
+            const auto rowData = row.GetData();
+            for(const auto& column : rowData)
+                column->PrintBlockData();
+        }
 
         auto end = chrono::high_resolution_clock::now();
 

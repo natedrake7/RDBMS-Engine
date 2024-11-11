@@ -10,3 +10,5 @@ Row::Row(const Table& table, const vector<Block*>& data) {
     this->table = &table;
     this->data = data;
 }
+
+const vector<Block *> & Row::GetData() const { return this->data; }

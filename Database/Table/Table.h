@@ -9,6 +9,7 @@
 
 using namespace std;
 
+class Database;
 class Row;
 class Block;
 
@@ -18,6 +19,7 @@ class Table {
         string tableName;
         size_t maxRowSize;
         vector<Column*> columns;
+        const Database* database;
         // vector<Row*> rows;
 
     protected:
@@ -27,11 +29,11 @@ class Table {
         static size_t HashColumn(Column* column, const size_t& numOfColumns);
 
     public:
-        Table(const string& tableName,const vector<Column*>& columns);
+        Table(const string& tableName,const vector<Column*>& columns, const Database* database);
 
         ~Table();
 
-        void InsertRow(vector<string>& inputData);
+        void InsertRow(const vector<string>& inputData);
 
         vector<Row> GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns = vector<Column*>()) const;
 

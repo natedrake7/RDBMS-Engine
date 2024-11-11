@@ -18,6 +18,8 @@ class Row {
 
         explicit Row(const Table& table, const vector<Block*>& data);
 
+        const vector<Block*>& GetData() const;
+
 };
 
 

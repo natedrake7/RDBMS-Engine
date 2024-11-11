@@ -60,7 +60,9 @@ void Block::PrintBlockData() const
     if(columnType == ColumnType::Integer)
         cout << *reinterpret_cast<const int*>(this->data) << " ";
     else if(columnType == ColumnType::String)
+    {
         cout << this->data << " ";
+    }
 
     cout << "|| ";
 }
