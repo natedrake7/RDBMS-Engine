@@ -20,10 +20,6 @@ bool& Column::GetAllowNulls() { return this->allowNulls;}
 
 const size_t& Column::GetColumnIndex() const { return this->columnIndex; }
 
-void Column::InsertBlock(Block *block) { this->data.push_back(block); }
-
-const vector<Block*>& Column::GetData() const { return this->data; }
-
 void Column::SetColumnIndex(const size_t& columnIndex) { this->columnIndex = columnIndex; }
 
 ColumnType Column::SetColumnType() const {

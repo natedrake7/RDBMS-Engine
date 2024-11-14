@@ -29,7 +29,7 @@ Table::~Table()
 
 void Table::InsertRow(const vector<string>& inputData)
 {
-    // Row* row = new Row(*this);
+    Row* row = new Row(*this);
     for(size_t i = 0;i < inputData.size(); ++i)
     {
         Block* block = new Block(columns[i]);
@@ -51,8 +51,11 @@ void Table::InsertRow(const vector<string>& inputData)
         else
             throw invalid_argument("Unsupported column type");
 
-        this->columns[i]->InsertBlock(block);
+        row->InsertColumnData(block, this->columns[i]->GetColumnIndex());
+
     }
+
+    this->rows.push_back(row);
     // cout<<"Row Affected: 1"<<'\n';
 }
 
@@ -62,8 +65,6 @@ vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& sele
     const size_t& blockIndex = block.GetColumnIndex();
     const ColumnType& columnType = this->columns[blockIndex]->GetColumnType();
     const auto searchBlockData = block.GetBlockData();
-
-
 
     const unsigned char* temp;
 
@@ -78,22 +79,23 @@ vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& sele
     else
         temp = searchBlockData;
 
-    int rowIndex = 0;
-    for(const auto& columnBlock : this->columns[blockIndex]->GetData())
+    for(const auto& row : this->rows)
     {
-        if(memcmp(columnBlock->GetBlockData(), temp, columnBlock->GetBlockSize()) == 0)
+        const auto& rowData = row->GetData();
+        if(memcmp(rowData[blockIndex]->GetBlockData(), temp, rowData[blockIndex]->GetBlockSize()) == 0)
         {
             vector<Block*> selectedBlocks;
             if(selectedColumns.empty())
+            {
                 for(const auto& column : this->columns)
-                    selectedBlocks.push_back(column->GetData()[rowIndex]);
+                    selectedBlocks.push_back(rowData[column->GetColumnIndex()]);
+            }
             else
                 for(const auto& column : selectedColumns)
-                    selectedBlocks.push_back(this->columns[column->GetColumnIndex()]->GetData()[rowIndex]);
+                    selectedBlocks.push_back(rowData[column->GetColumnIndex()]);
 
             selectedRows.emplace_back(*this, selectedBlocks);
         }
-        rowIndex++;
     }
 
     return selectedRows;
@@ -102,13 +104,20 @@ vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& sele
 void Table::PrintTable(size_t maxNumberOfItems) const
 {
     if(maxNumberOfItems == -1)
-        maxNumberOfItems = this->columns[0]->GetData().size();
+        maxNumberOfItems = this->rows.size();
 
-    for (const auto& column : columns)
+    for(size_t i = 0; i < this->columns.size(); ++i)
     {
-        const auto& columnData = column->GetData();
-        cout << column->GetColumnName() << " || ";
+        cout<< this->columns[i]->GetColumnName();
+
+        if(i != this->columns.size() - 1)
+            cout<<" || ";
+        else
+            cout<<"\n";
     }
+
+    for(size_t i = 0; i < maxNumberOfItems; ++i)
+        this->rows[i]->PrintRow(this->database);
 }
 
 void Table::CastPropertyToAppropriateType(void* data, Column* column, size_t& dataSize)

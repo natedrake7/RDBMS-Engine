@@ -28,7 +28,6 @@ class Column {
         size_t columnIndex;
         size_t recordSize;
         bool allowNulls;
-        vector<Block*> data;
 
     protected:
         ColumnType SetColumnType() const;
@@ -49,8 +48,6 @@ class Column {
         const size_t& GetColumnIndex() const;
 
         void InsertBlock(Block* block);
-
-        const vector<Block*>& GetData() const;
 };
 
 

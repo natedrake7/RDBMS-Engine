@@ -14,19 +14,16 @@ class Row;
 class Block;
 
 class Table {
-
-    private:
-        string tableName;
-        size_t maxRowSize;
-        vector<Column*> columns;
-        const Database* database;
-        // vector<Row*> rows;
+    string tableName;
+    size_t maxRowSize;
+    vector<Column*> columns;
+    vector<Row*> rows;
+    const Database* database;
 
     protected:
         static void CastPropertyToAppropriateType(void* data, Column* column, size_t& dataSize);
         static int* CastPropertyToInt(void* data);
         static string* CastPropertyToString(void* data);
-        static size_t HashColumn(Column* column, const size_t& numOfColumns);
 
     public:
         Table(const string& tableName,const vector<Column*>& columns, const Database* database);

@@ -36,6 +36,8 @@ class Block {
 
         const size_t& GetColumnSize() const;
 
+        const ColumnType& GetColumnType() const;
+
         void PrintBlockData(const Database* db) const;
 };
 

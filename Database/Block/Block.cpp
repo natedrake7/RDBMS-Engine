@@ -50,6 +50,8 @@ const size_t& Block::GetColumnIndex() const { return this->column->GetColumnInde
 
 const size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
+const ColumnType & Block::GetColumnType() const { return this->column->GetColumnType(); }
+
 void Block::PrintBlockData(const Database* db) const
 {
     if(this->data == nullptr)
@@ -58,14 +60,14 @@ void Block::PrintBlockData(const Database* db) const
     const ColumnType columnType = this->column->GetColumnType();
 
     if(columnType == ColumnType::Integer)
-        cout << *reinterpret_cast<const int*>(this->data) << " ";
+        cout << *reinterpret_cast<const int*>(this->data);
     else if(columnType == ColumnType::String)
     {
         uint64_t hashKey;
         memcpy(&hashKey, this->data, sizeof(uint64_t));
         // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
-        cout << db->GetStringByHashKey(hashKey) << " ";
+        cout << db->GetStringByHashKey(hashKey);
     }
 
-    cout << "|| ";
+    cout << " || ";
 }

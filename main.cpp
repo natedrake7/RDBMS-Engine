@@ -64,16 +64,11 @@ int main()
 
         int value = 10;
 
-        const Block searchBlock(searchTerm, length, columns[3]);
+        const Block searchBlock(&value, sizeof(int), columns[0]);
         vector<Column*> selectedColumns = { columns[0], columns[1] };
         const auto results = table->GetRowByBlock(searchBlock);
 
-        for(const auto& row : results)
-        {
-            const auto rowData = row.GetData();
-            for(const auto& column : rowData)
-                column->PrintBlockData(db);
-        }
+        table->PrintTable(10);
 
         auto end = chrono::high_resolution_clock::now();
 
