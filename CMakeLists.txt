@@ -14,8 +14,7 @@ add_library(Database Database/Database.cpp Database/Database.h
         Database/Block/Block.cpp
         Database/Block/Block.h
         Database/Column/Column.cpp
-        Database/Column/Column.h
-        HashTable/HashTable.cpp
-        HashTable/HashTable.h)
+        Database/Column/Column.h)
+add_library(HashTable HashTable/HashTable.cpp HashTable/HashTable.h)
 
 target_link_libraries(DatabaseInterface PRIVATE Database)
