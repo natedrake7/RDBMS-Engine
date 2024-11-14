@@ -39,28 +39,10 @@ int main()
             , "2 Hours And 15 Minutes"
         };
 
-        const string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        string randomString;
-
-        // Generate random string of the given length
-
-
-        auto insertStart = chrono::high_resolution_clock::now();
-
         for(int i = 0;i < 10000; i++) {
             words[0] = to_string(i);
             table->InsertRow(words);
         }
-
-        auto insertEnd = chrono::high_resolution_clock::now();
-
-        chrono::duration<double, milli> insertDuration = insertEnd - insertStart;
-        cout << "Duration: " << insertDuration.count() << " ms\n";
-
-        auto start = chrono::high_resolution_clock::now();
-
-        char* searchTerm = "A detective searches for a serial killer after conducting an experiment with Dr Hannibal Lecter and uncovers some harsh truths(that blacks do die first)";
-        size_t length = strlen(searchTerm) + 1;
 
         int value = 10;
 
@@ -69,21 +51,6 @@ int main()
         const auto results = table->GetRowByBlock(searchBlock);
 
         table->PrintTable(10);
-
-        auto end = chrono::high_resolution_clock::now();
-
-        chrono::duration<double, milli> duration = end - start;
-        cout << "Duration: " << duration.count() << " ms\n";
-
-        // for(const auto& row : results)
-        // {
-        //     const auto& rowData = row.GetRowData();
-        //
-        //     for(const auto& columnData : rowData)
-        //         columnData->PrintBlockData();
-        // }
-
-        // table->PrintTable();
 
         //always happens to avoid memory leaks
         delete db;
