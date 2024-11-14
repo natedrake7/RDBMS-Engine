@@ -6,13 +6,6 @@ HashTable::HashTable(const unsigned int &numOfBuckets)
     this->table.resize(this->numOfBuckets);
 }
 
-HashTable::~HashTable()
-{
-    for(const auto& bucket : this->table)
-        for(const auto& element : bucket)
-            delete[] element;
-}
-
 uint64_t HashTable::Insert(const char* input)
 {
     const uint64_t hashKey = Hash(input);
@@ -22,7 +15,7 @@ uint64_t HashTable::Insert(const char* input)
     for(const auto& element : this->table[index])
         if(memcmp(element, input, inputSize) == 0)
             return hashKey;
-    
+
     unsigned char* inputInBytes = new unsigned char[inputSize];
 
     memcpy(inputInBytes, input, inputSize);
@@ -31,26 +24,13 @@ uint64_t HashTable::Insert(const char* input)
     return hashKey;
 }
 
-void HashTable::Insert(const uint64_t &input, const char* inputString)
+HashTable::~HashTable()
 {
-    const uint64_t hashKey = Hash(input);
-
-    //hash current hashKey to secondary index (collisions not lessened)
-    const uint64_t index = this->HashToBucket(hashKey);
-
-    for(const auto& element : this->table[index])
-    {
-        const char* value = reinterpret_cast<char*>(element);
-
-        if(input == strcmp(inputString, value) == 0)
-            return;
-    }
-
-    unsigned char* hashValue = new unsigned char[strlen(inputString) + 1];
-    memcpy(hashValue, inputString, strlen(inputString) + 1);
-
-    this->table[index].push_back(hashValue);
+    for(const auto& bucket : this->table)
+        for(const auto& element : bucket)
+            delete[] element;
 }
+
 
 const char* HashTable::GetStringByHashKey(const uint64_t& hashKey)
 {
@@ -66,7 +46,7 @@ const char* HashTable::GetStringByHashKey(const uint64_t& hashKey)
 }
 
 uint64_t HashTable::Hash(const char* stringData) {
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(stringData);
+    const uint64_t* data = reinterpret_cast<const uint64_t*>(stringData);
     uint64_t len = strlen(stringData);
     uint64_t hash = 31;
     uint64_t c1 = 0x87c37b91114253d5ULL;
@@ -116,38 +96,6 @@ uint64_t HashTable::Hash(const char* stringData) {
     hash ^= (hash >> 33);
 
     return hash;
-}
-
-uint64_t HashTable::Hash(const uint64_t &integerData) {
-    const uint64_t seed = 0x9747b28c;
-    const uint64_t c1 = 0xcc9e2d51;
-    const uint64_t c2 = 0x1b873593;
-    const uint64_t r1 = 15;
-    const uint64_t r2 = 13;
-    const uint64_t m = 5;
-    const uint64_t n = 0xe6546b64;
-
-    uint64_t h = seed;
-    uint64_t k = integerData;
-
-    // Mixing step 1
-    k *= c1;
-    k = (k << r1) | (k >> (32 - r1)); // Rotate left
-    k *= c2;
-
-    // Mixing step 2
-    h ^= k;
-    h = (h << r2) | (h >> (32 - r2)); // Rotate left
-    h = h * m + n;
-
-    // Finalization
-    h ^= h >> 16;
-    h *= 0x85ebca6b;
-    h ^= h >> 13;
-    h *= 0xc2b2ae35;
-    h ^= h >> 16;
-
-    return h;
 }
 
 uint64_t HashTable::HashToBucket(const char* string) { return Hash(string) & this->numOfBuckets; }
