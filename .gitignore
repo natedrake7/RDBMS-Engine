@@ -1,11 +1,8 @@
 ﻿/cmake-build-debug/
-
-cmake-build-debug-visual-studio
+/cmake-build-debug-mingw/
+/cmake-build-debug-visual-studio/
 
 /build/
-
-/cmake-build-debug-mingw/
-/cmake-build-debug-mingw/
 
 /.idea/
 
