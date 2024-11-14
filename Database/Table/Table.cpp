@@ -45,7 +45,7 @@ void Table::InsertRow(const vector<string>& inputData)
         else if(columnType == ColumnType::String)//ths poutanas tha ginei dictionary encoding incoming
         {
 
-            const uint64_t primaryHashKey = this->database->InsertToHashTables(inputData[i].c_str());
+            const uint64_t primaryHashKey = this->database->InsertToHashTable(inputData[i].c_str());
             block->SetData(&primaryHashKey, sizeof(uint64_t));
         }
         else
@@ -86,7 +86,7 @@ vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& sele
             vector<Block*> selectedBlocks;
             if(selectedColumns.empty())
                 for(const auto& column : this->columns)
-                       selectedBlocks.push_back(column->GetData()[rowIndex]);
+                    selectedBlocks.push_back(column->GetData()[rowIndex]);
             else
                 for(const auto& column : selectedColumns)
                     selectedBlocks.push_back(this->columns[column->GetColumnIndex()]->GetData()[rowIndex]);

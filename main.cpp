@@ -48,15 +48,7 @@ int main()
         auto insertStart = chrono::high_resolution_clock::now();
 
         for(int i = 0;i < 10000; i++) {
-            for (int j = 0; j < i % 13; ++j) {
-                // Generate a random index into the characters string
-                const int randomIndex = rand() % characters.length();
-                randomString += characters[randomIndex];
-            }
             words[0] = to_string(i);
-            words[1] = randomString;
-            randomString.clear();
-
             table->InsertRow(words);
         }
 
@@ -72,14 +64,15 @@ int main()
 
         int value = 10;
 
-        const Block searchBlock(&value, sizeof(int), columns[0]);
+        const Block searchBlock(searchTerm, length, columns[3]);
         vector<Column*> selectedColumns = { columns[0], columns[1] };
         const auto results = table->GetRowByBlock(searchBlock);
 
-        for(const auto& row : results) {
+        for(const auto& row : results)
+        {
             const auto rowData = row.GetData();
             for(const auto& column : rowData)
-                column->PrintBlockData();
+                column->PrintBlockData(db);
         }
 
         auto end = chrono::high_resolution_clock::now();

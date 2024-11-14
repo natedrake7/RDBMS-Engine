@@ -3,8 +3,11 @@
 
 #include <iostream>
 #include <ostream>
+
+#include "../Database.h"
 #include "../Column/Column.h"
 
+class Database;
 class Column;
 
 
@@ -33,7 +36,7 @@ class Block {
 
         const size_t& GetColumnSize() const;
 
-        void PrintBlockData() const;
+        void PrintBlockData(const Database* db) const;
 };
 
 #endif

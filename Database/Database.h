@@ -9,6 +9,7 @@
 #include "Table/Table.h"
 
 using namespace std;
+class Table;
 
 enum
 {
@@ -23,7 +24,6 @@ class Database {
         string fileExtension = ".db";
         vector<Table*> tables;
         HashTable* primaryHashTable;
-        HashTable* secondaryHashTable;
 
     protected:
         void ValidateTableCreation(Table* table) const;
@@ -35,14 +35,13 @@ class Database {
 
         void CreateTable(Table* table);
 
-        void InsertRecord();
-
         void DeleteDatabase() const;
 
-        uint64_t InsertToHashTables(const char* inputString) const;
+        uint64_t InsertToHashTable(const char* inputString) const;
 
         uint64_t Hash(const char* inputString) const;
 
+        const char* GetStringByHashKey(const uint64_t& hashKey) const;
 };
 
 void CreateDatabase(const string& dbName);

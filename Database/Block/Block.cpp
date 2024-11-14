@@ -31,7 +31,7 @@ Block::~Block()
     delete this->size;
 }
 
-void Block::SetData(const void* inputData,const size_t& inputSize)
+void Block::SetData(const void* inputData, const size_t& inputSize)
 {
     // if(this->data)
     //     delete[] this->data;
@@ -50,7 +50,7 @@ const size_t& Block::GetColumnIndex() const { return this->column->GetColumnInde
 
 const size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
-void Block::PrintBlockData() const
+void Block::PrintBlockData(const Database* db) const
 {
     if(this->data == nullptr)
         return;
@@ -61,7 +61,10 @@ void Block::PrintBlockData() const
         cout << *reinterpret_cast<const int*>(this->data) << " ";
     else if(columnType == ColumnType::String)
     {
-        cout << this->data << " ";
+        uint64_t hashKey;
+        memcpy(&hashKey, this->data, sizeof(uint64_t));
+        // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
+        cout << db->GetStringByHashKey(hashKey) << " ";
     }
 
     cout << "|| ";

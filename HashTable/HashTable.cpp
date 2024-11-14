@@ -17,15 +17,16 @@ uint64_t HashTable::Insert(const char* input)
 {
     const uint64_t hashKey = Hash(input);
     const uint64_t index = this->HashToBucket(hashKey);
+    const size_t inputSize = strlen(input) + 1;
 
     for(const auto& element : this->table[index])
-        if(memcmp(element, &hashKey, sizeof(uint64_t)) == 0)
+        if(memcmp(element, input, inputSize) == 0)
             return hashKey;
+    
+    unsigned char* inputInBytes = new unsigned char[inputSize];
 
-    unsigned char* hashValue = new unsigned char[sizeof(uint64_t)];
-
-    memcpy(hashValue, &hashKey, sizeof(uint64_t));
-    this->table[index].push_back(hashValue);
+    memcpy(inputInBytes, input, inputSize);
+    this->table[index].push_back(inputInBytes);
 
     return hashKey;
 }
@@ -51,32 +52,17 @@ void HashTable::Insert(const uint64_t &input, const char* inputString)
     this->table[index].push_back(hashValue);
 }
 
-const char* HashTable::GetStringBySecondaryHashTableKey(const uint64_t &primaryHashKey, const uint64_t& secondaryHashKey)
+const char* HashTable::GetStringByHashKey(const uint64_t& hashKey)
 {
-    const uint64_t bucket = HashToBucket(secondaryHashKey);
-
-    for(const auto& element : this->table[bucket])
-    {
-        const char* value = reinterpret_cast<char*>(element);
-        const uint64_t hashKey = Hash(value);
-
-        if(hashKey == primaryHashKey)
-            return value;
-    }
-
-    return nullptr;
-}
-
-bool HashTable::ContainsPrimaryHashTableKey(const char *inputString) {
-    const uint64_t hashKey = Hash(inputString);
-
     const uint64_t index = HashToBucket(hashKey);
 
     for(const auto& element : this->table[index])
-        if(memcmp(element, inputString, sizeof(uint64_t)) == 0)
-            return true;
-
-    return false;
+    {
+        const char* value = reinterpret_cast<char*>(element);
+        if(Hash(value) == hashKey)
+            return value;
+    }
+    return nullptr;
 }
 
 uint64_t HashTable::Hash(const char* stringData) {

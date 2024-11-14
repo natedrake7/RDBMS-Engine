@@ -15,11 +15,12 @@ class HashTable {
     public:
         static uint64_t Hash(const char* stringData);
         static uint64_t Hash(const uint64_t& integerData);
+    
         explicit HashTable(const unsigned int& numOfBuckets);
         virtual ~HashTable();
+
         uint64_t Insert(const char* input);
         void Insert(const uint64_t& input, const char* inputString);
-        const char* GetStringBySecondaryHashTableKey(const uint64_t &primaryHashKey, const uint64_t& secondaryHashKey);
 
-        bool ContainsPrimaryHashTableKey(const char *inputString);
+        const char* GetStringByHashKey(const uint64_t& hashKey);
 };
