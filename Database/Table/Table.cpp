@@ -35,11 +35,11 @@ void Table::InsertRow(const vector<string>& inputData)
         Block* block = new Block(columns[i]);
         const ColumnType columnType = columns[i]->GetColumnType();
 
-        if(columnType == ColumnType::Integer)
+        if(columnType == ColumnType::Int)
         {
-            //set size only not convert to int
-            //bitoperations to make value smaller
+            //store each int value in 4 bits eg 04 -> 1 byte , 40 -> 8 bit
             long long int convertedInt = stoi(inputData[i]);
+            //pack integer to bytes
             block->SetData(&convertedInt, sizeof(int));
         }
         else if(columnType == ColumnType::String)//ths poutanas tha ginei dictionary encoding incoming
@@ -86,10 +86,7 @@ vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& sele
         {
             vector<Block*> selectedBlocks;
             if(selectedColumns.empty())
-            {
-                for(const auto& column : this->columns)
-                    selectedBlocks.push_back(rowData[column->GetColumnIndex()]);
-            }
+                selectedBlocks = rowData;
             else
                 for(const auto& column : selectedColumns)
                     selectedBlocks.push_back(rowData[column->GetColumnIndex()]);
@@ -118,27 +115,6 @@ void Table::PrintTable(size_t maxNumberOfItems) const
 
     for(size_t i = 0; i < maxNumberOfItems; ++i)
         this->rows[i]->PrintRow(this->database);
-}
-
-void Table::CastPropertyToAppropriateType(void* data, Column* column, size_t& dataSize)
-{
-    const ColumnType columnType = column->GetColumnType();
-
-    if(columnType == ColumnType::Integer)
-        cout<< *static_cast<int*>(data) << "\n";
-    else if(columnType == ColumnType::String)
-        cout<< *static_cast<string*>(data) << '\n';
-    else
-        throw invalid_argument("Unsupported column type");
-}
-
-int* Table::CastPropertyToInt(void* data){ return static_cast<int*>(data); }
-
-string* Table::CastPropertyToString(void* data){ return static_cast<string*>(data);}
-size_t generateRandomSeed() {
-    // Generate a random seed using the current time or another source
-    std::random_device rd;
-    return rd();  // Random seed
 }
 
 size_t Table::GetNumberOfColumns() const { return this->columns.size();}

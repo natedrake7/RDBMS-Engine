@@ -10,12 +10,11 @@ class Database;
 using namespace std;
 
 class Row {
-    private:
-        vector<Block*> data;
-        size_t* rowSize;
-        size_t* maxRowSize;
-        const Table* table;
-        bool isOriginalRow;
+    vector<Block*> data;
+    size_t* rowSize;
+    size_t* maxRowSize;
+    const Table* table;
+    bool isOriginalRow;
 
     public:
         explicit Row(const Table& table);

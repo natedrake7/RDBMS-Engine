@@ -38,8 +38,12 @@ void Row::PrintRow(const Database* db) const
     {
         const ColumnType columnType = this->data[i]->GetColumnType();
 
-        if(columnType == ColumnType::Integer)
-            cout << *reinterpret_cast<const int*>(this->data[i]->GetBlockData());
+        if(columnType == ColumnType::Int)
+        {
+            int integerValue;
+            memcpy(&integerValue, this->data[i]->GetBlockData(), sizeof(int));
+            cout<< integerValue;
+        }
         else if(columnType == ColumnType::String)
         {
             uint64_t hashKey;
@@ -54,3 +58,5 @@ void Row::PrintRow(const Database* db) const
             cout << " || ";
     }
 }
+
+

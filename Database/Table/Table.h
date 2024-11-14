@@ -20,11 +20,6 @@ class Table {
     vector<Row*> rows;
     const Database* database;
 
-    protected:
-        static void CastPropertyToAppropriateType(void* data, Column* column, size_t& dataSize);
-        static int* CastPropertyToInt(void* data);
-        static string* CastPropertyToString(void* data);
-
     public:
         Table(const string& tableName,const vector<Column*>& columns, const Database* database);
 

@@ -24,9 +24,7 @@ void Column::SetColumnIndex(const size_t& columnIndex) { this->columnIndex = col
 
 ColumnType Column::SetColumnType() const {
     if(this->columnTypeLiteral == "Int")
-        return ColumnType::Integer;
-    if(this->columnTypeLiteral == "Float")
-        return ColumnType::Float;
+        return ColumnType::Int;
     if(this->columnTypeLiteral == "String")
         return ColumnType::String;
     if(this->columnTypeLiteral == "Bool")

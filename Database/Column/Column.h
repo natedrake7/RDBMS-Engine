@@ -9,15 +9,16 @@ class Block;
 using namespace std;
 
 enum class ColumnType {
-    SmallInt = 0,
-    Integer = 1,
-    Long = 2,
-    Float = 3,
-    Double = 4,
-    LongDouble = 5,
-    String = 6,
-    UnicodeString = 7,
-    Bool = 8
+    TinyInt = 0,
+    SmallInt = 1,
+    Int = 2,
+    BigInt = 3,
+    Decimal = 4,
+    Double = 5,
+    LongDouble = 6,
+    String = 7,
+    UnicodeString = 8,
+    Bool = 9
 };
 
 class Column {

@@ -39,7 +39,7 @@ int main()
             , "2 Hours And 15 Minutes"
         };
 
-        for(int i = 0;i < 10000; i++) {
+        for(int i = 0;i < 100; i++) {
             words[0] = to_string(i);
             table->InsertRow(words);
         }

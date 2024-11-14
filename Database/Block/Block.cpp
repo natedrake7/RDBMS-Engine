@@ -59,7 +59,7 @@ void Block::PrintBlockData(const Database* db) const
 
     const ColumnType columnType = this->column->GetColumnType();
 
-    if(columnType == ColumnType::Integer)
+    if(columnType == ColumnType::Int)
         cout << *reinterpret_cast<const int*>(this->data);
     else if(columnType == ColumnType::String)
     {

@@ -38,7 +38,8 @@ const char* HashTable::GetStringByHashKey(const uint64_t& hashKey)
 
     for(const auto& element : this->table[index])
     {
-        const char* value = reinterpret_cast<char*>(element);
+        char* value = reinterpret_cast<char*>(element);
+
         if(Hash(value) == hashKey)
             return value;
     }
@@ -46,7 +47,7 @@ const char* HashTable::GetStringByHashKey(const uint64_t& hashKey)
 }
 
 uint64_t HashTable::Hash(const char* stringData) {
-    const uint64_t* data = reinterpret_cast<const uint64_t*>(stringData);
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(stringData);
     uint64_t len = strlen(stringData);
     uint64_t hash = 31;
     uint64_t c1 = 0x87c37b91114253d5ULL;
