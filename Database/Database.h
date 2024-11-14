@@ -23,7 +23,7 @@ class Database {
         string filename;
         string fileExtension = ".db";
         vector<Table*> tables;
-        HashTable* primaryHashTable;
+        HashTable* hashTable;
 
     protected:
         void ValidateTableCreation(Table* table) const;
@@ -39,7 +39,7 @@ class Database {
 
         uint64_t InsertToHashTable(const char* inputString) const;
 
-        uint64_t Hash(const char* inputString) const;
+        static uint64_t Hash(const char* inputString);
 
         const char* GetStringByHashKey(const uint64_t& hashKey) const;
 };
