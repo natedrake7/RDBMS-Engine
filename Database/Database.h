@@ -4,8 +4,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
-
-#include "../HashTable/HashTable.h"
+#include "../AdditionalLibraries/HashTable/HashTable.h"
 #include "Table/Table.h"
 
 using namespace std;

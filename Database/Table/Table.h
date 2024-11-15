@@ -6,6 +6,8 @@
 #include <random>
 #include "../Column/Column.h"
 #include "../Row/Row.h"
+#include "../Database.h"
+#include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
 
 using namespace std;
 

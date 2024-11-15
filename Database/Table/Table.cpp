@@ -1,8 +1,5 @@
 ﻿#include "Table.h"
 
-#include "../Database.h"
-#include "../Converter/SafeConverter.h"
-
 Table::Table(const string& tableName, const vector<Column*>& columns, const Database* database)
 {
     this->tableName = tableName;
