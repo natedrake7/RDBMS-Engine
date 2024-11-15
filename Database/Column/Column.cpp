@@ -23,11 +23,19 @@ const size_t& Column::GetColumnIndex() const { return this->columnIndex; }
 void Column::SetColumnIndex(const size_t& columnIndex) { this->columnIndex = columnIndex; }
 
 ColumnType Column::SetColumnType() const {
-    if(this->columnTypeLiteral == "Int")
+    if (this->columnTypeLiteral == "TinyInt")
+        return ColumnType::TinyInt;
+    if (this->columnTypeLiteral == "SmallInt")
+        return ColumnType::SmallInt;
+    if (this->columnTypeLiteral == "Int")
         return ColumnType::Int;
-    if(this->columnTypeLiteral == "String")
+    if (this->columnTypeLiteral == "BigInt")
+        return ColumnType::BigInt;
+    if (this->columnTypeLiteral == "Decimal")
+        return ColumnType::Decimal;
+    if (this->columnTypeLiteral == "String")
         return ColumnType::String;
-    if(this->columnTypeLiteral == "Bool")
+    if (this->columnTypeLiteral == "Bool")
         return ColumnType::Bool;
 
     throw runtime_error("Column type not recognized");

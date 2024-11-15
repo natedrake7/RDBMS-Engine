@@ -1,6 +1,7 @@
 ﻿#include "Table.h"
 
 #include "../Database.h"
+#include "../Converter/SafeConverter.h"
 
 Table::Table(const string& tableName, const vector<Column*>& columns, const Database* database)
 {
@@ -35,14 +36,28 @@ void Table::InsertRow(const vector<string>& inputData)
         Block* block = new Block(columns[i]);
         const ColumnType columnType = columns[i]->GetColumnType();
 
-        if(columnType == ColumnType::Int)
+        if (columnType == ColumnType::TinyInt)
+        {
+            int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData[i]);
+            block->SetData(&convertedTinyInt, sizeof(int8_t));
+        }
+        else if (columnType == ColumnType::SmallInt)
+        {
+            int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData[i]);
+            block->SetData(&convertedSmallInt, sizeof(int16_t));
+        }
+        else if (columnType == ColumnType::Int)
         {
             //store each int value in 4 bits eg 04 -> 1 byte , 40 -> 8 bit
-            long long int convertedInt = stoi(inputData[i]);
-            //pack integer to bytes
-            block->SetData(&convertedInt, sizeof(int));
+            int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData[i]);
+            block->SetData(&convertedInt, sizeof(int32_t));
         }
-        else if(columnType == ColumnType::String)//ths poutanas tha ginei dictionary encoding incoming
+        else if (columnType == ColumnType::BigInt)
+        {
+            int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData[i]);
+            block->SetData(&convertedBigInt, sizeof(int64_t));
+        }
+        else if (columnType == ColumnType::String)//ths poutanas tha ginei dictionary encoding incoming
         {
 
             const uint64_t primaryHashKey = this->database->InsertToHashTable(inputData[i].c_str());

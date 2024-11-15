@@ -17,6 +17,8 @@ add_library(Database Database/Database.cpp Database/Database.h
         Database/Block/Block.cpp
         Database/Block/Block.h
         Database/Column/Column.cpp
-        Database/Column/Column.h)
+        Database/Column/Column.h
+        Database/Converter/SafeConverter.cpp
+        Database/Converter/SafeConverter.h)
 
 target_link_libraries(DatabaseInterface PRIVATE Database)

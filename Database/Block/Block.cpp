@@ -59,8 +59,14 @@ void Block::PrintBlockData(const Database* db) const
 
     const ColumnType columnType = this->column->GetColumnType();
 
-    if(columnType == ColumnType::Int)
-        cout << *reinterpret_cast<const int*>(this->data);
+    if (columnType == ColumnType::TinyInt)
+        cout << *reinterpret_cast<const int8_t*>(this->data);
+    else if (columnType == ColumnType::SmallInt)
+        cout << *reinterpret_cast<const int16_t*>(this->data);
+    else if(columnType == ColumnType::Int)
+        cout << *reinterpret_cast<const int32_t*>(this->data);
+    else if (columnType == ColumnType::BigInt)
+        cout << *reinterpret_cast<const int64_t*>(this->data);
     else if(columnType == ColumnType::String)
     {
         uint64_t hashKey;

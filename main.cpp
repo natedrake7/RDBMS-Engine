@@ -16,11 +16,11 @@ int main()
         // CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
-        //
+
         // db->DeleteDatabase();
 
         vector<Column*> columns;
-        columns.push_back(new Column("MovieID", "Int", sizeof(int), false));
+        columns.push_back(new Column("MovieID", "TinyInt", sizeof(int8_t), false));
         columns.push_back(new Column("MovieName", "String", 100, true));
         columns.push_back(new Column("MovieType", "String", 100, true));
         columns.push_back(new Column("MovieDesc", "String", 100, true));
@@ -31,7 +31,7 @@ int main()
         db->CreateTable(table);
 
         vector<string> words = {
-            "0"
+            "129"
             , "Silence Of The Lambs"
             , "Thriller"
             , "A detective searches for a serial killer after conducting an experiment with Dr Hannibal Lecter and uncovers some harsh truths(that blacks do die first)"
@@ -40,7 +40,7 @@ int main()
         };
 
         for(int i = 0;i < 100; i++) {
-            words[0] = to_string(i);
+            //words[0] = to_string(i);
             table->InsertRow(words);
         }
 

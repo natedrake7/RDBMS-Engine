@@ -38,11 +38,29 @@ void Row::PrintRow(const Database* db) const
     {
         const ColumnType columnType = this->data[i]->GetColumnType();
 
-        if(columnType == ColumnType::Int)
+        if (columnType == ColumnType::TinyInt)
         {
-            int integerValue;
-            memcpy(&integerValue, this->data[i]->GetBlockData(), sizeof(int));
-            cout<< integerValue;
+            int8_t tinyIntValue;
+            memcpy(&tinyIntValue, this->data[i]->GetBlockData(), sizeof(int8_t));
+            cout << tinyIntValue;
+        }
+        else if (columnType == ColumnType::SmallInt)
+        {
+            int16_t smallIntValue;
+            memcpy(&smallIntValue, this->data[i]->GetBlockData(), sizeof(int16_t));
+            cout << smallIntValue;
+        }
+        else if(columnType == ColumnType::Int)
+        {
+            int32_t intValue;
+            memcpy(&intValue, this->data[i]->GetBlockData(), sizeof(int32_t));
+            cout << intValue;
+        }
+        else if (columnType == ColumnType::BigInt)
+        {
+            int64_t bigIntValue;
+            memcpy(&bigIntValue, this->data[i]->GetBlockData(), sizeof(int64_t));
+            cout << bigIntValue;
         }
         else if(columnType == ColumnType::String)
         {
