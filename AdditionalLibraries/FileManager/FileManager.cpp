@@ -9,7 +9,7 @@ File::File(const string& filename)
 File::~File()
 {
     this->filePtr->close();
-    delete *this->filePtr;
+    delete this->filePtr;
 }
 
 FileManager::FileManager() = default;
