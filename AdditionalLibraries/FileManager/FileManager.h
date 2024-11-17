@@ -1,23 +1,34 @@
 ﻿#pragma once
 #include <fstream>
-#include <vector>
+#include <list>
+#include <unordered_map>
+
+constexpr size_t MAX_OPEN_FILES = 100;
 
 using namespace std;
 
 typedef struct File {
     string name;
-    fstream file;
+    fstream* filePtr;
+
+    explicit File(const string& filename);
+    ~File();
 }File;
 
+typedef list<File*>::iterator FileIterator;
+
 class FileManager {
-    vector<File> files;
-    size_t maxOpenFiles;
-
+    list<File*> filesList;
+    unordered_map<string, FileIterator> cache;
+    
+    protected:
+        void OpenFile(const string& fileName);
+        void RemoveFile();
+    
     public:
-    explicit  FileManager();
-    ~FileManager();
-    void openFile(const string& fileName);
-    void closeFile();
-
+        explicit  FileManager();
+        ~FileManager();
+        fstream* GetFile(const string& fileName);
+        void CloseFile(const string& fileName);
 };
 
