@@ -3,13 +3,14 @@
 #include <list>
 #include <unordered_map>
 
-constexpr size_t MAX_OPEN_FILES = 100;
+constexpr size_t MAX_OPEN_FILES = 2;
 
 using namespace std;
 
 typedef struct File {
     string name;
     fstream* filePtr;
+    int lastPageId;
 
     explicit File(const string& filename);
     ~File();
@@ -28,6 +29,7 @@ class FileManager {
     public:
         explicit  FileManager();
         ~FileManager();
+        void CreateFile(const string& fileName, const string& extension);
         fstream* GetFile(const string& fileName);
         void CloseFile(const string& fileName);
 };

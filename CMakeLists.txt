@@ -11,7 +11,11 @@ add_library(AdditionalLibraries
         AdditionalLibraries/SafeConverter/SafeConverter.cpp
         AdditionalLibraries/SafeConverter/SafeConverter.h
         AdditionalLibraries/FileManager/FileManager.cpp
-        AdditionalLibraries/FileManager/FileManager.h)
+        AdditionalLibraries/FileManager/FileManager.h
+        AdditionalLibraries/PageManager/PageManager.cpp
+        AdditionalLibraries/PageManager/PageManager.h
+        AdditionalLibraries/PageManager/PageManager.cpp
+        AdditionalLibraries/PageManager/PageManager.cpp)
 add_library(Database
         Database/Database.cpp
         Database/Database.h
@@ -22,6 +26,8 @@ add_library(Database
         Database/Block/Block.cpp
         Database/Block/Block.h
         Database/Column/Column.cpp
-        Database/Column/Column.h)
+        Database/Column/Column.h
+        Database/Page/Page.cpp
+        Database/Page/Page.h)
 
 target_link_libraries(DatabaseInterface PRIVATE Database PRIVATE AdditionalLibraries)

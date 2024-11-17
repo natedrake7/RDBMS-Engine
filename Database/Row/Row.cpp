@@ -42,7 +42,7 @@ void Row::PrintRow(const Database* db) const
         {
             int8_t tinyIntValue;
             memcpy(&tinyIntValue, this->data[i]->GetBlockData(), sizeof(int8_t));
-            cout << tinyIntValue;
+            cout << static_cast<int>(tinyIntValue);
         }
         else if (columnType == ColumnType::SmallInt)
         {

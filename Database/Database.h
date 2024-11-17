@@ -4,7 +4,10 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+
+#include "../AdditionalLibraries/FileManager/FileManager.h"
 #include "../AdditionalLibraries/HashTable/HashTable.h"
+#include "../AdditionalLibraries/FileManager/FileManager.h"
 #include "Table/Table.h"
 
 using namespace std;
@@ -18,18 +21,16 @@ enum
 
 
 class Database {
-    private:
-        fstream* fileDescriptor;
-        string filename;
-        string fileExtension = ".db";
-        vector<Table*> tables;
-        HashTable* hashTable;
+    string filename;
+    string fileExtension = ".db";
+    vector<Table*> tables;
+    HashTable* hashTable;
 
     protected:
         void ValidateTableCreation(Table* table) const;
 
     public:
-        Database(fstream* fileDescriptor, const string& dbName);
+        Database(const string& dbName);
 
         ~Database();
 
@@ -44,7 +45,7 @@ class Database {
         const char* GetStringByHashKey(const uint64_t& hashKey) const;
 };
 
-void CreateDatabase(const string& dbName);
+void CreateDatabase(const string& dbName, FileManager* fileManager);
 
 void UseDatabase(const string& dbName, Database** db);
 

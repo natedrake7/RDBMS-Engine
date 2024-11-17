@@ -10,10 +10,11 @@ int CreateResponse(T input) { return static_cast<int>(input); }
 int main()
 {
     Database* db = nullptr;
+    FileManager fileManager;
     const string dbName = "stakosDb";
     try
     {
-        // CreateDatabase(dbName);
+        // CreateDatabase(dbname2, &fileManager);
 
         UseDatabase(dbName, &db);
 
@@ -31,7 +32,7 @@ int main()
         db->CreateTable(table);
 
         vector<string> words = {
-            "129"
+            "120"
             , "Silence Of The Lambs"
             , "Thriller"
             , "A detective searches for a serial killer after conducting an experiment with Dr Hannibal Lecter and uncovers some harsh truths(that blacks do die first)"

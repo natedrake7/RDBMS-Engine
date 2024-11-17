@@ -4,6 +4,7 @@ File::File(const string& filename)
 {
     this->name = filename;
     this->filePtr = new fstream(filename.c_str());
+    this->lastPageId = -1;
 }
 
 File::~File()
@@ -14,7 +15,33 @@ File::~File()
 
 FileManager::FileManager() = default;
 
-FileManager::~FileManager() = default;
+FileManager::~FileManager()
+{
+    for(const auto& file : this->filesList)
+        delete file;
+}
+
+void FileManager::CreateFile(const string& fileName, const string& extension)
+{
+    const auto& fileIteratorKeyPair = this->cache.find(fileName);
+    
+    if(fileIteratorKeyPair != this->cache.end())
+        throw runtime_error("File already exists");
+    
+    ifstream fileExists(fileName + extension);
+
+    if(fileExists)
+        throw runtime_error("Database with name: " + fileName +" already exists");
+
+    fileExists.close();
+
+    ofstream file(fileName + extension);
+
+    if(!file)
+        throw runtime_error("Database " + fileName + " could not be created");
+
+    file.close();
+}
 
 fstream* FileManager::GetFile(const string& fileName)
 {
@@ -22,12 +49,13 @@ fstream* FileManager::GetFile(const string& fileName)
     
     if(fileIteratorKeyPair == this->cache.end())
         this->OpenFile(fileName);
+    else
+    {
+        this->filesList.push_front(*fileIteratorKeyPair->second);
+        this->filesList.erase(fileIteratorKeyPair->second);
+    }
 
-    this->filesList.erase(fileIteratorKeyPair->second);
-    this->filesList.push_front(*fileIteratorKeyPair->second);
-    this->cache[fileName] = this->filesList.begin();
-
-    return (*fileIteratorKeyPair->second)->filePtr;
+    return (*this->filesList.begin())->filePtr;
 }
 
 void FileManager::CloseFile(const string& fileName)
@@ -61,10 +89,12 @@ void FileManager::OpenFile(const string& fileName)
 
 void FileManager::RemoveFile()
 {
-    const auto& fileIterator = this->filesList.end();
-        
-    this->filesList.erase(fileIterator);
+    const auto& fileIterator = prev(this->filesList.end());
+
     this->cache.erase((*fileIterator)->name);
-        
+
     delete *fileIterator;
+
+    this->filesList.erase(fileIterator);
+        
 }

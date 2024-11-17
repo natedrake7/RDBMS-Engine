@@ -18,6 +18,8 @@ class Block;
 class Table {
     string tableName;
     size_t maxRowSize;
+    int firstPageId;
+    int lastPageId;
     vector<Column*> columns;
     vector<Row*> rows;
     const Database* database;
