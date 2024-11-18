@@ -32,7 +32,7 @@ int main()
         db->CreateTable(table);
 
         vector<string> words = {
-            "120"
+            "1"
             , "Silence Of The Lambs"
             , "Thriller"
             , "A detective searches for a serial killer after conducting an experiment with Dr Hannibal Lecter and uncovers some harsh truths(that blacks do die first)"
@@ -41,11 +41,11 @@ int main()
         };
 
         for(int i = 0;i < 100; i++) {
-            //words[0] = to_string(i);
+            words[0] = to_string(i);
             table->InsertRow(words);
         }
 
-        int value = 10;
+        int8_t value = 10;
 
         const Block searchBlock(&value, sizeof(int), columns[0]);
         vector<Column*> selectedColumns = { columns[0], columns[1] };

@@ -64,10 +64,10 @@ void Row::PrintRow(const Database* db) const
         }
         else if(columnType == ColumnType::String)
         {
-            uint64_t hashKey;
-            memcpy(&hashKey, this->data[i]->GetBlockData(), sizeof(uint64_t));
+            // const char* hashKey;
+            // memcpy(&hashKey, this->data[i]->GetBlockData(), sizeof(uint64_t));
             // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
-            cout << db->GetStringByHashKey(hashKey);
+            cout << reinterpret_cast<const char*>(this->data[i]->GetBlockData());
         }
 
         if(i == this->data.size() - 1)

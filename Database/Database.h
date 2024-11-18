@@ -24,13 +24,13 @@ class Database {
     string filename;
     string fileExtension = ".db";
     vector<Table*> tables;
-    HashTable* hashTable;
+    // HashTable* hashTable;
 
     protected:
         void ValidateTableCreation(Table* table) const;
 
     public:
-        Database(const string& dbName);
+        explicit Database(const string& dbName);
 
         ~Database();
 
@@ -38,11 +38,11 @@ class Database {
 
         void DeleteDatabase() const;
 
-        uint64_t InsertToHashTable(const char* inputString) const;
+        // uint64_t InsertToHashTable(const char* inputString) const;
 
-        static uint64_t Hash(const char* inputString);
+        // static uint64_t Hash(const char* inputString);
 
-        const char* GetStringByHashKey(const uint64_t& hashKey) const;
+        // const char* GetStringByHashKey(const uint64_t& hashKey) const;
 };
 
 void CreateDatabase(const string& dbName, FileManager* fileManager);

@@ -69,10 +69,10 @@ void Block::PrintBlockData(const Database* db) const
         cout << *reinterpret_cast<const int64_t*>(this->data);
     else if(columnType == ColumnType::String)
     {
-        uint64_t hashKey;
-        memcpy(&hashKey, this->data, sizeof(uint64_t));
-        // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
-        cout << db->GetStringByHashKey(hashKey);
+        // uint64_t hashKey;
+        // memcpy(&hashKey, this->data, sizeof(uint64_t));
+        // // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
+        // cout << db->GetStringByHashKey(hashKey);
     }
 
     cout << " || ";
