@@ -19,19 +19,22 @@ void PageManager::BindDatabase(const Database *database) { this->database = data
 Page* PageManager::CreatePage(const int& pageId)
 {
     Page* page = new Page(pageId);
+    const string& filename = this->database->GetFileName();
     if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
         this->RemovePage();
 
     this->pageList.push_front(page);
     this->cache[pageId] = this->pageList.begin();
-    
+
+    (*this->pageList.begin())->SetFileName(filename);
+
     return page;
 }
 
 Page* PageManager::GetPage(const int& pageId, const Table* table)
 {
     const auto& pageHashIterator = this->cache.find(pageId);
-    const string& filename = this->database->GetFileName();
+
 
     if(pageHashIterator == this->cache.end())
         this->OpenPage(pageId, table);
@@ -42,18 +45,15 @@ Page* PageManager::GetPage(const int& pageId, const Table* table)
         this->cache[pageId] = this->pageList.begin();
     }
 
-    (*this->pageList.begin())->SetFileName(filename);
-    
     return *this->pageList.begin();
 }
 
-MetaDataPage* PageManager::GetMetaDataPage()
+MetaDataPage* PageManager::GetMetaDataPage(const string& filename)
 {
     const auto& pageHashIterator = this->cache.find(0);
-    const string& filename = this->database->GetFileName();
 
     if(pageHashIterator == this->cache.end())
-        this->OpenMetaDataPage();
+        this->OpenMetaDataPage(filename);
     else
     {
         this->pageList.push_front(*pageHashIterator->second);
@@ -66,9 +66,8 @@ MetaDataPage* PageManager::GetMetaDataPage()
     return dynamic_cast<MetaDataPage*>(*this->pageList.begin());
 }
 
-MetaDataPage* PageManager::CreateMetaDataPage()
+MetaDataPage* PageManager::CreateMetaDataPage(const string& filename)
 {
-    const string &filename = this->database->GetFileName();
     MetaDataPage* page = new MetaDataPage(0);
 
     if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
@@ -88,13 +87,14 @@ void PageManager::RemovePage()
 
     if((*pageIterator)->GetPageDirtyStatus())
     {
-        fstream* file = this->fileManager->GetFile((*pageIterator)->GetFileName());
+        const string& filename = (*pageIterator)->GetFileName();
+        fstream* file = this->fileManager->GetFile(filename);
 
         const int pageId = (*pageIterator)->GetPageId();
 
         const streampos pageOffset = pageId * PAGE_SIZE;
 
-        file->seekp(pageOffset);
+        SetWriteFilePointerToOffset(file, pageOffset);
 
         (*pageIterator)->WritePageToFile(file);
 
@@ -120,13 +120,13 @@ Page* PageManager::OpenPage(const int& pageId, const Table* table)
 
     const streampos pageOffset = pageId * PAGE_SIZE;
     vector<char> buffer(PAGE_SIZE);
-    
-    file->seekg(pageOffset);
+
+    SetReadFilePointerToOffset(file, pageOffset);
 
     file->read(buffer.data(), PAGE_SIZE);
 
-    if(file->fail())
-        throw runtime_error("Error reading page");
+    // if(file->fail())
+    //     throw runtime_error("Error reading page");
 
     Page* page = new Page(pageId);
     this->pageList.push_front(page);
@@ -138,20 +138,18 @@ Page* PageManager::OpenPage(const int& pageId, const Table* table)
     return page;
 }
 
-MetaDataPage* PageManager::OpenMetaDataPage()
+MetaDataPage* PageManager::OpenMetaDataPage(const string& filename)
 {
     if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
         this->RemovePage();
-
-    const string& filename = this->database->GetFileName();
 
     //read page from disk, call FileManager
     fstream* file = this->fileManager->GetFile(filename);
 
     const streampos pageOffset = 0;
     vector<char> buffer(PAGE_SIZE);
-
-    file->seekg(pageOffset);
+\
+    SetReadFilePointerToOffset(file, pageOffset);
 
     file->read(buffer.data(), PAGE_SIZE);
 
@@ -166,4 +164,18 @@ MetaDataPage* PageManager::OpenMetaDataPage()
     this->cache[0] = this->pageList.begin();
 
     return page;
+}
+
+void PageManager::SetReadFilePointerToOffset(fstream *file,const streampos& offSet)
+{
+    file->clear();
+    file->seekg(0, ios::beg);
+    file->seekg(offSet);
+}
+
+void PageManager::SetWriteFilePointerToOffset(fstream *file, const streampos& offSet)
+{
+    file->clear();
+    file->seekp(0, ios::beg);
+    file->seekp(offSet);
 }

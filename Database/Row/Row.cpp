@@ -21,7 +21,7 @@ Row::~Row(){
             delete block;
 }
 
-void Row::InsertColumnData(Block *block, const size_t &columnIndex)
+void Row::InsertColumnData(Block *block, const  uint16_t& columnIndex)
 {
     this->data[columnIndex] = block;
     this->rowSize += block->GetBlockSize();
@@ -74,6 +74,6 @@ void Row::PrintRow() const
     }
 }
 
-const size_t & Row::GetRowSize() const { return this->rowSize; }
+const uint32_t & Row::GetRowSize() const { return this->rowSize; }
 
 

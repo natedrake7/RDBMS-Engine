@@ -3,7 +3,7 @@
 File::File(const string& filename)
 {
     this->name = filename;
-    this->filePtr = new fstream(filename.c_str(), ios::out | ios::in);
+    this->filePtr = new fstream(filename.c_str(), ios::out | ios::in | ios::binary);
     this->lastPageId = -1;
 }
 
@@ -11,6 +11,7 @@ File::~File()
 {
     this->filePtr->close();
     delete this->filePtr;
+    filePtr = nullptr;
 }
 
 FileManager::FileManager() = default;

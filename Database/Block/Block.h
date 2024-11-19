@@ -14,27 +14,27 @@ class Column;
 class Block {
     private:
         unsigned char* data;
-        size_t size;
+        uint32_t size;
         const Column* column;
 
     public:
         explicit Block(const Column* column);
 
-        // explicit Block(const Block* block);
+        explicit Block(const Block* block);
 
-        Block(const void* data, const size_t& size,const Column* column);
+        Block(const void* data, const uint32_t& size,const Column* column);
 
         ~Block();
 
-        void SetData(const void* inputData, const size_t& inputSize);
+        void SetData(const void* inputData, const uint32_t& inputSize);
 
         unsigned char* GetBlockData() const;
 
-        const size_t& GetBlockSize() const;
+        const uint32_t& GetBlockSize() const;
 
-        const size_t& GetColumnIndex() const;
+        const uint16_t& GetColumnIndex() const;
 
-        const size_t& GetColumnSize() const;
+        const uint32_t& GetColumnSize() const;
 
         const ColumnType& GetColumnType() const;
 

@@ -26,8 +26,8 @@ typedef struct ColumnMetadata {
     int columnTypeLiteralSize;
     string columnTypeLiteral;
     ColumnType columnType;
-    size_t columnIndex;
-    size_t recordSize;
+    uint16_t columnIndex;
+    uint32_t recordSize;
     bool allowNulls;
 }ColumnMetadata;
 
@@ -46,13 +46,13 @@ class Column {
 
         const ColumnType& GetColumnType() const;
 
-        const size_t& GetColumnSize() const;
+        const uint32_t& GetColumnSize() const;
 
         bool& GetAllowNulls();
 
-        void SetColumnIndex(const size_t& columnIndex);
+        void SetColumnIndex(const uint16_t& columnIndex);
 
-        const size_t& GetColumnIndex() const;
+        const uint16_t& GetColumnIndex() const;
 
         const ColumnMetadata& GetColumnMetadata() const;
 };

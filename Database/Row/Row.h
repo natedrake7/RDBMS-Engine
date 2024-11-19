@@ -11,7 +11,7 @@ using namespace std;
 
 class Row {
     vector<Block*> data;
-    size_t rowSize;
+    uint32_t rowSize;
     size_t maxRowSize;
     const Table* table;
     bool isOriginalRow;
@@ -23,13 +23,13 @@ class Row {
 
         ~Row();
 
-        void InsertColumnData(Block* block, const size_t& columnIndex);
+        void InsertColumnData(Block* block, const uint16_t& columnIndex);
 
         const vector<Block*>& GetData() const;
 
         void PrintRow() const;
 
-        const size_t& GetRowSize() const;
+        const uint32_t& GetRowSize() const;
 };
 
 

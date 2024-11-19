@@ -6,9 +6,9 @@
 using namespace std;
 
 typedef struct DatabaseMetaData{
-    int lastPageId{};
-    int numberOfTables{};
-    int databaseNameSize{};
+    uint16_t lastPageId;
+    int numberOfTables;
+    int databaseNameSize;
     string databaseName;
 
     DatabaseMetaData();

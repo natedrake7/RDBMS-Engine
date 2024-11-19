@@ -23,16 +23,16 @@ Table::Table(const string& tableName, const vector<Column*>& columns, Database* 
     this->database = database;
     this->metadata.tableName = tableName;
     this->metadata.maxRowSize = 0;
-    this->metadata.firstPageId = -1;
-    this->metadata.lastPageId = -1;
+    this->metadata.firstPageId = 0;
+    this->metadata.lastPageId = 0;
     this->metadata.numberOfColumns = columns.size();
 
-    size_t counter = 0;
+    uint16_t counter = 0;
     for(const auto& column : columns)
     {
         this->metadata.maxRowSize += column->GetColumnSize();
-        const size_t columnHash = counter++;
-        column->SetColumnIndex(columnHash);
+        column->SetColumnIndex(counter);
+        counter++;
     }
 }
 
@@ -85,15 +85,12 @@ void Table::InsertRow(const vector<string>& inputData)
             block->SetData(&convertedBigInt, sizeof(int64_t));
         }
         else if (columnType == ColumnType::String)
-        {
-            // const uint64_t primaryHashKey = this->database->InsertToHashTable(inputData[i].c_str());
-            string convertedString = inputData[i] + '\0';;
-            block->SetData(convertedString.c_str(), convertedString.size() + 1);
-        }
+            block->SetData(inputData[i].c_str(), inputData[i].size() + 1);
         else
             throw invalid_argument("Unsupported column type");
 
-        row->InsertColumnData(block, this->columns[i]->GetColumnIndex());
+        const auto& columnIndex = columns[i]->GetColumnIndex();
+        row->InsertColumnData(block, columnIndex);
     }
 
     Page* lastPage = nullptr;
@@ -101,9 +98,9 @@ void Table::InsertRow(const vector<string>& inputData)
     {
         lastPage = this->database->GetPage(this->metadata.lastPageId, *this);
 
-        if(lastPage->GetBytesLeft() >= row->GetRowSize())
+        if(lastPage->GetBytesLeft() >= row->GetRowSize() + this->GetNumberOfColumns() * sizeof(uint32_t))
         {
-            lastPage->InsertRow(row);
+            lastPage->InsertRow(row, *this);
             return;
         }
     }
@@ -115,12 +112,12 @@ void Table::InsertRow(const vector<string>& inputData)
     if(lastPage != nullptr)
         lastPage->SetNextPageId(newPageId);
 
-    if(this->metadata.firstPageId == -1)
+    if(this->metadata.firstPageId <= 0)
         this->metadata.firstPageId = newPageId;
 
     this->metadata.lastPageId = newPageId;
 
-    newPage->InsertRow(row);
+    newPage->InsertRow(row, *this);
 
     // this->rows.push_back(row);
     // cout<<"Row Affected: 1"<<'\n';
@@ -129,7 +126,7 @@ void Table::InsertRow(const vector<string>& inputData)
 vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns) const
 {
     vector<Row> selectedRows;
-    const size_t& blockIndex = block.GetColumnIndex();
+    const uint16_t& blockIndex = block.GetColumnIndex();
     const ColumnType& columnType = this->columns[blockIndex]->GetColumnType();
     const auto searchBlockData = block.GetBlockData();
 
@@ -171,7 +168,7 @@ void Table::PrintTable(size_t maxNumberOfItems) const
         this->rows[i]->PrintRow();
 }
 
-size_t Table::GetNumberOfColumns() const { return this->columns.size();}
+uint16_t Table::GetNumberOfColumns() const { return this->columns.size();}
 
 const TableMetaData& Table::GetTableMetadata() const { return this->metadata; }
 
@@ -186,11 +183,10 @@ vector<Row> Table::SelectRows(const size_t& count) const
                         ? numeric_limits<size_t>::max()
                         : count;
 
-
-    while(pageId != -1)
+    while(pageId > 0)
     {
         Page* page = this->database->GetPage(pageId, *this);
-        const vector<Row> pageRows = page->GetRows();
+        const vector<Row> pageRows = page->GetRows(*this);
 
         if(selectedRows.size() + pageRows.size() > rowsToSelect)
         {

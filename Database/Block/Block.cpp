@@ -1,6 +1,6 @@
 ﻿#include "Block.h"
 
-Block::Block(const void* data, const size_t& size, const Column* column)
+Block::Block(const void* data, const uint32_t& size, const Column* column)
 {
     this->size = size;
     this->column = column;
@@ -13,6 +13,13 @@ Block::Block(const Column* column)
     this->column = column;
     this->data = nullptr;
     // this->SetData(data, size);
+}
+
+Block::Block(const Block *block)
+{
+    this->size = block->size;
+    this->column = block->column;
+    this->SetData(block->data, block->size);
 }
 
 // Block::Block(Column* column)
@@ -29,7 +36,7 @@ Block::~Block()
     this->data = nullptr;
 }
 
-void Block::SetData(const void* inputData, const size_t& inputSize)
+void Block::SetData(const void* inputData, const uint32_t& inputSize)
 {
     // if(this->data)
     //     delete[] this->data;
@@ -42,11 +49,11 @@ void Block::SetData(const void* inputData, const size_t& inputSize)
 
 unsigned char* Block::GetBlockData() const { return this->data; }
 
-const size_t& Block::GetBlockSize() const { return this->size; }
+const uint32_t& Block::GetBlockSize() const { return this->size; }
 
-const size_t& Block::GetColumnIndex() const { return this->column->GetColumnIndex(); }
+const uint16_t& Block::GetColumnIndex() const { return this->column->GetColumnIndex(); }
 
-const size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
+const uint32_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
 const ColumnType & Block::GetColumnType() const { return this->column->GetColumnType(); }
 

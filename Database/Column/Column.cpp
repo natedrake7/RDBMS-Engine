@@ -1,6 +1,6 @@
 ﻿#include "Column.h"
 
-Column::Column(const string& columnName, const string&  columnTypeLiteral, const int&  recordSize, const bool& allowNulls)
+Column::Column(const string& columnName, const string& columnTypeLiteral, const int&  recordSize, const bool& allowNulls)
 {
     this->metadata.columnName = columnName;
     this->metadata.columnTypeLiteral = columnTypeLiteral;
@@ -16,15 +16,15 @@ string& Column::GetColumnName() { return this->metadata.columnName; }
 
 const ColumnType& Column::GetColumnType() const { return this->metadata.columnType; }
 
-const size_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
+const uint32_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
 
 bool& Column::GetAllowNulls() { return this->metadata.allowNulls;}
 
-const size_t& Column::GetColumnIndex() const { return this->metadata.columnIndex; }
+const uint16_t& Column::GetColumnIndex() const { return this->metadata.columnIndex; }
 
 const ColumnMetadata & Column::GetColumnMetadata() const { return this->metadata; }
 
-void Column::SetColumnIndex(const size_t& columnIndex) { this->metadata.columnIndex = columnIndex; }
+void Column::SetColumnIndex(const uint16_t& columnIndex) { this->metadata.columnIndex = columnIndex; }
 
 ColumnType Column::SetColumnType() const {
     if (this->metadata.columnTypeLiteral == "TinyInt")

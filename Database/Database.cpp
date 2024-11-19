@@ -15,7 +15,7 @@ void Database::ValidateTableCreation(Table* table) const
 
 void Database::WriteMetaDataToFile()
 {
-    MetaDataPage* metaDataPage = this->pageManager->GetMetaDataPage();
+    MetaDataPage* metaDataPage = this->pageManager->GetMetaDataPage(this->filename + this->fileExtension);
 
     metaDataPage->SetMetaData(this->metadata, this->tables);
 }
@@ -26,7 +26,7 @@ Database::Database(const string &dbName, PageManager *pageManager)
     this->filename = dbName;
     this->pageManager = pageManager;
 
-    MetaDataPage* page = pageManager->GetMetaDataPage();
+    MetaDataPage* page = pageManager->GetMetaDataPage(this->filename + this->fileExtension);
 
     this->metadata = page->GetDatabaseMetaData();
     vector<TableFullMetaData> tableFullMetaData = page->GetTableFullMetaData();
@@ -86,7 +86,7 @@ Table* Database::OpenTable(const string &tableName)
 void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager* pageManager)
 {
     fileManager->CreateFile(dbName, ".db");
-    MetaDataPage* metaDataPage = pageManager->CreateMetaDataPage();
+    MetaDataPage* metaDataPage = pageManager->CreateMetaDataPage(dbName + ".db");
 
     metaDataPage->SetMetaData(DatabaseMetaData(dbName, 0, 0), vector<Table*>());
 }

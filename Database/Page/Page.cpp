@@ -2,10 +2,11 @@
 
 PageMetadata::PageMetadata()
 {
-    this->pageId = -1;
+    this->pageId = 0;
     this->pageSize = 0;
-    this->bytesLeft = PAGE_SIZE;
-    this->nextPageId = -1;
+    this->nextPageId = 0;
+    this->bytesLeft = PAGE_SIZE - 4 * sizeof(uint16_t);
+
 }
 
 PageMetadata::~PageMetadata() = default;
@@ -22,10 +23,10 @@ Page::~Page()
         delete row;
 }
 
-void Page::InsertRow(Row* row)
+void Page::InsertRow(Row* row, const Table& table)
 {
     this->rows.push_back(row);
-    this->metadata.bytesLeft -= row->GetRowSize();
+    this->metadata.bytesLeft -= (row->GetRowSize() + table.GetNumberOfColumns() * sizeof(uint32_t));
     this->metadata.pageSize++;
     this->isDirty = true;
 }
@@ -42,34 +43,42 @@ void Page::UpdateRow(Row* row)
 
 void Page::GetPageDataFromFile(const vector<char>& data, const Table* table)
 {
-    memcpy(&this->metadata, data.data(), sizeof(PageMetadata));
 
-    size_t dataOffset = sizeof(PageMetadata);
+    memcpy(&this->metadata.pageId, data.data(), sizeof(uint16_t));
+    uint32_t dataOffset = sizeof(uint16_t);
+
+    memcpy(&this->metadata.nextPageId, data.data() + dataOffset, sizeof(uint16_t));
+    dataOffset += sizeof(uint16_t);
+
+    memcpy(&this->metadata.pageSize, data.data() + dataOffset, sizeof(uint16_t));
+    dataOffset += sizeof(uint16_t);
+
+    memcpy(&this->metadata.bytesLeft, data.data() + dataOffset, sizeof(uint16_t));
+    dataOffset += sizeof(uint16_t);
+
     const auto& columns = table->GetColumns();
     const int columnsSize = columns.size();
-    int bytesToRead;
 
     for (int i = 0; i < this->metadata.pageSize; i++)
     {
-        // figure out how to use db here
          Row* row = new Row(*table);
          for(int j = 0; j < columnsSize; j++)
          {
-             memcpy(&bytesToRead, data.data() + dataOffset, sizeof(int));
+             uint32_t bytesToRead = 0;
+             memcpy(&bytesToRead, data.data() + dataOffset, sizeof(uint32_t));
 
              unsigned char* bytes = new unsigned char[bytesToRead];
 
-             dataOffset += sizeof(int);
+             dataOffset += sizeof(uint32_t);
 
              memcpy(bytes, data.data() + dataOffset, bytesToRead);
              dataOffset += bytesToRead;
-
 
              Block* block = new Block(bytes, bytesToRead, columns[j]);
 
              row->InsertColumnData(block, j);
 
-             delete bytes;
+             delete[] bytes;
          }
          this->rows.push_back(row);
     }
@@ -77,14 +86,17 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table)
 
 void Page::WritePageToFile(fstream *filePtr)
 {
-    filePtr->write(reinterpret_cast<char*>(&this->metadata), sizeof(PageMetadata));
+    filePtr->write(reinterpret_cast<char*>(&this->metadata.pageId), sizeof(uint16_t));
+    filePtr->write(reinterpret_cast<char*>(&this->metadata.nextPageId), sizeof(uint16_t));
+    filePtr->write(reinterpret_cast<char*>(&this->metadata.pageSize), sizeof(uint16_t));
+    filePtr->write(reinterpret_cast<char*>(&this->metadata.bytesLeft), sizeof(uint16_t));
 
     for(const auto& row: this->rows)
     {
         for(const auto& block : row->GetData())
         {
             const auto& dataSize = block->GetBlockSize();
-            filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(size_t));
+            filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(uint32_t));
 
             const auto& data = block->GetBlockData();
             filePtr->write(reinterpret_cast<const char *>(data), dataSize);
@@ -96,21 +108,29 @@ void Page::SetNextPageId(const int &nextPageId) { this->metadata.nextPageId = ne
 
 void Page::SetFileName(const string &filename) { this->filename = filename; }
 
-const string & Page::GetFileName() const { return this->filename; }
+const string& Page::GetFileName() const { return this->filename; }
 
-const int& Page::GetPageId() const { return this->metadata.pageId; }
+const uint16_t& Page::GetPageId() const { return this->metadata.pageId; }
 
 const bool& Page::GetPageDirtyStatus() const { return this->isDirty; }
 
-const size_t & Page::GetBytesLeft() const { return this->metadata.bytesLeft; }
+const uint16_t& Page::GetBytesLeft() const { return this->metadata.bytesLeft; }
 
-const int & Page::GetNextPageId() const { return this->metadata.nextPageId; }
+const uint16_t& Page::GetNextPageId() const { return this->metadata.nextPageId; }
 
-vector<Row> Page::GetRows() const
+vector<Row> Page::GetRows(const Table& table) const
 {
     vector<Row> copiedRows;
     for(const auto& row: this->rows)
-        copiedRows.push_back(*row);
+    {
+        vector<Block*> copyBlocks;
+        for(const auto& block : row->GetData())
+        {
+            Block* blockCopy = new Block(block);
+            copyBlocks.push_back(blockCopy);
+        }
+        copiedRows.emplace_back(table, copyBlocks);
+    }
 
     return copiedRows;
 }
@@ -126,17 +146,17 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
 {
     filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.databaseNameSize), sizeof(int));
     filePtr->write(this->databaseMetaData.databaseName.c_str(), this->databaseMetaData.databaseNameSize);
-    filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastPageId), sizeof(int));
+    filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastPageId), sizeof(uint16_t));
     filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.numberOfTables), sizeof(int));
 
     for(const auto& tableMetaData: this->tablesMetaData)
     {
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.tableNameSize), sizeof(int));
         filePtr->write(tableMetaData.tableMetaData.tableName.c_str(), tableMetaData.tableMetaData.tableNameSize);
-        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.firstPageId), sizeof(int));
-        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.lastPageId), sizeof(int));
+        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.firstPageId), sizeof(uint16_t));
+        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.lastPageId), sizeof(uint16_t));
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.maxRowSize), sizeof(size_t));
-        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.numberOfColumns), sizeof(int));
+        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.numberOfColumns), sizeof(uint16_t));
 
         for(const auto& columnMetaData: tableMetaData.columnsMetaData)
         {
@@ -144,9 +164,9 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
             filePtr->write(columnMetaData.columnName.c_str(), columnMetaData.columnNameSize);
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnTypeLiteralSize), sizeof(int));
             filePtr->write(columnMetaData.columnTypeLiteral.c_str(), columnMetaData.columnTypeLiteralSize);
-            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.recordSize), sizeof(size_t));
+            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.recordSize), sizeof(uint32_t));
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnType), sizeof(ColumnType));
-            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnIndex), sizeof(size_t));
+            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnIndex), sizeof(uint16_t));
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.allowNulls), sizeof(bool));
         }
     }
@@ -162,8 +182,8 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
     memcpy(&this->databaseMetaData.databaseName[0], data.data() + dataOffset, this->databaseMetaData.databaseNameSize);
     dataOffset += this->databaseMetaData.databaseNameSize;
 
-    memcpy(&this->databaseMetaData.lastPageId, data.data() + dataOffset, sizeof(int));
-    dataOffset += sizeof(int);
+    memcpy(&this->databaseMetaData.lastPageId, data.data() + dataOffset, sizeof(uint16_t));
+    dataOffset += sizeof(uint16_t);
 
     memcpy(&this->databaseMetaData.numberOfTables, data.data() + dataOffset, sizeof(int));
     dataOffset += sizeof(int);
@@ -179,17 +199,17 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
         memcpy(&tableFullMetaData.tableMetaData.tableName[0], data.data() + dataOffset, tableFullMetaData.tableMetaData.tableNameSize);
         dataOffset += tableFullMetaData.tableMetaData.tableNameSize;
 
-        memcpy(&tableFullMetaData.tableMetaData.firstPageId, data.data() + dataOffset, sizeof(int));
-        dataOffset += sizeof(int);
+        memcpy(&tableFullMetaData.tableMetaData.firstPageId, data.data() + dataOffset, sizeof(uint16_t));
+        dataOffset += sizeof(uint16_t);
 
-        memcpy(&tableFullMetaData.tableMetaData.lastPageId, data.data() + dataOffset, sizeof(int));
-        dataOffset += sizeof(int);
+        memcpy(&tableFullMetaData.tableMetaData.lastPageId, data.data() + dataOffset, sizeof(uint16_t));
+        dataOffset += sizeof(uint16_t);
 
         memcpy(&tableFullMetaData.tableMetaData.maxRowSize, data.data() + dataOffset, sizeof(size_t));
         dataOffset += sizeof(size_t);
 
-        memcpy(&tableFullMetaData.tableMetaData.numberOfColumns, data.data() + dataOffset, sizeof(int));
-        dataOffset += sizeof(int);
+        memcpy(&tableFullMetaData.tableMetaData.numberOfColumns, data.data() + dataOffset, sizeof(uint16_t));
+        dataOffset += sizeof(uint16_t);
 
         for(int j = 0; j < tableFullMetaData.tableMetaData.numberOfColumns; j++)
         {
@@ -208,14 +228,14 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
             memcpy(&columnMetaData.columnTypeLiteral[0], data.data() + dataOffset, columnMetaData.columnTypeLiteralSize);
             dataOffset += columnMetaData.columnTypeLiteralSize;
 
-            memcpy(&columnMetaData.recordSize, data.data() + dataOffset, sizeof(size_t));
-            dataOffset += sizeof(size_t);
+            memcpy(&columnMetaData.recordSize, data.data() + dataOffset, sizeof(uint32_t));
+            dataOffset += sizeof(uint32_t);
 
             memcpy(&columnMetaData.columnType, data.data() + dataOffset, sizeof(ColumnType));
             dataOffset += sizeof(ColumnType);
 
-            memcpy(&columnMetaData.columnIndex, data.data() + dataOffset, sizeof(size_t));
-            dataOffset += sizeof(size_t);
+            memcpy(&columnMetaData.columnIndex, data.data() + dataOffset, sizeof(uint16_t));
+            dataOffset += sizeof(uint16_t);
 
             memcpy(&columnMetaData.allowNulls, data.data() + dataOffset, sizeof(bool));
             dataOffset += sizeof(bool);
@@ -237,7 +257,9 @@ void MetaDataPage::SetMetaData(const DatabaseMetaData& databaseMetaData, const v
         tableFullMetaData.tableMetaData = table->GetTableMetadata();
         tableFullMetaData.tableMetaData.tableNameSize = tableFullMetaData.tableMetaData.tableName.size();
 
-        for(const auto& column: table->GetColumns())
+        const auto& columns = table->GetColumns();
+
+        for(const auto& column: columns)
         {
             ColumnMetadata columnMetadata = column->GetColumnMetadata();
             columnMetadata.columnTypeLiteralSize = columnMetadata.columnTypeLiteral.size();

@@ -10,9 +10,9 @@ typedef struct TableMetaData {
     int tableNameSize;
     string tableName;
     size_t maxRowSize;
-    int firstPageId;
-    int lastPageId;
-    int numberOfColumns;
+    uint16_t firstPageId;
+    uint16_t lastPageId;
+    uint16_t numberOfColumns;
 }TableMetaData;
 
 #include "../Column/Column.h"
@@ -56,7 +56,7 @@ class Table {
 
         void PrintTable(size_t maxNumberOfItems = -1) const;
 
-        size_t GetNumberOfColumns() const;
+        uint16_t GetNumberOfColumns() const;
 
         const TableMetaData& GetTableMetadata() const;
 
