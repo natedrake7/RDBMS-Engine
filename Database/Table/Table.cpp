@@ -99,7 +99,7 @@ void Table::InsertRow(const vector<string>& inputData)
     Page* lastPage = nullptr;
     if(this->metadata.lastPageId > 0)
     {
-        lastPage = this->database->GetPage(this->metadata.lastPageId);
+        lastPage = this->database->GetPage(this->metadata.lastPageId, *this);
 
         if(lastPage->GetBytesLeft() >= row->GetRowSize())
         {
@@ -189,7 +189,7 @@ vector<Row> Table::SelectRows(const size_t& count) const
 
     while(pageId != -1)
     {
-        Page* page = this->database->GetPage(pageId);
+        Page* page = this->database->GetPage(pageId, *this);
         const vector<Row> pageRows = page->GetRows();
 
         if(selectedRows.size() + pageRows.size() > rowsToSelect)

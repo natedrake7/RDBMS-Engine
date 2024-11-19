@@ -56,9 +56,11 @@ class Database {
 
         void DeleteDatabase() const;
 
-        Page* GetPage(const int& pageId);
+        Page* GetPage(const int& pageId, const Table& table);
 
         Page* CreatePage();
+
+        string GetFileName() const;
 
         // uint64_t InsertToHashTable(const char* inputString) const;
 

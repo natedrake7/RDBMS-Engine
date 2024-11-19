@@ -21,6 +21,8 @@ int main()
 
         UseDatabase(dbName, &db, &pageManager);
 
+        pageManager.BindDatabase(db);
+
         // db->DeleteDatabase();
         // delete db;
 

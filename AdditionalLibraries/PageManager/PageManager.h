@@ -8,7 +8,9 @@
 constexpr size_t MAX_NUMBER_OF_PAGES = 100;
 
 class Page;
+class Database;
 class MetaDataPage;
+class Table;
 
 using namespace std;
 
@@ -18,17 +20,19 @@ class PageManager {
     FileManager* fileManager;
     list<Page*> pageList;
     unordered_map<int, PageIterator> cache;
+    const Database* database;
     
 protected:
     void RemovePage();
-    Page* OpenPage(const int& pageId, const string& filename);
-    MetaDataPage* OpenMetaDataPage(const string& filename);
+    Page* OpenPage(const int& pageId, const Table* table);
+    MetaDataPage* OpenMetaDataPage();
     
 public:
     explicit PageManager(FileManager* fileManager);
     ~PageManager();
+    void BindDatabase(const Database* database);
     Page* CreatePage(const int& pageId);
-    Page* GetPage(const int& pageId, const string& filename);
-    MetaDataPage* GetMetaDataPage(const string& filename);
-    MetaDataPage* CreateMetaDataPage(const string& filename);
+    Page* GetPage(const int& pageId, const Table* table);
+    MetaDataPage* GetMetaDataPage();
+    MetaDataPage* CreateMetaDataPage();
 };

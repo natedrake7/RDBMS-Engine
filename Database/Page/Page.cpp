@@ -40,34 +40,38 @@ void Page::UpdateRow(Row* row)
     this->isDirty = true;
 }
 
-void Page::GetPageDataFromFile(const vector<char>& data)
+void Page::GetPageDataFromFile(const vector<char>& data, const Table* table)
 {
     memcpy(&this->metadata, data.data(), sizeof(PageMetadata));
 
     size_t dataOffset = sizeof(PageMetadata);
+    const auto& columns = table->GetColumns();
+    const int columnsSize = columns.size();
     int bytesToRead;
-    
+
     for (int i = 0; i < this->metadata.pageSize; i++)
     {
-        //figure out how to use db here
-        // Row* row = new Row();
-        // for(int j = 0; j < this->metadata.numberOfColumns; j++)
-        // {
-        //     memcpy(&bytesToRead, data.data() + dataOffset, sizeof(int));
-        //
-        //     // Row* row = new Row();
-        //     unsigned char *bytes = new unsigned char[bytesToRead];
-        //
-        //     dataOffset += sizeof(int);
-        //
-        //     memcpy(bytes, data.data() + dataOffset, bytesToRead);
-        //     dataOffset += bytesToRead;
-        //
-        //     Block* block = new Block(bytes, bytesToRead, nullptr);
-        //
-        //     row->InsertColumnData(block, j);
-        // }
-        // this->rows.push_back(row);
+        // figure out how to use db here
+         Row* row = new Row(*table);
+         for(int j = 0; j < columnsSize; j++)
+         {
+             memcpy(&bytesToRead, data.data() + dataOffset, sizeof(int));
+
+             unsigned char* bytes = new unsigned char[bytesToRead];
+
+             dataOffset += sizeof(int);
+
+             memcpy(bytes, data.data() + dataOffset, bytesToRead);
+             dataOffset += bytesToRead;
+
+
+             Block* block = new Block(bytes, bytesToRead, columns[j]);
+
+             row->InsertColumnData(block, j);
+
+             delete bytes;
+         }
+         this->rows.push_back(row);
     }
 }
 
@@ -148,7 +152,7 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
     }
 }
 
-void MetaDataPage::GetPageDataFromFile(const vector<char> &data)
+void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* table)
 {
     size_t dataOffset = 0;
     memcpy(&this->databaseMetaData.databaseNameSize, data.data(), sizeof(int));
