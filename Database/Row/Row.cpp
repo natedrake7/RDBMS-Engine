@@ -4,7 +4,8 @@ Row::Row(const Table& table)
 {
     this->table = &table;
     this->data.resize(this->table->GetNumberOfColumns());
-    this->rowSize = new size_t(0);
+    this->rowSize = 0;
+    this->maxRowSize = 0;
     this->isOriginalRow = true;
 }
 
@@ -16,12 +17,8 @@ Row::Row(const Table& table, const vector<Block*>& data) {
 
 Row::~Row(){
     if(this->isOriginalRow)
-    {
         for(const auto& block : this->data)
             delete block;
-
-        delete this->rowSize;
-    }
 }
 
 void Row::InsertColumnData(Block *block, const size_t &columnIndex)
@@ -32,7 +29,7 @@ void Row::InsertColumnData(Block *block, const size_t &columnIndex)
 
 const vector<Block *> & Row::GetData() const { return this->data; }
 
-void Row::PrintRow(const Database* db) const
+void Row::PrintRow() const
 {
     for(size_t i = 0; i < this->data.size(); i++)
     {
@@ -76,5 +73,7 @@ void Row::PrintRow(const Database* db) const
             cout << " || ";
     }
 }
+
+const size_t & Row::GetRowSize() const { return this->rowSize; }
 
 

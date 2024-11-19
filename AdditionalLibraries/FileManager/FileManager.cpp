@@ -3,7 +3,7 @@
 File::File(const string& filename)
 {
     this->name = filename;
-    this->filePtr = new fstream(filename.c_str());
+    this->filePtr = new fstream(filename.c_str(), ios::out | ios::in);
     this->lastPageId = -1;
 }
 
@@ -53,6 +53,7 @@ fstream* FileManager::GetFile(const string& fileName)
     {
         this->filesList.push_front(*fileIteratorKeyPair->second);
         this->filesList.erase(fileIteratorKeyPair->second);
+        this->cache[fileName] = this->filesList.begin();
     }
 
     return (*this->filesList.begin())->filePtr;

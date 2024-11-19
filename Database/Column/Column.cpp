@@ -2,40 +2,44 @@
 
 Column::Column(const string& columnName, const string&  columnTypeLiteral, const int&  recordSize, const bool& allowNulls)
 {
-    this->columnName = columnName;
-    this->columnTypeLiteral = columnTypeLiteral;
-    this->recordSize = recordSize;
-    this->allowNulls = allowNulls;
-    this->columnType = this->SetColumnType();
-    this->columnIndex = -1;
+    this->metadata.columnName = columnName;
+    this->metadata.columnTypeLiteral = columnTypeLiteral;
+    this->metadata.recordSize = recordSize;
+    this->metadata.allowNulls = allowNulls;
+    this->metadata.columnType = this->SetColumnType();
+    this->metadata.columnIndex = -1;
 }
 
-string& Column::GetColumnName() { return this->columnName; }
+Column::Column(const ColumnMetadata &metadata) { this->metadata = metadata; }
 
-const ColumnType& Column::GetColumnType() const { return this->columnType; }
+string& Column::GetColumnName() { return this->metadata.columnName; }
 
-const size_t& Column::GetColumnSize() const { return this->recordSize; }
+const ColumnType& Column::GetColumnType() const { return this->metadata.columnType; }
 
-bool& Column::GetAllowNulls() { return this->allowNulls;}
+const size_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
 
-const size_t& Column::GetColumnIndex() const { return this->columnIndex; }
+bool& Column::GetAllowNulls() { return this->metadata.allowNulls;}
 
-void Column::SetColumnIndex(const size_t& columnIndex) { this->columnIndex = columnIndex; }
+const size_t& Column::GetColumnIndex() const { return this->metadata.columnIndex; }
+
+const ColumnMetadata & Column::GetColumnMetadata() const { return this->metadata; }
+
+void Column::SetColumnIndex(const size_t& columnIndex) { this->metadata.columnIndex = columnIndex; }
 
 ColumnType Column::SetColumnType() const {
-    if (this->columnTypeLiteral == "TinyInt")
+    if (this->metadata.columnTypeLiteral == "TinyInt")
         return ColumnType::TinyInt;
-    if (this->columnTypeLiteral == "SmallInt")
+    if (this->metadata.columnTypeLiteral == "SmallInt")
         return ColumnType::SmallInt;
-    if (this->columnTypeLiteral == "Int")
+    if (this->metadata.columnTypeLiteral == "Int")
         return ColumnType::Int;
-    if (this->columnTypeLiteral == "BigInt")
+    if (this->metadata.columnTypeLiteral == "BigInt")
         return ColumnType::BigInt;
-    if (this->columnTypeLiteral == "Decimal")
+    if (this->metadata.columnTypeLiteral == "Decimal")
         return ColumnType::Decimal;
-    if (this->columnTypeLiteral == "String")
+    if (this->metadata.columnTypeLiteral == "String")
         return ColumnType::String;
-    if (this->columnTypeLiteral == "Bool")
+    if (this->metadata.columnTypeLiteral == "Bool")
         return ColumnType::Bool;
 
     throw runtime_error("Column type not recognized");

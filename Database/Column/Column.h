@@ -1,5 +1,4 @@
-﻿#ifndef COLUMN_H
-#define COLUMN_H
+﻿#pragma once
 
 #include <string>
 #include <stdexcept>
@@ -21,20 +20,27 @@ enum class ColumnType {
     Bool = 9
 };
 
+typedef struct ColumnMetadata {
+    int columnNameSize;
+    string columnName;
+    int columnTypeLiteralSize;
+    string columnTypeLiteral;
+    ColumnType columnType;
+    size_t columnIndex;
+    size_t recordSize;
+    bool allowNulls;
+}ColumnMetadata;
+
 class Column {
-    private:
-        string columnName;
-        string columnTypeLiteral;
-        ColumnType columnType;
-        size_t columnIndex;
-        size_t recordSize;
-        bool allowNulls;
+    ColumnMetadata metadata;
 
     protected:
         ColumnType SetColumnType() const;
 
     public:
         Column(const string& columnName, const string&  recordType, const int&  recordSize, const bool& allowNulls);
+
+        explicit Column(const ColumnMetadata& metadata);
 
         string& GetColumnName();
 
@@ -48,9 +54,5 @@ class Column {
 
         const size_t& GetColumnIndex() const;
 
-        void InsertBlock(Block* block);
+        const ColumnMetadata& GetColumnMetadata() const;
 };
-
-
-
-#endif //COLUMN_H

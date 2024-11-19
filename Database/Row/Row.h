@@ -11,8 +11,8 @@ using namespace std;
 
 class Row {
     vector<Block*> data;
-    size_t* rowSize;
-    size_t* maxRowSize;
+    size_t rowSize;
+    size_t maxRowSize;
     const Table* table;
     bool isOriginalRow;
 
@@ -27,7 +27,9 @@ class Row {
 
         const vector<Block*>& GetData() const;
 
-        void PrintRow(const Database* db) const;
+        void PrintRow() const;
+
+        const size_t& GetRowSize() const;
 };
 
 

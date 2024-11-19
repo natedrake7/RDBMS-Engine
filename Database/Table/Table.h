@@ -1,31 +1,48 @@
-﻿#ifndef TABLE_H
-#define TABLE_H
+﻿#pragma once
 
 #include <string>
 #include <vector>
 #include <random>
+
+using namespace std;
+
+typedef struct TableMetaData {
+    int tableNameSize;
+    string tableName;
+    size_t maxRowSize;
+    int firstPageId;
+    int lastPageId;
+    int numberOfColumns;
+}TableMetaData;
+
 #include "../Column/Column.h"
 #include "../Row/Row.h"
 #include "../Database.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
 
-using namespace std;
+typedef struct TableFullMetaData {
+    TableMetaData tableMetaData;
+    vector<ColumnMetadata> columnsMetaData;
 
+    TableFullMetaData();
+    TableFullMetaData(const TableFullMetaData& tableMetaData);
+}TableFullMetaData;
+
+class Page;
 class Database;
 class Row;
 class Block;
 
 class Table {
-    string tableName;
-    size_t maxRowSize;
-    int firstPageId;
-    int lastPageId;
+    TableMetaData metadata;
     vector<Column*> columns;
     vector<Row*> rows;
-    const Database* database;
+    Database* database;
 
     public:
-        Table(const string& tableName,const vector<Column*>& columns, const Database* database);
+        Table(const string& tableName,const vector<Column*>& columns, Database* database);
+
+        Table(const TableMetaData &tableMetaData, const vector<Column*>& columns, Database* database);
 
         ~Table();
 
@@ -40,8 +57,10 @@ class Table {
         void PrintTable(size_t maxNumberOfItems = -1) const;
 
         size_t GetNumberOfColumns() const;
+
+        const TableMetaData& GetTableMetadata() const;
+
+        const vector<Column*>& GetColumns() const;
+
+        vector<Row> SelectRows(const size_t& count = -1) const;
 };
-
-
-
-#endif //TABLE_H

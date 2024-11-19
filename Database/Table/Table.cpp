@@ -1,25 +1,54 @@
 ﻿#include "Table.h"
 
-Table::Table(const string& tableName, const vector<Column*>& columns, const Database* database)
+#include "../Page/Page.h"
+
+TableFullMetaData::TableFullMetaData()
 {
-    this->tableName = tableName;
+    this->tableMetaData.firstPageId = 0;
+    this->tableMetaData.lastPageId = 0;
+    this->tableMetaData.maxRowSize = 0;
+    this->tableMetaData.numberOfColumns = 0;
+    this->tableMetaData.tableNameSize = 0;
+}
+
+TableFullMetaData::TableFullMetaData(const TableFullMetaData& tableMetaData)
+{
+    this->tableMetaData = tableMetaData.tableMetaData;
+    this->columnsMetaData = tableMetaData.columnsMetaData;
+}
+
+Table::Table(const string& tableName, const vector<Column*>& columns, Database* database)
+{
     this->columns = columns;
-    this->maxRowSize = 0;
     this->database = database;
+    this->metadata.tableName = tableName;
+    this->metadata.maxRowSize = 0;
+    this->metadata.firstPageId = -1;
+    this->metadata.lastPageId = -1;
+    this->metadata.numberOfColumns = columns.size();
 
     size_t counter = 0;
     for(const auto& column : columns)
     {
-        this->maxRowSize += column->GetColumnSize();
+        this->metadata.maxRowSize += column->GetColumnSize();
         const size_t columnHash = counter++;
         column->SetColumnIndex(columnHash);
     }
 }
 
+Table::Table(const TableMetaData &tableMetaData, const vector<Column *> &columns, Database *database)
+{
+    this->metadata = tableMetaData;
+    this->columns = columns;
+    this->database = database;
+}
+
 Table::~Table()
 {
+    //save table metadata to file
     for(const auto& column : columns)
         delete column;
+
 
     // for(const auto& row : this->rows)
     //     delete row;
@@ -27,6 +56,7 @@ Table::~Table()
 
 void Table::InsertRow(const vector<string>& inputData)
 {
+
     Row* row = new Row(*this);
     for(size_t i = 0;i < inputData.size(); ++i)
     {
@@ -64,10 +94,35 @@ void Table::InsertRow(const vector<string>& inputData)
             throw invalid_argument("Unsupported column type");
 
         row->InsertColumnData(block, this->columns[i]->GetColumnIndex());
-
     }
 
-    this->rows.push_back(row);
+    Page* lastPage = nullptr;
+    if(this->metadata.lastPageId > 0)
+    {
+        lastPage = this->database->GetPage(this->metadata.lastPageId);
+
+        if(lastPage->GetBytesLeft() >= row->GetRowSize())
+        {
+            lastPage->InsertRow(row);
+            return;
+        }
+    }
+
+    Page* newPage = this->database->CreatePage();
+
+    const int newPageId = newPage->GetPageId();
+
+    if(lastPage != nullptr)
+        lastPage->SetNextPageId(newPageId);
+
+    if(this->metadata.firstPageId == -1)
+        this->metadata.firstPageId = newPageId;
+
+    this->metadata.lastPageId = newPageId;
+
+    newPage->InsertRow(row);
+
+    // this->rows.push_back(row);
     // cout<<"Row Affected: 1"<<'\n';
 }
 
@@ -113,11 +168,43 @@ void Table::PrintTable(size_t maxNumberOfItems) const
     }
 
     for(size_t i = 0; i < maxNumberOfItems; ++i)
-        this->rows[i]->PrintRow(this->database);
+        this->rows[i]->PrintRow();
 }
 
 size_t Table::GetNumberOfColumns() const { return this->columns.size();}
 
-string& Table::GetTableName(){ return this->tableName; }
+const TableMetaData& Table::GetTableMetadata() const { return this->metadata; }
 
-size_t& Table::GetMaxRowSize(){ return this->maxRowSize; }
+const vector<Column*>& Table::GetColumns() const { return this->columns; }
+
+vector<Row> Table::SelectRows(const size_t& count) const
+{
+    vector<Row> selectedRows;
+    int pageId = this->metadata.firstPageId;
+
+   const size_t rowsToSelect = (count == -1)
+                        ? numeric_limits<size_t>::max()
+                        : count;
+
+
+    while(pageId != -1)
+    {
+        Page* page = this->database->GetPage(pageId);
+        const vector<Row> pageRows = page->GetRows();
+
+        if(selectedRows.size() + pageRows.size() > rowsToSelect)
+        {
+            selectedRows.insert(selectedRows.end(), pageRows.begin(), pageRows.begin() + ( rowsToSelect - selectedRows.size()));
+            break;
+        }
+
+        selectedRows.insert(selectedRows.end(), pageRows.begin(), pageRows.end());
+        pageId = page->GetNextPageId();
+    }
+
+    return selectedRows;
+}
+
+string& Table::GetTableName(){ return this->metadata.tableName; }
+
+size_t& Table::GetMaxRowSize(){ return this->metadata.maxRowSize; }

@@ -2,14 +2,14 @@
 
 Block::Block(const void* data, const size_t& size, const Column* column)
 {
-    this->size = new size_t(size);
+    this->size = size;
     this->column = column;
     this->SetData(data, size);
 }
 
 Block::Block(const Column* column)
 {
-    this->size = new size_t(0);
+    this->size = 0;
     this->column = column;
     this->data = nullptr;
     // this->SetData(data, size);
@@ -27,8 +27,6 @@ Block::~Block()
     delete[] this->data;
 
     this->data = nullptr;
-
-    delete this->size;
 }
 
 void Block::SetData(const void* inputData, const size_t& inputSize)
@@ -39,12 +37,12 @@ void Block::SetData(const void* inputData, const size_t& inputSize)
     this->data = new unsigned char[inputSize];
     memcpy(this->data, inputData, inputSize);
 
-    *this->size = inputSize;
+    this->size = inputSize;
 }
 
 unsigned char* Block::GetBlockData() const { return this->data; }
 
-size_t& Block::GetBlockSize() const { return *this->size; }
+const size_t& Block::GetBlockSize() const { return this->size; }
 
 const size_t& Block::GetColumnIndex() const { return this->column->GetColumnIndex(); }
 
