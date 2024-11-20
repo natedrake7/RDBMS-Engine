@@ -164,24 +164,24 @@ void PageManager::OpenPage(const uint16_t& pageId, const Table* table)
     uint32_t offSet = 0;
     uint16_t currentPageId = extent * EXTENT_SIZE;
 
+    const auto& bytesRead = file->gcount();
+
     for(int i = 0; i < EXTENT_SIZE; i++)
     {
         offSet = i * PAGE_SIZE;
 
-        Page* page = new Page(currentPageId);
+        if(bytesRead < offSet)
+            break;
 
-        this->pageList.push_front(page);
+        Page* page = new Page();
 
         page->GetPageDataFromFile(buffer, table, offSet);
+        
+        this->pageList.push_front(page);
 
-        this->cache[currentPageId] = this->pageList.begin();
+        this->cache[page->GetPageId()] = this->pageList.begin();
 
         page->SetFileName(filename);
-
-        currentPageId = page->GetNextPageId();
-
-        if(currentPageId <= 0)
-            break;
     }
 
     const auto& pageIterator = this->cache.find(pageId);

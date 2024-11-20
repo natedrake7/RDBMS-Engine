@@ -29,6 +29,7 @@ class Page {
 
     public:
         explicit Page(const int& pageId);
+        explicit Page();
         virtual ~Page();
         void InsertRow(Row* row, const Table& table);
         void DeleteRow(Row* row);

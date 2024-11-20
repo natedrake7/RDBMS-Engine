@@ -16,6 +16,11 @@ Page::Page(const int& pageId)
     this->isDirty = false;
 }
 
+Page::Page()
+{
+    this->isDirty = false;
+}
+
 Page::~Page()
 {
     for(const auto& row: this->rows)
@@ -42,7 +47,7 @@ void Page::UpdateRow(Row* row)
 
 void Page::GetPageMetaDataFromFile(const vector<char> &data, const Table *table, uint32_t &offSet)
 {
-    // memcpy(&this->metadata.pageId, data.data(), sizeof(uint16_t));
+    memcpy(&this->metadata.pageId, data.data() + offSet, sizeof(uint16_t));
     offSet += sizeof(uint16_t);
 
     memcpy(&this->metadata.nextPageId, data.data() + offSet, sizeof(uint16_t));
@@ -77,7 +82,7 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uin
              memcpy(bytes, data.data() + offSet, bytesToRead);
              offSet += bytesToRead;
 
-             if(columns[i]->GetColumnType() == ColumnType::String)
+             if(columns[j]->GetColumnType() == ColumnType::String)
              {
                  //read from LargeDataObjectPage
                  //how to identify this is an offset(maybe type is string and parse as an Int)
