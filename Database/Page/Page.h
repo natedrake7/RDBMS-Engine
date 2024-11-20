@@ -11,7 +11,6 @@ struct DatabaseMetaData;
 
 using namespace std;
 
-constexpr size_t PAGE_SIZE = 8 * 1024;
 
 typedef struct PageMetadata{
     uint16_t pageId;
@@ -37,7 +36,7 @@ class Page {
         void InsertRow(Row* row, const Table& table);
         void DeleteRow(Row* row);
         void UpdateRow(Row* row);
-        virtual void GetPageDataFromFile(const vector<char>& data, const Table* table);
+        virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet);
         virtual void WritePageToFile(fstream* filePtr);
         void SetNextPageId(const int& nextPageId);
         void SetFileName(const string& filename);
@@ -57,7 +56,7 @@ class MetaDataPage final : public Page {
         explicit MetaDataPage(const int &pageId);
         ~MetaDataPage() override;
         void WritePageToFile(fstream* filePtr) override;
-        void GetPageDataFromFile(const vector<char>& data, const Table* table) override;
+        void GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet) override;
         void SetMetaData(const DatabaseMetaData& databaseMetaData, const vector<Table*>& tables);
         const DatabaseMetaData& GetDatabaseMetaData() const;
         const vector<TableFullMetaData>& GetTableFullMetaData() const;

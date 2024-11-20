@@ -88,7 +88,8 @@ void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager*
     fileManager->CreateFile(dbName, ".db");
     MetaDataPage* metaDataPage = pageManager->CreateMetaDataPage(dbName + ".db");
 
-    metaDataPage->SetMetaData(DatabaseMetaData(dbName, 0, 0), vector<Table*>());
+    //start the the paging of the data in the extent 1 not 0
+    metaDataPage->SetMetaData(DatabaseMetaData(dbName, EXTENT_SIZE - 1, 0), vector<Table*>());
 }
 
 void UseDatabase(const string& dbName, Database** db, PageManager* pageManager)

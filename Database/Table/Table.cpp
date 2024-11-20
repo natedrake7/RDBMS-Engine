@@ -94,7 +94,7 @@ void Table::InsertRow(const vector<string>& inputData)
     }
 
     Page* lastPage = nullptr;
-    if(this->metadata.lastPageId > 0)
+    if(this->metadata.lastPageId > EXTENT_SIZE - 1)
     {
         lastPage = this->database->GetPage(this->metadata.lastPageId, *this);
 
