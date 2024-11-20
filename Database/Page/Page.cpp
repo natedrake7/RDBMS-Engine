@@ -77,6 +77,12 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uin
              memcpy(bytes, data.data() + offSet, bytesToRead);
              offSet += bytesToRead;
 
+             if(columns[i]->GetColumnType() == ColumnType::String)
+             {
+                 //read from LargeDataObjectPage
+                 //how to identify this is an offset(maybe type is string and parse as an Int)
+             }
+
              Block* block = new Block(bytes, bytesToRead, columns[j]);
 
              row->InsertColumnData(block, j);

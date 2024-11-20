@@ -106,23 +106,24 @@ void Table::InsertRow(const vector<string>& inputData)
             return;
         }
 
-        // const auto& largeBlockIndexes = row->GetLargeBlocks();
-        //
-        // const auto& rowData = row->GetData();
-        //
-        // for(int i = 0; i < largeBlockIndexes.size(); i++)
-        // {
-        //     LargeDataPage* largeDataPage = this->database->CreateLargeDataPage();
-        //
-        //     const uint16_t objectPosition = largeDataPage->InsertObject(rowData[largeBlockIndexes[i]]->GetBlockData(), rowData[largeBlockIndexes[i]]->GetBlockSize());
-        //
-        //     //how to identify that it points to another page?
-        //     // Block* block = new Block(columns[largeBlockIndexes[i]]);
-        //     //
-        //     // block->SetData(&objectPosition, sizeof(uint16_t));
-        //     //
-        //     // row->InsertColumnData()
-        // }
+        const auto& largeBlockIndexes = row->GetLargeBlocks();
+
+        const auto& rowData = row->GetData();
+
+        for(int i = 0; i < largeBlockIndexes.size(); i++)
+        {
+            LargeDataPage* largeDataPage = this->database->CreateLargeDataPage();
+
+            uint16_t objectPosition = largeDataPage->InsertObject(rowData[largeBlockIndexes[i]]->GetBlockData(), rowData[largeBlockIndexes[i]]->GetBlockSize());
+
+            objectPosition += largeDataPage->GetPageId() * PAGE_SIZE;
+            //how to identify that it points to another page?
+            // Block* block = new Block(columns[largeBlockIndexes[i]]);
+            //
+            // block->SetData(&objectPosition, sizeof(uint16_t));
+            //
+            // row->InsertColumnData()
+        }
     }
 
     Page* newPage = this->database->CreatePage();
