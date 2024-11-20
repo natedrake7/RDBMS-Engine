@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 
+#include "LargeDataPage.h"
+
 using namespace std;
 
 class Row;
@@ -26,7 +28,11 @@ class Page {
         PageMetaData metadata;
         void GetPageMetaDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet);
         void WritePageMetaDataToFile(fstream* filePtr);
-
+        static unsigned char* RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
+                                                    , fstream* filePtr
+                                                    , const vector<char>& data
+                                                    , uint32_t& offSet);
+    
     public:
         explicit Page(const int& pageId);
         explicit Page();
@@ -34,7 +40,7 @@ class Page {
         void InsertRow(Row* row, const Table& table);
         void DeleteRow(Row* row);
         void UpdateRow(Row* row);
-        virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet);
+        virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet, fstream* filePtr);
         virtual void WritePageToFile(fstream* filePtr);
         void SetNextPageId(const int& nextPageId);
         void SetFileName(const string& filename);

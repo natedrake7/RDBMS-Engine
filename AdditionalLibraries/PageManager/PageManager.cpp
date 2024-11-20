@@ -162,10 +162,8 @@ void PageManager::OpenPage(const uint16_t& pageId, const Table* table)
     file->read(buffer.data(), EXTENT_BYTE_SIZE);
 
     uint32_t offSet = 0;
-    uint16_t currentPageId = extent * EXTENT_SIZE;
 
     const auto& bytesRead = file->gcount();
-
     for(int i = 0; i < EXTENT_SIZE; i++)
     {
         offSet = i * PAGE_SIZE;
@@ -175,7 +173,7 @@ void PageManager::OpenPage(const uint16_t& pageId, const Table* table)
 
         Page* page = new Page();
 
-        page->GetPageDataFromFile(buffer, table, offSet);
+        page->GetPageDataFromFile(buffer, table, offSet, file);
         
         this->pageList.push_front(page);
 

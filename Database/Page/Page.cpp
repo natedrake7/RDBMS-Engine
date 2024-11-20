@@ -60,7 +60,7 @@ void Page::GetPageMetaDataFromFile(const vector<char> &data, const Table *table,
     offSet += sizeof(uint16_t);
 }
 
-void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet)
+void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet, fstream* filePtr)
 {
     this->GetPageMetaDataFromFile(data, table, offSet);
 
@@ -82,10 +82,16 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uin
              memcpy(bytes, data.data() + offSet, bytesToRead);
              offSet += bytesToRead;
 
-             if(columns[j]->GetColumnType() == ColumnType::String)
+             //all strings are by default 2 characters because of the null terminating character
+             //so if it is 1,it is a boolean indicating that the string is stored in another table
+             if(columns[j]->GetColumnType() == ColumnType::String
+                 && bytesToRead == 1)
              {
-                 //read from LargeDataObjectPage
-                 //how to identify this is an offset(maybe type is string and parse as an Int)
+                 delete[] bytes;
+                 DataObjectPointer objectPointer;
+
+                 //whole page should be read not just the item
+                 bytes = Page::RetrieveDataFromLOBPage(objectPointer, filePtr, data, offSet);
              }
 
              Block* block = new Block(bytes, bytesToRead, columns[j]);
@@ -97,6 +103,25 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uin
          this->rows.push_back(row);
     }
 }
+
+unsigned char* Page::RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
+                                            , fstream* filePtr
+                                            , const vector<char>& data
+                                            , uint32_t& offSet)
+{
+    filePtr->clear();
+    filePtr->seekg(0, ios::beg);
+    filePtr->seekg(objectPointer.objectOffset);
+
+    memcpy(&objectPointer, data.data() + offSet, sizeof(DataObjectPointer));
+    offSet += sizeof(DataObjectPointer);
+
+    char* bytes = new char[objectPointer.objectSize];
+    filePtr->read(bytes, objectPointer.objectSize);
+
+    return reinterpret_cast<unsigned char*>(bytes);
+}
+
 
 void Page::WritePageMetaDataToFile(fstream* filePtr)
 {

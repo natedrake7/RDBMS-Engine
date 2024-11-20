@@ -9,6 +9,12 @@ typedef struct DataObject {
     ~DataObject();
 }DataObject;
 
+typedef struct DataObjectPointer
+{
+    uint32_t objectSize;
+    uint32_t objectOffset;
+}DataObjectPointer;
+
 class LargeDataPage : public Page {
     PageMetadata metadata;
     vector<DataObject*> data;
