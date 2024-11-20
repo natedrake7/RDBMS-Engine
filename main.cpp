@@ -16,28 +16,40 @@ int main()
     const string dbName = "stakosDb";
     try
     {
-
-        // CreateDatabase(dbName, &fileManager, pageManager);
+        // CreateDatabase(dbName, &fileManager, &pageManager);
 
         UseDatabase(dbName, &db, pageManager);
 
         pageManager->BindDatabase(db);
 
         // create the table and then let it be read from the heap file
+        // Table* table = db->OpenTable("Movies");
 
         // CreateAndInsertToDatabase(db);
 
         Table* table = db->OpenTable("Movies");
+
+        // vector<string> words = {
+        //     "1"
+        //     , "Silence Of The Lambs"
+        //     , "Thriller"
+        //     , "do"
+        //     , "Donald J Trump"
+        //     , "2 Hours And 15 Minutes"
+        // };
+        //
+        // for(int i = 200;i < 300; i++) {
+        //     words[0] = to_string(i);
+        //     table->InsertRow(words);
+        // }
 
         const auto& rows = table->SelectRows();
 
         for(const auto& row : rows)
             row.PrintRow();
 
-
         delete db;
         delete pageManager;
-
     }
     catch (const exception& exception)
     {
@@ -51,7 +63,7 @@ int main()
 void CreateAndInsertToDatabase(Database* db)
 {
     vector<Column*> columns;
-    columns.push_back(new Column("MovieID", "TinyInt", sizeof(int8_t), false));
+    columns.push_back(new Column("MovieID", "SmallInt", sizeof(int16_t), false));
     columns.push_back(new Column("MovieName", "String", 100, true));
     columns.push_back(new Column("MovieType", "String", 100, true));
     columns.push_back(new Column("MovieDesc", "String", 100, true));
@@ -64,7 +76,7 @@ void CreateAndInsertToDatabase(Database* db)
         "1"
         , "Silence Of The Lambs"
         , "Thriller"
-        , "A detective searches for a serial killer after conducting an experiment with Dr Hannibal Lecter and uncovers some harsh truths(that blacks do die first)"
+        , "do"
         , "Donald J Trump"
         , "2 Hours And 15 Minutes"
     };
@@ -74,7 +86,3 @@ void CreateAndInsertToDatabase(Database* db)
         table->InsertRow(words);
     }
 }
-
-
-
-

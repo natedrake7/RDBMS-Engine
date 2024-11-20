@@ -43,7 +43,7 @@ void Page::UpdateRow(Row* row)
 
 void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet)
 {
-    memcpy(&this->metadata.pageId, data.data(), sizeof(uint16_t));
+    // memcpy(&this->metadata.pageId, data.data(), sizeof(uint16_t));
     offSet += sizeof(uint16_t);
 
     memcpy(&this->metadata.nextPageId, data.data() + offSet, sizeof(uint16_t));

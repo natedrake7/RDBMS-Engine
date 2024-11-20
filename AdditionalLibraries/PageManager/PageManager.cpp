@@ -26,7 +26,7 @@ Page* PageManager::CreatePage(const uint16_t& pageId)
     this->pageList.push_front(page);
     this->cache[pageId] = this->pageList.begin();
 
-    (*this->pageList.begin())->SetFileName(filename);
+    page->SetFileName(filename);
 
     return page;
 }
@@ -111,6 +111,7 @@ void PageManager::RemovePage()
 void PageManager::OpenPage(const uint16_t& pageId, const Table* table)
 {
     const string& filename = this->database->GetFileName();
+
     if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
         this->RemovePage();
 
@@ -127,9 +128,8 @@ void PageManager::OpenPage(const uint16_t& pageId, const Table* table)
     //take into account the metadata page all the others
     file->read(buffer.data(), EXTENT_BYTE_SIZE);
 
-    Page* accessedPage = nullptr;
     uint32_t offSet = 0;
-    uint16_t currentPageId = pageId;
+    uint16_t currentPageId = extent * EXTENT_SIZE;
 
     for(int i = 0; i < EXTENT_SIZE; i++)
     {
@@ -142,6 +142,8 @@ void PageManager::OpenPage(const uint16_t& pageId, const Table* table)
         page->GetPageDataFromFile(buffer, table, offSet);
 
         this->cache[currentPageId] = this->pageList.begin();
+
+        page->SetFileName(filename);
 
         currentPageId = page->GetNextPageId();
 
@@ -167,7 +169,6 @@ MetaDataPage* PageManager::OpenMetaDataPage(const string& filename)
 
     const streampos pageOffset = 0;
     vector<char> buffer(PAGE_SIZE);
-\
     SetReadFilePointerToOffset(file, pageOffset);
 
     file->read(buffer.data(), PAGE_SIZE);
