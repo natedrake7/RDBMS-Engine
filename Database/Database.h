@@ -22,6 +22,7 @@ typedef struct DatabaseMetaData{
 class FileManager;
 class PageManager;
 class Page;
+class LargeDataPage;
 class Table;
 struct TableFullMetaData;
 // class HashTable;
@@ -59,6 +60,8 @@ class Database {
         Page* GetPage(const int& pageId, const Table& table);
 
         Page* CreatePage();
+
+        LargeDataPage* CreateLargeDataPage();
 
         string GetFileName() const;
 

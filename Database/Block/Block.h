@@ -12,10 +12,9 @@ class Column;
 
 
 class Block {
-    private:
-        unsigned char* data;
-        uint32_t size;
-        const Column* column;
+    unsigned char* data;
+    uint32_t size;
+    const Column* column;
 
     public:
         explicit Block(const Column* column);

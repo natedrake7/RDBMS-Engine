@@ -30,6 +30,8 @@ class Row {
         void PrintRow() const;
 
         const uint32_t& GetRowSize() const;
+
+        vector<uint16_t> GetLargeBlocks() const;
 };
 
 

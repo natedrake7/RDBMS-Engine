@@ -20,6 +20,7 @@ Page* PageManager::CreatePage(const uint16_t& pageId)
 {
     Page* page = new Page(pageId);
     const string& filename = this->database->GetFileName();
+
     if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
         this->RemovePage();
 
@@ -27,6 +28,37 @@ Page* PageManager::CreatePage(const uint16_t& pageId)
     this->cache[pageId] = this->pageList.begin();
 
     page->SetFileName(filename);
+
+    return page;
+}
+
+MetaDataPage* PageManager::CreateMetaDataPage(const string& filename)
+{
+    MetaDataPage* page = new MetaDataPage(0);
+
+    if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
+        this->RemovePage();
+
+    page->SetFileName(filename);
+
+    this->pageList.push_front(page);
+    this->cache[0] = this->pageList.begin();
+
+    return page;
+}
+
+LargeDataPage* PageManager::CreateLargeDataPage(const uint16_t &pageId)
+{
+    LargeDataPage* page = new LargeDataPage(pageId);
+    const string& filename = this->database->GetFileName();
+
+    if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
+        this->RemovePage();
+
+    page->SetFileName(filename);
+
+    this->pageList.push_front(page);
+    this->cache[0] = this->pageList.begin();
 
     return page;
 }
@@ -65,19 +97,20 @@ MetaDataPage* PageManager::GetMetaDataPage(const string& filename)
     return dynamic_cast<MetaDataPage*>(*this->pageList.begin());
 }
 
-MetaDataPage* PageManager::CreateMetaDataPage(const string& filename)
+LargeDataPage * PageManager::GetLargeDataPage(const uint16_t &pageId, const Table *table)
 {
-    MetaDataPage* page = new MetaDataPage(0);
+    const auto& pageHashIterator = this->cache.find(pageId);
 
-    if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
-        this->RemovePage();
+    if(pageHashIterator == this->cache.end())
+        this->OpenPage(pageId, table);
+    else
+    {
+        this->pageList.push_front(*pageHashIterator->second);
+        this->pageList.erase(pageHashIterator->second);
+        this->cache[pageId] = this->pageList.begin();
+    }
 
-    page->SetFileName(filename);
-
-    this->pageList.push_front(page);
-    this->cache[0] = this->pageList.begin();
-
-    return page;
+    return dynamic_cast<LargeDataPage*>(*this->pageList.begin());
 }
 
 void PageManager::RemovePage()

@@ -43,7 +43,12 @@ int main()
         //     table->InsertRow(words);
         // }
 
+        //update delete rows + bitmap handle, large texts. handle nulls -> datasize 0 -> 4
+
+        //UPDATE dbo.Movies SET isNull = 0
+
         const auto& rows = table->SelectRows();
+
 
         for(const auto& row : rows)
             row.PrintRow();

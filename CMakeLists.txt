@@ -27,6 +27,10 @@ add_library(Database
         Database/Column/Column.h
         Database/Page/Page.cpp
         Database/Page/Page.h
-        Database/Constants.h)
+        Database/Constants.h
+        Database/Page/MetaDataPage.cpp
+        Database/Page/MetaDataPage.h
+        Database/Page/LargeDataPage.cpp
+        Database/Page/LargeDataPage.h)
 
 target_link_libraries(DatabaseInterface PRIVATE Database PRIVATE AdditionalLibraries)

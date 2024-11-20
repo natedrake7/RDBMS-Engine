@@ -98,11 +98,31 @@ void Table::InsertRow(const vector<string>& inputData)
     {
         lastPage = this->database->GetPage(this->metadata.lastPageId, *this);
 
-        if(lastPage->GetBytesLeft() >= row->GetRowSize() + this->GetNumberOfColumns() * sizeof(uint32_t))
+        const uint32_t& rowSize = row->GetRowSize();
+
+        if(lastPage->GetBytesLeft() >= rowSize + this->GetNumberOfColumns() * sizeof(uint32_t))
         {
             lastPage->InsertRow(row, *this);
             return;
         }
+
+        // const auto& largeBlockIndexes = row->GetLargeBlocks();
+        //
+        // const auto& rowData = row->GetData();
+        //
+        // for(int i = 0; i < largeBlockIndexes.size(); i++)
+        // {
+        //     LargeDataPage* largeDataPage = this->database->CreateLargeDataPage();
+        //
+        //     const uint16_t objectPosition = largeDataPage->InsertObject(rowData[largeBlockIndexes[i]]->GetBlockData(), rowData[largeBlockIndexes[i]]->GetBlockSize());
+        //
+        //     //how to identify that it points to another page?
+        //     // Block* block = new Block(columns[largeBlockIndexes[i]]);
+        //     //
+        //     // block->SetData(&objectPosition, sizeof(uint16_t));
+        //     //
+        //     // row->InsertColumnData()
+        // }
     }
 
     Page* newPage = this->database->CreatePage();

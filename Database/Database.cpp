@@ -115,6 +115,13 @@ Page* Database::CreatePage()
     return this->pageManager->CreatePage(this->metadata.lastPageId);
 }
 
+LargeDataPage* Database::CreateLargeDataPage()
+{
+    this->metadata.lastPageId++;
+
+    return this->pageManager->CreateLargeDataPage(this->metadata.lastPageId);
+}
+
 string Database::GetFileName() const { return this->filename + this->fileExtension; }
 
 DatabaseMetaData::DatabaseMetaData()

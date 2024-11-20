@@ -1,16 +1,11 @@
 #pragma once
 #include <vector>
-#include "../Table/Table.h"
-#include "../Row/Row.h"
-#include "../Database.h"
-
-class Row;
-class Table;
-struct TableFullMetaData;
-struct DatabaseMetaData;
+#include <string>
 
 using namespace std;
 
+class Row;
+class Table;
 
 typedef struct PageMetadata{
     uint16_t pageId;
@@ -29,6 +24,8 @@ class Page {
         bool isDirty;
         string filename;
         PageMetaData metadata;
+        void GetPageMetaDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet);
+        void WritePageMetaDataToFile(fstream* filePtr);
 
     public:
         explicit Page(const int& pageId);
@@ -48,19 +45,6 @@ class Page {
         vector<Row> GetRows(const Table& table) const;
 };
 
-class MetaDataPage final : public Page {
-    DatabaseMetaData databaseMetaData;
-    vector<TableFullMetaData> tablesMetaData;
-
-    public:
-        explicit MetaDataPage(const int &pageId);
-        ~MetaDataPage() override;
-        void WritePageToFile(fstream* filePtr) override;
-        void GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet) override;
-        void SetMetaData(const DatabaseMetaData& databaseMetaData, const vector<Table*>& tables);
-        const DatabaseMetaData& GetDatabaseMetaData() const;
-        const vector<TableFullMetaData>& GetTableFullMetaData() const;
-};
-
-
-
+#include "../Database.h"
+#include "../Table/Table.h"
+#include "../Row/Row.h"

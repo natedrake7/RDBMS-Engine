@@ -3,9 +3,12 @@
 #include <unordered_map>
 #include <string>
 #include "../../Database/Page/Page.h"
+#include "../../Database/Page/MetaDataPage.h"
+#include "../../Database/Page/LargeDataPage.h"
 #include  "../../Database/Constants.h"
 #include "../FileManager/FileManager.h"
 
+class LargeDataPage;
 class Page;
 class Database;
 class MetaDataPage;
@@ -36,4 +39,6 @@ public:
     Page* GetPage(const uint16_t& pageId, const Table* table);
     MetaDataPage* GetMetaDataPage(const string& filename);
     MetaDataPage* CreateMetaDataPage(const string& filename);
+    LargeDataPage* CreateLargeDataPage(const uint16_t& pageId);
+    LargeDataPage* GetLargeDataPage(const uint16_t& pageId, const Table* table);
 };
