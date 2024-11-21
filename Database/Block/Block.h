@@ -12,9 +12,8 @@ class Column;
 
 class Block {
     unsigned char* data;
-    uint16_t size;
+    block_size_t size;
     bool isLargeObject;
-    bool isObjectSplitInPages;
     const Column* column;
 
     public:
@@ -22,19 +21,19 @@ class Block {
 
         explicit Block(const Block* block);
 
-        Block(const void* data, const uint16_t& size,const Column* column);
+        Block(const void* data, const block_size_t& size,const Column* column);
 
         ~Block();
 
-        void SetData(const void* inputData, const uint16_t& inputSize, const bool& isLargeObject = false);
+        void SetData(const void* inputData, const block_size_t& inputSize, const bool& isLargeObject = false);
 
         unsigned char* GetBlockData() const;
 
-        const uint16_t& GetBlockSize() const;
+        const block_size_t& GetBlockSize() const;
 
-        const uint16_t& GetColumnIndex() const;
+        const column_index_t& GetColumnIndex() const;
 
-        const uint32_t& GetColumnSize() const;
+        const record_size_t& GetColumnSize() const;
 
         const ColumnType& GetColumnType() const;
 

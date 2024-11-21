@@ -5,3 +5,24 @@ constexpr size_t MAX_NUMBER_OF_PAGES = 100;
 constexpr size_t EXTENT_SIZE = 8;
 constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
 constexpr size_t LARGE_DATA_OBJECT_SIZE = 1024;
+
+//Page types
+typedef uint32_t page_id_t;
+typedef uint16_t page_size_t;
+typedef uint16_t page_offset_t;
+
+//block types
+typedef uint16_t block_size_t;
+
+//column types
+typedef uint16_t column_index_t;
+
+//record size
+typedef uint32_t record_size_t;
+
+//metadata literal size
+typedef uint16_t metadata_literal_t;
+
+//number of column - table
+typedef uint16_t column_number_t;
+typedef uint16_t table_number_t;

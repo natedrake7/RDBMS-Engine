@@ -3,15 +3,16 @@
 #include <string>
 #include <vector>
 #include <random>
+#include "../Constants.h"
 
 using namespace std;
 
 typedef struct TableMetaData {
-    uint16_t tableNameSize;
+    metadata_literal_t tableNameSize;
     string tableName;
-    size_t maxRowSize;
-    uint16_t firstPageId;
-    uint16_t lastPageId;
+    record_size_t maxRowSize;
+    page_id_t firstPageId;
+    page_id_t lastPageId;
     uint16_t numberOfColumns;
 }TableMetaData;
 
@@ -32,6 +33,8 @@ class Page;
 class Database;
 class Row;
 class Block;
+class LargeDataPage;
+struct DataObject;
 
 class Table {
     TableMetaData metadata;
@@ -41,6 +44,14 @@ class Table {
 
     protected:
         void InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes);
+        LargeDataPage* GetOrCreateLargeDataPage(const page_id_t& lastLargePageId);
+        static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const uint16_t& objectOffset);
+        static void InsertLargeDataObjectPointerToRow(Row* row
+                            , const uint16_t& availableBytesInPage
+                            , const page_offset_t& offset
+                            , const page_offset_t& objectOffset
+                            , const page_id_t& lastLargePageId
+                            , const column_index_t& largeBlockIndex);
 
     public:
         Table(const string& tableName,const vector<Column*>& columns, Database* database);
@@ -55,7 +66,7 @@ class Table {
 
         string& GetTableName();
 
-        size_t& GetMaxRowSize();
+        record_size_t& GetMaxRowSize();
 
         void PrintTable(size_t maxNumberOfItems = -1) const;
 
@@ -64,6 +75,8 @@ class Table {
         const TableMetaData& GetTableMetadata() const;
 
         const vector<Column*>& GetColumns() const;
+
+        LargeDataPage* GetLargeDataPage(const page_id_t& pageId) const;
 
         vector<Row> SelectRows(const size_t& count = -1) const;
 };

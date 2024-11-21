@@ -64,6 +64,11 @@ void Row::PrintRow() const
             // const char* hashKey;
             // memcpy(&hashKey, this->data[i]->GetBlockData(), sizeof(uint64_t));
             // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
+            if (this->data[i]->IsLargeObject())
+            {
+                cout<<"LargeObject";
+                continue;
+            }
             cout << reinterpret_cast<const char*>(this->data[i]->GetBlockData());
         }
 
@@ -82,9 +87,9 @@ vector<uint16_t> Row::GetLargeBlocks()
     for(const auto& block : this->data)
     {
         const uint16_t& blockIndex = block->GetColumnIndex();
-        const uint32_t& blockSize = block->GetBlockSize();
+        const block_size_t& blockSize = block->GetBlockSize();
 
-        if(blockSize >= 100)//LARGE_DATA_OBJECT_SIZE)
+        if(blockSize >= LARGE_DATA_OBJECT_SIZE)
             largeBlocksIndexes.push_back(blockIndex);
     }
 

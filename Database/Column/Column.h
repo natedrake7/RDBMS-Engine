@@ -3,6 +3,7 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include "../Constants.h"
 
 class Block;
 using namespace std;
@@ -21,13 +22,13 @@ enum class ColumnType {
 };
 
 typedef struct ColumnMetadata {
-    uint16_t columnNameSize;
+    metadata_literal_t columnNameSize;
     string columnName;
-    uint16_t columnTypeLiteralSize;
+    metadata_literal_t columnTypeLiteralSize;
     string columnTypeLiteral;
     ColumnType columnType;
-    uint16_t columnIndex;
-    uint32_t recordSize;
+    column_index_t columnIndex;
+    record_size_t recordSize;
     bool allowNulls;
 }ColumnMetadata;
 
@@ -38,7 +39,7 @@ class Column {
         ColumnType SetColumnType() const;
 
     public:
-        Column(const string& columnName, const string&  recordType, const int&  recordSize, const bool& allowNulls);
+        Column(const string& columnName, const string&  recordType, const record_size_t&  recordSize, const bool& allowNulls);
 
         explicit Column(const ColumnMetadata& metadata);
 
@@ -46,13 +47,13 @@ class Column {
 
         const ColumnType& GetColumnType() const;
 
-        const uint32_t& GetColumnSize() const;
+        const record_size_t& GetColumnSize() const;
 
         bool& GetAllowNulls();
 
-        void SetColumnIndex(const uint16_t& columnIndex);
+        void SetColumnIndex(const column_index_t& columnIndex);
 
-        const uint16_t& GetColumnIndex() const;
+        const column_index_t& GetColumnIndex() const;
 
         const ColumnMetadata& GetColumnMetadata() const;
 };

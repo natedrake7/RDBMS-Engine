@@ -2,18 +2,19 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include "Constants.h"
 
 using namespace std;
 
 typedef struct DatabaseMetaData{
-    uint16_t lastPageId;
+    page_id_t lastPageId;
     uint16_t numberOfTables;
-    uint16_t lastLargePageId;
-    uint16_t databaseNameSize;
+    page_id_t lastLargePageId;
+    metadata_literal_t databaseNameSize;
     string databaseName;
 
     DatabaseMetaData();
-    DatabaseMetaData(const string& databaseName, const int& lastPageId, const int& numberOfTables);
+    DatabaseMetaData(const string& databaseName, const page_id_t& lastPageId, const int& numberOfTables);
     DatabaseMetaData(const DatabaseMetaData& dbMetaData);
 }DatabaseMetaData;
 
@@ -58,15 +59,15 @@ class Database {
 
         void DeleteDatabase() const;
 
-        Page* GetPage(const uint16_t& pageId, const Table& table);
+        Page* GetPage(const page_id_t& pageId, const Table& table);
 
         Page* CreatePage();
 
-        uint16_t GetLastLargeDataPageId() const;
+        page_id_t GetLastLargeDataPageId() const;
 
         LargeDataPage* CreateLargeDataPage();
 
-        LargeDataPage* GetLargeDataPage(const uint16_t& pageId, const Table& table);
+        LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table& table);
 
         string GetFileName() const;
 

@@ -1,13 +1,13 @@
 ﻿#include "Column.h"
 
-Column::Column(const string& columnName, const string& columnTypeLiteral, const int&  recordSize, const bool& allowNulls)
+Column::Column(const string& columnName, const string& columnTypeLiteral, const record_size_t&  recordSize, const bool& allowNulls)
 {
     this->metadata.columnName = columnName;
     this->metadata.columnTypeLiteral = columnTypeLiteral;
     this->metadata.recordSize = recordSize;
     this->metadata.allowNulls = allowNulls;
     this->metadata.columnType = this->SetColumnType();
-    this->metadata.columnIndex = -1;
+    this->metadata.columnIndex = 0;
 }
 
 Column::Column(const ColumnMetadata &metadata) { this->metadata = metadata; }
@@ -16,15 +16,15 @@ string& Column::GetColumnName() { return this->metadata.columnName; }
 
 const ColumnType& Column::GetColumnType() const { return this->metadata.columnType; }
 
-const uint32_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
+const record_size_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
 
 bool& Column::GetAllowNulls() { return this->metadata.allowNulls;}
 
-const uint16_t& Column::GetColumnIndex() const { return this->metadata.columnIndex; }
+const column_index_t& Column::GetColumnIndex() const { return this->metadata.columnIndex; }
 
-const ColumnMetadata & Column::GetColumnMetadata() const { return this->metadata; }
+const ColumnMetadata& Column::GetColumnMetadata() const { return this->metadata; }
 
-void Column::SetColumnIndex(const uint16_t& columnIndex) { this->metadata.columnIndex = columnIndex; }
+void Column::SetColumnIndex(const column_index_t& columnIndex) { this->metadata.columnIndex = columnIndex; }
 
 ColumnType Column::SetColumnType() const {
     if (this->metadata.columnTypeLiteral == "TinyInt")
@@ -44,6 +44,3 @@ ColumnType Column::SetColumnType() const {
 
     throw runtime_error("Column type not recognized");
 }
-
-
-

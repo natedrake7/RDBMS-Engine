@@ -3,9 +3,9 @@
 
 typedef struct DataObject {
     unsigned char* object;
-    uint16_t objectSize;
-    uint16_t nextPageId;
-    uint16_t nextPageOffset;
+    page_size_t objectSize;
+    page_id_t nextPageId;
+    page_offset_t nextPageOffset;
 
     DataObject();
     ~DataObject();
@@ -13,12 +13,12 @@ typedef struct DataObject {
 
 typedef struct DataObjectPointer
 {
-    uint16_t objectSize;
-    uint16_t objectOffset;
-    uint16_t pageId;
+    page_size_t objectSize;
+    page_offset_t objectOffset;
+    page_id_t pageId;
 
     DataObjectPointer();
-    DataObjectPointer(const uint16_t& objectSize, const uint16_t& objectOffset, const uint16_t& pageId);
+    DataObjectPointer(const page_size_t& objectSize, const page_offset_t& objectOffset, const page_id_t& pageId);
     ~DataObjectPointer();
 
 }DataObjectPointer;
@@ -28,9 +28,9 @@ class LargeDataPage : public Page
     vector<DataObject*> data;
 
     public:
-        explicit LargeDataPage(const uint16_t& pageId);
+        explicit LargeDataPage(const page_id_t& pageId);
         ~LargeDataPage() override;
-        void GetPageDataFromFile(const vector<char>& data, const Table* table, uint16_t& offSet, fstream* filePtr) override;
+        void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WritePageToFile(fstream* filePtr) override;
-        DataObject* InsertObject(const unsigned char* object, const uint16_t& size, uint16_t* objectPosition);
+        DataObject* InsertObject(const unsigned char* object, const page_size_t& size, page_offset_t* objectPosition);
 };

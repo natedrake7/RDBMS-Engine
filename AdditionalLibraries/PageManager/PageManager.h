@@ -21,7 +21,7 @@ typedef list<Page*>::iterator PageIterator;
 class PageManager {
     FileManager* fileManager;
     list<Page*> pageList;
-    unordered_map<uint16_t, PageIterator> cache;
+    unordered_map<page_id_t, PageIterator> cache;
     const Database* database;
     
 protected:

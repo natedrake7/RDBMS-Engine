@@ -16,6 +16,8 @@ int main()
     const string dbName = "stakosDb";
     try
     {
+
+        /*Handle LOB pages in different extents*/
         // CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
@@ -31,11 +33,9 @@ int main()
 
         const auto& rows = table->SelectRows();
 
-
         for(const auto& row : rows)
             row.PrintRow();
 
-        //
         // string largeString(9000, 'A');
         //
         // vector<string> words = {
@@ -52,7 +52,6 @@ int main()
         // for(int i = 0;i < 1; i++) {
         //     words[0] = to_string(i);
         //     table->InsertRow(words);
-        // }
 
         //update delete rows + bitmap handle, large texts. handle nulls -> datasize 0 -> 4
 
@@ -92,7 +91,7 @@ void CreateAndInsertToDatabase(Database* db)
         "1"
         , "Silence Of The Lambs"
         , "Thriller"
-        , "do"
+        , "Du Hast"
         , "Donald J Trump"
         , "2 Hours And 15 Minutes"
     };
