@@ -58,7 +58,7 @@ LargeDataPage* PageManager::CreateLargeDataPage(const uint16_t &pageId)
     page->SetFileName(filename);
 
     this->pageList.push_front(page);
-    this->cache[0] = this->pageList.begin();
+    this->cache[pageId] = this->pageList.begin();
 
     return page;
 }
@@ -161,7 +161,7 @@ void PageManager::OpenPage(const uint16_t& pageId, const Table* table)
     //take into account the metadata page all the others
     file->read(buffer.data(), EXTENT_BYTE_SIZE);
 
-    uint32_t offSet = 0;
+    uint16_t offSet = 0;
 
     const auto& bytesRead = file->gcount();
     for(int i = 0; i < EXTENT_SIZE; i++)
@@ -210,8 +210,8 @@ MetaDataPage* PageManager::OpenMetaDataPage(const string& filename)
     MetaDataPage* page = new MetaDataPage(0);
     this->pageList.push_front(page);
 
-    uint32_t offset = 0;
-    page->GetPageDataFromFile(buffer, nullptr, offset);
+    uint16_t offset = 0;
+    page->GetPageDataFromFile(buffer, nullptr, offset, file);
 
     this->cache[0] = this->pageList.begin();
 

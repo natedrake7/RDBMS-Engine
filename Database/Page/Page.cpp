@@ -45,7 +45,7 @@ void Page::UpdateRow(Row* row)
     this->isDirty = true;
 }
 
-void Page::GetPageMetaDataFromFile(const vector<char> &data, const Table *table, uint32_t &offSet)
+void Page::GetPageMetaDataFromFile(const vector<char> &data, const Table *table, uint16_t &offSet)
 {
     memcpy(&this->metadata.pageId, data.data() + offSet, sizeof(uint16_t));
     offSet += sizeof(uint16_t);
@@ -60,7 +60,7 @@ void Page::GetPageMetaDataFromFile(const vector<char> &data, const Table *table,
     offSet += sizeof(uint16_t);
 }
 
-void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet, fstream* filePtr)
+void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uint16_t& offSet, fstream* filePtr)
 {
     this->GetPageMetaDataFromFile(data, table, offSet);
 
@@ -72,29 +72,38 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uin
          Row* row = new Row(*table);
          for(int j = 0; j < columnsSize; j++)
          {
-             uint32_t bytesToRead = 0;
-             memcpy(&bytesToRead, data.data() + offSet, sizeof(uint32_t));
+             uint16_t bytesToRead = 0;
+             memcpy(&bytesToRead, data.data() + offSet, sizeof(uint16_t));
 
              unsigned char* bytes = new unsigned char[bytesToRead];
 
-             offSet += sizeof(uint32_t);
+             offSet += sizeof(uint16_t);
 
              memcpy(bytes, data.data() + offSet, bytesToRead);
              offSet += bytesToRead;
 
              //all strings are by default 2 characters because of the null terminating character
              //so if it is 1,it is a boolean indicating that the string is stored in another table
+             bool isLargeObject;
              if(columns[j]->GetColumnType() == ColumnType::String
                  && bytesToRead == 1)
              {
                  delete[] bytes;
-                 DataObjectPointer objectPointer;
 
-                 //whole page should be read not just the item
-                 bytes = Page::RetrieveDataFromLOBPage(objectPointer, filePtr, data, offSet);
+                 memcpy(&isLargeObject, data.data() + offSet, sizeof(bool));
+                 offSet += sizeof(bool);
+
+                 bytes = new unsigned char[sizeof(DataObjectPointer)];
+
+                 memcpy(bytes, data.data() + offSet, sizeof(DataObjectPointer));
+                 offSet += sizeof(DataObjectPointer);
+
+                 bytesToRead = sizeof(DataObjectPointer);
              }
 
              Block* block = new Block(bytes, bytesToRead, columns[j]);
+
+             block->SetIsLargeObject(true);
 
              row->InsertColumnData(block, j);
 
@@ -104,23 +113,23 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, uin
     }
 }
 
-unsigned char* Page::RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
-                                            , fstream* filePtr
-                                            , const vector<char>& data
-                                            , uint32_t& offSet)
-{
-    filePtr->clear();
-    filePtr->seekg(0, ios::beg);
-    filePtr->seekg(objectPointer.objectOffset);
-
-    memcpy(&objectPointer, data.data() + offSet, sizeof(DataObjectPointer));
-    offSet += sizeof(DataObjectPointer);
-
-    char* bytes = new char[objectPointer.objectSize];
-    filePtr->read(bytes, objectPointer.objectSize);
-
-    return reinterpret_cast<unsigned char*>(bytes);
-}
+// unsigned char* Page::RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
+//                                             , fstream* filePtr
+//                                             , const vector<char>& data
+//                                             , uint32_t& offSet)
+// {
+//     filePtr->clear();
+//     filePtr->seekg(0, ios::beg);
+//     filePtr->seekg(objectPointer.objectOffset);
+//
+//     memcpy(&objectPointer, data.data() + offSet, sizeof(DataObjectPointer));
+//     offSet += sizeof(DataObjectPointer);
+//
+//     char* bytes = new char[objectPointer.objectSize];
+//     filePtr->read(bytes, objectPointer.objectSize);
+//
+//     return reinterpret_cast<unsigned char*>(bytes);
+// }
 
 
 void Page::WritePageMetaDataToFile(fstream* filePtr)
@@ -139,8 +148,20 @@ void Page::WritePageToFile(fstream *filePtr)
     {
         for(const auto& block : row->GetData())
         {
-            const auto& dataSize = block->GetBlockSize();
-            filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(uint32_t));
+            uint16_t dataSize = block->GetBlockSize();
+
+            if(block->IsLargeObject())
+            {
+                dataSize = 1;
+
+                filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(uint16_t));
+                filePtr->write(reinterpret_cast<const char *>(&block->IsLargeObject()), sizeof(bool));
+                filePtr->write(reinterpret_cast<const char *>(block->GetBlockData()), sizeof(DataObjectPointer));
+
+                continue;
+            }
+
+            filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(uint16_t));
 
             const auto& data = block->GetBlockData();
             filePtr->write(reinterpret_cast<const char *>(data), dataSize);
@@ -162,6 +183,8 @@ const uint16_t& Page::GetBytesLeft() const { return this->metadata.bytesLeft; }
 
 const uint16_t& Page::GetNextPageId() const { return this->metadata.nextPageId; }
 
+uint16_t Page::GetPageSize() const { return this->metadata.pageSize; }
+
 vector<Row> Page::GetRows(const Table& table) const
 {
     vector<Row> copiedRows;
@@ -178,3 +201,4 @@ vector<Row> Page::GetRows(const Table& table) const
 
     return copiedRows;
 }
+

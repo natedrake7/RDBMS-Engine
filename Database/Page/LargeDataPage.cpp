@@ -3,6 +3,8 @@
 DataObject::DataObject()
 {
     this->objectSize = 0;
+    this->nextPageOffset = 0;
+    this->nextPageId = 0;
     this->object = nullptr;
 }
 
@@ -11,8 +13,25 @@ DataObject::~DataObject()
     delete[] this->object;
 }
 
+DataObjectPointer::DataObjectPointer()
+{
+    this->objectSize = 0;
+    this->objectOffset = 0;
+    this->pageId = 0;
+}
+
+DataObjectPointer::DataObjectPointer(const uint16_t& objectSize, const uint16_t& objectOffset, const uint16_t& pageId)
+{
+    this->objectSize = objectSize;
+    this->objectOffset = objectOffset;
+    this->pageId = pageId;
+}
+
+DataObjectPointer::~DataObjectPointer() = default;
+
 LargeDataPage::LargeDataPage(const uint16_t& pageId) : Page(pageId)
 {
+    this->metadata.pageId = pageId;
     this->isDirty = false;
 }
 
@@ -22,18 +41,22 @@ LargeDataPage::~LargeDataPage()
         delete dataObject;
 }
 
-void LargeDataPage::GetPageDataFromFile(const vector<char> &data, const Table *table, uint32_t &offSet)
+void LargeDataPage::GetPageDataFromFile(const vector<char> &data, const Table *table, uint16_t &offSet, fstream* filePtr)
 {
-    this->GetPageDataFromFile(data, table, offSet);
+    this->GetPageMetaDataFromFile(data, table, offSet);
 
     for(int i = 0; i < this->metadata.pageSize; i++)
     {
         DataObject* dataObject = new DataObject();
 
-        memcpy(&dataObject->objectSize, data.data() + offSet, sizeof(uint32_t));
-        offSet += sizeof(uint32_t);
+        memcpy(&dataObject->objectSize, data.data() + offSet, sizeof(uint16_t));
+        offSet += sizeof(uint16_t);
 
-        //handle case where object exceeds page read from the next page too
+        memcpy(&dataObject->nextPageId, data.data() + offSet, sizeof(uint16_t));
+        offSet += sizeof(uint16_t);
+
+        memcpy(&dataObject->nextPageOffset, data.data() + offSet, sizeof(uint16_t));
+        offSet += sizeof(uint16_t);
 
         memcpy(&dataObject->object, data.data() + offSet, dataObject->objectSize);
         offSet += dataObject->objectSize;
@@ -45,18 +68,19 @@ void LargeDataPage::GetPageDataFromFile(const vector<char> &data, const Table *t
 
 void LargeDataPage::WritePageToFile(fstream *filePtr)
 {
-    this->WritePageToFile(filePtr);
+    this->WritePageMetaDataToFile(filePtr);
 
     for(const auto& dataObject : this->data)
     {
-        //handle case where data exceeds page
-        filePtr->write(reinterpret_cast<const char*>(&dataObject->objectSize), sizeof(uint32_t));
+        filePtr->write(reinterpret_cast<const char*>(&dataObject->objectSize), sizeof(uint16_t));
+        filePtr->write(reinterpret_cast<const char*>(&dataObject->nextPageId), sizeof(uint16_t));
+        filePtr->write(reinterpret_cast<const char*>(&dataObject->nextPageOffset), sizeof(uint16_t));
 
         filePtr->write(reinterpret_cast<const char*>(&dataObject->object), dataObject->objectSize);
     }
 }
 
-uint16_t LargeDataPage::InsertObject(const unsigned char *object, const uint32_t& size)
+DataObject* LargeDataPage::InsertObject(const unsigned char *object, const uint16_t& size, uint16_t* objectPosition)
 {
     DataObject* dataObject = new DataObject();
     dataObject->objectSize = size;
@@ -64,14 +88,13 @@ uint16_t LargeDataPage::InsertObject(const unsigned char *object, const uint32_t
     dataObject->object = new unsigned char[dataObject->objectSize];
     memcpy(dataObject->object, object, dataObject->objectSize);
 
-    //handle case where object is larger than page
     this->data.push_back(dataObject);
 
-    uint16_t objectPosition = PAGE_SIZE - this->metadata.bytesLeft;
+    *objectPosition = PAGE_SIZE - this->metadata.bytesLeft;
 
-    this->metadata.bytesLeft -= (dataObject->objectSize  + sizeof(uint32_t));
-
+    this->metadata.bytesLeft -= (size + 2 * sizeof(uint16_t));
+    this->metadata.pageSize = this->data.size();
     this->isDirty = true;
 
-    return objectPosition;
+    return dataObject;
 }

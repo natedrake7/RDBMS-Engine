@@ -7,7 +7,7 @@
 using namespace std;
 
 typedef struct TableMetaData {
-    int tableNameSize;
+    uint16_t tableNameSize;
     string tableName;
     size_t maxRowSize;
     uint16_t firstPageId;
@@ -38,6 +38,9 @@ class Table {
     vector<Column*> columns;
     vector<Row*> rows;
     Database* database;
+
+    protected:
+        void InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes);
 
     public:
         Table(const string& tableName,const vector<Column*>& columns, Database* database);

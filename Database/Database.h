@@ -7,8 +7,9 @@ using namespace std;
 
 typedef struct DatabaseMetaData{
     uint16_t lastPageId;
-    int numberOfTables;
-    int databaseNameSize;
+    uint16_t numberOfTables;
+    uint16_t lastLargePageId;
+    uint16_t databaseNameSize;
     string databaseName;
 
     DatabaseMetaData();
@@ -57,11 +58,15 @@ class Database {
 
         void DeleteDatabase() const;
 
-        Page* GetPage(const int& pageId, const Table& table);
+        Page* GetPage(const uint16_t& pageId, const Table& table);
 
         Page* CreatePage();
 
+        uint16_t GetLastLargeDataPageId() const;
+
         LargeDataPage* CreateLargeDataPage();
+
+        LargeDataPage* GetLargeDataPage(const uint16_t& pageId, const Table& table);
 
         string GetFileName() const;
 

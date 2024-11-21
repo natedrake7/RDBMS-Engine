@@ -1,5 +1,5 @@
-﻿#ifndef ROW_H
-#define ROW_H
+﻿#pragma once
+
 #include "../Table/Table.h"
 #include "../Block/Block.h"
 
@@ -9,7 +9,8 @@ class Database;
 
 using namespace std;
 
-class Row {
+class Row
+{
     vector<Block*> data;
     uint32_t rowSize;
     size_t maxRowSize;
@@ -31,9 +32,7 @@ class Row {
 
         const uint32_t& GetRowSize() const;
 
-        vector<uint16_t> GetLargeBlocks() const;
+        vector<uint16_t> GetLargeBlocks();
+
+        void UpdateRowSize();
 };
-
-
-
-#endif //ROW_H

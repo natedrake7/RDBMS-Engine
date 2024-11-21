@@ -29,16 +29,27 @@ int main()
 
         Table* table = db->OpenTable("Movies");
 
+        const auto& rows = table->SelectRows();
+
+
+        for(const auto& row : rows)
+            row.PrintRow();
+
+        //
+        // string largeString(9000, 'A');
+        //
         // vector<string> words = {
         //     "1"
         //     , "Silence Of The Lambs"
         //     , "Thriller"
-        //     , "do"
+        //     ,""
         //     , "Donald J Trump"
         //     , "2 Hours And 15 Minutes"
         // };
         //
-        // for(int i = 200;i < 300; i++) {
+        // words[3] = largeString;
+        //
+        // for(int i = 0;i < 1; i++) {
         //     words[0] = to_string(i);
         //     table->InsertRow(words);
         // }
@@ -47,11 +58,11 @@ int main()
 
         //UPDATE dbo.Movies SET isNull = 0
 
-        const auto& rows = table->SelectRows();
-
-
-        for(const auto& row : rows)
-            row.PrintRow();
+        // const auto& rows = table->SelectRows();
+        //
+        //
+        // for(const auto& row : rows)
+        //     row.PrintRow();
 
         delete db;
         delete pageManager;

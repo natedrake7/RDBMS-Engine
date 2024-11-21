@@ -106,7 +106,7 @@ void Database::DeleteDatabase() const
 }
 
 
-Page* Database::GetPage(const int &pageId, const Table& table) { return this->pageManager->GetPage(pageId, &table); }
+Page* Database::GetPage(const uint16_t& pageId, const Table& table) { return this->pageManager->GetPage(pageId, &table); }
 
 Page* Database::CreatePage()
 {
@@ -119,8 +119,14 @@ LargeDataPage* Database::CreateLargeDataPage()
 {
     this->metadata.lastPageId++;
 
+    this->metadata.lastLargePageId = this->metadata.lastPageId;
+
     return this->pageManager->CreateLargeDataPage(this->metadata.lastPageId);
 }
+
+LargeDataPage * Database::GetLargeDataPage(const uint16_t &pageId, const Table& table) { return this->pageManager->GetLargeDataPage(pageId, &table); }
+
+uint16_t Database::GetLastLargeDataPageId() const { return this->metadata.lastLargePageId; }
 
 string Database::GetFileName() const { return this->filename + this->fileExtension; }
 
@@ -129,6 +135,7 @@ DatabaseMetaData::DatabaseMetaData()
     this->databaseNameSize = 0;
     this->lastPageId = 0;
     this->numberOfTables = 0;
+    this->lastLargePageId = 0;
 }
 
 DatabaseMetaData::DatabaseMetaData(const string &databaseName, const int &lastPageId, const int& numberOfTables)
@@ -137,6 +144,7 @@ DatabaseMetaData::DatabaseMetaData(const string &databaseName, const int &lastPa
     this->lastPageId = lastPageId;
     this->numberOfTables = numberOfTables;
     this->databaseNameSize = 0;
+    this->lastLargePageId = 0;
 }
 
 DatabaseMetaData::DatabaseMetaData(const DatabaseMetaData &dbMetaData)
@@ -145,6 +153,7 @@ DatabaseMetaData::DatabaseMetaData(const DatabaseMetaData &dbMetaData)
     this->lastPageId = dbMetaData.lastPageId;
     this->numberOfTables = dbMetaData.numberOfTables;
     this->databaseNameSize = this->databaseName.size();
+    this->lastLargePageId = dbMetaData.lastLargePageId;
 }
 
 // uint64_t Database::InsertToHashTable(const char *inputString) const { return this->hashTable->Insert(inputString); }

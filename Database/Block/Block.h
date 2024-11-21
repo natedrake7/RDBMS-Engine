@@ -10,10 +10,11 @@
 class Database;
 class Column;
 
-
 class Block {
     unsigned char* data;
-    uint32_t size;
+    uint16_t size;
+    bool isLargeObject;
+    bool isObjectSplitInPages;
     const Column* column;
 
     public:
@@ -21,15 +22,15 @@ class Block {
 
         explicit Block(const Block* block);
 
-        Block(const void* data, const uint32_t& size,const Column* column);
+        Block(const void* data, const uint16_t& size,const Column* column);
 
         ~Block();
 
-        void SetData(const void* inputData, const uint32_t& inputSize);
+        void SetData(const void* inputData, const uint16_t& inputSize, const bool& isLargeObject = false);
 
         unsigned char* GetBlockData() const;
 
-        const uint32_t& GetBlockSize() const;
+        const uint16_t& GetBlockSize() const;
 
         const uint16_t& GetColumnIndex() const;
 
@@ -38,6 +39,10 @@ class Block {
         const ColumnType& GetColumnType() const;
 
         void PrintBlockData(const Database* db) const;
+
+        const bool& IsLargeObject() const;
+
+        void SetIsLargeObject(const bool& isLargeObject);
 };
 
 #endif

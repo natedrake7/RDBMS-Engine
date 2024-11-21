@@ -2,12 +2,12 @@
 #include <vector>
 #include <string>
 
-#include "LargeDataPage.h"
 
 using namespace std;
 
 class Row;
 class Table;
+struct DataObjectPointer;
 
 typedef struct PageMetadata{
     uint16_t pageId;
@@ -26,12 +26,12 @@ class Page {
         bool isDirty;
         string filename;
         PageMetaData metadata;
-        void GetPageMetaDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet);
+        void GetPageMetaDataFromFile(const vector<char>& data, const Table* table, uint16_t& offSet);
         void WritePageMetaDataToFile(fstream* filePtr);
-        static unsigned char* RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
-                                                    , fstream* filePtr
-                                                    , const vector<char>& data
-                                                    , uint32_t& offSet);
+        // static unsigned char* RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
+        //                                             , fstream* filePtr
+        //                                             , const vector<char>& data
+        //                                             , uint32_t& offSet);
     
     public:
         explicit Page(const int& pageId);
@@ -40,7 +40,7 @@ class Page {
         void InsertRow(Row* row, const Table& table);
         void DeleteRow(Row* row);
         void UpdateRow(Row* row);
-        virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, uint32_t& offSet, fstream* filePtr);
+        virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, uint16_t& offSet, fstream* filePtr);
         virtual void WritePageToFile(fstream* filePtr);
         void SetNextPageId(const int& nextPageId);
         void SetFileName(const string& filename);
@@ -50,8 +50,10 @@ class Page {
         const uint16_t& GetBytesLeft() const;
         const uint16_t& GetNextPageId() const;
         vector<Row> GetRows(const Table& table) const;
+        uint16_t GetPageSize() const;
 };
 
 #include "../Database.h"
 #include "../Table/Table.h"
 #include "../Row/Row.h"
+#include "LargeDataPage.h"

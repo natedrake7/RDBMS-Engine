@@ -98,31 +98,16 @@ void Table::InsertRow(const vector<string>& inputData)
     {
         lastPage = this->database->GetPage(this->metadata.lastPageId, *this);
 
+        auto largeBlockIndexes = row->GetLargeBlocks();
+
+        this->InsertLargeObjectToPage(row, 0, largeBlockIndexes);
+
         const uint32_t& rowSize = row->GetRowSize();
 
-        if(lastPage->GetBytesLeft() >= rowSize + this->GetNumberOfColumns() * sizeof(uint32_t))
+        if(lastPage->GetBytesLeft() >= rowSize + this->GetNumberOfColumns() * sizeof(uint16_t))
         {
             lastPage->InsertRow(row, *this);
             return;
-        }
-
-        const auto& largeBlockIndexes = row->GetLargeBlocks();
-
-        const auto& rowData = row->GetData();
-
-        for(int i = 0; i < largeBlockIndexes.size(); i++)
-        {
-            LargeDataPage* largeDataPage = this->database->CreateLargeDataPage();
-
-            uint16_t objectPosition = largeDataPage->InsertObject(rowData[largeBlockIndexes[i]]->GetBlockData(), rowData[largeBlockIndexes[i]]->GetBlockSize());
-
-            objectPosition += largeDataPage->GetPageId() * PAGE_SIZE;
-            //how to identify that it points to another page?
-            // Block* block = new Block(columns[largeBlockIndexes[i]]);
-            //
-            // block->SetData(&objectPosition, sizeof(uint16_t));
-            //
-            // row->InsertColumnData()
         }
     }
 
@@ -138,10 +123,95 @@ void Table::InsertRow(const vector<string>& inputData)
 
     this->metadata.lastPageId = newPageId;
 
+    this->InsertLargeObjectToPage(row, 0, row->GetLargeBlocks());
+
     newPage->InsertRow(row, *this);
 
     // this->rows.push_back(row);
     // cout<<"Row Affected: 1"<<'\n';
+}
+
+void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes)
+{
+    if(largeBlocksIndexes.empty())
+        return;
+
+    const auto& rowData = row->GetData();
+
+    const auto& lastLargePageId = this->database->GetLastLargeDataPageId();
+
+
+    LargeDataPage* largeDataPage = nullptr;
+
+    for(const auto& largeBlockIndex : largeBlocksIndexes)
+    {
+        offset = 0;
+        uint16_t blockSize = rowData[largeBlockIndex]->GetBlockSize();
+
+        DataObject* dataObject = nullptr;
+
+        while(true)
+        {
+            if(lastLargePageId > 0)
+                largeDataPage = this->database->GetLargeDataPage(lastLargePageId, *this);
+
+            if (largeDataPage == nullptr)
+                largeDataPage = this->database->CreateLargeDataPage();
+
+            if (largeDataPage->GetBytesLeft() == 0
+                || largeDataPage->GetBytesLeft() < 2 * sizeof(uint16_t) + 1)
+            {
+                largeDataPage->SetNextPageId(this->database->GetLastLargeDataPageId() + 1);
+
+                largeDataPage = this->database->CreateLargeDataPage();
+            }
+
+            const auto& data = rowData[largeBlockIndex]->GetBlockData();
+
+            blockSize -= offset;
+
+            const auto& availableBytesInPage = largeDataPage->GetBytesLeft();
+
+            const auto& dataSize = blockSize + 2 * sizeof(uint16_t);
+
+            uint16_t objectOffset;
+
+            if (availableBytesInPage >= dataSize)
+            {
+                largeDataPage->InsertObject(data + offset, blockSize, &objectOffset);
+
+                if (dataObject != nullptr)
+                {
+                    dataObject->nextPageId = largeDataPage->GetPageId();
+                    dataObject->nextPageOffset = objectOffset;
+                }
+
+                if (offset == 0)
+                {
+                    DataObjectPointer objectPointer(blockSize, objectOffset, largeDataPage->GetPageId());
+                    rowData[largeBlockIndex]->SetData(&objectPointer, sizeof(DataObjectPointer), true);
+                }
+
+                break;
+            }
+
+            const auto bytesAllocated = availableBytesInPage - 2 * sizeof(uint32_t);
+
+            dataObject = largeDataPage->InsertObject(data + offset, bytesAllocated, &objectOffset);
+
+            if (offset == 0)
+            {
+                DataObjectPointer objectPointer(availableBytesInPage, objectOffset, largeDataPage->GetPageId());
+
+                rowData[largeBlockIndex]->SetData(&objectPointer, sizeof(DataObjectPointer), true);
+
+                row->UpdateRowSize();
+            }
+
+            offset += bytesAllocated;
+        }
+    }
+
 }
 
 vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns) const

@@ -21,9 +21,9 @@ enum class ColumnType {
 };
 
 typedef struct ColumnMetadata {
-    int columnNameSize;
+    uint16_t columnNameSize;
     string columnName;
-    int columnTypeLiteralSize;
+    uint16_t columnTypeLiteralSize;
     string columnTypeLiteral;
     ColumnType columnType;
     uint16_t columnIndex;
