@@ -294,7 +294,7 @@ LargeDataPage* Table::GetLargeDataPage(const page_id_t &pageId) const { return t
 vector<Row> Table::SelectRows(const size_t& count) const
 {
     vector<Row> selectedRows;
-    int pageId = this->metadata.firstPageId;
+    page_id_t pageId = this->metadata.firstPageId;
 
    const size_t rowsToSelect = (count == -1)
                         ? numeric_limits<size_t>::max()
