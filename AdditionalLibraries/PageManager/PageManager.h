@@ -26,7 +26,7 @@ class PageManager {
     
 protected:
     void RemovePage();
-    void OpenPage(const uint16_t& pageId, const Table* table);
+    void OpenPage(const page_id_t& pageId, const Table* table);
     MetaDataPage* OpenMetaDataPage(const string& filename);
     static void SetReadFilePointerToOffset(fstream* file, const streampos& offSet);
     static void SetWriteFilePointerToOffset(fstream* file, const streampos& offSet);
@@ -35,10 +35,10 @@ public:
     explicit PageManager(FileManager* fileManager);
     ~PageManager();
     void BindDatabase(const Database* database);
-    Page* CreatePage(const uint16_t& pageId);
-    Page* GetPage(const uint16_t& pageId, const Table* table);
+    Page* CreatePage(const page_id_t& pageId);
+    Page* GetPage(const page_id_t& pageId, const Table* table);
     MetaDataPage* GetMetaDataPage(const string& filename);
     MetaDataPage* CreateMetaDataPage(const string& filename);
-    LargeDataPage* CreateLargeDataPage(const uint16_t& pageId);
-    LargeDataPage* GetLargeDataPage(const uint16_t& pageId, const Table* table);
+    LargeDataPage* CreateLargeDataPage(const page_id_t& pageId);
+    LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table* table);
 };

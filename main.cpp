@@ -52,6 +52,7 @@ int main()
         // for(int i = 0;i < 1; i++) {
         //     words[0] = to_string(i);
         //     table->InsertRow(words);
+        // }
 
         //update delete rows + bitmap handle, large texts. handle nulls -> datasize 0 -> 4
 

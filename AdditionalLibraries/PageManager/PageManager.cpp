@@ -16,7 +16,7 @@ PageManager::~PageManager()
 
 void PageManager::BindDatabase(const Database *database) { this->database = database; }
 
-Page* PageManager::CreatePage(const uint16_t& pageId)
+Page* PageManager::CreatePage(const page_id_t& pageId)
 {
     Page* page = new Page(pageId);
     const string& filename = this->database->GetFileName();
@@ -47,7 +47,7 @@ MetaDataPage* PageManager::CreateMetaDataPage(const string& filename)
     return page;
 }
 
-LargeDataPage* PageManager::CreateLargeDataPage(const uint16_t &pageId)
+LargeDataPage* PageManager::CreateLargeDataPage(const page_id_t &pageId)
 {
     LargeDataPage* page = new LargeDataPage(pageId);
     const string& filename = this->database->GetFileName();
@@ -63,7 +63,7 @@ LargeDataPage* PageManager::CreateLargeDataPage(const uint16_t &pageId)
     return page;
 }
 
-Page* PageManager::GetPage(const uint16_t& pageId, const Table* table)
+Page* PageManager::GetPage(const page_id_t& pageId, const Table* table)
 {
     const auto& pageHashIterator = this->cache.find(pageId);
 
@@ -97,7 +97,7 @@ MetaDataPage* PageManager::GetMetaDataPage(const string& filename)
     return dynamic_cast<MetaDataPage*>(*this->pageList.begin());
 }
 
-LargeDataPage * PageManager::GetLargeDataPage(const uint16_t &pageId, const Table *table)
+LargeDataPage * PageManager::GetLargeDataPage(const page_id_t &pageId, const Table *table)
 {
     const auto& pageHashIterator = this->cache.find(pageId);
 
@@ -122,7 +122,7 @@ void PageManager::RemovePage()
         const string& filename = (*pageIterator)->GetFileName();
         fstream* file = this->fileManager->GetFile(filename);
 
-        const int pageId = (*pageIterator)->GetPageId();
+        const page_id_t pageId = (*pageIterator)->GetPageId();
 
         const streampos pageOffset = pageId * PAGE_SIZE;
 
@@ -141,7 +141,7 @@ void PageManager::RemovePage()
     this->pageList.erase(pageIterator);
 }
 
-void PageManager::OpenPage(const uint16_t& pageId, const Table* table)
+void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
 {
     const string& filename = this->database->GetFileName();
 
