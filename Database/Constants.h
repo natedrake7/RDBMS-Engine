@@ -10,6 +10,14 @@ constexpr size_t LARGE_DATA_OBJECT_SIZE = 1024;
 typedef uint32_t page_id_t;
 typedef uint16_t page_size_t;
 typedef uint16_t page_offset_t;
+typedef uint16_t large_page_index_t;
+
+enum class PageType : uint8_t {
+    DATA = 0,
+    INDEX = 1,
+    LOB = 2,
+    METADATA = 3
+};
 
 //block types
 typedef uint16_t block_size_t;

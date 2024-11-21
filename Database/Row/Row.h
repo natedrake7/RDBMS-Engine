@@ -35,4 +35,7 @@ class Row
         vector<uint16_t> GetLargeBlocks();
 
         void UpdateRowSize();
+
+        char* GetLargeObjectValue(const DataObjectPointer &objectPointer) const;
+
 };

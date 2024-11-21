@@ -3,7 +3,16 @@
 MetaDataPage::MetaDataPage(const int &pageId): Page(pageId)
 {
     this->isDirty = false;
+    this->metadata.pageType = PageType::METADATA;
 }
+
+MetaDataPage::MetaDataPage() : Page()
+{
+    this->isDirty = false;
+    this->metadata.pageType = PageType::METADATA;
+}
+
+MetaDataPage::MetaDataPage(const PageMetaData& pageMetaData) : Page(pageMetaData) { }
 
 MetaDataPage::~MetaDataPage() = default;
 

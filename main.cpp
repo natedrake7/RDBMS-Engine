@@ -17,7 +17,7 @@ int main()
     try
     {
 
-        /*Handle LOB pages in different extents*/
+        // /*Handle LOB pages in different extents*/
         // CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
@@ -28,21 +28,16 @@ int main()
         // Table* table = db->OpenTable("Movies");
 
         // CreateAndInsertToDatabase(db);
+        //
+        // string largeString(9000, 'A');
 
         Table* table = db->OpenTable("Movies");
 
-        const auto& rows = table->SelectRows();
-
-        for(const auto& row : rows)
-            row.PrintRow();
-
-        // string largeString(9000, 'A');
-        //
         // vector<string> words = {
         //     "1"
         //     , "Silence Of The Lambs"
         //     , "Thriller"
-        //     ,""
+        //     ,"gdgdfgfdg"
         //     , "Donald J Trump"
         //     , "2 Hours And 15 Minutes"
         // };
@@ -53,6 +48,11 @@ int main()
         //     words[0] = to_string(i);
         //     table->InsertRow(words);
         // }
+
+        const auto& rows = table->SelectRows();
+
+        for(const auto& row : rows)
+            row.PrintRow();
 
         //update delete rows + bitmap handle, large texts. handle nulls -> datasize 0 -> 4
 

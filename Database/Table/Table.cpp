@@ -160,15 +160,15 @@ void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint
 
             const auto& dataSize = blockSize + sizeof(uint16_t) + sizeof(page_offset_t);
 
-            uint16_t objectOffset;
+            large_page_index_t objectIndex;
 
             if (availableBytesInPage >= dataSize)
             {
-                largeDataPage->InsertObject(data + offset, blockSize, &objectOffset);
+                largeDataPage->InsertObject(data + offset, blockSize, &objectIndex);
 
-                LinkLargePageDataObjectChunks(dataObject, largeDataPage->GetPageId(), objectOffset);
+                LinkLargePageDataObjectChunks(dataObject, largeDataPage->GetPageId(), objectIndex);
 
-                InsertLargeDataObjectPointerToRow(row, availableBytesInPage, offset, objectOffset, largeDataPage->GetPageId(), largeBlockIndex);
+                InsertLargeDataObjectPointerToRow(row, offset, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
 
                 break;
             }
@@ -180,11 +180,11 @@ void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint
             if (dataObject != nullptr)
                 prevDataObject = dataObject;
 
-            dataObject = largeDataPage->InsertObject(data + offset, bytesAllocated, &objectOffset);
+            dataObject = largeDataPage->InsertObject(data + offset, bytesAllocated, &objectIndex);
 
-            LinkLargePageDataObjectChunks(prevDataObject, largeDataPage->GetPageId(), objectOffset);
+            LinkLargePageDataObjectChunks(prevDataObject, largeDataPage->GetPageId(), objectIndex);
 
-            InsertLargeDataObjectPointerToRow(row, availableBytesInPage, offset, objectOffset, largeDataPage->GetPageId(), largeBlockIndex);
+            InsertLargeDataObjectPointerToRow(row, availableBytesInPage, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
 
             offset += bytesAllocated;
         }
@@ -212,25 +212,24 @@ LargeDataPage* Table::GetOrCreateLargeDataPage(const page_id_t& lastLargePageId)
     return largeDataPage;
 }
 
-void Table::LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const uint16_t& objectOffset)
+void Table::LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex)
 {
     if (dataObject != nullptr)
     {
         dataObject->nextPageId = lastLargePageId;
-        dataObject->nextPageOffset = objectOffset;
+        dataObject->nextObjectIndex = objectIndex;
     }
 }
 
 void Table::InsertLargeDataObjectPointerToRow(Row* row
-        , const uint16_t& availableBytesInPage
         , const page_offset_t& offset
-        , const page_offset_t& objectOffset
+        , const large_page_index_t& objectIndex
         , const page_id_t& lastLargePageId
         , const column_index_t& largeBlockIndex)
 {
     if (offset == 0)
     {
-        DataObjectPointer objectPointer(availableBytesInPage, objectOffset, lastLargePageId);
+        DataObjectPointer objectPointer(objectIndex, lastLargePageId);
 
         row->GetData()[largeBlockIndex]->SetData(&objectPointer, sizeof(DataObjectPointer), true);
 

@@ -64,11 +64,14 @@ void Row::PrintRow() const
             // const char* hashKey;
             // memcpy(&hashKey, this->data[i]->GetBlockData(), sizeof(uint64_t));
             // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
-            if (this->data[i]->IsLargeObject())
-            {
-                cout<<"LargeObject";
-                continue;
-            }
+            // if (this->data[i]->IsLargeObject())
+            // {
+            //     DataObjectPointer objectPointer;
+            //     memcpy(&objectPointer, this->data[i]->GetBlockData(), sizeof(DataObjectPointer));
+            //     cout<< this->GetLargeObjectValue(objectPointer);
+            //     continue;
+            // }
+
             cout << reinterpret_cast<const char*>(this->data[i]->GetBlockData());
         }
 
@@ -102,5 +105,41 @@ void Row::UpdateRowSize()
      for (const auto& block : this->data)
          this->rowSize += block->GetBlockSize();
 }
+
+char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer) const
+{
+    LargeDataPage* page = this->table->GetLargeDataPage(objectPointer.pageId);
+
+    DataObject* object = page->GetObject(objectPointer.objectIndex);
+
+    // string largeValue;
+    // largeValue.resize(object->objectSize);
+    char* largeValue = new char[object->objectSize + 1];
+
+    memcpy(largeValue, object->object, object->objectSize);
+
+    largeValue[object->objectSize] = '\0';
+
+    while (object->nextPageId != 0)
+    {
+        page = this->table->GetLargeDataPage(object->nextPageId);
+        object = page->GetObject(objectPointer.objectIndex);
+
+        const auto& stringSize = strlen(largeValue);
+        char* prevValue = largeValue;
+
+        largeValue = new char[stringSize + object->objectSize + 1];
+
+        memcpy(largeValue, prevValue, stringSize);
+        memcpy(largeValue + stringSize, object->object, object->objectSize);
+
+        largeValue[stringSize + object->objectSize] = '\0';
+
+        delete[] prevValue;
+    }
+
+    return largeValue;
+}
+
 
 

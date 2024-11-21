@@ -97,7 +97,7 @@ MetaDataPage* PageManager::GetMetaDataPage(const string& filename)
     return dynamic_cast<MetaDataPage*>(*this->pageList.begin());
 }
 
-LargeDataPage * PageManager::GetLargeDataPage(const page_id_t &pageId, const Table *table)
+LargeDataPage* PageManager::GetLargeDataPage(const page_id_t &pageId, const Table *table)
 {
     const auto& pageHashIterator = this->cache.find(pageId);
 
@@ -164,6 +164,7 @@ void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
     page_offset_t offSet = 0;
 
     const auto& bytesRead = file->gcount();
+
     for(int i = 0; i < EXTENT_SIZE; i++)
     {
         offSet = i * PAGE_SIZE;
@@ -171,11 +172,21 @@ void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
         if(bytesRead < offSet)
             break;
 
-        Page* page = new Page();
+        const PageMetadata pageMetaData = this->GetPageMetaDataFromFile(buffer, offSet);
+
+        Page* page = nullptr;
+
+        if (pageMetaData.pageType == PageType::DATA)
+            page = new Page(pageMetaData);
+        else if (pageMetaData.pageType == PageType::LOB)
+            page = new LargeDataPage(pageMetaData);
+        else if (pageMetaData.pageType == PageType::METADATA)
+            page = new MetaDataPage(pageMetaData);
 
         page->GetPageDataFromFile(buffer, table, offSet, file);
-        
+
         this->pageList.push_front(page);
+
 
         this->cache[page->GetPageId()] = this->pageList.begin();
 
@@ -216,6 +227,27 @@ MetaDataPage* PageManager::OpenMetaDataPage(const string& filename)
     this->cache[0] = this->pageList.begin();
 
     return page;
+}
+
+PageMetadata PageManager::GetPageMetaDataFromFile(const vector<char> &data, page_offset_t &offSet)
+{
+    PageMetadata pageMetaData;
+    memcpy(&pageMetaData.pageId, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
+
+    memcpy(&pageMetaData.nextPageId, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
+
+    memcpy(&pageMetaData.pageSize, data.data() + offSet, sizeof(page_size_t));
+    offSet += sizeof(page_size_t);
+
+    memcpy(&pageMetaData.bytesLeft, data.data() + offSet, sizeof(page_size_t));
+    offSet += sizeof(page_size_t);
+
+    memcpy(&pageMetaData.pageType, data.data() + offSet, sizeof(PageType));
+    offSet += sizeof(PageType);
+
+    return pageMetaData;
 }
 
 void PageManager::SetReadFilePointerToOffset(fstream *file,const streampos& offSet)

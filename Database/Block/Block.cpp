@@ -22,7 +22,7 @@ Block::Block(const Block *block)
     this->size = block->size;
     this->column = block->column;
     this->SetData(block->data, block->size);
-    this->isLargeObject = false;
+    this->isLargeObject = block->isLargeObject;
 }
 
 // Block::Block(Column* column)
@@ -62,7 +62,7 @@ const record_size_t& Block::GetColumnSize() const { return this->column->GetColu
 
 const ColumnType & Block::GetColumnType() const { return this->column->GetColumnType(); }
 
-const bool & Block::IsLargeObject() const { return this->isLargeObject; }
+const bool& Block::IsLargeObject() const { return this->isLargeObject; }
 
 void Block::SetIsLargeObject(const bool &isLargeObject) { this->isLargeObject = isLargeObject; }
 

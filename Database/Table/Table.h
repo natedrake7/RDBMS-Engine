@@ -45,11 +45,10 @@ class Table {
     protected:
         void InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes);
         LargeDataPage* GetOrCreateLargeDataPage(const page_id_t& lastLargePageId);
-        static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const uint16_t& objectOffset);
+        static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
         static void InsertLargeDataObjectPointerToRow(Row* row
-                            , const uint16_t& availableBytesInPage
                             , const page_offset_t& offset
-                            , const page_offset_t& objectOffset
+                            , const large_page_index_t& objectIndex
                             , const page_id_t& lastLargePageId
                             , const column_index_t& largeBlockIndex);
 

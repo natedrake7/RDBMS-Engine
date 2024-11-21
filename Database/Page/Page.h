@@ -10,11 +10,11 @@ class Table;
 struct DataObjectPointer;
 
 typedef struct PageMetadata{
-    uint16_t extentId;
     page_id_t pageId;
     page_size_t pageSize;
     page_id_t nextPageId;
     page_size_t bytesLeft;
+    PageType pageType;
 
     PageMetadata();
     ~PageMetadata();
@@ -27,16 +27,12 @@ class Page {
         bool isDirty;
         string filename;
         PageMetaData metadata;
-        void GetPageMetaDataFromFile(const vector<char>& data, page_offset_t& offSet);
         void WritePageMetaDataToFile(fstream* filePtr);
-        // static unsigned char* RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
-        //                                             , fstream* filePtr
-        //                                             , const vector<char>& data
-        //                                             , uint32_t& offSet);
-    
+
     public:
         explicit Page(const page_id_t& pageId);
         explicit Page();
+        explicit Page(const PageMetaData& pageMetaData);
         virtual ~Page();
         void InsertRow(Row* row, const Table& table);
         void DeleteRow(Row* row);

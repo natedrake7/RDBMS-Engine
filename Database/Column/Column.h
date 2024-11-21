@@ -8,7 +8,7 @@
 class Block;
 using namespace std;
 
-enum class ColumnType {
+enum class ColumnType : uint8_t {
     TinyInt = 0,
     SmallInt = 1,
     Int = 2,

@@ -9,9 +9,9 @@
 #include "../FileManager/FileManager.h"
 
 class LargeDataPage;
+class MetaDataPage;
 class Page;
 class Database;
-class MetaDataPage;
 class Table;
 
 using namespace std;
@@ -30,6 +30,7 @@ protected:
     MetaDataPage* OpenMetaDataPage(const string& filename);
     static void SetReadFilePointerToOffset(fstream* file, const streampos& offSet);
     static void SetWriteFilePointerToOffset(fstream* file, const streampos& offSet);
+    PageMetadata GetPageMetaDataFromFile(const vector<char> &data, page_offset_t &offSet);
 
 public:
     explicit PageManager(FileManager* fileManager);
