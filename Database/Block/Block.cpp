@@ -44,7 +44,7 @@ void Block::SetData(const void* inputData, const block_size_t& inputSize, const 
     // if(this->data)
     //     delete[] this->data;
 
-    this->data = new unsigned char[inputSize];
+    this->data = new object_t[inputSize];
     memcpy(this->data, inputData, inputSize);
 
     this->size = inputSize;
@@ -52,7 +52,7 @@ void Block::SetData(const void* inputData, const block_size_t& inputSize, const 
     this->isLargeObject = isLargeObject;
 }
 
-unsigned char* Block::GetBlockData() const { return this->data; }
+object_t* Block::GetBlockData() const { return this->data; }
 
 const block_size_t& Block::GetBlockSize() const { return this->size; }
 

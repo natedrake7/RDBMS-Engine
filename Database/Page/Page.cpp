@@ -68,7 +68,7 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
              memcpy(&bytesToRead, data.data() + offSet, sizeof(block_size_t));
              offSet += sizeof(block_size_t);
 
-             unsigned char* bytes = new unsigned char[bytesToRead];
+             object_t* bytes = new object_t[bytesToRead];
 
 
              memcpy(bytes, data.data() + offSet, bytesToRead);
@@ -114,7 +114,7 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
     }
 }
 
-// unsigned char* Page::RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
+// object_t* Page::RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
 //                                             , fstream* filePtr
 //                                             , const vector<char>& data
 //                                             , uint32_t& offSet)
@@ -129,7 +129,7 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
 //     char* bytes = new char[objectPointer.objectSize];
 //     filePtr->read(bytes, objectPointer.objectSize);
 //
-//     return reinterpret_cast<unsigned char*>(bytes);
+//     return reinterpret_cast<object_t*>(bytes);
 // }
 
 

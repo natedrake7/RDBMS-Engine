@@ -45,12 +45,14 @@ class Table {
     protected:
         void InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes);
         LargeDataPage* GetOrCreateLargeDataPage(const page_id_t& lastLargePageId);
+        void InsertRow(const vector<string>& inputData);
         static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
         static void InsertLargeDataObjectPointerToRow(Row* row
                             , const page_offset_t& offset
                             , const large_page_index_t& objectIndex
                             , const page_id_t& lastLargePageId
                             , const column_index_t& largeBlockIndex);
+
 
     public:
         Table(const string& tableName,const vector<Column*>& columns, Database* database);
@@ -59,7 +61,7 @@ class Table {
 
         ~Table();
 
-        void InsertRow(const vector<string>& inputData);
+        void InsertRows(const vector<vector<string>>& inputData);
 
         vector<Row> GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns = vector<Column*>()) const;
 

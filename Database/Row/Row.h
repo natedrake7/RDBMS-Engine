@@ -32,7 +32,7 @@ class Row
 
         const uint32_t& GetRowSize() const;
 
-        vector<uint16_t> GetLargeBlocks();
+        vector<column_index_t> GetLargeBlocks();
 
         void UpdateRowSize();
 

@@ -16,7 +16,6 @@ int main()
     const string dbName = "stakosDb";
     try
     {
-
         // /*Handle LOB pages in different extents*/
         // CreateDatabase(dbName, &fileManager, pageManager);
 
@@ -88,17 +87,21 @@ void CreateAndInsertToDatabase(Database* db)
 
     Table* table = db->CreateTable("Movies", columns);
 
+    vector<vector<string>> inputData;
     vector<string> words = {
         "1"
-        , "Silence Of The Lambs"
-        , "Thriller"
-        , "Du Hast"
-        , "Donald J Trump"
-        , "2 Hours And 15 Minutes"
+        ,"Silence Of The Lambs"
+        ,"Thriller"
+        ,"Du Hast"
+        , {}
+        ,"2 Hours And 15 Minutes"
     };
 
-    for(int i = 0;i < 100; i++) {
+    for(int i = 0;i < 100; i++)
+    {
         words[0] = to_string(i);
-        table->InsertRow(words);
+        inputData.push_back(words);
     }
+
+    table->InsertRows(inputData);
 }

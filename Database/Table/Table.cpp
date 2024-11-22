@@ -54,6 +54,18 @@ Table::~Table()
     //     delete row;
 }
 
+void Table::InsertRows(const vector<vector<string>> &inputData)
+{
+    uint32_t rowsInserted = 0;
+    for (const auto& rowData: inputData)
+    {
+        this->InsertRow(rowData);
+        rowsInserted++;
+    }
+
+    cout<<"Rows affected: "<<rowsInserted<<endl;
+}
+
 void Table::InsertRow(const vector<string>& inputData)
 {
 

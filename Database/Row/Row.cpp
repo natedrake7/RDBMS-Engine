@@ -82,14 +82,14 @@ void Row::PrintRow() const
     }
 }
 
-const uint32_t & Row::GetRowSize() const { return this->rowSize; }
+const uint32_t& Row::GetRowSize() const { return this->rowSize; }
 
-vector<uint16_t> Row::GetLargeBlocks()
+vector<column_index_t> Row::GetLargeBlocks()
 {
-    vector<uint16_t> largeBlocksIndexes;
+    vector<column_index_t> largeBlocksIndexes;
     for(const auto& block : this->data)
     {
-        const uint16_t& blockIndex = block->GetColumnIndex();
+        const column_index_t& blockIndex = block->GetColumnIndex();
         const block_size_t& blockSize = block->GetBlockSize();
 
         if(blockSize >= LARGE_DATA_OBJECT_SIZE)

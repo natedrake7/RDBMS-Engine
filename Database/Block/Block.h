@@ -11,7 +11,7 @@ class Database;
 class Column;
 
 class Block {
-    unsigned char* data;
+    object_t* data;
     block_size_t size;
     bool isLargeObject;
     const Column* column;
@@ -27,7 +27,7 @@ class Block {
 
         void SetData(const void* inputData, const block_size_t& inputSize, const bool& isLargeObject = false);
 
-        unsigned char* GetBlockData() const;
+        object_t* GetBlockData() const;
 
         const block_size_t& GetBlockSize() const;
 
