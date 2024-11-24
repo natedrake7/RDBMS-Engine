@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Table/Table.h"
 #include "../Block/Block.h"
 
@@ -9,13 +10,21 @@ class Database;
 
 using namespace std;
 
-class Row
-{
-    vector<Block*> data;
+typedef struct RowMetaData {
+    BitMap* nullBitMap;
+    BitMap* largeObjectBitMap;
     uint32_t rowSize;
     size_t maxRowSize;
+
+    RowMetaData();
+    ~RowMetaData();
+}RowMetaData;
+
+class Row
+{
+    RowMetaData metaData;
+    vector<Block*> data;
     const Table* table;
-    bool isOriginalRow;
 
     public:
         explicit Row(const Table& table);
@@ -38,4 +47,9 @@ class Row
 
         char* GetLargeObjectValue(const DataObjectPointer &objectPointer) const;
 
+        void SetBitMapValue(const bit_map_pos_t& position, const bool& value);
+
+        bool GetBitMapValue(const bit_map_pos_t& position) const;
+
+        RowMetaData* GetMetaData();
 };

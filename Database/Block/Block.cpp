@@ -4,7 +4,6 @@ Block::Block(const void* data, const block_size_t& size, const Column* column)
 {
     this->size = size;
     this->column = column;
-    this->isLargeObject = false;
     this->SetData(data, size);
 }
 
@@ -13,7 +12,6 @@ Block::Block(const Column* column)
     this->size = 0;
     this->column = column;
     this->data = nullptr;
-    this->isLargeObject = false;
     // this->SetData(data, size);
 }
 
@@ -22,7 +20,6 @@ Block::Block(const Block *block)
     this->size = block->size;
     this->column = block->column;
     this->SetData(block->data, block->size);
-    this->isLargeObject = block->isLargeObject;
 }
 
 // Block::Block(Column* column)
@@ -39,17 +36,20 @@ Block::~Block()
     this->data = nullptr;
 }
 
-void Block::SetData(const void* inputData, const block_size_t& inputSize, const bool& isLargeObject)
+void Block::SetData(const void* inputData, const block_size_t& inputSize)
 {
-    // if(this->data)
-    //     delete[] this->data;
+    if (inputData == nullptr)
+    {
+        this->data = nullptr;
+        this->size = 0;
+
+        return;
+    }
 
     this->data = new object_t[inputSize];
     memcpy(this->data, inputData, inputSize);
 
     this->size = inputSize;
-
-    this->isLargeObject = isLargeObject;
 }
 
 object_t* Block::GetBlockData() const { return this->data; }
@@ -62,11 +62,7 @@ const record_size_t& Block::GetColumnSize() const { return this->column->GetColu
 
 const ColumnType & Block::GetColumnType() const { return this->column->GetColumnType(); }
 
-const bool& Block::IsLargeObject() const { return this->isLargeObject; }
-
-void Block::SetIsLargeObject(const bool &isLargeObject) { this->isLargeObject = isLargeObject; }
-
-void Block::PrintBlockData(const Database* db) const
+void Block::PrintBlockData() const
 {
     if(this->data == nullptr)
         return;

@@ -37,3 +37,8 @@ typedef uint16_t metadata_literal_t;
 //number of column - table
 typedef uint16_t column_number_t;
 typedef uint16_t table_number_t;
+
+//bit map constants
+typedef uint16_t bit_map_size_t;
+typedef uint16_t bit_map_pos_t;
+typedef uint8_t byte;

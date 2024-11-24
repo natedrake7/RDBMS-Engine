@@ -1,6 +1,8 @@
-﻿#include <chrono>
+﻿#include <bitset>
+#include <chrono>
 
 #include "./Database/Database.h"
+#include "AdditionalLibraries/BitMap/BitMap.h"
 #include "./Database/Row/Row.h"
 #include "AdditionalLibraries/PageManager/PageManager.h"
 
@@ -27,41 +29,17 @@ int main()
         // Table* table = db->OpenTable("Movies");
 
         // CreateAndInsertToDatabase(db);
-        //
-        // string largeString(9000, 'A');
 
         Table* table = db->OpenTable("Movies");
-
-        // vector<string> words = {
-        //     "1"
-        //     , "Silence Of The Lambs"
-        //     , "Thriller"
-        //     ,"gdgdfgfdg"
-        //     , "Donald J Trump"
-        //     , "2 Hours And 15 Minutes"
-        // };
-        //
-        // words[3] = largeString;
-        //
-        // for(int i = 0;i < 1; i++) {
-        //     words[0] = to_string(i);
-        //     table->InsertRow(words);
-        // }
-
+        
         const auto& rows = table->SelectRows();
-
+        
         for(const auto& row : rows)
             row.PrintRow();
 
         //update delete rows + bitmap handle, large texts. handle nulls -> datasize 0 -> 4
 
         //UPDATE dbo.Movies SET isNull = 0
-
-        // const auto& rows = table->SelectRows();
-        //
-        //
-        // for(const auto& row : rows)
-        //     row.PrintRow();
 
         delete db;
         delete pageManager;
@@ -86,18 +64,19 @@ void CreateAndInsertToDatabase(Database* db)
     columns.push_back(new Column("MovieLength", "String", 100, true));
 
     Table* table = db->CreateTable("Movies", columns);
-
+    string largeString(9000, 'A');
+    
     vector<vector<string>> inputData;
     vector<string> words = {
         "1"
         ,"Silence Of The Lambs"
         ,"Thriller"
-        ,"Du Hast"
-        , {}
+        ,largeString
+        , "Du Hast"
         ,"2 Hours And 15 Minutes"
     };
 
-    for(int i = 0;i < 100; i++)
+    for(int i = 0;i < 1; i++)
     {
         words[0] = to_string(i);
         inputData.push_back(words);

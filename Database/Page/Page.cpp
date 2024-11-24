@@ -61,50 +61,40 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
 
     for (int i = 0; i < this->metadata.pageSize; i++)
     {
-         Row* row = new Row(*table);
+        Row* row = new Row(*table);
+        RowMetaData* rowMetaData = row->GetMetaData();
+        
+        memcpy(&rowMetaData->rowSize, data.data() + offSet, sizeof(uint32_t));
+        offSet += sizeof(uint32_t);
+
+        memcpy(&rowMetaData->maxRowSize, data.data() + offSet, sizeof(size_t));
+        offSet += sizeof(size_t);
+
+        rowMetaData->nullBitMap->GetDataFromFile(data, offSet);
+        rowMetaData->largeObjectBitMap->GetDataFromFile(data, offSet);
+        
          for(int j = 0; j < columnsSize; j++)
          {
+             if (rowMetaData->nullBitMap->Get(j))
+             {
+                 Block* block = new Block(nullptr, 0, columns[j]);
+
+                 row->InsertColumnData(block, j);
+
+                 continue;
+             }
+             
              block_size_t bytesToRead;
+
              memcpy(&bytesToRead, data.data() + offSet, sizeof(block_size_t));
              offSet += sizeof(block_size_t);
 
-             object_t* bytes = new object_t[bytesToRead];
-
-
+             object_t* bytes = new unsigned char[bytesToRead];
              memcpy(bytes, data.data() + offSet, bytesToRead);
+
              offSet += bytesToRead;
-
-             //all strings are by default 2 characters because of the null terminating character
-             //so if it is 1,it is a boolean indicating that the string is stored in another table
-             bool isLargeObject = false;
-             if(columns[j]->GetColumnType() == ColumnType::String
-                 && bytesToRead == 1)
-             {
-                 memcpy(&isLargeObject, bytes, sizeof(bool));
-                 delete[] bytes;
-
-                 // offSet += sizeof(bool);
-
-                 bytes = new unsigned char[sizeof(DataObjectPointer)];
-
-                 memcpy(bytes, data.data() + offSet, sizeof(DataObjectPointer));
-
-                 offSet += sizeof(DataObjectPointer);
-                 bytesToRead = sizeof(DataObjectPointer);
-
-                 DataObjectPointer objectPointer;
-                 memcpy(&objectPointer, bytes, sizeof(DataObjectPointer));
-
-
-                 //get LargePage and assign a pointer to the object, if more than 1 pages are required for the object
-                 //get also pointers to the other objects
-
-                 // LargeDataPage* largeDataPage = table->GetLargeDataPage(objectPointer.pageId);
-             }
-
+             
              Block* block = new Block(bytes, bytesToRead, columns[j]);
-
-             block->SetIsLargeObject(isLargeObject);
 
              row->InsertColumnData(block, j);
 
@@ -113,25 +103,6 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
          this->rows.push_back(row);
     }
 }
-
-// object_t* Page::RetrieveDataFromLOBPage(DataObjectPointer& objectPointer
-//                                             , fstream* filePtr
-//                                             , const vector<char>& data
-//                                             , uint32_t& offSet)
-// {
-//     filePtr->clear();
-//     filePtr->seekg(0, ios::beg);
-//     filePtr->seekg(objectPointer.objectOffset);
-//
-//     memcpy(&objectPointer, data.data() + offSet, sizeof(DataObjectPointer));
-//     offSet += sizeof(DataObjectPointer);
-//
-//     char* bytes = new char[objectPointer.objectSize];
-//     filePtr->read(bytes, objectPointer.objectSize);
-//
-//     return reinterpret_cast<object_t*>(bytes);
-// }
-
 
 void Page::WritePageMetaDataToFile(fstream* filePtr)
 {
@@ -148,25 +119,28 @@ void Page::WritePageToFile(fstream *filePtr)
 
     for(const auto& row: this->rows)
     {
+        RowMetaData* rowMetaData = row->GetMetaData();
+
+        filePtr->write(reinterpret_cast<const char* >(&rowMetaData->rowSize), sizeof(uint32_t));
+        filePtr->write(reinterpret_cast<const char* >(&rowMetaData->maxRowSize), sizeof(size_t));
+        rowMetaData->nullBitMap->WriteDataToFile(filePtr);
+        rowMetaData->largeObjectBitMap->WriteDataToFile(filePtr);
+
+        uint16_t counter = 0;
         for(const auto& block : row->GetData())
         {
             block_size_t dataSize = block->GetBlockSize();
 
-            if(block->IsLargeObject())
-            {
-                dataSize = sizeof(bool);
-
-                filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(block_size_t));
-                filePtr->write(reinterpret_cast<const char *>(&block->IsLargeObject()), sizeof(bool));
-                filePtr->write(reinterpret_cast<const char *>(block->GetBlockData()), sizeof(DataObjectPointer));
-
-                continue;
-            }
-
             filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(block_size_t));
 
             const auto& data = block->GetBlockData();
-            filePtr->write(reinterpret_cast<const char *>(data), dataSize);
+            
+            if (rowMetaData->largeObjectBitMap->Get(counter))
+                filePtr->write(reinterpret_cast<const char *>(data), sizeof(DataObjectPointer));
+            else
+                filePtr->write(reinterpret_cast<const char *>(data), dataSize);
+            
+            counter++;
         }
     }
 }
@@ -190,13 +164,16 @@ page_size_t Page::GetPageSize() const { return this->metadata.pageSize; }
 vector<Row> Page::GetRows(const Table& table) const
 {
     vector<Row> copiedRows;
-    for(const auto& row: this->rows)
+    for(const auto row: this->rows)
     {
+        RowMetaData* rowMetaData = row->GetMetaData();
+        
         vector<Block*> copyBlocks;
+        
         for(const auto& block : row->GetData())
         {
             Block* blockCopy = new Block(block);
-            if (block->IsLargeObject())
+            if (rowMetaData->largeObjectBitMap->Get(block->GetColumnIndex()))
             {
                 DataObjectPointer objectPointer;
                 memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));

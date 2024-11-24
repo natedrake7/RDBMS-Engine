@@ -1,30 +1,49 @@
 ﻿#include "Row.h"
 
+RowMetaData::RowMetaData()
+{
+    this->rowSize = 0;
+    this->maxRowSize = 0;
+    this->nullBitMap = nullptr;
+    this->largeObjectBitMap = nullptr;
+}
+
+RowMetaData::~RowMetaData()
+{
+    delete this->nullBitMap;
+    delete this->largeObjectBitMap;
+}
+
 Row::Row(const Table& table)
 {
     this->table = &table;
-    this->data.resize(this->table->GetNumberOfColumns());
-    this->rowSize = 0;
-    this->maxRowSize = 0;
-    this->isOriginalRow = true;
+
+    const auto numberOfColumns = this->table->GetNumberOfColumns();
+    
+    this->data.resize(numberOfColumns);
+
+    this->metaData.nullBitMap = new BitMap(numberOfColumns);
+    this->metaData.largeObjectBitMap = new BitMap(numberOfColumns);
 }
 
-Row::Row(const Table& table, const vector<Block*>& data) {
+Row::Row(const Table& table, const vector<Block*>& data)
+{
     this->table = &table;
     this->data = data;
-    this->isOriginalRow = false;
+    this->UpdateRowSize();
+    this->metaData.maxRowSize = 0;
 }
 
-Row::~Row(){
-    if(this->isOriginalRow)
-        for(const auto& block : this->data)
-            delete block;
+Row::~Row()
+{
+    for(const auto& block : this->data)
+        delete block;
 }
 
 void Row::InsertColumnData(Block *block, const  uint16_t& columnIndex)
 {
     this->data[columnIndex] = block;
-    this->rowSize += block->GetBlockSize();
+    this->metaData.rowSize += block->GetBlockSize();
 }
 
 const vector<Block *> & Row::GetData() const { return this->data; }
@@ -33,6 +52,7 @@ void Row::PrintRow() const
 {
     for(size_t i = 0; i < this->data.size(); i++)
     {
+        //why this breaks check it column may be null
         const ColumnType columnType = this->data[i]->GetColumnType();
 
         if (columnType == ColumnType::TinyInt)
@@ -60,20 +80,7 @@ void Row::PrintRow() const
             cout << bigIntValue;
         }
         else if(columnType == ColumnType::String)
-        {
-            // const char* hashKey;
-            // memcpy(&hashKey, this->data[i]->GetBlockData(), sizeof(uint64_t));
-            // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
-            // if (this->data[i]->IsLargeObject())
-            // {
-            //     DataObjectPointer objectPointer;
-            //     memcpy(&objectPointer, this->data[i]->GetBlockData(), sizeof(DataObjectPointer));
-            //     cout<< this->GetLargeObjectValue(objectPointer);
-            //     continue;
-            // }
-
             cout << reinterpret_cast<const char*>(this->data[i]->GetBlockData());
-        }
 
         if(i == this->data.size() - 1)
             cout << '\n';
@@ -82,7 +89,7 @@ void Row::PrintRow() const
     }
 }
 
-const uint32_t& Row::GetRowSize() const { return this->rowSize; }
+const uint32_t& Row::GetRowSize() const { return this->metaData.rowSize; }
 
 vector<column_index_t> Row::GetLargeBlocks()
 {
@@ -101,9 +108,9 @@ vector<column_index_t> Row::GetLargeBlocks()
 
 void Row::UpdateRowSize()
 {
-    this->rowSize = 0;
+    this->metaData.rowSize = 0;
      for (const auto& block : this->data)
-         this->rowSize += block->GetBlockSize();
+         this->metaData.rowSize += block->GetBlockSize();
 }
 
 char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer) const
@@ -140,6 +147,13 @@ char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer) const
 
     return largeValue;
 }
+
+void Row::SetBitMapValue(const bit_map_pos_t &position, const bool &value) { this->metaData.nullBitMap->Set(position, value); }
+
+bool Row::GetBitMapValue(const bit_map_pos_t &position) const { return this->metaData.nullBitMap->Get(position); }
+
+RowMetaData* Row::GetMetaData() { return &this->metaData; }
+
 
 
 

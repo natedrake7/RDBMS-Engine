@@ -13,7 +13,9 @@ add_library(AdditionalLibraries
         AdditionalLibraries/FileManager/FileManager.cpp
         AdditionalLibraries/FileManager/FileManager.h
         AdditionalLibraries/PageManager/PageManager.cpp
-        AdditionalLibraries/PageManager/PageManager.h)
+        AdditionalLibraries/PageManager/PageManager.h
+        AdditionalLibraries/BitMap/BitMap.cpp
+        AdditionalLibraries/BitMap/BitMap.h)
 add_library(Database
         Database/Database.cpp
         Database/Database.h

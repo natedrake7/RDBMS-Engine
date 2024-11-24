@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include "../Constants.h"
+#include "../../AdditionalLibraries/BitMap/BitMap.h"
 
 using namespace std;
 

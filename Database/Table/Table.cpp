@@ -98,6 +98,15 @@ void Table::InsertRow(const vector<string>& inputData)
         }
         else if (columnType == ColumnType::String)
             block->SetData(inputData[i].c_str(), inputData[i].size() + 1);
+        else if (columnType == ColumnType::Null)
+        {
+            if (!columns[i]->GetAllowNulls())
+                throw invalid_argument("Column " + columns[i]->GetColumnName() + " does not allow NULLs. Insert Fails.");
+
+            row->SetBitMapValue(i, true);
+
+            block->SetData(nullptr, 0);
+        }
         else
             throw invalid_argument("Unsupported column type");
 
@@ -110,9 +119,7 @@ void Table::InsertRow(const vector<string>& inputData)
     {
         lastPage = this->database->GetPage(this->metadata.lastPageId, *this);
 
-        auto largeBlockIndexes = row->GetLargeBlocks();
-
-        this->InsertLargeObjectToPage(row, 0, largeBlockIndexes);
+        this->InsertLargeObjectToPage(row, 0,  row->GetLargeBlocks());
 
         const uint32_t& rowSize = row->GetRowSize();
 
@@ -148,12 +155,18 @@ void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint
     if(largeBlocksIndexes.empty())
         return;
 
+    RowMetaData* rowMetaData = row->GetMetaData();
+    
     const auto& rowData = row->GetData();
 
     const auto& lastLargePageId = this->database->GetLastLargeDataPageId();
 
     for(const auto& largeBlockIndex : largeBlocksIndexes)
     {
+        rowMetaData->largeObjectBitMap->Set(largeBlockIndex, true);
+
+        rowMetaData->largeObjectBitMap->Print();
+
         DataObject* dataObject = nullptr;
 
         offset = 0;
@@ -243,7 +256,7 @@ void Table::InsertLargeDataObjectPointerToRow(Row* row
     {
         DataObjectPointer objectPointer(objectIndex, lastLargePageId);
 
-        row->GetData()[largeBlockIndex]->SetData(&objectPointer, sizeof(DataObjectPointer), true);
+        row->GetData()[largeBlockIndex]->SetData(&objectPointer, sizeof(DataObjectPointer));
 
         row->UpdateRowSize();
     }
@@ -294,7 +307,7 @@ void Table::PrintTable(size_t maxNumberOfItems) const
         this->rows[i]->PrintRow();
 }
 
-uint16_t Table::GetNumberOfColumns() const { return this->columns.size();}
+column_number_t Table::GetNumberOfColumns() const { return this->columns.size();}
 
 const TableMetaData& Table::GetTableMetadata() const { return this->metadata; }
 

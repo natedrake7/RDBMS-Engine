@@ -71,7 +71,7 @@ class Table {
 
         void PrintTable(size_t maxNumberOfItems = -1) const;
 
-        uint16_t GetNumberOfColumns() const;
+        column_number_t GetNumberOfColumns() const;
 
         const TableMetaData& GetTableMetadata() const;
 

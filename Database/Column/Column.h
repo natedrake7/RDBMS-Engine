@@ -8,7 +8,8 @@
 class Block;
 using namespace std;
 
-enum class ColumnType : uint8_t {
+enum class ColumnType : uint8_t
+{
     TinyInt = 0,
     SmallInt = 1,
     Int = 2,
@@ -18,7 +19,8 @@ enum class ColumnType : uint8_t {
     LongDouble = 6,
     String = 7,
     UnicodeString = 8,
-    Bool = 9
+    Bool = 9,
+    Null = 10,
 };
 
 typedef struct ColumnMetadata {

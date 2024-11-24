@@ -13,7 +13,6 @@ class Column;
 class Block {
     object_t* data;
     block_size_t size;
-    bool isLargeObject;
     const Column* column;
 
     public:
@@ -25,7 +24,7 @@ class Block {
 
         ~Block();
 
-        void SetData(const void* inputData, const block_size_t& inputSize, const bool& isLargeObject = false);
+        void SetData(const void* inputData, const block_size_t& inputSize);
 
         object_t* GetBlockData() const;
 
@@ -37,11 +36,7 @@ class Block {
 
         const ColumnType& GetColumnType() const;
 
-        void PrintBlockData(const Database* db) const;
-
-        const bool& IsLargeObject() const;
-
-        void SetIsLargeObject(const bool& isLargeObject);
+        void PrintBlockData() const;
 };
 
 #endif
