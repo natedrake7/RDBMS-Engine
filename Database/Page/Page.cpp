@@ -164,7 +164,7 @@ page_size_t Page::GetPageSize() const { return this->metadata.pageSize; }
 vector<Row> Page::GetRows(const Table& table) const
 {
     vector<Row> copiedRows;
-    for(const auto row: this->rows)
+    for(const auto& row: this->rows)
     {
         RowMetaData* rowMetaData = row->GetMetaData();
         

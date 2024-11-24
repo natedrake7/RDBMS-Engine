@@ -335,6 +335,7 @@ vector<Row> Table::SelectRows(const size_t& count) const
             break;
         }
 
+
         selectedRows.insert(selectedRows.end(), pageRows.begin(), pageRows.end());
         pageId = page->GetNextPageId();
     }

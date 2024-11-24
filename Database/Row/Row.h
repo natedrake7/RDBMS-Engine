@@ -31,6 +31,8 @@ class Row
 
         explicit Row(const Table& table, const vector<Block*>& data);
 
+        explicit Row(const Row& copyRow);
+
         ~Row();
 
         void InsertColumnData(Block* block, const uint16_t& columnIndex);

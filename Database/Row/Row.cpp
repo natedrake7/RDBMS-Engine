@@ -29,9 +29,21 @@ Row::Row(const Table& table)
 Row::Row(const Table& table, const vector<Block*>& data)
 {
     this->table = &table;
-    this->data = data;
+    
+    for (const auto& block : data)
+        this->data.push_back(new Block(block));
+    
     this->UpdateRowSize();
     this->metaData.maxRowSize = 0;
+}
+
+Row::Row(const Row &copyRow)
+{
+    this->table = copyRow.table;
+    this->metaData = copyRow.metaData;
+    
+    for (const auto& block : copyRow.data)
+        this->data.push_back(new Block(block));
 }
 
 Row::~Row()
