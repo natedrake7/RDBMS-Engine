@@ -32,7 +32,7 @@ class Block {
 
         const column_index_t& GetColumnIndex() const;
 
-        const record_size_t& GetColumnSize() const;
+        const row_size_t& GetColumnSize() const;
 
         const ColumnType& GetColumnType() const;
 

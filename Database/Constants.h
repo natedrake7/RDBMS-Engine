@@ -29,7 +29,7 @@ typedef uint16_t block_size_t;
 typedef uint16_t column_index_t;
 
 //record size
-typedef uint32_t record_size_t;
+typedef uint32_t row_size_t;
 
 //metadata literal size
 typedef uint16_t metadata_literal_t;

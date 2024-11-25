@@ -30,7 +30,7 @@ typedef struct ColumnMetadata {
     string columnTypeLiteral;
     ColumnType columnType;
     column_index_t columnIndex;
-    record_size_t recordSize;
+    row_size_t recordSize;
     bool allowNulls;
 }ColumnMetadata;
 
@@ -41,7 +41,7 @@ class Column {
         ColumnType SetColumnType() const;
 
     public:
-        Column(const string& columnName, const string&  recordType, const record_size_t&  recordSize, const bool& allowNulls);
+        Column(const string& columnName, const string&  recordType, const row_size_t&  recordSize, const bool& allowNulls);
 
         explicit Column(const ColumnMetadata& metadata);
 
@@ -49,7 +49,7 @@ class Column {
 
         const ColumnType& GetColumnType() const;
 
-        const record_size_t& GetColumnSize() const;
+        const row_size_t& GetColumnSize() const;
 
         bool& GetAllowNulls();
 

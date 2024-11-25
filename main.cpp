@@ -8,7 +8,7 @@
 
 template<typename T>
 int CreateResponse(T input) { return static_cast<int>(input); }
-void CreateAndInsertToDatabase(Database* db);
+void CreateAndInsertToDatabase(Database* db, Table* table = nullptr);
 
 int main()
 {
@@ -28,11 +28,13 @@ int main()
         // create the table and then let it be read from the heap file
         // Table* table = db->OpenTable("Movies");
 
-        // CreateAndInsertToDatabase(db);
 
         Table* table = db->OpenTable("Movies");
-        
-        const auto& rows = table->SelectRows();
+
+        // CreateAndInsertToDatabase(db, table);
+
+        vector<Row> rows;
+        table->SelectRows(&rows);
         
         for(const auto& row : rows)
             row.PrintRow();
@@ -53,34 +55,51 @@ int main()
 }
 
 
-void CreateAndInsertToDatabase(Database* db)
+void CreateAndInsertToDatabase(Database* db, Table* table)
 {
-    vector<Column*> columns;
-    columns.push_back(new Column("MovieID", "SmallInt", sizeof(int16_t), false));
-    columns.push_back(new Column("MovieName", "String", 100, true));
-    columns.push_back(new Column("MovieType", "String", 100, true));
-    columns.push_back(new Column("MovieDesc", "String", 100, true));
-    columns.push_back(new Column("MovieActors", "String", 100, true));
-    columns.push_back(new Column("MovieLength", "String", 100, true));
-
-    Table* table = db->CreateTable("Movies", columns);
-    string largeString(9000, 'A');
-    
-    vector<vector<string>> inputData;
-    vector<string> words = {
-        "1"
-        ,"Silence Of The Lambs"
-        ,"Thriller"
-        ,largeString
-        , "Du Hast"
-        ,"2 Hours And 15 Minutes"
-    };
-
-    for(int i = 0;i < 1; i++)
+    if(table == nullptr)
     {
-        words[0] = to_string(i);
+        vector<Column*> columns;
+        columns.push_back(new Column("MovieID", "SmallInt", sizeof(int16_t), false));
+        columns.push_back(new Column("MovieName", "String", 100, true));
+        columns.push_back(new Column("MovieType", "String", 100, true));
+        columns.push_back(new Column("MovieDesc", "String", 100, true));
+        columns.push_back(new Column("MovieActors", "String", 100, true));
+        columns.push_back(new Column("MovieLength", "String", 100, true));
+
+        table = db->CreateTable("Movies", columns);
+    }
+    
+    // vector<string> words = {
+    //     "1"
+    //     ,"Silence Of The Lambs"
+    //     ,"Thriller"
+    //     ,"Hello its me you are loookin for"
+    //     , "Du Hast"
+    //     ,"2 Hours And 15 Minutes"
+    // };
+
+    vector<vector<string*>*> inputData;
+
+    for(int i = 1;i < 2; i++)
+    {
+        auto* words = new vector<string*>{
+            new string("1"),
+            new string("Silence Of The Lambs"),
+            new string("Thriller"),
+            new string("Hello its me"),
+            nullptr,
+            new string("2 Hours And 15 Minutes")
+        };
+        *(*words)[0] = to_string(i); // Dereference the pointer to modify the first string
         inputData.push_back(words);
     }
 
     table->InsertRows(inputData);
+
+    for (const auto& row : inputData) {
+        for (const auto& word : *row)
+            delete word; // Free each string
+        delete row;      // Free the vector itself
+    }
 }

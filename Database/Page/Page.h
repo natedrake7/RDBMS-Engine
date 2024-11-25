@@ -47,7 +47,7 @@ class Page {
         const bool& GetPageDirtyStatus() const;
         const page_size_t& GetBytesLeft() const;
         const page_id_t& GetNextPageId() const;
-        vector<Row> GetRows(const Table& table) const;
+        void GetRows(vector<Row>* copiedRows, const Table& table) const;
         page_size_t GetPageSize() const;
 };
 

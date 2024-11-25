@@ -58,7 +58,7 @@ const block_size_t& Block::GetBlockSize() const { return this->size; }
 
 const column_index_t& Block::GetColumnIndex() const { return this->column->GetColumnIndex(); }
 
-const record_size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
+const row_size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
 const ColumnType & Block::GetColumnType() const { return this->column->GetColumnType(); }
 

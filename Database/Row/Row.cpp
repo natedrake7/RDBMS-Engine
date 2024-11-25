@@ -66,33 +66,38 @@ void Row::PrintRow() const
     {
         //why this breaks check it column may be null
         const ColumnType columnType = this->data[i]->GetColumnType();
-
-        if (columnType == ColumnType::TinyInt)
+        const object_t* blockData = this->data[i]->GetBlockData();
+        
+        if(blockData == nullptr)
+        {
+            cout<< "NULL";
+        }
+        else if (columnType == ColumnType::TinyInt)
         {
             int8_t tinyIntValue;
-            memcpy(&tinyIntValue, this->data[i]->GetBlockData(), sizeof(int8_t));
+            memcpy(&tinyIntValue, blockData, sizeof(int8_t));
             cout << static_cast<int>(tinyIntValue);
         }
         else if (columnType == ColumnType::SmallInt)
         {
             int16_t smallIntValue;
-            memcpy(&smallIntValue, this->data[i]->GetBlockData(), sizeof(int16_t));
+            memcpy(&smallIntValue, blockData, sizeof(int16_t));
             cout << smallIntValue;
         }
         else if(columnType == ColumnType::Int)
         {
             int32_t intValue;
-            memcpy(&intValue, this->data[i]->GetBlockData(), sizeof(int32_t));
+            memcpy(&intValue, blockData, sizeof(int32_t));
             cout << intValue;
         }
         else if (columnType == ColumnType::BigInt)
         {
             int64_t bigIntValue;
-            memcpy(&bigIntValue, this->data[i]->GetBlockData(), sizeof(int64_t));
+            memcpy(&bigIntValue, blockData, sizeof(int64_t));
             cout << bigIntValue;
         }
         else if(columnType == ColumnType::String)
-            cout << reinterpret_cast<const char*>(this->data[i]->GetBlockData());
+            cout << reinterpret_cast<const char*>(blockData);
 
         if(i == this->data.size() - 1)
             cout << '\n';
@@ -101,7 +106,7 @@ void Row::PrintRow() const
     }
 }
 
-const uint32_t& Row::GetRowSize() const { return this->metaData.rowSize; }
+const row_size_t& Row::GetRowSize() const { return this->metaData.rowSize; }
 
 vector<column_index_t> Row::GetLargeBlocks()
 {
@@ -160,9 +165,9 @@ char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer) const
     return largeValue;
 }
 
-void Row::SetBitMapValue(const bit_map_pos_t &position, const bool &value) { this->metaData.nullBitMap->Set(position, value); }
+void Row::SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) { this->metaData.nullBitMap->Set(position, value); }
 
-bool Row::GetBitMapValue(const bit_map_pos_t &position) const { return this->metaData.nullBitMap->Get(position); }
+bool Row::GetNullBitMapValue(const bit_map_pos_t &position) const { return this->metaData.nullBitMap->Get(position); }
 
 RowMetaData* Row::GetMetaData() { return &this->metaData; }
 

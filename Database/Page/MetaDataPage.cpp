@@ -30,7 +30,7 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
         filePtr->write(tableMetaData.tableMetaData.tableName.c_str(), tableMetaData.tableMetaData.tableNameSize);
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.firstPageId), sizeof(page_id_t));
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.lastPageId), sizeof(page_id_t));
-        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.maxRowSize), sizeof(record_size_t));
+        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.maxRowSize), sizeof(row_size_t));
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.numberOfColumns), sizeof(column_number_t));
 
         for(const auto& columnMetaData: tableMetaData.columnsMetaData)
@@ -39,7 +39,7 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
             filePtr->write(columnMetaData.columnName.c_str(), columnMetaData.columnNameSize);
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnTypeLiteralSize), sizeof(metadata_literal_t));
             filePtr->write(columnMetaData.columnTypeLiteral.c_str(), columnMetaData.columnTypeLiteralSize);
-            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.recordSize), sizeof(record_size_t));
+            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.recordSize), sizeof(row_size_t));
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnType), sizeof(ColumnType));
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnIndex), sizeof(column_index_t));
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.allowNulls), sizeof(bool));
@@ -84,8 +84,8 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
         memcpy(&tableFullMetaData.tableMetaData.lastPageId, data.data() + offSet, sizeof(page_id_t));
         offSet += sizeof(page_id_t);
 
-        memcpy(&tableFullMetaData.tableMetaData.maxRowSize, data.data() + offSet, sizeof(record_size_t));
-        offSet += sizeof(record_size_t);
+        memcpy(&tableFullMetaData.tableMetaData.maxRowSize, data.data() + offSet, sizeof(row_size_t));
+        offSet += sizeof(row_size_t);
 
         memcpy(&tableFullMetaData.tableMetaData.numberOfColumns, data.data() + offSet, sizeof(column_number_t));
         offSet += sizeof(column_number_t);
@@ -107,8 +107,8 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
             memcpy(&columnMetaData.columnTypeLiteral[0], data.data() + offSet, columnMetaData.columnTypeLiteralSize);
             offSet += columnMetaData.columnTypeLiteralSize;
 
-            memcpy(&columnMetaData.recordSize, data.data() + offSet, sizeof(record_size_t));
-            offSet += sizeof(record_size_t);
+            memcpy(&columnMetaData.recordSize, data.data() + offSet, sizeof(row_size_t));
+            offSet += sizeof(row_size_t);
 
             memcpy(&columnMetaData.columnType, data.data() + offSet, sizeof(ColumnType));
             offSet += sizeof(ColumnType);

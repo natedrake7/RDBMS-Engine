@@ -46,8 +46,9 @@ void BitMap::GetDataFromFile(const vector<char>& data, page_offset_t& offset)
     {
         byte value;
         memcpy(&value, data.data() + offset, sizeof(byte));
-        offset += sizeof(byte);
         this->SetByte(i, value);
+
+        offset += sizeof(byte);
     }
 }
 

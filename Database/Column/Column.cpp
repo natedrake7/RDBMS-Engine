@@ -1,6 +1,6 @@
 ﻿#include "Column.h"
 
-Column::Column(const string& columnName, const string& columnTypeLiteral, const record_size_t&  recordSize, const bool& allowNulls)
+Column::Column(const string& columnName, const string& columnTypeLiteral, const row_size_t&  recordSize, const bool& allowNulls)
 {
     this->metadata.columnName = columnName;
     this->metadata.columnTypeLiteral = columnTypeLiteral;
@@ -16,7 +16,7 @@ string& Column::GetColumnName() { return this->metadata.columnName; }
 
 const ColumnType& Column::GetColumnType() const { return this->metadata.columnType; }
 
-const record_size_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
+const row_size_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
 
 bool& Column::GetAllowNulls() { return this->metadata.allowNulls;}
 

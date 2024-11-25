@@ -13,7 +13,7 @@ using namespace std;
 typedef struct RowMetaData {
     BitMap* nullBitMap;
     BitMap* largeObjectBitMap;
-    uint32_t rowSize;
+    row_size_t rowSize;
     size_t maxRowSize;
 
     RowMetaData();
@@ -35,7 +35,7 @@ class Row
 
         ~Row();
 
-        void InsertColumnData(Block* block, const uint16_t& columnIndex);
+        void InsertColumnData(Block* block, const column_index_t& columnIndex);
 
         const vector<Block*>& GetData() const;
 
@@ -49,9 +49,9 @@ class Row
 
         char* GetLargeObjectValue(const DataObjectPointer &objectPointer) const;
 
-        void SetBitMapValue(const bit_map_pos_t& position, const bool& value);
+        void SetNullBitMapValue(const bit_map_pos_t& position, const bool& value);
 
-        bool GetBitMapValue(const bit_map_pos_t& position) const;
+        bool GetNullBitMapValue(const bit_map_pos_t& position) const;
 
         RowMetaData* GetMetaData();
 };

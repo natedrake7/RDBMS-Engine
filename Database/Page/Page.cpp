@@ -64,14 +64,16 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
         Row* row = new Row(*table);
         RowMetaData* rowMetaData = row->GetMetaData();
         
-        memcpy(&rowMetaData->rowSize, data.data() + offSet, sizeof(uint32_t));
-        offSet += sizeof(uint32_t);
+        memcpy(&rowMetaData->rowSize, data.data() + offSet, sizeof(row_size_t));
+        offSet += sizeof(row_size_t);
 
         memcpy(&rowMetaData->maxRowSize, data.data() + offSet, sizeof(size_t));
         offSet += sizeof(size_t);
 
         rowMetaData->nullBitMap->GetDataFromFile(data, offSet);
         rowMetaData->largeObjectBitMap->GetDataFromFile(data, offSet);
+
+        rowMetaData->nullBitMap->Print();
         
          for(int j = 0; j < columnsSize; j++)
          {
@@ -121,26 +123,29 @@ void Page::WritePageToFile(fstream *filePtr)
     {
         RowMetaData* rowMetaData = row->GetMetaData();
 
-        filePtr->write(reinterpret_cast<const char* >(&rowMetaData->rowSize), sizeof(uint32_t));
+        filePtr->write(reinterpret_cast<const char* >(&rowMetaData->rowSize), sizeof(row_size_t));
         filePtr->write(reinterpret_cast<const char* >(&rowMetaData->maxRowSize), sizeof(size_t));
         rowMetaData->nullBitMap->WriteDataToFile(filePtr);
         rowMetaData->largeObjectBitMap->WriteDataToFile(filePtr);
 
-        uint16_t counter = 0;
+        column_index_t columnIndex = 0;
         for(const auto& block : row->GetData())
         {
+            if(rowMetaData->nullBitMap->Get(columnIndex))
+            {
+                columnIndex++;
+                continue;
+            }
+            
             block_size_t dataSize = block->GetBlockSize();
 
             filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(block_size_t));
 
             const auto& data = block->GetBlockData();
             
-            if (rowMetaData->largeObjectBitMap->Get(counter))
-                filePtr->write(reinterpret_cast<const char *>(data), sizeof(DataObjectPointer));
-            else
-                filePtr->write(reinterpret_cast<const char *>(data), dataSize);
+            filePtr->write(reinterpret_cast<const char *>(data), dataSize);
             
-            counter++;
+            columnIndex++;
         }
     }
 }
@@ -161,9 +166,9 @@ const page_id_t& Page::GetNextPageId() const { return this->metadata.nextPageId;
 
 page_size_t Page::GetPageSize() const { return this->metadata.pageSize; }
 
-vector<Row> Page::GetRows(const Table& table) const
+void Page::GetRows(vector<Row>* copiedRows, const Table& table) const
 {
-    vector<Row> copiedRows;
+    copiedRows->clear();
     for(const auto& row: this->rows)
     {
         RowMetaData* rowMetaData = row->GetMetaData();
@@ -173,7 +178,8 @@ vector<Row> Page::GetRows(const Table& table) const
         for(const auto& block : row->GetData())
         {
             Block* blockCopy = new Block(block);
-            if (rowMetaData->largeObjectBitMap->Get(block->GetColumnIndex()))
+            const column_index_t& blockIndex = block->GetColumnIndex();
+            if (rowMetaData->largeObjectBitMap->Get(blockIndex))
             {
                 DataObjectPointer objectPointer;
                 memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
@@ -186,8 +192,6 @@ vector<Row> Page::GetRows(const Table& table) const
 
             copyBlocks.push_back(blockCopy);
         }
-        copiedRows.emplace_back(table, copyBlocks);
+        copiedRows->emplace_back(table, copyBlocks);
     }
-
-    return copiedRows;
 }

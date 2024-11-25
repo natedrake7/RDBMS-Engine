@@ -54,19 +54,19 @@ Table::~Table()
     //     delete row;
 }
 
-void Table::InsertRows(const vector<vector<string>> &inputData)
+void Table::InsertRows(const vector<vector<string*>*> &inputData)
 {
     uint32_t rowsInserted = 0;
     for (const auto& rowData: inputData)
     {
-        this->InsertRow(rowData);
+        this->InsertRow(*rowData);
         rowsInserted++;
     }
 
     cout<<"Rows affected: "<<rowsInserted<<endl;
 }
 
-void Table::InsertRow(const vector<string>& inputData)
+void Table::InsertRow(const vector<string*>& inputData)
 {
 
     Row* row = new Row(*this);
@@ -75,38 +75,38 @@ void Table::InsertRow(const vector<string>& inputData)
         Block* block = new Block(columns[i]);
         const ColumnType columnType = columns[i]->GetColumnType();
 
-        if (columnType == ColumnType::TinyInt)
+        if(inputData[i] == nullptr)
         {
-            int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData[i]);
+            if(!columns[i]->GetAllowNulls())
+                throw invalid_argument("Column " + columns[i]->GetColumnName() + " does not allow NULLs. Insert Fails.");
+            
+            block->SetData(nullptr, 0);
+
+            row->SetNullBitMapValue(i, true);
+        }
+        else if (columnType == ColumnType::TinyInt)
+        {
+            int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(*inputData[i]);
             block->SetData(&convertedTinyInt, sizeof(int8_t));
         }
         else if (columnType == ColumnType::SmallInt)
         {
-            int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData[i]);
+            int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(*inputData[i]);
             block->SetData(&convertedSmallInt, sizeof(int16_t));
         }
         else if (columnType == ColumnType::Int)
         {
             //store each int value in 4 bits eg 04 -> 1 byte , 40 -> 8 bit
-            int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData[i]);
+            int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(*inputData[i]);
             block->SetData(&convertedInt, sizeof(int32_t));
         }
         else if (columnType == ColumnType::BigInt)
         {
-            int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData[i]);
+            int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(*inputData[i]);
             block->SetData(&convertedBigInt, sizeof(int64_t));
         }
         else if (columnType == ColumnType::String)
-            block->SetData(inputData[i].c_str(), inputData[i].size() + 1);
-        else if (columnType == ColumnType::Null)
-        {
-            if (!columns[i]->GetAllowNulls())
-                throw invalid_argument("Column " + columns[i]->GetColumnName() + " does not allow NULLs. Insert Fails.");
-
-            row->SetBitMapValue(i, true);
-
-            block->SetData(nullptr, 0);
-        }
+            block->SetData(inputData[i]->c_str(), inputData[i]->size() + 1);
         else
             throw invalid_argument("Unsupported column type");
 
@@ -121,7 +121,7 @@ void Table::InsertRow(const vector<string>& inputData)
 
         this->InsertLargeObjectToPage(row, 0,  row->GetLargeBlocks());
 
-        const uint32_t& rowSize = row->GetRowSize();
+        const row_size_t& rowSize = row->GetRowSize();
 
         if(lastPage->GetBytesLeft() >= rowSize + this->GetNumberOfColumns() * sizeof(uint16_t))
         {
@@ -145,9 +145,6 @@ void Table::InsertRow(const vector<string>& inputData)
     this->InsertLargeObjectToPage(row, 0, row->GetLargeBlocks());
 
     newPage->InsertRow(row, *this);
-
-    // this->rows.push_back(row);
-    // cout<<"Row Affected: 1"<<'\n';
 }
 
 void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes)
@@ -315,9 +312,8 @@ const vector<Column*>& Table::GetColumns() const { return this->columns; }
 
 LargeDataPage* Table::GetLargeDataPage(const page_id_t &pageId) const { return this->database->GetLargeDataPage(pageId, *this); }
 
-vector<Row> Table::SelectRows(const size_t& count) const
+void Table::SelectRows(vector<Row>* selectedRows, const size_t& count) const
 {
-    vector<Row> selectedRows;
     page_id_t pageId = this->metadata.firstPageId;
 
    const size_t rowsToSelect = (count == -1)
@@ -327,22 +323,20 @@ vector<Row> Table::SelectRows(const size_t& count) const
     while(pageId > 0)
     {
         Page* page = this->database->GetPage(pageId, *this);
-        const vector<Row> pageRows = page->GetRows(*this);
+        vector<Row> pageRows;
+        page->GetRows(&pageRows, *this);
 
-        if(selectedRows.size() + pageRows.size() > rowsToSelect)
+        if(selectedRows->size() + pageRows.size() > rowsToSelect)
         {
-            selectedRows.insert(selectedRows.end(), pageRows.begin(), pageRows.begin() + ( rowsToSelect - selectedRows.size()));
+            selectedRows->insert(selectedRows->end(), pageRows.begin(), pageRows.begin() + ( rowsToSelect - selectedRows->size()));
             break;
         }
 
-
-        selectedRows.insert(selectedRows.end(), pageRows.begin(), pageRows.end());
+        selectedRows->insert(selectedRows->end(), pageRows.begin(), pageRows.end());
         pageId = page->GetNextPageId();
     }
-
-    return selectedRows;
 }
 
 string& Table::GetTableName(){ return this->metadata.tableName; }
 
-record_size_t& Table::GetMaxRowSize(){ return this->metadata.maxRowSize; }
+row_size_t& Table::GetMaxRowSize(){ return this->metadata.maxRowSize; }
