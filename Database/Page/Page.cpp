@@ -6,10 +6,20 @@ PageMetadata::PageMetadata()
     this->pageId = 0;
     this->pageSize = 0;
     this->nextPageId = 0;
-    this->bytesLeft = PAGE_SIZE - 2 * sizeof(page_id_t) - 2 * sizeof(page_size_t) - sizeof(PageType);
+    this->bytesLeft = PAGE_SIZE - GetPageMetaDataSize();
 }
 
 PageMetadata::~PageMetadata() = default;
+
+page_size_t PageMetadata::GetPageMetaDataSize()
+{
+    page_size_t size = 0;
+    size += 2 * sizeof(page_id_t);
+    size += 2 * sizeof(page_size_t);
+    size += sizeof(PageType);
+
+    return size;
+}
 
 Page::Page(const page_id_t& pageId)
 {
@@ -36,10 +46,11 @@ Page::~Page()
         delete row;
 }
 
-void Page::InsertRow(Row* row, const Table& table)
+void Page::InsertRow(Row* row)
 {
     this->rows.push_back(row);
-    this->metadata.bytesLeft -= (row->GetRowSize() + table.GetNumberOfColumns() * sizeof(block_size_t));
+    auto totalSize = row->GetTotalRowSize();
+    this->metadata.bytesLeft -= totalSize;
     this->metadata.pageSize++;
     this->isDirty = true;
 }
@@ -57,7 +68,6 @@ void Page::UpdateRow(Row* row)
 void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr)
 {
     const auto& columns = table->GetColumns();
-    const int columnsSize = columns.size();
 
     for (int i = 0; i < this->metadata.pageSize; i++)
     {
@@ -73,7 +83,7 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
         rowMetaData->nullBitMap->GetDataFromFile(data, offSet);
         rowMetaData->largeObjectBitMap->GetDataFromFile(data, offSet);
 
-         for(int j = 0; j < columnsSize; j++)
+         for(int j = 0; j < columns.size(); j++)
          {
              if (rowMetaData->nullBitMap->Get(j))
              {
@@ -164,11 +174,25 @@ const page_id_t& Page::GetNextPageId() const { return this->metadata.nextPageId;
 
 page_size_t Page::GetPageSize() const { return this->metadata.pageSize; }
 
-void Page::GetRows(vector<Row>* copiedRows, const Table& table) const
+void Page::GetRows(vector<Row>* copiedRows, const Table& table, const vector<RowCondition*>* conditions) const
 {
     copiedRows->clear();
     for(const auto& row: this->rows)
     {
+        bool skipRow = false;
+        if(conditions != nullptr)
+        {
+            for(const auto& condition: *conditions)
+                if(*condition != row->GetData()[condition->GetColumnIndex()])
+                {
+                    skipRow = true;
+                    break;
+                }
+            
+            if(skipRow)
+                continue;
+        }
+
         RowMetaData* rowMetaData = row->GetMetaData();
         
         vector<Block*> copyBlocks;

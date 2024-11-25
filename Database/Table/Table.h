@@ -4,6 +4,7 @@
 #include <vector>
 #include <random>
 #include "../Constants.h"
+#include "../../AdditionalLibraries/AdditionalObjects/RowCondition.h"
 #include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
 
 using namespace std;
@@ -80,5 +81,7 @@ class Table {
 
         LargeDataPage* GetLargeDataPage(const page_id_t& pageId) const;
 
-        void SelectRows(vector<Row>* selectedRows, const size_t& count = -1) const;
+        void SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
+
+        void UpdateRows();
 };

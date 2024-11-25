@@ -4,6 +4,7 @@
 #include "../Constants.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 
+class RowCondition;
 using namespace std;
 
 class Row;
@@ -19,6 +20,7 @@ typedef struct PageMetadata{
 
     PageMetadata();
     ~PageMetadata();
+    static page_size_t GetPageMetaDataSize();
 }PageMetaData;
 
 class Page {
@@ -35,7 +37,7 @@ class Page {
         explicit Page();
         explicit Page(const PageMetaData& pageMetaData);
         virtual ~Page();
-        void InsertRow(Row* row, const Table& table);
+        void InsertRow(Row* row);
         void DeleteRow(Row* row);
         void UpdateRow(Row* row);
         virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr);
@@ -47,7 +49,7 @@ class Page {
         const bool& GetPageDirtyStatus() const;
         const page_size_t& GetBytesLeft() const;
         const page_id_t& GetNextPageId() const;
-        void GetRows(vector<Row>* copiedRows, const Table& table) const;
+        void GetRows(vector<Row>* copiedRows, const Table& table, const vector<RowCondition*>* conditions = nullptr) const;
         page_size_t GetPageSize() const;
 };
 

@@ -30,6 +30,8 @@ bool BitMap::Get(const bit_map_pos_t& position) const { return data[position / 8
 
 const bit_map_size_t& BitMap::GetSize() const { return this->size; }
 
+bit_map_size_t BitMap::GetSizeInBytes() const { return this->data.size() + sizeof(block_size_t); }
+
 void BitMap::SetByte(const bit_map_pos_t& position, const byte& value)
 {
     if (position < this->data.size())
@@ -55,7 +57,7 @@ void BitMap::GetDataFromFile(const vector<char>& data, page_offset_t& offset)
 void BitMap::WriteDataToFile(fstream* filePtr)
 {
     filePtr->write(reinterpret_cast<char*>(&this->size), sizeof(bit_map_size_t));
-    filePtr->write(reinterpret_cast<char*>(this->data.data()), this->data.size());
+    filePtr->write(reinterpret_cast<char*>(this->data.data()), this->data.size() * sizeof(byte));
 }
 
 void BitMap::Print() const

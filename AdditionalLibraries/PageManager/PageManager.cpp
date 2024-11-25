@@ -174,19 +174,29 @@ void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
 
         const PageMetadata pageMetaData = this->GetPageMetaDataFromFile(buffer, offSet);
 
+        //page is already opened skip it
+        if(this->cache.find(pageMetaData.pageId) != this->cache.end())
+            continue;
+
         Page* page = nullptr;
 
-        if (pageMetaData.pageType == PageType::DATA)
-            page = new Page(pageMetaData);
-        else if (pageMetaData.pageType == PageType::LOB)
-            page = new LargeDataPage(pageMetaData);
-        else if (pageMetaData.pageType == PageType::METADATA)
-            page = new MetaDataPage(pageMetaData);
+        switch (pageMetaData.pageType) {
+            case PageType::DATA:
+                page = new Page(pageMetaData);
+                break;
+            case PageType::METADATA:
+                page = new MetaDataPage(pageMetaData);
+                break;
+            case PageType::LOB:
+                page = new LargeDataPage(pageMetaData);
+                break;
+            default:
+                throw runtime_error("Page type not recognized");
+        }
 
         page->GetPageDataFromFile(buffer, table, offSet, file);
 
         this->pageList.push_front(page);
-
 
         this->cache[page->GetPageId()] = this->pageList.begin();
 

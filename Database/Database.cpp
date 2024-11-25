@@ -97,6 +97,18 @@ void UseDatabase(const string& dbName, Database** db, PageManager* pageManager)
     *db = new Database(dbName, pageManager);
 }
 
+void PrintRows(const vector<Row>& rows)
+{
+    uint16_t rowCount = 0;
+    for(const auto& row: rows)
+    {
+        row.PrintRow();
+        rowCount++;
+    }
+
+    cout<< "Rows printed: "<< rowCount << endl;
+}
+
 void Database::DeleteDatabase() const
 {
     const string path = this->filename + this->fileExtension;

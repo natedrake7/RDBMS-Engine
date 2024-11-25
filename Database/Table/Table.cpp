@@ -121,12 +121,11 @@ void Table::InsertRow(const vector<Field>& inputData)
         lastPage = this->database->GetPage(this->metadata.lastPageId, *this);
 
         this->InsertLargeObjectToPage(row, 0,  row->GetLargeBlocks());
-
-        const row_size_t& rowSize = row->GetRowSize();
-
-        if(lastPage->GetBytesLeft() >= rowSize + this->GetNumberOfColumns() * sizeof(uint16_t))
+        const auto rowSize = row->GetTotalRowSize();
+        
+        if(lastPage->GetBytesLeft() >= rowSize)
         {
-            lastPage->InsertRow(row, *this);
+            lastPage->InsertRow(row);
             return;
         }
     }
@@ -145,7 +144,7 @@ void Table::InsertRow(const vector<Field>& inputData)
 
     this->InsertLargeObjectToPage(row, 0, row->GetLargeBlocks());
 
-    newPage->InsertRow(row, *this);
+    newPage->InsertRow(row);
 }
 
 void Table::InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector<column_index_t>& largeBlocksIndexes)
@@ -310,7 +309,7 @@ const vector<Column*>& Table::GetColumns() const { return this->columns; }
 
 LargeDataPage* Table::GetLargeDataPage(const page_id_t &pageId) const { return this->database->GetLargeDataPage(pageId, *this); }
 
-void Table::SelectRows(vector<Row>* selectedRows, const size_t& count) const
+void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* conditions, const size_t& count) const
 {
     page_id_t pageId = this->metadata.firstPageId;
 
@@ -322,7 +321,7 @@ void Table::SelectRows(vector<Row>* selectedRows, const size_t& count) const
     {
         Page* page = this->database->GetPage(pageId, *this);
         vector<Row> pageRows;
-        page->GetRows(&pageRows, *this);
+        page->GetRows(&pageRows, *this, conditions);
 
         if(selectedRows->size() + pageRows.size() > rowsToSelect)
         {

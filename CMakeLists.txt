@@ -17,7 +17,9 @@ add_library(AdditionalLibraries
         AdditionalLibraries/BitMap/BitMap.cpp
         AdditionalLibraries/BitMap/BitMap.h
         AdditionalLibraries/AdditionalObjects/Field/Field.cpp
-        AdditionalLibraries/AdditionalObjects/Field/Field.h)
+        AdditionalLibraries/AdditionalObjects/Field/Field.h
+        AdditionalLibraries/AdditionalObjects/RowCondition.cpp
+        AdditionalLibraries/AdditionalObjects/RowCondition.h)
 add_library(Database
         Database/Database.cpp
         Database/Database.h

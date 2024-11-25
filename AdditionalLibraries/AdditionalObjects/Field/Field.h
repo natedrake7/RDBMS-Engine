@@ -9,7 +9,7 @@ class Field {
 
     public:
         Field();
-        Field(const string& data, const bool& isNull = false);
+        explicit Field(const string& data, const bool& isNull = false);
         ~Field();
         const string& GetData() const;
         const bool& GetIsNull() const;

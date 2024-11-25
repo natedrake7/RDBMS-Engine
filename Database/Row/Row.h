@@ -54,4 +54,8 @@ class Row
         bool GetNullBitMapValue(const bit_map_pos_t& position) const;
 
         RowMetaData* GetMetaData();
+
+        row_size_t GetTotalRowSize() const;
+
+        row_metadata_size_t GetRowMetaDataSize() const;
 };

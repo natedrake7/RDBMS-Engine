@@ -64,7 +64,6 @@ void Row::PrintRow() const
 {
     for(size_t i = 0; i < this->data.size(); i++)
     {
-        //why this breaks check it column may be null
         const ColumnType columnType = this->data[i]->GetColumnType();
         const object_t* blockData = this->data[i]->GetBlockData();
         
@@ -170,6 +169,25 @@ void Row::SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) {
 bool Row::GetNullBitMapValue(const bit_map_pos_t &position) const { return this->metaData.nullBitMap->Get(position); }
 
 RowMetaData* Row::GetMetaData() { return &this->metaData; }
+
+row_size_t Row::GetTotalRowSize() const
+{
+    row_size_t currentRowSize = this->GetRowMetaDataSize();
+    currentRowSize += this->table->GetNumberOfColumns() * sizeof(block_size_t); //decrease by the null blocks here
+    currentRowSize += this->metaData.rowSize;
+    
+    return currentRowSize;
+}
+
+row_metadata_size_t Row::GetRowMetaDataSize() const
+{
+    row_metadata_size_t rowMetaDataSize = sizeof(row_size_t);
+    rowMetaDataSize += sizeof(size_t);
+    rowMetaDataSize += this->metaData.nullBitMap->GetSizeInBytes();
+    rowMetaDataSize += this->metaData.largeObjectBitMap->GetSizeInBytes();
+
+    return rowMetaDataSize;
+}
 
 
 

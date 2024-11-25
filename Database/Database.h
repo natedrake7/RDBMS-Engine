@@ -81,3 +81,5 @@ class Database {
 void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager* pageManager);
 
 void UseDatabase(const string& dbName, Database** db, PageManager* pageManager);
+
+void PrintRows(const vector<Row>& rows);

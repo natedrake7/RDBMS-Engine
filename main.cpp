@@ -26,24 +26,29 @@ int main()
 
         pageManager->BindDatabase(db);
 
-        // create the table and then let it be read from the heap file
-        // Table* table = db->OpenTable("Movies");
-
-
         Table* table = db->OpenTable("Movies");
 
-        CreateAndInsertToDatabase(db, table);
+        // CreateAndInsertToDatabase(db, table);
 
         table = db->OpenTable("Movies");
         vector<Row> rows;
-        table->SelectRows(&rows);
+        char searchCond[]  = "Du Hast Miesch";
+        vector<RowCondition*> conditions;
+        RowCondition condition(searchCond, strlen(searchCond) + 1, 3);
+
+        conditions.push_back(&condition);
+
+        auto start = std::chrono::high_resolution_clock::now();
         
-        for(const auto& row : rows)
-            row.PrintRow();
+        table->SelectRows(&rows, &conditions);
 
-        //update delete rows + bitmap handle, large texts. handle nulls -> datasize 0 -> 4
+        auto end = std::chrono::high_resolution_clock::now();
 
-        //UPDATE dbo.Movies SET isNull = 0
+        auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+
+        cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
+
+        PrintRows(rows);
 
         delete db;
         delete pageManager;
@@ -74,15 +79,15 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
 
     vector<vector<Field>> inputData;
 
-    for(int i = 2;i < 10; i++)
+    for(int i = 1000;i < 1001; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field("", true),
             Field(string(9000, 'A')),
+            Field("Hello its me you are llooooking for"),
         };
 
         fields[0].SetData(to_string(i));
