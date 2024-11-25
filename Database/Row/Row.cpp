@@ -147,7 +147,7 @@ char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer) const
     while (object->nextPageId != 0)
     {
         page = this->table->GetLargeDataPage(object->nextPageId);
-        object = page->GetObject(objectPointer.objectIndex);
+        object = page->GetObject(object->nextObjectIndex);
 
         const auto& stringSize = strlen(largeValue);
         char* prevValue = largeValue;

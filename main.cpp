@@ -1,6 +1,7 @@
 ﻿#include <bitset>
 #include <chrono>
 
+#include "AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "./Database/Database.h"
 #include "AdditionalLibraries/BitMap/BitMap.h"
 #include "./Database/Row/Row.h"
@@ -31,8 +32,9 @@ int main()
 
         Table* table = db->OpenTable("Movies");
 
-        // CreateAndInsertToDatabase(db, table);
+        CreateAndInsertToDatabase(db, table);
 
+        table = db->OpenTable("Movies");
         vector<Row> rows;
         table->SelectRows(&rows);
         
@@ -69,37 +71,23 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
 
         table = db->CreateTable("Movies", columns);
     }
-    
-    // vector<string> words = {
-    //     "1"
-    //     ,"Silence Of The Lambs"
-    //     ,"Thriller"
-    //     ,"Hello its me you are loookin for"
-    //     , "Du Hast"
-    //     ,"2 Hours And 15 Minutes"
-    // };
 
-    vector<vector<string*>*> inputData;
+    vector<vector<Field>> inputData;
 
-    for(int i = 1;i < 2; i++)
+    for(int i = 2;i < 10; i++)
     {
-        auto* words = new vector<string*>{
-            new string("1"),
-            new string("Silence Of The Lambs"),
-            new string("Thriller"),
-            new string("Hello its me"),
-            nullptr,
-            new string("2 Hours And 15 Minutes")
+        vector<Field> fields = {
+            Field("1"),
+            Field("Silence Of The Lambs"),
+            Field("Thriller"),
+            Field("Du Hast Miesch"),
+            Field("", true),
+            Field(string(9000, 'A')),
         };
-        *(*words)[0] = to_string(i); // Dereference the pointer to modify the first string
-        inputData.push_back(words);
+
+        fields[0].SetData(to_string(i));
+        inputData.push_back(fields);
     }
 
     table->InsertRows(inputData);
-
-    for (const auto& row : inputData) {
-        for (const auto& word : *row)
-            delete word; // Free each string
-        delete row;      // Free the vector itself
-    }
 }

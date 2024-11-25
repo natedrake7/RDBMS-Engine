@@ -1,5 +1,6 @@
 ﻿#include "Table.h"
 
+#include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "../Page/Page.h"
 
 TableFullMetaData::TableFullMetaData()
@@ -54,19 +55,19 @@ Table::~Table()
     //     delete row;
 }
 
-void Table::InsertRows(const vector<vector<string*>*> &inputData)
+void Table::InsertRows(const vector<vector<Field>> &inputData)
 {
     uint32_t rowsInserted = 0;
     for (const auto& rowData: inputData)
     {
-        this->InsertRow(*rowData);
+        this->InsertRow(rowData);
         rowsInserted++;
     }
 
     cout<<"Rows affected: "<<rowsInserted<<endl;
 }
 
-void Table::InsertRow(const vector<string*>& inputData)
+void Table::InsertRow(const vector<Field>& inputData)
 {
 
     Row* row = new Row(*this);
@@ -75,7 +76,7 @@ void Table::InsertRow(const vector<string*>& inputData)
         Block* block = new Block(columns[i]);
         const ColumnType columnType = columns[i]->GetColumnType();
 
-        if(inputData[i] == nullptr)
+        if(inputData[i].GetIsNull())
         {
             if(!columns[i]->GetAllowNulls())
                 throw invalid_argument("Column " + columns[i]->GetColumnName() + " does not allow NULLs. Insert Fails.");
@@ -86,27 +87,27 @@ void Table::InsertRow(const vector<string*>& inputData)
         }
         else if (columnType == ColumnType::TinyInt)
         {
-            int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(*inputData[i]);
+            int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData[i].GetData());
             block->SetData(&convertedTinyInt, sizeof(int8_t));
         }
         else if (columnType == ColumnType::SmallInt)
         {
-            int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(*inputData[i]);
+            int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData[i].GetData());
             block->SetData(&convertedSmallInt, sizeof(int16_t));
         }
         else if (columnType == ColumnType::Int)
         {
             //store each int value in 4 bits eg 04 -> 1 byte , 40 -> 8 bit
-            int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(*inputData[i]);
+            int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData[i].GetData());
             block->SetData(&convertedInt, sizeof(int32_t));
         }
         else if (columnType == ColumnType::BigInt)
         {
-            int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(*inputData[i]);
+            int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData[i].GetData());
             block->SetData(&convertedBigInt, sizeof(int64_t));
         }
         else if (columnType == ColumnType::String)
-            block->SetData(inputData[i]->c_str(), inputData[i]->size() + 1);
+            block->SetData(inputData[i].GetData().c_str(), inputData[i].GetData().size() + 1);
         else
             throw invalid_argument("Unsupported column type");
 
@@ -147,7 +148,7 @@ void Table::InsertRow(const vector<string*>& inputData)
     newPage->InsertRow(row, *this);
 }
 
-void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes)
+void Table::InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector<column_index_t>& largeBlocksIndexes)
 {
     if(largeBlocksIndexes.empty())
         return;
@@ -156,13 +157,9 @@ void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint
     
     const auto& rowData = row->GetData();
 
-    const auto& lastLargePageId = this->database->GetLastLargeDataPageId();
-
     for(const auto& largeBlockIndex : largeBlocksIndexes)
     {
         rowMetaData->largeObjectBitMap->Set(largeBlockIndex, true);
-
-        rowMetaData->largeObjectBitMap->Print();
 
         DataObject* dataObject = nullptr;
 
@@ -174,13 +171,13 @@ void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint
 
         while(true)
         {
-            LargeDataPage* largeDataPage = this->GetOrCreateLargeDataPage(lastLargePageId);
+            LargeDataPage* largeDataPage = this->GetOrCreateLargeDataPage();
 
             blockSize -= offset;
 
             const auto& availableBytesInPage = largeDataPage->GetBytesLeft();
 
-            const auto& dataSize = blockSize + sizeof(uint16_t) + sizeof(page_offset_t);
+            const auto& dataSize = blockSize + OBJECT_METADATA_SIZE_T;
 
             large_page_index_t objectIndex;
 
@@ -195,7 +192,7 @@ void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint
                 break;
             }
 
-            const auto bytesAllocated = availableBytesInPage - (sizeof(uint16_t) + sizeof(page_offset_t));//add page Id maybe;
+            const auto bytesAllocated = availableBytesInPage - OBJECT_METADATA_SIZE_T;//add page Id maybe;
 
             DataObject* prevDataObject = nullptr;
 
@@ -213,9 +210,10 @@ void Table::InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint
     }
 }
 
-LargeDataPage* Table::GetOrCreateLargeDataPage(const page_id_t& lastLargePageId)
+LargeDataPage* Table::GetOrCreateLargeDataPage()
 {
     LargeDataPage* largeDataPage = nullptr;
+    const auto& lastLargePageId = this->database->GetLastLargeDataPageId();
 
     if(lastLargePageId > 0)
         largeDataPage = this->database->GetLargeDataPage(lastLargePageId, *this);
@@ -224,7 +222,7 @@ LargeDataPage* Table::GetOrCreateLargeDataPage(const page_id_t& lastLargePageId)
         largeDataPage = this->database->CreateLargeDataPage();
 
     if (largeDataPage->GetBytesLeft() == 0
-        || largeDataPage->GetBytesLeft() < sizeof(uint16_t) + sizeof(page_offset_t) + 1)
+        || largeDataPage->GetBytesLeft() < OBJECT_METADATA_SIZE_T + 1)
     {
         largeDataPage->SetNextPageId(this->database->GetLastLargeDataPageId() + 1);
 

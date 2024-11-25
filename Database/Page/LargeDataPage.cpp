@@ -97,7 +97,7 @@ DataObject* LargeDataPage::InsertObject(const unsigned char *object, const page_
 
     *objectPosition = this->data.size() - 1;//PAGE_SIZE - this->metadata.bytesLeft;
 
-    this->metadata.bytesLeft -= (size + sizeof(page_size_t) + sizeof(page_offset_t));
+    this->metadata.bytesLeft -= (size + OBJECT_METADATA_SIZE_T);
     this->metadata.pageSize = this->data.size();
     this->isDirty = true;
 

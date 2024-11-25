@@ -73,8 +73,6 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
         rowMetaData->nullBitMap->GetDataFromFile(data, offSet);
         rowMetaData->largeObjectBitMap->GetDataFromFile(data, offSet);
 
-        rowMetaData->nullBitMap->Print();
-        
          for(int j = 0; j < columnsSize; j++)
          {
              if (rowMetaData->nullBitMap->Get(j))
@@ -178,8 +176,7 @@ void Page::GetRows(vector<Row>* copiedRows, const Table& table) const
         for(const auto& block : row->GetData())
         {
             Block* blockCopy = new Block(block);
-            const column_index_t& blockIndex = block->GetColumnIndex();
-            if (rowMetaData->largeObjectBitMap->Get(blockIndex))
+            if (rowMetaData->largeObjectBitMap->Get(block->GetColumnIndex()))
             {
                 DataObjectPointer objectPointer;
                 memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));

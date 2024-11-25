@@ -4,6 +4,7 @@
 #include <vector>
 #include <random>
 #include "../Constants.h"
+#include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
 
 using namespace std;
 
@@ -44,8 +45,8 @@ class Table {
 
     protected:
         void InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes);
-        LargeDataPage* GetOrCreateLargeDataPage(const page_id_t& lastLargePageId);
-        void InsertRow(const vector<string*>& inputData);
+        LargeDataPage* GetOrCreateLargeDataPage();
+        void InsertRow(const vector<Field>& inputData);
         static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
         static void InsertLargeDataObjectPointerToRow(Row* row
                             , const page_offset_t& offset
@@ -61,7 +62,7 @@ class Table {
 
         ~Table();
 
-        void InsertRows(const vector<vector<string*>*>& inputData);
+        void InsertRows(const vector<vector<Field>>& inputData);
 
         vector<Row> GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns = vector<Column*>()) const;
 
