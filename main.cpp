@@ -33,10 +33,13 @@ int main()
         table = db->OpenTable("Movies");
         vector<Row> rows;
         char searchCond[]  = "Du Hast Miesch";
+        int16_t searchKey = 1001;
         vector<RowCondition*> conditions;
         RowCondition condition(searchCond, strlen(searchCond) + 1, 3);
+        RowCondition condition2(&searchKey, sizeof(int16_t), 0);
 
         conditions.push_back(&condition);
+        conditions.push_back(&condition2);
 
         auto start = std::chrono::high_resolution_clock::now();
         
@@ -79,14 +82,14 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
 
     vector<vector<Field>> inputData;
 
-    for(int i = 1000;i < 1001; i++)
+    for(int i = 1001;i < 1002; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field(string(9000, 'A')),
+            Field("", true),
             Field("Hello its me you are llooooking for"),
         };
 
