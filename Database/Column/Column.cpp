@@ -1,16 +1,24 @@
 ﻿#include "Column.h"
 
+#include "../Table/Table.h"
+
 Column::Column(const string& columnName, const string& columnTypeLiteral, const row_size_t&  recordSize, const bool& allowNulls)
 {
     this->metadata.columnName = columnName;
     this->metadata.columnTypeLiteral = columnTypeLiteral;
     this->metadata.recordSize = recordSize;
-    this->metadata.allowNulls = allowNulls;
+    this->allowNulls = allowNulls;
     this->metadata.columnType = this->SetColumnType();
     this->metadata.columnIndex = 0;
+    this->table = nullptr;
 }
 
-Column::Column(const ColumnMetadata &metadata) { this->metadata = metadata; }
+Column::Column(const ColumnMetaData &metadata)
+{
+    this->metadata = metadata;
+    this->allowNulls = false;
+    this->table = nullptr;
+}
 
 string& Column::GetColumnName() { return this->metadata.columnName; }
 
@@ -18,11 +26,13 @@ const ColumnType& Column::GetColumnType() const { return this->metadata.columnTy
 
 const row_size_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
 
-bool& Column::GetAllowNulls() { return this->metadata.allowNulls;}
+bool Column::IsColumnNullable() const { return this->table->IsColumnNullable(this->metadata.columnIndex); }
+
+const bool& Column::GetAllowNulls() const { return this->allowNulls; }
 
 const column_index_t& Column::GetColumnIndex() const { return this->metadata.columnIndex; }
 
-const ColumnMetadata& Column::GetColumnMetadata() const { return this->metadata; }
+const ColumnMetaData& Column::GetColumnMetadata() const { return this->metadata; }
 
 void Column::SetColumnIndex(const column_index_t& columnIndex) { this->metadata.columnIndex = columnIndex; }
 

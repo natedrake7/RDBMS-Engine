@@ -6,6 +6,7 @@
 #include "../Constants.h"
 #include "../../AdditionalLibraries/AdditionalObjects/RowCondition.h"
 #include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
+#include "../../AdditionalLibraries/BitMap/BitMap.h"
 
 using namespace std;
 
@@ -17,6 +18,11 @@ typedef struct TableMetaData {
     page_id_t lastPageId;
     column_number_t numberOfColumns;
     extent_id_t lastExtentId;
+    BitMap* columnsNullBitMap;
+
+    TableMetaData();
+    ~TableMetaData();
+    TableMetaData& operator=(const TableMetaData& tableMetaData);
 }TableMetaData;
 
 #include "../Column/Column.h"
@@ -26,7 +32,7 @@ typedef struct TableMetaData {
 
 typedef struct TableFullMetaData {
     TableMetaData tableMetaData;
-    vector<ColumnMetadata> columnsMetaData;
+    vector<ColumnMetaData> columnsMetaData;
 
     TableFullMetaData();
     TableFullMetaData(const TableFullMetaData& tableMetaData);
@@ -42,7 +48,6 @@ struct DataObject;
 class Table {
     TableMetaData metadata;
     vector<Column*> columns;
-    vector<Row*> rows;
     Database* database;
 
     protected:
@@ -66,13 +71,9 @@ class Table {
 
         void InsertRows(const vector<vector<Field>>& inputData);
 
-        vector<Row> GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns = vector<Column*>()) const;
-
         string& GetTableName();
 
         row_size_t& GetMaxRowSize();
-
-        void PrintTable(size_t maxNumberOfItems = -1) const;
 
         column_number_t GetNumberOfColumns() const;
 
@@ -89,4 +90,6 @@ class Table {
         void UpdateLastPageId(const page_id_t& lastPageId);
 
         void UpdateLastExtentId(const extent_id_t& lastExtentId);
+
+        bool IsColumnNullable(const column_index_t& columnIndex) const;
 };

@@ -33,6 +33,8 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.lastPageId), sizeof(page_id_t));
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.maxRowSize), sizeof(row_size_t));
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.numberOfColumns), sizeof(column_number_t));
+        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.lastExtentId), sizeof(extent_id_t));
+        tableMetaData.tableMetaData.columnsNullBitMap->WriteDataToFile(filePtr);
 
         for(const auto& columnMetaData: tableMetaData.columnsMetaData)
         {
@@ -43,7 +45,6 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.recordSize), sizeof(row_size_t));
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnType), sizeof(ColumnType));
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnIndex), sizeof(column_index_t));
-            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.allowNulls), sizeof(bool));
         }
     }
 }
@@ -94,9 +95,15 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
         memcpy(&tableFullMetaData.tableMetaData.numberOfColumns, data.data() + offSet, sizeof(column_number_t));
         offSet += sizeof(column_number_t);
 
+        memcpy(&tableFullMetaData.tableMetaData.lastExtentId, data.data() + offSet, sizeof(extent_id_t));
+        offSet += sizeof(extent_id_t);
+
+        tableFullMetaData.tableMetaData.columnsNullBitMap = new BitMap(tableFullMetaData.tableMetaData.numberOfColumns);
+        tableFullMetaData.tableMetaData.columnsNullBitMap->GetDataFromFile(data, offSet);
+        
         for(int j = 0; j < tableFullMetaData.tableMetaData.numberOfColumns; j++)
         {
-            ColumnMetadata columnMetaData;
+            ColumnMetaData columnMetaData;
             memcpy(&columnMetaData.columnNameSize, data.data() + offSet, sizeof(metadata_literal_t));
             offSet += sizeof(metadata_literal_t);
             columnMetaData.columnName.resize(columnMetaData.columnNameSize);
@@ -120,9 +127,6 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
             memcpy(&columnMetaData.columnIndex, data.data() + offSet, sizeof(column_index_t));
             offSet += sizeof(column_index_t);
 
-            memcpy(&columnMetaData.allowNulls, data.data() + offSet, sizeof(bool));
-            offSet += sizeof(bool);
-
             tableFullMetaData.columnsMetaData.push_back(columnMetaData);
         }
         this->tablesMetaData.push_back(tableFullMetaData);
@@ -144,7 +148,7 @@ void MetaDataPage::SetMetaData(const DatabaseMetaData& databaseMetaData, const v
 
         for(const auto& column: columns)
         {
-            ColumnMetadata columnMetadata = column->GetColumnMetadata();
+            ColumnMetaData columnMetadata = column->GetColumnMetadata();
             columnMetadata.columnTypeLiteralSize = columnMetadata.columnTypeLiteral.size();
             columnMetadata.columnNameSize = columnMetadata.columnName.size();
 

@@ -5,6 +5,7 @@
 #include <vector>
 #include "../Constants.h"
 
+class Table;
 class Block;
 using namespace std;
 
@@ -23,7 +24,7 @@ enum class ColumnType : uint8_t
     Null = 10,
 };
 
-typedef struct ColumnMetadata {
+typedef struct ColumnMetaData {
     metadata_literal_t columnNameSize;
     string columnName;
     metadata_literal_t columnTypeLiteralSize;
@@ -31,11 +32,12 @@ typedef struct ColumnMetadata {
     ColumnType columnType;
     column_index_t columnIndex;
     row_size_t recordSize;
-    bool allowNulls;
-}ColumnMetadata;
+}ColumnMetaData;
 
 class Column {
-    ColumnMetadata metadata;
+    ColumnMetaData metadata;
+    const Table* table;
+    bool allowNulls;
 
     protected:
         ColumnType SetColumnType() const;
@@ -43,7 +45,7 @@ class Column {
     public:
         Column(const string& columnName, const string&  recordType, const row_size_t&  recordSize, const bool& allowNulls);
 
-        explicit Column(const ColumnMetadata& metadata);
+        explicit Column(const ColumnMetaData& metadata);
 
         string& GetColumnName();
 
@@ -51,11 +53,13 @@ class Column {
 
         const row_size_t& GetColumnSize() const;
 
-        bool& GetAllowNulls();
+        bool IsColumnNullable() const;
+
+        const bool& GetAllowNulls() const;
 
         void SetColumnIndex(const column_index_t& columnIndex);
 
         const column_index_t& GetColumnIndex() const;
 
-        const ColumnMetadata& GetColumnMetadata() const;
+        const ColumnMetaData& GetColumnMetadata() const;
 };

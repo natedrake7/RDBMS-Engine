@@ -3,15 +3,41 @@
 #include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "../Page/Page.h"
 
-TableFullMetaData::TableFullMetaData()
+TableMetaData::TableMetaData()
 {
-    this->tableMetaData.firstPageId = 0;
-    this->tableMetaData.lastPageId = 0;
-    this->tableMetaData.lastExtentId = 0;
-    this->tableMetaData.maxRowSize = 0;
-    this->tableMetaData.numberOfColumns = 0;
-    this->tableMetaData.tableNameSize = 0;
+    this->firstPageId = 0;
+    this->lastPageId = 0;
+    this->lastExtentId = 0;
+    this->maxRowSize = 0;
+    this->numberOfColumns = 0;
+    this->tableNameSize = 0;
+    this->columnsNullBitMap = nullptr;
 }
+
+TableMetaData::~TableMetaData()
+{
+    delete this->columnsNullBitMap;
+}
+
+TableMetaData& TableMetaData::operator=(const TableMetaData &tableMetaData)
+{
+    if (this == &tableMetaData)
+        return *this;
+    
+    this->firstPageId = tableMetaData.firstPageId;
+    this->lastPageId = tableMetaData.lastPageId;
+    this->lastExtentId = tableMetaData.lastExtentId;
+    this->maxRowSize = tableMetaData.maxRowSize;
+    this->numberOfColumns = tableMetaData.numberOfColumns;
+    this->tableNameSize = tableMetaData.tableNameSize;
+    this->tableName = tableMetaData.tableName;
+    this->columnsNullBitMap = new BitMap(*tableMetaData.columnsNullBitMap);
+    
+    return *this;
+}
+
+
+TableFullMetaData::TableFullMetaData() = default;
 
 TableFullMetaData::TableFullMetaData(const TableFullMetaData& tableMetaData)
 {
@@ -24,17 +50,17 @@ Table::Table(const string& tableName, const vector<Column*>& columns, Database* 
     this->columns = columns;
     this->database = database;
     this->metadata.tableName = tableName;
-    this->metadata.maxRowSize = 0;
-    this->metadata.firstPageId = 0;
-    this->metadata.lastPageId = 0;
     this->metadata.numberOfColumns = columns.size();
-    this->metadata.lastExtentId = 0;
+    this->metadata.columnsNullBitMap = new BitMap(this->metadata.numberOfColumns);
 
     uint16_t counter = 0;
     for(const auto& column : columns)
     {
+        this->metadata.columnsNullBitMap->Set(counter, column->GetAllowNulls());
+        
         this->metadata.maxRowSize += column->GetColumnSize();
         column->SetColumnIndex(counter);
+        
         counter++;
     }
 }
@@ -51,10 +77,6 @@ Table::~Table()
     //save table metadata to file
     for(const auto& column : columns)
         delete column;
-
-
-    // for(const auto& row : this->rows)
-    //     delete row;
 }
 
 void Table::InsertRows(const vector<vector<Field>> &inputData)
@@ -258,51 +280,6 @@ void Table::InsertLargeDataObjectPointerToRow(Row* row
     }
 }
 
-vector<Row> Table::GetRowByBlock(const Block& block, const vector<Column*>& selectedColumns) const
-{
-    vector<Row> selectedRows;
-    const column_index_t& blockIndex = block.GetColumnIndex();
-    const ColumnType& columnType = this->columns[blockIndex]->GetColumnType();
-    const auto searchBlockData = block.GetBlockData();
-
-    for(const auto& row : this->rows)
-    {
-        const auto& rowData = row->GetData();
-        if(memcmp(rowData[blockIndex]->GetBlockData(), searchBlockData, rowData[blockIndex]->GetBlockSize()) == 0)
-        {
-            vector<Block*> selectedBlocks;
-            if(selectedColumns.empty())
-                selectedBlocks = rowData;
-            else
-                for(const auto& column : selectedColumns)
-                    selectedBlocks.push_back(rowData[column->GetColumnIndex()]);
-
-            selectedRows.emplace_back(*this, selectedBlocks);
-        }
-    }
-
-    return selectedRows;
-}
-
-void Table::PrintTable(size_t maxNumberOfItems) const
-{
-    if(maxNumberOfItems == -1)
-        maxNumberOfItems = this->rows.size();
-
-    for(size_t i = 0; i < this->columns.size(); ++i)
-    {
-        cout<< this->columns[i]->GetColumnName();
-
-        if(i != this->columns.size() - 1)
-            cout<<" || ";
-        else
-            cout<<"\n";
-    }
-
-    for(size_t i = 0; i < maxNumberOfItems; ++i)
-        this->rows[i]->PrintRow();
-}
-
 column_number_t Table::GetNumberOfColumns() const { return this->columns.size();}
 
 const TableMetaData& Table::GetTableMetadata() const { return this->metadata; }
@@ -354,6 +331,8 @@ void Table::UpdateRows(const vector<Block> *updates, const vector<RowCondition *
 void Table::UpdateLastPageId(const page_id_t &lastPageId) { this->metadata.lastPageId = lastPageId; }
 
 void Table::UpdateLastExtentId(const extent_id_t &lastExtentId) { this->metadata.lastExtentId = lastExtentId; }
+
+bool Table::IsColumnNullable(const column_index_t &columnIndex) const { return this->metadata.columnsNullBitMap->Get(columnIndex); }
 
 string& Table::GetTableName(){ return this->metadata.tableName; }
 

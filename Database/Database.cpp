@@ -49,8 +49,6 @@ Table* Database::CreateTable(const string &tableName, const vector<Column *> &co
 {
     Table* table = new Table(tableName, columns, this);
 
-    // this->ValidateTableCreation(table);
-
     this->tables.push_back(table);
 
     this->metadata.numberOfTables = this->tables.size();

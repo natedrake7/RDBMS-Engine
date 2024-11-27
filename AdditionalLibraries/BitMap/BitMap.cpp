@@ -5,6 +5,12 @@ BitMap::BitMap()
     this->size = 0;
 }
 
+BitMap::BitMap(const BitMap &bitMap)
+{
+    this->size = bitMap.size;
+    this->data = bitMap.data;
+}
+
 BitMap::BitMap(const bit_map_size_t& size) : size(size)
 {
     this->data.resize((size + 7) / 8, 0);
