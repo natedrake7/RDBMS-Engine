@@ -89,7 +89,7 @@ void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager*
     MetaDataPage* metaDataPage = pageManager->CreateMetaDataPage(dbName + ".db");
 
     //start the the paging of the data in the extent 1 not 0
-    metaDataPage->SetMetaData(DatabaseMetaData(dbName, EXTENT_SIZE - 1, 0), vector<Table*>());
+    metaDataPage->SetMetaData(DatabaseMetaData(dbName, 0), vector<Table*>());
 }
 
 void UseDatabase(const string& dbName, Database** db, PageManager* pageManager)
@@ -120,20 +120,59 @@ void Database::DeleteDatabase() const
 
 Page* Database::GetPage(const page_id_t& pageId, const Table& table) { return this->pageManager->GetPage(pageId, &table); }
 
-Page* Database::CreatePage()
+Page* Database::CreatePage(const string& tableName)
 {
-    this->metadata.lastPageId++;
+    Table* table = nullptr;
+    for (auto& dbTable : this->tables)
+    {
+        if(dbTable->GetTableName() == tableName)
+            table = dbTable;
+    }
 
-    return this->pageManager->CreatePage(this->metadata.lastPageId);
+    if (table == nullptr)
+        throw runtime_error("Table " + tableName + " could not be found");
+    
+    const auto& tableMetaData = table->GetTableMetadata();
+
+    page_id_t lastPageId = 0;
+
+    //counting of extents starts from 0
+    if ((tableMetaData.lastPageId + 1 < (tableMetaData.lastExtentId + 1) * EXTENT_SIZE)
+        && tableMetaData.lastExtentId > 0)
+    {
+        lastPageId = tableMetaData.lastPageId + 1;
+        
+        table->UpdateLastPageId(lastPageId);
+        
+        return this->pageManager->CreatePage(lastPageId);
+    }
+
+    lastPageId = (this->metadata.lastExtentId + 1) * EXTENT_SIZE;
+
+    this->metadata.lastExtentId++;
+    
+    table->UpdateLastPageId(lastPageId);
+
+    table->UpdateLastExtentId(this->metadata.lastExtentId);
+
+    return this->pageManager->CreatePage(lastPageId);
 }
 
 LargeDataPage* Database::CreateLargeDataPage()
 {
-    this->metadata.lastPageId++;
+    if ((this->metadata.lastLargePageId + 1 < (this->metadata.lastLargeExtentId + 1) * EXTENT_SIZE)
+        && this->metadata.lastLargeExtentId > 0)
+        this->metadata.lastLargePageId++;
+    else
+    {
+        this->metadata.lastLargePageId = (this->metadata.lastExtentId + 1) * EXTENT_SIZE;
 
-    this->metadata.lastLargePageId = this->metadata.lastPageId;
+        this->metadata.lastExtentId++;
 
-    return this->pageManager->CreateLargeDataPage(this->metadata.lastPageId);
+        this->metadata.lastLargeExtentId = this->metadata.lastExtentId;
+    }
+
+    return this->pageManager->CreateLargeDataPage(this->metadata.lastLargePageId);
 }
 
 LargeDataPage * Database::GetLargeDataPage(const page_id_t& pageId, const Table& table) { return this->pageManager->GetLargeDataPage(pageId, &table); }
@@ -145,27 +184,30 @@ string Database::GetFileName() const { return this->filename + this->fileExtensi
 DatabaseMetaData::DatabaseMetaData()
 {
     this->databaseNameSize = 0;
-    this->lastPageId = 0;
     this->numberOfTables = 0;
     this->lastLargePageId = 0;
+    this->lastExtentId = 0;
+    this->lastLargeExtentId = 0;
 }
 
-DatabaseMetaData::DatabaseMetaData(const string &databaseName, const page_id_t& lastPageId, const int& numberOfTables)
+DatabaseMetaData::DatabaseMetaData(const string &databaseName, const table_number_t& numberOfTables)
 {
     this->databaseName = databaseName;
-    this->lastPageId = lastPageId;
     this->numberOfTables = numberOfTables;
     this->databaseNameSize = 0;
     this->lastLargePageId = 0;
+    this->lastExtentId = 0;
+    this->lastLargeExtentId = 0;
 }
 
 DatabaseMetaData::DatabaseMetaData(const DatabaseMetaData &dbMetaData)
 {
     this->databaseName = dbMetaData.databaseName;
-    this->lastPageId = dbMetaData.lastPageId;
     this->numberOfTables = dbMetaData.numberOfTables;
     this->databaseNameSize = this->databaseName.size();
     this->lastLargePageId = dbMetaData.lastLargePageId;
+    this->lastExtentId = dbMetaData.lastExtentId;
+    this->lastLargeExtentId = dbMetaData.lastLargeExtentId;
 }
 
 // uint64_t Database::InsertToHashTable(const char *inputString) const { return this->hashTable->Insert(inputString); }

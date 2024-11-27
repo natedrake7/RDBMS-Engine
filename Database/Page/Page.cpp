@@ -60,11 +60,6 @@ void Page::DeleteRow(Row* row)
     this->isDirty = true;
 }
 
-void Page::UpdateRow(Row* row)
-{
-    this->isDirty = true;
-}
-
 void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr)
 {
     const auto& columns = table->GetColumns();
@@ -173,6 +168,30 @@ const page_size_t& Page::GetBytesLeft() const { return this->metadata.bytesLeft;
 const page_id_t& Page::GetNextPageId() const { return this->metadata.nextPageId; }
 
 page_size_t Page::GetPageSize() const { return this->metadata.pageSize; }
+
+void Page::UpdateRows(const vector<Block> *updates, const vector<RowCondition *> *conditions)
+{
+    for (const auto& row : this->rows)
+    {
+        bool updateRow = false;
+        if(conditions != nullptr) 
+        {
+            for(const auto& condition: *conditions)
+                if(*condition != row->GetData()[condition->GetColumnIndex()])
+                {
+                    updateRow = true;
+                    break;
+                }
+            
+            if(updateRow)
+                continue;
+        }
+
+        
+    }
+
+    this->isDirty = true;
+}
 
 void Page::GetRows(vector<Row>* copiedRows, const Table& table, const vector<RowCondition*>* conditions) const
 {

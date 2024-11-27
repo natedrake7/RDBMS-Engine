@@ -1,6 +1,6 @@
 ﻿#include "MetaDataPage.h"
 
-MetaDataPage::MetaDataPage(const int &pageId): Page(pageId)
+MetaDataPage::MetaDataPage(const int &pageId) : Page(pageId)
 {
     this->isDirty = false;
     this->metadata.pageType = PageType::METADATA;
@@ -20,7 +20,8 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
 {
     filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.databaseNameSize), sizeof(metadata_literal_t));
     filePtr->write(this->databaseMetaData.databaseName.c_str(), this->databaseMetaData.databaseNameSize);
-    filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastPageId), sizeof(page_id_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastExtentId), sizeof(extent_id_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastLargeExtentId), sizeof(extent_id_t));
     filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.numberOfTables), sizeof(table_number_t));
     filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastLargePageId), sizeof(page_id_t));
 
@@ -57,8 +58,11 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
     memcpy(&this->databaseMetaData.databaseName[0], data.data() + offSet, this->databaseMetaData.databaseNameSize);
     offSet += this->databaseMetaData.databaseNameSize;
 
-    memcpy(&this->databaseMetaData.lastPageId, data.data() + offSet, sizeof(page_id_t));
-    offSet += sizeof(page_id_t);
+    memcpy(&this->databaseMetaData.lastExtentId, data.data() + offSet, sizeof(extent_id_t));
+    offSet += sizeof(extent_id_t);
+
+    memcpy(&this->databaseMetaData.lastLargeExtentId, data.data() + offSet, sizeof(extent_id_t));
+    offSet += sizeof(extent_id_t);
 
     memcpy(&this->databaseMetaData.numberOfTables, data.data() + offSet, sizeof(table_number_t));
     offSet += sizeof(table_number_t);

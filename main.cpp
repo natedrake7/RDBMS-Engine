@@ -43,7 +43,7 @@ int main()
 
         auto start = std::chrono::high_resolution_clock::now();
         
-        table->SelectRows(&rows, &conditions);
+        table->SelectRows(&rows);
 
         auto end = std::chrono::high_resolution_clock::now();
 
@@ -82,18 +82,19 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
 
     vector<vector<Field>> inputData;
 
-    for(int i = 1002;i < 1010; i++)
+    for(int i = 1000;i < 1500; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field(string(2000, 'O')),
+            Field(string(2000, 'A')),
             Field("Hello its me you are llooooking for"),
         };
 
         fields[0].SetData(to_string(i));
+        
         inputData.push_back(fields);
     }
 

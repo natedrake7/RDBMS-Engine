@@ -145,9 +145,6 @@ void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
 {
     const string& filename = this->database->GetFileName();
 
-    if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
-        this->RemovePage();
-
     //read page from disk, call FileManager
     fstream* file = this->fileManager->GetFile(filename);
 
@@ -171,6 +168,9 @@ void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
 
         if(bytesRead < offSet)
             break;
+
+        if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
+            this->RemovePage();
 
         const PageMetadata pageMetaData = this->GetPageMetaDataFromFile(buffer, offSet);
 

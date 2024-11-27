@@ -9,6 +9,9 @@ constexpr size_t LARGE_DATA_OBJECT_SIZE = 1024;
 //data types
 typedef unsigned char object_t;
 
+//extent types
+typedef uint32_t extent_id_t;
+
 //Page types
 typedef uint32_t page_id_t;
 typedef uint16_t page_size_t;

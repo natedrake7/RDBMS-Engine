@@ -7,6 +7,7 @@
 class RowCondition;
 using namespace std;
 
+class Block;
 class Row;
 class Table;
 struct DataObjectPointer;
@@ -39,7 +40,7 @@ class Page {
         virtual ~Page();
         void InsertRow(Row* row);
         void DeleteRow(Row* row);
-        void UpdateRow(Row* row);
+        void UpdateRows(const vector<Block>* updates, const vector<RowCondition*>* conditions);
         virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr);
         virtual void WritePageToFile(fstream* filePtr);
         void SetNextPageId(const page_id_t& nextPageId);

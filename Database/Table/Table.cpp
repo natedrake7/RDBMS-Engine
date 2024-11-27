@@ -7,6 +7,7 @@ TableFullMetaData::TableFullMetaData()
 {
     this->tableMetaData.firstPageId = 0;
     this->tableMetaData.lastPageId = 0;
+    this->tableMetaData.lastExtentId = 0;
     this->tableMetaData.maxRowSize = 0;
     this->tableMetaData.numberOfColumns = 0;
     this->tableMetaData.tableNameSize = 0;
@@ -27,6 +28,7 @@ Table::Table(const string& tableName, const vector<Column*>& columns, Database* 
     this->metadata.firstPageId = 0;
     this->metadata.lastPageId = 0;
     this->metadata.numberOfColumns = columns.size();
+    this->metadata.lastExtentId = 0;
 
     uint16_t counter = 0;
     for(const auto& column : columns)
@@ -130,7 +132,7 @@ void Table::InsertRow(const vector<Field>& inputData)
         }
     }
 
-    Page* newPage = this->database->CreatePage();
+    Page* newPage = this->database->CreatePage(this->metadata.tableName);
 
     const page_id_t newPageId = newPage->GetPageId();
 
@@ -320,8 +322,11 @@ void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* c
     while(pageId > 0)
     {
         Page* page = this->database->GetPage(pageId, *this);
+
         vector<Row> pageRows;
         page->GetRows(&pageRows, *this, conditions);
+
+        pageRows[0].PrintRow();
 
         if(selectedRows->size() + pageRows.size() > rowsToSelect)
         {
@@ -333,6 +338,22 @@ void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* c
         pageId = page->GetNextPageId();
     }
 }
+
+void Table::UpdateRows(const vector<Block> *updates, const vector<RowCondition *>* conditions)
+{
+    page_id_t pageId = this->metadata.firstPageId;
+
+    while(pageId > 0)
+    {
+        Page* page = this->database->GetPage(pageId, *this);
+
+        
+    }
+}
+
+void Table::UpdateLastPageId(const page_id_t &lastPageId) { this->metadata.lastPageId = lastPageId; }
+
+void Table::UpdateLastExtentId(const extent_id_t &lastExtentId) { this->metadata.lastExtentId = lastExtentId; }
 
 string& Table::GetTableName(){ return this->metadata.tableName; }
 

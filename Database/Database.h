@@ -7,14 +7,15 @@
 using namespace std;
 
 typedef struct DatabaseMetaData{
-    page_id_t lastPageId;
-    uint16_t numberOfTables;
+    table_number_t numberOfTables;
     page_id_t lastLargePageId;
     metadata_literal_t databaseNameSize;
     string databaseName;
+    extent_id_t lastExtentId;
+    extent_id_t lastLargeExtentId;
 
     DatabaseMetaData();
-    DatabaseMetaData(const string& databaseName, const page_id_t& lastPageId, const int& numberOfTables);
+    DatabaseMetaData(const string& databaseName, const table_number_t& numberOfTables);
     DatabaseMetaData(const DatabaseMetaData& dbMetaData);
 }DatabaseMetaData;
 
@@ -34,7 +35,7 @@ enum
     MAX_TABLE_SIZE = 10*1024
 };
 
-class Database {
+class  Database {
     DatabaseMetaData metadata;
     string filename;
     string fileExtension = ".db";
@@ -61,7 +62,7 @@ class Database {
 
         Page* GetPage(const page_id_t& pageId, const Table& table);
 
-        Page* CreatePage();
+        Page* CreatePage(const string& tableName);
 
         page_id_t GetLastLargeDataPageId() const;
 

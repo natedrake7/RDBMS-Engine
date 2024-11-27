@@ -15,7 +15,8 @@ typedef struct TableMetaData {
     row_size_t maxRowSize;
     page_id_t firstPageId;
     page_id_t lastPageId;
-    uint16_t numberOfColumns;
+    column_number_t numberOfColumns;
+    extent_id_t lastExtentId;
 }TableMetaData;
 
 #include "../Column/Column.h"
@@ -45,7 +46,7 @@ class Table {
     Database* database;
 
     protected:
-        void InsertLargeObjectToPage(Row* row, uint16_t offset, const vector<uint16_t>& largeBlocksIndexes);
+        void InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector<column_index_t>& largeBlocksIndexes);
         LargeDataPage* GetOrCreateLargeDataPage();
         void InsertRow(const vector<Field>& inputData);
         static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
@@ -83,5 +84,9 @@ class Table {
 
         void SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
 
-        void UpdateRows();
+        void UpdateRows(const vector<Block>* updates, const vector<RowCondition*>* conditions = nullptr);
+
+        void UpdateLastPageId(const page_id_t& lastPageId);
+
+        void UpdateLastExtentId(const extent_id_t& lastExtentId);
 };
