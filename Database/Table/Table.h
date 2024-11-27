@@ -11,6 +11,7 @@
 using namespace std;
 
 typedef struct TableMetaData {
+    table_id_t tableId;
     metadata_literal_t tableNameSize;
     string tableName;
     row_size_t maxRowSize;
@@ -18,8 +19,9 @@ typedef struct TableMetaData {
     page_id_t lastPageId;
     column_number_t numberOfColumns;
     extent_id_t lastExtentId;
+    
     BitMap* columnsNullBitMap;
-
+    
     TableMetaData();
     ~TableMetaData();
     TableMetaData& operator=(const TableMetaData& tableMetaData);
@@ -63,7 +65,7 @@ class Table {
 
 
     public:
-        Table(const string& tableName,const vector<Column*>& columns, Database* database);
+        Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, Database* database);
 
         Table(const TableMetaData &tableMetaData, Database* database);
 

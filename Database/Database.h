@@ -13,6 +13,7 @@ typedef struct DatabaseMetaData{
     string databaseName;
     extent_id_t lastExtentId;
     extent_id_t lastLargeExtentId;
+    table_id_t lastTableId;
 
     DatabaseMetaData();
     DatabaseMetaData(const string& databaseName, const table_number_t& numberOfTables);

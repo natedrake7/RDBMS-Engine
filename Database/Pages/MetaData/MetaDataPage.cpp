@@ -24,9 +24,11 @@ void MetaDataPage::WritePageToFile(fstream *filePtr)
     filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastLargeExtentId), sizeof(extent_id_t));
     filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.numberOfTables), sizeof(table_number_t));
     filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastLargePageId), sizeof(page_id_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->databaseMetaData.lastTableId), sizeof(table_id_t));
 
     for(const auto& tableMetaData: this->tablesMetaData)
     {
+        filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.tableId), sizeof(table_id_t));
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.tableNameSize), sizeof(metadata_literal_t));
         filePtr->write(tableMetaData.tableMetaData.tableName.c_str(), tableMetaData.tableMetaData.tableNameSize);
         filePtr->write(reinterpret_cast<const char *>(&tableMetaData.tableMetaData.firstPageId), sizeof(page_id_t));
@@ -71,11 +73,16 @@ void MetaDataPage::GetPageDataFromFile(const vector<char> &data, const Table* ta
     memcpy(&this->databaseMetaData.lastLargePageId, data.data() + offSet, sizeof(page_id_t));
     offSet += sizeof(page_id_t);
 
+    memcpy(&this->databaseMetaData.lastTableId, data.data() + offSet, sizeof(table_id_t));
+    offSet += sizeof(table_id_t);
 
     for(int i = 0;i < this->databaseMetaData.numberOfTables; i++)
     {
         TableFullMetaData tableFullMetaData;
-
+        
+        memcpy(&tableFullMetaData.tableMetaData.tableId, data.data() + offSet, sizeof(table_id_t));
+        offSet += sizeof(table_id_t);
+        
         memcpy(&tableFullMetaData.tableMetaData.tableNameSize, data.data() + offSet, sizeof(metadata_literal_t));
         offSet += sizeof(metadata_literal_t);
         tableFullMetaData.tableMetaData.tableName.resize(tableFullMetaData.tableMetaData.tableNameSize);

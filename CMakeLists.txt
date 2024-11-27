@@ -31,12 +31,14 @@ add_library(Database
         Database/Block/Block.h
         Database/Column/Column.cpp
         Database/Column/Column.h
-        Database/Page/Page.cpp
-        Database/Page/Page.h
+        Database/Pages/Page.cpp
+        Database/Pages/Page.h
         Database/Constants.h
-        Database/Page/MetaDataPage.cpp
-        Database/Page/MetaDataPage.h
-        Database/Page/LargeDataPage.cpp
-        Database/Page/LargeDataPage.h)
+        Database/Pages/MetaData/MetaDataPage.cpp
+        Database/Pages/MetaData/MetaDataPage.h
+        Database/Pages/LargeObject/LargeDataPage.cpp
+        Database/Pages/LargeObject/LargeDataPage.h
+        Database/Pages/IndexMapAllocation/IndexAllocationMapPage.cpp
+        Database/Pages/IndexMapAllocation/IndexAllocationMapPage.h)
 
 target_link_libraries(DatabaseInterface PRIVATE Database PRIVATE AdditionalLibraries)

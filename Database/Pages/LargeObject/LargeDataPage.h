@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Page.h"
+#include "../Page.h"
 
 typedef struct DataObject {
     object_t* object;

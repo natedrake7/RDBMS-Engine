@@ -2,9 +2,9 @@
 #include <list>
 #include <unordered_map>
 #include <string>
-#include "../../Database/Page/Page.h"
-#include "../../Database/Page/MetaDataPage.h"
-#include "../../Database/Page/LargeDataPage.h"
+#include "../../Database/Pages/Page.h"
+#include "../../Database/Pages/MetaData/MetaDataPage.h"
+#include "../../Database/Pages/LargeObject/LargeDataPage.h"
 #include  "../../Database/Constants.h"
 #include "../FileManager/FileManager.h"
 

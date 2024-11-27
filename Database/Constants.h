@@ -6,11 +6,15 @@ constexpr size_t EXTENT_SIZE = 8;
 constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
 constexpr size_t LARGE_DATA_OBJECT_SIZE = 1024;
 
+//table types
+typedef uint16_t table_id_t;
+
 //data types
 typedef unsigned char object_t;
 
 //extent types
 typedef uint32_t extent_id_t;
+typedef uint32_t extent_num_t;
 
 //Page types
 typedef uint32_t page_id_t;

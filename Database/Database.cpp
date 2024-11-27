@@ -47,7 +47,15 @@ Database::~Database()
 
 Table* Database::CreateTable(const string &tableName, const vector<Column *> &columns)
 {
-    Table* table = new Table(tableName, columns, this);
+    Table* table = nullptr;
+
+    if (this->metadata.lastTableId == 0)
+        table = new Table(tableName, this->metadata.lastTableId , columns, this);
+    else
+    {
+        this->metadata.lastTableId++;
+        table = new Table(tableName, this->metadata.lastTableId , columns, this);
+    }
 
     this->tables.push_back(table);
 
@@ -182,6 +190,7 @@ DatabaseMetaData::DatabaseMetaData()
     this->lastLargePageId = 0;
     this->lastExtentId = 0;
     this->lastLargeExtentId = 0;
+    this->lastTableId = 0;
 }
 
 DatabaseMetaData::DatabaseMetaData(const string &databaseName, const table_number_t& numberOfTables)
@@ -192,6 +201,7 @@ DatabaseMetaData::DatabaseMetaData(const string &databaseName, const table_numbe
     this->lastLargePageId = 0;
     this->lastExtentId = 0;
     this->lastLargeExtentId = 0;
+    this->lastTableId = 0;
 }
 
 DatabaseMetaData::DatabaseMetaData(const DatabaseMetaData &dbMetaData)
@@ -202,14 +212,5 @@ DatabaseMetaData::DatabaseMetaData(const DatabaseMetaData &dbMetaData)
     this->lastLargePageId = dbMetaData.lastLargePageId;
     this->lastExtentId = dbMetaData.lastExtentId;
     this->lastLargeExtentId = dbMetaData.lastLargeExtentId;
+    this->lastTableId = dbMetaData.lastTableId;
 }
-
-// uint64_t Database::InsertToHashTable(const char *inputString) const { return this->hashTable->Insert(inputString); }
-
-// uint64_t Database::Hash(const char *inputString) { return HashTable::Hash(inputString); }
-
-// const char* Database::GetStringByHashKey(const uint64_t& hashKey) const { return this->hashTable->GetStringByHashKey(hashKey); }
-
-//Creates new file in db storage
-//1 file for each db? 1.000.000 1 gb
-//1.000.000

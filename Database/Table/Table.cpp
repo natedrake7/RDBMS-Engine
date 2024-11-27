@@ -1,13 +1,14 @@
 ﻿#include "Table.h"
 
 #include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
-#include "../Page/Page.h"
+#include "../Pages/Page.h"
 
 TableMetaData::TableMetaData()
 {
     this->firstPageId = 0;
     this->lastPageId = 0;
     this->lastExtentId = 0;
+    this->tableId = 0;
     this->maxRowSize = 0;
     this->numberOfColumns = 0;
     this->tableNameSize = 0;
@@ -31,6 +32,7 @@ TableMetaData& TableMetaData::operator=(const TableMetaData &tableMetaData)
     this->numberOfColumns = tableMetaData.numberOfColumns;
     this->tableNameSize = tableMetaData.tableNameSize;
     this->tableName = tableMetaData.tableName;
+    this->tableId = tableMetaData.tableId;
     this->columnsNullBitMap = new BitMap(*tableMetaData.columnsNullBitMap);
     
     return *this;
@@ -45,13 +47,14 @@ TableFullMetaData::TableFullMetaData(const TableFullMetaData& tableMetaData)
     this->columnsMetaData = tableMetaData.columnsMetaData;
 }
 
-Table::Table(const string& tableName, const vector<Column*>& columns, Database* database)
+Table::Table(const string& tableName,const table_id_t& tableId, const vector<Column*>& columns, Database* database)
 {
     this->columns = columns;
     this->database = database;
     this->metadata.tableName = tableName;
     this->metadata.numberOfColumns = columns.size();
     this->metadata.columnsNullBitMap = new BitMap(this->metadata.numberOfColumns);
+    this->metadata.tableId = tableId;
 
     uint16_t counter = 0;
     for(const auto& column : columns)

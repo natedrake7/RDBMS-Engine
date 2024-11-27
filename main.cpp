@@ -11,6 +11,13 @@ template<typename T>
 int CreateResponse(T input) { return static_cast<int>(input); }
 void CreateAndInsertToDatabase(Database* db, Table* table = nullptr);
 
+//handle updates
+//deletes
+//bitmaps for extents
+//B+ Trees
+//row ids
+//object ids
+
 int main()
 {
     Database* db = nullptr;
