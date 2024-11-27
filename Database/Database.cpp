@@ -56,16 +56,12 @@ Table* Database::CreateTable(const string &tableName, const vector<Column *> &co
     return table;
 }
 
-void Database::CreateTable(TableFullMetaData &tableMetaData)
+void Database::CreateTable(const TableFullMetaData &tableMetaData)
 {
-    vector<Column*> columns;
-    for(const auto& columnMetaData : tableMetaData.columnsMetaData)
-    {
-        Column* column = new Column(columnMetaData);
-        columns.push_back(column);
-    }
+    Table* table = new Table(tableMetaData.tableMetaData, this);
 
-    Table* table = new Table(tableMetaData.tableMetaData, columns, this);
+    for(const auto& columnMetaData : tableMetaData.columnsMetaData)
+        table->AddColumn(new Column(columnMetaData, table));
 
     this->tables.push_back(table);
 }

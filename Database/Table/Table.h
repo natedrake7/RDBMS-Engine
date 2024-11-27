@@ -65,7 +65,7 @@ class Table {
     public:
         Table(const string& tableName,const vector<Column*>& columns, Database* database);
 
-        Table(const TableMetaData &tableMetaData, const vector<Column*>& columns, Database* database);
+        Table(const TableMetaData &tableMetaData, Database* database);
 
         ~Table();
 
@@ -92,4 +92,6 @@ class Table {
         void UpdateLastExtentId(const extent_id_t& lastExtentId);
 
         bool IsColumnNullable(const column_index_t& columnIndex) const;
+
+        void AddColumn(Column* column);
 };

@@ -65,16 +65,14 @@ Table::Table(const string& tableName, const vector<Column*>& columns, Database* 
     }
 }
 
-Table::Table(const TableMetaData &tableMetaData, const vector<Column *> &columns, Database *database)
+Table::Table(const TableMetaData &tableMetaData, Database *database)
 {
     this->metadata = tableMetaData;
-    this->columns = columns;
     this->database = database;
 }
 
 Table::~Table()
 {
-    //save table metadata to file
     for(const auto& column : columns)
         delete column;
 }
@@ -303,8 +301,6 @@ void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* c
         vector<Row> pageRows;
         page->GetRows(&pageRows, *this, conditions);
 
-        pageRows[0].PrintRow();
-
         if(selectedRows->size() + pageRows.size() > rowsToSelect)
         {
             selectedRows->insert(selectedRows->end(), pageRows.begin(), pageRows.begin() + ( rowsToSelect - selectedRows->size()));
@@ -333,6 +329,8 @@ void Table::UpdateLastPageId(const page_id_t &lastPageId) { this->metadata.lastP
 void Table::UpdateLastExtentId(const extent_id_t &lastExtentId) { this->metadata.lastExtentId = lastExtentId; }
 
 bool Table::IsColumnNullable(const column_index_t &columnIndex) const { return this->metadata.columnsNullBitMap->Get(columnIndex); }
+
+void Table::AddColumn(Column *column) { this->columns.push_back(column); }
 
 string& Table::GetTableName(){ return this->metadata.tableName; }
 

@@ -27,7 +27,6 @@ int main()
         pageManager->BindDatabase(db);
 
         Table* table = db->OpenTable("Movies");
-
         // CreateAndInsertToDatabase(db, table);
 
         table = db->OpenTable("Movies");
@@ -51,7 +50,7 @@ int main()
 
         cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 
-        PrintRows(rows);
+        // PrintRows(rows);
 
         delete db;
         delete pageManager;

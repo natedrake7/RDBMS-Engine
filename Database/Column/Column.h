@@ -45,7 +45,7 @@ class Column {
     public:
         Column(const string& columnName, const string&  recordType, const row_size_t&  recordSize, const bool& allowNulls);
 
-        explicit Column(const ColumnMetaData& metadata);
+        explicit Column(const ColumnMetaData& metadata, const Table* table);
 
         string& GetColumnName();
 

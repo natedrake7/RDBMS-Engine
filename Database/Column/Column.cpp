@@ -13,11 +13,11 @@ Column::Column(const string& columnName, const string& columnTypeLiteral, const 
     this->table = nullptr;
 }
 
-Column::Column(const ColumnMetaData &metadata)
+Column::Column(const ColumnMetaData &metadata, const Table* table)
 {
     this->metadata = metadata;
     this->allowNulls = false;
-    this->table = nullptr;
+    this->table = table;
 }
 
 string& Column::GetColumnName() { return this->metadata.columnName; }

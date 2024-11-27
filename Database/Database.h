@@ -54,7 +54,7 @@ class  Database {
 
         Table* CreateTable(const string& tableName, const vector<Column*>& columns);
 
-        void CreateTable(TableFullMetaData& tableMetaData);
+        void CreateTable(const TableFullMetaData& tableMetaData);
 
         Table* OpenTable(const string& tableName);
 
