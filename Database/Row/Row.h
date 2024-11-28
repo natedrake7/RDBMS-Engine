@@ -31,7 +31,7 @@ class Row
 
         explicit Row(const Table& table, const vector<Block*>& data);
 
-        explicit Row(const Row& copyRow);
+        Row(const Row& copyRow);
 
         ~Row();
 

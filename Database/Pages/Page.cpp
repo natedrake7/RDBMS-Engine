@@ -10,15 +10,7 @@ PageHeader::PageHeader()
 
 PageHeader::~PageHeader() = default;
 
-page_size_t PageHeader::GetPageHeaderSize()
-{
-    page_size_t size = 0;
-    size += sizeof(page_id_t);
-    size += 2 * sizeof(page_size_t);
-    size += sizeof(PageType);
-
-    return size;
-}
+page_size_t PageHeader::GetPageHeaderSize() { return sizeof(page_id_t) + 2 * sizeof(page_size_t) + sizeof(PageType); }
 
 Page::Page(const page_id_t& pageId)
 {

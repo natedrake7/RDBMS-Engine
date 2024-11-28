@@ -22,7 +22,7 @@ typedef struct DataObjectPointer
 
 }DataObjectPointer;
 
-class LargeDataPage : public Page
+class LargeDataPage final : public Page
 {
     vector<DataObject*> data;
 
