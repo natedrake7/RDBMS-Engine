@@ -97,7 +97,7 @@ void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager*
     metaDataPage->SetHeaders(DatabaseHeader(dbName, 0), vector<Table*>());
 }
 
-void UseDatabase(const string& dbName, Database** db, PageManager* pageManager)
+void  UseDatabase(const string& dbName, Database** db, PageManager* pageManager)
 {
     *db = new Database(dbName, pageManager);
 }
@@ -229,26 +229,7 @@ Page* Database::CreatePage(const table_id_t& tableId)
     return newPage;
 }
 
-LargeDataPage* Database::CreateLargeDataPage()
-{
-    if ((this->header.lastLargePageId + 1 < (this->header.lastLargeExtentId + 1) * EXTENT_SIZE)
-        && this->header.lastLargeExtentId > 0)
-        this->header.lastLargePageId++;
-    else
-    {
-        this->header.lastLargePageId = (this->header.lastExtentId + 1) * EXTENT_SIZE;
-
-        this->header.lastExtentId++;
-
-        this->header.lastLargeExtentId = this->header.lastExtentId;
-    }
-
-    return this->pageManager->CreateLargeDataPage(this->header.lastLargePageId);
-}
-
 LargeDataPage* Database::GetLargeDataPage(const page_id_t& pageId, const Table& table) { return this->pageManager->GetLargeDataPage(pageId, &table); }
-
-page_id_t Database::GetLastLargeDataPageId() const { return this->header.lastLargePageId; }
 
 string Database::GetFileName() const { return this->filename + this->fileExtension; }
 
@@ -256,9 +237,6 @@ DatabaseHeader::DatabaseHeader()
 {
     this->databaseNameSize = 0;
     this->numberOfTables = 0;
-    this->lastLargePageId = 0;
-    this->lastExtentId = 0;
-    this->lastLargeExtentId = 0;
     this->lastTableId = 0;
 }
 
@@ -267,9 +245,6 @@ DatabaseHeader::DatabaseHeader(const string &databaseName, const table_number_t&
     this->databaseName = databaseName;
     this->numberOfTables = numberOfTables;
     this->databaseNameSize = 0;
-    this->lastLargePageId = 0;
-    this->lastExtentId = 0;
-    this->lastLargeExtentId = 0;
     this->lastTableId = 0;
 }
 
@@ -278,8 +253,5 @@ DatabaseHeader::DatabaseHeader(const DatabaseHeader &dbMetaData)
     this->databaseName = dbMetaData.databaseName;
     this->numberOfTables = dbMetaData.numberOfTables;
     this->databaseNameSize = this->databaseName.size();
-    this->lastLargePageId = dbMetaData.lastLargePageId;
-    this->lastExtentId = dbMetaData.lastExtentId;
-    this->lastLargeExtentId = dbMetaData.lastLargeExtentId;
     this->lastTableId = dbMetaData.lastTableId;
 }

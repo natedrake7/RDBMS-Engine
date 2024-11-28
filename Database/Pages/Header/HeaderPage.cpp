@@ -18,18 +18,15 @@ HeaderPage::~HeaderPage() = default;
 
 void HeaderPage::WritePageToFile(fstream *filePtr)
 {
-    filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.databaseNameSize), sizeof(metadata_literal_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.databaseNameSize), sizeof(header_literal_t));
     filePtr->write(this->databaseHeader.databaseName.c_str(), this->databaseHeader.databaseNameSize);
-    filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.lastExtentId), sizeof(extent_id_t));
-    filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.lastLargeExtentId), sizeof(extent_id_t));
     filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.numberOfTables), sizeof(table_number_t));
-    filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.lastLargePageId), sizeof(page_id_t));
     filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.lastTableId), sizeof(table_id_t));
 
     for(const auto& tableFullHeader: this->tablesHeaders)
     {
         filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableId), sizeof(table_id_t));
-        filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableNameSize), sizeof(metadata_literal_t));
+        filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableNameSize), sizeof(header_literal_t));
         filePtr->write(tableFullHeader.tableHeader.tableName.c_str(), tableFullHeader.tableHeader.tableNameSize);
         filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.firstPageId), sizeof(page_id_t));
         filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.lastPageId), sizeof(page_id_t));
@@ -40,9 +37,9 @@ void HeaderPage::WritePageToFile(fstream *filePtr)
 
         for(const auto& columnMetaData: tableFullHeader.columnsHeaders)
         {
-            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnNameSize), sizeof(metadata_literal_t));
+            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnNameSize), sizeof(header_literal_t));
             filePtr->write(columnMetaData.columnName.c_str(), columnMetaData.columnNameSize);
-            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnTypeLiteralSize), sizeof(metadata_literal_t));
+            filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnTypeLiteralSize), sizeof(header_literal_t));
             filePtr->write(columnMetaData.columnTypeLiteral.c_str(), columnMetaData.columnTypeLiteralSize);
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.recordSize), sizeof(row_size_t));
             filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnType), sizeof(ColumnType));
@@ -54,24 +51,15 @@ void HeaderPage::WritePageToFile(fstream *filePtr)
 void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table* table, page_offset_t& offSet, fstream* filePtr)
 {
     offSet = 0;
-    memcpy(&this->databaseHeader.databaseNameSize, data.data(), sizeof(metadata_literal_t));
-    offSet += sizeof(metadata_literal_t);
+    memcpy(&this->databaseHeader.databaseNameSize, data.data(), sizeof(header_literal_t));
+    offSet += sizeof(header_literal_t);
 
     this->databaseHeader.databaseName.resize(this->databaseHeader.databaseNameSize);
     memcpy(&this->databaseHeader.databaseName[0], data.data() + offSet, this->databaseHeader.databaseNameSize);
     offSet += this->databaseHeader.databaseNameSize;
 
-    memcpy(&this->databaseHeader.lastExtentId, data.data() + offSet, sizeof(extent_id_t));
-    offSet += sizeof(extent_id_t);
-
-    memcpy(&this->databaseHeader.lastLargeExtentId, data.data() + offSet, sizeof(extent_id_t));
-    offSet += sizeof(extent_id_t);
-
     memcpy(&this->databaseHeader.numberOfTables, data.data() + offSet, sizeof(table_number_t));
     offSet += sizeof(table_number_t);
-
-    memcpy(&this->databaseHeader.lastLargePageId, data.data() + offSet, sizeof(page_id_t));
-    offSet += sizeof(page_id_t);
 
     memcpy(&this->databaseHeader.lastTableId, data.data() + offSet, sizeof(table_id_t));
     offSet += sizeof(table_id_t);
@@ -83,8 +71,8 @@ void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table* tabl
         memcpy(&tableFullHeader.tableHeader.tableId, data.data() + offSet, sizeof(table_id_t));
         offSet += sizeof(table_id_t);
         
-        memcpy(&tableFullHeader.tableHeader.tableNameSize, data.data() + offSet, sizeof(metadata_literal_t));
-        offSet += sizeof(metadata_literal_t);
+        memcpy(&tableFullHeader.tableHeader.tableNameSize, data.data() + offSet, sizeof(header_literal_t));
+        offSet += sizeof(header_literal_t);
         tableFullHeader.tableHeader.tableName.resize(tableFullHeader.tableHeader.tableNameSize);
 
         memcpy(&tableFullHeader.tableHeader.tableName[0], data.data() + offSet, tableFullHeader.tableHeader.tableNameSize);
@@ -111,15 +99,15 @@ void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table* tabl
         for(int j = 0; j < tableFullHeader.tableHeader.numberOfColumns; j++)
         {
             ColumnHeader columnHeader;
-            memcpy(&columnHeader.columnNameSize, data.data() + offSet, sizeof(metadata_literal_t));
-            offSet += sizeof(metadata_literal_t);
+            memcpy(&columnHeader.columnNameSize, data.data() + offSet, sizeof(header_literal_t));
+            offSet += sizeof(header_literal_t);
             columnHeader.columnName.resize(columnHeader.columnNameSize);
 
             memcpy(&columnHeader.columnName[0], data.data() + offSet, columnHeader.columnNameSize);
             offSet += columnHeader.columnNameSize;
 
-            memcpy(&columnHeader.columnTypeLiteralSize, data.data() + offSet, sizeof(metadata_literal_t));
-            offSet += sizeof(metadata_literal_t);
+            memcpy(&columnHeader.columnTypeLiteralSize, data.data() + offSet, sizeof(header_literal_t));
+            offSet += sizeof(header_literal_t);
             columnHeader.columnTypeLiteral.resize(columnHeader.columnTypeLiteralSize);
 
             memcpy(&columnHeader.columnTypeLiteral[0], data.data() + offSet, columnHeader.columnTypeLiteralSize);

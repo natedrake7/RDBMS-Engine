@@ -41,9 +41,9 @@ typedef uint16_t column_index_t;
 //record size
 typedef uint32_t row_size_t;
 
-//metadata literal size
-typedef uint16_t metadata_literal_t;
-typedef uint16_t row_metadata_size_t;
+//header literal size
+typedef uint16_t header_literal_t;
+typedef uint16_t row_header_size_t;
 
 //number of column - table
 typedef uint16_t column_number_t;

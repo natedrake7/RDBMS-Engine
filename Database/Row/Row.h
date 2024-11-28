@@ -57,5 +57,5 @@ class Row
 
         row_size_t GetTotalRowSize() const;
 
-        row_metadata_size_t GetRowHeaderSize() const;
+        row_header_size_t GetRowHeaderSize() const;
 };

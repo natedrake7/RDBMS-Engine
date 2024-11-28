@@ -5,7 +5,6 @@ PageHeader::PageHeader()
     this->pageType = PageType::DATA;
     this->pageId = 0;
     this->pageSize = 0;
-    this->nextPageId = 0;
     this->bytesLeft = PAGE_SIZE - GetPageHeaderSize();
 }
 
@@ -14,7 +13,7 @@ PageHeader::~PageHeader() = default;
 page_size_t PageHeader::GetPageHeaderSize()
 {
     page_size_t size = 0;
-    size += 2 * sizeof(page_id_t);
+    size += sizeof(page_id_t);
     size += 2 * sizeof(page_size_t);
     size += sizeof(PageType);
 
@@ -49,8 +48,7 @@ Page::~Page()
 void Page::InsertRow(Row* row)
 {
     this->rows.push_back(row);
-    auto totalSize = row->GetTotalRowSize();
-    this->header.bytesLeft -= totalSize;
+    this->header.bytesLeft -=  row->GetTotalRowSize();
     this->header.pageSize++;
     this->isDirty = true;
 }
@@ -112,7 +110,6 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
 void Page::WritePageHeaderToFile(fstream* filePtr)
 {
     filePtr->write(reinterpret_cast<char*>(&this->header.pageId), sizeof(page_id_t));
-    filePtr->write(reinterpret_cast<char*>(&this->header.nextPageId), sizeof(page_id_t));
     filePtr->write(reinterpret_cast<char*>(&this->header.pageSize), sizeof(page_size_t));
     filePtr->write(reinterpret_cast<char*>(&this->header.bytesLeft), sizeof(page_size_t));
     filePtr->write(reinterpret_cast<char*>(&this->header.pageType), sizeof(PageType));
@@ -153,8 +150,6 @@ void Page::WritePageToFile(fstream *filePtr)
     }
 }
 
-void Page::SetNextPageId(const page_id_t &nextPageId) { this->header.nextPageId = nextPageId; }
-
 void Page::SetFileName(const string &filename) { this->filename = filename; }
 
 void Page::SetPageId(const page_id_t &pageId) { this->header.pageId = pageId; }
@@ -166,8 +161,6 @@ const page_id_t& Page::GetPageId() const { return this->header.pageId; }
 const bool& Page::GetPageDirtyStatus() const { return this->isDirty; }
 
 const page_size_t& Page::GetBytesLeft() const { return this->header.bytesLeft; }
-
-const page_id_t& Page::GetNextPageId() const { return this->header.nextPageId; }
 
 page_size_t Page::GetPageSize() const { return this->header.pageSize; }
 

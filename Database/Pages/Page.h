@@ -15,7 +15,6 @@ struct DataObjectPointer;
 typedef struct PageHeader{
     page_id_t pageId;
     page_size_t pageSize;
-    page_id_t nextPageId;
     page_size_t bytesLeft;
     PageType pageType;
 
@@ -43,14 +42,12 @@ class Page {
         void UpdateRows(const vector<Block>* updates, const vector<RowCondition*>* conditions);
         virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr);
         virtual void WritePageToFile(fstream* filePtr);
-        void SetNextPageId(const page_id_t& nextPageId);
         void SetFileName(const string& filename);
         void SetPageId(const page_id_t& pageId);
         const string& GetFileName() const;
         const page_id_t& GetPageId() const;
         const bool& GetPageDirtyStatus() const;
         const page_size_t& GetBytesLeft() const;
-        const page_id_t& GetNextPageId() const;
         void GetRows(vector<Row>* copiedRows, const Table& table, const vector<RowCondition*>* conditions = nullptr) const;
         page_size_t GetPageSize() const;
 };

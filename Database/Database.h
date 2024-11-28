@@ -8,16 +8,13 @@ using namespace std;
 
 typedef struct DatabaseHeader{
     table_number_t numberOfTables;
-    page_id_t lastLargePageId;
-    metadata_literal_t databaseNameSize;
+    header_literal_t databaseNameSize;
     string databaseName;
-    extent_id_t lastExtentId;
-    extent_id_t lastLargeExtentId;
     table_id_t lastTableId;
 
     DatabaseHeader();
     DatabaseHeader(const string& databaseName, const table_number_t& numberOfTables);
-    DatabaseHeader(const DatabaseHeader& dbMetaData);
+    DatabaseHeader(const DatabaseHeader& dbHeader);
 }DatabaseHeader;
 
 #include "../AdditionalLibraries/PageManager/PageManager.h"
@@ -28,7 +25,6 @@ class PageManager;
 class Page;
 class LargeDataPage;
 class Table;
-struct TableFullMetaData;
 
 enum
 {
@@ -41,7 +37,6 @@ class  Database {
     string fileExtension;
     vector<Table*> tables;
     PageManager* pageManager;
-    // HashTable* hashTable;
 
     protected:
         void ValidateTableCreation(Table* table) const;
@@ -65,10 +60,6 @@ class  Database {
         void GetTablePages(const Table &table, vector<Page*>* pages) const;
 
         Page* CreatePage(const table_id_t& tableId);
-
-        page_id_t GetLastLargeDataPageId() const;
-
-        LargeDataPage* CreateLargeDataPage();
 
         LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table& table);
 

@@ -145,7 +145,8 @@ void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
         const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
 
         //page is already opened skip it
-        if(this->cache.find(pageHeader.pageId) != this->cache.end())
+        if(this->cache.find(pageHeader.pageId) != this->cache.end()
+            || this->systemCache.find(pageHeader.pageId) != this->systemCache.end())
             continue;
 
         Page* page = nullptr;
@@ -401,9 +402,6 @@ PageHeader PageManager::GetPageHeaderFromFile(const vector<char> &data, page_off
 {
     PageHeader pageHeader;
     memcpy(&pageHeader.pageId, data.data() + offSet, sizeof(page_id_t));
-    offSet += sizeof(page_id_t);
-
-    memcpy(&pageHeader.nextPageId, data.data() + offSet, sizeof(page_id_t));
     offSet += sizeof(page_id_t);
 
     memcpy(&pageHeader.pageSize, data.data() + offSet, sizeof(page_size_t));

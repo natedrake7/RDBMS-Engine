@@ -25,9 +25,9 @@ enum class ColumnType : uint8_t
 };
 
 typedef struct ColumnHeader {
-    metadata_literal_t columnNameSize;
+    header_literal_t columnNameSize;
     string columnName;
-    metadata_literal_t columnTypeLiteralSize;
+    header_literal_t columnTypeLiteralSize;
     string columnTypeLiteral;
     ColumnType columnType;
     column_index_t columnIndex;

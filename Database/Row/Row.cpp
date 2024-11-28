@@ -179,14 +179,14 @@ row_size_t Row::GetTotalRowSize() const
     return currentRowSize;
 }
 
-row_metadata_size_t Row::GetRowHeaderSize() const
+row_header_size_t Row::GetRowHeaderSize() const
 {
-    row_metadata_size_t rowMetaDataSize = sizeof(row_size_t);
-    rowMetaDataSize += sizeof(size_t);
-    rowMetaDataSize += this->header.nullBitMap->GetSizeInBytes();
-    rowMetaDataSize += this->header.largeObjectBitMap->GetSizeInBytes();
+    row_header_size_t rowHeaderSize = sizeof(row_size_t);
+    rowHeaderSize += sizeof(size_t);
+    rowHeaderSize += this->header.nullBitMap->GetSizeInBytes();
+    rowHeaderSize += this->header.largeObjectBitMap->GetSizeInBytes();
 
-    return rowMetaDataSize;
+    return rowHeaderSize;
 }
 
 

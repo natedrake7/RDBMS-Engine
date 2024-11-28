@@ -144,7 +144,7 @@ void Table::InsertRow(const vector<Field>& inputData)
     {
         Page* lastPage = this->database->GetPage(*this, row->GetTotalRowSize());
 
-        this->InsertLargeObjectToPage(row, 0,  row->GetLargeBlocks());
+        // this->InsertLargeObjectToPage(row, 0,  row->GetLargeBlocks());
 
         if (lastPage != nullptr)
         {
@@ -155,104 +155,94 @@ void Table::InsertRow(const vector<Field>& inputData)
 
     Page* newPage = this->database->CreatePage(this->metadata.tableId);
 
-    // const page_id_t newPageId = newPage->GetPageId();
-    //
-    // if(lastPage != nullptr)
-    //     lastPage->SetNextPageId(newPageId);
-    //
-    // if(this->metadata.firstPageId <= 0)
-    //     this->metadata.firstPageId = newPageId;
-    //
-    // this->metadata.lastPageId = newPageId;
-
-    this->InsertLargeObjectToPage(row, 0, row->GetLargeBlocks());
+    // this->InsertLargeObjectToPage(row, 0, row->GetLargeBlocks());
 
     newPage->InsertRow(row);
 }
 
-void Table::InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector<column_index_t>& largeBlocksIndexes)
-{
-    if(largeBlocksIndexes.empty())
-        return;
+// void Table::InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector<column_index_t>& largeBlocksIndexes)
+// {
+//     if(largeBlocksIndexes.empty())
+//         return;
+//
+//     RowHeader* rowHeader = row->GetHeader();
+//     
+//     const auto& rowData = row->GetData();
+//
+//     for(const auto& largeBlockIndex : largeBlocksIndexes)
+//     {
+//         rowHeader->largeObjectBitMap->Set(largeBlockIndex, true);
+//
+//         DataObject* dataObject = nullptr;
+//
+//         offset = 0;
+//
+//         block_size_t blockSize = rowData[largeBlockIndex]->GetBlockSize();
+//
+//         const auto& data = rowData[largeBlockIndex]->GetBlockData();
+//
+//         while(true)
+//         {
+//             LargeDataPage* largeDataPage = this->GetOrCreateLargeDataPage();
+//
+//             blockSize -= offset;
+//
+//             const auto& availableBytesInPage = largeDataPage->GetBytesLeft();
+//
+//             const auto& dataSize = blockSize + OBJECT_METADATA_SIZE_T;
+//
+//             large_page_index_t objectIndex;
+//
+//             if (availableBytesInPage >= dataSize)
+//             {
+//                 largeDataPage->InsertObject(data + offset, blockSize, &objectIndex);
+//
+//                 LinkLargePageDataObjectChunks(dataObject, largeDataPage->GetPageId(), objectIndex);
+//
+//                 InsertLargeDataObjectPointerToRow(row, offset, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
+//
+//                 break;
+//             }
+//
+//             const auto bytesAllocated = availableBytesInPage - OBJECT_METADATA_SIZE_T;//add page Id maybe;
+//
+//             DataObject* prevDataObject = nullptr;
+//
+//             if (dataObject != nullptr)
+//                 prevDataObject = dataObject;
+//
+//             dataObject = largeDataPage->InsertObject(data + offset, bytesAllocated, &objectIndex);
+//
+//             LinkLargePageDataObjectChunks(prevDataObject, largeDataPage->GetPageId(), objectIndex);
+//
+//             InsertLargeDataObjectPointerToRow(row, availableBytesInPage, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
+//
+//             offset += bytesAllocated;
+//         }
+//     }
+// }
 
-    RowHeader* rowHeader = row->GetHeader();
-    
-    const auto& rowData = row->GetData();
-
-    for(const auto& largeBlockIndex : largeBlocksIndexes)
-    {
-        rowHeader->largeObjectBitMap->Set(largeBlockIndex, true);
-
-        DataObject* dataObject = nullptr;
-
-        offset = 0;
-
-        block_size_t blockSize = rowData[largeBlockIndex]->GetBlockSize();
-
-        const auto& data = rowData[largeBlockIndex]->GetBlockData();
-
-        while(true)
-        {
-            LargeDataPage* largeDataPage = this->GetOrCreateLargeDataPage();
-
-            blockSize -= offset;
-
-            const auto& availableBytesInPage = largeDataPage->GetBytesLeft();
-
-            const auto& dataSize = blockSize + OBJECT_METADATA_SIZE_T;
-
-            large_page_index_t objectIndex;
-
-            if (availableBytesInPage >= dataSize)
-            {
-                largeDataPage->InsertObject(data + offset, blockSize, &objectIndex);
-
-                LinkLargePageDataObjectChunks(dataObject, largeDataPage->GetPageId(), objectIndex);
-
-                InsertLargeDataObjectPointerToRow(row, offset, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
-
-                break;
-            }
-
-            const auto bytesAllocated = availableBytesInPage - OBJECT_METADATA_SIZE_T;//add page Id maybe;
-
-            DataObject* prevDataObject = nullptr;
-
-            if (dataObject != nullptr)
-                prevDataObject = dataObject;
-
-            dataObject = largeDataPage->InsertObject(data + offset, bytesAllocated, &objectIndex);
-
-            LinkLargePageDataObjectChunks(prevDataObject, largeDataPage->GetPageId(), objectIndex);
-
-            InsertLargeDataObjectPointerToRow(row, availableBytesInPage, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
-
-            offset += bytesAllocated;
-        }
-    }
-}
-
-LargeDataPage* Table::GetOrCreateLargeDataPage()
-{
-    LargeDataPage* largeDataPage = nullptr;
-    const auto& lastLargePageId = this->database->GetLastLargeDataPageId();
-
-    if(lastLargePageId > 0)
-        largeDataPage = this->database->GetLargeDataPage(lastLargePageId, *this);
-
-    if (largeDataPage == nullptr)
-        largeDataPage = this->database->CreateLargeDataPage();
-
-    if (largeDataPage->GetBytesLeft() == 0
-        || largeDataPage->GetBytesLeft() < OBJECT_METADATA_SIZE_T + 1)
-    {
-        largeDataPage->SetNextPageId(this->database->GetLastLargeDataPageId() + 1);
-
-        largeDataPage = this->database->CreateLargeDataPage();
-    }
-
-    return largeDataPage;
-}
+// LargeDataPage* Table::GetOrCreateLargeDataPage()
+// {
+//     LargeDataPage* largeDataPage = nullptr;
+//     const auto& lastLargePageId = this->database->GetLastLargeDataPageId();
+//
+//     if(lastLargePageId > 0)
+//         largeDataPage = this->database->GetLargeDataPage(lastLargePageId, *this);
+//
+//     if (largeDataPage == nullptr)
+//         largeDataPage = this->database->CreateLargeDataPage();
+//
+//     if (largeDataPage->GetBytesLeft() == 0
+//         || largeDataPage->GetBytesLeft() < OBJECT_METADATA_SIZE_T + 1)
+//     {
+//         largeDataPage->SetNextPageId(this->database->GetLastLargeDataPageId() + 1);
+//
+//         largeDataPage = this->database->CreateLargeDataPage();
+//     }
+//
+//     return largeDataPage;
+// }
 
 void Table::LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex)
 {

@@ -12,7 +12,7 @@ using namespace std;
 
 typedef struct TableHeader {
     table_id_t tableId;
-    metadata_literal_t tableNameSize;
+    header_literal_t tableNameSize;
     string tableName;
     row_size_t maxRowSize;
     page_id_t firstPageId;
