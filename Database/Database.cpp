@@ -125,7 +125,7 @@ void Database::DeleteDatabase() const
 
 Page* Database::GetPage(const Table& table, const row_size_t& rowSize)
 {
-    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().firstPageId);
+    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
 
     const extent_id_t lastAllocatedExtent = tableMapPage->GetLastAllocatedExtent();
 
@@ -155,7 +155,7 @@ Page* Database::GetPage(const Table& table, const row_size_t& rowSize)
 
 void Database::GetTablePages(const Table &table, vector<Page*>* pages) const
 {
-    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().firstPageId);
+    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
 
     vector<extent_id_t> allExtentsIds;
     tableMapPage->GetAllocatedExtents(&allExtentsIds);
@@ -199,21 +199,21 @@ Page* Database::CreatePage(const table_id_t& tableId)
     if(table == nullptr)
         return nullptr;
 
-    const page_id_t& firstPageId = table->GetTableHeader().firstPageId;
+    const page_id_t& indexAllocationMapPageId = table->GetTableHeader().indexAllocationMapPageId;
 
     const extent_id_t newExtentId = gamPage->AllocateExtent();
 
     const page_id_t newPageId = ( newExtentId * EXTENT_SIZE ) + 3;
     
     bool isFirstExtent = false;
-    if (firstPageId == 0)
+    if (indexAllocationMapPageId == 0)
     {
         isFirstExtent = true;
         tableMapPage = this->pageManager->CreateIndexAllocationMapPage(tableId, newPageId);
-        table->UpdateFirstPageId(newPageId);
+        table->UpdateIndexAllocationMapPageId(newPageId);
     }
     else
-        tableMapPage = this->pageManager->GetIndexAllocationMapPage(firstPageId);
+        tableMapPage = this->pageManager->GetIndexAllocationMapPage(indexAllocationMapPageId);
     
     tableMapPage->SetAllocatedExtent(newExtentId);
 

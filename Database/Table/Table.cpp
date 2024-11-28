@@ -5,9 +5,7 @@
 
 TableHeader::TableHeader()
 {
-    this->firstPageId = 0;
-    this->lastPageId = 0;
-    this->lastExtentId = 0;
+    this->indexAllocationMapPageId = 0;
     this->tableId = 0;
     this->maxRowSize = 0;
     this->numberOfColumns = 0;
@@ -25,9 +23,7 @@ TableHeader& TableHeader::operator=(const TableHeader &tableHeader)
     if (this == &tableHeader)
         return *this;
     
-    this->firstPageId = tableHeader.firstPageId;
-    this->lastPageId = tableHeader.lastPageId;
-    this->lastExtentId = tableHeader.lastExtentId;
+    this->indexAllocationMapPageId = tableHeader.indexAllocationMapPageId;
     this->maxRowSize = tableHeader.maxRowSize;
     this->numberOfColumns = tableHeader.numberOfColumns;
     this->tableNameSize = tableHeader.tableNameSize;
@@ -140,7 +136,7 @@ void Table::InsertRow(const vector<Field>& inputData)
         row->InsertColumnData(block, columnIndex);
     }
 
-    if(this->metadata.firstPageId > 0)
+    if(this->metadata.indexAllocationMapPageId > 0)
     {
         Page* lastPage = this->database->GetPage(*this, row->GetTotalRowSize());
 
@@ -304,7 +300,7 @@ void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* c
 
 // void Table::UpdateRows(const vector<Block> *updates, const vector<RowCondition *>* conditions)
 // {
-//     page_id_t pageId = this->metadata.firstPageId;
+//     page_id_t pageId = this->metadata.indexAllocationMapPageId;
 //
 //     while(pageId > 0)
 //     {
@@ -314,11 +310,7 @@ void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* c
 //     }
 // }
 
-void Table::UpdateFirstPageId(const page_id_t &firstPageId) { this->metadata.firstPageId = firstPageId; }
-
-void Table::UpdateLastPageId(const page_id_t &lastPageId) { this->metadata.lastPageId = lastPageId; }
-
-void Table::UpdateLastExtentId(const extent_id_t &lastExtentId) { this->metadata.lastExtentId = lastExtentId; }
+void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId) { this->metadata.indexAllocationMapPageId = indexAllocationMapPageId; }
 
 bool Table::IsColumnNullable(const column_index_t &columnIndex) const { return this->metadata.columnsNullBitMap->Get(columnIndex); }
 

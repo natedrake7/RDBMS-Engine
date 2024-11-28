@@ -15,11 +15,8 @@ typedef struct TableHeader {
     header_literal_t tableNameSize;
     string tableName;
     row_size_t maxRowSize;
-    page_id_t firstPageId;
-    page_id_t lastPageId;
+    page_id_t indexAllocationMapPageId;
     column_number_t numberOfColumns;
-    extent_id_t lastExtentId;
-    
     BitMap* columnsNullBitMap;
     
     TableHeader();
@@ -89,12 +86,8 @@ class Table {
 
         void UpdateRows(const vector<Block>* updates, const vector<RowCondition*>* conditions = nullptr);
 
-        void UpdateFirstPageId(const page_id_t& firstPageId);
+        void UpdateIndexAllocationMapPageId(const page_id_t& indexAllocationMapPageId);
     
-        void UpdateLastPageId(const page_id_t& lastPageId);
-
-        void UpdateLastExtentId(const extent_id_t& lastExtentId);
-
         bool IsColumnNullable(const column_index_t& columnIndex) const;
 
         void AddColumn(Column* column);

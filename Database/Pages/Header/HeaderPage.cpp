@@ -28,11 +28,9 @@ void HeaderPage::WritePageToFile(fstream *filePtr)
         filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableId), sizeof(table_id_t));
         filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableNameSize), sizeof(header_literal_t));
         filePtr->write(tableFullHeader.tableHeader.tableName.c_str(), tableFullHeader.tableHeader.tableNameSize);
-        filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.firstPageId), sizeof(page_id_t));
-        filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.lastPageId), sizeof(page_id_t));
+        filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.indexAllocationMapPageId), sizeof(page_id_t));
         filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.maxRowSize), sizeof(row_size_t));
         filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.numberOfColumns), sizeof(column_number_t));
-        filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.lastExtentId), sizeof(extent_id_t));
         tableFullHeader.tableHeader.columnsNullBitMap->WriteDataToFile(filePtr);
 
         for(const auto& columnMetaData: tableFullHeader.columnsHeaders)
@@ -78,10 +76,7 @@ void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table* tabl
         memcpy(&tableFullHeader.tableHeader.tableName[0], data.data() + offSet, tableFullHeader.tableHeader.tableNameSize);
         offSet += tableFullHeader.tableHeader.tableNameSize;
 
-        memcpy(&tableFullHeader.tableHeader.firstPageId, data.data() + offSet, sizeof(page_id_t));
-        offSet += sizeof(page_id_t);
-
-        memcpy(&tableFullHeader.tableHeader.lastPageId, data.data() + offSet, sizeof(page_id_t));
+        memcpy(&tableFullHeader.tableHeader.indexAllocationMapPageId, data.data() + offSet, sizeof(page_id_t));
         offSet += sizeof(page_id_t);
 
         memcpy(&tableFullHeader.tableHeader.maxRowSize, data.data() + offSet, sizeof(row_size_t));
@@ -89,9 +84,6 @@ void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table* tabl
 
         memcpy(&tableFullHeader.tableHeader.numberOfColumns, data.data() + offSet, sizeof(column_number_t));
         offSet += sizeof(column_number_t);
-
-        memcpy(&tableFullHeader.tableHeader.lastExtentId, data.data() + offSet, sizeof(extent_id_t));
-        offSet += sizeof(extent_id_t);
 
         tableFullHeader.tableHeader.columnsNullBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
         tableFullHeader.tableHeader.columnsNullBitMap->GetDataFromFile(data, offSet);
