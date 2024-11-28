@@ -12,17 +12,17 @@ class Row;
 class Table;
 struct DataObjectPointer;
 
-typedef struct PageMetadata{
+typedef struct PageHeader{
     page_id_t pageId;
     page_size_t pageSize;
     page_id_t nextPageId;
     page_size_t bytesLeft;
     PageType pageType;
 
-    PageMetadata();
-    ~PageMetadata();
-    static page_size_t GetPageMetaDataSize();
-}PageMetaData;
+    PageHeader();
+    ~PageHeader();
+    static page_size_t GetPageHeaderSize();
+}PageHeader;
 
 class Page {
     vector<Row*> rows;
@@ -30,13 +30,13 @@ class Page {
     protected:
         bool isDirty;
         string filename;
-        PageMetaData metadata;
-        void WritePageMetaDataToFile(fstream* filePtr);
+        PageHeader header;
+        void WritePageHeaderToFile(fstream* filePtr);
 
     public:
         explicit Page(const page_id_t& pageId);
         explicit Page();
-        explicit Page(const PageMetaData& pageMetaData);
+        explicit Page(const PageHeader& pageHeader);
         virtual ~Page();
         void InsertRow(Row* row);
         void DeleteRow(Row* row);

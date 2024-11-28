@@ -24,7 +24,7 @@ enum class ColumnType : uint8_t
     Null = 10,
 };
 
-typedef struct ColumnMetaData {
+typedef struct ColumnHeader {
     metadata_literal_t columnNameSize;
     string columnName;
     metadata_literal_t columnTypeLiteralSize;
@@ -32,10 +32,10 @@ typedef struct ColumnMetaData {
     ColumnType columnType;
     column_index_t columnIndex;
     row_size_t recordSize;
-}ColumnMetaData;
+}ColumnHeader;
 
 class Column {
-    ColumnMetaData metadata;
+    ColumnHeader header;
     const Table* table;
     bool allowNulls;
 
@@ -45,7 +45,7 @@ class Column {
     public:
         Column(const string& columnName, const string&  recordType, const row_size_t&  recordSize, const bool& allowNulls);
 
-        explicit Column(const ColumnMetaData& metadata, const Table* table);
+        explicit Column(const ColumnHeader& header, const Table* table);
 
         string& GetColumnName();
 
@@ -61,5 +61,5 @@ class Column {
 
         const column_index_t& GetColumnIndex() const;
 
-        const ColumnMetaData& GetColumnMetadata() const;
+        const ColumnHeader& GetColumnHeader() const;
 };

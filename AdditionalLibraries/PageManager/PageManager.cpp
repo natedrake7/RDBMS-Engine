@@ -142,24 +142,24 @@ void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
         if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
             this->RemovePage();
 
-        const PageMetadata pageMetaData = PageManager::GetPageMetaDataFromFile(buffer, offSet);
+        const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
 
         //page is already opened skip it
-        if(this->cache.find(pageMetaData.pageId) != this->cache.end())
+        if(this->cache.find(pageHeader.pageId) != this->cache.end())
             continue;
 
         Page* page = nullptr;
 
-        switch (pageMetaData.pageType)
+        switch (pageHeader.pageType)
         {
             case PageType::DATA:
-                page = new Page(pageMetaData);
+                page = new Page(pageHeader);
                 break;
             case PageType::LOB:
-                page = new LargeDataPage(pageMetaData);
+                page = new LargeDataPage(pageHeader);
                 break;
             case PageType::INDEX:
-                page = new IndexAllocationMapPage(pageMetaData, 0, 0);
+                page = new IndexAllocationMapPage(pageHeader, 0, 0);
                 break;
             default:
                 throw runtime_error("Page type not recognized");
@@ -186,9 +186,9 @@ void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
 ////////////////////System Pages///////////////////
 //////////////////////////////////////////////////
 
-MetaDataPage* PageManager::CreateMetaDataPage(const string& filename)
+HeaderPage* PageManager::CreateHeaderPage(const string& filename)
 {
-    MetaDataPage* page = new MetaDataPage(0);
+    HeaderPage* page = new HeaderPage(0);
 
     if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
         this->RemovePage();
@@ -269,9 +269,9 @@ IndexAllocationMapPage* PageManager::OpenIndexAllocationMapPage(const page_id_t 
 
     page_offset_t offSet = 0;
 
-    const PageMetadata pageMetaData = PageManager::GetPageMetaDataFromFile(buffer, offSet);
+    const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
 
-    IndexAllocationMapPage* page = new IndexAllocationMapPage(pageMetaData, 0, 0);
+    IndexAllocationMapPage* page = new IndexAllocationMapPage(pageHeader, 0, 0);
     this->systemPageList.push_front(page);
     
     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
@@ -281,7 +281,7 @@ IndexAllocationMapPage* PageManager::OpenIndexAllocationMapPage(const page_id_t 
     return page;
 }
 
-MetaDataPage* PageManager::OpenMetaDataPage(const string& filename)
+HeaderPage* PageManager::OpenHeaderPage(const string& filename)
 {
     if(this->systemPageList.size() == MAX_NUMBER_OF_PAGES)
         this->RemoveSystemPage();
@@ -296,9 +296,9 @@ MetaDataPage* PageManager::OpenMetaDataPage(const string& filename)
 
     page_offset_t offSet = 0;
 
-    const PageMetadata pageMetaData = PageManager::GetPageMetaDataFromFile(buffer, offSet);
+    const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
 
-    MetaDataPage* page = new MetaDataPage(pageMetaData);
+    HeaderPage* page = new HeaderPage(pageHeader);
     this->systemPageList.push_front(page);
     
     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
@@ -321,9 +321,9 @@ GlobalAllocationMapPage* PageManager::OpenGlobalAllocationMapPage(const string& 
     file->read(buffer.data(), PAGE_SIZE);
     page_offset_t offSet = 0;
     
-    const PageMetadata pageMetaData = PageManager::GetPageMetaDataFromFile(buffer, offSet);
+    const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
     
-    GlobalAllocationMapPage* page = new GlobalAllocationMapPage(pageMetaData);
+    GlobalAllocationMapPage* page = new GlobalAllocationMapPage(pageHeader);
     
     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
 
@@ -334,12 +334,12 @@ GlobalAllocationMapPage* PageManager::OpenGlobalAllocationMapPage(const string& 
     return page;
 }
 
-MetaDataPage* PageManager::GetMetaDataPage(const string& filename)
+HeaderPage* PageManager::GetHeaderPage(const string& filename)
 {
     const auto& pageHashIterator = this->systemCache.find(0);
 
     if(pageHashIterator == this->systemCache.end())
-        this->OpenMetaDataPage(filename);
+        this->OpenHeaderPage(filename);
     else
     {
         this->systemPageList.push_front(*pageHashIterator->second);
@@ -349,7 +349,7 @@ MetaDataPage* PageManager::GetMetaDataPage(const string& filename)
 
     (*this->systemPageList.begin())->SetFileName(filename);
 
-    return dynamic_cast<MetaDataPage*>(*this->systemPageList.begin());
+    return dynamic_cast<HeaderPage*>(*this->systemPageList.begin());
 }
 
 GlobalAllocationMapPage* PageManager::GetGlobalAllocationMapPage()
@@ -397,25 +397,25 @@ void PageManager::RemoveSystemPage()
 }
 
 
-PageMetadata PageManager::GetPageMetaDataFromFile(const vector<char> &data, page_offset_t &offSet)
+PageHeader PageManager::GetPageHeaderFromFile(const vector<char> &data, page_offset_t &offSet)
 {
-    PageMetadata pageMetaData;
-    memcpy(&pageMetaData.pageId, data.data() + offSet, sizeof(page_id_t));
+    PageHeader pageHeader;
+    memcpy(&pageHeader.pageId, data.data() + offSet, sizeof(page_id_t));
     offSet += sizeof(page_id_t);
 
-    memcpy(&pageMetaData.nextPageId, data.data() + offSet, sizeof(page_id_t));
+    memcpy(&pageHeader.nextPageId, data.data() + offSet, sizeof(page_id_t));
     offSet += sizeof(page_id_t);
 
-    memcpy(&pageMetaData.pageSize, data.data() + offSet, sizeof(page_size_t));
+    memcpy(&pageHeader.pageSize, data.data() + offSet, sizeof(page_size_t));
     offSet += sizeof(page_size_t);
 
-    memcpy(&pageMetaData.bytesLeft, data.data() + offSet, sizeof(page_size_t));
+    memcpy(&pageHeader.bytesLeft, data.data() + offSet, sizeof(page_size_t));
     offSet += sizeof(page_size_t);
 
-    memcpy(&pageMetaData.pageType, data.data() + offSet, sizeof(PageType));
+    memcpy(&pageHeader.pageType, data.data() + offSet, sizeof(PageType));
     offSet += sizeof(PageType);
 
-    return pageMetaData;
+    return pageHeader;
 }
 
 void PageManager::SetReadFilePointerToOffset(fstream *file,const streampos& offSet)

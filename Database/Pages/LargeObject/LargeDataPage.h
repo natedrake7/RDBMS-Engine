@@ -29,7 +29,7 @@ class LargeDataPage : public Page
     public:
         explicit LargeDataPage(const page_id_t& pageId);
         explicit LargeDataPage();
-        explicit LargeDataPage(const PageMetaData& pageMetaData);
+        explicit LargeDataPage(const PageHeader& pageHeader);
         ~LargeDataPage() override;
         void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WritePageToFile(fstream* filePtr) override;

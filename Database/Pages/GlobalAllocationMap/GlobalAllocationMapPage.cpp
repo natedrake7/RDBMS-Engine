@@ -2,13 +2,13 @@
 
 GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t& pageId) : Page(pageId)
 {
-    this->metadata.pageType = PageType::GAM;
-    this->extentsMap = new BitMap(this->metadata.bytesLeft * 8, 0xFF);
-    this->metadata.bytesLeft = 0;
+    this->header.pageType = PageType::GAM;
+    this->extentsMap = new BitMap(EXTENT_BIT_MAP_SIZE, 0xFF);
+    this->header.bytesLeft = 0;
     this->isDirty = true;
 }
 
-GlobalAllocationMapPage::GlobalAllocationMapPage(const PageMetadata &pageMetadata) : Page(pageMetadata)
+GlobalAllocationMapPage::GlobalAllocationMapPage(const PageHeader& pageHeader) : Page(pageHeader)
 {
     this->extentsMap = new BitMap();
 }
@@ -40,7 +40,7 @@ void GlobalAllocationMapPage::DeallocateExtent(const extent_id_t& extentId)
 
 void GlobalAllocationMapPage::WritePageToFile(fstream *filePtr)
 {
-    this->WritePageMetaDataToFile(filePtr);
+    this->WritePageHeaderToFile(filePtr);
     this->extentsMap->WriteDataToFile(filePtr);
 }
 
@@ -49,4 +49,4 @@ void GlobalAllocationMapPage::GetPageDataFromFile(const vector<char> &data, cons
     this->extentsMap->GetDataFromFile(data, offSet);
 }
 
-page_size_t GlobalAllocationMapPage::GetAvailableSize() { return PAGE_SIZE - PageMetaData::GetPageMetaDataSize(); }
+page_size_t GlobalAllocationMapPage::GetAvailableSize() { return PAGE_SIZE - PageHeader::GetPageHeaderSize(); }

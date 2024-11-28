@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include "../../Database/Pages/Page.h"
-#include "../../Database/Pages/MetaData/MetaDataPage.h"
+#include "../../Database/Pages/Header/HeaderPage.h"
 #include "../../Database/Pages/LargeObject/LargeDataPage.h"
 #include  "../../Database/Constants.h"
 #include "../../Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.h"
@@ -13,7 +13,7 @@
 class IndexAllocationMapPage;
 class GlobalAllocationMapPage;
 class LargeDataPage;
-class MetaDataPage;
+class HeaderPage;
 class Page;
 class Database;
 class Table;
@@ -34,12 +34,12 @@ class PageManager {
         void RemovePage();
         void RemoveSystemPage();
         void OpenPage(const page_id_t& pageId, const Table* table);
-        MetaDataPage* OpenMetaDataPage(const string& filename);
+        HeaderPage* OpenHeaderPage(const string& filename);
         GlobalAllocationMapPage* OpenGlobalAllocationMapPage(const string& filename);
         IndexAllocationMapPage* OpenIndexAllocationMapPage(const page_id_t& pageId);
         static void SetReadFilePointerToOffset(fstream* file, const streampos& offSet);
         static void SetWriteFilePointerToOffset(fstream* file, const streampos& offSet);
-        static PageMetadata GetPageMetaDataFromFile(const vector<char> &data, page_offset_t &offSet);
+        static PageHeader GetPageHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
 
     public:
         explicit PageManager(FileManager* fileManager);
@@ -47,8 +47,8 @@ class PageManager {
         void BindDatabase(const Database* database);
         Page* CreatePage(const page_id_t& pageId);
         Page* GetPage(const page_id_t& pageId, const Table* table);
-        MetaDataPage* GetMetaDataPage(const string& filename);
-        MetaDataPage* CreateMetaDataPage(const string& filename);
+        HeaderPage* GetHeaderPage(const string& filename);
+        HeaderPage* CreateHeaderPage(const string& filename);
         LargeDataPage* CreateLargeDataPage(const page_id_t& pageId);
         LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table* table);
         GlobalAllocationMapPage* CreateGlobalAllocationMapPage(const string& filename);

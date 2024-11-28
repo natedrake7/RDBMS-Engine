@@ -1,17 +1,17 @@
 #include "Page.h"
 
-PageMetadata::PageMetadata()
+PageHeader::PageHeader()
 {
     this->pageType = PageType::DATA;
     this->pageId = 0;
     this->pageSize = 0;
     this->nextPageId = 0;
-    this->bytesLeft = PAGE_SIZE - GetPageMetaDataSize();
+    this->bytesLeft = PAGE_SIZE - GetPageHeaderSize();
 }
 
-PageMetadata::~PageMetadata() = default;
+PageHeader::~PageHeader() = default;
 
-page_size_t PageMetadata::GetPageMetaDataSize()
+page_size_t PageHeader::GetPageHeaderSize()
 {
     page_size_t size = 0;
     size += 2 * sizeof(page_id_t);
@@ -23,20 +23,20 @@ page_size_t PageMetadata::GetPageMetaDataSize()
 
 Page::Page(const page_id_t& pageId)
 {
-    this->metadata.pageId = pageId;
+    this->header.pageId = pageId;
     this->isDirty = true;
-    this->metadata.pageType = PageType::DATA;
+    this->header.pageType = PageType::DATA;
 }
 
 Page::Page()
 {
     this->isDirty = false;
-    this->metadata.pageType = PageType::DATA;
+    this->header.pageType = PageType::DATA;
 }
 
-Page::Page(const PageMetaData &pageMetaData)
+Page::Page(const PageHeader &pageHeader)
 {
-    this->metadata = pageMetaData;
+    this->header = pageHeader;
     this->isDirty = false;
 }
 
@@ -50,8 +50,8 @@ void Page::InsertRow(Row* row)
 {
     this->rows.push_back(row);
     auto totalSize = row->GetTotalRowSize();
-    this->metadata.bytesLeft -= totalSize;
-    this->metadata.pageSize++;
+    this->header.bytesLeft -= totalSize;
+    this->header.pageSize++;
     this->isDirty = true;
 }
 
@@ -64,23 +64,23 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
 {
     const auto& columns = table->GetColumns();
 
-    for (int i = 0; i < this->metadata.pageSize; i++)
+    for (int i = 0; i < this->header.pageSize; i++)
     {
         Row* row = new Row(*table);
-        RowMetaData* rowMetaData = row->GetMetaData();
+        RowHeader* rowHeader = row->GetHeader();
         
-        memcpy(&rowMetaData->rowSize, data.data() + offSet, sizeof(row_size_t));
+        memcpy(&rowHeader->rowSize, data.data() + offSet, sizeof(row_size_t));
         offSet += sizeof(row_size_t);
 
-        memcpy(&rowMetaData->maxRowSize, data.data() + offSet, sizeof(size_t));
+        memcpy(&rowHeader->maxRowSize, data.data() + offSet, sizeof(size_t));
         offSet += sizeof(size_t);
 
-        rowMetaData->nullBitMap->GetDataFromFile(data, offSet);
-        rowMetaData->largeObjectBitMap->GetDataFromFile(data, offSet);
+        rowHeader->nullBitMap->GetDataFromFile(data, offSet);
+        rowHeader->largeObjectBitMap->GetDataFromFile(data, offSet);
 
          for(int j = 0; j < columns.size(); j++)
          {
-             if (rowMetaData->nullBitMap->Get(j))
+             if (rowHeader->nullBitMap->Get(j))
              {
                  Block* block = new Block(nullptr, 0, columns[j]);
 
@@ -109,32 +109,32 @@ void Page::GetPageDataFromFile(const vector<char>& data, const Table* table, pag
     }
 }
 
-void Page::WritePageMetaDataToFile(fstream* filePtr)
+void Page::WritePageHeaderToFile(fstream* filePtr)
 {
-    filePtr->write(reinterpret_cast<char*>(&this->metadata.pageId), sizeof(page_id_t));
-    filePtr->write(reinterpret_cast<char*>(&this->metadata.nextPageId), sizeof(page_id_t));
-    filePtr->write(reinterpret_cast<char*>(&this->metadata.pageSize), sizeof(page_size_t));
-    filePtr->write(reinterpret_cast<char*>(&this->metadata.bytesLeft), sizeof(page_size_t));
-    filePtr->write(reinterpret_cast<char*>(&this->metadata.pageType), sizeof(PageType));
+    filePtr->write(reinterpret_cast<char*>(&this->header.pageId), sizeof(page_id_t));
+    filePtr->write(reinterpret_cast<char*>(&this->header.nextPageId), sizeof(page_id_t));
+    filePtr->write(reinterpret_cast<char*>(&this->header.pageSize), sizeof(page_size_t));
+    filePtr->write(reinterpret_cast<char*>(&this->header.bytesLeft), sizeof(page_size_t));
+    filePtr->write(reinterpret_cast<char*>(&this->header.pageType), sizeof(PageType));
 }
 
 void Page::WritePageToFile(fstream *filePtr)
 {
-    this->WritePageMetaDataToFile(filePtr);
+    this->WritePageHeaderToFile(filePtr);
 
     for(const auto& row: this->rows)
     {
-        RowMetaData* rowMetaData = row->GetMetaData();
+        RowHeader* rowHeader = row->GetHeader();
 
-        filePtr->write(reinterpret_cast<const char* >(&rowMetaData->rowSize), sizeof(row_size_t));
-        filePtr->write(reinterpret_cast<const char* >(&rowMetaData->maxRowSize), sizeof(size_t));
-        rowMetaData->nullBitMap->WriteDataToFile(filePtr);
-        rowMetaData->largeObjectBitMap->WriteDataToFile(filePtr);
+        filePtr->write(reinterpret_cast<const char* >(&rowHeader->rowSize), sizeof(row_size_t));
+        filePtr->write(reinterpret_cast<const char* >(&rowHeader->maxRowSize), sizeof(size_t));
+        rowHeader->nullBitMap->WriteDataToFile(filePtr);
+        rowHeader->largeObjectBitMap->WriteDataToFile(filePtr);
 
         column_index_t columnIndex = 0;
         for(const auto& block : row->GetData())
         {
-            if(rowMetaData->nullBitMap->Get(columnIndex))
+            if(rowHeader->nullBitMap->Get(columnIndex))
             {
                 columnIndex++;
                 continue;
@@ -153,23 +153,23 @@ void Page::WritePageToFile(fstream *filePtr)
     }
 }
 
-void Page::SetNextPageId(const page_id_t &nextPageId) { this->metadata.nextPageId = nextPageId; }
+void Page::SetNextPageId(const page_id_t &nextPageId) { this->header.nextPageId = nextPageId; }
 
 void Page::SetFileName(const string &filename) { this->filename = filename; }
 
-void Page::SetPageId(const page_id_t &pageId) { this->metadata.pageId = pageId; }
+void Page::SetPageId(const page_id_t &pageId) { this->header.pageId = pageId; }
 
 const string& Page::GetFileName() const { return this->filename; }
 
-const page_id_t& Page::GetPageId() const { return this->metadata.pageId; }
+const page_id_t& Page::GetPageId() const { return this->header.pageId; }
 
 const bool& Page::GetPageDirtyStatus() const { return this->isDirty; }
 
-const page_size_t& Page::GetBytesLeft() const { return this->metadata.bytesLeft; }
+const page_size_t& Page::GetBytesLeft() const { return this->header.bytesLeft; }
 
-const page_id_t& Page::GetNextPageId() const { return this->metadata.nextPageId; }
+const page_id_t& Page::GetNextPageId() const { return this->header.nextPageId; }
 
-page_size_t Page::GetPageSize() const { return this->metadata.pageSize; }
+page_size_t Page::GetPageSize() const { return this->header.pageSize; }
 
 void Page::UpdateRows(const vector<Block> *updates, const vector<RowCondition *> *conditions)
 {
@@ -214,14 +214,14 @@ void Page::GetRows(vector<Row>* copiedRows, const Table& table, const vector<Row
                 continue;
         }
 
-        RowMetaData* rowMetaData = row->GetMetaData();
+        RowHeader* rowHeader = row->GetHeader();
         
         vector<Block*> copyBlocks;
         
         for(const auto& block : row->GetData())
         {
             Block* blockCopy = new Block(block);
-            if (rowMetaData->largeObjectBitMap->Get(block->GetColumnIndex()))
+            if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
             {
                 DataObjectPointer objectPointer;
                 memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));

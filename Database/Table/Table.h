@@ -10,7 +10,7 @@
 
 using namespace std;
 
-typedef struct TableMetaData {
+typedef struct TableHeader {
     table_id_t tableId;
     metadata_literal_t tableNameSize;
     string tableName;
@@ -22,23 +22,23 @@ typedef struct TableMetaData {
     
     BitMap* columnsNullBitMap;
     
-    TableMetaData();
-    ~TableMetaData();
-    TableMetaData& operator=(const TableMetaData& tableMetaData);
-}TableMetaData;
+    TableHeader();
+    ~TableHeader();
+    TableHeader& operator=(const TableHeader& tableHeader);
+}TableHeader;
 
 #include "../Column/Column.h"
 #include "../Row/Row.h"
 #include "../Database.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
 
-typedef struct TableFullMetaData {
-    TableMetaData tableMetaData;
-    vector<ColumnMetaData> columnsMetaData;
+typedef struct TableFullHeader {
+    TableHeader tableHeader;
+    vector<ColumnHeader> columnsHeaders;
 
-    TableFullMetaData();
-    TableFullMetaData(const TableFullMetaData& tableMetaData);
-}TableFullMetaData;
+    TableFullHeader();
+    TableFullHeader(const TableFullHeader& tableHeader);
+}TableFullHeader;
 
 class Page;
 class Database;
@@ -48,7 +48,7 @@ class LargeDataPage;
 struct DataObject;
 
 class Table {
-    TableMetaData metadata;
+    TableHeader metadata;
     vector<Column*> columns;
     Database* database;
 
@@ -67,7 +67,7 @@ class Table {
     public:
         Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, Database* database);
 
-        Table(const TableMetaData &tableMetaData, Database* database);
+        Table(const TableHeader &tableHeader, Database* database);
 
         ~Table();
 
@@ -79,7 +79,7 @@ class Table {
 
         column_number_t GetNumberOfColumns() const;
 
-        const TableMetaData& GetTableMetadata() const;
+        const TableHeader& GetTableHeader() const;
 
         const vector<Column*>& GetColumns() const;
 

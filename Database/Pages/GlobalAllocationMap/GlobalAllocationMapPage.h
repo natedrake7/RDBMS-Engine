@@ -9,7 +9,7 @@ class GlobalAllocationMapPage final : public Page{
     
     public:
         explicit GlobalAllocationMapPage(const page_id_t& pageId);
-        explicit GlobalAllocationMapPage(const PageMetadata& pageMetadata);
+        explicit GlobalAllocationMapPage(const PageHeader& pageHeader);
         ~GlobalAllocationMapPage() override;
         extent_id_t AllocateExtent();
         void DeallocateExtent(const extent_id_t& extentId);

@@ -13,32 +13,33 @@ void Database::ValidateTableCreation(Table* table) const
 
 }
 
-void Database::WriteMetaDataToFile()
+void Database::WriteHeaderToFile()
 {
-    MetaDataPage* metaDataPage = this->pageManager->GetMetaDataPage(this->filename + this->fileExtension);
+    HeaderPage* metaDataPage = this->pageManager->GetHeaderPage(this->filename + this->fileExtension);
 
-    metaDataPage->SetMetaData(this->metadata, this->tables);
+    metaDataPage->SetHeaders(this->header, this->tables);
 }
 
 
 Database::Database(const string &dbName, PageManager *pageManager)
 {
     this->filename = dbName;
+    this->fileExtension = ".db";
     this->pageManager = pageManager;
 
-    MetaDataPage* page = pageManager->GetMetaDataPage(this->filename + this->fileExtension);
+    HeaderPage* page = pageManager->GetHeaderPage(this->filename + this->fileExtension);
 
-    this->metadata = page->GetDatabaseMetaData();
-    vector<TableFullMetaData> tableFullMetaData = page->GetTableFullMetaData();
+    this->header = page->GetDatabaseHeader();
+    const vector<TableFullHeader> tablesFullHeaders = page->GetTablesFullHeaders();
 
-    for(auto& tableMetaData : tableFullMetaData)
-        this->CreateTable(tableMetaData);
+    for(auto& tableHeader : tablesFullHeaders)
+        this->CreateTable(tableHeader);
 }
 
 Database::~Database()
 {
-    //save db metadata;
-    this->WriteMetaDataToFile();
+    //save db header;
+    this->WriteHeaderToFile();
     for (const auto& dbTable : this->tables)
         delete dbTable;
 
@@ -49,27 +50,27 @@ Table* Database::CreateTable(const string &tableName, const vector<Column *> &co
 {
     Table* table = nullptr;
 
-    if (this->metadata.lastTableId == 0)
-        table = new Table(tableName, this->metadata.lastTableId , columns, this);
+    if (this->header.lastTableId == 0)
+        table = new Table(tableName, this->header.lastTableId , columns, this);
     else
     {
-        this->metadata.lastTableId++;
-        table = new Table(tableName, this->metadata.lastTableId , columns, this);
+        this->header.lastTableId++;
+        table = new Table(tableName, this->header.lastTableId , columns, this);
     }
 
     this->tables.push_back(table);
 
-    this->metadata.numberOfTables = this->tables.size();
+    this->header.numberOfTables = this->tables.size();
 
     return table;
 }
 
-void Database::CreateTable(const TableFullMetaData &tableMetaData)
+void Database::CreateTable(const TableFullHeader &tableFullHeader)
 {
-    Table* table = new Table(tableMetaData.tableMetaData, this);
+    Table* table = new Table(tableFullHeader.tableHeader, this);
 
-    for(const auto& columnMetaData : tableMetaData.columnsMetaData)
-        table->AddColumn(new Column(columnMetaData, table));
+    for(const auto& columnHeader : tableFullHeader.columnsHeaders)
+        table->AddColumn(new Column(columnHeader, table));
 
     this->tables.push_back(table);
 }
@@ -78,7 +79,7 @@ Table* Database::OpenTable(const string &tableName) const
 {
     for (const auto& table : this->tables)
     {
-        if(table->GetTableMetadata().tableName == tableName)
+        if(table->GetTableHeader().tableName == tableName)
             return table;
     }
 
@@ -89,11 +90,11 @@ void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager*
 {
     fileManager->CreateFile(dbName, ".db");
     
-    MetaDataPage* metaDataPage = pageManager->CreateMetaDataPage(dbName + ".db");
+    HeaderPage* metaDataPage = pageManager->CreateHeaderPage(dbName + ".db");
     pageManager->CreateGlobalAllocationMapPage(dbName + ".db");
 
     //start the the paging of the data in the extent 1 not 0
-    metaDataPage->SetMetaData(DatabaseMetaData(dbName, 0), vector<Table*>());
+    metaDataPage->SetHeaders(DatabaseHeader(dbName, 0), vector<Table*>());
 }
 
 void UseDatabase(const string& dbName, Database** db, PageManager* pageManager)
@@ -124,7 +125,7 @@ void Database::DeleteDatabase() const
 
 Page* Database::GetPage(const Table& table, const row_size_t& rowSize)
 {
-    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableMetadata().firstPageId);
+    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().firstPageId);
 
     const extent_id_t lastAllocatedExtent = tableMapPage->GetLastAllocatedExtent();
 
@@ -154,7 +155,7 @@ Page* Database::GetPage(const Table& table, const row_size_t& rowSize)
 
 void Database::GetTablePages(const Table &table, vector<Page*>* pages) const
 {
-    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableMetadata().firstPageId);
+    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().firstPageId);
 
     vector<extent_id_t> allExtentsIds;
     tableMapPage->GetAllocatedExtents(&allExtentsIds);
@@ -198,7 +199,7 @@ Page* Database::CreatePage(const table_id_t& tableId)
     if(table == nullptr)
         return nullptr;
 
-    const page_id_t& firstPageId = table->GetTableMetadata().firstPageId;
+    const page_id_t& firstPageId = table->GetTableHeader().firstPageId;
 
     const extent_id_t newExtentId = gamPage->AllocateExtent();
 
@@ -230,28 +231,28 @@ Page* Database::CreatePage(const table_id_t& tableId)
 
 LargeDataPage* Database::CreateLargeDataPage()
 {
-    if ((this->metadata.lastLargePageId + 1 < (this->metadata.lastLargeExtentId + 1) * EXTENT_SIZE)
-        && this->metadata.lastLargeExtentId > 0)
-        this->metadata.lastLargePageId++;
+    if ((this->header.lastLargePageId + 1 < (this->header.lastLargeExtentId + 1) * EXTENT_SIZE)
+        && this->header.lastLargeExtentId > 0)
+        this->header.lastLargePageId++;
     else
     {
-        this->metadata.lastLargePageId = (this->metadata.lastExtentId + 1) * EXTENT_SIZE;
+        this->header.lastLargePageId = (this->header.lastExtentId + 1) * EXTENT_SIZE;
 
-        this->metadata.lastExtentId++;
+        this->header.lastExtentId++;
 
-        this->metadata.lastLargeExtentId = this->metadata.lastExtentId;
+        this->header.lastLargeExtentId = this->header.lastExtentId;
     }
 
-    return this->pageManager->CreateLargeDataPage(this->metadata.lastLargePageId);
+    return this->pageManager->CreateLargeDataPage(this->header.lastLargePageId);
 }
 
 LargeDataPage* Database::GetLargeDataPage(const page_id_t& pageId, const Table& table) { return this->pageManager->GetLargeDataPage(pageId, &table); }
 
-page_id_t Database::GetLastLargeDataPageId() const { return this->metadata.lastLargePageId; }
+page_id_t Database::GetLastLargeDataPageId() const { return this->header.lastLargePageId; }
 
 string Database::GetFileName() const { return this->filename + this->fileExtension; }
 
-DatabaseMetaData::DatabaseMetaData()
+DatabaseHeader::DatabaseHeader()
 {
     this->databaseNameSize = 0;
     this->numberOfTables = 0;
@@ -261,7 +262,7 @@ DatabaseMetaData::DatabaseMetaData()
     this->lastTableId = 0;
 }
 
-DatabaseMetaData::DatabaseMetaData(const string &databaseName, const table_number_t& numberOfTables)
+DatabaseHeader::DatabaseHeader(const string &databaseName, const table_number_t& numberOfTables)
 {
     this->databaseName = databaseName;
     this->numberOfTables = numberOfTables;
@@ -272,7 +273,7 @@ DatabaseMetaData::DatabaseMetaData(const string &databaseName, const table_numbe
     this->lastTableId = 0;
 }
 
-DatabaseMetaData::DatabaseMetaData(const DatabaseMetaData &dbMetaData)
+DatabaseHeader::DatabaseHeader(const DatabaseHeader &dbMetaData)
 {
     this->databaseName = dbMetaData.databaseName;
     this->numberOfTables = dbMetaData.numberOfTables;

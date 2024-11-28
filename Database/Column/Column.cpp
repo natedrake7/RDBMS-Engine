@@ -4,52 +4,52 @@
 
 Column::Column(const string& columnName, const string& columnTypeLiteral, const row_size_t&  recordSize, const bool& allowNulls)
 {
-    this->metadata.columnName = columnName;
-    this->metadata.columnTypeLiteral = columnTypeLiteral;
-    this->metadata.recordSize = recordSize;
+    this->header.columnName = columnName;
+    this->header.columnTypeLiteral = columnTypeLiteral;
+    this->header.recordSize = recordSize;
     this->allowNulls = allowNulls;
-    this->metadata.columnType = this->SetColumnType();
-    this->metadata.columnIndex = 0;
+    this->header.columnType = this->SetColumnType();
+    this->header.columnIndex = 0;
     this->table = nullptr;
 }
 
-Column::Column(const ColumnMetaData &metadata, const Table* table)
+Column::Column(const ColumnHeader& header, const Table* table)
 {
-    this->metadata = metadata;
+    this->header = header;
     this->allowNulls = false;
     this->table = table;
 }
 
-string& Column::GetColumnName() { return this->metadata.columnName; }
+string& Column::GetColumnName() { return this->header.columnName; }
 
-const ColumnType& Column::GetColumnType() const { return this->metadata.columnType; }
+const ColumnType& Column::GetColumnType() const { return this->header.columnType; }
 
-const row_size_t& Column::GetColumnSize() const { return this->metadata.recordSize; }
+const row_size_t& Column::GetColumnSize() const { return this->header.recordSize; }
 
-bool Column::IsColumnNullable() const { return this->table->IsColumnNullable(this->metadata.columnIndex); }
+bool Column::IsColumnNullable() const { return this->table->IsColumnNullable(this->header.columnIndex); }
 
 const bool& Column::GetAllowNulls() const { return this->allowNulls; }
 
-const column_index_t& Column::GetColumnIndex() const { return this->metadata.columnIndex; }
+const column_index_t& Column::GetColumnIndex() const { return this->header.columnIndex; }
 
-const ColumnMetaData& Column::GetColumnMetadata() const { return this->metadata; }
+const ColumnHeader& Column::GetColumnHeader() const { return this->header; }
 
-void Column::SetColumnIndex(const column_index_t& columnIndex) { this->metadata.columnIndex = columnIndex; }
+void Column::SetColumnIndex(const column_index_t& columnIndex) { this->header.columnIndex = columnIndex; }
 
 ColumnType Column::SetColumnType() const {
-    if (this->metadata.columnTypeLiteral == "TinyInt")
+    if (this->header.columnTypeLiteral == "TinyInt")
         return ColumnType::TinyInt;
-    if (this->metadata.columnTypeLiteral == "SmallInt")
+    if (this->header.columnTypeLiteral == "SmallInt")
         return ColumnType::SmallInt;
-    if (this->metadata.columnTypeLiteral == "Int")
+    if (this->header.columnTypeLiteral == "Int")
         return ColumnType::Int;
-    if (this->metadata.columnTypeLiteral == "BigInt")
+    if (this->header.columnTypeLiteral == "BigInt")
         return ColumnType::BigInt;
-    if (this->metadata.columnTypeLiteral == "Decimal")
+    if (this->header.columnTypeLiteral == "Decimal")
         return ColumnType::Decimal;
-    if (this->metadata.columnTypeLiteral == "String")
+    if (this->header.columnTypeLiteral == "String")
         return ColumnType::String;
-    if (this->metadata.columnTypeLiteral == "Bool")
+    if (this->header.columnTypeLiteral == "Bool")
         return ColumnType::Bool;
 
     throw runtime_error("Column type not recognized");

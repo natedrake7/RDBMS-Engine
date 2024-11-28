@@ -1,6 +1,6 @@
 ﻿#include "Row.h"
 
-RowMetaData::RowMetaData()
+RowHeader::RowHeader()
 {
     this->rowSize = 0;
     this->maxRowSize = 0;
@@ -8,7 +8,7 @@ RowMetaData::RowMetaData()
     this->largeObjectBitMap = nullptr;
 }
 
-RowMetaData::~RowMetaData()
+RowHeader::~RowHeader()
 {
     delete this->nullBitMap;
     delete this->largeObjectBitMap;
@@ -22,8 +22,8 @@ Row::Row(const Table& table)
     
     this->data.resize(numberOfColumns);
 
-    this->metaData.nullBitMap = new BitMap(numberOfColumns);
-    this->metaData.largeObjectBitMap = new BitMap(numberOfColumns);
+    this->header.nullBitMap = new BitMap(numberOfColumns);
+    this->header.largeObjectBitMap = new BitMap(numberOfColumns);
 }
 
 Row::Row(const Table& table, const vector<Block*>& data)
@@ -34,13 +34,13 @@ Row::Row(const Table& table, const vector<Block*>& data)
         this->data.push_back(new Block(block));
     
     this->UpdateRowSize();
-    this->metaData.maxRowSize = 0;
+    this->header.maxRowSize = 0;
 }
 
 Row::Row(const Row &copyRow)
 {
     this->table = copyRow.table;
-    this->metaData = copyRow.metaData;
+    this->header = copyRow.header;
     
     for (const auto& block : copyRow.data)
         this->data.push_back(new Block(block));
@@ -55,7 +55,7 @@ Row::~Row()
 void Row::InsertColumnData(Block *block, const  uint16_t& columnIndex)
 {
     this->data[columnIndex] = block;
-    this->metaData.rowSize += block->GetBlockSize();
+    this->header.rowSize += block->GetBlockSize();
 }
 
 const vector<Block *> & Row::GetData() const { return this->data; }
@@ -105,7 +105,7 @@ void Row::PrintRow() const
     }
 }
 
-const row_size_t& Row::GetRowSize() const { return this->metaData.rowSize; }
+const row_size_t& Row::GetRowSize() const { return this->header.rowSize; }
 
 vector<column_index_t> Row::GetLargeBlocks()
 {
@@ -124,9 +124,9 @@ vector<column_index_t> Row::GetLargeBlocks()
 
 void Row::UpdateRowSize()
 {
-    this->metaData.rowSize = 0;
+    this->header.rowSize = 0;
      for (const auto& block : this->data)
-         this->metaData.rowSize += block->GetBlockSize();
+         this->header.rowSize += block->GetBlockSize();
 }
 
 char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer) const
@@ -164,27 +164,27 @@ char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer) const
     return largeValue;
 }
 
-void Row::SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) { this->metaData.nullBitMap->Set(position, value); }
+void Row::SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) { this->header.nullBitMap->Set(position, value); }
 
-bool Row::GetNullBitMapValue(const bit_map_pos_t &position) const { return this->metaData.nullBitMap->Get(position); }
+bool Row::GetNullBitMapValue(const bit_map_pos_t &position) const { return this->header.nullBitMap->Get(position); }
 
-RowMetaData* Row::GetMetaData() { return &this->metaData; }
+RowHeader* Row::GetHeader() { return &this->header; }
 
 row_size_t Row::GetTotalRowSize() const
 {
-    row_size_t currentRowSize = this->GetRowMetaDataSize();
+    row_size_t currentRowSize = this->GetRowHeaderSize();
     currentRowSize += this->table->GetNumberOfColumns() * sizeof(block_size_t); //decrease by the null blocks here
-    currentRowSize += this->metaData.rowSize;
+    currentRowSize += this->header.rowSize;
     
     return currentRowSize;
 }
 
-row_metadata_size_t Row::GetRowMetaDataSize() const
+row_metadata_size_t Row::GetRowHeaderSize() const
 {
     row_metadata_size_t rowMetaDataSize = sizeof(row_size_t);
     rowMetaDataSize += sizeof(size_t);
-    rowMetaDataSize += this->metaData.nullBitMap->GetSizeInBytes();
-    rowMetaDataSize += this->metaData.largeObjectBitMap->GetSizeInBytes();
+    rowMetaDataSize += this->header.nullBitMap->GetSizeInBytes();
+    rowMetaDataSize += this->header.largeObjectBitMap->GetSizeInBytes();
 
     return rowMetaDataSize;
 }

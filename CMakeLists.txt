@@ -36,8 +36,8 @@ add_library(Database
         Database/Pages/Page.cpp
         Database/Pages/Page.h
         Database/Constants.h
-        Database/Pages/MetaData/MetaDataPage.cpp
-        Database/Pages/MetaData/MetaDataPage.h
+        Database/Pages/Header/HeaderPage.cpp
+        Database/Pages/Header/HeaderPage.h
         Database/Pages/LargeObject/LargeDataPage.cpp
         Database/Pages/LargeObject/LargeDataPage.h
         Database/Pages/IndexMapAllocation/IndexAllocationMapPage.cpp

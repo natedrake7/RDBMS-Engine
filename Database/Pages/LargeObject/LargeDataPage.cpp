@@ -29,18 +29,18 @@ DataObjectPointer::~DataObjectPointer() = default;
 
 LargeDataPage::LargeDataPage(const page_id_t& pageId) : Page(pageId)
 {
-    this->metadata.pageId = pageId;
+    this->header.pageId = pageId;
     this->isDirty = false;
-    this->metadata.pageType = PageType::LOB;
+    this->header.pageType = PageType::LOB;
 }
 
 LargeDataPage::LargeDataPage() : Page()
 {
     this->isDirty = false;
-    this->metadata.pageType = PageType::LOB;
+    this->header.pageType = PageType::LOB;
 }
 
-LargeDataPage::LargeDataPage(const PageMetaData& pageMetaData) : Page(pageMetaData) { }
+LargeDataPage::LargeDataPage(const PageHeader& pageHeader) : Page(pageHeader) { }
 
 LargeDataPage::~LargeDataPage()
 {
@@ -50,7 +50,7 @@ LargeDataPage::~LargeDataPage()
 
 void LargeDataPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t& offSet, fstream* filePtr)
 {
-    for(int i = 0; i < this->metadata.pageSize; i++)
+    for(int i = 0; i < this->header.pageSize; i++)
     {
         DataObject* dataObject = new DataObject();
 
@@ -74,7 +74,7 @@ void LargeDataPage::GetPageDataFromFile(const vector<char> &data, const Table *t
 
 void LargeDataPage::WritePageToFile(fstream *filePtr)
 {
-    this->WritePageMetaDataToFile(filePtr);
+    this->WritePageHeaderToFile(filePtr);
 
     for(const auto& dataObject : this->data)
     {
@@ -95,10 +95,10 @@ DataObject* LargeDataPage::InsertObject(const unsigned char *object, const page_
 
     this->data.push_back(dataObject);
 
-    *objectPosition = this->data.size() - 1;//PAGE_SIZE - this->metadata.bytesLeft;
+    *objectPosition = this->data.size() - 1;//PAGE_SIZE - this->header.bytesLeft;
 
-    this->metadata.bytesLeft -= (size + OBJECT_METADATA_SIZE_T);
-    this->metadata.pageSize = this->data.size();
+    this->header.bytesLeft -= (size + OBJECT_METADATA_SIZE_T);
+    this->header.pageSize = this->data.size();
     this->isDirty = true;
 
     return dataObject;

@@ -10,19 +10,19 @@ class Database;
 
 using namespace std;
 
-typedef struct RowMetaData {
+typedef struct RowHeader {
     BitMap* nullBitMap;
     BitMap* largeObjectBitMap;
     row_size_t rowSize;
     size_t maxRowSize;
 
-    RowMetaData();
-    ~RowMetaData();
-}RowMetaData;
+    RowHeader();
+    ~RowHeader();
+}RowHeader;
 
 class Row
 {
-    RowMetaData metaData;
+    RowHeader header;
     vector<Block*> data;
     const Table* table;
 
@@ -53,9 +53,9 @@ class Row
 
         bool GetNullBitMapValue(const bit_map_pos_t& position) const;
 
-        RowMetaData* GetMetaData();
+        RowHeader* GetHeader();
 
         row_size_t GetTotalRowSize() const;
 
-        row_metadata_size_t GetRowMetaDataSize() const;
+        row_metadata_size_t GetRowHeaderSize() const;
 };

@@ -6,7 +6,7 @@
 
 using namespace std;
 
-typedef struct DatabaseMetaData{
+typedef struct DatabaseHeader{
     table_number_t numberOfTables;
     page_id_t lastLargePageId;
     metadata_literal_t databaseNameSize;
@@ -15,10 +15,10 @@ typedef struct DatabaseMetaData{
     extent_id_t lastLargeExtentId;
     table_id_t lastTableId;
 
-    DatabaseMetaData();
-    DatabaseMetaData(const string& databaseName, const table_number_t& numberOfTables);
-    DatabaseMetaData(const DatabaseMetaData& dbMetaData);
-}DatabaseMetaData;
+    DatabaseHeader();
+    DatabaseHeader(const string& databaseName, const table_number_t& numberOfTables);
+    DatabaseHeader(const DatabaseHeader& dbMetaData);
+}DatabaseHeader;
 
 #include "../AdditionalLibraries/PageManager/PageManager.h"
 #include "Table/Table.h"
@@ -29,7 +29,6 @@ class Page;
 class LargeDataPage;
 class Table;
 struct TableFullMetaData;
-// class HashTable;
 
 enum
 {
@@ -37,16 +36,16 @@ enum
 };
 
 class  Database {
-    DatabaseMetaData metadata;
+    DatabaseHeader header;
     string filename;
-    string fileExtension = ".db";
+    string fileExtension;
     vector<Table*> tables;
     PageManager* pageManager;
     // HashTable* hashTable;
 
     protected:
         void ValidateTableCreation(Table* table) const;
-        void WriteMetaDataToFile();
+        void WriteHeaderToFile();
 
     public:
         explicit Database(const string& dbName, PageManager* pageManager);
@@ -55,7 +54,7 @@ class  Database {
 
         Table* CreateTable(const string& tableName, const vector<Column*>& columns);
 
-        void CreateTable(const TableFullMetaData& tableMetaData);
+        void CreateTable(const TableFullHeader& tableMetaData);
 
         Table* OpenTable(const string& tableName) const;
 
@@ -63,7 +62,7 @@ class  Database {
 
         Page* GetPage(const Table& table, const row_size_t& rowSize);
 
-        void GetTablePages(const Table &table, vector<Page*>* pages, ) const;
+        void GetTablePages(const Table &table, vector<Page*>* pages) const;
 
         Page* CreatePage(const table_id_t& tableId);
 

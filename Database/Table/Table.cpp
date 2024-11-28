@@ -3,7 +3,7 @@
 #include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "../Pages/Page.h"
 
-TableMetaData::TableMetaData()
+TableHeader::TableHeader()
 {
     this->firstPageId = 0;
     this->lastPageId = 0;
@@ -15,36 +15,36 @@ TableMetaData::TableMetaData()
     this->columnsNullBitMap = nullptr;
 }
 
-TableMetaData::~TableMetaData()
+TableHeader::~TableHeader()
 {
     delete this->columnsNullBitMap;
 }
 
-TableMetaData& TableMetaData::operator=(const TableMetaData &tableMetaData)
+TableHeader& TableHeader::operator=(const TableHeader &tableHeader)
 {
-    if (this == &tableMetaData)
+    if (this == &tableHeader)
         return *this;
     
-    this->firstPageId = tableMetaData.firstPageId;
-    this->lastPageId = tableMetaData.lastPageId;
-    this->lastExtentId = tableMetaData.lastExtentId;
-    this->maxRowSize = tableMetaData.maxRowSize;
-    this->numberOfColumns = tableMetaData.numberOfColumns;
-    this->tableNameSize = tableMetaData.tableNameSize;
-    this->tableName = tableMetaData.tableName;
-    this->tableId = tableMetaData.tableId;
-    this->columnsNullBitMap = new BitMap(*tableMetaData.columnsNullBitMap);
+    this->firstPageId = tableHeader.firstPageId;
+    this->lastPageId = tableHeader.lastPageId;
+    this->lastExtentId = tableHeader.lastExtentId;
+    this->maxRowSize = tableHeader.maxRowSize;
+    this->numberOfColumns = tableHeader.numberOfColumns;
+    this->tableNameSize = tableHeader.tableNameSize;
+    this->tableName = tableHeader.tableName;
+    this->tableId = tableHeader.tableId;
+    this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
     
     return *this;
 }
 
 
-TableFullMetaData::TableFullMetaData() = default;
+TableFullHeader::TableFullHeader() = default;
 
-TableFullMetaData::TableFullMetaData(const TableFullMetaData& tableMetaData)
+TableFullHeader::TableFullHeader(const TableFullHeader& tableHeader)
 {
-    this->tableMetaData = tableMetaData.tableMetaData;
-    this->columnsMetaData = tableMetaData.columnsMetaData;
+    this->tableHeader = tableHeader.tableHeader;
+    this->columnsHeaders = tableHeader.columnsHeaders;
 }
 
 Table::Table(const string& tableName,const table_id_t& tableId, const vector<Column*>& columns, Database* database)
@@ -68,9 +68,9 @@ Table::Table(const string& tableName,const table_id_t& tableId, const vector<Col
     }
 }
 
-Table::Table(const TableMetaData &tableMetaData, Database *database)
+Table::Table(const TableHeader &tableHeader, Database *database)
 {
-    this->metadata = tableMetaData;
+    this->metadata = tableHeader;
     this->database = database;
 }
 
@@ -175,13 +175,13 @@ void Table::InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector
     if(largeBlocksIndexes.empty())
         return;
 
-    RowMetaData* rowMetaData = row->GetMetaData();
+    RowHeader* rowHeader = row->GetHeader();
     
     const auto& rowData = row->GetData();
 
     for(const auto& largeBlockIndex : largeBlocksIndexes)
     {
-        rowMetaData->largeObjectBitMap->Set(largeBlockIndex, true);
+        rowHeader->largeObjectBitMap->Set(largeBlockIndex, true);
 
         DataObject* dataObject = nullptr;
 
@@ -281,7 +281,7 @@ void Table::InsertLargeDataObjectPointerToRow(Row* row
 
 column_number_t Table::GetNumberOfColumns() const { return this->columns.size();}
 
-const TableMetaData& Table::GetTableMetadata() const { return this->metadata; }
+const TableHeader& Table::GetTableHeader() const { return this->metadata; }
 
 const vector<Column*>& Table::GetColumns() const { return this->columns; }
 
