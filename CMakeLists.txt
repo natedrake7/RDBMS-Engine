@@ -21,7 +21,9 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalObjects/RowCondition.cpp
         AdditionalLibraries/AdditionalObjects/RowCondition.h
         Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.cpp
-        Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.h)
+        Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.h
+        AdditionalLibraries/ByteMap/ByteMap.cpp
+        AdditionalLibraries/ByteMap/ByteMap.h)
 add_library(Database
         Database/Database.cpp
         Database/Database.h
@@ -41,6 +43,8 @@ add_library(Database
         Database/Pages/LargeObject/LargeDataPage.cpp
         Database/Pages/LargeObject/LargeDataPage.h
         Database/Pages/IndexMapAllocation/IndexAllocationMapPage.cpp
-        Database/Pages/IndexMapAllocation/IndexAllocationMapPage.h)
+        Database/Pages/IndexMapAllocation/IndexAllocationMapPage.h
+        Database/Pages/PageFreeSpace/PageFreeSpacePage.cpp
+        Database/Pages/PageFreeSpace/PageFreeSpacePage.h)
 
 target_link_libraries(DatabaseInterface PRIVATE Database PRIVATE AdditionalLibraries)

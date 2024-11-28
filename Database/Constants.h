@@ -52,6 +52,8 @@ typedef uint16_t table_number_t;
 //bit map constants
 typedef uint16_t bit_map_size_t;
 typedef uint16_t bit_map_pos_t;
+typedef uint16_t byte_map_size_t;
+typedef uint16_t byte_map_pos_t;
 typedef uint8_t byte;
 
 constexpr uint16_t OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
