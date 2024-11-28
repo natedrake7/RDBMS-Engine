@@ -19,7 +19,9 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalObjects/Field/Field.cpp
         AdditionalLibraries/AdditionalObjects/Field/Field.h
         AdditionalLibraries/AdditionalObjects/RowCondition.cpp
-        AdditionalLibraries/AdditionalObjects/RowCondition.h)
+        AdditionalLibraries/AdditionalObjects/RowCondition.h
+        Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.cpp
+        Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.h)
 add_library(Database
         Database/Database.cpp
         Database/Database.h

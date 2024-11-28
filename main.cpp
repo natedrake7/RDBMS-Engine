@@ -47,17 +47,17 @@ int main()
         conditions.push_back(&condition);
         conditions.push_back(&condition2);
 
-        auto start = std::chrono::high_resolution_clock::now();
+        const auto start = std::chrono::high_resolution_clock::now();
         
         table->SelectRows(&rows);
 
-        auto end = std::chrono::high_resolution_clock::now();
+        const auto end = std::chrono::high_resolution_clock::now();
 
-        auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+        const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
         cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 
-        // PrintRows(rows);
+        PrintRows(rows);
 
         delete db;
         delete pageManager;
@@ -85,24 +85,24 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
 
         table = db->CreateTable("Movies", columns);
     }
-
+    
     vector<vector<Field>> inputData;
-
-    for(int i = 1000;i < 1500; i++)
+    
+    for(int i = 0;i < 1200; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field(string(2000, 'A')),
+            Field("Du Hast Miesch"),
             Field("Hello its me you are llooooking for"),
         };
-
+    
         fields[0].SetData(to_string(i));
         
         inputData.push_back(fields);
     }
-
+    
     table->InsertRows(inputData);
 }

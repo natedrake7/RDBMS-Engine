@@ -8,7 +8,7 @@ MetaDataPage::MetaDataPage(const int &pageId) : Page(pageId)
 
 MetaDataPage::MetaDataPage() : Page()
 {
-    this->isDirty = false;
+    this->isDirty = true;
     this->metadata.pageType = PageType::METADATA;
 }
 

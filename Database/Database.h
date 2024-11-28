@@ -57,13 +57,15 @@ class  Database {
 
         void CreateTable(const TableFullMetaData& tableMetaData);
 
-        Table* OpenTable(const string& tableName);
+        Table* OpenTable(const string& tableName) const;
 
         void DeleteDatabase() const;
 
-        Page* GetPage(const page_id_t& pageId, const Table& table);
+        Page* GetPage(const Table& table, const row_size_t& rowSize);
 
-        Page* CreatePage(const string& tableName);
+        void GetTablePages(const Table &table, vector<Page*>* pages, ) const;
+
+        Page* CreatePage(const table_id_t& tableId);
 
         page_id_t GetLastLargeDataPageId() const;
 
@@ -72,12 +74,6 @@ class  Database {
         LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table& table);
 
         string GetFileName() const;
-
-        // uint64_t InsertToHashTable(const char* inputString) const;
-
-        // static uint64_t Hash(const char* inputString);
-
-        // const char* GetStringByHashKey(const uint64_t& hashKey) const;
 };
 
 void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager* pageManager);

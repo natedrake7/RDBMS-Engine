@@ -18,7 +18,7 @@ class BitMap {
     public:
         BitMap();
         BitMap(const BitMap& bitMap);
-        explicit BitMap(const bit_map_size_t& size);
+        explicit BitMap(const bit_map_size_t& size, const byte& defaultValue = 0);
         ~BitMap();
         void Set(const bit_map_pos_t& position, const bool& value);
         bool Get(const bit_map_pos_t& position) const;

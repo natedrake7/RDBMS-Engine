@@ -11,9 +11,9 @@ BitMap::BitMap(const BitMap &bitMap)
     this->data = bitMap.data;
 }
 
-BitMap::BitMap(const bit_map_size_t& size) : size(size)
+BitMap::BitMap(const bit_map_size_t& size, const byte& defaultValue) : size(size)
 {
-    this->data.resize((size + 7) / 8, 0);
+    this->data.resize((size + 7) / 8, defaultValue);
 }
 
 BitMap::~BitMap() = default;
@@ -50,6 +50,10 @@ void BitMap::GetDataFromFile(const vector<char>& data, page_offset_t& offset)
     offset += sizeof(bit_map_size_t);
     
     const bit_map_size_t& bytesToRead = (this->size + 7) / 8;
+    
+    if (this->data.empty())
+        this->data.resize(bytesToRead);
+    
     for (bit_map_size_t i = 0; i < bytesToRead; i++)
     {
         byte value;

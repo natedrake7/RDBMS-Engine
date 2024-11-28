@@ -24,7 +24,7 @@ page_size_t PageMetadata::GetPageMetaDataSize()
 Page::Page(const page_id_t& pageId)
 {
     this->metadata.pageId = pageId;
-    this->isDirty = false;
+    this->isDirty = true;
     this->metadata.pageType = PageType::DATA;
 }
 
@@ -156,6 +156,8 @@ void Page::WritePageToFile(fstream *filePtr)
 void Page::SetNextPageId(const page_id_t &nextPageId) { this->metadata.nextPageId = nextPageId; }
 
 void Page::SetFileName(const string &filename) { this->filename = filename; }
+
+void Page::SetPageId(const page_id_t &pageId) { this->metadata.pageId = pageId; }
 
 const string& Page::GetFileName() const { return this->filename; }
 

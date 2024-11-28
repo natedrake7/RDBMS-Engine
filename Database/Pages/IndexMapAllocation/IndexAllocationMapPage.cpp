@@ -1,69 +1,63 @@
 ﻿#include "IndexAllocationMapPage.h"
 
-ExtentAvailability::ExtentAvailability()
+IndexAllocationMapPage::IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId) : Page(pageId)
 {
-    this->freeExtents = nullptr;
+    this->tableId = tableId;
+    this->startingExtentId = pageId / 8;
+    this->metadata.bytesLeft -= (sizeof(table_id_t) + sizeof(extent_id_t));
+    this->ownedExtents = new BitMap(this->metadata.bytesLeft * 8);
+    this->isDirty = true;
+    this->metadata.pageType = PageType::INDEX;
+    this->metadata.bytesLeft = 0;
 }
 
-ExtentAvailability::~ExtentAvailability()
+IndexAllocationMapPage::IndexAllocationMapPage(const PageMetadata &pageMetaData, const extent_id_t& startingExtentId, const table_id_t& tableId) : Page(pageMetaData)
 {
-    delete this->freeExtents;    
+    this->tableId = tableId;
+    this->startingExtentId = startingExtentId;
+    this->ownedExtents = new BitMap();
+    this->metadata.bytesLeft = 0;
 }
 
-IndexAllocationMapPage::IndexAllocationMapPage(const page_id_t &pageId) : Page(pageId) { }
-
-IndexAllocationMapPage::IndexAllocationMapPage(const PageMetaData &pageMetaData) : Page(pageMetaData) { }
-
-IndexAllocationMapPage::~IndexAllocationMapPage() 
+IndexAllocationMapPage::~IndexAllocationMapPage()
 {
-    for (const auto& pair: this->allocationMap)
-        delete pair.second;
+    delete this->ownedExtents;
 }
 
-void IndexAllocationMapPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
+void IndexAllocationMapPage::SetAllocatedExtent(const extent_id_t &extentId) { this->ownedExtents->Set(extentId, true); }
+
+void IndexAllocationMapPage::SetDeallocatedExtent(const extent_id_t &extentId) { this->ownedExtents->Set(extentId, false); }
+
+void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedExtents) const
 {
-    for (int i = 0; i < this->metadata.pageSize; i++)
+    this->ownedExtents->Print();
+    for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
     {
-        table_id_t tableId;
-        memcpy(&tableId, data.data() + offSet, sizeof(table_id_t));
-        offSet += sizeof(table_id_t);
-
-        extent_num_t numberOfExtents;
-        memcpy(&numberOfExtents, data.data() + offSet, sizeof(extent_num_t));
-        offSet += sizeof(extent_num_t);
-
-        ExtentAvailability* extentAvailability = new ExtentAvailability();
-
-        extentAvailability->freeExtents = new BitMap(numberOfExtents);
-        extentAvailability->freeExtents->GetDataFromFile(data, offSet);
-        
-        for (int j = 0; j < numberOfExtents; j++)
-        {
-            extent_id_t extentId;
-            memcpy(&extentId, data.data() + offSet, sizeof(extent_id_t));
-            offSet += sizeof(extent_id_t);
-
-            extentAvailability->extents.push_back(extentId);
-        }
-
-        this->allocationMap[tableId] = extentAvailability;
+        if (this->ownedExtents->Get(id))
+            allocatedExtents->push_back(id);
     }
+}
+
+extent_id_t IndexAllocationMapPage::GetLastAllocatedExtent() const
+{
+    extent_id_t lastAllocatedExtent = 0;
+    for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
+    {
+        if (this->ownedExtents->Get(id))
+            lastAllocatedExtent = id;
+    }
+
+    return lastAllocatedExtent;
+}
+
+void IndexAllocationMapPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
+{
+    this->ownedExtents->GetDataFromFile(data, offSet);
 }
 
 void IndexAllocationMapPage::WritePageToFile(fstream *filePtr)
 {
     this->WritePageMetaDataToFile(filePtr);
-    
-    for (const auto& pair: this->allocationMap)
-    {
-        filePtr->write(reinterpret_cast<const char*>(&pair.first), sizeof(table_id_t));
 
-        const extent_num_t numberOfExtents = pair.second->extents.size();
-
-        filePtr->write(reinterpret_cast<const char*>(&numberOfExtents), sizeof(extent_num_t));
-
-        pair.second->freeExtents->WriteDataToFile(filePtr);
-
-        filePtr->write(reinterpret_cast<const char*>(pair.second->extents.data()), numberOfExtents * sizeof(extent_id_t));
-    }
+    this->ownedExtents->WriteDataToFile(filePtr);
 }

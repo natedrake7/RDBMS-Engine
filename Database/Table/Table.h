@@ -89,6 +89,8 @@ class Table {
 
         void UpdateRows(const vector<Block>* updates, const vector<RowCondition*>* conditions = nullptr);
 
+        void UpdateFirstPageId(const page_id_t& firstPageId);
+    
         void UpdateLastPageId(const page_id_t& lastPageId);
 
         void UpdateLastExtentId(const extent_id_t& lastExtentId);
@@ -96,4 +98,6 @@ class Table {
         bool IsColumnNullable(const column_index_t& columnIndex) const;
 
         void AddColumn(Column* column);
+
+        const table_id_t& GetTableId() const;
 };

@@ -45,6 +45,7 @@ class Page {
         virtual void WritePageToFile(fstream* filePtr);
         void SetNextPageId(const page_id_t& nextPageId);
         void SetFileName(const string& filename);
+        void SetPageId(const page_id_t& pageId);
         const string& GetFileName() const;
         const page_id_t& GetPageId() const;
         const bool& GetPageDirtyStatus() const;
