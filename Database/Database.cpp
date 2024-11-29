@@ -92,8 +92,8 @@ void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager*
     
     HeaderPage* metaDataPage = pageManager->CreateHeaderPage(dbName + ".db");
     pageManager->CreateGlobalAllocationMapPage(dbName + ".db");
+    pageManager->CreatePageFreeSpacePage(dbName + ".db");
 
-    //start the the paging of the data in the extent 1 not 0
     metaDataPage->SetHeaders(DatabaseHeader(dbName, 0), vector<Table*>());
 }
 
@@ -122,35 +122,41 @@ void Database::DeleteDatabase() const
         throw runtime_error("Database " + this->filename + " could not be deleted");
 }
 
-
-Page* Database::GetPage(const Table& table, const row_size_t& rowSize)
+bool Database::InsertRowToPage(const Table &table, Row *row)
 {
-    IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
+    const IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
 
     const extent_id_t lastAllocatedExtent = tableMapPage->GetLastAllocatedExtent();
 
     const page_id_t extentFirstPageId = ( lastAllocatedExtent * EXTENT_SIZE ) + 3;
 
-    page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
-                    ? extentFirstPageId
-                    : extentFirstPageId + 1;
+    const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                        ? extentFirstPageId
+                        : extentFirstPageId + 1;
 
-    Page* page = nullptr;
+    PageFreeSpacePage* pageFreeSpacePage = pageManager->GetPageFreeSpacePage(2);
 
-    while (true)
+    const byte rowCategory = row->RowSizeToCategory();
+    for (page_id_t pageId = firstDataPageId; pageId < ( lastAllocatedExtent + 1 ) * EXTENT_SIZE + 3; pageId++)
     {
-        if (pageId >= ( ( lastAllocatedExtent + 1 ) * EXTENT_SIZE ) + 3)
-            break;
-        
-        page = this->pageManager->GetPage(pageId, &table);
-        
-        if (page->GetBytesLeft() >= rowSize)
-            return page;
+        const byte pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(pageId);
 
-        pageId++;
+        //find potential candidate
+        if ( rowCategory <= pageSizeCategory)
+        {
+            Page* page = this->pageManager->GetPage(pageId, lastAllocatedExtent, &table);
+            
+            if (row->GetTotalRowSize() > page->GetBytesLeft())
+                continue;
+            
+            page->InsertRow(row);
+            pageFreeSpacePage->SetPageMetaData(page);
+
+            return true;
+        }
     }
-    
-    return nullptr;
+
+    return false;
 }
 
 void Database::GetTablePages(const Table &table, vector<Page*>* pages) const
@@ -170,7 +176,7 @@ void Database::GetTablePages(const Table &table, vector<Page*>* pages) const
 
         for (page_id_t extentPageId = pageId; extentPageId < ( ( extentId  + 1 ) * EXTENT_SIZE ) + 3; extentPageId++)
         {
-            Page* page = this->pageManager->GetPage(extentPageId, &table);
+            Page* page = this->pageManager->GetPage(extentPageId, extentId, &table);
             
             if (page->GetPageSize() == 0)
                 continue;
@@ -200,33 +206,34 @@ Page* Database::CreatePage(const table_id_t& tableId)
         return nullptr;
 
     const page_id_t& indexAllocationMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+    
+    PageFreeSpacePage* pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(2);
 
     const extent_id_t newExtentId = gamPage->AllocateExtent();
-
     const page_id_t newPageId = ( newExtentId * EXTENT_SIZE ) + 3;
-    
-    bool isFirstExtent = false;
-    if (indexAllocationMapPageId == 0)
+
+    const bool isFirstExtent = indexAllocationMapPageId == 0;
+    if (isFirstExtent)
     {
-        isFirstExtent = true;
         tableMapPage = this->pageManager->CreateIndexAllocationMapPage(tableId, newPageId);
+
+        pageFreeSpacePage->SetPageMetaData(tableMapPage);
+        
         table->UpdateIndexAllocationMapPageId(newPageId);
     }
     else
         tableMapPage = this->pageManager->GetIndexAllocationMapPage(indexAllocationMapPageId);
-    
+
     tableMapPage->SetAllocatedExtent(newExtentId);
 
     const page_id_t lowerLimit = (isFirstExtent)
-                    ? newPageId
-                    : newPageId - 1;
+                    ? newPageId + 1
+                    : newPageId;
 
-    //allocate extent
-    Page* newPage = nullptr;
-    for (page_id_t pageId = newPageId + EXTENT_SIZE - 1; pageId > lowerLimit; pageId--)
-        newPage = this->pageManager->CreatePage(pageId);
+    for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
+        pageFreeSpacePage->SetPageMetaData(this->pageManager->CreatePage(pageId));
 
-    return newPage;
+    return this->pageManager->GetPage(lowerLimit, newExtentId, table);
 }
 
 LargeDataPage* Database::GetLargeDataPage(const page_id_t& pageId, const Table& table) { return this->pageManager->GetLargeDataPage(pageId, &table); }

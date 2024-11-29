@@ -54,12 +54,12 @@ LargeDataPage* PageManager::CreateLargeDataPage(const page_id_t &pageId)
     return page;
 }
 
-Page* PageManager::GetPage(const page_id_t& pageId, const Table* table)
+Page* PageManager::GetPage(const page_id_t& pageId, const extent_id_t& extendId, const Table* table)
 {
     const auto& pageHashIterator = this->cache.find(pageId);
 
     if(pageHashIterator == this->cache.end())
-        this->OpenPage(pageId, table);
+        this->OpenPage(pageId, extendId,  table);
     else
     {
         this->pageList.push_front(*pageHashIterator->second);
@@ -75,7 +75,7 @@ LargeDataPage* PageManager::GetLargeDataPage(const page_id_t &pageId, const Tabl
     const auto& pageHashIterator = this->cache.find(pageId);
 
     if(pageHashIterator == this->cache.end())
-        this->OpenPage(pageId, table);
+        this->OpenPage(pageId,9, table);
     else
     {
         this->pageList.push_front(*pageHashIterator->second);
@@ -111,15 +111,14 @@ void PageManager::RemovePage()
     this->pageList.erase(pageIterator);
 }
 
-void PageManager::OpenPage(const page_id_t& pageId, const Table* table)
+void PageManager::OpenPage(const page_id_t& pageId, const extent_id_t& extendId, const Table* table)
 {
     const string& filename = this->database->GetFileName();
 
     //read page from disk, call FileManager
     fstream* file = this->fileManager->GetFile(filename);
 
-    const auto extent = pageId / EXTENT_SIZE; // >= 1 always
-    const streampos extentOffset = ( extent * EXTENT_BYTE_SIZE ) + 3 * PAGE_SIZE;
+    const streampos extentOffset = ( extendId * EXTENT_BYTE_SIZE ) + 3 * PAGE_SIZE;
 
     vector<char> buffer(EXTENT_BYTE_SIZE);
 
@@ -234,6 +233,40 @@ IndexAllocationMapPage * PageManager::CreateIndexAllocationMapPage(const table_i
     return page;
 }
 
+PageFreeSpacePage * PageManager::CreatePageFreeSpacePage(const string &filename)
+{
+    PageFreeSpacePage* page = new PageFreeSpacePage(2);
+
+    if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
+        this->RemoveSystemPage();
+
+    page->SetFileName(filename);
+
+    this->systemPageList.push_front(page);
+    this->systemCache[2] = this->systemPageList.begin();
+
+    return page;
+}
+
+PageFreeSpacePage* PageManager::GetPageFreeSpacePage(const page_id_t &pageId)
+{
+    const auto& pageHashIterator = this->systemCache.find(pageId);
+    const string& filename = this->database->GetFileName();
+    
+    if(pageHashIterator == this->systemCache.end())
+        this->OpenPageFreeSpacePage(pageId);
+    else
+    {
+        this->systemPageList.push_front(*pageHashIterator->second);
+        this->systemPageList.erase(pageHashIterator->second);
+        this->systemCache[pageId] = this->systemPageList.begin();
+    }
+
+    (*this->systemPageList.begin())->SetFileName(filename);
+
+    return dynamic_cast<PageFreeSpacePage*>(*this->systemPageList.begin()); 
+}
+
 IndexAllocationMapPage* PageManager::GetIndexAllocationMapPage(const page_id_t &pageId)
 {
     const auto& pageHashIterator = this->systemCache.find(pageId);
@@ -273,6 +306,35 @@ IndexAllocationMapPage* PageManager::OpenIndexAllocationMapPage(const page_id_t 
     const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
 
     IndexAllocationMapPage* page = new IndexAllocationMapPage(pageHeader, 0, 0);
+    this->systemPageList.push_front(page);
+    
+    page->GetPageDataFromFile(buffer, nullptr, offSet, file);
+
+    this->systemCache[pageId] = this->systemPageList.begin();
+
+    return page;
+}
+
+PageFreeSpacePage * PageManager::OpenPageFreeSpacePage(const page_id_t &pageId)
+{
+    if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
+        this->RemoveSystemPage();
+
+    const string& filename = this->database->GetFileName();
+
+    fstream* file = this->fileManager->GetFile(filename);
+
+    const streampos pageOffset = pageId * PAGE_SIZE;
+    vector<char> buffer(PAGE_SIZE);
+    SetReadFilePointerToOffset(file, pageOffset);
+
+    file->read(buffer.data(), PAGE_SIZE);
+
+    page_offset_t offSet = 0;
+
+    const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
+
+    PageFreeSpacePage* page = new PageFreeSpacePage(pageHeader);
     this->systemPageList.push_front(page);
     
     page->GetPageDataFromFile(buffer, nullptr, offSet, file);

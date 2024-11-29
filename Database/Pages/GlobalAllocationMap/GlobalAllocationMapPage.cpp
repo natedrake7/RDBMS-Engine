@@ -25,6 +25,9 @@ extent_id_t GlobalAllocationMapPage::AllocateExtent()
         if (this->extentsMap->Get(extentId))
         {
             this->extentsMap->Set(extentId, false);
+            
+            this->isDirty = true;
+            
             return extentId;
         }
     }
@@ -36,6 +39,8 @@ extent_id_t GlobalAllocationMapPage::AllocateExtent()
 void GlobalAllocationMapPage::DeallocateExtent(const extent_id_t& extentId)
 {
     this->extentsMap->Set(extentId, true);
+
+    this->isDirty = true;
 }
 
 void GlobalAllocationMapPage::WritePageToFile(fstream *filePtr)

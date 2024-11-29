@@ -55,7 +55,7 @@ class  Database {
 
         void DeleteDatabase() const;
 
-        Page* GetPage(const Table& table, const row_size_t& rowSize);
+        bool InsertRowToPage(const Table& table, Row* row);
 
         void GetTablePages(const Table &table, vector<Page*>* pages) const;
 

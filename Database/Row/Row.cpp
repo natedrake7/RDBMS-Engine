@@ -189,6 +189,15 @@ row_header_size_t Row::GetRowHeaderSize() const
     return rowHeaderSize;
 }
 
+byte Row::RowSizeToCategory() const
+{
+    static const byte categories[] = {0, 1, 5, 9, 13, 17, 21, 25, 29};
+    const float freeSpacePercentage = static_cast<float>(GetTotalRowSize()) / PAGE_SIZE;
+    const int index = static_cast<int>(freeSpacePercentage * 8); // Map 0.0–1.0 to 0–8
+
+    return categories[index];
+}
+
 
 
 

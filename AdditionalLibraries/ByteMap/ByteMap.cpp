@@ -58,13 +58,16 @@ void ByteMap::SetFreeSpace(const byte_map_pos_t& pos, const byte& percentage)
     if (percentage > 31) // 5 bits can represent values from 0 to 31
         throw std::invalid_argument("Free space percentage must be between 0 and 31.");
 
-    data[pos] = (data[pos] & 0x07) | (percentage << 3); // Clear bits 3-7 and set new percentage
+    data[pos] &= ~0xF8;
+
+    data[pos] |= (percentage << 3);
 }
 
 // Get the free space percentage (bits 3-7)
-byte ByteMap::GetFreeSpace(const byte_map_pos_t& pos) const
+page_size_t ByteMap::GetFreeSpace(const byte_map_pos_t& pos) const
 {
     this->CheckIndex(pos);
+    
     return (data[pos] & 0xF8) >> 3; // Extract bits 3-7
 }
 
@@ -89,4 +92,10 @@ void ByteMap::GetDataFromFile(const vector<char> &data, page_offset_t &offset, c
 void ByteMap::WriteDataToFile(fstream *filePtr)
 {
     filePtr->write(reinterpret_cast<const char*>(this->data.data()), this->data.size() * sizeof(byte));
+}
+
+void ByteMap::Print() const
+{
+    for (byte_map_pos_t i = 0; i < data.size(); i++) 
+        printf("Page %d: 0x%02X\n", i,  data[i]);
 }

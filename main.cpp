@@ -6,6 +6,7 @@
 #include "AdditionalLibraries/BitMap/BitMap.h"
 #include "./Database/Row/Row.h"
 #include "AdditionalLibraries/PageManager/PageManager.h"
+#include "Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
 
 template<typename T>
 int CreateResponse(T input) { return static_cast<int>(input); }
@@ -26,7 +27,7 @@ int main()
     const string dbName = "stakosDb";
     try
     {
-        // /*Handle LOB pages in different extents*/
+        // /*Handle LOB pages with pfs correctly*/
         // CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
@@ -88,7 +89,7 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 0;i < 1200; i++)
+    for(int i = 1000;i < 1200; i++)
     {
         vector<Field> fields = {
             Field("1"),

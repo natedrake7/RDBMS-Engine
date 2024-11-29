@@ -58,4 +58,6 @@ class Row
         row_size_t GetTotalRowSize() const;
 
         row_header_size_t GetRowHeaderSize() const;
+
+        byte RowSizeToCategory() const;
 };

@@ -8,10 +8,12 @@
 #include  "../../Database/Constants.h"
 #include "../../Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.h"
 #include "../../Database/Pages/IndexMapAllocation/IndexAllocationMapPage.h"
+#include "../../Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "../FileManager/FileManager.h"
 
 class IndexAllocationMapPage;
 class GlobalAllocationMapPage;
+class PageFreeSpacePage;
 class LargeDataPage;
 class HeaderPage;
 class Page;
@@ -33,10 +35,11 @@ class PageManager {
     protected:
         void RemovePage();
         void RemoveSystemPage();
-        void OpenPage(const page_id_t& pageId, const Table* table);
+        void OpenPage(const page_id_t& pageId, const extent_id_t& extendId, const Table* table);
         HeaderPage* OpenHeaderPage(const string& filename);
         GlobalAllocationMapPage* OpenGlobalAllocationMapPage(const string& filename);
         IndexAllocationMapPage* OpenIndexAllocationMapPage(const page_id_t& pageId);
+        PageFreeSpacePage* OpenPageFreeSpacePage(const page_id_t& pageId);
         static void SetReadFilePointerToOffset(fstream* file, const streampos& offSet);
         static void SetWriteFilePointerToOffset(fstream* file, const streampos& offSet);
         static PageHeader GetPageHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
@@ -46,7 +49,7 @@ class PageManager {
         ~PageManager();
         void BindDatabase(const Database* database);
         Page* CreatePage(const page_id_t& pageId);
-        Page* GetPage(const page_id_t& pageId, const Table* table);
+        Page* GetPage(const page_id_t& pageId, const extent_id_t& extendId, const Table* table);
         HeaderPage* GetHeaderPage(const string& filename);
         HeaderPage* CreateHeaderPage(const string& filename);
         LargeDataPage* CreateLargeDataPage(const page_id_t& pageId);
@@ -55,4 +58,6 @@ class PageManager {
         GlobalAllocationMapPage* GetGlobalAllocationMapPage();
         IndexAllocationMapPage* CreateIndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId);
         IndexAllocationMapPage* GetIndexAllocationMapPage(const page_id_t& pageId);
+        PageFreeSpacePage* CreatePageFreeSpacePage(const string &filename);
+        PageFreeSpacePage* GetPageFreeSpacePage(const page_id_t& pageId);
 };

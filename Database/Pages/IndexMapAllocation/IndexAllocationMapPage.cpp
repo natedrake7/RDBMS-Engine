@@ -24,9 +24,17 @@ IndexAllocationMapPage::~IndexAllocationMapPage()
     delete this->ownedExtents;
 }
 
-void IndexAllocationMapPage::SetAllocatedExtent(const extent_id_t &extentId) { this->ownedExtents->Set(extentId, true); }
+void IndexAllocationMapPage::SetAllocatedExtent(const extent_id_t &extentId)
+{
+    this->ownedExtents->Set(extentId, true);
+    this->isDirty = true;
+}
 
-void IndexAllocationMapPage::SetDeallocatedExtent(const extent_id_t &extentId) { this->ownedExtents->Set(extentId, false); }
+void IndexAllocationMapPage::SetDeallocatedExtent(const extent_id_t &extentId)
+{
+    this->ownedExtents->Set(extentId, false);
+    this->isDirty = true;
+}
 
 void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedExtents) const
 {

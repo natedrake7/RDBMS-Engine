@@ -25,7 +25,7 @@ class ByteMap {
         byte GetPageType(const byte_map_pos_t& pos) const;
     
         void SetFreeSpace(const byte_map_pos_t& pos, const byte& percentage);
-        byte GetFreeSpace(const byte_map_pos_t& pos) const;
+        page_size_t GetFreeSpace(const byte_map_pos_t& pos) const;
 
         void GetDataFromFile(const vector<char> &data, page_offset_t &offset, const page_size_t& byteMapSize);
         void WriteDataToFile(fstream* filePtr);

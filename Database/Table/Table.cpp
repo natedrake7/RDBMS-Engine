@@ -138,15 +138,9 @@ void Table::InsertRow(const vector<Field>& inputData)
 
     if(this->metadata.indexAllocationMapPageId > 0)
     {
-        Page* lastPage = this->database->GetPage(*this, row->GetTotalRowSize());
-
         // this->InsertLargeObjectToPage(row, 0,  row->GetLargeBlocks());
-
-        if (lastPage != nullptr)
-        {
-            lastPage->InsertRow(row);
+        if (this->database->InsertRowToPage(*this, row))
             return;
-        }
     }
 
     Page* newPage = this->database->CreatePage(this->metadata.tableId);

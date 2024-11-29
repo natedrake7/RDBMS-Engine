@@ -50,6 +50,7 @@ class Page {
         const page_size_t& GetBytesLeft() const;
         void GetRows(vector<Row>* copiedRows, const Table& table, const vector<RowCondition*>* conditions = nullptr) const;
         page_size_t GetPageSize() const;
+        const PageType& GetPageType() const;
 };
 
 #include "../Database.h"
