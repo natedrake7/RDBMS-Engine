@@ -27,10 +27,8 @@ DataObjectPointer::DataObjectPointer(const large_page_index_t& objectIndex, cons
 
 DataObjectPointer::~DataObjectPointer() = default;
 
-LargeDataPage::LargeDataPage(const page_id_t& pageId) : Page(pageId)
+LargeDataPage::LargeDataPage(const page_id_t& pageId, const bool& isPageCreation) : Page(pageId, isPageCreation)
 {
-    this->header.pageId = pageId;
-    this->isDirty = false;
     this->header.pageType = PageType::LOB;
 }
 
@@ -95,7 +93,7 @@ DataObject* LargeDataPage::InsertObject(const unsigned char *object, const page_
 
     this->data.push_back(dataObject);
 
-    *objectPosition = this->data.size() - 1;//PAGE_SIZE - this->header.bytesLeft;
+    *objectPosition = this->data.size() - 1;
 
     this->header.bytesLeft -= (size + OBJECT_METADATA_SIZE_T);
     this->header.pageSize = this->data.size();

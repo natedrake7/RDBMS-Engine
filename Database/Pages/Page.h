@@ -33,7 +33,7 @@ class Page {
         void WritePageHeaderToFile(fstream* filePtr);
 
     public:
-        explicit Page(const page_id_t& pageId);
+        explicit Page(const page_id_t& pageId, const bool& isPageCreation = false);
         explicit Page();
         explicit Page(const PageHeader& pageHeader);
         virtual ~Page();

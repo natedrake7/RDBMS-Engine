@@ -54,7 +54,7 @@ void Block::SetData(const void* inputData, const block_size_t& inputSize)
 
 object_t* Block::GetBlockData() const { return this->data; }
 
-const block_size_t& Block::GetBlockSize() const { return this->size; }
+block_size_t Block::GetBlockSize() const { return this->size; }
 
 const column_index_t& Block::GetColumnIndex() const { return this->column->GetColumnIndex(); }
 

@@ -24,7 +24,7 @@ void PageManager::BindDatabase(const Database *database) { this->database = data
 
 Page* PageManager::CreatePage(const page_id_t& pageId)
 {
-    Page* page = new Page(pageId);
+    Page* page = new Page(pageId, true);
     const string& filename = this->database->GetFileName();
 
     if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
@@ -40,7 +40,7 @@ Page* PageManager::CreatePage(const page_id_t& pageId)
 
 LargeDataPage* PageManager::CreateLargeDataPage(const page_id_t &pageId)
 {
-    LargeDataPage* page = new LargeDataPage(pageId);
+    LargeDataPage* page = new LargeDataPage(pageId, true);
     const string& filename = this->database->GetFileName();
 
     if(this->pageList.size() == MAX_NUMBER_OF_PAGES)
@@ -70,12 +70,12 @@ Page* PageManager::GetPage(const page_id_t& pageId, const extent_id_t& extendId,
     return *this->pageList.begin();
 }
 
-LargeDataPage* PageManager::GetLargeDataPage(const page_id_t &pageId, const Table *table)
+LargeDataPage* PageManager::GetLargeDataPage(const page_id_t &pageId,const extent_id_t& extentId, const Table *table)
 {
     const auto& pageHashIterator = this->cache.find(pageId);
 
     if(pageHashIterator == this->cache.end())
-        this->OpenPage(pageId,9, table);
+        this->OpenPage(pageId, extentId, table);
     else
     {
         this->pageList.push_front(*pageHashIterator->second);
@@ -92,7 +92,9 @@ void PageManager::RemovePage()
 
     if((*pageIterator)->GetPageDirtyStatus())
     {
+        Page* page = *pageIterator;
         const string& filename = (*pageIterator)->GetFileName();
+
         fstream* file = this->fileManager->GetFile(filename);
 
         const page_id_t pageId = (*pageIterator)->GetPageId();
@@ -106,19 +108,21 @@ void PageManager::RemovePage()
 
     this->cache.erase((*pageIterator)->GetPageId());
 
-    delete *pageIterator;
+    const Page* page = *pageIterator;
 
     this->pageList.erase(pageIterator);
+
+    delete page;
 }
 
-void PageManager::OpenPage(const page_id_t& pageId, const extent_id_t& extendId, const Table* table)
+void PageManager::OpenPage(const page_id_t& pageId, const extent_id_t& extentId, const Table* table)
 {
     const string& filename = this->database->GetFileName();
 
     //read page from disk, call FileManager
     fstream* file = this->fileManager->GetFile(filename);
 
-    const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extendId);
+    const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
 
     const streampos extentOffset = firstExtentPageId * PAGE_SIZE;
 

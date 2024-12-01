@@ -138,24 +138,28 @@ void Table::InsertRow(const vector<Field>& inputData)
 
     if(this->header.indexAllocationMapPageId > 0)
     {
-        this->InsertLargeObjectToPage(row, 0,  row->GetLargeBlocks());
+        this->InsertLargeObjectToPage(row);
         if (this->database->InsertRowToPage(*this, row))
             return;
     }
 
-    Page* newPage = this->database->CreatePage(this->header.tableId);
+    Page* newPage = this->database->CreateDataPage(this->header.tableId);
 
-    // this->InsertLargeObjectToPage(row, 0, row->GetLargeBlocks());
+    this->InsertLargeObjectToPage(row);
 
     newPage->InsertRow(row);
 }
 
-void Table::InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector<column_index_t>& largeBlocksIndexes)
+void Table::InsertLargeObjectToPage(Row* row)
 {
+    const vector<column_index_t> largeBlocksIndexes = row->GetLargeBlocks();
+    
     if(largeBlocksIndexes.empty())
         return;
 
     RowHeader* rowHeader = row->GetHeader();
+
+    page_offset_t offset = 0;
     
     const auto& rowData = row->GetData();
 
@@ -186,6 +190,8 @@ void Table::InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector
             if (availableBytesInPage >= dataSize)
             {
                 largeDataPage->InsertObject(data + offset, blockSize, &objectIndex);
+                
+                this->database->SetPageMetaDataToPfs(largeDataPage);
 
                 LinkLargePageDataObjectChunks(dataObject, largeDataPage->GetPageId(), objectIndex);
 
@@ -194,38 +200,36 @@ void Table::InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector
                 break;
             }
 
-            const auto bytesAllocated = availableBytesInPage - OBJECT_METADATA_SIZE_T;//add page Id maybe;
+            const auto bytesToBeAllocated = availableBytesInPage - OBJECT_METADATA_SIZE_T;//add page Id maybe;
 
             DataObject* prevDataObject = nullptr;
 
             if (dataObject != nullptr)
                 prevDataObject = dataObject;
 
-            dataObject = largeDataPage->InsertObject(data + offset, bytesAllocated, &objectIndex);
+            dataObject = largeDataPage->InsertObject(data + offset, bytesToBeAllocated, &objectIndex);
+
+            this->database->SetPageMetaDataToPfs(largeDataPage);
 
             LinkLargePageDataObjectChunks(prevDataObject, largeDataPage->GetPageId(), objectIndex);
 
             InsertLargeDataObjectPointerToRow(row, availableBytesInPage, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
 
-            offset += bytesAllocated;
+            offset += bytesToBeAllocated;
         }
     }
 }
 
 LargeDataPage* Table::GetOrCreateLargeDataPage()
 {
-    LargeDataPage* largeDataPage = nullptr;
-    const auto& lastLargePageId = this->database->GetLargeDataPage(this->header.tableId);
+    LargeDataPage* largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId, OBJECT_METADATA_SIZE_T + 1);
 
-    if(lastLargePageId > 0)
-        largeDataPage = this->database->GetLargeDataPage(this->header.tableId);
-
-    if (largeDataPage == nullptr
-        || largeDataPage->GetBytesLeft() == 0
-        || largeDataPage->GetBytesLeft() < OBJECT_METADATA_SIZE_T + 1)
-        largeDataPage = this->database->CreateLargeDataPage(this->header.tableId);
-
-    return largeDataPage;
+    if(largeDataPage != nullptr && largeDataPage->GetPageId() == 113)
+        cout<<"hello";
+    
+    return ( largeDataPage == nullptr )
+            ? this->database->CreateLargeDataPage(this->header.tableId)
+            : largeDataPage;
 }
 
 void Table::LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex)
@@ -259,7 +263,7 @@ const TableHeader& Table::GetTableHeader() const { return this->header; }
 
 const vector<Column*>& Table::GetColumns() const { return this->columns; }
 
-LargeDataPage* Table::GetLargeDataPage(const page_id_t &pageId) const { return this->database->GetLargeDataPage(this->header.tableId); }
+LargeDataPage* Table::GetLargeDataPage(const page_id_t &pageId) const { return this->database->GetLargeDataPage(pageId, this->header.tableId); }
 
 void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* conditions, const size_t& count) const
 {

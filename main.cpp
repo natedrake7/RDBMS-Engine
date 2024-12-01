@@ -28,14 +28,14 @@ int main()
     try
     {
         /*Handle LOB pages with pfs correctly*/
-        // CreateDatabase(dbName, &fileManager, pageManager);
+        CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
 
         pageManager->BindDatabase(db);
 
         Table* table = db->OpenTable("Movies");
-        // CreateAndInsertToDatabase(db, table);
+        CreateAndInsertToDatabase(db, table);
 
         table = db->OpenTable("Movies");
         vector<Row> rows;
@@ -89,14 +89,14 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 0;i < 1200; i++)
+    for(int i = 0;i < 100; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field("Du Hast Miesch"),
+            Field(string(9000, 'A')),
             Field("Hello its me you are llooooking for"),
         };
     

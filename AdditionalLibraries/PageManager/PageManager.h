@@ -35,7 +35,7 @@ class PageManager {
     protected:
         void RemovePage();
         void RemoveSystemPage();
-        void OpenPage(const page_id_t& pageId, const extent_id_t& extendId, const Table* table);
+        void OpenPage(const page_id_t& pageId, const extent_id_t& extentId, const Table* table);
         HeaderPage* OpenHeaderPage(const string& filename);
         GlobalAllocationMapPage* OpenGlobalAllocationMapPage(const string& filename);
         IndexAllocationMapPage* OpenIndexAllocationMapPage(const page_id_t& pageId);
@@ -53,7 +53,7 @@ class PageManager {
         HeaderPage* GetHeaderPage(const string& filename);
         HeaderPage* CreateHeaderPage(const string& filename);
         LargeDataPage* CreateLargeDataPage(const page_id_t& pageId);
-        LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table* table);
+        LargeDataPage* GetLargeDataPage(const page_id_t &pageId,const extent_id_t& extentId, const Table *table);
         GlobalAllocationMapPage* CreateGlobalAllocationMapPage(const string &filename, const page_id_t& pageId);
         GlobalAllocationMapPage* CreateGlobalAllocationMapPage(const page_id_t& pageId);
         GlobalAllocationMapPage* GetGlobalAllocationMapPage(const page_id_t& pageId);

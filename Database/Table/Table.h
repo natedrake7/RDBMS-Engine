@@ -50,7 +50,7 @@ class Table {
     Database* database;
 
     protected:
-        void InsertLargeObjectToPage(Row* row, page_offset_t offset, const vector<column_index_t>& largeBlocksIndexes);
+        void InsertLargeObjectToPage(Row* row);
         LargeDataPage* GetOrCreateLargeDataPage();
         void InsertRow(const vector<Field>& inputData);
         static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);

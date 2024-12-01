@@ -12,10 +12,10 @@ PageHeader::~PageHeader() = default;
 
 page_size_t PageHeader::GetPageHeaderSize() { return sizeof(page_id_t) + 2 * sizeof(page_size_t) + sizeof(PageType); }
 
-Page::Page(const page_id_t& pageId)
+Page::Page(const page_id_t& pageId, const bool& isPageCreation)
 {
     this->header.pageId = pageId;
-    this->isDirty = true;
+    this->isDirty = isPageCreation;
     this->header.pageType = PageType::DATA;
 }
 
@@ -187,9 +187,9 @@ void Page::GetRows(vector<Row>* copiedRows, const Table& table, const vector<Row
     copiedRows->clear();
     for(const auto& row: this->rows)
     {
-        bool skipRow = false;
         if(conditions != nullptr)
         {
+            bool skipRow = false;
             for(const auto& condition: *conditions)
                 if(*condition != row->GetData()[condition->GetColumnIndex()])
                 {

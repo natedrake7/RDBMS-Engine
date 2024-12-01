@@ -27,7 +27,7 @@ class LargeDataPage final : public Page
     vector<DataObject*> data;
 
     public:
-        explicit LargeDataPage(const page_id_t& pageId);
+        explicit LargeDataPage(const page_id_t& pageId, const bool& isPageCreation = false);
         explicit LargeDataPage();
         explicit LargeDataPage(const PageHeader& pageHeader);
         ~LargeDataPage() override;

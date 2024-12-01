@@ -28,7 +28,7 @@ class Block {
 
         object_t* GetBlockData() const;
 
-        const block_size_t& GetBlockSize() const;
+        block_size_t GetBlockSize() const;
 
         const column_index_t& GetColumnIndex() const;
 

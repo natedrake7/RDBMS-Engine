@@ -27,6 +27,7 @@ class PageManager;
 class Page;
 class LargeDataPage;
 class Table;
+class PageFreeSpacePage;
 
 enum
 {
@@ -47,6 +48,12 @@ class  Database {
         static page_id_t GetGamAssociatedPage(const page_id_t& pageId);
         static page_id_t GetPfsAssociatedPage(const page_id_t& pageId);
         static page_id_t CalculateSystemPageOffset(const page_id_t& pageId);
+        static byte GetObjectSizeToCategory(const row_size_t& size);
+        bool AllocateNewExtent( PageFreeSpacePage**  pageFreeSpacePage
+                        , page_id_t* lowerLimit
+                        , page_id_t* newPageId
+                        , extent_id_t* newExtentId
+                        , const table_id_t& tableId);
     
     public:
         explicit Database(const string& dbName, PageManager* pageManager);
@@ -65,11 +72,15 @@ class  Database {
 
         void GetTablePages(const Table &table, vector<Page*>* pages) const;
 
-        Page* CreatePage(const table_id_t& tableId);
+        Page* CreateDataPage(const table_id_t& tableId);
 
         LargeDataPage* CreateLargeDataPage(const table_id_t& tableId);
     
-        LargeDataPage* GetLargeDataPage(const table_id_t& tableId);
+        LargeDataPage* GetTableLastLargeDataPage(const table_id_t& tableId, const page_size_t& minObjectSize);
+
+        LargeDataPage* GetLargeDataPage(const page_id_t &pageId, const table_id_t& tableId);
+
+        void SetPageMetaDataToPfs(const Page* page) const;
 
         string GetFileName() const;
 
