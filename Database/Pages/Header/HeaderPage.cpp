@@ -22,6 +22,8 @@ void HeaderPage::WritePageToFile(fstream *filePtr)
     filePtr->write(this->databaseHeader.databaseName.c_str(), this->databaseHeader.databaseNameSize);
     filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.numberOfTables), sizeof(table_number_t));
     filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.lastTableId), sizeof(table_id_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.lastPageFreeSpacePageId), sizeof(page_id_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.lastGamPageId), sizeof(page_id_t));
 
     for(const auto& tableFullHeader: this->tablesHeaders)
     {
@@ -61,6 +63,12 @@ void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table* tabl
 
     memcpy(&this->databaseHeader.lastTableId, data.data() + offSet, sizeof(table_id_t));
     offSet += sizeof(table_id_t);
+
+    memcpy(&this->databaseHeader.lastPageFreeSpacePageId, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
+
+    memcpy(&this->databaseHeader.lastGamPageId, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
 
     for(int i = 0;i < this->databaseHeader.numberOfTables; i++)
     {

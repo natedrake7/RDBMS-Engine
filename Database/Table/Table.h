@@ -60,7 +60,6 @@ class Table {
                             , const page_id_t& lastLargePageId
                             , const column_index_t& largeBlockIndex);
 
-
     public:
         Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, Database* database);
 

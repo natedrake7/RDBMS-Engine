@@ -1,11 +1,11 @@
 ﻿#include "IndexAllocationMapPage.h"
 
-IndexAllocationMapPage::IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId) : Page(pageId)
+IndexAllocationMapPage::IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId) : Page(pageId)
 {
     this->additionalHeader.tableId = tableId;
-    this->additionalHeader.startingExtentId = pageId / 8;
+    this->additionalHeader.startingExtentId = startingExtentId;
     this->header.bytesLeft -= (sizeof(table_id_t) + sizeof(extent_id_t));
-    this->ownedExtents = new BitMap(EXTENT_BIT_MAP_SIZE);
+    this->ownedExtents = new BitMap(GAM_PAGE_SIZE);
     this->isDirty = true;
     this->header.pageType = PageType::INDEX;
     this->header.bytesLeft = 0;
@@ -24,9 +24,10 @@ IndexAllocationMapPage::~IndexAllocationMapPage()
     delete this->ownedExtents;
 }
 
-void IndexAllocationMapPage::SetAllocatedExtent(const extent_id_t &extentId)
+void IndexAllocationMapPage::SetAllocatedExtent(const extent_id_t &extentId, const GlobalAllocationMapPage* globalAllocationMapPage)
 {
-    this->ownedExtents->Set(extentId, true);
+    const extent_id_t bitMapId = extentId - ((globalAllocationMapPage->GetPageId() - 2) * GAM_PAGE_SIZE );
+    this->ownedExtents->Set(bitMapId, true);
     this->isDirty = true;
 }
 
@@ -41,7 +42,7 @@ void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedE
     for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
     {
         if (this->ownedExtents->Get(id))
-            allocatedExtents->push_back(id);
+            allocatedExtents->push_back(this->additionalHeader.startingExtentId + id);
     }
 }
 
@@ -54,7 +55,7 @@ extent_id_t IndexAllocationMapPage::GetLastAllocatedExtent() const
             lastAllocatedExtent = id;
     }
 
-    return lastAllocatedExtent;
+    return this->additionalHeader.startingExtentId + lastAllocatedExtent;
 }
 
 void IndexAllocationMapPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
@@ -72,16 +73,20 @@ void IndexAllocationMapPage::WritePageToFile(fstream *filePtr)
     this->ownedExtents->WriteDataToFile(filePtr);
 }
 
+void IndexAllocationMapPage::SetNextPageId(const page_id_t &nextPageId) { this->additionalHeader.nextPageId = nextPageId; }
+
 IndexAllocationPageAdditionalHeader::IndexAllocationPageAdditionalHeader()
 {
     this->tableId = 0;
     this->startingExtentId = 0;
+    this->nextPageId = 0;
 }
 
-IndexAllocationPageAdditionalHeader::IndexAllocationPageAdditionalHeader(const table_id_t &tableId, const extent_id_t &extentId)
+IndexAllocationPageAdditionalHeader::IndexAllocationPageAdditionalHeader(const table_id_t &tableId, const extent_id_t &extentId, const page_id_t& nextPageId)
 {
     this->tableId = tableId;
     this->startingExtentId = extentId;
+    this->nextPageId = nextPageId;
 }
 
 IndexAllocationPageAdditionalHeader::~IndexAllocationPageAdditionalHeader() = default;

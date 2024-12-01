@@ -92,7 +92,7 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 1000;i < 1200; i++)
+    for(int i = 0;i < 1200; i++)
     {
         vector<Field> fields = {
             Field("1"),

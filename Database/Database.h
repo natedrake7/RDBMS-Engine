@@ -11,9 +11,11 @@ typedef struct DatabaseHeader{
     header_literal_t databaseNameSize;
     string databaseName;
     table_id_t lastTableId;
+    page_id_t lastPageFreeSpacePageId;
+    page_id_t lastGamPageId;
 
     DatabaseHeader();
-    DatabaseHeader(const string& databaseName, const table_number_t& numberOfTables);
+    DatabaseHeader(const string &databaseName, const table_number_t& numberOfTables, const page_id_t& lastPageFreeSpacePageId, const page_id_t& lastGamPageId);
     DatabaseHeader(const DatabaseHeader& dbHeader);
 }DatabaseHeader;
 
@@ -41,7 +43,12 @@ class  Database {
     protected:
         void ValidateTableCreation(Table* table) const;
         void WriteHeaderToFile();
-
+        static bool IsSystemPage(const page_id_t& pageId);
+        static page_id_t GetGamAssociatedPage(const page_id_t& pageId);
+        static page_id_t GetPfsAssociatedPage(const page_id_t& pageId);
+        static page_id_t GetPageIdByExtentId(const extent_id_t& extentId);
+        static page_id_t CalculateSystemPageOffset(const page_id_t& pageId);
+    
     public:
         explicit Database(const string& dbName, PageManager* pageManager);
 
@@ -64,6 +71,8 @@ class  Database {
         LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table& table);
 
         string GetFileName() const;
+
+        static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t& extentId);
 };
 
 void CreateDatabase(const string& dbName, FileManager* fileManager, PageManager* pageManager);

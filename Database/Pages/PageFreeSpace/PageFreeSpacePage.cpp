@@ -13,8 +13,8 @@ PageFreeSpacePage::PageFreeSpacePage(const PageHeader &pageHeader) : Page(pageHe
 PageFreeSpacePage::PageFreeSpacePage(const page_id_t &pageId) : Page(pageId)
 {
     this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize();
-    this->pageMap = new ByteMap(this->header.bytesLeft);
-    this->header.pageSize = this->header.bytesLeft;
+    this->pageMap = new ByteMap(PAGE_FREE_SPACE_SIZE);
+    this->header.pageSize = PAGE_FREE_SPACE_SIZE;
     this->header.bytesLeft = 0;
     this->header.pageType = PageType::INDEX;
 }
@@ -42,6 +42,8 @@ void PageFreeSpacePage::SetPageAllocationStatus(const page_id_t &pageId, const p
 
     this->isDirty = true;
 }
+
+bool PageFreeSpacePage::IsFull() const { return this->pageMap->IsAllocated(this->header.pageSize - 1); }
 
 PageType PageFreeSpacePage::GetPageType(const page_id_t &pageId) const {return static_cast<PageType>(this->pageMap->GetPageType(pageId)); }
 

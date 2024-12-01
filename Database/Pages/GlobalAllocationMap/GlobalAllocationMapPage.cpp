@@ -27,12 +27,10 @@ extent_id_t GlobalAllocationMapPage::AllocateExtent()
             this->extentsMap->Set(extentId, false);
             
             this->isDirty = true;
-            
-            return extentId;
+            return extentId + (this->header.pageId - 2) * GAM_PAGE_SIZE;
         }
     }
 
-    //create new page
     return 0;
 }
 
@@ -53,5 +51,7 @@ void GlobalAllocationMapPage::GetPageDataFromFile(const vector<char> &data, cons
 {
     this->extentsMap->GetDataFromFile(data, offSet);
 }
+
+bool GlobalAllocationMapPage::IsFull() const { return !this->extentsMap->Get(extentsMap->GetSize() - 1); }
 
 page_size_t GlobalAllocationMapPage::GetAvailableSize() { return PAGE_SIZE - PageHeader::GetPageHeaderSize(); }

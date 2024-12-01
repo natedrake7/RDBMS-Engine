@@ -15,4 +15,5 @@ class GlobalAllocationMapPage final : public Page{
         void DeallocateExtent(const extent_id_t& extentId);
         void WritePageToFile(fstream *filePtr) override;
         void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
+        bool IsFull() const;
 };

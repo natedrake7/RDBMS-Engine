@@ -5,7 +5,7 @@ constexpr size_t MAX_NUMBER_OF_PAGES = 100;
 constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 20;
 constexpr size_t EXTENT_SIZE = 8;
 constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
-constexpr size_t EXTENT_BIT_MAP_SIZE = 65000;
+constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
 constexpr size_t LARGE_DATA_OBJECT_SIZE = 1024;
 
 //table types
@@ -57,3 +57,7 @@ typedef uint16_t byte_map_pos_t;
 typedef uint8_t byte;
 
 constexpr uint16_t OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
+
+constexpr uint16_t PAGE_FREE_SPACE_SIZE = 8088;
+constexpr uint16_t GAM_PAGE_SIZE = 64000;
+constexpr uint16_t GAM_NUMBER_OF_PAGES = 64000 * 8;

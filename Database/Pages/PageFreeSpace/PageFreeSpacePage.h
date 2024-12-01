@@ -22,4 +22,5 @@ class PageFreeSpacePage final: public Page{
         void WritePageToFile(fstream *filePtr) override;
         void SetPageMetaData(const Page* page);
         void SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft);
+        bool IsFull() const;
 };

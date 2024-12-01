@@ -54,10 +54,12 @@ class PageManager {
         HeaderPage* CreateHeaderPage(const string& filename);
         LargeDataPage* CreateLargeDataPage(const page_id_t& pageId);
         LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table* table);
-        GlobalAllocationMapPage* CreateGlobalAllocationMapPage(const string& filename);
-        GlobalAllocationMapPage* GetGlobalAllocationMapPage();
-        IndexAllocationMapPage* CreateIndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId);
+        GlobalAllocationMapPage* CreateGlobalAllocationMapPage(const string &filename, const page_id_t& pageId);
+        GlobalAllocationMapPage* CreateGlobalAllocationMapPage(const page_id_t& pageId);
+        GlobalAllocationMapPage* GetGlobalAllocationMapPage(const page_id_t& pageId);
+        IndexAllocationMapPage* CreateIndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId);
         IndexAllocationMapPage* GetIndexAllocationMapPage(const page_id_t& pageId);
-        PageFreeSpacePage* CreatePageFreeSpacePage(const string &filename);
+        PageFreeSpacePage* CreatePageFreeSpacePage(const string &filename, const page_id_t& pageId);
+        PageFreeSpacePage* CreatePageFreeSpacePage(const page_id_t& pageId);
         PageFreeSpacePage* GetPageFreeSpacePage(const page_id_t& pageId);
 };
