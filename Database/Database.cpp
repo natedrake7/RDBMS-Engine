@@ -58,15 +58,6 @@ extent_id_t Database::CalculateSystemPageOffsetByExtentId(const extent_id_t& ext
     return pageId + pfsPages + gamPages + 1;
 }
 
-page_id_t Database::GetPageIdByExtentId(const extent_id_t &extentId)
-{
-    const page_id_t extentPageId = extentId * EXTENT_SIZE;
-
-    const page_id_t systemPagesOffset = Database::CalculateSystemPageOffset(extentPageId);
-
-    return extentPageId + systemPagesOffset;
-}
-
 Database::Database(const string &dbName, PageManager *pageManager)
 {
     this->filename = dbName;
@@ -305,7 +296,34 @@ Page* Database::CreatePage(const table_id_t& tableId)
     return this->pageManager->GetPage(lowerLimit, newExtentId, this->tables[tableId]);
 }
 
-LargeDataPage* Database::GetLargeDataPage(const page_id_t& pageId, const Table& table) { return this->pageManager->GetLargeDataPage(pageId, &table); }
+LargeDataPage* Database::CreateLargeDataPage(const table_id_t &tableId)
+{
+    return dynamic_cast<LargeDataPage*>(this->CreatePage(tableId));
+}
+
+LargeDataPage* Database::GetLargeDataPage(const table_id_t& tableId)
+{
+    if (tableId >= this->tables.size())
+        return nullptr;
+    
+    const IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(this->tables[tableId]->GetTableHeader().indexAllocationMapPageId);
+    LargeDataPage* lastLargeDataPage = nullptr;
+
+    vector<extent_id_t> allocatedExtents;
+    tableMapPage->GetAllocatedExtents(&allocatedExtents);
+    for (const auto& extentId : allocatedExtents)
+    {
+        const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+        const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(firstExtentPageId);
+        
+        const PageFreeSpacePage* pageFreeSpace = pageManager->GetPageFreeSpacePage(correspondingPfsPageId);
+
+        if (pageFreeSpace->GetPageType(firstExtentPageId) == PageType::LOB)
+            lastLargeDataPage = this->pageManager->GetLargeDataPage(firstExtentPageId, this->tables[tableId]);
+    }
+    
+    return lastLargeDataPage;
+}
 
 string Database::GetFileName() const { return this->filename + this->fileExtension; }
 

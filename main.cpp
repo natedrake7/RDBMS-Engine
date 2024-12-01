@@ -28,9 +28,6 @@ int main()
     try
     {
         /*Handle LOB pages with pfs correctly*/
-        /*add database header numOfSystemPages to correctly initialize new page base on the number of system pages*/
-        /*before new allocation of extent verify pfs has space or create new pfs page and GAM has space or allocate new GAM*/
-        /*Do the same for IAM pages(when GAM is allocated new IAM should be too for each table)*/
         // CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);

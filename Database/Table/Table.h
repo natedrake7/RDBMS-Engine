@@ -45,7 +45,7 @@ class LargeDataPage;
 struct DataObject;
 
 class Table {
-    TableHeader metadata;
+    TableHeader header;
     vector<Column*> columns;
     Database* database;
 

@@ -46,7 +46,6 @@ class  Database {
         static bool IsSystemPage(const page_id_t& pageId);
         static page_id_t GetGamAssociatedPage(const page_id_t& pageId);
         static page_id_t GetPfsAssociatedPage(const page_id_t& pageId);
-        static page_id_t GetPageIdByExtentId(const extent_id_t& extentId);
         static page_id_t CalculateSystemPageOffset(const page_id_t& pageId);
     
     public:
@@ -68,7 +67,9 @@ class  Database {
 
         Page* CreatePage(const table_id_t& tableId);
 
-        LargeDataPage* GetLargeDataPage(const page_id_t& pageId, const Table& table);
+        LargeDataPage* CreateLargeDataPage(const table_id_t& tableId);
+    
+        LargeDataPage* GetLargeDataPage(const table_id_t& tableId);
 
         string GetFileName() const;
 
