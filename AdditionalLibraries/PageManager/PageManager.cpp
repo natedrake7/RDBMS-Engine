@@ -89,8 +89,9 @@ void PageManager::RemovePage()
 
     this->pageList.pop_back();
 
-    this->deletedPages.push_back(page);
-    // delete page;
+    // this->deletedPages.push_back(page);
+        
+    delete page;
 }
 
 void PageManager::OpenExtent(const extent_id_t& extentId, const Table* table)
@@ -156,7 +157,7 @@ HeaderPage* PageManager::CreateHeaderPage(const string& filename)
     
     HeaderPage* page = new HeaderPage(pageId);
 
-    this->MovePageToFrontOfList(page, pageId, filename);
+    this->MovePageToFrontOfSystemList(page, pageId, filename);
 
     return page;
 }
@@ -165,7 +166,7 @@ GlobalAllocationMapPage* PageManager::CreateGlobalAllocationMapPage(const string
 {
     GlobalAllocationMapPage* page = new GlobalAllocationMapPage(pageId);
 
-    this->MovePageToFrontOfList(page, pageId, filename);
+    this->MovePageToFrontOfSystemList(page, pageId, filename);
 
     return page;
 }
@@ -176,7 +177,7 @@ GlobalAllocationMapPage* PageManager::CreateGlobalAllocationMapPage(const page_i
     
     const string& filename = this->database->GetFileName();
 
-    this->MovePageToFrontOfList(page, pageId, filename);
+    this->MovePageToFrontOfSystemList(page, pageId, filename);
 
     return page;
 }
@@ -187,7 +188,7 @@ IndexAllocationMapPage* PageManager::CreateIndexAllocationMapPage(const table_id
     
     const string& filename = this->database->GetFileName();
 
-    this->MovePageToFrontOfList(page, pageId, filename);
+    this->MovePageToFrontOfSystemList(page, pageId, filename);
 
     return page;
 }
@@ -198,7 +199,7 @@ PageFreeSpacePage * PageManager::CreatePageFreeSpacePage(const page_id_t& pageId
     
     const string& filename = this->database->GetFileName();
 
-    this->MovePageToFrontOfList(page, pageId, filename);
+    this->MovePageToFrontOfSystemList(page, pageId, filename);
 
     return page;
 }
@@ -207,7 +208,7 @@ PageFreeSpacePage * PageManager::CreatePageFreeSpacePage(const string &filename,
 {
     PageFreeSpacePage* page = new PageFreeSpacePage(pageId);
 
-    this->MovePageToFrontOfList(page, pageId, filename);
+    this->MovePageToFrontOfSystemList(page, pageId, filename);
 
     return page;
 }
@@ -507,7 +508,7 @@ void PageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader &p
     }
 }
 
-void PageManager::MovePageToFrontOfList(Page *page, const page_id_t& pageId, const string& filename)
+void PageManager::MovePageToFrontOfSystemList(Page *page, const page_id_t& pageId, const string& filename)
 {
     if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
         this->RemoveSystemPage();
@@ -516,6 +517,17 @@ void PageManager::MovePageToFrontOfList(Page *page, const page_id_t& pageId, con
 
     this->systemPageList.push_front(page);
     this->systemCache[pageId] = this->systemPageList.begin();
+}
+
+void PageManager::MovePageToFrontOfList(Page *page, const page_id_t &pageId, const string &filename)
+{
+    if(this->pageList.size() == MAX_NUMBER_SYSTEM_PAGES)
+        this->RemovePage();
+
+    page->SetFileName(filename);
+
+    this->pageList.push_front(page);
+    this->cache[pageId] = this->pageList.begin();
 }
 
 PageHeader PageManager::GetPageHeaderFromFile(const vector<char> &data, page_offset_t &offSet)

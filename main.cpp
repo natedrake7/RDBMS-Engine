@@ -90,14 +90,14 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 0;i < 20; i++)
+    for(int i = 0;i < 10000; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field(string(9000, 'A')),
+            Field("hello its me"),
             Field("Hello its me you are llooooking for"),
         };
     

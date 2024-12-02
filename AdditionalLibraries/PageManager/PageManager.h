@@ -52,6 +52,7 @@ class PageManager {
         static void SetWriteFilePointerToOffset(fstream* file, const streampos& offSet);
         static PageHeader GetPageHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
         bool IsPageCached(const page_id_t& pageId);
+        void MovePageToFrontOfSystemList(Page *page, const page_id_t& pageId, const string& filename);
         void MovePageToFrontOfList(Page *page, const page_id_t& pageId, const string& filename);
 
     public:
