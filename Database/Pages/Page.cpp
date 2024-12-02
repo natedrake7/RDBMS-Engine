@@ -35,6 +35,8 @@ Page::~Page()
 {
     for(const auto& row: this->rows)
         delete row;
+
+    cout<< "Deleting Page: "<< this->header.pageId << endl;
 }
 
 void Page::InsertRow(Row* row)

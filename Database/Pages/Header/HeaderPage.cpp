@@ -2,7 +2,7 @@
 
 HeaderPage::HeaderPage(const int &pageId) : Page(pageId)
 {
-    this->isDirty = false;
+    this->isDirty = true;
     this->header.pageType = PageType::METADATA;
 }
 
@@ -18,6 +18,8 @@ HeaderPage::~HeaderPage() = default;
 
 void HeaderPage::WritePageToFile(fstream *filePtr)
 {
+    this->WritePageHeaderToFile(filePtr);
+    
     filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.databaseNameSize), sizeof(header_literal_t));
     filePtr->write(this->databaseHeader.databaseName.c_str(), this->databaseHeader.databaseNameSize);
     filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader.numberOfTables), sizeof(table_number_t));
@@ -50,8 +52,7 @@ void HeaderPage::WritePageToFile(fstream *filePtr)
 
 void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table* table, page_offset_t& offSet, fstream* filePtr)
 {
-    offSet = 0;
-    memcpy(&this->databaseHeader.databaseNameSize, data.data(), sizeof(header_literal_t));
+    memcpy(&this->databaseHeader.databaseNameSize, data.data() + offSet, sizeof(header_literal_t));
     offSet += sizeof(header_literal_t);
 
     this->databaseHeader.databaseName.resize(this->databaseHeader.databaseNameSize);

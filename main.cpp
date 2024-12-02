@@ -28,17 +28,16 @@ int main()
     try
     {
         /*Handle LOB pages with pfs correctly*/
-        CreateDatabase(dbName, &fileManager, pageManager);
+        // CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
 
         pageManager->BindDatabase(db);
 
         Table* table = db->OpenTable("Movies");
-        CreateAndInsertToDatabase(db, table);
+        // CreateAndInsertToDatabase(db, table);
 
         table = db->OpenTable("Movies");
-        vector<Row> rows;
         char searchCond[]  = "Du Hast Miesch";
         int16_t searchKey = 1008;
         vector<RowCondition*> conditions;
@@ -47,6 +46,8 @@ int main()
 
         conditions.push_back(&condition);
         conditions.push_back(&condition2);
+        
+        vector<Row> rows;
 
         const auto start = std::chrono::high_resolution_clock::now();
         
@@ -89,7 +90,7 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 0;i < 100; i++)
+    for(int i = 0;i < 20; i++)
     {
         vector<Field> fields = {
             Field("1"),

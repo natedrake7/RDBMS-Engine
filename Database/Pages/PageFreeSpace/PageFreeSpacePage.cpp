@@ -16,7 +16,7 @@ PageFreeSpacePage::PageFreeSpacePage(const page_id_t &pageId) : Page(pageId)
     this->pageMap = new ByteMap(PAGE_FREE_SPACE_SIZE);
     this->header.pageSize = PAGE_FREE_SPACE_SIZE;
     this->header.bytesLeft = 0;
-    this->header.pageType = PageType::INDEX;
+    this->header.pageType = PageType::FREESPACE;
 }
 
 PageFreeSpacePage::~PageFreeSpacePage()

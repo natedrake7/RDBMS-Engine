@@ -1,8 +1,8 @@
 ﻿#pragma once
 
 constexpr size_t PAGE_SIZE = 8 * 1024;
-constexpr size_t MAX_NUMBER_OF_PAGES = 200;
-constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 20;
+constexpr size_t MAX_NUMBER_OF_PAGES = 160;
+constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 40;
 constexpr size_t EXTENT_SIZE = 8;
 constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
 constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
@@ -30,6 +30,7 @@ enum class PageType : uint8_t {
     LOB = 2,
     METADATA = 3,
     GAM = 4,
+    FREESPACE = 5,
 };
 
 //block types

@@ -11,6 +11,7 @@
 #include "../../Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "../FileManager/FileManager.h"
 
+
 class IndexAllocationMapPage;
 class GlobalAllocationMapPage;
 class PageFreeSpacePage;
@@ -31,25 +32,34 @@ class PageManager {
     list<Page*> systemPageList;
     unordered_map<page_id_t, PageIterator> systemCache;
     const Database* database;
+    vector<Page*> deletedPages;
     
     protected:
         void RemovePage();
         void RemoveSystemPage();
-        void OpenPage(const page_id_t& pageId, const extent_id_t& extentId, const Table* table);
-        HeaderPage* OpenHeaderPage(const string& filename);
-        GlobalAllocationMapPage* OpenGlobalAllocationMapPage(const string& filename);
-        IndexAllocationMapPage* OpenIndexAllocationMapPage(const page_id_t& pageId);
-        PageFreeSpacePage* OpenPageFreeSpacePage(const page_id_t& pageId);
+        static void AllocateMemoryBasedOnSystemPageType(Page** page, const PageHeader& pageHeader);
+        static void AllocateMemoryBasedOnPageType(Page **page, const PageHeader &pageHeader);
+        void OpenExtent(const extent_id_t& extentId, const Table* table);
+        void OpenSystemPage(const page_id_t& pageId);
+        void OpenSystemPage(const page_id_t &pageId, const string &filename);
+        Page* GetSystemPage(const page_id_t& pageId);
+        Page* GetSystemPage(const page_id_t &pageId, const string& filename);
+        // HeaderPage* OpenHeaderPage(const string& filename);
+        // GlobalAllocationMapPage* OpenGlobalAllocationMapPage(const string& filename);
+        // IndexAllocationMapPage* OpenIndexAllocationMapPage(const page_id_t& pageId);
+        // PageFreeSpacePage* OpenPageFreeSpacePage(const page_id_t& pageId);
         static void SetReadFilePointerToOffset(fstream* file, const streampos& offSet);
         static void SetWriteFilePointerToOffset(fstream* file, const streampos& offSet);
         static PageHeader GetPageHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
+        bool IsPageCached(const page_id_t& pageId);
+        void MovePageToFrontOfList(Page *page, const page_id_t& pageId, const string& filename);
 
     public:
         explicit PageManager(FileManager* fileManager);
         ~PageManager();
         void BindDatabase(const Database* database);
         Page* CreatePage(const page_id_t& pageId);
-        Page* GetPage(const page_id_t& pageId, const extent_id_t& extendId, const Table* table);
+        Page* GetPage(const page_id_t& pageId, const extent_id_t& extentId, const Table* table);
         HeaderPage* GetHeaderPage(const string& filename);
         HeaderPage* CreateHeaderPage(const string& filename);
         LargeDataPage* CreateLargeDataPage(const page_id_t& pageId);

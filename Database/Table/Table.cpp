@@ -34,7 +34,6 @@ TableHeader& TableHeader::operator=(const TableHeader &tableHeader)
     return *this;
 }
 
-
 TableFullHeader::TableFullHeader() = default;
 
 TableFullHeader::TableFullHeader(const TableFullHeader& tableHeader)
@@ -224,9 +223,6 @@ LargeDataPage* Table::GetOrCreateLargeDataPage()
 {
     LargeDataPage* largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId, OBJECT_METADATA_SIZE_T + 1);
 
-    if(largeDataPage != nullptr && largeDataPage->GetPageId() == 113)
-        cout<<"hello";
-    
     return ( largeDataPage == nullptr )
             ? this->database->CreateLargeDataPage(this->header.tableId)
             : largeDataPage;
