@@ -52,7 +52,6 @@ class Table {
     protected:
         void InsertLargeObjectToPage(Row* row);
         LargeDataPage* GetOrCreateLargeDataPage();
-        void InsertRow(const vector<Field>& inputData);
         static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
         void InsertLargeDataObjectPointerToRow(Row* row
                             , const bool& isFirstRecursion
@@ -98,4 +97,7 @@ class Table {
         void AddColumn(Column* column);
 
         const table_id_t& GetTableId() const;
+
+        void InsertRow(const vector<Field>& inputData);
+
 };

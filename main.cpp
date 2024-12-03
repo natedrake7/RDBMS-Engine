@@ -91,21 +91,24 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 0;i < 10; i++)
+    for(int i = 11;i < 100000; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field(string(50000, 'A')),
+            Field("Du Hast Miesch"),
             Field("Hello its me you are llooooking for"),
         };
+
+        table->InsertRow(fields);
+
+        if (i % 1000 == 0)
+            cout<< i << endl;
     
-        fields[0].SetData(to_string(i));
-        
-        inputData.push_back(fields);
+        // inputData.push_back(fields);
     }
     
-    table->InsertRows(inputData);
+    // table->InsertRows(inputData);
 }
