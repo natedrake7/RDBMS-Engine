@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <cstdint>
 
 constexpr size_t PAGE_SIZE = 8 * 1024;
 constexpr size_t MAX_NUMBER_OF_PAGES = 112;
@@ -61,4 +62,4 @@ constexpr uint16_t OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id
 
 constexpr uint16_t PAGE_FREE_SPACE_SIZE = 8088;
 constexpr uint16_t GAM_PAGE_SIZE = 64000;
-constexpr uint16_t GAM_NUMBER_OF_PAGES = 64000 * 8;
+constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;

@@ -37,6 +37,8 @@ class Row
 
         void InsertColumnData(Block* block, const column_index_t& columnIndex);
 
+        void UpdateColumnData(Block *block);
+
         const vector<Block*>& GetData() const;
 
         void PrintRow() const;
@@ -47,7 +49,7 @@ class Row
 
         void UpdateRowSize();
 
-        char* GetLargeObjectValue(const DataObjectPointer &objectPointer) const;
+        unsigned char* GetLargeObjectValue(const DataObjectPointer &objectPointer, uint32_t* objectSize) const;
 
         void SetNullBitMapValue(const bit_map_pos_t& position, const bool& value);
 

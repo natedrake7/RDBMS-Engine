@@ -83,12 +83,12 @@ void LargeDataPage::WritePageToFile(fstream *filePtr)
     }
 }
 
-DataObject* LargeDataPage::InsertObject(const unsigned char *object, const page_size_t& size, page_offset_t* objectPosition)
+DataObject* LargeDataPage::InsertObject(const object_t *object, const page_size_t& size, page_offset_t* objectPosition)
 {
     DataObject* dataObject = new DataObject();
     dataObject->objectSize = size;
 
-    dataObject->object = new unsigned char[dataObject->objectSize];
+    dataObject->object = new object_t[size];
     memcpy(dataObject->object, object, dataObject->objectSize);
 
     this->data.push_back(dataObject);

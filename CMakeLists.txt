@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD 11)
 add_executable(DatabaseInterface
         main.cpp)
 add_library(AdditionalLibraries
-        AdditionalLibraries/HashTable/HashTable.cpp
-        AdditionalLibraries/HashTable/HashTable.h
         AdditionalLibraries/SafeConverter/SafeConverter.cpp
         AdditionalLibraries/SafeConverter/SafeConverter.h
         AdditionalLibraries/FileManager/FileManager.cpp

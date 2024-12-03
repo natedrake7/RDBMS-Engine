@@ -2,8 +2,8 @@
 #include "../Page.h"
 
 class GlobalAllocationMapPage final : public Page{
-
     BitMap* extentsMap;
+    
     protected:
         static page_size_t GetAvailableSize();
     

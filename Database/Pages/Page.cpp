@@ -213,8 +213,9 @@ void Page::GetRows(vector<Row>* copiedRows, const Table& table, const vector<Row
                 DataObjectPointer objectPointer;
                 memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
 
-                char* largeValue = row->GetLargeObjectValue(objectPointer);
-                blockCopy->SetData(largeValue, strlen(largeValue) + 1);
+                uint32_t objectSize;
+                unsigned char* largeValue = row->GetLargeObjectValue(objectPointer, &objectSize);
+                blockCopy->SetData(largeValue, objectSize);
 
                 delete[] largeValue;
             }

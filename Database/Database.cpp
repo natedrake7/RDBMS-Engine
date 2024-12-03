@@ -53,17 +53,11 @@ byte Database::GetObjectSizeToCategory(const row_size_t &size)
 extent_id_t Database::CalculateSystemPageOffsetByExtentId(const extent_id_t& extentId)
 {
     const page_id_t pageId = extentId * EXTENT_SIZE;
+
+    const page_id_t pfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
+
+    const page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
     
-    page_id_t pfsPages = pageId / PAGE_FREE_SPACE_SIZE;
-
-    if (pfsPages == 0)
-        pfsPages = 1;
-    
-    page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES;
-
-    if (gamPages == 0)
-        gamPages = 1;
-
     return pageId + pfsPages + gamPages + 1;
 }
 

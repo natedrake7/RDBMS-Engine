@@ -127,7 +127,10 @@ void Table::InsertRow(const vector<Field>& inputData)
             block->SetData(&convertedBigInt, sizeof(int64_t));
         }
         else if (columnType == ColumnType::String)
-            block->SetData(inputData[i].GetData().c_str(), inputData[i].GetData().size() + 1);
+        {
+            const string& data = inputData[i].GetData();
+            block->SetData(data.c_str(), data.size());
+        }
         else
             throw invalid_argument("Unsupported column type");
 
@@ -151,72 +154,81 @@ void Table::InsertRow(const vector<Field>& inputData)
 
 void Table::InsertLargeObjectToPage(Row* row)
 {
-    const vector<column_index_t> largeBlocksIndexes = row->GetLargeBlocks();
-    
-    if(largeBlocksIndexes.empty())
+    const vector<column_index_t> largeBlockIndexes = row->GetLargeBlocks();
+
+    if(largeBlockIndexes.empty())
         return;
 
     RowHeader* rowHeader = row->GetHeader();
 
-    page_offset_t offset = 0;
-    
     const auto& rowData = row->GetData();
 
-    for(const auto& largeBlockIndex : largeBlocksIndexes)
+    for (const auto& largeBlockIndex : largeBlockIndexes)
     {
         rowHeader->largeObjectBitMap->Set(largeBlockIndex, true);
 
-        DataObject* dataObject = nullptr;
+        page_offset_t offset = 0;
 
-        offset = 0;
+        block_size_t remainingBlockSize = rowData[largeBlockIndex]->GetBlockSize();
 
-        block_size_t blockSize = rowData[largeBlockIndex]->GetBlockSize();
-
-        const auto& data = rowData[largeBlockIndex]->GetBlockData();
-
-        while(true)
-        {
-            LargeDataPage* largeDataPage = this->GetOrCreateLargeDataPage();
-
-            blockSize -= offset;
-
-            const auto& availableBytesInPage = largeDataPage->GetBytesLeft();
-
-            const auto& dataSize = blockSize + OBJECT_METADATA_SIZE_T;
-
-            large_page_index_t objectIndex;
-
-            if (availableBytesInPage >= dataSize)
-            {
-                largeDataPage->InsertObject(data + offset, blockSize, &objectIndex);
-                
-                this->database->SetPageMetaDataToPfs(largeDataPage);
-
-                LinkLargePageDataObjectChunks(dataObject, largeDataPage->GetPageId(), objectIndex);
-
-                InsertLargeDataObjectPointerToRow(row, offset, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
-
-                break;
-            }
-
-            const auto bytesToBeAllocated = availableBytesInPage - OBJECT_METADATA_SIZE_T;//add page Id maybe;
-
-            DataObject* prevDataObject = nullptr;
-
-            if (dataObject != nullptr)
-                prevDataObject = dataObject;
-
-            dataObject = largeDataPage->InsertObject(data + offset, bytesToBeAllocated, &objectIndex);
-
-            this->database->SetPageMetaDataToPfs(largeDataPage);
-
-            LinkLargePageDataObjectChunks(prevDataObject, largeDataPage->GetPageId(), objectIndex);
-
-            InsertLargeDataObjectPointerToRow(row, availableBytesInPage, objectIndex, largeDataPage->GetPageId(), largeBlockIndex);
-
-            offset += bytesToBeAllocated;
-        }
+        RecursiveInsertToLargePage(row, offset, largeBlockIndex, remainingBlockSize, true, nullptr);
     }
+    
+}
+
+void Table::RecursiveInsertToLargePage(Row*& row
+                                    , page_offset_t& offset
+                                    , const column_index_t& columnIndex
+                                    , block_size_t& remainingBlockSize
+                                    , const bool& isFirstRecursion
+                                    , DataObject** previousDataObject)
+{
+    LargeDataPage* largeDataPage = this->GetOrCreateLargeDataPage();
+
+    const auto& pageSize = largeDataPage->GetBytesLeft();
+
+    const auto& data = row->GetData()[columnIndex]->GetBlockData();
+
+    large_page_index_t objectIndex;
+
+    if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize)
+    {
+
+        largeDataPage->InsertObject(data + offset, remainingBlockSize, &objectIndex);
+
+        this->database->SetPageMetaDataToPfs(largeDataPage);
+
+        Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion, objectIndex, largeDataPage->GetPageId(), columnIndex);
+
+        if (previousDataObject != nullptr)
+        {
+            (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
+            (*previousDataObject)->nextObjectIndex = objectIndex;
+        }
+
+        return;
+    }
+
+    //blockSize < pageSize
+    const auto bytesToBeInserted = pageSize - OBJECT_METADATA_SIZE_T;
+
+    remainingBlockSize -= bytesToBeInserted;
+
+    DataObject* dataObject = largeDataPage->InsertObject(data + offset, bytesToBeInserted, &objectIndex);
+
+    this->database->SetPageMetaDataToPfs(largeDataPage);
+
+    if (previousDataObject != nullptr)
+    {
+        (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
+        (*previousDataObject)->nextObjectIndex = objectIndex;
+    }
+
+    offset += bytesToBeInserted;
+
+    this->RecursiveInsertToLargePage(row, offset, columnIndex, remainingBlockSize, false, &dataObject);
+
+    Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion, objectIndex, largeDataPage->GetPageId(), columnIndex);
 }
 
 LargeDataPage* Table::GetOrCreateLargeDataPage()
@@ -238,19 +250,19 @@ void Table::LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_
 }
 
 void Table::InsertLargeDataObjectPointerToRow(Row* row
-        , const page_offset_t& offset
+        , const bool& isFirstRecursion
         , const large_page_index_t& objectIndex
         , const page_id_t& lastLargePageId
         , const column_index_t& largeBlockIndex)
 {
-    if (offset == 0)
-    {
-        DataObjectPointer objectPointer(objectIndex, lastLargePageId);
-
-        row->GetData()[largeBlockIndex]->SetData(&objectPointer, sizeof(DataObjectPointer));
-
-        row->UpdateRowSize();
-    }
+    if (!isFirstRecursion)
+        return;
+    
+    DataObjectPointer objectPointer(objectIndex, lastLargePageId);
+    
+    Block* block = new Block(&objectPointer, sizeof(DataObjectPointer), this->columns[largeBlockIndex]);
+    
+    row->UpdateColumnData(block);
 }
 
 column_number_t Table::GetNumberOfColumns() const { return this->columns.size();}
@@ -259,7 +271,10 @@ const TableHeader& Table::GetTableHeader() const { return this->header; }
 
 const vector<Column*>& Table::GetColumns() const { return this->columns; }
 
-LargeDataPage* Table::GetLargeDataPage(const page_id_t &pageId) const { return this->database->GetLargeDataPage(pageId, this->header.tableId); }
+LargeDataPage* Table::GetLargeDataPage(const page_id_t &pageId) const
+{
+    return this->database->GetLargeDataPage(pageId, this->header.tableId);
+}
 
 void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* conditions, const size_t& count) const
 {

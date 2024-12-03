@@ -52,8 +52,21 @@ Row::~Row()
         delete block;
 }
 
-void Row::InsertColumnData(Block *block, const  uint16_t& columnIndex)
+void Row::InsertColumnData(Block *block, const  column_index_t& columnIndex)
 {
+    this->data[columnIndex] = block;
+    this->header.rowSize += block->GetBlockSize();
+}
+
+void Row::UpdateColumnData(Block *block)
+{
+    const column_index_t& columnIndex = block->GetColumnIndex();
+    
+    this->header.rowSize -= this->data[columnIndex]->GetBlockSize();
+
+    if (this->data[columnIndex] != nullptr)
+        delete this->data[columnIndex];
+    
     this->data[columnIndex] = block;
     this->header.rowSize += block->GetBlockSize();
 }
@@ -66,6 +79,7 @@ void Row::PrintRow() const
     {
         const ColumnType columnType = this->data[i]->GetColumnType();
         const object_t* blockData = this->data[i]->GetBlockData();
+        const block_size_t& blockSize = this->data[i]->GetBlockSize();
         
         if(blockData == nullptr)
         {
@@ -96,7 +110,7 @@ void Row::PrintRow() const
             cout << bigIntValue;
         }
         else if(columnType == ColumnType::String)
-            cout << reinterpret_cast<const char*>(blockData);
+            cout.write(reinterpret_cast<const char*>(blockData), blockSize);
 
         if(i == this->data.size() - 1)
             cout << '\n';
@@ -129,37 +143,43 @@ void Row::UpdateRowSize()
          this->header.rowSize += block->GetBlockSize();
 }
 
-char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer) const
+unsigned char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer, uint32_t* objectSize) const
 {
     LargeDataPage* page = this->table->GetLargeDataPage(objectPointer.pageId);
 
     DataObject* object = page->GetObject(objectPointer.objectIndex);
 
-    char* largeValue = new char[object->objectSize + 1];
+    uint32_t currentObjectSize = object->objectSize;
 
-    memcpy(largeValue, object->object, object->objectSize);
+    unsigned char* buffer = new unsigned char[currentObjectSize];
 
-    largeValue[object->objectSize] = '\0';
+    memcpy(buffer, object->object, currentObjectSize);
 
     while (object->nextPageId != 0)
     {
-        page = this->table->GetLargeDataPage(object->nextPageId);
-        object = page->GetObject(object->nextObjectIndex);
+        const page_id_t nextPageId = object->nextPageId;
+        const large_page_index_t nextObjectIndex = object->nextObjectIndex;
+        
+        page = this->table->GetLargeDataPage(nextPageId);
+        object = page->GetObject(nextObjectIndex);
 
-        const auto& stringSize = strlen(largeValue);
-        char* prevValue = largeValue;
+        const page_size_t nextObjectSize = object->objectSize;
 
-        largeValue = new char[stringSize + object->objectSize + 1];
+        unsigned char* prevValue = buffer;
 
-        memcpy(largeValue, prevValue, stringSize);
-        memcpy(largeValue + stringSize, object->object, object->objectSize);
+        buffer = new unsigned char[currentObjectSize + nextObjectSize];
 
-        largeValue[stringSize + object->objectSize] = '\0';
-
+        memcpy(buffer, prevValue, currentObjectSize);
         delete[] prevValue;
+
+        memcpy(buffer + currentObjectSize, object->object, nextObjectSize);
+    
+        currentObjectSize += object->objectSize;
     }
 
-    return largeValue;
+    *objectSize = currentObjectSize;
+    
+    return buffer;
 }
 
 void Row::SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) { this->header.nullBitMap->Set(position, value); }

@@ -54,11 +54,17 @@ class Table {
         LargeDataPage* GetOrCreateLargeDataPage();
         void InsertRow(const vector<Field>& inputData);
         static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
-        static void InsertLargeDataObjectPointerToRow(Row* row
-                            , const page_offset_t& offset
+        void InsertLargeDataObjectPointerToRow(Row* row
+                            , const bool& isFirstRecursion
                             , const large_page_index_t& objectIndex
                             , const page_id_t& lastLargePageId
                             , const column_index_t& largeBlockIndex);
+        void RecursiveInsertToLargePage(Row*& row
+                                        , page_offset_t& offset
+                                        , const column_index_t& columnIndex
+                                        , block_size_t& remainingBlockSize
+                                        , const bool& isFirstRecursion
+                                        , DataObject** previousDataObject);
 
     public:
         Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, Database* database);

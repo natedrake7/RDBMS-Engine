@@ -1,5 +1,6 @@
 ﻿#include <bitset>
 #include <chrono>
+#include <string.h>
 
 #include "AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "./Database/Database.h"
@@ -27,7 +28,7 @@ int main()
     const string dbName = "stakosDb";
     try
     {
-        /*Handle LOB pages with pfs correctly*/
+        /*Get pages in select in chunks*/
         // CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
@@ -35,7 +36,7 @@ int main()
         pageManager->BindDatabase(db);
 
         Table* table = db->OpenTable("Movies");
-        // CreateAndInsertToDatabase(db, table);
+        CreateAndInsertToDatabase(db, table);
 
         table = db->OpenTable("Movies");
         char searchCond[]  = "Du Hast Miesch";
@@ -51,7 +52,7 @@ int main()
 
         const auto start = std::chrono::high_resolution_clock::now();
         
-        table->SelectRows(&rows);
+        table->SelectRows(&rows, nullptr, 10);
 
         const auto end = std::chrono::high_resolution_clock::now();
 
@@ -90,14 +91,14 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 0;i < 10000; i++)
+    for(int i = 0;i < 10; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field("hello its me"),
+            Field(string(50000, 'A')),
             Field("Hello its me you are llooooking for"),
         };
     

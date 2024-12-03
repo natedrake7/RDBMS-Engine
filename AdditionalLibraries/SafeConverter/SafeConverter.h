@@ -3,6 +3,7 @@
 #include <string>
 #include <limits>
 #include <stdexcept>
+#include <cstdint>
 
 using namespace std;
 
