@@ -50,10 +50,11 @@ class  Database {
         static page_id_t CalculateSystemPageOffset(const page_id_t& pageId);
         static byte GetObjectSizeToCategory(const row_size_t& size);
         bool AllocateNewExtent( PageFreeSpacePage**  pageFreeSpacePage
-                        , page_id_t* lowerLimit
-                        , page_id_t* newPageId
-                        , extent_id_t* newExtentId
-                        , const table_id_t& tableId);
+                            , page_id_t* lowerLimit
+                            , page_id_t* newPageId
+                            , extent_id_t* newExtentId
+                            , const table_id_t& tableId);
+        const Table* GetTable(const table_id_t& tableId) const;
     
     public:
         explicit Database(const string& dbName, PageManager* pageManager);
@@ -68,9 +69,9 @@ class  Database {
 
         void DeleteDatabase() const;
 
-        bool InsertRowToPage(const Table& table, Row* row);
+        bool InsertRowToPage(const Table &table,vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row *row);
 
-        void GetTablePages(const Table &table, vector<Page*>* pages) const;
+        void SelectTableRows(const table_id_t& tableId, vector<Row>& selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions) const;
 
         Page* CreateDataPage(const table_id_t& tableId);
 

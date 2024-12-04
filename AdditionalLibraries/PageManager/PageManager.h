@@ -1,5 +1,6 @@
 #pragma once
 #include <list>
+#include <mutex>
 #include <unordered_map>
 #include <string>
 #include "../../Database/Pages/Page.h"
@@ -32,7 +33,8 @@ class PageManager {
     list<Page*> systemPageList;
     unordered_map<page_id_t, PageIterator> systemCache;
     const Database* database;
-    vector<Page*> deletedPages;
+    mutex pageListMutex;
+    mutex systemPageListMutex;
     
     protected:
         void RemovePage();
@@ -53,7 +55,12 @@ class PageManager {
         static PageHeader GetPageHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
         bool IsPageCached(const page_id_t& pageId);
         void MovePageToFrontOfSystemList(Page *page, const page_id_t& pageId, const string& filename);
+        void MovePageToFrontOfSystemList(Page *page, const page_id_t& pageId);
         void MovePageToFrontOfList(Page *page, const page_id_t& pageId, const string& filename);
+        void MovePageToFrontOfList(Page *page, const page_id_t &pageId);
+        void ReadSystemPageFromFile(Page* page, const vector<char>& buffer, const page_id_t& pageId, page_offset_t& offSet, fstream* file);
+        void ReadPageFromFile(Page *page, const vector<char> &buffer, const Table *table, page_offset_t &offSet, fstream *file);
+        bool IsSystemCacheFull() const;
 
     public:
         explicit PageManager(FileManager* fileManager);
@@ -73,4 +80,5 @@ class PageManager {
         PageFreeSpacePage* CreatePageFreeSpacePage(const string &filename, const page_id_t& pageId);
         PageFreeSpacePage* CreatePageFreeSpacePage(const page_id_t& pageId);
         PageFreeSpacePage* GetPageFreeSpacePage(const page_id_t& pageId);
+        bool IsCacheFull() const;
 };

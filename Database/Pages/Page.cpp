@@ -182,11 +182,13 @@ void Page::UpdateRows(const vector<Block> *updates, const vector<RowCondition *>
     this->isDirty = true;
 }
 
-void Page::GetRows(vector<Row>* copiedRows, const Table& table, const vector<RowCondition*>* conditions) const
+void Page::GetRows(vector<Row>* copiedRows, const Table& table, const size_t& rowsToSelect, const vector<RowCondition*>* conditions) const
 {
-    copiedRows->clear();
     for(const auto& row: this->rows)
     {
+        if(copiedRows->size() >= rowsToSelect)
+            return;
+        
         if(conditions != nullptr)
         {
             bool skipRow = false;

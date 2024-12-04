@@ -46,6 +46,18 @@ void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedE
     }
 }
 
+void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedExtents, const extent_id_t& startingExtentIndex) const
+{
+    if(startingExtentIndex >= this->ownedExtents->GetSize())
+        return;
+    
+    for (extent_id_t id = startingExtentIndex; id < this->ownedExtents->GetSize(); id++)
+    {
+        if (this->ownedExtents->Get(id))
+            allocatedExtents->push_back(this->additionalHeader.startingExtentId + id);
+    }
+}
+
 extent_id_t IndexAllocationMapPage::GetLastAllocatedExtent() const
 {
     extent_id_t lastAllocatedExtent = 0;

@@ -64,6 +64,7 @@ class Table {
                                         , block_size_t& remainingBlockSize
                                         , const bool& isFirstRecursion
                                         , DataObject** previousDataObject);
+        void InsertRow(const vector<Field>& inputData, vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex);
 
     public:
         Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, Database* database);
@@ -86,9 +87,9 @@ class Table {
 
         LargeDataPage* GetLargeDataPage(const page_id_t& pageId) const;
 
-        void SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
+        void Select(vector<Row>& selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
 
-        void UpdateRows(const vector<Block>* updates, const vector<RowCondition*>* conditions = nullptr);
+        void Update(const vector<Block>* updates, const vector<RowCondition*>* conditions = nullptr);
 
         void UpdateIndexAllocationMapPageId(const page_id_t& indexAllocationMapPageId);
     

@@ -78,16 +78,24 @@ Table::~Table()
 void Table::InsertRows(const vector<vector<Field>> &inputData)
 {
     uint32_t rowsInserted = 0;
+    extent_id_t startingExtentIndex = 0;
+    vector<extent_id_t> extents;
     for (const auto& rowData: inputData)
     {
-        this->InsertRow(rowData);
+        this->InsertRow(rowData, extents, startingExtentIndex);
+
         rowsInserted++;
+    
+        if(rowsInserted % 1000 == 0)
+            cout<< rowsInserted << endl;
     }
+
+
 
     cout<<"Rows affected: "<<rowsInserted<<endl;
 }
 
-void Table::InsertRow(const vector<Field>& inputData)
+void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex)
 {
 
     Row* row = new Row(*this);
@@ -132,7 +140,7 @@ void Table::InsertRow(const vector<Field>& inputData)
             block->SetData(data.c_str(), data.size());
         }
         else
-            throw invalid_argument("Unsupported column type");
+            throw invalid_argument("InsertRow : Unsupported Column Type");
 
         const auto& columnIndex = columns[i]->GetColumnIndex();
         row->InsertColumnData(block, columnIndex);
@@ -141,10 +149,11 @@ void Table::InsertRow(const vector<Field>& inputData)
     if(this->header.indexAllocationMapPageId > 0)
     {
         this->InsertLargeObjectToPage(row);
-        if (this->database->InsertRowToPage(*this, row))
+
+        if (this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row))
             return;
     }
-
+    
     Page* newPage = this->database->CreateDataPage(this->header.tableId);
 
     this->InsertLargeObjectToPage(row);
@@ -257,8 +266,8 @@ void Table::InsertLargeDataObjectPointerToRow(Row* row
 {
     if (!isFirstRecursion)
         return;
-    
-    DataObjectPointer objectPointer(objectIndex, lastLargePageId);
+
+    const DataObjectPointer objectPointer(objectIndex, lastLargePageId);
     
     Block* block = new Block(&objectPointer, sizeof(DataObjectPointer), this->columns[largeBlockIndex]);
     
@@ -276,42 +285,19 @@ LargeDataPage* Table::GetLargeDataPage(const page_id_t &pageId) const
     return this->database->GetLargeDataPage(pageId, this->header.tableId);
 }
 
-void Table::SelectRows(vector<Row>* selectedRows, const vector<RowCondition*>* conditions, const size_t& count) const
+void Table::Select(vector<Row>& selectedRows, const vector<RowCondition*>* conditions, const size_t& count) const
 {
    const size_t rowsToSelect = (count == -1)
                         ? numeric_limits<size_t>::max()
                         : count;
 
-
-    vector<Page*> tablePages;
-    this->database->GetTablePages(*this, &tablePages);
-
-    for (const auto& tablePage : tablePages)
-    {
-        vector<Row> pageRows;
-        tablePage->GetRows(&pageRows, *this, conditions);
-
-        if(selectedRows->size() + pageRows.size() > rowsToSelect)
-        {
-            selectedRows->insert(selectedRows->end(), pageRows.begin(), pageRows.begin() + ( rowsToSelect - selectedRows->size()));
-            break;
-        }
-
-        selectedRows->insert(selectedRows->end(), pageRows.begin(), pageRows.end());
-    }
+    this->database->SelectTableRows(this->header.tableId, selectedRows, rowsToSelect, conditions);
 }
 
-// void Table::UpdateRows(const vector<Block> *updates, const vector<RowCondition *>* conditions)
-// {
-//     page_id_t pageId = this->header.indexAllocationMapPageId;
-//
-//     while(pageId > 0)
-//     {
-//         Page* page = this->database->GetPage(*this);
-//
-//         
-//     }
-// }
+void Table::Update(const vector<Block>* updates, const vector<RowCondition*>* conditions)
+{
+
+}
 
 void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId) { this->header.indexAllocationMapPageId = indexAllocationMapPageId; }
 

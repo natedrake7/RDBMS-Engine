@@ -1,5 +1,7 @@
 #include "PageManager.h"
 
+bool PageManager::IsSystemCacheFull() const { return this->systemCache.size() == MAX_NUMBER_SYSTEM_PAGES; }
+
 PageManager::PageManager(FileManager* fileManager)
 {
     this->fileManager = fileManager;
@@ -16,9 +18,6 @@ PageManager::~PageManager()
 
     for(size_t i = 0;i < systemPageListSize; i++)
         this->RemoveSystemPage();
-
-    for (const auto& page : this->deletedPages) 
-        delete page;
 }
 
 void PageManager::BindDatabase(const Database *database) { this->database = database; }
@@ -89,8 +88,6 @@ void PageManager::RemovePage()
 
     this->pageList.pop_back();
 
-    // this->deletedPages.push_back(page);
-        
     delete page;
 }
 
@@ -226,6 +223,8 @@ PageFreeSpacePage* PageManager::GetPageFreeSpacePage(const page_id_t &pageId)
     return dynamic_cast<PageFreeSpacePage*>(this->GetSystemPage(pageId)); 
 }
 
+bool PageManager::IsCacheFull() const { return this->pageList.size() == MAX_NUMBER_OF_PAGES; }
+
 IndexAllocationMapPage* PageManager::GetIndexAllocationMapPage(const page_id_t &pageId)
 {
     return dynamic_cast<IndexAllocationMapPage*>(this->GetSystemPage(pageId));
@@ -277,7 +276,7 @@ Page* PageManager::GetSystemPage(const page_id_t &pageId, const string& filename
 
 void PageManager::OpenSystemPage(const page_id_t &pageId)
 {
-    if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
+    if(this->IsSystemCacheFull())
         this->RemoveSystemPage();
 
     const string& filename = this->database->GetFileName();
@@ -307,7 +306,7 @@ void PageManager::OpenSystemPage(const page_id_t &pageId)
 
 void PageManager::OpenSystemPage(const page_id_t &pageId, const string &filename)
 {
-    if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
+    if(this->IsSystemCacheFull())
         this->RemoveSystemPage();
 
     fstream* file = this->fileManager->GetFile(filename);
@@ -357,117 +356,6 @@ void PageManager::RemoveSystemPage()
 
     delete page;
 }
-
-// IndexAllocationMapPage* PageManager::OpenIndexAllocationMapPage(const page_id_t &pageId)
-// {
-//     if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
-//         this->RemoveSystemPage();
-//
-//     const string& filename = this->database->GetFileName();
-//
-//     fstream* file = this->fileManager->GetFile(filename);
-//
-//     const streampos pageOffset = pageId * PAGE_SIZE;
-//     vector<char> buffer(PAGE_SIZE);
-//     SetReadFilePointerToOffset(file, pageOffset);
-//
-//     file->read(buffer.data(), PAGE_SIZE);
-//
-//     page_offset_t offSet = 0;
-//
-//     const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
-//
-//     IndexAllocationMapPage* page = new IndexAllocationMapPage(pageHeader, 0, 0);
-//     this->systemPageList.push_front(page);
-//     
-//     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
-//
-//     this->systemCache[pageId] = this->systemPageList.begin();
-//
-//     return page;
-// }
-
-// PageFreeSpacePage * PageManager::OpenPageFreeSpacePage(const page_id_t &pageId)
-// {
-//     if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
-//         this->RemoveSystemPage();
-//
-//     const string& filename = this->database->GetFileName();
-//
-//     fstream* file = this->fileManager->GetFile(filename);
-//
-//     const streampos pageOffset = pageId * PAGE_SIZE;
-//     vector<char> buffer(PAGE_SIZE);
-//     SetReadFilePointerToOffset(file, pageOffset);
-//
-//     file->read(buffer.data(), PAGE_SIZE);
-//
-//     page_offset_t offSet = 0;
-//
-//     const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
-//
-//     PageFreeSpacePage* page = new PageFreeSpacePage(pageHeader);
-//     this->systemPageList.push_front(page);
-//     
-//     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
-//
-//     this->systemCache[pageId] = this->systemPageList.begin();
-//
-//     return page;
-// }
-
-// HeaderPage* PageManager::OpenHeaderPage(const string& filename)
-// {
-//     if(this->systemPageList.size() == MAX_NUMBER_OF_PAGES)
-//         this->RemoveSystemPage();
-//
-//     fstream* file = this->fileManager->GetFile(filename);
-//
-//     const streampos pageOffset = 0;
-//     vector<char> buffer(PAGE_SIZE);
-//     SetReadFilePointerToOffset(file, pageOffset);
-//
-//     file->read(buffer.data(), PAGE_SIZE);
-//
-//     page_offset_t offSet = 0;
-//
-//     const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
-//
-//     HeaderPage* page = new HeaderPage(pageHeader);
-//     this->systemPageList.push_front(page);
-//     
-//     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
-//
-//     this->systemCache[0] = this->systemPageList.begin();
-//
-//     return page;
-// }
-
-// GlobalAllocationMapPage* PageManager::OpenGlobalAllocationMapPage(const string& filename)
-// {
-//     if(this->systemPageList.size() == MAX_NUMBER_OF_PAGES)
-//         this->RemovePage();
-//
-//     fstream* file = this->fileManager->GetFile(filename);
-//
-//     vector<char> buffer(PAGE_SIZE);
-//     SetReadFilePointerToOffset(file, PAGE_SIZE);
-//
-//     file->read(buffer.data(), PAGE_SIZE);
-//     page_offset_t offSet = 0;
-//     
-//     const PageHeader pageHeader = PageManager::GetPageHeaderFromFile(buffer, offSet);
-//     
-//     GlobalAllocationMapPage* page = new GlobalAllocationMapPage(pageHeader);
-//     
-//     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
-//
-//     this->systemPageList.push_front(page);
-//
-//     this->systemCache[2] = this->systemPageList.begin();
-//
-//     return page;
-// }
 
 void PageManager::AllocateMemoryBasedOnSystemPageType(Page **page, const PageHeader &pageHeader) {
     switch (pageHeader.pageType)

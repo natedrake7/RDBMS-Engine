@@ -1,6 +1,6 @@
 ﻿#include <bitset>
 #include <chrono>
-#include <string.h>
+#include <cstring>
 
 #include "AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "./Database/Database.h"
@@ -15,7 +15,6 @@ void CreateAndInsertToDatabase(Database* db, Table* table = nullptr);
 
 //handle updates
 //deletes
-//bitmaps for extents
 //B+ Trees
 //row ids
 //object ids
@@ -29,7 +28,7 @@ int main()
     try
     {
         /*Get pages in select in chunks*/
-        // CreateDatabase(dbName, &fileManager, pageManager);
+        CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
 
@@ -42,7 +41,7 @@ int main()
         char searchCond[]  = "Du Hast Miesch";
         int16_t searchKey = 1008;
         vector<RowCondition*> conditions;
-        RowCondition condition(searchCond, strlen(searchCond) + 1, 3);
+        RowCondition condition(searchCond, strlen(searchCond), 3);
         RowCondition condition2(&searchKey, sizeof(int16_t), 0);
 
         conditions.push_back(&condition);
@@ -52,7 +51,7 @@ int main()
 
         const auto start = std::chrono::high_resolution_clock::now();
         
-        table->SelectRows(&rows, nullptr, 10);
+        table->Select(rows, nullptr, 10);
 
         const auto end = std::chrono::high_resolution_clock::now();
 
@@ -79,7 +78,7 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     if(table == nullptr)
     {
         vector<Column*> columns;
-        columns.push_back(new Column("MovieID", "SmallInt", sizeof(int16_t), false));
+        columns.push_back(new Column("MovieID", "Int", sizeof(int), false));
         columns.push_back(new Column("MovieName", "String", 100, true));
         columns.push_back(new Column("MovieType", "String", 100, true));
         columns.push_back(new Column("MovieDesc", "String", 100, true));
@@ -91,24 +90,22 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 11;i < 100000; i++)
+    for(int i = 0;i < 10000; i++)
     {
         vector<Field> fields = {
             Field("1"),
             Field("Silence Of The Lambs"),
             Field("Thriller"),
             Field("Du Hast Miesch"),
-            Field("Du Hast Miesch"),
+            Field("hello" + to_string(i)),
             Field("Hello its me you are llooooking for"),
         };
 
-        table->InsertRow(fields);
+        fields[0].SetData(to_string(i));
 
-        if (i % 1000 == 0)
-            cout<< i << endl;
-    
-        // inputData.push_back(fields);
+        // table->InsertRow(fields);
+        inputData.push_back(fields);
     }
     
-    // table->InsertRows(inputData);
+    table->InsertRows(inputData);
 }
