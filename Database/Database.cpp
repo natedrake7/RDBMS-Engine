@@ -1,7 +1,5 @@
 ﻿#include "Database.h"
 
-#include "../AdditionalLibraries/PageManager/PageManager.h"
-
 void Database::ValidateTableCreation(Table* table) const
 {
     for (const auto& dbTable : this->tables)
@@ -20,7 +18,7 @@ void Database::WriteHeaderToFile()
     metaDataPage->SetHeaders(this->header, this->tables);
 }
 
-bool Database::IsSystemPage(const page_id_t &pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % PAGE_FREE_SPACE_SIZE == 1 || pageId % GAM_NUMBER_OF_PAGES == 2; }
+bool Database::IsSystemPage(const page_id_t& pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % PAGE_FREE_SPACE_SIZE == 1 || pageId % GAM_NUMBER_OF_PAGES == 2; }
 
 page_id_t Database::GetPfsAssociatedPage(const page_id_t& pageId) { return (pageId / PAGE_FREE_SPACE_SIZE) * PAGE_FREE_SPACE_SIZE + 1;}
 

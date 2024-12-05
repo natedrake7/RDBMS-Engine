@@ -87,12 +87,12 @@ void Table::InsertRows(const vector<vector<Field>> &inputData)
         rowsInserted++;
     
         if(rowsInserted % 1000 == 0)
-            cout<< rowsInserted << endl;
+            cout << rowsInserted << endl;
     }
 
 
 
-    cout<<"Rows affected: "<<rowsInserted<<endl;
+    cout << "Rows affected: "<< rowsInserted << endl;
 }
 
 void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex)
@@ -112,35 +112,57 @@ void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& alloc
             block->SetData(nullptr, 0);
 
             row->SetNullBitMapValue(i, true);
+
+            const auto& columnIndex = columns[i]->GetColumnIndex();
+            row->InsertColumnData(block, columnIndex);
+
+            continue;
         }
-        else if (columnType == ColumnType::TinyInt)
+
+        switch (columnType)
         {
-            int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData[i].GetData());
-            block->SetData(&convertedTinyInt, sizeof(int8_t));
+            case ColumnType::TinyInt: 
+            {
+                int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData[i].GetData());
+                block->SetData(&convertedTinyInt, sizeof(int8_t));
+                break;
+            }
+            case ColumnType::SmallInt: 
+            {
+                int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData[i].GetData());
+                block->SetData(&convertedSmallInt, sizeof(int16_t));
+                break;
+            }
+            case ColumnType::Int: 
+            {
+                int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData[i].GetData());
+                block->SetData(&convertedInt, sizeof(int32_t));
+                break;
+            }
+            case ColumnType::BigInt: 
+            {
+                int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData[i].GetData());
+                block->SetData(&convertedBigInt, sizeof(int64_t));
+                break;
+            }
+            case ColumnType::String: 
+            {
+                const string& data = inputData[i].GetData();
+                block->SetData(data.c_str(), data.size());
+                break;
+            }
+            case ColumnType::Decimal:
+            case ColumnType::Double:
+            case ColumnType::LongDouble:
+            case ColumnType::UnicodeString:
+            case ColumnType::Bool:
+            case ColumnType::Null:
+                // Handle other cases if needed
+                break;
+            default:
+                throw invalid_argument("Unsupported column type");
         }
-        else if (columnType == ColumnType::SmallInt)
-        {
-            int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData[i].GetData());
-            block->SetData(&convertedSmallInt, sizeof(int16_t));
-        }
-        else if (columnType == ColumnType::Int)
-        {
-            //store each int value in 4 bits eg 04 -> 1 byte , 40 -> 8 bit
-            int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData[i].GetData());
-            block->SetData(&convertedInt, sizeof(int32_t));
-        }
-        else if (columnType == ColumnType::BigInt)
-        {
-            int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData[i].GetData());
-            block->SetData(&convertedBigInt, sizeof(int64_t));
-        }
-        else if (columnType == ColumnType::String)
-        {
-            const string& data = inputData[i].GetData();
-            block->SetData(data.c_str(), data.size());
-        }
-        else
-            throw invalid_argument("InsertRow : Unsupported Column Type");
+
 
         const auto& columnIndex = columns[i]->GetColumnIndex();
         row->InsertColumnData(block, columnIndex);
@@ -294,9 +316,9 @@ void Table::Select(vector<Row>& selectedRows, const vector<RowCondition*>* condi
     this->database->SelectTableRows(this->header.tableId, selectedRows, rowsToSelect, conditions);
 }
 
-void Table::Update(const vector<Block>* updates, const vector<RowCondition*>* conditions)
+void Table::Update(const vector<Block*>* updates, const vector<RowCondition*>* conditions)
 {
-
+    
 }
 
 void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId) { this->header.indexAllocationMapPageId = indexAllocationMapPageId; }

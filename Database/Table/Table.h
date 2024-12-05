@@ -89,7 +89,7 @@ class Table {
 
         void Select(vector<Row>& selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
 
-        void Update(const vector<Block>* updates, const vector<RowCondition*>* conditions = nullptr);
+        void Update(const vector<Block*>* updates, const vector<RowCondition*>* conditions = nullptr);
 
         void UpdateIndexAllocationMapPageId(const page_id_t& indexAllocationMapPageId);
     

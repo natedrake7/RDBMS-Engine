@@ -8,6 +8,7 @@
 #include "./Database/Row/Row.h"
 #include "AdditionalLibraries/PageManager/PageManager.h"
 #include "Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
+#include "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
 
 template<typename T>
 int CreateResponse(T input) { return static_cast<int>(input); }
@@ -28,30 +29,27 @@ int main()
     try
     {
         /*Get pages in select in chunks*/
-        CreateDatabase(dbName, &fileManager, pageManager);
+        // CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
 
         pageManager->BindDatabase(db);
 
         Table* table = db->OpenTable("Movies");
-        CreateAndInsertToDatabase(db, table);
+        // CreateAndInsertToDatabase(db, table);
 
         table = db->OpenTable("Movies");
-        char searchCond[]  = "Du Hast Miesch";
         int16_t searchKey = 1008;
         vector<RowCondition*> conditions;
-        RowCondition condition(searchCond, strlen(searchCond), 3);
         RowCondition condition2(&searchKey, sizeof(int16_t), 0);
 
-        conditions.push_back(&condition);
         conditions.push_back(&condition2);
         
         vector<Row> rows;
 
         const auto start = std::chrono::high_resolution_clock::now();
         
-        table->Select(rows, nullptr, 10);
+        table->Select(rows, nullptr);
 
         const auto end = std::chrono::high_resolution_clock::now();
 
@@ -60,7 +58,7 @@ int main()
         cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 
         PrintRows(rows);
-
+ 
         delete db;
         delete pageManager;
     }

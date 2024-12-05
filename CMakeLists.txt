@@ -21,7 +21,7 @@ add_library(AdditionalLibraries
         Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.cpp
         Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.h
         AdditionalLibraries/ByteMap/ByteMap.cpp
-        AdditionalLibraries/ByteMap/ByteMap.h)
+        AdditionalLibraries/ByteMap/ByteMap.h "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.cpp" "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h")
 add_library(Database
         Database/Database.cpp
         Database/Database.h
