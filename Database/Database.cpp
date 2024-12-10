@@ -249,6 +249,42 @@ void Database::SelectTableRows(const table_id_t& tableId, vector<Row>& selectedR
     }
 }
 
+void Database::UpdateTableRows(const table_id_t &tableId, const vector<RowCondition *> *conditions)
+{
+    const Table* table = this->GetTable(tableId);
+    
+    const IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table->GetTableHeader().indexAllocationMapPageId);
+
+    vector<extent_id_t> tableExtentIds;
+    tableMapPage->GetAllocatedExtents(&tableExtentIds);
+
+    for(const auto& extentId: tableExtentIds)
+    {
+        const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+        const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
+
+        const PageFreeSpacePage* pageFreeSpacePage = pageManager->GetPageFreeSpacePage(pfsPageId);
+        
+        const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                ? extentFirstPageId
+                                : extentFirstPageId + 1;
+
+        for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+        {
+            if(pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+                break;
+
+            const Page* page = this->pageManager->GetPage(extentPageId, extentId, table);
+
+            // page->
+
+            if (page->GetPageSize() == 0)
+                continue;
+        }  
+    }
+}
+
 Page* Database::CreateDataPage(const table_id_t& tableId)
 {
     PageFreeSpacePage* pageFreeSpacePage = nullptr;

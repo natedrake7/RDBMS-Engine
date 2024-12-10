@@ -5,54 +5,90 @@ DateTime::DateTime()
 	this->timeStamp = time(nullptr);
 }
 
-DateTime::DateTime(int year, int month, int day, int hour, int minute, int second)
+DateTime::DateTime(const int year, const int month, const int day, const int hour, const int minute, const int second)
 {
-	this->timeStamp = this->ToUnixTimeStamp(year, month, day, hour, minute, second);
+	this->timeStamp = DateTime::ToUnixTimeStamp(year, month, day, hour, minute, second);
 }
 
 DateTime::~DateTime() = default;
 
-int DateTime::GetYears() const { return localtime(&this->timeStamp)->tm_year + 1900; }
+int DateTime::GetYears() const 
+{ 
+	tm time = {};
+	
+	localtime_s(&time, &this->timeStamp);
+	return time.tm_year + 1900; 
+}
 
-int DateTime::GetMonths() const { return localtime(&this->timeStamp)->tm_mon + 1; }
+int DateTime::GetMonths() const 
+{ 
+	tm time = {};
 
-int DateTime::GetDays() const { return localtime(&this->timeStamp)->tm_mday; }
+	localtime_s(&time, &this->timeStamp);
+	return time.tm_mon + 1;
+}
 
-int DateTime::GetHours() const { return localtime(&this->timeStamp)->tm_hour; }
+int DateTime::GetDays() const 
+{ 
+	tm time = {};
 
-int DateTime::GetMinutes() const { return localtime(&this->timeStamp)->tm_min; }
+	localtime_s(&time, &this->timeStamp); 
+	return time.tm_mday;
+}
 
-int DateTime::GetSeconds() const { return localtime(&this->timeStamp)->tm_sec; }
+int DateTime::GetHours() const 
+{ 
+	tm time = {};
+	localtime_s(&time, &this->timeStamp);
 
-void DateTime::AddSeconds(int seconds) { this->timeStamp += seconds; }
+	return time.tm_hour; 
+}
 
-void DateTime::AddDays(int days) { this->timeStamp += days * SECONDS_OF_DAY; }
+int DateTime::GetMinutes() const 
+{ 
+	tm time = {};
+	localtime_s(&time, &this->timeStamp);
+	return time.tm_min; 
+}
 
-DateTime DateTime::Now() { return DateTime(); }
+int DateTime::GetSeconds() const 
+{ 
+	tm time = {};
+
+	localtime_s(&time, &this->timeStamp);
+	return time.tm_sec;
+}
+
+void DateTime::AddSeconds(const int seconds) { this->timeStamp += seconds; }
+
+void DateTime::AddDays(const int days) { this->timeStamp += days * SECONDS_OF_DAY; }
+
+DateTime DateTime::Now() { return { }; }
 
 DateTime DateTime::FromString(const string& date, const string& format)
 {
-	struct tm time = {};
+	tm time = {};
 	istringstream ss(date);
 
 	ss >> get_time(&time, format.c_str());
 
-	return DateTime(time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
+	return{ time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec };
 }
 
 string DateTime::ToString(const string& format) const
 {
-	struct tm* time = localtime(&this->timeStamp);
+	tm time {};
+	localtime_s(&time, &this->timeStamp);
 
 	char buffer[100];
-	strftime(buffer, sizeof(buffer), format.c_str(), time);
+	strftime(buffer, sizeof(buffer), format.c_str(), &time);
 
-	return string(buffer);
+	return { buffer };
 }
 
-time_t DateTime::ToUnixTimeStamp(int year, int month, int day, int hour, int minute, int second)
+time_t DateTime::ToUnixTimeStamp(const int year, const int month, const int day, const int hour, const int minute, const int second)
 {
-	struct tm time = {};
+	tm time = {};
 
 	time.tm_year = year - 1900;
 	time.tm_mon = month - 1;
@@ -64,7 +100,7 @@ time_t DateTime::ToUnixTimeStamp(int year, int month, int day, int hour, int min
 	return mktime(&time);
 }
 
-void DateTime::ValidateDate(int year, int month, int day, int hour, int minute, int second) 
+void DateTime::ValidateDate(const int year, const int month, const int day, const int hour, const int minute, const int second) 
 {
 	if (year < 1970 
 		|| month < 1 || month > 12 

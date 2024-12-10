@@ -227,3 +227,29 @@ void Page::GetRows(vector<Row>* copiedRows, const Table& table, const size_t& ro
         copiedRows->emplace_back(table, copyBlocks);
     }
 }
+
+void Page::UpdateRows(const vector<RowCondition *> *conditions)
+{
+    for(auto& row : this->rows)
+    {
+        RowHeader* rowHeader = row->GetHeader();
+
+        
+        
+        for(const auto& block : row->GetData())
+        {
+            Block* blockCopy = new Block(block);
+            if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
+            {
+                DataObjectPointer objectPointer;
+                memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
+
+                uint32_t objectSize;
+                unsigned char* largeValue = row->GetLargeObjectValue(objectPointer, &objectSize);
+                blockCopy->SetData(largeValue, objectSize);
+
+                delete[] largeValue;
+            }
+        }  
+    }
+}

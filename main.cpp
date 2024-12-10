@@ -39,7 +39,7 @@ int main()
         // CreateAndInsertToDatabase(db, table);
 
         table = db->OpenTable("Movies");
-        int16_t searchKey = 1008;
+        constexpr int16_t searchKey = 1008;
         vector<RowCondition*> conditions;
         RowCondition condition2(&searchKey, sizeof(int16_t), 0);
 
@@ -88,15 +88,15 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
     
     vector<vector<Field>> inputData;
     
-    for(int i = 0;i < 10000; i++)
+    for(int i = 0;i < 1000; i++)
     {
         vector<Field> fields = {
-            Field("1"),
-            Field("Silence Of The Lambs"),
-            Field("Thriller"),
-            Field("Du Hast Miesch"),
-            Field("hello" + to_string(i)),
-            Field("Hello its me you are llooooking for"),
+            Field("1", 0),
+            Field("Silence Of The Lambs", 1),
+            Field("Thriller", 2),
+            Field("Du Hast Miesch", 3),
+            Field("hello" + to_string(i), 4),
+            Field("Hello its me you are llooooking for", 5),
         };
 
         fields[0].SetData(to_string(i));

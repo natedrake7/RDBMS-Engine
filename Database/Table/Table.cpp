@@ -101,19 +101,20 @@ void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& alloc
     Row* row = new Row(*this);
     for(size_t i = 0;i < inputData.size(); ++i)
     {
-        Block* block = new Block(columns[i]);
-        const ColumnType columnType = columns[i]->GetColumnType();
+        const column_index_t& associatedColumnIndex = inputData[i].GetColumnIndex();
+        Block* block = new Block(columns[associatedColumnIndex]);
+        const ColumnType columnType = columns[associatedColumnIndex]->GetColumnType();
 
         if(inputData[i].GetIsNull())
         {
-            if(!columns[i]->GetAllowNulls())
-                throw invalid_argument("Column " + columns[i]->GetColumnName() + " does not allow NULLs. Insert Fails.");
+            if(!columns[associatedColumnIndex]->GetAllowNulls())
+                throw invalid_argument("Column " + columns[associatedColumnIndex]->GetColumnName() + " does not allow NULLs. Insert Fails.");
             
             block->SetData(nullptr, 0);
 
             row->SetNullBitMapValue(i, true);
 
-            const auto& columnIndex = columns[i]->GetColumnIndex();
+            const auto& columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
             row->InsertColumnData(block, columnIndex);
 
             continue;
@@ -164,7 +165,7 @@ void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& alloc
         }
 
 
-        const auto& columnIndex = columns[i]->GetColumnIndex();
+        const auto& columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
         row->InsertColumnData(block, columnIndex);
     }
 
@@ -316,7 +317,7 @@ void Table::Select(vector<Row>& selectedRows, const vector<RowCondition*>* condi
     this->database->SelectTableRows(this->header.tableId, selectedRows, rowsToSelect, conditions);
 }
 
-void Table::Update(const vector<Block*>* updates, const vector<RowCondition*>* conditions)
+void Table::Update(const vector<Field>& updates, const vector<RowCondition*>* conditions)
 {
     
 }

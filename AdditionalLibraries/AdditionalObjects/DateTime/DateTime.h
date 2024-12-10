@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <ctime>
 #include <stdexcept>
 #include <string>
@@ -15,8 +16,8 @@ class DateTime {
 	time_t timeStamp;
 
 	protected:
-		void ValidateDate(int year, int month, int day, int hour, int minute, int second);
-		time_t ToUnixTimeStamp(int year, int month, int day, int hour, int minute, int second);
+		static void ValidateDate(int year, int month, int day, int hour, int minute, int second);
+		static time_t ToUnixTimeStamp(int year, int month, int day, int hour, int minute, int second);
 
 	public:
 		DateTime();
