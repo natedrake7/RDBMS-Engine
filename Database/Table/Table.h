@@ -65,6 +65,7 @@ class Table {
                                         , const bool& isFirstRecursion
                                         , DataObject** previousDataObject);
         void InsertRow(const vector<Field>& inputData, vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex);
+        static void SetBlockDataByColumnType(Block *&block, const ColumnType &columnType, const Field& inputData);
 
     public:
         Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, Database* database);

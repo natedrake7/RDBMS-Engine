@@ -249,7 +249,7 @@ void Database::SelectTableRows(const table_id_t& tableId, vector<Row>& selectedR
     }
 }
 
-void Database::UpdateTableRows(const table_id_t &tableId, const vector<RowCondition *> *conditions)
+void Database::UpdateTableRows(const table_id_t &tableId, const vector<Block*>& updates, const vector<RowCondition*>* conditions)
 {
     const Table* table = this->GetTable(tableId);
     
@@ -275,12 +275,9 @@ void Database::UpdateTableRows(const table_id_t &tableId, const vector<RowCondit
             if(pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
                 break;
 
-            const Page* page = this->pageManager->GetPage(extentPageId, extentId, table);
+            Page* page = this->pageManager->GetPage(extentPageId, extentId, table);
 
-            // page->
-
-            if (page->GetPageSize() == 0)
-                continue;
+            page->UpdateRows(conditions);
         }  
     }
 }

@@ -120,41 +120,65 @@ void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& alloc
             continue;
         }
 
+        Table::SetBlockDataByColumnType(block, columnType, inputData[i]);
+
+
+        const auto& columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
+        row->InsertColumnData(block, columnIndex);
+    }
+
+    if(this->header.indexAllocationMapPageId > 0)
+    {
+        this->InsertLargeObjectToPage(row);
+
+        if (this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row))
+            return;
+    }
+    
+    Page* newPage = this->database->CreateDataPage(this->header.tableId);
+
+    this->InsertLargeObjectToPage(row);
+
+    newPage->InsertRow(row);
+}
+
+void Table::SetBlockDataByColumnType(Block *&block, const ColumnType &columnType, const Field& inputData)
+{
         switch (columnType)
         {
             case ColumnType::TinyInt: 
             {
-                int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData[i].GetData());
+                const int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData.GetData());
                 block->SetData(&convertedTinyInt, sizeof(int8_t));
                 break;
             }
             case ColumnType::SmallInt: 
             {
-                int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData[i].GetData());
+                const int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData.GetData());
                 block->SetData(&convertedSmallInt, sizeof(int16_t));
                 break;
             }
             case ColumnType::Int: 
             {
-                int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData[i].GetData());
+                const int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData.GetData());
                 block->SetData(&convertedInt, sizeof(int32_t));
                 break;
             }
             case ColumnType::BigInt: 
             {
-                int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData[i].GetData());
+                const int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData.GetData());
                 block->SetData(&convertedBigInt, sizeof(int64_t));
                 break;
             }
             case ColumnType::String: 
             {
-                const string& data = inputData[i].GetData();
+                const string& data = inputData.GetData();
                 block->SetData(data.c_str(), data.size());
                 break;
             }
             case ColumnType::Bool:
             {
-                const string& data = inputData[i].GetData();
+                const string& data = inputData.GetData();
 
                 bool value = false;
                 
@@ -175,25 +199,6 @@ void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& alloc
             default:
                 throw invalid_argument("Unsupported column type");
         }
-
-
-        const auto& columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
-        row->InsertColumnData(block, columnIndex);
-    }
-
-    if(this->header.indexAllocationMapPageId > 0)
-    {
-        this->InsertLargeObjectToPage(row);
-
-        if (this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row))
-            return;
-    }
-    
-    Page* newPage = this->database->CreateDataPage(this->header.tableId);
-
-    this->InsertLargeObjectToPage(row);
-
-    newPage->InsertRow(row);
 }
 
 void Table::InsertLargeObjectToPage(Row* row)
@@ -331,7 +336,22 @@ void Table::Select(vector<Row>& selectedRows, const vector<RowCondition*>* condi
 
 void Table::Update(const vector<Field>& updates, const vector<RowCondition*>* conditions)
 {
+    vector<Block*> updateBlocks;
+    for(const auto& field : updates)
+    {
+        const auto& associatedColumnIndex = field.GetColumnIndex();
+        const auto& columnType = this->columns[associatedColumnIndex]->GetColumnType();
+        
+        Block* block = new Block(this->columns[associatedColumnIndex]);
+
+        Table::SetBlockDataByColumnType(block, columnType, field);
+        updateBlocks.push_back(block);
+    }
     
+    this->database->UpdateTableRows(this->header.tableId, updateBlocks, conditions);
+
+    for(const auto& block : updateBlocks)
+        delete block;
 }
 
 void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId) { this->header.indexAllocationMapPageId = indexAllocationMapPageId; }

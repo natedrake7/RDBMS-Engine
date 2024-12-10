@@ -73,7 +73,7 @@ class  Database {
 
         void SelectTableRows(const table_id_t& tableId, vector<Row>& selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions) const;
 
-        void UpdateTableRows(const table_id_t& tableId, const vector<RowCondition*>* conditions);
+        void UpdateTableRows(const table_id_t& tableId, const vector<Block*>& updates, const vector<RowCondition*>* conditions);
 
         Page* CreateDataPage(const table_id_t& tableId);
 
