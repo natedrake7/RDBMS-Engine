@@ -152,12 +152,24 @@ void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& alloc
                 block->SetData(data.c_str(), data.size());
                 break;
             }
-            case ColumnType::Decimal:
-            case ColumnType::Double:
-            case ColumnType::LongDouble:
-            case ColumnType::UnicodeString:
             case ColumnType::Bool:
-            case ColumnType::Null:
+            {
+                const string& data = inputData[i].GetData();
+
+                bool value = false;
+                
+                if(data == "1")
+                    value = true;
+                else if(data == "0")
+                    value = false;
+                else
+                    throw invalid_argument("InsertRow: Invalid Boolean Value specified!");
+
+                block->SetData(&value, sizeof(bool));
+                break; 
+            }
+            case ColumnType::Decimal:
+            case ColumnType::UnicodeString:
                 // Handle other cases if needed
                 break;
             default:

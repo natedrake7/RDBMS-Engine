@@ -16,12 +16,9 @@ enum class ColumnType : uint8_t
     Int = 2,
     BigInt = 3,
     Decimal = 4,
-    Double = 5,
-    LongDouble = 6,
-    String = 7,
-    UnicodeString = 8,
-    Bool = 9,
-    Null = 10,
+    String = 5,
+    UnicodeString = 6,
+    Bool = 7,
 };
 
 typedef struct ColumnHeader {
