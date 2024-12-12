@@ -9,11 +9,11 @@
 #include "AdditionalLibraries/PageManager/PageManager.h"
 #include "Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
+#include "AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
 
 template<typename T>
 int CreateResponse(T input) { return static_cast<int>(input); }
 void CreateAndInsertToDatabase(Database* db, Table* table = nullptr);
-
 //handle updates
 //deletes
 //B+ Trees
@@ -39,9 +39,9 @@ int main()
         // CreateAndInsertToDatabase(db, table);
 
         table = db->OpenTable("Movies");
-        constexpr int16_t searchKey = 1008;
+        constexpr int searchKey = 90;
         vector<RowCondition*> conditions;
-        RowCondition condition2(&searchKey, sizeof(int16_t), 0);
+        RowCondition condition2(&searchKey, sizeof(int), 0);
 
         conditions.push_back(&condition2);
         
@@ -49,7 +49,7 @@ int main()
 
         const auto start = std::chrono::high_resolution_clock::now();
         
-        table->Select(rows, nullptr);
+        table->Select(rows, &conditions);
 
         const auto end = std::chrono::high_resolution_clock::now();
 

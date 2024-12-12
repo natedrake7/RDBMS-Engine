@@ -7,6 +7,7 @@
 #include "../../AdditionalLibraries/AdditionalObjects/RowCondition.h"
 #include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../Pages/Page.h"
 
 using namespace std;
 

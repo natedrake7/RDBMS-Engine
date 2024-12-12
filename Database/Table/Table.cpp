@@ -1,7 +1,6 @@
 ﻿#include "Table.h"
 
-#include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
-#include "../Pages/Page.h"
+#include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
 
 TableHeader::TableHeader()
 {
@@ -192,7 +191,22 @@ void Table::SetBlockDataByColumnType(Block *&block, const ColumnType &columnType
                 block->SetData(&value, sizeof(bool));
                 break; 
             }
+            case ColumnType::DateTime:
+            {
+                const string& data = inputData.GetData();
+
+                const time_t unixMilliseconds = DateTime::ToUnixTimeStamp(data);
+
+                block->SetData(&unixMilliseconds, sizeof(time_t));
+                break; 
+            }
             case ColumnType::Decimal:
+            {
+                const string& data = inputData.GetData();
+                                
+                
+                break;
+            }
             case ColumnType::UnicodeString:
                 // Handle other cases if needed
                 break;
@@ -331,7 +345,7 @@ void Table::Select(vector<Row>& selectedRows, const vector<RowCondition*>* condi
                         ? numeric_limits<size_t>::max()
                         : count;
 
-    this->database->SelectTableRows(this->header.tableId, selectedRows, rowsToSelect, conditions);
+    this->database->SelectTableRows(this->header.tableId, &selectedRows, rowsToSelect, conditions);
 }
 
 void Table::Update(const vector<Field>& updates, const vector<RowCondition*>* conditions)

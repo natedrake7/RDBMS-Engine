@@ -1,4 +1,11 @@
 #include "PageManager.h"
+#include "PageManager.h"
+#include "PageManager.h"
+#include "PageManager.h"
+#include "PageManager.h"
+#include "PageManager.h"
+#include "PageManager.h"
+#include "PageManager.h"
 
 bool PageManager::IsSystemCacheFull() const { return this->systemCache.size() == MAX_NUMBER_SYSTEM_PAGES; }
 
@@ -6,6 +13,10 @@ PageManager::PageManager(FileManager* fileManager)
 {
     this->fileManager = fileManager;
     this->database = nullptr;
+    this->cacheReaders = 0;
+    this->cacheWriters = 0;
+    this->dataReaders = 0;
+    this->dataWriters = 0;
 }
 
 PageManager::~PageManager()
@@ -24,6 +35,8 @@ void PageManager::BindDatabase(const Database *database) { this->database = data
 
 Page* PageManager::GetPage(const page_id_t& pageId, const extent_id_t& extentId, const Table* table)
 {
+    this->LockPageRead();
+
     auto pageHashIterator = this->cache.find(pageId);
 
     if(pageHashIterator == this->cache.end())
@@ -32,11 +45,17 @@ Page* PageManager::GetPage(const page_id_t& pageId, const extent_id_t& extentId,
         pageHashIterator = this->cache.find(pageId);
     }
 
+    //assign work to writer thread
+
     this->pageList.push_front(*pageHashIterator->second);
     this->pageList.erase(pageHashIterator->second);
     this->cache[pageId] = this->pageList.begin();
 
-    return *this->pageList.begin();
+    Page* page = *pageHashIterator->second;
+    
+    this->UnlockPageRead();
+
+    return page;
 }
 
 LargeDataPage* PageManager::GetLargeDataPage(const page_id_t &pageId, const extent_id_t& extentId, const Table *table)
@@ -237,6 +256,8 @@ GlobalAllocationMapPage* PageManager::GetGlobalAllocationMapPage(const page_id_t
 
 Page* PageManager::GetSystemPage(const page_id_t &pageId)
 {
+    this->LockSystemPageWrite();
+
     auto pageHashIterator = this->systemCache.find(pageId);
     const string& filename = this->database->GetFileName();
     
@@ -250,28 +271,33 @@ Page* PageManager::GetSystemPage(const page_id_t &pageId)
     this->systemPageList.erase(pageHashIterator->second);
     this->systemCache[pageId] = this->systemPageList.begin();
 
-    (*this->systemPageList.begin())->SetFileName(filename);
+    (*pageHashIterator->second)->SetFileName(filename);
 
-    return *this->systemPageList.begin();
+    Page* page = *pageHashIterator->second;
+
+    this->UnlockSystemPageWrite();
+
+    return page;
 }
 
 Page* PageManager::GetSystemPage(const page_id_t &pageId, const string& filename)
 {
-    auto pageHashIterator = this->systemCache.find(pageId);
+    auto pageHashIterator = this->SearchSystemPageInCache(pageId);
     
     if(pageHashIterator == this->systemCache.end())
     {
         this->OpenSystemPage(pageId, filename);
-        pageHashIterator = this->systemCache.find(pageId);
+
+        pageHashIterator = this->SearchSystemPageInCache(pageId);
     }
-    
     this->systemPageList.push_front(*pageHashIterator->second);
     this->systemPageList.erase(pageHashIterator->second);
     this->systemCache[pageId] = this->systemPageList.begin();
+    // this->MoveSystemPageToStart(pageHashIterator->second);
 
-    (*this->systemPageList.begin())->SetFileName(filename);
+    (*pageHashIterator->second)->SetFileName(filename);
 
-    return *this->systemPageList.begin();
+    return (*pageHashIterator->second);
 }
 
 void PageManager::OpenSystemPage(const page_id_t &pageId)
@@ -297,11 +323,15 @@ void PageManager::OpenSystemPage(const page_id_t &pageId)
 
     PageManager::AllocateMemoryBasedOnSystemPageType(&page, pageHeader);
 
+    //this->LockSystemPageWrite();
+
     this->systemPageList.push_front(page);
-    
+    this->systemCache[pageId] = this->systemPageList.begin();
+
+    //this->UnlockSystemPageWrite();
+
     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
 
-    this->systemCache[pageId] = this->systemPageList.begin();
 }
 
 void PageManager::OpenSystemPage(const page_id_t &pageId, const string &filename)
@@ -323,19 +353,32 @@ void PageManager::OpenSystemPage(const page_id_t &pageId, const string &filename
 
     Page* page = nullptr;
     PageManager::AllocateMemoryBasedOnSystemPageType(&page, pageHeader);
+
+    //this->LockSystemPageWrite();
     
     this->systemPageList.push_front(page);
+
+    this->systemCache[pageId] = this->systemPageList.begin();
+
+    //this->UnlockSystemPageWrite();
     
     page->GetPageDataFromFile(buffer, nullptr, offSet, file);
 
-    this->systemCache[pageId] = this->systemPageList.begin();
 }
 
 void PageManager::RemoveSystemPage()
 {
+    //this->LockSystemPageWrite();
+
     Page* page = this->systemPageList.back();
-    
+
     const page_id_t pageId = page->GetPageId();
+
+    this->systemCache.erase(pageId);
+
+    this->systemPageList.pop_back();
+
+    //this->UnlockSystemPageWrite();
 
     if(page->GetPageDirtyStatus())
     {
@@ -349,10 +392,6 @@ void PageManager::RemoveSystemPage()
 
         page->WritePageToFile(file);
     }
-
-    this->systemCache.erase(pageId);
-
-    this->systemPageList.pop_back();
 
     delete page;
 }
@@ -380,6 +419,29 @@ void PageManager::AllocateMemoryBasedOnSystemPageType(Page **page, const PageHea
 ////////////////////////////////////////////////////////////////////
 /////////////////////////Globally Used Functions///////////////////
 //////////////////////////////////////////////////////////////////
+
+unordered_map<page_id_t, PageIterator>::iterator PageManager::SearchSystemPageInCache(const page_id_t& pageId)
+{
+    //Page* page = nullptr;
+
+    //this->LockSystemPageRead();
+
+    return this->systemCache.find(pageId);
+
+    //this->UnlockSystemPageRead();
+}
+
+void PageManager::MoveSystemPageToStart(const PageIterator& pageIterator)
+{
+    //this->LockSystemPageWrite();
+
+    this->systemPageList.push_front(*pageIterator);
+    this->systemPageList.erase(pageIterator);
+    this->systemCache[(*pageIterator)->GetPageId()] = this->systemPageList.begin();
+
+    //this->UnlockSystemPageWrite();
+}
+
 
 void PageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader &pageHeader)
 {
@@ -478,4 +540,80 @@ void PageManager::SetWriteFilePointerToOffset(fstream *file, const streampos& of
     file->clear();
     file->seekp(0, ios::beg);
     file->seekp(offSet);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////Thread Synchronization//////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////
+
+void PageManager::LockSystemPageRead()
+{
+    unique_lock<mutex> lock(this->systemPageListMutex);
+
+    this->systemConditionVariable.wait(lock, [this]() { return this->cacheWriters == 0;  });
+
+    this->cacheReaders++;
+}
+
+void PageManager::UnlockSystemPageRead()
+{
+    unique_lock<mutex> lock(this->systemPageListMutex);
+    this->cacheReaders--;
+
+    if (this->cacheReaders == 0)
+        this->systemConditionVariable.notify_all();
+}
+
+void PageManager::LockSystemPageWrite()
+{
+    unique_lock<mutex> lock(this->systemPageListMutex);
+
+    this->systemConditionVariable.wait(lock, [this]() { return this->cacheReaders == 0 && this->cacheWriters == 0; });
+
+    this->cacheWriters++;
+}
+
+void PageManager::UnlockSystemPageWrite()
+{
+    unique_lock<mutex> lock(this->systemPageListMutex);
+
+    this->cacheWriters--;
+
+    this->systemConditionVariable.notify_all();
+}
+
+void PageManager::LockPageRead()
+{
+    unique_lock<mutex> lock(this->pageListMutex);
+
+    this->dataConditionVariable.wait(lock, [this]() { return this->dataWriters == 0;  });
+
+    this->dataReaders++;
+}
+
+void PageManager::UnlockPageRead()
+{
+    unique_lock<mutex> lock(this->pageListMutex);
+    this->dataReaders--;
+
+    if (this->dataReaders == 0)
+        this->dataConditionVariable.notify_all();
+}
+
+void PageManager::LockPageWrite()
+{
+    unique_lock<mutex> lock(this->pageListMutex);
+
+    this->dataConditionVariable.wait(lock, [this]() { return this->dataReaders == 0 && this->dataWriters == 0; });
+
+    this->dataWriters++;
+}
+
+void PageManager::UnlockPageWrite()
+{
+    unique_lock<mutex> lock(this->pageListMutex);
+
+    this->dataWriters--;
+
+    this->dataConditionVariable.notify_all();
 }

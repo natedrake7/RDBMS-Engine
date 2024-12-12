@@ -19,6 +19,7 @@ enum class ColumnType : uint8_t
     String = 5,
     UnicodeString = 6,
     Bool = 7,
+    DateTime = 8,
 };
 
 typedef struct ColumnHeader {

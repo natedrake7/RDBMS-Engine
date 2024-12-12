@@ -35,7 +35,8 @@ class DateTime {
 		void AddDays(int days);
 
 		static DateTime Now();
-		static DateTime FromString(const string& date, const string& format);
+		static time_t ToUnixTimeStamp(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
+		static DateTime FromString(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
 
 		string ToString(const string& format = "%Y-%m-%d %H:%M:%S") const;
 

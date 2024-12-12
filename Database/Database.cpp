@@ -65,7 +65,7 @@ Database::Database(const string &dbName, PageManager *pageManager)
     this->fileExtension = ".db";
     this->pageManager = pageManager;
 
-    HeaderPage* page = pageManager->GetHeaderPage(this->filename + this->fileExtension);
+    const HeaderPage* page = pageManager->GetHeaderPage(this->filename + this->fileExtension);
 
     this->header = page->GetDatabaseHeader();
     const vector<TableFullHeader> tablesFullHeaders = page->GetTablesFullHeaders();
@@ -80,8 +80,6 @@ Database::~Database()
     this->WriteHeaderToFile();
     for (const auto& dbTable : this->tables)
         delete dbTable;
-
-    // delete this->hashTable;
 }
 
 Table* Database::CreateTable(const string &tableName, const vector<Column *> &columns)
@@ -209,8 +207,7 @@ bool Database::InsertRowToPage(const Table &table,vector<extent_id_t>& allocated
 
     return false;
 }
-
-void Database::SelectTableRows(const table_id_t& tableId, vector<Row>& selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions) const
+void Database::SelectTableRows(const table_id_t& tableId, vector<Row>* selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions)
 {
     const Table* table = this->GetTable(tableId);
     
@@ -219,33 +216,54 @@ void Database::SelectTableRows(const table_id_t& tableId, vector<Row>& selectedR
     vector<extent_id_t> tableExtentIds;
     tableMapPage->GetAllocatedExtents(&tableExtentIds);
 
-    for(const auto& extentId: tableExtentIds)
+    vector<thread> workerThreads;
+    for (const auto& extentId : tableExtentIds)
     {
-        const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+        workerThreads.emplace_back([this, selectedRows , conditions
+                                    , rowsToSelect , extentId, tableMapPage , table]
+                                    { ThreadSelect(table , tableMapPage , extentId
+                                                , rowsToSelect , conditions, selectedRows);});
+    }
 
-        const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
+    for (auto& workerThread : workerThreads)
+        workerThread.join();
+}
 
-        const PageFreeSpacePage* pageFreeSpacePage = pageManager->GetPageFreeSpacePage(pfsPageId);
-        
-        const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
-                                ? extentFirstPageId
-                                : extentFirstPageId + 1;
+void Database::ThreadSelect(const Table* table
+                    , const IndexAllocationMapPage* tableMapPage
+                    , const extent_id_t& extentId
+                    , const size_t& rowsToSelect
+                    , const vector<RowCondition*>* conditions
+                    , vector<Row>* selectedRows)
+{
+    const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-        for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
-        {
-            if(pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
-                break;
+    const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
 
-            const Page* page = this->pageManager->GetPage(extentPageId, extentId, table);
+    const PageFreeSpacePage* pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(pfsPageId);
 
-            if (page->GetPageSize() == 0)
-                continue;
-            
-            page->GetRows(&selectedRows, *table, rowsToSelect, conditions);
+    const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+        ? extentFirstPageId
+        : extentFirstPageId + 1;
 
-            if(selectedRows.size() >= rowsToSelect)
-                return;
-        }   
+    for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+    {
+        if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+            break;
+
+        const Page* page = this->pageManager->GetPage(extentPageId, extentId, table);
+
+        if (page->GetPageSize() == 0)
+            continue;
+
+        this->pageSelectMutex.lock();
+
+        page->GetRows(selectedRows, *table, rowsToSelect, conditions);
+
+        this->pageSelectMutex.unlock();
+
+        if (selectedRows->size() >= rowsToSelect)
+            return;
     }
 }
 

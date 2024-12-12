@@ -58,6 +58,9 @@ typedef uint16_t byte_map_size_t;
 typedef uint16_t byte_map_pos_t;
 typedef uint8_t byte;
 
+//decimal constants
+typedef uint8_t fraction_index_t;
+
 constexpr uint16_t OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
 
 constexpr uint16_t PAGE_FREE_SPACE_SIZE = 8088;

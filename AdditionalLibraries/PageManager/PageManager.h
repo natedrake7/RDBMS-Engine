@@ -1,4 +1,5 @@
 #pragma once
+#include <condition_variable>
 #include <list>
 #include <mutex>
 #include <unordered_map>
@@ -11,7 +12,6 @@
 #include "../../Database/Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "../../Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "../FileManager/FileManager.h"
-
 
 class IndexAllocationMapPage;
 class GlobalAllocationMapPage;
@@ -35,6 +35,12 @@ class PageManager {
     const Database* database;
     mutex pageListMutex;
     mutex systemPageListMutex;
+    condition_variable systemConditionVariable;
+    condition_variable dataConditionVariable;
+    int cacheReaders;
+    int cacheWriters;
+    int dataReaders;
+    int dataWriters;
     
     protected:
         void RemovePage();
@@ -46,10 +52,6 @@ class PageManager {
         void OpenSystemPage(const page_id_t &pageId, const string &filename);
         Page* GetSystemPage(const page_id_t& pageId);
         Page* GetSystemPage(const page_id_t &pageId, const string& filename);
-        // HeaderPage* OpenHeaderPage(const string& filename);
-        // GlobalAllocationMapPage* OpenGlobalAllocationMapPage(const string& filename);
-        // IndexAllocationMapPage* OpenIndexAllocationMapPage(const page_id_t& pageId);
-        // PageFreeSpacePage* OpenPageFreeSpacePage(const page_id_t& pageId);
         static void SetReadFilePointerToOffset(fstream* file, const streampos& offSet);
         static void SetWriteFilePointerToOffset(fstream* file, const streampos& offSet);
         static PageHeader GetPageHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
@@ -61,6 +63,16 @@ class PageManager {
         void ReadSystemPageFromFile(Page* page, const vector<char>& buffer, const page_id_t& pageId, page_offset_t& offSet, fstream* file);
         void ReadPageFromFile(Page *page, const vector<char> &buffer, const Table *table, page_offset_t &offSet, fstream *file);
         bool IsSystemCacheFull() const;
+        void LockSystemPageRead();
+        void UnlockSystemPageRead();
+        void LockSystemPageWrite();
+        void UnlockSystemPageWrite();
+        void LockPageRead();
+        void UnlockPageRead();
+        void LockPageWrite();
+        void UnlockPageWrite();
+        unordered_map<page_id_t, PageIterator>::iterator SearchSystemPageInCache(const page_id_t& pageId);
+        void MoveSystemPageToStart(const PageIterator& pageIterator);
 
     public:
         explicit PageManager(FileManager* fileManager);

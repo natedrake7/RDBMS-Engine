@@ -65,6 +65,13 @@ void DateTime::AddDays(const int days) { this->timeStamp += days * SECONDS_OF_DA
 
 DateTime DateTime::Now() { return { }; }
 
+time_t DateTime::ToUnixTimeStamp(const string &date, const string &format)
+{
+	const DateTime dateTime = DateTime::FromString(date, format);
+
+	return DateTime::ToUnixTimeStamp(dateTime.GetYears(), dateTime.GetMonths(), dateTime.GetDays(), dateTime.GetHours(), dateTime.GetMinutes(), dateTime.GetSeconds());
+}
+
 DateTime DateTime::FromString(const string& date, const string& format)
 {
 	tm time = {};

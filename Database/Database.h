@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include "Constants.h"
+#include <thread>
 
 using namespace std;
 
@@ -28,6 +29,8 @@ class Page;
 class LargeDataPage;
 class Table;
 class PageFreeSpacePage;
+class IndexAllocationMapPage;
+class Column;
 
 enum
 {
@@ -40,6 +43,7 @@ class  Database {
     string fileExtension;
     vector<Table*> tables;
     PageManager* pageManager;
+    mutex pageSelectMutex;
 
     protected:
         void ValidateTableCreation(Table* table) const;
@@ -55,6 +59,12 @@ class  Database {
                             , extent_id_t* newExtentId
                             , const table_id_t& tableId);
         const Table* GetTable(const table_id_t& tableId) const;
+        void ThreadSelect(const Table* table
+            , const IndexAllocationMapPage* tableMapPage
+            , const extent_id_t& extentId
+            , const size_t& rowsToSelect
+            , const vector<RowCondition*>* conditions
+            , vector<Row>* selectedRows);
     
     public:
         explicit Database(const string& dbName, PageManager* pageManager);
@@ -71,7 +81,7 @@ class  Database {
 
         bool InsertRowToPage(const Table &table,vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row *row);
 
-        void SelectTableRows(const table_id_t& tableId, vector<Row>& selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions) const;
+        void SelectTableRows(const table_id_t& tableId, vector<Row>* selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions);
 
         void UpdateTableRows(const table_id_t& tableId, const vector<Block*>& updates, const vector<RowCondition*>* conditions);
 
