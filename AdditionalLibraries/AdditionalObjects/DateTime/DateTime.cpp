@@ -10,6 +10,11 @@ DateTime::DateTime(const int year, const int month, const int day, const int hou
 	this->timeStamp = DateTime::ToUnixTimeStamp(year, month, day, hour, minute, second);
 }
 
+DateTime::DateTime(const time_t &timestamp)
+{
+	this->timeStamp = timestamp;
+}
+
 DateTime::~DateTime() = default;
 
 int DateTime::GetYears() const 

@@ -41,7 +41,7 @@ class Column {
         ColumnType SetColumnType() const;
 
     public:
-        Column(const string& columnName, const string&  recordType, const row_size_t&  recordSize, const bool& allowNulls);
+        Column(const string& columnName, const string& columnTypeLiteral, const row_size_t&  recordSize, const bool& allowNulls);
 
         explicit Column(const ColumnHeader& header, const Table* table);
 

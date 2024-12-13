@@ -1,6 +1,7 @@
 ﻿#include "Table.h"
 
 #include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
+#include "../../AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
 
 TableHeader::TableHeader()
 {
@@ -89,8 +90,6 @@ void Table::InsertRows(const vector<vector<Field>> &inputData)
             cout << rowsInserted << endl;
     }
 
-
-
     cout << "Rows affected: "<< rowsInserted << endl;
 }
 
@@ -120,7 +119,6 @@ void Table::InsertRow(const vector<Field>& inputData, vector<extent_id_t>& alloc
         }
 
         Table::SetBlockDataByColumnType(block, columnType, inputData[i]);
-
 
         const auto& columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
         row->InsertColumnData(block, columnIndex);
@@ -203,7 +201,10 @@ void Table::SetBlockDataByColumnType(Block *&block, const ColumnType &columnType
             case ColumnType::Decimal:
             {
                 const string& data = inputData.GetData();
-                                
+
+                const Decimal decimalValue(data);
+
+                block->SetData(decimalValue.GetRawData(), decimalValue.GetRawDataSize());
                 
                 break;
             }

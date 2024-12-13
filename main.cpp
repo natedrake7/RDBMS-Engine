@@ -37,7 +37,6 @@ int main()
 
         Table* table = db->OpenTable("Movies");
         // CreateAndInsertToDatabase(db, table);
-
         table = db->OpenTable("Movies");
         constexpr int searchKey = 90;
         vector<RowCondition*> conditions;
@@ -49,7 +48,7 @@ int main()
 
         const auto start = std::chrono::high_resolution_clock::now();
         
-        table->Select(rows, &conditions);
+        table->Select(rows);
 
         const auto end = std::chrono::high_resolution_clock::now();
 
@@ -79,24 +78,24 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
         columns.push_back(new Column("MovieID", "Int", sizeof(int), false));
         columns.push_back(new Column("MovieName", "String", 100, true));
         columns.push_back(new Column("MovieType", "String", 100, true));
-        columns.push_back(new Column("MovieDesc", "String", 100, true));
-        columns.push_back(new Column("MovieActors", "String", 100, true));
-        columns.push_back(new Column("MovieLength", "String", 100, true));
+        columns.push_back(new Column("MovieReleaseDate", "DateTime", sizeof(time_t), true));
+        columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
+        columns.push_back(new Column("MovieLength", "Decimal", sizeof(double), true));
 
         table = db->CreateTable("Movies", columns);
     }
     
     vector<vector<Field>> inputData;
     
-    for(int i = 0;i < 1000; i++)
+    for(int i = 0;i < 1; i++)
     {
         vector<Field> fields = {
             Field("1", 0),
             Field("Silence Of The Lambs", 1),
             Field("Thriller", 2),
-            Field("Du Hast Miesch", 3),
-            Field("hello" + to_string(i), 4),
-            Field("Hello its me you are llooooking for", 5),
+            Field("2024-04-12 12:12:12", 3),
+            Field("1", 4),
+            Field("1233232.12434343", 5),
         };
 
         fields[0].SetData(to_string(i));

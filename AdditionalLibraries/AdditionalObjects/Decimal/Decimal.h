@@ -15,10 +15,15 @@ class Decimal final {
     public:
         Decimal();
         explicit Decimal(const string& value);
+        explicit Decimal(const byte* data, const int& dataSize);
         ~Decimal();
 
 
         bool IsPositive() const;
         fraction_index_t GetFractionIndex() const;
-        string ToString() const;    
+        string ToString() const;
+
+        const byte* GetRawData() const;
+
+        int GetRawDataSize() const;
 };

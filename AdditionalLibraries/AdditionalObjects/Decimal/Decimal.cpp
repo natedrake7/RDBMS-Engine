@@ -1,8 +1,5 @@
 ﻿#include "Decimal.h"
 
-#include <iostream>
-#include <sstream>
-
 Decimal::Decimal() = default;
 
 Decimal::Decimal(const string& value)
@@ -37,6 +34,11 @@ Decimal::Decimal(const string& value)
 
 }
 
+Decimal::Decimal(const byte* data, const int& dataSize)
+{
+    this->bytes = vector<byte>(data, data + dataSize);
+}
+
 Decimal::~Decimal() = default;
 
 bool Decimal::IsPositive() const { return ( this->bytes.at(0) >> 7 ) & 0x01; }
@@ -66,6 +68,10 @@ string Decimal::ToString() const
 
     return result;
 }
+
+const byte* Decimal::GetRawData() const { return this->bytes.data(); }
+
+int Decimal::GetRawDataSize() const { return this->bytes.size(); }
 
 fraction_index_t Decimal::GetFractionIndex(const string& value)
 {

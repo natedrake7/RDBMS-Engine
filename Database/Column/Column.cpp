@@ -51,6 +51,8 @@ ColumnType Column::SetColumnType() const {
         return ColumnType::String;
     if (this->header.columnTypeLiteral == "Bool")
         return ColumnType::Bool;
+    if (this->header.columnTypeLiteral == "DateTime")
+        return ColumnType::DateTime;
 
     throw runtime_error("Column type not recognized");
 }

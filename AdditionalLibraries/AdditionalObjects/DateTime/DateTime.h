@@ -22,6 +22,7 @@ class DateTime {
 	public:
 		DateTime();
 		DateTime(int year, int month, int day, int hour = 0, int minute = 0, int second = 0);
+		DateTime(const time_t& timestamp);
 		~DateTime();
 
 		int GetYears() const;

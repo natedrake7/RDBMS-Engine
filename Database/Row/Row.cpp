@@ -1,5 +1,8 @@
 ﻿#include "Row.h"
 
+#include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
+#include "../../AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
+
 RowHeader::RowHeader()
 {
     this->rowSize = 0;
@@ -111,6 +114,28 @@ void Row::PrintRow() const
         }
         else if(columnType == ColumnType::String)
             cout.write(reinterpret_cast<const char*>(blockData), blockSize);
+        else if (columnType == ColumnType::Decimal)
+        {
+            Decimal decimalValue(blockData, blockSize);
+
+            cout << decimalValue.ToString();
+        }
+        else if (columnType == ColumnType::Bool)
+        {
+            bool booleanValue;
+            memcpy(&booleanValue, blockData, sizeof(bool));
+            cout << booleanValue;
+        }
+        else if (columnType == ColumnType::DateTime)
+        {
+            time_t timeValue;
+            memcpy(&timeValue, blockData, blockSize);
+            
+            DateTime date(timeValue);
+
+            cout << date.ToString();
+        }
+
 
         if(i == this->data.size() - 1)
             cout << '\n';
