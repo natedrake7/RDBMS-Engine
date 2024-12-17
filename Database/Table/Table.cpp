@@ -1,8 +1,5 @@
 ﻿#include "Table.h"
 
-#include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
-#include "../../AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
-
 TableHeader::TableHeader()
 {
     this->indexAllocationMapPageId = 0;
@@ -10,6 +7,7 @@ TableHeader::TableHeader()
     this->maxRowSize = 0;
     this->numberOfColumns = 0;
     this->tableNameSize = 0;
+    this->clusteredIndexPageId = 0;
     this->columnsNullBitMap = nullptr;
 }
 
@@ -29,7 +27,12 @@ TableHeader& TableHeader::operator=(const TableHeader &tableHeader)
     this->tableNameSize = tableHeader.tableNameSize;
     this->tableName = tableHeader.tableName;
     this->tableId = tableHeader.tableId;
+    this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
+
     this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
+
+    this->clusteredIndexes = tableHeader.clusteredIndexes;
+    this->nonClusteredIndexes = tableHeader.nonClusteredIndexes;
     
     return *this;
 }
@@ -295,7 +298,7 @@ void Table::RecursiveInsertToLargePage(Row*& row
     Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion, objectIndex, largeDataPage->GetPageId(), columnIndex);
 }
 
-LargeDataPage* Table::GetOrCreateLargeDataPage()
+LargeDataPage* Table::GetOrCreateLargeDataPage() const
 {
     LargeDataPage* largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId, OBJECT_METADATA_SIZE_T + 1);
 
@@ -317,7 +320,7 @@ void Table::InsertLargeDataObjectPointerToRow(Row* row
         , const bool& isFirstRecursion
         , const large_page_index_t& objectIndex
         , const page_id_t& lastLargePageId
-        , const column_index_t& largeBlockIndex)
+        , const column_index_t& largeBlockIndex) const
 {
     if (!isFirstRecursion)
         return;
@@ -349,7 +352,7 @@ void Table::Select(vector<Row>& selectedRows, const vector<RowCondition*>* condi
     this->database->SelectTableRows(this->header.tableId, &selectedRows, rowsToSelect, conditions);
 }
 
-void Table::Update(const vector<Field>& updates, const vector<RowCondition*>* conditions)
+void Table::Update(const vector<Field>& updates, const vector<RowCondition*>* conditions) const
 {
     vector<Block*> updateBlocks;
     for(const auto& field : updates)
@@ -380,3 +383,16 @@ string& Table::GetTableName(){ return this->header.tableName; }
 row_size_t& Table::GetMaxRowSize(){ return this->header.maxRowSize; }
 
 const table_id_t& Table::GetTableId() const { return this->header.tableId; }
+
+TableType Table::GetTableType() const { return this->header.clusteredIndexes.empty() ? TableType::HEAP : TableType::CLUSTERED; }
+
+row_size_t Table::GetMaximumRowSize() const
+{
+    row_size_t maximumRowSize = 0;
+    for (const auto& column : this->columns)
+            maximumRowSize += ( column->isColumnLOB() )
+                        ? sizeof(DataObjectPointer)
+                        : column->GetColumnSize();
+
+    return maximumRowSize;
+}

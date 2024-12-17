@@ -17,7 +17,7 @@ class PageFreeSpacePage final: public Page{
         void SetPageFreed(const page_id_t& pageId);
         bool IsPageAllocated(const page_id_t& pageId) const;
         PageType GetPageType(const page_id_t& pageId) const;
-        byte GetPageSizeCategory(const page_id_t& pageId) const;
+        Constants::byte GetPageSizeCategory(const page_id_t& pageId) const;
         void GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) override;
         void WritePageToFile(fstream *filePtr) override;
         void SetPageMetaData(const Page* page);

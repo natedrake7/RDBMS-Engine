@@ -2,14 +2,14 @@
 
 ByteMap::ByteMap() = default;
 
-ByteMap::ByteMap(const byte_map_size_t &size)
+ByteMap::ByteMap(const Constants::byte_map_size_t &size)
 {
     this->data.resize(size, 0);
 }
 
 ByteMap::~ByteMap() = default;
 
-void ByteMap::SetPageIsAllocated(const byte_map_pos_t &pos, const bool& isAllocated)
+void ByteMap::SetPageIsAllocated(const Constants::byte_map_pos_t &pos, const bool& isAllocated)
 {
     this->CheckIndex(pos);
     if (isAllocated)
@@ -21,7 +21,7 @@ void ByteMap::SetPageIsAllocated(const byte_map_pos_t &pos, const bool& isAlloca
     data[pos] &= ~0x01; // Clear bit 0
 }
 
-bool ByteMap::IsAllocated(const byte_map_pos_t& pos) const
+bool ByteMap::IsAllocated(const Constants::byte_map_pos_t& pos) const
 {
     this->CheckIndex(pos);
     return data[pos] & 0x01;
@@ -34,7 +34,7 @@ void ByteMap::CheckIndex(const byte_map_pos_t& pos) const
 }
 
 // Set the page type (bits 1-2)
-void ByteMap::SetPageType(const byte_map_pos_t& pos, const byte& type)
+void ByteMap::SetPageType(const byte_map_pos_t& pos, const Constants::byte& type)
 {
     this->CheckIndex(pos);
     if (type > 0x03)
@@ -44,14 +44,14 @@ void ByteMap::SetPageType(const byte_map_pos_t& pos, const byte& type)
 }
 
 // Get the page type (bits 1-2)
-byte ByteMap::GetPageType(const byte_map_pos_t& pos) const
+Constants::byte ByteMap::GetPageType(const byte_map_pos_t& pos) const
 {
     this->CheckIndex(pos);
     return (data[pos] & 0x06) >> 1; // Extract bits 1-2
 }
 
 // Set the free space percentage (bits 3-7)
-void ByteMap::SetFreeSpace(const byte_map_pos_t& pos, const byte& percentage)
+void ByteMap::SetFreeSpace(const byte_map_pos_t& pos, const Constants::byte& percentage)
 {
     this->CheckIndex(pos);
     
@@ -71,7 +71,7 @@ page_size_t ByteMap::GetFreeSpace(const byte_map_pos_t& pos) const
     return (data[pos] & 0xF8) >> 3; // Extract bits 3-7
 }
 
-void ByteMap::SetByte(const byte_map_pos_t &position, const byte &value)
+void ByteMap::SetByte(const byte_map_pos_t &position, const Constants::byte &value)
 {
     if (position < this->data.size())
         data[position] = value;
@@ -81,17 +81,17 @@ void ByteMap::GetDataFromFile(const vector<char> &data, page_offset_t &offset, c
 {
     for (bit_map_size_t i = 0; i < byteMapSize; i++)
     {
-        byte value;
-        memcpy(&value, data.data() + offset, sizeof(byte));
+        Constants::byte value;
+        memcpy(&value, data.data() + offset, sizeof(Constants::byte));
         this->SetByte(i, value);
 
-        offset += sizeof(byte);
+        offset += sizeof(Constants::byte);
     }
 }
 
 void ByteMap::WriteDataToFile(fstream *filePtr)
 {
-    filePtr->write(reinterpret_cast<const char*>(this->data.data()), this->data.size() * sizeof(byte));
+    filePtr->write(reinterpret_cast<const char*>(this->data.data()), this->data.size() * sizeof(Constants::byte));
 }
 
 void ByteMap::Print() const

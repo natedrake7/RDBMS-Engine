@@ -12,6 +12,7 @@
 #include "../../Database/Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "../../Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "../FileManager/FileManager.h"
+#include "../../Database/Pages/IndexPage/IndexPage.h"
 
 class IndexAllocationMapPage;
 class GlobalAllocationMapPage;
@@ -21,6 +22,7 @@ class HeaderPage;
 class Page;
 class Database;
 class Table;
+class IndexPage;
 
 using namespace std;
 
@@ -92,5 +94,7 @@ class PageManager {
         PageFreeSpacePage* CreatePageFreeSpacePage(const string &filename, const page_id_t& pageId);
         PageFreeSpacePage* CreatePageFreeSpacePage(const page_id_t& pageId);
         PageFreeSpacePage* GetPageFreeSpacePage(const page_id_t& pageId);
+        IndexPage* CreateIndexPage(const page_id_t& pageId);
+        IndexPage* GetIndexPage(const page_id_t &pageId);
         bool IsCacheFull() const;
 };

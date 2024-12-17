@@ -1,5 +1,6 @@
 ﻿#include "Database.h"
 
+
 void Database::ValidateTableCreation(Table* table) const
 {
     for (const auto& dbTable : this->tables)
@@ -39,9 +40,9 @@ page_id_t Database::CalculateSystemPageOffset(const page_id_t& pageId)
     return pageId + pfsPages + gamPages + 1;
 }
 
-byte Database::GetObjectSizeToCategory(const row_size_t &size)
+Constants::byte Database::GetObjectSizeToCategory(const row_size_t &size)
 {
-    static const byte categories[] = {0, 1, 5, 9, 13, 17, 21, 25, 29};
+    static const Constants::byte categories[] = {0, 1, 5, 9, 13, 17, 21, 25, 29};
     const float freeSpacePercentage = static_cast<float>(size) / PAGE_SIZE;
     const int index = static_cast<int>(freeSpacePercentage * 8); // Map 0.0–1.0 to 0–8
 
@@ -162,41 +163,62 @@ void Database::DeleteDatabase() const
         throw runtime_error("Database " + this->filename + " could not be deleted");
 }
 
-bool Database::InsertRowToPage(const Table &table,vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row *row)
+bool Database::InsertRowToPage(const Table &table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row *row) const
+{
+    return ( table.GetTableType() == TableType::CLUSTERED )
+                ? this->InsertRowToClusteredIndex(table, allocatedExtents, lastExtentIndex, row)
+                : this->InsertRowToHeapTable(table, allocatedExtents, lastExtentIndex, row);
+}
+
+bool Database::InsertRowToClusteredIndex(const Table& table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row* row) const
+{
+    const auto& tableHeader = table.GetTableHeader();
+
+    const IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
+
+    IndexPage* indexPage = this->pageManager->GetIndexPage(tableHeader.clusteredIndexPageId);
+
+    // indexPage->InsertRow();
+    
+
+    return false;
+}
+
+bool Database::InsertRowToHeapTable(const Table& table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row* row) const
 {
     const IndexAllocationMapPage* tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
 
     tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
     lastExtentIndex = allocatedExtents.size() - 1;
-    
-    const byte rowCategory =  Database::GetObjectSizeToCategory(row->GetTotalRowSize());
 
-    for(const auto& extentId: allocatedExtents)
+    const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
+
+    for (const auto& extentId : allocatedExtents)
     {
         const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
 
         const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
-                            ? extentFirstPageId
-                            : extentFirstPageId + 1;
-        
+            ? extentFirstPageId
+            : extentFirstPageId + 1;
+
         for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
         {
             const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
             PageFreeSpacePage* pageFreeSpacePage = pageManager->GetPageFreeSpacePage(pageFreeSpacePageId);
 
-            if(pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
+            if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
                 break;
 
-            const byte pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(pageId);
+            const Constants::byte pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(pageId);
 
             //find potential candidate
-            if ( rowCategory <= pageSizeCategory)
+            if (rowCategory <= pageSizeCategory)
             {
                 Page* page = this->pageManager->GetPage(pageId, extentId, &table);
-            
+
                 if (row->GetTotalRowSize() > page->GetBytesLeft())
                     continue;
-            
+
                 page->InsertRow(row);
                 pageFreeSpacePage->SetPageMetaData(page);
 
@@ -207,6 +229,7 @@ bool Database::InsertRowToPage(const Table &table,vector<extent_id_t>& allocated
 
     return false;
 }
+
 void Database::SelectTableRows(const table_id_t& tableId, vector<Row>* selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions)
 {
     const Table* table = this->GetTable(tableId);
@@ -426,7 +449,7 @@ LargeDataPage* Database::GetTableLastLargeDataPage(const table_id_t& tableId, co
             const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
         
             const PageFreeSpacePage* pageFreeSpace = pageManager->GetPageFreeSpacePage(correspondingPfsPageId);
-            const byte objectSizeCategory = Database::GetObjectSizeToCategory(minObjectSize);
+            const Constants::byte objectSizeCategory = Database::GetObjectSizeToCategory(minObjectSize);
             
             if (pageFreeSpace->GetPageType(pageId) != PageType::LOB)
                 break;

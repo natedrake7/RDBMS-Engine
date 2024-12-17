@@ -4,6 +4,7 @@
 #include "../../Database/Constants.h"
 
 class Block;
+using namespace Constants;
 
 class RowCondition {
     column_index_t columnIndex;

@@ -7,7 +7,7 @@ IndexAllocationMapPage::IndexAllocationMapPage(const table_id_t& tableId, const 
     this->header.bytesLeft -= (sizeof(table_id_t) + sizeof(extent_id_t));
     this->ownedExtents = new BitMap(GAM_PAGE_SIZE);
     this->isDirty = true;
-    this->header.pageType = PageType::INDEX;
+    this->header.pageType = PageType::IAM;
     this->header.bytesLeft = 0;
 }
 

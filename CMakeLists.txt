@@ -1,7 +1,7 @@
 ﻿cmake_minimum_required(VERSION 3.29)
 project(DatabaseInterface)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 26)
 
 add_executable(DatabaseInterface
         main.cpp)
@@ -21,9 +21,13 @@ add_library(AdditionalLibraries
         Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.cpp
         Database/Pages/GlobalAllocationMap/GlobalAllocationMapPage.h
         AdditionalLibraries/ByteMap/ByteMap.cpp
-        AdditionalLibraries/ByteMap/ByteMap.h "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.cpp" "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
+        AdditionalLibraries/ByteMap/ByteMap.h 
+        AdditionalLibraries/AdditionalObjects/DateTime/DateTime.cpp 
+        AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h
         AdditionalLibraries/AdditionalObjects/Decimal/Decimal.cpp
-        AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h)
+        AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h
+        AdditionalLibraries/B+Tree/BPlusTree.cpp
+        AdditionalLibraries/B+Tree/BPlusTree.h)
 add_library(Database
         Database/Database.cpp
         Database/Database.h
@@ -45,6 +49,8 @@ add_library(Database
         Database/Pages/IndexMapAllocation/IndexAllocationMapPage.cpp
         Database/Pages/IndexMapAllocation/IndexAllocationMapPage.h
         Database/Pages/PageFreeSpace/PageFreeSpacePage.cpp
-        Database/Pages/PageFreeSpace/PageFreeSpacePage.h)
+        Database/Pages/PageFreeSpace/PageFreeSpacePage.h
+        Database/Pages/IndexPage/IndexPage.cpp
+        Database/Pages/IndexPage/IndexPage.h)
 
 target_link_libraries(DatabaseInterface PRIVATE Database PRIVATE AdditionalLibraries)

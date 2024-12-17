@@ -1,4 +1,4 @@
-﻿#pragma once
+﻿ #pragma once
 
 #include <string>
 #include <vector>
@@ -7,17 +7,27 @@
 #include "../../AdditionalLibraries/AdditionalObjects/RowCondition.h"
 #include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
+#include "../../AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
 #include "../Pages/Page.h"
 
 using namespace std;
 
 typedef struct TableHeader {
     table_id_t tableId;
+
     header_literal_t tableNameSize;
     string tableName;
+
     row_size_t maxRowSize;
     page_id_t indexAllocationMapPageId;
     column_number_t numberOfColumns;
+    
+    vector<column_index_t> clusteredIndexes;
+    vector<column_index_t> nonClusteredIndexes;
+    
+    page_id_t clusteredIndexPageId;
+    
     BitMap* columnsNullBitMap;
     
     TableHeader();
@@ -52,13 +62,13 @@ class Table {
 
     protected:
         void InsertLargeObjectToPage(Row* row);
-        LargeDataPage* GetOrCreateLargeDataPage();
+        LargeDataPage* GetOrCreateLargeDataPage() const;
         static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
         void InsertLargeDataObjectPointerToRow(Row* row
                             , const bool& isFirstRecursion
                             , const large_page_index_t& objectIndex
                             , const page_id_t& lastLargePageId
-                            , const column_index_t& largeBlockIndex);
+                            , const column_index_t& largeBlockIndex) const;
         void RecursiveInsertToLargePage(Row*& row
                                         , page_offset_t& offset
                                         , const column_index_t& columnIndex
@@ -91,7 +101,7 @@ class Table {
 
         void Select(vector<Row>& selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
 
-        void Update(const vector<Field>& updates, const vector<RowCondition*>* conditions);
+        void Update(const vector<Field>& updates, const vector<RowCondition*>* conditions) const;
 
         void UpdateIndexAllocationMapPageId(const page_id_t& indexAllocationMapPageId);
     
@@ -103,4 +113,7 @@ class Table {
 
         void InsertRow(const vector<Field>& inputData);
 
+        TableType GetTableType() const;
+
+        row_size_t GetMaximumRowSize() const;
 };

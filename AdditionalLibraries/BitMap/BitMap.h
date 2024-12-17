@@ -6,19 +6,20 @@
 #include "../../Database/Constants.h"
 
 using namespace std;
+using namespace Constants;
 
 class BitMap {
-    vector<byte> data;
+    vector<Constants::byte> data;
     bit_map_size_t size;
 
     protected:
         void Resize(const bit_map_size_t& newSize);
-        void SetByte(const bit_map_pos_t& position, const byte& value);
+        void SetByte(const bit_map_pos_t& position, const Constants::byte& value);
 
     public:
         BitMap();
         BitMap(const BitMap& bitMap);
-        explicit BitMap(const bit_map_size_t& size, const byte& defaultValue = 0);
+        explicit BitMap(const bit_map_size_t& size, const Constants::byte& defaultValue = 0);
         ~BitMap();
         void Set(const bit_map_pos_t& position, const bool& value);
         bool Get(const bit_map_pos_t& position) const;

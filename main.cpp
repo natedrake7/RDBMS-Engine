@@ -1,7 +1,6 @@
 ﻿#include <bitset>
 #include <chrono>
 #include <cstring>
-
 #include "AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "./Database/Database.h"
 #include "AdditionalLibraries/BitMap/BitMap.h"
@@ -10,6 +9,7 @@
 #include "Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
 #include "AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
+#include "AdditionalLibraries/B+Tree/BPlusTree.h"
 
 template<typename T>
 int CreateResponse(T input) { return static_cast<int>(input); }
@@ -78,7 +78,7 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
         columns.push_back(new Column("MovieID", "Int", sizeof(int), false));
         columns.push_back(new Column("MovieName", "String", 100, true));
         columns.push_back(new Column("MovieType", "String", 100, true));
-        columns.push_back(new Column("MovieReleaseDate", "DateTime", sizeof(time_t), true));
+        columns.push_back(new Column("MovieReleaseDate", "DateTime", DateTime::DateTimeSize(), true));
         columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
         columns.push_back(new Column("MovieLength", "Decimal", sizeof(double), true));
 

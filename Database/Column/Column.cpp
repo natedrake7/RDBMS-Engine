@@ -34,6 +34,8 @@ const column_index_t& Column::GetColumnIndex() const { return this->header.colum
 
 const ColumnHeader& Column::GetColumnHeader() const { return this->header; }
 
+bool Column::isColumnLOB() const { return this->header.recordSize >= LARGE_DATA_OBJECT_SIZE; }
+
 void Column::SetColumnIndex(const column_index_t& columnIndex) { this->header.columnIndex = columnIndex; }
 
 ColumnType Column::SetColumnType() const {

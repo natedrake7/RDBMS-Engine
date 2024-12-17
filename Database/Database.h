@@ -6,6 +6,7 @@
 #include <thread>
 
 using namespace std;
+using namespace Constants;
 
 typedef struct DatabaseHeader{
     table_number_t numberOfTables;
@@ -52,7 +53,7 @@ class  Database {
         static page_id_t GetGamAssociatedPage(const page_id_t& pageId);
         static page_id_t GetPfsAssociatedPage(const page_id_t& pageId);
         static page_id_t CalculateSystemPageOffset(const page_id_t& pageId);
-        static byte GetObjectSizeToCategory(const row_size_t& size);
+        static Constants::byte GetObjectSizeToCategory(const row_size_t& size);
         bool AllocateNewExtent( PageFreeSpacePage**  pageFreeSpacePage
                             , page_id_t* lowerLimit
                             , page_id_t* newPageId
@@ -65,6 +66,8 @@ class  Database {
             , const size_t& rowsToSelect
             , const vector<RowCondition*>* conditions
             , vector<Row>* selectedRows);
+        bool InsertRowToClusteredIndex(const Table& table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row* row) const;
+        bool InsertRowToHeapTable(const Table& table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row* row) const;
     
     public:
         explicit Database(const string& dbName, PageManager* pageManager);
@@ -79,7 +82,7 @@ class  Database {
 
         void DeleteDatabase() const;
 
-        bool InsertRowToPage(const Table &table,vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row *row);
+        bool InsertRowToPage(const Table &table,vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row *row) const;
 
         void SelectTableRows(const table_id_t& tableId, vector<Row>* selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions);
 

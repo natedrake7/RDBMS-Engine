@@ -70,6 +70,8 @@ void DateTime::AddDays(const int days) { this->timeStamp += days * SECONDS_OF_DA
 
 DateTime DateTime::Now() { return { }; }
 
+int DateTime::DateTimeSize() { return sizeof(time_t); }
+
 time_t DateTime::ToUnixTimeStamp(const string &date, const string &format)
 {
 	const DateTime dateTime = DateTime::FromString(date, format);

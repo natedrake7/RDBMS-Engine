@@ -8,6 +8,7 @@
 class Table;
 class Block;
 using namespace std;
+using namespace Constants;
 
 enum class ColumnType : uint8_t
 {
@@ -60,4 +61,6 @@ class Column {
         const column_index_t& GetColumnIndex() const;
 
         const ColumnHeader& GetColumnHeader() const;
+
+        bool isColumnLOB() const;
 };

@@ -1,14 +1,13 @@
 ﻿#pragma once
-#include "../Page.h"
+#include "../../Database.h"
 
 class Table;
 struct TableFullHeader;
-struct DatabaseHeader;
 
 class HeaderPage final : public Page
 {
     DatabaseHeader databaseHeader;
-    vector<TableFullHeader> tablesHeaders;
+    std::vector<TableFullHeader> tablesHeaders;
 
 public:
     explicit HeaderPage(const int &pageId);

@@ -11,9 +11,9 @@ Decimal::Decimal(const string& value)
     if (!isPositive || copiedValue[0] == '+')
         copiedValue.erase(0, 1);
 
-    const fraction_index_t fractionIndex = Decimal::GetFractionIndex(copiedValue);
+    const Constants::fraction_index_t fractionIndex = Decimal::GetFractionIndex(copiedValue);
 
-    const byte bitAndfractionIndexByte = (isPositive << 7) | (fractionIndex & 0x7F);
+    const Constants::byte bitAndfractionIndexByte = (isPositive << 7) | (fractionIndex & 0x7F);
 
     this->bytes.push_back(bitAndfractionIndexByte);
 
@@ -22,7 +22,7 @@ Decimal::Decimal(const string& value)
 
     for (int i = 0; i < copiedValue.size(); i+=2)
     {
-        byte val = 0;
+        Constants::byte val = 0;
 
         val |= (copiedValue[i] - '0') << 4;
 
@@ -34,16 +34,16 @@ Decimal::Decimal(const string& value)
 
 }
 
-Decimal::Decimal(const byte* data, const int& dataSize)
+Decimal::Decimal(const Constants::byte* data, const int& dataSize)
 {
-    this->bytes = vector<byte>(data, data + dataSize);
+    this->bytes = vector<Constants::byte>(data, data + dataSize);
 }
 
 Decimal::~Decimal() = default;
 
 bool Decimal::IsPositive() const { return ( this->bytes.at(0) >> 7 ) & 0x01; }
 
-fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->bytes.at(0) & 0x7F); }
+Constants::fraction_index_t Decimal::GetFractionIndex() const { return static_cast<Constants::fraction_index_t>(this->bytes.at(0) & 0x7F); }
 
 string Decimal::ToString() const
 {
@@ -62,18 +62,18 @@ string Decimal::ToString() const
     if (result.back() == '0')
         result.pop_back();
 
-    const fraction_index_t fractionIndex = Decimal::GetFractionIndex() + ( isPositive ? 0 : 1);
+    const Constants::fraction_index_t fractionIndex = Decimal::GetFractionIndex() + ( isPositive ? 0 : 1);
 
     result.insert(fractionIndex,  ".");
 
     return result;
 }
 
-const byte* Decimal::GetRawData() const { return this->bytes.data(); }
+const Constants::byte* Decimal::GetRawData() const { return this->bytes.data(); }
 
 int Decimal::GetRawDataSize() const { return this->bytes.size(); }
 
-fraction_index_t Decimal::GetFractionIndex(const string& value)
+Constants::fraction_index_t Decimal::GetFractionIndex(const string& value)
 {
     const int decimalPos = value.find('.');
 

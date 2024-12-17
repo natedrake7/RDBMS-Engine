@@ -1,11 +1,5 @@
 #include "PageManager.h"
-#include "PageManager.h"
-#include "PageManager.h"
-#include "PageManager.h"
-#include "PageManager.h"
-#include "PageManager.h"
-#include "PageManager.h"
-#include "PageManager.h"
+#include "../../Database/Pages/IndexPage/IndexPage.h"
 
 bool PageManager::IsSystemCacheFull() const { return this->systemCache.size() == MAX_NUMBER_SYSTEM_PAGES; }
 
@@ -229,6 +223,15 @@ PageFreeSpacePage * PageManager::CreatePageFreeSpacePage(const string &filename,
     return page;
 }
 
+IndexPage* PageManager::CreateIndexPage(const page_id_t& pageId)
+{
+    IndexPage* page = new IndexPage(pageId, true);
+
+    this->MovePageToFrontOfSystemList(page, pageId);
+
+    return page;
+}
+
 HeaderPage* PageManager::GetHeaderPage(const string& filename)
 {
     constexpr page_id_t pageId = 0;
@@ -240,6 +243,12 @@ HeaderPage* PageManager::GetHeaderPage(const string& filename)
 PageFreeSpacePage* PageManager::GetPageFreeSpacePage(const page_id_t &pageId)
 {
     return dynamic_cast<PageFreeSpacePage*>(this->GetSystemPage(pageId)); 
+}
+
+
+IndexPage* PageManager::GetIndexPage(const page_id_t& pageId)
+{
+    return dynamic_cast<IndexPage*>(this->GetSystemPage(pageId));
 }
 
 bool PageManager::IsCacheFull() const { return this->pageList.size() == MAX_NUMBER_OF_PAGES; }
@@ -401,16 +410,19 @@ void PageManager::AllocateMemoryBasedOnSystemPageType(Page **page, const PageHea
     {
         case PageType::GAM:
             *page = new GlobalAllocationMapPage(pageHeader);
-        break;
-        case PageType::INDEX:
+            break;
+        case PageType::IAM:
             *page = new IndexAllocationMapPage(pageHeader, 0, 0);
-        break;
+            break;
         case PageType::METADATA:
             *page = new HeaderPage(pageHeader);
-        break;
+             break;
         case PageType::FREESPACE:
             *page = new PageFreeSpacePage(pageHeader);
-        break;
+            break;
+        case PageType::INDEX:
+            *page = new IndexPage(pageHeader);
+            break;
         default:
             throw runtime_error("Page type not recognized");
     }
@@ -462,6 +474,19 @@ void PageManager::MovePageToFrontOfSystemList(Page *page, const page_id_t& pageI
 {
     if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
         this->RemoveSystemPage();
+
+    page->SetFileName(filename);
+
+    this->systemPageList.push_front(page);
+    this->systemCache[pageId] = this->systemPageList.begin();
+}
+
+void PageManager::MovePageToFrontOfSystemList(Page *page, const page_id_t& pageId)
+{
+    if(this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
+        this->RemoveSystemPage();
+
+    const string& filename = this->database->GetFileName();
 
     page->SetFileName(filename);
 

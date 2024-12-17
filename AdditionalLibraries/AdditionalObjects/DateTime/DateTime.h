@@ -22,7 +22,7 @@ class DateTime {
 	public:
 		DateTime();
 		DateTime(int year, int month, int day, int hour = 0, int minute = 0, int second = 0);
-		DateTime(const time_t& timestamp);
+		explicit DateTime(const time_t& timestamp);
 		~DateTime();
 
 		int GetYears() const;
@@ -38,6 +38,7 @@ class DateTime {
 		static DateTime Now();
 		static time_t ToUnixTimeStamp(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
 		static DateTime FromString(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
+		static int DateTimeSize();
 
 		string ToString(const string& format = "%Y-%m-%d %H:%M:%S") const;
 
