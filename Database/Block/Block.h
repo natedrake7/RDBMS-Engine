@@ -6,14 +6,18 @@
 using namespace std;
 using namespace Constants;
 
-class Database;
-class Column;
-enum class ColumnType : uint8_t;
+namespace DatabaseEngine {
+    class Database;
+}
 
-class Block {
-    object_t* data;
-    block_size_t size;
-    const Column* column;
+namespace DatabaseEngine::StorageTypes {
+    class Column;
+    enum class ColumnType : uint8_t;
+    
+    class Block {
+        object_t* data;
+        block_size_t size;
+        const Column* column;
 
     public:
         explicit Block(const Column* column);
@@ -37,4 +41,5 @@ class Block {
         const ColumnType& GetColumnType() const;
 
         void PrintBlockData() const;
-};
+    };
+}

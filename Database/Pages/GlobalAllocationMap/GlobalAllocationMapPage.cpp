@@ -2,6 +2,7 @@
 #include "../../../AdditionalLibraries/BitMap/BitMap.h"
 
 using namespace ByteMaps;
+using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {
     GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t& pageId) : Page(pageId)

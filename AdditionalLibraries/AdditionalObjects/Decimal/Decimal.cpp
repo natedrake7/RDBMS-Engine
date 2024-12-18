@@ -1,5 +1,8 @@
 ﻿#include "Decimal.h"
 
+#include <algorithm>
+#include <bits/ranges_algo.h>
+
 namespace DataTypes {
     Decimal::Decimal() = default;
 
@@ -40,6 +43,11 @@ namespace DataTypes {
         this->bytes = vector(data, data + dataSize);
     }
 
+    Decimal::Decimal(const vector<Constants::byte> &value)
+    {
+        this->bytes = value;
+    }
+
     Decimal::~Decimal() = default;
 
     bool Decimal::IsPositive() const { return ( this->bytes.at(0) >> 7 ) & 0x01; }
@@ -73,6 +81,47 @@ namespace DataTypes {
     const Constants::byte* Decimal::GetRawData() const { return this->bytes.data(); }
 
     int Decimal::GetRawDataSize() const { return this->bytes.size(); }
+
+    const vector<Constants::byte>& Decimal::GetData() const { return this->bytes; }
+
+    Decimal operator+(const Decimal &left, const Decimal &right)
+    {
+        vector<Constants::byte> result;
+
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        const bool isLeftPositive = left.IsPositive();
+        const bool isRightPositive = right.IsPositive();
+
+        const fraction_index_t leftFractionIndex = left.GetFractionIndex();
+        const fraction_index_t rightFractionIndex = right.GetFractionIndex();
+
+        auto leftIterator = leftData.rbegin() + 1;
+        auto rightIterator = rightData.rbegin() + 1;
+        int carry = 0;
+
+        while (leftIterator != leftData.rend() || rightIterator != rightData.rend() || carry != 0)
+        {
+
+            const int left_digit = (leftIterator != leftData.rend())
+                                ? *leftIterator++
+                                : 0;
+            
+            const int right_digit = (rightIterator != rightData.rend())
+                                ? *rightIterator++
+                                : 0;
+
+            const int sum = left_digit + right_digit + carry;
+            
+            result.push_back(static_cast<Constants::byte>(sum % 10)); // Store last digit.
+            carry = sum / 100;                                         // Carry the overflow.
+        }
+
+        ranges::reverse(result);
+
+        return Decimal(result);
+    }
 
     fraction_index_t Decimal::GetFractionIndex(const string& value)
     {

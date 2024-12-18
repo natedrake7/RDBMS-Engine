@@ -1,6 +1,8 @@
 ﻿#include "LargeDataPage.h"
 #include "../Page.h"
 
+using namespace DatabaseEngine::StorageTypes;
+
 namespace Pages {
     DataObject::DataObject()
     {

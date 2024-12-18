@@ -17,16 +17,21 @@ namespace DataTypes {
         Decimal();
         explicit Decimal(const string& value);
         explicit Decimal(const Constants::byte* data, const int& dataSize);
+        explicit Decimal(const vector<Constants::byte>& value);
         ~Decimal();
 
 
-        bool IsPositive() const;
-        fraction_index_t GetFractionIndex() const;
-        string ToString() const;
+        [[nodiscard]] bool IsPositive() const;
+        [[nodiscard]] fraction_index_t GetFractionIndex() const;
+        [[nodiscard]] string ToString() const;
 
-        const Constants::byte* GetRawData() const;
+        [[nodiscard]] const Constants::byte* GetRawData() const;
 
-        int GetRawDataSize() const;
+        [[nodiscard]] int GetRawDataSize() const;
+
+        [[nodiscard]] const vector<Constants::byte>& GetData() const;
     };
+
+    Decimal operator+(const Decimal& left, const Decimal& right);
 }
 

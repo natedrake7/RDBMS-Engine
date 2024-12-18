@@ -2,6 +2,7 @@
 #include "../../../AdditionalLibraries/B+Tree/BPlusTree.h"
 
 using namespace Indexing;
+using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {
     IndexPage::IndexPage(const page_id_t& pageId, const bool& isPageCreation) : Page(pageId, isPageCreation)

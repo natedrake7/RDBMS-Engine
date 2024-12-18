@@ -5,6 +5,7 @@
 #include "../../Column/Column.h"
 
 using namespace DatabaseEngine;
+using namespace DatabaseEngine::StorageTypes;
 using namespace ByteMaps;
 
 namespace Pages {

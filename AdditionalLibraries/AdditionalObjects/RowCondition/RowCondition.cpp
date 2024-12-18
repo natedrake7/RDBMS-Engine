@@ -2,6 +2,8 @@
 #include <cstring>
 #include "../../../Database/Block/Block.h"
 
+using namespace DatabaseEngine::StorageTypes;
+
 RowCondition::RowCondition()
 {
     this->columnIndex = 0;

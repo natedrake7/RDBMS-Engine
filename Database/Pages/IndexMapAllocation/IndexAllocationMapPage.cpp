@@ -3,6 +3,7 @@
 #include "../GlobalAllocationMap/GlobalAllocationMapPage.h"
 
 using namespace ByteMaps;
+using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {
     IndexAllocationMapPage::IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId) : Page(pageId)

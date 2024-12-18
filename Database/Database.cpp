@@ -14,6 +14,7 @@
 #include "Storage/PageManager/PageManager.h"
 
 using namespace Pages;
+using namespace DatabaseEngine::StorageTypes;
 
 namespace DatabaseEngine {
     void Database::ValidateTableCreation(Table* table) const

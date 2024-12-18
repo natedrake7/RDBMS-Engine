@@ -5,6 +5,10 @@ namespace Indexing {
     class BPlusTree;
 }
 
+namespace DatabaseEngine::StorageTypes {
+    class Table;
+}
+
 namespace Pages {
     class IndexPage final : public Page{
         Indexing::BPlusTree* tree;
@@ -14,9 +18,9 @@ namespace Pages {
         explicit IndexPage(const PageHeader& pageHeader);
         ~IndexPage() override;
 
-        void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
+        void GetPageDataFromFile(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WritePageToFile(fstream* filePtr) override;
-        void InsertRow(const Table* table, const int& key, const page_id_t& pageId, const page_offset_t& pageOffset);
+        void InsertRow(const DatabaseEngine::StorageTypes::Table* table, const int& key, const page_id_t& pageId, const page_offset_t& pageOffset);
     }; 
 }
 

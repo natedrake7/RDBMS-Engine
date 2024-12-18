@@ -7,13 +7,15 @@
 using namespace Constants;
 using namespace std;
 
-class Block;
-class Column;
-class Row;
 class RowCondition;
 
-class Table;
-struct TableFullHeader;
+namespace DatabaseEngine::StorageTypes {
+    class Table;
+    struct TableFullHeader;
+    class Block;
+    class Column;
+    class Row;
+}
 
 namespace Storage {
     class FileManager;
@@ -51,12 +53,12 @@ namespace DatabaseEngine{
         DatabaseHeader header;
         string filename;
         string fileExtension;
-        vector<Table*> tables;
+        vector<StorageTypes::Table*> tables;
         Storage::PageManager* pageManager;
         mutex pageSelectMutex;
 
         protected:
-            void ValidateTableCreation(Table* table) const;
+            void ValidateTableCreation(StorageTypes::Table* table) const;
             void WriteHeaderToFile();
             static bool IsSystemPage(const page_id_t& pageId);
             static page_id_t GetGamAssociatedPage(const page_id_t& pageId);
@@ -68,34 +70,34 @@ namespace DatabaseEngine{
                                 , page_id_t* newPageId
                                 , extent_id_t* newExtentId
                                 , const table_id_t& tableId);
-            const Table* GetTable(const table_id_t& tableId) const;
-            void ThreadSelect(const Table* table
+            const StorageTypes::Table* GetTable(const table_id_t& tableId) const;
+            void ThreadSelect(const StorageTypes::Table* table
                 , const Pages::IndexAllocationMapPage* tableMapPage
                 , const extent_id_t& extentId
                 , const size_t& rowsToSelect
                 , const vector<RowCondition*>* conditions
-                , vector<Row>* selectedRows);
-            bool InsertRowToClusteredIndex(const Table& table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row* row) const;
-            bool InsertRowToHeapTable(const Table& table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row* row) const;
+                , vector<StorageTypes::Row>* selectedRows);
+            bool InsertRowToClusteredIndex(const StorageTypes::Table& table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, StorageTypes::Row* row) const;
+            bool InsertRowToHeapTable(const StorageTypes::Table& table, vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, StorageTypes::Row* row) const;
         
         public:
             explicit Database(const string& dbName, Storage::PageManager* pageManager);
 
             ~Database();
 
-            Table* CreateTable(const string& tableName, const vector<Column*>& columns);
+            StorageTypes::Table* CreateTable(const string& tableName, const vector<StorageTypes::Column*>& columns);
 
-            void CreateTable(const TableFullHeader& tableMetaData);
+            void CreateTable(const StorageTypes::TableFullHeader& tableMetaData);
 
-            Table* OpenTable(const string& tableName) const;
+            StorageTypes::Table* OpenTable(const string& tableName) const;
 
             void DeleteDatabase() const;
 
-            bool InsertRowToPage(const Table &table,vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, Row *row) const;
+            bool InsertRowToPage(const StorageTypes::Table &table,vector<extent_id_t>& allocatedExtents, extent_id_t& lastExtentIndex, StorageTypes::Row *row) const;
 
-            void SelectTableRows(const table_id_t& tableId, vector<Row>* selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions);
+            void SelectTableRows(const table_id_t& tableId, vector<StorageTypes::Row>* selectedRows, const size_t& rowsToSelect, const vector<RowCondition*>* conditions);
 
-            void UpdateTableRows(const table_id_t& tableId, const vector<Block*>& updates, const vector<RowCondition*>* conditions);
+            void UpdateTableRows(const table_id_t& tableId, const vector<StorageTypes::Block*>& updates, const vector<RowCondition*>* conditions);
 
             Pages::Page* CreateDataPage(const table_id_t& tableId);
 
@@ -116,5 +118,5 @@ namespace DatabaseEngine{
 
     void UseDatabase(const string& dbName, Database** db, Storage::PageManager* pageManager);
 
-    void PrintRows(const vector<Row>& rows);
+    void PrintRows(const vector<StorageTypes::Row>& rows);
 };

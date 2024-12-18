@@ -6,6 +6,7 @@
 #include "../../Database/Table/Table.h"
 
 using namespace std;
+using namespace DatabaseEngine::StorageTypes;
 
 namespace Indexing {
     

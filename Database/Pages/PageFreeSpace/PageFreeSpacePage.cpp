@@ -2,6 +2,7 @@
 #include "../../../AdditionalLibraries/ByteMap/ByteMap.h"
 
 using namespace ByteMaps;
+using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {
     PageFreeSpacePage::PageFreeSpacePage() : Page()

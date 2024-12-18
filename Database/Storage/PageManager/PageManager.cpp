@@ -10,9 +10,12 @@
 #include "../FileManager/FileManager.h"
 #include "../../Pages/IndexPage/IndexPage.h"
 
+using namespace DatabaseEngine;
+using namespace DatabaseEngine::StorageTypes;
+using namespace Pages;
+
 namespace Storage {
-    using namespace DatabaseEngine;
-    using namespace Pages;
+
 
     bool PageManager::IsSystemCacheFull() const { return this->systemCache.size() == MAX_NUMBER_SYSTEM_PAGES; }
 

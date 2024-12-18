@@ -7,6 +7,8 @@
 #include "../Block/Block.h"
 #include "../../AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h"
 
+using namespace DatabaseEngine::StorageTypes;
+
 namespace Pages {
    PageHeader::PageHeader()
     {

@@ -7,7 +7,9 @@
 using namespace Constants;
 using namespace std;
 
-class Table;
+namespace DatabaseEngine::StorageTypes {
+    class Table;
+}
 
 namespace Pages {
     typedef struct DataObject {
@@ -40,7 +42,7 @@ namespace Pages {
         explicit LargeDataPage();
         explicit LargeDataPage(const PageHeader& pageHeader);
         ~LargeDataPage() override;
-        void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
+        void GetPageDataFromFile(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WritePageToFile(fstream* filePtr) override;
         DataObject* InsertObject(const object_t* object, const page_size_t& size, page_offset_t* objectPosition);
         DataObject* GetObject(const page_offset_t& offset);

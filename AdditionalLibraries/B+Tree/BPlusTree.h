@@ -5,7 +5,9 @@
 using namespace std;
 using namespace Constants;
 
-class Table;
+namespace DatabaseEngine::StorageTypes {
+    class Table;
+}
 
 namespace Indexing {
 
@@ -47,7 +49,7 @@ namespace Indexing {
 
 
     public:
-        explicit BPlusTree(const Table* table);
+        explicit BPlusTree(const DatabaseEngine::StorageTypes::Table* table);
         ~BPlusTree();
 
         void Insert(const int& key, const BPlusTreeData& value);

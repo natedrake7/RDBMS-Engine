@@ -1,11 +1,10 @@
 ﻿#pragma once
 #include <vector>
-
 #include "../Constants.h"
 
-class Block;
-class Table;
-class Database;
+namespace DatabaseEngine {
+    class Database;
+}
 
 namespace Pages {
     struct DataObjectPointer;
@@ -18,21 +17,25 @@ namespace ByteMaps {
 using namespace std;
 using namespace Constants;
 
-typedef struct RowHeader {
-    ByteMaps::BitMap* nullBitMap;
-    ByteMaps::BitMap* largeObjectBitMap;
-    row_size_t rowSize;
-    size_t maxRowSize;
+namespace DatabaseEngine::StorageTypes {
+    class Table;
+    class Block;
 
-    RowHeader();
-    ~RowHeader();
-}RowHeader;
+    typedef struct RowHeader {
+        ByteMaps::BitMap* nullBitMap;
+        ByteMaps::BitMap* largeObjectBitMap;
+        row_size_t rowSize;
+        size_t maxRowSize;
 
-class Row
-{
-    RowHeader header;
-    vector<Block*> data;
-    const Table* table;
+        RowHeader();
+        ~RowHeader();
+    }RowHeader;
+
+    class Row
+    {
+        RowHeader header;
+        vector<Block*> data;
+        const Table* table;
 
     public:
         explicit Row(const Table& table);
@@ -68,4 +71,5 @@ class Row
         row_size_t GetTotalRowSize() const;
 
         row_header_size_t GetRowHeaderSize() const;
-};
+    };
+}

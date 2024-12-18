@@ -4,38 +4,42 @@
 #include <vector>
 #include "../Constants.h"
 
-class Table;
-class Block;
 using namespace std;
 using namespace Constants;
 
-enum class ColumnType : uint8_t
-{
-    TinyInt = 0,
-    SmallInt = 1,
-    Int = 2,
-    BigInt = 3,
-    Decimal = 4,
-    String = 5,
-    UnicodeString = 6,
-    Bool = 7,
-    DateTime = 8,
-};
+namespace DatabaseEngine::StorageTypes {
+    class Table;
+    class Block;
+    
+    enum class ColumnType : uint8_t
+    {
+        TinyInt = 0,
+        SmallInt = 1,
+        Int = 2,
+        BigInt = 3,
+        Decimal = 4,
+        String = 5,
+        UnicodeString = 6,
+        Bool = 7,
+        DateTime = 8,
+    };
 
-typedef struct ColumnHeader {
-    header_literal_t columnNameSize;
-    string columnName;
-    header_literal_t columnTypeLiteralSize;
-    string columnTypeLiteral;
-    ColumnType columnType;
-    column_index_t columnIndex;
-    row_size_t recordSize;
-}ColumnHeader;
+    typedef struct ColumnHeader {
+        header_literal_t columnNameSize;
+        string columnName;
+        
+        header_literal_t columnTypeLiteralSize;
+        string columnTypeLiteral;
+        
+        ColumnType columnType;
+        column_index_t columnIndex;
+        row_size_t recordSize;
+    }ColumnHeader;
 
-class Column {
-    ColumnHeader header;
-    const Table* table;
-    bool allowNulls;
+    class Column {
+        ColumnHeader header;
+        const Table* table;
+        bool allowNulls;
 
     protected:
         ColumnType SetColumnType() const;
@@ -62,4 +66,5 @@ class Column {
         const ColumnHeader& GetColumnHeader() const;
 
         bool isColumnLOB() const;
-};
+    };
+}

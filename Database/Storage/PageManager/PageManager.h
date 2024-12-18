@@ -7,11 +7,12 @@
 #include <vector>
 #include "../../Constants.h"
 
-
-class Table;
-
 namespace DatabaseEngine {
     class Database;
+    
+    namespace StorageTypes {
+        class Table;
+    }
 }
 
 namespace Pages {
@@ -52,7 +53,7 @@ namespace Storage{
             void RemoveSystemPage();
             static void AllocateMemoryBasedOnSystemPageType(Pages::Page** page, const Pages::PageHeader& pageHeader);
             static void AllocateMemoryBasedOnPageType(Pages::Page **page, const Pages::PageHeader &pageHeader);
-            void OpenExtent(const Constants::extent_id_t& extentId, const Table* table);
+            void OpenExtent(const Constants::extent_id_t& extentId, const DatabaseEngine::StorageTypes::Table* table);
             void OpenSystemPage(const Constants::page_id_t& pageId);
             void OpenSystemPage(const Constants::page_id_t &pageId, const string &filename);
             Pages::Page* GetSystemPage(const Constants::page_id_t& pageId);
@@ -66,7 +67,7 @@ namespace Storage{
             void MovePageToFrontOfList(Pages::Page *page, const Constants::page_id_t& pageId, const string& filename);
             void MovePageToFrontOfList(Pages::Page *page, const Constants::page_id_t &pageId);
             void ReadSystemPageFromFile(Pages::Page* page, const vector<char>& buffer, const Constants::page_id_t& pageId, Constants::page_offset_t& offSet, fstream* file);
-            void ReadPageFromFile(Pages::Page *page, const vector<char> &buffer, const Table *table, Constants::page_offset_t &offSet, fstream *file);
+            void ReadPageFromFile(Pages::Page *page, const vector<char> &buffer, const DatabaseEngine::StorageTypes::Table *table, Constants::page_offset_t &offSet, fstream *file);
             bool IsSystemCacheFull() const;
             void LockSystemPageRead();
             void UnlockSystemPageRead();
@@ -84,11 +85,11 @@ namespace Storage{
             ~PageManager();
             void BindDatabase(const DatabaseEngine::Database* database);
             Pages::Page* CreatePage(const Constants::page_id_t& pageId);
-            Pages::Page* GetPage(const Constants::page_id_t& pageId, const Constants::extent_id_t& extentId, const Table* table);
+            Pages::Page* GetPage(const Constants::page_id_t& pageId, const Constants::extent_id_t& extentId, const DatabaseEngine::StorageTypes::Table* table);
             Pages::HeaderPage* GetHeaderPage(const string& filename);
             Pages::HeaderPage* CreateHeaderPage(const string& filename);
             Pages::LargeDataPage* CreateLargeDataPage(const Constants::page_id_t& pageId);
-            Pages::LargeDataPage* GetLargeDataPage(const Constants::page_id_t &pageId,const Constants::extent_id_t& extentId, const Table *table);
+            Pages::LargeDataPage* GetLargeDataPage(const Constants::page_id_t &pageId,const Constants::extent_id_t& extentId, const DatabaseEngine::StorageTypes::Table *table);
             Pages::GlobalAllocationMapPage* CreateGlobalAllocationMapPage(const string &filename, const Constants::page_id_t& pageId);
             Pages::GlobalAllocationMapPage* CreateGlobalAllocationMapPage(const Constants::page_id_t& pageId);
             Pages::GlobalAllocationMapPage* GetGlobalAllocationMapPage(const Constants::page_id_t& pageId);

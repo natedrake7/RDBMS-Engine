@@ -4,12 +4,15 @@
 #include "../Constants.h"
 
 class RowCondition;
-class Block;
-class Row;
-class Table;
 
 using namespace std;
 using namespace Constants;
+
+namespace DatabaseEngine::StorageTypes {
+    class Block;
+    class Row;
+    class Table;
+}
 
 namespace Pages {
     typedef struct PageHeader{
@@ -24,7 +27,7 @@ namespace Pages {
     }PageHeader;
 
     class Page {
-        vector<Row*> rows;
+        vector<DatabaseEngine::StorageTypes::Row*> rows;
 
     protected:
         bool isDirty;
@@ -37,10 +40,10 @@ namespace Pages {
         explicit Page();
         explicit Page(const PageHeader& pageHeader);
         virtual ~Page();
-        void InsertRow(Row* row);
-        void DeleteRow(Row* row);
-        void UpdateRows(const vector<Block>* updates, const vector<RowCondition*>* conditions);
-        virtual void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr);
+        void InsertRow(DatabaseEngine::StorageTypes::Row* row);
+        void DeleteRow(DatabaseEngine::StorageTypes::Row* row);
+        void UpdateRows(const vector<DatabaseEngine::StorageTypes::Block>* updates, const vector<RowCondition*>* conditions);
+        virtual void GetPageDataFromFile(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr);
         virtual void WritePageToFile(fstream* filePtr);
         void SetFileName(const string& filename);
         void SetPageId(const page_id_t& pageId);
@@ -48,7 +51,7 @@ namespace Pages {
         const page_id_t& GetPageId() const;
         const bool& GetPageDirtyStatus() const;
         const page_size_t& GetBytesLeft() const;
-        void GetRows(vector<Row>* copiedRows, const Table& table, const size_t& rowsToSelect, const vector<RowCondition*>* conditions = nullptr) const;
+        void GetRows(vector<DatabaseEngine::StorageTypes::Row>* copiedRows, const DatabaseEngine::StorageTypes::Table& table, const size_t& rowsToSelect, const vector<RowCondition*>* conditions = nullptr) const;
         void UpdateRows(const vector<RowCondition*>* conditions = nullptr);
         page_size_t GetPageSize() const;
         const PageType& GetPageType() const;
