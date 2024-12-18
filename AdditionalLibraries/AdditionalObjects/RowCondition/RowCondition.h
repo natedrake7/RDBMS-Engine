@@ -15,7 +15,7 @@ class RowCondition {
         RowCondition();
         RowCondition(const void *condition, const block_size_t& conditionSize, const column_index_t &columnIndex);
         ~RowCondition();
-        const column_index_t& GetColumnIndex() const;
+        [[nodiscard]] const column_index_t& GetColumnIndex() const;
         bool operator==(const DatabaseEngine::StorageTypes::Block* block) const;
         bool operator!=(const DatabaseEngine::StorageTypes::Block* block) const;
 };

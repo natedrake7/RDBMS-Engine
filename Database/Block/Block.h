@@ -30,15 +30,15 @@ namespace DatabaseEngine::StorageTypes {
 
         void SetData(const void* inputData, const block_size_t& inputSize);
 
-        object_t* GetBlockData() const;
+        [[nodiscard]] object_t* GetBlockData() const;
 
-        block_size_t GetBlockSize() const;
+        [[nodiscard]] block_size_t GetBlockSize() const;
 
-        const column_index_t& GetColumnIndex() const;
+        [[nodiscard]] const column_index_t& GetColumnIndex() const;
 
-        const row_size_t& GetColumnSize() const;
+        [[nodiscard]] const row_size_t& GetColumnSize() const;
 
-        const ColumnType& GetColumnType() const;
+        [[nodiscard]] const ColumnType& GetColumnType() const;
 
         void PrintBlockData() const;
     };

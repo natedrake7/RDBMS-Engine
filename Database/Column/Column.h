@@ -42,7 +42,7 @@ namespace DatabaseEngine::StorageTypes {
         bool allowNulls;
 
     protected:
-        ColumnType SetColumnType() const;
+        [[nodiscard]] ColumnType SetColumnType() const;
 
     public:
         Column(const string& columnName, const string& columnTypeLiteral, const row_size_t&  recordSize, const bool& allowNulls);
@@ -51,20 +51,20 @@ namespace DatabaseEngine::StorageTypes {
 
         string& GetColumnName();
 
-        const ColumnType& GetColumnType() const;
+        [[nodiscard]] const ColumnType& GetColumnType() const;
 
-        const row_size_t& GetColumnSize() const;
+        [[nodiscard]] const row_size_t& GetColumnSize() const;
 
-        bool IsColumnNullable() const;
+        [[nodiscard]] bool IsColumnNullable() const;
 
-        const bool& GetAllowNulls() const;
+        [[nodiscard]] const bool& GetAllowNulls() const;
 
         void SetColumnIndex(const column_index_t& columnIndex);
 
-        const column_index_t& GetColumnIndex() const;
+        [[nodiscard]] const column_index_t& GetColumnIndex() const;
 
-        const ColumnHeader& GetColumnHeader() const;
+        [[nodiscard]] const ColumnHeader& GetColumnHeader() const;
 
-        bool isColumnLOB() const;
+        [[nodiscard]] bool isColumnLOB() const;
     };
 }

@@ -70,7 +70,7 @@ namespace DatabaseEngine{
                                 , page_id_t* newPageId
                                 , extent_id_t* newExtentId
                                 , const table_id_t& tableId);
-            const StorageTypes::Table* GetTable(const table_id_t& tableId) const;
+            [[nodiscard]] const StorageTypes::Table* GetTable(const table_id_t& tableId) const;
             void ThreadSelect(const StorageTypes::Table* table
                 , const Pages::IndexAllocationMapPage* tableMapPage
                 , const extent_id_t& extentId
@@ -89,7 +89,7 @@ namespace DatabaseEngine{
 
             void CreateTable(const StorageTypes::TableFullHeader& tableMetaData);
 
-            StorageTypes::Table* OpenTable(const string& tableName) const;
+            [[nodiscard]] StorageTypes::Table* OpenTable(const string& tableName) const;
 
             void DeleteDatabase() const;
 
@@ -109,7 +109,7 @@ namespace DatabaseEngine{
 
             void SetPageMetaDataToPfs(const Pages::Page* page) const;
 
-            string GetFileName() const;
+            [[nodiscard]] string GetFileName() const;
 
             static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t& extentId);
     };

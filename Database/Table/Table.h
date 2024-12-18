@@ -68,11 +68,11 @@ namespace DatabaseEngine::StorageTypes {
     class Table {
         TableHeader header;
         vector<Column*> columns;
-        DatabaseEngine::Database* database;
+        Database* database;
 
         protected:
             void InsertLargeObjectToPage(Row* row);
-            Pages::LargeDataPage* GetOrCreateLargeDataPage() const;
+            [[nodiscard]] Pages::LargeDataPage* GetOrCreateLargeDataPage() const;
             static void LinkLargePageDataObjectChunks(Pages::DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
             void InsertLargeDataObjectPointerToRow(Row* row
                                 , const bool& isFirstRecursion
@@ -91,7 +91,7 @@ namespace DatabaseEngine::StorageTypes {
         public:
             Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, DatabaseEngine::Database* database);
 
-            Table(const TableHeader &tableHeader, DatabaseEngine::Database* database);
+            Table(const TableHeader &tableHeader, Database* database);
 
             ~Table();
 
@@ -101,13 +101,13 @@ namespace DatabaseEngine::StorageTypes {
 
             row_size_t& GetMaxRowSize();
 
-            column_number_t GetNumberOfColumns() const;
+            [[nodiscard]] column_number_t GetNumberOfColumns() const;
 
-            const TableHeader& GetTableHeader() const;
+            [[nodiscard]] const TableHeader& GetTableHeader() const;
 
-            const vector<Column*>& GetColumns() const;
+            [[nodiscard]] const vector<Column*>& GetColumns() const;
 
-            Pages::LargeDataPage* GetLargeDataPage(const page_id_t& pageId) const;
+            [[nodiscard]] Pages::LargeDataPage* GetLargeDataPage(const page_id_t& pageId) const;
 
             void Select(vector<Row>& selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
 
@@ -115,16 +115,16 @@ namespace DatabaseEngine::StorageTypes {
 
             void UpdateIndexAllocationMapPageId(const page_id_t& indexAllocationMapPageId);
         
-            bool IsColumnNullable(const column_index_t& columnIndex) const;
+            [[nodiscard]] bool IsColumnNullable(const column_index_t& columnIndex) const;
 
             void AddColumn(Column* column);
 
-            const table_id_t& GetTableId() const;
+            [[nodiscard]] const table_id_t& GetTableId() const;
 
             void InsertRow(const vector<Field>& inputData);
 
-            TableType GetTableType() const;
+            [[nodiscard]] TableType GetTableType() const;
 
-            row_size_t GetMaximumRowSize() const;
+            [[nodiscard]] row_size_t GetMaximumRowSize() const;
     };   
 }

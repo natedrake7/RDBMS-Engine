@@ -14,9 +14,9 @@ class Field {
         Field();
         explicit Field(const string& data,const Constants::column_index_t& columnIndex ,const bool& isNull = false);
         ~Field();
-        const string& GetData() const;
-        const bool& GetIsNull() const;
-        const Constants::column_index_t& GetColumnIndex() const;
+        [[nodiscard]] const string& GetData() const;
+        [[nodiscard]] const bool& GetIsNull() const;
+        [[nodiscard]] const Constants::column_index_t& GetColumnIndex() const;
         void SetData(const string& data);
         void SetIsNull(const bool& isNull);
         void SetColumnIndex(const Constants::column_index_t& columnIndex);

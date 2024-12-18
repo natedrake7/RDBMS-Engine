@@ -47,13 +47,13 @@ namespace Pages {
         virtual void WritePageToFile(fstream* filePtr);
         void SetFileName(const string& filename);
         void SetPageId(const page_id_t& pageId);
-        const string& GetFileName() const;
-        const page_id_t& GetPageId() const;
-        const bool& GetPageDirtyStatus() const;
-        const page_size_t& GetBytesLeft() const;
+        [[nodiscard]] const string& GetFileName() const;
+        [[nodiscard]] const page_id_t& GetPageId() const;
+        [[nodiscard]] const bool& GetPageDirtyStatus() const;
+        [[nodiscard]] const page_size_t& GetBytesLeft() const;
         void GetRows(vector<DatabaseEngine::StorageTypes::Row>* copiedRows, const DatabaseEngine::StorageTypes::Table& table, const size_t& rowsToSelect, const vector<RowCondition*>* conditions = nullptr) const;
         void UpdateRows(const vector<RowCondition*>* conditions = nullptr);
-        page_size_t GetPageSize() const;
-        const PageType& GetPageType() const;
+        [[nodiscard]] page_size_t GetPageSize() const;
+        [[nodiscard]] const PageType& GetPageType() const;
     };
 }

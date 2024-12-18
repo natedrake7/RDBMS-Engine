@@ -50,11 +50,11 @@ namespace DatabaseEngine::StorageTypes {
 
         void UpdateColumnData(Block *block);
 
-        const vector<Block*>& GetData() const;
+        [[nodiscard]] const vector<Block*>& GetData() const;
 
         void PrintRow() const;
 
-        const uint32_t& GetRowSize() const;
+        [[nodiscard]] const uint32_t& GetRowSize() const;
 
         vector<column_index_t> GetLargeBlocks();
 
@@ -64,12 +64,12 @@ namespace DatabaseEngine::StorageTypes {
 
         void SetNullBitMapValue(const bit_map_pos_t& position, const bool& value);
 
-        bool GetNullBitMapValue(const bit_map_pos_t& position) const;
+        [[nodiscard]] bool GetNullBitMapValue(const bit_map_pos_t& position) const;
 
         RowHeader* GetHeader();
 
-        row_size_t GetTotalRowSize() const;
+        [[nodiscard]] row_size_t GetTotalRowSize() const;
 
-        row_header_size_t GetRowHeaderSize() const;
+        [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
     };
 }

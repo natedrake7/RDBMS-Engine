@@ -23,7 +23,7 @@ namespace Pages {
         void WritePageToFile(fstream* filePtr) override;
         void GetPageDataFromFile(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void SetHeaders(const DatabaseEngine::DatabaseHeader& databaseHeader, const vector<DatabaseEngine::StorageTypes::Table*>& tables);
-        const DatabaseEngine::DatabaseHeader* GetDatabaseHeader() const;
-        const vector<DatabaseEngine::StorageTypes::TableFullHeader>& GetTablesFullHeaders() const;
+        [[nodiscard]] const DatabaseEngine::DatabaseHeader* GetDatabaseHeader() const;
+        [[nodiscard]] const vector<DatabaseEngine::StorageTypes::TableFullHeader>& GetTablesFullHeaders() const;
     };
 }

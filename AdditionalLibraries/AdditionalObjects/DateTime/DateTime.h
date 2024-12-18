@@ -6,7 +6,6 @@
 #include <iomanip>
 using namespace std;
 
-
 namespace DataTypes {
 	constexpr uint32_t SECONDS_OF_DAY = 86400;
 
@@ -23,12 +22,12 @@ namespace DataTypes {
 		explicit DateTime(const time_t& timestamp);
 		~DateTime();
 
-		int GetYears() const;
-		int GetMonths() const;
-		int GetDays() const;
-		int GetHours() const;
-		int GetMinutes() const;
-		int GetSeconds() const;
+		[[nodiscard]] int GetYears() const;
+		[[nodiscard]] int GetMonths() const;
+		[[nodiscard]] int GetDays() const;
+		[[nodiscard]] int GetHours() const;
+		[[nodiscard]] int GetMinutes() const;
+		[[nodiscard]] int GetSeconds() const;
 
 		void AddSeconds(int seconds);
 		void AddDays(int days);
@@ -38,6 +37,6 @@ namespace DataTypes {
 		static DateTime FromString(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
 		static int DateTimeSize();
 
-		string ToString(const string& format = "%Y-%m-%d %H:%M:%S") const;
+		[[nodiscard]] string ToString(const string& format = "%Y-%m-%d %H:%M:%S") const;
 	};
 }
