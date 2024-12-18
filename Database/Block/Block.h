@@ -1,14 +1,14 @@
-﻿#ifndef BLOCK_H
-#define BLOCK_H
-
+﻿#pragma once
 #include <iostream>
 #include <ostream>
+#include "../Constants.h"
 
-#include "../Database.h"
-#include "../Column/Column.h"
+using namespace std;
+using namespace Constants;
 
 class Database;
 class Column;
+enum class ColumnType : uint8_t;
 
 class Block {
     object_t* data;
@@ -38,5 +38,3 @@ class Block {
 
         void PrintBlockData() const;
 };
-
-#endif

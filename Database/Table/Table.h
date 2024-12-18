@@ -1,17 +1,33 @@
-﻿ #pragma once
-
+﻿#pragma once
 #include <string>
 #include <vector>
 #include <random>
 #include "../Constants.h"
-#include "../../AdditionalLibraries/AdditionalObjects/RowCondition.h"
-#include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
-#include "../../AdditionalLibraries/BitMap/BitMap.h"
-#include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
-#include "../../AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
-#include "../Pages/Page.h"
-
+#include "../Database.h"
 using namespace std;
+using namespace Constants;
+
+class RowCondition;
+enum class ColumnType : uint8_t;
+class Column;
+class Field;
+struct ColumnHeader;
+class Row;
+class Block;
+
+namespace DatabaseEngine {
+    class Database;
+}
+
+namespace Pages {
+    class Page;
+    class LargeDataPage;
+    struct DataObject;
+}
+
+namespace ByteMaps {
+    class BitMap;
+}
 
 typedef struct TableHeader {
     table_id_t tableId;
@@ -23,22 +39,18 @@ typedef struct TableHeader {
     page_id_t indexAllocationMapPageId;
     column_number_t numberOfColumns;
     
-    vector<column_index_t> clusteredIndexes;
-    vector<column_index_t> nonClusteredIndexes;
-    
     page_id_t clusteredIndexPageId;
-    
-    BitMap* columnsNullBitMap;
+    ByteMaps::BitMap* columnsNullBitMap;
+
+
+    //bitmaps to store the composite key 
+    ByteMaps::BitMap* clusteredIndexes;
+    ByteMaps::BitMap* nonClusteredIndexes;
     
     TableHeader();
     ~TableHeader();
     TableHeader& operator=(const TableHeader& tableHeader);
 }TableHeader;
-
-#include "../Column/Column.h"
-#include "../Row/Row.h"
-#include "../Database.h"
-#include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
 
 typedef struct TableFullHeader {
     TableHeader tableHeader;
@@ -48,22 +60,15 @@ typedef struct TableFullHeader {
     TableFullHeader(const TableFullHeader& tableHeader);
 }TableFullHeader;
 
-class Page;
-class Database;
-class Row;
-class Block;
-class LargeDataPage;
-struct DataObject;
-
 class Table {
     TableHeader header;
     vector<Column*> columns;
-    Database* database;
+    DatabaseEngine::Database* database;
 
     protected:
         void InsertLargeObjectToPage(Row* row);
-        LargeDataPage* GetOrCreateLargeDataPage() const;
-        static void LinkLargePageDataObjectChunks(DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
+        Pages::LargeDataPage* GetOrCreateLargeDataPage() const;
+        static void LinkLargePageDataObjectChunks(Pages::DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
         void InsertLargeDataObjectPointerToRow(Row* row
                             , const bool& isFirstRecursion
                             , const large_page_index_t& objectIndex
@@ -74,14 +79,14 @@ class Table {
                                         , const column_index_t& columnIndex
                                         , block_size_t& remainingBlockSize
                                         , const bool& isFirstRecursion
-                                        , DataObject** previousDataObject);
+                                        , Pages::DataObject** previousDataObject);
         void InsertRow(const vector<Field>& inputData, vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex);
         static void SetBlockDataByColumnType(Block *&block, const ColumnType &columnType, const Field& inputData);
 
     public:
-        Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, Database* database);
+        Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, DatabaseEngine::Database* database);
 
-        Table(const TableHeader &tableHeader, Database* database);
+        Table(const TableHeader &tableHeader, DatabaseEngine::Database* database);
 
         ~Table();
 
@@ -97,7 +102,7 @@ class Table {
 
         const vector<Column*>& GetColumns() const;
 
-        LargeDataPage* GetLargeDataPage(const page_id_t& pageId) const;
+        Pages::LargeDataPage* GetLargeDataPage(const page_id_t& pageId) const;
 
         void Select(vector<Row>& selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
 

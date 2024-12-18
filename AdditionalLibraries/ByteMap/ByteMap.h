@@ -8,8 +8,9 @@
 using namespace std;
 using namespace Constants;
 
-class ByteMap {
-    vector<Constants::byte> data;
+namespace ByteMaps {
+    class ByteMap {
+        vector<Constants::byte> data;
 
     protected:
         void CheckIndex(const byte_map_pos_t& pos) const;
@@ -34,4 +35,5 @@ class ByteMap {
 
         void SetByte(const byte_map_pos_t& position, const Constants::byte& value);
     
-};
+    };
+}

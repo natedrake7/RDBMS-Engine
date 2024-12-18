@@ -1,18 +1,26 @@
 ﻿#pragma once
+#include <vector>
 
-#include "../../AdditionalLibraries/BitMap/BitMap.h"
-#include "../Table/Table.h"
-#include "../Block/Block.h"
+#include "../Constants.h"
 
 class Block;
 class Table;
 class Database;
 
+namespace Pages {
+    struct DataObjectPointer;
+}
+
+namespace ByteMaps {
+    class BitMap;
+}
+
 using namespace std;
+using namespace Constants;
 
 typedef struct RowHeader {
-    BitMap* nullBitMap;
-    BitMap* largeObjectBitMap;
+    ByteMaps::BitMap* nullBitMap;
+    ByteMaps::BitMap* largeObjectBitMap;
     row_size_t rowSize;
     size_t maxRowSize;
 
@@ -49,7 +57,7 @@ class Row
 
         void UpdateRowSize();
 
-        unsigned char* GetLargeObjectValue(const DataObjectPointer &objectPointer, uint32_t* objectSize) const;
+        unsigned char* GetLargeObjectValue(const Pages::DataObjectPointer& objectPointer, uint32_t* objectSize) const;
 
         void SetNullBitMapValue(const bit_map_pos_t& position, const bool& value);
 

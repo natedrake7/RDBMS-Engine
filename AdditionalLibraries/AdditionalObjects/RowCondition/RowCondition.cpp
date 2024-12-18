@@ -1,8 +1,6 @@
 #include "RowCondition.h"
-
 #include <cstring>
-
-#include "../../Database/Block/Block.h"
+#include "../../../Database/Block/Block.h"
 
 RowCondition::RowCondition()
 {

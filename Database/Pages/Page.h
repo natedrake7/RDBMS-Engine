@@ -2,29 +2,29 @@
 #include <vector>
 #include <string>
 #include "../Constants.h"
-#include "../../AdditionalLibraries/BitMap/BitMap.h"
 
 class RowCondition;
-using namespace std;
-
 class Block;
 class Row;
 class Table;
-struct DataObjectPointer;
 
-typedef struct PageHeader{
-    page_id_t pageId;
-    page_size_t pageSize;
-    page_size_t bytesLeft;
-    PageType pageType;
+using namespace std;
+using namespace Constants;
 
-    PageHeader();
-    ~PageHeader();
-    static page_size_t GetPageHeaderSize();
-}PageHeader;
+namespace Pages {
+    typedef struct PageHeader{
+        page_id_t pageId;
+        page_size_t pageSize;
+        page_size_t bytesLeft;
+        PageType pageType;
 
-class Page {
-    vector<Row*> rows;
+        PageHeader();
+        ~PageHeader();
+        static page_size_t GetPageHeaderSize();
+    }PageHeader;
+
+    class Page {
+        vector<Row*> rows;
 
     protected:
         bool isDirty;
@@ -52,9 +52,5 @@ class Page {
         void UpdateRows(const vector<RowCondition*>* conditions = nullptr);
         page_size_t GetPageSize() const;
         const PageType& GetPageType() const;
-};
-
-#include "../Database.h"
-#include "../Table/Table.h"
-#include "../Row/Row.h"
-#include "./LargeObject/LargeDataPage.h"
+    };
+}

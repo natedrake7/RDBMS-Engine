@@ -1,22 +1,28 @@
 ﻿#pragma once
-#include "../../Database.h"
+#include "../Page.h"
 
 class Table;
 struct TableFullHeader;
 
-class HeaderPage final : public Page
-{
-    DatabaseHeader databaseHeader;
-    std::vector<TableFullHeader> tablesHeaders;
+namespace DatabaseEngine {
+    struct DatabaseHeader;
+}
 
-public:
-    explicit HeaderPage(const int &pageId);
-    explicit HeaderPage();
-    explicit HeaderPage(const PageHeader &pageHeader);
-    ~HeaderPage() override;
-    void WritePageToFile(fstream* filePtr) override;
-    void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
-    void SetHeaders(const DatabaseHeader& databaseHeader, const vector<Table*>& tables);
-    const DatabaseHeader& GetDatabaseHeader() const;
-    const vector<TableFullHeader>& GetTablesFullHeaders() const;
-};
+namespace Pages {
+    class HeaderPage final : public Page
+    {
+        DatabaseEngine::DatabaseHeader* databaseHeader;
+        vector<TableFullHeader> tablesHeaders;
+
+    public:
+        explicit HeaderPage(const int &pageId);
+        explicit HeaderPage();
+        explicit HeaderPage(const PageHeader &pageHeader);
+        ~HeaderPage() override;
+        void WritePageToFile(fstream* filePtr) override;
+        void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
+        void SetHeaders(const DatabaseEngine::DatabaseHeader& databaseHeader, const vector<Table*>& tables);
+        const DatabaseEngine::DatabaseHeader* GetDatabaseHeader() const;
+        const vector<TableFullHeader>& GetTablesFullHeaders() const;
+    };
+}

@@ -1,30 +1,39 @@
 ﻿#pragma once
+#include <fstream>
+#include <vector>
+#include "../../Constants.h"
 #include "../Page.h"
 
-typedef struct DataObject {
-    object_t* object;
-    page_size_t objectSize;
-    page_id_t nextPageId;
-    large_page_index_t nextObjectIndex;
+using namespace Constants;
+using namespace std;
 
-    DataObject();
-    ~DataObject();
-}DataObject;
+class Table;
 
-typedef struct DataObjectPointer
-{
-    large_page_index_t objectIndex;
-    page_id_t pageId;
+namespace Pages {
+    typedef struct DataObject {
+        object_t* object;
+        page_size_t objectSize;
+        page_id_t nextPageId;
+        large_page_index_t nextObjectIndex;
 
-    DataObjectPointer();
-    DataObjectPointer(const large_page_index_t& objectIndex, const page_id_t& pageId);
-    ~DataObjectPointer();
+        DataObject();
+        ~DataObject();
+    }DataObject;
 
-}DataObjectPointer;
+    typedef struct DataObjectPointer
+    {
+        large_page_index_t objectIndex;
+        page_id_t pageId;
 
-class LargeDataPage final : public Page
-{
-    vector<DataObject*> data;
+        DataObjectPointer();
+        DataObjectPointer(const large_page_index_t& objectIndex, const page_id_t& pageId);
+        ~DataObjectPointer();
+
+    }DataObjectPointer;
+    
+    class LargeDataPage final : public Page
+    {
+        vector<DataObject*> data;
 
     public:
         explicit LargeDataPage(const page_id_t& pageId, const bool& isPageCreation = false);
@@ -35,4 +44,5 @@ class LargeDataPage final : public Page
         void WritePageToFile(fstream* filePtr) override;
         DataObject* InsertObject(const object_t* object, const page_size_t& size, page_offset_t* objectPosition);
         DataObject* GetObject(const page_offset_t& offset);
-};
+    };
+}

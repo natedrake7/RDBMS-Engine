@@ -1,19 +1,20 @@
 ﻿#include <bitset>
 #include <chrono>
-#include <cstring>
+#include <iostream>
+
 #include "AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "./Database/Database.h"
-#include "AdditionalLibraries/BitMap/BitMap.h"
 #include "./Database/Row/Row.h"
-#include "AdditionalLibraries/PageManager/PageManager.h"
-#include "Database/Pages/PageFreeSpace/PageFreeSpacePage.h"
+#include "AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h"
 #include "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
-#include "AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
-#include "AdditionalLibraries/B+Tree/BPlusTree.h"
+#include "Database/Column/Column.h"
+#include "Database/Storage/FileManager/FileManager.h"
+#include "Database/Storage/PageManager/PageManager.h"
+#include "Database/Table/Table.h"
 
 template<typename T>
 int CreateResponse(T input) { return static_cast<int>(input); }
-void CreateAndInsertToDatabase(Database* db, Table* table = nullptr);
+void CreateAndInsertToDatabase(DatabaseEngine::Database* db, Table* table = nullptr);
 //handle updates
 //deletes
 //B+ Trees
@@ -22,21 +23,21 @@ void CreateAndInsertToDatabase(Database* db, Table* table = nullptr);
 
 int main()
 {
-    Database* db = nullptr;
-    FileManager fileManager;
-    PageManager* pageManager = new PageManager(&fileManager);
+    DatabaseEngine::Database* db = nullptr;
+    Storage::FileManager fileManager;
+    Storage::PageManager* pageManager = new Storage::PageManager(&fileManager);
     const string dbName = "stakosDb";
     try
     {
         /*Get pages in select in chunks*/
-        // CreateDatabase(dbName, &fileManager, pageManager);
+        DatabaseEngine::CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
 
         pageManager->BindDatabase(db);
 
         Table* table = db->OpenTable("Movies");
-        // CreateAndInsertToDatabase(db, table);
+        CreateAndInsertToDatabase(db, table);
         table = db->OpenTable("Movies");
         constexpr int searchKey = 90;
         vector<RowCondition*> conditions;
@@ -56,7 +57,7 @@ int main()
 
         cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 
-        PrintRows(rows);
+        DatabaseEngine::PrintRows(rows);
  
         delete db;
         delete pageManager;
@@ -70,7 +71,7 @@ int main()
 }
 
 
-void CreateAndInsertToDatabase(Database* db, Table* table)
+void CreateAndInsertToDatabase(DatabaseEngine::Database* db, Table* table)
 {
     if(table == nullptr)
     {
@@ -78,7 +79,7 @@ void CreateAndInsertToDatabase(Database* db, Table* table)
         columns.push_back(new Column("MovieID", "Int", sizeof(int), false));
         columns.push_back(new Column("MovieName", "String", 100, true));
         columns.push_back(new Column("MovieType", "String", 100, true));
-        columns.push_back(new Column("MovieReleaseDate", "DateTime", DateTime::DateTimeSize(), true));
+        columns.push_back(new Column("MovieReleaseDate", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
         columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
         columns.push_back(new Column("MovieLength", "Decimal", sizeof(double), true));
 

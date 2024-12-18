@@ -1,75 +1,80 @@
 ﻿#include "PageFreeSpacePage.h"
+#include "../../../AdditionalLibraries/ByteMap/ByteMap.h"
 
-PageFreeSpacePage::PageFreeSpacePage() : Page()
-{
-    this->pageMap = nullptr;
-}
+using namespace ByteMaps;
 
-PageFreeSpacePage::PageFreeSpacePage(const PageHeader &pageHeader) : Page(pageHeader)
-{
-    this->pageMap = new ByteMap(this->header.pageSize);
-}
+namespace Pages {
+    PageFreeSpacePage::PageFreeSpacePage() : Page()
+    {
+        this->pageMap = nullptr;
+    }
 
-PageFreeSpacePage::PageFreeSpacePage(const page_id_t &pageId) : Page(pageId)
-{
-    this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize();
-    this->pageMap = new ByteMap(PAGE_FREE_SPACE_SIZE);
-    this->header.pageSize = PAGE_FREE_SPACE_SIZE;
-    this->header.bytesLeft = 0;
-    this->header.pageType = PageType::FREESPACE;
-}
+    PageFreeSpacePage::PageFreeSpacePage(const PageHeader &pageHeader) : Page(pageHeader)
+    {
+        this->pageMap = new ByteMap(this->header.pageSize);
+    }
 
-PageFreeSpacePage::~PageFreeSpacePage()
-{
-    delete this->pageMap;
-}
+    PageFreeSpacePage::PageFreeSpacePage(const page_id_t &pageId) : Page(pageId)
+    {
+        this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize();
+        this->pageMap = new ByteMap(PAGE_FREE_SPACE_SIZE);
+        this->header.pageSize = PAGE_FREE_SPACE_SIZE;
+        this->header.bytesLeft = 0;
+        this->header.pageType = PageType::FREESPACE;
+    }
 
-void PageFreeSpacePage::SetPageAllocated(const page_id_t &pageId)
-{
-    this->pageMap->SetPageIsAllocated(pageId, true);
-}
+    PageFreeSpacePage::~PageFreeSpacePage()
+    {
+        delete this->pageMap;
+    }
 
-bool PageFreeSpacePage::IsPageAllocated(const page_id_t &pageId) const { return this->pageMap->IsAllocated(pageId); }
+    void PageFreeSpacePage::SetPageAllocated(const page_id_t &pageId)
+    {
+        this->pageMap->SetPageIsAllocated(pageId, true);
+    }
 
-void PageFreeSpacePage::SetPageFreed(const page_id_t &pageId) { this->pageMap->SetPageIsAllocated(pageId, false); }
+    bool PageFreeSpacePage::IsPageAllocated(const page_id_t &pageId) const { return this->pageMap->IsAllocated(pageId); }
 
-void PageFreeSpacePage::SetPageType(const page_id_t &pageId, const PageType &pageType) { this->pageMap->SetPageType(pageId, static_cast<Constants::byte>(pageType)); }
+    void PageFreeSpacePage::SetPageFreed(const page_id_t &pageId) { this->pageMap->SetPageIsAllocated(pageId, false); }
 
-void PageFreeSpacePage::SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft)
-{
-    const Constants::byte pageAllocationStatus = static_cast<Constants::byte>((PAGE_SIZE - bytesLeft) * 31 / PAGE_SIZE);
-    this->pageMap->SetFreeSpace(pageId, pageAllocationStatus);
+    void PageFreeSpacePage::SetPageType(const page_id_t &pageId, const PageType &pageType) { this->pageMap->SetPageType(pageId, static_cast<Constants::byte>(pageType)); }
 
-    this->isDirty = true;
-}
+    void PageFreeSpacePage::SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft)
+    {
+        const Constants::byte pageAllocationStatus = static_cast<Constants::byte>((PAGE_SIZE - bytesLeft) * 31 / PAGE_SIZE);
+        this->pageMap->SetFreeSpace(pageId, pageAllocationStatus);
 
-bool PageFreeSpacePage::IsFull() const { return this->pageMap->IsAllocated(this->header.pageSize - 1); }
+        this->isDirty = true;
+    }
 
-PageType PageFreeSpacePage::GetPageType(const page_id_t &pageId) const {return static_cast<PageType>(this->pageMap->GetPageType(pageId)); }
+    bool PageFreeSpacePage::IsFull() const { return this->pageMap->IsAllocated(this->header.pageSize - 1); }
 
-Constants::byte PageFreeSpacePage::GetPageSizeCategory(const page_id_t &pageId) const { return this->pageMap->GetFreeSpace(pageId); }
+    PageType PageFreeSpacePage::GetPageType(const page_id_t &pageId) const {return static_cast<PageType>(this->pageMap->GetPageType(pageId)); }
 
-void PageFreeSpacePage::SetPageMetaData(const Page *page)
-{
-    const page_id_t& pageId = page->GetPageId();
-    
-    this->SetPageAllocated(pageId);
-    this->SetPageType(pageId, page->GetPageType());
-    this->SetPageAllocationStatus(pageId, page->GetBytesLeft());
+    Constants::byte PageFreeSpacePage::GetPageSizeCategory(const page_id_t &pageId) const { return this->pageMap->GetFreeSpace(pageId); }
 
-    this->isDirty = true;
-}
+    void PageFreeSpacePage::SetPageMetaData(const Page *page)
+    {
+        const page_id_t& pageId = page->GetPageId();
+        
+        this->SetPageAllocated(pageId);
+        this->SetPageType(pageId, page->GetPageType());
+        this->SetPageAllocationStatus(pageId, page->GetBytesLeft());
 
-void PageFreeSpacePage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
-{
-    this->pageMap->GetDataFromFile(data, offSet, this->header.pageSize);
-}
+        this->isDirty = true;
+    }
 
-void PageFreeSpacePage::WritePageToFile(fstream *filePtr)
-{
-    this->WritePageHeaderToFile(filePtr);
+    void PageFreeSpacePage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
+    {
+        this->pageMap->GetDataFromFile(data, offSet, this->header.pageSize);
+    }
 
-    this->pageMap->WriteDataToFile(filePtr);
+    void PageFreeSpacePage::WritePageToFile(fstream *filePtr)
+    {
+        this->WritePageHeaderToFile(filePtr);
+
+        this->pageMap->WriteDataToFile(filePtr);
+    }
 }
 
 

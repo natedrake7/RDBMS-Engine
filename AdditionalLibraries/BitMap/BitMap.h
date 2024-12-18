@@ -1,16 +1,15 @@
 ﻿#pragma once
-
 #include <fstream>
 #include <vector>
-#include <iostream>
 #include "../../Database/Constants.h"
 
 using namespace std;
 using namespace Constants;
 
-class BitMap {
-    vector<Constants::byte> data;
-    bit_map_size_t size;
+namespace ByteMaps {
+    class BitMap {
+        vector<Constants::byte> data;
+        bit_map_size_t size;
 
     protected:
         void Resize(const bit_map_size_t& newSize);
@@ -28,4 +27,5 @@ class BitMap {
         void GetDataFromFile(const vector<char>& data, page_offset_t& offset);
         void WriteDataToFile(fstream* filePtr);
         void Print() const;
-};
+    };
+}

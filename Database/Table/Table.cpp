@@ -1,4 +1,21 @@
 ﻿#include "Table.h"
+#include "../Constants.h"
+#include "../../AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h"
+#include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
+#include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
+#include "../../AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
+#include "../Pages/Page.h"
+#include "../Column/Column.h"
+#include "../Row/Row.h"
+#include "../Database.h"
+#include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../Pages/LargeObject/LargeDataPage.h"
+#include "../Block/Block.h"
+
+using namespace Pages;
+using namespace DataTypes;
+using namespace ByteMaps;
 
 TableHeader::TableHeader()
 {
@@ -45,7 +62,7 @@ TableFullHeader::TableFullHeader(const TableFullHeader& tableHeader)
     this->columnsHeaders = tableHeader.columnsHeaders;
 }
 
-Table::Table(const string& tableName,const table_id_t& tableId, const vector<Column*>& columns, Database* database)
+Table::Table(const string& tableName,const table_id_t& tableId, const vector<Column*>& columns, DatabaseEngine::Database* database)
 {
     this->columns = columns;
     this->database = database;
@@ -66,7 +83,7 @@ Table::Table(const string& tableName,const table_id_t& tableId, const vector<Col
     }
 }
 
-Table::Table(const TableHeader &tableHeader, Database *database)
+Table::Table(const TableHeader &tableHeader, DatabaseEngine::Database *database)
 {
     this->header = tableHeader;
     this->database = database;
@@ -384,7 +401,7 @@ row_size_t& Table::GetMaxRowSize(){ return this->header.maxRowSize; }
 
 const table_id_t& Table::GetTableId() const { return this->header.tableId; }
 
-TableType Table::GetTableType() const { return this->header.clusteredIndexes.empty() ? TableType::HEAP : TableType::CLUSTERED; }
+TableType Table::GetTableType() const { return TableType::HEAP; }
 
 row_size_t Table::GetMaximumRowSize() const
 {

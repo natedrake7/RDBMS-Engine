@@ -2,18 +2,16 @@
 
 #include <cstdint>
 #include <ctime>
-#include <stdexcept>
 #include <string>
-#include <time.h>
-#include <sstream>
 #include <iomanip>
 using namespace std;
 
-constexpr uint32_t SECONDS_OF_DAY = 86400;
 
+namespace DataTypes {
+	constexpr uint32_t SECONDS_OF_DAY = 86400;
 
-class DateTime {
-	time_t timeStamp;
+	class DateTime {
+		time_t timeStamp;
 
 	protected:
 		static void ValidateDate(int year, int month, int day, int hour, int minute, int second);
@@ -41,5 +39,5 @@ class DateTime {
 		static int DateTimeSize();
 
 		string ToString(const string& format = "%Y-%m-%d %H:%M:%S") const;
-
-};
+	};
+}

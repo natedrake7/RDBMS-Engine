@@ -1,21 +1,27 @@
 ﻿#pragma once
 #include "../Page.h"
 
-class GlobalAllocationMapPage;
 
-typedef struct IndexAllocationPageAdditionalHeader {
-    table_id_t tableId;
-    extent_id_t startingExtentId;
-    page_id_t nextPageId;
+namespace ByteMaps {
+    class BitMap;
+}
 
-    IndexAllocationPageAdditionalHeader();
-    IndexAllocationPageAdditionalHeader(const table_id_t& tableId, const extent_id_t& extentId, const page_id_t& nextPageId);
-    ~IndexAllocationPageAdditionalHeader();
-}IndexAllocationPageAdditionalHeader;
+namespace Pages {
+    class GlobalAllocationMapPage;
+    
+    typedef struct IndexAllocationPageAdditionalHeader {
+        table_id_t tableId;
+        extent_id_t startingExtentId;
+        page_id_t nextPageId;
 
-class IndexAllocationMapPage final : public Page{
-    BitMap* ownedExtents;
-    IndexAllocationPageAdditionalHeader additionalHeader;
+        IndexAllocationPageAdditionalHeader();
+        IndexAllocationPageAdditionalHeader(const table_id_t& tableId, const extent_id_t& extentId, const page_id_t& nextPageId);
+        ~IndexAllocationPageAdditionalHeader();
+    }IndexAllocationPageAdditionalHeader;
+
+    class IndexAllocationMapPage final : public Page{
+        ByteMaps::BitMap* ownedExtents;
+        IndexAllocationPageAdditionalHeader additionalHeader;
 
     protected:
         void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
@@ -33,4 +39,5 @@ class IndexAllocationMapPage final : public Page{
         void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WritePageToFile(fstream* filePtr) override;
         void SetNextPageId(const page_id_t& nextPageId);
-};
+    };
+}

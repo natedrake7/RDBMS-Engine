@@ -1,9 +1,13 @@
 ﻿#pragma once
 #include "../Page.h"
-#include "../../../AdditionalLibraries/ByteMap/ByteMap.h"
 
-class PageFreeSpacePage final: public Page{
-    ByteMap* pageMap;
+namespace ByteMaps {
+    class ByteMap;
+}
+
+namespace Pages {
+    class PageFreeSpacePage final: public Page{
+        ByteMaps::ByteMap* pageMap;
 
     protected:
         void SetPageAllocated(const page_id_t& pageId);
@@ -23,4 +27,6 @@ class PageFreeSpacePage final: public Page{
         void SetPageMetaData(const Page* page);
         void SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft);
         bool IsFull() const;
-};
+    };
+}
+

@@ -1,16 +1,17 @@
 ﻿#pragma once
 #include  "../../../Database/Constants.h"
-#include <cmath>
 #include <string>
 #include <vector>
 
 using namespace std;
+using namespace Constants;
 
-class Decimal final {
-    vector<Constants::byte> bytes;
+namespace DataTypes {
+    class Decimal final {
+        vector<Constants::byte> bytes;
 
     protected:
-        static Constants::fraction_index_t GetFractionIndex(const string& value);
+        static fraction_index_t GetFractionIndex(const string& value);
     
     public:
         Decimal();
@@ -20,10 +21,12 @@ class Decimal final {
 
 
         bool IsPositive() const;
-        Constants::fraction_index_t GetFractionIndex() const;
+        fraction_index_t GetFractionIndex() const;
         string ToString() const;
 
         const Constants::byte* GetRawData() const;
 
         int GetRawDataSize() const;
-};
+    };
+}
+

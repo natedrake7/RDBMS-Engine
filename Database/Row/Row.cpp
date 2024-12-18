@@ -1,7 +1,15 @@
 ﻿#include "Row.h"
-
+#include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../Table/Table.h"
+#include "../Block/Block.h"
 #include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
 #include "../../AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
+#include "../Column/Column.h"
+#include "../Pages/LargeObject/LargeDataPage.h"
+
+using namespace Pages;
+using namespace DataTypes;
+using namespace ByteMaps;
 
 RowHeader::RowHeader()
 {

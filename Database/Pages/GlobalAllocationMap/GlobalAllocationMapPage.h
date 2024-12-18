@@ -1,8 +1,13 @@
 ﻿#pragma once
 #include "../Page.h"
 
-class GlobalAllocationMapPage final : public Page{
-    BitMap* extentsMap;
+namespace ByteMaps {
+    class BitMap;
+}
+
+namespace Pages {
+    class GlobalAllocationMapPage final : public Page{
+        ByteMaps::BitMap* extentsMap;
     
     protected:
         static page_size_t GetAvailableSize();
@@ -16,4 +21,6 @@ class GlobalAllocationMapPage final : public Page{
         void WritePageToFile(fstream *filePtr) override;
         void GetPageDataFromFile(const vector<char>& data, const Table* table, page_offset_t& offSet, fstream* filePtr) override;
         bool IsFull() const;
-};
+    };
+}
+

@@ -1,4 +1,6 @@
 ﻿#include "Block.h"
+#include "../Database.h"
+#include "../Column/Column.h"
 
 Block::Block(const void* data, const block_size_t& size, const Column* column)
 {
