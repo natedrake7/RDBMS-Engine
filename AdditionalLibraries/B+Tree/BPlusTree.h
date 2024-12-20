@@ -5,61 +5,90 @@
 using namespace std;
 using namespace Constants;
 
-namespace DatabaseEngine::StorageTypes {
+namespace DatabaseEngine::StorageTypes
+{
     class Table;
 }
 
-namespace Indexing {
+namespace Indexing
+{
 
-    typedef struct BPlusTreeData {
+    typedef struct BPlusTreeData
+    {
         page_id_t pageId;
-        page_offset_t rowIndex;
+        extent_id_t extentId;
 
         BPlusTreeData();
-        BPlusTreeData(const page_id_t& pageId, const page_offset_t& rowIndex);
+        BPlusTreeData(const page_id_t &pageId, const extent_id_t &extentId);
         ~BPlusTreeData();
-    }BPlusTreeData;
+    } BPlusTreeData;
 
-    class BPlusTree final{
-    public:
-        struct Node {
+    typedef struct QueryData
+    {
+        BPlusTreeData treeData;
+        int indexPosition;
 
-            bool isLeaf;
-            vector<int> keys;
-            vector<BPlusTreeData> data;
-            vector<Node*> children;
-            Node* next;
-            Node* prev;
+        QueryData();
+        QueryData(const BPlusTreeData &otherTreeData, const int &otherIndexPosition);
+        ~QueryData();
+    } QueryData;
 
-            explicit Node(const bool& isLeaf = false);
-        };
+    typedef struct Key
+    {
+        object_t *value;
+        key_size_t size;
 
-    private:    
+        Key();
+        Key(const void *keyValue, const key_size_t &keySize);
+        ~Key();
 
+        Key(const Key &otherKey);
+    } Key;
+
+    struct Node
+    {
+
+        bool isLeaf;
+        vector<Key> keys;
+        vector<BPlusTreeData> data;
+        vector<Node *> children;
+        Node *next;
+        Node *prev;
+
+        explicit Node(const bool &isLeaf = false);
+        ~Node();
+    };
+
+    class BPlusTree final
+    {
+    private:
         table_id_t tableId;
         int t;
-        Node* root;
+        Node *root;
 
-        void SplitChild(Node* parent,const int& index, Node* child) const;
-        void PrintTree(Node* node, const int& level);
-        void InsertToNonFullNode(Node* node, const int& key, const BPlusTreeData& value);
-        void DeleteNode(Node* node);
-        Node* SearchKey(const int &key) const;
-        void GetNodeSize(Node* node, page_size_t& size) const;
-
+        void SplitChild(Node *parent, const int &index, Node *child) const;
+        void PrintTree(const Node *node, const int &level);
+        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition);
+        void DeleteNode(Node *node);
+        Node *SearchKey(const Key &key) const;
+        void GetNodeSize(const Node *node, page_size_t &size) const;
+        static bool IsKeyLessThan(const Key &searchKey, const Key &sortedKey);
+        static bool IsKeyGreaterThan(const Key &searchKey, const Key &sortedKey);
+        static bool IsKeyEqual(const Key &searchKey, const Key &sortedKey);
+        static bool IsKeyGreaterOrEqual(const Key &searchKey, const Key &sortedKey);
+        static bool IsKeyLessOrEqual(const Key &searchKey, const Key &sortedKey);
 
     public:
-        explicit BPlusTree(const DatabaseEngine::StorageTypes::Table* table);
+        explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table);
         ~BPlusTree();
 
-        void Insert(const int& key, const BPlusTreeData& value);
+        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition);
         void PrintTree();
 
-        void RangeQuery(const int& minKey, const int& maxKey, vector<BPlusTreeData>& result) const;
-        void SearchKey(const int& key, BPlusTreeData& result) const;
-        page_size_t GetTreeSize() const;
+        void RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
+        void SearchKey(const Key &key, BPlusTreeData &result) const;
+        [[nodiscard]] page_size_t GetTreeSize() const;
 
-        void SetBranchingFactor(const int& branchingFactor);
+        void SetBranchingFactor(const int &branchingFactor);
     };
 }
-

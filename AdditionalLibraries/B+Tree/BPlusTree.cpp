@@ -3,44 +3,53 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string.h>
+
 #include "../../Database/Table/Table.h"
 
 using namespace std;
 using namespace DatabaseEngine::StorageTypes;
 
-namespace Indexing {
-    
-    static ostream& operator<<(ostream& os, const BPlusTreeData& dataObject)
+namespace Indexing
+{
+
+    static ostream &operator<<(ostream &os, const BPlusTreeData &dataObject)
     {
-        os << dataObject.pageId << " " << dataObject.rowIndex;
+        os << dataObject.pageId << " " << dataObject.extentId;
         return os;
     }
 
     BPlusTreeData::BPlusTreeData()
     {
         this->pageId = 0;
-        this->rowIndex = 0;
+        this->extentId = 0;
     }
 
-    BPlusTreeData::BPlusTreeData(const page_id_t &pageId, const page_offset_t &rowIndex)
+    BPlusTreeData::BPlusTreeData(const page_id_t &pageId, const extent_id_t &extentId)
     {
         this->pageId = pageId;
-        this->rowIndex = rowIndex;
+        this->extentId = extentId;
     }
 
     BPlusTreeData::~BPlusTreeData() = default;
 
-    BPlusTree::Node::Node(const bool& isLeaf)
+    Node::Node(const bool &isLeaf)
     {
         this->isLeaf = isLeaf;
         this->next = nullptr;
         this->prev = nullptr;
     }
 
-    BPlusTree::BPlusTree(const Table* table)
+    Node::~Node()
     {
-        const auto& tableHeader = table->GetTableHeader();
-        
+        for (const auto &key : this->keys)
+            delete key.value;
+    }
+
+    BPlusTree::BPlusTree(const Table *table)
+    {
+        const auto &tableHeader = table->GetTableHeader();
+
         this->root = new Node(true);
         this->t = PAGE_SIZE / table->GetMaximumRowSize();
         this->tableId = tableHeader.tableId;
@@ -48,12 +57,12 @@ namespace Indexing {
 
     BPlusTree::~BPlusTree()
     {
-        this->DeleteNode(root);   
+        this->DeleteNode(root);
     }
 
-    void BPlusTree::SplitChild(Node* parent, const int& index, Node* child) const
+    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child) const
     {
-        Node* newChild = new Node(child->isLeaf);
+        Node *newChild = new Node(child->isLeaf);
 
         // Insert the new child into the parent's children vector at the correct position
         parent->children.insert(parent->children.begin() + index + 1, newChild);
@@ -77,9 +86,9 @@ namespace Indexing {
 
             return;
         }
-        
-        //new page should be created to store half the new values
-        
+
+        // new page should be created to store half the new values
+
         // Maintain the linked list structure for leaf nodes
         newChild->next = child->next;
         child->next = newChild;
@@ -88,66 +97,64 @@ namespace Indexing {
         child->data.resize(t);
     }
 
-    void BPlusTree::Insert(const int& key, const BPlusTreeData& value)
+    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition)
     {
-        if (root->keys.size() == 2 * t - 1) //root is full,
+        if (root->keys.size() == 2 * t - 1) // root is full,
         {
-            //create new root
-            Node* newRoot = new Node();
+            // create new root
+            Node *newRoot = new Node();
 
-            //add current root as leaf
+            // add current root as leaf
             newRoot->children.push_back(root);
 
-            //split the root
+            // split the root
             this->SplitChild(newRoot, 0, root);
 
-            //root is the newRoot
+            // root is the newRoot
             root = newRoot;
         }
-        
-        this->InsertToNonFullNode(root, key, value);
+
+        return this->GetNonFullNode(root, key, indexPosition);
     }
 
-    void BPlusTree::InsertToNonFullNode(Node* node, const int& key, const BPlusTreeData& value)
+    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition)
     {
         if (node->isLeaf)
         {
-            const auto iterator = upper_bound(node->keys.begin(), node->keys.end(), key);
+            const auto iterator = ranges::upper_bound(node->keys, key, BPlusTree::IsKeyLessThan);
 
-            const int indexPosition = iterator - node->keys.begin();
+            const int indexPos = iterator - node->keys.begin();
 
-            if (!node->keys.empty() && node->keys.size() > indexPosition 
-                && node->keys[indexPosition] == key)
+            if (!node->keys.empty() && ((node->keys.size() > indexPos && BPlusTree::IsKeyEqual(key, node->keys[indexPos])) || BPlusTree::IsKeyEqual(key, node->keys[indexPos - 1])))
             {
                 ostringstream oss;
 
-                oss << "BPlusTree::InsertToNonFullNode: Key " << key << " already exists";
-                
+                oss << "BPlusTree::GetNonFullNode: Key " << key.value << " already exists";
+
                 throw invalid_argument(oss.str());
             }
 
-            node->keys.insert(iterator, key);
+            if (indexPosition != nullptr)
+                *indexPosition = indexPos;
 
-            node->data.insert(node->data.begin() + indexPosition, value);
-            
-            return;
+            return node;
         }
 
-        const auto iterator = lower_bound(node->keys.begin(), node->keys.end(), key);
+        const auto iterator = ranges::lower_bound(node->keys, key, BPlusTree::IsKeyLessThan);
 
         int childIndex = iterator - node->keys.begin();
 
-        Node* child = node->children[childIndex];
+        Node *child = node->children[childIndex];
 
         if (child->keys.size() == 2 * t - 1)
         {
             SplitChild(node, childIndex, child);
 
-            if (key > node->keys[childIndex])
+            if (BPlusTree::IsKeyGreaterThan(key, node->keys[childIndex]))
                 childIndex++;
         }
 
-        InsertToNonFullNode(node->children[childIndex], key, value);
+        return GetNonFullNode(node->children[childIndex], key, indexPosition);
     }
 
     void BPlusTree::DeleteNode(Node *node)
@@ -156,7 +163,7 @@ namespace Indexing {
             return;
 
         if (!node->isLeaf)
-            for (const auto& child : node->children)
+            for (const auto &child : node->children)
                 this->DeleteNode(child);
 
         delete node;
@@ -167,80 +174,80 @@ namespace Indexing {
         this->PrintTree(root, 0);
     }
 
-    void BPlusTree::RangeQuery(const int &minKey, const int &maxKey, vector<BPlusTreeData> &result) const
+    void BPlusTree::RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
     {
         if (!root)
             return;
 
-        const Node* currentNode = this->SearchKey(minKey);
-        const Node* previousNode = nullptr;
-        
+        const Node *currentNode = this->SearchKey(minKey);
+        const Node *previousNode = nullptr;
+
         while (currentNode)
         {
-            if (previousNode && currentNode->keys[0] <= maxKey)
+            if (previousNode && BPlusTree::IsKeyGreaterOrEqual(maxKey, currentNode->keys[0]))
             {
-                const auto& lastDataObject = previousNode->data.back();
-                
-                if (previousNode->keys[previousNode->keys.size() - 1] <= maxKey)
-                    result.push_back(lastDataObject);
+                const auto &lastDataObject = previousNode->data.back();
+
+                if (BPlusTree::IsKeyGreaterOrEqual(maxKey, previousNode->keys[previousNode->keys.size() - 1]))
+                    result.push_back(QueryData(lastDataObject, previousNode->keys.size() - 1));
             }
-            
+
             for (int i = 0; i < currentNode->keys.size(); i++)
             {
-                const int& key = currentNode->keys[i];
+                const auto &key = currentNode->keys[i];
 
-                if (key >= minKey && key <= maxKey)
+                if (BPlusTree::IsKeyLessOrEqual(minKey, key) && BPlusTree::IsKeyGreaterOrEqual(maxKey, key))
                 {
-                    result.push_back(currentNode->data[i]);
+                    result.push_back(QueryData(currentNode->data[i], i));
                     continue;
                 }
 
-                if (key > maxKey)
+                if (BPlusTree::IsKeyLessThan(maxKey, key))
                     return;
-                
             }
-            
+
             previousNode = currentNode;
             currentNode = currentNode->next;
         }
     }
 
-    void BPlusTree::SearchKey(const int &key, BPlusTreeData &result) const
+    void BPlusTree::SearchKey(const Key &key, BPlusTreeData &result) const
     {
         if (!root)
             return;
-        
-        Node* currentNode = root;
+
+        Node *currentNode = root;
 
         while (!currentNode->isLeaf)
         {
-            const auto iterator = lower_bound(currentNode->keys.begin(), currentNode->keys.end(), key);
+            const auto iterator = ranges::lower_bound(currentNode->keys, key, BPlusTree::IsKeyLessThan);
+
             const int index = iterator - currentNode->keys.begin();
 
             currentNode = currentNode->children[index];
         }
 
-        const Node* previousNode = nullptr;
+        const Node *previousNode = nullptr;
         while (currentNode)
         {
-            if (previousNode && currentNode->keys[0] > key)
+            if (previousNode && BPlusTree::IsKeyLessThan(key, currentNode->keys[0]))
             {
                 result = previousNode->data[previousNode->keys.size()];
                 return;
             }
-            
+
             for (int i = 0; i < currentNode->keys.size(); i++)
             {
-                if (key == currentNode->keys[i])
+                if (BPlusTree::IsKeyEqual(key, currentNode->keys[i]))
                 {
                     result = currentNode->data[i];
                     return;
                 }
-                
-                if (key < currentNode->keys[i])
-                    return;    
+
+                if (BPlusTree::IsKeyGreaterThan(key, currentNode->keys[i]))
+                    return;
             }
-            
+
             previousNode = currentNode;
             currentNode = currentNode->next;
         }
@@ -255,31 +262,31 @@ namespace Indexing {
         return result;
     }
 
-    void BPlusTree::SetBranchingFactor(const int& branchingFractor) { this->t = branchingFractor; }
+    void BPlusTree::SetBranchingFactor(const int &branchingFactor) { this->t = branchingFactor; }
 
-    void BPlusTree::GetNodeSize(Node *node, page_size_t &size) const
+    void BPlusTree::GetNodeSize(const Node *node, page_size_t &size) const
     {
         if (!node)
             return;
 
-        for (const auto& data : node->data)
-            size+= sizeof(BPlusTreeData);
-        
-        for (const auto& key : node->keys)
+        for (const auto &data : node->data)
+            size += sizeof(BPlusTreeData);
+
+        for (const auto &key : node->keys)
             size += sizeof(key);
-        
-        for (const auto& child : node->children)
+
+        for (const auto &child : node->children)
             GetNodeSize(child, size);
     }
 
-
-    BPlusTree::Node * BPlusTree::SearchKey(const int &key) const
+    Node *BPlusTree::SearchKey(const Key &key) const
     {
-        Node* currentNode = root;
+        Node *currentNode = root;
 
         while (!currentNode->isLeaf)
         {
-            const auto iterator = lower_bound(currentNode->keys.begin(), currentNode->keys.end(), key);
+            const auto iterator = ranges::lower_bound(currentNode->keys, key, BPlusTree::IsKeyLessThan);
+
             const int index = iterator - currentNode->keys.begin();
 
             currentNode = currentNode->children[index];
@@ -288,7 +295,7 @@ namespace Indexing {
         return currentNode;
     }
 
-    void BPlusTree::PrintTree(Node* node, const int& level)
+    void BPlusTree::PrintTree(const Node *node, const int &level)
     {
         if (!node)
             return;
@@ -306,12 +313,12 @@ namespace Indexing {
         // Print keys in the current node
 
         cout << "Keys: ";
-        for (const int& key : node->keys)
-            cout << key << " ";
+        for (const auto &key : node->keys)
+            cout << key.value << " ";
         if (node->isLeaf)
         {
             cout << "Data: ";
-            for (const auto& dataObject : node->data)
+            for (const auto &dataObject : node->data)
                 cout << dataObject << " ";
         }
 
@@ -319,7 +326,97 @@ namespace Indexing {
 
         // Recursively print children, if any
         if (!node->isLeaf)
-            for (const auto& childNode : node->children)
+            for (const auto &childNode : node->children)
                 PrintTree(childNode, level + 1);
     }
+
+    bool BPlusTree::IsKeyLessThan(const Key &searchKey, const Key &sortedKey)
+    {
+        if (searchKey.size < sortedKey.size)
+            return true;
+
+        if (searchKey.size > sortedKey.size)
+            return false;
+
+        return memcmp(searchKey.value, sortedKey.value, searchKey.size) < 0;
+    }
+
+    bool BPlusTree::IsKeyGreaterThan(const Key &searchKey, const Key &sortedKey)
+    {
+        if (searchKey.size > sortedKey.size)
+            return true;
+
+        if (searchKey.size < sortedKey.size)
+            return false;
+
+        return memcmp(searchKey.value, sortedKey.value, searchKey.size) > 0;
+    }
+
+    bool BPlusTree::IsKeyEqual(const Key &searchKey, const Key &sortedKey)
+    {
+        return searchKey.size == sortedKey.size && memcmp(searchKey.value, sortedKey.value, searchKey.size) == 0;
+    }
+
+    bool BPlusTree::IsKeyGreaterOrEqual(const Key &searchKey, const Key &sortedKey)
+    {
+        if (searchKey.size > sortedKey.size)
+            return true;
+
+        if (searchKey.size < sortedKey.size)
+            return false;
+
+        return memcmp(searchKey.value, sortedKey.value, searchKey.size) >= 0;
+    }
+
+    bool BPlusTree::IsKeyLessOrEqual(const Key &searchKey, const Key &sortedKey)
+    {
+        if (searchKey.size < sortedKey.size)
+            return true;
+
+        if (searchKey.size > sortedKey.size)
+            return false;
+
+        return memcmp(searchKey.value, sortedKey.value, searchKey.size) <= 0;
+    }
+
+    Key::Key()
+    {
+        this->value = nullptr;
+        this->size = 0;
+    }
+
+    Key::Key(const void *keyValue, const key_size_t &keySize)
+    {
+        this->value = new object_t[keySize];
+
+        memcpy(this->value, keyValue, keySize);
+
+        this->size = keySize;
+    }
+
+    Key::~Key()
+    {
+        delete this->value;
+    }
+
+    Key::Key(const Key &otherKey)
+    {
+        this->value = new object_t[otherKey.size];
+        memcpy(this->value, otherKey.value, otherKey.size);
+
+        this->size = otherKey.size;
+    }
+
+    QueryData::QueryData()
+    {
+        this->indexPosition = 0;
+    }
+
+    QueryData::QueryData(const BPlusTreeData &otherTreeData, const int &otherIndexPosition)
+    {
+        this->treeData = otherTreeData;
+        this->indexPosition = otherIndexPosition;
+    }
+
+    QueryData::~QueryData() = default;
 }

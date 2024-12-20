@@ -2,71 +2,76 @@
 #include <vector>
 #include "../Constants.h"
 
-namespace DatabaseEngine {
+namespace DatabaseEngine
+{
     class Database;
 }
 
-namespace Pages {
+namespace Pages
+{
     struct DataObjectPointer;
 }
 
-namespace ByteMaps {
+namespace ByteMaps
+{
     class BitMap;
 }
 
 using namespace std;
 using namespace Constants;
 
-namespace DatabaseEngine::StorageTypes {
+namespace DatabaseEngine::StorageTypes
+{
     class Table;
     class Block;
 
-    typedef struct RowHeader {
-        ByteMaps::BitMap* nullBitMap;
-        ByteMaps::BitMap* largeObjectBitMap;
+    typedef struct RowHeader
+    {
+        ByteMaps::BitMap *nullBitMap;
+        ByteMaps::BitMap *largeObjectBitMap;
         row_size_t rowSize;
         size_t maxRowSize;
 
         RowHeader();
         ~RowHeader();
-    }RowHeader;
+    } RowHeader;
 
     class Row
     {
         RowHeader header;
-        vector<Block*> data;
-        const Table* table;
+        vector<Block *> data;
+        const Table *table;
 
     public:
-        explicit Row(const Table& table);
+        explicit Row(const Table &table);
 
-        explicit Row(const Table& table, const vector<Block*>& data);
+        explicit Row(const Table &table, const vector<Block *> &data);
 
-        Row(const Row& copyRow);
+        Row(const Row &copyRow);
 
         ~Row();
 
-        void InsertColumnData(Block* block, const column_index_t& columnIndex);
+        void InsertColumnData(Block *block, const column_index_t &columnIndex);
 
         void UpdateColumnData(Block *block);
 
-        [[nodiscard]] const vector<Block*>& GetData() const;
+        [[nodiscard]] const vector<Block *> &GetData() const;
 
         void PrintRow() const;
 
-        [[nodiscard]] const uint32_t& GetRowSize() const;
+        [[nodiscard]] const uint32_t &GetRowSize() const;
 
         vector<column_index_t> GetLargeBlocks();
 
         void UpdateRowSize();
 
-        unsigned char* GetLargeObjectValue(const Pages::DataObjectPointer& objectPointer, uint32_t* objectSize) const;
+        unsigned char *GetLargeObjectValue(const Pages::DataObjectPointer &objectPointer, uint32_t *objectSize) const;
 
-        void SetNullBitMapValue(const bit_map_pos_t& position, const bool& value);
+        void SetNullBitMapValue(const bit_map_pos_t &position, const bool &value);
 
-        [[nodiscard]] bool GetNullBitMapValue(const bit_map_pos_t& position) const;
+        [[nodiscard]] bool GetNullBitMapValue(const bit_map_pos_t &position) const;
 
-        RowHeader* GetHeader();
+        RowHeader *GetHeader();
 
         [[nodiscard]] row_size_t GetTotalRowSize() const;
 

@@ -10,31 +10,37 @@ using namespace Constants;
 class RowCondition;
 class Field;
 
-namespace DatabaseEngine {
+namespace DatabaseEngine
+{
     class Database;
-    
-    namespace StorageTypes {
+
+    namespace StorageTypes
+    {
         class Row;
     }
 }
 
-namespace Pages {
+namespace Pages
+{
     class Page;
     class LargeDataPage;
     struct DataObject;
 }
 
-namespace ByteMaps {
+namespace ByteMaps
+{
     class BitMap;
 }
 
-namespace DatabaseEngine::StorageTypes {
+namespace DatabaseEngine::StorageTypes
+{
     enum class ColumnType : uint8_t;
     class Block;
     class Column;
     struct ColumnHeader;
 
-     typedef struct TableHeader {
+    typedef struct TableHeader
+    {
         table_id_t tableId;
 
         header_literal_t tableNameSize;
@@ -43,88 +49,85 @@ namespace DatabaseEngine::StorageTypes {
         row_size_t maxRowSize;
         page_id_t indexAllocationMapPageId;
         column_number_t numberOfColumns;
-        
+
         page_id_t clusteredIndexPageId;
-        ByteMaps::BitMap* columnsNullBitMap;
+        ByteMaps::BitMap *columnsNullBitMap;
 
+        // bitmaps to store the composite key
+        ByteMaps::BitMap *clusteredIndexesBitMap;
+        ByteMaps::BitMap *nonClusteredIndexesBitMap;
 
-        //bitmaps to store the composite key 
-        ByteMaps::BitMap* clusteredIndexes;
-        ByteMaps::BitMap* nonClusteredIndexes;
-        
         TableHeader();
         ~TableHeader();
-        TableHeader& operator=(const TableHeader& tableHeader);
-    }TableHeader;
+        TableHeader &operator=(const TableHeader &tableHeader);
+    } TableHeader;
 
-    typedef struct TableFullHeader {
+    typedef struct TableFullHeader
+    {
         TableHeader tableHeader;
         vector<ColumnHeader> columnsHeaders;
 
         TableFullHeader();
-        TableFullHeader(const TableFullHeader& tableHeader);
-    }TableFullHeader;
+        TableFullHeader(const TableFullHeader &tableHeader);
+    } TableFullHeader;
 
-    class Table {
+    class Table
+    {
         TableHeader header;
-        vector<Column*> columns;
-        Database* database;
+        vector<Column *> columns;
+        Database *database;
 
-        protected:
-            void InsertLargeObjectToPage(Row* row);
-            [[nodiscard]] Pages::LargeDataPage* GetOrCreateLargeDataPage() const;
-            static void LinkLargePageDataObjectChunks(Pages::DataObject* dataObject, const page_id_t& lastLargePageId, const large_page_index_t& objectIndex);
-            void InsertLargeDataObjectPointerToRow(Row* row
-                                , const bool& isFirstRecursion
-                                , const large_page_index_t& objectIndex
-                                , const page_id_t& lastLargePageId
-                                , const column_index_t& largeBlockIndex) const;
-            void RecursiveInsertToLargePage(Row*& row
-                                            , page_offset_t& offset
-                                            , const column_index_t& columnIndex
-                                            , block_size_t& remainingBlockSize
-                                            , const bool& isFirstRecursion
-                                            , Pages::DataObject** previousDataObject);
-            void InsertRow(const vector<Field>& inputData, vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex);
-            static void SetBlockDataByColumnType(Block *&block, const ColumnType &columnType, const Field& inputData);
+    protected:
+        void InsertLargeObjectToPage(Row *row);
+        [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
+        static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
+        void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
+        void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
+        void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
+        static void SetBlockDataByColumnType(Block *&block, const ColumnType &columnType, const Field &inputData);
+        void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes);
 
-        public:
-            Table(const string& tableName, const table_id_t& tableId, const vector<Column*>& columns, DatabaseEngine::Database* database);
+    public:
+        Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);
 
-            Table(const TableHeader &tableHeader, Database* database);
+        Table(const TableHeader &tableHeader, Database *database);
 
-            ~Table();
+        ~Table();
 
-            void InsertRows(const vector<vector<Field>>& inputData);
+        void InsertRows(const vector<vector<Field>> &inputData);
 
-            string& GetTableName();
+        string &GetTableName();
 
-            row_size_t& GetMaxRowSize();
+        row_size_t &GetMaxRowSize();
 
-            [[nodiscard]] column_number_t GetNumberOfColumns() const;
+        [[nodiscard]] column_number_t GetNumberOfColumns() const;
 
-            [[nodiscard]] const TableHeader& GetTableHeader() const;
+        [[nodiscard]] const TableHeader &GetTableHeader() const;
 
-            [[nodiscard]] const vector<Column*>& GetColumns() const;
+        [[nodiscard]] const vector<Column *> &GetColumns() const;
 
-            [[nodiscard]] Pages::LargeDataPage* GetLargeDataPage(const page_id_t& pageId) const;
+        [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId) const;
 
-            void Select(vector<Row>& selectedRows, const vector<RowCondition*>* conditions = nullptr, const size_t& count = -1) const;
+        void Select(vector<Row> &selectedRows, const vector<RowCondition *> *conditions = nullptr, const size_t &count = -1) const;
 
-            void Update(const vector<Field>& updates, const vector<RowCondition*>* conditions) const;
+        void Update(const vector<Field> &updates, const vector<RowCondition *> *conditions) const;
 
-            void UpdateIndexAllocationMapPageId(const page_id_t& indexAllocationMapPageId);
-        
-            [[nodiscard]] bool IsColumnNullable(const column_index_t& columnIndex) const;
+        void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
 
-            void AddColumn(Column* column);
+        [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;
 
-            [[nodiscard]] const table_id_t& GetTableId() const;
+        void AddColumn(Column *column);
 
-            void InsertRow(const vector<Field>& inputData);
+        [[nodiscard]] const table_id_t &GetTableId() const;
 
-            [[nodiscard]] TableType GetTableType() const;
+        void InsertRow(const vector<Field> &inputData);
 
-            [[nodiscard]] row_size_t GetMaximumRowSize() const;
-    };   
+        [[nodiscard]] TableType GetTableType() const;
+
+        [[nodiscard]] row_size_t GetMaximumRowSize() const;
+
+        void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
+
+        void SetIndexPageId(const page_id_t &indexPageId);
+    };
 }

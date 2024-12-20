@@ -1,6 +1,9 @@
 #include "DateTime.h"
+#include <iomanip>
+#include <chrono>
 
-namespace DataTypes {
+namespace DataTypes
+{
 	DateTime::DateTime()
 	{
 		this->timeStamp = time(nullptr);
@@ -18,47 +21,47 @@ namespace DataTypes {
 
 	DateTime::~DateTime() = default;
 
-	int DateTime::GetYears() const 
-	{ 
+	int DateTime::GetYears() const
+	{
 		tm time = {};
-		
+
 		localtime_s(&time, &this->timeStamp);
-		return time.tm_year + 1900; 
+		return time.tm_year + 1900;
 	}
 
-	int DateTime::GetMonths() const 
-	{ 
+	int DateTime::GetMonths() const
+	{
 		tm time = {};
 
 		localtime_s(&time, &this->timeStamp);
 		return time.tm_mon + 1;
 	}
 
-	int DateTime::GetDays() const 
-	{ 
+	int DateTime::GetDays() const
+	{
 		tm time = {};
 
-		localtime_s(&time, &this->timeStamp); 
+		localtime_s(&time, &this->timeStamp);
 		return time.tm_mday;
 	}
 
-	int DateTime::GetHours() const 
-	{ 
+	int DateTime::GetHours() const
+	{
 		tm time = {};
 		localtime_s(&time, &this->timeStamp);
 
-		return time.tm_hour; 
+		return time.tm_hour;
 	}
 
-	int DateTime::GetMinutes() const 
-	{ 
+	int DateTime::GetMinutes() const
+	{
 		tm time = {};
 		localtime_s(&time, &this->timeStamp);
-		return time.tm_min; 
+		return time.tm_min;
 	}
 
-	int DateTime::GetSeconds() const 
-	{ 
+	int DateTime::GetSeconds() const
+	{
 		tm time = {};
 
 		localtime_s(&time, &this->timeStamp);
@@ -69,7 +72,7 @@ namespace DataTypes {
 
 	void DateTime::AddDays(const int days) { this->timeStamp += days * SECONDS_OF_DAY; }
 
-	DateTime DateTime::Now() { return { }; }
+	DateTime DateTime::Now() { return {}; }
 
 	int DateTime::DateTimeSize() { return sizeof(time_t); }
 
@@ -80,25 +83,27 @@ namespace DataTypes {
 		return DateTime::ToUnixTimeStamp(dateTime.GetYears(), dateTime.GetMonths(), dateTime.GetDays(), dateTime.GetHours(), dateTime.GetMinutes(), dateTime.GetSeconds());
 	}
 
-	DateTime DateTime::FromString(const string& date, const string& format)
+	DateTime DateTime::FromString(const string &date, const string &format)
 	{
 		tm time = {};
+		
 		istringstream ss(date);
 
-		ss >> get_time(&time, format.c_str());
+		 ss >> get_time(&time, format.c_str());
 
-		return{ time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec };
+		return {time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec};
 	}
 
-	string DateTime::ToString(const string& format) const
+	string DateTime::ToString(const string &format) const
 	{
-		tm time {};
+
+		tm time{};
 		localtime_s(&time, &this->timeStamp);
 
 		char buffer[100];
 		strftime(buffer, sizeof(buffer), format.c_str(), &time);
 
-		return { buffer };
+		return {buffer};
 	}
 
 	time_t DateTime::ToUnixTimeStamp(const int year, const int month, const int day, const int hour, const int minute, const int second)
@@ -115,14 +120,9 @@ namespace DataTypes {
 		return mktime(&time);
 	}
 
-	void DateTime::ValidateDate(const int year, const int month, const int day, const int hour, const int minute, const int second) 
+	void DateTime::ValidateDate(const int year, const int month, const int day, const int hour, const int minute, const int second)
 	{
-		if (year < 1970 
-			|| month < 1 || month > 12 
-			|| day < 1 || day > 31 
-			||hour < 0 || hour >= 24
-			|| minute < 0 || minute >= 60 
-			|| second < 0 || second >= 60)
+		if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 || hour < 0 || hour >= 24 || minute < 0 || minute >= 60 || second < 0 || second >= 60)
 			throw invalid_argument("Invalid date/time components.");
 	}
 }

@@ -1,7 +1,6 @@
 ﻿#include "Decimal.h"
 
 #include <algorithm>
-#include <bits/ranges_algo.h>
 
 namespace DataTypes {
     Decimal::Decimal() = default;
