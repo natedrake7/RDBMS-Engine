@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../../Database/Table/Table.h"
+#include "../../Database/Storage/PageManager/PageManager.h"
 
 using namespace std;
 using namespace DatabaseEngine::StorageTypes;
@@ -60,7 +61,7 @@ namespace Indexing
         this->DeleteNode(root);
     }
 
-    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child) const
+    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves) const
     {
         Node *newChild = new Node(child->isLeaf);
 
@@ -87,17 +88,17 @@ namespace Indexing
             return;
         }
 
-        // new page should be created to store half the new values
-
         // Maintain the linked list structure for leaf nodes
         newChild->next = child->next;
         child->next = newChild;
 
         newChild->data.assign(child->data.begin() + t, child->data.end());
         child->data.resize(t);
+
+        splitLeaves->push_back(pair<Node *, Node *>(child, newChild));
     }
 
-    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition)
+    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves)
     {
         if (root->keys.size() == 2 * t - 1) // root is full,
         {
@@ -108,16 +109,16 @@ namespace Indexing
             newRoot->children.push_back(root);
 
             // split the root
-            this->SplitChild(newRoot, 0, root);
+            this->SplitChild(newRoot, 0, root, splitLeaves);
 
             // root is the newRoot
             root = newRoot;
         }
 
-        return this->GetNonFullNode(root, key, indexPosition);
+        return this->GetNonFullNode(root, key, indexPosition, splitLeaves);
     }
 
-    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition)
+    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves)
     {
         if (node->isLeaf)
         {
@@ -148,13 +149,13 @@ namespace Indexing
 
         if (child->keys.size() == 2 * t - 1)
         {
-            SplitChild(node, childIndex, child);
+            SplitChild(node, childIndex, child, splitLeaves);
 
             if (BPlusTree::IsKeyGreaterThan(key, node->keys[childIndex]))
                 childIndex++;
         }
 
-        return GetNonFullNode(node->children[childIndex], key, indexPosition);
+        return GetNonFullNode(node->children[childIndex], key, indexPosition, splitLeaves);
     }
 
     void BPlusTree::DeleteNode(Node *node)
@@ -189,7 +190,7 @@ namespace Indexing
                 const auto &lastDataObject = previousNode->data.back();
 
                 if (BPlusTree::IsKeyGreaterOrEqual(maxKey, previousNode->keys[previousNode->keys.size() - 1]))
-                    result.push_back(QueryData(lastDataObject, previousNode->keys.size() - 1));
+                    result.push_back(QueryData(lastDataObject, previousNode->keys.size()));
             }
 
             for (int i = 0; i < currentNode->keys.size(); i++)
@@ -263,6 +264,8 @@ namespace Indexing
     }
 
     void BPlusTree::SetBranchingFactor(const int &branchingFactor) { this->t = branchingFactor; }
+
+    const int &BPlusTree::GetBranchingFactor() const { return this->t; }
 
     void BPlusTree::GetNodeSize(const Node *node, page_size_t &size) const
     {

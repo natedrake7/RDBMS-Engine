@@ -13,10 +13,11 @@
 #include "Database/Table/Table.h"
 
 using namespace DatabaseEngine;
+using namespace DatabaseEngine::StorageTypes;
 
 template <typename T>
 int CreateResponse(T input) { return static_cast<int>(input); }
-void CreateAndInsertToDatabase(Database *db, StorageTypes::Table *table = nullptr);
+void CreateAndInsertToDatabase(Database *db, Table *table = nullptr);
 // handle updates
 // deletes
 // B+ Trees
@@ -37,7 +38,7 @@ int main()
 
         pageManager->BindDatabase(db);
 
-        StorageTypes::Table *table = db->OpenTable("Movies");
+        Table *table = db->OpenTable("Movies");
 
         CreateAndInsertToDatabase(db, table);
         table = db->OpenTable("Movies");
@@ -48,7 +49,7 @@ int main()
 
         conditions.push_back(&condition2);
 
-        vector<StorageTypes::Row> rows;
+        vector<Row> rows;
 
         const auto start = std::chrono::high_resolution_clock::now();
 
@@ -61,49 +62,50 @@ int main()
         cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 
         PrintRows(rows);
-
-        delete db;
-        delete pageManager;
     }
     catch (const exception &exception)
     {
         cerr << exception.what() << '\n';
+        db->DeleteDatabase();
     }
+
+    delete db;
+    delete pageManager;
 
     return 0;
 }
 
-void CreateAndInsertToDatabase(Database *db, StorageTypes::Table *table)
+void CreateAndInsertToDatabase(Database *db, Table *table)
 {
     if (table == nullptr)
     {
-        vector<StorageTypes::Column *> columns;
-        columns.push_back(new StorageTypes::Column("MovieID", "Int", sizeof(int), false));
-        columns.push_back(new StorageTypes::Column("MovieName", "String", 100, true));
-        columns.push_back(new StorageTypes::Column("MovieType", "String", 100, true));
-        columns.push_back(new StorageTypes::Column("MovieReleaseDate", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
-        columns.push_back(new StorageTypes::Column("IsMovieLicensed", "Bool", sizeof(bool), true));
-        columns.push_back(new StorageTypes::Column("MovieLength", "Decimal", sizeof(double), true));
+        vector<Column *> columns;
+        columns.push_back(new Column("MovieID", "Int", sizeof(int), false));
+        columns.push_back(new Column("MovieName", "String", 100, true));
+        columns.push_back(new Column("MovieType", "String", 100, true));
+        columns.push_back(new Column("MovieReleaseDate", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
+        columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
+        columns.push_back(new Column("MovieLength", "Decimal", 10, true));
 
-        const vector<column_index_t> clusteredIndexes = {0};
+        const vector<column_index_t> clusteredIndexes = {1};
 
         table = db->CreateTable("Movies", columns, &clusteredIndexes, nullptr);
     }
 
     vector<vector<Field>> inputData;
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 1000; i++)
     {
         vector<Field> fields = {
             Field("1", 0),
-            Field("Silence Of The Lambs", 1),
+            Field("Silence Of The Lambs" + to_string(i), 1),
             Field("Thriller", 2),
             Field("2024-04-12 12:12:12", 3),
             Field("1", 4),
             Field("1233232.12434343", 5),
         };
 
-        fields[0].SetData(to_string(i));
+        // fields[0].SetData(to_string(i));
 
         // table->InsertRow(fields);
         inputData.push_back(fields);

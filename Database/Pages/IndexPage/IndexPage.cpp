@@ -33,7 +33,7 @@ namespace Pages
     {
     }
 
-    Node *IndexPage::FindAppropriateNodeForInsert(const DatabaseEngine::StorageTypes::Table *table, const Key &key, int *indexPosition)
+    Node *IndexPage::FindAppropriateNodeForInsert(const DatabaseEngine::StorageTypes::Table *table, const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves)
     {
         if (!this->tree)
         {
@@ -41,7 +41,7 @@ namespace Pages
             this->tree = new BPlusTree(table);
         }
 
-        return this->tree->FindAppropriateNodeForInsert(key, indexPosition);
+        return this->tree->FindAppropriateNodeForInsert(key, indexPosition, splitLeaves);
     }
 
     void IndexPage::RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result)
@@ -53,4 +53,6 @@ namespace Pages
     }
 
     const vector<column_index_t> &IndexPage::GetIndexedColumns() const { return this->indexedColumns; }
+
+    const int &IndexPage::GetBranchingFactor() const { return this->tree->GetBranchingFactor(); }
 }

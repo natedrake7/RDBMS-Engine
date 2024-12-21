@@ -34,10 +34,12 @@ namespace Pages
         void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
         void WritePageToFile(fstream *filePtr) override;
 
-        Indexing::Node *FindAppropriateNodeForInsert(const DatabaseEngine::StorageTypes::Table *table, const Indexing::Key &key, int *indexPosition);
+        Indexing::Node *FindAppropriateNodeForInsert(const DatabaseEngine::StorageTypes::Table *table, const Indexing::Key &key, int *indexPosition, vector<pair<Indexing::Node *, Indexing::Node *>> *splitLeaves);
 
         void RangeQuery(const Indexing::Key &minKey, const Indexing::Key &maxKey, vector<Indexing::QueryData> &result);
 
         [[nodiscard]] const vector<column_index_t> &GetIndexedColumns() const;
+
+        [[nodiscard]] const int &GetBranchingFactor() const;
     };
 }

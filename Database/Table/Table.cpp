@@ -164,9 +164,7 @@ namespace DatabaseEngine::StorageTypes
         }
 
         this->InsertLargeObjectToPage(row);
-
-        if (!this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row))
-            throw std::invalid_argument("Table::InsertRow: Failed to insert row");
+        this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row);
     }
 
     void Table::SetBlockDataByColumnType(Block *&block, const ColumnType &columnType, const Field &inputData)

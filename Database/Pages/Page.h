@@ -52,6 +52,8 @@ namespace Pages
         virtual void WritePageToFile(fstream *filePtr);
         void SetFileName(const string &filename);
         void SetPageId(const page_id_t &pageId);
+        void UpdatePageSize();
+        void UpdateBytesLeft();
         [[nodiscard]] const string &GetFileName() const;
         [[nodiscard]] const page_id_t &GetPageId() const;
         [[nodiscard]] const bool &GetPageDirtyStatus() const;
@@ -61,5 +63,7 @@ namespace Pages
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const PageType &GetPageType() const;
         [[nodiscard]] DatabaseEngine::StorageTypes::Row GetRowByIndex(const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
+        void SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const DatabaseEngine::StorageTypes::Table &table);
+        [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
     };
 }

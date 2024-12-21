@@ -56,7 +56,7 @@ namespace Pages
         this->isDirty = true;
     }
 
-    void Page::InsertRow(DatabaseEngine::StorageTypes::Row *row, int indexPosition)
+    void Page::InsertRow(Row *row, const int indexPosition)
     {
         this->rows.insert(this->rows.begin() + indexPosition, row);
         this->header.bytesLeft -= row->GetTotalRowSize();
@@ -164,6 +164,16 @@ namespace Pages
     void Page::SetFileName(const string &filename) { this->filename = filename; }
 
     void Page::SetPageId(const page_id_t &pageId) { this->header.pageId = pageId; }
+
+    void Page::UpdatePageSize() { this->header.pageSize = this->rows.size(); }
+
+    void Page::UpdateBytesLeft()
+    {
+        this->header.bytesLeft = PAGE_SIZE - this->header.GetPageHeaderSize();
+
+        for (const auto &row : this->rows)
+            this->header.bytesLeft -= row->GetTotalRowSize();
+    }
 
     const string &Page::GetFileName() const { return this->filename; }
 
@@ -273,6 +283,26 @@ namespace Pages
 
         return Row(table, copyBlocks);
     }
+
+    void Page::SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const Table &table)
+    {
+        if (table.GetTableType() != TableType::CLUSTERED)
+            return;
+
+        vector<Row *> *nextLeafPageDataRows = nextLeafPage->GetDataRowsUnsafe();
+
+        nextLeafPageDataRows->assign(this->rows.begin() + branchingFactor, this->rows.end());
+
+        nextLeafPage->UpdatePageSize();
+        nextLeafPage->UpdateBytesLeft();
+
+        this->rows.resize(branchingFactor);
+
+        this->UpdatePageSize();
+        this->UpdateBytesLeft();
+    }
+
+    vector<DatabaseEngine::StorageTypes::Row *> *Page::GetDataRowsUnsafe() { return &this->rows; }
 
     void Page::UpdateRows(const vector<RowCondition *> *conditions)
     {

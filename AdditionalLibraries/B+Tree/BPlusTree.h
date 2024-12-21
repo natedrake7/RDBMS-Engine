@@ -10,6 +10,11 @@ namespace DatabaseEngine::StorageTypes
     class Table;
 }
 
+namespace Storage
+{
+    class PageManager;
+}
+
 namespace Indexing
 {
 
@@ -62,13 +67,14 @@ namespace Indexing
     class BPlusTree final
     {
     private:
+        Storage::PageManager *pageManager;
         table_id_t tableId;
         int t;
         Node *root;
 
-        void SplitChild(Node *parent, const int &index, Node *child) const;
+        void SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves) const;
         void PrintTree(const Node *node, const int &level);
-        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition);
+        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves);
         void DeleteNode(Node *node);
         Node *SearchKey(const Key &key) const;
         void GetNodeSize(const Node *node, page_size_t &size) const;
@@ -82,7 +88,7 @@ namespace Indexing
         explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table);
         ~BPlusTree();
 
-        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition);
+        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves);
         void PrintTree();
 
         void RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
@@ -90,5 +96,7 @@ namespace Indexing
         [[nodiscard]] page_size_t GetTreeSize() const;
 
         void SetBranchingFactor(const int &branchingFactor);
+
+        const int &GetBranchingFactor() const;
     };
 }

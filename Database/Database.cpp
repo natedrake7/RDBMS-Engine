@@ -178,14 +178,17 @@ namespace DatabaseEngine
             throw runtime_error("Database " + this->filename + " could not be deleted");
     }
 
-    bool Database::InsertRowToPage(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
+    void Database::InsertRowToPage(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
     {
-        return (table.GetTableType() == TableType::CLUSTERED)
-                   ? this->InsertRowToClusteredIndex(table, allocatedExtents, lastExtentIndex, row)
-                   : this->InsertRowToHeapTable(table, allocatedExtents, lastExtentIndex, row);
+        if (table.GetTableType() != TableType::CLUSTERED)
+        {
+            this->InsertRowToHeapTable(table, allocatedExtents, lastExtentIndex, row);
+            return;
+        }
+        this->InsertRowToClusteredIndex(table, row);
     }
 
-    bool Database::InsertRowToClusteredIndex(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
+    void Database::InsertRowToClusteredIndex(const Table &table, Row *row)
     {
         const auto &tableHeader = table.GetTableHeader();
 
@@ -210,60 +213,18 @@ namespace DatabaseEngine
 
         int indexPosition = 0;
 
-        Node *node = indexPage->FindAppropriateNodeForInsert(&table, key, &indexPosition);
+        vector<pair<Node *, Node *>> splitLeaves;
+
+        Node *node = indexPage->FindAppropriateNodeForInsert(&table, key, &indexPosition, &splitLeaves);
+
+        SplitPage(splitLeaves, indexPage->GetBranchingFactor(), table);
 
         const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
 
-        page_id_t rowInsertedPageId = 0;
-        extent_id_t rowInsertedExtentId = 0;
-
         if (!node->data.empty())
         {
-            const auto &previousObject = node->data.begin() + indexPosition - 1;
-
-            const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(previousObject->pageId);
-
-            PageFreeSpacePage *pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(pageFreeSpacePageId);
-
-            const Constants::byte pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(previousObject->pageId);
-            // rowCategory < pageSizeCategory &&
-            if (this->TryInsertRowToPage(table, pageFreeSpacePage, previousObject->pageId, previousObject->extentId, row, indexPosition))
-            {
-                rowInsertedPageId = previousObject->pageId;
-                rowInsertedExtentId = previousObject->extentId;
-            }
-            else
-            {
-                const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(previousObject->extentId);
-
-                // check if there is at least one page available left in the extent
-                if (previousObject->pageId < extentFirstPageId + EXTENT_SIZE - 1 && this->TryInsertRowToPage(table, pageFreeSpacePage, ++previousObject->pageId, previousObject->extentId, row, indexPosition))
-                {
-                    rowInsertedPageId = ++previousObject->pageId;
-                    rowInsertedExtentId = previousObject->extentId;
-                }
-                else
-                {
-                    Page *newPage = this->CreateDataPage(table.GetTableId());
-
-                    const page_id_t newPageAssosiatedPfs = Database::GetPfsAssociatedPage(previousObject->pageId);
-
-                    pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(newPageAssosiatedPfs);
-
-                    // should never fail
-                    if (!this->TryInsertRowToPage(table, pageFreeSpacePage, newPage, row, indexPosition))
-                        throw std::invalid_argument("Database::InsertRowToClusteredIndex: Failed to insert to new page");
-
-                    rowInsertedPageId = ++previousObject->pageId;
-                    rowInsertedExtentId = previousObject->extentId;
-                }
-            }
-
-            node->keys.insert(node->keys.begin() + indexPosition, key);
-
-            node->data.insert(node->data.begin() + indexPosition, BPlusTreeData(rowInsertedPageId, rowInsertedExtentId));
-
-            return true;
+            this->InsertRowToNonEmptyNode(node, indexPage, table, row, key, indexPosition);
+            return;
         }
 
         extent_id_t newExtentId = 0;
@@ -277,47 +238,119 @@ namespace DatabaseEngine
         PageFreeSpacePage *pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(pageFreeSpacePageId);
 
         // should never fail
-        if (!this->TryInsertRowToPage(table, pageFreeSpacePage, newPage, row, indexPosition))
-            throw std::invalid_argument("Failed to insert to new page");
-
-        rowInsertedPageId = newPageId;
-        rowInsertedExtentId = newExtentId;
+        Database::TryInsertRowToPage(pageFreeSpacePage, newPage, row, indexPosition);
 
         node->keys.insert(node->keys.begin() + indexPosition, key);
 
-        node->data.insert(node->data.begin() + indexPosition, BPlusTreeData(rowInsertedPageId, rowInsertedExtentId));
-
-        return true;
+        node->data.insert(node->data.begin() + indexPosition, BPlusTreeData(newPageId, newExtentId));
     }
 
-    bool Database::TryInsertRowToPage(const Table &table, PageFreeSpacePage *pageFreeSpacePage, const page_id_t &pageId, const extent_id_t &extentId, Row *row, const int &indexPosition)
+    void Database::SplitPage(vector<pair<Node *, Node *>> &splitLeaves, const int &branchingFactor, const Table &table)
     {
-        Page *page = this->pageManager->GetPage(pageId, extentId, &table);
+        if (splitLeaves.empty())
+            return;
+
+        for (auto &pair : splitLeaves)
+        {
+            auto &firstNode = pair.first;
+            auto &secondNode = pair.second;
+
+            if (!firstNode->isLeaf || !secondNode->isLeaf)
+                continue;
+
+            const page_id_t pageId = secondNode->data[0].pageId;
+            const extent_id_t extentId = secondNode->data[0].extentId;
+
+            Page *page = this->pageManager->GetPage(pageId, extentId, &table);
+
+            const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+            // check if there is at least one page available left in the extent
+
+            extent_id_t nextExtentId = 0;
+
+            const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
+
+            PageFreeSpacePage *pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(pageFreeSpacePageId);
+
+            Page *nextLeafPage = this->FindOrAllocateNextDataPage(pageFreeSpacePage, pageId, extentFirstPageId, extentId, table, &nextExtentId);
+
+            const page_id_t nextLeafPageId = nextLeafPage->GetPageId();
+            const extent_id_t nextLeafExtentId = (nextExtentId == 0)
+                                                     ? secondNode->data[0].extentId
+                                                     : nextExtentId;
+
+            page->SplitPageRowByBranchingFactor(nextLeafPage, branchingFactor, table);
+
+            pageFreeSpacePage->SetPageMetaData(page);
+            pageFreeSpacePage->SetPageMetaData(nextLeafPage);
+
+            for (auto &secondNodeData : secondNode->data)
+            {
+                secondNodeData.pageId = nextLeafPageId;
+                secondNodeData.extentId = nextLeafExtentId;
+            }
+        }
+    }
+
+    Page *Database::FindOrAllocateNextDataPage(PageFreeSpacePage *&pageFreeSpacePage, const page_id_t &pageId, const page_id_t &extentFirstPageId, const extent_id_t &extentId, const Table &table, extent_id_t *nextExtentId)
+    {
+        Page *nextLeafPage = nullptr;
+        if (pageId < extentFirstPageId + EXTENT_SIZE - 1)
+        {
+            for (page_id_t nextLeafPageId = pageId + 1; nextLeafPageId < extentFirstPageId + EXTENT_SIZE; nextLeafPageId++)
+            {
+                const auto &pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(nextLeafPageId);
+
+                if (pageSizeCategory > 0)
+                    continue;
+
+                nextLeafPage = this->pageManager->GetPage(nextLeafPageId, extentId, &table);
+
+                if (nextLeafPage->GetPageSize() == 0)
+                    break;
+            }
+        }
+
+        if (nextLeafPage == nullptr || nextLeafPage->GetPageSize() > 0)
+        {
+            nextLeafPage = this->CreateDataPage(table.GetTableId(), nextExtentId);
+
+            const page_id_t newPageAssosiatedPfs = Database::GetPfsAssociatedPage(nextLeafPage->GetPageId());
+
+            pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(newPageAssosiatedPfs);
+        }
+
+        return nextLeafPage;
+    }
+
+    void Database::InsertRowToNonEmptyNode(Node *node, IndexPage *indexPage, const Table &table, Row *row, const Key &key, const int &indexPosition)
+    {
+        const auto &previousObject = node->data.begin() + indexPosition - 1;
+
+        const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(previousObject->pageId);
+
+        PageFreeSpacePage *pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(pageFreeSpacePageId);
+
+        Page *page = this->pageManager->GetPage(previousObject->pageId, previousObject->extentId, &table);
+
+        Database::TryInsertRowToPage(pageFreeSpacePage, page, row, indexPosition);
+
+        node->keys.insert(node->keys.begin() + indexPosition, key);
+
+        node->data.insert(node->data.begin() + indexPosition, BPlusTreeData(previousObject->pageId, previousObject->extentId));
+    }
+
+    void Database::TryInsertRowToPage(PageFreeSpacePage *pageFreeSpacePage, Page *page, Row *row, const int &indexPosition)
+    {
         if (row->GetTotalRowSize() <= page->GetBytesLeft())
         {
             page->InsertRow(row, indexPosition);
             pageFreeSpacePage->SetPageMetaData(page);
-
-            return true;
         }
-
-        return false;
     }
 
-    bool Database::TryInsertRowToPage(const Table &table, PageFreeSpacePage *pageFreeSpacePage, Page *page, Row *row, const int &indexPosition)
-    {
-        if (row->GetTotalRowSize() <= page->GetBytesLeft())
-        {
-            page->InsertRow(row, indexPosition);
-            pageFreeSpacePage->SetPageMetaData(page);
-
-            return true;
-        }
-
-        return false;
-    }
-
-    bool Database::InsertRowToHeapTable(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
+    void Database::InsertRowToHeapTable(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
     {
         const IndexAllocationMapPage *tableMapPage = pageManager->GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
 
@@ -354,8 +387,6 @@ namespace DatabaseEngine
 
                     page->InsertRow(row);
                     pageFreeSpacePage->SetPageMetaData(page);
-
-                    return true;
                 }
             }
         }
@@ -363,8 +394,6 @@ namespace DatabaseEngine
         Page *newPage = this->CreateDataPage(table.GetTableId());
 
         newPage->InsertRow(row);
-
-        return true;
     }
 
     void Database::SelectTableRows(const table_id_t &tableId, vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions)
@@ -405,13 +434,15 @@ namespace DatabaseEngine
         IndexPage *indexPage = this->pageManager->GetIndexPage(tableHeader.clusteredIndexPageId);
 
         vector<QueryData> results;
-        int minKey = 12, maxKey = 25;
+        // int minKey = 12, maxKey = 25;
+        const string minKey = "Silence Of The Lambs";
+        const string maxKey = "Silence Of The Lambs152";
 
-        indexPage->RangeQuery(Key(&minKey, sizeof(int)), Key(&maxKey, sizeof(int)), results);
+        indexPage->RangeQuery(Key(minKey.c_str(), minKey.size()), Key(maxKey.c_str(), maxKey.size()), results);
 
         const Page *page = (!results.empty())
-                         ? this->pageManager->GetPage(results[0].treeData.pageId, results[0].treeData.extentId, table)
-                         : nullptr;
+                               ? this->pageManager->GetPage(results[0].treeData.pageId, results[0].treeData.extentId, table)
+                               : nullptr;
 
         for (const auto &result : results)
         {
