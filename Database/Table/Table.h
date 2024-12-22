@@ -76,6 +76,7 @@ namespace DatabaseEngine::StorageTypes
         TableHeader header;
         vector<Column *> columns;
         Database *database;
+        vector<void (*)(Block *&block, const Field &inputData)> setBlockDataByDataTypeArray = {&Table::SetTinyIntData, &Table::SetSmallIntData, &Table::SetIntData, &Table::SetBigIntData, &Table::SetDecimalData, &Table::SetStringData, &Table::SetBoolData, &Table::SetDateTimeData};
 
     protected:
         void InsertLargeObjectToPage(Row *row);
@@ -84,8 +85,16 @@ namespace DatabaseEngine::StorageTypes
         void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
         void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
         void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
-        static void SetBlockDataByColumnType(Block *&block, const ColumnType &columnType, const Field &inputData);
         void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes);
+        static void SetTinyIntData(Block *&block, const Field &inputData);
+        static void SetSmallIntData(Block *&block, const Field &inputData);
+        static void SetIntData(Block *&block, const Field &inputData);
+        static void SetBigIntData(Block *&block, const Field &inputData);
+        static void SetStringData(Block *&block, const Field &inputData);
+        static void SetBoolData(Block *&block, const Field &inputData);
+        static void SetDateTimeData(Block *&block, const Field &inputData);
+        static void SetDecimalData(Block *&block, const Field &inputData);
+        void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
 
     public:
         Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);

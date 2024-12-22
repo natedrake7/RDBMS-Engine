@@ -20,6 +20,8 @@ namespace DatabaseEngine::StorageTypes {
         this->table = table;
     }
 
+    Column::~Column() = default;
+
     string& Column::GetColumnName() { return this->header.columnName; }
 
     const ColumnType& Column::GetColumnType() const { return this->header.columnType; }

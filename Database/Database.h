@@ -72,22 +72,39 @@ namespace DatabaseEngine
 
     protected:
         void ValidateTableCreation(StorageTypes::Table *table) const;
+
         void WriteHeaderToFile();
+
         static bool IsSystemPage(const page_id_t &pageId);
+
         static page_id_t GetGamAssociatedPage(const page_id_t &pageId);
+
         static page_id_t GetPfsAssociatedPage(const page_id_t &pageId);
+
         static page_id_t CalculateSystemPageOffset(const page_id_t &pageId);
+
         static Constants::byte GetObjectSizeToCategory(const row_size_t &size);
+
         bool AllocateNewExtent(Pages::PageFreeSpacePage **pageFreeSpacePage, page_id_t *lowerLimit, page_id_t *newPageId, extent_id_t *newExtentId, const table_id_t &tableId);
+
         [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
+
         void ThreadSelect(const StorageTypes::Table *table, const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<RowCondition *> *conditions, vector<StorageTypes::Row> *selectedRows);
+
         void InsertRowToClusteredIndex(const StorageTypes::Table &table, StorageTypes::Row *row);
+
         void InsertRowToHeapTable(const StorageTypes::Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, StorageTypes::Row *row);
+
         void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves, const int &branchingFactor, const StorageTypes::Table &table);
+
         [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage(Pages::PageFreeSpacePage *&pageFreeSpacePage, const page_id_t &pageId, const page_id_t &extentFirstPageId, const extent_id_t &extentId, const StorageTypes::Table &table, extent_id_t *nextExtentId);
-        static void TryInsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, StorageTypes::Row *row, const int &indexPosition);
+
+        static void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, StorageTypes::Row *row, const int &indexPosition);
+
         void InsertRowToNonEmptyNode(Indexing::Node *node, Pages::IndexPage *indexPage, const StorageTypes::Table &table, StorageTypes::Row *row, const Indexing::Key &key, const int &indexPosition);
+
         void SelectRowsFromHeapTable(const StorageTypes::Table *table, vector<StorageTypes::Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
+
         void SelectRowFromClusteredTable(const StorageTypes::Table *table, vector<StorageTypes::Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
 
     public:

@@ -32,7 +32,7 @@ int main()
     const string dbName = "stakosDb";
     try
     {
-        CreateDatabase(dbName, &fileManager, pageManager);
+        // CreateDatabase(dbName, &fileManager, pageManager);
 
         UseDatabase(dbName, &db, pageManager);
 
@@ -40,7 +40,7 @@ int main()
 
         Table *table = db->OpenTable("Movies");
 
-        CreateAndInsertToDatabase(db, table);
+        // CreateAndInsertToDatabase(db, table);
         table = db->OpenTable("Movies");
 
         constexpr int searchKey = 90;
@@ -66,7 +66,7 @@ int main()
     catch (const exception &exception)
     {
         cerr << exception.what() << '\n';
-        db->DeleteDatabase();
+        // db->DeleteDatabase();
     }
 
     delete db;
@@ -87,14 +87,14 @@ void CreateAndInsertToDatabase(Database *db, Table *table)
         columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
         columns.push_back(new Column("MovieLength", "Decimal", 10, true));
 
-        const vector<column_index_t> clusteredIndexes = {1};
+        const vector<column_index_t> clusteredIndexes = {0};
 
         table = db->CreateTable("Movies", columns, &clusteredIndexes, nullptr);
     }
 
     vector<vector<Field>> inputData;
 
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 100; i++)
     {
         vector<Field> fields = {
             Field("1", 0),
@@ -105,7 +105,7 @@ void CreateAndInsertToDatabase(Database *db, Table *table)
             Field("1233232.12434343", 5),
         };
 
-        // fields[0].SetData(to_string(i));
+        fields[0].SetData(to_string(i));
 
         // table->InsertRow(fields);
         inputData.push_back(fields);

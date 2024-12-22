@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <vector>
 #include "../../Database/Constants.h"
+#include <fstream>
 
 using namespace std;
 using namespace Constants;
@@ -10,22 +11,21 @@ namespace DatabaseEngine::StorageTypes
     class Table;
 }
 
-namespace Storage
-{
-    class PageManager;
-}
-
 namespace Indexing
 {
 
     typedef struct BPlusTreeData
     {
-        page_id_t pageId;
-        extent_id_t extentId;
+        page_id_t *pageId;
+        extent_id_t *extentId;
 
         BPlusTreeData();
         BPlusTreeData(const page_id_t &pageId, const extent_id_t &extentId);
+        BPlusTreeData(BPlusTreeData &&other) noexcept;
+        BPlusTreeData(const BPlusTreeData &other);
         ~BPlusTreeData();
+        BPlusTreeData &operator=(const BPlusTreeData &other);
+        BPlusTreeData &operator=(BPlusTreeData &&other);
     } BPlusTreeData;
 
     typedef struct QueryData
@@ -61,13 +61,13 @@ namespace Indexing
         Node *prev;
 
         explicit Node(const bool &isLeaf = false);
+        vector<Key> &GetKeysData();
+        vector<BPlusTreeData> &GetData();
         ~Node();
     };
 
     class BPlusTree final
     {
-    private:
-        Storage::PageManager *pageManager;
         table_id_t tableId;
         int t;
         Node *root;
@@ -86,6 +86,7 @@ namespace Indexing
 
     public:
         explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table);
+        BPlusTree();
         ~BPlusTree();
 
         Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves);
@@ -95,8 +96,16 @@ namespace Indexing
         void SearchKey(const Key &key, BPlusTreeData &result) const;
         [[nodiscard]] page_size_t GetTreeSize() const;
 
+        Node *GetRoot();
+
+        void SetRoot(Node *&node);
+
         void SetBranchingFactor(const int &branchingFactor);
 
         const int &GetBranchingFactor() const;
+
+        void WriteTreeHeaderToFile(fstream *filePtr);
+
+        void ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
     };
 }

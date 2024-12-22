@@ -51,9 +51,8 @@ namespace DatabaseEngine::StorageTypes
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
 
         this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
-
-        this->clusteredIndexesBitMap = tableHeader.clusteredIndexesBitMap;
-        this->nonClusteredIndexesBitMap = tableHeader.nonClusteredIndexesBitMap;
+        this->clusteredIndexesBitMap = new BitMap(*tableHeader.clusteredIndexesBitMap);
+        this->nonClusteredIndexesBitMap = new BitMap(*tableHeader.nonClusteredIndexesBitMap);
 
         return *this;
     }
@@ -144,20 +143,14 @@ namespace DatabaseEngine::StorageTypes
 
             if (inputData[i].GetIsNull())
             {
-                if (!columns[associatedColumnIndex]->GetAllowNulls())
-                    throw invalid_argument("Column " + columns[associatedColumnIndex]->GetColumnName() + " does not allow NULLs. Insert Fails.");
-
-                block->SetData(nullptr, 0);
-
-                row->SetNullBitMapValue(i, true);
-
-                const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
-                row->InsertColumnData(block, columnIndex);
-
+                this->CheckAndInsertNullValues(block, row, associatedColumnIndex);
                 continue;
             }
 
-            Table::SetBlockDataByColumnType(block, columnType, inputData[i]);
+            if (columnType > ColumnType::ColumnTypeCount)
+                throw invalid_argument("Table::InsertRow: Unsupported Column Type");
+
+            this->setBlockDataByDataTypeArray[static_cast<int>(columnType)](block, inputData[i]);
 
             const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
             row->InsertColumnData(block, columnIndex);
@@ -165,83 +158,6 @@ namespace DatabaseEngine::StorageTypes
 
         this->InsertLargeObjectToPage(row);
         this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row);
-    }
-
-    void Table::SetBlockDataByColumnType(Block *&block, const ColumnType &columnType, const Field &inputData)
-    {
-        switch (columnType)
-        {
-        case ColumnType::TinyInt:
-        {
-            const int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData.GetData());
-            block->SetData(&convertedTinyInt, sizeof(int8_t));
-            break;
-        }
-        case ColumnType::SmallInt:
-        {
-            const int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData.GetData());
-            block->SetData(&convertedSmallInt, sizeof(int16_t));
-            break;
-        }
-        case ColumnType::Int:
-        {
-            const int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData.GetData());
-            block->SetData(&convertedInt, sizeof(int32_t));
-            break;
-        }
-        case ColumnType::BigInt:
-        {
-            const int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData.GetData());
-            block->SetData(&convertedBigInt, sizeof(int64_t));
-            break;
-        }
-        case ColumnType::String:
-        {
-            const string &data = inputData.GetData();
-            block->SetData(data.c_str(), data.size());
-            break;
-        }
-        case ColumnType::Bool:
-        {
-            const string &data = inputData.GetData();
-
-            bool value = false;
-
-            if (data == "1")
-                value = true;
-            else if (data == "0")
-                value = false;
-            else
-                throw invalid_argument("InsertRow: Invalid Boolean Value specified!");
-
-            block->SetData(&value, sizeof(bool));
-            break;
-        }
-        case ColumnType::DateTime:
-        {
-            const string &data = inputData.GetData();
-
-            const time_t unixMilliseconds = DateTime::ToUnixTimeStamp(data);
-
-            block->SetData(&unixMilliseconds, sizeof(time_t));
-            break;
-        }
-        case ColumnType::Decimal:
-        {
-            const string &data = inputData.GetData();
-
-            const Decimal decimalValue(data);
-
-            block->SetData(decimalValue.GetRawData(), decimalValue.GetRawDataSize());
-
-            break;
-        }
-        case ColumnType::UnicodeString:
-            // Handle other cases if needed
-            break;
-        default:
-            throw invalid_argument("Unsupported column type");
-        }
     }
 
     void Table::InsertLargeObjectToPage(Row *row)
@@ -377,7 +293,7 @@ namespace DatabaseEngine::StorageTypes
 
             Block *block = new Block(this->columns[associatedColumnIndex]);
 
-            Table::SetBlockDataByColumnType(block, columnType, field);
+            this->setBlockDataByDataTypeArray[static_cast<int>(columnType)](block, field);
             updateBlocks.push_back(block);
         }
 
@@ -420,4 +336,81 @@ namespace DatabaseEngine::StorageTypes
     }
 
     void Table::SetIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
+
+    void Table::SetTinyIntData(Block *&block, const Field &inputData)
+    {
+        const int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData.GetData());
+        block->SetData(&convertedTinyInt, sizeof(int8_t));
+    }
+
+    void Table::SetSmallIntData(Block *&block, const Field &inputData)
+    {
+        const int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData.GetData());
+        block->SetData(&convertedSmallInt, sizeof(int16_t));
+    }
+
+    void Table::SetIntData(Block *&block, const Field &inputData)
+    {
+        const int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData.GetData());
+        block->SetData(&convertedInt, sizeof(int32_t));
+    }
+
+    void Table::SetBigIntData(Block *&block, const Field &inputData)
+    {
+        const int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData.GetData());
+        block->SetData(&convertedBigInt, sizeof(int64_t));
+    }
+
+    void Table::SetStringData(Block *&block, const Field &inputData)
+    {
+        const string &data = inputData.GetData();
+        block->SetData(data.c_str(), data.size());
+    }
+
+    void Table::SetBoolData(Block *&block, const Field &inputData)
+    {
+        const string &data = inputData.GetData();
+
+        bool value = false;
+
+        if (data == "1")
+            value = true;
+        else if (data == "0")
+            value = false;
+        else
+            throw invalid_argument("InsertRow: Invalid Boolean Value specified!");
+
+        block->SetData(&value, sizeof(bool));
+    }
+
+    void Table::SetDateTimeData(Block *&block, const Field &inputData)
+    {
+        const string &data = inputData.GetData();
+
+        const time_t unixMilliseconds = DateTime::ToUnixTimeStamp(data);
+
+        block->SetData(&unixMilliseconds, sizeof(time_t));
+    }
+
+    void Table::SetDecimalData(Block *&block, const Field &inputData)
+    {
+        const string &data = inputData.GetData();
+
+        const Decimal decimalValue(data);
+
+        block->SetData(decimalValue.GetRawData(), decimalValue.GetRawDataSize());
+    }
+
+    void Table::CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex)
+    {
+        if (!columns[associatedColumnIndex]->GetAllowNulls())
+            throw invalid_argument("Column " + columns[associatedColumnIndex]->GetColumnName() + " does not allow NULLs. Insert Fails.");
+
+        block->SetData(nullptr, 0);
+
+        row->SetNullBitMapValue(associatedColumnIndex, true);
+
+        const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
+        row->InsertColumnData(block, columnIndex);
+    }
 }

@@ -7,10 +7,11 @@
 using namespace std;
 using namespace Constants;
 
-namespace DatabaseEngine::StorageTypes {
+namespace DatabaseEngine::StorageTypes
+{
     class Table;
     class Block;
-    
+
     enum class ColumnType : uint8_t
     {
         TinyInt = 0,
@@ -19,51 +20,55 @@ namespace DatabaseEngine::StorageTypes {
         BigInt = 3,
         Decimal = 4,
         String = 5,
-        UnicodeString = 6,
-        Bool = 7,
-        DateTime = 8,
+        Bool = 6,
+        DateTime = 7,
+        ColumnTypeCount = 8
     };
 
-    typedef struct ColumnHeader {
+    typedef struct ColumnHeader
+    {
         header_literal_t columnNameSize;
         string columnName;
-        
+
         header_literal_t columnTypeLiteralSize;
         string columnTypeLiteral;
-        
+
         ColumnType columnType;
         column_index_t columnIndex;
         row_size_t recordSize;
-    }ColumnHeader;
+    } ColumnHeader;
 
-    class Column {
+    class Column
+    {
         ColumnHeader header;
-        const Table* table;
+        const Table *table;
         bool allowNulls;
 
     protected:
         [[nodiscard]] ColumnType SetColumnType() const;
 
     public:
-        Column(const string& columnName, const string& columnTypeLiteral, const row_size_t&  recordSize, const bool& allowNulls);
+        Column(const string &columnName, const string &columnTypeLiteral, const row_size_t &recordSize, const bool &allowNulls);
 
-        explicit Column(const ColumnHeader& header, const Table* table);
+        explicit Column(const ColumnHeader &header, const Table *table);
 
-        string& GetColumnName();
+        ~Column();
 
-        [[nodiscard]] const ColumnType& GetColumnType() const;
+        string &GetColumnName();
 
-        [[nodiscard]] const row_size_t& GetColumnSize() const;
+        [[nodiscard]] const ColumnType &GetColumnType() const;
+
+        [[nodiscard]] const row_size_t &GetColumnSize() const;
 
         [[nodiscard]] bool IsColumnNullable() const;
 
-        [[nodiscard]] const bool& GetAllowNulls() const;
+        [[nodiscard]] const bool &GetAllowNulls() const;
 
-        void SetColumnIndex(const column_index_t& columnIndex);
+        void SetColumnIndex(const column_index_t &columnIndex);
 
-        [[nodiscard]] const column_index_t& GetColumnIndex() const;
+        [[nodiscard]] const column_index_t &GetColumnIndex() const;
 
-        [[nodiscard]] const ColumnHeader& GetColumnHeader() const;
+        [[nodiscard]] const ColumnHeader &GetColumnHeader() const;
 
         [[nodiscard]] bool isColumnLOB() const;
     };

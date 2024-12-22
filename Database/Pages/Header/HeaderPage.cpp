@@ -8,7 +8,8 @@ using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
 using namespace ByteMaps;
 
-namespace Pages {
+namespace Pages
+{
     HeaderPage::HeaderPage(const int &pageId) : Page(pageId)
     {
         this->databaseHeader = new DatabaseHeader();
@@ -18,33 +19,35 @@ namespace Pages {
 
     HeaderPage::HeaderPage() : Page()
     {
-        this->databaseHeader = new DatabaseHeader();;
+        this->databaseHeader = new DatabaseHeader();
+        ;
         this->isDirty = true;
         this->header.pageType = PageType::METADATA;
     }
 
-    HeaderPage::HeaderPage(const PageHeader& pageHeader) : Page(pageHeader)
+    HeaderPage::HeaderPage(const PageHeader &pageHeader) : Page(pageHeader)
     {
-        this->databaseHeader = new DatabaseHeader();;
+        this->databaseHeader = new DatabaseHeader();
+        ;
     }
 
     HeaderPage::~HeaderPage()
     {
-        delete this->databaseHeader;   
+        delete this->databaseHeader;
     }
 
     void HeaderPage::WritePageToFile(fstream *filePtr)
     {
         this->WritePageHeaderToFile(filePtr);
-        
-        filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader->databaseNameSize), sizeof(header_literal_t));
-        filePtr->write(this->databaseHeader->databaseName.c_str(), this->databaseHeader->databaseNameSize);
-        filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader->numberOfTables), sizeof(table_number_t));
-        filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader->lastTableId), sizeof(table_id_t));
-        filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader->lastPageFreeSpacePageId), sizeof(page_id_t));
-        filePtr->write(reinterpret_cast<const char*>(&this->databaseHeader->lastGamPageId), sizeof(page_id_t));
 
-        for(const auto& tableFullHeader: this->tablesHeaders)
+        filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->databaseNameSize), sizeof(header_literal_t));
+        filePtr->write(this->databaseHeader->databaseName.c_str(), this->databaseHeader->databaseNameSize);
+        filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->numberOfTables), sizeof(table_number_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->lastTableId), sizeof(table_id_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->lastPageFreeSpacePageId), sizeof(page_id_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->lastGamPageId), sizeof(page_id_t));
+
+        for (const auto &tableFullHeader : this->tablesHeaders)
         {
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableId), sizeof(table_id_t));
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableNameSize), sizeof(header_literal_t));
@@ -52,9 +55,12 @@ namespace Pages {
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.indexAllocationMapPageId), sizeof(page_id_t));
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.maxRowSize), sizeof(row_size_t));
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.numberOfColumns), sizeof(column_number_t));
+            filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.clusteredIndexPageId), sizeof(page_id_t));
             tableFullHeader.tableHeader.columnsNullBitMap->WriteDataToFile(filePtr);
+            tableFullHeader.tableHeader.clusteredIndexesBitMap->WriteDataToFile(filePtr);
+            tableFullHeader.tableHeader.nonClusteredIndexesBitMap->WriteDataToFile(filePtr);
 
-            for(const auto& columnMetaData: tableFullHeader.columnsHeaders)
+            for (const auto &columnMetaData : tableFullHeader.columnsHeaders)
             {
                 filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnNameSize), sizeof(header_literal_t));
                 filePtr->write(columnMetaData.columnName.c_str(), columnMetaData.columnNameSize);
@@ -67,7 +73,7 @@ namespace Pages {
         }
     }
 
-    void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table* table, page_offset_t& offSet, fstream* filePtr)
+    void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
     {
         memcpy(&this->databaseHeader->databaseNameSize, data.data() + offSet, sizeof(header_literal_t));
         offSet += sizeof(header_literal_t);
@@ -88,13 +94,13 @@ namespace Pages {
         memcpy(&this->databaseHeader->lastGamPageId, data.data() + offSet, sizeof(page_id_t));
         offSet += sizeof(page_id_t);
 
-        for(int i = 0;i < this->databaseHeader->numberOfTables; i++)
+        for (int i = 0; i < this->databaseHeader->numberOfTables; i++)
         {
             TableFullHeader tableFullHeader;
-            
+
             memcpy(&tableFullHeader.tableHeader.tableId, data.data() + offSet, sizeof(table_id_t));
             offSet += sizeof(table_id_t);
-            
+
             memcpy(&tableFullHeader.tableHeader.tableNameSize, data.data() + offSet, sizeof(header_literal_t));
             offSet += sizeof(header_literal_t);
             tableFullHeader.tableHeader.tableName.resize(tableFullHeader.tableHeader.tableNameSize);
@@ -111,10 +117,19 @@ namespace Pages {
             memcpy(&tableFullHeader.tableHeader.numberOfColumns, data.data() + offSet, sizeof(column_number_t));
             offSet += sizeof(column_number_t);
 
+            memcpy(&tableFullHeader.tableHeader.clusteredIndexPageId, data.data() + offSet, sizeof(page_id_t));
+            offSet += sizeof(page_id_t);
+
             tableFullHeader.tableHeader.columnsNullBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
             tableFullHeader.tableHeader.columnsNullBitMap->GetDataFromFile(data, offSet);
-            
-            for(int j = 0; j < tableFullHeader.tableHeader.numberOfColumns; j++)
+
+            tableFullHeader.tableHeader.clusteredIndexesBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
+            tableFullHeader.tableHeader.clusteredIndexesBitMap->GetDataFromFile(data, offSet);
+
+            tableFullHeader.tableHeader.nonClusteredIndexesBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
+            tableFullHeader.tableHeader.nonClusteredIndexesBitMap->GetDataFromFile(data, offSet);
+
+            for (int j = 0; j < tableFullHeader.tableHeader.numberOfColumns; j++)
             {
                 ColumnHeader columnHeader;
                 memcpy(&columnHeader.columnNameSize, data.data() + offSet, sizeof(header_literal_t));
@@ -146,20 +161,20 @@ namespace Pages {
         }
     }
 
-    void HeaderPage::SetHeaders(const DatabaseHeader& databaseHeader, const vector<Table*>& tables)
+    void HeaderPage::SetHeaders(const DatabaseHeader &databaseHeader, const vector<Table *> &tables)
     {
         *this->databaseHeader = databaseHeader;
         this->databaseHeader->databaseNameSize = this->databaseHeader->databaseName.size();
 
-        for(const auto& table: tables)
+        for (const auto &table : tables)
         {
             TableFullHeader tableFullHeader;
             tableFullHeader.tableHeader = table->GetTableHeader();
             tableFullHeader.tableHeader.tableNameSize = tableFullHeader.tableHeader.tableName.size();
 
-            const auto& columns = table->GetColumns();
+            const auto &columns = table->GetColumns();
 
-            for(const auto& column: columns)
+            for (const auto &column : columns)
             {
                 ColumnHeader columnHeader = column->GetColumnHeader();
                 columnHeader.columnTypeLiteralSize = columnHeader.columnTypeLiteral.size();
@@ -174,7 +189,7 @@ namespace Pages {
         this->isDirty = true;
     }
 
-    const DatabaseHeader* HeaderPage::GetDatabaseHeader() const { return this->databaseHeader; }
+    const DatabaseHeader *HeaderPage::GetDatabaseHeader() const { return this->databaseHeader; }
 
-    const vector<TableFullHeader>& HeaderPage::GetTablesFullHeaders() const { return this->tablesHeaders; }
+    const vector<TableFullHeader> &HeaderPage::GetTablesFullHeaders() const { return this->tablesHeaders; }
 }

@@ -1,5 +1,8 @@
 ﻿#pragma once
 #include "../Page.h"
+#include <fstream>
+
+using namespace std;
 
 namespace Indexing
 {
@@ -26,6 +29,10 @@ namespace Pages
         Indexing::BPlusTree *tree;
         vector<column_index_t> indexedColumns;
 
+    protected:
+        void WriteNodeToDisk(Indexing::Node *node, fstream *filePtr);
+        Indexing::Node *GetNodeFromDisk(const vector<char> &data, page_offset_t &offSet);
+
     public:
         IndexPage(const page_id_t &pageId, const bool &isPageCreation);
         explicit IndexPage(const PageHeader &pageHeader);
@@ -41,5 +48,7 @@ namespace Pages
         [[nodiscard]] const vector<column_index_t> &GetIndexedColumns() const;
 
         [[nodiscard]] const int &GetBranchingFactor() const;
+
+        void SetRoot(Indexing::Node *&node);
     };
 }

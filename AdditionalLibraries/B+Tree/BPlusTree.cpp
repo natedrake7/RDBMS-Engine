@@ -4,7 +4,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <string.h>
-
 #include "../../Database/Table/Table.h"
 #include "../../Database/Storage/PageManager/PageManager.h"
 
@@ -16,23 +15,80 @@ namespace Indexing
 
     static ostream &operator<<(ostream &os, const BPlusTreeData &dataObject)
     {
-        os << dataObject.pageId << " " << dataObject.extentId;
+        os << *dataObject.pageId << " " << *dataObject.extentId;
         return os;
     }
 
     BPlusTreeData::BPlusTreeData()
     {
-        this->pageId = 0;
-        this->extentId = 0;
+        this->pageId = nullptr;
+        this->extentId = nullptr;
     }
 
     BPlusTreeData::BPlusTreeData(const page_id_t &pageId, const extent_id_t &extentId)
     {
-        this->pageId = pageId;
-        this->extentId = extentId;
+        this->pageId = new page_id_t(pageId);
+        this->extentId = new extent_id_t(extentId);
     }
 
-    BPlusTreeData::~BPlusTreeData() = default;
+    BPlusTreeData::BPlusTreeData(BPlusTreeData &&other) noexcept
+    {
+        this->pageId = other.pageId;
+        this->extentId = other.extentId;
+
+        other.pageId = nullptr;
+        other.extentId = nullptr;
+    }
+
+    BPlusTreeData::BPlusTreeData(const BPlusTreeData &other)
+    {
+        this->pageId = (other.pageId != nullptr)
+                           ? new page_id_t(*other.pageId)
+                           : nullptr;
+
+        this->extentId = (other.extentId != nullptr)
+                             ? new extent_id_t(*other.extentId)
+                             : nullptr;
+    }
+
+    BPlusTreeData::~BPlusTreeData()
+    {
+        delete this->pageId;
+        delete this->extentId;
+    }
+
+    BPlusTreeData &BPlusTreeData::operator=(const BPlusTreeData &other)
+    {
+        if (this == &other)
+            return *this;
+
+        this->pageId = (other.pageId != nullptr)
+                           ? new page_id_t(*other.pageId)
+                           : nullptr;
+
+        this->extentId = (other.extentId != nullptr)
+                             ? new extent_id_t(*other.extentId)
+                             : nullptr;
+
+        return *this;
+    }
+
+    BPlusTreeData &BPlusTreeData::operator=(BPlusTreeData &&other)
+    {
+        if (this == &other)
+            return *this;
+
+        delete pageId;
+        delete extentId;
+
+        pageId = other.pageId;
+        extentId = other.extentId;
+
+        other.pageId = nullptr;
+        other.extentId = nullptr;
+
+        return *this;
+    }
 
     Node::Node(const bool &isLeaf)
     {
@@ -41,11 +97,11 @@ namespace Indexing
         this->prev = nullptr;
     }
 
-    Node::~Node()
-    {
-        for (const auto &key : this->keys)
-            delete key.value;
-    }
+    vector<Key> &Node::GetKeysData() { return this->keys; }
+
+    vector<BPlusTreeData> &Node::GetData() { return this->data; }
+
+    Node::~Node() = default;
 
     BPlusTree::BPlusTree(const Table *table)
     {
@@ -54,6 +110,13 @@ namespace Indexing
         this->root = new Node(true);
         this->t = PAGE_SIZE / table->GetMaximumRowSize();
         this->tableId = tableHeader.tableId;
+    }
+
+    BPlusTree::BPlusTree()
+    {
+        this->root = nullptr;
+        this->t = 0;
+        this->tableId = 0;
     }
 
     BPlusTree::~BPlusTree()
@@ -190,7 +253,7 @@ namespace Indexing
                 const auto &lastDataObject = previousNode->data.back();
 
                 if (BPlusTree::IsKeyGreaterOrEqual(maxKey, previousNode->keys[previousNode->keys.size() - 1]))
-                    result.push_back(QueryData(lastDataObject, previousNode->keys.size()));
+                    result.emplace_back(lastDataObject, previousNode->keys.size());
             }
 
             for (int i = 0; i < currentNode->keys.size(); i++)
@@ -199,7 +262,7 @@ namespace Indexing
 
                 if (BPlusTree::IsKeyLessOrEqual(minKey, key) && BPlusTree::IsKeyGreaterOrEqual(maxKey, key))
                 {
-                    result.push_back(QueryData(currentNode->data[i], i));
+                    result.emplace_back(currentNode->data[i], i);
                     continue;
                 }
 
@@ -263,9 +326,28 @@ namespace Indexing
         return result;
     }
 
+    Node *BPlusTree::GetRoot() { return this->root; }
+
+    void BPlusTree::SetRoot(Node *&node) { this->root = node; }
+
     void BPlusTree::SetBranchingFactor(const int &branchingFactor) { this->t = branchingFactor; }
 
     const int &BPlusTree::GetBranchingFactor() const { return this->t; }
+
+    void BPlusTree::WriteTreeHeaderToFile(fstream *filePtr)
+    {
+        filePtr->write(reinterpret_cast<char *>(&this->t), sizeof(int));
+        filePtr->write(reinterpret_cast<char *>(&this->tableId), sizeof(table_id_t));
+    }
+
+    void BPlusTree::ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet)
+    {
+        memcpy(&this->t, data.data() + offSet, sizeof(int));
+        offSet += sizeof(int);
+
+        memcpy(&this->tableId, data.data() + offSet, sizeof(table_id_t));
+        offSet += sizeof(table_id_t);
+    }
 
     void BPlusTree::GetNodeSize(const Node *node, page_size_t &size) const
     {
