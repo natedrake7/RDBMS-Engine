@@ -432,10 +432,12 @@ namespace DatabaseEngine
 
         vector<QueryData> results;
         // int minKey = 12, maxKey = 25;
-        const string minKey = "Silence Of The Lambs";
-        const string maxKey = "Silence Of The Lambs152";
+        // const string minKey = "Silence Of The Lambs";
+        // const string maxKey = "Silence Of The Lambs152";
+        const int32_t minKey = 9;
+        const int32_t maxKey = 20;
 
-        indexPage->RangeQuery(Key(minKey.c_str(), minKey.size()), Key(maxKey.c_str(), maxKey.size()), results);
+        indexPage->RangeQuery(Key(&minKey, sizeof(int32_t)), Key(&maxKey, sizeof(int32_t)), results);
 
         const Page *page = (!results.empty())
                                ? this->pageManager->GetPage(*results[0].treeData.pageId, *results[0].treeData.extentId, table)

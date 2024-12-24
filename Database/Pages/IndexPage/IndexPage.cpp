@@ -64,11 +64,6 @@ namespace Pages
 
             node->data[0].pageId = new page_id_t(pageId);
             node->data[0].extentId = new extent_id_t(extentId);
-
-            if (prevLeafNode != nullptr)
-                prevLeafNode->next = node;
-
-            prevLeafNode = node;
         }
 
         uint16_t numOfKeys;
@@ -96,7 +91,7 @@ namespace Pages
         node->children.resize(numberOfChildren);
 
         for (int i = 0; i < numberOfChildren; i++)
-            node->children[i] = this->GetNodeFromDisk(data, offSet, prevLeafNode);
+            node->children[i] = this->GetNodeFromDisk(data, offSet);
 
         return node;
     }
