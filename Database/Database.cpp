@@ -1,12 +1,14 @@
 ﻿#include "Database.h"
-#include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <thread>
+#include <vcruntime_new_debug.h>
 #include "./Pages/Header/HeaderPage.h"
 #include "./Pages/GlobalAllocationMap/GlobalAllocationMapPage.h"
 #include "./Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "./Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "./Pages/IndexPage/IndexPage.h"
+#include "Constants.h"
 #include "Table/Table.h"
 #include "Column/Column.h"
 #include "Row/Row.h"
@@ -15,7 +17,6 @@
 #include "Storage/PageManager/PageManager.h"
 #include "../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "Block/Block.h"
-#include <unordered_set>
 
 using namespace Pages;
 using namespace DatabaseEngine::StorageTypes;
@@ -99,7 +100,10 @@ namespace DatabaseEngine
     Database::~Database()
     {
         // save db header;
+        this->WriteTableIndexesToFile();
+        
         this->WriteHeaderToFile();
+
         for (const auto &dbTable : this->tables)
             delete dbTable;
     }
@@ -135,7 +139,9 @@ namespace DatabaseEngine
                 return table;
         }
 
-        return nullptr;
+        const string exceptionMsg = "Database::OpenTable: No table with name " + tableName + " exists.";
+
+        throw invalid_argument(exceptionMsg);
     }
 
     void CreateDatabase(const string &dbName, Storage::FileManager *fileManager, Storage::PageManager *pageManager)
@@ -193,20 +199,13 @@ namespace DatabaseEngine
     {
         const auto &tableHeader = table.GetTableHeader();
 
-        IndexPage *indexPage = nullptr;
+        const table_id_t& tableId = table.GetTableId();
 
-        if (tableHeader.clusteredIndexPageId == 0)
-        {
-            indexPage = this->CreateIndexPage(table.GetTableId());
-            this->tables[table.GetTableId()]->SetIndexPageId(indexPage->GetPageId());
-        }
-        else
-            indexPage = this->pageManager->GetIndexPage(tableHeader.clusteredIndexPageId);
+        BPlusTree* tree = this->tables[tableId]->GetClusteredIndexedTree();
 
-        vector<column_index_t> indexedColumns = indexPage->GetIndexedColumns();
+        vector<column_index_t> indexedColumns;
 
-        if (indexedColumns.empty())
-            table.GetIndexedColumnKeys(&indexedColumns);
+        table.GetIndexedColumnKeys(&indexedColumns);
 
         const auto &keyBlock = row->GetData()[indexedColumns[0]];
 
@@ -216,15 +215,15 @@ namespace DatabaseEngine
 
         vector<pair<Node *, Node *>> splitLeaves;
 
-        Node *node = indexPage->FindAppropriateNodeForInsert(&table, key, &indexPosition, &splitLeaves);
+        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, &splitLeaves);
 
-        SplitPage(splitLeaves, indexPage->GetBranchingFactor(), table);
+        SplitPage(splitLeaves, tree->GetBranchingFactor(), table);
 
         const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
 
-        if (!node->data.empty())
+        if (node->data.pageId != 0)
         {
-            this->InsertRowToNonEmptyNode(node, indexPage, table, row, key, indexPosition);
+            this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition);
             return;
         }
 
@@ -243,7 +242,8 @@ namespace DatabaseEngine
 
         node->keys.insert(node->keys.begin() + indexPosition, key);
 
-        node->data.insert(node->data.begin() + indexPosition, BPlusTreeData(newPageId, newExtentId));
+        node->data.pageId = newPageId;
+        node->data.extentId = newExtentId;
     }
 
     void Database::SplitPage(vector<pair<Node *, Node *>> &splitLeaves, const int &branchingFactor, const Table &table)
@@ -256,8 +256,8 @@ namespace DatabaseEngine
             if (!firstNode->isLeaf || !secondNode->isLeaf)
                 continue;
 
-            const page_id_t pageId = *firstNode->data[0].pageId;
-            const extent_id_t extentId = *firstNode->data[0].extentId;
+            const page_id_t pageId = firstNode->data.pageId;
+            const extent_id_t extentId = firstNode->data.extentId;
 
             Page *page = this->pageManager->GetPage(pageId, extentId, &table);
 
@@ -275,7 +275,7 @@ namespace DatabaseEngine
 
             const page_id_t nextLeafPageId = nextLeafPage->GetPageId();
             const extent_id_t nextLeafExtentId = (nextExtentId == 0)
-                                                     ? *firstNode->data[0].extentId
+                                                     ? firstNode->data.extentId
                                                      : nextExtentId;
 
             page->SplitPageRowByBranchingFactor(nextLeafPage, branchingFactor, table);
@@ -283,10 +283,8 @@ namespace DatabaseEngine
             pageFreeSpacePage->SetPageMetaData(page);
             pageFreeSpacePage->SetPageMetaData(nextLeafPage);
 
-            auto &secondNodeFirstItem = secondNode->data[0];
-
-            secondNodeFirstItem.pageId = new page_id_t(nextLeafPageId);
-            secondNodeFirstItem.extentId = new extent_id_t(nextLeafExtentId);
+            secondNode->data.pageId = nextLeafPageId;
+            secondNode->data.extentId = nextLeafExtentId;
         }
     }
 
@@ -321,21 +319,17 @@ namespace DatabaseEngine
         return nextLeafPage;
     }
 
-    void Database::InsertRowToNonEmptyNode(Node *node, IndexPage *indexPage, const Table &table, Row *row, const Key &key, const int &indexPosition)
+    void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)
     {
-        const auto &nodeFirstObject = node->data.begin();
-
-        const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(*nodeFirstObject->pageId);
+        const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(node->data.pageId);
 
         PageFreeSpacePage *pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(pageFreeSpacePageId);
 
-        Page *page = this->pageManager->GetPage(*nodeFirstObject->pageId, *nodeFirstObject->extentId, &table);
+        Page *page = this->pageManager->GetPage(node->data.pageId, node->data.extentId, &table);
 
         Database::InsertRowToPage(pageFreeSpacePage, page, row, indexPosition);
 
         node->keys.insert(node->keys.begin() + indexPosition, key);
-
-        node->data.insert(node->data.begin() + indexPosition, BPlusTreeData());
     }
 
     void Database::InsertRowToPage(PageFreeSpacePage *pageFreeSpacePage, Page *page, Row *row, const int &indexPosition)
@@ -427,8 +421,8 @@ namespace DatabaseEngine
     void Database::SelectRowFromClusteredTable(const Table *table, vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions)
     {
         const auto &tableHeader = table->GetTableHeader();
-
-        IndexPage *indexPage = this->pageManager->GetIndexPage(tableHeader.clusteredIndexPageId);
+        
+        BPlusTree* tree = this->tables[tableHeader.tableId]->GetClusteredIndexedTree();
 
         vector<QueryData> results;
         // int minKey = 12, maxKey = 25;
@@ -437,17 +431,17 @@ namespace DatabaseEngine
         const int32_t minKey = 9;
         const int32_t maxKey = 20;
 
-        indexPage->RangeQuery(Key(&minKey, sizeof(int32_t)), Key(&maxKey, sizeof(int32_t)), results);
+        tree->RangeQuery(Key(&minKey, sizeof(int32_t)), Key(&maxKey, sizeof(int32_t)), results);
 
         const Page *page = (!results.empty())
-                               ? this->pageManager->GetPage(*results[0].treeData.pageId, *results[0].treeData.extentId, table)
+                               ? this->pageManager->GetPage(results[0].treeData.pageId, results[0].treeData.extentId, table)
                                : nullptr;
 
         for (const auto &result : results)
         {
             // get new page else use current one
-            if (result.treeData.pageId != nullptr && *result.treeData.pageId != page->GetPageId())
-                page = this->pageManager->GetPage(*result.treeData.pageId, *result.treeData.extentId, table);
+            if (result.treeData.pageId != 0 && result.treeData.pageId != page->GetPageId())
+                page = this->pageManager->GetPage(result.treeData.pageId, result.treeData.extentId, table);
 
             selectedRows->push_back(page->GetRowByIndex(*table, result.indexPosition));
         }
@@ -717,7 +711,172 @@ namespace DatabaseEngine
         pageFreeSpacePage->SetPageMetaData(page);
     }
 
+    void Database::WriteTableIndexesToFile()
+    {
+        for(auto& table : this->tables)
+        {
+            BPlusTree* clusteredIndexedTree = table->GetClusteredIndexedTree();
+
+            if(clusteredIndexedTree == nullptr)
+                continue;
+
+            this->WriteBTreeToFile(clusteredIndexedTree, table);
+        }
+    }
+
+    void Database::WriteBTreeToFile(BPlusTree* tree, Table*& table)
+    {
+        const auto& tableHeader = table->GetTableHeader();
+        IndexPage* indexPage = nullptr;
+
+        if (tableHeader.clusteredIndexPageId == 0)
+        {
+            indexPage = this->CreateIndexPage(tableHeader.tableId);
+            table->SetIndexPageId(indexPage->GetPageId());
+        }
+        else
+            indexPage = this->pageManager->GetIndexPage(tableHeader.clusteredIndexPageId);
+
+        Node* root = tree->GetRoot();
+
+        this->WriteNodeToPage(root, indexPage, table);
+        
+    }
+
+    void Database::WriteNodeToPage(Node *node, IndexPage* indexPage, Table*& table)
+    {
+        const page_size_t nodeSize = node->GetNodeSize();
+
+        const page_id_t indexPageId = indexPage->GetPageId();
+
+        const page_id_t freeSpacePageId = Database::GetPfsAssociatedPage(indexPageId);
+
+        PageFreeSpacePage* pageFreeSpacePage = this->pageManager->GetPageFreeSpacePage(freeSpacePageId);
+
+        if(indexPage->GetBytesLeft() < nodeSize)
+        {
+            const auto& tableHeader = table->GetTableHeader();
+
+            IndexAllocationMapPage* indexAllocationMapPage = this->pageManager->GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
+
+            vector<extent_id_t> allocatedExtents;
+            indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
+
+            bool newPageFound = false;
+            for(const auto& extentId: allocatedExtents)
+            {
+                const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+                for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < indexPageId + EXTENT_SIZE; nextIndexPageId++)
+                {
+                    if(pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
+                        break;
+                    
+                    //page is free
+                    if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) != 0)
+                        continue;
+
+                    indexPage->SetNextPageId(nextIndexPageId);
+
+                    indexPage = this->pageManager->GetIndexPage(nextIndexPageId);
+
+                    newPageFound = true;
+                }
+            }
+
+            if(!newPageFound)
+            {
+                IndexPage* prevIndexPage = indexPage;
+                indexPage = this->CreateIndexPage(table->GetTableId());
+
+                prevIndexPage->SetNextPageId(indexPage->GetPageId());
+            }
+        }
+
+        indexPage->WriteTreeDataToPage(node);
+        pageFreeSpacePage->SetPageMetaData(indexPage);
+
+        for (const auto &child : node->children)
+            this->WriteNodeToPage(child, indexPage, table);
+    }
+
+    void Database::GetTreeFromDisk(BPlusTree*& tree, Table* table)
+    {
+        const auto& tableHeader = table->GetTableHeader();
+
+        page_id_t indexPageId = tableHeader.clusteredIndexPageId;
+        IndexPage* indexPage = nullptr;
+
+        Node* root = tree->GetRoot();
+
+        indexPage = this->pageManager->GetIndexPage(indexPageId);
+
+        int currentNodeIndex = 0;
+        page_offset_t offSet = 0;
+
+        root = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet);
+    }
+
+    Node* Database::GetNodeFromDisk(IndexPage* indexPage, int& currentNodeIndex, page_offset_t& offSet)
+    {
+        //next page must be loaded
+        if(currentNodeIndex == indexPage->GetPageSize() && indexPage->GetNextPageId() != 0)
+        {
+            indexPage = this->pageManager->GetIndexPage(indexPage->GetNextPageId());
+
+            currentNodeIndex = 0;
+            offSet = 0;
+        }
+
+        const auto& treeData = indexPage->GetTreeData();
+
+        bool isLeaf;
+        memcpy(&isLeaf, treeData + offSet, sizeof(bool));
+        offSet += sizeof(bool);
+
+        Node *node = new Node(isLeaf);
+
+        if (node->isLeaf)
+        {
+            memcpy(&node->data.pageId, treeData + offSet, sizeof(page_id_t));
+            offSet += sizeof(page_id_t);
+
+            memcpy(&node->data.extentId, treeData + offSet, sizeof(extent_id_t));
+            offSet += sizeof(extent_id_t);
+        }
+
+        uint16_t numOfKeys;
+        memcpy(&numOfKeys, treeData + offSet, sizeof(uint16_t));
+        offSet += sizeof(uint16_t);
+
+        for (int i = 0; i < numOfKeys; i++)
+        {
+            key_size_t keySize;
+            memcpy(&keySize, treeData + offSet, sizeof(key_size_t));
+            offSet += sizeof(key_size_t);
+
+            object_t *keyValue = new object_t[keySize];
+            memcpy(keyValue, treeData + offSet, keySize);
+
+            offSet += keySize;
+
+            node->keys.emplace_back(keyValue, keySize);
+        }
+
+        uint16_t numberOfChildren;
+        memcpy(&numberOfChildren, treeData + offSet, sizeof(uint16_t));
+        offSet += sizeof(uint16_t);
+
+        node->children.resize(numberOfChildren);
+
+        for (int i = 0; i < numberOfChildren; i++)
+            node->children[i] = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet);
+
+        return node;
+    }
+
     string Database::GetFileName() const { return this->filename + this->fileExtension; }
+
     DatabaseHeader::DatabaseHeader()
     {
         this->databaseNameSize = 0;

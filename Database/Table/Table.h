@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include <string>
 #include <vector>
-#include <random>
 #include "../Constants.h"
 #include "../Database.h"
 using namespace std;
@@ -9,6 +8,10 @@ using namespace Constants;
 
 class RowCondition;
 class Field;
+
+namespace Indexing{
+    class BPlusTree;
+}
 
 namespace DatabaseEngine
 {
@@ -77,6 +80,8 @@ namespace DatabaseEngine::StorageTypes
         vector<Column *> columns;
         Database *database;
         vector<void (*)(Block *&block, const Field &inputData)> setBlockDataByDataTypeArray = {&Table::SetTinyIntData, &Table::SetSmallIntData, &Table::SetIntData, &Table::SetBigIntData, &Table::SetDecimalData, &Table::SetStringData, &Table::SetBoolData, &Table::SetDateTimeData};
+        Indexing::BPlusTree* clusteredIndexedTree;
+        vector<Indexing::BPlusTree*> nonClusteredIndexedTrees;
 
     protected:
         void InsertLargeObjectToPage(Row *row);
@@ -138,5 +143,7 @@ namespace DatabaseEngine::StorageTypes
         void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
 
         void SetIndexPageId(const page_id_t &indexPageId);
+
+        Indexing::BPlusTree* GetClusteredIndexedTree();
     };
 }

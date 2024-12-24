@@ -13,6 +13,7 @@ namespace Indexing
 {
     struct Key;
     struct Node;
+    class BPlusTree;
 }
 
 namespace DatabaseEngine::StorageTypes
@@ -61,7 +62,7 @@ namespace DatabaseEngine
         DatabaseHeader &operator=(const DatabaseHeader &dbHeader);
     } DatabaseHeader;
 
-    class Database
+    class  Database
     {
         DatabaseHeader header;
         string filename;
@@ -101,11 +102,19 @@ namespace DatabaseEngine
 
         static void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, StorageTypes::Row *row, const int &indexPosition);
 
-        void InsertRowToNonEmptyNode(Indexing::Node *node, Pages::IndexPage *indexPage, const StorageTypes::Table &table, StorageTypes::Row *row, const Indexing::Key &key, const int &indexPosition);
+        void InsertRowToNonEmptyNode(Indexing::Node *node, const StorageTypes::Table &table, StorageTypes::Row *row, const Indexing::Key &key, const int &indexPosition);
 
         void SelectRowsFromHeapTable(const StorageTypes::Table *table, vector<StorageTypes::Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
 
         void SelectRowFromClusteredTable(const StorageTypes::Table *table, vector<StorageTypes::Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
+
+        void WriteTableIndexesToFile();
+
+        void WriteBTreeToFile(Indexing::BPlusTree* tree, StorageTypes::Table*& table);
+
+        void WriteNodeToPage(Indexing::Node *node, Pages::IndexPage* indexPage, StorageTypes::Table*& table);
+
+        Indexing::Node* GetNodeFromDisk(Pages::IndexPage* indexPage, int& currentNodeIndex, page_offset_t& offSet);
 
     public:
         explicit Database(const string &dbName, Storage::PageManager *pageManager);
@@ -141,6 +150,8 @@ namespace DatabaseEngine
         [[nodiscard]] string GetFileName() const;
 
         static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId);
+
+        void GetTreeFromDisk(Indexing::BPlusTree*& tree, StorageTypes::Table* table);
     };
 
     void CreateDatabase(const string &dbName, Storage::FileManager *fileManager, Storage::PageManager *pageManager);

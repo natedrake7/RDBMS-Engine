@@ -34,7 +34,7 @@ int main() {
 
     pageManager->BindDatabase(db);
 
-    Table *table = db->OpenTable("Movies");
+    Table *table = nullptr;
 
     // CreateAndInsertToDatabase(db, table);
     table = db->OpenTable("Movies");

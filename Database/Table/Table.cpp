@@ -5,6 +5,7 @@
 #include "../../AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "../Block/Block.h"
 #include "../Column/Column.h"
 #include "../Constants.h"
@@ -13,9 +14,11 @@
 #include "../Pages/Page.h"
 #include "../Row/Row.h"
 
+
 using namespace Pages;
 using namespace DataTypes;
 using namespace ByteMaps;
+using namespace Indexing;
 
 namespace DatabaseEngine::StorageTypes {
 TableHeader::TableHeader() {
@@ -72,13 +75,14 @@ Table::Table(const string &tableName, const table_id_t &tableId,
   this->header.tableName = tableName;
   this->header.numberOfColumns = columns.size();
   this->header.columnsNullBitMap = new BitMap(this->header.numberOfColumns);
-  this->header.clusteredIndexesBitMap =
-      new BitMap(this->header.numberOfColumns);
-  this->header.nonClusteredIndexesBitMap =
-      new BitMap(this->header.numberOfColumns);
+  this->header.clusteredIndexesBitMap = new BitMap(this->header.numberOfColumns);
+  this->header.nonClusteredIndexesBitMap = new BitMap(this->header.numberOfColumns);
   this->header.tableId = tableId;
 
+  this->clusteredIndexedTree = nullptr;
+
   this->SetTableIndexesToHeader(clusteredKeyIndexes, nonClusteredIndexes);
+
 
   uint16_t counter = 0;
   for (const auto &column : columns) {
@@ -95,26 +99,36 @@ Table::Table(const TableHeader &tableHeader,
              DatabaseEngine::Database *database) {
   this->header = tableHeader;
   this->database = database;
+
+  this->clusteredIndexedTree = nullptr;
 }
 
-Table::~Table() {
+Table::~Table() 
+{
+  delete this->clusteredIndexedTree;
+
   for (const auto &column : columns)
     delete column;
 }
 
-void Table::SetTableIndexesToHeader(
-    const vector<column_index_t> *clusteredKeyIndexes,
-    const vector<column_index_t> *nonClusteredIndexes) {
+void Table::SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes) 
+{
   if (clusteredKeyIndexes != nullptr && !clusteredKeyIndexes->empty())
-    for (const auto &clusteredIndex : *clusteredKeyIndexes)
-      this->header.clusteredIndexesBitMap->Set(clusteredIndex, true);
+  {
+      for (const auto &clusteredIndex : *clusteredKeyIndexes)
+        this->header.clusteredIndexesBitMap->Set(clusteredIndex, true);
+      
+      this->clusteredIndexedTree = new BPlusTree(this);
+  }
+
 
   if (nonClusteredIndexes != nullptr && !nonClusteredIndexes->empty())
     for (const auto &nonClusteredIndex : *nonClusteredIndexes)
       this->header.nonClusteredIndexesBitMap->Set(nonClusteredIndex, true);
 }
 
-void Table::InsertRows(const vector<vector<Field>> &inputData) {
+void Table::InsertRows(const vector<vector<Field>> &inputData) 
+{
   uint32_t rowsInserted = 0;
   extent_id_t startingExtentIndex = 0;
   vector<extent_id_t> extents;
@@ -135,24 +149,27 @@ void Table::InsertRow(const vector<Field> &inputData,
                       extent_id_t &startingExtentIndex) {
 
   Row *row = new Row(*this);
-  for (size_t i = 0; i < inputData.size(); ++i) {
+  for (size_t i = 0; i < inputData.size(); ++i) 
+  {
     const column_index_t &associatedColumnIndex = inputData[i].GetColumnIndex();
-    Block *block = new Block(columns[associatedColumnIndex]);
-    const ColumnType columnType =
-        columns[associatedColumnIndex]->GetColumnType();
 
-    if (inputData[i].GetIsNull()) {
-      this->CheckAndInsertNullValues(block, row, associatedColumnIndex);
-      continue;
-    }
+    Block *block = new Block(columns[associatedColumnIndex]);
+
+    const ColumnType columnType = columns[associatedColumnIndex]->GetColumnType();
 
     if (columnType > ColumnType::ColumnTypeCount)
       throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
-    this->setBlockDataByDataTypeArray[static_cast<int>(columnType)](
-        block, inputData[i]);
+    if (inputData[i].GetIsNull()) 
+    {
+      this->CheckAndInsertNullValues(block, row, associatedColumnIndex);
+      continue;
+    }
+
+    this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, inputData[i]);
 
     const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
+    
     row->InsertColumnData(block, columnIndex);
   }
 
@@ -171,7 +188,8 @@ void Table::InsertLargeObjectToPage(Row *row) {
 
   const auto &rowData = row->GetData();
 
-  for (const auto &largeBlockIndex : largeBlockIndexes) {
+  for (const auto &largeBlockIndex : largeBlockIndexes) 
+  {
     rowHeader->largeObjectBitMap->Set(largeBlockIndex, true);
 
     page_offset_t offset = 0;
@@ -196,7 +214,8 @@ void Table::RecursiveInsertToLargePage(Row *&row, page_offset_t &offset,
 
   large_page_index_t objectIndex;
 
-  if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize) {
+  if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize) 
+  {
 
     largeDataPage->InsertObject(data + offset, remainingBlockSize,
                                 &objectIndex);
@@ -207,7 +226,8 @@ void Table::RecursiveInsertToLargePage(Row *&row, page_offset_t &offset,
                                              largeDataPage->GetPageId(),
                                              columnIndex);
 
-    if (previousDataObject != nullptr) {
+    if (previousDataObject != nullptr) 
+    {
       (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
       (*previousDataObject)->nextObjectIndex = objectIndex;
     }
@@ -225,7 +245,8 @@ void Table::RecursiveInsertToLargePage(Row *&row, page_offset_t &offset,
 
   this->database->SetPageMetaDataToPfs(largeDataPage);
 
-  if (previousDataObject != nullptr) {
+  if (previousDataObject != nullptr) 
+  {
     (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
     (*previousDataObject)->nextObjectIndex = objectIndex;
   }
@@ -342,6 +363,7 @@ TableType Table::GetTableType() const {
 
 row_size_t Table::GetMaximumRowSize() const {
   row_size_t maximumRowSize = 0;
+  
   for (const auto &column : this->columns)
     maximumRowSize += (column->isColumnLOB()) ? sizeof(DataObjectPointer)
                                               : column->GetColumnSize();
@@ -354,8 +376,8 @@ void Table::GetIndexedColumnKeys(vector<column_index_t> *vector) const {
        i++)
     if (this->header.clusteredIndexesBitMap->Get(i))
       vector->push_back(i);
-}
 
+}
 void Table::SetIndexPageId(const page_id_t &indexPageId) {
   this->header.clusteredIndexPageId = indexPageId;
 }
@@ -434,4 +456,17 @@ void Table::CheckAndInsertNullValues(
   const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
   row->InsertColumnData(block, columnIndex);
 }
+
+BPlusTree* Table::GetClusteredIndexedTree() 
+{
+  if(this->clusteredIndexedTree == nullptr)
+  {
+      this->clusteredIndexedTree = new BPlusTree(this);
+
+      this->database->GetTreeFromDisk(this->clusteredIndexedTree, this);
+  }
+
+  return this->clusteredIndexedTree; 
+}
+
 } // namespace DatabaseEngine::StorageTypes

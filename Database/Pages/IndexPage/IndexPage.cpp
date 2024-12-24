@@ -2,171 +2,119 @@
 #include "../../../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "../../Table/Table.h"
 #include "../../Row/Row.h"
-#include "../../Block/Block.h"
+#include <cstring>
 
 using namespace Indexing;
 using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages
 {
+    IndexPageAdditionalHeader::IndexPageAdditionalHeader()
+    {
+        this->nextPageId = 0;
+    }
+
+    IndexPageAdditionalHeader::IndexPageAdditionalHeader(const page_id_t& nextPageId)
+    {
+        this->nextPageId = nextPageId;
+    }
+
+    IndexPageAdditionalHeader::~IndexPageAdditionalHeader() = default;
+
     IndexPage::IndexPage(const page_id_t &pageId, const bool &isPageCreation) : Page(pageId, isPageCreation)
     {
-        this->tree = nullptr;
+        this->treeData = new object_t[PAGE_SIZE - this->header.GetPageHeaderSize() - sizeof(this->additionalHeader)];
         this->header.pageType = PageType::INDEX;
     }
 
     IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader)
     {
-        this->tree = nullptr;
+        this->treeData = new object_t[PAGE_SIZE - this->header.GetPageHeaderSize() - sizeof(this->additionalHeader)];
     }
 
     IndexPage::~IndexPage()
     {
-        delete this->tree;
+       delete this->treeData;
     }
 
     void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
     {
-        if (this->header.pageSize == 0)
+        this->GetAdditionalHeaderFromFile(data, offSet);
+
+        page_size_t treeDataSize = this->CalculateTreeDataSize();
+
+        if(treeDataSize == 0)
             return;
 
-        this->tree = new BPlusTree();
-        this->tree->ReadTreeHeaderFromFile(data, offSet);
+        this->treeData = new object_t[PAGE_SIZE - this->header.GetPageHeaderSize() - sizeof(this->additionalHeader)];
 
-        Node *root = this->GetNodeFromDisk(data, offSet);
-        this->tree->SetRoot(root);
-    }
-
-    Node *IndexPage::GetNodeFromDisk(const vector<char> &data, page_offset_t &offSet)
-    {
-        bool isLeaf;
-        memcpy(&isLeaf, data.data() + offSet, sizeof(bool));
-        offSet += sizeof(bool);
-
-        Node *node = new Node(isLeaf);
-
-        if (node->isLeaf)
-        {
-            uint16_t dataSize;
-            memcpy(&dataSize, data.data() + offSet, sizeof(uint16_t));
-            offSet += sizeof(uint16_t);
-
-            page_id_t pageId;
-            extent_id_t extentId;
-
-            memcpy(&pageId, data.data() + offSet, sizeof(page_id_t));
-            offSet += sizeof(page_id_t);
-
-            memcpy(&extentId, data.data() + offSet, sizeof(extent_id_t));
-            offSet += sizeof(extent_id_t);
-
-            node->data.resize(dataSize);
-
-            node->data[0].pageId = new page_id_t(pageId);
-            node->data[0].extentId = new extent_id_t(extentId);
-        }
-
-        uint16_t numOfKeys;
-        memcpy(&numOfKeys, data.data() + offSet, sizeof(uint16_t));
-        offSet += sizeof(uint16_t);
-
-        for (int i = 0; i < numOfKeys; i++)
-        {
-            key_size_t keySize;
-            memcpy(&keySize, data.data() + offSet, sizeof(key_size_t));
-            offSet += sizeof(key_size_t);
-
-            object_t *keyValue = new object_t[keySize];
-            memcpy(keyValue, data.data() + offSet, keySize);
-
-            offSet += keySize;
-
-            node->keys.emplace_back(keyValue, keySize);
-        }
-
-        uint16_t numberOfChildren;
-        memcpy(&numberOfChildren, data.data() + offSet, sizeof(uint16_t));
-        offSet += sizeof(uint16_t);
-
-        node->children.resize(numberOfChildren);
-
-        for (int i = 0; i < numberOfChildren; i++)
-            node->children[i] = this->GetNodeFromDisk(data, offSet);
-
-        return node;
+        memcpy(treeData, data.data() + offSet, treeDataSize);
     }
 
     void IndexPage::WritePageToFile(fstream *filePtr)
     {
         this->WritePageHeaderToFile(filePtr);
+        this->WriteAdditionalHeaderToFile(filePtr);
 
-        if (this->header.pageSize == 0)
-            return;
-
-        this->tree->WriteTreeHeaderToFile(filePtr);
-
-        Node *root = this->tree->GetRoot();
-
-        this->WriteNodeToDisk(root, filePtr);
+        filePtr->write(reinterpret_cast<const char*>(this->treeData), this->CalculateTreeDataSize());
     }
 
-    void IndexPage::WriteNodeToDisk(Node *node, fstream *filePtr)
+    page_size_t IndexPage::CalculateTreeDataSize() const
     {
+        return PAGE_SIZE - this->header.bytesLeft - this->header.GetPageHeaderSize() - sizeof(this->additionalHeader);
+    }
+
+    void IndexPage::WriteTreeDataToPage(Node* node)
+    {
+        memcpy(this->treeData - this->header.bytesLeft, &node->isLeaf, sizeof(bool));
         this->header.bytesLeft -= sizeof(bool);
-        filePtr->write(reinterpret_cast<char *>(&node->isLeaf), sizeof(bool));
 
         if (node->isLeaf)
         {
-            const uint16_t numberOfData = node->data.size();
+            memcpy(this->treeData - this->header.bytesLeft, &node->data.pageId, sizeof(page_id_t));
+            this->header.bytesLeft -= sizeof(page_id_t);
 
-            filePtr->write(reinterpret_cast<const char *>(&numberOfData), sizeof(uint16_t));
-            filePtr->write(reinterpret_cast<char *>(node->data[0].pageId), sizeof(page_id_t));
-            filePtr->write(reinterpret_cast<char *>(node->data[0].extentId), sizeof(extent_id_t));
+            memcpy(this->treeData - this->header.bytesLeft, &node->data.extentId, sizeof(extent_id_t));
+            this->header.bytesLeft -= sizeof(extent_id_t);
         }
 
         const uint16_t numberOfKeys = node->keys.size();
+
+        memcpy(this->treeData - this->header.bytesLeft, &numberOfKeys, sizeof(uint16_t));
         this->header.bytesLeft -= sizeof(uint16_t);
-        filePtr->write(reinterpret_cast<const char *>(&numberOfKeys), sizeof(uint16_t));
 
         for (const auto &key : node->keys)
         {
-            filePtr->write(reinterpret_cast<const char *>(&key.size), sizeof(key_size_t));
-            filePtr->write(reinterpret_cast<char *>(key.value), key.size);
+            memcpy(this->treeData - this->header.bytesLeft, &key.size, sizeof(key_size_t));
+            this->header.bytesLeft -= sizeof(key_size_t);
 
-            this->header.bytesLeft -= (sizeof(key_size_t) + key.size);
+            memcpy(this->treeData - this->header.bytesLeft, key.value, key.size);
+            this->header.bytesLeft -= key.size;
         }
 
         const uint16_t numberOfChildren = node->children.size();
-        filePtr->write(reinterpret_cast<const char *>(&numberOfChildren), sizeof(uint16_t));
 
-        for (const auto &child : node->children)
-            this->WriteNodeToDisk(child, filePtr);
+        memcpy(this->treeData - this->header.bytesLeft, &numberOfChildren, sizeof(uint16_t));
+        this->header.bytesLeft -= sizeof(uint16_t);
+
+        this->header.pageSize++;
+        this->isDirty = true;
     }
 
-    Node *IndexPage::FindAppropriateNodeForInsert(const DatabaseEngine::StorageTypes::Table *table, const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves)
+    void IndexPage::GetAdditionalHeaderFromFile(const vector<char>& data, page_offset_t& offSet)
     {
-        if (!this->tree)
-        {
-            table->GetIndexedColumnKeys(&this->indexedColumns);
-            this->tree = new BPlusTree(table);
-
-            this->header.pageSize = 1;
-        }
-
-        return this->tree->FindAppropriateNodeForInsert(key, indexPosition, splitLeaves);
+        memcpy(&this->additionalHeader, data.data() + offSet, sizeof(IndexPageAdditionalHeader));
+        offSet += sizeof(IndexPageAdditionalHeader);
     }
 
-    void IndexPage::RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result)
+    void IndexPage::WriteAdditionalHeaderToFile(fstream* filePtr)
     {
-        if (!this->tree)
-            return;
-
-        this->tree->RangeQuery(minKey, maxKey, result);
+        filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader), sizeof(IndexPageAdditionalHeader));
     }
 
-    const vector<column_index_t> &IndexPage::GetIndexedColumns() const { return this->indexedColumns; }
+    void IndexPage::SetNextPageId(const page_id_t& nextPageId) { this->additionalHeader.nextPageId = nextPageId; }
 
-    const int &IndexPage::GetBranchingFactor() const { return this->tree->GetBranchingFactor(); }
+    const page_id_t& IndexPage::GetNextPageId() const { return this->additionalHeader.nextPageId; }
 
-    void IndexPage::SetRoot(Node *&node) { this->tree->SetRoot(node); }
+    const object_t*  IndexPage::GetTreeData() const { return this->treeData; }
 }

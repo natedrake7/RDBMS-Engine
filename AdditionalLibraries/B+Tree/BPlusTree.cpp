@@ -1,5 +1,6 @@
 ﻿#include "BPlusTree.h"
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -15,80 +16,80 @@ namespace Indexing
 
     static ostream &operator<<(ostream &os, const BPlusTreeData &dataObject)
     {
-        os << *dataObject.pageId << " " << *dataObject.extentId;
+        os << dataObject.pageId << " " << dataObject.extentId;
         return os;
     }
 
     BPlusTreeData::BPlusTreeData()
     {
-        this->pageId = nullptr;
-        this->extentId = nullptr;
+        this->pageId = 0;
+        this->extentId = 0;
     }
 
-    BPlusTreeData::BPlusTreeData(const page_id_t &pageId, const extent_id_t &extentId)
-    {
-        this->pageId = new page_id_t(pageId);
-        this->extentId = new extent_id_t(extentId);
-    }
+    // BPlusTreeData::BPlusTreeData(const page_id_t &pageId, const extent_id_t &extentId)
+    // {
+    //     this->pageId = new page_id_t(pageId);
+    //     this->extentId = new extent_id_t(extentId);
+    // }
 
-    BPlusTreeData::BPlusTreeData(BPlusTreeData &&other) noexcept
-    {
-        this->pageId = other.pageId;
-        this->extentId = other.extentId;
+    // BPlusTreeData::BPlusTreeData(BPlusTreeData &&other) noexcept
+    // {
+    //     this->pageId = other.pageId;
+    //     this->extentId = other.extentId;
 
-        other.pageId = nullptr;
-        other.extentId = nullptr;
-    }
+    //     other.pageId = nullptr;
+    //     other.extentId = nullptr;
+    // }
 
-    BPlusTreeData::BPlusTreeData(const BPlusTreeData &other)
-    {
-        this->pageId = (other.pageId != nullptr)
-                           ? new page_id_t(*other.pageId)
-                           : nullptr;
+    // BPlusTreeData::BPlusTreeData(const BPlusTreeData &other)
+    // {
+    //     this->pageId = (other.pageId != nullptr)
+    //                        ? new page_id_t(*other.pageId)
+    //                        : nullptr;
 
-        this->extentId = (other.extentId != nullptr)
-                             ? new extent_id_t(*other.extentId)
-                             : nullptr;
-    }
+    //     this->extentId = (other.extentId != nullptr)
+    //                          ? new extent_id_t(*other.extentId)
+    //                          : nullptr;
+    // }
 
-    BPlusTreeData::~BPlusTreeData()
-    {
-        delete this->pageId;
-        delete this->extentId;
-    }
+    BPlusTreeData::~BPlusTreeData() = default;
+    // {
+    //     delete this->pageId;
+    //     delete this->extentId;
+    // }
 
-    BPlusTreeData &BPlusTreeData::operator=(const BPlusTreeData &other)
-    {
-        if (this == &other)
-            return *this;
+    // BPlusTreeData &BPlusTreeData::operator=(const BPlusTreeData &other)
+    // {
+    //     if (this == &other)
+    //         return *this;
 
-        this->pageId = (other.pageId != nullptr)
-                           ? new page_id_t(*other.pageId)
-                           : nullptr;
+    //     this->pageId = (other.pageId != nullptr)
+    //                        ? new page_id_t(*other.pageId)
+    //                        : nullptr;
 
-        this->extentId = (other.extentId != nullptr)
-                             ? new extent_id_t(*other.extentId)
-                             : nullptr;
+    //     this->extentId = (other.extentId != nullptr)
+    //                          ? new extent_id_t(*other.extentId)
+    //                          : nullptr;
 
-        return *this;
-    }
+    //     return *this;
+    // }
 
-    BPlusTreeData &BPlusTreeData::operator=(BPlusTreeData &&other)
-    {
-        if (this == &other)
-            return *this;
+    // BPlusTreeData &BPlusTreeData::operator=(BPlusTreeData &&other)
+    // {
+    //     if (this == &other)
+    //         return *this;
 
-        delete pageId;
-        delete extentId;
+    //     delete pageId;
+    //     delete extentId;
 
-        pageId = other.pageId;
-        extentId = other.extentId;
+    //     pageId = other.pageId;
+    //     extentId = other.extentId;
 
-        other.pageId = nullptr;
-        other.extentId = nullptr;
+    //     other.pageId = nullptr;
+    //     other.extentId = nullptr;
 
-        return *this;
-    }
+    //     return *this;
+    // }
 
     Node::Node(const bool &isLeaf)
     {
@@ -99,7 +100,30 @@ namespace Indexing
 
     vector<Key> &Node::GetKeysData() { return this->keys; }
 
-    vector<BPlusTreeData> &Node::GetData() { return this->data; }
+    BPlusTreeData &Node::GetData() { return this->data; }
+
+    page_size_t Node::GetNodeSize()
+    {
+        page_size_t size = 0;
+
+        for (const auto &key : this->keys)
+            size += ( sizeof(key_size_t) + sizeof(key.size) );
+
+        //num of keys to read for node
+        size += sizeof(uint16_t);
+
+        if(this->isLeaf)
+            size += sizeof(BPlusTreeData);
+
+        //if node is leaf or not
+        size += sizeof(bool);
+
+        const uint16_t numberOfChildren = this->children.size();
+
+        size += numberOfChildren;
+
+        return size;
+    }
 
     Node::~Node() = default;
 
@@ -155,8 +179,8 @@ namespace Indexing
         newChild->next = child->next;
         child->next = newChild;
 
-        newChild->data.assign(child->data.begin() + t, child->data.end());
-        child->data.resize(t);
+        // newChild->data.assign(child->data.begin() + t, child->data.end());
+        // child->data.resize(t);
 
         splitLeaves->push_back(pair<Node *, Node *>(child, newChild));
     }
@@ -250,10 +274,8 @@ namespace Indexing
         {
             if (previousNode && BPlusTree::IsKeyGreaterOrEqual(maxKey, currentNode->keys[0]))
             {
-                const auto &lastDataObject = previousNode->data.back();
-
                 if (BPlusTree::IsKeyGreaterOrEqual(maxKey, previousNode->keys[previousNode->keys.size() - 1]))
-                    result.emplace_back(lastDataObject, previousNode->keys.size());
+                    result.emplace_back(previousNode->data, previousNode->keys.size());
             }
 
             for (int i = 0; i < currentNode->keys.size(); i++)
@@ -262,7 +284,7 @@ namespace Indexing
 
                 if (BPlusTree::IsKeyLessOrEqual(minKey, key) && BPlusTree::IsKeyGreaterOrEqual(maxKey, key))
                 {
-                    result.emplace_back(currentNode->data[i], i);
+                    result.emplace_back(currentNode->data, i);
                     continue;
                 }
 
@@ -275,7 +297,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::SearchKey(const Key &key, BPlusTreeData &result) const
+    void BPlusTree::SearchKey(const Key &key, QueryData &result) const
     {
         if (!root)
             return;
@@ -296,7 +318,8 @@ namespace Indexing
         {
             if (previousNode && BPlusTree::IsKeyLessThan(key, currentNode->keys[0]))
             {
-                result = previousNode->data[previousNode->keys.size()];
+                result.treeData = previousNode->data;
+                result.indexPosition = previousNode->keys.size();
                 return;
             }
 
@@ -304,7 +327,9 @@ namespace Indexing
             {
                 if (BPlusTree::IsKeyEqual(key, currentNode->keys[i]))
                 {
-                    result = currentNode->data[i];
+
+                    result.treeData = currentNode->data;
+                    result.indexPosition = i;
                     return;
                 }
 
@@ -354,11 +379,11 @@ namespace Indexing
         if (!node)
             return;
 
-        for (const auto &data : node->data)
-            size += sizeof(BPlusTreeData);
-
         for (const auto &key : node->keys)
             size += sizeof(key);
+
+        if(node->isLeaf)
+            size += sizeof(BPlusTreeData); 
 
         for (const auto &child : node->children)
             GetNodeSize(child, size);
@@ -403,8 +428,7 @@ namespace Indexing
         if (node->isLeaf)
         {
             cout << "Data: ";
-            for (const auto &dataObject : node->data)
-                cout << dataObject << " ";
+            cout << node->data << " ";
         }
 
         cout << "\n";
