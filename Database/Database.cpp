@@ -1,4 +1,5 @@
 ﻿#include "Database.h"
+#include <cstdint>
 #include <stdexcept>
 #include <vcruntime_new_debug.h>
 #include "./Pages/Header/HeaderPage.h"
@@ -19,6 +20,7 @@ using namespace Pages;
 using namespace DatabaseEngine::StorageTypes;
 using namespace Storage;
 using namespace Indexing;
+using namespace std;
 
 namespace DatabaseEngine
 {
@@ -36,7 +38,7 @@ namespace DatabaseEngine
     {
         HeaderPage *metaDataPage = StorageManager::Get().GetHeaderPage(this->filename + this->fileExtension);
 
-        metaDataPage->SetHeaders(this->header, this->tables);
+        metaDataPage->SetDbHeader(this->header);
     }
 
     bool Database::IsSystemPage(const page_id_t &pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % PAGE_FREE_SPACE_SIZE == 1 || pageId % GAM_NUMBER_OF_PAGES == 2; }
@@ -151,7 +153,7 @@ namespace DatabaseEngine
 
         HeaderPage *headerPage = StorageManager::Get().CreateHeaderPage(dbName + ".db");
 
-        headerPage->SetHeaders(DatabaseHeader(dbName, 0, firstPfsPageId, firstGamePageId), vector<Table *>());
+        headerPage->SetDbHeader(DatabaseHeader(dbName, 0, firstPfsPageId, firstGamePageId));
     }
 
     void UseDatabase(const string &dbName, Database **db)
@@ -204,7 +206,7 @@ namespace DatabaseEngine
 
         const auto &keyBlock = row->GetData()[indexedColumns[0]];
 
-        const Key key(keyBlock->GetBlockData(), keyBlock->GetBlockSize());
+        const Key key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), KeyType::Int);
 
         int indexPosition = 0;
 
@@ -292,7 +294,7 @@ namespace DatabaseEngine
             {
                 const auto &pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(nextLeafPageId);
 
-                if (pageSizeCategory > 0)
+                if (pageSizeCategory == 0)
                     continue;
 
                 nextLeafPage = StorageManager::Get().GetPage(nextLeafPageId, extentId, &table);
@@ -420,13 +422,12 @@ namespace DatabaseEngine
         BPlusTree* tree = this->tables[tableHeader.tableId]->GetClusteredIndexedTree();
 
         vector<QueryData> results;
-        // int minKey = 12, maxKey = 25;
-        // const string minKey = "Silence Of The Lambs";
-        // const string maxKey = "Silence Of The Lambs152";
-        const int32_t minKey = 9;
+        // const char* minKey = "Silence Of The Lambs10";
+        // const char* maxKey = "Silence Of The Lambs150";
         const int32_t maxKey = 95;
+        const int32_t minKey = 10;
 
-        tree->RangeQuery(Key(&minKey, sizeof(int32_t)), Key(&maxKey, sizeof(int32_t)), results);
+        tree->RangeQuery(Key(&minKey, sizeof(minKey), KeyType::Int), Key(&maxKey, sizeof(maxKey), KeyType::Int), results);
 
         const Page *page = (!results.empty())
                                ? StorageManager::Get().GetPage(results[0].treeData.pageId, results[0].treeData.extentId, table)

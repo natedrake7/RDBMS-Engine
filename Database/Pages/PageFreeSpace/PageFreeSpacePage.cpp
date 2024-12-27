@@ -42,7 +42,8 @@ namespace Pages {
 
     void PageFreeSpacePage::SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft)
     {
-        const Constants::byte pageAllocationStatus = static_cast<Constants::byte>((PAGE_SIZE - bytesLeft) * 31 / PAGE_SIZE);
+        const Constants::byte pageAllocationStatus = static_cast<Constants::byte>(bytesLeft * 31 / PAGE_SIZE);
+
         this->pageMap->SetFreeSpace(pageId, pageAllocationStatus);
 
         this->isDirty = true;

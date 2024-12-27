@@ -20,13 +20,8 @@ namespace Indexing
         extent_id_t extentId;
 
         BPlusTreeData();
-        // BPlusTreeData(const page_id_t &pageId, const extent_id_t &extentId);
-        // BPlusTreeData(BPlusTreeData &&other) noexcept;
-        // BPlusTreeData(const BPlusTreeData &other);
         ~BPlusTreeData();
-        // BPlusTreeData &operator=(const BPlusTreeData &other);
-        // BPlusTreeData &operator=(BPlusTreeData &&other);
-    } BPlusTreeData;
+    }BPlusTreeData;
 
     typedef struct QueryData
     {
@@ -40,19 +35,24 @@ namespace Indexing
 
     typedef struct Key
     {
-        object_t *value;
+        vector<object_t> value;
         key_size_t size;
+        KeyType type;
 
         Key();
-        Key(const void *keyValue, const key_size_t &keySize);
+        Key(const void *keyValue, const key_size_t &keySize, const KeyType& keyType);
         ~Key();
 
         Key(const Key &otherKey);
+        bool operator==(const Key& otherKey) const;
+        bool operator>(const Key& otherKey) const;
+        bool operator<(const Key& otherKey) const;
+        bool operator<=(const Key& otherKey) const;
+        bool operator>=(const Key& otherKey) const;
     } Key;
 
     struct Node
     {
-
         bool isLeaf;
         vector<Key> keys;
         BPlusTreeData data;
@@ -79,11 +79,6 @@ namespace Indexing
         Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves);
         void DeleteNode(Node *node);
         Node *SearchKey(const Key &key) const;
-        static bool IsKeyLessThan(const Key &searchKey, const Key &sortedKey);
-        static bool IsKeyGreaterThan(const Key &searchKey, const Key &sortedKey);
-        static bool IsKeyEqual(const Key &searchKey, const Key &sortedKey);
-        static bool IsKeyGreaterOrEqual(const Key &searchKey, const Key &sortedKey);
-        static bool IsKeyLessOrEqual(const Key &searchKey, const Key &sortedKey);
 
     public:
         explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table);

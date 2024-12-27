@@ -13,6 +13,7 @@
 #include "../Pages/LargeObject/LargeDataPage.h"
 #include "../Pages/IndexPage/IndexPage.h"
 #include "../Pages/IndexMapAllocation/IndexAllocationMapPage.h"
+#include "../Pages/Header/HeaderPage.h"
 #include "../Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "../Storage/StorageManager/StorageManager.h"
 #include "../Pages/Page.h"
@@ -116,6 +117,10 @@ Table::~Table()
 
   delete this->clusteredIndexedTree;
 
+  HeaderPage* headerPage = StorageManager::Get().GetHeaderPage(this->database->GetFileName());
+
+  headerPage->SetTableHeader(this);
+
   for (const auto &column : columns)
     delete column;
 }
@@ -141,7 +146,8 @@ void Table::InsertRows(const vector<vector<Field>> &inputData)
   uint32_t rowsInserted = 0;
   extent_id_t startingExtentIndex = 0;
   vector<extent_id_t> extents;
-  for (const auto &rowData : inputData) {
+  for (const auto &rowData : inputData) 
+  {
     this->InsertRow(rowData, extents, startingExtentIndex);
 
     rowsInserted++;
@@ -181,8 +187,7 @@ void Table::InsertRow(const vector<Field> &inputData, vector<extent_id_t> &alloc
   }
 
   this->InsertLargeObjectToPage(row);
-  this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex,
-                                  row);
+  this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row);
 }
 
 void Table::InsertLargeObjectToPage(Row *row) 
@@ -269,9 +274,9 @@ void Table::RecursiveInsertToLargePage(Row *&row, page_offset_t &offset,
                                            columnIndex);
 }
 
-LargeDataPage *Table::GetOrCreateLargeDataPage() const {
-  LargeDataPage *largeDataPage = this->database->GetTableLastLargeDataPage(
-      this->header.tableId, OBJECT_METADATA_SIZE_T + 1);
+LargeDataPage *Table::GetOrCreateLargeDataPage() const 
+{
+  LargeDataPage *largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId, OBJECT_METADATA_SIZE_T + 1);
 
   return (largeDataPage == nullptr)
              ? this->database->CreateLargeDataPage(this->header.tableId)
@@ -324,8 +329,8 @@ void Table::Select(vector<Row> &selectedRows, const vector<RowCondition *> *cond
                                   rowsToSelect, conditions);
 }
 
-void Table::Update(const vector<Field> &updates,
-                   const vector<RowCondition *> *conditions) const {
+void Table::Update(const vector<Field> &updates, const vector<RowCondition *> *conditions) const 
+{
   vector<Block *> updateBlocks;
   for (const auto &field : updates) 
   {
@@ -499,7 +504,7 @@ void Table::WriteIndexesToDisk()
     this->WriteNodeToPage(root, indexPage, offSet);
 }
 
-void Table::WriteNodeToPage(Node *node, IndexPage* indexPage, page_offset_t &offSet)
+void Table::WriteNodeToPage(Node* node, IndexPage*& indexPage, page_offset_t &offSet)
 {
     const page_size_t nodeSize = node->GetNodeSize();
 
@@ -521,20 +526,26 @@ void Table::WriteNodeToPage(Node *node, IndexPage* indexPage, page_offset_t &off
         {
             const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
 
-            for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < indexPageId + EXTENT_SIZE; nextIndexPageId++)
+            for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
             {
                 if(pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
                     break;
-                
+
                 //page is free
-                if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) != 0)
+                if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
                     continue;
 
-                indexPage->SetNextPageId(nextIndexPageId);
+                IndexPage* nextIndexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
 
-                indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
+                if(nextIndexPage->GetBytesLeft() < nodeSize)
+                  continue;
+
+                indexPage->SetNextPageId(nextIndexPageId);
+                indexPage = nextIndexPage;
 
                 newPageFound = true;
+
+                break;
             }
         }
 
@@ -552,33 +563,32 @@ void Table::WriteNodeToPage(Node *node, IndexPage* indexPage, page_offset_t &off
     indexPage->WriteTreeDataToPage(node, offSet);
     pageFreeSpacePage->SetPageMetaData(indexPage);
 
-    for (const auto &child : node->children)
+    for (auto &child : node->children)
         this->WriteNodeToPage(child, indexPage, offSet);
 }
 
 void Table::GetClusteredIndexFromDisk()
 {
-      page_id_t indexPageId = this->header.clusteredIndexPageId;
-      IndexPage* indexPage = nullptr;
+    IndexPage* indexPage = nullptr;
 
-      Node* root = this->clusteredIndexedTree->GetRoot();
+    Node* root = this->clusteredIndexedTree->GetRoot();
 
-      indexPage = StorageManager::Get().GetIndexPage(indexPageId);
+    indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
 
-      int currentNodeIndex = 0;
-      page_offset_t offSet = 0;
+    int currentNodeIndex = 0;
+    page_offset_t offSet = 0;
 
-      Node* prevLeafNode = nullptr;
+    Node* prevLeafNode = nullptr;
 
-      root = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet, prevLeafNode);
+    root = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet, prevLeafNode);
 
-      this->clusteredIndexedTree->SetRoot(root);
+    this->clusteredIndexedTree->SetRoot(root);
 }
 
-Node* Table::GetNodeFromDisk(IndexPage* indexPage, int& currentNodeIndex, page_offset_t& offSet, Node*& prevLeafNode)
+Node* Table::GetNodeFromDisk(IndexPage*& indexPage, int& currentNodeIndex, page_offset_t& offSet, Node*& prevLeafNode)
 {
     //next page must be loaded
-    if(currentNodeIndex == indexPage->GetPageSize() - 1 && indexPage->GetNextPageId() != 0)
+    if(currentNodeIndex == indexPage->GetPageSize() && indexPage->GetNextPageId() != 0)
     {
         indexPage = StorageManager::Get().GetIndexPage(indexPage->GetNextPageId());
 
@@ -594,20 +604,6 @@ Node* Table::GetNodeFromDisk(IndexPage* indexPage, int& currentNodeIndex, page_o
 
     Node *node = new Node(isLeaf);
 
-    if (node->isLeaf)
-    {
-        memcpy(&node->data.pageId, treeData + offSet, sizeof(page_id_t));
-        offSet += sizeof(page_id_t);
-
-        memcpy(&node->data.extentId, treeData + offSet, sizeof(extent_id_t));
-        offSet += sizeof(extent_id_t);
-
-        if(prevLeafNode != nullptr)
-            prevLeafNode->next = node;
-
-        prevLeafNode = node;
-    }
-
     uint16_t numOfKeys;
     memcpy(&numOfKeys, treeData + offSet, sizeof(uint16_t));
     offSet += sizeof(uint16_t);
@@ -622,17 +618,34 @@ Node* Table::GetNodeFromDisk(IndexPage* indexPage, int& currentNodeIndex, page_o
         memcpy(keyValue.data(), treeData + offSet, keySize);
         offSet += keySize;
 
-        node->keys.emplace_back(keyValue.data(), keySize);
+        node->keys.emplace_back(keyValue.data(), keySize, KeyType::Int);
     }
 
-    uint16_t numberOfChildren;
-    memcpy(&numberOfChildren, treeData + offSet, sizeof(uint16_t));
-    offSet += sizeof(uint16_t);
+    currentNodeIndex++;
 
-    node->children.resize(numberOfChildren);
+    if (node->isLeaf)
+    {
+        memcpy(&node->data, treeData + offSet, sizeof(BPlusTreeData));
+        offSet += sizeof(BPlusTreeData);
 
-    for (int i = 0; i < numberOfChildren; i++)
-        node->children[i] = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet, prevLeafNode);
+        if(prevLeafNode != nullptr)
+            prevLeafNode->next = node;
+
+        prevLeafNode = node;
+    }
+    else
+    {
+      uint16_t numberOfChildren;
+      memcpy(&numberOfChildren, treeData + offSet, sizeof(uint16_t));
+      offSet += sizeof(uint16_t);
+
+      node->children.resize(numberOfChildren);
+
+      
+      for (int i = 0; i < numberOfChildren; i++)
+          node->children[i] = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet, prevLeafNode);
+    }
+
     
     //figure out how to connect leaves betwwen them
     return node;

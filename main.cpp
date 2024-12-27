@@ -1,5 +1,7 @@
 ﻿#include <chrono>
+#include <cstdint>
 #include <iostream>
+#include <string>
 
 #include "./Database/Database.h"
 #include "./Database/Row/Row.h"
@@ -26,7 +28,7 @@ int main() {
   const string dbName = "stakosDb";
   try 
   {
-    // CreateDatabase(dbName, &fileManager, pageManager);
+    // CreateDatabase(dbName);
 
     UseDatabase(dbName, &db);
 
@@ -66,15 +68,15 @@ int main() {
 }
 
 void CreateAndInsertToDatabase(Database *db, Table *table) {
-  if (table == nullptr) {
+
+  if (table == nullptr) 
+  {
     vector<Column *> columns;
-    columns.push_back(new Column("MovieID", "Int", sizeof(int), false));
+    columns.push_back(new Column("MovieID", "Int", sizeof(int32_t), false));
     columns.push_back(new Column("MovieName", "String", 100, true));
     columns.push_back(new Column("MovieType", "String", 100, true));
-    columns.push_back(new Column("MovieReleaseDate", "DateTime",
-                                 DataTypes::DateTime::DateTimeSize(), true));
-    columns.push_back(
-        new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
+    columns.push_back(new Column("MovieReleaseDate", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
+    columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
     columns.push_back(new Column("MovieLength", "Decimal", 10, true));
 
     const vector<column_index_t> clusteredIndexes = {0};
@@ -84,7 +86,8 @@ void CreateAndInsertToDatabase(Database *db, Table *table) {
 
   vector<vector<Field>> inputData;
 
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 1000; i++) 
+  {
     vector<Field> fields = {
         Field("1", 0),        Field("Silence Of The Lambs" + to_string(i), 1),
         Field("Thriller", 2), Field("2024-04-12 12:12:12", 3),

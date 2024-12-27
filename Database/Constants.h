@@ -45,6 +45,15 @@ namespace Constants
         CLUSTERED = 1,
     };
 
+    enum class KeyType: uint8_t
+    {
+        Int = 0,
+        Decimal = 1,
+        String = 2,
+        Bool = 3,
+        DateTime = 4
+    };
+
     typedef uint8_t byte;
 
     // block types

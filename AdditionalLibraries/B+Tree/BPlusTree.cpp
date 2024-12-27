@@ -1,6 +1,7 @@
 ﻿#include "BPlusTree.h"
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -25,70 +26,7 @@ namespace Indexing
         this->extentId = 0;
     }
 
-    // BPlusTreeData::BPlusTreeData(const page_id_t &pageId, const extent_id_t &extentId)
-    // {
-    //     this->pageId = new page_id_t(pageId);
-    //     this->extentId = new extent_id_t(extentId);
-    // }
-
-    // BPlusTreeData::BPlusTreeData(BPlusTreeData &&other) noexcept
-    // {
-    //     this->pageId = other.pageId;
-    //     this->extentId = other.extentId;
-
-    //     other.pageId = nullptr;
-    //     other.extentId = nullptr;
-    // }
-
-    // BPlusTreeData::BPlusTreeData(const BPlusTreeData &other)
-    // {
-    //     this->pageId = (other.pageId != nullptr)
-    //                        ? new page_id_t(*other.pageId)
-    //                        : nullptr;
-
-    //     this->extentId = (other.extentId != nullptr)
-    //                          ? new extent_id_t(*other.extentId)
-    //                          : nullptr;
-    // }
-
     BPlusTreeData::~BPlusTreeData() = default;
-    // {
-    //     delete this->pageId;
-    //     delete this->extentId;
-    // }
-
-    // BPlusTreeData &BPlusTreeData::operator=(const BPlusTreeData &other)
-    // {
-    //     if (this == &other)
-    //         return *this;
-
-    //     this->pageId = (other.pageId != nullptr)
-    //                        ? new page_id_t(*other.pageId)
-    //                        : nullptr;
-
-    //     this->extentId = (other.extentId != nullptr)
-    //                          ? new extent_id_t(*other.extentId)
-    //                          : nullptr;
-
-    //     return *this;
-    // }
-
-    // BPlusTreeData &BPlusTreeData::operator=(BPlusTreeData &&other)
-    // {
-    //     if (this == &other)
-    //         return *this;
-
-    //     delete pageId;
-    //     delete extentId;
-
-    //     pageId = other.pageId;
-    //     extentId = other.extentId;
-
-    //     other.pageId = nullptr;
-    //     other.extentId = nullptr;
-
-    //     return *this;
-    // }
 
     Node::Node(const bool &isLeaf)
     {
@@ -104,18 +42,18 @@ namespace Indexing
     page_size_t Node::GetNodeSize()
     {
         page_size_t size = 0;
-
-        for (const auto &key : this->keys)
-            size += ( sizeof(key_size_t) + sizeof(key.size) );
-
-        //num of keys to read for node
-        size += sizeof(uint16_t);
+        
+        //if node is leaf or not
+        size += sizeof(bool);
 
         if(this->isLeaf)
             size += sizeof(BPlusTreeData);
 
-        //if node is leaf or not
-        size += sizeof(bool);
+        //num of keys to read for node
+        size += sizeof(uint16_t);
+
+        for (const auto &key : this->keys)
+            size += ( sizeof(key_size_t) + key.size);
 
         const uint16_t numberOfChildren = this->children.size();
 
@@ -211,18 +149,21 @@ namespace Indexing
     {
         if (node->isLeaf)
         {
-            const auto iterator = ranges::upper_bound(node->keys, key, BPlusTree::IsKeyLessThan);
+            const auto iterator = ranges::upper_bound(node->keys, key);
 
             const int indexPos = iterator - node->keys.begin();
 
-            if (!node->keys.empty() && ((node->keys.size() > indexPos && BPlusTree::IsKeyEqual(key, node->keys[indexPos])) || BPlusTree::IsKeyEqual(key, node->keys[indexPos - 1])))
+            if (!node->keys.empty() && ((node->keys.size() > indexPos 
+                && key == node->keys[indexPos]) 
+                ||(indexPos > 0 && key == node->keys[indexPos - 1])))
             {
                 ostringstream oss;
 
-                oss << "BPlusTree::GetNonFullNode: Key " << key.value << " already exists";
+                oss << "BPlusTree::GetNonFullNode: Key " << node->keys.data() << " already exists";
 
                 throw invalid_argument(oss.str());
             }
+
 
             if (indexPosition != nullptr)
                 *indexPosition = indexPos;
@@ -230,7 +171,7 @@ namespace Indexing
             return node;
         }
 
-        const auto iterator = ranges::lower_bound(node->keys, key, BPlusTree::IsKeyLessThan);
+        const auto iterator = ranges::lower_bound(node->keys, key);
 
         int childIndex = iterator - node->keys.begin();
 
@@ -240,7 +181,7 @@ namespace Indexing
         {
             SplitChild(node, childIndex, child, splitLeaves);
 
-            if (BPlusTree::IsKeyGreaterThan(key, node->keys[childIndex]))
+            if (key > node->keys[childIndex])
                 childIndex++;
         }
 
@@ -274,9 +215,9 @@ namespace Indexing
 
         while (currentNode)
         {
-            if (previousNode && BPlusTree::IsKeyGreaterOrEqual(maxKey, currentNode->keys[0]))
+            if (previousNode && maxKey >= currentNode->keys[0])
             {
-                if (BPlusTree::IsKeyGreaterOrEqual(maxKey, previousNode->keys[previousNode->keys.size() - 1]))
+                if (maxKey >= previousNode->keys[previousNode->keys.size() - 1])
                     result.emplace_back(previousNode->data, previousNode->keys.size());
             }
 
@@ -284,13 +225,13 @@ namespace Indexing
             {
                 const auto &key = currentNode->keys[i];
 
-                if (BPlusTree::IsKeyLessOrEqual(minKey, key) && BPlusTree::IsKeyGreaterOrEqual(maxKey, key))
+                if (minKey <= key && maxKey >= key)
                 {
                     result.emplace_back(currentNode->data, i);
                     continue;
                 }
 
-                if (BPlusTree::IsKeyLessThan(maxKey, key))
+                if (maxKey < key)
                     return;
             }
 
@@ -308,7 +249,7 @@ namespace Indexing
 
         while (!currentNode->isLeaf)
         {
-            const auto iterator = ranges::lower_bound(currentNode->keys, key, BPlusTree::IsKeyLessThan);
+            const auto iterator = ranges::lower_bound(currentNode->keys, key);
 
             const int index = iterator - currentNode->keys.begin();
 
@@ -318,7 +259,7 @@ namespace Indexing
         const Node *previousNode = nullptr;
         while (currentNode)
         {
-            if (previousNode && BPlusTree::IsKeyLessThan(key, currentNode->keys[0]))
+            if (previousNode && key <= currentNode->keys[0])
             {
                 result.treeData = previousNode->data;
                 result.indexPosition = previousNode->keys.size();
@@ -327,7 +268,7 @@ namespace Indexing
 
             for (int i = 0; i < currentNode->keys.size(); i++)
             {
-                if (BPlusTree::IsKeyEqual(key, currentNode->keys[i]))
+                if (key == currentNode->keys[i])
                 {
 
                     result.treeData = currentNode->data;
@@ -335,7 +276,7 @@ namespace Indexing
                     return;
                 }
 
-                if (BPlusTree::IsKeyGreaterThan(key, currentNode->keys[i]))
+                if (key > currentNode->keys[i])
                     return;
             }
 
@@ -399,7 +340,7 @@ namespace Indexing
 
         while (!currentNode->isLeaf)
         {
-            const auto iterator = ranges::lower_bound(currentNode->keys, key, BPlusTree::IsKeyLessThan);
+            const auto iterator = ranges::lower_bound(currentNode->keys, key);
 
             const int index = iterator - currentNode->keys.begin();
 
@@ -428,7 +369,7 @@ namespace Indexing
 
         cout << "Keys: ";
         for (const auto &key : node->keys)
-            cout << key.value << " ";
+            cout << key.value.data() << " ";
         if (node->isLeaf)
         {
             cout << "Data: ";
@@ -443,81 +384,119 @@ namespace Indexing
                 PrintTree(childNode, level + 1);
     }
 
-    bool BPlusTree::IsKeyLessThan(const Key &searchKey, const Key &sortedKey)
-    {
-        if (searchKey.size < sortedKey.size)
-            return true;
-
-        if (searchKey.size > sortedKey.size)
-            return false;
-
-        return memcmp(searchKey.value, sortedKey.value, searchKey.size) < 0;
-    }
-
-    bool BPlusTree::IsKeyGreaterThan(const Key &searchKey, const Key &sortedKey)
-    {
-        if (searchKey.size > sortedKey.size)
-            return true;
-
-        if (searchKey.size < sortedKey.size)
-            return false;
-
-        return memcmp(searchKey.value, sortedKey.value, searchKey.size) > 0;
-    }
-
-    bool BPlusTree::IsKeyEqual(const Key &searchKey, const Key &sortedKey)
-    {
-        return searchKey.size == sortedKey.size && memcmp(searchKey.value, sortedKey.value, searchKey.size) == 0;
-    }
-
-    bool BPlusTree::IsKeyGreaterOrEqual(const Key &searchKey, const Key &sortedKey)
-    {
-        if (searchKey.size > sortedKey.size)
-            return true;
-
-        if (searchKey.size < sortedKey.size)
-            return false;
-
-        return memcmp(searchKey.value, sortedKey.value, searchKey.size) >= 0;
-    }
-
-    bool BPlusTree::IsKeyLessOrEqual(const Key &searchKey, const Key &sortedKey)
-    {
-        if (searchKey.size < sortedKey.size)
-            return true;
-
-        if (searchKey.size > sortedKey.size)
-            return false;
-
-        return memcmp(searchKey.value, sortedKey.value, searchKey.size) <= 0;
-    }
-
     Key::Key()
     {
-        this->value = nullptr;
         this->size = 0;
+        this->type = KeyType::Int;
     }
 
-    Key::Key(const void *keyValue, const key_size_t &keySize)
+    Key::Key(const void *keyValue, const key_size_t &keySize, const KeyType& keyType)
     {
-        this->value = new object_t[keySize];
-
-        memcpy(this->value, keyValue, keySize);
+        this->value.resize(keySize);
+        memcpy(this->value.data(), keyValue, keySize);
 
         this->size = keySize;
+        this->type = keyType;
     }
 
-    Key::~Key()
-    {
-        delete this->value;
-    }
+    Key::~Key() = default;
 
     Key::Key(const Key &otherKey)
     {
-        this->value = new object_t[otherKey.size];
-        memcpy(this->value, otherKey.value, otherKey.size);
+        this->value = otherKey.value;
+        // memcpy(this->value, otherKey.value, otherKey.size);
 
         this->size = otherKey.size;
+        this->type = otherKey.type;
+    }
+
+    bool Key::operator>(const Key& otherKey) const
+    {
+        switch (this->type) 
+        {
+            case Constants::KeyType::Int:
+            {
+                int64_t keyVal;
+                memcpy(&keyVal, this->value.data(), this->size);
+
+                int64_t otherKeyVal;
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.size);
+
+                return keyVal > otherKeyVal;
+            }
+            case Constants::KeyType::String:
+            {
+                if (otherKey.size > this->size)
+                    return true;
+
+                if (otherKey.size < this->size)
+                    return false;
+
+                return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) > 0;
+            }
+        }
+
+        throw invalid_argument(" > Invalid DataType for Key");
+    }
+
+    bool Key::operator<(const Key& otherKey) const
+    {
+        return !(*this >= otherKey);
+    }
+
+    bool Key::operator<=(const Key& otherKey) const
+    {
+        return !(*this > otherKey);
+    }
+
+    bool Key::operator>=(const Key& otherKey) const
+    { 
+        switch (this->type) 
+        {
+            case Constants::KeyType::Int:
+            {
+                int64_t keyVal;
+                memcpy(&keyVal, this->value.data(), this->size);
+
+                int64_t otherKeyVal;
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.size);
+
+                return keyVal >= otherKeyVal;
+            }
+            case Constants::KeyType::String:
+            {
+                if (otherKey.size > this->size)
+                    return true;
+
+                if (otherKey.size < this->size)
+                    return false;
+
+                return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) >= 0;
+            }
+        }
+
+        throw invalid_argument(">= Invalid DataType for Key");
+    }
+
+    bool Key::operator==(const Key& otherKey) const
+    {
+        switch (this->type) 
+        {
+            case Constants::KeyType::Int:
+            {
+                int64_t keyVal;
+                memcpy(&keyVal, this->value.data(), this->size);
+
+                int64_t otherKeyVal;
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.size);
+
+                return keyVal == otherKeyVal;
+            }
+            case Constants::KeyType::String:
+                return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
+        }
+
+        throw invalid_argument("== Invalid DataType for Key");
     }
 
     QueryData::QueryData()

@@ -65,19 +65,10 @@ page_size_t IndexPage::CalculateTreeDataSize() const
 
 void IndexPage::WriteTreeDataToPage(Node *node, page_offset_t& offSet) 
 {
+    const uint16_t numberOfKeys = node->keys.size();
+
     memcpy(this->treeData + offSet, &node->isLeaf, sizeof(bool));
     offSet += sizeof(bool);
-
-    if (node->isLeaf) 
-    {
-        memcpy(this->treeData + offSet, &node->data.pageId, sizeof(page_id_t));
-        offSet += sizeof(page_id_t);
-
-        memcpy(this->treeData + offSet, &node->data.extentId, sizeof(extent_id_t));
-        offSet += sizeof(extent_id_t);
-    }
-
-    const uint16_t numberOfKeys = node->keys.size();
 
     memcpy(this->treeData + offSet, &numberOfKeys, sizeof(uint16_t));
     offSet += sizeof(uint16_t);
@@ -87,18 +78,24 @@ void IndexPage::WriteTreeDataToPage(Node *node, page_offset_t& offSet)
         memcpy(this->treeData + offSet, &key.size, sizeof(key_size_t));
         offSet += sizeof(key_size_t);
 
-        memcpy(this->treeData + offSet, key.value, key.size);
+        memcpy(this->treeData + offSet, key.value.data(), key.size);
         offSet += key.size;
     }
 
-    const uint16_t numberOfChildren = node->children.size();
+    if (node->isLeaf) 
+    {
+        memcpy(this->treeData + offSet, &node->data,sizeof(BPlusTreeData));
+        offSet += sizeof(BPlusTreeData);
+    }
+    else 
+    {
+        const uint16_t numberOfChildren = node->children.size();
 
-    memcpy(this->treeData + offSet, &numberOfChildren, sizeof(uint16_t));
-    offSet += sizeof(uint16_t);
+        memcpy(this->treeData + offSet, &numberOfChildren, sizeof(uint16_t));
+        offSet += sizeof(uint16_t);
+    }
 
-    const page_size_t headerSize = PageHeader::GetPageHeaderSize() + sizeof(this->additionalHeader);
-
-    this->header.bytesLeft = PAGE_SIZE - headerSize - offSet;
+    this->header.bytesLeft -= node->GetNodeSize();
     this->additionalHeader.dataSize = offSet;
 
     this->header.pageSize++;

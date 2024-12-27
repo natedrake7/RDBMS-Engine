@@ -94,9 +94,7 @@ namespace DatabaseEngine::StorageTypes {
             const block_size_t& blockSize = this->data[i]->GetBlockSize();
             
             if(blockData == nullptr)
-            {
                 cout<< "NULL";
-            }
             else if (columnType == ColumnType::TinyInt)
             {
                 int8_t tinyIntValue;

@@ -161,30 +161,31 @@ namespace Pages
         }
     }
 
-    void HeaderPage::SetHeaders(const DatabaseHeader &databaseHeader, const vector<Table *> &tables)
+    void HeaderPage::SetDbHeader(const DatabaseHeader &databaseHeader)
     {
         *this->databaseHeader = databaseHeader;
         this->databaseHeader->databaseNameSize = this->databaseHeader->databaseName.size();
+        this->isDirty = true;
+    }
 
-        for (const auto &table : tables)
+    void HeaderPage::SetTableHeader(const Table* table)
+    {
+        TableFullHeader tableFullHeader;
+        tableFullHeader.tableHeader = table->GetTableHeader();
+        tableFullHeader.tableHeader.tableNameSize = tableFullHeader.tableHeader.tableName.size();
+
+        const auto &columns = table->GetColumns();
+
+        for (const auto &column : columns)
         {
-            TableFullHeader tableFullHeader;
-            tableFullHeader.tableHeader = table->GetTableHeader();
-            tableFullHeader.tableHeader.tableNameSize = tableFullHeader.tableHeader.tableName.size();
+            ColumnHeader columnHeader = column->GetColumnHeader();
+            columnHeader.columnTypeLiteralSize = columnHeader.columnTypeLiteral.size();
+            columnHeader.columnNameSize = columnHeader.columnName.size();
 
-            const auto &columns = table->GetColumns();
-
-            for (const auto &column : columns)
-            {
-                ColumnHeader columnHeader = column->GetColumnHeader();
-                columnHeader.columnTypeLiteralSize = columnHeader.columnTypeLiteral.size();
-                columnHeader.columnNameSize = columnHeader.columnName.size();
-
-                tableFullHeader.columnsHeaders.push_back(columnHeader);
-            }
-
-            tablesHeaders.push_back(tableFullHeader);
+            tableFullHeader.columnsHeaders.push_back(columnHeader);
         }
+
+        tablesHeaders.push_back(tableFullHeader);
 
         this->isDirty = true;
     }

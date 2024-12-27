@@ -101,9 +101,9 @@ namespace DatabaseEngine::StorageTypes
         static void SetDecimalData(Block *&block, const Field &inputData);
         void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
         void WriteIndexesToDisk();
-        void WriteNodeToPage(Indexing::Node *node, Pages::IndexPage* indexPage, page_offset_t &offSet);
+        void WriteNodeToPage(Indexing::Node* node, Pages::IndexPage*& indexPage, page_offset_t &offSet);
         void GetClusteredIndexFromDisk();
-        Indexing::Node* GetNodeFromDisk(Pages::IndexPage* indexPage, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
+        Indexing::Node* GetNodeFromDisk(Pages::IndexPage*& indexPage, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
 
     public:
         Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);
