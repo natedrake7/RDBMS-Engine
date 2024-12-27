@@ -36,8 +36,8 @@ add_library(Database
         AdditionalLibraries/SafeConverter/SafeConverter.h
         Database/Storage/FileManager/FileManager.cpp
         Database/Storage/FileManager/FileManager.h
-        Database/Storage/PageManager/PageManager.cpp
-        Database/Storage/PageManager/PageManager.h
+        Database/Storage/StorageManager/StorageManager.cpp
+        Database/Storage/StorageManager/StorageManager.h
         AdditionalLibraries/BitMap/BitMap.cpp
         AdditionalLibraries/BitMap/BitMap.h
         AdditionalLibraries/AdditionalObjects/Field/Field.cpp

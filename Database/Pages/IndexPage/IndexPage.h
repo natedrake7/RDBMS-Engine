@@ -1,62 +1,61 @@
 ﻿#pragma once
 #include "../Page.h"
+#include <cstdint>
 #include <fstream>
 
 using namespace std;
 
-namespace Indexing
-{
-    class BPlusTree;
-    struct Node;
-    struct Key;
-    struct QueryData;
+namespace Indexing {
+class BPlusTree;
+struct Node;
+struct Key;
+struct QueryData;
+} // namespace Indexing
+
+namespace DatabaseEngine::StorageTypes {
+class Table;
 }
 
-namespace DatabaseEngine::StorageTypes
-{
-    class Table;
+namespace Storage {
+class PageManager;
 }
 
-namespace Storage
-{
-    class PageManager;
-}
+namespace Pages {
+typedef struct IndexPageAdditionalHeader {
+  page_id_t nextPageId;
+  uint16_t dataSize;
 
-namespace Pages
-{
-    typedef struct IndexPageAdditionalHeader{
-        page_id_t nextPageId;
+  IndexPageAdditionalHeader();
+  IndexPageAdditionalHeader(const page_id_t &nextPageId);
+  ~IndexPageAdditionalHeader();
+} IndexPageAdditionalHeader;
 
-        IndexPageAdditionalHeader();
-        IndexPageAdditionalHeader(const page_id_t& nextPageId);
-        ~IndexPageAdditionalHeader();
-    }IndexPageAdditionalHeader;
+class IndexPage final : public Page {
+  IndexPageAdditionalHeader additionalHeader;
+  object_t *treeData;
+  vector<column_index_t> indexedColumns;
 
-    class IndexPage final : public Page
-    {
-        IndexPageAdditionalHeader additionalHeader;
-        object_t* treeData;
-        vector<column_index_t> indexedColumns;
+protected:
+  void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
 
-    protected:
-        void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
-        void WriteAdditionalHeaderToFile(fstream* filePtr);
-        page_size_t CalculateTreeDataSize() const;
+  void WriteAdditionalHeaderToFile(fstream *filePtr);
+  
+  page_size_t CalculateTreeDataSize() const;
 
-    public:
-        IndexPage(const page_id_t &pageId, const bool &isPageCreation);
-        explicit IndexPage(const PageHeader &pageHeader);
-        ~IndexPage() override;
+public:
+  IndexPage(const page_id_t &pageId, const bool &isPageCreation);
+  explicit IndexPage(const PageHeader &pageHeader);
+  ~IndexPage() override;
 
-        void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
-        void WritePageToFile(fstream *filePtr) override;
+  void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
+  void WritePageToFile(fstream *filePtr) override;
 
-        void WriteTreeDataToPage(Indexing::Node* node);
+  void WriteTreeDataToPage(Indexing::Node *node, page_offset_t &offSet);
 
-        void SetNextPageId(const page_id_t& nextPageId);
+  void SetNextPageId(const page_id_t &nextPageId);
 
-        const page_id_t& GetNextPageId() const;
+  const page_id_t &GetNextPageId() const;
 
-        const object_t* GetTreeData() const;
-    };
-}
+  const object_t *GetTreeData() const;
+};
+} // namespace Pages

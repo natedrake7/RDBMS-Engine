@@ -18,7 +18,7 @@ namespace Storage{
 
     typedef list<File*>::iterator FileIterator;
 
-    class FileManager {
+    class FileManager final {
         list<File*> filesList;
         unordered_map<string, FileIterator> cache;
         
@@ -28,6 +28,7 @@ namespace Storage{
         
         public:
             explicit  FileManager();
+            FileManager(const FileManager& other) = delete;
             ~FileManager();
             void CreateFile(const string& fileName, const string& extension);
             fstream* GetFile(const string& fileName);

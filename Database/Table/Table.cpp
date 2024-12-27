@@ -11,6 +11,10 @@
 #include "../Constants.h"
 #include "../Database.h"
 #include "../Pages/LargeObject/LargeDataPage.h"
+#include "../Pages/IndexPage/IndexPage.h"
+#include "../Pages/IndexMapAllocation/IndexAllocationMapPage.h"
+#include "../Pages/PageFreeSpace/PageFreeSpacePage.h"
+#include "../Storage/StorageManager/StorageManager.h"
 #include "../Pages/Page.h"
 #include "../Row/Row.h"
 
@@ -19,6 +23,7 @@ using namespace Pages;
 using namespace DataTypes;
 using namespace ByteMaps;
 using namespace Indexing;
+using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes {
 TableHeader::TableHeader() {
@@ -105,6 +110,10 @@ Table::Table(const TableHeader &tableHeader,
 
 Table::~Table() 
 {
+
+  if(this->clusteredIndexedTree != nullptr && this->clusteredIndexedTree->IsTreeDirty())
+    this->WriteIndexesToDisk();
+
   delete this->clusteredIndexedTree;
 
   for (const auto &column : columns)
@@ -144,10 +153,8 @@ void Table::InsertRows(const vector<vector<Field>> &inputData)
   cout << "Rows affected: " << rowsInserted << endl;
 }
 
-void Table::InsertRow(const vector<Field> &inputData,
-                      vector<extent_id_t> &allocatedExtents,
-                      extent_id_t &startingExtentIndex) {
-
+void Table::InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex) 
+{
   Row *row = new Row(*this);
   for (size_t i = 0; i < inputData.size(); ++i) 
   {
@@ -178,7 +185,8 @@ void Table::InsertRow(const vector<Field> &inputData,
                                   row);
 }
 
-void Table::InsertLargeObjectToPage(Row *row) {
+void Table::InsertLargeObjectToPage(Row *row) 
+{
   const vector<column_index_t> largeBlockIndexes = row->GetLargeBlocks();
 
   if (largeBlockIndexes.empty())
@@ -270,19 +278,17 @@ LargeDataPage *Table::GetOrCreateLargeDataPage() const {
              : largeDataPage;
 }
 
-void Table::LinkLargePageDataObjectChunks(
-    DataObject *dataObject, const page_id_t &lastLargePageId,
-    const large_page_index_t &objectIndex) {
-  if (dataObject != nullptr) {
+void Table::LinkLargePageDataObjectChunks(DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex) 
+{
+  if (dataObject != nullptr) 
+  {
     dataObject->nextPageId = lastLargePageId;
     dataObject->nextObjectIndex = objectIndex;
   }
 }
 
-void Table::InsertLargeDataObjectPointerToRow(
-    Row *row, const bool &isFirstRecursion,
-    const large_page_index_t &objectIndex, const page_id_t &lastLargePageId,
-    const column_index_t &largeBlockIndex) const {
+void Table::InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const 
+{
   if (!isFirstRecursion)
     return;
 
@@ -294,7 +300,8 @@ void Table::InsertLargeDataObjectPointerToRow(
   row->UpdateColumnData(block);
 }
 
-column_number_t Table::GetNumberOfColumns() const {
+column_number_t Table::GetNumberOfColumns() const 
+{
   return this->columns.size();
 }
 
@@ -302,15 +309,16 @@ const TableHeader &Table::GetTableHeader() const { return this->header; }
 
 const vector<Column *> &Table::GetColumns() const { return this->columns; }
 
-LargeDataPage *Table::GetLargeDataPage(const page_id_t &pageId) const {
+LargeDataPage *Table::GetLargeDataPage(const page_id_t &pageId) const 
+{
   return this->database->GetLargeDataPage(pageId, this->header.tableId);
 }
 
-void Table::Select(vector<Row> &selectedRows,
-                   const vector<RowCondition *> *conditions,
-                   const size_t &count) const {
-  const size_t rowsToSelect =
-      (count == -1) ? numeric_limits<size_t>::max() : count;
+void Table::Select(vector<Row> &selectedRows, const vector<RowCondition *> *conditions, const size_t &count) const 
+{
+  const size_t rowsToSelect =  (count == -1) 
+                            ? numeric_limits<size_t>::max() 
+                            : count;
 
   this->database->SelectTableRows(this->header.tableId, &selectedRows,
                                   rowsToSelect, conditions);
@@ -319,15 +327,16 @@ void Table::Select(vector<Row> &selectedRows,
 void Table::Update(const vector<Field> &updates,
                    const vector<RowCondition *> *conditions) const {
   vector<Block *> updateBlocks;
-  for (const auto &field : updates) {
+  for (const auto &field : updates) 
+  {
     const auto &associatedColumnIndex = field.GetColumnIndex();
-    const auto &columnType =
-        this->columns[associatedColumnIndex]->GetColumnType();
+  
+    const auto &columnType = this->columns[associatedColumnIndex]->GetColumnType();
 
     Block *block = new Block(this->columns[associatedColumnIndex]);
 
-    this->setBlockDataByDataTypeArray[static_cast<int>(columnType)](block,
-                                                                    field);
+    this->setBlockDataByDataTypeArray[static_cast<int>(columnType)](block, field);
+
     updateBlocks.push_back(block);
   }
 
@@ -338,12 +347,13 @@ void Table::Update(const vector<Field> &updates,
     delete block;
 }
 
-void Table::UpdateIndexAllocationMapPageId(
-    const page_id_t &indexAllocationMapPageId) {
+void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId) 
+{
   this->header.indexAllocationMapPageId = indexAllocationMapPageId;
 }
 
-bool Table::IsColumnNullable(const column_index_t &columnIndex) const {
+bool Table::IsColumnNullable(const column_index_t &columnIndex) const 
+{
   return this->header.columnsNullBitMap->Get(columnIndex);
 }
 
@@ -355,7 +365,8 @@ row_size_t &Table::GetMaxRowSize() { return this->header.maxRowSize; }
 
 const table_id_t &Table::GetTableId() const { return this->header.tableId; }
 
-TableType Table::GetTableType() const {
+TableType Table::GetTableType() const 
+{
   return this->header.clusteredIndexesBitMap->HasAtLeastOneEntry()
              ? TableType::CLUSTERED
              : TableType::HEAP;
@@ -426,7 +437,8 @@ void Table::SetBoolData(Block *&block, const Field &inputData) {
   block->SetData(&value, sizeof(bool));
 }
 
-void Table::SetDateTimeData(Block *&block, const Field &inputData) {
+void Table::SetDateTimeData(Block *&block, const Field &inputData) 
+{
   const string &data = inputData.GetData();
 
   const time_t unixMilliseconds = DateTime::ToUnixTimeStamp(data);
@@ -434,7 +446,8 @@ void Table::SetDateTimeData(Block *&block, const Field &inputData) {
   block->SetData(&unixMilliseconds, sizeof(time_t));
 }
 
-void Table::SetDecimalData(Block *&block, const Field &inputData) {
+void Table::SetDecimalData(Block *&block, const Field &inputData) 
+{
   const string &data = inputData.GetData();
 
   const Decimal decimalValue(data);
@@ -442,12 +455,10 @@ void Table::SetDecimalData(Block *&block, const Field &inputData) {
   block->SetData(decimalValue.GetRawData(), decimalValue.GetRawDataSize());
 }
 
-void Table::CheckAndInsertNullValues(
-    Block *&block, Row *&row, const column_index_t &associatedColumnIndex) {
+void Table::CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex) 
+{
   if (!columns[associatedColumnIndex]->GetAllowNulls())
-    throw invalid_argument("Column " +
-                           columns[associatedColumnIndex]->GetColumnName() +
-                           " does not allow NULLs. Insert Fails.");
+    throw invalid_argument("Column " + columns[associatedColumnIndex]->GetColumnName() + " does not allow NULLs. Insert Fails.");
 
   block->SetData(nullptr, 0);
 
@@ -463,10 +474,168 @@ BPlusTree* Table::GetClusteredIndexedTree()
   {
       this->clusteredIndexedTree = new BPlusTree(this);
 
-      this->database->GetTreeFromDisk(this->clusteredIndexedTree, this);
+      this->GetClusteredIndexFromDisk();
   }
 
   return this->clusteredIndexedTree; 
+}
+
+void Table::WriteIndexesToDisk()
+{
+    IndexPage* indexPage = nullptr;
+
+    if (this->header.clusteredIndexPageId == 0)
+    {
+        indexPage = this->database->CreateIndexPage(this->header.tableId);
+        this->header.clusteredIndexPageId = indexPage->GetPageId();
+    }
+    else
+        indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
+
+    Node* root = this->clusteredIndexedTree->GetRoot();
+
+    page_offset_t offSet = 0;
+
+    this->WriteNodeToPage(root, indexPage, offSet);
+}
+
+void Table::WriteNodeToPage(Node *node, IndexPage* indexPage, page_offset_t &offSet)
+{
+    const page_size_t nodeSize = node->GetNodeSize();
+
+    const page_id_t indexPageId = indexPage->GetPageId();
+
+    const page_id_t freeSpacePageId = Database::GetPfsAssociatedPage(indexPageId);
+
+    PageFreeSpacePage* pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(freeSpacePageId);
+
+    if(indexPage->GetBytesLeft() < nodeSize)
+    {
+        IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->header.indexAllocationMapPageId);
+
+        vector<extent_id_t> allocatedExtents;
+        indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
+
+        bool newPageFound = false;
+        for(const auto& extentId: allocatedExtents)
+        {
+            const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+            for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < indexPageId + EXTENT_SIZE; nextIndexPageId++)
+            {
+                if(pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
+                    break;
+                
+                //page is free
+                if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) != 0)
+                    continue;
+
+                indexPage->SetNextPageId(nextIndexPageId);
+
+                indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
+
+                newPageFound = true;
+            }
+        }
+
+        if(!newPageFound)
+        {
+            IndexPage* prevIndexPage = indexPage;
+            indexPage = this->database->CreateIndexPage(this->header.tableId);
+
+            prevIndexPage->SetNextPageId(indexPage->GetPageId());
+        }
+
+        offSet = 0;
+    }
+
+    indexPage->WriteTreeDataToPage(node, offSet);
+    pageFreeSpacePage->SetPageMetaData(indexPage);
+
+    for (const auto &child : node->children)
+        this->WriteNodeToPage(child, indexPage, offSet);
+}
+
+void Table::GetClusteredIndexFromDisk()
+{
+      page_id_t indexPageId = this->header.clusteredIndexPageId;
+      IndexPage* indexPage = nullptr;
+
+      Node* root = this->clusteredIndexedTree->GetRoot();
+
+      indexPage = StorageManager::Get().GetIndexPage(indexPageId);
+
+      int currentNodeIndex = 0;
+      page_offset_t offSet = 0;
+
+      Node* prevLeafNode = nullptr;
+
+      root = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet, prevLeafNode);
+
+      this->clusteredIndexedTree->SetRoot(root);
+}
+
+Node* Table::GetNodeFromDisk(IndexPage* indexPage, int& currentNodeIndex, page_offset_t& offSet, Node*& prevLeafNode)
+{
+    //next page must be loaded
+    if(currentNodeIndex == indexPage->GetPageSize() - 1 && indexPage->GetNextPageId() != 0)
+    {
+        indexPage = StorageManager::Get().GetIndexPage(indexPage->GetNextPageId());
+
+        currentNodeIndex = 0;
+        offSet = 0;
+    }
+
+    const auto& treeData = indexPage->GetTreeData();
+
+    bool isLeaf;
+    memcpy(&isLeaf, treeData + offSet, sizeof(bool));
+    offSet += sizeof(bool);
+
+    Node *node = new Node(isLeaf);
+
+    if (node->isLeaf)
+    {
+        memcpy(&node->data.pageId, treeData + offSet, sizeof(page_id_t));
+        offSet += sizeof(page_id_t);
+
+        memcpy(&node->data.extentId, treeData + offSet, sizeof(extent_id_t));
+        offSet += sizeof(extent_id_t);
+
+        if(prevLeafNode != nullptr)
+            prevLeafNode->next = node;
+
+        prevLeafNode = node;
+    }
+
+    uint16_t numOfKeys;
+    memcpy(&numOfKeys, treeData + offSet, sizeof(uint16_t));
+    offSet += sizeof(uint16_t);
+
+    for (int i = 0; i < numOfKeys; i++)
+    {
+        key_size_t keySize;
+        memcpy(&keySize, treeData + offSet, sizeof(key_size_t));
+        offSet += sizeof(key_size_t);
+
+        vector<object_t> keyValue(keySize);
+        memcpy(keyValue.data(), treeData + offSet, keySize);
+        offSet += keySize;
+
+        node->keys.emplace_back(keyValue.data(), keySize);
+    }
+
+    uint16_t numberOfChildren;
+    memcpy(&numberOfChildren, treeData + offSet, sizeof(uint16_t));
+    offSet += sizeof(uint16_t);
+
+    node->children.resize(numberOfChildren);
+
+    for (int i = 0; i < numberOfChildren; i++)
+        node->children[i] = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet, prevLeafNode);
+    
+    //figure out how to connect leaves betwwen them
+    return node;
 }
 
 } // namespace DatabaseEngine::StorageTypes

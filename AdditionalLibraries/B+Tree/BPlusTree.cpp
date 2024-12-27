@@ -6,7 +6,6 @@
 #include <stdexcept>
 #include <string.h>
 #include "../../Database/Table/Table.h"
-#include "../../Database/Storage/PageManager/PageManager.h"
 
 using namespace std;
 using namespace DatabaseEngine::StorageTypes;
@@ -134,6 +133,7 @@ namespace Indexing
         this->root = new Node(true);
         this->t = PAGE_SIZE / table->GetMaximumRowSize();
         this->tableId = tableHeader.tableId;
+        this->isDirty = false;
     }
 
     BPlusTree::BPlusTree()
@@ -141,6 +141,7 @@ namespace Indexing
         this->root = nullptr;
         this->t = 0;
         this->tableId = 0;
+        this->isDirty = false;
     }
 
     BPlusTree::~BPlusTree()
@@ -187,6 +188,7 @@ namespace Indexing
 
     Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves)
     {
+        this->isDirty = true;
         if (root->keys.size() == 2 * t - 1) // root is full,
         {
             // create new root
@@ -364,6 +366,8 @@ namespace Indexing
         filePtr->write(reinterpret_cast<char *>(&this->t), sizeof(int));
         filePtr->write(reinterpret_cast<char *>(&this->tableId), sizeof(table_id_t));
     }
+
+    const bool& BPlusTree::IsTreeDirty() const { return this->isDirty; }
 
     void BPlusTree::ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet)
     {

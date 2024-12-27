@@ -7,8 +7,7 @@
 #include "AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include "AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h"
 #include "Database/Column/Column.h"
-#include "Database/Storage/FileManager/FileManager.h"
-#include "Database/Storage/PageManager/PageManager.h"
+#include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 
 using namespace DatabaseEngine;
@@ -24,15 +23,14 @@ void CreateAndInsertToDatabase(Database *db, Table *table = nullptr);
 
 int main() {
   Database *db = nullptr;
-  FileManager fileManager;
-  PageManager *pageManager = new PageManager(&fileManager);
   const string dbName = "stakosDb";
-  try {
+  try 
+  {
     // CreateDatabase(dbName, &fileManager, pageManager);
 
-    UseDatabase(dbName, &db, pageManager);
+    UseDatabase(dbName, &db);
 
-    pageManager->BindDatabase(db);
+    StorageManager::Get().BindDatabase(db);
 
     Table *table = nullptr;
 
@@ -64,8 +62,6 @@ int main() {
   }
 
   delete db;
-  delete pageManager;
-
   return 0;
 }
 

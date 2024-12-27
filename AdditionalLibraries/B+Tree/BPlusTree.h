@@ -72,6 +72,7 @@ namespace Indexing
         table_id_t tableId;
         int t;
         Node *root;
+        bool isDirty;
 
         void SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves) const;
         void PrintTree(const Node *node, const int &level);
@@ -109,5 +110,7 @@ namespace Indexing
         void ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
 
         void GetNodeSize(const Node *node, page_size_t &size) const;
+
+        const bool& IsTreeDirty() const;
     };
 }
