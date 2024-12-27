@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Constants.h"
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -10,30 +9,30 @@ using namespace std;
 class RowCondition;
 
 namespace Indexing {
-struct Key;
-struct Node;
-class BPlusTree;
+  struct Key;
+  struct Node;
+  class BPlusTree;
 } // namespace Indexing
 
 namespace DatabaseEngine::StorageTypes {
-class Table;
-struct TableFullHeader;
-class Block;
-class Column;
-class Row;
+  class Table;
+  struct TableFullHeader;
+  class Block;
+  class Column;
+  class Row;
 } // namespace DatabaseEngine::StorageTypes
 
 namespace Storage {
-class FileManager;
-class PageManager;
+  class FileManager;
+  class PageManager;
 } // namespace Storage
 
 namespace Pages {
 class Page;
-class LargeDataPage;
-class PageFreeSpacePage;
-class IndexAllocationMapPage;
-class IndexPage;
+  class LargeDataPage;
+  class PageFreeSpacePage;
+  class IndexAllocationMapPage;
+  class IndexPage;
 } // namespace Pages
 
 namespace DatabaseEngine {
@@ -61,7 +60,6 @@ class Database {
   string filename;
   string fileExtension;
   vector<StorageTypes::Table *> tables;
-  mutex pageSelectMutex;
 
 protected:
   void ValidateTableCreation(StorageTypes::Table *table) const;
@@ -95,11 +93,6 @@ protected:
   void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves,
                  const int &branchingFactor, const StorageTypes::Table &table);
 
-  [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage(
-      Pages::PageFreeSpacePage *&pageFreeSpacePage, const page_id_t &pageId,
-      const page_id_t &extentFirstPageId, const extent_id_t &extentId,
-      const StorageTypes::Table &table, extent_id_t *nextExtentId);
-
   static void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage,
                               Pages::Page *page, StorageTypes::Row *row,
                               const int &indexPosition);
@@ -113,11 +106,6 @@ protected:
                                vector<StorageTypes::Row> *selectedRows,
                                const size_t &rowsToSelect,
                                const vector<RowCondition *> *conditions);
-
-  void SelectRowFromClusteredTable(const StorageTypes::Table *table,
-                                   vector<StorageTypes::Row> *selectedRows,
-                                   const size_t &rowsToSelect,
-                                   const vector<RowCondition *> *conditions);
 
   void WriteBTreeToFile(Indexing::BPlusTree *tree, StorageTypes::Table *&table);
 
@@ -166,6 +154,8 @@ public:
   [[nodiscard]] string GetFileName() const;
 
   static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId);
+
+  [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage( Pages::PageFreeSpacePage *&pageFreeSpacePage, const page_id_t &pageId, const page_id_t &extentFirstPageId, const extent_id_t &extentId, const StorageTypes::Table &table, extent_id_t *nextExtentId);
 };
 
 void CreateDatabase(const string &dbName);

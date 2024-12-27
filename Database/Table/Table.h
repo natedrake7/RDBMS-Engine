@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <mutex>
 #include <string>
 #include <vector>
 #include "../Constants.h"
@@ -82,10 +83,13 @@ namespace DatabaseEngine::StorageTypes
         vector<void (*)(Block *&block, const Field &inputData)> setBlockDataByDataTypeArray = {&Table::SetTinyIntData, &Table::SetSmallIntData, &Table::SetIntData, &Table::SetBigIntData, &Table::SetDecimalData, &Table::SetStringData, &Table::SetBoolData, &Table::SetDateTimeData};
         Indexing::BPlusTree* clusteredIndexedTree;
         vector<Indexing::BPlusTree*> nonClusteredIndexedTrees;
+        mutex pageSelectMutex;
 
     protected:
+        
         void InsertLargeObjectToPage(Row *row);
         [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
+        
         static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
         void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
         void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
@@ -100,10 +104,19 @@ namespace DatabaseEngine::StorageTypes
         static void SetDateTimeData(Block *&block, const Field &inputData);
         static void SetDecimalData(Block *&block, const Field &inputData);
         void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
+       
         void WriteIndexesToDisk();
         void WriteNodeToPage(Indexing::Node* node, Pages::IndexPage*& indexPage, page_offset_t &offSet);
         void GetClusteredIndexFromDisk();
         Indexing::Node* GetNodeFromDisk(Pages::IndexPage*& indexPage, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
+       
+        void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
+        void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
+        void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<RowCondition *> *conditions, vector<Row> *selectedRows);
+        
+        void InsertRowToPage(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row);
+        void InsertRowToClusteredIndex(Row *row);
+        void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves);
 
     public:
         Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);
@@ -126,7 +139,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId) const;
 
-        void Select(vector<Row> &selectedRows, const vector<RowCondition *> *conditions = nullptr, const size_t &count = -1) const;
+        void Select(vector<Row> &selectedRows, const vector<RowCondition *> *conditions = nullptr, const size_t &count = -1);
 
         void Update(const vector<Field> &updates, const vector<RowCondition *> *conditions) const;
 

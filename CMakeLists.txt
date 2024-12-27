@@ -10,6 +10,7 @@ add_library(Database
         Database/Database.cpp
         Database/Database.h
         Database/Table/Table.cpp
+        Database/Table/TableIndexesFunctions.cpp
         Database/Table/Table.h
         Database/Row/Row.cpp
         Database/Row/Row.h

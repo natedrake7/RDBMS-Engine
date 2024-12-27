@@ -416,11 +416,8 @@ namespace Indexing
         {
             case Constants::KeyType::Int:
             {
-                int64_t keyVal;
-                memcpy(&keyVal, this->value.data(), this->size);
-
-                int64_t otherKeyVal;
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.size);
+                int64_t keyVal = *reinterpret_cast<const int64_t*>(this->value.data());
+                int64_t otherKeyVal = *reinterpret_cast<const int64_t*>(otherKey.value.data());
 
                 return keyVal > otherKeyVal;
             }
@@ -455,11 +452,8 @@ namespace Indexing
         {
             case Constants::KeyType::Int:
             {
-                int64_t keyVal;
-                memcpy(&keyVal, this->value.data(), this->size);
-
-                int64_t otherKeyVal;
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.size);
+                int64_t keyVal = *reinterpret_cast<const int64_t*>(this->value.data());
+                int64_t otherKeyVal = *reinterpret_cast<const int64_t*>(otherKey.value.data());
 
                 return keyVal >= otherKeyVal;
             }
@@ -484,11 +478,8 @@ namespace Indexing
         {
             case Constants::KeyType::Int:
             {
-                int64_t keyVal;
-                memcpy(&keyVal, this->value.data(), this->size);
-
-                int64_t otherKeyVal;
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.size);
+                int64_t keyVal = *reinterpret_cast<const int64_t*>(this->value.data());
+                int64_t otherKeyVal = *reinterpret_cast<const int64_t*>(otherKey.value.data());
 
                 return keyVal == otherKeyVal;
             }
