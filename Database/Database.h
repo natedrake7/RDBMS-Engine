@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Constants.h"
+#include "../AdditionalLibraries/AdditionalObjects/Field/Field.h"
 #include <string>
 #include <vector>
 
@@ -79,7 +80,7 @@ protected:
   void ThreadSelect(const StorageTypes::Table *table,
                     const Pages::IndexAllocationMapPage *tableMapPage,
                     const extent_id_t &extentId, const size_t &rowsToSelect,
-                    const vector<RowCondition *> *conditions,
+                    const vector<Field> *conditions,
                     vector<StorageTypes::Row> *selectedRows);
 
   void InsertRowToClusteredIndex(const StorageTypes::Table &table,
@@ -105,7 +106,7 @@ protected:
   void SelectRowsFromHeapTable(const StorageTypes::Table *table,
                                vector<StorageTypes::Row> *selectedRows,
                                const size_t &rowsToSelect,
-                               const vector<RowCondition *> *conditions);
+                               const vector<Field> *conditions);
 
   void WriteBTreeToFile(Indexing::BPlusTree *tree, StorageTypes::Table *&table);
 
@@ -134,9 +135,9 @@ public:
 
   void InsertRowToPage(const StorageTypes::Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, StorageTypes::Row *row);
 
-  void SelectTableRows(const table_id_t &tableId,vector<StorageTypes::Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
+  void SelectTableRows(const table_id_t &tableId,vector<StorageTypes::Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
 
-  void UpdateTableRows(const table_id_t &tableId, const vector<StorageTypes::Block *> &updates, const vector<RowCondition *> *conditions);
+  void UpdateTableRows(const table_id_t &tableId, const vector<StorageTypes::Block *> &updates, const vector<Field> *conditions);
 
   Pages::Page *CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId = nullptr);
 

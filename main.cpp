@@ -2,13 +2,12 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
-
 #include "./Database/Database.h"
 #include "./Database/Row/Row.h"
 #include "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
 #include "AdditionalLibraries/AdditionalObjects/Field/Field.h"
-#include "AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h"
 #include "Database/Column/Column.h"
+#include "Database/Constants.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 
@@ -40,16 +39,16 @@ int main() {
     table = db->OpenTable("Movies");
 
     constexpr int searchKey = 90;
-    vector<RowCondition *> conditions;
-    RowCondition condition2(&searchKey, sizeof(int), 0);
-
-    conditions.push_back(&condition2);
+    vector<Field> conditions = 
+    {
+      Field("5",0 , Operator::OperatorNone, ConditionType::ConditionNone)
+    };
 
     vector<Row> rows;
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    table->Select(rows);
+    table->Select(rows, &conditions);
 
     const auto end = std::chrono::high_resolution_clock::now();
 
@@ -58,17 +57,18 @@ int main() {
     cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 
     PrintRows(rows);
-  } catch (const exception &exception) {
+  }
+  catch (const exception &exception) 
+  {
     cerr << exception.what() << '\n';
-    // db->DeleteDatabase();
   }
 
   delete db;
   return 0;
 }
 
-void CreateAndInsertToDatabase(Database *db, Table *table) {
-
+void CreateAndInsertToDatabase(Database *db, Table *table) 
+{
   if (table == nullptr) 
   {
     vector<Column *> columns;

@@ -187,19 +187,19 @@ namespace Pages
 
     const PageType &Page::GetPageType() const { return this->header.pageType; }
 
-    void Page::UpdateRows(const vector<Block> *updates, const vector<RowCondition *> *conditions)
+    void Page::UpdateRows(const vector<Block> *updates, const vector<Field> *conditions)
     {
         for (const auto &row : this->rows)
         {
             bool updateRow = false;
             if (conditions != nullptr)
             {
-                for (const auto &condition : *conditions)
-                    if (*condition != row->GetData()[condition->GetColumnIndex()])
-                    {
-                        updateRow = true;
-                        break;
-                    }
+                // for (const auto &condition : *conditions)
+                //     if (*condition != row->GetData()[condition->GetColumnIndex()])
+                //     {
+                //         updateRow = true;
+                //         break;
+                //     }
 
                 if (updateRow)
                     continue;
@@ -209,7 +209,7 @@ namespace Pages
         this->isDirty = true;
     }
 
-    void Page::GetRows(vector<Row> *copiedRows, const Table &table, const size_t &rowsToSelect, const vector<RowCondition *> *conditions) const
+    void Page::GetRows(vector<Row> *copiedRows, const Table &table, const size_t &rowsToSelect, const vector<Field> *conditions) const
     {
         for (const auto &row : this->rows)
         {
@@ -219,12 +219,12 @@ namespace Pages
             if (conditions != nullptr)
             {
                 bool skipRow = false;
-                for (const auto &condition : *conditions)
-                    if (*condition != row->GetData()[condition->GetColumnIndex()])
-                    {
-                        skipRow = true;
-                        break;
-                    }
+                // for (const auto &condition : *conditions)
+                //     if (condition != row->GetData()[condition->GetColumnIndex()])
+                //     {
+                //         skipRow = true;
+                //         break;
+                //     }
 
                 if (skipRow)
                     continue;
@@ -304,7 +304,7 @@ namespace Pages
 
     vector<DatabaseEngine::StorageTypes::Row *> *Page::GetDataRowsUnsafe() { return &this->rows; }
 
-    void Page::UpdateRows(const vector<RowCondition *> *conditions)
+    void Page::UpdateRows(const vector<Field> *conditions)
     {
         for (auto &row : this->rows)
         {

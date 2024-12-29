@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <mutex>
 #include <string>
+#include <unordered_set>
 #include <vector>
 #include "../Constants.h"
 #include "../Database.h"
@@ -86,6 +87,8 @@ namespace DatabaseEngine::StorageTypes
         mutex pageSelectMutex;
 
     protected:
+
+        [[nodiscard]] unordered_set<column_index_t> GetClusteredIndexesMap() const;
         
         void InsertLargeObjectToPage(Row *row);
         [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
@@ -110,9 +113,9 @@ namespace DatabaseEngine::StorageTypes
         void GetClusteredIndexFromDisk();
         Indexing::Node* GetNodeFromDisk(Pages::IndexPage*& indexPage, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
        
-        void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
-        void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions);
-        void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<RowCondition *> *conditions, vector<Row> *selectedRows);
+        void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
+        void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
+        void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows);
         
         void InsertRowToPage(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row);
         void InsertRowToClusteredIndex(Row *row);
@@ -139,9 +142,9 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId) const;
 
-        void Select(vector<Row> &selectedRows, const vector<RowCondition *> *conditions = nullptr, const size_t &count = -1);
+        void Select(vector<Row> &selectedRows, const vector<Field> *conditions = nullptr, const size_t &count = -1);
 
-        void Update(const vector<Field> &updates, const vector<RowCondition *> *conditions) const;
+        void Update(const vector<Field> &updates, const vector<Field> *conditions) const;
 
         void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
 

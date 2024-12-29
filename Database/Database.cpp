@@ -384,7 +384,7 @@ namespace DatabaseEngine
         newPage->InsertRow(row);
     }
 
-    void Database::UpdateTableRows(const table_id_t &tableId, const vector<Block *> &updates, const vector<RowCondition *> *conditions)
+    void Database::UpdateTableRows(const table_id_t &tableId, const vector<Block *> &updates, const vector<Field> *conditions)
     {
         const Table *table = this->GetTable(tableId);
 

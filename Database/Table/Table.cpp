@@ -18,6 +18,8 @@
 #include "../Storage/StorageManager/StorageManager.h"
 #include "../Pages/Page.h"
 #include "../Row/Row.h"
+#include <stdexcept>
+#include <unordered_set>
 
 
 using namespace Pages;
@@ -314,13 +316,34 @@ LargeDataPage *Table::GetLargeDataPage(const page_id_t &pageId) const
   return this->database->GetLargeDataPage(pageId, this->header.tableId);
 }
 
-void Table::Select(vector<Row> &selectedRows, const vector<RowCondition *> *conditions, const size_t &count) 
+void Table::Select(vector<Row> &selectedRows, const vector<Field> *conditions, const size_t &count) 
 {
   const size_t rowsToSelect =  (count == -1) 
                             ? numeric_limits<size_t>::max() 
                             : count;
 
-  if (this->GetTableType() == TableType::HEAP)
+  const auto tableType = this->GetTableType();
+
+  bool conditionsHaveClusteredIndex = false;
+
+  if(conditions != nullptr)
+  {
+    const auto clusteredColumnsHashSet = this->GetClusteredIndexesMap();
+
+    for(int i = 0;i < conditions->size(); i++)
+    {
+      if((*conditions)[i].GetConditionType() == ConditionType::ConditionNone)
+        throw invalid_argument("Table::Select: Invalid Condition specified");
+
+      if(i > 0 && ((*conditions)[i].GetOperatorType() == Constants::OperatorNone))
+        throw invalid_argument("Table::Select: Invalid Operator specified");
+
+      if(clusteredColumnsHashSet.find((*conditions)[i].GetColumnIndex()) != clusteredColumnsHashSet.end())
+        conditionsHaveClusteredIndex = true;
+    }
+  }
+
+  if (this->GetTableType() == TableType::HEAP || !conditionsHaveClusteredIndex)
   {
       this->SelectRowsFromHeap(&selectedRows, rowsToSelect, conditions);
       return;
@@ -329,7 +352,7 @@ void Table::Select(vector<Row> &selectedRows, const vector<RowCondition *> *cond
   this->SelectRowsFromClusteredIndex(&selectedRows, rowsToSelect, conditions);
 }
 
-void Table::Update(const vector<Field> &updates, const vector<RowCondition *> *conditions) const 
+void Table::Update(const vector<Field> &updates, const vector<Field> *conditions) const 
 {
   vector<Block *> updateBlocks;
   for (const auto &field : updates) 
@@ -345,8 +368,7 @@ void Table::Update(const vector<Field> &updates, const vector<RowCondition *> *c
     updateBlocks.push_back(block);
   }
 
-  this->database->UpdateTableRows(this->header.tableId, updateBlocks,
-                                  conditions);
+  this->database->UpdateTableRows(this->header.tableId, updateBlocks, conditions);
 
   for (const auto &block : updateBlocks)
     delete block;
@@ -377,7 +399,8 @@ TableType Table::GetTableType() const
              : TableType::HEAP;
 }
 
-row_size_t Table::GetMaximumRowSize() const {
+row_size_t Table::GetMaximumRowSize() const 
+{
   row_size_t maximumRowSize = 0;
   
   for (const auto &column : this->columns)
@@ -387,47 +410,47 @@ row_size_t Table::GetMaximumRowSize() const {
   return maximumRowSize;
 }
 
-void Table::GetIndexedColumnKeys(vector<column_index_t> *vector) const {
-  for (bit_map_pos_t i = 0; i < this->header.clusteredIndexesBitMap->GetSize();
-       i++)
+void Table::GetIndexedColumnKeys(vector<column_index_t> *vector) const 
+{
+  for (bit_map_pos_t i = 0; i < this->header.clusteredIndexesBitMap->GetSize(); i++)
     if (this->header.clusteredIndexesBitMap->Get(i))
       vector->push_back(i);
 
 }
-void Table::SetIndexPageId(const page_id_t &indexPageId) {
-  this->header.clusteredIndexPageId = indexPageId;
-}
+void Table::SetIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
 
-void Table::SetTinyIntData(Block *&block, const Field &inputData) {
-  const int8_t convertedTinyInt =
-      SafeConverter<int8_t>::SafeStoi(inputData.GetData());
+void Table::SetTinyIntData(Block *&block, const Field &inputData) 
+{
+  const int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData.GetData());
   block->SetData(&convertedTinyInt, sizeof(int8_t));
 }
 
-void Table::SetSmallIntData(Block *&block, const Field &inputData) {
-  const int16_t convertedSmallInt =
-      SafeConverter<int16_t>::SafeStoi(inputData.GetData());
+void Table::SetSmallIntData(Block *&block, const Field &inputData) 
+{
+  const int16_t convertedSmallInt = SafeConverter<int16_t>::SafeStoi(inputData.GetData());
   block->SetData(&convertedSmallInt, sizeof(int16_t));
 }
 
-void Table::SetIntData(Block *&block, const Field &inputData) {
-  const int32_t convertedInt =
-      SafeConverter<int32_t>::SafeStoi(inputData.GetData());
+void Table::SetIntData(Block *&block, const Field &inputData) 
+{
+  const int32_t convertedInt = SafeConverter<int32_t>::SafeStoi(inputData.GetData());
   block->SetData(&convertedInt, sizeof(int32_t));
 }
 
 void Table::SetBigIntData(Block *&block, const Field &inputData) {
-  const int64_t convertedBigInt =
-      SafeConverter<int64_t>::SafeStoi(inputData.GetData());
+
+  const int64_t convertedBigInt = SafeConverter<int64_t>::SafeStoi(inputData.GetData());
   block->SetData(&convertedBigInt, sizeof(int64_t));
 }
 
-void Table::SetStringData(Block *&block, const Field &inputData) {
+void Table::SetStringData(Block *&block, const Field &inputData) 
+{
   const string &data = inputData.GetData();
   block->SetData(data.c_str(), data.size());
 }
 
-void Table::SetBoolData(Block *&block, const Field &inputData) {
+void Table::SetBoolData(Block *&block, const Field &inputData) 
+{
   const string &data = inputData.GetData();
 
   bool value = false;
@@ -473,10 +496,10 @@ void Table::CheckAndInsertNullValues(Block *&block, Row *&row, const column_inde
   row->InsertColumnData(block, columnIndex);
 }
 
-void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions)
+void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
 {
     vector<QueryData> results;
-    const int32_t maxKey = 145;
+    const int32_t maxKey = 10;
     const int32_t minKey = 10;
 
     if(this->clusteredIndexedTree == nullptr)
@@ -502,7 +525,7 @@ void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t
     }
 }
 
-void Table::SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<RowCondition *> *conditions)
+void Table::SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
 {
   const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(header.indexAllocationMapPageId);
 
@@ -520,7 +543,7 @@ void Table::SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSe
       workerThread.join();
 }
 
- void Table::ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<RowCondition *> *conditions, vector<Row> *selectedRows)
+ void Table::ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows)
  {
     const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
@@ -552,5 +575,18 @@ void Table::SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSe
             return;
     }
  }
+
+  unordered_set<column_index_t> Table::GetClusteredIndexesMap() const
+  {
+    unordered_set<column_index_t> hashSet = {};
+    for(const auto& column: this->columns)
+    {
+      const column_index_t& columnIndex = column->GetColumnIndex();
+      if(this->header.clusteredIndexesBitMap->Get(columnIndex))
+        hashSet.insert(columnIndex);
+    }
+
+    return hashSet;
+  }
 
 } // namespace DatabaseEngine::StorageTypes

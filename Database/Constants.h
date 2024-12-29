@@ -54,6 +54,22 @@ namespace Constants
         DateTime = 4
     };
 
+    enum Operator: uint8_t{
+        OperatorNone = 0,
+        Equal = 1,
+        NotEqual = 2,
+        GreaterThan = 3,
+        LessThan = 4,
+        GreaterOrEqual = 5,
+        LessOrEqual = 6
+    };
+
+    enum ConditionType: uint8_t{
+        ConditionNone = 0,
+        And = 1,
+        Or = 2
+    };
+
     typedef uint8_t byte;
 
     // block types
