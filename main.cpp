@@ -48,7 +48,7 @@ int main() {
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    table->Select(rows, &conditions);
+    table->Select(rows);
 
     const auto end = std::chrono::high_resolution_clock::now();
 

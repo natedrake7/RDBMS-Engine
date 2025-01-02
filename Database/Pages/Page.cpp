@@ -304,11 +304,28 @@ namespace Pages
 
     vector<DatabaseEngine::StorageTypes::Row *> *Page::GetDataRowsUnsafe() { return &this->rows; }
 
-    void Page::UpdateRows(const vector<Field> *conditions)
+    void Page::UpdateRows(const vector<Block*> *updates, const vector<Field> *conditions)
     {
+        //add condition checking prior to update
         for (auto &row : this->rows)
         {
             RowHeader *rowHeader = row->GetHeader();
+            
+            vector<Block*> rowData = row->GetData();
+
+            for(const auto& update: *updates)
+            {
+                const auto& columnIndex = update->GetColumnIndex();
+
+                if (rowHeader->largeObjectBitMap->Get(columnIndex))
+                {
+                    //set lob objects
+
+                    continue;
+                }
+
+                rowData[columnIndex]->SetData(update->GetBlockData(), update->GetBlockSize());
+            }
 
             for (const auto &block : row->GetData())
             {

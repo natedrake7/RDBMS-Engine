@@ -412,7 +412,7 @@ namespace DatabaseEngine
 
                 Page *page = StorageManager::Get().GetPage(extentPageId, extentId, table);
 
-                page->UpdateRows(conditions);
+                page->UpdateRows(&updates, conditions);
             }
         }
     }

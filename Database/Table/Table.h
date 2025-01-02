@@ -76,7 +76,7 @@ namespace DatabaseEngine::StorageTypes
         TableFullHeader(const TableFullHeader &tableHeader);
     } TableFullHeader;
 
-    class Table
+    class Table final
     {
         TableHeader header;
         vector<Column *> columns;
@@ -86,84 +86,85 @@ namespace DatabaseEngine::StorageTypes
         vector<Indexing::BPlusTree*> nonClusteredIndexedTrees;
         mutex pageSelectMutex;
 
-    protected:
+        protected:
 
-        [[nodiscard]] unordered_set<column_index_t> GetClusteredIndexesMap() const;
+            [[nodiscard]] unordered_set<column_index_t> GetClusteredIndexesMap() const;
+            
+            void InsertLargeObjectToPage(Row *row);
+            [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
+            
+            static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
+            void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
+            void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
+            void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
+            void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes);
+            
+            static void SetTinyIntData(Block *&block, const Field &inputData);
+            static void SetSmallIntData(Block *&block, const Field &inputData);
+            static void SetIntData(Block *&block, const Field &inputData);
+            static void SetBigIntData(Block *&block, const Field &inputData);
+            static void SetStringData(Block *&block, const Field &inputData);
+            static void SetBoolData(Block *&block, const Field &inputData);
+            static void SetDateTimeData(Block *&block, const Field &inputData);
+            static void SetDecimalData(Block *&block, const Field &inputData);
+            void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
         
-        void InsertLargeObjectToPage(Row *row);
-        [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
+            void WriteIndexesToDisk();
+            void WriteNodeToPage(Indexing::Node* node, Pages::IndexPage*& indexPage, page_offset_t &offSet);
+            void GetClusteredIndexFromDisk();
+            Indexing::Node* GetNodeFromDisk(Pages::IndexPage*& indexPage, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
         
-        static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
-        void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
-        void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
-        void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
-        void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes);
-        static void SetTinyIntData(Block *&block, const Field &inputData);
-        static void SetSmallIntData(Block *&block, const Field &inputData);
-        static void SetIntData(Block *&block, const Field &inputData);
-        static void SetBigIntData(Block *&block, const Field &inputData);
-        static void SetStringData(Block *&block, const Field &inputData);
-        static void SetBoolData(Block *&block, const Field &inputData);
-        static void SetDateTimeData(Block *&block, const Field &inputData);
-        static void SetDecimalData(Block *&block, const Field &inputData);
-        void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
-       
-        void WriteIndexesToDisk();
-        void WriteNodeToPage(Indexing::Node* node, Pages::IndexPage*& indexPage, page_offset_t &offSet);
-        void GetClusteredIndexFromDisk();
-        Indexing::Node* GetNodeFromDisk(Pages::IndexPage*& indexPage, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
-       
-        void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
-        void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
-        void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows);
-        
-        void InsertRowToPage(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row);
-        void InsertRowToClusteredIndex(Row *row);
-        void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves);
+            void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
+            void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
+            void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows);
+            
+            void InsertRowToPage(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row);
+            void InsertRowToClusteredIndex(Row *row);
+            void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves);
 
-    public:
-        Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);
+        public:
+            Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);
 
-        Table(const TableHeader &tableHeader, Database *database);
+            Table(const TableHeader &tableHeader, Database *database);
 
-        ~Table();
+            ~Table();
 
-        void InsertRows(const vector<vector<Field>> &inputData);
+            void InsertRows(const vector<vector<Field>> &inputData);
 
-        string &GetTableName();
+            string &GetTableName();
 
-        row_size_t &GetMaxRowSize();
+            row_size_t &GetMaxRowSize();
 
-        [[nodiscard]] column_number_t GetNumberOfColumns() const;
+            [[nodiscard]] column_number_t GetNumberOfColumns() const;
 
-        [[nodiscard]] const TableHeader &GetTableHeader() const;
+            [[nodiscard]] const TableHeader &GetTableHeader() const;
 
-        [[nodiscard]] const vector<Column *> &GetColumns() const;
+            [[nodiscard]] const vector<Column *> &GetColumns() const;
 
-        [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId) const;
+            [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId) const;
 
-        void Select(vector<Row> &selectedRows, const vector<Field> *conditions = nullptr, const size_t &count = -1);
+            void Select(vector<Row> &selectedRows, const vector<Field> *conditions = nullptr, const size_t &count = -1);
 
-        void Update(const vector<Field> &updates, const vector<Field> *conditions) const;
+            void Update(const vector<Field> &updates, const vector<Field> *conditions) const;
 
-        void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
+            void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
 
-        [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;
+            [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;
 
-        void AddColumn(Column *column);
+            void AddColumn(Column *column);
 
-        [[nodiscard]] const table_id_t &GetTableId() const;
+            [[nodiscard]] const table_id_t &GetTableId() const;
 
-        void InsertRow(const vector<Field> &inputData);
+            void InsertRow(const vector<Field> &inputData);
 
-        [[nodiscard]] TableType GetTableType() const;
+            [[nodiscard]] TableType GetTableType() const;
 
-        [[nodiscard]] row_size_t GetMaximumRowSize() const;
+            [[nodiscard]] row_size_t GetMaximumRowSize() const;
 
-        void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
+            void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
 
-        void SetIndexPageId(const page_id_t &indexPageId);
+            void SetIndexPageId(const page_id_t &indexPageId);
 
-        Indexing::BPlusTree* GetClusteredIndexedTree();
+            Indexing::BPlusTree* GetClusteredIndexedTree();
     };
 }
