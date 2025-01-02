@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <vcruntime_new_debug.h>
+#include <vector>
 #include "./Pages/Header/HeaderPage.h"
 #include "./Pages/GlobalAllocationMap/GlobalAllocationMapPage.h"
 #include "./Pages/PageFreeSpace/PageFreeSpacePage.h"
@@ -15,12 +16,14 @@
 #include "Storage/StorageManager/StorageManager.h"
 #include "../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "Block/Block.h"
+#include "../AdditionalLibraries/BitMap/BitMap.h"
 
 using namespace Pages;
 using namespace DatabaseEngine::StorageTypes;
 using namespace Storage;
 using namespace Indexing;
 using namespace std;
+using namespace ByteMaps;
 
 namespace DatabaseEngine
 {
@@ -384,7 +387,7 @@ namespace DatabaseEngine
         newPage->InsertRow(row);
     }
 
-    void Database::UpdateTableRows(const table_id_t &tableId, const vector<Block *> &updates, const vector<Field> *conditions)
+    void Database::UpdateTableRows(const table_id_t &tableId, const vector<Field> &updates, const vector<Field> *conditions)
     {
         const Table *table = this->GetTable(tableId);
 
@@ -393,13 +396,17 @@ namespace DatabaseEngine
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds);
 
+        const auto& columns = table->GetColumns();
+
+        vector<Row*> rowsToBeInserted;
+
         for (const auto &extentId : tableExtentIds)
         {
             const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
             const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
 
-            const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pfsPageId);
+            PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pfsPageId);
 
             const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                          ? extentFirstPageId
@@ -412,8 +419,85 @@ namespace DatabaseEngine
 
                 Page *page = StorageManager::Get().GetPage(extentPageId, extentId, table);
 
-                page->UpdateRows(&updates, conditions);
+                vector<Row*>* rows = page->GetDataRowsUnsafe();
+
+                vector<Row*>::iterator it;
+
+                for(it = rows->begin(); it != rows->end(); it++)
+                {
+                    Row* row = *it;
+
+                    if(row == nullptr)
+                        continue;
+
+                    RowHeader* rowHeader = row->GetHeader();
+
+                    const row_size_t rowPreviousSize = row->GetTotalRowSize();
+
+                    for(const auto& update: updates)
+                    {
+                        const column_index_t& columnIndex = update.GetColumnIndex();
+
+                        if(rowHeader->largeObjectBitMap->Get(columnIndex))
+                        {
+                            //do for LOBS
+
+                            continue;
+                        }
+
+                        if(rowHeader->nullBitMap->Get(columnIndex) && update.GetIsNull())
+                            continue;
+                        else if(rowHeader->nullBitMap->Get(columnIndex) && !update.GetIsNull())
+                            rowHeader->nullBitMap->Set(columnIndex, false);
+
+                        //leverage table inserts to do this better
+                        const string& data = update.GetData();
+
+                        row->InsertColumnData(new Block(data.c_str(), data.size(), columns[columnIndex]), columnIndex);
+                    }
+
+                    if(row->GetTotalRowSize() > page->GetBytesLeft() + rowPreviousSize)
+                    {
+                        rowsToBeInserted.push_back(row);
+                        rows->erase(it);
+                        continue;
+                    }
+
+                    //update bytesleft is slow and better implementation should be created
+                    //but it sets dirty to true
+                    page->UpdateBytesLeft();
+                    pageFreeSpacePage->SetPageMetaData(page);
+                }
+                
+                if(rowsToBeInserted.empty())
+                    continue;
+
+                for(it = rowsToBeInserted.begin(); it != rowsToBeInserted.end(); it++)
+                {
+                    Row* row = *it;
+
+                    if(page->GetBytesLeft() == 0)
+                        break;
+
+                    if(row->GetTotalRowSize() > page->GetBytesLeft())
+                        continue;
+
+                    page->InsertRow(row);
+
+                    pageFreeSpacePage->SetPageMetaData(page);
+
+                    rowsToBeInserted.erase(it);
+                }
             }
+
+            //leverage heap insert optimization to skips extents with index less than the specified one
+            extent_id_t lastExtentIndex = tableExtentIds.size() - 1;
+            tableExtentIds.clear();
+
+            for(auto& row: rowsToBeInserted)
+                this->InsertRowToHeapTable(*table, tableExtentIds, lastExtentIndex, row);
+
+            //rows need to be inserted to new page
         }
     }
 

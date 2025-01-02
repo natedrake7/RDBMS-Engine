@@ -157,6 +157,14 @@ namespace DatabaseEngine::StorageTypes {
 
   void Table::InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex) 
   {
+    Row* row = this->CreateRow(inputData);
+
+    this->InsertLargeObjectToPage(row);
+    this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row);
+  }
+
+  Row* Table::CreateRow(const vector<Field>& inputData)
+  {
     Row *row = new Row(*this);
     for (size_t i = 0; i < inputData.size(); ++i) 
     {
@@ -182,8 +190,7 @@ namespace DatabaseEngine::StorageTypes {
       row->InsertColumnData(block, columnIndex);
     }
 
-    this->InsertLargeObjectToPage(row);
-    this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row);
+    return row;
   }
 
   column_number_t Table::GetNumberOfColumns() const 
@@ -233,24 +240,23 @@ namespace DatabaseEngine::StorageTypes {
 
   void Table::Update(const vector<Field> &updates, const vector<Field> *conditions) const 
   {
-    vector<Block *> updateBlocks;
-    for (const auto &field : updates) 
-    {
-      const auto &associatedColumnIndex = field.GetColumnIndex();
+    // vector<Block *> updateBlocks;
+    // for (const auto &field : updates) 
+    // {
+    //   const auto &associatedColumnIndex = field.GetColumnIndex();
     
-      const auto &columnType = this->columns[associatedColumnIndex]->GetColumnType();
+    //   const auto &columnType = this->columns[associatedColumnIndex]->GetColumnType();
 
-      Block *block = new Block(this->columns[associatedColumnIndex]);
+    //   Block *block = new Block(this->columns[associatedColumnIndex]);
 
-      this->setBlockDataByDataTypeArray[static_cast<int>(columnType)](block, field);
+    //   this->setBlockDataByDataTypeArray[static_cast<int>(columnType)](block, field);
 
-      updateBlocks.push_back(block);
-    }
+    //   updateBlocks.push_back(block);
+    // }
 
-    this->database->UpdateTableRows(this->header.tableId, updateBlocks, conditions);
-
-    for (const auto &block : updateBlocks)
-      delete block;
+    this->database->UpdateTableRows(this->header.tableId, updates, conditions);
+    // for (const auto &block : updateBlocks)
+    //   delete block;
   }
 
   void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId) 

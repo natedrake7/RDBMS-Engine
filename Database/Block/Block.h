@@ -24,7 +24,7 @@ namespace DatabaseEngine::StorageTypes {
 
         explicit Block(const Block* block);
 
-        Block(const void* data, const block_size_t& size,const Column* column);
+        Block(const void* data, const block_size_t& size, const Column* column);
 
         ~Block();
 

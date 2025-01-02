@@ -137,7 +137,7 @@ public:
 
   void SelectTableRows(const table_id_t &tableId,vector<StorageTypes::Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
 
-  void UpdateTableRows(const table_id_t &tableId, const vector<StorageTypes::Block *> &updates, const vector<Field> *conditions);
+  void UpdateTableRows(const table_id_t &tableId, const vector<Field> &updates, const vector<Field> *conditions);
 
   Pages::Page *CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId = nullptr);
 

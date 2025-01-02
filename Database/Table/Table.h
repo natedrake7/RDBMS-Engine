@@ -122,6 +122,8 @@ namespace DatabaseEngine::StorageTypes
             void InsertRowToClusteredIndex(Row *row);
             void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves);
 
+            Row* CreateRow(const vector<Field>& inputData);
+
         public:
             Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);
 

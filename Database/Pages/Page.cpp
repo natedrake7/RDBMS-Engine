@@ -173,6 +173,8 @@ namespace Pages
 
         for (const auto &row : this->rows)
             this->header.bytesLeft -= row->GetTotalRowSize();
+
+        this->isDirty = true;
     }
 
     const string &Page::GetFileName() const { return this->filename; }
@@ -302,7 +304,7 @@ namespace Pages
         this->UpdateBytesLeft();
     }
 
-    vector<DatabaseEngine::StorageTypes::Row *> *Page::GetDataRowsUnsafe() { return &this->rows; }
+    vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsUnsafe() { return &this->rows; }
 
     void Page::UpdateRows(const vector<Block*> *updates, const vector<Field> *conditions)
     {
@@ -323,6 +325,8 @@ namespace Pages
 
                     continue;
                 }
+
+                if(row)
 
                 rowData[columnIndex]->SetData(update->GetBlockData(), update->GetBlockSize());
             }
