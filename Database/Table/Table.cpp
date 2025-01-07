@@ -298,8 +298,8 @@ namespace DatabaseEngine::StorageTypes {
   void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
   {
       vector<QueryData> results;
-      const int32_t maxKey = 10;
       const int32_t minKey = 10;
+      const int32_t maxKey = 252;
 
       if(this->clusteredIndexedTree == nullptr)
       {

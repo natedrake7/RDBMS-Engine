@@ -26,7 +26,8 @@ StorageManager::StorageManager()
   this->dataWriters = 0;
 }
 
-StorageManager::~StorageManager() {
+StorageManager::~StorageManager() 
+{
   const size_t pageListSize = this->pageList.size();
   const size_t systemPageListSize = this->systemPageList.size();
 

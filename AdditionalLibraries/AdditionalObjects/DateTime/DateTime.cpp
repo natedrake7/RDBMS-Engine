@@ -97,13 +97,10 @@ namespace DataTypes
 	string DateTime::ToString(const string &format) const
 	{
 
-		tm time{};
-		localtime_s(&time, &this->timeStamp);
-
-		char buffer[100];
-		strftime(buffer, sizeof(buffer), format.c_str(), &time);
-
-		return {buffer};
+		auto timePoint = std::chrono::system_clock::from_time_t(this->timeStamp);
+        
+        // Use std::format with chrono-style specifiers
+        return std::format("{:%Y-%m-%d %H:%M:%S}", timePoint);
 	}
 
 	time_t DateTime::ToUnixTimeStamp(const int year, const int month, const int day, const int hour, const int minute, const int second)

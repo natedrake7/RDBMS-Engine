@@ -48,7 +48,7 @@ namespace DatabaseEngine
 
     page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) { return (pageId / PAGE_FREE_SPACE_SIZE) * PAGE_FREE_SPACE_SIZE + 1; }
 
-    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) { return (pageId / GAM_NUMBER_OF_PAGES) * GAM_NUMBER_OF_PAGES + 1; }
+    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) { return (pageId / GAM_NUMBER_OF_PAGES) * GAM_NUMBER_OF_PAGES + 2; }
 
     page_id_t Database::CalculateSystemPageOffset(const page_id_t &pageId)
     {
@@ -110,6 +110,12 @@ namespace DatabaseEngine
 
     Table *Database::CreateTable(const string &tableName, const vector<StorageTypes::Column *> &columns, const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes)
     {
+        for (const auto& table : this->tables)
+        {
+            if(table->GetTableName() == tableName)
+                throw invalid_argument("Database::CreateTable: Table with name " + tableName + " already exists!");
+        }
+
         Table *table = new Table(tableName, this->header.lastTableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
 
         this->header.lastTableId++;
@@ -345,6 +351,15 @@ namespace DatabaseEngine
     {
         const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
 
+        if (tableMapPage == nullptr)
+        {
+           Page *newPage = this->CreateDataPage(table.GetTableId());
+
+            newPage->InsertRow(row);
+
+            return;
+        }
+        
         tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
         lastExtentIndex = allocatedExtents.size() - 1;
 
@@ -378,6 +393,8 @@ namespace DatabaseEngine
 
                     page->InsertRow(row);
                     pageFreeSpacePage->SetPageMetaData(page);
+
+                    return;
                 }
             }
         }

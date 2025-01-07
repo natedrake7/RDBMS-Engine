@@ -1,9 +1,11 @@
 ﻿#include "IndexAllocationMapPage.h"
 #include "../../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../GlobalAllocationMap/GlobalAllocationMapPage.h"
+#include "../../Database.h"
 
 using namespace ByteMaps;
 using namespace DatabaseEngine::StorageTypes;
+using namespace DatabaseEngine;
 
 namespace Pages {
     IndexAllocationMapPage::IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId) : Page(pageId)
@@ -45,27 +47,35 @@ namespace Pages {
 
     void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedExtents) const
     {
+        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(this->header.pageId);
+
         for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
         {
             if (this->ownedExtents->Get(id))
-                allocatedExtents->push_back(this->additionalHeader.startingExtentId + id);
+                allocatedExtents->push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + id);
         }
     }
 
     void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedExtents, const extent_id_t& startingExtentIndex) const
     {
+        allocatedExtents->clear();
+
+        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(this->header.pageId);
+
         if(startingExtentIndex >= this->ownedExtents->GetSize())
             return;
         
         for (extent_id_t id = startingExtentIndex; id < this->ownedExtents->GetSize(); id++)
         {
             if (this->ownedExtents->Get(id))
-                allocatedExtents->push_back(this->additionalHeader.startingExtentId + id);
+                allocatedExtents->push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + id);
         }
     }
 
     extent_id_t IndexAllocationMapPage::GetLastAllocatedExtent() const
     {
+        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(this->header.pageId);
+
         extent_id_t lastAllocatedExtent = 0;
         for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
         {
@@ -73,7 +83,7 @@ namespace Pages {
                 lastAllocatedExtent = id;
         }
 
-        return this->additionalHeader.startingExtentId + lastAllocatedExtent;
+        return (IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + lastAllocatedExtent);
     }
 
     void IndexAllocationMapPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
@@ -118,5 +128,10 @@ namespace Pages {
     void IndexAllocationMapPage::WriteAdditionalHeaderToFile(fstream* filePtr)
     {
         filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader), sizeof(IndexAllocationPageAdditionalHeader));
+    }
+
+    page_id_t IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(const page_id_t & globalAllocationMapPageId)
+    {
+        return (globalAllocationMapPageId - 2) * GAM_PAGE_SIZE;
     }
 }

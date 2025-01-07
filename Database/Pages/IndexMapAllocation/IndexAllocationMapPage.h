@@ -26,6 +26,7 @@ namespace Pages {
     protected:
         void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
         void WriteAdditionalHeaderToFile(fstream* filePtr);
+        static page_id_t CalculatePageIdOffsetByGamPageId(const page_id_t& globalAllocationMapPageId);
     
     public:
         IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId);
