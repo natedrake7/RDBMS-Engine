@@ -66,7 +66,14 @@ namespace DatabaseEngine::StorageTypes {
 
     void Row::InsertColumnData(Block *block, const  column_index_t& columnIndex)
     {
+        if (this->data[columnIndex] != nullptr)
+        {
+            this->header.rowSize -= this->data[columnIndex]->GetBlockSize();
+            delete this->data[columnIndex];
+        }
+
         this->data[columnIndex] = block;
+
         this->header.rowSize += block->GetBlockSize();
     }
 
@@ -224,7 +231,10 @@ namespace DatabaseEngine::StorageTypes {
     {
         row_size_t currentRowSize = this->GetRowHeaderSize();
         currentRowSize += this->table->GetNumberOfColumns() * sizeof(block_size_t); //decrease by the null blocks here
-        currentRowSize += this->header.rowSize;
+
+        for(const auto& block: this->data)
+            currentRowSize += block->GetBlockSize();
+        //currentRowSize += this->header.rowSize;
         
         return currentRowSize;
     }

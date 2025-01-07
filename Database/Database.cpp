@@ -404,8 +404,9 @@ namespace DatabaseEngine
         newPage->InsertRow(row);
     }
 
-    void Database::UpdateTableRows(const table_id_t &tableId, const vector<Field> &updates, const vector<Field> *conditions)
+    void Database::UpdateTableRows(const table_id_t &tableId, const vector<Block*> &updateBlocks, const vector<Field> *conditions)
     {
+        //this is update heap table rows (which should be called if no index is selected)
         const Table *table = this->GetTable(tableId);
 
         const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(table->GetTableHeader().indexAllocationMapPageId);
@@ -451,9 +452,9 @@ namespace DatabaseEngine
 
                     const row_size_t rowPreviousSize = row->GetTotalRowSize();
 
-                    for(const auto& update: updates)
+                    for(const auto& update: updateBlocks)
                     {
-                        const column_index_t& columnIndex = update.GetColumnIndex();
+                        const column_index_t& columnIndex = update->GetColumnIndex();
 
                         if(rowHeader->largeObjectBitMap->Get(columnIndex))
                         {
@@ -462,15 +463,17 @@ namespace DatabaseEngine
                             continue;
                         }
 
-                        if(rowHeader->nullBitMap->Get(columnIndex) && update.GetIsNull())
+                        const bool isNull = update->GetBlockData() == nullptr;
+
+                        if(rowHeader->nullBitMap->Get(columnIndex) && isNull)
                             continue;
-                        else if(rowHeader->nullBitMap->Get(columnIndex) && !update.GetIsNull())
+                        else if(rowHeader->nullBitMap->Get(columnIndex) && !isNull)
                             rowHeader->nullBitMap->Set(columnIndex, false);
 
                         //leverage table inserts to do this better
-                        const string& data = update.GetData();
+                        Block* newBlock = new Block(update);
 
-                        row->InsertColumnData(new Block(data.c_str(), data.size(), columns[columnIndex]), columnIndex);
+                        row->InsertColumnData(newBlock, columnIndex);
                     }
 
                     if(row->GetTotalRowSize() > page->GetBytesLeft() + rowPreviousSize)
@@ -506,16 +509,15 @@ namespace DatabaseEngine
                     rowsToBeInserted.erase(it);
                 }
             }
-
-            //leverage heap insert optimization to skips extents with index less than the specified one
-            extent_id_t lastExtentIndex = tableExtentIds.size() - 1;
-            tableExtentIds.clear();
-
-            for(auto& row: rowsToBeInserted)
-                this->InsertRowToHeapTable(*table, tableExtentIds, lastExtentIndex, row);
-
-            //rows need to be inserted to new page
         }
+        //leverage heap insert optimization to skips extents with index less than the specified one
+        //rows need to be inserted to new page
+
+        extent_id_t lastExtentIndex = tableExtentIds.size() - 1;
+        tableExtentIds.clear();
+
+        for(auto& row: rowsToBeInserted)
+            this->InsertRowToHeapTable(*table, tableExtentIds, lastExtentIndex, row);
     }
 
     Page *Database::CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId)

@@ -81,7 +81,7 @@ namespace DatabaseEngine::StorageTypes
         TableHeader header;
         vector<Column *> columns;
         Database *database;
-        vector<void (*)(Block *&block, const Field &inputData)> setBlockDataByDataTypeArray = {&Table::SetTinyIntData, &Table::SetSmallIntData, &Table::SetIntData, &Table::SetBigIntData, &Table::SetDecimalData, &Table::SetStringData, &Table::SetBoolData, &Table::SetDateTimeData};
+        const vector<void (*)(Block *&block, const Field &inputData)> setBlockDataByDataTypeArray = {&Table::SetTinyIntData, &Table::SetSmallIntData, &Table::SetIntData, &Table::SetBigIntData, &Table::SetDecimalData, &Table::SetStringData, &Table::SetBoolData, &Table::SetDateTimeData};
         Indexing::BPlusTree* clusteredIndexedTree;
         vector<Indexing::BPlusTree*> nonClusteredIndexedTrees;
         mutex pageSelectMutex;
@@ -147,7 +147,7 @@ namespace DatabaseEngine::StorageTypes
 
             void Select(vector<Row> &selectedRows, const vector<Field> *conditions = nullptr, const size_t &count = -1);
 
-            void Update(const vector<Field> &updates, const vector<Field> *conditions) const;
+            void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
 
             void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
 

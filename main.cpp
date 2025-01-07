@@ -42,8 +42,15 @@ int main()
       /*  CreateMoviesTables(db);
         CreateActorsTable(db);*/
 
-        //table = db->OpenTable("Movies");
-        table = db->OpenTable("Movies");
+        table = db->OpenTable("Actors");
+
+        //const vector<Field> updates = {
+        //    Field("Michael Jackson", 1, false)
+        //};
+
+        //table->Update(updates, nullptr);
+
+        table = db->OpenTable("Actors");
 
         ExecuteQuery(table);
     }
