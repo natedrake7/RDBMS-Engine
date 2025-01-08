@@ -18,6 +18,7 @@ using namespace Storage;
 void ExecuteQuery(Table* table);
 void CreateMoviesTables(Database *db);
 void CreateActorsTable(Database *db);
+void InsertRowsToTable(Table* table);
 // handle updates
 // deletes
 // B+ Trees
@@ -40,17 +41,20 @@ int main()
         Table *table = nullptr;
 
       //  CreateMoviesTables(db);
-        //CreateActorsTable(db);
+      // CreateActorsTable(db);
 
-        table = db->OpenTable("Actors");
+        //table = db->OpenTable("Actors");
+        table = db->OpenTable("Movies");
+
+      //  InsertRowsToTable(table);
 
         const vector<Field> updates = {
             Field("Michael Jackson", 1, false)
         };
 
-       // table->Update(updates, nullptr);
+        //table->Update(updates, nullptr);
 
-        table = db->OpenTable("Actors");
+     //   table->Delete(nullptr);
 
         ExecuteQuery(table);
     }
@@ -107,7 +111,7 @@ void CreateActorsTable(Database *db)
             ,Field("Johhny Depp", 1)
             ,Field("65", 2)
             ,Field("1962-04-12 12:12:12", 3)
-            ,Field("1.73", 4)
+            ,Field("1.77", 4)
         };
 
         fields[0].SetData(to_string(i));
@@ -141,6 +145,29 @@ void CreateMoviesTables(Database *db)
             Field("1", 0),        Field("Silence Of The Lambs" + to_string(i), 1),
             Field("Thriller", 2), Field("2024-04-12 12:12:12", 3),
             Field("1", 4),        Field("1233232.12434343", 5),
+        };
+
+        fields[0].SetData(to_string(i));
+
+        // table->InsertRow(fields);
+        inputData.push_back(fields);
+    }
+
+    table->InsertRows(inputData);
+}
+
+void InsertRowsToTable(Table* table)
+{
+    vector<vector<Field>> inputData;
+
+    for (int i = 0; i < 100; i++) 
+    {
+        vector<Field> fields = {
+             Field("1", 0)
+            ,Field("Johhny Depp", 1)
+            ,Field("65", 2)
+            ,Field("1962-04-12 12:12:12", 3)
+            ,Field("1.77", 4)
         };
 
         fields[0].SetData(to_string(i));

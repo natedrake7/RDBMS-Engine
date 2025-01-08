@@ -149,6 +149,8 @@ namespace DatabaseEngine::StorageTypes
 
             void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
 
+            void Delete(const vector<Field> *conditions = nullptr) const;
+
             void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
 
             [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;

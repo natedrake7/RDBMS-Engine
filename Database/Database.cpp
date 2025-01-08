@@ -1,4 +1,5 @@
 ﻿#include "Database.h"
+#include "Database.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vcruntime_new_debug.h>
@@ -519,6 +520,52 @@ namespace DatabaseEngine
 
         for(auto& row: rowsToBeInserted)
             this->InsertRowToHeapTable(*table, tableExtentIds, lastExtentIndex, row);
+    }
+
+    void Database::DeleteTableRows(const table_id_t& tableId, const vector<Field>* conditions)
+    {
+         const Table *table = this->GetTable(tableId);
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(table->GetTableHeader().indexAllocationMapPageId);
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds);
+
+        const auto& columns = table->GetColumns();
+
+        vector<Row*> rowsToBeInserted;
+
+        for (const auto &extentId : tableExtentIds)
+        {
+            const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+            const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
+
+            PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pfsPageId);
+
+            const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                         ? extentFirstPageId
+                                         : extentFirstPageId + 1;
+
+            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+            {
+                if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+                    break;
+
+                Page *page = StorageManager::Get().GetPage(extentPageId, extentId, table);
+
+                vector<Row*>* rows = page->GetDataRowsUnsafe();
+
+                for(const auto& row: *rows)
+                    delete row;
+
+                rows->clear();
+
+                page->UpdateBytesLeft();
+                page->UpdatePageSize();
+                pageFreeSpacePage->SetPageMetaData(page);
+            }
+        }
     }
 
     Page *Database::CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId)
