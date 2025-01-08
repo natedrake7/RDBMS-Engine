@@ -26,7 +26,8 @@ using namespace Indexing;
 using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes {
-      TableHeader::TableHeader() {
+      TableHeader::TableHeader() 
+      {
         this->indexAllocationMapPageId = 0;
         this->tableId = 0;
         this->maxRowSize = 0;
@@ -36,7 +37,8 @@ namespace DatabaseEngine::StorageTypes {
         this->columnsNullBitMap = nullptr;
       }
 
-      TableHeader::~TableHeader() {
+      TableHeader::~TableHeader() 
+      {
         delete this->columnsNullBitMap;
         delete this->clusteredIndexesBitMap;
 
@@ -243,6 +245,8 @@ namespace DatabaseEngine::StorageTypes {
             this->SelectRowsFromHeap(&selectedRows, rowsToSelect, conditions);
             return;
         }
+
+        //check if tables has non clustered index and it is in the query
 
         this->SelectRowsFromClusteredIndex(&selectedRows, rowsToSelect, conditions);
       }

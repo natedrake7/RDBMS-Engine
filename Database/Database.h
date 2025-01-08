@@ -77,8 +77,9 @@ protected:
 
     [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
 
-    void InsertRowToClusteredIndex(const StorageTypes::Table &table,
-                                    StorageTypes::Row *row);
+    void InsertRowToClusteredIndex(const StorageTypes::Table &table, StorageTypes::Row *row);
+
+    void InsertRowToNonClusteredIndex(const StorageTypes::Table &table, StorageTypes::Row *row);
 
     void InsertRowToHeapTable(const StorageTypes::Table &table,
                             vector<extent_id_t> &allocatedExtents,

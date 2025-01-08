@@ -31,7 +31,7 @@ namespace DatabaseEngine::StorageTypes{
     {
         for (bit_map_pos_t i = 0; i < this->header.clusteredIndexesBitMap->GetSize(); i++)
             if (this->header.clusteredIndexesBitMap->Get(i))
-            vector->push_back(i);
+                vector->push_back(i);
 
     }
     void Table::SetIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
