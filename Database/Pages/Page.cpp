@@ -177,6 +177,13 @@ namespace Pages
         this->isDirty = true;
     }
 
+    void Page::UpdateBytesLeft(const row_size_t& previousRowSize, const row_size_t& currentRowSize)
+    {
+        this->header.bytesLeft += static_cast<int64_t>(currentRowSize) -static_cast<int64_t>(previousRowSize);
+
+        this->isDirty = true;
+    }
+
     const string &Page::GetFileName() const { return this->filename; }
 
     const page_id_t &Page::GetPageId() const { return this->header.pageId; }

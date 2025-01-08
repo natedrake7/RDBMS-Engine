@@ -476,16 +476,17 @@ namespace DatabaseEngine
                         row->InsertColumnData(newBlock, columnIndex);
                     }
 
-                    if(row->GetTotalRowSize() > page->GetBytesLeft() + rowPreviousSize)
+                    const row_size_t currentRowSize = row->GetTotalRowSize();
+
+                    if(currentRowSize > page->GetBytesLeft() + rowPreviousSize)
                     {
                         rowsToBeInserted.push_back(row);
                         rows->erase(it);
                         continue;
                     }
 
-                    //update bytesleft is slow and better implementation should be created
-                    //but it sets dirty to true
-                    page->UpdateBytesLeft();
+                    //it sets dirty to true
+                    page->UpdateBytesLeft(rowPreviousSize, currentRowSize);
                     pageFreeSpacePage->SetPageMetaData(page);
                 }
                 

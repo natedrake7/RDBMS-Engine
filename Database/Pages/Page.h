@@ -58,6 +58,7 @@ namespace Pages
         void SetPageId(const page_id_t &pageId);
         void UpdatePageSize();
         void UpdateBytesLeft();
+        void UpdateBytesLeft(const row_size_t& previousRowSize, const row_size_t& currentRowSize);
 
         [[nodiscard]] const string &GetFileName() const;
         [[nodiscard]] const page_id_t &GetPageId() const;

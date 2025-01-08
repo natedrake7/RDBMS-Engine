@@ -31,7 +31,7 @@ int main()
 
     try 
     {
-        //CreateDatabase(dbName);
+     //   CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
@@ -39,16 +39,16 @@ int main()
 
         Table *table = nullptr;
 
-      /*  CreateMoviesTables(db);
-        CreateActorsTable(db);*/
+      //  CreateMoviesTables(db);
+        //CreateActorsTable(db);
 
         table = db->OpenTable("Actors");
 
-        //const vector<Field> updates = {
-        //    Field("Michael Jackson", 1, false)
-        //};
+        const vector<Field> updates = {
+            Field("Michael Jackson", 1, false)
+        };
 
-        //table->Update(updates, nullptr);
+       // table->Update(updates, nullptr);
 
         table = db->OpenTable("Actors");
 
