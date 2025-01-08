@@ -39,7 +39,9 @@ namespace DatabaseEngine::StorageTypes {
       TableHeader::~TableHeader() {
         delete this->columnsNullBitMap;
         delete this->clusteredIndexesBitMap;
-        delete this->nonClusteredIndexesBitMap;
+
+        for(const auto& nonClusteredIndexMap: this->nonClusteredIndexesBitMap)
+            delete nonClusteredIndexMap;
       }
 
       TableHeader &TableHeader::operator=(const TableHeader &tableHeader) 
@@ -56,10 +58,10 @@ namespace DatabaseEngine::StorageTypes {
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
 
         this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
-        this->clusteredIndexesBitMap =
-            new BitMap(*tableHeader.clusteredIndexesBitMap);
-        this->nonClusteredIndexesBitMap =
-            new BitMap(*tableHeader.nonClusteredIndexesBitMap);
+        this->clusteredIndexesBitMap = new BitMap(*tableHeader.clusteredIndexesBitMap);
+
+        for(const auto& nonClusteredIndexBitMap: tableHeader.nonClusteredIndexesBitMap)
+            this->nonClusteredIndexesBitMap.push_back(new BitMap(*nonClusteredIndexBitMap));
 
         return *this;
       }
@@ -72,7 +74,7 @@ namespace DatabaseEngine::StorageTypes {
         this->columnsHeaders = tableHeader.columnsHeaders;
       }
 
-      Table::Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns,  DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes) 
+      Table::Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns,  DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes) 
       {
         this->columns = columns;
         this->database = database;
@@ -80,7 +82,6 @@ namespace DatabaseEngine::StorageTypes {
         this->header.numberOfColumns = columns.size();
         this->header.columnsNullBitMap = new BitMap(this->header.numberOfColumns);
         this->header.clusteredIndexesBitMap = new BitMap(this->header.numberOfColumns);
-        this->header.nonClusteredIndexesBitMap = new BitMap(this->header.numberOfColumns);
         this->header.tableId = tableId;
 
         this->clusteredIndexedTree = nullptr;
@@ -123,7 +124,7 @@ namespace DatabaseEngine::StorageTypes {
           delete column;
       }
 
-      void Table::SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes) 
+      void Table::SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes) 
       {
         if (clusteredKeyIndexes != nullptr && !clusteredKeyIndexes->empty())
         {
@@ -134,8 +135,15 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         if (nonClusteredIndexes != nullptr && !nonClusteredIndexes->empty())
-          for (const auto &nonClusteredIndex : *nonClusteredIndexes)
-            this->header.nonClusteredIndexesBitMap->Set(nonClusteredIndex, true);
+        {
+            for (int i = 0; i < nonClusteredIndexes->size(); i++)
+            {
+                 this->header.nonClusteredIndexesBitMap.push_back(new BitMap(this->header.numberOfColumns));
+
+                for (const auto &nonClusteredIndex : (*nonClusteredIndexes)[i])
+                    this->header.nonClusteredIndexesBitMap[i]->Set(nonClusteredIndex, true);
+            }
+        }
       }
 
       void Table::InsertRows(const vector<vector<Field>> &inputData) 
@@ -269,6 +277,11 @@ namespace DatabaseEngine::StorageTypes {
         //update indexes as well
     }
 
+    void Table::Truncate()
+    {
+        this->database->TruncateTable(this->header.tableId);
+    }
+
     void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId) 
     {
         this->header.indexAllocationMapPageId = indexAllocationMapPageId;
@@ -336,7 +349,10 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
     {
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(header.indexAllocationMapPageId);
+        if(this->header.indexAllocationMapPageId == 0)
+            return;
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->header.indexAllocationMapPageId);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds);

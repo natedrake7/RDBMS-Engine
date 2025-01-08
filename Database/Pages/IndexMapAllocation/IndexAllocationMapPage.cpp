@@ -103,6 +103,8 @@ namespace Pages {
 
     void IndexAllocationMapPage::SetNextPageId(const page_id_t &nextPageId) { this->additionalHeader.nextPageId = nextPageId; }
 
+    const page_id_t& IndexAllocationMapPage::GetNextPageId() const { return this->additionalHeader.nextPageId; }
+
     IndexAllocationPageAdditionalHeader::IndexAllocationPageAdditionalHeader()
     {
         this->tableId = 0;

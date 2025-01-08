@@ -38,7 +38,7 @@ namespace DatabaseEngine
             throw runtime_error("Table size exceeds limit");
     }
 
-    void Database::WriteHeaderToFile()
+    void Database::WriteHeaderToFile() const
     {
         HeaderPage *metaDataPage = StorageManager::Get().GetHeaderPage(this->filename + this->fileExtension);
 
@@ -75,7 +75,7 @@ namespace DatabaseEngine
         return categories[index];
     }
 
-    extent_id_t Database::CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId)
+    page_id_t Database::CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId)
     {
         const page_id_t pageId = extentId * EXTENT_SIZE;
 
@@ -109,7 +109,7 @@ namespace DatabaseEngine
             delete dbTable;
     }
 
-    Table *Database::CreateTable(const string &tableName, const vector<StorageTypes::Column *> &columns, const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes)
+    Table *Database::CreateTable(const string &tableName, const vector<StorageTypes::Column *> &columns, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes)
     {
         for (const auto& table : this->tables)
         {
@@ -149,6 +149,54 @@ namespace DatabaseEngine
         const string exceptionMsg = "Database::OpenTable: No table with name " + tableName + " exists.";
 
         throw invalid_argument(exceptionMsg);
+    }
+
+    void Database::DeleteTable(const string& tableName)
+    {
+        Table* table = nullptr;
+        vector<Table*>::iterator it;
+
+        for (it = this->tables.begin(); it != this->tables.end(); it++)
+        {
+            if ((*it)->GetTableName() == tableName)
+            {
+                table = *it;
+                break;
+            }
+        }
+
+        if (table == nullptr)
+        {
+            const string exceptionMsg = "Database::OpenTable: No table with name " + tableName + " exists.";
+
+            throw invalid_argument(exceptionMsg);
+        }
+
+        const auto& tableHeader = table->GetTableHeader();
+
+        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
+
+        if (indexAllocationMapPage == nullptr)
+        {
+            this->tables.erase(it);
+            delete table;
+            return;
+        }
+
+        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(tableHeader.indexAllocationMapPageId);
+
+        const GlobalAllocationMapPage* globalAllocationMapPage = StorageManager::Get().GetGlobalAllocationMapPage(globalAllocationMapPageId);
+
+        vector<extent_id_t> allocatedExtents;
+        indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
+
+        //deallocate pages as well
+        for (const auto& extentId : allocatedExtents)
+        {
+
+        }
+        //deletes all rows
+        table->Delete(nullptr);
     }
 
     void CreateDatabase(const string &dbName)
@@ -566,6 +614,45 @@ namespace DatabaseEngine
                 pageFreeSpacePage->SetPageMetaData(page);
             }
         }
+    }
+
+    void Database::TruncateTable(const table_id_t & tableId)
+    {
+        Table *table = this->tables.at(tableId);
+
+        page_id_t indexAllocationMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+
+        while (indexAllocationMapPageId != 0)
+        {
+            const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(indexAllocationMapPageId);
+
+            vector<extent_id_t> allocatedExtents;
+            tableMapPage->GetAllocatedExtents(&allocatedExtents);
+
+            const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(indexAllocationMapPageId);
+
+            GlobalAllocationMapPage* gamPage = StorageManager::Get().GetGlobalAllocationMapPage(globalAllocationMapPageId);
+
+            indexAllocationMapPageId = tableMapPage->GetNextPageId();
+
+            for (const auto& extentId : allocatedExtents)
+            {
+                const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+                for (page_id_t pageId = extentFirstPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+                {
+                    const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
+                
+                    PageFreeSpacePage* pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pageFreeSpacePageId);
+
+                    pageFreeSpacePage->SetPageFreed(pageId);
+                }
+
+                gamPage->DeallocateExtent(extentId);
+            }
+        }
+
+        table->SetIndexAllocationMapPageId(0);
     }
 
     Page *Database::CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId)

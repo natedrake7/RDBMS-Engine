@@ -18,12 +18,14 @@ using namespace Storage;
 void ExecuteQuery(Table* table);
 void CreateMoviesTables(Database *db);
 void CreateActorsTable(Database *db);
-void InsertRowsToTable(Table* table);
+void InsertRowsToActorsTable(Table* table);
 // handle updates
 // deletes
 // B+ Trees
 // row ids
 // object ids
+//truncate should deallocate the space used by the pages instead of marking it as free?
+//delete should defragment pages when done and combine them on heap files.
 
 int main() 
 {
@@ -32,7 +34,7 @@ int main()
 
     try 
     {
-     //   CreateDatabase(dbName);
+        //CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
@@ -40,13 +42,14 @@ int main()
 
         Table *table = nullptr;
 
-      //  CreateMoviesTables(db);
-      // CreateActorsTable(db);
+        //CreateMoviesTables(db);
+       //CreateActorsTable(db);
 
         //table = db->OpenTable("Actors");
-        table = db->OpenTable("Movies");
+        table = db->OpenTable("Actors");
+        //table->Truncate();
 
-      //  InsertRowsToTable(table);
+        //InsertRowsToActorsTable(table);
 
         const vector<Field> updates = {
             Field("Michael Jackson", 1, false)
@@ -100,8 +103,9 @@ void CreateActorsTable(Database *db)
     columns.push_back(new Column("ActorHeight", "Decimal", 10, true));
 
     const vector<column_index_t> clusteredIndexes; /*= {0};*/
+    const vector<vector<column_index_t>> nonClusteredIndexes = { { 0 } };
 
-    Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, nullptr);
+    Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, &nonClusteredIndexes);
     vector<vector<Field>> inputData;
 
     for (int i = 0; i < 100; i++) 
@@ -156,7 +160,7 @@ void CreateMoviesTables(Database *db)
     table->InsertRows(inputData);
 }
 
-void InsertRowsToTable(Table* table)
+void InsertRowsToActorsTable(Table* table)
 {
     vector<vector<Field>> inputData;
 

@@ -60,7 +60,8 @@ namespace DatabaseEngine::StorageTypes
 
         // bitmaps to store the composite key
         ByteMaps::BitMap *clusteredIndexesBitMap;
-        ByteMaps::BitMap *nonClusteredIndexesBitMap;
+        vector<ByteMaps::BitMap*> nonClusteredIndexesBitMap;
+        
 
         TableHeader();
         ~TableHeader();
@@ -97,7 +98,7 @@ namespace DatabaseEngine::StorageTypes
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
             void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
-            void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<column_index_t> *nonClusteredIndexes);
+            void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
             
             static void SetTinyIntData(Block *&block, const Field &inputData);
             static void SetSmallIntData(Block *&block, const Field &inputData);
@@ -125,7 +126,7 @@ namespace DatabaseEngine::StorageTypes
             Row* CreateRow(const vector<Field>& inputData);
 
         public:
-            Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);
+            Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
 
             Table(const TableHeader &tableHeader, Database *database);
 
@@ -151,6 +152,8 @@ namespace DatabaseEngine::StorageTypes
 
             void Delete(const vector<Field> *conditions = nullptr) const;
 
+            void Truncate();
+
             void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
 
             [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;
@@ -168,6 +171,8 @@ namespace DatabaseEngine::StorageTypes
             void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
 
             void SetIndexPageId(const page_id_t &indexPageId);
+
+            void SetIndexAllocationMapPageId(const page_id_t& pageId);
 
             Indexing::BPlusTree* GetClusteredIndexedTree();
     };

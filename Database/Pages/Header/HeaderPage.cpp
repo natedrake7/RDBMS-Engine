@@ -28,7 +28,6 @@ namespace Pages
     HeaderPage::HeaderPage(const PageHeader &pageHeader) : Page(pageHeader)
     {
         this->databaseHeader = new DatabaseHeader();
-        ;
     }
 
     HeaderPage::~HeaderPage()
@@ -58,7 +57,12 @@ namespace Pages
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.clusteredIndexPageId), sizeof(page_id_t));
             tableFullHeader.tableHeader.columnsNullBitMap->WriteDataToFile(filePtr);
             tableFullHeader.tableHeader.clusteredIndexesBitMap->WriteDataToFile(filePtr);
-            tableFullHeader.tableHeader.nonClusteredIndexesBitMap->WriteDataToFile(filePtr);
+
+            const uint8_t numberOfNonClusteredIndexes = tableFullHeader.tableHeader.nonClusteredIndexesBitMap.size();
+            filePtr->write(reinterpret_cast<const char *>(&numberOfNonClusteredIndexes), sizeof(uint8_t));
+
+            for (const auto& nonClusteredIndex : tableFullHeader.tableHeader.nonClusteredIndexesBitMap)
+                nonClusteredIndex->WriteDataToFile(filePtr);
 
             for (const auto &columnMetaData : tableFullHeader.columnsHeaders)
             {
@@ -126,8 +130,16 @@ namespace Pages
             tableFullHeader.tableHeader.clusteredIndexesBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
             tableFullHeader.tableHeader.clusteredIndexesBitMap->GetDataFromFile(data, offSet);
 
-            tableFullHeader.tableHeader.nonClusteredIndexesBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
-            tableFullHeader.tableHeader.nonClusteredIndexesBitMap->GetDataFromFile(data, offSet);
+            uint8_t numberOfNonClusteredIndexes;
+
+            memcpy(&numberOfNonClusteredIndexes, data.data() + offSet, sizeof(uint8_t));
+            offSet += sizeof(uint8_t);
+
+            for (int j = 0; j < numberOfNonClusteredIndexes; j++)
+            {
+                tableFullHeader.tableHeader.nonClusteredIndexesBitMap.push_back(new BitMap(tableFullHeader.tableHeader.numberOfColumns));
+                tableFullHeader.tableHeader.nonClusteredIndexesBitMap[j]->GetDataFromFile(data, offSet);
+            }
 
             for (int j = 0; j < tableFullHeader.tableHeader.numberOfColumns; j++)
             {
@@ -166,6 +178,8 @@ namespace Pages
         *this->databaseHeader = databaseHeader;
         this->databaseHeader->databaseNameSize = this->databaseHeader->databaseName.size();
         this->isDirty = true;
+
+        this->tablesHeaders.clear();
     }
 
     void HeaderPage::SetTableHeader(const Table* table)
@@ -185,7 +199,7 @@ namespace Pages
             tableFullHeader.columnsHeaders.push_back(columnHeader);
         }
 
-        tablesHeaders.push_back(tableFullHeader);
+        this->tablesHeaders.push_back(tableFullHeader);
 
         this->isDirty = true;
     }

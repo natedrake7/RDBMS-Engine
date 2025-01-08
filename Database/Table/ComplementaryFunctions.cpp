@@ -36,6 +36,8 @@ namespace DatabaseEngine::StorageTypes{
     }
     void Table::SetIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
 
+    void Table::SetIndexAllocationMapPageId(const page_id_t & pageId) { this->header.indexAllocationMapPageId = pageId; }
+
     void Table::SetTinyIntData(Block *&block, const Field &inputData) 
     {
         const int8_t convertedTinyInt = SafeConverter<int8_t>::SafeStoi(inputData.GetData());

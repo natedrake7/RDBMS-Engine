@@ -63,83 +63,91 @@ class Database {
   vector<StorageTypes::Table *> tables;
 
 protected:
-  void ValidateTableCreation(StorageTypes::Table *table) const;
+    void ValidateTableCreation(StorageTypes::Table *table) const;
 
-  void WriteHeaderToFile();
+    void WriteHeaderToFile() const;
 
-  static bool IsSystemPage(const page_id_t &pageId);
+    static bool IsSystemPage(const page_id_t &pageId);
 
-  static Constants::byte GetObjectSizeToCategory(const row_size_t &size);
+    static Constants::byte GetObjectSizeToCategory(const row_size_t &size);
 
-  bool AllocateNewExtent(Pages::PageFreeSpacePage **pageFreeSpacePage,
-                         page_id_t *lowerLimit, page_id_t *newPageId,
-                         extent_id_t *newExtentId, const table_id_t &tableId);
+    bool AllocateNewExtent(Pages::PageFreeSpacePage **pageFreeSpacePage,
+                            page_id_t *lowerLimit, page_id_t *newPageId,
+                            extent_id_t *newExtentId, const table_id_t &tableId);
 
-  [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
+    [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
 
-  void InsertRowToClusteredIndex(const StorageTypes::Table &table,
-                                 StorageTypes::Row *row);
+    void InsertRowToClusteredIndex(const StorageTypes::Table &table,
+                                    StorageTypes::Row *row);
 
-  void InsertRowToHeapTable(const StorageTypes::Table &table,
+    void InsertRowToHeapTable(const StorageTypes::Table &table,
                             vector<extent_id_t> &allocatedExtents,
                             extent_id_t &lastExtentIndex,
                             StorageTypes::Row *row);
 
-  void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves,
-                 const int &branchingFactor, const StorageTypes::Table &table);
+    void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves,
+                    const int &branchingFactor, const StorageTypes::Table &table);
 
-  static void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage,
-                              Pages::Page *page, StorageTypes::Row *row,
-                              const int &indexPosition);
+    static void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage,
+                                Pages::Page *page, StorageTypes::Row *row,
+                                const int &indexPosition);
 
-  void InsertRowToNonEmptyNode(Indexing::Node *node,
-                               const StorageTypes::Table &table,
-                               StorageTypes::Row *row, const Indexing::Key &key,
-                               const int &indexPosition);
+    void InsertRowToNonEmptyNode(Indexing::Node *node,
+                                const StorageTypes::Table &table,
+                                StorageTypes::Row *row, const Indexing::Key &key,
+                                const int &indexPosition);
 
 public:
-  explicit Database(const string &dbName);
+    explicit Database(const string &dbName);
 
-  ~Database();
+    ~Database();
 
-  static page_id_t GetGamAssociatedPage(const page_id_t &pageId);
+    static page_id_t GetGamAssociatedPage(const page_id_t &pageId);
 
-  static page_id_t GetPfsAssociatedPage(const page_id_t &pageId);
+    static page_id_t GetPfsAssociatedPage(const page_id_t &pageId);
 
-  static page_id_t CalculateSystemPageOffset(const page_id_t &pageId);
+    static page_id_t CalculateSystemPageOffset(const page_id_t &pageId);
 
-  StorageTypes::Table *CreateTable(const string &tableName,  const vector<StorageTypes::Column *> &columns, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<column_index_t> *nonClusteredIndexes = nullptr);
+    StorageTypes::Table *CreateTable(const string &tableName,  const vector<StorageTypes::Column *> &columns, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
 
-  void CreateTable(const StorageTypes::TableFullHeader &tableMetaData);
+    void CreateTable(const StorageTypes::TableFullHeader &tableMetaData);
 
-  [[nodiscard]] StorageTypes::Table *OpenTable(const string &tableName) const;
+    [[nodiscard]] StorageTypes::Table *OpenTable(const string &tableName) const;
 
-  void DeleteDatabase() const;
+    void DeleteTable(const string& tableName);
 
-  void InsertRowToPage(const StorageTypes::Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, StorageTypes::Row *row);
+    void DeleteDatabase() const;
 
-  void UpdateTableRows(const table_id_t &tableId, const vector<StorageTypes::Block*> &updateBlocks, const vector<Field> *conditions);
+    void InsertRowToPage(const StorageTypes::Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, StorageTypes::Row *row);
 
-  void DeleteTableRows(const table_id_t& tableId, const vector<Field>* conditions);
+    void UpdateTableRows(const table_id_t &tableId, const vector<StorageTypes::Block*> &updateBlocks, const vector<Field> *conditions);
+
+    void DeleteTableRows(const table_id_t& tableId, const vector<Field>* conditions);
+
+    void TruncateTable(const table_id_t& tableId);
   
-  Pages::Page *CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId = nullptr);
+    Pages::Page *CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId = nullptr);
 
-  Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
+    Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
 
-  Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId, const page_size_t &minObjectSize);
+    Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId, const page_size_t &minObjectSize);
 
-  Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId,
-                                         const table_id_t &tableId);
+    Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId);
 
-  Pages::IndexPage *CreateIndexPage(const table_id_t &tableId);
+    Pages::IndexPage *CreateIndexPage(const table_id_t &tableId);
 
-  void SetPageMetaDataToPfs(const Pages::Page *page) const;
+    void SetPageMetaDataToPfs(const Pages::Page *page) const;
 
-  [[nodiscard]] string GetFileName() const;
+    [[nodiscard]] string GetFileName() const;
 
-  static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId);
+    static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId);
 
-  [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage( Pages::PageFreeSpacePage *&pageFreeSpacePage, const page_id_t &pageId, const page_id_t &extentFirstPageId, const extent_id_t &extentId, const StorageTypes::Table &table, extent_id_t *nextExtentId);
+    [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage( Pages::PageFreeSpacePage *&pageFreeSpacePage
+                                                            , const page_id_t &pageId
+                                                            , const page_id_t &extentFirstPageId
+                                                            , const extent_id_t &extentId
+                                                            , const StorageTypes::Table &table
+                                                            , extent_id_t *nextExtentId);
 };
 
 void CreateDatabase(const string &dbName);
