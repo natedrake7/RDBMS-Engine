@@ -1,4 +1,6 @@
 #include "Table.h"
+#include "Table.h"
+#include "Table.h"
 #include "../../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "../Block/Block.h"
 #include "../Column/Column.h"
@@ -31,6 +33,14 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         return this->clusteredIndexedTree; 
+    }
+
+    Indexing::BPlusTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId)
+    {
+        if(this->nonClusteredIndexedTrees.empty())
+            return nullptr;
+
+        return this->nonClusteredIndexedTrees.at(nonClusteredIndexId);
     }
 
     void Table::WriteIndexesToDisk()

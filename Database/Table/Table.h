@@ -170,10 +170,16 @@ namespace DatabaseEngine::StorageTypes
 
             void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
 
+            void GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>> *vector) const;
+
             void SetIndexPageId(const page_id_t &indexPageId);
 
             void SetIndexAllocationMapPageId(const page_id_t& pageId);
 
             Indexing::BPlusTree* GetClusteredIndexedTree();
+
+            Indexing::BPlusTree* GetNonClusteredIndexTree(const int& nonClusteredIndexId);
+
+            bool HasNonClusteredIndexes() const;
     };
 }

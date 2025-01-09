@@ -239,18 +239,33 @@ namespace DatabaseEngine
             throw runtime_error("Database " + this->filename + " could not be deleted");
     }
 
-    void Database::InsertRowToPage(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
+    void Database::InsertRowToPage(const table_id_t &tableId, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
     {
-        if (table.GetTableType() != TableType::CLUSTERED)
-        {
-            this->InsertRowToHeapTable(table, allocatedExtents, lastExtentIndex, row);
-            return;
-        }
+        const Table* table = this->GetTable(tableId);
 
-        this->InsertRowToClusteredIndex(table, row);
+        page_id_t rowPageId;
+        extent_id_t rowExtentId;
+        int rowIndexPosition;
+
+        if (table->GetTableType() == TableType::CLUSTERED)
+            this->InsertRowToClusteredIndex(*table, row, &rowPageId, &rowExtentId, &rowIndexPosition);
+        else
+            this->InsertRowToHeapTable(*table, allocatedExtents, lastExtentIndex, row, &rowPageId, &rowExtentId, &rowIndexPosition);
+
+        //insert to Non Clustered Indexes
+        if(!table->HasNonClusteredIndexes())
+            return;
+
+        vector<vector<column_index_t>> nonClusteredIndexedColumns;
+        table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexedColumns);
+
+        for (const auto& nonClusteredIndex : nonClusteredIndexedColumns)
+        {
+            this->InsertRowToNonClusteredIndex(tableId, row, &rowPageId, &rowExtentId, &rowIndexPosition);
+        }
     }
 
-    void Database::InsertRowToClusteredIndex(const Table &table, Row *row)
+    void Database::InsertRowToClusteredIndex(const Table &table, Row *row, page_id_t* rowPageId, extent_id_t* rowExtentId, int* rowIndex)
     {
         const auto &tableHeader = table.GetTableHeader();
 
@@ -271,6 +286,8 @@ namespace DatabaseEngine
         vector<pair<Node *, Node *>> splitLeaves;
 
         Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, &splitLeaves);
+
+        *rowIndex = indexPosition;
 
         SplitPage(splitLeaves, tree->GetBranchingFactor(), table);
 
@@ -278,7 +295,7 @@ namespace DatabaseEngine
 
         if (node->data.pageId != 0)
         {
-            this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition);
+            this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition, rowPageId, rowExtentId);
             return;
         }
 
@@ -299,19 +316,18 @@ namespace DatabaseEngine
 
         node->data.pageId = newPageId;
         node->data.extentId = newExtentId;
+
+        *rowPageId = newPageId;
+        *rowExtentId = newExtentId;
     }
 
-    void Database::InsertRowToNonClusteredIndex(const StorageTypes::Table & table, StorageTypes::Row * row)
+    void Database::InsertRowToNonClusteredIndex(const table_id_t& tableId, Row * row, page_id_t* rowPageId, extent_id_t* rowExtentId, int* rowIndex)
     {
-        const auto &tableHeader = table.GetTableHeader();
-
-        const table_id_t& tableId = table.GetTableId();
-
-        BPlusTree* tree = this->tables[tableId]->GetClusteredIndexedTree();
+        Table* table = this->tables.at(tableId);
 
         vector<column_index_t> indexedColumns;
 
-        table.GetIndexedColumnKeys(&indexedColumns);
+        table->GetIndexedColumnKeys(&indexedColumns);
 
         const auto &keyBlock = row->GetData()[indexedColumns[0]];
 
@@ -321,21 +337,19 @@ namespace DatabaseEngine
 
         vector<pair<Node *, Node *>> splitLeaves;
 
-        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, &splitLeaves);
-
-        SplitPage(splitLeaves, tree->GetBranchingFactor(), table);
+        //Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, &splitLeaves);
 
         //const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
 
-        if (node->data.pageId != 0)
-        {
-            this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition);
-            return;
-        }
+        //if (node->data.pageId != 0)
+        //{
+        //    //this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition);
+        //    return;
+        //}
 
         extent_id_t newExtentId = 0;
 
-        Page *newPage = this->CreateDataPage(table.GetTableId(), &newExtentId);
+        Page *newPage = this->CreateDataPage(tableId, &newExtentId);
 
         const page_id_t &newPageId = newPage->GetPageId();
 
@@ -346,10 +360,10 @@ namespace DatabaseEngine
         // should never fail
         Database::InsertRowToPage(pageFreeSpacePage, newPage, row, indexPosition);
 
-        node->keys.insert(node->keys.begin() + indexPosition, key);
+        //node->keys.insert(node->keys.begin() + indexPosition, key);
 
-        node->data.pageId = newPageId;
-        node->data.extentId = newExtentId;
+        //node->data.pageId = newPageId;
+        //node->data.extentId = newExtentId;
     }
 
     void Database::SplitPage(vector<pair<Node *, Node *>> &splitLeaves, const int &branchingFactor, const Table &table)
@@ -425,7 +439,7 @@ namespace DatabaseEngine
         return nextLeafPage;
     }
 
-    void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)
+    void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition, page_id_t* rowPageId, extent_id_t* rowExtentId)
     {
         const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(node->data.pageId);
 
@@ -447,15 +461,15 @@ namespace DatabaseEngine
         }
     }
 
-    void Database::InsertRowToHeapTable(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
+    void Database::InsertRowToHeapTable(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, page_id_t* rowPageId, extent_id_t* rowExtentId, int* rowIndex)
     {
         const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
 
         if (tableMapPage == nullptr)
         {
-           Page *newPage = this->CreateDataPage(table.GetTableId());
-
-            newPage->InsertRow(row);
+            Page *newPage = this->CreateDataPage(table.GetTableId(), rowExtentId);
+            newPage->InsertRow(row, rowIndex);
+            *rowPageId = newPage->GetPageId();
 
             return;
         }
@@ -491,17 +505,20 @@ namespace DatabaseEngine
                     if (row->GetTotalRowSize() > page->GetBytesLeft())
                         continue;
 
-                    page->InsertRow(row);
+                    page->InsertRow(row, rowIndex);
                     pageFreeSpacePage->SetPageMetaData(page);
+
+                    *rowExtentId = extentId;
+                    *rowPageId = pageId;
 
                     return;
                 }
             }
         }
 
-        Page *newPage = this->CreateDataPage(table.GetTableId());
-
-        newPage->InsertRow(row);
+        Page *newPage = this->CreateDataPage(table.GetTableId(), rowExtentId);
+        newPage->InsertRow(row, rowIndex);
+        *rowPageId = newPage->GetPageId();
     }
 
     void Database::UpdateTableRows(const table_id_t &tableId, const vector<Block*> &updateBlocks, const vector<Field> *conditions)

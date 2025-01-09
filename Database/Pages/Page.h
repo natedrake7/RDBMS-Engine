@@ -46,8 +46,8 @@ namespace Pages
         explicit Page(const PageHeader &pageHeader);
         virtual ~Page();
 
-        void InsertRow(DatabaseEngine::StorageTypes::Row *row);
-        void InsertRow(DatabaseEngine::StorageTypes::Row *row, int indexPosition);
+        void InsertRow(DatabaseEngine::StorageTypes::Row *row, int* indexPosition = nullptr);
+        void InsertRow(DatabaseEngine::StorageTypes::Row *row, const int& indexPosition);
         void DeleteRow(DatabaseEngine::StorageTypes::Row *row);
         void UpdateRows(const vector<DatabaseEngine::StorageTypes::Block> *updates, const vector<Field> *conditions);
 

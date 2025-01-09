@@ -42,10 +42,9 @@ int main()
 
         Table *table = nullptr;
 
-        //CreateMoviesTables(db);
-       //CreateActorsTable(db);
+       /* CreateMoviesTables(db);
+        CreateActorsTable(db);*/
 
-        //table = db->OpenTable("Actors");
         table = db->OpenTable("Actors");
         //table->Truncate();
 
@@ -57,7 +56,7 @@ int main()
 
         //table->Update(updates, nullptr);
 
-     //   table->Delete(nullptr);
+        table->Delete(nullptr);
 
         ExecuteQuery(table);
     }

@@ -171,7 +171,7 @@ namespace DatabaseEngine::StorageTypes {
         Row* row = this->CreateRow(inputData);
 
         this->InsertLargeObjectToPage(row);
-        this->database->InsertRowToPage(*this, allocatedExtents, startingExtentIndex, row);
+        this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
       }
 
       Row* Table::CreateRow(const vector<Field>& inputData)

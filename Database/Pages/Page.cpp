@@ -48,15 +48,19 @@ namespace Pages
             delete row;
     }
 
-    void Page::InsertRow(Row *row)
+    void Page::InsertRow(Row *row, int* indexPosition)
     {
         this->rows.push_back(row);
+        
+        if(indexPosition != nullptr)
+            *indexPosition = this->rows.size() - 1;
+
         this->header.bytesLeft -= row->GetTotalRowSize();
         this->header.pageSize++;
         this->isDirty = true;
     }
 
-    void Page::InsertRow(Row *row, const int indexPosition)
+    void Page::InsertRow(Row *row, const int& indexPosition)
     {
         this->rows.insert(this->rows.begin() + indexPosition, row);
         this->header.bytesLeft -= row->GetTotalRowSize();

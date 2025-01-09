@@ -1,4 +1,5 @@
 #include "Table.h"
+#include "Table.h"
 #include "../../AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
 #include "../../AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h"
 #include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
@@ -32,8 +33,25 @@ namespace DatabaseEngine::StorageTypes{
         for (bit_map_pos_t i = 0; i < this->header.clusteredIndexesBitMap->GetSize(); i++)
             if (this->header.clusteredIndexesBitMap->Get(i))
                 vector->push_back(i);
-
     }
+
+    void Table::GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>>* vector) const
+    {
+        if(this->header.nonClusteredIndexesBitMap.empty())
+            return;
+
+        vector->resize(this->header.nonClusteredIndexesBitMap.size());
+
+        for (int i = 0;i < this->header.nonClusteredIndexesBitMap.size(); i++)
+        {
+            for (bit_map_pos_t j = 0; j < this->header.nonClusteredIndexesBitMap[i]->GetSize(); j++)
+                if(this->header.nonClusteredIndexesBitMap[i]->Get(j))
+                    (*vector)[i].push_back(j);
+        }
+    }
+
+    bool Table::HasNonClusteredIndexes() { return !this->header.nonClusteredIndexesBitMap.empty(); }
+
     void Table::SetIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
 
     void Table::SetIndexAllocationMapPageId(const page_id_t & pageId) { this->header.indexAllocationMapPageId = pageId; }
@@ -91,10 +109,10 @@ namespace DatabaseEngine::StorageTypes{
         const time_t unixMilliseconds = DateTime::ToUnixTimeStamp(data);
 
         block->SetData(&unixMilliseconds, sizeof(time_t));
-        }
+    }
 
-        void Table::SetDecimalData(Block *&block, const Field &inputData) 
-        {
+    void Table::SetDecimalData(Block *&block, const Field &inputData) 
+    {
         const string &data = inputData.GetData();
 
         const Decimal decimalValue(data);
