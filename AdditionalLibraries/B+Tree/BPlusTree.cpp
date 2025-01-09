@@ -7,9 +7,13 @@
 #include <stdexcept>
 #include <string.h>
 #include "../../Database/Table/Table.h"
+#include "../../Database/Pages/IndexPage/IndexPage.h"
+#include "../../Database/Storage/StorageManager/StorageManager.h"
 
 using namespace std;
 using namespace DatabaseEngine::StorageTypes;
+using namespace Pages;
+using namespace Storage;
 
 namespace Indexing
 {
@@ -24,7 +28,7 @@ namespace Indexing
     {
         this->isLeaf = isLeaf;
         this->next = nullptr;
-        this->prev = nullptr;
+        this->isRoot = false;
     }
 
     vector<Key> &Node::GetKeysData() { return this->keys; }
@@ -36,7 +40,7 @@ namespace Indexing
         page_size_t size = 0;
         
         //if node is leaf or not
-        size += sizeof(bool);
+        size += 2 * sizeof(bool);
 
         //num of keys to read for node
         size += sizeof(uint16_t);
@@ -45,25 +49,33 @@ namespace Indexing
             size += ( sizeof(key_size_t) + key.size);
 
         if (this->isLeaf)
+        {
             size += this->nonClusteredData.empty() 
                     ? sizeof(BPlusTreeData) 
                     : (this->nonClusteredData.size() * (sizeof(BPlusTreeData) + sizeof(page_offset_t))) + sizeof(uint16_t);
+
+            size += NodeHeader::GetNodeHeaderSize();
+        }
+
         else
-            size += sizeof(uint16_t);
+            size += sizeof(uint16_t) + (this->children.size() * NodeHeader::GetNodeHeaderSize());
 
         return size;
     }
 
     Node::~Node() = default;
 
-    BPlusTree::BPlusTree(const Table *table)
+    BPlusTree::BPlusTree(const Table *table, const page_id_t& indexPageId, const TreeType& treeType)
     {
         const auto &tableHeader = table->GetTableHeader();
-
-        this->root = new Node(true);
+        
+        this->root = nullptr;
         this->t = PAGE_SIZE / table->GetMaximumRowSize();
         this->tableId = tableHeader.tableId;
+        this->firstIndexPageId = indexPageId;
+        this->type = treeType;
         this->isDirty = false;
+        this->database = table->GetDatabase();
     }
 
     BPlusTree::BPlusTree()
@@ -74,12 +86,12 @@ namespace Indexing
         this->isDirty = false;
     }
 
-    BPlusTree::~BPlusTree()
-    {
-        this->DeleteNode(root);
-    }
+    BPlusTree::~BPlusTree() = default;
+    //{
+    //    this->DeleteNode(root);
+    //}
 
-    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves) const
+    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves)
     {
         Node *newChild = new Node(child->isLeaf);
 
@@ -109,23 +121,37 @@ namespace Indexing
         // Maintain the linked list structure for leaf nodes
         newChild->next = child->next;
         child->next = newChild;
-
+        
+        this->InsertNodeToPage(newChild);
         splitLeaves->push_back(pair<Node *, Node *>(child, newChild));
     }
 
     Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves)
     {
+        if (this->root == nullptr)
+        {
+            this->root = new Node(true);
+
+            this->root->isRoot = true;
+
+            this->InsertNodeToPage(this->root);
+        }
+
         this->isDirty = true;
+
         if (root->keys.size() == 2 * t - 1) // root is full,
         {
             // create new root
             Node *newRoot = new Node();
+            this->InsertNodeToPage(newRoot);
 
             // add current root as leaf
-            newRoot->children.push_back(root);
+            newRoot->children.push_back(this->root);
+            newRoot->isRoot = true;
+            this->root->isRoot = false;
 
             // split the root
-            this->SplitChild(newRoot, 0, root, splitLeaves);
+            this->SplitChild(newRoot, 0, this->root, splitLeaves);
 
             // root is the newRoot
             root = newRoot;
@@ -260,7 +286,9 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode = currentNode->next;
+            currentNode = (currentNode->next == nullptr && currentNode->nextNodeHeader.pageId != 0) 
+                        ? this->GetNodeFromPage(currentNode->nextNodeHeader)
+                        : currentNode->next;
         }
     }
 
@@ -363,6 +391,8 @@ namespace Indexing
         }
     }
 
+    const page_id_t & BPlusTree::GetFirstIndexPageId() const { return this->firstIndexPageId; }
+
     void BPlusTree::ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet)
     {
         memcpy(&this->t, data.data() + offSet, sizeof(int));
@@ -397,10 +427,33 @@ namespace Indexing
 
             const int index = iterator - currentNode->keys.begin();
 
-            currentNode = currentNode->children[index];
+            currentNode = (currentNode->children[index] == nullptr) 
+                        ? this->GetNodeFromPage(currentNode->childrenHeaders[index]) 
+                        : currentNode->children[index];
         }
 
         return currentNode;
+    }
+
+    void BPlusTree::InsertNodeToPage(Node*& node)
+    {
+        IndexPage* indexPage = (this->firstIndexPageId == 0) 
+                     ? this->database->CreateIndexPage(this->tableId) 
+                     : this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize());
+
+        if(this->firstIndexPageId == 0)
+            this->firstIndexPageId = indexPage->GetPageId();
+
+         indexPage->InsertNode(node, &node->header.indexPosition);
+
+         node->header.pageId = indexPage->GetPageId();
+    }
+
+    Node* BPlusTree::GetNodeFromPage(const NodeHeader & header) const
+    {
+        IndexPage* indexPage = StorageManager::Get().GetIndexPage(header.pageId);
+
+        return indexPage->GetNodeByIndex(header.indexPosition);
     }
 
     void BPlusTree::PrintTree(const Node *node, const int &level)
@@ -580,4 +633,14 @@ namespace Indexing
     }
 
     BPlusTreeNonClusteredData::~BPlusTreeNonClusteredData() = default;
+
+    NodeHeader::NodeHeader()
+    {
+        this->pageId = 0;
+        this->indexPosition = 0;
+    }
+
+    NodeHeader::~NodeHeader() = default;
+
+    page_size_t NodeHeader::GetNodeHeaderSize() { return sizeof(page_id_t) + sizeof(page_offset_t); }
 }

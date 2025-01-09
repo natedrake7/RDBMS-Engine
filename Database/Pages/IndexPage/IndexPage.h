@@ -31,31 +31,37 @@ typedef struct IndexPageAdditionalHeader {
 } IndexPageAdditionalHeader;
 
 class IndexPage final : public Page {
-  IndexPageAdditionalHeader additionalHeader;
-  object_t *treeData;
-  vector<column_index_t> indexedColumns;
+	IndexPageAdditionalHeader additionalHeader;
+	vector<Indexing::Node*> nodes; 
+	vector<column_index_t> indexedColumns;
 
 protected:
-  void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
+	void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
 
-  void WriteAdditionalHeaderToFile(fstream *filePtr);
+	void WriteAdditionalHeaderToFile(fstream *filePtr);
   
-  page_size_t CalculateTreeDataSize() const;
+	page_size_t CalculateTreeDataSize() const;
 
 public:
-  IndexPage(const page_id_t &pageId, const bool &isPageCreation);
-  explicit IndexPage(const PageHeader &pageHeader);
-  ~IndexPage() override;
+	IndexPage(const page_id_t &pageId, const bool &isPageCreation);
+	explicit IndexPage(const PageHeader &pageHeader);
+	~IndexPage() override;
 
-  void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
-  void WritePageToFile(fstream *filePtr) override;
+	void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
+	void WritePageToFile(fstream *filePtr) override;
 
-  void WriteTreeDataToPage(Indexing::Node *node, page_offset_t &offSet);
+	//void WriteTreeDataToPage(Indexing::Node *node, page_offset_t &offSet);
 
-  void SetNextPageId(const page_id_t &nextPageId);
+	void SetNextPageId(const page_id_t &nextPageId);
 
-  const page_id_t &GetNextPageId() const;
+	const page_id_t &GetNextPageId() const;
 
-  const object_t *GetTreeData() const;
-};
+	void InsertNode(Indexing::Node*& node, page_offset_t* indexPosition);
+
+	void DeleteNode(const page_offset_t& indexPosition);
+
+	[[nodiscard]] Indexing::Node*& GetNodeByIndex(const page_offset_t& indexPosition);
+
+	[[nodiscard]] Indexing::Node* GetRoot();
+	};
 } // namespace Pages

@@ -183,5 +183,7 @@ namespace DatabaseEngine::StorageTypes
             Indexing::BPlusTree* GetNonClusteredIndexTree(const int& nonClusteredIndexId);
 
             bool HasNonClusteredIndexes() const;
+
+            Database* GetDatabase() const;
     };
 }

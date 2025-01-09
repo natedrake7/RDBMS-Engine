@@ -27,7 +27,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         if(this->clusteredIndexedTree == nullptr)
         {
-            this->clusteredIndexedTree = new BPlusTree(this);
+            this->clusteredIndexedTree = new BPlusTree(this, this->header.clusteredIndexPageId, TreeType::Clustered);
 
             this->GetClusteredIndexFromDisk();
         }
@@ -47,7 +47,7 @@ namespace DatabaseEngine::StorageTypes {
 
         if (nonClusteredTree == nullptr)
         {
-            nonClusteredTree = new BPlusTree(this);
+            nonClusteredTree = new BPlusTree(this, this->header.nonClusteredIndexPageIds[nonClusteredIndexId], TreeType::NonClustered);
 
             this->GetNonClusteredIndexFromDisk(nonClusteredIndexId);
         }
@@ -57,21 +57,22 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::WriteClusteredIndexToPage()
     {
-        IndexPage* indexPage = nullptr;
+        this->header.clusteredIndexPageId = this->clusteredIndexedTree->GetFirstIndexPageId();
+        //IndexPage* indexPage = nullptr;
 
-        if (this->header.clusteredIndexPageId == 0)
-        {
-            indexPage = this->database->CreateIndexPage(this->header.tableId);
-            this->header.clusteredIndexPageId = indexPage->GetPageId();
-        }
-        else
-            indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
+        //if (this->header.clusteredIndexPageId == 0)
+        //{
+        //    indexPage = this->database->CreateIndexPage(this->header.tableId);
+        //    this->header.clusteredIndexPageId = indexPage->GetPageId();
+        //}
+        //else
+        //    indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
 
-        Node* root = this->clusteredIndexedTree->GetRoot();
+        //Node* root = this->clusteredIndexedTree->GetRoot();
 
-        page_offset_t offSet = 0;
+        //page_offset_t offSet = 0;
 
-        this->WriteNodeToPage(root, indexPage, offSet);
+        //this->WriteNodeToPage(root, indexPage, offSet);
     }
 
     void Table::WriteNonClusteredIndexToPage(const int & indexId)
@@ -95,72 +96,35 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::WriteNodeToPage(Node* node, IndexPage*& indexPage, page_offset_t &offSet)
     {
-        const page_size_t nodeSize = node->GetNodeSize();
+        //const page_size_t nodeSize = node->GetNodeSize();
 
-        const page_id_t indexPageId = indexPage->GetPageId();
+        //const page_id_t indexPageId = indexPage->GetPageId();
 
-        const page_id_t freeSpacePageId = Database::GetPfsAssociatedPage(indexPageId);
+        //const page_id_t freeSpacePageId = Database::GetPfsAssociatedPage(indexPageId);
 
-        PageFreeSpacePage* pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(freeSpacePageId);
+        //PageFreeSpacePage* pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(freeSpacePageId);
 
-        if(indexPage->GetBytesLeft() < nodeSize)
-        {
-            IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->header.indexAllocationMapPageId);
+        //if(indexPage->GetBytesLeft() < nodeSize)
+        //{
 
-            vector<extent_id_t> allocatedExtents;
-            indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
 
-            bool newPageFound = false;
-            for(const auto& extentId: allocatedExtents)
-            {
-                const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+        //    offSet = 0;
+        //}
 
-                for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
-                {
-                    if(pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
-                        break;
+        //indexPage->WriteTreeDataToPage(node, offSet);
+        //pageFreeSpacePage->SetPageMetaData(indexPage);
 
-                    //page is free
-                    if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
-                        continue;
-
-                    IndexPage* nextIndexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
-
-                    if(nextIndexPage->GetBytesLeft() != PAGE_SIZE - sizeof(IndexPageAdditionalHeader) - PageHeader::GetPageHeaderSize())
-                        continue;
-
-                    indexPage->SetNextPageId(nextIndexPageId);
-                    indexPage = nextIndexPage;
-
-                    newPageFound = true;
-
-                    break;
-                }
-            }
-
-            if(!newPageFound)
-            {
-                IndexPage* prevIndexPage = indexPage;
-                indexPage = this->database->CreateIndexPage(this->header.tableId);
-
-                prevIndexPage->SetNextPageId(indexPage->GetPageId());
-            }
-
-            offSet = 0;
-        }
-
-        indexPage->WriteTreeDataToPage(node, offSet);
-        pageFreeSpacePage->SetPageMetaData(indexPage);
-
-        for (auto &child : node->children)
-            this->WriteNodeToPage(child, indexPage, offSet);
+        //for (auto &child : node->children)
+        //    this->WriteNodeToPage(child, indexPage, offSet);
     }
 
     void Table::GetClusteredIndexFromDisk() 
     {
-        Node*& root = this->clusteredIndexedTree->GetRoot();
+        IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
 
-        this->GetIndexFromDisk(root, this->header.clusteredIndexPageId, TreeType::Clustered);
+        Node* root = indexPage->GetRoot();
+
+        this->clusteredIndexedTree->SetRoot(root);
 
         this->clusteredIndexedTree->SetTreeType(TreeType::Clustered);
     }
@@ -194,15 +158,13 @@ namespace DatabaseEngine::StorageTypes {
     Node* Table::GetNodeFromDisk(Pages::IndexPage*& indexPage, const TreeType& treeType, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode)
     {
         //next page must be loaded
-        if(currentNodeIndex == indexPage->GetPageSize() && indexPage->GetNextPageId() != 0)
+       /* if(currentNodeIndex == indexPage->GetPageSize() && indexPage->GetNextPageId() != 0)
         {
             indexPage = StorageManager::Get().GetIndexPage(indexPage->GetNextPageId());
 
             currentNodeIndex = 0;
             offSet = 0;
         }
-
-        const auto& treeData = indexPage->GetTreeData();
 
         bool isLeaf;
         memcpy(&isLeaf, treeData + offSet, sizeof(bool));
@@ -269,6 +231,6 @@ namespace DatabaseEngine::StorageTypes {
         for (int i = 0; i < numberOfChildren; i++)
             node->children[i] = this->GetNodeFromDisk(indexPage, treeType, currentNodeIndex, offSet, prevLeafNode);
         
-        return node;
+        return node;*/
     }
 }

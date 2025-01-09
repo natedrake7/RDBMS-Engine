@@ -55,7 +55,7 @@ int main()
             Field("Michael Jackson", 1, false)
         };
 
-        table->Update(updates, nullptr);
+        //table->Update(updates, nullptr);
 
         ExecuteQuery(table);
     }
@@ -103,7 +103,7 @@ void CreateActorsTable(Database *db)
     const vector<column_index_t> clusteredIndexes; /*= {0};*/
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 0 } };
 
-    Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, &nonClusteredIndexes);
+    Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, nullptr);
     vector<vector<Field>> inputData;
 
     for (int i = 0; i < 100; i++) 
@@ -136,9 +136,9 @@ void CreateMoviesTables(Database *db)
     columns.push_back(new Column("MovieLength", "Decimal", 10, true));
 
     const vector<column_index_t> clusteredIndexes = {0};
-    const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
+    //const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
 
-    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
+    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, nullptr);
 
     vector<vector<Field>> inputData;
 

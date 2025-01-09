@@ -143,7 +143,7 @@ namespace DatabaseEngine::StorageTypes {
             for (const auto &clusteredIndex : *clusteredKeyIndexes)
               this->header.clusteredIndexesBitMap->Set(clusteredIndex, true);
         
-            this->clusteredIndexedTree = new BPlusTree(this);
+            this->clusteredIndexedTree = new BPlusTree(this, this->header.clusteredIndexPageId, TreeType::Clustered);
         }
 
         if (nonClusteredIndexes != nullptr && !nonClusteredIndexes->empty())
@@ -235,25 +235,25 @@ namespace DatabaseEngine::StorageTypes {
 
         bool conditionsHaveClusteredIndex = false;
 
-        if(conditions != nullptr)
-        {
-          const auto clusteredColumnsHashSet = this->GetClusteredIndexesMap();
+        //if(conditions != nullptr)
+        //{
+        //  const auto clusteredColumnsHashSet = this->GetClusteredIndexesMap();
 
-          for(int i = 0;i < conditions->size(); i++)
-          {
-            if((*conditions)[i].GetConditionType() == ConditionType::ConditionNone)
-              throw invalid_argument("Table::Select: Invalid Condition specified");
+        //  for(int i = 0;i < conditions->size(); i++)
+        //  {
+        //    if((*conditions)[i].GetConditionType() == ConditionType::ConditionNone)
+        //      throw invalid_argument("Table::Select: Invalid Condition specified");
 
-            if(i > 0 && ((*conditions)[i].GetOperatorType() == Constants::OperatorNone))
-              throw invalid_argument("Table::Select: Invalid Operator specified");
+        //    if(i > 0 && ((*conditions)[i].GetOperatorType() == Constants::OperatorNone))
+        //      throw invalid_argument("Table::Select: Invalid Operator specified");
 
-            if(clusteredColumnsHashSet.find((*conditions)[i].GetColumnIndex()) != clusteredColumnsHashSet.end())
-              conditionsHaveClusteredIndex = true;
-          }
-        }
+        //    if(clusteredColumnsHashSet.find((*conditions)[i].GetColumnIndex()) != clusteredColumnsHashSet.end())
+        //      conditionsHaveClusteredIndex = true;
+        //  }
+        //}
 
-        this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
-        return;
+        //this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
+        //return;
 
         if (this->GetTableType() == TableType::HEAP)
         {

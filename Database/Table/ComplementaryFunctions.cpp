@@ -52,6 +52,8 @@ namespace DatabaseEngine::StorageTypes{
 
     bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredIndexesBitMap.empty(); }
 
+    Database * Table::GetDatabase() const { return this->database; }
+
     void Table::SetIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
 
     void Table::SetIndexAllocationMapPageId(const page_id_t & pageId) { this->header.indexAllocationMapPageId = pageId; }

@@ -6,9 +6,19 @@
 using namespace std;
 using namespace Constants;
 
+namespace DatabaseEngine 
+{
+    class Database;
+}
+
 namespace DatabaseEngine::StorageTypes
 {
     class Table;
+}
+
+namespace Pages
+{
+    class IndexPage;
 }
 
 namespace Indexing
@@ -58,15 +68,31 @@ namespace Indexing
         bool operator>=(const Key& otherKey) const;
     }Key;
 
+    typedef struct NodeHeader{
+        page_id_t pageId;
+        page_offset_t indexPosition;
+
+        NodeHeader();
+        ~NodeHeader();
+        static page_size_t GetNodeHeaderSize();
+    }NodeHeader;
+
     typedef struct Node
     {
+        NodeHeader header;
         bool isLeaf;
+        bool isRoot;
+        
         vector<Key> keys;
+        
         BPlusTreeData data;
         vector<BPlusTreeNonClusteredData> nonClusteredData;
+
         vector<Node *> children;
+        vector<NodeHeader> childrenHeaders;
+        
         Node *next;
-        Node *prev;
+        NodeHeader nextNodeHeader;
 
         explicit Node(const bool &isLeaf = false);
         vector<Key> &GetKeysData();
@@ -78,19 +104,23 @@ namespace Indexing
     class BPlusTree final
     {
         table_id_t tableId;
+        page_id_t firstIndexPageId;
         int t;
         Node *root;
         bool isDirty;
         TreeType type;
+        DatabaseEngine::Database* database;
 
-        void SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves) const;
+        void SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves);
         void PrintTree(const Node *node, const int &level);
         Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves);
         void DeleteNode(Node *node);
         Node *SearchKey(const Key &key) const;
+        void InsertNodeToPage(Node*& node);
+        Node* GetNodeFromPage(const NodeHeader& header) const;
 
     public:
-        explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table);
+        explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType);
         BPlusTree();
         ~BPlusTree();
 
@@ -121,5 +151,7 @@ namespace Indexing
         void SetTreeType(const TreeType& treeType);
 
         void UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data);
+
+        const page_id_t& GetFirstIndexPageId() const;
     };
 }

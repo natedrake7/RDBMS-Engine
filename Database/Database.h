@@ -172,6 +172,8 @@ public:
                                                             const extent_id_t &extentId, 
                                                             const StorageTypes::Table &table, 
                                                             extent_id_t *nextExtentId);
+
+    [[nodiscard]] Pages::IndexPage* FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize);
 };
 
 void CreateDatabase(const string &dbName);
