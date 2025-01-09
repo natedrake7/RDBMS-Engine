@@ -37,13 +37,25 @@ namespace DatabaseEngine::StorageTypes {
 
     Indexing::BPlusTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId)
     {
-        if(this->nonClusteredIndexedTrees.empty())
+        if(this->header.nonClusteredIndexesBitMap.empty())
             return nullptr;
 
-        return this->nonClusteredIndexedTrees.at(nonClusteredIndexId);
+        if(this->nonClusteredIndexedTrees.empty())
+            this->nonClusteredIndexedTrees.resize(this->header.nonClusteredIndexesBitMap.size());
+
+        BPlusTree*& nonClusteredTree = this->nonClusteredIndexedTrees.at(nonClusteredIndexId);
+
+        if (nonClusteredTree == nullptr)
+        {
+            nonClusteredTree = new BPlusTree(this);
+
+            this->GetNonClusteredIndexFromDisk(nonClusteredIndexId);
+        }
+
+        return nonClusteredTree;
     }
 
-    void Table::WriteIndexesToDisk()
+    void Table::WriteClusteredIndexToPage()
     {
         IndexPage* indexPage = nullptr;
 
@@ -56,6 +68,25 @@ namespace DatabaseEngine::StorageTypes {
             indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
 
         Node* root = this->clusteredIndexedTree->GetRoot();
+
+        page_offset_t offSet = 0;
+
+        this->WriteNodeToPage(root, indexPage, offSet);
+    }
+
+    void Table::WriteNonClusteredIndexToPage(const int & indexId)
+    {
+        IndexPage* indexPage = nullptr;
+
+        if (this->header.nonClusteredIndexPageIds[indexId] == 0)
+        {
+            indexPage = this->database->CreateIndexPage(this->header.tableId);
+            this->header.nonClusteredIndexPageIds[indexId] = indexPage->GetPageId();
+        }
+        else
+            indexPage = StorageManager::Get().GetIndexPage(this->header.nonClusteredIndexPageIds[indexId]);
+
+        Node*& root = this->nonClusteredIndexedTrees[indexId]->GetRoot();
 
         page_offset_t offSet = 0;
 
@@ -95,7 +126,7 @@ namespace DatabaseEngine::StorageTypes {
 
                     IndexPage* nextIndexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
 
-                    if(nextIndexPage->GetBytesLeft() < nodeSize)
+                    if(nextIndexPage->GetBytesLeft() != PAGE_SIZE - sizeof(IndexPageAdditionalHeader) - PageHeader::GetPageHeaderSize())
                         continue;
 
                     indexPage->SetNextPageId(nextIndexPageId);
@@ -125,25 +156,42 @@ namespace DatabaseEngine::StorageTypes {
             this->WriteNodeToPage(child, indexPage, offSet);
     }
 
-    void Table::GetClusteredIndexFromDisk()
+    void Table::GetClusteredIndexFromDisk() 
+    {
+        Node*& root = this->clusteredIndexedTree->GetRoot();
+
+        this->GetIndexFromDisk(root, this->header.clusteredIndexPageId, TreeType::Clustered);
+
+        this->clusteredIndexedTree->SetTreeType(TreeType::Clustered);
+    }
+
+    void Table::GetNonClusteredIndexFromDisk(const int& indexId)
+    {
+        if(this->header.nonClusteredIndexPageIds[indexId] == 0)
+            return;
+
+        Node*& root = this->nonClusteredIndexedTrees[indexId]->GetRoot();
+
+        this->GetIndexFromDisk(root, this->header.nonClusteredIndexPageIds[indexId], TreeType::NonClustered);
+
+        this->nonClusteredIndexedTrees[indexId]->SetTreeType(TreeType::NonClustered);
+    }
+
+    void Table::GetIndexFromDisk(Node*& root, const page_id_t& indexPageId, const TreeType& treeType)
     {
         IndexPage* indexPage = nullptr;
 
-        Node* root = this->clusteredIndexedTree->GetRoot();
-
-        indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
+        indexPage = StorageManager::Get().GetIndexPage(indexPageId);
 
         int currentNodeIndex = 0;
         page_offset_t offSet = 0;
 
         Node* prevLeafNode = nullptr;
 
-        root = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet, prevLeafNode);
-
-        this->clusteredIndexedTree->SetRoot(root);
+        root = this->GetNodeFromDisk(indexPage, treeType, currentNodeIndex, offSet, prevLeafNode);
     }
 
-    Node* Table::GetNodeFromDisk(IndexPage*& indexPage, int& currentNodeIndex, page_offset_t& offSet, Node*& prevLeafNode)
+    Node* Table::GetNodeFromDisk(Pages::IndexPage*& indexPage, const TreeType& treeType, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode)
     {
         //next page must be loaded
         if(currentNodeIndex == indexPage->GetPageSize() && indexPage->GetNextPageId() != 0)
@@ -183,26 +231,43 @@ namespace DatabaseEngine::StorageTypes {
 
         if (node->isLeaf)
         {
-            memcpy(&node->data, treeData + offSet, sizeof(BPlusTreeData));
-            offSet += sizeof(BPlusTreeData);
+            if (treeType == TreeType::Clustered)
+            {
+                memcpy(&node->data, treeData + offSet, sizeof(BPlusTreeData));
+                offSet += sizeof(BPlusTreeData);
+            }
+            else
+            {
+                uint16_t numberOfRows;
+                memcpy(&numberOfRows, treeData + offSet, sizeof(uint16_t));
+                offSet += sizeof(uint16_t);
+
+                for (uint16_t rowIndex = 0; rowIndex < numberOfRows; rowIndex++)
+                {
+                    BPlusTreeNonClusteredData nonClusteredData;
+                    memcpy(&nonClusteredData, treeData + offSet, sizeof(BPlusTreeData) + sizeof(page_offset_t));
+                    offSet += (sizeof(BPlusTreeData) + sizeof(page_offset_t));
+
+                    node->nonClusteredData.push_back(nonClusteredData);
+                }
+            }
 
             if(prevLeafNode != nullptr)
                 prevLeafNode->next = node;
 
             prevLeafNode = node;
+
+            return node;
         }
-        else
-        {
-            uint16_t numberOfChildren;
-            memcpy(&numberOfChildren, treeData + offSet, sizeof(uint16_t));
-            offSet += sizeof(uint16_t);
 
-            node->children.resize(numberOfChildren);
+        uint16_t numberOfChildren;
+        memcpy(&numberOfChildren, treeData + offSet, sizeof(uint16_t));
+        offSet += sizeof(uint16_t);
 
+        node->children.resize(numberOfChildren);
             
-            for (int i = 0; i < numberOfChildren; i++)
-                node->children[i] = this->GetNodeFromDisk(indexPage, currentNodeIndex, offSet, prevLeafNode);
-        }
+        for (int i = 0; i < numberOfChildren; i++)
+            node->children[i] = this->GetNodeFromDisk(indexPage, treeType, currentNodeIndex, offSet, prevLeafNode);
         
         return node;
     }

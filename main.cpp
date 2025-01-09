@@ -42,11 +42,10 @@ int main()
 
         Table *table = nullptr;
 
-       /* CreateMoviesTables(db);
-        CreateActorsTable(db);*/
+        //CreateMoviesTables(db);
+        //CreateActorsTable(db);
 
-        table = db->OpenTable("Actors");
-        //table->Truncate();
+        table = db->OpenTable("Movies");
 
         //InsertRowsToActorsTable(table);
 
@@ -55,8 +54,6 @@ int main()
         };
 
         //table->Update(updates, nullptr);
-
-        table->Delete(nullptr);
 
         ExecuteQuery(table);
     }
@@ -130,27 +127,32 @@ void CreateMoviesTables(Database *db)
 {
     vector<Column *> columns;
     columns.push_back(new Column("MovieID", "Int", sizeof(int32_t), false));
-    columns.push_back(new Column("MovieName", "String", 100, true));
+    columns.push_back(new Column("MovieYear", "Int", sizeof(int32_t), false));
     columns.push_back(new Column("MovieType", "String", 100, true));
     columns.push_back(new Column("MovieReleaseDate", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
     columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
     columns.push_back(new Column("MovieLength", "Decimal", 10, true));
 
     const vector<column_index_t> clusteredIndexes = {0};
+    const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
 
-    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, nullptr);
+    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
 
     vector<vector<Field>> inputData;
 
     for (int i = 0; i < 1000; i++) 
     {
         vector<Field> fields = {
-            Field("1", 0),        Field("Silence Of The Lambs" + to_string(i), 1),
-            Field("Thriller", 2), Field("2024-04-12 12:12:12", 3),
-            Field("1", 4),        Field("1233232.12434343", 5),
+            Field("1", 0),        
+            Field("1", 1),
+            Field("Thriller", 2), 
+            Field("2024-04-12 12:12:12", 3),
+            Field("1", 4),        
+            Field("1233232.12434343", 5),
         };
 
         fields[0].SetData(to_string(i));
+        fields[1].SetData(to_string(i));
 
         // table->InsertRow(fields);
         inputData.push_back(fields);

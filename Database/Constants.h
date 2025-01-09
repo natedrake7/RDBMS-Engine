@@ -70,6 +70,12 @@ namespace Constants
         Or = 2
     };
 
+    enum TreeType : uint8_t 
+    {
+        Clustered = 0,
+        NonClustered = 1
+    };
+
     typedef uint8_t byte;
 
     // block types

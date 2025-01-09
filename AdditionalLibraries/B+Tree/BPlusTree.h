@@ -13,7 +13,6 @@ namespace DatabaseEngine::StorageTypes
 
 namespace Indexing
 {
-
     typedef struct BPlusTreeData
     {
         page_id_t pageId;
@@ -22,6 +21,14 @@ namespace Indexing
         BPlusTreeData();
         ~BPlusTreeData();
     }BPlusTreeData;
+
+    typedef struct BPlusTreeNonClusteredData : public BPlusTreeData
+    {
+        page_offset_t index;
+        BPlusTreeNonClusteredData();
+        BPlusTreeNonClusteredData(const page_id_t& pageId, const extent_id_t& extentId, const page_offset_t& index);
+        ~BPlusTreeNonClusteredData();
+    }BPlusTreeNonClusteredData;
 
     typedef struct QueryData
     {
@@ -49,23 +56,24 @@ namespace Indexing
         bool operator<(const Key& otherKey) const;
         bool operator<=(const Key& otherKey) const;
         bool operator>=(const Key& otherKey) const;
-    } Key;
+    }Key;
 
-    struct Node
+    typedef struct Node
     {
         bool isLeaf;
         vector<Key> keys;
         BPlusTreeData data;
+        vector<BPlusTreeNonClusteredData> nonClusteredData;
         vector<Node *> children;
         Node *next;
         Node *prev;
 
         explicit Node(const bool &isLeaf = false);
         vector<Key> &GetKeysData();
-        BPlusTreeData &GetData();
+        BPlusTreeData &GetClusteredData();
         page_size_t GetNodeSize();
         ~Node();
-    };
+    }Node;
 
     class BPlusTree final
     {
@@ -73,6 +81,7 @@ namespace Indexing
         int t;
         Node *root;
         bool isDirty;
+        TreeType type;
 
         void SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves) const;
         void PrintTree(const Node *node, const int &level);
@@ -89,10 +98,11 @@ namespace Indexing
         void PrintTree();
 
         void RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
+        void RangeQuery(const Key &minKey, const Key &maxKey, vector<BPlusTreeNonClusteredData> &result) const;
         void SearchKey(const Key &key, QueryData &result) const;
         [[nodiscard]] page_size_t GetTreeSize() const;
 
-        Node *GetRoot();
+        Node*& GetRoot();
 
         void SetRoot(Node *&node);
 
@@ -107,5 +117,9 @@ namespace Indexing
         void GetNodeSize(const Node *node, page_size_t &size) const;
 
         const bool& IsTreeDirty() const;
+
+        void SetTreeType(const TreeType& treeType);
+
+        void UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data);
     };
 }

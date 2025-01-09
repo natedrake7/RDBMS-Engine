@@ -259,10 +259,10 @@ namespace DatabaseEngine
         vector<vector<column_index_t>> nonClusteredIndexedColumns;
         table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexedColumns);
 
-        for (const auto& nonClusteredIndex : nonClusteredIndexedColumns)
-        {
-            this->InsertRowToNonClusteredIndex(tableId, row, &rowPageId, &rowExtentId, &rowIndexPosition);
-        }
+        BPlusTreeNonClusteredData nonClusteredData(rowPageId, rowExtentId, rowIndexPosition);
+
+        for (int i = 0; i < nonClusteredIndexedColumns.size(); i++)
+            this->InsertRowToNonClusteredIndex(tableId, row, i, nonClusteredIndexedColumns[i], nonClusteredData);
     }
 
     void Database::InsertRowToClusteredIndex(const Table &table, Row *row, page_id_t* rowPageId, extent_id_t* rowExtentId, int* rowIndex)
@@ -295,7 +295,10 @@ namespace DatabaseEngine
 
         if (node->data.pageId != 0)
         {
-            this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition, rowPageId, rowExtentId);
+            this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition);
+
+            *rowPageId = node->data.pageId;
+            *rowExtentId = node->data.extentId;
             return;
         }
 
@@ -321,13 +324,11 @@ namespace DatabaseEngine
         *rowExtentId = newExtentId;
     }
 
-    void Database::InsertRowToNonClusteredIndex(const table_id_t& tableId, Row * row, page_id_t* rowPageId, extent_id_t* rowExtentId, int* rowIndex)
+    void Database::InsertRowToNonClusteredIndex(const table_id_t& tableId, Row* row, const int& nonClusteredIndexId, const vector<column_index_t>& indexedColumns, const BPlusTreeNonClusteredData& data)
     {
         Table* table = this->tables.at(tableId);
 
-        vector<column_index_t> indexedColumns;
-
-        table->GetIndexedColumnKeys(&indexedColumns);
+        BPlusTree* tree = table->GetNonClusteredIndexTree(nonClusteredIndexId);
 
         const auto &keyBlock = row->GetData()[indexedColumns[0]];
 
@@ -337,33 +338,30 @@ namespace DatabaseEngine
 
         vector<pair<Node *, Node *>> splitLeaves;
 
-        //Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, &splitLeaves);
+        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, &splitLeaves);
 
-        //const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
+        const int& branchingFactor = tree->GetBranchingFactor();
 
-        //if (node->data.pageId != 0)
-        //{
-        //    //this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition);
-        //    return;
-        //}
+        this->SplitNonClusteredData(splitLeaves, branchingFactor);
 
-        extent_id_t newExtentId = 0;
+        node->keys.insert(node->keys.begin() + indexPosition, key);
 
-        Page *newPage = this->CreateDataPage(tableId, &newExtentId);
+        node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
+    }
 
-        const page_id_t &newPageId = newPage->GetPageId();
+    void Database::SplitNonClusteredData(vector<pair<Indexing::Node*,Indexing::Node*>>& splitLeaves, const int & branchingFactor)
+    {
+        if (splitLeaves.empty())
+            return;
 
-        const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(newPageId);
+        for (auto &[firstNode, secondNode] : splitLeaves)
+        {
+            if (!firstNode->isLeaf || !secondNode->isLeaf)
+                continue;
 
-        PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pageFreeSpacePageId);
-
-        // should never fail
-        Database::InsertRowToPage(pageFreeSpacePage, newPage, row, indexPosition);
-
-        //node->keys.insert(node->keys.begin() + indexPosition, key);
-
-        //node->data.pageId = newPageId;
-        //node->data.extentId = newExtentId;
+            secondNode->nonClusteredData.assign(firstNode->nonClusteredData.begin() + branchingFactor, firstNode->nonClusteredData.end());
+            firstNode->nonClusteredData.resize(branchingFactor);
+        }
     }
 
     void Database::SplitPage(vector<pair<Node *, Node *>> &splitLeaves, const int &branchingFactor, const Table &table)
@@ -405,6 +403,39 @@ namespace DatabaseEngine
 
             secondNode->data.pageId = nextLeafPageId;
             secondNode->data.extentId = nextLeafExtentId;
+
+            UpdateNonClusteredData(table, nextLeafPage, nextLeafPageId, nextLeafExtentId);
+        }
+    }
+
+    void Database::UpdateNonClusteredData(const Table& table, Page* nextLeafPage, const page_id_t& nextLeafPageId, const extent_id_t& nextLeafExtentId)
+    {
+       if(!table.HasNonClusteredIndexes())
+            return;
+
+        Table* tablePtr = this->tables.at(table.GetTableId());
+            
+        //update any nonClusteredIndexes
+        vector<vector<column_index_t>> nonClusteredIndexedColumns;
+        tablePtr->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexedColumns);
+
+        for (int i = 0; i < nonClusteredIndexedColumns.size(); i++)
+        {
+            BPlusTree* nonClusteredTree = tablePtr->GetNonClusteredIndexTree(i);
+
+            const auto& rows = nextLeafPage->GetDataRowsUnsafe();
+
+            for (page_offset_t index = 0; index < rows->size(); index++)
+            {
+                const auto &keyBlock = (*rows)[index]->GetData()[nonClusteredIndexedColumns[i][0]];
+
+                const Key key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), KeyType::Int);
+
+                int64_t val = 0;
+                memcpy(&val, key.value.data(), key.value.size());
+
+                nonClusteredTree->UpdateRowData(key, BPlusTreeNonClusteredData(nextLeafPageId, nextLeafExtentId, index));
+            }
         }
     }
 
@@ -439,7 +470,7 @@ namespace DatabaseEngine
         return nextLeafPage;
     }
 
-    void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition, page_id_t* rowPageId, extent_id_t* rowExtentId)
+    void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)
     {
         const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(node->data.pageId);
 
@@ -635,7 +666,7 @@ namespace DatabaseEngine
         tableExtentIds.clear();
 
         for(auto& row: rowsToBeInserted)
-            this->InsertRowToHeapTable(*table, tableExtentIds, lastExtentIndex, row);
+            this->InsertRowToPage(table->GetTableId(), tableExtentIds, lastExtentIndex, row);
     }
 
     void Database::DeleteTableRows(const table_id_t& tableId, const vector<Field>* conditions)

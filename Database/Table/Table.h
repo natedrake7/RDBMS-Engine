@@ -56,6 +56,7 @@ namespace DatabaseEngine::StorageTypes
         column_number_t numberOfColumns;
 
         page_id_t clusteredIndexPageId;
+        vector<page_id_t> nonClusteredIndexPageIds;
         ByteMaps::BitMap *columnsNullBitMap;
 
         // bitmaps to store the composite key
@@ -110,19 +111,20 @@ namespace DatabaseEngine::StorageTypes
             static void SetDecimalData(Block *&block, const Field &inputData);
             void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
         
-            void WriteIndexesToDisk();
+            void WriteClusteredIndexToPage();
+            void WriteNonClusteredIndexToPage(const int& indexId);
             void WriteNodeToPage(Indexing::Node* node, Pages::IndexPage*& indexPage, page_offset_t &offSet);
+
             void GetClusteredIndexFromDisk();
-            Indexing::Node* GetNodeFromDisk(Pages::IndexPage*& indexPage, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
+            void GetNonClusteredIndexFromDisk(const int& indexId);
+            void GetIndexFromDisk(Indexing::Node*& root, const page_id_t& indexPageId, const TreeType& treeType);
+            Indexing::Node* GetNodeFromDisk(Pages::IndexPage*& indexPage, const TreeType& treeType, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
         
             void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
+            void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
             void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
             void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows);
             
-            void InsertRowToPage(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row);
-            void InsertRowToClusteredIndex(Row *row);
-            void SplitPage(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves);
-
             Row* CreateRow(const vector<Field>& inputData);
 
         public:

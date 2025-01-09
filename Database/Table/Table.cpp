@@ -58,6 +58,7 @@ namespace DatabaseEngine::StorageTypes {
         this->tableName = tableHeader.tableName;
         this->tableId = tableHeader.tableId;
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
+        this->nonClusteredIndexPageIds = tableHeader.nonClusteredIndexPageIds;
 
         this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
         this->clusteredIndexesBitMap = new BitMap(*tableHeader.clusteredIndexesBitMap);
@@ -90,7 +91,6 @@ namespace DatabaseEngine::StorageTypes {
 
         this->SetTableIndexesToHeader(clusteredKeyIndexes, nonClusteredIndexes);
 
-
         uint16_t counter = 0;
         for (const auto &column : columns) 
         {
@@ -113,17 +113,27 @@ namespace DatabaseEngine::StorageTypes {
 
       Table::~Table() 
       {
-        if(this->clusteredIndexedTree != nullptr && this->clusteredIndexedTree->IsTreeDirty())
-          this->WriteIndexesToDisk();
+        if(this->clusteredIndexedTree != nullptr 
+            && this->clusteredIndexedTree->IsTreeDirty())
+          this->WriteClusteredIndexToPage();
 
         delete this->clusteredIndexedTree;
+
+        for (int i = 0; i < this->nonClusteredIndexedTrees.size(); i++)
+        {
+            if (this->nonClusteredIndexedTrees[i] != nullptr 
+                && this->nonClusteredIndexedTrees[i]->IsTreeDirty())
+                this->WriteNonClusteredIndexToPage(i);
+
+            delete this->nonClusteredIndexedTrees[i];
+        }
 
         HeaderPage* headerPage = StorageManager::Get().GetHeaderPage(this->database->GetFileName());
 
         headerPage->SetTableHeader(this);
 
         for (const auto &column : columns)
-          delete column;
+            delete column;
       }
 
       void Table::SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes) 
@@ -145,6 +155,8 @@ namespace DatabaseEngine::StorageTypes {
                 for (const auto &nonClusteredIndex : (*nonClusteredIndexes)[i])
                     this->header.nonClusteredIndexesBitMap[i]->Set(nonClusteredIndex, true);
             }
+
+            this->header.nonClusteredIndexPageIds.resize(nonClusteredIndexes->size(), 0);
         }
       }
 
@@ -240,6 +252,9 @@ namespace DatabaseEngine::StorageTypes {
           }
         }
 
+        this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
+        return;
+
         if (this->GetTableType() == TableType::HEAP)
         {
             this->SelectRowsFromHeap(&selectedRows, rowsToSelect, conditions);
@@ -328,14 +343,9 @@ namespace DatabaseEngine::StorageTypes {
         const int32_t minKey = 10;
         const int32_t maxKey = 252;
 
-        if(this->clusteredIndexedTree == nullptr)
-        {
-            this->clusteredIndexedTree = new BPlusTree(this);
+        const BPlusTree* tree = this->GetClusteredIndexedTree();
 
-            this->GetClusteredIndexFromDisk();
-        }
-
-        this->clusteredIndexedTree->RangeQuery(Key(&minKey, sizeof(minKey), KeyType::Int), Key(&maxKey, sizeof(maxKey), KeyType::Int), results);
+        tree->RangeQuery(Key(&minKey, sizeof(minKey), KeyType::Int), Key(&maxKey, sizeof(maxKey), KeyType::Int), results);
 
         const Page *page = (!results.empty())
                             ? StorageManager::Get().GetPage(results[0].treeData.pageId, results[0].treeData.extentId, this)
@@ -348,6 +358,35 @@ namespace DatabaseEngine::StorageTypes {
                 page = StorageManager::Get().GetPage(result.treeData.pageId, result.treeData.extentId, this);
 
             selectedRows->push_back(page->GetRowByIndex(*this, result.indexPosition));
+        }
+    }
+
+    void Table::SelectRowsFromNonClusteredIndex(vector<Row>* selectedRows, const size_t & rowsToSelect, const vector<Field>* conditions)
+    {
+        //find which index to use
+
+        vector<vector<column_index_t>> indexes;
+        this->GetNonClusteredIndexedColumnKeys(&indexes);
+
+        vector<BPlusTreeNonClusteredData> results;
+        const int32_t minKey = 10;
+        const int32_t maxKey = 252;
+
+        const BPlusTree* tree = this->GetNonClusteredIndexTree(0);
+
+        tree->RangeQuery(Key(&minKey, sizeof(minKey), KeyType::Int), Key(&maxKey, sizeof(maxKey), KeyType::Int), results);
+
+        const Page *page = (!results.empty())
+                    ? StorageManager::Get().GetPage(results[0].pageId, results[0].extentId, this)
+                    : nullptr;
+
+        for (const auto &result : results)
+        {
+            // get new page else use current one
+            if (result.pageId != 0 && result.pageId != page->GetPageId())
+                page = StorageManager::Get().GetPage(result.pageId, result.extentId, this);
+
+            selectedRows->push_back(page->GetRowByIndex(*this, result.index));
         }
     }
 

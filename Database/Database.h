@@ -13,6 +13,7 @@ namespace Indexing {
   struct Key;
   struct Node;
   class BPlusTree;
+  struct BPlusTreeNonClusteredData;
 } // namespace Indexing
 
 namespace DatabaseEngine::StorageTypes {
@@ -87,9 +88,9 @@ protected:
 
     void InsertRowToNonClusteredIndex(  const table_id_t& tableId, 
                                         StorageTypes::Row *row,
-                                        page_id_t* rowPageId,
-                                        extent_id_t* rowExtentId,
-                                        int* rowIndex);
+                                        const int& nonClusteredIndexId,
+                                        const vector<column_index_t>& indexedColumns,
+                                        const Indexing::BPlusTreeNonClusteredData& data);
 
     void InsertRowToHeapTable(  const StorageTypes::Table &table,
                                 vector<extent_id_t> &allocatedExtents,
@@ -103,6 +104,10 @@ protected:
                     const int &branchingFactor,
                     const StorageTypes::Table &table);
 
+    void SplitNonClusteredData(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves, const int &branchingFactor);
+
+    void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId, const extent_id_t& nextLeafExtentId);
+
     static void InsertRowToPage( Pages::PageFreeSpacePage *pageFreeSpacePage,
                                  Pages::Page *page, StorageTypes::Row *row,
                                  const int &indexPosition);
@@ -111,9 +116,7 @@ protected:
                                   const StorageTypes::Table &table,
                                   StorageTypes::Row *row, 
                                   const Indexing::Key &key,
-                                  const int &indexPosition, 
-                                  page_id_t* rowPageId, 
-                                  extent_id_t* rowExtentId);
+                                  const int &indexPosition);
 
 public:
     explicit Database(const string &dbName);

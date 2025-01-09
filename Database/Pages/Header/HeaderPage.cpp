@@ -55,6 +55,7 @@ namespace Pages
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.maxRowSize), sizeof(row_size_t));
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.numberOfColumns), sizeof(column_number_t));
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.clusteredIndexPageId), sizeof(page_id_t));
+
             tableFullHeader.tableHeader.columnsNullBitMap->WriteDataToFile(filePtr);
             tableFullHeader.tableHeader.clusteredIndexesBitMap->WriteDataToFile(filePtr);
 
@@ -63,6 +64,9 @@ namespace Pages
 
             for (const auto& nonClusteredIndex : tableFullHeader.tableHeader.nonClusteredIndexesBitMap)
                 nonClusteredIndex->WriteDataToFile(filePtr);
+
+            for(const auto& nonClusteredIndexPageId: tableFullHeader.tableHeader.nonClusteredIndexPageIds)
+                filePtr->write(reinterpret_cast<const char *>(&nonClusteredIndexPageId), sizeof(page_id_t));
 
             for (const auto &columnMetaData : tableFullHeader.columnsHeaders)
             {
@@ -139,6 +143,15 @@ namespace Pages
             {
                 tableFullHeader.tableHeader.nonClusteredIndexesBitMap.push_back(new BitMap(tableFullHeader.tableHeader.numberOfColumns));
                 tableFullHeader.tableHeader.nonClusteredIndexesBitMap[j]->GetDataFromFile(data, offSet);
+            }
+
+            for (int j = 0; j < numberOfNonClusteredIndexes; j++)
+            {
+                page_id_t pageId = 0;
+                memcpy(&pageId, data.data() + offSet, sizeof(page_id_t));
+
+                tableFullHeader.tableHeader.nonClusteredIndexPageIds.push_back(pageId);
+                offSet += sizeof(page_id_t);
             }
 
             for (int j = 0; j < tableFullHeader.tableHeader.numberOfColumns; j++)

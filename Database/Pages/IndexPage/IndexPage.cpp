@@ -65,11 +65,11 @@ page_size_t IndexPage::CalculateTreeDataSize() const
 
 void IndexPage::WriteTreeDataToPage(Node *node, page_offset_t& offSet) 
 {
-    const uint16_t numberOfKeys = node->keys.size();
-
     memcpy(this->treeData + offSet, &node->isLeaf, sizeof(bool));
     offSet += sizeof(bool);
 
+    const uint16_t numberOfKeys = node->keys.size();
+ 
     memcpy(this->treeData + offSet, &numberOfKeys, sizeof(uint16_t));
     offSet += sizeof(uint16_t);
 
@@ -84,8 +84,24 @@ void IndexPage::WriteTreeDataToPage(Node *node, page_offset_t& offSet)
 
     if (node->isLeaf) 
     {
-        memcpy(this->treeData + offSet, &node->data,sizeof(BPlusTreeData));
-        offSet += sizeof(BPlusTreeData);
+        if (node->nonClusteredData.empty())
+        {
+            memcpy(this->treeData + offSet, &node->data,sizeof(BPlusTreeData));
+            offSet += sizeof(BPlusTreeData);
+        }
+        else
+        {
+            const uint16_t numberOfRows = node->nonClusteredData.size();
+            memcpy(this->treeData + offSet, &numberOfRows, sizeof(uint16_t));
+            offSet += sizeof(uint16_t);
+
+            for (const auto& rowData : node->nonClusteredData)
+            {
+                memcpy(this->treeData + offSet, &rowData, sizeof(BPlusTreeData) + sizeof(page_offset_t));
+                offSet += (sizeof(BPlusTreeData) + sizeof(page_offset_t));
+            }
+        }
+
     }
     else 
     {

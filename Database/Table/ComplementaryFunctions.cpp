@@ -50,7 +50,7 @@ namespace DatabaseEngine::StorageTypes{
         }
     }
 
-    bool Table::HasNonClusteredIndexes() { return !this->header.nonClusteredIndexesBitMap.empty(); }
+    bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredIndexesBitMap.empty(); }
 
     void Table::SetIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
 

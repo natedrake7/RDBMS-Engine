@@ -20,14 +20,6 @@ namespace Indexing
         return os;
     }
 
-    BPlusTreeData::BPlusTreeData()
-    {
-        this->pageId = 0;
-        this->extentId = 0;
-    }
-
-    BPlusTreeData::~BPlusTreeData() = default;
-
     Node::Node(const bool &isLeaf)
     {
         this->isLeaf = isLeaf;
@@ -37,7 +29,7 @@ namespace Indexing
 
     vector<Key> &Node::GetKeysData() { return this->keys; }
 
-    BPlusTreeData &Node::GetData() { return this->data; }
+    BPlusTreeData &Node::GetClusteredData() { return this->data; }
 
     page_size_t Node::GetNodeSize()
     {
@@ -46,18 +38,18 @@ namespace Indexing
         //if node is leaf or not
         size += sizeof(bool);
 
-        if(this->isLeaf)
-            size += sizeof(BPlusTreeData);
-
         //num of keys to read for node
         size += sizeof(uint16_t);
 
         for (const auto &key : this->keys)
             size += ( sizeof(key_size_t) + key.size);
 
-        const uint16_t numberOfChildren = this->children.size();
-
-        size += numberOfChildren;
+        if (this->isLeaf)
+            size += this->nonClusteredData.empty() 
+                    ? sizeof(BPlusTreeData) 
+                    : (this->nonClusteredData.size() * (sizeof(BPlusTreeData) + sizeof(page_offset_t))) + sizeof(uint16_t);
+        else
+            size += sizeof(uint16_t);
 
         return size;
     }
@@ -117,9 +109,6 @@ namespace Indexing
         // Maintain the linked list structure for leaf nodes
         newChild->next = child->next;
         child->next = newChild;
-
-        // newChild->data.assign(child->data.begin() + t, child->data.end());
-        // child->data.resize(t);
 
         splitLeaves->push_back(pair<Node *, Node *>(child, newChild));
     }
@@ -240,6 +229,41 @@ namespace Indexing
         }
     }
 
+    void BPlusTree::RangeQuery(const Key & minKey, const Key & maxKey, vector<BPlusTreeNonClusteredData>& result) const
+    {
+        if (!root)
+            return;
+
+        const Node *currentNode = this->SearchKey(minKey);
+        const Node *previousNode = nullptr;
+
+        while (currentNode)
+        {
+            if (previousNode && maxKey >= currentNode->keys[0])
+            {
+                if (maxKey >= previousNode->keys[previousNode->keys.size() - 1])
+                    result.push_back(previousNode->nonClusteredData[previousNode->keys.size()]);
+            }
+
+            for (int i = 0; i < currentNode->keys.size(); i++)
+            {
+                const auto &key = currentNode->keys[i];
+
+                if (minKey <= key && maxKey >= key)
+                {
+                    result.push_back(currentNode->nonClusteredData[i]);
+                    continue;
+                }
+
+                if (maxKey < key)
+                    return;
+            }
+
+            previousNode = currentNode;
+            currentNode = currentNode->next;
+        }
+    }
+
     void BPlusTree::SearchKey(const Key &key, QueryData &result) const
     {
         if (!root)
@@ -275,9 +299,6 @@ namespace Indexing
                     result.indexPosition = i;
                     return;
                 }
-
-                if (key > currentNode->keys[i])
-                    return;
             }
 
             previousNode = currentNode;
@@ -294,7 +315,7 @@ namespace Indexing
         return result;
     }
 
-    Node *BPlusTree::GetRoot() { return this->root; }
+    Node*& BPlusTree::GetRoot() { return this->root; }
 
     void BPlusTree::SetRoot(Node *&node) { this->root = node; }
 
@@ -309,6 +330,38 @@ namespace Indexing
     }
 
     const bool& BPlusTree::IsTreeDirty() const { return this->isDirty; }
+
+    void BPlusTree::SetTreeType(const TreeType & treeType) { this->type = treeType; }
+
+    void BPlusTree::UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data)
+    {
+        Node* currentNode = this->SearchKey(key);
+
+        if(currentNode == nullptr)
+            return;
+
+        Node *previousNode = nullptr;
+        while (currentNode)
+        {
+            if (previousNode && key <= currentNode->keys[0])
+            {
+                previousNode->nonClusteredData[previousNode->keys.size()] = data;
+                return;
+            }
+
+            for (int i = 0; i < currentNode->keys.size(); i++)
+            {
+                if (key == currentNode->keys[i])
+                {
+                    currentNode->nonClusteredData[i] = data;
+                    return;
+                }
+            }
+
+            previousNode = currentNode;
+            currentNode = currentNode->next;
+        }
+    }
 
     void BPlusTree::ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet)
     {
@@ -416,8 +469,9 @@ namespace Indexing
         {
             case Constants::KeyType::Int:
             {
-                int64_t keyVal = *reinterpret_cast<const int64_t*>(this->value.data());
-                int64_t otherKeyVal = *reinterpret_cast<const int64_t*>(otherKey.value.data());
+                int64_t keyVal = 0, otherKeyVal = 0;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
 
                 return keyVal > otherKeyVal;
             }
@@ -452,8 +506,9 @@ namespace Indexing
         {
             case Constants::KeyType::Int:
             {
-                int64_t keyVal = *reinterpret_cast<const int64_t*>(this->value.data());
-                int64_t otherKeyVal = *reinterpret_cast<const int64_t*>(otherKey.value.data());
+                int64_t keyVal = 0, otherKeyVal = 0;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
 
                 return keyVal >= otherKeyVal;
             }
@@ -478,8 +533,9 @@ namespace Indexing
         {
             case Constants::KeyType::Int:
             {
-                int64_t keyVal = *reinterpret_cast<const int64_t*>(this->value.data());
-                int64_t otherKeyVal = *reinterpret_cast<const int64_t*>(otherKey.value.data());
+                int64_t keyVal = 0, otherKeyVal = 0;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
 
                 return keyVal == otherKeyVal;
             }
@@ -502,4 +558,26 @@ namespace Indexing
     }
 
     QueryData::~QueryData() = default;
+
+    BPlusTreeData::BPlusTreeData()
+    {
+        this->pageId = 0;
+        this->extentId = 0;
+    }
+
+    BPlusTreeData::~BPlusTreeData() = default;
+
+    BPlusTreeNonClusteredData::BPlusTreeNonClusteredData() : BPlusTreeData()
+    {
+        this->index = 0;
+    }
+
+    BPlusTreeNonClusteredData::BPlusTreeNonClusteredData(const page_id_t & pageId, const extent_id_t & extentId, const page_offset_t & index)
+    {
+        this->pageId = pageId;
+        this->extentId = extentId;
+        this->index = index;
+    }
+
+    BPlusTreeNonClusteredData::~BPlusTreeNonClusteredData() = default;
 }
