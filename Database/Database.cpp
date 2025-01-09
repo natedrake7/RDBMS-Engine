@@ -665,6 +665,8 @@ namespace DatabaseEngine
         extent_id_t lastExtentIndex = tableExtentIds.size() - 1;
         tableExtentIds.clear();
 
+        //skip inserting to non clustered indexes again and just update their position(if index values changes handle)
+
         for(auto& row: rowsToBeInserted)
             this->InsertRowToPage(table->GetTableId(), tableExtentIds, lastExtentIndex, row);
     }

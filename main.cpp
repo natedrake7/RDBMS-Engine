@@ -26,6 +26,8 @@ void InsertRowsToActorsTable(Table* table);
 // object ids
 //truncate should deallocate the space used by the pages instead of marking it as free?
 //delete should defragment pages when done and combine them on heap files.
+//indexes should be traversed as needed and avoid loading the whole tree each time
+//how to save the tree parts if dirty tho?
 
 int main() 
 {
@@ -53,7 +55,7 @@ int main()
             Field("Michael Jackson", 1, false)
         };
 
-        //table->Update(updates, nullptr);
+        table->Update(updates, nullptr);
 
         ExecuteQuery(table);
     }
