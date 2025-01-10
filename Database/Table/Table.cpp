@@ -255,7 +255,6 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         //check if tables has non clustered index and it is in the query
-
         this->SelectRowsFromClusteredIndex(&selectedRows, rowsToSelect, conditions);
       }
 
@@ -340,10 +339,10 @@ namespace DatabaseEngine::StorageTypes {
 
         tree->RangeQuery(Key(&minKey, sizeof(minKey), KeyType::Int), Key(&maxKey, sizeof(maxKey), KeyType::Int), results);
 
-        const Page *page = (!results.empty())
-                            ? StorageManager::Get().GetPage(results[0].treeData.pageId, results[0].treeData.extentId, this)
-                            : nullptr;
+        if(results.empty())
+            return;
 
+        const Page *page = StorageManager::Get().GetPage(results[0].treeData.pageId, results[0].treeData.extentId, this);
         for (const auto &result : results)
         {
             // get new page else use current one
@@ -369,9 +368,10 @@ namespace DatabaseEngine::StorageTypes {
 
         tree->RangeQuery(Key(&minKey, sizeof(minKey), KeyType::Int), Key(&maxKey, sizeof(maxKey), KeyType::Int), results);
 
-        const Page *page = (!results.empty())
-                    ? StorageManager::Get().GetPage(results[0].pageId, results[0].extentId, this)
-                    : nullptr;
+        if(results.empty())
+            return;
+
+        const Page *page = StorageManager::Get().GetPage(results[0].pageId, results[0].extentId, this);
 
         for (const auto &result : results)
         {

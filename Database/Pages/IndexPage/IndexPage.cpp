@@ -8,6 +8,22 @@ using namespace Indexing;
 using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {
+
+void IndexPage::WriteAdditionalHeaderToFile(fstream * filePtr) const
+{
+    filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeType), sizeof(TreeType));
+    filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeId), sizeof(page_id_t));
+}
+
+void IndexPage::ReadAdditionalHeaderFromFile(const vector<char>& data, page_offset_t & offSet)
+{
+    memcpy(&this->additionalHeader.treeType, data.data() + offSet, sizeof(TreeType));
+    offSet += sizeof(TreeType);
+
+    memcpy(&this->additionalHeader.treeId, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
+}
+
 IndexPage::IndexPage(const page_id_t &pageId, const bool &isPageCreation) : Page(pageId, isPageCreation) 
 {
   this->header.pageType = PageType::INDEX;
@@ -23,8 +39,7 @@ IndexPage::~IndexPage()
 
 void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) 
 {
-    memcpy(&this->treeType, data.data() + offSet, sizeof(TreeType));
-    offSet += sizeof(TreeType);
+    this->ReadAdditionalHeaderFromFile(data, offSet);
 
     for (int i = 0; i < this->header.pageSize; i++)
     {
@@ -81,7 +96,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             continue;
         }
 
-        if (this->treeType == TreeType::Clustered)
+        if (this->additionalHeader.treeType == TreeType::Clustered)
         {
             memcpy(&node->data, data.data() + offSet, sizeof(BPlusTreeData));
             offSet += sizeof(BPlusTreeData);
@@ -115,7 +130,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
 void IndexPage::WritePageToFile(fstream *filePtr) 
 {
   this->WritePageHeaderToFile(filePtr);
-  filePtr->write(reinterpret_cast<const char *>(&this->treeType), sizeof(TreeType));
+  this->WriteAdditionalHeaderToFile(filePtr);
 
   for (const auto& node : nodes)
   {
@@ -145,7 +160,7 @@ void IndexPage::WritePageToFile(fstream *filePtr)
       }
 
       //clustered indexed tree
-      if (this->treeType == TreeType::Clustered)
+      if (this->additionalHeader.treeType == TreeType::Clustered)
            filePtr->write(reinterpret_cast<const char*>(&node->data), sizeof(BPlusTreeData));
       else
       {
@@ -162,7 +177,11 @@ void IndexPage::WritePageToFile(fstream *filePtr)
   }
 }
 
-void IndexPage::SetTreeType(const TreeType & treeType) { this->treeType = treeType; }
+void IndexPage::SetTreeType(const TreeType & treeType) { this->additionalHeader.treeType = treeType; }
+
+void IndexPage::SetTreeId(const page_id_t & treeId) { this->additionalHeader.treeId = treeId; }
+
+const page_id_t & IndexPage::GetTreeId() const { return this->additionalHeader.treeId; }
 
 void IndexPage::InsertNode(Indexing::Node *& node, page_offset_t* indexPosition)
 {
@@ -224,4 +243,11 @@ void IndexPage::UpdateNodePreviousLeafHeader(const page_offset_t & indexPosition
     this->isDirty = true;
 }
 
+IndexPageAdditionalHeader::IndexPageAdditionalHeader()
+{
+    this->treeId = 0;
+    this->treeType = TreeType::NonClustered;
+}
+
+IndexPageAdditionalHeader::~IndexPageAdditionalHeader() = default;
 } // namespace Pages

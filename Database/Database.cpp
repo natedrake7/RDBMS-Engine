@@ -476,10 +476,10 @@ namespace DatabaseEngine
         if (indexPageId == 0)
         {
             IndexPage* indexPage = this->CreateIndexPage(tableId);
-
             Table* table = this->tables.at(tableId);
 
             const page_id_t& newIndexPageId = indexPage->GetPageId();
+            indexPage->SetTreeId(newIndexPageId);
 
             if (nonClusteredIndexId != -1)
             {
@@ -488,15 +488,14 @@ namespace DatabaseEngine
             }
 
             table->SetClusteredIndexPageId(newIndexPageId);
-
             return indexPage;
         }
 
         IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
-
+        
         vector<extent_id_t> allocatedExtents;
         indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
-
+        
         for(const auto& extentId: allocatedExtents)
         {
             const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
@@ -514,14 +513,20 @@ namespace DatabaseEngine
 
                 IndexPage* indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
 
-                if(indexPage->GetBytesLeft() < nodeSize)
+                const auto& treeId = indexPage->GetTreeId();
+                if(indexPage->GetBytesLeft() < nodeSize || ( treeId != indexPageId && treeId != 0 ))
                     continue;
+
+                indexPage->SetTreeId(indexPageId);
 
                 return indexPage;
             }
         }
 
-        return this->CreateIndexPage(tableHeader.tableId);
+        IndexPage* indexPage = this->CreateIndexPage(tableHeader.tableId);
+        indexPage->SetTreeId(indexPageId);
+
+        return indexPage;
     }
 
     void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)

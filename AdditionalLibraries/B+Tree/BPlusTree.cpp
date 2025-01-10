@@ -24,10 +24,10 @@ namespace Indexing
         return os;
     }
 
-    Node::Node(const bool &isLeaf)
+    Node::Node(const bool &isLeaf, const bool& isRoot)
     {
         this->isLeaf = isLeaf;
-        this->isRoot = false;
+        this->isRoot = isRoot;
     }
 
     vector<Key> &Node::GetKeysData() { return this->keys; }
@@ -135,10 +135,7 @@ namespace Indexing
     {
         if (this->root == nullptr)
         {
-            this->root = new Node(true);
-
-            this->root->isRoot = true;
-
+            this->root = new Node(true, true);
             this->InsertNodeToPage(this->root);
         }
 
@@ -147,12 +144,11 @@ namespace Indexing
         if (root->keys.size() == 2 * t - 1) // root is full,
         {
             // create new root
-            Node *newRoot = new Node();
+            Node *newRoot = new Node(false, true);
             this->InsertNodeToPage(newRoot);
 
             // add current root as leaf
             newRoot->childrenHeaders.push_back(this->root->header);
-            newRoot->isRoot = true;
             this->root->isRoot = false;
 
             // split the root

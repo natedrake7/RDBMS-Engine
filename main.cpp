@@ -24,6 +24,7 @@ void InsertRowsToActorsTable(Table* table);
 // B+ Trees
 // row ids
 // object ids
+// create composite keys (minor)
 //truncate should deallocate the space used by the pages instead of marking it as free?
 //delete should defragment pages when done and combine them on heap files.
 //index pages should be for each index and should not have multiple indexes in them
@@ -46,11 +47,12 @@ int main()
         //CreateMoviesTables(db);
         //CreateActorsTable(db);
 
-        table = db->OpenTable("Actors");
+        table = db->OpenTable("Movies");
 
         //InsertRowsToActorsTable(table);
 
-        const vector<Field> updates = {
+        const vector<Field> updates = 
+        {
             Field("Michael Jackson", 1, false)
         };
 

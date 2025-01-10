@@ -93,7 +93,7 @@ namespace Indexing
         NodeHeader nextNodeHeader;
         NodeHeader previousNodeHeader;
 
-        explicit Node(const bool &isLeaf = false);
+        explicit Node(const bool &isLeaf = false, const bool& isRoot = false);
         vector<Key> &GetKeysData();
         BPlusTreeData &GetClusteredData();
         page_size_t GetNodeSize();
