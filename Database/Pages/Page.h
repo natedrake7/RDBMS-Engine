@@ -38,7 +38,7 @@ namespace Pages
         bool isDirty;
         string filename;
         PageHeader header;
-        void WritePageHeaderToFile(fstream *filePtr);
+        void WritePageHeaderToFile(fstream *filePtr) const;
 
     public:
         explicit Page(const page_id_t &pageId, const bool &isPageCreation = false);

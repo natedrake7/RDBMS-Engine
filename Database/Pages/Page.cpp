@@ -122,12 +122,12 @@ namespace Pages
         }
     }
 
-    void Page::WritePageHeaderToFile(fstream *filePtr)
+    void Page::WritePageHeaderToFile(fstream *filePtr) const
     {
-        filePtr->write(reinterpret_cast<char *>(&this->header.pageId), sizeof(page_id_t));
-        filePtr->write(reinterpret_cast<char *>(&this->header.pageSize), sizeof(page_size_t));
-        filePtr->write(reinterpret_cast<char *>(&this->header.bytesLeft), sizeof(page_size_t));
-        filePtr->write(reinterpret_cast<char *>(&this->header.pageType), sizeof(PageType));
+        filePtr->write(reinterpret_cast<const char *>(&this->header.pageId), sizeof(page_id_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->header.pageSize), sizeof(page_size_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->header.bytesLeft), sizeof(page_size_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->header.pageType), sizeof(PageType));
     }
 
     void Page::WritePageToFile(fstream *filePtr)

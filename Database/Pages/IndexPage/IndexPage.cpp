@@ -8,21 +8,6 @@ using namespace Indexing;
 using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {
-  
-IndexPageAdditionalHeader::IndexPageAdditionalHeader() 
-{ 
-    this->nextPageId = 0;
-    this->dataSize = 0;
-}
-
-IndexPageAdditionalHeader::IndexPageAdditionalHeader(const page_id_t &nextPageId) 
-{
-  this->nextPageId = nextPageId;
-  this->dataSize = 0;
-}
-
-IndexPageAdditionalHeader::~IndexPageAdditionalHeader() = default;
-
 IndexPage::IndexPage(const page_id_t &pageId, const bool &isPageCreation) : Page(pageId, isPageCreation) 
 {
   this->header.pageType = PageType::INDEX;
@@ -38,8 +23,6 @@ IndexPage::~IndexPage()
 
 void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) 
 {
-    this->GetAdditionalHeaderFromFile(data, offSet);
-
     for (int i = 0; i < this->header.pageSize; i++)
     {
         bool isLeaf;
@@ -113,6 +96,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
         }
             
         memcpy(&node->nextNodeHeader, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
+        offSet += NodeHeader::GetNodeHeaderSize();
         this->nodes.push_back(node);
     }
 }
@@ -120,8 +104,8 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
 void IndexPage::WritePageToFile(fstream *filePtr) 
 {
   this->WritePageHeaderToFile(filePtr);
-  this->WriteAdditionalHeaderToFile(filePtr);
 
+  int size = 0;
   for (const auto& node : nodes)
   {
       filePtr->write(reinterpret_cast<const char*>(&node->isLeaf), sizeof(bool));
@@ -163,36 +147,7 @@ void IndexPage::WritePageToFile(fstream *filePtr)
       }
       else
          filePtr->write(reinterpret_cast<const char*>(&node->next->header),  NodeHeader::GetNodeHeaderSize());
-
   }
-
-  //filePtr->write(reinterpret_cast<char *>(this->treeData), this->CalculateTreeDataSize());
-}
-
-page_size_t IndexPage::CalculateTreeDataSize() const 
-{
-  return PAGE_SIZE - this->header.bytesLeft - this->header.GetPageHeaderSize() - sizeof(this->additionalHeader);
-}
-
-void IndexPage::GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet) 
-{
-  memcpy(&this->additionalHeader, data.data() + offSet, sizeof(IndexPageAdditionalHeader));
-  offSet += sizeof(IndexPageAdditionalHeader);
-}
-
-void IndexPage::WriteAdditionalHeaderToFile(fstream *filePtr) 
-{
-  filePtr->write(reinterpret_cast<char*>(&this->additionalHeader),sizeof(IndexPageAdditionalHeader));
-}
-
-void IndexPage::SetNextPageId(const page_id_t &nextPageId) 
-{
-  this->additionalHeader.nextPageId = nextPageId;
-}
-
-const page_id_t &IndexPage::GetNextPageId() const 
-{
-  return this->additionalHeader.nextPageId;
 }
 
 void IndexPage::InsertNode(Indexing::Node *& node, page_offset_t* indexPosition)

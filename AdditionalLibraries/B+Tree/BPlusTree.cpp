@@ -225,7 +225,7 @@ namespace Indexing
         if (!root)
             return;
 
-        const Node *currentNode = this->SearchKey(minKey);
+        Node *currentNode = this->SearchKey(minKey);
         const Node *previousNode = nullptr;
 
         while (currentNode)
@@ -251,6 +251,10 @@ namespace Indexing
             }
 
             previousNode = currentNode;
+            currentNode->next = (currentNode->next == nullptr && currentNode->nextNodeHeader.pageId != 0) 
+                            ? this->GetNodeFromPage(currentNode->nextNodeHeader) 
+                            : currentNode->next;
+
             currentNode = currentNode->next;
         }
     }
@@ -427,9 +431,11 @@ namespace Indexing
 
             const int index = iterator - currentNode->keys.begin();
 
-            currentNode = (currentNode->children[index] == nullptr) 
+            currentNode->children[index] = (currentNode->children[index] == nullptr) 
                         ? this->GetNodeFromPage(currentNode->childrenHeaders[index]) 
                         : currentNode->children[index];
+
+            currentNode = currentNode->children[index];
         }
 
         return currentNode;
@@ -437,9 +443,7 @@ namespace Indexing
 
     void BPlusTree::InsertNodeToPage(Node*& node)
     {
-        IndexPage* indexPage = (this->firstIndexPageId == 0) 
-                     ? this->database->CreateIndexPage(this->tableId) 
-                     : this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize());
+        IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize());
 
         if(this->firstIndexPageId == 0)
             this->firstIndexPageId = indexPage->GetPageId();

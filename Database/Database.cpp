@@ -474,69 +474,41 @@ namespace DatabaseEngine
     {
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
-        PageFreeSpacePage* pageFreeSpacePage = nullptr;
-
-        page_id_t nextPageId = indexPageId;
-
-        IndexPage* indexPage = nullptr;
-
-        while (nextPageId != 0)
-        {
-            indexPage = StorageManager::Get().GetIndexPage(nextPageId);
-
-            if(indexPage->GetBytesLeft() >= nodeSize)
-                return indexPage;
-
-            nextPageId = indexPage->GetNextPageId();
-        }
-
-        //this should be above but need to check later
-        const page_id_t freeSpacePageId = Database::GetPfsAssociatedPage(nextPageId);
-
-        pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(freeSpacePageId);
+        if(indexPageId == 0)
+            return this->CreateIndexPage(tableId);
 
         IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
 
         vector<extent_id_t> allocatedExtents;
         indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
 
-        bool newPageFound = false;
         for(const auto& extentId: allocatedExtents)
         {
             const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
             {
+                const page_id_t freeSpacePageId = Database::GetPfsAssociatedPage(indexPageId);
+
+                PageFreeSpacePage* pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(freeSpacePageId);
+
                 if(pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
-                    break;
+                    continue;
 
                 //page is free
                 if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
                     continue;
 
-                IndexPage* nextIndexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
+                IndexPage* indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
 
-                if(nextIndexPage->GetBytesLeft() != PAGE_SIZE - sizeof(IndexPageAdditionalHeader) - PageHeader::GetPageHeaderSize())
+                if(indexPage->GetBytesLeft() < nodeSize)
                     continue;
 
-                indexPage->SetNextPageId(nextIndexPageId);
-                indexPage = nextIndexPage;
-
-                newPageFound = true;
-
-                break;
+                return indexPage;
             }
         }
 
-        if(!newPageFound)
-        {
-            IndexPage* prevIndexPage = indexPage;
-            indexPage = this->CreateIndexPage(tableHeader.tableId);
-
-            prevIndexPage->SetNextPageId(indexPage->GetPageId());
-        }
-
-        return indexPage;
+        return this->CreateIndexPage(tableHeader.tableId);
     }
 
     void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)
