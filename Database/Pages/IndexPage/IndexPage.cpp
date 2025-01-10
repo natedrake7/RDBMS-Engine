@@ -150,6 +150,9 @@ void IndexPage::WritePageToFile(fstream *filePtr)
       else
       {
           //non clustered indexed tree
+          const uint16_t numberOfRows = node->nonClusteredData.size();
+          filePtr->write(reinterpret_cast<const char*>(&numberOfRows), sizeof(uint16_t));
+
           for (const auto& nonClusteredData : node->nonClusteredData)
             filePtr->write(reinterpret_cast<const char*>(&nonClusteredData), sizeof(BPlusTreeData) + sizeof(page_offset_t));
       }

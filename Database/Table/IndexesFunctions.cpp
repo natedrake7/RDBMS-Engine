@@ -46,7 +46,7 @@ namespace DatabaseEngine::StorageTypes {
 
         if (nonClusteredTree == nullptr)
         {
-            nonClusteredTree = new BPlusTree(this, this->header.nonClusteredIndexPageIds[nonClusteredIndexId], TreeType::NonClustered);
+            nonClusteredTree = new BPlusTree(this, this->header.nonClusteredIndexPageIds[nonClusteredIndexId], TreeType::NonClustered, nonClusteredIndexId);
 
             this->GetNonClusteredIndexFromDisk(nonClusteredIndexId);
         }
@@ -77,7 +77,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Node* Table::GetIndexFromDisk(const page_id_t & indexPageId) const
     {
-        IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
+        IndexPage* indexPage = StorageManager::Get().GetIndexPage(indexPageId);
 
         return indexPage->GetRoot();
     }

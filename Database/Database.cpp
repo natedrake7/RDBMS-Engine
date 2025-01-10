@@ -342,11 +342,13 @@ namespace DatabaseEngine
 
         this->SplitNonClusteredData(splitLeaves, branchingFactor);
 
+        const page_size_t prevNodeSize = node->GetNodeSize();
+
         node->keys.insert(node->keys.begin() + indexPosition, key);
 
         node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
 
-        //check if node can fit inside the page else move the node to another page
+        this->SplitNodeFromIndexPage(*table, node, prevNodeSize);
     }
 
     void Database::SplitNonClusteredData(vector<pair<Indexing::Node*,Indexing::Node*>>& splitLeaves, const int & branchingFactor)
@@ -466,7 +468,7 @@ namespace DatabaseEngine
         return nextLeafPage;
     }
 
-    IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize)
+    IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize, const int& nonClusteredIndexId)
     {
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
@@ -477,7 +479,15 @@ namespace DatabaseEngine
 
             Table* table = this->tables.at(tableId);
 
-            table->SetIndexPageId(indexPage->GetPageId());
+            const page_id_t& newIndexPageId = indexPage->GetPageId();
+
+            if (nonClusteredIndexId != -1)
+            {
+                table->SetNonClusteredIndexPageId(newIndexPageId, nonClusteredIndexId);
+                return indexPage;
+            }
+
+            table->SetClusteredIndexPageId(newIndexPageId);
 
             return indexPage;
         }

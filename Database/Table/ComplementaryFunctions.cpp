@@ -54,7 +54,9 @@ namespace DatabaseEngine::StorageTypes{
 
     Database * Table::GetDatabase() const { return this->database; }
 
-    void Table::SetIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
+    void Table::SetClusteredIndexPageId(const page_id_t &indexPageId) { this->header.clusteredIndexPageId = indexPageId; }
+
+    void Table::SetNonClusteredIndexPageId(const page_id_t & indexPageId, const int& indexPosition) { this->header.nonClusteredIndexPageIds.at(indexPosition) = indexPageId; }
 
     void Table::SetIndexAllocationMapPageId(const page_id_t & pageId) { this->header.indexAllocationMapPageId = pageId; }
 

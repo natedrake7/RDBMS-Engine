@@ -177,7 +177,7 @@ public:
                                                             const StorageTypes::Table &table, 
                                                             extent_id_t *nextExtentId);
 
-    [[nodiscard]] Pages::IndexPage* FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize);
+    [[nodiscard]] Pages::IndexPage* FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize, const int& nonClusteredIndexId = -1);
 };
 
 void CreateDatabase(const string &dbName);

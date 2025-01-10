@@ -169,7 +169,9 @@ namespace DatabaseEngine::StorageTypes
 
             void GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>> *vector) const;
 
-            void SetIndexPageId(const page_id_t &indexPageId);
+            void SetClusteredIndexPageId(const page_id_t &indexPageId);
+
+            void SetNonClusteredIndexPageId(const page_id_t& indexPageId, const int& indexPosition);
 
             void SetIndexAllocationMapPageId(const page_id_t& pageId);
 

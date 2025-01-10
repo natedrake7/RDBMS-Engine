@@ -64,7 +64,7 @@ namespace Indexing
 
     Node::~Node() = default;
 
-    BPlusTree::BPlusTree(const Table *table, const page_id_t& indexPageId, const TreeType& treeType)
+    BPlusTree::BPlusTree(const Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
     {
         const auto &tableHeader = table->GetTableHeader();
         
@@ -75,6 +75,7 @@ namespace Indexing
         this->type = treeType;
         this->isDirty = false;
         this->database = table->GetDatabase();
+        this->nonClusteredIndexId = nonClusteredIndexId;
     }
 
     BPlusTree::BPlusTree()
@@ -441,7 +442,7 @@ namespace Indexing
 
     void BPlusTree::InsertNodeToPage(Node*& node)
     {
-        IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize());
+        IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize(), this->nonClusteredIndexId);
 
         //could only be set once and not multiple times but insignificant
         indexPage->SetTreeType(this->type);

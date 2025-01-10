@@ -242,8 +242,11 @@ namespace DatabaseEngine::StorageTypes {
         //  }
         //}
 
-        //this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
-        //return;
+        if (this->HasNonClusteredIndexes())
+        {
+            this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
+            return;
+        }
 
         if (this->GetTableType() == TableType::HEAP)
         {

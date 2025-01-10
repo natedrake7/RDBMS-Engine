@@ -108,6 +108,7 @@ namespace Indexing
         Node *root;
         bool isDirty;
         TreeType type;
+        int nonClusteredIndexId;
         DatabaseEngine::Database* database;
 
         void SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves);
@@ -119,7 +120,7 @@ namespace Indexing
         Node* GetNodeFromPage(const NodeHeader& header) const;
 
     public:
-        explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType);
+        explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId = -1);
         BPlusTree();
         ~BPlusTree();
 
