@@ -522,23 +522,66 @@ namespace DatabaseEngine
 
         Database::InsertRowToPage(pageFreeSpacePage, page, row, indexPosition);
 
-        const auto previousNodeSize = node->GetNodeSize();
+        const page_size_t previousNodeSize = node->GetNodeSize();
 
         node->keys.insert(node->keys.begin() + indexPosition, key);
 
+        this->SplitNodeFromIndexPage(table, node, previousNodeSize);
+    }
+
+    void Database::SplitNodeFromIndexPage(const Table& table, Node*& node, const page_size_t& previousNodeSize)
+    {
         IndexPage* indexPage = StorageManager::Get().GetIndexPage(node->header.pageId);
 
         const auto& nodeSize = node->GetNodeSize();
 
-        if (nodeSize > indexPage->GetBytesLeft() + previousNodeSize)
+        if (nodeSize <= indexPage->GetBytesLeft() + previousNodeSize)
+            return;
+
+        indexPage->DeleteNode(node->header.indexPosition);
+
+        const NodeHeader previousHeader = node->header;
+
+        indexPage = this->FindOrAllocateNextIndexPage(table.GetTableId(), indexPage->GetPageId(), nodeSize);
+
+        indexPage->InsertNode(node, &node->header.indexPosition);
+        node->header.pageId = indexPage->GetPageId();
+
+        if (node->parentHeader.pageId != 0)
         {
-            indexPage->DeleteNode(node->header.indexPosition);
+            IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(node->parentHeader.pageId);
 
-            indexPage = this->FindOrAllocateNextIndexPage(table.GetTableId(), indexPage->GetPageId(), nodeSize);
+            Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
-            indexPage->InsertNode(node, &node->header.indexPosition);
+            for (auto& child : parentNode->childrenHeaders)
+                if (child.pageId == previousHeader.pageId && child.indexPosition == previousHeader.indexPosition)
+                    parentNodeIndexPage->UpdateNodeChildHeader(node->parentHeader.indexPosition, child.indexPosition, node->header);
+        }
 
-            node->header.pageId = indexPage->GetPageId();
+        if (node->isLeaf)
+        {
+            if (node->previousNodeHeader.pageId != 0)
+            {
+                IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(node->previousNodeHeader.pageId);
+
+                previousLeafNodeIndexPage->UpdateNodeNextLeafHeader(node->previousNodeHeader.indexPosition, node->header);
+            }
+
+            if (node->nextNodeHeader.pageId != 0)
+            {
+                IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(node->nextNodeHeader.pageId);
+
+                nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, node->header);
+            }
+
+            return; //leaf has not children so return
+        }
+
+        for (auto& child : node->childrenHeaders)
+        {
+            IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(child.pageId);
+
+            childIndexPage->UpdateNodeParentHeader(child.indexPosition, node->header);
         }
     }
 

@@ -87,12 +87,11 @@ namespace Indexing
         
         BPlusTreeData data;
         vector<BPlusTreeNonClusteredData> nonClusteredData;
-
-        vector<Node *> children;
-        vector<NodeHeader> childrenHeaders;
         
-        Node *next;
+        NodeHeader parentHeader;
+        vector<NodeHeader> childrenHeaders;
         NodeHeader nextNodeHeader;
+        NodeHeader previousNodeHeader;
 
         explicit Node(const bool &isLeaf = false);
         vector<Key> &GetKeysData();

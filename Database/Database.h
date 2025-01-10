@@ -118,6 +118,8 @@ protected:
                                   const Indexing::Key &key,
                                   const int &indexPosition);
 
+    void SplitNodeFromIndexPage(const StorageTypes::Table& table, Indexing::Node*& node, const page_size_t& previousNodeSize);
+
     [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
 
 public:

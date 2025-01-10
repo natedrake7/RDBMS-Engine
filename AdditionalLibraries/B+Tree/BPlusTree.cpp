@@ -27,7 +27,6 @@ namespace Indexing
     Node::Node(const bool &isLeaf)
     {
         this->isLeaf = isLeaf;
-        this->next = nullptr;
         this->isRoot = false;
     }
 
@@ -37,8 +36,9 @@ namespace Indexing
 
     page_size_t Node::GetNodeSize()
     {
-        page_size_t size = 0;
-        
+        //included self and parent header
+        page_size_t size = 2 * NodeHeader::GetNodeHeaderSize();
+
         //if node is leaf or not
         size += 2 * sizeof(bool);
 
@@ -54,11 +54,10 @@ namespace Indexing
                     ? sizeof(BPlusTreeData) 
                     : (this->nonClusteredData.size() * (sizeof(BPlusTreeData) + sizeof(page_offset_t))) + sizeof(uint16_t);
 
-            size += NodeHeader::GetNodeHeaderSize();
+            size += 2 * NodeHeader::GetNodeHeaderSize();
         }
-
         else
-            size += sizeof(uint16_t) + (this->children.size() * NodeHeader::GetNodeHeaderSize());
+            size += sizeof(uint16_t) + (this->childrenHeaders.size() * NodeHeader::GetNodeHeaderSize());
 
         return size;
     }
@@ -94,9 +93,10 @@ namespace Indexing
     void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves)
     {
         Node *newChild = new Node(child->isLeaf);
+        this->InsertNodeToPage(newChild);
 
         // Insert the new child into the parent's children vector at the correct position
-        parent->children.insert(parent->children.begin() + index + 1, newChild);
+        parent->childrenHeaders.insert(parent->childrenHeaders.begin() + index + 1, newChild->header);
 
         // Move the middle key from the child to the parent
         parent->keys.insert(parent->keys.begin() + index, child->keys[t - 1]);
@@ -107,22 +107,26 @@ namespace Indexing
         // Resize the old child to keep only the first half of its keys
         child->keys.resize(t - 1);
 
+        child->parentHeader = parent->header;
+        newChild->parentHeader = parent->header;
+
         if (!child->isLeaf)
         {
             // Assign the second half of the child pointers to the new child
-            newChild->children.assign(child->children.begin() + t, child->children.end());
+            newChild->childrenHeaders.assign(child->childrenHeaders.begin() + t, child->childrenHeaders.end());
 
-            // Resize the old child's children vector to keep only the first half
-            child->children.resize(t);
+            // Resize the old child's childrenHeaders vector to keep only the first half
+            child->childrenHeaders.resize(t);
 
             return;
         }
 
         // Maintain the linked list structure for leaf nodes
-        newChild->next = child->next;
-        child->next = newChild;
+        newChild->nextNodeHeader = child->nextNodeHeader;
+        newChild->previousNodeHeader = child->header;
+
+        child->nextNodeHeader = newChild->header;
         
-        this->InsertNodeToPage(newChild);
         splitLeaves->push_back(pair<Node *, Node *>(child, newChild));
     }
 
@@ -146,7 +150,7 @@ namespace Indexing
             this->InsertNodeToPage(newRoot);
 
             // add current root as leaf
-            newRoot->children.push_back(this->root);
+            newRoot->childrenHeaders.push_back(this->root->header);
             newRoot->isRoot = true;
             this->root->isRoot = false;
 
@@ -190,7 +194,7 @@ namespace Indexing
 
         int childIndex = iterator - node->keys.begin();
 
-        Node *child = node->children[childIndex];
+        Node *child = this->GetNodeFromPage(node->childrenHeaders[childIndex]);
 
         if (child->keys.size() == 2 * t - 1)
         {
@@ -200,7 +204,7 @@ namespace Indexing
                 childIndex++;
         }
 
-        return GetNonFullNode(node->children[childIndex], key, indexPosition, splitLeaves);
+        return GetNonFullNode(this->GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition, splitLeaves);
     }
 
     void BPlusTree::DeleteNode(Node *node)
@@ -208,9 +212,9 @@ namespace Indexing
         if (!node)
             return;
 
-        if (!node->isLeaf)
-            for (const auto &child : node->children)
-                this->DeleteNode(child);
+        //if (!node->isLeaf)
+        //    for (const auto &child : node->children)
+        //        this->DeleteNode(child);
 
         delete node;
     }
@@ -251,11 +255,9 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode->next = (currentNode->next == nullptr && currentNode->nextNodeHeader.pageId != 0) 
+            currentNode = (currentNode->nextNodeHeader.pageId != 0) 
                             ? this->GetNodeFromPage(currentNode->nextNodeHeader) 
-                            : currentNode->next;
-
-            currentNode = currentNode->next;
+                            : nullptr;
         }
     }
 
@@ -290,9 +292,9 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode = (currentNode->next == nullptr && currentNode->nextNodeHeader.pageId != 0) 
+            currentNode = (currentNode->nextNodeHeader.pageId != 0) 
                         ? this->GetNodeFromPage(currentNode->nextNodeHeader)
-                        : currentNode->next;
+                        : nullptr;
         }
     }
 
@@ -309,7 +311,7 @@ namespace Indexing
 
             const int index = iterator - currentNode->keys.begin();
 
-            currentNode = currentNode->children[index];
+            currentNode = this->GetNodeFromPage(currentNode->childrenHeaders[index]);
         }
 
         const Node *previousNode = nullptr;
@@ -334,7 +336,7 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode = currentNode->next;
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -391,7 +393,7 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode = currentNode->next;
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -417,8 +419,8 @@ namespace Indexing
         if(node->isLeaf)
             size += sizeof(BPlusTreeData); 
 
-        for (const auto &child : node->children)
-            GetNodeSize(child, size);
+        //for (const auto &child : node->children)
+        //    GetNodeSize(child, size);
     }
 
     Node *BPlusTree::SearchKey(const Key &key) const
@@ -431,11 +433,7 @@ namespace Indexing
 
             const int index = iterator - currentNode->keys.begin();
 
-            currentNode->children[index] = (currentNode->children[index] == nullptr) 
-                        ? this->GetNodeFromPage(currentNode->childrenHeaders[index]) 
-                        : currentNode->children[index];
-
-            currentNode = currentNode->children[index];
+           currentNode = this->GetNodeFromPage(currentNode->childrenHeaders[index]);
         }
 
         return currentNode;
@@ -488,10 +486,10 @@ namespace Indexing
 
         cout << "\n";
 
-        // Recursively print children, if any
-        if (!node->isLeaf)
-            for (const auto &childNode : node->children)
-                PrintTree(childNode, level + 1);
+        //// Recursively print children, if any
+        //if (!node->isLeaf)
+        //    for (const auto &childNode : node->children)
+        //        PrintTree(childNode, level + 1);
     }
 
     Key::Key()

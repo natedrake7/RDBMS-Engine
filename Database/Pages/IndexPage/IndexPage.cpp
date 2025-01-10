@@ -36,6 +36,12 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
         Node* node = new Node(isLeaf);
         node->isRoot = isRoot;
 
+        memcpy(&node->header, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
+        offSet += NodeHeader::GetNodeHeaderSize();
+
+        memcpy(&node->parentHeader, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
+        offSet += NodeHeader::GetNodeHeaderSize();
+
         uint16_t numberOfKeys;
         memcpy(&numberOfKeys, data.data() + offSet, sizeof(uint16_t));
         offSet += sizeof(uint16_t);
@@ -68,8 +74,6 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
                 node->childrenHeaders.push_back(childHeader);
             }
 
-            node->children.resize(numberOfChildren, nullptr);
-
             this->nodes.push_back(node);
             continue;
         }
@@ -97,6 +101,10 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             
         memcpy(&node->nextNodeHeader, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
         offSet += NodeHeader::GetNodeHeaderSize();
+
+        memcpy(&node->previousNodeHeader, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
+        offSet += NodeHeader::GetNodeHeaderSize();
+        
         this->nodes.push_back(node);
     }
 }
@@ -111,6 +119,9 @@ void IndexPage::WritePageToFile(fstream *filePtr)
       filePtr->write(reinterpret_cast<const char*>(&node->isLeaf), sizeof(bool));
       filePtr->write(reinterpret_cast<const char*>(&node->isRoot), sizeof(bool));
 
+      filePtr->write(reinterpret_cast<const char*>(&node->header), NodeHeader::GetNodeHeaderSize());
+      filePtr->write(reinterpret_cast<const char*>(&node->parentHeader), NodeHeader::GetNodeHeaderSize());
+
       const uint16_t numberOfKeys = node->keys.size();
       filePtr->write(reinterpret_cast<const char*>(&numberOfKeys), sizeof(uint16_t));
       for (const auto& key : node->keys)
@@ -121,11 +132,11 @@ void IndexPage::WritePageToFile(fstream *filePtr)
 
       if (!node->isLeaf)
       {
-          const uint16_t numberOfChildren = node->children.size();
+          const uint16_t numberOfChildren = node->childrenHeaders.size();
 
           filePtr->write(reinterpret_cast<const char*>(&numberOfChildren), sizeof(uint16_t));
-          for (const auto& child : node->children)
-              filePtr->write(reinterpret_cast<const char*>(&child->header), NodeHeader::GetNodeHeaderSize());
+          for (const auto& childHeader : node->childrenHeaders)
+              filePtr->write(reinterpret_cast<const char*>(&childHeader), NodeHeader::GetNodeHeaderSize());
 
           continue;
       }
@@ -140,13 +151,8 @@ void IndexPage::WritePageToFile(fstream *filePtr)
             filePtr->write(reinterpret_cast<const char*>(&nonClusteredData), sizeof(BPlusTreeData) + sizeof(page_offset_t));
       }
 
-      if (node->next == nullptr)
-      {
-          NodeHeader defaultHeader;
-          filePtr->write(reinterpret_cast<const char*>(&defaultHeader),  NodeHeader::GetNodeHeaderSize());
-      }
-      else
-         filePtr->write(reinterpret_cast<const char*>(&node->next->header),  NodeHeader::GetNodeHeaderSize());
+      filePtr->write(reinterpret_cast<const char*>(&node->nextNodeHeader),  NodeHeader::GetNodeHeaderSize());
+      filePtr->write(reinterpret_cast<const char*>(&node->previousNodeHeader),  NodeHeader::GetNodeHeaderSize());
   }
 }
 
@@ -172,6 +178,42 @@ Node* IndexPage::GetRoot()
             return node;
 
     return nullptr;
+}
+
+void IndexPage::UpdateNodeParentHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader & nodeHeader)
+{
+   Node* node = this->nodes.at(indexPosition);
+
+   node->parentHeader = nodeHeader;
+
+   this->isDirty = true;
+}
+
+void IndexPage::UpdateNodeChildHeader(const page_offset_t & indexPosition, const page_offset_t & childIndexPosition, const Indexing::NodeHeader & nodeHeader)
+{
+    Node* node = this->nodes.at(indexPosition);
+
+    node->childrenHeaders[childIndexPosition] = nodeHeader;
+
+    this->isDirty = true;
+}
+
+void IndexPage::UpdateNodeNextLeafHeader(const page_offset_t & indexPosition, const Indexing::NodeHeader & nodeHeader)
+{
+    Node* node = this->nodes.at(indexPosition);
+
+    node->nextNodeHeader = nodeHeader;
+
+    this->isDirty = true;
+}
+
+void IndexPage::UpdateNodePreviousLeafHeader(const page_offset_t & indexPosition, const Indexing::NodeHeader & nodeHeader)
+{
+    Node* node = this->nodes.at(indexPosition);
+
+    node->previousNodeHeader = nodeHeader;
+
+    this->isDirty = true;
 }
 
 } // namespace Pages

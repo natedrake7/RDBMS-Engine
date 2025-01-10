@@ -10,6 +10,7 @@ class BPlusTree;
 struct Node;
 struct Key;
 struct QueryData;
+struct NodeHeader;
 } // namespace Indexing
 
 namespace DatabaseEngine::StorageTypes {
@@ -19,6 +20,7 @@ class Table;
 namespace Storage {
 class PageManager;
 }
+
 
 namespace Pages {
 class IndexPage final : public Page {
@@ -40,5 +42,13 @@ public:
 	[[nodiscard]] Indexing::Node*& GetNodeByIndex(const page_offset_t& indexPosition);
 
 	[[nodiscard]] Indexing::Node* GetRoot();
+
+	void UpdateNodeParentHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
+
+	void UpdateNodeChildHeader(const page_offset_t& indexPosition, const page_offset_t& childIndexPosition, const Indexing::NodeHeader& nodeHeader);
+
+	void UpdateNodeNextLeafHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
+
+	void UpdateNodePreviousLeafHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
 	};
 } // namespace Pages
