@@ -160,6 +160,7 @@ void IndexPage::InsertNode(Indexing::Node *& node, page_offset_t* indexPosition)
     this->header.pageSize++;
     this->isDirty = true;
 }
+
 void IndexPage::DeleteNode(const page_offset_t & indexPosition) { this->nodes.erase(this->nodes.begin() + indexPosition); }
 
 Node *& IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) { return this->nodes.at(indexPosition); }

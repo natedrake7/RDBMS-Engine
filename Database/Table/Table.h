@@ -111,14 +111,8 @@ namespace DatabaseEngine::StorageTypes
             static void SetDecimalData(Block *&block, const Field &inputData);
             void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
         
-            void WriteClusteredIndexToPage();
-            void WriteNonClusteredIndexToPage(const int& indexId);
-            void WriteNodeToPage(Indexing::Node* node, Pages::IndexPage*& indexPage, page_offset_t &offSet);
-
             void GetClusteredIndexFromDisk();
             void GetNonClusteredIndexFromDisk(const int& indexId);
-            void GetIndexFromDisk(Indexing::Node*& root, const page_id_t& indexPageId, const TreeType& treeType);
-            Indexing::Node* GetNodeFromDisk(Pages::IndexPage*& indexPage, const TreeType& treeType, int& currentNodeIndex, page_offset_t& offSet, Indexing::Node*& prevLeafNode);
         
             void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
             void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);

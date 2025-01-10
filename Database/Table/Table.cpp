@@ -113,20 +113,10 @@ namespace DatabaseEngine::StorageTypes {
 
       Table::~Table() 
       {
-        if(this->clusteredIndexedTree != nullptr 
-            && this->clusteredIndexedTree->IsTreeDirty())
-          this->WriteClusteredIndexToPage();
-
         delete this->clusteredIndexedTree;
 
         for (int i = 0; i < this->nonClusteredIndexedTrees.size(); i++)
-        {
-            if (this->nonClusteredIndexedTrees[i] != nullptr 
-                && this->nonClusteredIndexedTrees[i]->IsTreeDirty())
-                this->WriteNonClusteredIndexToPage(i);
-
             delete this->nonClusteredIndexedTrees[i];
-        }
 
         HeaderPage* headerPage = StorageManager::Get().GetHeaderPage(this->database->GetFileName());
 

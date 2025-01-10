@@ -58,8 +58,6 @@ int main()
         //table->Update(updates, nullptr);
 
         ExecuteQuery(table);
-
-        ExecuteQuery(table);
     }
     catch (const exception &exception) 
     {
