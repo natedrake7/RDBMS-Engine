@@ -473,10 +473,10 @@ namespace DatabaseEngine
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
         //tree has no indexPage
+        Table* table = this->tables.at(tableId);
         if (indexPageId == 0)
         {
             IndexPage* indexPage = this->CreateIndexPage(tableId);
-            Table* table = this->tables.at(tableId);
 
             const page_id_t& newIndexPageId = indexPage->GetPageId();
             indexPage->SetTreeId(newIndexPageId);
@@ -490,6 +490,12 @@ namespace DatabaseEngine
             table->SetClusteredIndexPageId(newIndexPageId);
             return indexPage;
         }
+
+        //set the updated index pageId of the root node
+        if (nonClusteredIndexId != -1)
+            table->SetNonClusteredIndexPageId(indexPageId, nonClusteredIndexId);
+        else
+            table->SetClusteredIndexPageId(indexPageId);
 
         IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
         

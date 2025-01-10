@@ -140,7 +140,7 @@ namespace Indexing
 
         const int &GetBranchingFactor() const;
 
-        void WriteTreeHeaderToFile(fstream *filePtr);
+        void WriteTreeHeaderToFile(fstream *filePtr) const;
 
         void ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
 

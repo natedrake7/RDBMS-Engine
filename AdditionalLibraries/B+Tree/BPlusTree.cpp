@@ -251,10 +251,11 @@ namespace Indexing
                     return;
             }
 
+            if(currentNode->nextNodeHeader.pageId == 0)
+                return;
+
             previousNode = currentNode;
-            currentNode = (currentNode->nextNodeHeader.pageId != 0) 
-                            ? this->GetNodeFromPage(currentNode->nextNodeHeader) 
-                            : nullptr;
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -288,10 +289,11 @@ namespace Indexing
                     return;
             }
 
+            if(currentNode->nextNodeHeader.pageId == 0)
+                return;
+
             previousNode = currentNode;
-            currentNode = (currentNode->nextNodeHeader.pageId != 0) 
-                        ? this->GetNodeFromPage(currentNode->nextNodeHeader)
-                        : nullptr;
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -354,10 +356,10 @@ namespace Indexing
 
     const int &BPlusTree::GetBranchingFactor() const { return this->t; }
 
-    void BPlusTree::WriteTreeHeaderToFile(fstream *filePtr)
+    void BPlusTree::WriteTreeHeaderToFile(fstream *filePtr) const
     {
-        filePtr->write(reinterpret_cast<char *>(&this->t), sizeof(int));
-        filePtr->write(reinterpret_cast<char *>(&this->tableId), sizeof(table_id_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->t), sizeof(int));
+        filePtr->write(reinterpret_cast<const char *>(&this->tableId), sizeof(table_id_t));
     }
 
     const bool& BPlusTree::IsTreeDirty() const { return this->isDirty; }
@@ -443,12 +445,11 @@ namespace Indexing
         //could only be set once and not multiple times but insignificant
         indexPage->SetTreeType(this->type);
 
-        if (this->firstIndexPageId == 0)
-            this->firstIndexPageId = indexPage->GetPageId();
+        indexPage->InsertNode(node, &node->header.indexPosition);
 
-         indexPage->InsertNode(node, &node->header.indexPosition);
+        node->header.pageId = indexPage->GetPageId();
 
-         node->header.pageId = indexPage->GetPageId();
+        this->firstIndexPageId = root->header.pageId;
     }
 
     Node* BPlusTree::GetNodeFromPage(const NodeHeader & header) const
