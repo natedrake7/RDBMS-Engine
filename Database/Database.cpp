@@ -291,7 +291,7 @@ namespace DatabaseEngine
 
         SplitPage(splitLeaves, tree->GetBranchingFactor(), table);
 
-        const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
+        //const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
 
         if (node->data.pageId != 0)
         {
@@ -308,9 +308,7 @@ namespace DatabaseEngine
 
         const page_id_t &newPageId = newPage->GetPageId();
 
-        const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(newPageId);
-
-        PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pageFreeSpacePageId);
+        PageFreeSpacePage *pageFreeSpacePage =  this->GetAssociatedPfsPage(newPageId);
 
         // should never fail
         Database::InsertRowToPage(pageFreeSpacePage, newPage, row, indexPosition);
@@ -347,6 +345,8 @@ namespace DatabaseEngine
         node->keys.insert(node->keys.begin() + indexPosition, key);
 
         node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
+
+        //check if node can fit inside the page else move the node to another page
     }
 
     void Database::SplitNonClusteredData(vector<pair<Indexing::Node*,Indexing::Node*>>& splitLeaves, const int & branchingFactor)
@@ -385,9 +385,7 @@ namespace DatabaseEngine
 
             extent_id_t nextExtentId = 0;
 
-            const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
-
-            PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pageFreeSpacePageId);
+            PageFreeSpacePage *pageFreeSpacePage = this->GetAssociatedPfsPage(pageId);
 
             Page *nextLeafPage = this->FindOrAllocateNextDataPage(pageFreeSpacePage, pageId, extentFirstPageId, extentId, table, &nextExtentId);
 
@@ -462,9 +460,7 @@ namespace DatabaseEngine
         {
             nextLeafPage = this->CreateDataPage(table.GetTableId(), nextExtentId);
 
-            const page_id_t newPageAssociatedPfs = Database::GetPfsAssociatedPage(nextLeafPage->GetPageId());
-
-            pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(newPageAssociatedPfs);
+            pageFreeSpacePage = this->GetAssociatedPfsPage(nextLeafPage->GetPageId());
         }
 
         return nextLeafPage;
@@ -474,8 +470,17 @@ namespace DatabaseEngine
     {
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
-        if(indexPageId == 0)
-            return this->CreateIndexPage(tableId);
+        //tree has no indexPage
+        if (indexPageId == 0)
+        {
+            IndexPage* indexPage = this->CreateIndexPage(tableId);
+
+            Table* table = this->tables.at(tableId);
+
+            table->SetIndexPageId(indexPage->GetPageId());
+
+            return indexPage;
+        }
 
         IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
 
@@ -488,9 +493,7 @@ namespace DatabaseEngine
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
             {
-                const page_id_t freeSpacePageId = Database::GetPfsAssociatedPage(indexPageId);
-
-                PageFreeSpacePage* pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(freeSpacePageId);
+                PageFreeSpacePage *pageFreeSpacePage = this->GetAssociatedPfsPage(indexPageId);
 
                 if(pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
                     continue;
@@ -513,9 +516,7 @@ namespace DatabaseEngine
 
     void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)
     {
-        const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(node->data.pageId);
-
-        PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pageFreeSpacePageId);
+        PageFreeSpacePage *pageFreeSpacePage = this->GetAssociatedPfsPage(node->data.pageId);
 
         Page *page = StorageManager::Get().GetPage(node->data.pageId, node->data.extentId, &table);
 
@@ -539,6 +540,13 @@ namespace DatabaseEngine
 
             node->header.pageId = indexPage->GetPageId();
         }
+    }
+
+    PageFreeSpacePage * Database::GetAssociatedPfsPage(const page_id_t & pageId)
+    {
+        const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
+
+        return StorageManager::Get().GetPageFreeSpacePage(pageFreeSpacePageId);
     }
 
     void Database::InsertRowToPage(PageFreeSpacePage *pageFreeSpacePage, Page *page, Row *row, const int &indexPosition)

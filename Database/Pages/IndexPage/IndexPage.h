@@ -33,8 +33,6 @@ public:
 	void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
 	void WritePageToFile(fstream *filePtr) override;
 
-	//void WriteTreeDataToPage(Indexing::Node *node, page_offset_t &offSet);
-
 	void InsertNode(Indexing::Node*& node, page_offset_t* indexPosition);
 
 	void DeleteNode(const page_offset_t& indexPosition);

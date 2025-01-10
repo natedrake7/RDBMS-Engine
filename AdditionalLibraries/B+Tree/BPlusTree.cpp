@@ -445,7 +445,7 @@ namespace Indexing
     {
         IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize());
 
-        if(this->firstIndexPageId == 0)
+        if (this->firstIndexPageId == 0)
             this->firstIndexPageId = indexPage->GetPageId();
 
          indexPage->InsertNode(node, &node->header.indexPosition);

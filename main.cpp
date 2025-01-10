@@ -103,7 +103,7 @@ void CreateActorsTable(Database *db)
     const vector<column_index_t> clusteredIndexes; /*= {0};*/
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 0 } };
 
-    Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, nullptr);
+    Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, &nonClusteredIndexes);
     vector<vector<Field>> inputData;
 
     for (int i = 0; i < 100; i++) 

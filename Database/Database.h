@@ -118,6 +118,8 @@ protected:
                                   const Indexing::Key &key,
                                   const int &indexPosition);
 
+    [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
+
 public:
     explicit Database(const string &dbName);
 
