@@ -26,6 +26,7 @@ namespace Pages {
 class IndexPage final : public Page {
 	vector<Indexing::Node*> nodes; 
 	vector<column_index_t> indexedColumns;
+    TreeType treeType;
 
 public:
 	IndexPage(const page_id_t &pageId, const bool &isPageCreation);
@@ -34,6 +35,8 @@ public:
 
 	void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
 	void WritePageToFile(fstream *filePtr) override;
+
+	void SetTreeType(const TreeType& treeType);
 
 	void InsertNode(Indexing::Node*& node, page_offset_t* indexPosition);
 

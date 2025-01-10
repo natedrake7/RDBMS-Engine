@@ -443,6 +443,9 @@ namespace Indexing
     {
         IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize());
 
+        //could only be set once and not multiple times but insignificant
+        indexPage->SetTreeType(this->type);
+
         if (this->firstIndexPageId == 0)
             this->firstIndexPageId = indexPage->GetPageId();
 

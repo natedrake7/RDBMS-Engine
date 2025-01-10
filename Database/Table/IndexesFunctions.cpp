@@ -15,7 +15,6 @@
 #include "../Pages/Page.h"
 #include "../Row/Row.h"
 
-
 using namespace Pages;
 using namespace ByteMaps;
 using namespace Indexing;
@@ -57,9 +56,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::GetClusteredIndexFromDisk() 
     {
-        IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
-
-        Node* root = indexPage->GetRoot();
+        Node* root = this->GetIndexFromDisk(this->header.clusteredIndexPageId);
 
         this->clusteredIndexedTree->SetRoot(root);
 
@@ -71,12 +68,17 @@ namespace DatabaseEngine::StorageTypes {
         if(this->header.nonClusteredIndexPageIds[indexId] == 0)
             return;
 
-        IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->header.nonClusteredIndexPageIds[indexId]);
-
-        Node* root = indexPage->GetRoot();
+        Node* root =  this->GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
 
         this->nonClusteredIndexedTrees[indexId]->SetRoot(root);
 
         this->nonClusteredIndexedTrees[indexId]->SetTreeType(TreeType::NonClustered);
+    }
+
+    Node* Table::GetIndexFromDisk(const page_id_t & indexPageId) const
+    {
+        IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->header.clusteredIndexPageId);
+
+        return indexPage->GetRoot();
     }
 }

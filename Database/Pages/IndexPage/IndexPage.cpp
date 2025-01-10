@@ -23,6 +23,9 @@ IndexPage::~IndexPage()
 
 void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) 
 {
+    memcpy(&this->treeType, data.data() + offSet, sizeof(TreeType));
+    offSet += sizeof(TreeType);
+
     for (int i = 0; i < this->header.pageSize; i++)
     {
         bool isLeaf;
@@ -78,7 +81,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             continue;
         }
 
-        if (true)
+        if (this->treeType == TreeType::Clustered)
         {
             memcpy(&node->data, data.data() + offSet, sizeof(BPlusTreeData));
             offSet += sizeof(BPlusTreeData);
@@ -112,8 +115,8 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
 void IndexPage::WritePageToFile(fstream *filePtr) 
 {
   this->WritePageHeaderToFile(filePtr);
+  filePtr->write(reinterpret_cast<const char *>(&this->treeType), sizeof(TreeType));
 
-  int size = 0;
   for (const auto& node : nodes)
   {
       filePtr->write(reinterpret_cast<const char*>(&node->isLeaf), sizeof(bool));
@@ -142,7 +145,7 @@ void IndexPage::WritePageToFile(fstream *filePtr)
       }
 
       //clustered indexed tree
-      if (node->nonClusteredData.empty())
+      if (this->treeType == TreeType::Clustered)
            filePtr->write(reinterpret_cast<const char*>(&node->data), sizeof(BPlusTreeData));
       else
       {
@@ -155,6 +158,8 @@ void IndexPage::WritePageToFile(fstream *filePtr)
       filePtr->write(reinterpret_cast<const char*>(&node->previousNodeHeader),  NodeHeader::GetNodeHeaderSize());
   }
 }
+
+void IndexPage::SetTreeType(const TreeType & treeType) { this->treeType = treeType; }
 
 void IndexPage::InsertNode(Indexing::Node *& node, page_offset_t* indexPosition)
 {
