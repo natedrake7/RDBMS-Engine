@@ -100,13 +100,13 @@ protected:
                                 extent_id_t* rowExtentId,
                                 int* rowIndex);
 
-    void SplitPage( vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves,
+    void SplitPage( vector<tuple<Indexing::Node *, Indexing::Node *, Indexing::Node *>> &splitLeaves,
                     const int &branchingFactor,
                     const StorageTypes::Table &table);
 
-    void SplitNonClusteredData(vector<pair<Indexing::Node *, Indexing::Node *>> &splitLeaves, const int &branchingFactor);
+    void SplitNonClusteredData(const StorageTypes::Table& table, vector<tuple<Indexing::Node *, Indexing::Node *, Indexing::Node *>> &splitLeaves, const int &branchingFactor);
 
-    void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId, const extent_id_t& nextLeafExtentId);
+    void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId);
 
     static void InsertRowToPage( Pages::PageFreeSpacePage *pageFreeSpacePage,
                                  Pages::Page *page, StorageTypes::Row *row,
@@ -118,7 +118,7 @@ protected:
                                   const Indexing::Key &key,
                                   const int &indexPosition);
 
-    void SplitNodeFromIndexPage(const StorageTypes::Table& table, Indexing::Node*& node, const page_size_t& previousNodeSize);
+    void SplitNodeFromIndexPage(const StorageTypes::Table& table, Indexing::Node*& node);
 
     [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
 
@@ -162,7 +162,7 @@ public:
 
     Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId);
 
-    Pages::IndexPage *CreateIndexPage(const table_id_t &tableId);
+    Pages::IndexPage *CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId = 0);
 
     void SetPageMetaDataToPfs(const Pages::Page *page) const;
 

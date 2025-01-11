@@ -342,12 +342,17 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
-        const Page *page = StorageManager::Get().GetPage(results[0].treeData.pageId, results[0].treeData.extentId, this);
+        const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].treeData.pageId);
+        const Page *page = StorageManager::Get().GetPage(results[0].treeData.pageId, pageExtentId, this);
+
         for (const auto &result : results)
         {
             // get new page else use current one
             if (result.treeData.pageId != 0 && result.treeData.pageId != page->GetPageId())
-                page = StorageManager::Get().GetPage(result.treeData.pageId, result.treeData.extentId, this);
+            {
+                const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(result.treeData.pageId);
+                page = StorageManager::Get().GetPage(result.treeData.pageId, pageExtentId, this);
+            }
 
             selectedRows->push_back(page->GetRowByIndex(*this, result.indexPosition));
         }
@@ -371,13 +376,17 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
-        const Page *page = StorageManager::Get().GetPage(results[0].pageId, results[0].extentId, this);
+        const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        const Page *page = StorageManager::Get().GetPage(results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
         {
             // get new page else use current one
             if (result.pageId != 0 && result.pageId != page->GetPageId())
-                page = StorageManager::Get().GetPage(result.pageId, result.extentId, this);
+            {
+                const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+                page = StorageManager::Get().GetPage(result.pageId, pageExtentId, this);
+            }
 
             selectedRows->push_back(page->GetRowByIndex(*this, result.index));
         }

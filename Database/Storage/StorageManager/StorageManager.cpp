@@ -412,8 +412,7 @@ void StorageManager::OpenSystemExtent(const Constants::extent_id_t &extentId)
   // read page from disk, call this->fileManager
   fstream *file = this->fileManager.GetFile(filename);
 
-  const page_id_t firstExtentPageId =
-      DatabaseEngine::Database::CalculateSystemPageOffsetByExtentId(extentId);
+  const page_id_t firstExtentPageId = DatabaseEngine::Database::CalculateSystemPageOffsetByExtentId(extentId);
 
   const streampos extentOffset = firstExtentPageId * PAGE_SIZE;
 
@@ -440,10 +439,9 @@ void StorageManager::OpenSystemExtent(const Constants::extent_id_t &extentId)
       continue;
 
     if (this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
-      this->RemovePage();
+        this->RemoveSystemPage();
 
-    const PageHeader pageHeader =
-        StorageManager::GetPageHeaderFromFile(buffer, offSet);
+    PageHeader pageHeader = StorageManager::GetPageHeaderFromFile(buffer, offSet);
 
     Page *page = nullptr;
 

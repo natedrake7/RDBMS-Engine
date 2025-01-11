@@ -26,7 +26,6 @@ namespace Indexing
     typedef struct BPlusTreeData
     {
         page_id_t pageId;
-        extent_id_t extentId;
 
         BPlusTreeData();
         ~BPlusTreeData();
@@ -36,17 +35,17 @@ namespace Indexing
     {
         page_offset_t index;
         BPlusTreeNonClusteredData();
-        BPlusTreeNonClusteredData(const page_id_t& pageId, const extent_id_t& extentId, const page_offset_t& index);
+        BPlusTreeNonClusteredData(const page_id_t& pageId, const page_offset_t& index);
         ~BPlusTreeNonClusteredData();
     }BPlusTreeNonClusteredData;
 
     typedef struct QueryData
     {
         BPlusTreeData treeData;
-        int indexPosition;
+        page_offset_t indexPosition;
 
         QueryData();
-        QueryData(const BPlusTreeData &otherTreeData, const int &otherIndexPosition);
+        QueryData(const BPlusTreeData &otherTreeData, const page_offset_t &otherIndexPosition);
         ~QueryData();
     } QueryData;
 
@@ -93,6 +92,8 @@ namespace Indexing
         NodeHeader nextNodeHeader;
         NodeHeader previousNodeHeader;
 
+        page_size_t prevNodeSize;
+
         explicit Node(const bool &isLeaf = false, const bool& isRoot = false);
         vector<Key> &GetKeysData();
         BPlusTreeData &GetClusteredData();
@@ -106,14 +107,13 @@ namespace Indexing
         page_id_t firstIndexPageId;
         int t;
         Node *root;
-        bool isDirty;
         TreeType type;
         int nonClusteredIndexId;
         DatabaseEngine::Database* database;
 
-        void SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves);
+        void SplitChild(Node *parent, const int &index, Node *child, vector<tuple<Node*, Node *, Node *>> *splitLeaves);
         void PrintTree(const Node *node, const int &level);
-        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves);
+        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves);
         void DeleteNode(Node *node);
         Node *SearchKey(const Key &key) const;
         void InsertNodeToPage(Node*& node);
@@ -124,7 +124,7 @@ namespace Indexing
         BPlusTree();
         ~BPlusTree();
 
-        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves);
+        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves);
         void PrintTree();
 
         void RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
@@ -145,8 +145,6 @@ namespace Indexing
         void ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
 
         void GetNodeSize(const Node *node, page_size_t &size) const;
-
-        const bool& IsTreeDirty() const;
 
         void SetTreeType(const TreeType& treeType);
 

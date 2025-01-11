@@ -27,9 +27,6 @@ void InsertRowsToActorsTable(Table* table);
 // create composite keys (minor)
 //truncate should deallocate the space used by the pages instead of marking it as free?
 //delete should defragment pages when done and combine them on heap files.
-//index pages should be for each index and should not have multiple indexes in them
-//read extents for index pages
-//when a new index is created, dont create new index page , just find an empty one, or each index has each own extent(would help if a whole extent is read))
 
 int main() 
 {

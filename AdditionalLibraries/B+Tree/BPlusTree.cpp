@@ -20,7 +20,7 @@ namespace Indexing
 
     static ostream &operator<<(ostream &os, const BPlusTreeData &dataObject)
     {
-        os << dataObject.pageId << " " << dataObject.extentId;
+        os << dataObject.pageId;
         return os;
     }
 
@@ -73,7 +73,6 @@ namespace Indexing
         this->tableId = tableHeader.tableId;
         this->firstIndexPageId = indexPageId;
         this->type = treeType;
-        this->isDirty = false;
         this->database = table->GetDatabase();
         this->nonClusteredIndexId = nonClusteredIndexId;
     }
@@ -83,7 +82,6 @@ namespace Indexing
         this->root = nullptr;
         this->t = 0;
         this->tableId = 0;
-        this->isDirty = false;
     }
 
     BPlusTree::~BPlusTree() = default;
@@ -91,16 +89,22 @@ namespace Indexing
     //    this->DeleteNode(root);
     //}
 
-    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<pair<Node *, Node *>> *splitLeaves)
+    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
     {
         Node *newChild = new Node(child->isLeaf);
+        newChild->prevNodeSize = newChild->GetNodeSize();
         this->InsertNodeToPage(newChild);
+
+        parent->prevNodeSize = parent->GetNodeSize();
+        child->prevNodeSize = child->GetNodeSize();
 
         // Insert the new child into the parent's children vector at the correct position
         parent->childrenHeaders.insert(parent->childrenHeaders.begin() + index + 1, newChild->header);
 
         // Move the middle key from the child to the parent
         parent->keys.insert(parent->keys.begin() + index, child->keys[t - 1]);
+
+        //update pageSize
 
         // Assign the second half of the child's keys to the new child
         newChild->keys.assign(child->keys.begin() + t, child->keys.end());
@@ -128,18 +132,16 @@ namespace Indexing
 
         child->nextNodeHeader = newChild->header;
         
-        splitLeaves->push_back(pair<Node *, Node *>(child, newChild));
+        splitLeaves->push_back(make_tuple(parent, child, newChild));
     }
 
-    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves)
+    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
     {
         if (this->root == nullptr)
         {
             this->root = new Node(true, true);
             this->InsertNodeToPage(this->root);
         }
-
-        this->isDirty = true;
 
         if (root->keys.size() == 2 * t - 1) // root is full,
         {
@@ -161,7 +163,7 @@ namespace Indexing
         return this->GetNonFullNode(root, key, indexPosition, splitLeaves);
     }
 
-    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<pair<Node *, Node *>> *splitLeaves)
+    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
     {
         if (node->isLeaf)
         {
@@ -362,8 +364,6 @@ namespace Indexing
         filePtr->write(reinterpret_cast<const char *>(&this->tableId), sizeof(table_id_t));
     }
 
-    const bool& BPlusTree::IsTreeDirty() const { return this->isDirty; }
-
     void BPlusTree::SetTreeType(const TreeType & treeType) { this->type = treeType; }
 
     void BPlusTree::UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data)
@@ -444,11 +444,9 @@ namespace Indexing
 
         //could only be set once and not multiple times but insignificant
         indexPage->SetTreeType(this->type);
-
         indexPage->InsertNode(node, &node->header.indexPosition);
 
         node->header.pageId = indexPage->GetPageId();
-
         this->firstIndexPageId = root->header.pageId;
     }
 
@@ -607,7 +605,7 @@ namespace Indexing
         this->indexPosition = 0;
     }
 
-    QueryData::QueryData(const BPlusTreeData &otherTreeData, const int &otherIndexPosition)
+    QueryData::QueryData(const BPlusTreeData &otherTreeData, const page_offset_t &otherIndexPosition)
     {
         this->treeData = otherTreeData;
         this->indexPosition = otherIndexPosition;
@@ -618,7 +616,6 @@ namespace Indexing
     BPlusTreeData::BPlusTreeData()
     {
         this->pageId = 0;
-        this->extentId = 0;
     }
 
     BPlusTreeData::~BPlusTreeData() = default;
@@ -628,10 +625,9 @@ namespace Indexing
         this->index = 0;
     }
 
-    BPlusTreeNonClusteredData::BPlusTreeNonClusteredData(const page_id_t & pageId, const extent_id_t & extentId, const page_offset_t & index)
+    BPlusTreeNonClusteredData::BPlusTreeNonClusteredData(const page_id_t & pageId, const page_offset_t & index)
     {
         this->pageId = pageId;
-        this->extentId = extentId;
         this->index = index;
     }
 
