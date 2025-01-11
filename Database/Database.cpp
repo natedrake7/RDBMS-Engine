@@ -86,6 +86,15 @@ namespace DatabaseEngine
         return pageId + pfsPages + gamPages + 1;
     }
 
+    extent_id_t Database::CalculateExtentIdByPageId(const page_id_t &pageId)
+    {
+        const page_id_t pfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
+
+        const page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
+
+        return (pageId - ( pfsPages + gamPages + 1 )) / 8 ;
+    }
+
     Database::Database(const string &dbName)
     {
         this->filename = dbName;
@@ -239,6 +248,7 @@ namespace DatabaseEngine
             throw runtime_error("Database " + this->filename + " could not be deleted");
     }
 
+    //optimize for multiple inserts
     void Database::InsertRowToPage(const table_id_t &tableId, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
     {
         const Table* table = this->GetTable(tableId);
@@ -557,7 +567,10 @@ namespace DatabaseEngine
         const auto& nodeSize = node->GetNodeSize();
 
         if (nodeSize <= indexPage->GetBytesLeft() + previousNodeSize)
+        {
+            indexPage->UpdateBytesLeft(previousNodeSize, nodeSize);
             return;
+        }
 
         indexPage->DeleteNode(node->header.indexPosition);
 
@@ -574,9 +587,13 @@ namespace DatabaseEngine
 
             Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
-            for (auto& child : parentNode->childrenHeaders)
-                if (child.pageId == previousHeader.pageId && child.indexPosition == previousHeader.indexPosition)
-                    parentNodeIndexPage->UpdateNodeChildHeader(node->parentHeader.indexPosition, child.indexPosition, node->header);
+            for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
+                if (parentNode->childrenHeaders[index].pageId == previousHeader.pageId
+                    && parentNode->childrenHeaders[index].indexPosition == previousHeader.indexPosition)
+                {
+                    parentNodeIndexPage->UpdateNodeChildHeader(node->parentHeader.indexPosition, index, node->header);
+                    break;
+                }
         }
 
         if (node->isLeaf)
@@ -595,7 +612,7 @@ namespace DatabaseEngine
                 nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, node->header);
             }
 
-            return; //leaf has not children so return
+            return; //leaf has no children so return
         }
 
         for (auto& child : node->childrenHeaders)

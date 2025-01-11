@@ -194,7 +194,31 @@ void IndexPage::InsertNode(Indexing::Node *& node, page_offset_t* indexPosition)
     this->isDirty = true;
 }
 
-void IndexPage::DeleteNode(const page_offset_t & indexPosition) { this->nodes.erase(this->nodes.begin() + indexPosition); }
+void IndexPage::DeleteNode(const page_offset_t & indexPosition) 
+{
+    this->header.bytesLeft += this->nodes.at(indexPosition)->GetNodeSize();
+    
+    this->nodes.erase(this->nodes.begin() + indexPosition); 
+
+    this->isDirty = true;
+}
+
+void IndexPage::UpdateBytesLeft()
+{
+    this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+
+    for(const auto& node: this->nodes)
+        this->header.bytesLeft -= node->GetNodeSize();
+
+    this->isDirty = true;
+}
+
+void IndexPage::UpdateBytesLeft(const page_size_t & prevNodeSize, const page_size_t & currentNodeSize)
+{
+    this->header.bytesLeft -= (currentNodeSize - prevNodeSize);
+
+    this->isDirty = true;
+}
 
 Node *& IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) { return this->nodes.at(indexPosition); }
 
@@ -250,4 +274,6 @@ IndexPageAdditionalHeader::IndexPageAdditionalHeader()
 }
 
 IndexPageAdditionalHeader::~IndexPageAdditionalHeader() = default;
+
+page_size_t IndexPageAdditionalHeader::GetAdditionalHeaderSize() { return sizeof(page_id_t) + sizeof(TreeType); }
 } // namespace Pages

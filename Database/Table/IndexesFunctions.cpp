@@ -77,7 +77,9 @@ namespace DatabaseEngine::StorageTypes {
 
     Node* Table::GetIndexFromDisk(const page_id_t & indexPageId) const
     {
-        IndexPage* indexPage = StorageManager::Get().GetIndexPage(indexPageId);
+        const extent_id_t indexPageExtentId = Database::CalculateExtentIdByPageId(indexPageId);
+
+        IndexPage* indexPage = StorageManager::Get().GetIndexPage(indexPageId, indexPageExtentId);
 
         return indexPage->GetRoot();
     }

@@ -29,6 +29,7 @@ namespace Pages {
 
 		IndexPageAdditionalHeader();
 		~IndexPageAdditionalHeader();
+		static page_size_t GetAdditionalHeaderSize();
 	}IndexPageAdditionalHeader;
 
 	class IndexPage final : public Page {
@@ -54,8 +55,10 @@ namespace Pages {
 			[[nodiscard]] const page_id_t& GetTreeId() const; 
 
 			void InsertNode(Indexing::Node*& node, page_offset_t* indexPosition);
-
 			void DeleteNode(const page_offset_t& indexPosition);
+
+			void UpdateBytesLeft() override;
+			void UpdateBytesLeft(const page_size_t& prevNodeSize, const page_size_t& currentNodeSize);
 
 			[[nodiscard]] Indexing::Node*& GetNodeByIndex(const page_offset_t& indexPosition);
 

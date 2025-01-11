@@ -170,6 +170,8 @@ public:
 
     static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId);
 
+    static extent_id_t CalculateExtentIdByPageId(const page_id_t &pageId);
+
     [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage(  Pages::PageFreeSpacePage *&pageFreeSpacePage, 
                                                             const page_id_t &pageId, 
                                                             const page_id_t &extentFirstPageId, 

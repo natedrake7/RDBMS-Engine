@@ -357,9 +357,9 @@ Page *StorageManager::GetSystemPage(const page_id_t &pageId, const extent_id_t &
 {
   auto pageHashIterator = this->SearchSystemPageInCache(pageId);
 
-  if (pageHashIterator == this->systemCache.end()) {
+  if (pageHashIterator == this->systemCache.end()) 
+  {
     this->OpenSystemExtent(extentId);
-
     pageHashIterator = this->SearchSystemPageInCache(pageId);
   }
 
