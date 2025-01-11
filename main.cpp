@@ -41,12 +41,11 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        Table *table = nullptr;
-
          //CreateMoviesTables(db);
-        // CreateActorsTable(db);
+         //CreateActorsTable(db);
 
-        table = db->OpenTable("Movies");
+        Table* table = db->OpenTable("Movies");
+        Table* actorsTable =  db->OpenTable("Actors");
 
         //InsertRowsToActorsTable(table);
 
@@ -58,6 +57,8 @@ int main()
         //table->Update(updates, nullptr);
 
         ExecuteQuery(table);
+        //ExecuteQuery(actorsTable);
+
     }
     catch (const exception &exception) 
     {
