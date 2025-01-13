@@ -33,15 +33,18 @@ int main()
     Database *db = nullptr;
     const string dbName = "stakosDb";
 
+
     try 
     {
-        //CreateDatabase(dbName);
+        auto &storageManager = StorageManager::Get();
+
+        CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
-         //CreateMoviesTables(db);
+         CreateMoviesTables(db);
          //CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");
@@ -143,7 +146,7 @@ void CreateMoviesTables(Database *db)
 
     vector<vector<Field>> inputData;
 
-    for (int i = 0; i < 1000; i++) 
+    for (int i = 0; i < 10000; i++) 
     {
         vector<Field> fields = {
             Field("1", 0),        

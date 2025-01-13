@@ -14,6 +14,7 @@ namespace Indexing {
   struct Node;
   class BPlusTree;
   struct BPlusTreeNonClusteredData;
+  struct NodeHeader;
 } // namespace Indexing
 
 namespace DatabaseEngine::StorageTypes {
@@ -80,7 +81,7 @@ protected:
 
     [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
 
-    void InsertRowToClusteredIndex( const StorageTypes::Table &table, 
+    void InsertRowToClusteredIndex( const table_id_t& tableId, 
                                     StorageTypes::Row *row, 
                                     page_id_t* rowPageId, 
                                     extent_id_t* rowExtentId,
@@ -100,9 +101,14 @@ protected:
                                 extent_id_t* rowExtentId,
                                 int* rowIndex);
 
-    void SplitPage( vector<tuple<Indexing::Node *, Indexing::Node *, Indexing::Node *>> &splitLeaves,
+    void SplitNodesFromClusteredIndex(vector<tuple<Indexing::Node*, Indexing::Node*, Indexing::Node*>>& splitLeaves, 
+                                        const int& branchingFactor, 
+                                        StorageTypes::Table* table);
+
+    void SplitPage( Indexing::Node*& firstNode,
+                    Indexing::Node*& secondNode,
                     const int &branchingFactor,
-                    const StorageTypes::Table &table);
+                    StorageTypes::Table *table);
 
     void SplitNonClusteredData(const StorageTypes::Table& table, vector<tuple<Indexing::Node *, Indexing::Node *, Indexing::Node *>> &splitLeaves, const int &branchingFactor, const int& nonClusteredIndexId = -1);
 
@@ -118,7 +124,9 @@ protected:
                                   const Indexing::Key &key,
                                   const int &indexPosition);
 
-    void SplitNodeFromIndexPage(const StorageTypes::Table& table, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
+    void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
+
+    void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& previousHeader);
 
     [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
 

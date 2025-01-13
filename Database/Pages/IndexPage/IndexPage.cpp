@@ -203,6 +203,23 @@ void IndexPage::DeleteNode(const page_offset_t & indexPosition)
 
     this->nodes.erase(this->nodes.begin() + indexPosition);
 
+    this->header.pageSize--;
+    this->isDirty = true;
+}
+
+Indexing::Node * IndexPage::GetLastNode()
+{
+    return this->nodes.back();
+}
+
+void IndexPage::DeleteLastNode()
+{
+    Node* lastNode = this->nodes.back();
+
+    this->nodes.pop_back();
+
+    this->header.pageSize--;
+    this->header.bytesLeft += lastNode->GetNodeSize();
     this->isDirty = true;
 }
 
@@ -266,6 +283,15 @@ void IndexPage::UpdateNodePreviousLeafHeader(const page_offset_t & indexPosition
     Node* node = this->nodes.at(indexPosition);
 
     node->previousNodeHeader = nodeHeader;
+
+    this->isDirty = true;
+}
+
+void IndexPage::UpdateNodeHeader(const page_offset_t & indexPosition, const NodeHeader & header)
+{
+    Node* node = this->nodes.at(indexPosition);
+
+    node->header = header;
 
     this->isDirty = true;
 }

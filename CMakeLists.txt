@@ -54,6 +54,6 @@ add_library(Database
         AdditionalLibraries/AdditionalObjects/Decimal/Decimal.cpp
         AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h
         AdditionalLibraries/B+Tree/BPlusTree.cpp
-        AdditionalLibraries/B+Tree/BPlusTree.h)
+        AdditionalLibraries/B+Tree/BPlusTree.h   "Database/DatabaseIndexHandlers.cpp")
 
 target_link_libraries(DatabaseInterface PRIVATE Database)

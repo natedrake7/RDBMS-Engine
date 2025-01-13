@@ -81,6 +81,8 @@ namespace DatabaseEngine::StorageTypes {
 
         IndexPage* indexPage = StorageManager::Get().GetIndexPage(indexPageId, indexPageExtentId);
 
+        const auto& storageManager = StorageManager::Get();
+
         return indexPage->GetRoot();
     }
 }

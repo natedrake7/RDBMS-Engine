@@ -65,6 +65,7 @@ namespace Indexing
         page_offset_t indexPosition;
 
         NodeHeader();
+        NodeHeader(const page_id_t& pageId, const page_offset_t& indexPosition);
         ~NodeHeader();
         static page_size_t GetNodeHeaderSize();
     }NodeHeader;

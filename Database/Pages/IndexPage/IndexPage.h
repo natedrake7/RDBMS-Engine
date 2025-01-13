@@ -56,6 +56,8 @@ namespace Pages {
 
 			void InsertNode(Indexing::Node*& node, page_offset_t* indexPosition);
 			void DeleteNode(const page_offset_t& indexPosition);
+			void DeleteLastNode();
+			[[nodiscard]] Indexing::Node* GetLastNode();
 
 			void UpdateBytesLeft() override;
 			void UpdateBytesLeft(const page_size_t& prevNodeSize, const page_size_t& currentNodeSize);
@@ -71,5 +73,7 @@ namespace Pages {
 			void UpdateNodeNextLeafHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
 
 			void UpdateNodePreviousLeafHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
+
+			void UpdateNodeHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& header);
 		};
 } // namespace Pages

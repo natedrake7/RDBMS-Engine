@@ -157,7 +157,12 @@ namespace DatabaseEngine::StorageTypes {
         vector<extent_id_t> extents;
         for (const auto &rowData : inputData) 
         {
-          this->InsertRow(rowData, extents, startingExtentIndex);
+            if (rowsInserted == 8214)
+            {
+                cout<< rowsInserted<<endl;
+            }
+
+            this->InsertRow(rowData, extents, startingExtentIndex);
 
           rowsInserted++;
 

@@ -84,6 +84,7 @@ namespace Indexing
     void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
     {
         Node *newChild = new Node(child->isLeaf);
+        
         newChild->prevNodeSize = newChild->GetNodeSize();
         this->InsertNodeToPage(newChild);
 
@@ -107,6 +108,8 @@ namespace Indexing
         child->parentHeader = parent->header;
         newChild->parentHeader = parent->header;
 
+        splitLeaves->push_back(make_tuple(parent, child, newChild));
+
         if (!child->isLeaf)
         {
             // Assign the second half of the child pointers to the new child
@@ -122,15 +125,14 @@ namespace Indexing
         newChild->nextNodeHeader = child->nextNodeHeader;
         newChild->previousNodeHeader = child->header;
 
-        child->nextNodeHeader = newChild->header;
-        
-        splitLeaves->push_back(make_tuple(parent, child, newChild));
+        child->nextNodeHeader = newChild->header;   
     }
 
     Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
     {
         if (this->root == nullptr)
         {
+            //maybe root page is removed and need to be reopened
             this->root = new Node(true, true);
             this->InsertNodeToPage(this->root);
         }
@@ -622,6 +624,12 @@ namespace Indexing
     {
         this->pageId = 0;
         this->indexPosition = 0;
+    }
+
+    NodeHeader::NodeHeader(const page_id_t & pageId, const page_offset_t & indexPosition)
+    {
+        this->pageId = pageId;
+        this->indexPosition = indexPosition;
     }
 
     NodeHeader::~NodeHeader() = default;
