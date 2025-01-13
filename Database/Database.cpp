@@ -303,11 +303,11 @@ namespace DatabaseEngine
 
         //const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
 
-        if (node->data.pageId != 0)
+        if (node->dataPageId != 0)
         {
             this->InsertRowToNonEmptyNode(node, table, row, key, indexPosition);
 
-            *rowPageId = node->data.pageId;
+            *rowPageId = node->dataPageId;
             return;
         }
 
@@ -324,7 +324,7 @@ namespace DatabaseEngine
 
         node->keys.insert(node->keys.begin() + indexPosition, key);
 
-        node->data.pageId = newPageId;
+        node->dataPageId = newPageId;
         *rowPageId = newPageId;
     }
 
@@ -346,7 +346,7 @@ namespace DatabaseEngine
 
         const int& branchingFactor = tree->GetBranchingFactor();
 
-        this->SplitNonClusteredData(*table, splitLeaves, branchingFactor);
+        this->SplitNonClusteredData(*table, splitLeaves, branchingFactor, nonClusteredIndexId);
 
         node->prevNodeSize = node->GetNodeSize();
 
@@ -354,10 +354,10 @@ namespace DatabaseEngine
 
         node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
 
-        this->SplitNodeFromIndexPage(*table, node);
+        this->SplitNodeFromIndexPage(*table, node, nonClusteredIndexId);
     }
 
-    void Database::SplitNonClusteredData(const Table& table, vector<tuple<Node*, Node*, Node*>>& splitLeaves, const int & branchingFactor)
+    void Database::SplitNonClusteredData(const Table& table, vector<tuple<Node*, Node*, Node*>>& splitLeaves, const int & branchingFactor, const int& nonClusteredIndexId)
     {
         if (splitLeaves.empty())
             return;
@@ -368,12 +368,12 @@ namespace DatabaseEngine
                 continue;
 
             secondNode->nonClusteredData.assign(firstNode->nonClusteredData.begin() + branchingFactor, firstNode->nonClusteredData.end());
-            this->SplitNodeFromIndexPage(table, secondNode);
+            this->SplitNodeFromIndexPage(table, secondNode, nonClusteredIndexId);
 
             firstNode->nonClusteredData.resize(branchingFactor);
-            this->SplitNodeFromIndexPage(table, firstNode);
+            this->SplitNodeFromIndexPage(table, firstNode, nonClusteredIndexId);
 
-            this->SplitNodeFromIndexPage(table, parentNode);
+            this->SplitNodeFromIndexPage(table, parentNode, nonClusteredIndexId);
         }
     }
 
@@ -387,7 +387,7 @@ namespace DatabaseEngine
             if (!firstNode->isLeaf || !secondNode->isLeaf)
                 continue;
 
-            const page_id_t pageId = firstNode->data.pageId;
+            const page_id_t pageId = firstNode->dataPageId;
 
             const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(pageId);
 
@@ -409,7 +409,7 @@ namespace DatabaseEngine
             pageFreeSpacePage->SetPageMetaData(page);
             pageFreeSpacePage->SetPageMetaData(nextLeafPage);
 
-            secondNode->data.pageId = nextLeafPageId;
+            secondNode->dataPageId = nextLeafPageId;
 
             UpdateNonClusteredData(table, nextLeafPage, nextLeafPageId);
 
@@ -535,17 +535,16 @@ namespace DatabaseEngine
             }
         }
 
-        IndexPage* indexPage = this->CreateIndexPage(tableHeader.tableId, indexPageId);
-        return indexPage;
+        return this->CreateIndexPage(tableHeader.tableId, indexPageId);
     }
 
     void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)
     {
-        PageFreeSpacePage *pageFreeSpacePage = this->GetAssociatedPfsPage(node->data.pageId);
+        PageFreeSpacePage *pageFreeSpacePage = this->GetAssociatedPfsPage(node->dataPageId);
 
-        const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(node->data.pageId);
+        const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(node->dataPageId);
 
-        Page *page = StorageManager::Get().GetPage(node->data.pageId, pageExtentId, &table);
+        Page *page = StorageManager::Get().GetPage(node->dataPageId, pageExtentId, &table);
 
         Database::InsertRowToPage(pageFreeSpacePage, page, row, indexPosition);
 
@@ -556,7 +555,7 @@ namespace DatabaseEngine
         this->SplitNodeFromIndexPage(table, node);
     }
 
-    void Database::SplitNodeFromIndexPage(const Table& table, Node*& node)
+    void Database::SplitNodeFromIndexPage(const Table& table, Node*& node, const int& nonClusteredIndexId)
     {
         IndexPage* indexPage = StorageManager::Get().GetIndexPage(node->header.pageId);
 
@@ -572,7 +571,7 @@ namespace DatabaseEngine
 
         const NodeHeader previousHeader = node->header;
 
-        indexPage = this->FindOrAllocateNextIndexPage(table.GetTableId(), indexPage->GetPageId(), nodeSize);
+        indexPage = this->FindOrAllocateNextIndexPage(table.GetTableId(), indexPage->GetPageId(), nodeSize, nonClusteredIndexId);
 
         indexPage->InsertNode(node, &node->header.indexPosition);
         node->header.pageId = indexPage->GetPageId();

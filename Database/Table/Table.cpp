@@ -242,11 +242,11 @@ namespace DatabaseEngine::StorageTypes {
         //  }
         //}
 
-        if (this->HasNonClusteredIndexes())
-        {
-            this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
-            return;
-        }
+        //if (this->HasNonClusteredIndexes())
+        //{
+        //    this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
+        //    return;
+        //}
 
         if (this->GetTableType() == TableType::HEAP)
         {
@@ -342,16 +342,16 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
-        const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].treeData.pageId);
-        const Page *page = StorageManager::Get().GetPage(results[0].treeData.pageId, pageExtentId, this);
+        const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        const Page *page = StorageManager::Get().GetPage(results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
         {
             // get new page else use current one
-            if (result.treeData.pageId != 0 && result.treeData.pageId != page->GetPageId())
+            if (result.pageId != 0 && result.pageId != page->GetPageId())
             {
-                const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(result.treeData.pageId);
-                page = StorageManager::Get().GetPage(result.treeData.pageId, pageExtentId, this);
+                const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+                page = StorageManager::Get().GetPage(result.pageId, pageExtentId, this);
             }
 
             selectedRows->push_back(page->GetRowByIndex(*this, result.indexPosition));

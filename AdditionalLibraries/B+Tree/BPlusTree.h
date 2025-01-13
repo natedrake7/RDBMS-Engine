@@ -23,16 +23,9 @@ namespace Pages
 
 namespace Indexing
 {
-    typedef struct BPlusTreeData
+    typedef struct BPlusTreeNonClusteredData
     {
         page_id_t pageId;
-
-        BPlusTreeData();
-        ~BPlusTreeData();
-    }BPlusTreeData;
-
-    typedef struct BPlusTreeNonClusteredData : public BPlusTreeData
-    {
         page_offset_t index;
         BPlusTreeNonClusteredData();
         BPlusTreeNonClusteredData(const page_id_t& pageId, const page_offset_t& index);
@@ -41,11 +34,11 @@ namespace Indexing
 
     typedef struct QueryData
     {
-        BPlusTreeData treeData;
+        page_id_t pageId;
         page_offset_t indexPosition;
 
         QueryData();
-        QueryData(const BPlusTreeData &otherTreeData, const page_offset_t &otherIndexPosition);
+        QueryData(const page_id_t &pageId, const page_offset_t &otherIndexPosition);
         ~QueryData();
     } QueryData;
 
@@ -84,7 +77,7 @@ namespace Indexing
         
         vector<Key> keys;
         
-        BPlusTreeData data;
+        page_id_t dataPageId;
         vector<BPlusTreeNonClusteredData> nonClusteredData;
         
         NodeHeader parentHeader;
@@ -95,8 +88,6 @@ namespace Indexing
         page_size_t prevNodeSize;
 
         explicit Node(const bool &isLeaf = false, const bool& isRoot = false);
-        vector<Key> &GetKeysData();
-        BPlusTreeData &GetClusteredData();
         page_size_t GetNodeSize();
         ~Node();
     }Node;

@@ -104,7 +104,7 @@ protected:
                     const int &branchingFactor,
                     const StorageTypes::Table &table);
 
-    void SplitNonClusteredData(const StorageTypes::Table& table, vector<tuple<Indexing::Node *, Indexing::Node *, Indexing::Node *>> &splitLeaves, const int &branchingFactor);
+    void SplitNonClusteredData(const StorageTypes::Table& table, vector<tuple<Indexing::Node *, Indexing::Node *, Indexing::Node *>> &splitLeaves, const int &branchingFactor, const int& nonClusteredIndexId = -1);
 
     void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId);
 
@@ -118,7 +118,7 @@ protected:
                                   const Indexing::Key &key,
                                   const int &indexPosition);
 
-    void SplitNodeFromIndexPage(const StorageTypes::Table& table, Indexing::Node*& node);
+    void SplitNodeFromIndexPage(const StorageTypes::Table& table, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
 
     [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
 

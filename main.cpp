@@ -45,7 +45,7 @@ int main()
          //CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");
-        Table* actorsTable =  db->OpenTable("Actors");
+        //Table* actorsTable =  db->OpenTable("Actors");
 
         //InsertRowsToActorsTable(table);
 

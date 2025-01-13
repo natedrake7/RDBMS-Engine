@@ -18,21 +18,13 @@ using namespace Storage;
 namespace Indexing
 {
 
-    static ostream &operator<<(ostream &os, const BPlusTreeData &dataObject)
-    {
-        os << dataObject.pageId;
-        return os;
-    }
-
     Node::Node(const bool &isLeaf, const bool& isRoot)
     {
         this->isLeaf = isLeaf;
         this->isRoot = isRoot;
+        this->prevNodeSize = 0;
+        this->dataPageId = 0;
     }
-
-    vector<Key> &Node::GetKeysData() { return this->keys; }
-
-    BPlusTreeData &Node::GetClusteredData() { return this->data; }
 
     page_size_t Node::GetNodeSize()
     {
@@ -51,8 +43,8 @@ namespace Indexing
         if (this->isLeaf)
         {
             size += this->nonClusteredData.empty() 
-                    ? sizeof(BPlusTreeData) 
-                    : (this->nonClusteredData.size() * (sizeof(BPlusTreeData) + sizeof(page_offset_t))) + sizeof(uint16_t);
+                    ? sizeof(page_id_t) 
+                    : (this->nonClusteredData.size() * (sizeof(page_id_t) + sizeof(page_offset_t))) + sizeof(uint16_t);
 
             size += 2 * NodeHeader::GetNodeHeaderSize();
         }
@@ -236,7 +228,7 @@ namespace Indexing
             if (previousNode && maxKey >= currentNode->keys[0])
             {
                 if (maxKey >= previousNode->keys[previousNode->keys.size() - 1])
-                    result.emplace_back(previousNode->data, previousNode->keys.size());
+                    result.emplace_back(previousNode->dataPageId, previousNode->keys.size());
             }
 
             for (int i = 0; i < currentNode->keys.size(); i++)
@@ -245,7 +237,7 @@ namespace Indexing
 
                 if (minKey <= key && maxKey >= key)
                 {
-                    result.emplace_back(currentNode->data, i);
+                    result.emplace_back(currentNode->dataPageId, i);
                     continue;
                 }
 
@@ -320,7 +312,7 @@ namespace Indexing
         {
             if (previousNode && key <= currentNode->keys[0])
             {
-                result.treeData = previousNode->data;
+                result.pageId = previousNode->dataPageId;
                 result.indexPosition = previousNode->keys.size();
                 return;
             }
@@ -330,7 +322,7 @@ namespace Indexing
                 if (key == currentNode->keys[i])
                 {
 
-                    result.treeData = currentNode->data;
+                    result.pageId = currentNode->dataPageId;
                     result.indexPosition = i;
                     return;
                 }
@@ -416,7 +408,7 @@ namespace Indexing
             size += sizeof(key);
 
         if(node->isLeaf)
-            size += sizeof(BPlusTreeData); 
+            size += sizeof(page_id_t); 
 
         //for (const auto &child : node->children)
         //    GetNodeSize(child, size);
@@ -480,7 +472,7 @@ namespace Indexing
         if (node->isLeaf)
         {
             cout << "Data: ";
-            cout << node->data << " ";
+            cout << node->dataPageId << " ";
         }
 
         cout << "\n";
@@ -605,22 +597,15 @@ namespace Indexing
         this->indexPosition = 0;
     }
 
-    QueryData::QueryData(const BPlusTreeData &otherTreeData, const page_offset_t &otherIndexPosition)
+    QueryData::QueryData(const page_id_t &pageId, const page_offset_t &otherIndexPosition)
     {
-        this->treeData = otherTreeData;
+        this->pageId = pageId;
         this->indexPosition = otherIndexPosition;
     }
 
     QueryData::~QueryData() = default;
 
-    BPlusTreeData::BPlusTreeData()
-    {
-        this->pageId = 0;
-    }
-
-    BPlusTreeData::~BPlusTreeData() = default;
-
-    BPlusTreeNonClusteredData::BPlusTreeNonClusteredData() : BPlusTreeData()
+    BPlusTreeNonClusteredData::BPlusTreeNonClusteredData()
     {
         this->index = 0;
     }
