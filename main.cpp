@@ -36,15 +36,13 @@ int main()
 
     try 
     {
-        auto &storageManager = StorageManager::Get();
-
-        CreateDatabase(dbName);
+        //CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
-         CreateMoviesTables(db);
+         //CreateMoviesTables(db);
          //CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");
@@ -59,6 +57,7 @@ int main()
 
         //table->Update(updates, nullptr);
 
+        ExecuteQuery(table);
         ExecuteQuery(table);
         //ExecuteQuery(actorsTable);
 
@@ -142,11 +141,11 @@ void CreateMoviesTables(Database *db)
     const vector<column_index_t> clusteredIndexes = {0};
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
 
-    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
+    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, nullptr);
 
     vector<vector<Field>> inputData;
 
-    for (int i = 0; i < 10000; i++) 
+    for (int i = 0; i < 100000; i++) 
     {
         vector<Field> fields = {
             Field("1", 0),        
