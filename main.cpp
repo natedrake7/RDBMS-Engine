@@ -19,6 +19,7 @@ void ExecuteQuery(Table* table);
 void CreateMoviesTables(Database *db);
 void CreateActorsTable(Database *db);
 void InsertRowsToActorsTable(Table* table);
+void InsertRowsToMoviesTable(Table* table);
 // handle updates
 // deletes
 // B+ Trees
@@ -33,7 +34,6 @@ int main()
     Database *db = nullptr;
     const string dbName = "stakosDb";
 
-
     try 
     {
         //CreateDatabase(dbName);
@@ -47,6 +47,7 @@ int main()
 
         Table* table = db->OpenTable("Movies");
         //Table* actorsTable =  db->OpenTable("Actors");
+        //InsertRowsToMoviesTable(table);
 
         //InsertRowsToActorsTable(table);
 
@@ -57,7 +58,6 @@ int main()
 
         //table->Update(updates, nullptr);
 
-        ExecuteQuery(table);
         ExecuteQuery(table);
         //ExecuteQuery(actorsTable);
 
@@ -178,6 +178,30 @@ void InsertRowsToActorsTable(Table* table)
             ,Field("65", 2)
             ,Field("1962-04-12 12:12:12", 3)
             ,Field("1.77", 4)
+        };
+
+        fields[0].SetData(to_string(i));
+
+        // table->InsertRow(fields);
+        inputData.push_back(fields);
+    }
+
+    table->InsertRows(inputData);
+}
+
+void InsertRowsToMoviesTable(Table* table)
+{
+    vector<vector<Field>> inputData;
+
+    for (int i = 100002; i < 100100; i++) 
+    {
+        vector<Field> fields = {
+            Field("1", 0),        
+            Field("1", 1),
+            Field(string(9000, 'A'), 2), 
+            Field("2024-04-12 12:12:12", 3),
+            Field("1", 4),        
+            Field("1233232.12434343", 5),
         };
 
         fields[0].SetData(to_string(i));

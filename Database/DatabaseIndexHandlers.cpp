@@ -129,11 +129,11 @@ namespace DatabaseEngine {
         
         for (auto &[parentNode, firstNode, secondNode] : splitLeaves)
         {
-            if (!firstNode->isLeaf || !secondNode->isLeaf)
-                continue;
-
-            secondNode->nonClusteredData.assign(firstNode->nonClusteredData.begin() + branchingFactor, firstNode->nonClusteredData.end());
-            firstNode->nonClusteredData.resize(branchingFactor);
+            if (firstNode->isLeaf && secondNode->isLeaf)
+            {
+                secondNode->nonClusteredData.assign(firstNode->nonClusteredData.begin() + branchingFactor, firstNode->nonClusteredData.end());
+                firstNode->nonClusteredData.resize(branchingFactor);
+            }
          
             this->SplitNodeFromIndexPage(tableId, parentNode, nonClusteredIndexId);
             this->SplitNodeFromIndexPage(tableId, firstNode, nonClusteredIndexId);
@@ -260,11 +260,17 @@ namespace DatabaseEngine {
     {
         IndexPage* indexPage = StorageManager::Get().GetIndexPage(node->header.pageId);
 
-        const auto& nodeSize = node->GetNodeSize();
+        const auto nodeSize = node->GetNodeSize();
+
+        bool isNodeDeleted = false;
 
         while (nodeSize - node->prevNodeSize > indexPage->GetBytesLeft())
         {
             Node* lastNode = indexPage->GetLastNode();
+
+            if (&lastNode == &node)
+                isNodeDeleted = true;
+            
             const NodeHeader previousHeader = lastNode->header;
             
             IndexPage* nextIndexPage = this->FindOrAllocateNextIndexPage(tableId, indexPage->GetPageId(), lastNode->GetNodeSize(), nonClusteredIndexId);
@@ -274,9 +280,10 @@ namespace DatabaseEngine {
             lastNode->header.pageId = nextIndexPage->GetPageId();
             
             this->UpdateNodeConnections(lastNode, previousHeader);
+            this->UpdateTableIndexes(tableId, lastNode, nonClusteredIndexId);
         }
 
-        indexPage->UpdateBytesLeft(node->prevNodeSize, nodeSize);
+        indexPage->UpdateBytesLeft(node->prevNodeSize, (!isNodeDeleted) ? nodeSize : 0);
     }
 
     void Database::UpdateNodeConnections(Node *& node, const NodeHeader& previousHeader)
@@ -320,6 +327,24 @@ namespace DatabaseEngine {
 
             childIndexPage->UpdateNodeParentHeader(child.indexPosition, node->header);
         }
+    }
+
+    void Database::UpdateTableIndexes(const table_id_t & tableId, Indexing::Node *& node, const int & nonClusteredIndexId)
+    {
+        if(!node->isRoot)
+            return;
+
+        Table* table = this->tables.at(tableId);
+
+        const bool isNonClusteredIndex = nonClusteredIndexId == -1;
+
+        if (isNonClusteredIndex)
+        {
+            table->SetNonClusteredIndexPageId(node->header.pageId, nonClusteredIndexId);
+            return;
+        }
+
+        table->SetClusteredIndexPageId(node->header.pageId);
     }
 
     void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)

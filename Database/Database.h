@@ -128,6 +128,8 @@ protected:
 
     void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& previousHeader);
 
+    void UpdateTableIndexes(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId);
+
     [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
 
 public:
