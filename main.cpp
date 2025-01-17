@@ -46,8 +46,8 @@ int main()
         //CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");
-        Table* actorsTable =  db->OpenTable("Actors");
-        InsertRowsToMoviesTable(table);
+        //Table* actorsTable =  db->OpenTable("Actors");
+        //InsertRowsToMoviesTable(table);
 
         //InsertRowsToActorsTable(table);
 
@@ -59,7 +59,6 @@ int main()
         //table->Update(updates, nullptr);
 
         ExecuteQuery(table);
-        ExecuteQuery(actorsTable);
 
     }
     catch (const exception &exception) 
@@ -193,7 +192,7 @@ void InsertRowsToMoviesTable(Table* table)
 {
     vector<vector<Field>> inputData;
 
-    for (int i = 100200; i < 200000; i++) 
+    for (int i = 200000; i < 200200; i++) 
     {
         vector<Field> fields = {
             Field("1", 0),        

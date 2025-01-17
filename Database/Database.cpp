@@ -713,7 +713,12 @@ namespace DatabaseEngine
         if (tableId >= this->tables.size())
             return nullptr;
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->tables[tableId]->GetTableHeader().indexAllocationMapPageId);
+        const auto& tableMapPageId = this->tables[tableId]->GetTableHeader().indexAllocationMapPageId;
+
+        if(tableMapPageId == 0)
+            return nullptr;
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableMapPageId);
         LargeDataPage *lastLargeDataPage = nullptr;
 
         vector<extent_id_t> allocatedExtents;

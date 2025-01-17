@@ -218,6 +218,9 @@ void IndexPage::DeleteLastNode()
 
     this->header.pageSize--;
     this->isDirty = true;
+
+    if(this->nodes.empty())
+        this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
 }
 
 void IndexPage::UpdateBytesLeft()
