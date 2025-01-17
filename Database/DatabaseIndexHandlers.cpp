@@ -48,13 +48,9 @@ namespace DatabaseEngine {
 
         *rowIndex = indexPosition;
 
-        this->SplitNodesFromClusteredIndex(splitLeaves, tree->GetBranchingFactor(), table);
-
         if (node->dataPageId != 0)
         {
             this->InsertRowToNonEmptyNode(node, *table, row, key, indexPosition);
-
-            //table->SetClusteredIndexPageId(tree->GetRoot()->header.pageId);
 
             *rowPageId = node->dataPageId;
             return;
@@ -69,31 +65,14 @@ namespace DatabaseEngine {
 
         // should never fail
         Database::InsertRowToPage(pageFreeSpacePage, newPage, row, indexPosition);
+
         node->keys.insert(node->keys.begin() + indexPosition, key);
+        node->currentNodeSize += key.GetKeySize();
 
         node->dataPageId = newPageId;
         *rowPageId = newPageId;
 
         this->SplitNodeFromIndexPage(tableId, node);
-    }
-
-    void Database::SplitNodesFromClusteredIndex(vector<tuple<Node*, Node*, Node*>>& splitLeaves, const int& branchingFactor, Table* table)
-    {
-        if (splitLeaves.empty())
-            return;
-        
-        const table_id_t& tableId = table->GetTableId();
-
-        for (auto &[parentNode, firstNode, secondNode] : splitLeaves)
-        {
-            if (firstNode->isLeaf && secondNode->isLeaf)
-                this->SplitPage(firstNode, secondNode, branchingFactor, table);
-
-
-            this->SplitNodeFromIndexPage(tableId, secondNode);
-            this->SplitNodeFromIndexPage(tableId, firstNode);
-            this->SplitNodeFromIndexPage(tableId, parentNode);
-        }
     }
 
     void Database::InsertRowToNonClusteredIndex(const table_id_t& tableId, Row* row, const int& nonClusteredIndexId, const vector<column_index_t>& indexedColumns, const BPlusTreeNonClusteredData& data)
@@ -110,39 +89,17 @@ namespace DatabaseEngine {
         vector<tuple<Node*, Node *, Node *>> splitLeaves;
         Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, &splitLeaves);
 
-        const int& branchingFactor = tree->GetBranchingFactor();
-        this->SplitNonClusteredData(*table, splitLeaves, branchingFactor, nonClusteredIndexId);
-
-        node->prevNodeSize = node->GetNodeSize();
         node->keys.insert(node->keys.begin() + indexPosition, key);
         node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
+        node->currentNodeSize += (BPlusTreeNonClusteredData::GetNonClusteredDataSize() + key.GetKeySize());
 
         this->SplitNodeFromIndexPage(tableId, node, nonClusteredIndexId);
     }
 
-    void Database::SplitNonClusteredData(const Table& table, vector<tuple<Node*, Node*, Node*>>& splitLeaves, const int & branchingFactor, const int& nonClusteredIndexId)
+    void Database::SplitPage(Node*& firstNode, Node*& secondNode, const int &branchingFactor, const table_id_t& tableId)
     {
-        if (splitLeaves.empty())
-            return;
+        Table* table = this->tables.at(tableId);
 
-        const table_id_t& tableId = table.GetTableId();
-        
-        for (auto &[parentNode, firstNode, secondNode] : splitLeaves)
-        {
-            if (firstNode->isLeaf && secondNode->isLeaf)
-            {
-                secondNode->nonClusteredData.assign(firstNode->nonClusteredData.begin() + branchingFactor, firstNode->nonClusteredData.end());
-                firstNode->nonClusteredData.resize(branchingFactor);
-            }
-         
-            this->SplitNodeFromIndexPage(tableId, parentNode, nonClusteredIndexId);
-            this->SplitNodeFromIndexPage(tableId, firstNode, nonClusteredIndexId);
-            this->SplitNodeFromIndexPage(tableId, secondNode, nonClusteredIndexId);
-        }
-    }
-
-    void Database::SplitPage(Node*& firstNode, Node*& secondNode, const int &branchingFactor, Table *table)
-    {
         const page_id_t pageId = firstNode->dataPageId;
 
         const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(pageId);
@@ -198,7 +155,7 @@ namespace DatabaseEngine {
         }
     }
 
-	IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize, const int& nonClusteredIndexId)
+	IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize, const int& nonClusteredIndexId, const bool& findPageDifferentFromCurrent)
     {
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
@@ -224,16 +181,24 @@ namespace DatabaseEngine {
         
         vector<extent_id_t> allocatedExtents;
         indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
-        
+
+        const page_id_t primaryIndexPageId = nonClusteredIndexId != -1 
+                            ? table->GetNonClusteredIndexPageId(nonClusteredIndexId) 
+                            : table->GetClusteredIndexPageId();
+
         for(const auto& extentId: allocatedExtents)
         {
             const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
             {
-                PageFreeSpacePage *pageFreeSpacePage = this->GetAssociatedPfsPage(indexPageId);
+                if(findPageDifferentFromCurrent 
+                    && nextIndexPageId == indexPageId)
+                    continue;
 
-                if(pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
+                PageFreeSpacePage * pageFreeSpacePage = this->GetAssociatedPfsPage(nextIndexPageId);
+
+                if (pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
                     continue;
 
                 //page is free
@@ -241,49 +206,62 @@ namespace DatabaseEngine {
                     continue;
 
                 IndexPage* indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
+
                 if(indexPage->GetBytesLeft() < nodeSize 
-                    || indexPage->GetTreeId() != indexPageId)
+                    || indexPage->GetTreeId() != primaryIndexPageId)
                     continue;
 
                 indexPage->SetTreeType((nonClusteredIndexId != -1) 
                                 ? TreeType::NonClustered 
                                 : TreeType::Clustered);
-
+                
                 return indexPage;
             }
         }
 
-        return this->CreateIndexPage(tableHeader.tableId, indexPageId);
+        return this->CreateIndexPage(tableHeader.tableId, primaryIndexPageId);
     }
 
     void Database::SplitNodeFromIndexPage(const table_id_t& tableId, Node*& node, const int& nonClusteredIndexId)
     {
         IndexPage* indexPage = StorageManager::Get().GetIndexPage(node->header.pageId);
 
-        const auto nodeSize = node->GetNodeSize();
+        const auto& bytesLeft = indexPage->GetBytesLeft();
+        const auto& pageSize = indexPage->GetPageSize();
 
-        bool isNodeDeleted = false;
+        bool isNodeDeletedFromPage = false;
 
-        while (nodeSize - node->prevNodeSize > indexPage->GetBytesLeft())
+        uint16_t counter = 0;
+        while (node->currentNodeSize - node->prevNodeSize > bytesLeft)
         {
             Node* lastNode = indexPage->GetLastNode();
 
-            if (&lastNode == &node)
-                isNodeDeleted = true;
+            const NodeHeader previousHeader(lastNode->header);
             
-            const NodeHeader previousHeader = lastNode->header;
-            
-            IndexPage* nextIndexPage = this->FindOrAllocateNextIndexPage(tableId, indexPage->GetPageId(), lastNode->GetNodeSize(), nonClusteredIndexId);
+            IndexPage* nextIndexPage = this->FindOrAllocateNextIndexPage(tableId, indexPage->GetPageId(), lastNode->currentNodeSize, nonClusteredIndexId, counter >= pageSize - 1);
             indexPage->DeleteLastNode();
+
+            if(lastNode->header.pageId == node->header.pageId
+                && lastNode->header.indexPosition == node->header.indexPosition)
+            {
+                isNodeDeletedFromPage = true;
+                indexPage->UpdateBytesLeft(lastNode->prevNodeSize, 0);
+            }
+            else
+                indexPage->UpdateBytesLeft(lastNode->currentNodeSize, 0);
             
             nextIndexPage->InsertNode(lastNode, &lastNode->header.indexPosition);
             lastNode->header.pageId = nextIndexPage->GetPageId();
             
             this->UpdateNodeConnections(lastNode, previousHeader);
             this->UpdateTableIndexes(tableId, lastNode, nonClusteredIndexId);
+
+            counter++;
         }
 
-        indexPage->UpdateBytesLeft(node->prevNodeSize, (!isNodeDeleted) ? nodeSize : 0);
+        if(!isNodeDeletedFromPage)
+            indexPage->UpdateBytesLeft(node->prevNodeSize, node->currentNodeSize);
+        node->prevNodeSize = node->currentNodeSize;
     }
 
     void Database::UpdateNodeConnections(Node *& node, const NodeHeader& previousHeader)
@@ -294,12 +272,14 @@ namespace DatabaseEngine {
             Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
             for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
+            {
                 if (parentNode->childrenHeaders[index].pageId == previousHeader.pageId
                     && parentNode->childrenHeaders[index].indexPosition == previousHeader.indexPosition)
                 {
                     parentNodeIndexPage->UpdateNodeChildHeader(node->parentHeader.indexPosition, index, node->header);
                     break;
                 }
+            }
         }
 
         if (node->isLeaf)
@@ -336,7 +316,7 @@ namespace DatabaseEngine {
 
         Table* table = this->tables.at(tableId);
 
-        const bool isNonClusteredIndex = nonClusteredIndexId == -1;
+        const bool isNonClusteredIndex = nonClusteredIndexId != -1;
 
         if (isNonClusteredIndex)
         {
@@ -357,9 +337,10 @@ namespace DatabaseEngine {
 
         Database::InsertRowToPage(pageFreeSpacePage, page, row, indexPosition);
 
-        node->prevNodeSize = node->GetNodeSize();
+        //node->prevNodeSize = (node->prevNodeSize > 0) ? node->prevNodeSize : node->GetNodeSize();
 
         node->keys.insert(node->keys.begin() + indexPosition, key);
+        node->currentNodeSize += key.GetKeySize();
 
         this->SplitNodeFromIndexPage(table.GetTableId(), node);
     }

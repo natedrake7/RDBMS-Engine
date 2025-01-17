@@ -171,9 +171,13 @@ namespace DatabaseEngine::StorageTypes
 
             void SetClusteredIndexPageId(const page_id_t &indexPageId);
 
+            [[nodiscard]] const page_id_t& GetClusteredIndexPageId() const;
+
             void SetNonClusteredIndexPageId(const page_id_t& indexPageId, const int& indexPosition);
 
-            void SetIndexAllocationMapPageId(const page_id_t& pageId);
+            const page_id_t& GetNonClusteredIndexPageId( const int& indexPosition) const;
+
+            [[nodiscard]] void SetIndexAllocationMapPageId(const page_id_t& pageId);
 
             Indexing::BPlusTree* GetClusteredIndexedTree();
 

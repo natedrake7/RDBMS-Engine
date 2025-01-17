@@ -191,7 +191,7 @@ void IndexPage::InsertNode(Indexing::Node *& node, page_offset_t* indexPosition)
     *indexPosition = this->nodes.size();
     this->nodes.push_back(node);
 
-    this->header.bytesLeft -= node->GetNodeSize();
+    this->header.bytesLeft -= node->currentNodeSize;
 
     this->header.pageSize++;
     this->isDirty = true;
@@ -214,12 +214,9 @@ Indexing::Node * IndexPage::GetLastNode()
 
 void IndexPage::DeleteLastNode()
 {
-    Node* lastNode = this->nodes.back();
-
     this->nodes.pop_back();
 
     this->header.pageSize--;
-    this->header.bytesLeft += lastNode->GetNodeSize();
     this->isDirty = true;
 }
 
@@ -228,25 +225,34 @@ void IndexPage::UpdateBytesLeft()
     this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
 
     for(const auto& node: this->nodes)
-        this->header.bytesLeft -= node->GetNodeSize();
+        this->header.bytesLeft -= node->currentNodeSize;
 
     this->isDirty = true;
 }
 
 void IndexPage::UpdateBytesLeft(const page_size_t & prevNodeSize, const page_size_t & currentNodeSize)
 {
-    this->header.bytesLeft -= (currentNodeSize - prevNodeSize);
+    this->header.bytesLeft += prevNodeSize - currentNodeSize;
 
     this->isDirty = true;
 }
 
-Node *& IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) { return this->nodes.at(indexPosition); }
+Node * IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) 
+{
+    Node* node = this->nodes.at(indexPosition);
+    node->isNodeClustered = this->additionalHeader.treeType == TreeType::Clustered;
+
+    return node; 
+}
 
 Node* IndexPage::GetRoot()
 {
     for (auto& node : this->nodes)
-        if(node->isRoot)
+        if (node->isRoot)
+        {
+            node->isNodeClustered = this->additionalHeader.treeType == TreeType::Clustered;
             return node;
+        }
 
     return nullptr;
 }

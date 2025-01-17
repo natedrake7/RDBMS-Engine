@@ -5,8 +5,8 @@
 namespace Constants
 {
     constexpr size_t PAGE_SIZE = 8 * 1024;
-    constexpr size_t MAX_NUMBER_OF_PAGES = 8000;
-    constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000;
+    constexpr size_t MAX_NUMBER_OF_PAGES = 15000;
+    constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 100000;
     constexpr size_t EXTENT_SIZE = 8;
     constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
     constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;

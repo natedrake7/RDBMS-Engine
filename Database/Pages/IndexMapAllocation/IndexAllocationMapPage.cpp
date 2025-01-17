@@ -36,6 +36,9 @@ namespace Pages {
     {
         const extent_id_t bitMapId = extentId - ((globalAllocationMapPage->GetPageId() - 2) * GAM_PAGE_SIZE );
         this->ownedExtents->Set(bitMapId, true);
+
+        this->lastAllocatedExtentId = bitMapId;
+
         this->isDirty = true;
     }
 
@@ -43,17 +46,18 @@ namespace Pages {
     {
         this->ownedExtents->Set(extentId, false);
         this->isDirty = true;
+
+        //set the lastAllocated accordingly
     }
 
     void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedExtents) const
     {
         const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(this->header.pageId);
+        const page_id_t offSet = IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
-        for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
-        {
+        for (extent_id_t id = 0; id < lastAllocatedExtentId; id++)
             if (this->ownedExtents->Get(id))
-                allocatedExtents->push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + id);
-        }
+               allocatedExtents->push_back(offSet + id);
     }
 
     void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedExtents, const extent_id_t& startingExtentIndex) const

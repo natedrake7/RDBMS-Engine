@@ -30,6 +30,8 @@ namespace Indexing
         BPlusTreeNonClusteredData();
         BPlusTreeNonClusteredData(const page_id_t& pageId, const page_offset_t& index);
         ~BPlusTreeNonClusteredData();
+
+        static page_size_t GetNonClusteredDataSize();
     }BPlusTreeNonClusteredData;
 
     typedef struct QueryData
@@ -58,6 +60,8 @@ namespace Indexing
         bool operator<(const Key& otherKey) const;
         bool operator<=(const Key& otherKey) const;
         bool operator>=(const Key& otherKey) const;
+
+        int GetKeySize() const;
     }Key;
 
     typedef struct NodeHeader{
@@ -66,6 +70,7 @@ namespace Indexing
 
         NodeHeader();
         NodeHeader(const page_id_t& pageId, const page_offset_t& indexPosition);
+        NodeHeader(const NodeHeader& otherHeader);
         ~NodeHeader();
         static page_size_t GetNodeHeaderSize();
     }NodeHeader;
@@ -75,6 +80,7 @@ namespace Indexing
         NodeHeader header;
         bool isLeaf;
         bool isRoot;
+        bool isNodeClustered;
         
         vector<Key> keys;
         
@@ -87,8 +93,9 @@ namespace Indexing
         NodeHeader previousNodeHeader;
 
         page_size_t prevNodeSize;
+        page_size_t currentNodeSize;
 
-        explicit Node(const bool &isLeaf = false, const bool& isRoot = false);
+        explicit Node(const bool &isLeaf = false, const bool& isRoot = false, const bool& isNodeClustered = false);
         page_size_t GetNodeSize();
         ~Node();
     }Node;

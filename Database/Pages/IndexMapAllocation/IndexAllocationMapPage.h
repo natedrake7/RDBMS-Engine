@@ -22,6 +22,7 @@ namespace Pages {
     class IndexAllocationMapPage final : public Page{
         ByteMaps::BitMap* ownedExtents;
         IndexAllocationPageAdditionalHeader additionalHeader;
+        uint16_t lastAllocatedExtentId;
 
     protected:
         void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);

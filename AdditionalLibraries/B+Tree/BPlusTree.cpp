@@ -18,17 +18,19 @@ using namespace Storage;
 namespace Indexing
 {
 
-    Node::Node(const bool &isLeaf, const bool& isRoot)
+    Node::Node(const bool &isLeaf, const bool& isRoot, const bool& isNodeClustered)
     {
         this->isLeaf = isLeaf;
         this->isRoot = isRoot;
-        this->prevNodeSize = 0;
+        this->isNodeClustered = isNodeClustered;
+        this->currentNodeSize = this->GetNodeSize();
+        this->prevNodeSize = this->GetNodeSize();
         this->dataPageId = 0;
     }
 
     page_size_t Node::GetNodeSize()
     {
-        //included self and parent header
+        //included self and parent header + prev and next
         page_size_t size = 2 * NodeHeader::GetNodeHeaderSize();
 
         //if node is leaf or not
@@ -38,13 +40,13 @@ namespace Indexing
         size += sizeof(uint16_t);
 
         for (const auto &key : this->keys)
-            size += ( sizeof(key_size_t) + key.size);
+            size += key.GetKeySize();
 
         if (this->isLeaf)
         {
-            size += this->nonClusteredData.empty() 
+            size += this->isNodeClustered 
                     ? sizeof(page_id_t) 
-                    : (this->nonClusteredData.size() * (sizeof(page_id_t) + sizeof(page_offset_t))) + sizeof(uint16_t);
+                    : ((this->nonClusteredData.size() * BPlusTreeNonClusteredData::GetNonClusteredDataSize())+ sizeof(uint16_t));
 
             size += 2 * NodeHeader::GetNodeHeaderSize();
         }
@@ -83,13 +85,9 @@ namespace Indexing
 
     void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
     {
-        Node *newChild = new Node(child->isLeaf);
+        Node *newChild = new Node(child->isLeaf, false, this->type == TreeType::Clustered);
         
-        newChild->prevNodeSize = newChild->GetNodeSize();
         this->InsertNodeToPage(newChild);
-
-        parent->prevNodeSize = parent->GetNodeSize();
-        child->prevNodeSize = child->GetNodeSize();
 
         // Insert the new child into the parent's children vector at the correct position
         parent->childrenHeaders.insert(parent->childrenHeaders.begin() + index + 1, newChild->header);
@@ -110,22 +108,41 @@ namespace Indexing
 
         splitLeaves->push_back(make_tuple(parent, child, newChild));
 
-        if (!child->isLeaf)
+        if (child->isLeaf)
+        {
+            if (this->type == TreeType::Clustered)
+                this->database->SplitPage(child, newChild, this->t, this->tableId);
+            else
+            {
+                newChild->nonClusteredData.assign(child->nonClusteredData.begin() + this->t, child->nonClusteredData.end());
+                child->nonClusteredData.resize(this->t);
+            }
+
+            // Maintain the linked list structure for leaf nodes
+            newChild->nextNodeHeader = child->nextNodeHeader;
+            newChild->previousNodeHeader = child->header;
+
+            child->nextNodeHeader = newChild->header;  
+        }
+        else
         {
             // Assign the second half of the child pointers to the new child
             newChild->childrenHeaders.assign(child->childrenHeaders.begin() + t, child->childrenHeaders.end());
-
             // Resize the old child's childrenHeaders vector to keep only the first half
             child->childrenHeaders.resize(t);
-
-            return;
         }
 
-        // Maintain the linked list structure for leaf nodes
-        newChild->nextNodeHeader = child->nextNodeHeader;
-        newChild->previousNodeHeader = child->header;
+        parent->prevNodeSize = parent->currentNodeSize;
+        parent->currentNodeSize = parent->GetNodeSize();
+        this->database->SplitNodeFromIndexPage(tableId, parent, nonClusteredIndexId);
 
-        child->nextNodeHeader = newChild->header;   
+        child->prevNodeSize = child->currentNodeSize;
+        child->currentNodeSize = child->GetNodeSize();
+        this->database->SplitNodeFromIndexPage(tableId, child, nonClusteredIndexId);
+
+        newChild->prevNodeSize = newChild->currentNodeSize;
+        newChild->currentNodeSize = newChild->GetNodeSize();
+        this->database->SplitNodeFromIndexPage(tableId, newChild, nonClusteredIndexId);
     }
 
     Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
@@ -133,14 +150,14 @@ namespace Indexing
         if (this->root == nullptr)
         {
             //maybe root page is removed and need to be reopened
-            this->root = new Node(true, true);
+            this->root = new Node(true, true, this->type == TreeType::Clustered);
             this->InsertNodeToPage(this->root);
         }
 
         if (root->keys.size() == 2 * t - 1) // root is full,
         {
             // create new root
-            Node *newRoot = new Node(false, true);
+            Node *newRoot = new Node(false, true, this->type == TreeType::Clustered);
             this->InsertNodeToPage(newRoot);
 
             // add current root as leaf
@@ -434,7 +451,7 @@ namespace Indexing
 
     void BPlusTree::InsertNodeToPage(Node*& node)
     {
-        IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize(), this->nonClusteredIndexId);
+        IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize(), this->nonClusteredIndexId, false);
 
         //could only be set once and not multiple times but insignificant
         indexPage->SetTreeType(this->type);
@@ -575,6 +592,8 @@ namespace Indexing
         throw invalid_argument(">= Invalid DataType for Key");
     }
 
+    int Key::GetKeySize() const { return this->size + sizeof(key_size_t); }
+
     bool Key::operator==(const Key& otherKey) const
     {
         switch (this->type) 
@@ -620,6 +639,8 @@ namespace Indexing
 
     BPlusTreeNonClusteredData::~BPlusTreeNonClusteredData() = default;
 
+    page_size_t BPlusTreeNonClusteredData::GetNonClusteredDataSize() { return sizeof(page_id_t) + sizeof(page_offset_t); }
+
     NodeHeader::NodeHeader()
     {
         this->pageId = 0;
@@ -630,6 +651,12 @@ namespace Indexing
     {
         this->pageId = pageId;
         this->indexPosition = indexPosition;
+    }
+
+    NodeHeader::NodeHeader(const NodeHeader & otherHeader)
+    {
+        this->pageId = otherHeader.pageId;
+        this->indexPosition = otherHeader.indexPosition;
     }
 
     NodeHeader::~NodeHeader() = default;

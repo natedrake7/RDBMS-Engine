@@ -11,11 +11,13 @@ namespace Pages {
         this->extentsMap = new BitMap(EXTENT_BIT_MAP_SIZE, 0xFF);
         this->header.bytesLeft = 0;
         this->isDirty = true;
-    }
+        this->lastAllocatedExtentId = 0;
 
+    }
     GlobalAllocationMapPage::GlobalAllocationMapPage(const PageHeader& pageHeader) : Page(pageHeader)
     {
         this->extentsMap = new BitMap();
+        this->lastAllocatedExtentId = 0;
     }
 
     GlobalAllocationMapPage::~GlobalAllocationMapPage()
@@ -25,10 +27,11 @@ namespace Pages {
 
     extent_id_t GlobalAllocationMapPage::AllocateExtent()
     {
-        for (extent_id_t extentId = 0; extentId < this->extentsMap->GetSize(); extentId++)
+        for (extent_id_t extentId = lastAllocatedExtentId; extentId < this->extentsMap->GetSize(); extentId++)
         {
             if (this->extentsMap->Get(extentId))
             {
+                this->lastAllocatedExtentId = extentId;
                 this->extentsMap->Set(extentId, false);
             
                 this->isDirty = true;

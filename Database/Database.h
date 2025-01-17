@@ -63,6 +63,8 @@ class Database {
   string filename;
   string fileExtension;
   vector<StorageTypes::Table *> tables;
+  page_id_t lastEmptyIndexPageId;
+
 
 protected:
     void ValidateTableCreation(StorageTypes::Table *table) const;
@@ -101,17 +103,6 @@ protected:
                                 extent_id_t* rowExtentId,
                                 int* rowIndex);
 
-    void SplitNodesFromClusteredIndex(vector<tuple<Indexing::Node*, Indexing::Node*, Indexing::Node*>>& splitLeaves, 
-                                        const int& branchingFactor, 
-                                        StorageTypes::Table* table);
-
-    void SplitPage( Indexing::Node*& firstNode,
-                    Indexing::Node*& secondNode,
-                    const int &branchingFactor,
-                    StorageTypes::Table *table);
-
-    void SplitNonClusteredData(const StorageTypes::Table& table, vector<tuple<Indexing::Node *, Indexing::Node *, Indexing::Node *>> &splitLeaves, const int &branchingFactor, const int& nonClusteredIndexId = -1);
-
     void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId);
 
     static void InsertRowToPage( Pages::PageFreeSpacePage *pageFreeSpacePage,
@@ -124,7 +115,6 @@ protected:
                                   const Indexing::Key &key,
                                   const int &indexPosition);
 
-    void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
 
     void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& previousHeader);
 
@@ -189,7 +179,19 @@ public:
                                                             const StorageTypes::Table &table, 
                                                             extent_id_t *nextExtentId);
 
-    [[nodiscard]] Pages::IndexPage* FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize, const int& nonClusteredIndexId = -1);
+    [[nodiscard]] Pages::IndexPage* FindOrAllocateNextIndexPage(  const table_id_t& tableId
+                                                                , const page_id_t &indexPageId
+                                                                , const int& nodeSize
+                                                                , const int& nonClusteredIndexId = -1
+                                                                , const bool& findPageDifferentFromCurrent = false);
+
+    void SplitPage( Indexing::Node*& firstNode,
+                Indexing::Node*& secondNode,
+                const int &branchingFactor,
+                const table_id_t& tableId);
+    
+    void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
+
 };
 
 void CreateDatabase(const string &dbName);

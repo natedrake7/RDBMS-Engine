@@ -62,7 +62,7 @@ namespace Pages {
 			void UpdateBytesLeft() override;
 			void UpdateBytesLeft(const page_size_t& prevNodeSize, const page_size_t& currentNodeSize);
 
-			[[nodiscard]] Indexing::Node*& GetNodeByIndex(const page_offset_t& indexPosition);
+			[[nodiscard]] Indexing::Node* GetNodeByIndex(const page_offset_t& indexPosition);
 
 			[[nodiscard]] Indexing::Node* GetRoot();
 

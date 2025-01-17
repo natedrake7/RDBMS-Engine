@@ -59,7 +59,11 @@ namespace DatabaseEngine::StorageTypes{
         this->header.clusteredIndexPageId = indexPageId; 
     }
 
+    const page_id_t & Table::GetClusteredIndexPageId() const { return this->header.clusteredIndexPageId; }
+
     void Table::SetNonClusteredIndexPageId(const page_id_t & indexPageId, const int& indexPosition) { this->header.nonClusteredIndexPageIds.at(indexPosition) = indexPageId; }
+
+    const page_id_t & Table::GetNonClusteredIndexPageId(const int & indexPosition) const { return this->header.nonClusteredIndexPageIds.at(indexPosition); }
 
     void Table::SetIndexAllocationMapPageId(const page_id_t & pageId) { this->header.indexAllocationMapPageId = pageId; }
 

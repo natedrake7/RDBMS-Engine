@@ -32,22 +32,22 @@ void InsertRowsToMoviesTable(Table* table);
 int main() 
 {
     Database *db = nullptr;
-    const string dbName = "stakosDb";
-
     try 
     {
+        const string dbName = "stakosDb";
+
         //CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
-         //CreateMoviesTables(db);
-         //CreateActorsTable(db);
+        //CreateMoviesTables(db);
+        //CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");
-        //Table* actorsTable =  db->OpenTable("Actors");
-        //InsertRowsToMoviesTable(table);
+        Table* actorsTable =  db->OpenTable("Actors");
+        InsertRowsToMoviesTable(table);
 
         //InsertRowsToActorsTable(table);
 
@@ -59,7 +59,7 @@ int main()
         //table->Update(updates, nullptr);
 
         ExecuteQuery(table);
-        //ExecuteQuery(actorsTable);
+        ExecuteQuery(actorsTable);
 
     }
     catch (const exception &exception) 
@@ -106,10 +106,10 @@ void CreateActorsTable(Database *db)
     const vector<column_index_t> clusteredIndexes; /*= {0};*/
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 0 } };
 
-    Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, &nonClusteredIndexes);
+    Table* table = db->CreateTable("Actors", columns, nullptr, &nonClusteredIndexes);
     vector<vector<Field>> inputData;
 
-    for (int i = 0; i < 100; i++) 
+    for (int i = 0; i < 100000; i++) 
     {
         vector<Field> fields = {
              Field("1", 0)
@@ -141,7 +141,7 @@ void CreateMoviesTables(Database *db)
     const vector<column_index_t> clusteredIndexes = {0};
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
 
-    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, nullptr);
+    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
 
     vector<vector<Field>> inputData;
 
@@ -193,18 +193,19 @@ void InsertRowsToMoviesTable(Table* table)
 {
     vector<vector<Field>> inputData;
 
-    for (int i = 100002; i < 100100; i++) 
+    for (int i = 100200; i < 200000; i++) 
     {
         vector<Field> fields = {
             Field("1", 0),        
             Field("1", 1),
-            Field(string(9000, 'A'), 2), 
+            Field("Thriller", 2), 
             Field("2024-04-12 12:12:12", 3),
             Field("1", 4),        
             Field("1233232.12434343", 5),
         };
 
         fields[0].SetData(to_string(i));
+        fields[1].SetData(to_string(i));
 
         // table->InsertRow(fields);
         inputData.push_back(fields);

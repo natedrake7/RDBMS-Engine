@@ -12,6 +12,7 @@ namespace ByteMaps {
 namespace Pages {
     class GlobalAllocationMapPage final : public Page{
         ByteMaps::BitMap* extentsMap;
+        extent_id_t lastAllocatedExtentId;
     
     protected:
         static page_size_t GetAvailableSize();
