@@ -57,6 +57,8 @@ namespace DatabaseEngine::StorageTypes
 
         page_id_t clusteredIndexPageId;
         vector<page_id_t> nonClusteredIndexPageIds;
+        vector<uint8_t> nonClusteredIndexesIds;
+
         ByteMaps::BitMap *columnsNullBitMap;
 
         // bitmaps to store the composite key
@@ -177,7 +179,9 @@ namespace DatabaseEngine::StorageTypes
 
             const page_id_t& GetNonClusteredIndexPageId( const int& indexPosition) const;
 
-            [[nodiscard]] void SetIndexAllocationMapPageId(const page_id_t& pageId);
+            const uint8_t& GetNonClusteredIndexId( const int& indexPosition) const;
+
+            void SetIndexAllocationMapPageId(const page_id_t& pageId);
 
             Indexing::BPlusTree* GetClusteredIndexedTree();
 

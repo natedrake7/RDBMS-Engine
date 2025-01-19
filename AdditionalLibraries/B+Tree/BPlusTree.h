@@ -89,6 +89,7 @@ namespace Indexing
         
         NodeHeader parentHeader;
         vector<NodeHeader> childrenHeaders;
+        vector<Node*> childrenPtrs;
         NodeHeader nextNodeHeader;
         NodeHeader previousNodeHeader;
 
@@ -110,9 +111,9 @@ namespace Indexing
         int nonClusteredIndexId;
         DatabaseEngine::Database* database;
 
-        void SplitChild(Node *parent, const int &index, Node *child, vector<tuple<Node*, Node *, Node *>> *splitLeaves);
+        void SplitChild(Node *parent, const int &index, Node *child);
         void PrintTree(const Node *node, const int &level);
-        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves);
+        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition);
         void DeleteNode(Node *node);
         Node *SearchKey(const Key &key) const;
         void InsertNodeToPage(Node*& node);
@@ -123,7 +124,7 @@ namespace Indexing
         BPlusTree();
         ~BPlusTree();
 
-        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves);
+        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition);
         void PrintTree();
 
         void RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;

@@ -32,20 +32,18 @@ void InsertRowsToMoviesTable(Table* table);
 int main() 
 {
     Database *db = nullptr;
-    try 
-    {
-        const string dbName = "stakosDb";
+            const string dbName = "stakosDb";
 
-        //CreateDatabase(dbName);
+        CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
         //CreateMoviesTables(db);
-        //CreateActorsTable(db);
+        CreateActorsTable(db);
 
-        Table* table = db->OpenTable("Movies");
+        Table* table = db->OpenTable("Actors");
         //Table* actorsTable =  db->OpenTable("Actors");
         //InsertRowsToMoviesTable(table);
 
@@ -59,6 +57,11 @@ int main()
         //table->Update(updates, nullptr);
 
         ExecuteQuery(table);
+
+
+    try 
+    {
+
 
     }
     catch (const exception &exception) 
@@ -102,17 +105,17 @@ void CreateActorsTable(Database *db)
     columns.push_back(new Column("ActorBirthDay", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
     columns.push_back(new Column("ActorHeight", "Decimal", 10, true));
 
-    const vector<column_index_t> clusteredIndexes; /*= {0};*/
-    const vector<vector<column_index_t>> nonClusteredIndexes = { { 0 } };
+    const vector<column_index_t> clusteredIndexes= { 0 };
+    const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
 
-    Table* table = db->CreateTable("Actors", columns, nullptr, &nonClusteredIndexes);
+    Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, nullptr);
     vector<vector<Field>> inputData;
 
     for (int i = 0; i < 100000; i++) 
     {
         vector<Field> fields = {
              Field("1", 0)
-            ,Field("Johhny Depp", 1)
+            ,Field("Johnny Depp", 1)
             ,Field("65", 2)
             ,Field("1962-04-12 12:12:12", 3)
             ,Field("1.77", 4)
@@ -140,7 +143,7 @@ void CreateMoviesTables(Database *db)
     const vector<column_index_t> clusteredIndexes = {0};
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
 
-    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
+    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, nullptr);
 
     vector<vector<Field>> inputData;
 

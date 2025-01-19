@@ -59,6 +59,7 @@ namespace DatabaseEngine::StorageTypes {
         this->tableId = tableHeader.tableId;
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
         this->nonClusteredIndexPageIds = tableHeader.nonClusteredIndexPageIds;
+        this->nonClusteredIndexesIds = tableHeader.nonClusteredIndexesIds;
 
         this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
         this->clusteredIndexesBitMap = new BitMap(*tableHeader.clusteredIndexesBitMap);
@@ -144,6 +145,8 @@ namespace DatabaseEngine::StorageTypes {
 
                 for (const auto &nonClusteredIndex : (*nonClusteredIndexes)[i])
                     this->header.nonClusteredIndexesBitMap[i]->Set(nonClusteredIndex, true);
+
+                this->header.nonClusteredIndexesIds.emplace_back(i + 1);
             }
 
             this->header.nonClusteredIndexPageIds.resize(nonClusteredIndexes->size(), 0);
@@ -160,6 +163,8 @@ namespace DatabaseEngine::StorageTypes {
             this->InsertRow(rowData, extents, startingExtentIndex);
 
             rowsInserted++;
+
+            cout<< rowsInserted << endl;
 
             if (rowsInserted % 1000 == 0)
                 cout << rowsInserted << endl;
@@ -331,8 +336,8 @@ namespace DatabaseEngine::StorageTypes {
     void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
     {
         vector<QueryData> results;
-        const int32_t minKey = 200000;
-        const int32_t maxKey = 220000;
+        const int32_t minKey = 88700;
+        const int32_t maxKey = 89252;
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
 

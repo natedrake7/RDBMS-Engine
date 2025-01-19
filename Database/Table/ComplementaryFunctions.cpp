@@ -65,6 +65,8 @@ namespace DatabaseEngine::StorageTypes{
 
     const page_id_t & Table::GetNonClusteredIndexPageId(const int & indexPosition) const { return this->header.nonClusteredIndexPageIds.at(indexPosition); }
 
+    const uint8_t & Table::GetNonClusteredIndexId(const int & indexPosition) const { return this->header.nonClusteredIndexesIds.at(indexPosition); }
+
     void Table::SetIndexAllocationMapPageId(const page_id_t & pageId) { this->header.indexAllocationMapPageId = pageId; }
 
     void Table::SetTinyIntData(Block *&block, const Field &inputData) 

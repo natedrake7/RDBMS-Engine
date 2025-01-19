@@ -192,6 +192,7 @@ public:
     
     void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
 
+    void SplitNodeFromIndexPage2(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
 };
 
 void CreateDatabase(const string &dbName);

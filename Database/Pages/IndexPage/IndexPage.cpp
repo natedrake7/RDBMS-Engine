@@ -191,7 +191,7 @@ void IndexPage::InsertNode(Indexing::Node *& node, page_offset_t* indexPosition)
     *indexPosition = this->nodes.size();
     this->nodes.push_back(node);
 
-    this->header.bytesLeft -= node->currentNodeSize;
+    this->header.bytesLeft -= node->GetNodeSize();
 
     this->header.pageSize++;
     this->isDirty = true;
@@ -218,9 +218,6 @@ void IndexPage::DeleteLastNode()
 
     this->header.pageSize--;
     this->isDirty = true;
-
-    if(this->nodes.empty())
-        this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
 }
 
 void IndexPage::UpdateBytesLeft()
@@ -228,7 +225,7 @@ void IndexPage::UpdateBytesLeft()
     this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
 
     for(const auto& node: this->nodes)
-        this->header.bytesLeft -= node->currentNodeSize;
+        this->header.bytesLeft -= node->GetNodeSize();
 
     this->isDirty = true;
 }
@@ -238,6 +235,16 @@ void IndexPage::UpdateBytesLeft(const page_size_t & prevNodeSize, const page_siz
     this->header.bytesLeft += prevNodeSize - currentNodeSize;
 
     this->isDirty = true;
+}
+
+page_size_t IndexPage::GetPageAllocatedBytes()
+{
+    page_size_t maxSize = PageHeader::GetPageHeaderSize() + IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+
+    for(const auto& node: this->nodes)
+        maxSize += node->GetNodeSize();
+
+    return maxSize;
 }
 
 Node * IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) 
@@ -262,36 +269,28 @@ Node* IndexPage::GetRoot()
 
 void IndexPage::UpdateNodeParentHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader & nodeHeader)
 {
-   Node* node = this->nodes.at(indexPosition);
-
-   node->parentHeader = nodeHeader;
+   this->nodes.at(indexPosition)->parentHeader = nodeHeader;
 
    this->isDirty = true;
 }
 
 void IndexPage::UpdateNodeChildHeader(const page_offset_t & indexPosition, const page_offset_t & childIndexPosition, const Indexing::NodeHeader & nodeHeader)
 {
-    Node* node = this->nodes.at(indexPosition);
-
-    node->childrenHeaders[childIndexPosition] = nodeHeader;
+    this->nodes.at(indexPosition)->childrenHeaders[childIndexPosition] = nodeHeader;
 
     this->isDirty = true;
 }
 
 void IndexPage::UpdateNodeNextLeafHeader(const page_offset_t & indexPosition, const Indexing::NodeHeader & nodeHeader)
 {
-    Node* node = this->nodes.at(indexPosition);
-
-    node->nextNodeHeader = nodeHeader;
+    this->nodes.at(indexPosition)->nextNodeHeader = nodeHeader;
 
     this->isDirty = true;
 }
 
 void IndexPage::UpdateNodePreviousLeafHeader(const page_offset_t & indexPosition, const Indexing::NodeHeader & nodeHeader)
 {
-    Node* node = this->nodes.at(indexPosition);
-
-    node->previousNodeHeader = nodeHeader;
+    this->nodes.at(indexPosition)->previousNodeHeader = nodeHeader;
 
     this->isDirty = true;
 }

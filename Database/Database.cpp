@@ -628,7 +628,7 @@ namespace DatabaseEngine
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
         {
             IndexPage* indexPage = StorageManager::Get().CreateIndexPage(pageId);
-            indexPage->SetTreeId(treeId != 0 ? treeId : lowerLimit);
+            indexPage->SetTreeId(treeId);
             
             pageFreeSpacePage->SetPageMetaData(indexPage);
         }

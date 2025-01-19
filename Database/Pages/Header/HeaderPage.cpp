@@ -68,6 +68,9 @@ namespace Pages
             for(const auto& nonClusteredIndexPageId: tableFullHeader.tableHeader.nonClusteredIndexPageIds)
                 filePtr->write(reinterpret_cast<const char *>(&nonClusteredIndexPageId), sizeof(page_id_t));
 
+            for(const auto& nonClusteredIndexPageId: tableFullHeader.tableHeader.nonClusteredIndexesIds)
+                filePtr->write(reinterpret_cast<const char *>(&nonClusteredIndexPageId), sizeof(uint8_t));
+
             for (const auto &columnMetaData : tableFullHeader.columnsHeaders)
             {
                 filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnNameSize), sizeof(header_literal_t));
@@ -152,6 +155,15 @@ namespace Pages
 
                 tableFullHeader.tableHeader.nonClusteredIndexPageIds.push_back(pageId);
                 offSet += sizeof(page_id_t);
+            }
+
+            for (int j = 0; j < numberOfNonClusteredIndexes; j++)
+            {
+                uint8_t indexId = 0;
+                memcpy(&indexId, data.data() + offSet, sizeof(uint8_t));
+
+                tableFullHeader.tableHeader.nonClusteredIndexesIds.push_back(indexId);
+                offSet += sizeof(uint8_t);
             }
 
             for (int j = 0; j < tableFullHeader.tableHeader.numberOfColumns; j++)

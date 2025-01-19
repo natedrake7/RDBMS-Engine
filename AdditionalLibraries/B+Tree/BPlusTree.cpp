@@ -63,7 +63,7 @@ namespace Indexing
         const auto &tableHeader = table->GetTableHeader();
         
         this->root = nullptr;
-        this->t = PAGE_SIZE / table->GetMaximumRowSize();
+        this->t = 3;
         this->tableId = tableHeader.tableId;
         this->firstIndexPageId = indexPageId;
         this->type = treeType;
@@ -83,19 +83,12 @@ namespace Indexing
     //    this->DeleteNode(root);
     //}
 
-    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
+    void BPlusTree::SplitChild(Node *parent, const int &index, Node *child)
     {
         Node *newChild = new Node(child->isLeaf, false, this->type == TreeType::Clustered);
-        
-        this->InsertNodeToPage(newChild);
-
-        // Insert the new child into the parent's children vector at the correct position
-        parent->childrenHeaders.insert(parent->childrenHeaders.begin() + index + 1, newChild->header);
 
         // Move the middle key from the child to the parent
         parent->keys.insert(parent->keys.begin() + index, child->keys[t - 1]);
-
-        //update pageSize
 
         // Assign the second half of the child's keys to the new child
         newChild->keys.assign(child->keys.begin() + t, child->keys.end());
@@ -105,8 +98,6 @@ namespace Indexing
 
         child->parentHeader = parent->header;
         newChild->parentHeader = parent->header;
-
-        splitLeaves->push_back(make_tuple(parent, child, newChild));
 
         if (child->isLeaf)
         {
@@ -121,31 +112,29 @@ namespace Indexing
             // Maintain the linked list structure for leaf nodes
             newChild->nextNodeHeader = child->nextNodeHeader;
             newChild->previousNodeHeader = child->header;
-
             child->nextNodeHeader = newChild->header;  
         }
         else
         {
             // Assign the second half of the child pointers to the new child
             newChild->childrenHeaders.assign(child->childrenHeaders.begin() + t, child->childrenHeaders.end());
+            newChild->childrenPtrs.assign(child->childrenPtrs.begin() + t, child->childrenPtrs.end());
             // Resize the old child's childrenHeaders vector to keep only the first half
             child->childrenHeaders.resize(t);
+            child->childrenPtrs.resize(t);
         }
 
-        parent->prevNodeSize = parent->currentNodeSize;
-        parent->currentNodeSize = parent->GetNodeSize();
-        this->database->SplitNodeFromIndexPage(tableId, parent, nonClusteredIndexId);
+        this->InsertNodeToPage(newChild);
+        
+        parent->childrenHeaders.insert(parent->childrenHeaders.begin() + index + 1, newChild->header);
+        parent->childrenPtrs.insert(parent->childrenPtrs.begin() + index + 1, newChild);
+        //this->database->SplitNodeFromIndexPage(tableId, parent, nonClusteredIndexId);
 
-        child->prevNodeSize = child->currentNodeSize;
-        child->currentNodeSize = child->GetNodeSize();
-        this->database->SplitNodeFromIndexPage(tableId, child, nonClusteredIndexId);
-
-        newChild->prevNodeSize = newChild->currentNodeSize;
-        newChild->currentNodeSize = newChild->GetNodeSize();
-        this->database->SplitNodeFromIndexPage(tableId, newChild, nonClusteredIndexId);
+        // Insert the new child into the parent's children vector at the correct position
+        //this->database->SplitNodeFromIndexPage(tableId, child, nonClusteredIndexId);
     }
 
-    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
+    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition)
     {
         if (this->root == nullptr)
         {
@@ -162,19 +151,20 @@ namespace Indexing
 
             // add current root as leaf
             newRoot->childrenHeaders.push_back(this->root->header);
+            newRoot->childrenPtrs.push_back(root);
             this->root->isRoot = false;
 
             // split the root
-            this->SplitChild(newRoot, 0, this->root, splitLeaves);
+            this->SplitChild(newRoot, 0, this->root);
 
             // root is the newRoot
             root = newRoot;
         }
 
-        return this->GetNonFullNode(root, key, indexPosition, splitLeaves);
+        return this->GetNonFullNode(root, key, indexPosition);
     }
 
-    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition, vector<tuple<Node*, Node *, Node *>> *splitLeaves)
+    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition)
     {
         if (node->isLeaf)
         {
@@ -203,18 +193,25 @@ namespace Indexing
         const auto iterator = ranges::lower_bound(node->keys, key);
 
         int childIndex = iterator - node->keys.begin();
+        Node *child = nullptr;
+        try {
 
-        Node *child = this->GetNodeFromPage(node->childrenHeaders[childIndex]);
+             child = this->GetNodeFromPage(node->childrenHeaders[childIndex]);
+        }
+        catch (const exception& e)
+        {
+            Node* childNodeParent = this->GetNodeFromPage(node->childrenPtrs[childIndex]->parentHeader);
+        }
 
         if (child->keys.size() == 2 * t - 1)
         {
-            SplitChild(node, childIndex, child, splitLeaves);
+            SplitChild(node, childIndex, child);
 
             if (key > node->keys[childIndex])
                 childIndex++;
         }
 
-        return GetNonFullNode(this->GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition, splitLeaves);
+        return GetNonFullNode(this->GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition);
     }
 
     void BPlusTree::DeleteNode(Node *node)
@@ -451,13 +448,12 @@ namespace Indexing
 
     void BPlusTree::InsertNodeToPage(Node*& node)
     {
-        IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->GetNodeSize(), this->nonClusteredIndexId, false);
+        IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->currentNodeSize, this->nonClusteredIndexId, true);
 
         //could only be set once and not multiple times but insignificant
-        indexPage->SetTreeType(this->type);
         indexPage->InsertNode(node, &node->header.indexPosition);
-
         node->header.pageId = indexPage->GetPageId();
+        
         this->firstIndexPageId = root->header.pageId;
     }
 
