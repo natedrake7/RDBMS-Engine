@@ -1,6 +1,5 @@
 #include "Database.h"
 #include <cstdint>
-#include <stdexcept>
 #include <vcruntime_new_debug.h>
 #include <vector>
 #include "./Pages/Header/HeaderPage.h"
@@ -9,6 +8,7 @@
 #include "./Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "./Pages/IndexPage/IndexPage.h"
 #include "Constants.h"
+#include "Pages/Page.h"
 #include "Table/Table.h"
 #include "Column/Column.h"
 #include "Row/Row.h"
@@ -16,7 +16,6 @@
 #include "Storage/StorageManager/StorageManager.h"
 #include "../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "Block/Block.h"
-#include "../AdditionalLibraries/BitMap/BitMap.h"
 
 using namespace Pages;
 using namespace DatabaseEngine::StorageTypes;
@@ -166,7 +165,15 @@ namespace DatabaseEngine {
                                 : 0;
 
         if(indexPageId == 0)
-            return this->CreateIndexPage(tableId, indexId);
+        {
+            IndexPage* newIndexPage = this->CreateIndexPage(tableId, indexId);
+            
+            newIndexPage->SetTreeType(isNonClusteredIndex 
+                                    ? TreeType::NonClustered 
+                                    : TreeType::Clustered);
+
+            return newIndexPage;
+        }
 
         IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
         
@@ -194,7 +201,7 @@ namespace DatabaseEngine {
 
                 IndexPage* indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
 
-                if(indexPage->GetBytesLeft() + 400 < nodeSize
+                if(indexPage->GetBytesLeft() < nodeSize
                     || indexPage->GetTreeId() != indexId)
                     continue;
 
@@ -206,33 +213,71 @@ namespace DatabaseEngine {
             }
         }
 
-        return this->CreateIndexPage(tableId, indexId);
+        IndexPage* newIndexPage = this->CreateIndexPage(tableId, indexId);
+            
+        newIndexPage->SetTreeType(isNonClusteredIndex 
+                                ? TreeType::NonClustered 
+                                : TreeType::Clustered);
+
+        return newIndexPage;
     }
 
     void Database::SplitNodeFromIndexPage(const table_id_t& tableId, Node*& node, const int& nonClusteredIndexId)
     {
-        IndexPage* indexPage = StorageManager::Get().GetIndexPage(node->header.pageId);
+        IndexPage* overflowedPage = StorageManager::Get().GetIndexPage(node->header.pageId);
 
-        while (indexPage->GetPageAllocatedBytes() > PAGE_SIZE)
+        overflowedPage->UpdateBytesLeft();
+
+        if(overflowedPage->GetBytesLeft() > 0)
         {
-            Node* lastNode = indexPage->GetLastNode();
-
-            const NodeHeader previousHeader = lastNode->header;
-            
-            IndexPage* nextIndexPage = this->FindOrAllocateNextIndexPage(tableId, indexPage->GetPageId(), lastNode->GetNodeSize(), nonClusteredIndexId, true);
-            indexPage->DeleteLastNode();
-
-            nextIndexPage->InsertNode(lastNode, &lastNode->header.indexPosition);
-            lastNode->header.pageId = nextIndexPage->GetPageId();
-            
-            this->UpdateNodeConnections(lastNode, previousHeader);
-            this->UpdateTableIndexes(tableId, lastNode, nonClusteredIndexId);
+            PageFreeSpacePage* overflowedPagePFS = this->GetAssociatedPfsPage(overflowedPage->GetPageId());
+            overflowedPagePFS->SetPageMetaData(overflowedPage);
+            return;
         }
 
-        indexPage->UpdateBytesLeft();
+        vector<Node*>* overflowedPageNodes = overflowedPage->GetNodesUnsafe();
+
+        const int splitFactor = overflowedPage->GetPageSize() / 2;
+
+        const page_size_t availablePageBytes = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+
+        IndexPage* nextIndexPage = this->FindOrAllocateNextIndexPage(tableId, overflowedPage->GetPageId(), availablePageBytes, nonClusteredIndexId, true);
+
+        vector<Node*>* nextIndexPageNodes = nextIndexPage->GetNodesUnsafe();
+
+        const page_id_t& nextIndexPageId = nextIndexPage->GetPageId();
+
+        page_offset_t indexPosition = 0;
+
+        for(page_offset_t i = splitFactor; i < overflowedPageNodes->size(); i++)
+        {
+           const NodeHeader newNodeHeader(nextIndexPageId, indexPosition);
+
+            this->UpdateNodeConnections((*overflowedPageNodes)[i], newNodeHeader);
+
+            (*overflowedPageNodes)[i]->header = newNodeHeader;
+
+            this->UpdateTableIndexes(tableId, (*overflowedPageNodes)[i], nonClusteredIndexId);
+
+            nextIndexPageNodes->push_back((*overflowedPageNodes)[i]);
+
+            indexPosition++;
+        }
+
+        overflowedPage->ResizeNodes(splitFactor);
+        overflowedPage->UpdateBytesLeft();
+        
+        nextIndexPage->UpdateBytesLeft();
+        nextIndexPage->UpdatePageSize();
+
+        PageFreeSpacePage* overflowedPagePFS = this->GetAssociatedPfsPage(overflowedPage->GetPageId());
+        overflowedPagePFS->SetPageMetaData(overflowedPage);
+
+        PageFreeSpacePage* nextIndexPagePFS = this->GetAssociatedPfsPage(nextIndexPageId);
+        nextIndexPagePFS->SetPageMetaData(nextIndexPage);
     }
 
-    void Database::UpdateNodeConnections(Node *& node, const NodeHeader& previousHeader)
+    void Database::UpdateNodeConnections(Node *& node, const NodeHeader& newNodeHeader)
     {
         if (node->parentHeader.pageId != 0)
         {
@@ -241,8 +286,53 @@ namespace DatabaseEngine {
 
             for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
             {
-                if (parentNode->childrenHeaders[index].pageId == previousHeader.pageId
-                    && parentNode->childrenHeaders[index].indexPosition == previousHeader.indexPosition)
+                if (parentNode->childrenHeaders[index].pageId == node->header.pageId
+                    && parentNode->childrenHeaders[index].indexPosition == node->header.indexPosition)
+                {
+                    parentNodeIndexPage->UpdateNodeChildHeader(parentNode->header.indexPosition, index, newNodeHeader);
+                    break;
+                }
+            }
+        }
+
+        if (node->isLeaf)
+        {
+            if (node->previousNodeHeader.pageId != 0)
+            {
+                IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(node->previousNodeHeader.pageId);
+
+                previousLeafNodeIndexPage->UpdateNodeNextLeafHeader(node->previousNodeHeader.indexPosition, newNodeHeader);
+            }
+
+            if (node->nextNodeHeader.pageId != 0)
+            {
+                IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(node->nextNodeHeader.pageId);
+
+                nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, newNodeHeader);
+            }
+
+            return; //leaf has no children so return
+        }
+
+        for (auto& child : node->childrenHeaders)
+        {
+            IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(child.pageId);
+
+            childIndexPage->UpdateNodeParentHeader(child.indexPosition, newNodeHeader);
+        }
+    }
+
+    void Database::UpdateNodeConnections(Node*& node)
+    {
+        if (node->parentHeader.pageId != 0)
+        {
+            IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(node->parentHeader.pageId);
+            Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
+
+            for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
+            {
+                if (parentNode->childrenHeaders[index].pageId == node->header.pageId
+                    && parentNode->childrenHeaders[index].indexPosition == node->header.indexPosition)
                 {
                     parentNodeIndexPage->UpdateNodeChildHeader(parentNode->header.indexPosition, index, node->header);
                     break;
@@ -274,7 +364,7 @@ namespace DatabaseEngine {
             IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(child.pageId);
 
             childIndexPage->UpdateNodeParentHeader(child.indexPosition, node->header);
-        }
+        }  
     }
 
     void Database::UpdateTableIndexes(const table_id_t & tableId, Indexing::Node *& node, const int & nonClusteredIndexId)

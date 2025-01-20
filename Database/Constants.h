@@ -24,7 +24,7 @@ namespace Constants
 
     // Page types
     typedef uint32_t page_id_t;
-    typedef uint16_t page_size_t;
+    typedef int16_t page_size_t;
     typedef uint16_t page_offset_t;
     typedef uint16_t large_page_index_t;
 

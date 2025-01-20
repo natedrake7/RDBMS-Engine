@@ -89,7 +89,6 @@ namespace Indexing
         
         NodeHeader parentHeader;
         vector<NodeHeader> childrenHeaders;
-        vector<Node*> childrenPtrs;
         NodeHeader nextNodeHeader;
         NodeHeader previousNodeHeader;
 
@@ -116,7 +115,7 @@ namespace Indexing
         Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition);
         void DeleteNode(Node *node);
         Node *SearchKey(const Key &key) const;
-        void InsertNodeToPage(Node*& node);
+        void InsertNodeToPage(Node*& node, const page_id_t& parentPageId);
         Node* GetNodeFromPage(const NodeHeader& header) const;
 
     public:

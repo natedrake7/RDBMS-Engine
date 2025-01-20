@@ -3,6 +3,9 @@
 #include "../../Row/Row.h"
 #include "../../Table/Table.h"
 #include <cstring>
+#include <iostream>
+#include <ostream>
+#include <stdexcept>
 
 using namespace Indexing;
 using namespace DatabaseEngine::StorageTypes;
@@ -164,7 +167,9 @@ void IndexPage::WritePageToFile(fstream *filePtr)
 
       //clustered indexed tree
       if (this->additionalHeader.treeType == TreeType::Clustered)
+      {
            filePtr->write(reinterpret_cast<const char*>(&node->dataPageId), sizeof(page_id_t));
+      }
       else
       {
           //non clustered indexed tree
@@ -237,16 +242,6 @@ void IndexPage::UpdateBytesLeft(const page_size_t & prevNodeSize, const page_siz
     this->isDirty = true;
 }
 
-page_size_t IndexPage::GetPageAllocatedBytes()
-{
-    page_size_t maxSize = PageHeader::GetPageHeaderSize() + IndexPageAdditionalHeader::GetAdditionalHeaderSize();
-
-    for(const auto& node: this->nodes)
-        maxSize += node->GetNodeSize();
-
-    return maxSize;
-}
-
 Node * IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) 
 {
     Node* node = this->nodes.at(indexPosition);
@@ -265,6 +260,26 @@ Node* IndexPage::GetRoot()
         }
 
     return nullptr;
+}
+
+vector<Node*>* IndexPage::GetNodesUnsafe() { return &this->nodes; }
+
+void IndexPage::ResizeNodes(const int& splitFactor)
+{
+    if(this->header.pageSize <= splitFactor)
+        throw invalid_argument("IndexPage::split factor cannot be equal or less to pageSize");
+
+    this->nodes.resize(splitFactor);
+    this->header.pageSize = this->nodes.size();
+
+    this->isDirty = true;
+}
+
+void IndexPage::UpdatePageSize()
+{
+    this->header.pageSize = this->nodes.size();
+
+    this->isDirty = true;
 }
 
 void IndexPage::UpdateNodeParentHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader & nodeHeader)

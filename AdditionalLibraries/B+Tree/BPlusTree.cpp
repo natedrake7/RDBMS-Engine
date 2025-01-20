@@ -63,7 +63,7 @@ namespace Indexing
         const auto &tableHeader = table->GetTableHeader();
         
         this->root = nullptr;
-        this->t = 3;
+        this->t = 40;
         this->tableId = tableHeader.tableId;
         this->firstIndexPageId = indexPageId;
         this->type = treeType;
@@ -96,8 +96,10 @@ namespace Indexing
         // Resize the old child to keep only the first half of its keys
         child->keys.resize(t - 1);
 
-        child->parentHeader = parent->header;
         newChild->parentHeader = parent->header;
+        
+        this->InsertNodeToPage(newChild, parent->header.pageId);
+        parent->childrenHeaders.insert(parent->childrenHeaders.begin() + index + 1, newChild->header);
 
         if (child->isLeaf)
         {
@@ -112,26 +114,26 @@ namespace Indexing
             // Maintain the linked list structure for leaf nodes
             newChild->nextNodeHeader = child->nextNodeHeader;
             newChild->previousNodeHeader = child->header;
-            child->nextNodeHeader = newChild->header;  
+            child->nextNodeHeader = newChild->header;
         }
         else
         {
             // Assign the second half of the child pointers to the new child
             newChild->childrenHeaders.assign(child->childrenHeaders.begin() + t, child->childrenHeaders.end());
-            newChild->childrenPtrs.assign(child->childrenPtrs.begin() + t, child->childrenPtrs.end());
+
             // Resize the old child's childrenHeaders vector to keep only the first half
             child->childrenHeaders.resize(t);
-            child->childrenPtrs.resize(t);
         }
 
-        this->InsertNodeToPage(newChild);
-        
-        parent->childrenHeaders.insert(parent->childrenHeaders.begin() + index + 1, newChild->header);
-        parent->childrenPtrs.insert(parent->childrenPtrs.begin() + index + 1, newChild);
-        //this->database->SplitNodeFromIndexPage(tableId, parent, nonClusteredIndexId);
+        this->database->UpdateNodeConnections(parent);
+        this->database->UpdateNodeConnections(newChild);
+        this->database->UpdateNodeConnections(child);
 
-        // Insert the new child into the parent's children vector at the correct position
-        //this->database->SplitNodeFromIndexPage(tableId, child, nonClusteredIndexId);
+        // this->database->UpdateNodeConnections(newChild);
+        //Check if pages are overflowed for parent, for child it will simply update the available bytes of the page
+        this->database->SplitNodeFromIndexPage(tableId, parent, nonClusteredIndexId);
+        this->database->SplitNodeFromIndexPage(tableId, child, nonClusteredIndexId);
+        this->database->SplitNodeFromIndexPage(tableId, newChild, nonClusteredIndexId);
     }
 
     Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition)
@@ -140,18 +142,17 @@ namespace Indexing
         {
             //maybe root page is removed and need to be reopened
             this->root = new Node(true, true, this->type == TreeType::Clustered);
-            this->InsertNodeToPage(this->root);
+            this->InsertNodeToPage(this->root, 0);
         }
 
         if (root->keys.size() == 2 * t - 1) // root is full,
         {
             // create new root
             Node *newRoot = new Node(false, true, this->type == TreeType::Clustered);
-            this->InsertNodeToPage(newRoot);
+            this->InsertNodeToPage(newRoot, root->header.pageId);
 
             // add current root as leaf
             newRoot->childrenHeaders.push_back(this->root->header);
-            newRoot->childrenPtrs.push_back(root);
             this->root->isRoot = false;
 
             // split the root
@@ -193,15 +194,7 @@ namespace Indexing
         const auto iterator = ranges::lower_bound(node->keys, key);
 
         int childIndex = iterator - node->keys.begin();
-        Node *child = nullptr;
-        try {
-
-             child = this->GetNodeFromPage(node->childrenHeaders[childIndex]);
-        }
-        catch (const exception& e)
-        {
-            Node* childNodeParent = this->GetNodeFromPage(node->childrenPtrs[childIndex]->parentHeader);
-        }
+        Node *child = this->GetNodeFromPage(node->childrenHeaders[childIndex]);
 
         if (child->keys.size() == 2 * t - 1)
         {
@@ -446,9 +439,11 @@ namespace Indexing
         return currentNode;
     }
 
-    void BPlusTree::InsertNodeToPage(Node*& node)
+    void BPlusTree::InsertNodeToPage(Node*& node, const page_id_t& parentPageId)
     {
-        IndexPage* indexPage = this->database->FindOrAllocateNextIndexPage(this->tableId, this->firstIndexPageId, node->currentNodeSize, this->nonClusteredIndexId, true);
+        IndexPage* indexPage = parentPageId == 0 
+                                ? this->database->FindOrAllocateNextIndexPage(this->tableId, parentPageId, node->currentNodeSize, this->nonClusteredIndexId)
+                                : StorageManager::Get().GetIndexPage(parentPageId);
 
         //could only be set once and not multiple times but insignificant
         indexPage->InsertNode(node, &node->header.indexPosition);

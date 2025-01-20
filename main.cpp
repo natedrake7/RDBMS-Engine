@@ -32,31 +32,31 @@ void InsertRowsToMoviesTable(Table* table);
 int main() 
 {
     Database *db = nullptr;
-            const string dbName = "stakosDb";
+    const string dbName = "stakosDb";
 
-        CreateDatabase(dbName);
+    // CreateDatabase(dbName);
 
-        UseDatabase(dbName, &db);
+    UseDatabase(dbName, &db);
 
-        StorageManager::Get().BindDatabase(db);
+    StorageManager::Get().BindDatabase(db);
 
-        //CreateMoviesTables(db);
-        CreateActorsTable(db);
+    // CreateMoviesTables(db);
+    // CreateActorsTable(db);
 
-        Table* table = db->OpenTable("Actors");
-        //Table* actorsTable =  db->OpenTable("Actors");
-        //InsertRowsToMoviesTable(table);
+    Table* table = db->OpenTable("Actors");
+    //Table* actorsTable =  db->OpenTable("Actors");
+    // InsertRowsToMoviesTable(table);
 
-        //InsertRowsToActorsTable(table);
+    //InsertRowsToActorsTable(table);
 
-        const vector<Field> updates = 
-        {
-            Field("Michael Jackson", 1, false)
-        };
+    const vector<Field> updates = 
+    {
+        Field("Michael Jackson", 1, false)
+    };
 
-        //table->Update(updates, nullptr);
+    //table->Update(updates, nullptr);
 
-        ExecuteQuery(table);
+    ExecuteQuery(table);
 
 
     try 

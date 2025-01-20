@@ -164,8 +164,6 @@ namespace DatabaseEngine::StorageTypes {
 
             rowsInserted++;
 
-            cout<< rowsInserted << endl;
-
             if (rowsInserted % 1000 == 0)
                 cout << rowsInserted << endl;
         }
@@ -336,8 +334,8 @@ namespace DatabaseEngine::StorageTypes {
     void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
     {
         vector<QueryData> results;
-        const int32_t minKey = 88700;
-        const int32_t maxKey = 89252;
+        const int32_t minKey = 99000;
+        const int32_t maxKey = 220000;
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
 

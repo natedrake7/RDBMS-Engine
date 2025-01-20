@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "../Page.h"
-#include <cstdint>
 #include <fstream>
 
 using namespace std;
@@ -62,11 +61,15 @@ namespace Pages {
 			void UpdateBytesLeft() override;
 			void UpdateBytesLeft(const page_size_t& prevNodeSize, const page_size_t& currentNodeSize);
 
-			page_size_t GetPageAllocatedBytes();
-
 			[[nodiscard]] Indexing::Node* GetNodeByIndex(const page_offset_t& indexPosition);
 
 			[[nodiscard]] Indexing::Node* GetRoot();
+
+			[[nodiscard]] vector<Indexing::Node*>* GetNodesUnsafe();
+
+			void ResizeNodes(const int& splitFactor);
+
+			void UpdatePageSize();
 
 			void UpdateNodeParentHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
 
