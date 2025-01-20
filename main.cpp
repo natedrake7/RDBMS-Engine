@@ -28,41 +28,38 @@ void InsertRowsToMoviesTable(Table* table);
 // create composite keys (minor)
 //truncate should deallocate the space used by the pages instead of marking it as free?
 //delete should defragment pages when done and combine them on heap files.
+//handle degree correctly
 
 int main() 
 {
     Database *db = nullptr;
-    const string dbName = "stakosDb";
-
-    // CreateDatabase(dbName);
-
-    UseDatabase(dbName, &db);
-
-    StorageManager::Get().BindDatabase(db);
-
-    // CreateMoviesTables(db);
-    // CreateActorsTable(db);
-
-    Table* table = db->OpenTable("Actors");
-    //Table* actorsTable =  db->OpenTable("Actors");
-    // InsertRowsToMoviesTable(table);
-
-    //InsertRowsToActorsTable(table);
-
-    const vector<Field> updates = 
-    {
-        Field("Michael Jackson", 1, false)
-    };
-
-    //table->Update(updates, nullptr);
-
-    ExecuteQuery(table);
-
-
     try 
     {
+        const string dbName = "stakosDb";
 
+        // CreateDatabase(dbName);
 
+        UseDatabase(dbName, &db);
+
+        StorageManager::Get().BindDatabase(db);
+
+        // CreateMoviesTables(db);
+        // CreateActorsTable(db);
+
+        Table* table = db->OpenTable("Movies");
+        //Table* actorsTable =  db->OpenTable("Actors");
+        // InsertRowsToMoviesTable(table);
+
+        //InsertRowsToActorsTable(table);
+
+        const vector<Field> updates = 
+        {
+            Field("Michael Jackson", 1, false)
+        };
+
+        //table->Update(updates, nullptr);
+
+        ExecuteQuery(table);
     }
     catch (const exception &exception) 
     {
@@ -143,7 +140,7 @@ void CreateMoviesTables(Database *db)
     const vector<column_index_t> clusteredIndexes = {0};
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
 
-    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, nullptr);
+    Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
 
     vector<vector<Field>> inputData;
 

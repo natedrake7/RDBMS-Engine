@@ -63,8 +63,6 @@ class Database {
   string filename;
   string fileExtension;
   vector<StorageTypes::Table *> tables;
-  page_id_t lastEmptyIndexPageId;
-
 
 protected:
     void ValidateTableCreation(StorageTypes::Table *table) const;

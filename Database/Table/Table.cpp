@@ -244,6 +244,7 @@ namespace DatabaseEngine::StorageTypes {
         //      conditionsHaveClusteredIndex = true;
         //  }
         //}
+
         if (this->HasNonClusteredIndexes() && this->GetTableType() != TableType::CLUSTERED)
         {
             this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
@@ -334,7 +335,7 @@ namespace DatabaseEngine::StorageTypes {
     void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
     {
         vector<QueryData> results;
-        const int32_t minKey = 99000;
+        const int32_t minKey = 90000;
         const int32_t maxKey = 220000;
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
@@ -368,7 +369,7 @@ namespace DatabaseEngine::StorageTypes {
         this->GetNonClusteredIndexedColumnKeys(&indexes);
 
         vector<BPlusTreeNonClusteredData> results;
-        const int32_t minKey = 200000;
+        const int32_t minKey = 90000;
         const int32_t maxKey = 220000;
 
         const BPlusTree* tree = this->GetNonClusteredIndexTree(0);

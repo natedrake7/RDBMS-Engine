@@ -9,6 +9,7 @@
 #include "../../Database/Table/Table.h"
 #include "../../Database/Pages/IndexPage/IndexPage.h"
 #include "../../Database/Storage/StorageManager/StorageManager.h"
+#include "../../Database/Column/Column.h"
 
 using namespace std;
 using namespace DatabaseEngine::StorageTypes;
@@ -61,9 +62,10 @@ namespace Indexing
     BPlusTree::BPlusTree(const Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
     {
         const auto &tableHeader = table->GetTableHeader();
-        
+
+        //handle degree here correctly based on indexed columns
+        this->t = BPlusTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
         this->root = nullptr;
-        this->t = 40;
         this->tableId = tableHeader.tableId;
         this->firstIndexPageId = indexPageId;
         this->type = treeType;
@@ -82,6 +84,28 @@ namespace Indexing
     //{
     //    this->DeleteNode(root);
     //}
+
+    int BPlusTree::CalculateTreeDegree(const Table* table, const TreeType& treeType, const int& nonClusteredIndexId)
+    {
+        if(treeType == TreeType::Clustered)
+            return (PAGE_SIZE - PageHeader::GetPageHeaderSize()) / (table->GetMaximumRowSize() * 2);
+        
+        const vector<Column*> columns = table->GetColumns();
+
+        vector<vector<column_index_t>> nonClusteredIndexes;
+        table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexes);
+
+        int keySize = 0;
+        for(const auto& key: nonClusteredIndexes[nonClusteredIndexId])
+        {
+            Column* column = columns[key];
+
+            keySize += column->GetColumnSize();
+        }
+
+        return (PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize()) 
+                    / ((keySize + BPlusTreeNonClusteredData::GetNonClusteredDataSize() ) * 2);
+    }
 
     void BPlusTree::SplitChild(Node *parent, const int &index, Node *child)
     {

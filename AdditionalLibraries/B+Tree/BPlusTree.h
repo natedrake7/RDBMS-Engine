@@ -117,6 +117,7 @@ namespace Indexing
         Node *SearchKey(const Key &key) const;
         void InsertNodeToPage(Node*& node, const page_id_t& parentPageId);
         Node* GetNodeFromPage(const NodeHeader& header) const;
+        static int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
 
     public:
         explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId = -1);
