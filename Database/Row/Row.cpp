@@ -26,6 +26,19 @@ namespace DatabaseEngine::StorageTypes {
         delete this->largeObjectBitMap;
     }
 
+    RowHeader & RowHeader::operator=(const RowHeader &otherHeader)
+    {
+        if (this == &otherHeader)
+            return *this;
+
+        this->rowSize = otherHeader.rowSize;
+        this->maxRowSize = otherHeader.maxRowSize;
+        this->nullBitMap = new BitMap(*otherHeader.nullBitMap);
+        // this->largeObjectBitMap = new BitMap(*otherHeader.largeObjectBitMap);
+
+        return *this;
+    }
+
     Row::Row(const Table& table)
     {
         this->table = &table;
@@ -38,10 +51,11 @@ namespace DatabaseEngine::StorageTypes {
         this->header.largeObjectBitMap = new BitMap(numberOfColumns);
     }
 
-    Row::Row(const Table& table, const vector<Block*>& data)
+    Row::Row(const Table& table, const vector<Block*>& data, const BitMap* nullBitMap)
     {
         this->table = &table;
-        
+
+        this->header.nullBitMap = new BitMap(*nullBitMap);
         for (const auto& block : data)
             this->data.push_back(new Block(block));
         

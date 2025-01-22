@@ -34,6 +34,7 @@ namespace DatabaseEngine::StorageTypes
 
         RowHeader();
         ~RowHeader();
+        RowHeader& operator= (const RowHeader& otherHeader);
     } RowHeader;
 
     class Row
@@ -45,7 +46,7 @@ namespace DatabaseEngine::StorageTypes
     public:
         explicit Row(const Table &table);
 
-        explicit Row(const Table &table, const vector<Block *> &data);
+        explicit Row(const Table &table, const vector<Block *> &data, const ByteMaps::BitMap* nullBitMa);
 
         Row(const Row &copyRow);
 

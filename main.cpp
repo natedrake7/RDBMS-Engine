@@ -8,6 +8,7 @@
 #include "AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
+#include "Database/AggregateFunctions/AggregateFunctions.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 
@@ -88,8 +89,11 @@ void ExecuteQuery(Table* table)
 
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
-    PrintRows(rows);
+    const auto countRes = AggregateFunctions::Count(rows, 0);
+    // PrintRows(rows);
 
+    cout << "AverageVal: " << countRes << '\n';
+    
     cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 }
 

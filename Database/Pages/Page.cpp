@@ -264,7 +264,7 @@ namespace Pages
 
                 copyBlocks.push_back(blockCopy);
             }
-            copiedRows->emplace_back(table, copyBlocks);
+            copiedRows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
         }
     }
 
@@ -272,7 +272,7 @@ namespace Pages
     {
         const auto &row = this->rows[indexPosition];
 
-        RowHeader *rowHeader = row->GetHeader();
+        const RowHeader *rowHeader = row->GetHeader();
 
         vector<Block *> copyBlocks;
 
@@ -294,7 +294,7 @@ namespace Pages
             copyBlocks.push_back(blockCopy);
         }
 
-        return Row(table, copyBlocks);
+        return Row(table, copyBlocks, rowHeader->nullBitMap);
     }
 
     void Page::SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const Table &table)
