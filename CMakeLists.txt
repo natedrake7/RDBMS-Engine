@@ -6,8 +6,25 @@ set(CMAKE_CXX_STANDARD 26)
 add_executable(DatabaseInterface
         main.cpp)
 
+add_library(AdditionalLibraries 
+        AdditionalLibraries/BitMap/BitMap.cpp
+        AdditionalLibraries/BitMap/BitMap.h
+        AdditionalLibraries/AdditionalDataTypes/Field/Field.cpp
+        AdditionalLibraries/AdditionalDataTypes/Field/Field.h
+        AdditionalLibraries/AdditionalDataTypes/RowCondition/RowCondition.cpp
+        AdditionalLibraries/AdditionalDataTypes/RowCondition/RowCondition.h
+        AdditionalLibraries/ByteMap/ByteMap.cpp
+        AdditionalLibraries/ByteMap/ByteMap.h
+        AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
+        AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
+        AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
+        AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
+        AdditionalLibraries/SafeConverter/SafeConverter.cpp
+        AdditionalLibraries/SafeConverter/SafeConverter.h)
+
 add_library(Database
         Database/Database.cpp
+        Database/DatabaseIndexHandlers.cpp
         Database/Database.h
         Database/Table/Table.cpp
         Database/Table/ComplementaryFunctions.cpp
@@ -35,25 +52,11 @@ add_library(Database
         Database/Pages/IndexPage/IndexPage.h
         Database/Pages/Page.cpp
         Database/Pages/Page.h
-        AdditionalLibraries/SafeConverter/SafeConverter.cpp
-        AdditionalLibraries/SafeConverter/SafeConverter.h
         Database/Storage/FileManager/FileManager.cpp
         Database/Storage/FileManager/FileManager.h
         Database/Storage/StorageManager/StorageManager.cpp
         Database/Storage/StorageManager/StorageManager.h
-        AdditionalLibraries/BitMap/BitMap.cpp
-        AdditionalLibraries/BitMap/BitMap.h
-        AdditionalLibraries/AdditionalObjects/Field/Field.cpp
-        AdditionalLibraries/AdditionalObjects/Field/Field.h
-        AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.cpp
-        AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h
-        AdditionalLibraries/ByteMap/ByteMap.cpp
-        AdditionalLibraries/ByteMap/ByteMap.h
-        AdditionalLibraries/AdditionalObjects/DateTime/DateTime.cpp
-        AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h
-        AdditionalLibraries/AdditionalObjects/Decimal/Decimal.cpp
-        AdditionalLibraries/AdditionalObjects/Decimal/Decimal.h
-        AdditionalLibraries/B+Tree/BPlusTree.cpp
-        AdditionalLibraries/B+Tree/BPlusTree.h   "Database/DatabaseIndexHandlers.cpp")
+        Database/B+Tree/BPlusTree.cpp
+        Database/B+Tree/BPlusTree.h )
 
-target_link_libraries(DatabaseInterface PRIVATE Database)
+target_link_libraries(DatabaseInterface PRIVATE AdditionalLibraries PRIVATE Database)

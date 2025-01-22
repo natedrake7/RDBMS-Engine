@@ -1,5 +1,5 @@
 #include "Table.h"
-#include "../../AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/RowCondition/RowCondition.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Block/Block.h"
 #include "../Column/Column.h"

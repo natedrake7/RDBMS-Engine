@@ -1,7 +1,6 @@
 ﻿#include "Database.h"
 #include <cstdint>
 #include <stdexcept>
-#include <vcruntime_new_debug.h>
 #include <vector>
 #include "./Pages/Header/HeaderPage.h"
 #include "./Pages/GlobalAllocationMap/GlobalAllocationMapPage.h"
@@ -14,9 +13,9 @@
 #include "Row/Row.h"
 #include "Pages/LargeObject/LargeDataPage.h"
 #include "Storage/StorageManager/StorageManager.h"
-#include "../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "Block/Block.h"
 #include "../AdditionalLibraries/BitMap/BitMap.h"
+#include "B+Tree/BPlusTree.h"
 
 using namespace Pages;
 using namespace DatabaseEngine::StorageTypes;

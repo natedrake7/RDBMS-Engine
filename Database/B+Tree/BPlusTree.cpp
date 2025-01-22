@@ -90,7 +90,7 @@ namespace Indexing
         if(treeType == TreeType::Clustered)
             return (PAGE_SIZE - PageHeader::GetPageHeaderSize()) / (table->GetMaximumRowSize() * 2);
         
-        const vector<Column*> columns = table->GetColumns();
+        const vector<Column*>& columns = table->GetColumns();
 
         vector<vector<column_index_t>> nonClusteredIndexes;
         table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexes);
@@ -98,13 +98,13 @@ namespace Indexing
         int keySize = 0;
         for(const auto& key: nonClusteredIndexes[nonClusteredIndexId])
         {
-            Column* column = columns[key];
+            const Column* column = columns[key];
 
             keySize += column->GetColumnSize();
         }
 
         return (PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize()) 
-                    / ((keySize + BPlusTreeNonClusteredData::GetNonClusteredDataSize() ) * 2);
+                    / ((keySize + BPlusTreeNonClusteredData::GetNonClusteredDataSize() + 4 * NodeHeader::GetNodeHeaderSize()) * 2);
     }
 
     void BPlusTree::SplitChild(Node *parent, const int &index, Node *child)

@@ -1,9 +1,7 @@
 ﻿#include "IndexPage.h"
-#include "../../../AdditionalLibraries/B+Tree/BPlusTree.h"
-#include "../../Row/Row.h"
+#include "../../B+Tree/BPlusTree.h"
 #include "../../Table/Table.h"
 #include <cstring>
-#include <iostream>
 #include <ostream>
 #include <stdexcept>
 

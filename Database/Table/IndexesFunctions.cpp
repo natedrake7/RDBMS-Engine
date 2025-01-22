@@ -1,19 +1,10 @@
 #include "Table.h"
-#include "Table.h"
-#include "Table.h"
-#include "../../AdditionalLibraries/B+Tree/BPlusTree.h"
-#include "../Block/Block.h"
 #include "../Column/Column.h"
 #include "../Constants.h"
 #include "../Database.h"
-#include "../Pages/LargeObject/LargeDataPage.h"
 #include "../Pages/IndexPage/IndexPage.h"
-#include "../Pages/IndexMapAllocation/IndexAllocationMapPage.h"
-#include "../Pages/Header/HeaderPage.h"
-#include "../Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "../Storage/StorageManager/StorageManager.h"
-#include "../Pages/Page.h"
-#include "../Row/Row.h"
+#include "../B+Tree/BPlusTree.h"
 
 using namespace Pages;
 using namespace ByteMaps;

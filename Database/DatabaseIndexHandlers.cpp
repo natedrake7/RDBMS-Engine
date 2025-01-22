@@ -1,20 +1,15 @@
 #include "Database.h"
 #include <cstdint>
-#include <vcruntime_new_debug.h>
 #include <vector>
-#include "./Pages/Header/HeaderPage.h"
-#include "./Pages/GlobalAllocationMap/GlobalAllocationMapPage.h"
 #include "./Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "./Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "./Pages/IndexPage/IndexPage.h"
 #include "Constants.h"
+#include "B+Tree/BPlusTree.h"
 #include "Pages/Page.h"
 #include "Table/Table.h"
-#include "Column/Column.h"
 #include "Row/Row.h"
-#include "Pages/LargeObject/LargeDataPage.h"
 #include "Storage/StorageManager/StorageManager.h"
-#include "../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "Block/Block.h"
 
 using namespace Pages;

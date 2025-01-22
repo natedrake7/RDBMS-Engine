@@ -4,8 +4,8 @@
 #include <string>
 #include "./Database/Database.h"
 #include "./Database/Row/Row.h"
-#include "AdditionalLibraries/AdditionalObjects/DateTime/DateTime.h"
-#include "AdditionalLibraries/AdditionalObjects/Field/Field.h"
+#include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
+#include "AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
 #include "Database/Storage/StorageManager/StorageManager.h"

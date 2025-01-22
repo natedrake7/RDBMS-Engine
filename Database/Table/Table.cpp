@@ -1,21 +1,18 @@
 ﻿#include "Table.h"
-#include "Table.h"
-#include "../../AdditionalLibraries/AdditionalObjects/Field/Field.h"
-#include "../../AdditionalLibraries/AdditionalObjects/RowCondition/RowCondition.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
-#include "../../AdditionalLibraries/B+Tree/BPlusTree.h"
 #include "../Block/Block.h"
 #include "../Column/Column.h"
 #include "../Constants.h"
 #include "../Database.h"
 #include "../Pages/LargeObject/LargeDataPage.h"
-#include "../Pages/IndexPage/IndexPage.h"
 #include "../Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "../Pages/Header/HeaderPage.h"
 #include "../Pages/PageFreeSpace/PageFreeSpacePage.h"
 #include "../Storage/StorageManager/StorageManager.h"
 #include "../Pages/Page.h"
 #include "../Row/Row.h"
+#include "../B+Tree/BPlusTree.h"
 #include <stdexcept>
 #include <unordered_set>
 
@@ -35,6 +32,7 @@ namespace DatabaseEngine::StorageTypes {
         this->tableNameSize = 0;
         this->clusteredIndexPageId = 0;
         this->columnsNullBitMap = nullptr;
+        this->clusteredIndexesBitMap = nullptr;
       }
 
       TableHeader::~TableHeader() 
@@ -244,7 +242,6 @@ namespace DatabaseEngine::StorageTypes {
         //      conditionsHaveClusteredIndex = true;
         //  }
         //}
-
         if (this->HasNonClusteredIndexes() && this->GetTableType() != TableType::CLUSTERED)
         {
             this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
