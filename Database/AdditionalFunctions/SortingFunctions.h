@@ -8,11 +8,11 @@ namespace DatabaseEngine::StorageTypes {
 
 using namespace std;
 
-class AdditionalFunctions{
+class SortingFunctions{
 
     
 
     public:
-        static AdditionalFunctions& Get();
+        static SortingFunctions& Get();
         static void OrderBy(vector<DatabaseEngine::StorageTypes::Row>& rows, const vector<SortType>& sortConditions);
 };

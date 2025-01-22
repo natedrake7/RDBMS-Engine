@@ -58,8 +58,8 @@ add_library(Database
         Database/Storage/StorageManager/StorageManager.h
         Database/B+Tree/BPlusTree.cpp
         Database/B+Tree/BPlusTree.h
-        Database/AdditionalFunctions/AdditionalFunctions.cpp
-        Database/AdditionalFunctions/AdditionalFunctions.h
+        Database/AdditionalFunctions/SortingFunctions.cpp
+        Database/AdditionalFunctions/SortingFunctions.h
         Database/AggregateFunctions/AggregateFunctions.cpp
         Database/AggregateFunctions/AggregateFunctions.h)
 

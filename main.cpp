@@ -89,10 +89,10 @@ void ExecuteQuery(Table* table)
 
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
-    const auto countRes = AggregateFunctions::Count(rows, 0);
+    const auto countRes = AggregateFunctions::Min(rows, 0, true);
     // PrintRows(rows);
 
-    cout << "AverageVal: " << countRes << '\n';
+    cout << fixed << setprecision(2) << "AverageVal: " << countRes << '\n';
     
     cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 }
