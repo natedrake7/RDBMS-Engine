@@ -6,13 +6,13 @@ set(CMAKE_CXX_STANDARD 26)
 add_executable(DatabaseInterface
         main.cpp)
 
-add_library(AdditionalLibraries 
+add_library(AdditionalLibraries
         AdditionalLibraries/BitMap/BitMap.cpp
         AdditionalLibraries/BitMap/BitMap.h
         AdditionalLibraries/AdditionalDataTypes/Field/Field.cpp
         AdditionalLibraries/AdditionalDataTypes/Field/Field.h
-        AdditionalLibraries/AdditionalDataTypes/RowCondition/RowCondition.cpp
-        AdditionalLibraries/AdditionalDataTypes/RowCondition/RowCondition.h
+        Database/RowCondition/RowCondition.cpp
+        Database/RowCondition/RowCondition.h
         AdditionalLibraries/ByteMap/ByteMap.cpp
         AdditionalLibraries/ByteMap/ByteMap.h
         AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
@@ -20,7 +20,8 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
         AdditionalLibraries/SafeConverter/SafeConverter.cpp
-        AdditionalLibraries/SafeConverter/SafeConverter.h)
+        AdditionalLibraries/SafeConverter/SafeConverter.h
+        AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp)
 
 add_library(Database
         Database/Database.cpp

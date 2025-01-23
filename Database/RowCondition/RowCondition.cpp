@@ -1,6 +1,6 @@
 #include "RowCondition.h"
 #include <cstring>
-#include "../../../Database/Block/Block.h"
+#include "../Block/Block.h"
 
 using namespace DatabaseEngine::StorageTypes;
 

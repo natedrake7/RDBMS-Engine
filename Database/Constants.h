@@ -28,6 +28,11 @@ namespace Constants
     typedef uint16_t page_offset_t;
     typedef uint16_t large_page_index_t;
 
+    enum SortType : uint8_t {
+        ASCENDING = 0,
+        DESCENDING = 1,
+    };
+
     enum class PageType : uint8_t
     {
         DATA = 0,

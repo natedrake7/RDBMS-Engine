@@ -34,7 +34,7 @@ namespace ByteMaps
         void WriteDataToFile(fstream *filePtr);
         void Print() const;
 
-        const vector<Constants::byte> &GetData() const;
+        [[nodiscard]] const vector<Constants::byte> &GetData() const;
 
         BitMap &operator=(const BitMap &itMap);
 

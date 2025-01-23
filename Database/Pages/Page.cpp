@@ -5,7 +5,6 @@
 #include "./LargeObject/LargeDataPage.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Block/Block.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/RowCondition/RowCondition.h"
 
 using namespace DatabaseEngine::StorageTypes;
 

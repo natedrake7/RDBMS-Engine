@@ -61,6 +61,7 @@ int main()
         //table->Update(updates, nullptr);
 
         ExecuteQuery(table);
+        ExecuteQuery(table);
     }
     catch (const exception &exception) 
     {
@@ -89,10 +90,11 @@ void ExecuteQuery(Table* table)
 
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
-    const auto countRes = AggregateFunctions::Min(rows, 0, true);
-    // PrintRows(rows);
+    // const long double val = 1;
+    // const auto countRes = AggregateFunctions::Count(rows, 0, &val);
+    PrintRows(rows);
 
-    cout << fixed << setprecision(2) << "AverageVal: " << countRes << '\n';
+    // cout << fixed << setprecision(2) << "Count: " << countRes << '\n';
     
     cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 }

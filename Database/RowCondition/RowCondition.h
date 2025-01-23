@@ -1,6 +1,5 @@
 #pragma once
-#include "../../../Database/Constants.h"
-
+#include "../Constants.h"
 using namespace Constants;
 
 namespace DatabaseEngine::StorageTypes {
