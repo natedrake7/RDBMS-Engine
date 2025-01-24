@@ -3,58 +3,14 @@
 #include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
 #include "../Block/Block.h"
 #include "../Row/Row.h"
+#include "SortingAlgorithms/MergeSort/MergeSort.h"
+#include "SortingAlgorithms/QuickSort/QuickSort.h"
 
 using namespace DatabaseEngine::StorageTypes;
 
 //merge sort (maybe)
-void SortingFunctions::QuickSort(vector<Row> &rows, const int &low, const int &high, const column_index_t& columnIndex, const SortType& sortType)
-{
-    if (low >= high)
-        return;
-      
-    const int pi = SortingFunctions::Partition(rows, low, high, columnIndex, sortType);
 
-    SortingFunctions::QuickSort(rows, low, pi - 1, columnIndex, sortType);
-    SortingFunctions::QuickSort(rows, pi + 1, high, columnIndex, sortType);
-}
-
-int SortingFunctions::Partition(vector<Row> &rows, const int &low, const int &high, const column_index_t& columnIndex, const SortType& sortType)
-{
-    const auto& pivot = rows[high];
-  
-    int i = low - 1;
-
-    for (int j = low; j <= high - 1; j++)
-    {
-        const bool comparison = (sortType == SortType::ASCENDING)
-                                    ? SortingFunctions::CompareRowsAscending(rows[j], pivot, columnIndex)
-                                    : SortingFunctions::CompareRowsDescending(rows[j], pivot, columnIndex);
-
-        if(!comparison)
-            continue;
-        
-        i++;
-
-        if(i == j)
-            continue;
-
-        const Row tempRow = rows[j];
-
-        rows[j] = rows[i];
-        rows[i] = tempRow;
-        
-        // swap(rows[i], rows[j]);
-    }
-
-    const Row tempRow = rows[high];
-    rows[high] = rows[i + 1];
-    rows[i + 1] = tempRow;
-
-    // swap(rows[i + 1], rows[high]);  
-    return i + 1;
-}
-
-void SortingFunctions::OrderDescending(vector<Row> &rows, const SortCondition &condition)
+void SortingFunctions::OrderDescending(vector<Row*> &rows, const SortCondition &condition)
 {
     const bool& isColumnIndexed = condition.GetIsColumnIndexed();
     const SortType sortType = condition.GetSortType();
@@ -69,21 +25,26 @@ void SortingFunctions::OrderDescending(vector<Row> &rows, const SortCondition &c
 
     const column_index_t& columnIndex = condition.GetColumnIndex();
 
-    SortingFunctions::QuickSort(rows, 0, static_cast<int>(rows.size() - 1), columnIndex, sortType);
+    //if dataset is small use quicksort
+    if(rows.size() <= 1000)
+    {
+        QuickSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), columnIndex, sortType);
+        return;
+    }
+    //else mergesort
     
-    // if(sortType == SortType::DESCENDING)
-    //     reverse(rows.begin(), rows.end());
+    MergeSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), columnIndex, sortType);
 }
 
-bool SortingFunctions::CompareRowsAscending(const Row &firstRow, const Row &secondRow, const column_index_t& columnIndex)
+bool SortingFunctions::CompareRowsAscending(const Row *firstRow, const Row *secondRow, const column_index_t& columnIndex)
 {
-    const Block* firstRowData = firstRow.GetData()[columnIndex];
-    const Block* secondRowData = secondRow.GetData()[columnIndex];
+    const Block* firstRowData = firstRow->GetData()[columnIndex];
+    const Block* secondRowData = secondRow->GetData()[columnIndex];
     
     return SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);
 }
 
-bool SortingFunctions::CompareRowsDescending(const Row &firstRow, const Row &secondRow, const column_index_t &columnIndex)
+bool SortingFunctions::CompareRowsDescending(const Row* firstRow, const Row* secondRow, const column_index_t &columnIndex)
 {
     return !SortingFunctions::CompareRowsAscending(firstRow, secondRow, columnIndex);
 }
@@ -130,14 +91,19 @@ bool SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Bl
     }
 }
 
-void SortingFunctions::OrderBy(vector<Row> &rows, const vector<SortCondition> &sortConditions)
+void SortingFunctions::OrderBy(vector<Row> &rows, vector<Row*>& result, const vector<SortCondition> &sortConditions)
 {
     if(rows.empty())
         return;
 
+    for(auto& row: rows)
+        result.push_back(&row);
+
     //handle multiple conditions priority
+    //after first condition break into multiple arrays where the first condition is satisfied
+    //order by the 2nd condition. do it for the rest etc.
     for(const SortCondition &condition : sortConditions)
-        SortingFunctions::OrderDescending(rows, condition);
+        SortingFunctions::OrderDescending(result, condition);
 }
 
 void SortingFunctions::GroupBy(vector<Row> &rows, const vector<SortCondition> &sortConditions)

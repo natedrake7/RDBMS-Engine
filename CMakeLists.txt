@@ -62,6 +62,10 @@ add_library(Database
         Database/AdditionalFunctions/SortingFunctions.cpp
         Database/AdditionalFunctions/SortingFunctions.h
         Database/AggregateFunctions/AggregateFunctions.cpp
-        Database/AggregateFunctions/AggregateFunctions.h)
+        Database/AggregateFunctions/AggregateFunctions.h
+        Database/AdditionalFunctions/SortingAlgorithms/QuickSort/QuickSort.cpp
+        Database/AdditionalFunctions/SortingAlgorithms/QuickSort/QuickSort.h
+        Database/AdditionalFunctions/SortingAlgorithms/MergeSort/MergeSort.cpp
+        Database/AdditionalFunctions/SortingAlgorithms/MergeSort/MergeSort.h)
 
 target_link_libraries(DatabaseInterface PRIVATE AdditionalLibraries PRIVATE Database)
