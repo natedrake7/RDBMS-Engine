@@ -56,6 +56,7 @@ namespace DatabaseEngine::StorageTypes {
         this->table = &table;
 
         this->header.nullBitMap = new BitMap(*nullBitMap);
+        
         for (const auto& block : data)
             this->data.push_back(new Block(block));
         
@@ -67,9 +68,25 @@ namespace DatabaseEngine::StorageTypes {
     {
         this->table = copyRow.table;
         this->header = copyRow.header;
-        
+
         for (const auto& block : copyRow.data)
             this->data.push_back(new Block(block));
+    }
+
+    Row & Row::operator=(const Row &copyRow)
+    {
+        if (this == &copyRow)
+            return *this;
+        
+        this->header = copyRow.header;
+        this->table = copyRow.table;
+
+        this->data.clear();
+
+        for (const auto& block : copyRow.data)
+            this->data.push_back(new Block(block));
+
+        return *this;
     }
 
     Row::~Row()

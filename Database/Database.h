@@ -83,8 +83,7 @@ protected:
 
     void InsertRowToClusteredIndex( const table_id_t& tableId, 
                                     StorageTypes::Row *row, 
-                                    page_id_t* rowPageId, 
-                                    extent_id_t* rowExtentId,
+                                    page_id_t* rowPageId,
                                     int* rowIndex);
 
     void InsertRowToNonClusteredIndex(  const table_id_t& tableId, 
@@ -101,7 +100,7 @@ protected:
                                 extent_id_t* rowExtentId,
                                 int* rowIndex);
 
-    void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId);
+    void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId) const;
 
     static void InsertRowToPage( Pages::PageFreeSpacePage *pageFreeSpacePage,
                                  Pages::Page *page, StorageTypes::Row *row,

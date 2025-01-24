@@ -11,10 +11,9 @@ namespace DatabaseEngine::StorageTypes {
 }
 
 class AggregateFunctions {
-
-    static void SumByColumnType(long double& sum, const DatabaseEngine::StorageTypes::Block* block);
-    static void CompareMaxWithRow(long double& max, const DatabaseEngine::StorageTypes::Block* block);
-    static void CompareMinWithRow(long double& max, const DatabaseEngine::StorageTypes::Block* block);
+        static void SumByColumnType(long double& sum, const DatabaseEngine::StorageTypes::Block* block);
+        static void CompareMaxWithRow(long double& max, const DatabaseEngine::StorageTypes::Block* block);
+        static void CompareMinWithRow(long double& max, const DatabaseEngine::StorageTypes::Block* block);
     
     public:
         static long double Average(const vector<DatabaseEngine::StorageTypes::Row>& rows, const Constants::column_index_t& columnIndex, const long double* constantValue = nullptr);

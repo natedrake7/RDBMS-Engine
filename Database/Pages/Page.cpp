@@ -267,7 +267,7 @@ namespace Pages
         }
     }
 
-    Row Page::GetRowByIndex(const Table &table, const int &indexPosition) const
+    void Page::GetRowByIndex(vector<Row>*& rows, const Table &table, const int &indexPosition) const
     {
         const auto &row = this->rows[indexPosition];
 
@@ -284,7 +284,7 @@ namespace Pages
                 memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
 
                 uint32_t objectSize;
-                unsigned char *largeValue = row->GetLargeObjectValue(objectPointer, &objectSize);
+                const unsigned char *largeValue = row->GetLargeObjectValue(objectPointer, &objectSize);
                 blockCopy->SetData(largeValue, objectSize);
 
                 delete[] largeValue;
@@ -292,8 +292,8 @@ namespace Pages
 
             copyBlocks.push_back(blockCopy);
         }
-
-        return Row(table, copyBlocks, rowHeader->nullBitMap);
+        
+        rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
     }
 
     void Page::SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const Table &table)

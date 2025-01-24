@@ -20,7 +20,7 @@ using namespace std;
 using namespace ByteMaps;
 
 namespace DatabaseEngine {
-    void Database::InsertRowToClusteredIndex(const table_id_t& tableId, Row *row, page_id_t* rowPageId, extent_id_t* rowExtentId, int* rowIndex)
+    void Database::InsertRowToClusteredIndex(const table_id_t& tableId, Row* row, page_id_t* rowPageId, int* rowIndex)
     {
         Table* table = this->tables.at(tableId);
 
@@ -116,7 +116,7 @@ namespace DatabaseEngine {
         UpdateNonClusteredData(*table, nextLeafPage, nextLeafPageId);
     }
 
-    void Database::UpdateNonClusteredData(const Table& table, Page* nextLeafPage, const page_id_t& nextLeafPageId)
+    void Database::UpdateNonClusteredData(const Table& table, Page* nextLeafPage, const page_id_t& nextLeafPageId) const
     {
        if(!table.HasNonClusteredIndexes())
             return;

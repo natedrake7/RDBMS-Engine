@@ -46,9 +46,11 @@ namespace DatabaseEngine::StorageTypes
     public:
         explicit Row(const Table &table);
 
-        explicit Row(const Table &table, const vector<Block *> &data, const ByteMaps::BitMap* nullBitMa);
+        explicit Row(const Table &table, const vector<Block *> &data, const ByteMaps::BitMap* nullBitMap);
 
         Row(const Row &copyRow);
+
+        Row& operator= (const Row &copyRow);
 
         ~Row();
 

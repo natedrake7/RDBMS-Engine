@@ -333,7 +333,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         vector<QueryData> results;
         const int32_t minKey = 90000;
-        const int32_t maxKey = 220000;
+        const int32_t maxKey = 120000;
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
 
@@ -342,7 +342,7 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
-        const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
         const Page *page = StorageManager::Get().GetPage(results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
@@ -350,11 +350,11 @@ namespace DatabaseEngine::StorageTypes {
             // get new page else use current one
             if (result.pageId != 0 && result.pageId != page->GetPageId())
             {
-                const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+                pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
                 page = StorageManager::Get().GetPage(result.pageId, pageExtentId, this);
             }
 
-            selectedRows->push_back(page->GetRowByIndex(*this, result.indexPosition));
+            page->GetRowByIndex(selectedRows, *this, result.indexPosition);
         }
     }
 
@@ -376,7 +376,7 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
-        const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
         const Page *page = StorageManager::Get().GetPage(results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
@@ -384,11 +384,11 @@ namespace DatabaseEngine::StorageTypes {
             // get new page else use current one
             if (result.pageId != 0 && result.pageId != page->GetPageId())
             {
-                const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+                pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
                 page = StorageManager::Get().GetPage(result.pageId, pageExtentId, this);
             }
 
-            selectedRows->push_back(page->GetRowByIndex(*this, result.index));
+            page->GetRowByIndex(selectedRows, *this, result.index);
         }
     }
 

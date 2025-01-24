@@ -267,7 +267,7 @@ namespace DatabaseEngine
         vector<vector<column_index_t>> nonClusteredIndexedColumns;
         table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexedColumns);
 
-        BPlusTreeNonClusteredData nonClusteredData(rowPageId, rowIndexPosition);
+        const BPlusTreeNonClusteredData nonClusteredData(rowPageId, rowIndexPosition);
 
         for (int i = 0; i < nonClusteredIndexedColumns.size(); i++)
             this->InsertRowToNonClusteredIndex(tableId, row, i, nonClusteredIndexedColumns[i], nonClusteredData);
