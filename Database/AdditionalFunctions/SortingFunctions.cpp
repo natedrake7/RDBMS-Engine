@@ -144,7 +144,7 @@ void SortingFunctions::OrderBy(vector<Row*> &rows, const vector<SortCondition> &
         return;
     if(isColumnIndexed && sortType == SortType::DESCENDING)
     {
-        std::reverse(rows.begin(), rows.end());
+        ranges::reverse(rows);
         return;
     }
 

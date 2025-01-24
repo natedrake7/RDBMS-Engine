@@ -96,7 +96,7 @@ void ExecuteQuery(Table* table)
 
     const auto orderStart = std::chrono::high_resolution_clock::now();
 
-    SortingFunctions::OrderBy(result, { SortCondition(0, SortType::ASCENDING, true)});
+    SortingFunctions::OrderBy(result, { SortCondition(0, SortType::DESCENDING, true)});
 
     const auto orderEnd = std::chrono::high_resolution_clock::now();
 
