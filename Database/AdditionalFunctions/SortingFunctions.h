@@ -17,6 +17,6 @@ class SortingFunctions{
     public:
         static bool CompareRowsAscending(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const column_index_t& columnIndex);
         static bool CompareRowsDescending(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const column_index_t& columnIndex);
-        static void OrderBy(vector<DatabaseEngine::StorageTypes::Row>& rows, vector<DatabaseEngine::StorageTypes::Row*>& result, const vector<SortCondition>& sortConditions);
+        static void OrderBy(vector<DatabaseEngine::StorageTypes::Row*>& rows, const vector<SortCondition>& sortConditions);
         static void GroupBy(vector<DatabaseEngine::StorageTypes::Row>& rows, const vector<SortCondition>& sortConditions);
 };

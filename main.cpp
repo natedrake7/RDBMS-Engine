@@ -81,6 +81,7 @@ void ExecuteQuery(Table* table)
     //};
 
     vector<Row> rows;
+    vector<Row*> result;
 
     const auto start = std::chrono::high_resolution_clock::now();
 
@@ -88,12 +89,14 @@ void ExecuteQuery(Table* table)
 
     const auto end = std::chrono::high_resolution_clock::now();
 
+    for(auto& row: rows)
+        result.push_back(&row);
+
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
     const auto orderStart = std::chrono::high_resolution_clock::now();
 
-    vector<Row*> result;
-    SortingFunctions::OrderBy(rows, result, { SortCondition(0, SortType::DESCENDING, false)});
+    SortingFunctions::OrderBy(result, { SortCondition(0, SortType::DESCENDING, true)});
 
     const auto orderEnd = std::chrono::high_resolution_clock::now();
 
@@ -102,7 +105,7 @@ void ExecuteQuery(Table* table)
     // const long double val = 1;
     // const auto countRes = AggregateFunctions::Count(rows, 0, &val);
     
-    PrintRows(rows);
+    PrintRows(result);
 
     // cout << fixed << setprecision(2) << "Count: " << countRes << '\n';
     

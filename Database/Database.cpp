@@ -238,6 +238,18 @@ namespace DatabaseEngine
         cout << "Rows printed: " << rowCount << endl;
     }
 
+    void PrintRows(const vector<Row*> &rows)
+    {
+        uint16_t rowCount = 0;
+        for (const auto &row : rows)
+        {
+            row->PrintRow();
+            rowCount++;
+        }
+
+        cout << "Rows printed: " << rowCount << endl;
+    }
+
     void Database::DeleteDatabase() const
     {
         const string path = this->filename + this->fileExtension;

@@ -58,28 +58,28 @@ bool SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Bl
             const auto& firstBlockData = *reinterpret_cast<const int8_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const int8_t*>(secondBlock->GetBlockData());
 
-            return firstBlockData < secondBlockData;
+            return firstBlockData <= secondBlockData;
         }
         case ColumnType::SmallInt:
         {
             const auto& firstBlockData = *reinterpret_cast<const int16_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const int16_t*>(secondBlock->GetBlockData());
 
-            return firstBlockData < secondBlockData;
+            return firstBlockData <= secondBlockData;
         }
         case ColumnType::Int:
         {
             const auto& firstBlockData = *reinterpret_cast<const int32_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const int32_t*>(secondBlock->GetBlockData());
 
-            return firstBlockData < secondBlockData;
+            return firstBlockData <= secondBlockData;
         }
         case ColumnType::BigInt:
         {
             const auto& firstBlockData = *reinterpret_cast<const int64_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const int64_t*>(secondBlock->GetBlockData());
 
-            return firstBlockData < secondBlockData;
+            return firstBlockData <= secondBlockData;
         }
         case ColumnType::Decimal:
         {
@@ -91,19 +91,16 @@ bool SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Bl
     }
 }
 
-void SortingFunctions::OrderBy(vector<Row> &rows, vector<Row*>& result, const vector<SortCondition> &sortConditions)
+void SortingFunctions::OrderBy(vector<Row*> &rows, const vector<SortCondition> &sortConditions)
 {
     if(rows.empty())
         return;
-
-    for(auto& row: rows)
-        result.push_back(&row);
 
     //handle multiple conditions priority
     //after first condition break into multiple arrays where the first condition is satisfied
     //order by the 2nd condition. do it for the rest etc.
     for(const SortCondition &condition : sortConditions)
-        SortingFunctions::OrderDescending(result, condition);
+        SortingFunctions::OrderDescending(rows, condition);
 }
 
 void SortingFunctions::GroupBy(vector<Row> &rows, const vector<SortCondition> &sortConditions)

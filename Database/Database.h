@@ -198,4 +198,6 @@ void CreateDatabase(const string &dbName);
 void UseDatabase(const string &dbName, Database **db);
 
 void PrintRows(const vector<StorageTypes::Row> &rows);
+
+void PrintRows(const vector<StorageTypes::Row*> &rows);
 }; // namespace DatabaseEngine
