@@ -61,7 +61,7 @@ namespace Indexing
         bool operator<=(const Key& otherKey) const;
         bool operator>=(const Key& otherKey) const;
 
-        int GetKeySize() const;
+        [[nodiscard]] int GetKeySize() const;
     }Key;
 
     typedef struct NodeHeader{
@@ -139,7 +139,7 @@ namespace Indexing
 
         void SetBranchingFactor(const int &branchingFactor);
 
-        const int &GetBranchingFactor() const;
+        [[nodiscard]] const int &GetBranchingFactor() const;
 
         void WriteTreeHeaderToFile(fstream *filePtr) const;
 
@@ -151,6 +151,6 @@ namespace Indexing
 
         void UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data) const;
 
-        const page_id_t& GetFirstIndexPageId() const;
+        [[nodiscard]] const page_id_t& GetFirstIndexPageId() const;
     };
 }

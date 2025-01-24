@@ -11,10 +11,10 @@ namespace DatabaseEngine::StorageTypes {
 using namespace std;
 
 class SortingFunctions{
-        static void OrderDescending(vector<DatabaseEngine::StorageTypes::Row*>& rows, const SortCondition& condition);
-        static bool CompareBlockByDataType(const DatabaseEngine::StorageTypes::Block*& firstBlock, const DatabaseEngine::StorageTypes::Block*& secondBlock);
+        static int CompareBlockByDataType(const DatabaseEngine::StorageTypes::Block*& firstBlock, const DatabaseEngine::StorageTypes::Block*& secondBlock);
 
     public:
+        static bool CompareRows(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const vector<SortCondition>& sortConditions);
         static bool CompareRowsAscending(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const column_index_t& columnIndex);
         static bool CompareRowsDescending(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const column_index_t& columnIndex);
         static void OrderBy(vector<DatabaseEngine::StorageTypes::Row*>& rows, const vector<SortCondition>& sortConditions);

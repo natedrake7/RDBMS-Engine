@@ -5,18 +5,18 @@
 
 using namespace DatabaseEngine::StorageTypes;
 
-void QuickSort::Sort(vector<Row*> &rows, const int &low, const int &high, const column_index_t& columnIndex, const SortType& sortType)
+void QuickSort::Sort(vector<Row*> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions)
 {
     if (low >= high)
         return;
       
-    const int pi = QuickSort::Partition(rows, low, high, columnIndex, sortType);
+    const int pi = QuickSort::Partition(rows, low, high, sortConditions);
 
-    QuickSort::Sort(rows, low, pi - 1, columnIndex, sortType);
-    QuickSort::Sort(rows, pi + 1, high, columnIndex, sortType);
+    QuickSort::Sort(rows, low, pi - 1, sortConditions);
+    QuickSort::Sort(rows, pi + 1, high, sortConditions);
 }
 
-int QuickSort::Partition(vector<Row*> &rows, const int &low, const int &high, const column_index_t& columnIndex, const SortType& sortType)
+int QuickSort::Partition(vector<Row*> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions)
 {
     const auto& pivot = rows[high];
   
@@ -24,11 +24,7 @@ int QuickSort::Partition(vector<Row*> &rows, const int &low, const int &high, co
 
     for (int j = low; j <= high - 1; j++)
     {
-        const bool comparison = (sortType == SortType::ASCENDING)
-                                    ? SortingFunctions::CompareRowsAscending(rows[j], pivot, columnIndex)
-                                    : SortingFunctions::CompareRowsDescending(rows[j], pivot, columnIndex);
-
-        if(!comparison)
+        if(!SortingFunctions::CompareRows(rows[j], pivot, sortConditions))
             continue;
         
         i++;

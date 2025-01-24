@@ -4,7 +4,7 @@
 
 using namespace DatabaseEngine::StorageTypes;
 
-void MergeSort::Merge(vector<Row*> &rows, const int &left, const int &mid, const int &right, const column_index_t &columnIndex, const SortType &sortType)
+void MergeSort::Merge(vector<Row*> &rows, const int &left, const int &mid, const int &right, const vector<SortCondition>& sortConditions)
 {
     int i, j;
     const int n1 = mid - left + 1;
@@ -24,11 +24,7 @@ void MergeSort::Merge(vector<Row*> &rows, const int &left, const int &mid, const
 
     while (i < n1 && j < n2)
     {
-        const bool comparison = (sortType == SortType::ASCENDING)
-                            ? SortingFunctions::CompareRowsAscending(leftVec[i], rightVec[j], columnIndex)
-                            : SortingFunctions::CompareRowsDescending(leftVec[i], rightVec[j], columnIndex);
-
-        if (comparison)
+        if (SortingFunctions::CompareRows(leftVec[i], rightVec[j], sortConditions))
         {
             rows[k] = leftVec[i];
             i++;
@@ -56,7 +52,7 @@ void MergeSort::Merge(vector<Row*> &rows, const int &left, const int &mid, const
     }
 }
 
-void MergeSort::Sort(vector<Row*> &rows, const int &left, const int &right, const column_index_t &columnIndex, const SortType &sortType)
+void MergeSort::Sort(vector<Row*> &rows, const int &left, const int &right, const vector<SortCondition>& sortConditions)
 {
     if(left >= right)
         return;
@@ -65,9 +61,9 @@ void MergeSort::Sort(vector<Row*> &rows, const int &left, const int &right, cons
     const int mid = left + (right - left) / 2;
 
     // Sort first and second halves
-    MergeSort::Sort(rows, left, mid, columnIndex, sortType);
-    MergeSort::Sort(rows, mid + 1, right, columnIndex, sortType);
+    MergeSort::Sort(rows, left, mid, sortConditions);
+    MergeSort::Sort(rows, mid + 1, right, sortConditions);
 
     // Merge the sorted halves
-    MergeSort::Merge(rows, left, mid, right, columnIndex, sortType);
+    MergeSort::Merge(rows, left, mid, right, sortConditions);
 }
