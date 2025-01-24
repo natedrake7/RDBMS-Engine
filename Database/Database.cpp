@@ -256,9 +256,9 @@ namespace DatabaseEngine
         int rowIndexPosition;
 
         if (table->GetTableType() == TableType::CLUSTERED)
-            this->InsertRowToClusteredIndex(tableId, row, &rowPageId, &rowExtentId, &rowIndexPosition);
+            this->InsertRowToClusteredIndex(tableId, row, &rowPageId, &rowIndexPosition);
         else
-            this->InsertRowToHeapTable(*table, allocatedExtents, lastExtentIndex, row, &rowPageId, &rowExtentId, &rowIndexPosition);
+            this->InsertRowToHeapTable(*table, allocatedExtents, lastExtentIndex, row, &rowPageId, &rowIndexPosition);
 
         //insert to Non Clustered Indexes
         if(!table->HasNonClusteredIndexes())
@@ -294,7 +294,7 @@ namespace DatabaseEngine
 
         if (nextLeafPage == nullptr || nextLeafPage->GetPageSize() > 0)
         {
-            nextLeafPage = this->CreateDataPage(table.GetTableId(), nextExtentId);
+            nextLeafPage = this->CreateDataPage(table.GetTableId());
 
             pageFreeSpacePage = this->GetAssociatedPfsPage(nextLeafPage->GetPageId());
         }
@@ -318,13 +318,13 @@ namespace DatabaseEngine
         }
     }
 
-    void Database::InsertRowToHeapTable(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, page_id_t* rowPageId, extent_id_t* rowExtentId, int* rowIndex)
+    void Database::InsertRowToHeapTable(const Table &table, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, page_id_t* rowPageId, int* rowIndex)
     {
         const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(table.GetTableHeader().indexAllocationMapPageId);
 
         if (tableMapPage == nullptr)
         {
-            Page *newPage = this->CreateDataPage(table.GetTableId(), rowExtentId);
+            Page *newPage = this->CreateDataPage(table.GetTableId());
             newPage->InsertRow(row, rowIndex);
             *rowPageId = newPage->GetPageId();
 
@@ -365,15 +365,13 @@ namespace DatabaseEngine
                     page->InsertRow(row, rowIndex);
                     pageFreeSpacePage->SetPageMetaData(page);
 
-                    *rowExtentId = extentId;
                     *rowPageId = pageId;
-
                     return;
                 }
             }
         }
 
-        Page *newPage = this->CreateDataPage(table.GetTableId(), rowExtentId);
+        Page *newPage = this->CreateDataPage(table.GetTableId());
         newPage->InsertRow(row, rowIndex);
         *rowPageId = newPage->GetPageId();
     }
@@ -582,7 +580,7 @@ namespace DatabaseEngine
         table->SetIndexAllocationMapPageId(0);
     }
 
-    Page *Database::CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId)
+    Page *Database::CreateDataPage(const table_id_t &tableId)
     {
         PageFreeSpacePage *pageFreeSpacePage = nullptr;
         extent_id_t newExtentId = 0;
@@ -593,9 +591,6 @@ namespace DatabaseEngine
 
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreatePage(pageId));
-
-        if (allocatedExtentId != nullptr)
-            *allocatedExtentId = newExtentId;
 
         return StorageManager::Get().GetPage(lowerLimit, newExtentId, this->tables[tableId]);
     }
@@ -781,7 +776,7 @@ namespace DatabaseEngine
                    : nullptr;
     }
 
-    void Database::SetPageMetaDataToPfs(const Page *page) const
+    void Database::SetPageMetaDataToPfs(const Page *page)
     {
         const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(page->GetPageId());
 

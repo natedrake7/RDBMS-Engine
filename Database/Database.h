@@ -97,7 +97,6 @@ protected:
                                 extent_id_t &lastExtentIndex,
                                 StorageTypes::Row *row,
                                 page_id_t* rowPageId,
-                                extent_id_t* rowExtentId,
                                 int* rowIndex);
 
     void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId) const;
@@ -151,7 +150,7 @@ public:
 
     void TruncateTable(const table_id_t& tableId);
   
-    Pages::Page *CreateDataPage(const table_id_t &tableId, extent_id_t *allocatedExtentId = nullptr);
+    Pages::Page *CreateDataPage(const table_id_t &tableId);
 
     Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
 
@@ -161,7 +160,7 @@ public:
 
     Pages::IndexPage *CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId = 0);
 
-    void SetPageMetaDataToPfs(const Pages::Page *page) const;
+    static void SetPageMetaDataToPfs(const Pages::Page *page);
 
     [[nodiscard]] string GetFileName() const;
 

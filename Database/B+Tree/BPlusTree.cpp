@@ -218,7 +218,7 @@ namespace Indexing
         const auto iterator = ranges::lower_bound(node->keys, key);
 
         int childIndex = iterator - node->keys.begin();
-        Node *child = this->GetNodeFromPage(node->childrenHeaders[childIndex]);
+        Node *child = BPlusTree::GetNodeFromPage(node->childrenHeaders[childIndex]);
 
         if (child->keys.size() == 2 * t - 1)
         {
@@ -228,10 +228,10 @@ namespace Indexing
                 childIndex++;
         }
 
-        return GetNonFullNode(this->GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition);
+        return GetNonFullNode(BPlusTree::GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition);
     }
 
-    void BPlusTree::DeleteNode(Node *node)
+    void BPlusTree::DeleteNode(const Node *node)
     {
         if (!node)
             return;
@@ -320,7 +320,7 @@ namespace Indexing
                 return;
 
             previousNode = currentNode;
-            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
+            currentNode = BPlusTree::GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -337,7 +337,7 @@ namespace Indexing
 
             const int index = iterator - currentNode->keys.begin();
 
-            currentNode = this->GetNodeFromPage(currentNode->childrenHeaders[index]);
+            currentNode = BPlusTree::GetNodeFromPage(currentNode->childrenHeaders[index]);
         }
 
         const Node *previousNode = nullptr;
@@ -362,7 +362,7 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
+            currentNode = BPlusTree::GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -391,7 +391,7 @@ namespace Indexing
 
     void BPlusTree::SetTreeType(const TreeType & treeType) { this->type = treeType; }
 
-    void BPlusTree::UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data)
+    void BPlusTree::UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data) const
     {
         Node* currentNode = this->SearchKey(key);
 
@@ -417,7 +417,7 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
+            currentNode = BPlusTree::GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -457,7 +457,7 @@ namespace Indexing
 
             const int index = iterator - currentNode->keys.begin();
 
-           currentNode = this->GetNodeFromPage(currentNode->childrenHeaders[index]);
+           currentNode = BPlusTree::GetNodeFromPage(currentNode->childrenHeaders[index]);
         }
 
         return currentNode;
@@ -476,7 +476,7 @@ namespace Indexing
         this->firstIndexPageId = root->header.pageId;
     }
 
-    Node* BPlusTree::GetNodeFromPage(const NodeHeader & header) const
+    Node* BPlusTree::GetNodeFromPage(const NodeHeader & header)
     {
         IndexPage* indexPage = StorageManager::Get().GetIndexPage(header.pageId);
 
@@ -631,6 +631,7 @@ namespace Indexing
     QueryData::QueryData()
     {
         this->indexPosition = 0;
+        this->pageId = 0;
     }
 
     QueryData::QueryData(const page_id_t &pageId, const page_offset_t &otherIndexPosition)
@@ -644,6 +645,7 @@ namespace Indexing
     BPlusTreeNonClusteredData::BPlusTreeNonClusteredData()
     {
         this->index = 0;
+        this->pageId = 0;
     }
 
     BPlusTreeNonClusteredData::BPlusTreeNonClusteredData(const page_id_t & pageId, const page_offset_t & index)

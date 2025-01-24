@@ -113,10 +113,11 @@ namespace Indexing
         void SplitChild(Node *parent, const int &index, Node *child);
         void PrintTree(const Node *node, const int &level);
         Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition);
-        void DeleteNode(Node *node);
-        Node *SearchKey(const Key &key) const;
+        void DeleteNode(const Node *node);
+        [[nodiscard]] Node *SearchKey(const Key &key) const;
         void InsertNodeToPage(Node*& node, const page_id_t& parentPageId);
-        Node* GetNodeFromPage(const NodeHeader& header) const;
+
+        static Node* GetNodeFromPage(const NodeHeader& header);
         static int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
 
     public:
@@ -148,7 +149,7 @@ namespace Indexing
 
         void SetTreeType(const TreeType& treeType);
 
-        void UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data);
+        void UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data) const;
 
         const page_id_t& GetFirstIndexPageId() const;
     };
