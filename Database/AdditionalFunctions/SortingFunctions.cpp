@@ -84,7 +84,6 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
-
             return 0;
         }
         case ColumnType::String:
@@ -93,7 +92,6 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             const auto& secondBlockDataSize = secondBlock->GetBlockSize();
             
             if (firstBlockDataSize < secondBlockDataSize) return 1;
-
             if (firstBlockDataSize > secondBlockDataSize) return -1;
 
             const int result = memcmp(firstBlock->GetBlockData(), secondBlock->GetBlockData(), firstBlockDataSize);
