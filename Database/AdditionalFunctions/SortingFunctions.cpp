@@ -4,7 +4,7 @@
 
 #include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h"
-#include "../AggregateFunctions/AggregateFunctions.h"
+#include "./AggregateFunctions/AggregateFunctions.h"
 #include "../Block/Block.h"
 #include "../Row/Row.h"
 #include "SortingAlgorithms/MergeSort/MergeSort.h"

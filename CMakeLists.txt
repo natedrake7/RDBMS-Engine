@@ -63,8 +63,8 @@ add_library(Database
         Database/B+Tree/BPlusTree.h
         Database/AdditionalFunctions/SortingFunctions.cpp
         Database/AdditionalFunctions/SortingFunctions.h
-        Database/AggregateFunctions/AggregateFunctions.cpp
-        Database/AggregateFunctions/AggregateFunctions.h
+        Database/AdditionalFunctions/AggregateFunctions/AggregateFunctions.cpp
+        Database/AdditionalFunctions/AggregateFunctions/AggregateFunctions.h
         Database/AdditionalFunctions/SortingAlgorithms/QuickSort/QuickSort.cpp
         Database/AdditionalFunctions/SortingAlgorithms/QuickSort/QuickSort.h
         Database/AdditionalFunctions/SortingAlgorithms/MergeSort/MergeSort.cpp

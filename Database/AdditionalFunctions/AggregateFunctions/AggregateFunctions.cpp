@@ -1,7 +1,7 @@
 ﻿#include "AggregateFunctions.h"
-#include "../Block/Block.h"
-#include "../Column/Column.h"
-#include "../Row/Row.h"
+#include "../../Block/Block.h"
+#include "../../Column/Column.h"
+#include "../../Row/Row.h"
 
 using namespace DatabaseEngine::StorageTypes;
 using namespace Constants;

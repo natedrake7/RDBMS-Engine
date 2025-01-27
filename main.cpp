@@ -10,7 +10,6 @@
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
 #include "Database/AdditionalFunctions/SortingFunctions.h"
-#include "Database/AggregateFunctions/AggregateFunctions.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 
