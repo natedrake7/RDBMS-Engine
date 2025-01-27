@@ -21,7 +21,9 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
         AdditionalLibraries/SafeConverter/SafeConverter.cpp
         AdditionalLibraries/SafeConverter/SafeConverter.h
-        AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp)
+        AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
+        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
+        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h)
 
 add_library(Database
         Database/Database.cpp

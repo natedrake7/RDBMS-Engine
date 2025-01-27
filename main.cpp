@@ -6,6 +6,7 @@
 #include "./Database/Row/Row.h"
 #include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
 #include "AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+#include "AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h"
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
 #include "Database/AdditionalFunctions/SortingFunctions.h"
@@ -96,21 +97,27 @@ void ExecuteQuery(Table* table)
 
     const auto orderStart = std::chrono::high_resolution_clock::now();
 
-    SortingFunctions::OrderBy(result, { SortCondition(0, SortType::DESCENDING, true)});
+    SortingFunctions::OrderBy(result, { SortCondition(0, SortType::DESCENDING, false)});
 
     const auto orderEnd = std::chrono::high_resolution_clock::now();
 
     const auto orderElapsed = std::chrono::duration<double, std::milli>(orderEnd - orderStart);
 
-    // const long double val = 1;
-    // const auto countRes = AggregateFunctions::Count(rows, 0, &val);
-    
-    PrintRows(result);
+    const auto groupByStart = std::chrono::high_resolution_clock::now();
 
-    // cout << fixed << setprecision(2) << "Count: " << countRes << '\n';
+    const auto groupByResult = SortingFunctions::GroupBy(result, { GroupCondition(0, ColumnType::Int, AggregateFunction::COUNT, false, nullptr)});
+
+    const auto groupByEnd = std::chrono::high_resolution_clock::now();
+
+    const auto groupByElapsed = std::chrono::duration<double, std::milli>(groupByEnd - groupByStart);
+
+    //construct the query result here
+
+    PrintRows(result);
     
     cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
     cout<< "Order By Time: "<< orderElapsed.count() << "ms" << endl;
+    cout<< "Group By Time: "<< groupByElapsed.count() << "ms" << endl;
 }
 
 void CreateActorsTable(Database *db) 

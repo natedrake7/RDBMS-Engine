@@ -333,7 +333,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         vector<QueryData> results;
         const int32_t minKey = 90000;
-        const int32_t maxKey = 120000;
+        const int32_t maxKey = 91000;
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
 

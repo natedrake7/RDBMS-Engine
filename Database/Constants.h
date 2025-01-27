@@ -33,6 +33,15 @@ namespace Constants
         DESCENDING = 1,
     };
 
+    enum AggregateFunction: uint8_t {
+        NONE = 0,
+        SUM = 1,
+        AVERAGE = 2,
+        COUNT = 3,
+        MIN = 4,
+        MAX = 5
+    };
+
     enum class PageType : uint8_t
     {
         DATA = 0,

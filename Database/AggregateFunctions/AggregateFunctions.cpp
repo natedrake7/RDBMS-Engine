@@ -111,7 +111,7 @@ void AggregateFunctions::CompareMinWithRow(long double &max, const DatabaseEngin
     }
 }
 
-long double AggregateFunctions::Average(const vector<Row>& rows, const column_index_t& columnIndex, const long double* constantValue)
+long double AggregateFunctions::Average(const vector<Row*>& rows, const column_index_t& columnIndex, const long double* constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue ;
@@ -119,12 +119,12 @@ long double AggregateFunctions::Average(const vector<Row>& rows, const column_in
     long double sum = 0;
     
     for (const auto& row : rows)
-        AggregateFunctions::SumByColumnType(sum, row.GetData()[columnIndex]);
+        AggregateFunctions::SumByColumnType(sum, row->GetData()[columnIndex]);
 
     return sum / static_cast<long double>(rows.size());
 }
 
-uint64_t AggregateFunctions::Count(const vector<Row> &rows, const column_index_t &columnIndex, const long double *constantValue)
+uint64_t AggregateFunctions::Count(const vector<Row*>& rows, const column_index_t &columnIndex, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return rows.size();
@@ -132,7 +132,7 @@ uint64_t AggregateFunctions::Count(const vector<Row> &rows, const column_index_t
     uint64_t count = 0;
     for (const auto& row : rows)
     {
-        if (row.GetNullBitMapValue(columnIndex))
+        if (row->GetNullBitMapValue(columnIndex))
             continue;
 
         count++;
@@ -141,7 +141,7 @@ uint64_t AggregateFunctions::Count(const vector<Row> &rows, const column_index_t
     return count;
 }
 
-long double AggregateFunctions::Max(const vector<Row> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
+long double AggregateFunctions::Max(const vector<Row*> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -153,17 +153,17 @@ long double AggregateFunctions::Max(const vector<Row> &rows, const column_index_
 
     if (isSelectedColumnIndexed)
     {
-        AggregateFunctions::CompareMaxWithRow(max, rows.back().GetData()[columnIndex]);
+        AggregateFunctions::CompareMaxWithRow(max, rows.back()->GetData()[columnIndex]);
         return max;
     }
 
     for (const auto& row : rows)
-        AggregateFunctions::CompareMaxWithRow(max, row.GetData()[columnIndex]);
+        AggregateFunctions::CompareMaxWithRow(max, row->GetData()[columnIndex]);
 
     return max;
 }
 
-long double AggregateFunctions::Min(const vector<DatabaseEngine::StorageTypes::Row> &rows, const Constants::column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
+long double AggregateFunctions::Min(const vector<Row*> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -175,17 +175,17 @@ long double AggregateFunctions::Min(const vector<DatabaseEngine::StorageTypes::R
 
     if (isSelectedColumnIndexed)
     {
-        AggregateFunctions::CompareMinWithRow(min, rows.front().GetData()[columnIndex]);
+        AggregateFunctions::CompareMinWithRow(min, rows.front()->GetData()[columnIndex]);
         return min;
     }
 
     for (const auto& row : rows)
-        AggregateFunctions::CompareMinWithRow(min, row.GetData()[columnIndex]);
+        AggregateFunctions::CompareMinWithRow(min, row->GetData()[columnIndex]);
 
     return min;
 }
 
-long double AggregateFunctions::Sum(const vector<DatabaseEngine::StorageTypes::Row> &rows, const Constants::column_index_t &columnIndex, const long double *constantValue)
+long double AggregateFunctions::Sum(const vector<Row*> &rows, const column_index_t &columnIndex, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -196,7 +196,7 @@ long double AggregateFunctions::Sum(const vector<DatabaseEngine::StorageTypes::R
     long double sum = 0;
 
     for (const auto& row : rows)
-        AggregateFunctions::SumByColumnType(sum, row.GetData()[columnIndex]);
+        AggregateFunctions::SumByColumnType(sum, row->GetData()[columnIndex]);
 
     return sum;
 }

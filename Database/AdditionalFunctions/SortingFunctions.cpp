@@ -1,8 +1,10 @@
 ﻿#include "SortingFunctions.h"
-
 #include <ppltasks.h>
+#include <ranges>
 
 #include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h"
+#include "../AggregateFunctions/AggregateFunctions.h"
 #include "../Block/Block.h"
 #include "../Row/Row.h"
 #include "SortingAlgorithms/MergeSort/MergeSort.h"
@@ -21,6 +23,15 @@ bool SortingFunctions::CompareRowsAscending(const Row *firstRow, const Row *seco
 bool SortingFunctions::CompareRowsDescending(const Row* firstRow, const Row* secondRow, const column_index_t &columnIndex)
 {
     return !SortingFunctions::CompareRowsAscending(firstRow, secondRow, columnIndex);
+}
+
+AggregateResults::AggregateResults()
+{
+    this->average = 0;
+    this->min = 0;
+    this->max = 0;
+    this->sum = 0;
+    this->count = 0;
 }
 
 int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Block *&secondBlock)
@@ -148,18 +159,89 @@ void SortingFunctions::OrderBy(vector<Row*> &rows, const vector<SortCondition> &
         return;
     }
 
-    //if dataset is small use quicksort
-    if(rows.size() <= 1000)
-    {
-        QuickSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), sortConditions);
-        return;
-    }
+    //if dataset is small use quicksort (is it needed?)
+    // if(rows.size() <= 1000)
+    // {
+    //     QuickSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), sortConditions);
+    //     return;
+    // }
     //else mergesort
     
     MergeSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), sortConditions);
 }
 
-void SortingFunctions::GroupBy(vector<Row> &rows, const vector<SortCondition> &sortConditions)
+unordered_map<string, AggregateResults> SortingFunctions::GroupBy(const vector<Row*> &rows, const vector<GroupCondition> &sortConditions)
 {
-    
+    unordered_map<string, AggregateResults> groupedResults;
+    unordered_map<string, vector<Row*>> groupedRows;
+
+    //add any aggregate function execution asWell by condition
+    //also store the keys of the groupBy used in order to prin them.
+    //should be done in a single loop
+    for(const auto& row : rows)
+        groupedRows[SortingFunctions::CreateGroupByKey(row, sortConditions)].push_back(row);
+
+    for(const auto& [key , rowGroup ] : groupedRows)
+    {
+        AggregateResults aggregateResults;
+        for(const auto& condition : sortConditions)
+        {
+            switch (condition.GetAggregateFunction())
+            {
+                case NONE:
+                case COUNT:
+                default:
+                    aggregateResults.count = AggregateFunctions::Count(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
+                    break;
+                case SUM:
+                    aggregateResults.sum = AggregateFunctions::Sum(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
+                    break;
+                case MIN:
+                    aggregateResults.min = AggregateFunctions::Min(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
+                    break;
+                case MAX:
+                    aggregateResults.max = AggregateFunctions::Max(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
+                    break;
+                case AVERAGE:
+                    aggregateResults.average = AggregateFunctions::Average(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
+                    break;
+            }
+        }
+
+        groupedResults[key] = aggregateResults;
+    }
+
+    return groupedResults;
+}
+
+string SortingFunctions::CreateGroupByKey(const Row* row, const vector<GroupCondition> &sortConditions)
+{
+    string hashKey;
+    const auto& rowData = row->GetData();
+
+    for(const auto& condition : sortConditions)
+    {
+        const auto& block = rowData[condition.GetColumnIndex()];
+        
+        hashKey.append(reinterpret_cast<const char*>(block->GetBlockData()), block->GetBlockSize());
+    }
+
+    return hashKey;
+}
+
+long double SortingFunctions::ApplyAggregateFunctionToGroup(const vector<Row *> &rowGroup, const GroupCondition &condition)
+{
+    switch (condition.GetAggregateFunction())
+    {
+        case NONE:
+        case COUNT:
+        default:
+            return static_cast<long double>(AggregateFunctions::Count(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue()));
+        case SUM:
+            return AggregateFunctions::Sum(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
+        case MIN:
+            return AggregateFunctions::Min(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
+        case MAX:
+            return AggregateFunctions::Max(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
+    }
 }
