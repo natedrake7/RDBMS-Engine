@@ -10,6 +10,7 @@
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
 #include "Database/AdditionalFunctions/SortingFunctions.h"
+#include "Database/AdditionalFunctions/StringFunctions/StringFunctions.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 
@@ -34,6 +35,11 @@ void InsertRowsToMoviesTable(Table* table);
 
 int main() 
 {
+
+    cout << StringFunctions::CharIndex("spera3", "hellosperaspera3", 3) << endl;
+
+    return 0;
+    
     Database *db = nullptr;
     try 
     {
