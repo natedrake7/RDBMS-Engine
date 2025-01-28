@@ -58,13 +58,7 @@ int StringFunctions::Length(const string &str)
     if(str.empty())
         return 0;
 
-    int length = 0;
-
-    for(const auto& character : str)
-        if(!isspace(character))
-            length++;
-
-    return length;
+    return static_cast<int>(StringFunctions::Trim(str).size());
 }
 
 string StringFunctions::Lower(const string &str)
@@ -150,4 +144,25 @@ string StringFunctions::TrimRight(const string &str)
         }
 
     return str.substr(0, lastIndex);
+}
+
+string StringFunctions::Replace(const string &str, const string &subStr, const string &replaceStr)
+{
+    if(str.empty() || subStr.empty())
+        return str;
+
+    string result(str);
+    int subStrIndex = 0;
+
+    while (true)
+    {
+        subStrIndex = static_cast<int>(result.find(subStr));
+
+        if(subStrIndex == string::npos)
+            break;
+
+        result.replace(subStrIndex, subStr.size(), replaceStr);
+    }
+    
+    return result;
 }
