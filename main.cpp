@@ -36,7 +36,7 @@ void InsertRowsToMoviesTable(Table* table);
 int main() 
 {
 
-    cout << StringFunctions::Replace("spera3spera2spera13", "spera", "helloFromTheOtherSide") << endl;
+    cout << StringFunctions::SubString("spera3spera2spera13", 0, 5) << endl;
 
     return 0;
     

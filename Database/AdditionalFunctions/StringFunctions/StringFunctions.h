@@ -21,4 +21,5 @@ class StringFunctions {
         static string TrimLeft(const string& str);
         static string TrimRight(const string& str);
         static string Replace(const string& str, const string& subStr, const string& replaceStr);
+        static string SubString(const string& str, const int& startIndex = 0, const int& endIndex = 0);
 };

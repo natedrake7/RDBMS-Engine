@@ -166,3 +166,11 @@ string StringFunctions::Replace(const string &str, const string &subStr, const s
     
     return result;
 }
+
+string StringFunctions::SubString(const string &str, const int &startIndex, const int &endIndex)
+{
+    if(startIndex > str.size() -1 || endIndex > str.size() - 1)
+        return str;
+
+    return str.substr(startIndex, endIndex - startIndex + 1);
+}
