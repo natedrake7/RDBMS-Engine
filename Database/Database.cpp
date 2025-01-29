@@ -308,7 +308,7 @@ namespace DatabaseEngine
         {
             nextLeafPage = this->CreateDataPage(table.GetTableId());
 
-            pageFreeSpacePage = this->GetAssociatedPfsPage(nextLeafPage->GetPageId());
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(nextLeafPage->GetPageId());
         }
 
         return nextLeafPage;

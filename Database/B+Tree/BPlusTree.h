@@ -49,9 +49,12 @@ namespace Indexing
         vector<object_t> value;
         key_size_t size;
         KeyType type;
+        vector<Key> subKeys;
 
         Key();
         Key(const void *keyValue, const key_size_t &keySize, const KeyType& keyType);
+
+        explicit Key(const vector<Key>& subKeys);
         ~Key();
 
         Key(const Key &otherKey);
@@ -62,6 +65,8 @@ namespace Indexing
         bool operator>=(const Key& otherKey) const;
 
         [[nodiscard]] int GetKeySize() const;
+        [[nodiscard]] int CompareCompositeKeys(const Key& otherKey) const;
+        void InsertKey(const Key &otherKey);
     }Key;
 
     typedef struct NodeHeader{
@@ -96,7 +101,7 @@ namespace Indexing
         page_size_t currentNodeSize;
 
         explicit Node(const bool &isLeaf = false, const bool& isRoot = false, const bool& isNodeClustered = false);
-        page_size_t GetNodeSize();
+        page_size_t GetNodeSize() const;
         ~Node();
     }Node;
 

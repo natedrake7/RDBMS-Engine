@@ -35,11 +35,6 @@ void InsertRowsToMoviesTable(Table* table);
 
 int main() 
 {
-
-    cout << StringFunctions::SubString("spera3spera2spera13", 0, 5) << endl;
-
-    return 0;
-    
     Database *db = nullptr;
     try 
     {
@@ -169,8 +164,8 @@ void CreateMoviesTables(Database *db)
     columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
     columns.push_back(new Column("MovieLength", "Decimal", 10, true));
 
-    const vector<column_index_t> clusteredIndexes = {0};
-    const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
+    const vector<column_index_t> clusteredIndexes = {0, 1};
+    const vector<vector<column_index_t>> nonClusteredIndexes = { { 1, 0 } };
 
     Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
 

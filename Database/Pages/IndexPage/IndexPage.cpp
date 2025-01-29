@@ -14,6 +14,7 @@ void IndexPage::WriteAdditionalHeaderToFile(fstream * filePtr) const
 {
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeType), sizeof(TreeType));
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeId), sizeof(page_id_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.numberOfSubKeys), sizeof(uint8_t));
 }
 
 void IndexPage::ReadAdditionalHeaderFromFile(const vector<char>& data, page_offset_t & offSet)
@@ -23,6 +24,9 @@ void IndexPage::ReadAdditionalHeaderFromFile(const vector<char>& data, page_offs
 
     memcpy(&this->additionalHeader.treeId, data.data() + offSet, sizeof(page_id_t));
     offSet += sizeof(page_id_t);
+
+    memcpy(&this->additionalHeader.numberOfSubKeys, data.data() + offSet, sizeof(uint8_t));
+    offSet += sizeof(uint8_t);
 }
 
 IndexPage::IndexPage(const page_id_t &pageId, const bool &isPageCreation) : Page(pageId, isPageCreation) 
@@ -66,15 +70,21 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
 
         for (int j = 0; j < numberOfKeys; j++)
         {
-            key_size_t keySize;
-            memcpy(&keySize, data.data() + offSet, sizeof(key_size_t));
-            offSet += sizeof(key_size_t);
+            Key key;
+            for (int k = 0; k < this->additionalHeader.numberOfSubKeys; k++)
+            {
+                key_size_t keySize;
+                memcpy(&keySize, data.data() + offSet, sizeof(key_size_t));
+                offSet += sizeof(key_size_t);
 
-            vector<object_t> keyValue(keySize);
-            memcpy(keyValue.data(), data.data() + offSet, keySize);
-            offSet += keySize;
+                vector<object_t> keyValue(keySize);
+                memcpy(keyValue.data(), data.data() + offSet, keySize);
+                offSet += keySize;
 
-            node->keys.emplace_back(keyValue.data(), keySize, KeyType::Int);
+                key.InsertKey(Key(keyValue.data(), keySize, KeyType::Int));
+            }
+
+            node->keys.push_back(key);
         }
 
         if (!node->isLeaf)
@@ -133,6 +143,9 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
 
 void IndexPage::WritePageToFile(fstream *filePtr) 
 {
+    if (!this->nodes.empty())
+        this->additionalHeader.numberOfSubKeys = this->nodes.front()->keys.front().subKeys.size();
+    
   this->WritePageHeaderToFile(filePtr);
   this->WriteAdditionalHeaderToFile(filePtr);
 
@@ -146,11 +159,13 @@ void IndexPage::WritePageToFile(fstream *filePtr)
 
       const uint16_t numberOfKeys = node->keys.size();
       filePtr->write(reinterpret_cast<const char*>(&numberOfKeys), sizeof(uint16_t));
+      
       for (const auto& key : node->keys)
-      {
-          filePtr->write(reinterpret_cast<const char*>(&key.size), sizeof(key_size_t));
-          filePtr->write(reinterpret_cast<const char*>(key.value.data()), key.size);
-      }
+        for (const auto& subKey: key.subKeys)
+        {
+          filePtr->write(reinterpret_cast<const char*>(&subKey.size), sizeof(key_size_t));
+          filePtr->write(reinterpret_cast<const char*>(subKey.value.data()), subKey.size);
+        }
 
       if (!node->isLeaf)
       {
@@ -240,7 +255,7 @@ void IndexPage::UpdateBytesLeft(const page_size_t & prevNodeSize, const page_siz
     this->isDirty = true;
 }
 
-Node * IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) 
+Node * IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) const
 {
     Node* node = this->nodes.at(indexPosition);
     node->isNodeClustered = this->additionalHeader.treeType == TreeType::Clustered;
@@ -248,9 +263,9 @@ Node * IndexPage::GetNodeByIndex(const page_offset_t & indexPosition)
     return node; 
 }
 
-Node* IndexPage::GetRoot()
+Node* IndexPage::GetRoot() const
 {
-    for (auto& node : this->nodes)
+    for (const auto& node : this->nodes)
         if (node->isRoot)
         {
             node->isNodeClustered = this->additionalHeader.treeType == TreeType::Clustered;
@@ -321,9 +336,13 @@ IndexPageAdditionalHeader::IndexPageAdditionalHeader()
 {
     this->treeId = 0;
     this->treeType = TreeType::NonClustered;
+    this->numberOfSubKeys = 0;
 }
 
 IndexPageAdditionalHeader::~IndexPageAdditionalHeader() = default;
 
-page_size_t IndexPageAdditionalHeader::GetAdditionalHeaderSize() { return sizeof(page_id_t) + sizeof(TreeType); }
+page_size_t IndexPageAdditionalHeader::GetAdditionalHeaderSize()
+{
+    return sizeof(page_id_t) + sizeof(TreeType) + sizeof(uint8_t);
+}
 } // namespace Pages

@@ -180,9 +180,9 @@ namespace DatabaseEngine::StorageTypes {
       Row* Table::CreateRow(const vector<Field>& inputData)
       {
         Row *row = new Row(*this);
-        for (size_t i = 0; i < inputData.size(); ++i) 
+        for (const auto & i : inputData) 
         {
-          const column_index_t &associatedColumnIndex = inputData[i].GetColumnIndex();
+          const column_index_t &associatedColumnIndex = i.GetColumnIndex();
 
           Block *block = new Block(columns[associatedColumnIndex]);
 
@@ -191,13 +191,13 @@ namespace DatabaseEngine::StorageTypes {
           if (columnType > ColumnType::ColumnTypeCount)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
-          if (inputData[i].GetIsNull()) 
+          if (i.GetIsNull()) 
           {
             this->CheckAndInsertNullValues(block, row, associatedColumnIndex);
             continue;
           }
 
-          this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, inputData[i]);
+          this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, i);
 
           const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
       
@@ -337,7 +337,16 @@ namespace DatabaseEngine::StorageTypes {
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
 
-        tree->RangeQuery(Key(&minKey, sizeof(minKey), KeyType::Int), Key(&maxKey, sizeof(maxKey), KeyType::Int), results);
+        Key minimumValue;
+        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), KeyType::Int));
+        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), KeyType::Int));
+
+      Key maximumValue;
+      maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), KeyType::Int));
+      maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), KeyType::Int));
+                  
+
+        tree->RangeQuery(minimumValue, maximumValue, results);
 
         if(results.empty())
             return;
@@ -367,11 +376,19 @@ namespace DatabaseEngine::StorageTypes {
 
         vector<BPlusTreeNonClusteredData> results;
         const int32_t minKey = 90000;
-        const int32_t maxKey = 220000;
+        const int32_t maxKey = 90500;
+
+      Key minimumValue;
+      minimumValue.InsertKey(Key(&minKey, sizeof(minKey), KeyType::Int));
+      minimumValue.InsertKey(Key(&minKey, sizeof(minKey), KeyType::Int));
+
+      Key maximumValue;
+      maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), KeyType::Int));
+      maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), KeyType::Int));
 
         const BPlusTree* tree = this->GetNonClusteredIndexTree(0);
 
-        tree->RangeQuery(Key(&minKey, sizeof(minKey), KeyType::Int), Key(&maxKey, sizeof(maxKey), KeyType::Int), results);
+        tree->RangeQuery(minimumValue, maximumValue, results);
 
         if(results.empty())
             return;

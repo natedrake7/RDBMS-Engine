@@ -25,6 +25,7 @@ namespace Pages {
 	typedef struct IndexPageAdditionalHeader {
 		TreeType treeType;
 		page_id_t treeId;
+		uint8_t numberOfSubKeys;
 
 		IndexPageAdditionalHeader();
 		~IndexPageAdditionalHeader();
@@ -61,9 +62,9 @@ namespace Pages {
 			void UpdateBytesLeft() override;
 			void UpdateBytesLeft(const page_size_t& prevNodeSize, const page_size_t& currentNodeSize);
 
-			[[nodiscard]] Indexing::Node* GetNodeByIndex(const page_offset_t& indexPosition);
+			[[nodiscard]] Indexing::Node* GetNodeByIndex(const page_offset_t& indexPosition) const;
 
-			[[nodiscard]] Indexing::Node* GetRoot();
+			[[nodiscard]] Indexing::Node* GetRoot() const;
 
 			[[nodiscard]] vector<Indexing::Node*>* GetNodesUnsafe();
 

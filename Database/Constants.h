@@ -65,7 +65,8 @@ namespace Constants
         Decimal = 1,
         String = 2,
         Bool = 3,
-        DateTime = 4
+        DateTime = 4,
+        Composite = 5
     };
 
     enum Operator: uint8_t{

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "B+Tree/BPlusTree.h"
+
 using namespace Constants;
 using namespace std;
 
@@ -86,8 +88,8 @@ protected:
                                     page_id_t* rowPageId,
                                     int* rowIndex);
 
-    void InsertRowToNonClusteredIndex(  const table_id_t& tableId, 
-                                        StorageTypes::Row *row,
+    void InsertRowToNonClusteredIndex(  const table_id_t& tableId,
+                                        const StorageTypes::Row *row,
                                         const int& nonClusteredIndexId,
                                         const vector<column_index_t>& indexedColumns,
                                         const Indexing::BPlusTreeNonClusteredData& data);
@@ -112,11 +114,13 @@ protected:
                                   const int &indexPosition);
 
 
-    void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& previousHeader);
+    static void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& newNodeHeader);
 
-    void UpdateTableIndexes(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId);
+    void UpdateTableIndexes(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId) const;
 
-    [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
+    [[nodiscard]] static Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
+
+    [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
 public:
     explicit Database(const string &dbName);
@@ -188,9 +192,7 @@ public:
     
     void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
 
-    void SplitNodeFromIndexPage2(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
-
-    void UpdateNodeConnections(Indexing::Node*& node);
+    static void UpdateNodeConnections(Indexing::Node*& node);
 };
 
 void CreateDatabase(const string &dbName);

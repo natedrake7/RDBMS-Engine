@@ -29,7 +29,7 @@ namespace Indexing
         this->dataPageId = 0;
     }
 
-    page_size_t Node::GetNodeSize()
+    page_size_t Node::GetNodeSize() const
     {
         //included self and parent header + prev and next
         page_size_t size = 2 * NodeHeader::GetNodeHeaderSize();
@@ -39,6 +39,7 @@ namespace Indexing
 
         //num of keys to read for node
         size += sizeof(uint16_t);
+        size += sizeof(uint8_t);
 
         for (const auto &key : this->keys)
             size += key.GetKeySize();
@@ -532,15 +533,43 @@ namespace Indexing
         this->type = keyType;
     }
 
+    Key::Key(const vector<Key> &subKeys)
+    {
+        this->size = 0;
+        for (const auto &key : subKeys)
+        {
+            this->subKeys.push_back(key);
+            this->size += key.size;
+        }
+        this->type = KeyType::Composite;
+    }
+
     Key::~Key() = default;
 
     Key::Key(const Key &otherKey)
     {
+        this->type = otherKey.type;
+        this->size = otherKey.size;
+
+        if (this->type == KeyType::Composite)
+        {
+            this->subKeys = otherKey.subKeys;
+            return;
+        }
+
+        //key is not composite
         this->value = otherKey.value;
         // memcpy(this->value, otherKey.value, otherKey.size);
 
-        this->size = otherKey.size;
-        this->type = otherKey.type;
+    }
+
+    void Key::InsertKey(const Key &otherKey)
+    {
+        this->type = KeyType::Composite;
+
+        this->size += (otherKey.size + sizeof(key_size_t));
+
+        this->subKeys.push_back(otherKey);
     }
 
     bool Key::operator>(const Key& otherKey) const
@@ -564,6 +593,12 @@ namespace Indexing
                     return false;
 
                 return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) > 0;
+            }
+            case Constants::KeyType::Composite:
+            {
+                const int compositeCompareResult = this->CompareCompositeKeys(otherKey);
+
+                return compositeCompareResult > 0;
             }
         }
 
@@ -602,12 +637,40 @@ namespace Indexing
 
                 return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) >= 0;
             }
+            case Constants::KeyType::Composite:
+            {
+                const int compositeCompareResult = this->CompareCompositeKeys(otherKey);
+
+                return compositeCompareResult >= 0;
+            }
         }
 
         throw invalid_argument(">= Invalid DataType for Key");
     }
 
-    int Key::GetKeySize() const { return this->size + sizeof(key_size_t); }
+    int Key::GetKeySize() const
+    {
+        return this->size;
+    }
+
+    int Key::CompareCompositeKeys(const Key& otherKey) const
+    {
+        if (this->subKeys.size() != otherKey.subKeys.size())
+            throw std::invalid_argument("Key::CompareCompositeKeys: Size mismatch");
+        
+        for (int i = 0; i < this->subKeys.size(); i++)
+        {
+            if (this->subKeys[i] == otherKey.subKeys[i])
+                continue;
+
+            if (this->subKeys[i] < otherKey.subKeys[i])
+                return -1;
+
+            return 1;
+        }
+
+        return 0;
+    }
 
     bool Key::operator==(const Key& otherKey) const
     {
@@ -623,6 +686,11 @@ namespace Indexing
             }
             case Constants::KeyType::String:
                 return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
+            case Constants::KeyType::Composite:
+            {
+                const int compositeCompareResult = this->CompareCompositeKeys(otherKey);
+                return compositeCompareResult == 0;
+            }
         }
 
         throw invalid_argument("== Invalid DataType for Key");

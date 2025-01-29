@@ -20,6 +20,21 @@ using namespace std;
 using namespace ByteMaps;
 
 namespace DatabaseEngine {
+    Key Database::CreateKey(const vector<column_index_t>& indexedColumns, const Row* row)
+    {
+        Key compositeKey;
+        for (const auto &column : indexedColumns)
+        {
+            const auto &keyBlock = row->GetData()[column];
+            
+            const Key key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), KeyType::Int);
+
+            compositeKey.InsertKey(key);
+        }
+
+        return compositeKey;
+    }
+    
     void Database::InsertRowToClusteredIndex(const table_id_t& tableId, Row* row, page_id_t* rowPageId, int* rowIndex)
     {
         Table* table = this->tables.at(tableId);
@@ -27,12 +42,9 @@ namespace DatabaseEngine {
         BPlusTree* tree = table->GetClusteredIndexedTree();
 
         vector<column_index_t> indexedColumns;
-
         table->GetIndexedColumnKeys(&indexedColumns);
 
-        const auto &keyBlock = row->GetData()[indexedColumns[0]];
-
-        const Key key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), KeyType::Int);
+        const auto key = Database::CreateKey(indexedColumns, row);
 
         int indexPosition = 0;
 
@@ -53,7 +65,7 @@ namespace DatabaseEngine {
 
         const page_id_t &newPageId = newPage->GetPageId();
 
-        PageFreeSpacePage *pageFreeSpacePage =  this->GetAssociatedPfsPage(newPageId);
+        PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(newPageId);
 
         // should never fail
         Database::InsertRowToPage(pageFreeSpacePage, newPage, row, indexPosition);
@@ -67,15 +79,12 @@ namespace DatabaseEngine {
         this->SplitNodeFromIndexPage(tableId, node);
     }
 
-    void Database::InsertRowToNonClusteredIndex(const table_id_t& tableId, Row* row, const int& nonClusteredIndexId, const vector<column_index_t>& indexedColumns, const BPlusTreeNonClusteredData& data)
+    void Database::InsertRowToNonClusteredIndex(const table_id_t& tableId, const Row* row, const int& nonClusteredIndexId, const vector<column_index_t>& indexedColumns, const BPlusTreeNonClusteredData& data)
     {
         Table* table = this->tables.at(tableId);
 
         BPlusTree* tree = table->GetNonClusteredIndexTree(nonClusteredIndexId);
-
-        const auto &keyBlock = row->GetData()[indexedColumns[0]];
-
-        const Key key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), KeyType::Int);
+        const auto key = Database::CreateKey(indexedColumns, row);
 
         int indexPosition = 0;
         Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition);
@@ -102,7 +111,7 @@ namespace DatabaseEngine {
 
         // check if there is at least one page available left in the extent
         extent_id_t nextExtentId = 0;
-        PageFreeSpacePage *pageFreeSpacePage = this->GetAssociatedPfsPage(pageId);
+        PageFreeSpacePage *pageFreeSpacePage = Database::GetAssociatedPfsPage(pageId);
 
         Page *nextLeafPage = this->FindOrAllocateNextDataPage(pageFreeSpacePage, pageId, extentFirstPageId, pageExtentId, *table, &nextExtentId);
 
@@ -129,18 +138,13 @@ namespace DatabaseEngine {
 
         for (int i = 0; i < nonClusteredIndexedColumns.size(); i++)
         {
-            BPlusTree* nonClusteredTree = tablePtr->GetNonClusteredIndexTree(i);
+            const BPlusTree* nonClusteredTree = tablePtr->GetNonClusteredIndexTree(i);
 
             const auto& rows = nextLeafPage->GetDataRowsUnsafe();
 
             for (page_offset_t index = 0; index < rows->size(); index++)
             {
-                const auto &keyBlock = (*rows)[index]->GetData()[nonClusteredIndexedColumns[i][0]];
-
-                const Key key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), KeyType::Int);
-
-                int64_t val = 0;
-                memcpy(&val, key.value.data(), key.value.size());
+                const auto key = Database::CreateKey(nonClusteredIndexedColumns[i], (*rows)[index]);
 
                 nonClusteredTree->UpdateRowData(key, BPlusTreeNonClusteredData(nextLeafPageId, index));
             }
@@ -170,7 +174,7 @@ namespace DatabaseEngine {
             return newIndexPage;
         }
 
-        IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
+        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
         
         vector<extent_id_t> allocatedExtents;
         indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -185,7 +189,7 @@ namespace DatabaseEngine {
                     && nextIndexPageId == indexPageId)
                     continue;
 
-                PageFreeSpacePage * pageFreeSpacePage = this->GetAssociatedPfsPage(nextIndexPageId);
+                const PageFreeSpacePage * pageFreeSpacePage = Database::GetAssociatedPfsPage(nextIndexPageId);
 
                 if (pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
                     continue;
@@ -225,7 +229,7 @@ namespace DatabaseEngine {
 
         if(overflowedPage->GetBytesLeft() > 0)
         {
-            PageFreeSpacePage* overflowedPagePFS = this->GetAssociatedPfsPage(overflowedPage->GetPageId());
+            PageFreeSpacePage* overflowedPagePFS = Database::GetAssociatedPfsPage(overflowedPage->GetPageId());
             overflowedPagePFS->SetPageMetaData(overflowedPage);
             return;
         }
@@ -248,7 +252,7 @@ namespace DatabaseEngine {
         {
            const NodeHeader newNodeHeader(nextIndexPageId, indexPosition);
 
-            this->UpdateNodeConnections((*overflowedPageNodes)[i], newNodeHeader);
+            Database::UpdateNodeConnections((*overflowedPageNodes)[i], newNodeHeader);
 
             (*overflowedPageNodes)[i]->header = newNodeHeader;
 
@@ -265,10 +269,10 @@ namespace DatabaseEngine {
         nextIndexPage->UpdateBytesLeft();
         nextIndexPage->UpdatePageSize();
 
-        PageFreeSpacePage* overflowedPagePFS = this->GetAssociatedPfsPage(overflowedPage->GetPageId());
+        PageFreeSpacePage* overflowedPagePFS = Database::GetAssociatedPfsPage(overflowedPage->GetPageId());
         overflowedPagePFS->SetPageMetaData(overflowedPage);
 
-        PageFreeSpacePage* nextIndexPagePFS = this->GetAssociatedPfsPage(nextIndexPageId);
+        PageFreeSpacePage* nextIndexPagePFS = Database::GetAssociatedPfsPage(nextIndexPageId);
         nextIndexPagePFS->SetPageMetaData(nextIndexPage);
     }
 
@@ -277,7 +281,7 @@ namespace DatabaseEngine {
         if (node->parentHeader.pageId != 0)
         {
             IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(node->parentHeader.pageId);
-            Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
+            const Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
             for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
             {
@@ -322,7 +326,7 @@ namespace DatabaseEngine {
         if (node->parentHeader.pageId != 0)
         {
             IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(node->parentHeader.pageId);
-            Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
+            const Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
             for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
             {
@@ -362,7 +366,7 @@ namespace DatabaseEngine {
         }  
     }
 
-    void Database::UpdateTableIndexes(const table_id_t & tableId, Indexing::Node *& node, const int & nonClusteredIndexId)
+    void Database::UpdateTableIndexes(const table_id_t & tableId, Indexing::Node *& node, const int & nonClusteredIndexId) const
     {
         if(!node->isRoot)
             return;
@@ -382,7 +386,7 @@ namespace DatabaseEngine {
 
     void Database::InsertRowToNonEmptyNode(Node *node, const Table &table, Row *row, const Key &key, const int &indexPosition)
     {
-        PageFreeSpacePage *pageFreeSpacePage = this->GetAssociatedPfsPage(node->dataPageId);
+        PageFreeSpacePage *pageFreeSpacePage = Database::GetAssociatedPfsPage(node->dataPageId);
 
         const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(node->dataPageId);
 

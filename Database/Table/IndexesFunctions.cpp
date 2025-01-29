@@ -25,7 +25,7 @@ namespace DatabaseEngine::StorageTypes {
         return this->clusteredIndexedTree; 
     }
 
-    Indexing::BPlusTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId)
+    BPlusTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId)
     {
         if(this->header.nonClusteredIndexesBitMap.empty())
             return nullptr;
@@ -45,29 +45,28 @@ namespace DatabaseEngine::StorageTypes {
         return nonClusteredTree;
     }
 
-    void Table::GetClusteredIndexFromDisk() 
+    void Table::GetClusteredIndexFromDisk() const
     {
-        Node* root = this->GetIndexFromDisk(this->header.clusteredIndexPageId);
+        Node* root = Table::GetIndexFromDisk(this->header.clusteredIndexPageId);
 
         this->clusteredIndexedTree->SetRoot(root);
 
         this->clusteredIndexedTree->SetTreeType(TreeType::Clustered);
     }
 
-    void Table::GetNonClusteredIndexFromDisk(const int& indexId)
+    void Table::GetNonClusteredIndexFromDisk(const int& indexId) const
     {
         if(this->header.nonClusteredIndexPageIds[indexId] == 0)
             return;
 
-        Node* root =  this->GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
+        Node* root =  Table::GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
 
         this->nonClusteredIndexedTrees[indexId]->SetRoot(root);
 
         this->nonClusteredIndexedTrees[indexId]->SetTreeType(TreeType::NonClustered);
     }
 
-    Node* Table::GetIndexFromDisk(const page_id_t & indexPageId) const
-    {
+    Node* Table::GetIndexFromDisk(const page_id_t & indexPageId) {
         const extent_id_t indexPageExtentId = Database::CalculateExtentIdByPageId(indexPageId);
 
         IndexPage* indexPage = StorageManager::Get().GetIndexPage(indexPageId, indexPageExtentId);
