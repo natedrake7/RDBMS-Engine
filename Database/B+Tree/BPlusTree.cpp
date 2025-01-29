@@ -655,8 +655,8 @@ namespace Indexing
 
     int Key::CompareCompositeKeys(const Key& otherKey) const
     {
-        if (this->subKeys.size() != otherKey.subKeys.size())
-            throw std::invalid_argument("Key::CompareCompositeKeys: Size mismatch");
+        // if (this->subKeys.size() != otherKey.subKeys.size())
+        //     throw std::invalid_argument("Key::CompareCompositeKeys: Size mismatch");
         
         for (int i = 0; i < this->subKeys.size(); i++)
         {

@@ -101,7 +101,7 @@ namespace Indexing
         page_size_t currentNodeSize;
 
         explicit Node(const bool &isLeaf = false, const bool& isRoot = false, const bool& isNodeClustered = false);
-        page_size_t GetNodeSize() const;
+        [[nodiscard]] page_size_t GetNodeSize() const;
         ~Node();
     }Node;
 
