@@ -85,6 +85,12 @@ namespace DatabaseEngine::StorageTypes{
         block->SetData(data.c_str(), data.size());
     }
 
+    void Table::SetUnicodeStringData(Block *&block, const Field &inputData)
+    {
+        const u16string& data = inputData.GetUnicodeData();
+        block->SetData(data.c_str(), data.size() * sizeof(char16_t));
+    }
+
     void Table::SetBoolData(Block *&block, const Field &inputData) 
     {
         const string &data = inputData.GetData();

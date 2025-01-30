@@ -159,6 +159,8 @@ namespace DatabaseEngine::StorageTypes {
             }
             else if(columnType == ColumnType::String)
                 cout.write(reinterpret_cast<const char*>(blockData), blockSize);
+            else if(columnType == ColumnType::UnicodeString)
+                wcout.write(reinterpret_cast<const wchar_t*>(blockData), blockSize / sizeof(char16_t));
             else if (columnType == ColumnType::Decimal)
             {
                 Decimal decimalValue(blockData, blockSize);

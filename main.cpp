@@ -32,18 +32,19 @@ void InsertRowsToMoviesTable(Table* table);
 
 int main() 
 {
+    setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 
     {
         const string dbName = "stakosDb";
 
-        // CreateDatabase(dbName);
+        CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
-        // CreateMoviesTables(db);
+        CreateMoviesTables(db);
         // CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");
@@ -87,8 +88,9 @@ void ExecuteQuery(Table* table)
 
     const auto end = std::chrono::high_resolution_clock::now();
 
+    result.reserve(rows.size());
     for(auto& row: rows)
-        result.push_back(&row);
+            result.push_back(&row);
 
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
@@ -156,7 +158,7 @@ void CreateMoviesTables(Database *db)
     vector<Column *> columns;
     columns.push_back(new Column("MovieID", "Int", sizeof(int32_t), false));
     columns.push_back(new Column("MovieYear", "Int", sizeof(int32_t), false));
-    columns.push_back(new Column("MovieType", "String", 100, true));
+    columns.push_back(new Column("MovieType", "UnicodeString", 100, true));
     columns.push_back(new Column("MovieReleaseDate", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
     columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
     columns.push_back(new Column("MovieLength", "Decimal", 10, true));
@@ -173,7 +175,7 @@ void CreateMoviesTables(Database *db)
         vector<Field> fields = {
             Field("1", 0),        
             Field("1", 1),
-            Field("Thriller", 2), 
+            Field(u"Η Σιγή των αμνών", 2), 
             Field("2024-04-12 12:12:12", 3),
             Field("1", 4),        
             Field("1233232.12434343", 5),

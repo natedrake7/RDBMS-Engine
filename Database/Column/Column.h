@@ -20,9 +20,10 @@ namespace DatabaseEngine::StorageTypes
         BigInt = 3,
         Decimal = 4,
         String = 5,
-        Bool = 6,
-        DateTime = 7,
-        ColumnTypeCount = 8
+        UnicodeString = 6,
+        Bool = 7,
+        DateTime = 8,
+        ColumnTypeCount = 9
     };
 
     typedef struct ColumnHeader

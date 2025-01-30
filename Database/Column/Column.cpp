@@ -53,6 +53,8 @@ namespace DatabaseEngine::StorageTypes {
             return ColumnType::Decimal;
         if (this->header.columnTypeLiteral == "String")
             return ColumnType::String;
+        if (this->header.columnTypeLiteral == "UnicodeString")
+            return ColumnType::UnicodeString;
         if (this->header.columnTypeLiteral == "Bool")
             return ColumnType::Bool;
         if (this->header.columnTypeLiteral == "DateTime")
