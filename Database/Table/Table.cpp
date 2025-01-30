@@ -32,16 +32,16 @@ namespace DatabaseEngine::StorageTypes {
         this->tableNameSize = 0;
         this->clusteredIndexPageId = 0;
         this->columnsNullBitMap = nullptr;
-        this->clusteredIndexesBitMap = nullptr;
+        // this->clusteredIndexesBitMap = nullptr;
       }
 
       TableHeader::~TableHeader() 
       {
         delete this->columnsNullBitMap;
-        delete this->clusteredIndexesBitMap;
+        // delete this->clusteredIndexesBitMap;
 
-        for(const auto& nonClusteredIndexMap: this->nonClusteredIndexesBitMap)
-            delete nonClusteredIndexMap;
+        // for(const auto& nonClusteredIndexMap: this->nonClusteredIndexesBitMap)
+            // delete nonClusteredIndexMap;
       }
 
       TableHeader &TableHeader::operator=(const TableHeader &tableHeader) 
@@ -60,10 +60,10 @@ namespace DatabaseEngine::StorageTypes {
         this->nonClusteredIndexesIds = tableHeader.nonClusteredIndexesIds;
 
         this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
-        this->clusteredIndexesBitMap = new BitMap(*tableHeader.clusteredIndexesBitMap);
+        this->clusteredColumnIndexes = tableHeader.clusteredColumnIndexes;
 
-        for(const auto& nonClusteredIndexBitMap: tableHeader.nonClusteredIndexesBitMap)
-            this->nonClusteredIndexesBitMap.push_back(new BitMap(*nonClusteredIndexBitMap));
+          for(const auto& nonClusteredIndexes: tableHeader.nonClusteredColumnIndexes)
+              this->nonClusteredColumnIndexes.push_back(nonClusteredIndexes);
 
         return *this;
       }
@@ -83,7 +83,6 @@ namespace DatabaseEngine::StorageTypes {
         this->header.tableName = tableName;
         this->header.numberOfColumns = columns.size();
         this->header.columnsNullBitMap = new BitMap(this->header.numberOfColumns);
-        this->header.clusteredIndexesBitMap = new BitMap(this->header.numberOfColumns);
         this->header.tableId = tableId;
 
         this->clusteredIndexedTree = nullptr;
@@ -129,8 +128,8 @@ namespace DatabaseEngine::StorageTypes {
       {
         if (clusteredKeyIndexes != nullptr && !clusteredKeyIndexes->empty())
         {
-            for (const auto &clusteredIndex : *clusteredKeyIndexes)
-              this->header.clusteredIndexesBitMap->Set(clusteredIndex, true);
+
+            this->header.clusteredColumnIndexes = *clusteredKeyIndexes;
         
             this->clusteredIndexedTree = new BPlusTree(this, this->header.clusteredIndexPageId, TreeType::Clustered);
         }
@@ -139,11 +138,7 @@ namespace DatabaseEngine::StorageTypes {
         {
             for (int i = 0; i < nonClusteredIndexes->size(); i++)
             {
-                 this->header.nonClusteredIndexesBitMap.push_back(new BitMap(this->header.numberOfColumns));
-
-                for (const auto &nonClusteredIndex : (*nonClusteredIndexes)[i])
-                    this->header.nonClusteredIndexesBitMap[i]->Set(nonClusteredIndex, true);
-
+                this->header.nonClusteredColumnIndexes.push_back(nonClusteredIndexes->at(i));
                 this->header.nonClusteredIndexesIds.emplace_back(i + 1);
             }
 
@@ -313,7 +308,7 @@ namespace DatabaseEngine::StorageTypes {
 
     TableType Table::GetTableType() const 
     {
-        return this->header.clusteredIndexesBitMap->HasAtLeastOneEntry()
+        return !this->header.clusteredColumnIndexes.empty()
                     ? TableType::CLUSTERED
                     : TableType::HEAP;
     }
@@ -466,12 +461,9 @@ namespace DatabaseEngine::StorageTypes {
     unordered_set<column_index_t> Table::GetClusteredIndexesMap() const
     {
         unordered_set<column_index_t> hashSet = {};
-        for(const auto& column: this->columns)
-        {
-            const column_index_t& columnIndex = column->GetColumnIndex();
-            if(this->header.clusteredIndexesBitMap->Get(columnIndex))
-            hashSet.insert(columnIndex);
-        }
+          
+        for(const auto& clusteredColumnIndex: this->header.clusteredColumnIndexes)
+            hashSet.insert(clusteredColumnIndex);
 
         return hashSet;
     }

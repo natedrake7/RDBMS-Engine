@@ -41,10 +41,7 @@ namespace DatabaseEngine {
 
         BPlusTree* tree = table->GetClusteredIndexedTree();
 
-        vector<column_index_t> indexedColumns;
-        table->GetIndexedColumnKeys(&indexedColumns);
-
-        const auto key = Database::CreateKey(indexedColumns, row);
+        const auto key = Database::CreateKey(table->GetClusteredIndex(), row);
 
         int indexPosition = 0;
 
@@ -131,12 +128,11 @@ namespace DatabaseEngine {
             return;
 
         Table* tablePtr = this->tables.at(table.GetTableId());
-            
-        //update any nonClusteredIndexes
-        vector<vector<column_index_t>> nonClusteredIndexedColumns;
-        tablePtr->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexedColumns);
 
-        for (int i = 0; i < nonClusteredIndexedColumns.size(); i++)
+        const auto& nonClusteredIndexes = tablePtr->GetNonClusteredIndexes();
+            
+
+        for (int i = 0; i < nonClusteredIndexes.size(); i++)
         {
             const BPlusTree* nonClusteredTree = tablePtr->GetNonClusteredIndexTree(i);
 
@@ -144,7 +140,7 @@ namespace DatabaseEngine {
 
             for (page_offset_t index = 0; index < rows->size(); index++)
             {
-                const auto key = Database::CreateKey(nonClusteredIndexedColumns[i], (*rows)[index]);
+                const auto key = Database::CreateKey(nonClusteredIndexes[i], (*rows)[index]);
 
                 nonClusteredTree->UpdateRowData(key, BPlusTreeNonClusteredData(nextLeafPageId, index));
             }

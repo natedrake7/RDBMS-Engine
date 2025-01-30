@@ -127,8 +127,9 @@ namespace DatabaseEngine::StorageTypes {
         row->UpdateColumnData(block);
     }
 
-    LargeDataPage *Table::GetLargeDataPage(const page_id_t &pageId) const 
-    {
-    return this->database->GetLargeDataPage(pageId, this->header.tableId);
-    }
+    LargeDataPage *Table::GetLargeDataPage(const page_id_t &pageId) const { return this->database->GetLargeDataPage(pageId, this->header.tableId); }
+
+    const vector<vector<column_index_t>> & Table::GetNonClusteredIndexes() const { return this->header.nonClusteredColumnIndexes; }
+
+    const vector<column_index_t> & Table::GetClusteredIndex() const { return this->header.clusteredColumnIndexes; }
 }

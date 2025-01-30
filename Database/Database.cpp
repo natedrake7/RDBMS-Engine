@@ -276,13 +276,12 @@ namespace DatabaseEngine
         if(!table->HasNonClusteredIndexes())
             return;
 
-        vector<vector<column_index_t>> nonClusteredIndexedColumns;
-        table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexedColumns);
-
         const BPlusTreeNonClusteredData nonClusteredData(rowPageId, rowIndexPosition);
 
-        for (int i = 0; i < nonClusteredIndexedColumns.size(); i++)
-            this->InsertRowToNonClusteredIndex(tableId, row, i, nonClusteredIndexedColumns[i], nonClusteredData);
+        const auto& nonClusteredIndexes = table->GetNonClusteredIndexes();
+
+        for (int i = 0; i < nonClusteredIndexes.size(); i++)
+            this->InsertRowToNonClusteredIndex(tableId, row, i, nonClusteredIndexes[i], nonClusteredData);
     }
 
     Page *Database::FindOrAllocateNextDataPage(PageFreeSpacePage *&pageFreeSpacePage, const page_id_t &pageId, const page_id_t &extentFirstPageId, const extent_id_t &extentId, const Table &table, extent_id_t *nextExtentId)

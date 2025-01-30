@@ -57,13 +57,22 @@ namespace Pages
             filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.clusteredIndexPageId), sizeof(page_id_t));
 
             tableFullHeader.tableHeader.columnsNullBitMap->WriteDataToFile(filePtr);
-            tableFullHeader.tableHeader.clusteredIndexesBitMap->WriteDataToFile(filePtr);
 
-            const uint8_t numberOfNonClusteredIndexes = tableFullHeader.tableHeader.nonClusteredIndexesBitMap.size();
+            const uint8_t numberOfClusteredIndexedColumns = tableFullHeader.tableHeader.clusteredColumnIndexes.size();
+            filePtr->write(reinterpret_cast<const char *>(&numberOfClusteredIndexedColumns), sizeof(uint8_t));
+            filePtr->write(reinterpret_cast<const char *>(tableFullHeader.tableHeader.clusteredColumnIndexes.data()), numberOfClusteredIndexedColumns * sizeof(column_index_t));
+
+            const uint8_t numberOfNonClusteredIndexes = tableFullHeader.tableHeader.nonClusteredColumnIndexes.size();
             filePtr->write(reinterpret_cast<const char *>(&numberOfNonClusteredIndexes), sizeof(uint8_t));
 
-            for (const auto& nonClusteredIndex : tableFullHeader.tableHeader.nonClusteredIndexesBitMap)
-                nonClusteredIndex->WriteDataToFile(filePtr);
+            for(const auto& nonClusteredIndexes: tableFullHeader.tableHeader.nonClusteredColumnIndexes)
+            {
+                const uint8_t numberOfNonClusteredIndexedColumns = nonClusteredIndexes.size();
+                filePtr->write(reinterpret_cast<const char *>(&numberOfNonClusteredIndexedColumns), sizeof(uint8_t));
+
+                filePtr->write(reinterpret_cast<const char *>(nonClusteredIndexes.data()), numberOfNonClusteredIndexedColumns * sizeof(column_index_t));  
+            }
+
 
             for(const auto& nonClusteredIndexPageId: tableFullHeader.tableHeader.nonClusteredIndexPageIds)
                 filePtr->write(reinterpret_cast<const char *>(&nonClusteredIndexPageId), sizeof(page_id_t));
@@ -134,18 +143,38 @@ namespace Pages
             tableFullHeader.tableHeader.columnsNullBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
             tableFullHeader.tableHeader.columnsNullBitMap->GetDataFromFile(data, offSet);
 
-            tableFullHeader.tableHeader.clusteredIndexesBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
-            tableFullHeader.tableHeader.clusteredIndexesBitMap->GetDataFromFile(data, offSet);
+            uint8_t numberOfClusteredIndexedColumns;
+            memcpy(&numberOfClusteredIndexedColumns, data.data() + offSet, sizeof(uint8_t));
+            offSet += sizeof(uint8_t);
+
+            for(int j = 0; j < numberOfClusteredIndexedColumns; j++)
+            {
+                column_index_t columnIndex;
+                memcpy(&columnIndex, data.data() + offSet, sizeof(column_index_t));
+                offSet += sizeof(column_index_t);
+
+                tableFullHeader.tableHeader.clusteredColumnIndexes.push_back(columnIndex);
+            }
 
             uint8_t numberOfNonClusteredIndexes;
-
             memcpy(&numberOfNonClusteredIndexes, data.data() + offSet, sizeof(uint8_t));
             offSet += sizeof(uint8_t);
 
-            for (int j = 0; j < numberOfNonClusteredIndexes; j++)
+            tableFullHeader.tableHeader.nonClusteredColumnIndexes.resize(numberOfNonClusteredIndexes);
+            for(int j = 0; j < numberOfNonClusteredIndexes; j++)
             {
-                tableFullHeader.tableHeader.nonClusteredIndexesBitMap.push_back(new BitMap(tableFullHeader.tableHeader.numberOfColumns));
-                tableFullHeader.tableHeader.nonClusteredIndexesBitMap[j]->GetDataFromFile(data, offSet);
+                uint8_t numberOfNonClusteredIndexedColumns;
+                memcpy(&numberOfNonClusteredIndexedColumns, data.data() + offSet, sizeof(uint8_t));
+                offSet += sizeof(uint8_t);
+
+                for(int k = 0; k < numberOfNonClusteredIndexedColumns; k++)
+                {
+                    column_index_t columnIndex;
+                    memcpy(&columnIndex, data.data() + offSet, sizeof(column_index_t));
+                    offSet += sizeof(column_index_t);
+                    
+                    tableFullHeader.tableHeader.nonClusteredColumnIndexes[j].push_back(columnIndex);
+                }
             }
 
             for (int j = 0; j < numberOfNonClusteredIndexes; j++)

@@ -62,9 +62,11 @@ namespace DatabaseEngine::StorageTypes
         ByteMaps::BitMap *columnsNullBitMap;
 
         // bitmaps to store the composite key
-        ByteMaps::BitMap *clusteredIndexesBitMap;
-        vector<ByteMaps::BitMap*> nonClusteredIndexesBitMap;
-        
+        vector<column_index_t> clusteredColumnIndexes;
+        vector<vector<column_index_t>> nonClusteredColumnIndexes;
+        // ByteMaps::BitMap *clusteredIndexesBitMap;
+        // vector<ByteMaps::BitMap*> nonClusteredIndexesBitMap;
+        //
 
         TableHeader();
         ~TableHeader();
@@ -145,6 +147,10 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId) const;
 
+            [[nodiscard]] const vector<vector<column_index_t>>& GetNonClusteredIndexes() const;
+
+            [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
+
             void Select(vector<Row> &selectedRows, const vector<Field> *conditions = nullptr, const size_t &count = -1);
 
             void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
@@ -161,8 +167,6 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] const table_id_t &GetTableId() const;
 
-            void InsertRow(const vector<Field> &inputData);
-
             [[nodiscard]] TableType GetTableType() const;
 
             [[nodiscard]] row_size_t GetMaximumRowSize() const;
@@ -177,9 +181,9 @@ namespace DatabaseEngine::StorageTypes
 
             void SetNonClusteredIndexPageId(const page_id_t& indexPageId, const int& indexPosition);
 
-            const page_id_t& GetNonClusteredIndexPageId( const int& indexPosition) const;
+            [[nodiscard]] const page_id_t& GetNonClusteredIndexPageId( const int& indexPosition) const;
 
-            const uint8_t& GetNonClusteredIndexId( const int& indexPosition) const;
+            [[nodiscard]] const uint8_t& GetNonClusteredIndexId( const int& indexPosition) const;
 
             void SetIndexAllocationMapPageId(const page_id_t& pageId);
 
@@ -187,8 +191,8 @@ namespace DatabaseEngine::StorageTypes
 
             Indexing::BPlusTree* GetNonClusteredIndexTree(const int& nonClusteredIndexId);
 
-            bool HasNonClusteredIndexes() const;
+            [[nodiscard]] bool HasNonClusteredIndexes() const;
 
-            Database* GetDatabase() const;
+            [[nodiscard]] Database* GetDatabase() const;
     };
 }

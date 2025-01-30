@@ -22,27 +22,21 @@ using namespace Storage;
 namespace DatabaseEngine::StorageTypes{
     void Table::GetIndexedColumnKeys(vector<column_index_t> *vector) const 
     {
-        for (bit_map_pos_t i = 0; i < this->header.clusteredIndexesBitMap->GetSize(); i++)
-            if (this->header.clusteredIndexesBitMap->Get(i))
-                vector->push_back(i);
+        *vector = this->header.clusteredColumnIndexes; 
     }
 
     void Table::GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>>* vector) const
     {
-        if(this->header.nonClusteredIndexesBitMap.empty())
+        if(this->header.nonClusteredColumnIndexes.empty())
             return;
 
-        vector->resize(this->header.nonClusteredIndexesBitMap.size());
+        vector->resize(this->header.nonClusteredColumnIndexes.size());
 
-        for (int i = 0;i < this->header.nonClusteredIndexesBitMap.size(); i++)
-        {
-            for (bit_map_pos_t j = 0; j < this->header.nonClusteredIndexesBitMap[i]->GetSize(); j++)
-                if(this->header.nonClusteredIndexesBitMap[i]->Get(j))
-                    (*vector)[i].push_back(j);
-        }
+        for(const auto& nonClusteredIndex : this->header.nonClusteredColumnIndexes)
+            vector->push_back(nonClusteredIndex);
     }
 
-    bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredIndexesBitMap.empty(); }
+    bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredColumnIndexes.empty(); }
 
     Database * Table::GetDatabase() const { return this->database; }
 
