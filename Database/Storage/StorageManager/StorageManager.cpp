@@ -288,9 +288,9 @@ IndexPage *StorageManager::GetIndexPage(const page_id_t &pageId)
   return dynamic_cast<IndexPage *>(this->GetSystemPage(pageId));
 }
 
-IndexPage *StorageManager::GetIndexPage(const page_id_t &pageId, const extent_id_t &extentId) 
+IndexPage *StorageManager::GetIndexPage(const page_id_t &pageId, const extent_id_t &extentId, const Table* table) 
 {
-  return dynamic_cast<IndexPage *>(this->GetSystemPage(pageId, extentId));
+  return dynamic_cast<IndexPage *>(this->GetSystemPage(pageId, extentId, table));
 }
 
 bool StorageManager::IsCacheFull() const 
@@ -353,13 +353,13 @@ Page *StorageManager::GetSystemPage(const page_id_t &pageId, const string &filen
   return (*pageHashIterator->second);
 }
 
-Page *StorageManager::GetSystemPage(const page_id_t &pageId, const extent_id_t &extentId) 
+Page *StorageManager::GetSystemPage(const page_id_t &pageId, const extent_id_t &extentId, const Table* table) 
 {
   auto pageHashIterator = this->SearchSystemPageInCache(pageId);
 
   if (pageHashIterator == this->systemCache.end()) 
   {
-    this->OpenSystemExtent(extentId);
+    this->OpenSystemExtent(extentId, table);
     pageHashIterator = this->SearchSystemPageInCache(pageId);
   }
 
@@ -405,7 +405,7 @@ void StorageManager::OpenSystemPage(const page_id_t &pageId)
   page->GetPageDataFromFile(buffer, nullptr, offSet, file);
 }
 
-void StorageManager::OpenSystemExtent(const Constants::extent_id_t &extentId) 
+void StorageManager::OpenSystemExtent(const extent_id_t &extentId, const Table* table)
 {
   const string &filename = this->database->GetFileName();
 
@@ -447,7 +447,7 @@ void StorageManager::OpenSystemExtent(const Constants::extent_id_t &extentId)
 
     StorageManager::AllocateMemoryBasedOnSystemPageType(&page, pageHeader);
 
-    page->GetPageDataFromFile(buffer, nullptr, offSet, file);
+    page->GetPageDataFromFile(buffer, table, offSet, file);
 
     this->systemPageList.push_front(page);
 

@@ -104,7 +104,7 @@ namespace DatabaseEngine::StorageTypes
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
             void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
             void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
-            
+        
             static void SetTinyIntData(Block *&block, const Field &inputData);
             static void SetSmallIntData(Block *&block, const Field &inputData);
             static void SetIntData(Block *&block, const Field &inputData);
@@ -117,7 +117,7 @@ namespace DatabaseEngine::StorageTypes
         
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
-            [[nodiscard]] static Indexing::Node* GetIndexFromDisk(const page_id_t& indexPageId);
+            [[nodiscard]] Indexing::Node* GetIndexFromDisk(const page_id_t& indexPageId) const;
         
             void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
             void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
@@ -194,5 +194,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] bool HasNonClusteredIndexes() const;
 
             [[nodiscard]] Database* GetDatabase() const;
+
+            [[nodiscard]] vector<ColumnType> GetColumnTypeByTreeId(const uint8_t& treeId) const;
     };
 }

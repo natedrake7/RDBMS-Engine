@@ -3,6 +3,8 @@
 #include "../../Database/Constants.h"
 #include <fstream>
 
+#include "../Column/Column.h"
+
 using namespace std;
 using namespace Constants;
 
@@ -48,11 +50,11 @@ namespace Indexing
     {
         vector<object_t> value;
         key_size_t size;
-        KeyType type;
+        DatabaseEngine::StorageTypes::ColumnType type;
         vector<Key> subKeys;
 
         Key();
-        Key(const void *keyValue, const key_size_t &keySize, const KeyType& keyType);
+        Key(const void *keyValue, const key_size_t &keySize, const DatabaseEngine::StorageTypes::ColumnType& keyType);
 
         explicit Key(const vector<Key>& subKeys);
         ~Key();
@@ -114,6 +116,7 @@ namespace Indexing
         TreeType type;
         int nonClusteredIndexId;
         DatabaseEngine::Database* database;
+        const DatabaseEngine::StorageTypes::Table* table;
 
         void SplitChild(Node *parent, const int &index, Node *child);
         void PrintTree(const Node *node, const int &level);
@@ -122,7 +125,7 @@ namespace Indexing
         [[nodiscard]] Node *SearchKey(const Key &key) const;
         void InsertNodeToPage(Node*& node, const page_id_t& parentPageId);
 
-        static Node* GetNodeFromPage(const NodeHeader& header);
+        [[nodiscard]] Node* GetNodeFromPage(const NodeHeader& header) const;
         static int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
 
     public:

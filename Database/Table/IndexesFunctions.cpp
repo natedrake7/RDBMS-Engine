@@ -66,10 +66,11 @@ namespace DatabaseEngine::StorageTypes {
         this->nonClusteredIndexedTrees[indexId]->SetTreeType(TreeType::NonClustered);
     }
 
-    Node* Table::GetIndexFromDisk(const page_id_t & indexPageId) {
+    Node* Table::GetIndexFromDisk(const page_id_t & indexPageId) const
+    {
         const extent_id_t indexPageExtentId = Database::CalculateExtentIdByPageId(indexPageId);
 
-        IndexPage* indexPage = StorageManager::Get().GetIndexPage(indexPageId, indexPageExtentId);
+        IndexPage* indexPage = StorageManager::Get().GetIndexPage(indexPageId, indexPageExtentId, this);
 
         return indexPage->GetRoot();
     }

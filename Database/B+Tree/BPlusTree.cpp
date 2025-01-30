@@ -72,6 +72,7 @@ namespace Indexing
         this->type = treeType;
         this->database = table->GetDatabase();
         this->nonClusteredIndexId = nonClusteredIndexId;
+        this->table = table;
     }
 
     BPlusTree::BPlusTree()
@@ -219,7 +220,7 @@ namespace Indexing
         const auto iterator = ranges::lower_bound(node->keys, key);
 
         int childIndex = iterator - node->keys.begin();
-        Node *child = BPlusTree::GetNodeFromPage(node->childrenHeaders[childIndex]);
+        Node *child = this->GetNodeFromPage(node->childrenHeaders[childIndex]);
 
         if (child->keys.size() == 2 * t - 1)
         {
@@ -229,7 +230,7 @@ namespace Indexing
                 childIndex++;
         }
 
-        return GetNonFullNode(BPlusTree::GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition);
+        return GetNonFullNode(this->GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition);
     }
 
     void BPlusTree::DeleteNode(const Node *node)
@@ -321,7 +322,7 @@ namespace Indexing
                 return;
 
             previousNode = currentNode;
-            currentNode = BPlusTree::GetNodeFromPage(currentNode->nextNodeHeader);
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -338,7 +339,7 @@ namespace Indexing
 
             const int index = iterator - currentNode->keys.begin();
 
-            currentNode = BPlusTree::GetNodeFromPage(currentNode->childrenHeaders[index]);
+            currentNode = this->GetNodeFromPage(currentNode->childrenHeaders[index]);
         }
 
         const Node *previousNode = nullptr;
@@ -363,7 +364,7 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode = BPlusTree::GetNodeFromPage(currentNode->nextNodeHeader);
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -418,7 +419,7 @@ namespace Indexing
             }
 
             previousNode = currentNode;
-            currentNode = BPlusTree::GetNodeFromPage(currentNode->nextNodeHeader);
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
         }
     }
 
@@ -458,7 +459,7 @@ namespace Indexing
 
             const int index = iterator - currentNode->keys.begin();
 
-           currentNode = BPlusTree::GetNodeFromPage(currentNode->childrenHeaders[index]);
+           currentNode = this->GetNodeFromPage(currentNode->childrenHeaders[index]);
         }
 
         return currentNode;
@@ -477,9 +478,11 @@ namespace Indexing
         this->firstIndexPageId = root->header.pageId;
     }
 
-    Node* BPlusTree::GetNodeFromPage(const NodeHeader & header)
+    Node* BPlusTree::GetNodeFromPage(const NodeHeader & header) const
     {
-        IndexPage* indexPage = StorageManager::Get().GetIndexPage(header.pageId);
+        const extent_id_t extentId = DatabaseEngine::Database::CalculateExtentIdByPageId(header.pageId);
+
+        const IndexPage* indexPage = StorageManager::Get().GetIndexPage(header.pageId, extentId, this->table);
 
         return indexPage->GetNodeByIndex(header.indexPosition);
     }
@@ -521,10 +524,10 @@ namespace Indexing
     Key::Key()
     {
         this->size = 0;
-        this->type = KeyType::Int;
+        this->type = ColumnType::Int;
     }
 
-    Key::Key(const void *keyValue, const key_size_t &keySize, const KeyType& keyType)
+    Key::Key(const void *keyValue, const key_size_t &keySize, const ColumnType& keyType)
     {
         this->value.resize(keySize);
         memcpy(this->value.data(), keyValue, keySize);
@@ -541,7 +544,7 @@ namespace Indexing
             this->subKeys.push_back(key);
             this->size += key.size;
         }
-        this->type = KeyType::Composite;
+        this->type = ColumnType::Int;
     }
 
     Key::~Key() = default;
@@ -551,22 +554,21 @@ namespace Indexing
         this->type = otherKey.type;
         this->size = otherKey.size;
 
-        if (this->type == KeyType::Composite)
+        if(otherKey.subKeys.empty())
         {
-            this->subKeys = otherKey.subKeys;
+            this->value = otherKey.value;
             return;
         }
 
+        this->subKeys = otherKey.subKeys;
+
         //key is not composite
-        this->value = otherKey.value;
         // memcpy(this->value, otherKey.value, otherKey.size);
 
     }
 
     void Key::InsertKey(const Key &otherKey)
     {
-        this->type = KeyType::Composite;
-
         this->size += (otherKey.size + sizeof(key_size_t));
 
         this->subKeys.push_back(otherKey);
@@ -574,9 +576,15 @@ namespace Indexing
 
     bool Key::operator>(const Key& otherKey) const
     {
+        if(!this->subKeys.empty())
+            return this->CompareCompositeKeys(otherKey) > 0;
+        
         switch (this->type) 
         {
-            case Constants::KeyType::Int:
+            case ColumnType::TinyInt:
+            case ColumnType::SmallInt:
+            case ColumnType::Int:
+            case ColumnType::BigInt:
             {
                 int64_t keyVal = 0, otherKeyVal = 0;
                 memcpy(&keyVal, this->value.data(), this->value.size());
@@ -584,7 +592,7 @@ namespace Indexing
 
                 return keyVal > otherKeyVal;
             }
-            case Constants::KeyType::String:
+            case ColumnType::String:
             {
                 if (otherKey.size > this->size)
                     return true;
@@ -593,12 +601,6 @@ namespace Indexing
                     return false;
 
                 return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) > 0;
-            }
-            case Constants::KeyType::Composite:
-            {
-                const int compositeCompareResult = this->CompareCompositeKeys(otherKey);
-
-                return compositeCompareResult > 0;
             }
         }
 
@@ -616,10 +618,16 @@ namespace Indexing
     }
 
     bool Key::operator>=(const Key& otherKey) const
-    { 
+    {
+        if(!this->subKeys.empty())
+            return this->CompareCompositeKeys(otherKey) >= 0;
+        
         switch (this->type) 
         {
-            case Constants::KeyType::Int:
+            case ColumnType::TinyInt:
+            case ColumnType::SmallInt:
+            case ColumnType::Int:
+            case ColumnType::BigInt:
             {
                 int64_t keyVal = 0, otherKeyVal = 0;
                 memcpy(&keyVal, this->value.data(), this->value.size());
@@ -627,7 +635,7 @@ namespace Indexing
 
                 return keyVal >= otherKeyVal;
             }
-            case Constants::KeyType::String:
+            case ColumnType::String:
             {
                 if (otherKey.size > this->size)
                     return true;
@@ -636,12 +644,6 @@ namespace Indexing
                     return false;
 
                 return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) >= 0;
-            }
-            case Constants::KeyType::Composite:
-            {
-                const int compositeCompareResult = this->CompareCompositeKeys(otherKey);
-
-                return compositeCompareResult >= 0;
             }
         }
 
@@ -674,9 +676,15 @@ namespace Indexing
 
     bool Key::operator==(const Key& otherKey) const
     {
+        if(!this->subKeys.empty())
+            return this->CompareCompositeKeys(otherKey) == 0;
+        
         switch (this->type) 
         {
-            case Constants::KeyType::Int:
+            case ColumnType::TinyInt:
+            case ColumnType::SmallInt:
+            case ColumnType::Int:
+            case ColumnType::BigInt:
             {
                 int64_t keyVal = 0, otherKeyVal = 0;
                 memcpy(&keyVal, this->value.data(), this->value.size());
@@ -684,16 +692,12 @@ namespace Indexing
 
                 return keyVal == otherKeyVal;
             }
-            case Constants::KeyType::String:
+            case ColumnType::String:
                 return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
-            case Constants::KeyType::Composite:
-            {
-                const int compositeCompareResult = this->CompareCompositeKeys(otherKey);
-                return compositeCompareResult == 0;
-            }
+            default:
+                throw invalid_argument("== Invalid DataType for Key");
         }
 
-        throw invalid_argument("== Invalid DataType for Key");
     }
 
     QueryData::QueryData()

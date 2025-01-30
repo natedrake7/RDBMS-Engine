@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "B+Tree/BPlusTree.h"
+#include "Column/Column.h"
 
 using namespace Constants;
 using namespace std;

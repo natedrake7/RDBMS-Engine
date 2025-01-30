@@ -160,7 +160,7 @@ namespace DatabaseEngine
 
     void Database::DeleteTable(const string& tableName)
     {
-        Table* table = nullptr;
+        const Table* table = nullptr;
         vector<Table*>::iterator it;
 
         for (it = this->tables.begin(); it != this->tables.end(); it++)
@@ -262,10 +262,7 @@ namespace DatabaseEngine
     void Database::InsertRowToPage(const table_id_t &tableId, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
     {
         const Table* table = this->GetTable(tableId);
-
-        page_id_t rowPageId;
-        extent_id_t rowExtentId;
-        int rowIndexPosition;
+        page_id_t rowPageId;int rowIndexPosition;
 
         if (table->GetTableType() == TableType::CLUSTERED)
             this->InsertRowToClusteredIndex(tableId, row, &rowPageId, &rowIndexPosition);
@@ -638,7 +635,7 @@ namespace DatabaseEngine
             pageFreeSpacePage->SetPageMetaData(indexPage);
         }
 
-        return StorageManager::Get().GetIndexPage(lowerLimit, newExtentId);
+        return StorageManager::Get().GetIndexPage(lowerLimit, newExtentId, this->tables[tableId]);
     }
 
     bool Database::AllocateNewExtent(PageFreeSpacePage **pageFreeSpacePage, page_id_t *lowerLimit, page_id_t *newPageId, extent_id_t *newExtentId, const table_id_t &tableId)

@@ -25,14 +25,10 @@ void InsertRowsToActorsTable(Table* table);
 void InsertRowsToMoviesTable(Table* table);
 // handle updates
 // deletes
-// B+ Trees
 // row ids
 // object ids
-// create composite keys (minor)
 //truncate should deallocate the space used by the pages instead of marking it as free?
 //delete should defragment pages when done and combine them on heap files.
-//handle degree correctly
-//figure out way to know which column is primary used by composite key
 
 int main() 
 {

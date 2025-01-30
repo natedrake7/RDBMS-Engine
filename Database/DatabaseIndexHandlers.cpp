@@ -22,19 +22,16 @@ using namespace ByteMaps;
 namespace DatabaseEngine {
     Key Database::CreateKey(const vector<column_index_t>& indexedColumns, const Row* row)
     {
-        Key compositeKey;
-        for (const auto &column : indexedColumns)
+        Key key;
+        for (const auto &columnId : indexedColumns)
         {
-            const auto &keyBlock = row->GetData()[column];
-            
-            const Key key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), KeyType::Int);
-
-            compositeKey.InsertKey(key);
+            const auto &keyBlock = row->GetData()[columnId];
+            key.InsertKey(Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
         }
 
-        return compositeKey;
+        return key;
     }
-    
+
     void Database::InsertRowToClusteredIndex(const table_id_t& tableId, Row* row, page_id_t* rowPageId, int* rowIndex)
     {
         Table* table = this->tables.at(tableId);
@@ -151,7 +148,7 @@ namespace DatabaseEngine {
     {
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
-        Table* table = this->tables.at(tableId);
+        const Table* table = this->tables.at(tableId);
 
         const bool isNonClusteredIndex = nonClusteredIndexId != -1;
 
@@ -194,7 +191,7 @@ namespace DatabaseEngine {
                 if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
                     continue;
 
-                IndexPage* indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId);
+                IndexPage* indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId, extentId, table);
 
                 if(indexPage->GetBytesLeft() < nodeSize
                     || indexPage->GetTreeId() != indexId)

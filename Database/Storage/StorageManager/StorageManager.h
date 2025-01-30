@@ -56,12 +56,12 @@ protected:
   static void AllocateMemoryBasedOnSystemPageType(Pages::Page **page, const Pages::PageHeader &pageHeader);
   static void AllocateMemoryBasedOnPageType(Pages::Page **page, const Pages::PageHeader &pageHeader);
   void OpenExtent(const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
-  void OpenSystemExtent(const Constants::extent_id_t &extentId);
+  void OpenSystemExtent(const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
   void OpenSystemPage(const Constants::page_id_t &pageId);
   void OpenSystemPage(const Constants::page_id_t &pageId, const string &filename);
   Pages::Page *GetSystemPage(const Constants::page_id_t &pageId);
   Pages::Page *GetSystemPage(const Constants::page_id_t &pageId, const string &filename);
-  Pages::Page *GetSystemPage(const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId);
+  Pages::Page *GetSystemPage(const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table = nullptr);
   static void SetReadFilePointerToOffset(fstream *file, const streampos &offSet);
   static void SetWriteFilePointerToOffset(fstream *file, const streampos &offSet);
   static Pages::PageHeader GetPageHeaderFromFile(const vector<char> &data, Constants::page_offset_t &offSet);
@@ -106,8 +106,8 @@ public:
   Pages::PageFreeSpacePage * GetPageFreeSpacePage(const Constants::page_id_t &pageId);
   Pages::IndexPage *CreateIndexPage(const Constants::page_id_t &pageId);
   Pages::IndexPage *GetIndexPage(const Constants::page_id_t &pageId);
-  Pages::IndexPage *GetIndexPage(const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId);
-  bool IsCacheFull() const;
+  Pages::IndexPage *GetIndexPage(const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
+  [[nodiscard]] bool IsCacheFull() const;
 };
 
 } // namespace Storage
