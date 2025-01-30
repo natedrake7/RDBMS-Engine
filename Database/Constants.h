@@ -97,7 +97,7 @@ namespace Constants
     typedef uint16_t block_size_t;
 
     // column types
-    typedef uint16_t column_index_t;
+    typedef uint8_t column_index_t;
 
     // record size
     typedef uint32_t row_size_t;
