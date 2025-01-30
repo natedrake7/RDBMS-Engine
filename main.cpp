@@ -29,7 +29,7 @@ void InsertRowsToMoviesTable(Table* table);
 // object ids
 //truncate should deallocate the space used by the pages instead of marking it as free?
 //delete should defragment pages when done and combine them on heap files.
-
+//add more types to index keys (datetime, decimal, bool, null?)
 int main() 
 {
     setlocale(LC_ALL, "");
@@ -38,13 +38,13 @@ int main()
     {
         const string dbName = "stakosDb";
 
-        CreateDatabase(dbName);
+        // CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
-        CreateMoviesTables(db);
+        // CreateMoviesTables(db);
         // CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");

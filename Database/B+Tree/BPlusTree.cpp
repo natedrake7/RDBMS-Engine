@@ -593,6 +593,7 @@ namespace Indexing
                 return keyVal > otherKeyVal;
             }
             case ColumnType::String:
+            case ColumnType::UnicodeString:
             {
                 if (otherKey.size > this->size)
                     return true;
@@ -636,6 +637,7 @@ namespace Indexing
                 return keyVal >= otherKeyVal;
             }
             case ColumnType::String:
+            case ColumnType::UnicodeString:
             {
                 if (otherKey.size > this->size)
                     return true;
@@ -693,6 +695,7 @@ namespace Indexing
                 return keyVal == otherKeyVal;
             }
             case ColumnType::String:
+            case ColumnType::UnicodeString:
                 return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
             default:
                 throw invalid_argument("== Invalid DataType for Key");
