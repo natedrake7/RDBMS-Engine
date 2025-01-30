@@ -30,6 +30,10 @@ void InsertRowsToMoviesTable(Table* table);
 //truncate should deallocate the space used by the pages instead of marking it as free?
 //delete should defragment pages when done and combine them on heap files.
 //add more types to index keys (datetime, decimal, bool, null?)
+//for decimals compare first size before the fraction point, if one has greater size it is bigger, then if they are the same
+//start comparing each digit until a bigger is found and return the greater one
+//for bool simple
+//for datetime compare time_t absolute values.
 int main() 
 {
     setlocale(LC_ALL, "");
