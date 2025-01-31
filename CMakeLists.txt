@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 26)
 add_executable(DatabaseInterface
         main.cpp)
 
+add_library(QueryParser
+            QueryParser/Tokenizer/Tokenizer.cpp
+            QueryParser/Tokenizer/Tokenizer.h)
+
 add_library(AdditionalLibraries
         AdditionalLibraries/BitMap/BitMap.cpp
         AdditionalLibraries/BitMap/BitMap.h
@@ -72,4 +76,4 @@ add_library(Database
         Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
         Database/AdditionalFunctions/StringFunctions/StringFunctions.h)
 
-target_link_libraries(DatabaseInterface PRIVATE AdditionalLibraries PRIVATE Database)
+target_link_libraries(DatabaseInterface PRIVATE QueryParser PRIVATE AdditionalLibraries PRIVATE Database)

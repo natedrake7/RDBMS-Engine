@@ -174,7 +174,7 @@ void CreateMoviesTables(Database *db)
 
     vector<vector<Field>> inputData;
 
-    for (int i = 0; i < 100000; i++) 
+    for (int i = 0; i < 10000; i++) 
     {
         vector<Field> fields = {
             Field("1", 0),        
