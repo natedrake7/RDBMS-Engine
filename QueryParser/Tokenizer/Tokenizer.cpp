@@ -8,7 +8,7 @@ namespace QueryParser
         vector<string> tokens;
         for(const auto& character: query)
         {
-
+                
         }
     }
 }

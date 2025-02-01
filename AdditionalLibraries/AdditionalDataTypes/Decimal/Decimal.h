@@ -33,5 +33,6 @@ namespace DataTypes {
     };
 
     Decimal operator+(const Decimal& left, const Decimal& right);
+    bool operator==(const Decimal& left, const Decimal& right);
 }
 

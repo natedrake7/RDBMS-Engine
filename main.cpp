@@ -5,6 +5,7 @@
 #include "./Database/Database.h"
 #include "./Database/Row/Row.h"
 #include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
+#include "AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
 #include "AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h"
 #include "Database/Column/Column.h"

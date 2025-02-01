@@ -122,6 +122,20 @@ namespace DataTypes {
         return Decimal(result);
     }
 
+    bool operator==(const Decimal& left, const Decimal& right)
+    {
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        if(leftData.size() != rightData.size())
+            return false;
+    
+        for(const auto& leftByte: leftData)
+        {
+            
+        }
+    }
+
     fraction_index_t Decimal::GetFractionIndex(const string& value)
     {
         const int decimalPos = value.find('.');
