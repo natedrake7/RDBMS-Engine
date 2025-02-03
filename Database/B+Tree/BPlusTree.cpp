@@ -585,16 +585,13 @@ namespace Indexing
         switch (this->type) 
         {
             case ColumnType::TinyInt:
+                return *reinterpret_cast<const int8_t*>(this->value.data()) > *reinterpret_cast<const int8_t*>(otherKey.value.data());
             case ColumnType::SmallInt:
+                return *reinterpret_cast<const int16_t*>(this->value.data()) > *reinterpret_cast<const int16_t*>(otherKey.value.data());
             case ColumnType::Int:
+                return *reinterpret_cast<const int32_t*>(this->value.data()) > *reinterpret_cast<const int32_t*>(otherKey.value.data());
             case ColumnType::BigInt:
-            {
-                int64_t keyVal = 0, otherKeyVal = 0;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal > otherKeyVal;
-            }
+                return *reinterpret_cast<const int64_t*>(this->value.data()) > *reinterpret_cast<const int64_t*>(otherKey.value.data());
             case ColumnType::String:
             case ColumnType::UnicodeString:
             {
@@ -609,21 +606,9 @@ namespace Indexing
             case ColumnType::Decimal:
                 return Decimal(this->value.data(), this->size) > Decimal(otherKey.value.data(), otherKey.size);
             case ColumnType::Bool:
-            {
-                bool keyVal = false, otherKeyVal = false;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal > otherKeyVal;
-            }
+                return *reinterpret_cast<const bool*>(this->value.data()) > *reinterpret_cast<const bool*>(otherKey.value.data());
             case ColumnType::DateTime:
-            {
-                time_t keyVal = 0, otherKeyVal = 0;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal > otherKeyVal;
-            }
+                return *reinterpret_cast<const time_t*>(this->value.data()) > *reinterpret_cast<const time_t*>(otherKey.value.data());
             case ColumnType::ColumnTypeCount: 
             default:
                 throw invalid_argument("> Invalid DataType for Key");
@@ -650,15 +635,14 @@ namespace Indexing
         switch (this->type) 
         {
             case ColumnType::TinyInt:
+                return *reinterpret_cast<const int8_t*>(this->value.data()) >= *reinterpret_cast<const int8_t*>(otherKey.value.data());
             case ColumnType::SmallInt:
+                return *reinterpret_cast<const int16_t*>(this->value.data()) >= *reinterpret_cast<const int16_t*>(otherKey.value.data());
             case ColumnType::Int:
+                return *reinterpret_cast<const int32_t*>(this->value.data()) >= *reinterpret_cast<const int32_t*>(otherKey.value.data());
             case ColumnType::BigInt:
             {
-                int64_t keyVal = 0, otherKeyVal = 0;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal >= otherKeyVal;
+                return *reinterpret_cast<const int64_t*>(this->value.data()) >= *reinterpret_cast<const int64_t*>(otherKey.value.data());
             }
             case ColumnType::String:
             case ColumnType::UnicodeString:
@@ -674,21 +658,9 @@ namespace Indexing
             case ColumnType::Decimal:
                 return Decimal(this->value.data(), this->size) >= Decimal(otherKey.value.data(), otherKey.size);
             case ColumnType::Bool:
-            {
-                bool keyVal = false, otherKeyVal = false;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal >= otherKeyVal;
-            }
+                return *reinterpret_cast<const bool*>(this->value.data()) >= *reinterpret_cast<const bool*>(otherKey.value.data());
             case ColumnType::DateTime:
-            {
-                time_t keyVal = 0, otherKeyVal = 0;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal >= otherKeyVal;
-            }
+                return *reinterpret_cast<const time_t*>(this->value.data()) >= *reinterpret_cast<const time_t*>(otherKey.value.data());
             case ColumnType::ColumnTypeCount: 
             default:
                 throw invalid_argument(">= Invalid DataType for Key");
@@ -729,37 +701,22 @@ namespace Indexing
         switch (this->type) 
         {
             case ColumnType::TinyInt:
+                return *reinterpret_cast<const int8_t*>(this->value.data()) == *reinterpret_cast<const int8_t*>(otherKey.value.data());
             case ColumnType::SmallInt:
+                return *reinterpret_cast<const int16_t*>(this->value.data()) == *reinterpret_cast<const int16_t*>(otherKey.value.data());
             case ColumnType::Int:
+                return *reinterpret_cast<const int32_t*>(this->value.data()) == *reinterpret_cast<const int32_t*>(otherKey.value.data());
             case ColumnType::BigInt:
-            {
-                int64_t keyVal = 0, otherKeyVal = 0;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal == otherKeyVal;
-            }
+                return *reinterpret_cast<const int64_t*>(this->value.data()) == *reinterpret_cast<const int64_t*>(otherKey.value.data());
             case ColumnType::String:
             case ColumnType::UnicodeString:
                 return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
             case ColumnType::Decimal:
                 return Decimal(this->value.data(), this->size) == Decimal(otherKey.value.data(), otherKey.size);
             case ColumnType::Bool:
-            {
-                bool keyVal = false, otherKeyVal = false;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal == otherKeyVal;
-            }
+                return *reinterpret_cast<const bool*>(this->value.data()) == *reinterpret_cast<const bool*>(otherKey.value.data());
             case ColumnType::DateTime:
-            {
-                time_t keyVal = 0, otherKeyVal = 0;
-                memcpy(&keyVal, this->value.data(), this->value.size());
-                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
-
-                return keyVal == otherKeyVal;
-            }
+                return *reinterpret_cast<const time_t*>(this->value.data()) == *reinterpret_cast<const time_t*>(otherKey.value.data());
             case ColumnType::ColumnTypeCount: 
             default:
                 throw invalid_argument("== Invalid DataType for Key");

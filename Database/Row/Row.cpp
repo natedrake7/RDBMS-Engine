@@ -6,6 +6,9 @@
 #include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
 #include "../Column/Column.h"
 #include "../Pages/LargeObject/LargeDataPage.h"
+#include <cstdint>
+#include <ctime>
+#include <stdexcept>
 
 using namespace Pages;
 using namespace DataTypes;
@@ -130,59 +133,64 @@ namespace DatabaseEngine::StorageTypes {
             const ColumnType columnType = this->data[i]->GetColumnType();
             const object_t* blockData = this->data[i]->GetBlockData();
             const block_size_t& blockSize = this->data[i]->GetBlockSize();
-            
+
             if(blockData == nullptr)
-                cout<< "NULL";
-            else if (columnType == ColumnType::TinyInt)
             {
-                int8_t tinyIntValue;
-                memcpy(&tinyIntValue, blockData, sizeof(int8_t));
-                cout << static_cast<int>(tinyIntValue);
-            }
-            else if (columnType == ColumnType::SmallInt)
-            {
-                int16_t smallIntValue;
-                memcpy(&smallIntValue, blockData, sizeof(int16_t));
-                cout << smallIntValue;
-            }
-            else if(columnType == ColumnType::Int)
-            {
-                int32_t intValue;
-                memcpy(&intValue, blockData, sizeof(int32_t));
-                cout << intValue;
-            }
-            else if (columnType == ColumnType::BigInt)
-            {
-                int64_t bigIntValue;
-                memcpy(&bigIntValue, blockData, sizeof(int64_t));
-                cout << bigIntValue;
-            }
-            else if(columnType == ColumnType::String)
-                cout.write(reinterpret_cast<const char*>(blockData), blockSize);
-            else if(columnType == ColumnType::UnicodeString)
-                wcout.write(reinterpret_cast<const wchar_t*>(blockData), blockSize / sizeof(char16_t));
-            else if (columnType == ColumnType::Decimal)
-            {
-                Decimal decimalValue(blockData, blockSize);
-
-                cout << decimalValue.ToString();
-            }
-            else if (columnType == ColumnType::Bool)
-            {
-                bool booleanValue;
-                memcpy(&booleanValue, blockData, sizeof(bool));
-                cout << booleanValue;
-            }
-            else if (columnType == ColumnType::DateTime)
-            {
-                time_t timeValue;
-                memcpy(&timeValue, blockData, blockSize);
-                
-                DateTime date(timeValue);
-
-                cout << date.ToString();
+                cout << "NULL";
+                continue;
             }
 
+            switch (columnType) 
+            {
+                case ColumnType::TinyInt:
+                {
+                    cout << *reinterpret_cast<const int8_t*>(blockData);
+                    break;
+                }
+                case ColumnType::SmallInt:
+                {
+                    cout << *reinterpret_cast<const int16_t*>(blockData);
+                    break;
+                }
+                case ColumnType::Int:
+                {
+                    cout << *reinterpret_cast<const int32_t*>(blockData);
+                    break;
+                }
+                case ColumnType::BigInt:
+                {
+                    cout << *reinterpret_cast<const int64_t*>(blockData);
+                    break;
+                }
+                case ColumnType::Decimal:
+                {
+                    cout << Decimal(blockData, blockSize).ToString();
+                    break;
+                }
+                case ColumnType::String:
+                {
+                    cout.write(reinterpret_cast<const char*>(blockData), blockSize);
+                    break;
+                }
+                case ColumnType::UnicodeString:
+                {
+                    wcout.write(reinterpret_cast<const wchar_t*>(blockData), blockSize / sizeof(char16_t));
+                    break;
+                }
+                case ColumnType::Bool:
+                {
+                    cout << *reinterpret_cast<const bool*>(blockData);
+                    break;
+                }
+                case ColumnType::DateTime:
+                {
+                    cout << DateTime(reinterpret_cast<time_t>(blockData)).ToString();
+                    break;
+                }
+                case ColumnType::ColumnTypeCount:
+                default:
+                    throw invalid_argument("Row::PrintRow Invalid Column specified");
+            }
 
             if(i == this->data.size() - 1)
                 cout << '\n';

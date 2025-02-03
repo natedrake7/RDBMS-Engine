@@ -5,7 +5,6 @@
 #include "./Database/Database.h"
 #include "./Database/Row/Row.h"
 #include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
-#include "AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
 #include "AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h"
 #include "Database/Column/Column.h"
@@ -36,27 +35,19 @@ void InsertRowsToMoviesTable(Table* table);
 //for datetime compare time_t absolute values.
 int main() 
 {
-
-    DataTypes::Decimal val1("12.234");
-    DataTypes::Decimal val2("12.23000004");
-
-    const bool temp = val1 >= val2;
-    cout << temp << endl;
-
-    return 0;
     setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 
     {
         const string dbName = "stakosDb";
 
-        // CreateDatabase(dbName);
+        CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
-        // CreateMoviesTables(db);
+        CreateMoviesTables(db);
         // CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");
@@ -175,7 +166,7 @@ void CreateMoviesTables(Database *db)
     columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
     columns.push_back(new Column("MovieLength", "Decimal", 10, true));
 
-    const vector<column_index_t> clusteredIndexes = {0, 1};
+    const vector<column_index_t> clusteredIndexes = {0, 4};
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 1, 0 } };
 
     Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
