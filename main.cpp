@@ -12,10 +12,12 @@
 #include "Database/AdditionalFunctions/SortingFunctions.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
+#include "QueryParser/Tokenizer/Tokenizer.h"
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
 using namespace Storage;
+using namespace QueryParser;
 
 void ExecuteQuery(Table* table);
 void CreateMoviesTables(Database *db);
@@ -28,13 +30,20 @@ void InsertRowsToMoviesTable(Table* table);
 // object ids
 //truncate should deallocate the space used by the pages instead of marking it as free?
 //delete should defragment pages when done and combine them on heap files.
-//add more types to index keys (datetime, decimal, bool, null?)
-//for decimals compare first size before the fraction point, if one has greater size it is bigger, then if they are the same
-//start comparing each digit until a bigger is found and return the greater one
-//for bool simple
-//for datetime compare time_t absolute values.
+//handle joins
+//deletes
+//advanced functions
 int main() 
 {
+    string sql = "SELECT name, age FROM users WHERE age >= 25;";
+    vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
+
+    cout << "Tokens:\n";
+    for (const QueryParser::Token& token : tokens) {
+        cout << token.value << " -> " << static_cast<int>(token.type) << endl;
+    }
+
+    return 0;
     setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 
