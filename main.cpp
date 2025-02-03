@@ -11,7 +11,6 @@
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
 #include "Database/AdditionalFunctions/SortingFunctions.h"
-#include "Database/AdditionalFunctions/StringFunctions/StringFunctions.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 
@@ -37,6 +36,14 @@ void InsertRowsToMoviesTable(Table* table);
 //for datetime compare time_t absolute values.
 int main() 
 {
+
+    DataTypes::Decimal val1("12.234");
+    DataTypes::Decimal val2("12.23000004");
+
+    const bool temp = val1 >= val2;
+    cout << temp << endl;
+
+    return 0;
     setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 

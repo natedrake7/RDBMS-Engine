@@ -32,7 +32,13 @@ namespace DataTypes {
         [[nodiscard]] const vector<Constants::byte>& GetData() const;
     };
 
+    static int CompareDecimals(const vector<Constants::byte>& largerData, const int& startingIndex);
+
     Decimal operator+(const Decimal& left, const Decimal& right);
     bool operator==(const Decimal& left, const Decimal& right);
+    bool operator>=(const Decimal& left, const Decimal& right);
+    bool operator>(const Decimal& left, const Decimal& right);
+    bool operator<(const Decimal& left, const Decimal& right);
+    bool operator<=(const Decimal& left, const Decimal& right);
 }
 

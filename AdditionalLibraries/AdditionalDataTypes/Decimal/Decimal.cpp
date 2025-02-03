@@ -1,6 +1,7 @@
 ﻿#include "Decimal.h"
 
 #include <algorithm>
+#include <cstdint>
 
 namespace DataTypes {
     Decimal::Decimal() = default;
@@ -127,13 +128,86 @@ namespace DataTypes {
         const auto& leftData = left.GetData();
         const auto& rightData = right.GetData();
 
-        if(leftData.size() != rightData.size())
-            return false;
-    
-        for(const auto& leftByte: leftData)
+        const bool hasLeftDecimalGreaterLength = leftData.size() > rightData.size();
+        const int minSize = hasLeftDecimalGreaterLength
+                            ? rightData.size() 
+                            : leftData.size();
+
+        for(int i = 0; i < minSize; i++)
+            if(((leftData[i] >> 4) & 0x0F ) != ((rightData[i] >> 4) & 0x0F)
+                || (leftData[i] & 0x0F) != (rightData[i] & 0x0F))
+                return false;
+
+        return hasLeftDecimalGreaterLength 
+                ? CompareDecimals(leftData, rightData.size()) == 0
+                : CompareDecimals(rightData, leftData.size()) == 0;
+    }
+
+    bool operator>=(const Decimal& left, const Decimal& right)
+    {
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        const bool hasLeftDecimalGreaterLength = leftData.size() > rightData.size();
+        const bool hasRightDecimalGreaterLength = rightData.size() > leftData.size();
+
+        const int minSize = hasLeftDecimalGreaterLength
+                            ? rightData.size() 
+                            : leftData.size();
+
+        for(int i = 0; i < minSize; i++)
         {
-            
+            if(((leftData[i] >> 4) & 0x0F ) > ((rightData[i] >> 4) & 0x0F)
+                || (leftData[i] & 0x0F) > (rightData[i] & 0x0F))
+                return true;
         }
+
+        return hasLeftDecimalGreaterLength 
+                ? CompareDecimals(leftData, rightData.size()) >= 0
+                : CompareDecimals(rightData, leftData.size()) == 0;
+    }
+
+    bool operator>(const Decimal& left, const Decimal& right)
+    {
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        const bool hasLeftDecimalGreaterLength = leftData.size() > rightData.size();
+        const bool hasRightDecimalGreaterLength = rightData.size() > leftData.size();
+
+        const int minSize = hasLeftDecimalGreaterLength
+                            ? rightData.size() 
+                            : leftData.size();
+
+        for(int i = 0; i < minSize; i++)
+        {
+            if(((leftData[i] >> 4) & 0x0F ) > ((rightData[i] >> 4) & 0x0F)
+                || (leftData[i] & 0x0F) > (rightData[i] & 0x0F))
+                return true;
+        }
+
+        return hasLeftDecimalGreaterLength 
+                ? CompareDecimals(leftData, rightData.size()) > 0
+                : false;
+    }
+
+    bool operator<(const Decimal& left, const Decimal& right)
+    {
+        return !(left >= right);
+    }
+
+    bool operator<=(const Decimal& left, const Decimal& right)
+    {
+        return !(left > right);
+    }
+
+    int CompareDecimals(const vector<Constants::byte>& largerData, const int& startingIndex)
+    {
+        for(int i = startingIndex; i < largerData.size(); i++)
+            if(((largerData[i] >> 4) & 0x0F) != 0 || (largerData[i] & 0x0F) != 0)
+                return 1;
+
+        return 0;
     }
 
     fraction_index_t Decimal::GetFractionIndex(const string& value)

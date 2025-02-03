@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -10,11 +11,13 @@
 #include "../../Database/Pages/IndexPage/IndexPage.h"
 #include "../../Database/Storage/StorageManager/StorageManager.h"
 #include "../../Database/Column/Column.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
 
 using namespace std;
 using namespace DatabaseEngine::StorageTypes;
 using namespace Pages;
 using namespace Storage;
+using namespace DataTypes;
 
 namespace Indexing
 {
@@ -603,6 +606,27 @@ namespace Indexing
 
                 return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) > 0;
             }
+            case ColumnType::Decimal:
+                return Decimal(this->value.data(), this->size) > Decimal(otherKey.value.data(), otherKey.size);
+            case ColumnType::Bool:
+            {
+                bool keyVal = false, otherKeyVal = false;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
+
+                return keyVal > otherKeyVal;
+            }
+            case ColumnType::DateTime:
+            {
+                time_t keyVal = 0, otherKeyVal = 0;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
+
+                return keyVal > otherKeyVal;
+            }
+            case ColumnType::ColumnTypeCount: 
+            default:
+                throw invalid_argument("> Invalid DataType for Key");
         }
 
         throw invalid_argument(" > Invalid DataType for Key");
@@ -647,6 +671,27 @@ namespace Indexing
 
                 return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) >= 0;
             }
+            case ColumnType::Decimal:
+                return Decimal(this->value.data(), this->size) >= Decimal(otherKey.value.data(), otherKey.size);
+            case ColumnType::Bool:
+            {
+                bool keyVal = false, otherKeyVal = false;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
+
+                return keyVal >= otherKeyVal;
+            }
+            case ColumnType::DateTime:
+            {
+                time_t keyVal = 0, otherKeyVal = 0;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
+
+                return keyVal >= otherKeyVal;
+            }
+            case ColumnType::ColumnTypeCount: 
+            default:
+                throw invalid_argument(">= Invalid DataType for Key");
         }
 
         throw invalid_argument(">= Invalid DataType for Key");
@@ -697,6 +742,25 @@ namespace Indexing
             case ColumnType::String:
             case ColumnType::UnicodeString:
                 return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
+            case ColumnType::Decimal:
+                return Decimal(this->value.data(), this->size) == Decimal(otherKey.value.data(), otherKey.size);
+            case ColumnType::Bool:
+            {
+                bool keyVal = false, otherKeyVal = false;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
+
+                return keyVal == otherKeyVal;
+            }
+            case ColumnType::DateTime:
+            {
+                time_t keyVal = 0, otherKeyVal = 0;
+                memcpy(&keyVal, this->value.data(), this->value.size());
+                memcpy(&otherKeyVal, otherKey.value.data(), otherKey.value.size());
+
+                return keyVal == otherKeyVal;
+            }
+            case ColumnType::ColumnTypeCount: 
             default:
                 throw invalid_argument("== Invalid DataType for Key");
         }
