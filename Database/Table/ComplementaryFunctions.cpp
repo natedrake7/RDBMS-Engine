@@ -2,7 +2,6 @@
 #include "../../AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
-#include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
 #include "../Block/Block.h"
 #include "../Column/Column.h"

@@ -18,6 +18,7 @@ class Field {
         Field();
         explicit Field(const string& data, const Constants::column_index_t& columnIndex , const bool& isNull = false);
         explicit Field(const u16string& data, const Constants::column_index_t& columnIndex , const bool& isNull = false);
+        explicit Field(const vector<Field>& children);
         explicit Field(const string& data
                         , const Constants::column_index_t& columnIndex
                         , const Constants::Operator& operatorType

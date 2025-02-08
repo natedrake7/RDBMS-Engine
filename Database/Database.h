@@ -194,6 +194,8 @@ public:
     void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
 
     static void UpdateNodeConnections(Indexing::Node*& node);
+
+    static void InnerJoin(StorageTypes::Table* firstTable, StorageTypes::Table* secondTable, const vector<Field>& conditions);
 };
 
 void CreateDatabase(const string &dbName);

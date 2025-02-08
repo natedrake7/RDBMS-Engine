@@ -32,6 +32,7 @@ add_library(AdditionalLibraries
 add_library(Database
         Database/Database.cpp
         Database/DatabaseIndexHandlers.cpp
+        Database/DatabaseJoins.cpp
         Database/Database.h
         Database/Table/Table.cpp
         Database/Table/ComplementaryFunctions.cpp

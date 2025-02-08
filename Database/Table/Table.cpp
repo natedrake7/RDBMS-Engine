@@ -391,13 +391,13 @@ namespace DatabaseEngine::StorageTypes {
         const int32_t minKey = 90000;
         const int32_t maxKey = 90500;
 
-      Key minimumValue;
-      minimumValue.InsertKey(Key(&minKey, sizeof(minKey), ColumnType::Int));
-      minimumValue.InsertKey(Key(&minKey, sizeof(minKey), ColumnType::Int));
+        Key minimumValue;
+        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), ColumnType::Int));
+        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), ColumnType::Int));
 
-      Key maximumValue;
-      maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), ColumnType::Int));
-      maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), ColumnType::Int));
+        Key maximumValue;
+        maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), ColumnType::Int));
+        maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), ColumnType::Int));
 
         const BPlusTree* tree = this->GetNonClusteredIndexTree(0);
 
