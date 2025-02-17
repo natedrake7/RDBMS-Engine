@@ -50,11 +50,14 @@ namespace DatabaseEngine::StorageTypes
 
         Row(const Row &copyRow);
 
-        Row& operator= (const Row &copyRow);
+        Row& operator=(const Row &copyRow);
 
         ~Row();
 
         void InsertColumnData(Block *block, const column_index_t &columnIndex);
+
+        //primarily used by the join operation
+        void InsertNewColumn(Block *block);
 
         void UpdateColumnData(Block *block);
 

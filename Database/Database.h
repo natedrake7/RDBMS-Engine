@@ -195,7 +195,9 @@ public:
 
     static void UpdateNodeConnections(Indexing::Node*& node);
 
-    static void InnerJoin(StorageTypes::Table* firstTable, StorageTypes::Table* secondTable, const vector<Field>& conditions);
+    static void JoinTables(StorageTypes::Table* firstTable, StorageTypes::Table* secondTable, const vector<Field>& conditions);
+
+    static void JoinTables(vector<StorageTypes::Row*>& firstTableRows, StorageTypes::Table* secondTable, const vector<Field>& conditions);
 };
 
 void CreateDatabase(const string &dbName);

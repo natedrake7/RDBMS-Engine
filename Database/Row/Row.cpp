@@ -111,6 +111,15 @@ namespace DatabaseEngine::StorageTypes {
         this->header.rowSize += block->GetBlockSize();
     }
 
+    void Row::InsertNewColumn(Block *block)
+    {
+        this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
+
+        this->data.push_back(block);
+
+        this->header.rowSize += block->GetBlockSize();
+    }
+
     void Row::UpdateColumnData(Block *block)
     {
         const column_index_t& columnIndex = block->GetColumnIndex();
