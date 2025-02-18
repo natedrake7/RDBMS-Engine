@@ -34,7 +34,7 @@ namespace DatabaseEngine
         for(const auto& row: firstTableRows)
         {
             //create condition here to join
-            secondTable->Select(selectedRows);
+            secondTable->Select(selectedRows, &conditions);
 
             //join the rows
             Row newRow(*row);

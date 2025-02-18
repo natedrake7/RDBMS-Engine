@@ -229,6 +229,11 @@ namespace DatabaseEngine::StorageTypes {
 
       const vector<Column *> &Table::GetColumns() const { return this->columns; }
 
+      bool Table::VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index)
+      {
+        return find(vector.begin(), vector.end(), index) != vector.end();
+      }
+
       void Table::Select(vector<Row> &selectedRows, const vector<Field> *conditions, const size_t &count) 
       {
         const size_t rowsToSelect =  (count == -1) 
@@ -237,38 +242,76 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto tableType = this->GetTableType();
 
-        bool conditionsHaveClusteredIndex = false;
+        const auto& clusteredIndexes = this->GetClusteredIndex();
+        const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
 
-        //if(conditions != nullptr)
-        //{
-        //  const auto clusteredColumnsHashSet = this->GetClusteredIndexesMap();
+        Key minimumValue;
+        Key maximumValue;
 
-        //  for(int i = 0;i < conditions->size(); i++)
-        //  {
-        //    if((*conditions)[i].GetConditionType() == ConditionType::ConditionNone)
-        //      throw invalid_argument("Table::Select: Invalid Condition specified");
+        bool useClusteredIndex = false;
+        bool useNonClusteredIndex = false;
+        bool useHeap = false;
 
-        //    if(i > 0 && ((*conditions)[i].GetOperatorType() == Constants::OperatorNone))
-        //      throw invalid_argument("Table::Select: Invalid Operator specified");
+        bool clusteredIndexSeek = false;
+        bool nonClusteredIndexSeek = false;
 
-        //    if(clusteredColumnsHashSet.find((*conditions)[i].GetColumnIndex()) != clusteredColumnsHashSet.end())
-        //      conditionsHaveClusteredIndex = true;
-        //  }
-        //}
-        if (this->HasNonClusteredIndexes() && this->GetTableType() != TableType::CLUSTERED)
+        if(conditions != nullptr)
+          for(const auto& condition: *conditions)
+          {
+              const auto& columnIndex = condition.GetColumnIndex();
+              const auto& data = condition.GetData();
+
+              Block *block = new Block(columns[columnIndex]);
+
+              const ColumnType columnType = columns[columnIndex]->GetColumnType();
+    
+              if (columnType > ColumnType::ColumnTypeCount)
+                throw invalid_argument("Table::Select: Unsupported Column Type");
+    
+              this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, condition);
+
+              int indexPosition = 0;
+              if(Table::VectorContainsIndex(clusteredIndexes, columnIndex))
+              {
+                useClusteredIndex = true;
+                
+                //figure out how to perform index seek and index scan
+                clusteredIndexSeek = clusteredIndexes[0] == columnIndex;
+              }
+
+              int nonClusteredIndexPosition = 0;
+
+              for(int i = 0;i < nonClusteredIndexes.size(); i++)
+              {
+                if(Table::VectorContainsIndex(nonClusteredIndexes[i], columnIndex))
+                {
+                    useNonClusteredIndex = true;
+                    nonClusteredIndexPosition = i;
+
+                    nonClusteredIndexSeek = nonClusteredIndexes[i][0] == columnIndex;
+                    //figure out how to perform index seek and index scan
+                }
+              }
+
+              useHeap = !useNonClusteredIndex && !useClusteredIndex;
+
+              minimumValue.InsertKey(Key(block->GetBlockData(), block->GetBlockSize(), columnType));
+              maximumValue.InsertKey(Key(block->GetBlockData(), block->GetBlockSize(), columnType));
+          }
+
+        //handle more complex queries like prefer index seek over index scan
+        if(useClusteredIndex)
+        {
+            this->SelectRowsFromClusteredIndex(&selectedRows, rowsToSelect, minimumValue, maximumValue);
+            return;
+        }
+        else if (useNonClusteredIndex)
         {
             this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions);
             return;
         }
-
-        if (this->GetTableType() == TableType::HEAP)
-        {
-            this->SelectRowsFromHeap(&selectedRows, rowsToSelect, conditions);
-            return;
-        }
-
-        //check if tables has non clustered index and it is in the query
-        this->SelectRowsFromClusteredIndex(&selectedRows, rowsToSelect, conditions);
+      
+        this->SelectRowsFromHeap(&selectedRows, rowsToSelect, conditions);
       }
 
       void Table::Update(const vector<Field> &updates, const vector<Field> *conditions) const 
@@ -342,23 +385,14 @@ namespace DatabaseEngine::StorageTypes {
         return maximumRowSize;
     }
 
-    void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
+    void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Key& minimumValue, const Key& maximumValue)
     {
         vector<QueryData> results;
         const int32_t minKey = 0;
         const int32_t maxKey = 100;
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
-
-        Key minimumValue;
-        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), ColumnType::Int));
-        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), ColumnType::Int));
-
-      Key maximumValue;
-      maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), ColumnType::Int));
-      maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), ColumnType::Int));
-                  
-
+        
         tree->RangeQuery(minimumValue, maximumValue, results);
 
         if(results.empty())

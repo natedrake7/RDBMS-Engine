@@ -115,12 +115,14 @@ namespace DatabaseEngine::StorageTypes
             static void SetDateTimeData(Block *&block, const Field &inputData);
             static void SetDecimalData(Block *&block, const Field &inputData);
             void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
+
+            static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index);
         
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Indexing::Node* GetIndexFromDisk(const page_id_t& indexPageId) const;
         
-            void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
+            void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Indexing::Key& minimumValue, const Indexing::Key& maximumValue);
             void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
             void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
             void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows);

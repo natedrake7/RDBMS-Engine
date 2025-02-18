@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <vector>
 #include "./Database/Database.h"
 #include "./Database/Row/Row.h"
 #include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
@@ -35,28 +36,28 @@ void InsertRowsToMoviesTable(Table* table);
 //advanced functions
 int main() 
 {
-    string sql = "SELECT name, age FROM users WHERE age >= 25;";
-    vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
+    // string sql = "SELECT name, age FROM users WHERE age >= 25;";
+    // vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
 
-    cout << "Tokens:\n";
-    for (const QueryParser::Token& token : tokens) {
-        cout << token.value << " -> " << static_cast<int>(token.type) << endl;
-    }
+    // cout << "Tokens:\n";
+    // for (const QueryParser::Token& token : tokens) {
+    //     cout << token.value << " -> " << static_cast<int>(token.type) << endl;
+    // }
 
-    return 0;
+    // return 0;
     setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 
     {
         const string dbName = "stakosDb";
 
-        CreateDatabase(dbName);
+        // CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
-        CreateMoviesTables(db);
+        // CreateMoviesTables(db);
         // CreateActorsTable(db);
 
         Table* table = db->OpenTable("Movies");
@@ -96,13 +97,19 @@ void ExecuteQuery(Table* table)
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    table->Select(rows);
+    const vector<Field> conditions = {
+        Field("1000", 0, Operator::OperatorNone, ConditionType::ConditionNone)
+    };
+
+    table->Select(rows, &conditions);
 
     const auto end = std::chrono::high_resolution_clock::now();
 
     result.reserve(rows.size());
     for(auto& row: rows)
             result.push_back(&row);
+
+    // Database::JoinTables(result, table, { Field("", 0, Operator::OperatorNone, ConditionType::ConditionNone) });
 
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
