@@ -14,12 +14,12 @@ namespace DatabaseEngine
         vector<Row> selectedRows;
 
         //join conditions should have 2 columnIndices for each field to indicate which columns to match
-        firstTable->Select(selectedRows);
+        // firstTable->Select(selectedRows);
 
         for(const auto& row: selectedRows)
         {
             //create condition here to join
-            secondTable->Select(selectedRows);
+            // secondTable->Select(selectedRows);
         }
     }
 
@@ -34,7 +34,7 @@ namespace DatabaseEngine
         for(const auto& row: firstTableRows)
         {
             //create condition here to join
-            secondTable->Select(selectedRows, &conditions);
+            // secondTable->Select(selectedRows, &conditions);
 
             //join the rows
             Row newRow(*row);

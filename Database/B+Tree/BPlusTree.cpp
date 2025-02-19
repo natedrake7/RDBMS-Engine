@@ -253,6 +253,44 @@ namespace Indexing
         this->PrintTree(root, 0);
     }
 
+    void BPlusTree::IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
+    {
+        if (!root)
+            return;
+
+        Node *currentNode = this->SearchLeftMostLeafNode();
+        const Node *previousNode = nullptr;
+
+        while (currentNode)
+        {
+            if (previousNode && maxKey >= currentNode->keys[0])
+            {
+                if (maxKey >= previousNode->keys[previousNode->keys.size() - 1])
+                    result.emplace_back(previousNode->dataPageId, previousNode->keys.size());
+            }
+
+            for (int i = 0; i < currentNode->keys.size(); i++)
+            {
+                const auto &key = currentNode->keys[i];
+
+                if (minKey <= key && maxKey >= key)
+                {
+                    result.emplace_back(currentNode->dataPageId, i);
+                    continue;
+                }
+
+                // if (maxKey < key)
+                //     return;
+            }
+
+            if(currentNode->nextNodeHeader.pageId == 0)
+                return;
+
+            previousNode = currentNode;
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
+        }
+    }
+
     void BPlusTree::RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
     {
         if (!root)
@@ -468,6 +506,16 @@ namespace Indexing
         return currentNode;
     }
 
+    Node *BPlusTree::SearchLeftMostLeafNode() const
+    {
+        Node *currentNode = root;
+        
+        while (!currentNode->isLeaf)
+            currentNode = this->GetNodeFromPage(currentNode->childrenHeaders[0]);
+
+        return currentNode;
+    }
+
     void BPlusTree::InsertNodeToPage(Node*& node, const page_id_t& parentPageId)
     {
         IndexPage* indexPage = parentPageId == 0 
@@ -528,6 +576,8 @@ namespace Indexing
     {
         this->size = 0;
         this->type = ColumnType::Int;
+        this->indexKeyPosition = -1;
+        this->currentSearchKeyPosition = -1;
     }
 
     Key::Key(const void *keyValue, const key_size_t &keySize, const ColumnType& keyType)
@@ -537,6 +587,8 @@ namespace Indexing
 
         this->size = keySize;
         this->type = keyType;
+        this->indexKeyPosition = -1;
+        this->currentSearchKeyPosition = -1;
     }
 
     Key::Key(const vector<Key> &subKeys)
@@ -548,6 +600,8 @@ namespace Indexing
             this->size += key.size;
         }
         this->type = ColumnType::Int;
+        this->indexKeyPosition = -1;
+        this->currentSearchKeyPosition = -1;
     }
 
     Key::~Key() = default;
@@ -564,6 +618,8 @@ namespace Indexing
         }
 
         this->subKeys = otherKey.subKeys;
+        this->indexKeyPosition = -1;
+        this->currentSearchKeyPosition = -1;
 
         //key is not composite
         // memcpy(this->value, otherKey.value, otherKey.size);
@@ -678,6 +734,9 @@ namespace Indexing
     {
         // if (this->subKeys.size() != otherKey.subKeys.size())
         //     throw std::invalid_argument("Key::CompareCompositeKeys: Size mismatch");
+
+        if(this->indexKeyPosition != -1)
+            return Key::CompareSubKeys(this->subKeys[this->currentSearchKeyPosition], otherKey.subKeys[this->indexKeyPosition]);
         
         for (int i = 0; i < this->subKeys.size(); i++)
         {
@@ -691,6 +750,17 @@ namespace Indexing
         }
 
         return 0;
+    }
+
+    int Key::CompareSubKeys(const Key& firstKey, const Key& otherKey)
+    {
+        if (firstKey == otherKey)
+            return 0;
+
+        if (firstKey < otherKey)
+            return -1;
+
+        return 1;
     }
 
     bool Key::operator==(const Key& otherKey) const

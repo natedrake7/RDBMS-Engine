@@ -53,6 +53,13 @@ namespace QueryParser
                     continue;
                 }
 
+                if(c == '*')
+                {
+                    tokens.push_back({string(1, c), WordType::WildCard});
+                    i++;
+                    continue;
+                }
+
                 // Unknown character (error handling)
                 tokens.push_back({string(1, c), WordType::Uknown});
                 i++;

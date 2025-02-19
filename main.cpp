@@ -1,5 +1,6 @@
 ﻿#include <chrono>
 #include <cstdint>
+#include <exception>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -20,7 +21,7 @@ using namespace DatabaseEngine::StorageTypes;
 using namespace Storage;
 using namespace QueryParser;
 
-void ExecuteQuery(Table* table);
+void ExecuteQuery(Table* table, const vector<column_index_t>& selectedColumnIndices);
 void CreateMoviesTables(Database *db);
 void CreateActorsTable(Database *db);
 void InsertRowsToActorsTable(Table* table);
@@ -36,15 +37,6 @@ void InsertRowsToMoviesTable(Table* table);
 //advanced functions
 int main() 
 {
-    // string sql = "SELECT name, age FROM users WHERE age >= 25;";
-    // vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
-
-    // cout << "Tokens:\n";
-    // for (const QueryParser::Token& token : tokens) {
-    //     cout << token.value << " -> " << static_cast<int>(token.type) << endl;
-    // }
-
-    // return 0;
     setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 
@@ -57,10 +49,63 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
+        string sql = "SELECT * FROM Movies WHERE MovieID = 25;";
+        vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
+    
+        vector<string> columns;
+        string tableString;
+        for(int i = 0;i < tokens.size(); i++)
+        {
+            const auto& token = tokens[i];
+
+            if(token.type == WordType::Keyword && token.value == "SELECT")
+            {
+                i++;
+                while (i < tokens.size() && tokens[i].type != WordType::Keyword)
+                {
+                    columns.push_back(tokens[i].value);
+                    i++;
+                }
+    
+                if(columns.size() == 0)
+                {
+                    cout << "No columns selected\n";
+                    return 0;
+                }
+
+                if(tokens[i].type == WordType::Keyword && tokens[i].value == "FROM")
+                {
+                    i++;
+                    tableString = tokens[i].value;
+                }
+    
+                // if(token.type == WordType::Keyword && token.value == "WHERE")
+                // {
+                //     i++;
+                //     table = tokens[i].value;
+                // }
+            }
+        }
+
+        Table* table = db->OpenTable(tableString);
+        vector<column_index_t> selectedColumnIndices;
+
+        for(const auto& column: table->GetColumns())
+        {
+            if(columns[0] == "*")
+            {
+                selectedColumnIndices.push_back(column->GetColumnIndex());
+                continue;
+            }
+
+            for(const auto& columnName: columns)
+                if(column->GetColumnName() == columnName)
+                    selectedColumnIndices.push_back(column->GetColumnIndex());
+        }
+
         // CreateMoviesTables(db);
         // CreateActorsTable(db);
 
-        Table* table = db->OpenTable("Movies");
         //Table* actorsTable =  db->OpenTable("Actors");
         // InsertRowsToMoviesTable(table);
 
@@ -73,7 +118,7 @@ int main()
 
         //table->Update(updates, nullptr);
 
-        ExecuteQuery(table);
+        ExecuteQuery(table, selectedColumnIndices);
     }
     catch (const exception &exception) 
     {
@@ -84,7 +129,7 @@ int main()
     return 0;
 }
 
-void ExecuteQuery(Table* table)
+void ExecuteQuery(Table* table, const vector<column_index_t>& selectedColumnIndices)
 {
     //constexpr int searchKey = 90;
     //vector<Field> conditions = 
@@ -98,10 +143,10 @@ void ExecuteQuery(Table* table)
     const auto start = std::chrono::high_resolution_clock::now();
 
     const vector<Field> conditions = {
-        Field("1000", 0, Operator::OperatorNone, ConditionType::ConditionNone)
+        Field("10", 0, Operator::GreaterThan, ConditionType::ConditionNone),
     };
 
-    table->Select(rows, &conditions);
+    table->Select(rows, selectedColumnIndices, &conditions);
 
     const auto end = std::chrono::high_resolution_clock::now();
 

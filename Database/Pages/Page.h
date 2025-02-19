@@ -70,7 +70,7 @@ namespace Pages
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const PageType &GetPageType() const;
-        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>*& rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
+        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>*& rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const vector<column_index_t>& selectedColumnIndices) const;
         [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
         void SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const DatabaseEngine::StorageTypes::Table &table);
     };

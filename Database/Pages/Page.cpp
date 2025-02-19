@@ -267,7 +267,7 @@ namespace Pages
         }
     }
 
-    void Page::GetRowByIndex(vector<Row>*& rows, const Table &table, const int &indexPosition) const
+    void Page::GetRowByIndex(vector<Row>*& rows, const Table &table, const int &indexPosition, const vector<column_index_t>& selectedColumnIndices) const
     {
         const auto &row = this->rows[indexPosition];
 
@@ -275,8 +275,11 @@ namespace Pages
 
         vector<Block *> copyBlocks;
 
-        for (const auto &block : row->GetData())
+        const auto& rowData = row->GetData();
+        for(const auto& columnIndex: selectedColumnIndices)
         {
+            const auto& block = rowData[columnIndex];
+
             Block *blockCopy = new Block(block);
             if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
             {
@@ -292,7 +295,7 @@ namespace Pages
 
             copyBlocks.push_back(blockCopy);
         }
-        
+
         rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
     }
 

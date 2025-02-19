@@ -69,6 +69,12 @@ namespace Indexing
         [[nodiscard]] int GetKeySize() const;
         [[nodiscard]] int CompareCompositeKeys(const Key& otherKey) const;
         void InsertKey(const Key &otherKey);
+
+        static int CompareSubKeys(const Key& firstKey, const Key& otherKey);
+
+        //key comparison index used only on queries and not on key saveon db
+        int indexKeyPosition = -1;
+        int currentSearchKeyPosition = -1;
     }Key;
 
     typedef struct NodeHeader{
@@ -123,6 +129,7 @@ namespace Indexing
         Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition);
         void DeleteNode(const Node *node);
         [[nodiscard]] Node *SearchKey(const Key &key) const;
+        [[nodiscard]] Node* SearchLeftMostLeafNode() const;
         void InsertNodeToPage(Node*& node, const page_id_t& parentPageId);
 
         [[nodiscard]] Node* GetNodeFromPage(const NodeHeader& header) const;
@@ -138,6 +145,7 @@ namespace Indexing
 
         void RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
         void RangeQuery(const Key &minKey, const Key &maxKey, vector<BPlusTreeNonClusteredData> &result) const;
+        void IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
         void SearchKey(const Key &key, QueryData &result) const;
         [[nodiscard]] page_size_t GetTreeSize() const;
 

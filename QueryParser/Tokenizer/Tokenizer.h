@@ -11,7 +11,8 @@ namespace QueryParser {
         Number = 2,
         String = 3,
         Symbol = 4,
-        Uknown = 5
+        WildCard = 5,
+        Uknown = 6
     };
 
     typedef struct Token{

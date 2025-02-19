@@ -116,14 +116,14 @@ namespace DatabaseEngine::StorageTypes
             static void SetDecimalData(Block *&block, const Field &inputData);
             void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
 
-            static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index);
+            static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);
         
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Indexing::Node* GetIndexFromDisk(const page_id_t& indexPageId) const;
         
-            void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Indexing::Key& minimumValue, const Indexing::Key& maximumValue);
-            void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
+            void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Indexing::Key& minimumValue, const Indexing::Key& maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices);
+            void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions, const vector<column_index_t>& selectedColumnIndices);
             void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
             void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows);
             
@@ -154,7 +154,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
 
-            void Select(vector<Row> &selectedRows, const vector<Field> *conditions = nullptr, const size_t &count = -1);
+            void Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Field> *conditions = nullptr, const size_t &count = -1);
 
             void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
 
