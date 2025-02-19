@@ -54,53 +54,18 @@ int main()
         vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
         const auto& root = QueryParser::AstTree::Get().BuildTree(tokens);
     
-        vector<string> columns;
-        string tableString;
-        for(int i = 0;i < tokens.size(); i++)
-        {
-            const auto& token = tokens[i];
-
-            if(token.type == WordType::Keyword && token.value == "SELECT")
-            {
-                i++;
-                while (i < tokens.size() && tokens[i].type != WordType::Keyword)
-                {
-                    columns.push_back(tokens[i].value);
-                    i++;
-                }
-    
-                if(columns.size() == 0)
-                {
-                    cout << "No columns selected\n";
-                    return 0;
-                }
-
-                if(tokens[i].type == WordType::Keyword && tokens[i].value == "FROM")
-                {
-                    i++;
-                    tableString = tokens[i].value;
-                }
-    
-                // if(token.type == WordType::Keyword && token.value == "WHERE")
-                // {
-                //     i++;
-                //     table = tokens[i].value;
-                // }
-            }
-        }
-
-        Table* table = db->OpenTable(tableString);
+        Table* table = db->OpenTable(root->table);
         vector<column_index_t> selectedColumnIndices;
 
         for(const auto& column: table->GetColumns())
         {
-            if(columns[0] == "*")
+            if(root->columns[0] == "*")
             {
                 selectedColumnIndices.push_back(column->GetColumnIndex());
                 continue;
             }
 
-            for(const auto& columnName: columns)
+            for(const auto& columnName: root->columns)
                 if(column->GetColumnName() == columnName)
                     selectedColumnIndices.push_back(column->GetColumnIndex());
         }
