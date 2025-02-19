@@ -8,7 +8,9 @@ add_executable(DatabaseInterface
 
 add_library(QueryParser
             QueryParser/Tokenizer/Tokenizer.cpp
-            QueryParser/Tokenizer/Tokenizer.h)
+            QueryParser/Tokenizer/Tokenizer.h
+            QueryParser/ASTTree/ASTTree.cpp
+            QueryParser/ASTTree/ASTTree.h)
 
 add_library(AdditionalLibraries
         AdditionalLibraries/BitMap/BitMap.cpp

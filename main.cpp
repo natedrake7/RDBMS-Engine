@@ -15,6 +15,7 @@
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 #include "QueryParser/Tokenizer/Tokenizer.h"
+#include "QueryParser/AstTree/AstTree.h"
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
@@ -51,6 +52,7 @@ int main()
 
         string sql = "SELECT * FROM Movies WHERE MovieID = 25;";
         vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
+        const auto& root = QueryParser::AstTree::Get().BuildTree(tokens);
     
         vector<string> columns;
         string tableString;
