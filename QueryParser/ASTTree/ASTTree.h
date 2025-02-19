@@ -19,6 +19,10 @@ namespace QueryParser{
             string column;
             string direction;
         } orderBy;
+        struct {
+            vector<string> columns;
+            ASTNode* having;
+        } groupBy;
         vector<ASTNode*> children; // Nested queries or joins
     
         ASTNode(string type);
@@ -38,5 +42,7 @@ namespace QueryParser{
             }
 
             ASTNode* BuildTree(vector<Token>& tokens);
+
+            static void BuildTree(ASTNode*& node, vector<Token>& tokens, int& startingDepth);
     };
 }

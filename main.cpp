@@ -50,9 +50,12 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "SELECT * FROM Movies WHERE MovieID = 25;";
+        string sql = "SELECT * FROM (SELECT MovieID FROM Movies) WHERE MovieID = 25 GROUP BY MovieID HAVING MovieID > 0 ORDER BY MovieID DESC;";
+
         vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
         const auto& root = QueryParser::AstTree::Get().BuildTree(tokens);
+
+        throw exception("Not implemented yet");
     
         Table* table = db->OpenTable(root->table);
         vector<column_index_t> selectedColumnIndices;
