@@ -1,5 +1,6 @@
 #include "ASTTree.h"
 #include "../Tokenizer/Tokenizer.h"
+#include <exception>
 
 namespace QueryParser 
 {
@@ -8,9 +9,7 @@ namespace QueryParser
     ASTNode::~ASTNode() 
     {
         for (auto child : children) 
-        {
             delete child;
-        }
     }
 
     AstTree::AstTree() : root(nullptr) {}
@@ -37,6 +36,16 @@ namespace QueryParser
             node = new ASTNode("SELECT");
 
         int i = startingDepth;
+
+        if(!KeywordsDictionary.TryGetValue(tokens[i].value, node->type))
+            throw exception("ASTTree::BuildTree::Invalid Query");
+
+        //function based on keyword
+
+        if(tokens[i].type == WordType::Keyword)
+        {
+            //
+        }
     
         if (tokens[i].value == "SELECT") 
         {
@@ -48,6 +57,14 @@ namespace QueryParser
                 i++;
             }
         }
+        else if(i + 1< tokens.size() && tokens[i].value == "INSERT" && tokens[i + 1].value == "INTO")
+        {
+            i += 2;
+            node->type = "INSERT INTO";
+            i++;
+        }
+        else
+            throw exception("ASTTree::BuildTree::Invalid Query");
     
         if (tokens[i].value == "FROM") 
         {
@@ -107,5 +124,38 @@ namespace QueryParser
         }
 
         startingDepth = i;
+    }
+
+    static void BuildSelectNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
+    {
+        node->type = "SELECT";
+        int i = startingDepth;
+
+        i++;
+        while (tokens[i].value != "FROM") 
+        {
+            if (tokens[i].value != ",") 
+                node->columns.push_back(tokens[i].value);
+
+            //add check for instead of columns to use
+            if(tokens[i].value.contains("@"))
+                break;
+            i++;
+        }
+
+        if (tokens[i].value == "FROM") 
+        {
+            if(tokens[++i].value == "(")
+            {
+                ASTNode* subQueryNode = new ASTNode("SELECT");
+                node->children.push_back(subQueryNode);
+                AstTree::BuildTree(subQueryNode, tokens, ++i);
+            }
+            else
+                node->table = tokens[i].value;
+
+            //skip closing bracket or table
+            i++;
+        }
     }
 }

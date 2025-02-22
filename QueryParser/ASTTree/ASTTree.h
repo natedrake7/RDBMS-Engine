@@ -29,6 +29,18 @@ namespace QueryParser{
         ~ASTNode();  // Destructor
     };
 
+    // HashSet<string> KeywordsDictionary = 
+    // {
+    //     "SELECT", 
+    //     "FROM", 
+    //     "WHERE", 
+    //     "GROUP BY", 
+    //     "HAVING", 
+    //     "ORDER BY", 
+    //     "ASC", 
+    //     "DESC"
+    // };
+
     class AstTree
     {
         ASTNode* root;
@@ -44,5 +56,8 @@ namespace QueryParser{
             ASTNode* BuildTree(vector<Token>& tokens);
 
             static void BuildTree(ASTNode*& node, vector<Token>& tokens, int& startingDepth);
+            static void BuildSelectNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth);
     };
+
+
 }

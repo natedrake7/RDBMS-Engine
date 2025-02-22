@@ -27,6 +27,7 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
         AdditionalLibraries/SafeConverter/SafeConverter.cpp
         AdditionalLibraries/SafeConverter/SafeConverter.h
+        AdditionalLibraries/HashSet/HashSet.h
         AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
         AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
         AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h)
@@ -79,4 +80,4 @@ add_library(Database
         Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
         Database/AdditionalFunctions/StringFunctions/StringFunctions.h)
 
-target_link_libraries(DatabaseInterface PRIVATE QueryParser PRIVATE AdditionalLibraries PRIVATE Database)
+target_link_libraries(DatabaseInterface PRIVATE AdditionalLibraries PRIVATE QueryParser  PRIVATE Database)

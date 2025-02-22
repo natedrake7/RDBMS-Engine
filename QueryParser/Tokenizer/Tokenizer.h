@@ -1,10 +1,12 @@
 #pragma once
 #include <string>
 #include <unordered_set>
+#include "../../AdditionalLibraries/HashSet/HashSet.h"
 
 using namespace std;
 
-namespace QueryParser {
+namespace QueryParser 
+{
     enum class WordType: uint8_t{
         Keyword = 0,
         Identifier = 1,
@@ -20,15 +22,16 @@ namespace QueryParser {
         WordType type;
     }Token;
 
-    static unordered_set<string> keywords = {
-        "SELECT",
-        "FROM",
-        "ORDER BY",
-        "GROUP BY",
-        "WHERE",
-        "IN",
-        "UPDATE",
-        "INSERT INTO"
+    static HashSet<string> KeywordsDictionary = 
+    {
+        "SELECT", 
+        "FROM", 
+        "WHERE", 
+        "GROUP BY", 
+        "HAVING", 
+        "ORDER BY", 
+        "ASC", 
+        "DESC"
     };
 
     vector<Token> TokenizeQuery(const string& query);
