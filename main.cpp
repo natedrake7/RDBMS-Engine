@@ -9,7 +9,6 @@
 #include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
 #include "AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h"
-#include "AdditionalLibraries/HashSet/HashSet.h"
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
 #include "Database/AdditionalFunctions/SortingFunctions.h"
@@ -39,6 +38,7 @@ void InsertRowsToMoviesTable(Table* table);
 //advanced functions
 int main() 
 {
+
     setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 

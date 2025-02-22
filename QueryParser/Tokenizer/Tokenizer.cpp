@@ -20,7 +20,7 @@ namespace QueryParser
                 while (i < query.size() && (isalpha(query[i]) || isdigit(query[i]) || query[i] == '_')) 
                     buffer += query[i++];
 
-                if (KeywordsDictionary.Contains(buffer))
+                if (keywordsHashSet.Contains(buffer))
                     tokens.push_back({buffer, WordType::Keyword});
                 else
                     tokens.push_back({buffer, WordType::Identifier});

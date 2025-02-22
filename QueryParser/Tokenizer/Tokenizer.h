@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include <unordered_set>
 #include "../../AdditionalLibraries/HashSet/HashSet.h"
 
 using namespace std;
@@ -22,7 +21,7 @@ namespace QueryParser
         WordType type;
     }Token;
 
-    static HashSet<string> KeywordsDictionary = 
+    static HashSet<string> keywordsHashSet = 
     {
         "SELECT", 
         "FROM", 

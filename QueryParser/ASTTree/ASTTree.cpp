@@ -24,55 +24,65 @@ namespace QueryParser
         int startingDepth = 0;
         this->root = nullptr;
 
-        AstTree::BuildTree(this->root, tokens, startingDepth);
+        AstTree::BuildNode(this->root, tokens, startingDepth);
 
         return this->root;
     }
     
 
-    void AstTree::BuildTree(ASTNode*& node, vector<Token>& tokens, int& startingDepth) 
+    void AstTree::BuildNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth) 
     {
+
         if(node == nullptr)
             node = new ASTNode("SELECT");
 
         int i = startingDepth;
 
-        if(!KeywordsDictionary.TryGetValue(tokens[i].value, node->type))
+        if(!keywordsHashSet.TryGetValue(tokens[i].value, node->type))
             throw exception("ASTTree::BuildTree::Invalid Query");
 
         //function based on keyword
 
         if(tokens[i].type == WordType::Keyword)
         {
-            //
-        }
-    
-        if (tokens[i].value == "SELECT") 
-        {
-            i++;
-            while (tokens[i].value != "FROM") 
+            //build starting node by datatype
+            switch (keywordsDictionary.Get(tokens[i].value))
             {
-                if (tokens[i].value != ",") 
-                    node->columns.push_back(tokens[i].value);
-                i++;
+                case KeyWord::Select:
+                    AstTree::BuildSelectNode(node, tokens, i);
+                    break;
+                case KeyWord::Insert:
+                    AstTree::BuildInsertNode(node, tokens, i);
+                    break;
+                case KeyWord::Update:
+                    AstTree::BuildUpdateNode(node, tokens, i);
+                    break;
+                case KeyWord::Delete:
+                    AstTree::BuildDeleteNode(node, tokens, i);
+                    break;
+                default:
+                    break;
+            
             }
         }
-        else if(i + 1< tokens.size() && tokens[i].value == "INSERT" && tokens[i + 1].value == "INTO")
-        {
-            i += 2;
-            node->type = "INSERT INTO";
-            i++;
-        }
-        else
-            throw exception("ASTTree::BuildTree::Invalid Query");
-    
+
+        if(i == tokens.size())
+            return;
+        
+        ASTNode* newNode = new ASTNode("SELECT");
+        node->children.push_back(newNode);
+        AstTree::BuildNode(newNode, tokens, i);
+
+        return;
+
+
         if (tokens[i].value == "FROM") 
         {
             if(tokens[++i].value == "(")
             {
                 ASTNode* subQueryNode = new ASTNode("SELECT");
                 node->children.push_back(subQueryNode);
-                BuildTree(subQueryNode, tokens, ++i);
+                AstTree::BuildNode(subQueryNode, tokens, ++i);
             }
             else
                 node->table = tokens[i].value;
@@ -126,7 +136,7 @@ namespace QueryParser
         startingDepth = i;
     }
 
-    static void BuildSelectNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
+    void AstTree::BuildSelectNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
     {
         node->type = "SELECT";
         int i = startingDepth;
@@ -149,7 +159,8 @@ namespace QueryParser
             {
                 ASTNode* subQueryNode = new ASTNode("SELECT");
                 node->children.push_back(subQueryNode);
-                AstTree::BuildTree(subQueryNode, tokens, ++i);
+
+                AstTree::BuildNode(subQueryNode, tokens, ++i);
             }
             else
                 node->table = tokens[i].value;
@@ -157,5 +168,20 @@ namespace QueryParser
             //skip closing bracket or table
             i++;
         }
+    }
+
+    void AstTree::BuildInsertNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
+    {
+
+    }
+
+    void AstTree::BuildUpdateNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
+    {
+
+    }
+    
+    void AstTree::BuildDeleteNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
+    {
+
     }
 }
