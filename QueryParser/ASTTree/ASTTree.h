@@ -8,10 +8,17 @@ namespace QueryParser{
 
     struct Token;
 
+    typedef struct{
+        vector<Token> columns;
+        vector<Token> operation;
+
+        Token alias;
+    }ColumnOperation;
+
     struct ASTNode {
         KeyWord type;  // "SELECT", "FROM", "WHERE", etc.
-        vector<string> columns;
-        string table;
+        vector<ColumnOperation> columns;
+        Token table;
         struct {
             string column;
             string op;
@@ -38,6 +45,7 @@ namespace QueryParser{
         AstTree();
 
         static bool IsNumber(const string& str);
+        static void InitializeColumnOperations(vector<Token>& columns, vector<Token>& operations, Token& alias);
         
         public:
             static AstTree& Get()

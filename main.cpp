@@ -51,28 +51,28 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "SELECT @variable + 'hello '''";
+        string sql = "SELECT @variable + 'hello ''' + @anotherScalar + 1 AS FirstColumn, MovieID, SUM(MovieID) FROM @Movies";
 
         vector<Token> tokens = Tokenizer::TokenizeQuery(sql);
         const auto& root = AstTree::Get().BuildTree(tokens);
 
         throw std::runtime_error("Not implemented yet");
 
-        Table* table = db->OpenTable(root->table);
+        Table* table = db->OpenTable("Movies");
         vector<column_index_t> selectedColumnIndices;
 
-        for(const auto& column: table->GetColumns())
-        {
-            if(root->columns[0] == "*")
-            {
-                selectedColumnIndices.push_back(column->GetColumnIndex());
-                continue;
-            }
+        // for(const auto& column: table->GetColumns())
+        // {
+        //     if(root->columns[0].columns[0] == "*")
+        //     {
+        //         selectedColumnIndices.push_back(column->GetColumnIndex());
+        //         continue;
+        //     }
 
-            for(const auto& columnName: root->columns)
-                if(column->GetColumnName() == columnName)
-                    selectedColumnIndices.push_back(column->GetColumnIndex());
-        }
+        //     for(const auto& columnName: root->columns[0].columns)
+        //         if(column->GetColumnName() == columnName)
+        //             selectedColumnIndices.push_back(column->GetColumnIndex());
+        // }
 
         // CreateMoviesTables(db);
         // CreateActorsTable(db);

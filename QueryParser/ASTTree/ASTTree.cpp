@@ -1,6 +1,8 @@
 #include "ASTTree.h"
 #include "../Tokenizer/Tokenizer.h"
 #include <exception>
+#include <stdexcept>
+#include <vector>
 
 namespace QueryParser 
 {
@@ -32,6 +34,14 @@ namespace QueryParser
         }
     }
 
+    void AstTree::InitializeColumnOperations(vector<Token>& columns, vector<Token>& operations, Token& alias)
+    {
+        columns.clear();
+        operations.clear();
+        alias.type = WordType::Uknown;
+        alias.value = "";
+    }
+
     ASTNode* AstTree::BuildTree(vector<Token>& tokens)
     {
         int startingDepth = 0;
@@ -45,39 +55,36 @@ namespace QueryParser
 
     void AstTree::BuildNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth) 
     {
-
         if(node == nullptr)
             node = new ASTNode();
 
         int i = startingDepth;
+        //each node should start with a KeyWord
+        //function based on keyword
+        if(tokens[i].type != WordType::Keyword)
+            throw runtime_error("AstTree::BuildNode: Invalid Query");
 
         KeyWord keywordEnumeration;
         if(!keywordsDictionary.TryGetValue(tokens[i].value, keywordEnumeration))
-            throw exception("ASTTree::BuildTree::Invalid Query");
+            throw exception("ASTTree::BuildNode: Invalid Query");
 
-        //function based on keyword
-
-        if(tokens[i].type == WordType::Keyword)
+        //build starting node by datatype
+        switch (keywordEnumeration)
         {
-            //build starting node by datatype
-            switch (keywordEnumeration)
-            {
-                case KeyWord::Select:
-                    AstTree::BuildSelectNode(node, tokens, i);
-                    break;
-                case KeyWord::Insert:
-                    AstTree::BuildInsertNode(node, tokens, i);
-                    break;
-                case KeyWord::Update:
-                    AstTree::BuildUpdateNode(node, tokens, i);
-                    break;
-                case KeyWord::Delete:
-                    AstTree::BuildDeleteNode(node, tokens, i);
-                    break;
-                default:
-                    break;
-            
-            }
+            case KeyWord::Select:
+                AstTree::BuildSelectNode(node, tokens, i);
+                break;
+            case KeyWord::Insert:
+                AstTree::BuildInsertNode(node, tokens, i);
+                break;
+            case KeyWord::Update:
+                AstTree::BuildUpdateNode(node, tokens, i);
+                break;
+            case KeyWord::Delete:
+                AstTree::BuildDeleteNode(node, tokens, i);
+                break;
+            default:
+               throw runtime_error("ASTTree::BuildNode: Invalid Keyword specified");        
         }
 
         if(i == tokens.size())
@@ -89,22 +96,6 @@ namespace QueryParser
 
         return;
 
-
-        if (tokens[i].value == "FROM") 
-        {
-            if(tokens[++i].value == "(")
-            {
-                ASTNode* subQueryNode = new ASTNode();
-                node->children.push_back(subQueryNode);
-                AstTree::BuildNode(subQueryNode, tokens, ++i);
-            }
-            else
-                node->table = tokens[i].value;
-
-            //skip closing bracket or table
-            i++;
-        }
-    
         if (tokens[i].value == "WHERE") 
         {
             ASTNode* whereNode = new ASTNode();
@@ -150,34 +141,62 @@ namespace QueryParser
         startingDepth = i;
     }
 
-    void AstTree::BuildSelectNode(ASTNode*& node, vector<Token>& tokens, int& depth)
+    void AstTree:: BuildSelectNode(ASTNode*& node, vector<Token>& tokens, int& depth)
     {
         node->type = KeyWord::Select;
 
         depth++;
         
         //get columns or constants
+        int i = 0;
+        vector<Token> columns;
+        vector<Token> operations;
+        Token alias;
+
         while (tokens[depth].value != "FROM") 
         {
-            if (tokens[depth].value != ",") 
-                node->columns.push_back(tokens[depth].value);
+            if (tokens[depth].value == ",") 
+            {
+                node->columns.push_back({.columns = columns, .operation = operations, .alias = alias});
+                i++;
+                depth++;
+                AstTree::InitializeColumnOperations(columns, operations, alias);
+                continue;
+            }
 
-            //add check for instead of columns to use
-            // if(tokens[depth].value.contains("@"))
-            // {
-            //     node->columns.push_back(tokens[depth].value);
-
-            //     if(tokens[++depth].type == WordType::Symbol)
-            //     {
-
-            //     }
-            // }
+            switch (tokens[depth].type) 
+            {
+                case WordType::Symbol:
+                    operations.push_back(tokens[depth]);
+                    break;
+                case WordType::Keyword:
+                    alias = tokens[++depth];
+                    break;
+                case WordType::Identifier:
+                case WordType::Number:
+                case WordType::String:
+                case WordType::WildCard:
+                case WordType::ScalarVariable:
+                    columns.push_back(tokens[depth]);
+                    break;
+                case WordType::Uknown:
+                default:
+                    throw runtime_error("Invalid Query");
+            }
 
             depth++;
 
             if(depth == tokens.size())
+            {
+                node->columns.push_back({.columns = columns, .operation = operations, .alias = alias});
                 return;
+            }
         }
+
+        if(columns.empty())
+            throw runtime_error("Invalid Query");
+
+        node->columns.push_back({.columns = columns, .operation = operations, .alias = alias});
 
         //get table or subquery
         if (tokens[depth].value == "FROM") 
@@ -190,7 +209,7 @@ namespace QueryParser
                 AstTree::BuildNode(subQueryNode, tokens, ++depth);
             }
             else
-                node->table = tokens[depth].value;
+                node->table = tokens[depth];
 
             //skip closing bracket or table
             depth++;

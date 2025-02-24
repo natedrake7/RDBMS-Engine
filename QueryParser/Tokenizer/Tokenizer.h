@@ -36,7 +36,8 @@ namespace QueryParser
         Order = 10,
         Asc = 11,
         Desc = 12,
-        Into = 13
+        Into = 13,
+        As = 14
     };
 
     static Dictionary<string, KeyWord> keywordsDictionary = {
@@ -52,7 +53,8 @@ namespace QueryParser
         {"ORDER", KeyWord::Order},
         {"ASC", KeyWord::Asc},
         {"DESC", KeyWord::Desc},
-        {"INTO", KeyWord::Into}
+        {"INTO", KeyWord::Into},
+        {"AS", KeyWord::As}
     };
 
     static HashSet<char> symbolsHashSet = 

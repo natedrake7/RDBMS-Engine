@@ -35,9 +35,9 @@ namespace QueryParser
 
         while (i < query.size()) 
         {
-            buffer.clear();
-
             const char& c = query[i];
+
+            buffer.clear();
 
             // Handle Alphabetic Characters (Keywords / Identifiers)
             if (isalpha(c)) 
