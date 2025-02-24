@@ -51,10 +51,12 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "SELECT * FROM Movies WHERE MovieID = 25 GROUP BY MovieID HAVING MovieID > 0 ORDER BY MovieID DESC;";
+        string sql = "SELECT @variable + 'hello '''";
 
-        vector<QueryParser::Token> tokens = QueryParser::TokenizeQuery(sql);
-        const auto& root = QueryParser::AstTree::Get().BuildTree(tokens);
+        vector<Token> tokens = Tokenizer::TokenizeQuery(sql);
+        const auto& root = AstTree::Get().BuildTree(tokens);
+
+        throw std::runtime_error("Not implemented yet");
 
         Table* table = db->OpenTable(root->table);
         vector<column_index_t> selectedColumnIndices;

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include "../../AdditionalLibraries/Dictionary/Dictionary.h"
 #include "../../AdditionalLibraries/HashSet/HashSet.h"
 
 using namespace std;
@@ -7,13 +8,14 @@ using namespace std;
 namespace QueryParser 
 {
     enum class WordType: uint8_t{
-        Keyword = 0,
-        Identifier = 1,
-        Number = 2,
-        String = 3,
-        Symbol = 4,
-        WildCard = 5,
-        Uknown = 6
+        Uknown = 0,
+        Keyword = 1,
+        Identifier = 2,
+        Number = 3,
+        String = 4,
+        Symbol = 5,
+        WildCard = 6,
+        ScalarVariable = 7
     };
 
     typedef struct Token{
@@ -21,17 +23,72 @@ namespace QueryParser
         WordType type;
     }Token;
 
-    static HashSet<string> keywordsHashSet = 
-    {
-        "SELECT", 
-        "FROM", 
-        "WHERE", 
-        "GROUP BY", 
-        "HAVING", 
-        "ORDER BY", 
-        "ASC", 
-        "DESC"
+    enum class KeyWord: uint8_t{
+        Select = 1,
+        Insert = 2,
+        Update = 3,
+        Delete = 4,
+        From = 5,
+        Where = 6,
+        Group = 7,
+        By = 8,
+        Having = 9,
+        Order = 10,
+        Asc = 11,
+        Desc = 12,
+        Into = 13
     };
 
-    vector<Token> TokenizeQuery(const string& query);
+    static Dictionary<string, KeyWord> keywordsDictionary = {
+        {"SELECT", KeyWord::Select},
+        {"INSERT", KeyWord::Insert},
+        {"UPDATE", KeyWord::Update},
+        {"DELETE", KeyWord::Delete},
+        {"FROM", KeyWord::From},
+        {"WHERE", KeyWord::Where},
+        {"GROUP", KeyWord::Group},
+        {"BY", KeyWord::By},
+        {"HAVING", KeyWord::Having},
+        {"ORDER", KeyWord::Order},
+        {"ASC", KeyWord::Asc},
+        {"DESC", KeyWord::Desc},
+        {"INTO", KeyWord::Into}
+    };
+
+    static HashSet<char> symbolsHashSet = 
+    {
+        '>', 
+        '<', 
+        '=', 
+        '!',
+        '>',
+        '<',
+        '+',
+        '-',
+        '*',
+        '/', 
+        ',', 
+        ';'
+    };
+
+    constexpr bool ValidateScalarVariableStructure(const char& c, bool isFirstChar);
+    constexpr bool ValidateMultiCharacterOperations(const char& c, const string& query, const int& i);
+    constexpr bool ValidateAlphabeticCharacters(const char& c);
+
+    class Tokenizer{
+
+        Tokenizer();
+        ~Tokenizer();
+
+        public:
+            static Tokenizer& Get()
+            {
+                static Tokenizer instance;
+
+                return instance;
+            }
+            static vector<Token> TokenizeQuery(const string& query);
+
+    };
+
 }

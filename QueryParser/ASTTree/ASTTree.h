@@ -1,47 +1,15 @@
 #include <string>
 #include <vector>
-#include "../../AdditionalLibraries/Dictionary/Dictionary.h"
+#include "../Tokenizer/Tokenizer.h"
 
 using namespace std;
 
 namespace QueryParser{
 
-    enum class KeyWord: uint8_t{
-        Select = 1,
-        Insert = 2,
-        Update = 3,
-        Delete = 4,
-        From = 5,
-        Where = 6,
-        Group = 7,
-        By = 8,
-        Having = 9,
-        Order = 10,
-        Asc = 11,
-        Desc = 12,
-        Into = 13
-    };
-
-    static Dictionary<string, KeyWord> keywordsDictionary = {
-        {"SELECT", KeyWord::Select},
-        {"INSERT", KeyWord::Insert},
-        {"UPDATE", KeyWord::Update},
-        {"DELETE", KeyWord::Delete},
-        {"FROM", KeyWord::From},
-        {"WHERE", KeyWord::Where},
-        {"GROUP", KeyWord::Group},
-        {"BY", KeyWord::By},
-        {"HAVING", KeyWord::Having},
-        {"ORDER", KeyWord::Order},
-        {"ASC", KeyWord::Asc},
-        {"DESC", KeyWord::Desc},
-        {"INTO", KeyWord::Into}
-    };
-
     struct Token;
 
     struct ASTNode {
-        string type;  // "SELECT", "FROM", "WHERE", etc.
+        KeyWord type;  // "SELECT", "FROM", "WHERE", etc.
         vector<string> columns;
         string table;
         struct {
@@ -59,7 +27,7 @@ namespace QueryParser{
         } groupBy;
         vector<ASTNode*> children; // Nested queries or joins
     
-        ASTNode(string type);
+        ASTNode();
         ~ASTNode();  // Destructor
     };
 
@@ -68,6 +36,9 @@ namespace QueryParser{
         ASTNode* root;
         ~AstTree();
         AstTree();
+
+        static bool IsNumber(const string& str);
+        
         public:
             static AstTree& Get()
             {

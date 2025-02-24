@@ -4,7 +4,7 @@
 
 namespace QueryParser 
 {
-    ASTNode::ASTNode(string type) : type(type) {}
+    ASTNode::ASTNode() = default;
 
     ASTNode::~ASTNode() 
     {
@@ -18,6 +18,19 @@ namespace QueryParser
     {
         delete root;
     };
+
+    bool AstTree::IsNumber(const string& str)
+    {
+        try 
+        {
+            const auto res = std::stod(str);
+            return true;
+        } 
+        catch (...) 
+        {
+            return false;
+        }
+    }
 
     ASTNode* AstTree::BuildTree(vector<Token>& tokens)
     {
@@ -34,11 +47,12 @@ namespace QueryParser
     {
 
         if(node == nullptr)
-            node = new ASTNode("SELECT");
+            node = new ASTNode();
 
         int i = startingDepth;
 
-        if(!keywordsHashSet.TryGetValue(tokens[i].value, node->type))
+        KeyWord keywordEnumeration;
+        if(!keywordsDictionary.TryGetValue(tokens[i].value, keywordEnumeration))
             throw exception("ASTTree::BuildTree::Invalid Query");
 
         //function based on keyword
@@ -46,7 +60,7 @@ namespace QueryParser
         if(tokens[i].type == WordType::Keyword)
         {
             //build starting node by datatype
-            switch (keywordsDictionary.Get(tokens[i].value))
+            switch (keywordEnumeration)
             {
                 case KeyWord::Select:
                     AstTree::BuildSelectNode(node, tokens, i);
@@ -69,7 +83,7 @@ namespace QueryParser
         if(i == tokens.size())
             return;
         
-        ASTNode* newNode = new ASTNode("SELECT");
+        ASTNode* newNode = new ASTNode();
         node->children.push_back(newNode);
         AstTree::BuildNode(newNode, tokens, i);
 
@@ -80,7 +94,7 @@ namespace QueryParser
         {
             if(tokens[++i].value == "(")
             {
-                ASTNode* subQueryNode = new ASTNode("SELECT");
+                ASTNode* subQueryNode = new ASTNode();
                 node->children.push_back(subQueryNode);
                 AstTree::BuildNode(subQueryNode, tokens, ++i);
             }
@@ -93,7 +107,7 @@ namespace QueryParser
     
         if (tokens[i].value == "WHERE") 
         {
-            ASTNode* whereNode = new ASTNode("WHERE");
+            ASTNode* whereNode = new ASTNode();
             //handle more complex queries like Subqueries
             whereNode->whereClause.column = tokens[++i].value;
             whereNode->whereClause.op = tokens[++i].value;
@@ -105,14 +119,14 @@ namespace QueryParser
         if (i < tokens.size() && tokens[i].value == "GROUP" && tokens[i + 1].value == "BY") 
         {
             i += 2;  // Skip "GROUP BY"
-            ASTNode* groupByNode = new ASTNode("GROUP BY");
+            ASTNode* groupByNode = new ASTNode();
 
             while(i < tokens.size() && ( tokens[i].value != "HAVING" && tokens[i].value != ";" && tokens[i].value != "ORDER"))
                 groupByNode->groupBy.columns.push_back(tokens[i++].value);
 
             if(tokens[i].value == "HAVING")
             {
-                groupByNode->groupBy.having = new ASTNode("HAVING");
+                groupByNode->groupBy.having = new ASTNode();
                 groupByNode->groupBy.having->whereClause.column = tokens[++i].value;
                 groupByNode->groupBy.having->whereClause.op = tokens[++i].value;
                 groupByNode->groupBy.having->whereClause.value = tokens[++i].value;
@@ -126,7 +140,7 @@ namespace QueryParser
         if (i < tokens.size() && tokens[i].value == "ORDER" && tokens[i + 1].value == "BY") 
         {
             i += 2;  // Skip "ORDER BY"
-            ASTNode* orderByNode = new ASTNode("ORDER BY");
+            ASTNode* orderByNode = new ASTNode();
             orderByNode->orderBy.column = tokens[i++].value;
             
             orderByNode->orderBy.direction = tokens[i++].value; // ASC or DESC
@@ -136,37 +150,50 @@ namespace QueryParser
         startingDepth = i;
     }
 
-    void AstTree::BuildSelectNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
+    void AstTree::BuildSelectNode(ASTNode*& node, vector<Token>& tokens, int& depth)
     {
-        node->type = "SELECT";
-        int i = startingDepth;
+        node->type = KeyWord::Select;
 
-        i++;
-        while (tokens[i].value != "FROM") 
+        depth++;
+        
+        //get columns or constants
+        while (tokens[depth].value != "FROM") 
         {
-            if (tokens[i].value != ",") 
-                node->columns.push_back(tokens[i].value);
+            if (tokens[depth].value != ",") 
+                node->columns.push_back(tokens[depth].value);
 
             //add check for instead of columns to use
-            if(tokens[i].value.contains("@"))
-                break;
-            i++;
+            // if(tokens[depth].value.contains("@"))
+            // {
+            //     node->columns.push_back(tokens[depth].value);
+
+            //     if(tokens[++depth].type == WordType::Symbol)
+            //     {
+
+            //     }
+            // }
+
+            depth++;
+
+            if(depth == tokens.size())
+                return;
         }
 
-        if (tokens[i].value == "FROM") 
+        //get table or subquery
+        if (tokens[depth].value == "FROM") 
         {
-            if(tokens[++i].value == "(")
+            if(tokens[++depth].value == "(")
             {
-                ASTNode* subQueryNode = new ASTNode("SELECT");
+                ASTNode* subQueryNode = new ASTNode();
                 node->children.push_back(subQueryNode);
 
-                AstTree::BuildNode(subQueryNode, tokens, ++i);
+                AstTree::BuildNode(subQueryNode, tokens, ++depth);
             }
             else
-                node->table = tokens[i].value;
+                node->table = tokens[depth].value;
 
             //skip closing bracket or table
-            i++;
+            depth++;
         }
     }
 
