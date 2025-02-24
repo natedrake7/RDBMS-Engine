@@ -8,9 +8,13 @@ namespace QueryParser{
 
     struct Token;
 
+    typedef struct SelectColumn : Token{
+        Token subToken;
+    } SelectColumn;
+
     typedef struct{
-        vector<Token> columns;
-        vector<Token> operation;
+        vector<SelectColumn> columns;
+        vector<SelectColumn> operation;
 
         Token alias;
     }ColumnOperation;
@@ -45,7 +49,7 @@ namespace QueryParser{
         AstTree();
 
         static bool IsNumber(const string& str);
-        static void InitializeColumnOperations(vector<Token>& columns, vector<Token>& operations, Token& alias);
+        static void InitializeColumnOperations(vector<SelectColumn>& columns, vector<SelectColumn>& operations, Token& alias);
         
         public:
             static AstTree& Get()

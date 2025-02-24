@@ -1,6 +1,7 @@
 #include "Tokenizer.h"
 #include <cctype>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace QueryParser 
@@ -27,11 +28,67 @@ namespace QueryParser
         return isalnum(c) || c == '_';
     }
 
+    void Tokenizer::AppendKeywords(vector<Token>& tokens, const string& query, string& buffer, int& i)
+    {
+        while (i < query.size() && ValidateAlphabeticCharacters(query[i])) 
+            buffer += query[i++];
+
+        string columnBuffer;
+
+        if (keywordsDictionary.Contains(buffer))
+            tokens.push_back({buffer, WordType::Keyword});
+        else if(aggregateKeywordsDictionary.Contains(buffer))
+        {
+            bool enclosingBracketFound = false;
+            while (i < query.size())
+            {
+                if(query[i] == '(')
+                {
+                    i++;
+                    while (i < query.size() && ValidateAlphabeticCharacters(query[i])) 
+                        columnBuffer += query[i++];
+                }
+                else if(query[i] == ')')
+                {
+                    // buffer += query[i++];
+                    i++;
+                    enclosingBracketFound = true;
+                    break;
+                }
+                else
+                    buffer += query[i++];
+            }
+
+            if(!enclosingBracketFound)
+                throw runtime_error("Missing enclosing qualifier at position: " + to_string(i));
+
+            tokens.push_back({buffer, WordType::AggregateFunction});
+
+            bool isIdentifierConstant = true;
+            for(const auto& c: columnBuffer)
+            {
+                if(!isdigit(c))
+                {
+                    isIdentifierConstant = false;
+                    break;
+                }
+            }
+
+            const auto wordType = isIdentifierConstant 
+                            ? WordType::Number 
+                            : WordType::Identifier;
+
+            tokens.push_back({columnBuffer, wordType});
+        } 
+        else
+            tokens.push_back({buffer, WordType::Identifier});
+    }
+
     vector<Token> Tokenizer::TokenizeQuery(const string& query)
     {
         vector<Token> tokens;
         string buffer;
-        size_t i = 0;
+        int i = 0;
 
         while (i < query.size()) 
         {
@@ -42,14 +99,7 @@ namespace QueryParser
             // Handle Alphabetic Characters (Keywords / Identifiers)
             if (isalpha(c)) 
             {
-                while (i < query.size() && ValidateAlphabeticCharacters(query[i])) 
-                    buffer += query[i++];
-
-                if (keywordsDictionary.Contains(buffer))
-                    tokens.push_back({buffer, WordType::Keyword});
-                else
-                    tokens.push_back({buffer, WordType::Identifier});
-
+                Tokenizer::AppendKeywords(tokens, query, buffer, i);
                 continue;
             }
 

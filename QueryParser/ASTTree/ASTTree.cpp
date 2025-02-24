@@ -34,7 +34,7 @@ namespace QueryParser
         }
     }
 
-    void AstTree::InitializeColumnOperations(vector<Token>& columns, vector<Token>& operations, Token& alias)
+    void AstTree::InitializeColumnOperations(vector<SelectColumn>& columns, vector<SelectColumn>& operations, Token& alias)
     {
         columns.clear();
         operations.clear();
@@ -149,8 +149,8 @@ namespace QueryParser
         
         //get columns or constants
         int i = 0;
-        vector<Token> columns;
-        vector<Token> operations;
+        vector<SelectColumn> columns;
+        vector<SelectColumn> operations;
         Token alias;
 
         while (tokens[depth].value != "FROM") 
@@ -167,7 +167,7 @@ namespace QueryParser
             switch (tokens[depth].type) 
             {
                 case WordType::Symbol:
-                    operations.push_back(tokens[depth]);
+                    operations.push_back({tokens[depth]});
                     break;
                 case WordType::Keyword:
                     alias = tokens[++depth];
@@ -177,7 +177,10 @@ namespace QueryParser
                 case WordType::String:
                 case WordType::WildCard:
                 case WordType::ScalarVariable:
-                    columns.push_back(tokens[depth]);
+                    columns.push_back({tokens[depth]});
+                    break;
+                case WordType::AggregateFunction:
+                    columns.push_back({tokens[depth], tokens[++depth]});
                     break;
                 case WordType::Uknown:
                 default:

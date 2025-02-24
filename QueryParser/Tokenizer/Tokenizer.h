@@ -15,7 +15,8 @@ namespace QueryParser
         String = 4,
         Symbol = 5,
         WildCard = 6,
-        ScalarVariable = 7
+        ScalarVariable = 7,
+        AggregateFunction = 8
     };
 
     typedef struct Token{
@@ -37,7 +38,12 @@ namespace QueryParser
         Asc = 11,
         Desc = 12,
         Into = 13,
-        As = 14
+        As = 14,
+        Sum = 15,
+        Avg = 16,
+        Min = 17,
+        Max = 18,
+        Count = 19,
     };
 
     static Dictionary<string, KeyWord> keywordsDictionary = {
@@ -55,6 +61,14 @@ namespace QueryParser
         {"DESC", KeyWord::Desc},
         {"INTO", KeyWord::Into},
         {"AS", KeyWord::As}
+    };
+
+    static Dictionary<string, KeyWord> aggregateKeywordsDictionary = {
+        {"SUM", KeyWord::Sum},
+        {"AVG", KeyWord::Avg},
+        {"MIN", KeyWord::Min},
+        {"MAX", KeyWord::Max},
+        {"COUNT", KeyWord::Count}
     };
 
     static HashSet<char> symbolsHashSet = 
@@ -81,6 +95,8 @@ namespace QueryParser
 
         Tokenizer();
         ~Tokenizer();
+
+        static void AppendKeywords(vector<Token>& tokens, const string& query, string& buffer, int& i);
 
         public:
             static Tokenizer& Get()

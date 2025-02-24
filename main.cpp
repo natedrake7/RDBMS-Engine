@@ -51,7 +51,7 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "SELECT @variable + 'hello ''' + @anotherScalar + 1 AS FirstColumn, MovieID, SUM(MovieID) FROM @Movies";
+        string sql = "SELECT @variable + 'hello ''' + @anotherScalar + 1 AS FirstColumn, MovieID, AVG(1) + 1 AS AverageMovieIncome FROM @Movies";
 
         vector<Token> tokens = Tokenizer::TokenizeQuery(sql);
         const auto& root = AstTree::Get().BuildTree(tokens);
