@@ -44,6 +44,10 @@ namespace QueryParser
         Min = 17,
         Max = 18,
         Count = 19,
+        Inner = 20,
+        Join = 21,
+        InnerJoin = 22,
+        On = 23
     };
 
     static Dictionary<string, KeyWord> keywordsDictionary = {
@@ -60,7 +64,7 @@ namespace QueryParser
         {"ASC", KeyWord::Asc},
         {"DESC", KeyWord::Desc},
         {"INTO", KeyWord::Into},
-        {"AS", KeyWord::As}
+        {"AS", KeyWord::As},
     };
 
     static Dictionary<string, KeyWord> aggregateKeywordsDictionary = {
@@ -69,6 +73,12 @@ namespace QueryParser
         {"MIN", KeyWord::Min},
         {"MAX", KeyWord::Max},
         {"COUNT", KeyWord::Count}
+    };
+
+    static Dictionary<string, KeyWord> joinsKeywordsDictionary = {
+        {"INNER", KeyWord::Inner},
+        {"JOIN", KeyWord::Join},
+        {"ON", KeyWord::On}
     };
 
     static HashSet<char> symbolsHashSet = 

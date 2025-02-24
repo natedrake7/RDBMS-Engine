@@ -12,6 +12,12 @@ namespace QueryParser{
         Token subToken;
     } SelectColumn;
 
+    typedef struct {
+        Token leftOperand;
+        Token operation;
+        Token rightOperand;
+    }WhereOperation;
+
     typedef struct{
         vector<SelectColumn> columns;
         vector<SelectColumn> operation;
@@ -23,11 +29,8 @@ namespace QueryParser{
         KeyWord type;  // "SELECT", "FROM", "WHERE", etc.
         vector<ColumnOperation> columns;
         Token table;
-        struct {
-            string column;
-            string op;
-            string value;
-        } whereClause;
+        Token tableAlias;
+        vector<WhereOperation> whereClause;
         struct {
             string column;
             string direction;
@@ -50,7 +53,8 @@ namespace QueryParser{
 
         static bool IsNumber(const string& str);
         static void InitializeColumnOperations(vector<SelectColumn>& columns, vector<SelectColumn>& operations, Token& alias);
-        
+        static WhereOperation BuildJoinCondition(vector<Token>& tokens, int& depth);
+
         public:
             static AstTree& Get()
             {
@@ -65,7 +69,8 @@ namespace QueryParser{
             static void BuildInsertNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth);
             static void BuildUpdateNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth);
             static void BuildDeleteNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth);
-    };
+            static void BuildJoinNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth);
+        };
 
 
 }

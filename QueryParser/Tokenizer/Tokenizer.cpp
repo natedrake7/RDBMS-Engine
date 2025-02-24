@@ -35,7 +35,7 @@ namespace QueryParser
 
         string columnBuffer;
 
-        if (keywordsDictionary.Contains(buffer))
+        if (keywordsDictionary.Contains(buffer) || joinsKeywordsDictionary.Contains(buffer))
             tokens.push_back({buffer, WordType::Keyword});
         else if(aggregateKeywordsDictionary.Contains(buffer))
         {

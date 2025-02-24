@@ -65,8 +65,11 @@ namespace QueryParser
             throw runtime_error("AstTree::BuildNode: Invalid Query");
 
         KeyWord keywordEnumeration;
-        if(!keywordsDictionary.TryGetValue(tokens[i].value, keywordEnumeration))
+        if(!keywordsDictionary.TryGetValue(tokens[i].value, keywordEnumeration)
+            && !joinsKeywordsDictionary.TryGetValue(tokens[i].value, keywordEnumeration))
             throw exception("ASTTree::BuildNode: Invalid Query");
+
+
 
         //build starting node by datatype
         switch (keywordEnumeration)
@@ -83,6 +86,9 @@ namespace QueryParser
             case KeyWord::Delete:
                 AstTree::BuildDeleteNode(node, tokens, i);
                 break;
+            case KeyWord::Inner:
+                AstTree::BuildJoinNode(node, tokens, i);
+                break;
             default:
                throw runtime_error("ASTTree::BuildNode: Invalid Keyword specified");        
         }
@@ -96,16 +102,16 @@ namespace QueryParser
 
         return;
 
-        if (tokens[i].value == "WHERE") 
-        {
-            ASTNode* whereNode = new ASTNode();
-            //handle more complex queries like Subqueries
-            whereNode->whereClause.column = tokens[++i].value;
-            whereNode->whereClause.op = tokens[++i].value;
-            whereNode->whereClause.value = tokens[++i].value;
-            node->children.push_back(whereNode);
-            i++;
-        }
+        // if (tokens[i].value == "WHERE") 
+        // {
+        //     ASTNode* whereNode = new ASTNode();
+        //     //handle more complex queries like Subqueries
+        //     whereNode->whereClause.column = tokens[++i].value;
+        //     whereNode->whereClause.op = tokens[++i].value;
+        //     whereNode->whereClause.value = tokens[++i].value;
+        //     node->children.push_back(whereNode);
+        //     i++;
+        // }
 
         if (i < tokens.size() && tokens[i].value == "GROUP" && tokens[i + 1].value == "BY") 
         {
@@ -115,14 +121,14 @@ namespace QueryParser
             while(i < tokens.size() && ( tokens[i].value != "HAVING" && tokens[i].value != ";" && tokens[i].value != "ORDER"))
                 groupByNode->groupBy.columns.push_back(tokens[i++].value);
 
-            if(tokens[i].value == "HAVING")
-            {
-                groupByNode->groupBy.having = new ASTNode();
-                groupByNode->groupBy.having->whereClause.column = tokens[++i].value;
-                groupByNode->groupBy.having->whereClause.op = tokens[++i].value;
-                groupByNode->groupBy.having->whereClause.value = tokens[++i].value;
+            // if(tokens[i].value == "HAVING")
+            // {
+            //     groupByNode->groupBy.having = new ASTNode();
+            //     groupByNode->groupBy.having->whereClause.column = tokens[++i].value;
+            //     groupByNode->groupBy.having->whereClause.op = tokens[++i].value;
+            //     groupByNode->groupBy.having->whereClause.value = tokens[++i].value;
                 
-            }
+            // }
 
             node->children.push_back(groupByNode);
             i++;       
@@ -217,6 +223,60 @@ namespace QueryParser
             //skip closing bracket or table
             depth++;
         }
+    }
+
+    WhereOperation AstTree::BuildJoinCondition(vector<Token>& tokens, int& depth)
+    {
+        WhereOperation operation;
+
+        if(depth + 3 >= tokens.size())
+            throw std::runtime_error("Invalid Query");
+
+
+        operation.leftOperand = tokens[++depth];
+        operation.operation = tokens[++depth];
+        operation.rightOperand = tokens[++depth];
+    
+        return operation;
+    }
+
+    void AstTree::BuildJoinNode(ASTNode*& node, vector<Token>& tokens, int& depth)
+    {
+        string table;
+        string tableAlias;
+
+        if(tokens[depth].value == "INNER"
+            && tokens[++depth].value == "JOIN")
+            {
+                node->type = KeyWord::InnerJoin;
+            }
+        
+        depth++;
+
+        while(tokens[depth].value != "ON")
+        {
+            switch (tokens[depth].type) 
+            {
+                case WordType::Keyword:
+                    node->tableAlias = tokens[depth++];
+                    break;
+                case WordType::Identifier:
+                    node->table = tokens[depth++];
+                    break;
+                case WordType::Uknown:
+                default:
+                    throw runtime_error("Invalid Query");
+            }
+        }
+
+        while(depth < tokens.size()
+            &&( tokens[depth].value == "ON" 
+                || tokens[depth].value == "OR" 
+                || tokens[depth].value == "AND"))
+            {
+                node->whereClause.push_back(AstTree::BuildJoinCondition(tokens, depth));
+                depth++;
+            }
     }
 
     void AstTree::BuildInsertNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
