@@ -313,9 +313,13 @@ namespace QueryParser
 
         while(depth < tokens.size()
             && ( tokens[depth].value == "ON" 
+            && ( tokens[depth].value == "ON" 
                 || tokens[depth].value == "OR" 
                 || tokens[depth].value == "AND"))
             {
+                if(tokens[depth].value != "ON")
+                    node->whereClause.operationCondition.push_back(tokens[depth]);
+                node->whereClause.operations.push_back(AstTree::BuildJoinCondition(tokens, depth));
                 if(tokens[depth].value != "ON")
                     node->whereClause.operationCondition.push_back(tokens[depth]);
                 node->whereClause.operations.push_back(AstTree::BuildJoinCondition(tokens, depth));
@@ -336,6 +340,35 @@ namespace QueryParser
     void AstTree::BuildDeleteNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
     {
 
+    }
+
+    KeyWord AstTree::SetAppropriateJoinKeyword(vector<Token>& tokens, int& depth)
+    {
+        if (depth >= tokens.size())
+            throw runtime_error("Invalid Query");
+
+        const string& firstValue = tokens[depth].value;
+
+        if(firstValue == "JOIN")
+        {
+            depth++;
+            return KeyWord::InnerJoin;
+        }
+
+        if(depth + 1 >= tokens.size())
+            throw runtime_error("Invalid Query");
+
+        const string& secondValue = tokens[++depth].value;
+
+        KeyWord joinKeyword;
+        if (joinTypeKeywordDictionary.TryGetValue(firstValue, joinKeyword) 
+            && secondValue == "JOIN")
+        {
+            depth++;
+            return joinKeyword;
+        }
+
+        throw runtime_error("Invalid Query");
     }
 
     KeyWord AstTree::SetAppropriateJoinKeyword(vector<Token>& tokens, int& depth)
