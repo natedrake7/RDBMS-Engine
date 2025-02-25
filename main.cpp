@@ -51,7 +51,7 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "SELECT @variable AS temp FROM @Movies INNER JOIN Actors ON ActorID = @variable";
+        string sql = "SELECT @variable AS temp FROM @Movies INNER JOIN Actors AS a ON a.ActorID = @variable AND a.ActorName = 'Hello' LEFT JOIN Actors ON ActorID = @variable";
 
         vector<Token> tokens = Tokenizer::TokenizeQuery(sql);
         const auto& root = AstTree::Get().BuildTree(tokens);

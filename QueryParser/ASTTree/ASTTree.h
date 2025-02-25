@@ -6,6 +6,13 @@ using namespace std;
 
 namespace QueryParser{
 
+    static Dictionary<string, KeyWord> joinTypeKeywordDictionary = {
+        {"INNER", KeyWord::InnerJoin},
+        {"LEFT",  KeyWord::LeftJoin},
+        {"RIGHT", KeyWord::RightJoin},
+        {"FULL",  KeyWord::FullJoin}
+    };
+
     struct Token;
 
     typedef struct SelectColumn : Token{
@@ -30,7 +37,10 @@ namespace QueryParser{
         vector<ColumnOperation> columns;
         Token table;
         Token tableAlias;
-        vector<WhereOperation> whereClause;
+        struct{
+            vector<WhereOperation> operations;
+            vector<Token> operationCondition;
+        }whereClause;
         struct {
             string column;
             string direction;
@@ -45,6 +55,7 @@ namespace QueryParser{
         ~ASTNode();  // Destructor
     };
 
+
     class AstTree
     {
         ASTNode* root;
@@ -54,6 +65,7 @@ namespace QueryParser{
         static bool IsNumber(const string& str);
         static void InitializeColumnOperations(vector<SelectColumn>& columns, vector<SelectColumn>& operations, Token& alias);
         static WhereOperation BuildJoinCondition(vector<Token>& tokens, int& depth);
+        static KeyWord SetAppropriateJoinKeyword(vector<Token>& tokens, int& depth);
 
         public:
             static AstTree& Get()

@@ -25,7 +25,7 @@ namespace QueryParser
 
     constexpr bool ValidateAlphabeticCharacters(const char& c)
     {
-        return isalnum(c) || c == '_';
+        return isalnum(c) || c == '_' || c == '.';
     }
 
     void Tokenizer::AppendKeywords(vector<Token>& tokens, const string& query, string& buffer, int& i)
