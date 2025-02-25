@@ -47,7 +47,13 @@ namespace QueryParser
         Inner = 20,
         Join = 21,
         InnerJoin = 22,
-        On = 23
+        On = 23,
+        LeftJoin = 23,
+        RightJoin = 24,
+        FullJoin = 25,
+        Left = 26,
+        Right = 27,
+        Full = 28,
     };
 
     static Dictionary<string, KeyWord> keywordsDictionary = {
@@ -77,6 +83,9 @@ namespace QueryParser
 
     static Dictionary<string, KeyWord> joinsKeywordsDictionary = {
         {"INNER", KeyWord::Inner},
+        {"LEFT", KeyWord::Left},
+        {"RIGHT", KeyWord::Right},
+        {"FULL", KeyWord::Full},
         {"JOIN", KeyWord::Join},
         {"ON", KeyWord::On}
     };

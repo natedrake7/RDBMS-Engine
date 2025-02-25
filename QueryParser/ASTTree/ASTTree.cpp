@@ -46,7 +46,8 @@ namespace QueryParser
     {
         int startingDepth = 0;
         this->root = nullptr;
-
+        this->SearchQueryForJoinOperations(tokens);
+        
         AstTree::BuildNode(this->root, tokens, startingDepth);
 
         return this->root;
@@ -87,6 +88,10 @@ namespace QueryParser
                 AstTree::BuildDeleteNode(node, tokens, i);
                 break;
             case KeyWord::Inner:
+            case KeyWord::Left:
+            case KeyWord::Right:
+            case KeyWord::Full:
+            case KeyWord::Join:
                 AstTree::BuildJoinNode(node, tokens, i);
                 break;
             default:
@@ -232,7 +237,6 @@ namespace QueryParser
         if(depth + 3 >= tokens.size())
             throw std::runtime_error("Invalid Query");
 
-
         operation.leftOperand = tokens[++depth];
         operation.operation = tokens[++depth];
         operation.rightOperand = tokens[++depth];
@@ -240,25 +244,63 @@ namespace QueryParser
         return operation;
     }
 
+    void AstTree::SearchQueryForJoinOperations(vector<Token>& tokens)
+    {
+        for (int i = 0; i < tokens.size(); i++)
+        {
+            KeyWord joinKeyword;
+            const auto& firstToken = tokens[i];
+    
+            // Look for valid join types (e.g., INNER, LEFT, RIGHT, FULL)
+            if (!joinTypeKeywordDictionary.TryGetValue(firstToken.value, joinKeyword))
+                continue;
+                // Ensure that we check for "JOIN" as the next token
+            if (i + 1 >= tokens.size() || tokens[i + 1].value != "JOIN")
+                continue;
+
+            switch (joinKeyword)
+            {
+                case KeyWord::RightJoin:
+                    this->RightJoinIndexes.push_back(i);
+                    break;
+                case KeyWord::LeftJoin:
+                    this->LeftJoinIndexes.push_back(i);
+                    break;
+                case KeyWord::FullJoin:
+                    this->FullJoinIndexes.push_back(i);
+                    break;
+                case KeyWord::InnerJoin:
+                    this->InnerJoinIndexes.push_back(i);
+                    break;
+                default:
+                    throw runtime_error("Invalid Query: Unknown Join Type");
+            }
+            i++; // Skip over the "JOIN" token
+        }
+    }
+
     void AstTree::BuildJoinNode(ASTNode*& node, vector<Token>& tokens, int& depth)
     {
         string table;
         string tableAlias;
 
-        if(tokens[depth].value == "INNER"
-            && tokens[++depth].value == "JOIN")
-            {
-                node->type = KeyWord::InnerJoin;
-            }
-        
-        depth++;
+        const int innerJoinPos = -1;//AstTree::SearchForInnerJoins(tokens, depth);
+        if(innerJoinPos != -1)
+        {
+            //handle inner join first
+            ASTNode* newNode = new ASTNode();
+            AstTree::BuildJoinNode(newNode, tokens, depth);
+        }
 
+        node->type = AstTree::SetAppropriateJoinKeyword(tokens, depth);
+        
         while(tokens[depth].value != "ON")
         {
             switch (tokens[depth].type) 
             {
                 case WordType::Keyword:
-                    node->tableAlias = tokens[depth++];
+                    node->tableAlias = tokens[++depth];
+                    depth++;
                     break;
                 case WordType::Identifier:
                     node->table = tokens[depth++];
@@ -270,11 +312,13 @@ namespace QueryParser
         }
 
         while(depth < tokens.size()
-            &&( tokens[depth].value == "ON" 
+            && ( tokens[depth].value == "ON" 
                 || tokens[depth].value == "OR" 
                 || tokens[depth].value == "AND"))
             {
-                node->whereClause.push_back(AstTree::BuildJoinCondition(tokens, depth));
+                if(tokens[depth].value != "ON")
+                    node->whereClause.operationCondition.push_back(tokens[depth]);
+                node->whereClause.operations.push_back(AstTree::BuildJoinCondition(tokens, depth));
                 depth++;
             }
     }
@@ -292,5 +336,34 @@ namespace QueryParser
     void AstTree::BuildDeleteNode(ASTNode*& node, vector<Token>& tokens, int& startingDepth)
     {
 
+    }
+
+    KeyWord AstTree::SetAppropriateJoinKeyword(vector<Token>& tokens, int& depth)
+    {
+        if (depth >= tokens.size())
+            throw runtime_error("Invalid Query");
+
+        const string& firstValue = tokens[depth].value;
+
+        if(firstValue == "JOIN")
+        {
+            depth++;
+            return KeyWord::InnerJoin;
+        }
+
+        if(depth + 1 >= tokens.size())
+            throw runtime_error("Invalid Query");
+
+        const string& secondValue = tokens[++depth].value;
+
+        KeyWord joinKeyword;
+        if (joinTypeKeywordDictionary.TryGetValue(firstValue, joinKeyword) 
+            && secondValue == "JOIN")
+        {
+            depth++;
+            return joinKeyword;
+        }
+
+        throw runtime_error("Invalid Query");
     }
 }
