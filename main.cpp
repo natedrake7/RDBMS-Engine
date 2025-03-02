@@ -51,9 +51,9 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "SELECT @variable AS temp FROM @Movies INNER JOIN Actors AS a ON a.ActorID = @variable AND a.ActorName = 'Hello' LEFT JOIN Actors ON ActorID = @variable";
+        string sql = "SELECT @variable AS temp FROM (SELECT 1 FROM Movies) INNER JOIN Actors AS a ON ActorID = @variable AND ActorName = 'Hello' LEFT JOIN Actors ON ActorID = @variable";
 
-        vector<Token> tokens = Tokenizer::TokenizeQuery(sql);
+        vector<Token> tokens = Tokenizer::Get().TokenizeQuery(sql);
         const auto& root = AstTree::Get().BuildTree(tokens);
 
         throw std::runtime_error("Not implemented yet");

@@ -1,206 +1,75 @@
 #include "Tokenizer.h"
-#include <cctype>
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace QueryParser 
 {
-    Tokenizer::Tokenizer() = default;
+    vector<ReguralExpressions> regexPatterns = {
+        {regex(R"(\s+)"), WordType::WhiteSpace} ,        // Punctuation
+        {regex(R"(@\w+)"), WordType::ScalarVariable},  // Scalar variable (e.g., @variable)
+        {regex(R"(\d+)"), WordType::Number},           // Numbers
+        {regex(R"('[^']*')"), WordType::String},       // Strings enclosed in single quotes
+        {regex(R"([a-zA-Z_]\w*)"), WordType::Identifier}, // Identifiers (table/column names)
+        {regex(R"([<>!=]=?)"), WordType::Symbol},      // Operators (>=, <=, !=, etc.)
+        {regex(R"(\*)"), WordType::WildCard},          // Wildcard (*)
+        {regex(R"([,;()])"), WordType::Symbol}        // Punctuation
+    };
+
+    Tokenizer::Tokenizer()
+    {
+        const string& keywordsRegexExp = Tokenizer::BuildKeywordsRegex();
+
+        regexPatterns.insert(regexPatterns.begin() + 1, {regex(keywordsRegexExp), WordType::Keyword});
+    }
 
     Tokenizer::~Tokenizer() = default;
-
-    constexpr bool ValidateScalarVariableStructure(const char& c, bool isFirstChar) 
+    
+    string& Tokenizer::BuildKeywordsRegex()
     {
-        return isFirstChar 
-                ? (isalpha(c) || c == '_') 
-                : (isalnum(c) || c == '_');
-    }
+        static string regexp;
 
-    constexpr bool ValidateMultiCharacterOperations(const char& c, const string& query, const int& i)
-    {
-        return (c == '>' || c == '<' || c == '!' || c == '=') && 
-                (i + 1 < query.size() && query[i + 1] == '=');
-    }
+        regexp += R"(\b()";
+        for (const auto& keyword : SQLKeywords)
+            regexp += keyword + "|";
 
-    constexpr bool ValidateAlphabeticCharacters(const char& c)
-    {
-        return isalnum(c) || c == '_' || c == '.';
-    }
-
-    void Tokenizer::AppendKeywords(vector<Token>& tokens, const string& query, string& buffer, int& i)
-    {
-        while (i < query.size() && ValidateAlphabeticCharacters(query[i])) 
-            buffer += query[i++];
-
-        string columnBuffer;
-
-        if (keywordsDictionary.Contains(buffer) || joinsKeywordsDictionary.Contains(buffer))
-            tokens.push_back({buffer, WordType::Keyword});
-        else if(aggregateKeywordsDictionary.Contains(buffer))
-        {
-            bool enclosingBracketFound = false;
-            while (i < query.size())
-            {
-                if(query[i] == '(')
-                {
-                    i++;
-                    while (i < query.size() && ValidateAlphabeticCharacters(query[i])) 
-                        columnBuffer += query[i++];
-                }
-                else if(query[i] == ')')
-                {
-                    // buffer += query[i++];
-                    i++;
-                    enclosingBracketFound = true;
-                    break;
-                }
-                else
-                    buffer += query[i++];
-            }
-
-            if(!enclosingBracketFound)
-                throw runtime_error("Missing enclosing qualifier at position: " + to_string(i));
-
-            tokens.push_back({buffer, WordType::AggregateFunction});
-
-            bool isIdentifierConstant = true;
-            for(const auto& c: columnBuffer)
-            {
-                if(!isdigit(c))
-                {
-                    isIdentifierConstant = false;
-                    break;
-                }
-            }
-
-            const auto wordType = isIdentifierConstant 
-                            ? WordType::Number 
-                            : WordType::Identifier;
-
-            tokens.push_back({columnBuffer, wordType});
-        } 
-        else
-            tokens.push_back({buffer, WordType::Identifier});
+        regexp = regexp.substr(0, regexp.size() - 1);  // Remove the last pipe "|"
+        regexp += R"()\b)";
+        return regexp;
     }
 
     vector<Token> Tokenizer::TokenizeQuery(const string& query)
     {
         vector<Token> tokens;
-        string buffer;
-        int i = 0;
+        string remainingQuery = query;
+        smatch match;
 
-        while (i < query.size()) 
+        while (!remainingQuery.empty()) 
         {
-            const char& c = query[i];
+            bool matched = false;
 
-            buffer.clear();
-
-            // Handle Alphabetic Characters (Keywords / Identifiers)
-            if (isalpha(c)) 
+            // Try matching each regex pattern
+            for (const auto& [pattern, type] : regexPatterns) 
             {
-                Tokenizer::AppendKeywords(tokens, query, buffer, i);
-                continue;
-            }
-
-            // Handle Numbers
-            if (isdigit(c)) 
-            {
-                while (i < query.size() && isdigit(query[i])) 
-                    buffer += query[i++];
-
-                tokens.push_back({buffer, WordType::Number});
-
-                continue;
-            }
-
-            // Handle Symbols (e.g., >, >=, <=, =, !=, , , ;)
-            if (symbolsHashSet.Contains(c))
-            {
-                //handle operations like  != , >= etc
-                if (ValidateMultiCharacterOperations(c, query, i)) 
-                {
-                    tokens.push_back({{string(1, c) + "="}, WordType::Symbol});  // Handle >=, <=, !=
-                    i += 2;
+                if (!regex_search(remainingQuery, match, pattern,regex_constants::match_continuous)) 
                     continue;
-                } 
 
-                tokens.push_back({string(1, c), WordType::Symbol});
-                i++;
-                continue;
-            }
-
-            // Ignore Whitespace
-            if (isspace(c)) 
-            {
-                i++;
-                continue;
-            }
-
-            //handle wildcard characters
-            if(c == '*')
-            {
-                tokens.push_back({string(1, c), WordType::WildCard});
-                i++;
-                continue;
-            }
-
-            //handle scalar variables
-            if(c == '@')
-            {
-                if (i == query.size() || !isalpha(query[i + 1])) 
-                    throw std::runtime_error("Tokenizer::TokenizeQuery: Invalid scalar variable name!");
-
-                
-                buffer += query[i++];
-                const int firstCharacterIndex = i;
-
-                while (i < query.size() && ValidateScalarVariableStructure(query[i], firstCharacterIndex == i))
-                    buffer += query[i++];
-
-                tokens.push_back({buffer, WordType::ScalarVariable});
-
-                continue;
-            }
-
-            //handle strings
-            if (c == '\'') 
-            {
-                i++;
-                bool isQuoteMarkEnclosed = false;
-            
-                while (i < query.size()) 
+                matched = true;
+                if(type == WordType::WhiteSpace)
                 {
-                    if (query[i] == '\'') 
-                    {
-                        if (i + 1 < query.size() && query[i + 1] == '\'') 
-                        {
-                            buffer += '\'';
-                            i += 2;
-                            continue;
-                        }
-
-                        i++;  // Closing quote found
-                        isQuoteMarkEnclosed = true;
-                        break;
-                    }
-                    buffer += query[i++];
+                    remainingQuery = remainingQuery.substr(match.length(0)); // Move past the matched token
+                    break;
                 }
-            
-                if (!isQuoteMarkEnclosed)
-                    throw std::runtime_error("Tokenizer::TokenizeQuery: String not properly enclosed with single quotes!");
-            
-                tokens.push_back({buffer, WordType::String});
-                continue;
+                
+                tokens.push_back({match.str(), type});
+                remainingQuery = remainingQuery.substr(match.length(0)); // Move past the matched token
+
+                break;
             }
 
-            // Unknown character (error handling)
-            // tokens.push_back({string(1, c), WordType::Uknown});
-            // i++;
-
-            throw runtime_error("Tokenizer::TokenizeQuery: Unexpected character '" 
-                        + string(1, c) +
-                         "' at position " + to_string(i));
+            if(!matched)
+                throw runtime_error("Tokenizer Error: Unexpected character at: " + remainingQuery);
         }
 
         return tokens;

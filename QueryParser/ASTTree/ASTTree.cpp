@@ -315,7 +315,7 @@ namespace QueryParser
             && ( tokens[depth].value == "ON" 
             && ( tokens[depth].value == "ON" 
                 || tokens[depth].value == "OR" 
-                || tokens[depth].value == "AND"))
+                || tokens[depth].value == "AND")))
             {
                 if(tokens[depth].value != "ON")
                     node->whereClause.operationCondition.push_back(tokens[depth]);
@@ -371,32 +371,32 @@ namespace QueryParser
         throw runtime_error("Invalid Query");
     }
 
-    KeyWord AstTree::SetAppropriateJoinKeyword(vector<Token>& tokens, int& depth)
-    {
-        if (depth >= tokens.size())
-            throw runtime_error("Invalid Query");
+    // KeyWord AstTree::SetAppropriateJoinKeyword(vector<Token>& tokens, int& depth)
+    // {
+    //     if (depth >= tokens.size())
+    //         throw runtime_error("Invalid Query");
 
-        const string& firstValue = tokens[depth].value;
+    //     const string& firstValue = tokens[depth].value;
 
-        if(firstValue == "JOIN")
-        {
-            depth++;
-            return KeyWord::InnerJoin;
-        }
+    //     if(firstValue == "JOIN")
+    //     {
+    //         depth++;
+    //         return KeyWord::InnerJoin;
+    //     }
 
-        if(depth + 1 >= tokens.size())
-            throw runtime_error("Invalid Query");
+    //     if(depth + 1 >= tokens.size())
+    //         throw runtime_error("Invalid Query");
 
-        const string& secondValue = tokens[++depth].value;
+    //     const string& secondValue = tokens[++depth].value;
 
-        KeyWord joinKeyword;
-        if (joinTypeKeywordDictionary.TryGetValue(firstValue, joinKeyword) 
-            && secondValue == "JOIN")
-        {
-            depth++;
-            return joinKeyword;
-        }
+    //     KeyWord joinKeyword;
+    //     if (joinTypeKeywordDictionary.TryGetValue(firstValue, joinKeyword) 
+    //         && secondValue == "JOIN")
+    //     {
+    //         depth++;
+    //         return joinKeyword;
+    //     }
 
-        throw runtime_error("Invalid Query");
-    }
+    //     throw runtime_error("Invalid Query");
+    // }
 }

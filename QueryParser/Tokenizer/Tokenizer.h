@@ -1,4 +1,5 @@
 #pragma once
+#include <regex>
 #include <string>
 #include "../../AdditionalLibraries/Dictionary/Dictionary.h"
 #include "../../AdditionalLibraries/HashSet/HashSet.h"
@@ -16,7 +17,25 @@ namespace QueryParser
         Symbol = 5,
         WildCard = 6,
         ScalarVariable = 7,
-        AggregateFunction = 8
+        AggregateFunction = 8,
+        WhiteSpace = 9
+    };
+
+    typedef struct ReguralExpressions{
+        regex expression;
+        WordType type;
+    }ReguralExpressions;
+
+    static string SQLKeywords[] = {
+        "SELECT",
+        "FROM",
+        "WHERE",
+        "ON",
+        "LEFT\\s+JOIN",
+        "RIGHT\\s+JOIN",
+        "INNER\\s+JOIN",
+        "OUTER\\s+JOIN",
+        "FULL\\s+JOIN"
     };
 
     typedef struct Token{
@@ -115,7 +134,7 @@ namespace QueryParser
         Tokenizer();
         ~Tokenizer();
 
-        static void AppendKeywords(vector<Token>& tokens, const string& query, string& buffer, int& i);
+        static string& BuildKeywordsRegex();
 
         public:
             static Tokenizer& Get()
@@ -125,7 +144,6 @@ namespace QueryParser
                 return instance;
             }
             static vector<Token> TokenizeQuery(const string& query);
-
     };
 
 }
