@@ -15,7 +15,7 @@
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 #include "QueryParser/Tokenizer/Tokenizer.h"
-#include "QueryParser/AstTree/AstTree.h"
+#include "QueryParser/Parser/Parser.h"
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
@@ -51,10 +51,11 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "SELECT @variable AS temp FROM (SELECT 1 FROM Movies) INNER JOIN Actors AS a ON ActorID = @variable AND ActorName = 'Hello' LEFT JOIN Actors ON ActorID = @variable";
+        string sql = "       'hello'        ";
 
         vector<Token> tokens = Tokenizer::Get().TokenizeQuery(sql);
-        const auto& root = AstTree::Get().BuildTree(tokens);
+
+        const auto& root = Parser::Get().Parse(tokens);
 
         throw std::runtime_error("Not implemented yet");
 

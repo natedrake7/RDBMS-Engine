@@ -8,6 +8,8 @@ namespace QueryParser
 {
     vector<ReguralExpressions> regexPatterns = {
         {regex(R"(\s+)"), WordType::WhiteSpace} ,        // Punctuation
+        {regex(R"(#.*)"), WordType::Comment} ,   
+        {regex(R"(/\*[\s\S]*?\*/)"), WordType::Comment},
         {regex(R"(@\w+)"), WordType::ScalarVariable},  // Scalar variable (e.g., @variable)
         {regex(R"(\d+)"), WordType::Number},           // Numbers
         {regex(R"('[^']*')"), WordType::String},       // Strings enclosed in single quotes
@@ -56,7 +58,7 @@ namespace QueryParser
                     continue;
 
                 matched = true;
-                if(type == WordType::WhiteSpace)
+                if(type == WordType::WhiteSpace || type == WordType::Comment)
                 {
                     remainingQuery = remainingQuery.substr(match.length(0)); // Move past the matched token
                     break;
