@@ -19,7 +19,11 @@ namespace QueryParser
         ScalarVariable = 7,
         AggregateFunction = 8,
         WhiteSpace = 9,
-        Comment = 10
+        Comment = 10,
+        Program = 11,
+        Semicolon = 12,
+        LeftParenthesis = 13,
+        RightParenthesis = 14
     };
 
     typedef struct ReguralExpressions{

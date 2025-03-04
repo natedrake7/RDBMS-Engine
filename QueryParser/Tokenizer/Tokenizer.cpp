@@ -16,7 +16,11 @@ namespace QueryParser
         {regex(R"([a-zA-Z_]\w*)"), WordType::Identifier}, // Identifiers (table/column names)
         {regex(R"([<>!=]=?)"), WordType::Symbol},      // Operators (>=, <=, !=, etc.)
         {regex(R"(\*)"), WordType::WildCard},          // Wildcard (*)
-        {regex(R"([,;()])"), WordType::Symbol}        // Punctuation
+        {regex(R"([,()])"), WordType::Symbol},        // Punctuation
+        {regex(R"(;)"), WordType::Semicolon},        // Punctuation
+        {regex("\\("), WordType::LeftParenthesis},    // Left Parenthesis
+        {regex("\\)"), WordType::RightParenthesis},   // Right Parenthesis
+        
     };
 
     Tokenizer::Tokenizer()

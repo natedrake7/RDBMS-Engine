@@ -1,18 +1,21 @@
 #include "Parser.h"
 #include "../Tokenizer/Tokenizer.h"
-#include <exception>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace QueryParser 
 {
-    Parser::Parser()
-    {
-        this->root = nullptr;
-    }
+    Parser::Parser() = default;
 
-    Parser::~Parser() = default;
+    Parser::~Parser()
+    {
+        for(const auto& statement : this->query.statements)
+        {
+            for(auto& node : statement->nodes)
+                delete node;
+        }
+    }
 
     Node::Node() = default;
 
@@ -20,6 +23,23 @@ namespace QueryParser
     {
         for(auto& child: children)
             delete child;
+    }
+
+    Query::Query()
+    {
+        this->type = WordType::Program;
+    }
+    
+    Query::~Query()
+    {
+        for(auto& statement: statements)
+            delete statement;
+    }
+
+    Statement::~Statement()
+    {
+        for(auto& node : nodes)
+            delete node;
     }
 
     std::ostream& operator<<(std::ostream& os, const Node& node) 
@@ -38,29 +58,55 @@ namespace QueryParser
         return os;
     }
 
-    Node* Parser::Parse(vector<Token>& tokens)
+    Query& Parser::Parse(vector<Token>& tokens)
     {
+        if(!tokens.empty())
+        {
+            Statement* firstStatement = new Statement();
+            this->query.statements.push_back(firstStatement);
+        }
+
         for(const auto& token: tokens)
         {
+            Node* node = nullptr;
             switch (token.type) 
             {
                 case WordType::Number:
+                    node = Parser::ParseNumber(token);
+                    break;
+                case WordType::String:
+                    node = Parser::ParseString(token);
+                    break;
+                case WordType::LeftParenthesis:
                 {
-                    this->root = Parser::ParseNumber(token);
+                    BlockStatement* statement = new BlockStatement();
+                    this->query.statements.push_back(statement);
                     break;
                 }
-                case WordType::String:
+                case WordType::RightParenthesis:
                 {
-                    this->root = Parser::ParseString(token);
+                    const auto iterator = this->query.statements.back();
+                    if(dynamic_cast<BlockStatement*>(iterator) == nullptr)
+                        throw runtime_error("Enclosing parenthesis not specified");
+                    break;
+                }
+                case WordType::Semicolon:
+                {
+                    Statement* statement = new Statement();
+                    this->query.statements.push_back(statement);
                     break;
                 }
                 default:
                     throw runtime_error("Invalid token type");
-
             }
+
+            if(node == nullptr)
+                continue;
+            
+            this->query.statements.back()->nodes.push_back(node);
         }
 
-        return this->root;
+        return this->query;
     }
 
     Node* Parser::ParseNumber(const Token& token)

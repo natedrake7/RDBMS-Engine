@@ -24,6 +24,7 @@ namespace QueryParser{
     };
 
     struct Token;
+    struct Node;
 
     typedef struct SelectColumn : Token{
         Token subToken;
@@ -41,6 +42,23 @@ namespace QueryParser{
 
         Token alias;
     }ColumnOperation;
+
+    struct Statement{
+        vector<Node*> nodes;
+        virtual ~Statement();
+    };
+
+    struct BlockStatement : Statement{
+        vector<Statement> statements;
+    };
+
+    struct Query{
+        WordType type;
+        vector<Statement*> statements;
+
+        Query();
+        ~Query();
+    };
 
     struct Node {
         // vector<ColumnOperation> columns;
@@ -61,6 +79,7 @@ namespace QueryParser{
         WordType type;  // "SELECT", "FROM", "WHERE", etc.
         variant<string, int64_t> value;
         vector<Node*> children; // Nested queries or joins
+        vector<Statement> statements;
     
         Node();
         ~Node();  // Destructor
@@ -69,7 +88,7 @@ namespace QueryParser{
     };
 
     class Parser{
-        Node* root;
+        Query query;
 
         ~Parser();
         Parser();
@@ -85,7 +104,7 @@ namespace QueryParser{
                 return instance;
             }
 
-            Node* Parse(vector<Token>& tokens);
+            Query& Parse(vector<Token>& tokens);
     };
 
 

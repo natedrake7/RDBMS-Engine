@@ -51,11 +51,11 @@ int main()
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "       'hello'        ";
+        string sql = "       'hello'        ;(42)";
 
         vector<Token> tokens = Tokenizer::Get().TokenizeQuery(sql);
 
-        const auto& root = Parser::Get().Parse(tokens);
+        const auto& query = Parser::Get().Parse(tokens);
 
         throw std::runtime_error("Not implemented yet");
 
