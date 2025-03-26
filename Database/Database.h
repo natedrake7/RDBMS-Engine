@@ -3,7 +3,7 @@
 #include "../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include <string>
 #include <vector>
-
+#include "../AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h"
 #include "B+Tree/BPlusTree.h"
 #include "Column/Column.h"
 
@@ -197,7 +197,7 @@ public:
 
     static void JoinTables(StorageTypes::Table* firstTable, StorageTypes::Table* secondTable, const vector<Field>& conditions);
 
-    static void JoinTables(vector<StorageTypes::Row*>& firstTableRows, StorageTypes::Table* secondTable, const vector<Field>& conditions);
+    static void JoinTables(vector<StorageTypes::Row*>& firstTableRows, StorageTypes::Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions);
 };
 
 void CreateDatabase(const string &dbName);

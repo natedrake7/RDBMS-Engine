@@ -143,8 +143,8 @@ namespace Indexing
         Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition);
         void PrintTree();
 
-        void RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
-        void RangeQuery(const Key &minKey, const Key &maxKey, vector<BPlusTreeNonClusteredData> &result) const;
+        void IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
+        void IndexSeek(const Key &minKey, const Key &maxKey, vector<BPlusTreeNonClusteredData> &result) const;
         void IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
         void SearchKey(const Key &key, QueryData &result) const;
         [[nodiscard]] page_size_t GetTreeSize() const;

@@ -10,6 +10,7 @@ class Field {
     string data;
     u16string unicodeData;
     bool isNull;
+    bool isNotConstant;
     vector<Field> children;
     Constants::Operator operatorType;
     Constants::ConditionType conditionType;
@@ -23,11 +24,13 @@ class Field {
                         , const Constants::column_index_t& columnIndex
                         , const Constants::Operator& operatorType
                         , const Constants::ConditionType& conditionType
-                        , const bool& isNull = false);
+                        , const bool& isNull = false
+                        , const bool& isNotConstant = false);
         ~Field();
         [[nodiscard]] const string& GetData() const;
         [[nodiscard]] const u16string& GetUnicodeData() const;
         [[nodiscard]] const bool& GetIsNull() const;
+        [[nodiscard]] const bool& GetIsNotConstant() const;
         [[nodiscard]] const Constants::column_index_t& GetColumnIndex() const;
         [[nodiscard]] const Constants::ConditionType& GetConditionType() const;
         [[nodiscard]] const Constants::Operator& GetOperatorType() const;
@@ -35,5 +38,4 @@ class Field {
         void SetData(const string& data);
         void SetIsNull(const bool& isNull);
         void SetColumnIndex(const Constants::column_index_t& columnIndex);
-        
 };

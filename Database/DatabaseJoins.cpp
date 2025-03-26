@@ -1,3 +1,4 @@
+#include "Constants.h"
 #include "Database.h"
 #include "Table/Table.h"
 #include "Row/Row.h"
@@ -23,30 +24,40 @@ namespace DatabaseEngine
         }
     }
 
-    void Database::JoinTables(vector<Row*>& firstTableRows, Table* secondTable, const vector<Field>& conditions)
+    void Database::JoinTables(vector<Row*>& firstTableRows, Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions)
     {
         //basic nested loop join
         vector<Row> selectedRows;
 
-        vector<Row> finalRows;
-
         //join conditions should have 2 columnIndices for each field to indicate which columns to match
-        for(const auto& row: firstTableRows)
+        for(auto& row: firstTableRows)
         {
             //create condition here to join
-            // secondTable->Select(selectedRows, &conditions);
+            vector<Field> joinConditions;
 
-            //join the rows
-            Row newRow(*row);
+            for(const auto& condition: conditions)
+            {
+                const auto& firstCondition = condition.GetFirstTableCondition();
+                const auto& secondCondition = condition.GetSecondTableCondition();
+
+                const auto& block = row->GetData()[firstCondition.GetColumnIndex()];
+
+                joinConditions.emplace_back(string(reinterpret_cast<const char*>(block->GetBlockData()), block->GetBlockSize()), 
+                          secondCondition.GetColumnIndex(), 
+                         Operator::Equal, 
+                        ConditionType::ConditionNone, 
+                        false, 
+                        true);
+            }
+
+            secondTable->Select(selectedRows, selectedColumnIndices, &joinConditions);
 
             for(const auto& selectedRow: selectedRows)
             {
                 const auto& rowData = selectedRow.GetData();
                 for(const auto& block: rowData)
-                    newRow.InsertNewColumn(new Block(*block));
+                    row->InsertNewColumn(new Block(*block));
             }
-
-            finalRows.push_back(newRow);
         }
     }
 

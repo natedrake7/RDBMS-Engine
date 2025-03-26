@@ -22,13 +22,14 @@ Field::Field(const u16string &data, const Constants::column_index_t &columnIndex
     this->columnIndex = columnIndex;
 }
 
-Field::Field(const string& data, const Constants::column_index_t& columnIndex , const Operator& operatorType, const ConditionType& conditionType, const bool& isNull)
+Field::Field(const string& data, const Constants::column_index_t& columnIndex , const Operator& operatorType, const ConditionType& conditionType, const bool& isNull, const bool& isNotConstant)
 {
     this->data = data;
     this->columnIndex = columnIndex;
     this->operatorType = operatorType;
     this->conditionType = conditionType;
     this->isNull = isNull;
+    this->isNotConstant = isNotConstant;
 }
 
 Field::~Field() = default;
@@ -38,6 +39,8 @@ const string& Field::GetData() const { return this->data; }
 const u16string & Field::GetUnicodeData() const { return this->unicodeData; }
 
 const bool & Field::GetIsNull() const { return this->isNull; }
+
+const bool & Field::GetIsNotConstant() const { return this->isNotConstant; }
 
 const Constants::column_index_t & Field::GetColumnIndex() const { return this->columnIndex;}
 

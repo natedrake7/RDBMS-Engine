@@ -291,7 +291,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::RangeQuery(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
+    void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
     {
         if (!root)
             return;
@@ -329,7 +329,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::RangeQuery(const Key & minKey, const Key & maxKey, vector<BPlusTreeNonClusteredData>& result) const
+    void BPlusTree::IndexSeek(const Key & minKey, const Key & maxKey, vector<BPlusTreeNonClusteredData>& result) const
     {
         if (!root)
             return;

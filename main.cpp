@@ -38,7 +38,6 @@ void InsertRowsToMoviesTable(Table* table);
 //advanced functions
 int main() 
 {
-
     setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 
@@ -53,14 +52,14 @@ int main()
 
         string sql = "       'hello'        ;(42)";
 
-        vector<Token> tokens = Tokenizer::Get().TokenizeQuery(sql);
+        // vector<Token> tokens = Tokenizer::Get().TokenizeQuery(sql);
 
-        const auto& query = Parser::Get().Parse(tokens);
+        // const auto& query = Parser::Get().Parse(tokens);
 
-        throw std::runtime_error("Not implemented yet");
+        // throw std::runtime_error("Not implemented yet");
 
         Table* table = db->OpenTable("Movies");
-        vector<column_index_t> selectedColumnIndices;
+        vector<column_index_t> selectedColumnIndices { 0, 1};
 
         // for(const auto& column: table->GetColumns())
         // {
@@ -120,11 +119,20 @@ void ExecuteQuery(Table* table, const vector<column_index_t>& selectedColumnIndi
 
     table->Select(rows, selectedColumnIndices, &conditions);
 
+
     const auto end = std::chrono::high_resolution_clock::now();
 
     result.reserve(rows.size());
     for(auto& row: rows)
             result.push_back(&row);
+
+    
+    const vector<JoinField> joinConditions = {
+        JoinField(Field("", 0, Operator::GreaterThan, ConditionType::ConditionNone), Field("", 0, Operator::GreaterThan, ConditionType::ConditionNone)),
+    };
+    
+    Database::JoinTables(result, nullptr, {0, 1}, joinConditions);
+    
 
     // Database::JoinTables(result, table, { Field("", 0, Operator::OperatorNone, ConditionType::ConditionNone) });
 
