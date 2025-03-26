@@ -40,6 +40,9 @@ namespace QueryParser
     {
         for(auto& node : nodes)
             delete node;
+
+        for(auto& subStatement : subStatements)
+            delete subStatement;
     }
 
     std::ostream& operator<<(std::ostream& os, const Node& node) 
@@ -60,15 +63,22 @@ namespace QueryParser
 
     Query& Parser::Parse(vector<Token>& tokens)
     {
-        if(!tokens.empty())
+        if(tokens.empty())
         {
-            Statement* firstStatement = new Statement();
-            this->query.statements.push_back(firstStatement);
+            return this->query;
         }
 
-        for(const auto& token: tokens)
+        Statement* firstStatement = new Statement();
+        this->query.statements.push_back(firstStatement);
+
+        bool subquery = false;
+        bool semicolon = false;
+
+        for (int i = 0; i < tokens.size(); i++)
         {
             Node* node = nullptr;
+            const auto& token = tokens[i];
+
             switch (token.type) 
             {
                 case WordType::Number:
@@ -79,21 +89,82 @@ namespace QueryParser
                     break;
                 case WordType::LeftParenthesis:
                 {
-                    BlockStatement* statement = new BlockStatement();
-                    this->query.statements.push_back(statement);
+                    Statement* statement = Parser::ParseSubQuery(tokens, ++i);
+                    this->query.statements.back()->subStatements.push_back(statement);
+
+                    subquery = true;
                     break;
                 }
                 case WordType::RightParenthesis:
                 {
-                    const auto iterator = this->query.statements.back();
-                    if(dynamic_cast<BlockStatement*>(iterator) == nullptr)
+                    if(!subquery)
                         throw runtime_error("Enclosing parenthesis not specified");
+                    
+                    subquery = false;
                     break;
                 }
                 case WordType::Semicolon:
                 {
-                    Statement* statement = new Statement();
-                    this->query.statements.push_back(statement);
+                    semicolon = true;
+                    break;
+                }
+                default:
+                    throw runtime_error("Invalid token type");
+            }
+
+            if(node == nullptr)
+                continue;
+
+            if (semicolon)
+            {
+                this->query.statements.push_back(new Statement());
+                semicolon = false;
+            }
+
+            this->query.statements.back()->nodes.push_back(node);
+        }
+
+        return this->query;
+    }
+
+    Statement* Parser::ParseSubQuery(vector<Token>& tokens, int& indexToStart)
+    {
+        if(tokens.empty() 
+            || indexToStart >= tokens.size())
+            return nullptr;
+        
+        Statement* statement = new Statement();
+
+        int leftParentheses = 1;
+
+        for (; indexToStart < tokens.size(); indexToStart++)
+        {
+            const auto& token = tokens[indexToStart];
+
+            Node* node = nullptr;
+
+            switch (token.type) 
+            {
+                case WordType::Number:
+                    node = Parser::ParseNumber(token);
+                    break;
+                case WordType::String:
+                    node = Parser::ParseString(token);
+                    break;
+                case WordType::LeftParenthesis:
+                {
+                    Statement* subStatement = Parser::ParseSubQuery(tokens, ++indexToStart);
+                    statement->subStatements.push_back(subStatement);
+
+                    leftParentheses++;
+                    break;
+                }
+                case WordType::RightParenthesis:
+                {
+                    leftParentheses--;
+                    if(leftParentheses == 0)
+                        return statement;
+
                     break;
                 }
                 default:
@@ -103,11 +174,15 @@ namespace QueryParser
             if(node == nullptr)
                 continue;
             
-            this->query.statements.back()->nodes.push_back(node);
+            statement->nodes.push_back(node);
         }
 
-        return this->query;
+        if(leftParentheses != 0)
+            throw runtime_error("Enclosing parenthesis not specified");
+        
+        return statement;
     }
+    
 
     Node* Parser::ParseNumber(const Token& token)
     {

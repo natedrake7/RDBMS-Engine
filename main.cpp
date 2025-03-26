@@ -44,13 +44,13 @@ int main()
     {
         const string dbName = "stakosDb";
 
-        // CreateDatabase(dbName);
+         //CreateDatabase(dbName);
 
         UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
-        string sql = "       'hello'        ;(42)";
+        string sql = "       'hello' (42 (53)); 43";
 
         // vector<Token> tokens = Tokenizer::Get().TokenizeQuery(sql);
 

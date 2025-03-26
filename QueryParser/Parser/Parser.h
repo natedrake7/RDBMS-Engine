@@ -45,11 +45,8 @@ namespace QueryParser{
 
     struct Statement{
         vector<Node*> nodes;
-        virtual ~Statement();
-    };
-
-    struct BlockStatement : Statement{
-        vector<Statement> statements;
+        vector<Statement*> subStatements;
+        ~Statement();
     };
 
     struct Query{
@@ -79,7 +76,6 @@ namespace QueryParser{
         WordType type;  // "SELECT", "FROM", "WHERE", etc.
         variant<string, int64_t> value;
         vector<Node*> children; // Nested queries or joins
-        vector<Statement> statements;
     
         Node();
         ~Node();  // Destructor
@@ -95,6 +91,7 @@ namespace QueryParser{
 
         static Node* ParseNumber(const Token& token);
         static Node* ParseString(const Token& token);
+        static Statement* ParseSubQuery(vector<Token>& tokens, int& indexToStart);
 
         public:
             static Parser& Get()
