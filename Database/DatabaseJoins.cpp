@@ -9,6 +9,7 @@ using namespace DatabaseEngine::StorageTypes;
 
 namespace DatabaseEngine 
 {
+    /*Should be called when the where clause is not executed prior to the join*/
     void Database::JoinTables(Table* firstTable, Table* secondTable, const vector<Field>& conditions)
     {
         //basic nested loop join
@@ -24,10 +25,13 @@ namespace DatabaseEngine
         }
     }
 
+    /*Should be called only when where clause of the select contains an index and can be executed faster this way*/
     void Database::JoinTables(vector<Row>& firstTableRows, Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions)
     {
         //basic nested loop join
         vector<Row> selectedRows;
+
+        const auto& secondTableColumns = secondTable->GetColumns();
 
         //join conditions should have 2 columnIndices for each field to indicate which columns to match
         for(auto& row: firstTableRows)
@@ -43,7 +47,7 @@ namespace DatabaseEngine
                 const auto& block = row.GetData()[firstCondition.GetColumnIndex()];
 
                 joinConditions.emplace_back(block);
-                joinConditions.back().SetColumn(secondTable->GetColumns()[secondCondition.GetColumnIndex()]);
+                joinConditions.back().SetColumn(secondTableColumns[secondCondition.GetColumnIndex()]);
             }
 
             secondTable->Select(selectedRows, selectedColumnIndices, &joinConditions);

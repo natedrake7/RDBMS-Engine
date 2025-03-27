@@ -59,7 +59,7 @@ int main()
         // throw std::runtime_error("Not implemented yet");
 
         Table* table = db->OpenTable("Movies");
-        vector<column_index_t> selectedColumnIndices { 0, 1};
+        vector<column_index_t> selectedColumnIndices { 0, 1, 2};
 
         // for(const auto& column: table->GetColumns())
         // {
@@ -118,7 +118,6 @@ void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& sele
     };
 
     table->Select(rows, selectedColumnIndices, &conditions);
-
 
     const auto end = std::chrono::high_resolution_clock::now();
 

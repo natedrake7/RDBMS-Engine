@@ -199,7 +199,7 @@ public:
     static void JoinTables(StorageTypes::Table* firstTable, StorageTypes::Table* secondTable, const vector<Field>& conditions);
 
     static void JoinTables(vector<StorageTypes::Row>& firstTableRows, StorageTypes::Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions);
-};
+  };
 
 void CreateDatabase(const string &dbName);
 
