@@ -339,19 +339,85 @@ namespace DatabaseEngine::StorageTypes {
         this->SelectRowsFromHeap(&selectedRows, rowsToSelect, conditions);
       }
 
-      void Table::Select(vector<Row> &selectedRows, 
-                  const vector<column_index_t>& selectedColumnIndices, 
-                  const Indexing::Key& minimumValue, 
-                  const Indexing::Key& maximumValue, 
-                  const bool& useClusteredIndex, 
-                  const bool& clusteredIndexSeek, 
-                  const bool& useNonClusteredIndex,
-                  const size_t &count)
+      void Table::Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions, const size_t &count)
       {
         const size_t rowsToSelect =  (count == -1) 
-                ? numeric_limits<size_t>::max() 
-                : count;
+                                    ? numeric_limits<size_t>::max() 
+                                    : count;
 
+          const auto tableType = this->GetTableType();
+
+          const auto& clusteredIndexes = this->GetClusteredIndex();
+          const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
+
+          Key minimumValue;
+          Key maximumValue;
+
+          bool useClusteredIndex = false;
+          bool useNonClusteredIndex = false;
+          bool useHeap = false;
+
+          bool clusteredIndexSeek = false;
+          bool nonClusteredIndexSeek = false;
+
+          if(conditions != nullptr)
+            for(const auto& block: *conditions)
+            {
+                const auto& columnIndex = block.GetColumnIndex();
+
+                const ColumnType columnType = columns[columnIndex]->GetColumnType();
+      
+                if (columnType > ColumnType::ColumnTypeCount)
+                  throw invalid_argument("Table::Select: Unsupported Column Type");
+
+                int indexPosition = 0;
+                if(Table::VectorContainsIndex(clusteredIndexes, columnIndex, indexPosition))
+                {
+                  useClusteredIndex = true;
+                  
+                  //figure out how to perform index seek and index scan
+                  clusteredIndexSeek = clusteredIndexes[0] == columnIndex;
+
+                  if(!clusteredIndexSeek)
+                  {
+                    minimumValue.indexKeyPosition = indexPosition;
+                    minimumValue.currentSearchKeyPosition = minimumValue.subKeys.size();
+                  
+                    maximumValue.indexKeyPosition = indexPosition;
+                    maximumValue.currentSearchKeyPosition = maximumValue.subKeys.size();
+                  }
+                }
+
+                int nonClusteredIndexPosition = 0;
+
+                for(int i = 0;i < nonClusteredIndexes.size(); i++)
+                {
+                  if(Table::VectorContainsIndex(nonClusteredIndexes[i], columnIndex, indexPosition) && !clusteredIndexSeek)
+                  {
+                      useNonClusteredIndex = true;
+                      nonClusteredIndexPosition = i;
+
+                      nonClusteredIndexSeek = nonClusteredIndexes[i][0] == columnIndex;
+
+                      //prioritize clustered index seek over nonclustered index seek or scan
+                      if(!nonClusteredIndexSeek)
+                      {
+                        minimumValue.indexKeyPosition = indexPosition;
+                        minimumValue.currentSearchKeyPosition = minimumValue.subKeys.size();
+                      
+                        maximumValue.indexKeyPosition = indexPosition;
+                        maximumValue.currentSearchKeyPosition = maximumValue.subKeys.size();
+                      }
+                  }
+                }
+
+                useHeap = !useNonClusteredIndex && !useClusteredIndex;
+
+                minimumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
+                maximumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
+          }
+
+        //handle more complex queries like prefer index seek over index scan
         if(useClusteredIndex)
         {
             this->SelectRowsFromClusteredIndex(&selectedRows, rowsToSelect, minimumValue, maximumValue, clusteredIndexSeek, selectedColumnIndices);

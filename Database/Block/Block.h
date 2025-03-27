@@ -40,6 +40,8 @@ namespace DatabaseEngine::StorageTypes {
 
         [[nodiscard]] const ColumnType& GetColumnType() const;
 
+        void SetColumn(const Column* column);
+
         void PrintBlockData() const;
     };
 }

@@ -156,14 +156,7 @@ namespace DatabaseEngine::StorageTypes
 
             void Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Field> *conditions = nullptr, const size_t &count = -1);
 
-            void Select(vector<Row> &selectedRows,
-                        const vector<column_index_t>& selectedColumnIndices, 
-                        const Indexing::Key& minimumValue, 
-                        const Indexing::Key& maximumValue, 
-                        const bool& useClusteredIndex, 
-                        const bool& clusteredIndexSeek, 
-                        const bool& useNonClusteredIndex,
-                        const size_t &count = -1);
+            void Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
 
             void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
 

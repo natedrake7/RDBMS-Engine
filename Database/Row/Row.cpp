@@ -111,7 +111,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header.rowSize += block->GetBlockSize();
     }
 
-    void Row::InsertNewColumn(Block *block)
+    void Row::InsertNewColumn(Block* block)
     {
         this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
 

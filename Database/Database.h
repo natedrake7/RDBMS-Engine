@@ -66,6 +66,7 @@ class Database {
   string filename;
   string fileExtension;
   vector<StorageTypes::Table *> tables;
+  const vector<string (*)(DatabaseEngine::StorageTypes::Block *&block)> getBlockDataByDataTypeArray = {};
 
 protected:
     void ValidateTableCreation(StorageTypes::Table *table) const;
@@ -197,7 +198,7 @@ public:
 
     static void JoinTables(StorageTypes::Table* firstTable, StorageTypes::Table* secondTable, const vector<Field>& conditions);
 
-    static void JoinTables(vector<StorageTypes::Row*>& firstTableRows, StorageTypes::Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions);
+    static void JoinTables(vector<StorageTypes::Row>& firstTableRows, StorageTypes::Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions);
 };
 
 void CreateDatabase(const string &dbName);

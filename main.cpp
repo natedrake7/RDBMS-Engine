@@ -22,7 +22,7 @@ using namespace DatabaseEngine::StorageTypes;
 using namespace Storage;
 using namespace QueryParser;
 
-void ExecuteQuery(Table* table, const vector<column_index_t>& selectedColumnIndices);
+void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& selectedColumnIndices);
 void CreateMoviesTables(Database *db);
 void CreateActorsTable(Database *db);
 void InsertRowsToActorsTable(Table* table);
@@ -89,7 +89,7 @@ int main()
 
         //table->Update(updates, nullptr);
 
-        ExecuteQuery(table, selectedColumnIndices);
+        ExecuteQuery(table, db, selectedColumnIndices);
     }
     catch (const exception &exception) 
     {
@@ -100,7 +100,7 @@ int main()
     return 0;
 }
 
-void ExecuteQuery(Table* table, const vector<column_index_t>& selectedColumnIndices)
+void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& selectedColumnIndices)
 {
     //constexpr int searchKey = 90;
     //vector<Field> conditions = 
@@ -130,9 +130,10 @@ void ExecuteQuery(Table* table, const vector<column_index_t>& selectedColumnIndi
     const vector<JoinField> joinConditions = {
         JoinField(Field("", 0, Operator::GreaterThan, ConditionType::ConditionNone), Field("", 0, Operator::GreaterThan, ConditionType::ConditionNone)),
     };
+
+    Table* actorsTable = db->OpenTable("Actors");
     
-    Database::JoinTables(result, nullptr, {0, 1}, joinConditions);
-    
+    Database::JoinTables(rows, actorsTable, {0, 1}, joinConditions);
 
     // Database::JoinTables(result, table, { Field("", 0, Operator::OperatorNone, ConditionType::ConditionNone) });
 
