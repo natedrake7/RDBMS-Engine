@@ -146,6 +146,12 @@ namespace DatabaseEngine::StorageTypes {
             if(blockData == nullptr)
             {
                 cout << "NULL";
+                
+                if(i == this->data.size() - 1)
+                    cout << '\n';
+                else
+                    cout << " || ";
+
                 continue;
             }
 

@@ -69,6 +69,8 @@ class Database {
   const vector<string (*)(DatabaseEngine::StorageTypes::Block *&block)> getBlockDataByDataTypeArray = {};
 
 protected:
+    static void MergeRows(StorageTypes::Row& row, const vector<StorageTypes::Row>& selectedRows, const vector<column_index_t>& selectedColumnIndices, const StorageTypes::Table *secondTable);
+
     void ValidateTableCreation(StorageTypes::Table *table) const;
 
     void WriteHeaderToFile() const;
@@ -196,7 +198,7 @@ public:
 
     static void UpdateNodeConnections(Indexing::Node*& node);
 
-    static void JoinTables(StorageTypes::Table* firstTable, StorageTypes::Table* secondTable, const vector<Field>& conditions);
+    static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 
     static void JoinTables(vector<StorageTypes::Row>& firstTableRows, StorageTypes::Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions);
   };

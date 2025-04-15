@@ -291,6 +291,27 @@ namespace Indexing
         }
     }
 
+    void BPlusTree::IndexScan(vector<QueryData> &result) const
+    {
+        if (!root)
+            return;
+
+        Node *currentNode = this->SearchLeftMostLeafNode();
+        const Node *previousNode = nullptr;
+
+        while (currentNode)
+        {
+            for (int i = 0; i < currentNode->keys.size(); i++)
+                result.emplace_back(currentNode->dataPageId, i);
+
+            if(currentNode->nextNodeHeader.pageId == 0)
+                return;
+
+            previousNode = currentNode;
+            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
+        }
+    }
+
     void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
     {
         if (!root)
@@ -697,9 +718,7 @@ namespace Indexing
             case ColumnType::Int:
                 return *reinterpret_cast<const int32_t*>(this->value.data()) >= *reinterpret_cast<const int32_t*>(otherKey.value.data());
             case ColumnType::BigInt:
-            {
                 return *reinterpret_cast<const int64_t*>(this->value.data()) >= *reinterpret_cast<const int64_t*>(otherKey.value.data());
-            }
             case ColumnType::String:
             case ColumnType::UnicodeString:
             {

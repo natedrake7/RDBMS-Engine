@@ -263,6 +263,7 @@ namespace DatabaseEngine::StorageTypes {
           bool nonClusteredIndexSeek = false;
 
           if(conditions != nullptr)
+          {
             for(const auto& condition: *conditions)
             {
                 const auto& columnIndex = condition.GetColumnIndex();
@@ -322,24 +323,36 @@ namespace DatabaseEngine::StorageTypes {
 
                 minimumValue.InsertKey(Key(block->GetBlockData(), block->GetBlockSize(), columnType));
                 maximumValue.InsertKey(Key(block->GetBlockData(), block->GetBlockSize(), columnType));
+           }
           }
+          else if(!this->header.clusteredColumnIndexes.empty())
+              useClusteredIndex = true;
+          else if(!this->header.nonClusteredColumnIndexes.empty())
+              useNonClusteredIndex = true;
 
         //handle more complex queries like prefer index seek over index scan
         if(useClusteredIndex)
         {
-            this->SelectRowsFromClusteredIndex(&selectedRows, rowsToSelect, minimumValue, maximumValue, clusteredIndexSeek, selectedColumnIndices);
-            return;
+          this->SelectRowsFromClusteredIndex(
+            &selectedRows, 
+            rowsToSelect, 
+            conditions != nullptr ? &minimumValue : nullptr, 
+            conditions != nullptr ? &maximumValue : nullptr, 
+            clusteredIndexSeek, 
+            selectedColumnIndices
+          );
+          return;
         }
         else if (useNonClusteredIndex)
         {
-            this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions, selectedColumnIndices);
-            return;
+          this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions, selectedColumnIndices);
+          return;
         }
       
         this->SelectRowsFromHeap(&selectedRows, rowsToSelect, conditions);
       }
 
-      void Table::Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions, const size_t &count)
+      void Table::SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions, const size_t &count)
       {
         const size_t rowsToSelect =  (count == -1) 
                                     ? numeric_limits<size_t>::max() 
@@ -361,6 +374,7 @@ namespace DatabaseEngine::StorageTypes {
           bool nonClusteredIndexSeek = false;
 
           if(conditions != nullptr)
+          {
             for(const auto& block: *conditions)
             {
                 const auto& columnIndex = block.GetColumnIndex();
@@ -415,12 +429,24 @@ namespace DatabaseEngine::StorageTypes {
 
                 minimumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
                 maximumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
+            }
           }
+          else if(!this->header.clusteredColumnIndexes.empty())
+            useClusteredIndex = true;
+          else if(!this->header.nonClusteredColumnIndexes.empty())
+            useNonClusteredIndex = true;
 
         //handle more complex queries like prefer index seek over index scan
         if(useClusteredIndex)
         {
-            this->SelectRowsFromClusteredIndex(&selectedRows, rowsToSelect, minimumValue, maximumValue, clusteredIndexSeek, selectedColumnIndices);
+            this->SelectRowsFromClusteredIndex(
+              &selectedRows, 
+              rowsToSelect, 
+              conditions != nullptr ? &minimumValue : nullptr, 
+              conditions != nullptr ? &maximumValue : nullptr, 
+              clusteredIndexSeek, 
+              selectedColumnIndices
+            );
             return;
         }
         else if (useNonClusteredIndex)
@@ -503,7 +529,7 @@ namespace DatabaseEngine::StorageTypes {
         return maximumRowSize;
     }
 
-    void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Key& minimumValue, const Key& maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices)
+    void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Key* minimumValue, const Key* maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices)
     {
         vector<QueryData> results;
         const int32_t minKey = 0;
@@ -511,10 +537,12 @@ namespace DatabaseEngine::StorageTypes {
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
 
-        if(indexSeek)
-          tree->IndexSeek(minimumValue, maximumValue, results);
+        if(indexSeek && minimumValue != nullptr && maximumValue != nullptr)
+          tree->IndexSeek(*minimumValue, *maximumValue, results);
+        else if (minimumValue != nullptr && maximumValue != nullptr)
+          tree->IndexScan(*minimumValue, *maximumValue, results);
         else
-          tree->IndexScan(minimumValue, maximumValue, results);
+          tree->IndexScan(results);
 
         if(results.empty())
             return;

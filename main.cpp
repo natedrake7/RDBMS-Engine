@@ -132,10 +132,9 @@ void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& sele
 
     Table* actorsTable = db->OpenTable("Actors");
     
-    Database::JoinTables(rows, actorsTable, {0, 1}, joinConditions);
+    Database::JoinTables(rows, table, actorsTable, {0, 1}, joinConditions);
 
     // Database::JoinTables(result, table, { Field("", 0, Operator::OperatorNone, ConditionType::ConditionNone) });
-
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
     const auto orderStart = std::chrono::high_resolution_clock::now();
@@ -156,7 +155,7 @@ void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& sele
 
     //construct the query result here
 
-    PrintRows(result);
+    PrintRows(rows);
     
     cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
     cout<< "Order By Time: "<< orderElapsed.count() << "ms" << endl;

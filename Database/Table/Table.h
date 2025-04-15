@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <cstddef>
 #include <mutex>
 #include <string>
 #include <unordered_set>
@@ -122,7 +123,7 @@ namespace DatabaseEngine::StorageTypes
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Indexing::Node* GetIndexFromDisk(const page_id_t& indexPageId) const;
         
-            void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Indexing::Key& minimumValue, const Indexing::Key& maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices);
+            void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Indexing::Key* minimumValue, const Indexing::Key* maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices);
             void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions, const vector<column_index_t>& selectedColumnIndices);
             void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
             void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows);
@@ -156,7 +157,7 @@ namespace DatabaseEngine::StorageTypes
 
             void Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Field> *conditions = nullptr, const size_t &count = -1);
 
-            void Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
+            void SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
 
             void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
 
