@@ -25,7 +25,8 @@ namespace DataTypes
 	{
 		tm time = {};
 
-		localtime_s(&time, &this->timeStamp);
+		localtime_r(&this->timeStamp, &time);
+		// localtime_s(&time, &this->timeStamp);
 		return time.tm_year + 1900;
 	}
 
@@ -33,7 +34,8 @@ namespace DataTypes
 	{
 		tm time = {};
 
-		localtime_s(&time, &this->timeStamp);
+		localtime_r(&this->timeStamp, &time);
+		// localtime_s(&time, &this->timeStamp);
 		return time.tm_mon + 1;
 	}
 
@@ -41,22 +43,26 @@ namespace DataTypes
 	{
 		tm time = {};
 
-		localtime_s(&time, &this->timeStamp);
+		localtime_r(&this->timeStamp, &time);
+		//localtime_s(&time, &this->timeStamp);
 		return time.tm_mday;
 	}
 
 	int DateTime::GetHours() const
 	{
 		tm time = {};
-		localtime_s(&time, &this->timeStamp);
 
+		localtime_r(&this->timeStamp, &time);
+		//localtime_s(&time, &this->timeStamp);
 		return time.tm_hour;
 	}
 
 	int DateTime::GetMinutes() const
 	{
 		tm time = {};
-		localtime_s(&time, &this->timeStamp);
+		
+		localtime_r(&this->timeStamp, &time);
+		//localtime_s(&time, &this->timeStamp);
 		return time.tm_min;
 	}
 
@@ -64,7 +70,8 @@ namespace DataTypes
 	{
 		tm time = {};
 
-		localtime_s(&time, &this->timeStamp);
+		localtime_r(&this->timeStamp, &time);
+		//localtime_s(&time, &this->timeStamp);
 		return time.tm_sec;
 	}
 
@@ -98,9 +105,19 @@ namespace DataTypes
 	{
 
 		auto timePoint = std::chrono::system_clock::from_time_t(this->timeStamp);
-        
-        // Use std::format with chrono-style specifiers
-        return std::format("{:%Y-%m-%d %H:%M:%S}", timePoint);
+
+		// Convert the time_point to std::time_t
+		std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
+
+		// Convert to std::tm (local time)
+		struct tm* localTime = std::localtime(&t);
+
+		// Create a buffer to hold the formatted time
+		char buffer[100];
+
+		std::strftime(buffer, sizeof(buffer), format.c_str(), localTime);
+
+		return {buffer};
 	}
 
 	time_t DateTime::ToUnixTimeStamp(const int year, const int month, const int day, const int hour, const int minute, const int second)

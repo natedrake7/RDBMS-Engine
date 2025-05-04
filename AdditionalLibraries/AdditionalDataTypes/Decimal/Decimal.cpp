@@ -1,7 +1,5 @@
 ﻿#include "Decimal.h"
-
 #include <algorithm>
-#include <cstdint>
 
 namespace DataTypes {
     Decimal::Decimal() = default;

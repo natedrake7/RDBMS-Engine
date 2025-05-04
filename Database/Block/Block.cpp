@@ -2,6 +2,8 @@
 #include "../Database.h"
 #include "../Column/Column.h"
 
+#include <cstring>
+
 namespace DatabaseEngine::StorageTypes {
     
     Block::Block(const void* data, const block_size_t& size, const Column* column)

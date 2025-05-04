@@ -1,5 +1,4 @@
 ﻿#include "SortingFunctions.h"
-#include <ppltasks.h>
 #include <ranges>
 
 #include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
@@ -9,6 +8,9 @@
 #include "../Row/Row.h"
 #include "SortingAlgorithms/MergeSort/MergeSort.h"
 #include "SortingAlgorithms/QuickSort/QuickSort.h"
+
+#include <algorithm>
+#include <cstring>
 
 using namespace DatabaseEngine::StorageTypes;
 

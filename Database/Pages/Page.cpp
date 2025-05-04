@@ -6,6 +6,8 @@
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Block/Block.h"
 
+#include <cstring>
+
 using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages

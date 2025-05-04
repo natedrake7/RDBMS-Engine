@@ -1,0 +1,138 @@
+#include <stdexcept>
+#include <string>
+#include <iostream>
+#include <ostream>
+#include <vector>
+
+#include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
+
+#include <sstream>
+
+#ifdef _WIN32
+  #include <winsock2.h>
+  #pragma comment(lib, "ws2_32.lib")
+#else
+  #include <sys/socket.h>
+  #include <arpa/inet.h>
+  #include <unistd.h>
+#endif
+
+using namespace std;
+
+typedef struct ConnectionParameters {
+  int port;
+  string hostName;
+  string username;
+  string password;
+
+  int socket;
+
+  ConnectionParameters() {
+    this->port = 0;
+    this->socket = 0;
+  }
+  ~ConnectionParameters() = default;
+}ConnectionParameters;
+
+static void ValidateConnectionString(ConnectionParameters& parameters, const vector<string>& connectionString);
+void InitializeConnectionToServer(ConnectionParameters& parameters);
+void CloseConnection(ConnectionParameters& parameters);
+
+int main()
+{
+  const vector connectionString = {
+    string("-h"),
+    string("127.0.0.5"),
+    string("-P"),
+    string("1433"),
+    string("-p"),
+    string("kalispera"),
+    string("-u"),
+    string("natedrake7")
+  };
+
+  ConnectionParameters parameters;
+  ValidateConnectionString(parameters, connectionString);
+
+  InitializeConnectionToServer(parameters);
+  
+
+  cout << "hello" << endl;
+}
+
+void InitializeConnectionToServer(ConnectionParameters& parameters) {
+  #ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData))
+      throw runtime_error("WSAStartup failed")
+  #endif
+
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+  if (sock < 0)
+    throw runtime_error("Failed to initialize socket");
+
+  sockaddr_in serverAddress = {};
+
+  serverAddress.sin_family = AF_INET;
+  serverAddress.sin_port = htons(parameters.port);
+
+  inet_pton(AF_INET, parameters.hostName.c_str(), &serverAddress.sin_addr);
+
+  if (connect(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
+    #ifdef _WIN32
+        closesocket(sock);
+        WSACleanup();
+    #else
+        close(sock);
+    #endif
+
+    std::ostringstream oss;
+    oss << "Failed to connect to host: " << parameters.hostName << ":" << parameters.port;
+
+    throw runtime_error(oss.str());
+  }
+
+  cout << "Connection established" << endl;
+
+  parameters.socket = sock;
+}
+
+void CloseConnection(ConnectionParameters &parameters)
+{
+  #ifdef _WIN32
+    closesocket(parameters.socket);
+    WSACleanup();
+  #else
+    close(parameters.socket);
+  #endif
+}
+
+void ValidateConnectionString(ConnectionParameters& parameters, const vector<string>& connectionString) {
+  
+  for (int i = 0; i < connectionString.size(); i++) {
+    const auto& parameter = connectionString[i];
+
+    if (i + 1 >= connectionString.size())
+      throw invalid_argument("invalid argument specified in connection string!");
+    
+    if (parameter == "-P") {
+      parameters.port = SafeConverter<int32_t>::SafeStoi(connectionString[++i]);
+      continue;
+    }
+    if (parameter == "-h") {
+      parameters.hostName = connectionString[++i];
+      continue;
+    }
+    if (parameter == "-u") {
+      parameters.password = connectionString[++i];
+      continue;
+    }
+    if (parameter == "-p") {
+      parameters.username = connectionString[++i];
+      continue;
+    }
+    
+    throw invalid_argument("invalid argument specified in connection string!");
+  }
+}

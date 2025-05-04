@@ -3,6 +3,8 @@
 #include "../GlobalAllocationMap/GlobalAllocationMapPage.h"
 #include "../../Database.h"
 
+#include <cstring>
+
 using namespace ByteMaps;
 using namespace DatabaseEngine::StorageTypes;
 using namespace DatabaseEngine;

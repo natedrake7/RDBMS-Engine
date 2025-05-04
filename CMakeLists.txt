@@ -1,7 +1,7 @@
-﻿cmake_minimum_required(VERSION 3.29)
-project(DatabaseInterface)
+﻿project(DatabaseInterface)
 
-set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(DatabaseInterface
         main.cpp)
@@ -15,18 +15,18 @@ add_library(QueryParser
 add_library(AdditionalLibraries
         AdditionalLibraries/BitMap/BitMap.cpp
         AdditionalLibraries/BitMap/BitMap.h
+        AdditionalLibraries/ByteMap/ByteMap.cpp
+        AdditionalLibraries/ByteMap/ByteMap.h
         AdditionalLibraries/AdditionalDataTypes/Field/Field.cpp
         AdditionalLibraries/AdditionalDataTypes/Field/Field.h
         AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.cpp
         AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h
-        Database/RowCondition/RowCondition.cpp
-        Database/RowCondition/RowCondition.h
-        AdditionalLibraries/ByteMap/ByteMap.cpp
-        AdditionalLibraries/ByteMap/ByteMap.h
         AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
         AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
+        Database/RowCondition/RowCondition.cpp
+        Database/RowCondition/RowCondition.h
         AdditionalLibraries/SafeConverter/SafeConverter.cpp
         AdditionalLibraries/SafeConverter/SafeConverter.h
         AdditionalLibraries/HashSet/HashSet.h
@@ -82,4 +82,12 @@ add_library(Database
         Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
         Database/AdditionalFunctions/StringFunctions/StringFunctions.h)
 
-target_link_libraries(DatabaseInterface PRIVATE AdditionalLibraries PRIVATE QueryParser  PRIVATE Database)
+add_library(Server  
+                Server/ConnectionManager/ConnectionManager.cpp
+                Server/ConnectionManager/ConnectionManager.h)
+
+add_executable(Client Client/main.cpp)
+
+target_link_libraries(Client PRIVATE AdditionalLibraries)
+
+target_link_libraries(DatabaseInterface PRIVATE Database Server AdditionalLibraries QueryParser)

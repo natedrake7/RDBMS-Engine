@@ -9,6 +9,8 @@
 #include "../../Pages/Page.h"
 #include "../../Pages/PageFreeSpace/PageFreeSpacePage.h"
 
+#include <cstring>
+
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
 using namespace Pages;

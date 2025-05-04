@@ -1,6 +1,8 @@
 ﻿#include "LargeDataPage.h"
 #include "../Page.h"
 
+#include <cstring>
+
 using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {

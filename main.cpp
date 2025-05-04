@@ -16,6 +16,7 @@
 #include "Database/Table/Table.h"
 #include "QueryParser/Tokenizer/Tokenizer.h"
 #include "QueryParser/Parser/Parser.h"
+#include "Server/ConnectionManager/ConnectionManager.h"
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
@@ -36,8 +37,41 @@ void InsertRowsToMoviesTable(Table* table);
 //handle joins
 //deletes
 //advanced functions
+
+std::atomic<bool> serverRunning{true};
+ 
 int main() 
 {
+    Server::ConnectionParameters parameters;
+
+    parameters.port = 1433;
+    parameters.hostName = "127.0.0.5";
+
+    std::thread connectionThread(Server::HandleNewConnections, std::ref(parameters), std::ref(serverRunning));
+
+    try {
+
+        string input;
+
+        cout << "Server Initialized correctly, type exit to shutdown" << endl;
+        while (true) {
+            cin >> input;
+
+            if (input == "exit") {
+                
+                serverRunning = false;
+                break;
+            }
+        }
+    }
+    catch (const exception& e) {
+        cout << e.what() << endl;
+    }
+
+    
+    connectionThread.join();
+    
+    return 0;
     setlocale(LC_ALL, "");
     Database *db = nullptr;
     try 

@@ -1,12 +1,11 @@
 ﻿#include "BPlusTree.h"
 #include <algorithm>
-#include <cstdint>
 #include <cstring>
 #include <ctime>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
-#include <string.h>
+#include <cstring>
 #include "../../Database/Table/Table.h"
 #include "../../Database/Pages/IndexPage/IndexPage.h"
 #include "../../Database/Storage/StorageManager/StorageManager.h"

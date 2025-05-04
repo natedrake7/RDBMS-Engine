@@ -3,6 +3,8 @@
 #include "../../Column/Column.h"
 #include "../../Row/Row.h"
 
+#include <limits>
+
 using namespace DatabaseEngine::StorageTypes;
 using namespace Constants;
 

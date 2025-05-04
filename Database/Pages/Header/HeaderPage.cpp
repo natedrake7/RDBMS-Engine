@@ -4,6 +4,8 @@
 #include "../../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../../Column/Column.h"
 
+#include <cstring>
+
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
 using namespace ByteMaps;

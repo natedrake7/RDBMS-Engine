@@ -7,6 +7,7 @@
 #include "../Column/Column.h"
 #include "../Pages/LargeObject/LargeDataPage.h"
 #include <cstdint>
+#include <cstring>
 #include <ctime>
 #include <stdexcept>
 

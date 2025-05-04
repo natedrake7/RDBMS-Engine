@@ -1,5 +1,7 @@
 ﻿#include "ByteMap.h"
 
+#include <cstring>
+
 namespace ByteMaps {
     ByteMap::ByteMap() = default;
 

@@ -1,4 +1,6 @@
 ﻿#include "BitMap.h"
+
+#include <cstring>
 #include <iostream>
 
 namespace ByteMaps
