@@ -47,7 +47,7 @@ int main()
     parameters.port = 1433;
     parameters.hostName = "127.0.0.5";
 
-    std::thread connectionThread(Server::HandleNewConnections, std::ref(parameters), std::ref(serverRunning));
+    std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
     try {
 

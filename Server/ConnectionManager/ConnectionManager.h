@@ -1,21 +1,40 @@
 #pragma once
 #include <atomic>
+#include <queue>
 #include <string>
+#include <sys/epoll.h>
 
 using namespace std;
 
 namespace Server {
 
+  constexpr int MAX_CONNECTIONS = 10;
+
   typedef struct ConnectionParameters {
     int port;
+    int serverSocket;
+    int epollFileDescriptor;
     string hostName;
 
-    int socket;
-    int clientSocket;
   }ConnectionParameters;
 
-  void HandleNewConnections(ConnectionParameters& parameters, const atomic<bool>& isServerRunning);
-  void CloseServerConnection(const ConnectionParameters& parameters);
-  void CloseClientConnection(const ConnectionParameters& parameters);
+  void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning);
+
+  class ConnectionManager {
+    ConnectionParameters parameters;
+    vector<epoll_event> events;
+
+    protected:
+      static void CloseServerConnection(const ConnectionParameters& parameters);
+      static void CloseClientConnection(const ConnectionParameters& parameters);
+      void InitializeServerSocket();
+    public:
+      explicit ConnectionManager(const ConnectionParameters& parameters);
+      ~ConnectionManager() = default;
+
+      void HandleNewConnections(const atomic<bool>& isServerRunning);
+  };
+
+
 
 }
