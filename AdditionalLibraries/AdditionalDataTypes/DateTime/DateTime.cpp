@@ -104,13 +104,13 @@ namespace DataTypes
 	string DateTime::ToString(const string &format) const
 	{
 
-		auto timePoint = std::chrono::system_clock::from_time_t(this->timeStamp);
+		const auto timePoint = std::chrono::system_clock::from_time_t(this->timeStamp);
 
 		// Convert the time_point to std::time_t
 		std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
 
 		// Convert to std::tm (local time)
-		struct tm* localTime = std::localtime(&t);
+		const struct tm* localTime = std::localtime(&t);
 
 		// Create a buffer to hold the formatted time
 		char buffer[100];

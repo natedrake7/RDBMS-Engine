@@ -25,9 +25,11 @@ namespace Server {
     vector<epoll_event> events;
 
     protected:
-      static void CloseServerConnection(const ConnectionParameters& parameters);
-      static void CloseClientConnection(const ConnectionParameters& parameters);
+      void CloseServerConnection()const;
+      void CloseClientConnection(const int& clientSocket)const;
+      void HandleClientConnection(const int& clientSocket)const;
       void InitializeServerSocket();
+    
     public:
       explicit ConnectionManager(const ConnectionParameters& parameters);
       ~ConnectionManager() = default;

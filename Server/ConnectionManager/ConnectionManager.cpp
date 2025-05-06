@@ -31,41 +31,41 @@ namespace Server {
 
   void ConnectionManager::HandleNewConnections(const atomic<bool>& isServerRunning)
   {
-
     this->InitializeServerSocket();
-
     
     while (isServerRunning) {
-      int eventCount = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), -1);
+      const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), -1);
+
       if (eventCount < 0) {
-        perror("epoll_wait");
+        perror("epoll_wait failed");
         continue;
       }
 
       for (int i = 0;i < eventCount; i++) {
-        if (events[i].data.fd == this->parameters.serverSocket) {
-          sockaddr_in clientAddress = {};
-          socklen_t clientSize = sizeof(clientAddress);
-    
-          const int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
-
-          if (clientSocket < 0) {
-            std::cerr << "Connection with client failed to establish" << endl;
-          }
-          
-          epoll_event clientEvent{};
-          clientEvent.events = EPOLLIN | EPOLLET; // Edge-triggered for efficiency
-          clientEvent.data.fd = clientSocket;
-
-          epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, clientSocket, &clientEvent);
-          std::cout << "Accepted client: " << clientSocket << std::endl;
+        if (!(events[i].events & EPOLLIN))
+          continue;
+        
+        if (events[i].data.fd != this->parameters.serverSocket) {
+          ConnectionManager::HandleClientConnection(events[i].data.fd);
+          continue;
         }
-        else {
-          //client sockets
+
+        sockaddr_in clientAddress = {};
+        socklen_t clientSize = sizeof(clientAddress);
+  
+        const int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
+
+        if (clientSocket < 0) {
+          std::cerr << "Connection with client failed to establish" << endl;
         }
+        
+        epoll_event clientEvent{};
+        clientEvent.events = EPOLLIN | EPOLLET; // Edge-triggered for efficiency
+        clientEvent.data.fd = clientSocket;
+
+        epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, clientSocket, &clientEvent);
+        std::cout << "Accepted client: " << clientSocket << std::endl;
       }
-      
-
     }
 
     cout << "Closing connections" << endl;
@@ -97,7 +97,7 @@ namespace Server {
       throw runtime_error("Failed to bind socket");
     
     if (listen(sock, SOMAXCONN) < 0) {
-      CloseServerConnection(this->parameters);
+      this->CloseServerConnection();
       throw runtime_error("Failed to listen on socket");
     }
 
@@ -115,23 +115,50 @@ namespace Server {
     this->events.push_back(event);
   }
 
-  void ConnectionManager::CloseServerConnection(const ConnectionParameters &parameters)
+  void ConnectionManager::CloseServerConnection() const
   {
-    #ifdef _WIN32
-        closesocket(parameters.serverSocket);
-        WSACleanup();
-    #else
-        close(parameters.serverSocket);
-    #endif
+    for (const auto& event : this->events) {
+      epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, event.data.fd, nullptr);
+#ifdef _WIN32
+      closesocket(event.data.fd);
+#else
+      close(event.data.fd);
+#endif
+    }
+    
+#ifdef _WIN32
+    closesocket(this->parameters.epollFileDescriptor);
+    WSACleanup();
+#else
+    close(this->parameters.epollFileDescriptor);
+#endif
   }
 
-  void ConnectionManager::CloseClientConnection(const ConnectionParameters &parameters)
+  void ConnectionManager::CloseClientConnection(const int &clientSocket) const
   {
-    // #ifdef _WIN32
-    //     closesocket(parameters.clientSocket);
-    //     WSACleanup();
-    // #else
-    //     close(parameters.clientSocket);
-    // #endif
+    epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, clientSocket, nullptr);
+
+#ifdef _WIN32
+    closesocket(clientSocket);
+    WSACleanup();
+#else
+    close(clientSocket);
+#endif
+  }
+
+  void ConnectionManager::HandleClientConnection(const int &clientSocket) const{
+    vector<unsigned char> buffer;
+    const ssize_t bytesRead = recv(clientSocket, buffer.data(), 100, 0);
+    
+    if (bytesRead > 0) {
+      cout<< buffer.data() << endl;
+      return;
+    }
+    if (bytesRead == 0) {
+      this->CloseClientConnection(clientSocket);
+      return;
+    }
+
+    perror("recv failed");
   }
 } // Server
