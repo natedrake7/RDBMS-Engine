@@ -53,11 +53,32 @@ int main()
 
   ConnectionParameters parameters;
   ValidateConnectionString(parameters, connectionString);
-
   InitializeConnectionToServer(parameters);
-  
 
-  cout << "hello" << endl;
+  string input;
+  cout << "Please enter the query: " << endl;
+
+  while(true){
+    cin >> input;
+
+    if(input == "exit")
+      break;
+
+    const int bytesSent = send(parameters.socket, input.data(), input.size(), 0);
+
+    if(bytesSent < 0)
+    {
+      cerr << "Failed to send request to server" << endl;
+      CloseConnection(parameters);
+      
+      return -1;
+    }
+  }
+
+  CloseConnection(parameters);
+  cout << "Connection Closed" << endl;
+
+  return 0;
 }
 
 void InitializeConnectionToServer(ConnectionParameters& parameters) {
@@ -79,7 +100,10 @@ void InitializeConnectionToServer(ConnectionParameters& parameters) {
 
   inet_pton(AF_INET, parameters.hostName.c_str(), &serverAddress.sin_addr);
 
-  if (connect(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
+  const int hasConnectedToServer = connect(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress));
+
+  cout << hasConnectedToServer << endl;
+  if (hasConnectedToServer < 0) {
     #ifdef _WIN32
         closesocket(sock);
         WSACleanup();

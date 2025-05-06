@@ -1,9 +1,11 @@
 #include "ConnectionManager.h"
 
 #include <atomic>
+#include <cstring>
 #include <iostream>
 #include <ostream>
 #include <stdexcept>
+#include <fcntl.h>
 #ifdef _WIN32
   #include <winsock2.h>
   #pragma comment(lib, "ws2_32.lib")
@@ -32,18 +34,23 @@ namespace Server {
   void ConnectionManager::HandleNewConnections(const atomic<bool>& isServerRunning)
   {
     this->InitializeServerSocket();
-    
+    vector<epoll_event> events(this->parameters.numberOfConnections);
+
     while (isServerRunning) {
-      const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), -1);
+      const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, events.data(), events.size(), 10);
 
       if (eventCount < 0) {
-        perror("epoll_wait failed");
+        cerr << "epoll_wait failed: " << strerror(errno) << endl;
         continue;
       }
 
       for (int i = 0;i < eventCount; i++) {
+        cout << "hello" << endl;
+        
         if (!(events[i].events & EPOLLIN))
           continue;
+
+        cout << "event found" << endl;
         
         if (events[i].data.fd != this->parameters.serverSocket) {
           ConnectionManager::HandleClientConnection(events[i].data.fd);
@@ -54,6 +61,11 @@ namespace Server {
         socklen_t clientSize = sizeof(clientAddress);
   
         const int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
+
+        const int flags = fcntl(clientSocket, F_GETFL, 0);
+        fcntl(clientSocket, F_SETFL, flags | O_NONBLOCK);
+
+        cout << "hello from client" << endl;
 
         if (clientSocket < 0) {
           std::cerr << "Connection with client failed to establish" << endl;
@@ -70,7 +82,7 @@ namespace Server {
 
     cout << "Closing connections" << endl;
 
-    this->CloseServerConnection();
+    this->CloseServerConnection(events);
   }
 
   void ConnectionManager::InitializeServerSocket()
@@ -97,7 +109,7 @@ namespace Server {
       throw runtime_error("Failed to bind socket");
     
     if (listen(sock, SOMAXCONN) < 0) {
-      this->CloseServerConnection();
+      this->CloseServerConnection({});
       throw runtime_error("Failed to listen on socket");
     }
 
@@ -112,12 +124,12 @@ namespace Server {
     event.events = EPOLLIN;
     event.data.fd = sock;
 
-    this->events.push_back(event);
+    epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, sock, &event);
   }
 
-  void ConnectionManager::CloseServerConnection() const
+  void ConnectionManager::CloseServerConnection(const vector<epoll_event>& events) const
   {
-    for (const auto& event : this->events) {
+    for (const auto& event : events) {
       epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, event.data.fd, nullptr);
 #ifdef _WIN32
       closesocket(event.data.fd);
@@ -147,7 +159,7 @@ namespace Server {
   }
 
   void ConnectionManager::HandleClientConnection(const int &clientSocket) const{
-    vector<unsigned char> buffer;
+    vector<unsigned char> buffer(100);
     const ssize_t bytesRead = recv(clientSocket, buffer.data(), 100, 0);
     
     if (bytesRead > 0) {

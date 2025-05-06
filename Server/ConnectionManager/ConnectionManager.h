@@ -16,16 +16,17 @@ namespace Server {
     int epollFileDescriptor;
     string hostName;
 
+    int numberOfConnections;
+
   }ConnectionParameters;
 
   void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning);
 
   class ConnectionManager {
     ConnectionParameters parameters;
-    vector<epoll_event> events;
 
     protected:
-      void CloseServerConnection()const;
+      void CloseServerConnection(const vector<epoll_event>& events)const;
       void CloseClientConnection(const int& clientSocket)const;
       void HandleClientConnection(const int& clientSocket)const;
       void InitializeServerSocket();
