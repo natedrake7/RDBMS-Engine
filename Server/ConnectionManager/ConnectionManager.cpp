@@ -70,7 +70,7 @@ namespace Server {
 
     cout << "Closing connections" << endl;
 
-    ConnectionManager::CloseServerConnection(parameters);
+    this->CloseServerConnection();
   }
 
   void ConnectionManager::InitializeServerSocket()

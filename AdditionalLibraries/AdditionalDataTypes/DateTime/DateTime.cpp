@@ -25,8 +25,11 @@ namespace DataTypes
 	{
 		tm time = {};
 
+#ifdef _WIN32
+		localtime_s(&time, &this->timeStamp);
+#else
 		localtime_r(&this->timeStamp, &time);
-		// localtime_s(&time, &this->timeStamp);
+#endif
 		return time.tm_year + 1900;
 	}
 
@@ -34,7 +37,11 @@ namespace DataTypes
 	{
 		tm time = {};
 
+#ifdef _WIN32
+		localtime_s(&time, &this->timeStamp);
+#else
 		localtime_r(&this->timeStamp, &time);
+#endif
 		// localtime_s(&time, &this->timeStamp);
 		return time.tm_mon + 1;
 	}
@@ -43,8 +50,11 @@ namespace DataTypes
 	{
 		tm time = {};
 
+#ifdef _WIN32
+		localtime_s(&time, &this->timeStamp);
+#else
 		localtime_r(&this->timeStamp, &time);
-		//localtime_s(&time, &this->timeStamp);
+#endif
 		return time.tm_mday;
 	}
 
@@ -52,8 +62,11 @@ namespace DataTypes
 	{
 		tm time = {};
 
+#ifdef _WIN32
+		localtime_s(&time, &this->timeStamp);
+#else
 		localtime_r(&this->timeStamp, &time);
-		//localtime_s(&time, &this->timeStamp);
+#endif
 		return time.tm_hour;
 	}
 
@@ -61,8 +74,11 @@ namespace DataTypes
 	{
 		tm time = {};
 		
+#ifdef _WIN32
+		localtime_s(&time, &this->timeStamp);
+#else
 		localtime_r(&this->timeStamp, &time);
-		//localtime_s(&time, &this->timeStamp);
+#endif
 		return time.tm_min;
 	}
 
@@ -70,8 +86,11 @@ namespace DataTypes
 	{
 		tm time = {};
 
+#ifdef _WIN32
+		localtime_s(&time, &this->timeStamp);
+#else
 		localtime_r(&this->timeStamp, &time);
-		//localtime_s(&time, &this->timeStamp);
+#endif
 		return time.tm_sec;
 	}
 
@@ -106,8 +125,10 @@ namespace DataTypes
 
 		const auto timePoint = std::chrono::system_clock::from_time_t(this->timeStamp);
 
-		// Convert the time_point to std::time_t
-		std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
+#ifdef _WIN32
+		return std::format("{:%Y-%m-%d %H:%M:%S}", timePoint);
+#else
+		const std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
 
 		// Convert to std::tm (local time)
 		const struct tm* localTime = std::localtime(&t);
@@ -118,6 +139,7 @@ namespace DataTypes
 		std::strftime(buffer, sizeof(buffer), format.c_str(), localTime);
 
 		return {buffer};
+#endif
 	}
 
 	time_t DateTime::ToUnixTimeStamp(const int year, const int month, const int day, const int hour, const int minute, const int second)
