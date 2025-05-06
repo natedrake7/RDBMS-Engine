@@ -42,10 +42,7 @@ std::atomic<bool> serverRunning{true};
  
 int main() 
 {
-    Server::ConnectionParameters parameters;
-
-    parameters.port = 1433;
-    parameters.hostName = "127.0.0.5";
+    Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
     std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 

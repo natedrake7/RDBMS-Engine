@@ -1,5 +1,7 @@
 #include "ConnectionManager.h"
 
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol.h"
+
 #include <atomic>
 #include <cstring>
 #include <iostream>
@@ -18,6 +20,26 @@
 #endif
 
 namespace Server {
+
+  ConnectionParameters::ConnectionParameters() {
+    this->hostName = "127.0.0.1";
+    this->numberOfConnections = 20;
+    this->timeoutTime = 10;
+    this->port = 1433;
+
+    this->epollFileDescriptor = -1;
+    this->serverSocket = -1;
+  }
+
+  ConnectionParameters::ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime){
+    this->hostName = hostname;
+    this->numberOfConnections = numberOfConnections;
+    this->timeoutTime = timeoutTime;
+    this->port = port;
+
+    this->epollFileDescriptor = -1;
+    this->serverSocket = -1;
+  }
 
   void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning)
   {
@@ -45,13 +67,9 @@ namespace Server {
       }
 
       for (int i = 0;i < eventCount; i++) {
-        cout << "hello" << endl;
-        
         if (!(events[i].events & EPOLLIN))
           continue;
 
-        cout << "event found" << endl;
-        
         if (events[i].data.fd != this->parameters.serverSocket) {
           ConnectionManager::HandleClientConnection(events[i].data.fd);
           continue;
@@ -64,8 +82,6 @@ namespace Server {
 
         const int flags = fcntl(clientSocket, F_GETFL, 0);
         fcntl(clientSocket, F_SETFL, flags | O_NONBLOCK);
-
-        cout << "hello from client" << endl;
 
         if (clientSocket < 0) {
           std::cerr << "Connection with client failed to establish" << endl;
@@ -159,18 +175,60 @@ namespace Server {
   }
 
   void ConnectionManager::HandleClientConnection(const int &clientSocket) const{
-    vector<unsigned char> buffer(100);
-    const ssize_t bytesRead = recv(clientSocket, buffer.data(), 100, 0);
+
+    ConnectionProtocol protocol;
+    const ssize_t headerBytesRead = recv(clientSocket, &protocol.header, sizeof(protocol.header), 0);
+
+    cout << static_cast<int>(protocol.header.dataType) << endl;
     
-    if (bytesRead > 0) {
-      cout<< buffer.data() << endl;
+    if (headerBytesRead > 0) {
+      ConnectionManager::ReadBodyFromClient(clientSocket, protocol);
       return;
     }
-    if (bytesRead == 0) {
+    
+    if (headerBytesRead == 0) {
       this->CloseClientConnection(clientSocket);
       return;
     }
 
     perror("recv failed");
   }
+
+  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, ConnectionProtocol &protocol){
+    protocol.buffer.resize(protocol.header.size);
+
+    if (recv(clientSocket, protocol.buffer.data(), protocol.header.size, 0) <= 0) {
+      perror("failed to read body from client or body was empty!");
+      return;
+    }
+
+    if (protocol.header.dataType == ConnectionProtocolType::Authorize)
+      ConnectionManager::AuthorizeClientConnection(clientSocket, protocol);
+  }
+
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, ConnectionProtocol &protocol){
+    AuthorizeBody body;
+
+    const unsigned char* bufferPtr = protocol.buffer.data();
+      
+    int usernameSize = 0, passwordSize = 0;
+    
+    memcpy(&usernameSize, bufferPtr, sizeof(int));
+    bufferPtr += sizeof(int);
+
+    body.username.resize(usernameSize);
+    memcpy(body.username.data(), bufferPtr, usernameSize);
+    bufferPtr += usernameSize;
+
+    memcpy(&passwordSize, bufferPtr, sizeof(int));
+    bufferPtr += sizeof(int);
+    
+    body.password.resize(passwordSize);
+    memcpy(body.password.data(), bufferPtr, passwordSize);
+    bufferPtr += passwordSize;
+
+    if (body.username == "natedrake7" && body.password == "kalispera") {
+      cout << "SuccessFully Authorized!" << endl;
+    }
+}
 } // Server

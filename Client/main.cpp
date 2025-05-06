@@ -1,3 +1,6 @@
+#include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol.h"
+
+
 #include <stdexcept>
 #include <string>
 #include <iostream>
@@ -5,7 +8,9 @@
 #include <vector>
 
 #include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol.h"
 
+#include <cstring>
 #include <sstream>
 
 #ifdef _WIN32
@@ -81,6 +86,43 @@ int main()
   return 0;
 }
 
+void AuthorizeClientConnection(const int& socket, const ConnectionParameters& parameters) {
+  ConnectionProtocol protocol;
+
+  const AuthorizeBody body(parameters.username, parameters.password);
+
+  protocol.header.size = body.GetBodySize();
+  protocol.header.dataType = ConnectionProtocolType::Authorize;
+  
+  protocol.buffer.resize(protocol.header.size);
+
+  unsigned char* bufferPtr = protocol.buffer.data();
+
+  const int usernameSize = parameters.username.size();
+
+  memcpy(bufferPtr, &usernameSize, sizeof(int));
+  bufferPtr += sizeof(int);
+
+  memcpy(bufferPtr, parameters.username.c_str(), usernameSize);
+  bufferPtr += usernameSize;
+  
+  const int passwordSize = parameters.password.size();
+
+  memcpy(bufferPtr, &passwordSize, sizeof(int));
+  bufferPtr += sizeof(int);
+
+  memcpy(bufferPtr, parameters.password.c_str(), passwordSize);
+  bufferPtr += passwordSize;
+
+  const auto bytesSent = send(socket, protocol.buffer.data(), protocol.header.size, 0);
+
+  if (bytesSent < 0) {
+    cerr << "Failed to send request to server" << endl;
+    return;
+  }
+  
+}
+
 void InitializeConnectionToServer(ConnectionParameters& parameters) {
   #ifdef _WIN32
     WSADATA wsaData;
@@ -116,6 +158,8 @@ void InitializeConnectionToServer(ConnectionParameters& parameters) {
 
     throw runtime_error(oss.str());
   }
+
+  AuthorizeClientConnection(sock, parameters);
 
   cout << "Connection established" << endl;
 

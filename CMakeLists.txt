@@ -32,7 +32,9 @@ add_library(AdditionalLibraries
         AdditionalLibraries/HashSet/HashSet.h
         AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
         AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
-        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h)
+        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol.h)
 
 add_library(Database
         Database/Database.cpp

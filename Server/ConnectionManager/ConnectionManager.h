@@ -4,6 +4,8 @@
 #include <string>
 #include <sys/epoll.h>
 
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol.h"
+
 using namespace std;
 
 namespace Server {
@@ -17,8 +19,13 @@ namespace Server {
     string hostName;
 
     int numberOfConnections;
+    int timeoutTime;
 
+    ConnectionParameters();
+    explicit ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime);
   }ConnectionParameters;
+
+
 
   void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning);
 
@@ -26,9 +33,13 @@ namespace Server {
     ConnectionParameters parameters;
 
     protected:
-      void CloseServerConnection(const vector<epoll_event>& events)const;
-      void CloseClientConnection(const int& clientSocket)const;
-      void HandleClientConnection(const int& clientSocket)const;
+      static void AuthorizeClientConnection(const int& clientSocket, ConnectionProtocol& protocol);
+    
+      void HandleClientConnection(const int& clientSocket) const;
+      static void ReadBodyFromClient(const int& clientSocket, ConnectionProtocol& protocol);
+    
+      void CloseServerConnection(const vector<epoll_event>& events) const;
+      void CloseClientConnection(const int& clientSocket) const;
       void InitializeServerSocket();
     
     public:
