@@ -93,10 +93,15 @@ void AuthorizeClientConnection(const int& socket, const ConnectionParameters& pa
 
   protocol.header.size = body.GetBodySize();
   protocol.header.dataType = ConnectionProtocolType::Authorize;
+
+  const int totalRequestSize = protocol.header.size + sizeof(ConnectionProtocolHeader);
   
-  protocol.buffer.resize(protocol.header.size);
+  protocol.buffer.resize(totalRequestSize);
 
   unsigned char* bufferPtr = protocol.buffer.data();
+
+  memcpy(bufferPtr, &protocol.header, sizeof(ConnectionProtocolHeader));
+  bufferPtr += sizeof(ConnectionProtocolHeader);
 
   const int usernameSize = parameters.username.size();
 
@@ -114,13 +119,18 @@ void AuthorizeClientConnection(const int& socket, const ConnectionParameters& pa
   memcpy(bufferPtr, parameters.password.c_str(), passwordSize);
   bufferPtr += passwordSize;
 
-  const auto bytesSent = send(socket, protocol.buffer.data(), protocol.header.size, 0);
+  const auto bytesSent = send(socket, protocol.buffer.data(), totalRequestSize, 0);
+
+  cout << protocol.buffer.data() << endl;
+
+  cout << bytesSent << endl;
 
   if (bytesSent < 0) {
     cerr << "Failed to send request to server" << endl;
     return;
   }
-  
+
+  // const auto bytesReceived = recv(socket, void *buf, size_t n, int flags)
 }
 
 void InitializeConnectionToServer(ConnectionParameters& parameters) {
@@ -193,11 +203,11 @@ void ValidateConnectionString(ConnectionParameters& parameters, const vector<str
       continue;
     }
     if (parameter == "-u") {
-      parameters.password = connectionString[++i];
+      parameters.username = connectionString[++i];
       continue;
     }
     if (parameter == "-p") {
-      parameters.username = connectionString[++i];
+      parameters.password = connectionString[++i];
       continue;
     }
     

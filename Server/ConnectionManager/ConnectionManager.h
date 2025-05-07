@@ -1,6 +1,5 @@
 #pragma once
 #include <atomic>
-#include <queue>
 #include <string>
 #include <sys/epoll.h>
 
@@ -33,9 +32,9 @@ namespace Server {
     ConnectionParameters parameters;
 
     protected:
-      static void AuthorizeClientConnection(const int& clientSocket, ConnectionProtocol& protocol);
+      static void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocol& protocol);
     
-      void HandleClientConnection(const int& clientSocket) const;
+      void HandleClientConnection(const int& clientSocket, mutex& clientMutex) const;
       static void ReadBodyFromClient(const int& clientSocket, ConnectionProtocol& protocol);
     
       void CloseServerConnection(const vector<epoll_event>& events) const;

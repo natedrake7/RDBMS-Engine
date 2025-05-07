@@ -16,12 +16,14 @@ typedef struct ConnectionProtocolHeader {
   }ConnectionProtocolHeader;
 
 typedef struct ConnectionProtocol {
-  ConnectionProtocolHeader header;
+  ConnectionProtocolHeader header{};
   vector<unsigned char> buffer;
 
   ConnectionProtocol(){
-    this->header.size = 0;
-    this->header.dataType = ConnectionProtocolType::Invalid;
+    this->header = {
+      .size = 0,
+      .dataType = ConnectionProtocolType::Invalid
+    };
   }
   ~ConnectionProtocol() = default;
 }ConnectionProtocol;

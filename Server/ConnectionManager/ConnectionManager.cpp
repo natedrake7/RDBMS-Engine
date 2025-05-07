@@ -57,6 +57,7 @@ namespace Server {
   {
     this->InitializeServerSocket();
     vector<epoll_event> events(this->parameters.numberOfConnections);
+    vector<mutex> eventMutexes(this->parameters.numberOfConnections);
 
     while (isServerRunning) {
       const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, events.data(), events.size(), 10);
@@ -67,11 +68,17 @@ namespace Server {
       }
 
       for (int i = 0;i < eventCount; i++) {
+
+        if (!eventMutexes[i].try_lock())
+            continue;
+
+        eventMutexes[i].unlock();
+        
         if (!(events[i].events & EPOLLIN))
           continue;
 
         if (events[i].data.fd != this->parameters.serverSocket) {
-          ConnectionManager::HandleClientConnection(events[i].data.fd);
+          ConnectionManager::HandleClientConnection(events[i].data.fd, eventMutexes[i]);
           continue;
         }
 
@@ -174,23 +181,26 @@ namespace Server {
 #endif
   }
 
-  void ConnectionManager::HandleClientConnection(const int &clientSocket) const{
+  void ConnectionManager::HandleClientConnection(const int &clientSocket, mutex& clientMutex) const{
 
-    ConnectionProtocol protocol;
-    const ssize_t headerBytesRead = recv(clientSocket, &protocol.header, sizeof(protocol.header), 0);
-
-    cout << static_cast<int>(protocol.header.dataType) << endl;
+    clientMutex.lock();
     
+    ConnectionProtocol protocol;
+    const ssize_t headerBytesRead = recv(clientSocket, &protocol.header, sizeof(ConnectionProtocolHeader), 0);
+
     if (headerBytesRead > 0) {
       ConnectionManager::ReadBodyFromClient(clientSocket, protocol);
+      clientMutex.unlock();
       return;
     }
     
     if (headerBytesRead == 0) {
       this->CloseClientConnection(clientSocket);
+      clientMutex.unlock();
       return;
     }
-
+    
+    clientMutex.unlock();
     perror("recv failed");
   }
 
@@ -206,7 +216,7 @@ namespace Server {
       ConnectionManager::AuthorizeClientConnection(clientSocket, protocol);
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, ConnectionProtocol &protocol){
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocol &protocol){
     AuthorizeBody body;
 
     const unsigned char* bufferPtr = protocol.buffer.data();
@@ -229,6 +239,13 @@ void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, Conne
 
     if (body.username == "natedrake7" && body.password == "kalispera") {
       cout << "SuccessFully Authorized!" << endl;
+      //send response to client that verification is successfull
+
+      
+      
+    }
+    else {
+      //close connection with client, invalid credentials
     }
 }
 } // Server

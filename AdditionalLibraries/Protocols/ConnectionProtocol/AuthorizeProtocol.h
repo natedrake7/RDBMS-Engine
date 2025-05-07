@@ -1,10 +1,10 @@
 #pragma once
-#include <cstring>
+#include "BodyProtocol.h"
 #include <string>
 
 using namespace std;
 
-typedef struct AuthorizeBody {
+typedef struct AuthorizeBody{
   string username;
   string password;
 
@@ -14,7 +14,7 @@ typedef struct AuthorizeBody {
   
   ~AuthorizeBody() = default;
   
-  int GetBodySize() const {
+  [[nodiscard]] int GetBodySize() const {
     return username.size() + password.size() + 2 * sizeof(int);
   }
 }AuthorizeBody;

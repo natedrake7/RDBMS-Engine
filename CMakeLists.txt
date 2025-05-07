@@ -34,7 +34,9 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
         AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
         AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol.h)
+        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeSuccessProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/BodyProtocol.h)
 
 add_library(Database
         Database/Database.cpp
