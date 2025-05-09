@@ -1,6 +1,6 @@
 #include "ConnectionManager.h"
 
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h"
 
 #include <atomic>
 #include <cstring>
@@ -185,11 +185,11 @@ namespace Server {
 
     clientMutex.lock();
     
-    ConnectionProtocol protocol;
-    const ssize_t headerBytesRead = recv(clientSocket, &protocol.header, sizeof(ConnectionProtocolHeader), 0);
+    ConnectionProtocolHeader header;
+    const ssize_t headerBytesRead = recv(clientSocket, &header, sizeof(ConnectionProtocolHeader), 0);
 
     if (headerBytesRead > 0) {
-      ConnectionManager::ReadBodyFromClient(clientSocket, protocol);
+      ConnectionManager::ReadBodyFromClient(clientSocket, header);
       clientMutex.unlock();
       return;
     }
@@ -204,44 +204,28 @@ namespace Server {
     perror("recv failed");
   }
 
-  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, ConnectionProtocol &protocol){
-    protocol.buffer.resize(protocol.header.size);
-
-    if (recv(clientSocket, protocol.buffer.data(), protocol.header.size, 0) <= 0) {
+  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header){
+    vector<unsigned char> buffer(header.size);
+    
+    if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
       perror("failed to read body from client or body was empty!");
       return;
     }
-
-    if (protocol.header.dataType == ConnectionProtocolType::Authorize)
-      ConnectionManager::AuthorizeClientConnection(clientSocket, protocol);
+    
+    if (header.dataType == ConnectionProtocolType::Authorize) {
+      ConnectionManager::AuthorizeClientConnection(clientSocket, header, buffer);
+      return;
+    }
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocol &protocol){
-    AuthorizeBody body;
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer){
+    AuthorizeProtocol protocol(header);
 
-    const unsigned char* bufferPtr = protocol.buffer.data();
-      
-    int usernameSize = 0, passwordSize = 0;
-    
-    memcpy(&usernameSize, bufferPtr, sizeof(int));
-    bufferPtr += sizeof(int);
+    protocol.Deserialize(buffer);
 
-    body.username.resize(usernameSize);
-    memcpy(body.username.data(), bufferPtr, usernameSize);
-    bufferPtr += usernameSize;
-
-    memcpy(&passwordSize, bufferPtr, sizeof(int));
-    bufferPtr += sizeof(int);
-    
-    body.password.resize(passwordSize);
-    memcpy(body.password.data(), bufferPtr, passwordSize);
-    bufferPtr += passwordSize;
-
-    if (body.username == "natedrake7" && body.password == "kalispera") {
+    if (protocol.GetUsername() == "natedrake7" && protocol.GetPassword() == "kalispera") {
       cout << "SuccessFully Authorized!" << endl;
       //send response to client that verification is successfull
-
-      
       
     }
     else {

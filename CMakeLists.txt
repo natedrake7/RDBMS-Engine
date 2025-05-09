@@ -33,10 +33,10 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
         AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
         AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeSuccessProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/BodyProtocol.h)
+        AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
+        AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.cpp
+        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h)
 
 add_library(Database
         Database/Database.cpp

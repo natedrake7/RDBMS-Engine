@@ -1,6 +1,3 @@
-#include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol.h"
-
-
 #include <stdexcept>
 #include <string>
 #include <iostream>
@@ -8,7 +5,7 @@
 #include <vector>
 
 #include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
-#include "../AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol.h"
+#include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h"
 
 #include <cstring>
 #include <sstream>
@@ -87,41 +84,11 @@ int main()
 }
 
 void AuthorizeClientConnection(const int& socket, const ConnectionParameters& parameters) {
-  ConnectionProtocol protocol;
+  AuthorizeProtocol protocol(parameters.username, parameters.password);
 
-  const AuthorizeBody body(parameters.username, parameters.password);
+  const auto& serializedObject = protocol.GetSerializedProtocol();
 
-  protocol.header.size = body.GetBodySize();
-  protocol.header.dataType = ConnectionProtocolType::Authorize;
-
-  const int totalRequestSize = protocol.header.size + sizeof(ConnectionProtocolHeader);
-  
-  protocol.buffer.resize(totalRequestSize);
-
-  unsigned char* bufferPtr = protocol.buffer.data();
-
-  memcpy(bufferPtr, &protocol.header, sizeof(ConnectionProtocolHeader));
-  bufferPtr += sizeof(ConnectionProtocolHeader);
-
-  const int usernameSize = parameters.username.size();
-
-  memcpy(bufferPtr, &usernameSize, sizeof(int));
-  bufferPtr += sizeof(int);
-
-  memcpy(bufferPtr, parameters.username.c_str(), usernameSize);
-  bufferPtr += usernameSize;
-  
-  const int passwordSize = parameters.password.size();
-
-  memcpy(bufferPtr, &passwordSize, sizeof(int));
-  bufferPtr += sizeof(int);
-
-  memcpy(bufferPtr, parameters.password.c_str(), passwordSize);
-  bufferPtr += passwordSize;
-
-  const auto bytesSent = send(socket, protocol.buffer.data(), totalRequestSize, 0);
-
-  cout << protocol.buffer.data() << endl;
+  const auto bytesSent = send(socket, serializedObject.data(), serializedObject.size(), 0);
 
   cout << bytesSent << endl;
 

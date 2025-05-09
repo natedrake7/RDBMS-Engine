@@ -3,7 +3,7 @@
 #include <string>
 #include <sys/epoll.h>
 
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h"
 
 using namespace std;
 
@@ -32,10 +32,10 @@ namespace Server {
     ConnectionParameters parameters;
 
     protected:
-      static void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocol& protocol);
+      static void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer);
     
       void HandleClientConnection(const int& clientSocket, mutex& clientMutex) const;
-      static void ReadBodyFromClient(const int& clientSocket, ConnectionProtocol& protocol);
+      static void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header);
     
       void CloseServerConnection(const vector<epoll_event>& events) const;
       void CloseClientConnection(const int& clientSocket) const;
