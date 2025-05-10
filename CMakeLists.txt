@@ -94,14 +94,13 @@ add_library(Database
         Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
         Database/AdditionalFunctions/StringFunctions/StringFunctions.h)
 
-add_library(Server  
-                Server/ConnectionManager/ConnectionManager.cpp
-                Server/ConnectionManager/ConnectionManager.h
-        Server/Threadpool/ThreadPool.cpp
-        Server/Threadpool/ThreadPool.h)
+add_library(Server  Server/ConnectionManager/ConnectionManager.cpp
+                    Server/ConnectionManager/ConnectionManager.h
+                    Server/Threadpool/ThreadPool.cpp
+                    Server/Threadpool/ThreadPool.h)
 
-add_executable(Client Client/client.cpp
-        Client/client.h)
+add_executable(Client   Client/client.cpp
+                        Client/client.h)
 
 target_link_libraries(Client PRIVATE AdditionalLibraries)
 
