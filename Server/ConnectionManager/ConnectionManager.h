@@ -1,5 +1,6 @@
 #pragma once
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h"
+#include "../Threadpool/ThreadPool.h"
 
 
 #include <atomic>
@@ -49,14 +50,15 @@ namespace Server {
   class ConnectionManager {
     ConnectionParameters parameters;
     vector<SocketEvent> events;
+    ThreadPool threadPool;
 
     protected:
       static void SendToClient(const int& clientSocket, ResponseProtocol* protocol);
 
-      static void GetQueryFromClient(const int& clientSocket, const ConnectionProtocolHeader& header, const vector<unsigned char>& buffer);
+      void GetQueryFromClient(const int& clientSocket, const ConnectionProtocolHeader& header, const vector<unsigned char>& buffer);
       void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer)const;
-      void HandleClientConnection(const int& clientSocket, mutex& clientMutex) const;
-      void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header)const;
+      void HandleClientConnection(const int& clientSocket, mutex& clientMutex);
+      void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header);
       void CloseServerConnection() const;
       void CloseClientConnection(const int& clientSocket) const;
       void InitializeServerSocket();

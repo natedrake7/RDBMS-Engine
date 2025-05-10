@@ -3,6 +3,7 @@
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
+#include "../Threadpool/ThreadPool.h"
 
 #include <atomic>
 #include <cstring>
@@ -58,9 +59,12 @@ namespace Server {
   void ConnectionManager::HandleNewConnections(const atomic<bool>& isServerRunning)
   {
     this->InitializeServerSocket();
+
     vector<mutex> eventMutexes(this->parameters.numberOfConnections);
     this->events.resize(this->parameters.numberOfConnections);
 
+    threadPool.InitializeWorkers(isServerRunning, 20);
+    
     while (isServerRunning) {
 #ifdef _WIN32
 	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 1000);
@@ -70,7 +74,7 @@ namespace Server {
 
       if (eventCount < 0) {
         std::cerr << "epoll_wait failed"<< strerror(errno) << endl;
-        // break;
+        break;
       }
 
       for (int i = 0;i < eventCount; i++) {
@@ -221,7 +225,7 @@ void ConnectionManager::CloseServerConnection() const
 #endif
   }
 
-  void ConnectionManager::HandleClientConnection(const int &clientSocket, mutex& clientMutex) const{
+  void ConnectionManager::HandleClientConnection(const int &clientSocket, mutex& clientMutex){
 
     clientMutex.lock();
     
@@ -244,7 +248,7 @@ void ConnectionManager::CloseServerConnection() const
     perror("recv failed");
   }
 
-  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header) const{
+  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header){
     vector<unsigned char> buffer(header.size);
     
     if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
@@ -258,7 +262,7 @@ void ConnectionManager::CloseServerConnection() const
     }
     
     if (header.dataType == ConnectionProtocolType::Query) {
-      ConnectionManager::GetQueryFromClient(clientSocket, header, buffer);
+      this->GetQueryFromClient(clientSocket, header, buffer);
       return;
     }
 
@@ -288,14 +292,9 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Connec
 
     protocol.Deserialize(buffer);
 
-    cout << protocol.GetQuery() << endl;
-
-    //send query to threadpool to be executed
-    //
-    //
-    ///////////////////////////////////////////
-    ///
-    ///send response of the rows back to the client
+    this->threadPool.Enqueue([query = protocol.GetQuery()] {
+      cout << query << endl;
+    });
 }
 
 void ConnectionManager::SendToClient(const int &clientSocket, ResponseProtocol *protocol){

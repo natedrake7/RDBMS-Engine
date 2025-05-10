@@ -17,6 +17,9 @@
 #include "QueryParser/Tokenizer/Tokenizer.h"
 #include "QueryParser/Parser/Parser.h"
 #include "Server/ConnectionManager/ConnectionManager.h"
+#include "Server/Threadpool/ThreadPool.h"
+
+#include <csignal>
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
@@ -38,33 +41,36 @@ void InsertRowsToMoviesTable(Table* table);
 //deletes
 //advanced functions
 
+
 std::atomic<bool> serverRunning{true};
+
+void shutdownServer(int signal) {
+    serverRunning.store(false);
+
+    cout << "Server shutting down..." << endl;
+}
  
 int main() 
 {
+    signal(SIGINT, shutdownServer);   // Ctrl+C
+    signal(SIGTERM, shutdownServer);  // kill command
+    signal(SIGABRT, shutdownServer);  // abort()
+    
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
     std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
+    
 
     try {
-
-        string input;
-
         cout << "Server Initialized correctly, type exit to shutdown" << endl;
-        while (true) {
-            cin >> input;
-
-            if (input == "exit") {
-                
-                serverRunning = false;
-                break;
-            }
-        }
+        
+        while (serverRunning) { }
     }
     catch (const exception& e) {
         cout << e.what() << endl;
     }
 
+    serverRunning = false;
     
     connectionThread.join();
     

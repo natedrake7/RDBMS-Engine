@@ -96,7 +96,9 @@ add_library(Database
 
 add_library(Server  
                 Server/ConnectionManager/ConnectionManager.cpp
-                Server/ConnectionManager/ConnectionManager.h)
+                Server/ConnectionManager/ConnectionManager.h
+        Server/Threadpool/ThreadPool.cpp
+        Server/Threadpool/ThreadPool.h)
 
 add_executable(Client Client/main.cpp)
 
