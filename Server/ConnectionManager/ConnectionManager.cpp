@@ -56,15 +56,18 @@ namespace Server {
   void ConnectionManager::HandleNewConnections(const atomic<bool>& isServerRunning)
   {
     this->InitializeServerSocket();
-    vector<epoll_event> events(this->parameters.numberOfConnections);
     vector<mutex> eventMutexes(this->parameters.numberOfConnections);
 
     while (isServerRunning) {
-      const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, events.data(), events.size(), 10);
+#ifdef _WIN32
+	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 1000);
+#else
+        const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), 10);
+#endif
 
       if (eventCount < 0) {
-        cerr << "epoll_wait failed: " << strerror(errno) << endl;
-        continue;
+        std::cerr << "epoll_wait failed" << endl;
+        break;
       }
 
       for (int i = 0;i < eventCount; i++) {
@@ -74,32 +77,54 @@ namespace Server {
 
         eventMutexes[i].unlock();
         
-        if (!(events[i].events & EPOLLIN))
-          continue;
+#ifdef _WIN32
+        auto& evt = this->events[i];
+        if (!(evt.revents & POLLIN))
+            continue;
 
-        if (events[i].data.fd != this->parameters.serverSocket) {
-          ConnectionManager::HandleClientConnection(events[i].data.fd, eventMutexes[i]);
-          continue;
+        if (evt.fd != this->parameters.serverSocket) {
+            ConnectionManager::HandleClientConnection(evt.fd, eventMutexes[i]);
+            continue;
         }
 
-        sockaddr_in clientAddress = {};
+        SOCKET clientSocket = accept(this->parameters.serverSocket, nullptr, nullptr);
+        if (clientSocket == INVALID_SOCKET) {
+            cerr << "Failed to accept client (Windows)" << endl;
+            continue;
+        }
+
+        pollfd newEvent{};
+        newEvent.fd = clientSocket;
+        newEvent.events = POLLIN;
+        this->events.push_back(newEvent);
+        cout << "Accepted client (Windows): " << clientSocket << endl;
+
+#else
+        auto& evt = this->events[i];
+        if (!(evt.events & EPOLLIN))
+            continue;
+
+        if (evt.data.fd != this->parameters.serverSocket) {
+            ConnectionManager::HandleClientConnection(evt.data.fd, eventMutexes[i]);
+            continue;
+        }
+
+        sockaddr_in clientAddress{};
         socklen_t clientSize = sizeof(clientAddress);
-  
-        const int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
-
-        const int flags = fcntl(clientSocket, F_GETFL, 0);
-        fcntl(clientSocket, F_SETFL, flags | O_NONBLOCK);
-
+        int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
         if (clientSocket < 0) {
-          std::cerr << "Connection with client failed to establish" << endl;
+            cerr << "Failed to accept client (Linux)" << endl;
+            continue;
         }
-        
-        epoll_event clientEvent{};
-        clientEvent.events = EPOLLIN | EPOLLET; // Edge-triggered for efficiency
-        clientEvent.data.fd = clientSocket;
 
-        epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, clientSocket, &clientEvent);
-        std::cout << "Accepted client: " << clientSocket << std::endl;
+        fcntl(clientSocket, F_SETFL, fcntl(clientSocket, F_GETFL, 0) | O_NONBLOCK);
+
+        epoll_event newEvent{};
+        newEvent.events = EPOLLIN | EPOLLET;
+        newEvent.data.fd = clientSocket;
+        epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, clientSocket, &newEvent);
+        cout << "Accepted client (Linux): " << clientSocket << endl;
+#endif
       }
     }
 
@@ -136,47 +161,59 @@ namespace Server {
       throw runtime_error("Failed to listen on socket");
     }
 
+#ifdef _WIN32
+    pollfd pfd{};
+    pfd.fd = sock;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+
+    this->events.push_back(pfd);
+#else
     const int epollFd = epoll_create1(0);
     if (epollFd == -1)
       throw std::runtime_error("Failed to create epoll file descriptor");
 
     this->parameters.epollFileDescriptor = epollFd;
-    this->parameters.serverSocket = sock;
 
     epoll_event event{};
     event.events = EPOLLIN;
     event.data.fd = sock;
 
     epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, sock, &event);
+#endif
+
+    this->parameters.serverSocket = sock;
+
   }
 
-  void ConnectionManager::CloseServerConnection(const vector<epoll_event>& events) const
-  {
-    for (const auto& event : events) {
-      epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, event.data.fd, nullptr);
+void ConnectionManager::CloseServerConnection() const
+{
 #ifdef _WIN32
-      closesocket(event.data.fd);
-#else
-      close(event.data.fd);
-#endif
-    }
-    
-#ifdef _WIN32
-    closesocket(this->parameters.epollFileDescriptor);
+    for (const auto& event : this->events) 
+        closesocket(event.fd);
+
+    //closesocket(this->parameters.serverSocket);
     WSACleanup();
+
 #else
+    for (const auto& event : this->events) {
+        epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, event.data.fd, nullptr);
+        close(event.data.fd);
+    }
+
+    //close(this->parameters.serverSocket);
     close(this->parameters.epollFileDescriptor);
 #endif
-  }
+}
 
   void ConnectionManager::CloseClientConnection(const int &clientSocket) const
   {
-    epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, clientSocket, nullptr);
 
 #ifdef _WIN32
     closesocket(clientSocket);
     WSACleanup();
 #else
+    epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, clientSocket, nullptr);
     close(clientSocket);
 #endif
   }

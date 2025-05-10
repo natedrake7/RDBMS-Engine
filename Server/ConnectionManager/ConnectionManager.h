@@ -1,7 +1,22 @@
 #pragma once
 #include <atomic>
 #include <string>
-#include <sys/epoll.h>
+
+#ifdef _WIN32
+    #include <ws2tcpip.h>
+    #include <windows.h>
+    #include <winsock2.h>
+    #pragma comment(lib, "ws2_32.lib")
+    using SocketEvent = pollfd;
+#else
+    #include <sys/socket.h>
+    #include <sys/epoll.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+    #include <sys/epoll.h>
+    using SocketEvent = epoll_event;
+#endif
 
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h"
 
@@ -30,6 +45,7 @@ namespace Server {
 
   class ConnectionManager {
     ConnectionParameters parameters;
+    vector<SocketEvent> events;
 
     protected:
       static void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer);
@@ -37,7 +53,8 @@ namespace Server {
       void HandleClientConnection(const int& clientSocket, mutex& clientMutex) const;
       static void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header);
     
-      void CloseServerConnection(const vector<epoll_event>& events) const;
+      void CloseServerConnection() const;
+
       void CloseClientConnection(const int& clientSocket) const;
       void InitializeServerSocket();
     
