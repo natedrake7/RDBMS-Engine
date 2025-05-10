@@ -20,8 +20,6 @@ class AuthorizeProtocol final : public ConnectionProtocol{
     [[nodiscard]] int GetSize() const override;
     void Serialize() override;
     void Deserialize(const vector<unsigned char>& buffer) override;
-    void DeserializeBody(const vector<unsigned char> &buffer) override;
-    const vector<unsigned char>& GetSerializedProtocol() override;
 
     [[nodiscard]] const string& GetUsername() const;
     [[nodiscard]] const string& GetPassword() const;

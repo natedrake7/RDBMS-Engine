@@ -29,6 +29,5 @@ class ConnectionProtocol {
     [[nodiscard]] virtual int GetSize() const;
     virtual void Serialize();
     virtual void Deserialize(const vector<unsigned char>& buffer);
-    virtual void DeserializeBody(const vector<unsigned char>& buffer);
     virtual const vector<unsigned char>& GetSerializedProtocol();
 };

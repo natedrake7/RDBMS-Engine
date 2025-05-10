@@ -1,4 +1,7 @@
 #pragma once
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h"
+
+
 #include <atomic>
 #include <string>
 
@@ -48,13 +51,13 @@ namespace Server {
     vector<SocketEvent> events;
 
     protected:
-      static void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer);
-    
-      void HandleClientConnection(const int& clientSocket, mutex& clientMutex) const;
-      static void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header);
-    
-      void CloseServerConnection() const;
+      static void SendToClient(const int& clientSocket, ResponseProtocol* protocol);
 
+      static void GetQueryFromClient(const int& clientSocket, const ConnectionProtocolHeader& header, const vector<unsigned char>& buffer);
+      void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer)const;
+      void HandleClientConnection(const int& clientSocket, mutex& clientMutex) const;
+      void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header)const;
+      void CloseServerConnection() const;
       void CloseClientConnection(const int& clientSocket) const;
       void InitializeServerSocket();
     

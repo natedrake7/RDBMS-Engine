@@ -40,34 +40,22 @@ void AuthorizeProtocol::Serialize(){
 }
 
 void AuthorizeProtocol::Deserialize(const vector<unsigned char> &buffer){
-  ConnectionProtocol::Deserialize(buffer);
-  this->DeserializeBody(buffer);
-}
-
-void AuthorizeProtocol::DeserializeBody(const vector<unsigned char> &buffer){
-  const unsigned char* bufferPtr = buffer.data();
+   const unsigned char* bufferPtr = buffer.data();
       
-  int usernameSize = 0, passwordSize = 0;
+   int usernameSize = 0, passwordSize = 0;
     
-  memcpy(&usernameSize, bufferPtr, sizeof(int));
-  bufferPtr += sizeof(int);
+   memcpy(&usernameSize, bufferPtr, sizeof(int));
+   bufferPtr += sizeof(int);
 
-  this->username.resize(usernameSize);
-  memcpy(this->username.data(), bufferPtr, usernameSize);
-  bufferPtr += usernameSize;
+   this->username.resize(usernameSize);
+   memcpy(this->username.data(), bufferPtr, usernameSize);
+   bufferPtr += usernameSize;
 
-  memcpy(&passwordSize, bufferPtr, sizeof(int));
-  bufferPtr += sizeof(int);
+   memcpy(&passwordSize, bufferPtr, sizeof(int));
+   bufferPtr += sizeof(int);
     
-  this->password.resize(passwordSize);
-  memcpy(this->password.data(), bufferPtr, passwordSize);
-}
-
-const vector<unsigned char> & AuthorizeProtocol::GetSerializedProtocol(){
-  if (this->buffer.empty())
-    this->Serialize();
-  
-  return this->buffer;
+   this->password.resize(passwordSize);
+   memcpy(this->password.data(), bufferPtr, passwordSize);
 }
 
 const string & AuthorizeProtocol::GetUsername() const{ return this->username; }

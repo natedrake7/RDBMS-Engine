@@ -1,7 +1,5 @@
-#pragma once
 #include "ConnectionProtocol.h"
 #include <cstring>
-
 
 int ConnectionProtocol::GetSize() const{ return sizeof(ConnectionProtocolHeader); }
 
@@ -21,8 +19,6 @@ void ConnectionProtocol::Deserialize(const vector<unsigned char> &buffer){
 
   memcpy(&this->header, bufferPtr, sizeof(ConnectionProtocolHeader));
 }
-
-void ConnectionProtocol::DeserializeBody(const vector<unsigned char> &buffer) { }
 
 const vector<unsigned char> & ConnectionProtocol::GetSerializedProtocol() {
   if (this->buffer.empty())

@@ -5,7 +5,9 @@
 #include <vector>
 
 #include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
-#include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h"
+#include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
+#include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
+#include "../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
 
 #include <cstring>
 #include <sstream>
@@ -57,24 +59,37 @@ int main()
   ValidateConnectionString(parameters, connectionString);
   InitializeConnectionToServer(parameters);
 
-  string input;
   cout << "Please enter the query: " << endl;
 
   while(true){
-    cin >> input;
+    string input;
+
+    std::getline(std::cin, input);
 
     if(input == "exit")
       break;
 
-    const auto bytesSent = send(parameters.socket, input.data(), input.size(), 0);
+    QueryProtocol protocol(input);
+    
+    const auto& serializedProtocol = protocol.GetSerializedProtocol();
+
+    cout << serializedProtocol.size() << endl;
+
+    const auto bytesSent = send(parameters.socket, serializedProtocol.data(), protocol.GetSize(), 0);
 
     if(bytesSent < 0)
     {
       cerr << "Failed to send request to server" << endl;
       CloseConnection(parameters);
-      
       return -1;
     }
+
+    if (bytesSent == 0) {
+      cout << "Connection lost" << endl;
+      CloseConnection(parameters);
+    }
+
+    //get response from server (usually a set of rows)
   }
 
   CloseConnection(parameters);
@@ -97,7 +112,33 @@ void AuthorizeClientConnection(const int& socket, const ConnectionParameters& pa
     return;
   }
 
-  // const auto bytesReceived = recv(socket, void *buf, size_t n, int flags)
+  AuthorizeResponseProtocol responseProtocol;
+
+  const int responseProtocolSize = responseProtocol.GetSize();
+
+  vector<char> buffer(responseProtocolSize);
+
+  const auto bytesReceived = recv(socket, buffer.data(), responseProtocolSize, 0);
+
+  if (bytesReceived < 0) {
+    cerr << "Failed to receive response from server" << endl;
+  }
+
+  if (bytesReceived == 0) {
+    cout << "Connection to server has been lost" << endl;
+  }
+
+  responseProtocol.Deserialize(buffer);
+
+  const auto& statusCode = responseProtocol.GetResponseType();
+
+  if (statusCode == ResponseType::InvalidCredentials)
+    throw std::runtime_error("Failed to authenticate");
+
+  if (statusCode != ResponseType::Authenticated)
+    throw std::runtime_error("Unknown error occurred");
+
+  cout << "Successfully authenticated" << endl;
 }
 
 void InitializeConnectionToServer(ConnectionParameters& parameters) {
@@ -135,7 +176,6 @@ void InitializeConnectionToServer(ConnectionParameters& parameters) {
 
   AuthorizeClientConnection(sock, parameters);
 
-  cout << "Connection established" << endl;
 
   parameters.socket = sock;
 }

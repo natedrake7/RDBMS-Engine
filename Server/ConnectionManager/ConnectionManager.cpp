@@ -1,6 +1,8 @@
 #include "ConnectionManager.h"
 
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
 
 #include <atomic>
 #include <cstring>
@@ -68,7 +70,7 @@ namespace Server {
 
       if (eventCount < 0) {
         std::cerr << "epoll_wait failed"<< strerror(errno) << endl;
-        break;
+        // break;
       }
 
       for (int i = 0;i < eventCount; i++) {
@@ -227,7 +229,7 @@ void ConnectionManager::CloseServerConnection() const
     const ssize_t headerBytesRead = recv(clientSocket, &header, sizeof(ConnectionProtocolHeader), 0);
 
     if (headerBytesRead > 0) {
-      ConnectionManager::ReadBodyFromClient(clientSocket, header);
+      this->ReadBodyFromClient(clientSocket, header);
       clientMutex.unlock();
       return;
     }
@@ -242,7 +244,7 @@ void ConnectionManager::CloseServerConnection() const
     perror("recv failed");
   }
 
-  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header){
+  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header) const{
     vector<unsigned char> buffer(header.size);
     
     if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
@@ -251,23 +253,71 @@ void ConnectionManager::CloseServerConnection() const
     }
     
     if (header.dataType == ConnectionProtocolType::Authorize) {
-      ConnectionManager::AuthorizeClientConnection(clientSocket, header, buffer);
+      this->AuthorizeClientConnection(clientSocket, header, buffer);
       return;
     }
+    
+    if (header.dataType == ConnectionProtocolType::Query) {
+      ConnectionManager::GetQueryFromClient(clientSocket, header, buffer);
+      return;
+    }
+
+    //invalid request type
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer){
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer) const{
     AuthorizeProtocol protocol(header);
 
-    protocol.DeserializeBody(buffer);
+    protocol.Deserialize(buffer);
 
     if (protocol.GetUsername() == "natedrake7" && protocol.GetPassword() == "kalispera") {
-      cout << "SuccessFully Authorized!" << endl;
-      //send response to client that verification is successfull
+      AuthorizeResponseProtocol responseProtocol(ResponseType::Authenticated);
       
+      ConnectionManager::SendToClient(clientSocket, &responseProtocol);
     }
     else {
-      //close connection with client, invalid credentials
+      AuthorizeResponseProtocol responseProtocol(ResponseType::InvalidCredentials);
+      ConnectionManager::SendToClient(clientSocket, &responseProtocol);
+
+      this->CloseClientConnection(clientSocket);
     }
 }
+
+void ConnectionManager::GetQueryFromClient(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char> &buffer){
+    QueryProtocol protocol(header);
+
+    protocol.Deserialize(buffer);
+
+    cout << protocol.GetQuery() << endl;
+
+    //send query to threadpool to be executed
+    //
+    //
+    ///////////////////////////////////////////
+    ///
+    ///send response of the rows back to the client
+}
+
+void ConnectionManager::SendToClient(const int &clientSocket, ResponseProtocol *protocol){
+    if (protocol == nullptr)
+      return;
+
+    const auto& serializedProtocol = protocol->GetSerializedProtocol();
+
+    const auto protocolSize = protocol->GetSize();
+
+    const auto bytesSent = send(clientSocket, serializedProtocol.data(), protocolSize, 0);
+
+    if (bytesSent > 0)
+      return;
+    
+    if (bytesSent < 0) {
+      std::cerr << " Failed to send request to client"<< strerror(errno) << endl;
+      return;
+    }
+
+    cout << "Client disconnected" << endl;
+  }
+
+
 } // Server
