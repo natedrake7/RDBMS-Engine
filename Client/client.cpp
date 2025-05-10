@@ -11,6 +11,7 @@
 
 #include <cstring>
 #include <sstream>
+#include "client.h"
 
 #ifdef _WIN32
   #include <winsock2.h>
@@ -22,25 +23,6 @@
 #endif
 
 using namespace std;
-
-typedef struct ConnectionParameters {
-  int port;
-  string hostName;
-  string username;
-  string password;
-
-  int socket;
-
-  ConnectionParameters() {
-    this->port = 0;
-    this->socket = 0;
-  }
-  ~ConnectionParameters() = default;
-}ConnectionParameters;
-
-static void ValidateConnectionString(ConnectionParameters& parameters, const vector<string>& connectionString);
-void InitializeConnectionToServer(ConnectionParameters& parameters);
-void CloseConnection(ConnectionParameters& parameters);
 
 int main()
 {
@@ -72,8 +54,6 @@ int main()
     QueryProtocol protocol(input);
     
     const auto& serializedProtocol = protocol.GetSerializedProtocol();
-
-    cout << serializedProtocol.size() << endl;
 
     const auto bytesSent = send(parameters.socket, serializedProtocol.data(), protocol.GetSize(), 0);
 

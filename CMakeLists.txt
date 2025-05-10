@@ -100,7 +100,8 @@ add_library(Server
         Server/Threadpool/ThreadPool.cpp
         Server/Threadpool/ThreadPool.h)
 
-add_executable(Client Client/main.cpp)
+add_executable(Client Client/client.cpp
+        Client/client.h)
 
 target_link_libraries(Client PRIVATE AdditionalLibraries)
 
