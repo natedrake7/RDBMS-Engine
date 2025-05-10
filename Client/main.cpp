@@ -66,7 +66,7 @@ int main()
     if(input == "exit")
       break;
 
-    const int bytesSent = send(parameters.socket, input.data(), input.size(), 0);
+    const auto bytesSent = send(parameters.socket, input.data(), input.size(), 0);
 
     if(bytesSent < 0)
     {
@@ -119,10 +119,7 @@ void InitializeConnectionToServer(ConnectionParameters& parameters) {
 
   inet_pton(AF_INET, parameters.hostName.c_str(), &serverAddress.sin_addr);
 
-  const int hasConnectedToServer = connect(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress));
-
-  cout << hasConnectedToServer << endl;
-  if (hasConnectedToServer < 0) {
+  if (connect(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
     #ifdef _WIN32
         closesocket(sock);
         WSACleanup();

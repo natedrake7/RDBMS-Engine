@@ -57,6 +57,7 @@ namespace Server {
   {
     this->InitializeServerSocket();
     vector<mutex> eventMutexes(this->parameters.numberOfConnections);
+    this->events.resize(this->parameters.numberOfConnections);
 
     while (isServerRunning) {
 #ifdef _WIN32
@@ -66,7 +67,7 @@ namespace Server {
 #endif
 
       if (eventCount < 0) {
-        std::cerr << "epoll_wait failed" << endl;
+        std::cerr << "epoll_wait failed"<< strerror(errno) << endl;
         break;
       }
 
@@ -130,7 +131,7 @@ namespace Server {
 
     cout << "Closing connections" << endl;
 
-    this->CloseServerConnection(events);
+    this->CloseServerConnection();
   }
 
   void ConnectionManager::InitializeServerSocket()
@@ -157,7 +158,7 @@ namespace Server {
       throw runtime_error("Failed to bind socket");
     
     if (listen(sock, SOMAXCONN) < 0) {
-      this->CloseServerConnection({});
+      this->CloseServerConnection();
       throw runtime_error("Failed to listen on socket");
     }
 
@@ -258,7 +259,7 @@ void ConnectionManager::CloseServerConnection() const
 void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer){
     AuthorizeProtocol protocol(header);
 
-    protocol.Deserialize(buffer);
+    protocol.DeserializeBody(buffer);
 
     if (protocol.GetUsername() == "natedrake7" && protocol.GetPassword() == "kalispera") {
       cout << "SuccessFully Authorized!" << endl;
