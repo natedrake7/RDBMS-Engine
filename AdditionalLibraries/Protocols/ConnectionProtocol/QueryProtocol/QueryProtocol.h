@@ -13,6 +13,6 @@ class QueryProtocol final : public ConnectionProtocol{
     ~QueryProtocol() override = default;
     [[nodiscard]] int GetSize() const override;
     void Serialize() override;
-    void Deserialize(const vector<unsigned char>& buffer) override;
+    void Deserialize(const vector<char>& buffer) override;
     [[nodiscard]] const string& GetQuery() const;
 };

@@ -17,8 +17,12 @@
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
 
 #ifdef _WIN32
+#define NOMINMAX
+#define byte win_byte_override // Add this before any Windows headers
   #include <winsock2.h>
+  #include <ws2tcpip.h>
   #pragma comment(lib, "ws2_32.lib")
+#undef byte
 #else
   #include <sys/socket.h>
   #include <arpa/inet.h>
@@ -89,7 +93,7 @@ int main()
     ResponseProtocolHeader responseHeader;
     vector<char> buffer;
 
-    auto bytesReceived = recv(parameters.socket, &responseHeader, responseHeader.GetSize(), 0);
+    auto bytesReceived = recv(parameters.socket, reinterpret_cast<char *>(&responseHeader), responseHeader.GetSize(), 0);
 
     if (bytesReceived < 0) {
       cerr << "Failed to get response from server" << endl;
@@ -182,7 +186,7 @@ void InitializeConnectionToServer(ConnectionParameters& parameters) {
   #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData))
-      throw runtime_error("WSAStartup failed")
+      throw runtime_error("WSAStartup failed");
   #endif
 
   int sock = socket(AF_INET, SOCK_STREAM, 0);

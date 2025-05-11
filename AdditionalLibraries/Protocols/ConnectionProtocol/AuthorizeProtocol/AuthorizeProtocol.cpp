@@ -7,7 +7,7 @@
   this->header.dataType = ConnectionProtocolType::Authorize; 
 }
 
-AuthorizeProtocol::AuthorizeProtocol(const vector<unsigned char> &buffer){
+AuthorizeProtocol::AuthorizeProtocol(const vector<char> &buffer){
   this->Deserialize(buffer);
 }
 
@@ -20,7 +20,7 @@ void AuthorizeProtocol::Serialize(){
 
   ConnectionProtocol::Serialize();
 
-  unsigned char *bufferPtr = this->buffer.data() + sizeof(ConnectionProtocolHeader);
+  char *bufferPtr = this->buffer.data() + sizeof(ConnectionProtocolHeader);
   
   const int usernameSize = this->username.size();
 
@@ -39,8 +39,8 @@ void AuthorizeProtocol::Serialize(){
   bufferPtr += passwordSize;
 }
 
-void AuthorizeProtocol::Deserialize(const vector<unsigned char> &buffer){
-   const unsigned char* bufferPtr = buffer.data();
+void AuthorizeProtocol::Deserialize(const vector<char> &buffer){
+   const char* bufferPtr = buffer.data();
       
    int usernameSize = 0, passwordSize = 0;
     

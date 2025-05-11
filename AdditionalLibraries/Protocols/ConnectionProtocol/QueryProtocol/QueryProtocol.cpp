@@ -15,14 +15,14 @@ void QueryProtocol::Serialize(){
   
   ConnectionProtocol::Serialize();
 
-  unsigned char* bufferPtr = this->buffer.data() + sizeof(ConnectionProtocolHeader);
+  char* bufferPtr = this->buffer.data() + sizeof(ConnectionProtocolHeader);
 
   memcpy(bufferPtr, this->query.data(), this->header.size);
   bufferPtr += this->header.size;
 }
 
-void QueryProtocol::Deserialize(const vector<unsigned char> &buffer){
-  const unsigned char* bufferPtr = buffer.data();
+void QueryProtocol::Deserialize(const vector<char> &buffer){
+  const char* bufferPtr = buffer.data();
 
   query.resize(this->header.size);
   memcpy(query.data(), bufferPtr, this->header.size);

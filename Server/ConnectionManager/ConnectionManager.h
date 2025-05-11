@@ -7,11 +7,16 @@
 #include <string>
 
 #ifdef _WIN32
+
+#define NOMINMAX
+#define byte win_byte_override // Add this before any Windows headers
     #include <ws2tcpip.h>
     #include <windows.h>
     #include <winsock2.h>
     #pragma comment(lib, "ws2_32.lib")
     using SocketEvent = pollfd;
+
+#undef byte // Clean up after including
 #else
     #include <sys/socket.h>
     #include <sys/epoll.h>
@@ -55,8 +60,8 @@ namespace Server {
     protected:
       static void SendToClient(const int& clientSocket, ResponseProtocol* protocol);
 
-      void GetQueryFromClient(const int& clientSocket, const ConnectionProtocolHeader& header, const vector<unsigned char>& buffer);
-      void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer)const;
+      void GetQueryFromClient(const int& clientSocket, const ConnectionProtocolHeader& header, const vector<char>& buffer);
+      void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<char>& buffer)const;
       void HandleClientConnection(const int& clientSocket, mutex& clientMutex);
       void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header);
       void CloseServerConnection() const;

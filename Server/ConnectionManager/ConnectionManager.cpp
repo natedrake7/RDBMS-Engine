@@ -12,9 +12,16 @@
 #include <ostream>
 #include <stdexcept>
 #include <fcntl.h>
+
 #ifdef _WIN32
+#define NOMINMAX
+#define byte win_byte_override // Add this before any Windows headers
+  #include <windows.h>
   #include <winsock2.h>
+  #include <ws2tcpip.h>
   #pragma comment(lib, "ws2_32.lib")
+
+#undef byte // Clean up after including
 #else
   #include <sys/socket.h>
   #include <sys/epoll.h>
@@ -62,13 +69,13 @@ namespace Server {
     this->InitializeServerSocket();
 
     vector<mutex> eventMutexes(this->parameters.numberOfConnections);
-    this->events.resize(this->parameters.numberOfConnections);
+    //this->events.resize(this->parameters.numberOfConnections);
 
     threadPool.InitializeWorkers(isServerRunning, 20);
     
     while (isServerRunning) {
 #ifdef _WIN32
-	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 1000);
+	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 10);
 #else
         const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), 10);
 #endif
@@ -100,10 +107,14 @@ namespace Server {
             cerr << "Failed to accept client (Windows)" << endl;
             continue;
         }
+        
+        u_long mode = 1;
+        ioctlsocket(clientSocket, FIONBIO, &mode);
 
         pollfd newEvent{};
         newEvent.fd = clientSocket;
         newEvent.events = POLLIN;
+        newEvent.revents = 0;
         this->events.push_back(newEvent);
         cout << "Accepted client (Windows): " << clientSocket << endl;
 
@@ -161,7 +172,7 @@ namespace Server {
     serverAddress.sin_addr.s_addr = inet_addr(this->parameters.hostName.c_str());
     serverAddress.sin_port = htons(this->parameters.port);
 
-    if (bind(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0)
+    if (::bind(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0)
       throw runtime_error("Failed to bind socket");
     
     if (listen(sock, SOMAXCONN) < 0) {
@@ -231,7 +242,7 @@ void ConnectionManager::CloseServerConnection() const
     clientMutex.lock();
     
     ConnectionProtocolHeader header;
-    const ssize_t headerBytesRead = recv(clientSocket, &header, sizeof(ConnectionProtocolHeader), 0);
+    const auto headerBytesRead = recv(clientSocket, reinterpret_cast<char*>(&header), sizeof(ConnectionProtocolHeader), 0);
 
     if (headerBytesRead > 0) {
       this->ReadBodyFromClient(clientSocket, header);
@@ -250,7 +261,7 @@ void ConnectionManager::CloseServerConnection() const
   }
 
   void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header){
-    vector<unsigned char> buffer(header.size);
+    vector<char> buffer(header.size);
     
     if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
       perror("failed to read body from client or body was empty!");
@@ -270,7 +281,7 @@ void ConnectionManager::CloseServerConnection() const
     //invalid request type
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer) const{
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<char>& buffer) const{
     AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
@@ -288,7 +299,7 @@ void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const
     }
 }
 
-void ConnectionManager::GetQueryFromClient(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char> &buffer){
+void ConnectionManager::GetQueryFromClient(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<char> &buffer){
     QueryProtocol protocol(header);
 
     protocol.Deserialize(buffer);

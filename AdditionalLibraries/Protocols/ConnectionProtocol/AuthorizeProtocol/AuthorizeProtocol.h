@@ -13,13 +13,13 @@ class AuthorizeProtocol final : public ConnectionProtocol{
     AuthorizeProtocol() = default;
     explicit AuthorizeProtocol(const ConnectionProtocolHeader& header): ConnectionProtocol(header){}
     AuthorizeProtocol(const string& username, const string& password);
-    explicit AuthorizeProtocol(const vector<unsigned char>& buffer);
+    explicit AuthorizeProtocol(const vector<char>& buffer);
     
     ~AuthorizeProtocol() override = default;
     
     [[nodiscard]] int GetSize() const override;
     void Serialize() override;
-    void Deserialize(const vector<unsigned char>& buffer) override;
+    void Deserialize(const vector<char>& buffer) override;
 
     [[nodiscard]] const string& GetUsername() const;
     [[nodiscard]] const string& GetPassword() const;

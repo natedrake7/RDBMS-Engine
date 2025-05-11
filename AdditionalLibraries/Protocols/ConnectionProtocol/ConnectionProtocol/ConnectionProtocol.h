@@ -20,7 +20,7 @@ typedef struct ConnectionProtocolHeader {
 class ConnectionProtocol {
   protected:
     ConnectionProtocolHeader header;
-    vector<unsigned char> buffer;
+    vector<char> buffer;
 
   public:
     explicit ConnectionProtocol() = default;
@@ -28,6 +28,6 @@ class ConnectionProtocol {
     virtual ~ConnectionProtocol() = default;
     [[nodiscard]] virtual int GetSize() const;
     virtual void Serialize();
-    virtual void Deserialize(const vector<unsigned char>& buffer);
-    virtual const vector<unsigned char>& GetSerializedProtocol();
+    virtual void Deserialize(const vector<char>& buffer);
+    virtual const vector<char>& GetSerializedProtocol();
 };

@@ -10,7 +10,6 @@ class ThreadPool {
   std::condition_variable condition;
   std::vector<std::thread> workers;
   std::queue<std::function<void()>> tasks;
-  
 
   public:
     ThreadPool();
