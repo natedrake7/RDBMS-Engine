@@ -1,9 +1,21 @@
 ﻿cmake_minimum_required(VERSION 3.10)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(DatabaseInterface)
 
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+
+FLEX_TARGET(Lexer   ${CMAKE_CURRENT_SOURCE_DIR}/QueryParser/Grammar/Grammar.l 
+                    ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
+
+BISON_TARGET(Parser ${CMAKE_CURRENT_SOURCE_DIR}/QueryParser/Grammar/Grammar.y
+                    ${CMAKE_CURRENT_BINARY_DIR}/parser.cpp)
+
+ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(DatabaseInterface
         main.cpp)
@@ -12,7 +24,10 @@ add_library(QueryParser
             QueryParser/Tokenizer/Tokenizer.cpp
             QueryParser/Tokenizer/Tokenizer.h
             QueryParser/Parser/Parser.cpp
-            QueryParser/Parser/Parser.h)
+            QueryParser/Parser/Parser.h
+            ${BISON_Parser_OUTPUTS}
+            ${FLEX_Lexer_OUTPUTS}
+            ${FLEX_LIBRARIES})
 
 add_library(AdditionalLibraries
         AdditionalLibraries/BitMap/BitMap.cpp
@@ -104,5 +119,7 @@ add_executable(Client   Client/client.cpp
                         Client/client.h)
 
 target_link_libraries(Client PRIVATE AdditionalLibraries)
+
+#target_include_directories(DatabaseInterface PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 target_link_libraries(DatabaseInterface PRIVATE Database Server AdditionalLibraries QueryParser)

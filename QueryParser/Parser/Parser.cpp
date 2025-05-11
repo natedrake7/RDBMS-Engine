@@ -47,6 +47,7 @@ namespace QueryParser
 
     std::ostream& operator<<(std::ostream& os, const Node& node) 
     {
+
         os  << "Node(Type: " 
             << wordTypeLiterals.Get(node.type) 
             << ", Value: ";
@@ -63,6 +64,10 @@ namespace QueryParser
 
     Query& Parser::Parse(vector<Token>& tokens)
     {
+        std::istringstream input("SELECT * FROM my_table;");
+
+        throw invalid_argument("stop debug");
+
         if(tokens.empty())
         {
             return this->query;

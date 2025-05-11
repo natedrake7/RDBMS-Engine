@@ -1,5 +1,6 @@
 ﻿#include <chrono>
 #include <cstdint>
+#include <csignal>
 #include <exception>
 #include <iostream>
 #include <string>
@@ -18,8 +19,6 @@
 #include "QueryParser/Parser/Parser.h"
 #include "Server/ConnectionManager/ConnectionManager.h"
 #include "Server/Threadpool/ThreadPool.h"
-
-#include <csignal>
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
@@ -54,6 +53,25 @@ int main()
     signal(SIGINT, shutdownServer);   // Ctrl+C
     signal(SIGTERM, shutdownServer);  // kill command
     signal(SIGABRT, shutdownServer);  // abort()
+
+    const string test = "SELECT users FROM dbo.test";
+    vector<Token> temp = {
+    };
+    
+    Parser::Get().Parse(temp);
+
+    // // Parse the query
+    // if (yyparse() == 0) {
+    //     std::cout << "Query parsed successfully.\n";
+    // } else {
+    //     std::cout << "Failed to parse query.\n";
+    // }
+
+    // Clean up the buffer
+    // yy_delete_buffer(buffer);
+    
+    return 0;
+    
     
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
