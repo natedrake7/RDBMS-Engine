@@ -68,7 +68,7 @@ namespace QueryParser
     Query& Parser::Parse(vector<Token>& tokens)
     {
 
-        std::string input = "5";
+        std::string input = "SELECT user , test FROM table;";
         FILE* filePtr = fmemopen(input.data(), input.size(), "r");
 
         set_yyin(filePtr);
