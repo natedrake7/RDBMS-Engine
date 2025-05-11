@@ -37,8 +37,15 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
         AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h)
+        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
+        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
+        AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
+        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
+        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h)
 
 add_library(Database
         Database/Database.cpp
@@ -88,11 +95,13 @@ add_library(Database
         Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
         Database/AdditionalFunctions/StringFunctions/StringFunctions.h)
 
-add_library(Server  
-                Server/ConnectionManager/ConnectionManager.cpp
-                Server/ConnectionManager/ConnectionManager.h)
+add_library(Server  Server/ConnectionManager/ConnectionManager.cpp
+                    Server/ConnectionManager/ConnectionManager.h
+                    Server/Threadpool/ThreadPool.cpp
+                    Server/Threadpool/ThreadPool.h)
 
-add_executable(Client Client/main.cpp)
+add_executable(Client   Client/client.cpp
+                        Client/client.h)
 
 target_link_libraries(Client PRIVATE AdditionalLibraries)
 

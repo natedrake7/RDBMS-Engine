@@ -1,19 +1,20 @@
 #include "ConnectionManager.h"
+
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
+#include "../Threadpool/ThreadPool.h"
+
+#include <atomic>
+#include <cstring>
 #include <iostream>
 #include <ostream>
-#include <iostream>
 #include <stdexcept>
 #include <fcntl.h>
-
 #ifdef _WIN32
-#define NOMINMAX
-#define byte win_byte_override // Add this before any Windows headers
-
-  #include <mutex>
   #include <winsock2.h>
   #pragma comment(lib, "ws2_32.lib")
-
-#undef byte // Clean up after including
 #else
   #include <sys/socket.h>
   #include <sys/epoll.h>
@@ -21,8 +22,6 @@
   #include <arpa/inet.h>
   #include <unistd.h>
 #endif
-
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h"
 
 namespace Server {
 
@@ -36,7 +35,7 @@ namespace Server {
     this->serverSocket = -1;
   }
 
-  ConnectionParameters::ConnectionParameters(const std::string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime){
+  ConnectionParameters::ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime){
     this->hostName = hostname;
     this->numberOfConnections = numberOfConnections;
     this->timeoutTime = timeoutTime;
@@ -46,7 +45,7 @@ namespace Server {
     this->serverSocket = -1;
   }
 
-  void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const std::atomic<bool>& isServerRunning)
+  void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning)
   {
     ConnectionManager _connectionManager(parameters);
 
@@ -58,20 +57,24 @@ namespace Server {
     this->parameters = parameters;
   }
 
-  void ConnectionManager::HandleNewConnections(const std::atomic<bool>& isServerRunning)
+  void ConnectionManager::HandleNewConnections(const atomic<bool>& isServerRunning)
   {
     this->InitializeServerSocket();
-    std::vector<std::mutex> eventMutexes(this->parameters.numberOfConnections);
 
+    vector<mutex> eventMutexes(this->parameters.numberOfConnections);
+    this->events.resize(this->parameters.numberOfConnections);
+
+    threadPool.InitializeWorkers(isServerRunning, 20);
+    
     while (isServerRunning) {
 #ifdef _WIN32
-	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 10);
+	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 1000);
 #else
         const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), 10);
 #endif
 
       if (eventCount < 0) {
-        std::cerr << "epoll_wait failed" << std::endl;
+        std::cerr << "epoll_wait failed"<< strerror(errno) << endl;
         break;
       }
 
@@ -94,7 +97,7 @@ namespace Server {
 
         SOCKET clientSocket = accept(this->parameters.serverSocket, nullptr, nullptr);
         if (clientSocket == INVALID_SOCKET) {
-            std::cerr << "Failed to accept client (Windows)" << std::endl;
+            cerr << "Failed to accept client (Windows)" << endl;
             continue;
         }
 
@@ -102,7 +105,7 @@ namespace Server {
         newEvent.fd = clientSocket;
         newEvent.events = POLLIN;
         this->events.push_back(newEvent);
-        std::cout << "Accepted client (Windows): " << clientSocket << std::endl;
+        cout << "Accepted client (Windows): " << clientSocket << endl;
 
 #else
         auto& evt = this->events[i];
@@ -133,7 +136,7 @@ namespace Server {
       }
     }
 
-    std::cout << "Closing connections" << std::endl;
+    cout << "Closing connections" << endl;
 
     this->CloseServerConnection();
   }
@@ -144,31 +147,26 @@ namespace Server {
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData))
-      throw std::runtime_error( "WSAStartup failed");
+      throw runtime_error( "WSAStartup failed");
 #endif
     
     const int sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sock < 0)
-      throw std::runtime_error("Failed to create socket");
+      throw runtime_error("Failed to create socket");
 
     sockaddr_in serverAddress = {};
 
     serverAddress.sin_family = AF_INET;
-#ifdef _WIN32
-    InetPton(AF_INET, this->parameters.hostName.c_str(), &serverAddress.sin_addr);
-#else
     serverAddress.sin_addr.s_addr = inet_addr(this->parameters.hostName.c_str());
-#endif
-    
     serverAddress.sin_port = htons(this->parameters.port);
 
     if (bind(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0)
-      throw std::runtime_error("Failed to bind socket");
+      throw runtime_error("Failed to bind socket");
     
     if (listen(sock, SOMAXCONN) < 0) {
       this->CloseServerConnection();
-      throw std::runtime_error("Failed to listen on socket");
+      throw runtime_error("Failed to listen on socket");
     }
 
 #ifdef _WIN32
@@ -228,15 +226,15 @@ void ConnectionManager::CloseServerConnection() const
 #endif
   }
 
-  void ConnectionManager::HandleClientConnection(const int &clientSocket, std::mutex& clientMutex) const{
+  void ConnectionManager::HandleClientConnection(const int &clientSocket, mutex& clientMutex){
 
     clientMutex.lock();
     
     ConnectionProtocolHeader header;
-    const auto headerBytesRead = recv(clientSocket, reinterpret_cast<char*>(&header), sizeof(ConnectionProtocolHeader), 0);
+    const ssize_t headerBytesRead = recv(clientSocket, &header, sizeof(ConnectionProtocolHeader), 0);
 
     if (headerBytesRead > 0) {
-      ConnectionManager::ReadBodyFromClient(clientSocket, header);
+      this->ReadBodyFromClient(clientSocket, header);
       clientMutex.unlock();
       return;
     }
@@ -252,7 +250,7 @@ void ConnectionManager::CloseServerConnection() const
   }
 
   void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header){
-    std::vector<char> buffer(header.size);
+    vector<unsigned char> buffer(header.size);
     
     if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
       perror("failed to read body from client or body was empty!");
@@ -260,23 +258,86 @@ void ConnectionManager::CloseServerConnection() const
     }
     
     if (header.dataType == ConnectionProtocolType::Authorize) {
-      ConnectionManager::AuthorizeClientConnection(clientSocket, header, buffer);
+      this->AuthorizeClientConnection(clientSocket, header, buffer);
       return;
     }
+    
+    if (header.dataType == ConnectionProtocolType::Query) {
+      this->GetQueryFromClient(clientSocket, header, buffer);
+      return;
+    }
+
+    //invalid request type
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const std::vector<char>& buffer){
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer) const{
     AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
 
     if (protocol.GetUsername() == "natedrake7" && protocol.GetPassword() == "kalispera") {
-      std::cout << "SuccessFully Authorized!" << std::endl;
-      //send response to client that verification is successfull
+      AuthorizeResponseProtocol responseProtocol(ResponseType::Authenticated);
       
+      ConnectionManager::SendToClient(clientSocket, &responseProtocol);
     }
     else {
-      //close connection with client, invalid credentials
+      AuthorizeResponseProtocol responseProtocol(ResponseType::InvalidCredentials);
+      ConnectionManager::SendToClient(clientSocket, &responseProtocol);
+
+      this->CloseClientConnection(clientSocket);
     }
 }
+
+void ConnectionManager::GetQueryFromClient(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char> &buffer){
+    QueryProtocol protocol(header);
+
+    protocol.Deserialize(buffer);
+
+    this->threadPool.Enqueue([query = protocol.GetQuery(), clientSocket] {
+      const vector<string> columns = {
+        {"1"},
+        {"2"},
+        {"3"}
+      };
+
+      const vector<ResponseRow> rows = {
+        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 1)),
+        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+      };
+
+      const vector<string> tableColumns = {
+        {"id"},
+        {"user"},
+        {"result"}
+      };
+      
+      QueryResponseProtocol response(tableColumns, rows);
+      
+      ConnectionManager::SendToClient(clientSocket, &response);
+    });
+}
+
+void ConnectionManager::SendToClient(const int &clientSocket, ResponseProtocol *protocol){
+    if (protocol == nullptr)
+      return;
+
+    const auto& serializedProtocol = protocol->GetSerializedProtocol();
+
+    const auto protocolSize = protocol->GetSize();
+
+    const auto bytesSent = send(clientSocket, serializedProtocol.data(), protocolSize, 0);
+
+    if (bytesSent > 0)
+      return;
+    
+    if (bytesSent < 0) {
+      std::cerr << " Failed to send request to client"<< strerror(errno) << endl;
+      return;
+    }
+
+    cout << "Client disconnected" << endl;
+  }
+
+
 } // Server

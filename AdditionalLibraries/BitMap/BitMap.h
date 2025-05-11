@@ -16,7 +16,6 @@ namespace ByteMaps
 
     protected:
         void Resize(const bit_map_size_t &newSize);
-        void SetByte(const bit_map_pos_t &position, const Constants::byte &value);
 
     public:
         BitMap();
@@ -25,6 +24,7 @@ namespace ByteMaps
         ~BitMap();
 
         void Set(const bit_map_pos_t &position, const bool &value);
+        void SetByte(const bit_map_pos_t &position, const Constants::byte &value);
 
         [[nodiscard]] bool Get(const bit_map_pos_t &position) const;
         [[nodiscard]] const bit_map_size_t &GetSize() const;
@@ -32,11 +32,15 @@ namespace ByteMaps
 
         void GetDataFromFile(const vector<char> &data, page_offset_t &offset);
         void WriteDataToFile(fstream *filePtr);
+        void WriteDataToProtocol(char*& data)const;
         void Print() const;
 
         [[nodiscard]] const vector<Constants::byte> &GetData() const;
+        [[nodiscard]] vector<Constants::byte>& GetDataUnsafe();
 
-        BitMap &operator=(const BitMap &itMap);
+        [[nodiscard]] bit_map_size_t& GetSizeUnsafe();
+
+        BitMap &operator=(const BitMap &bitMap);
 
         const bool HasAtLeastOneEntry();
     };
