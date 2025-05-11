@@ -69,7 +69,7 @@ namespace Server {
     this->InitializeServerSocket();
 
     vector<mutex> eventMutexes(this->parameters.numberOfConnections);
-    //this->events.resize(this->parameters.numberOfConnections);
+    this->events.resize(this->parameters.numberOfConnections);
 
     threadPool.InitializeWorkers(isServerRunning, 20);
     

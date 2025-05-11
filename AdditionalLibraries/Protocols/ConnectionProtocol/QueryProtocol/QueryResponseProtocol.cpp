@@ -105,7 +105,7 @@ void QueryResponseProtocol::Serialize(){
   bufferPtr += sizeof(int);
 
   for (auto& row: this->rows) {
-    auto& bitMapData = row.nullBitMap.GetDataUnsafe();
+    // auto& bitMapData = row.nullBitMap.GetDataUnsafe();
     
     // int bitMapSize = bitMapData.size();
     // memcpy(bufferPtr, &bitMapSize, sizeof(int));
@@ -114,15 +114,15 @@ void QueryResponseProtocol::Serialize(){
     // memcpy(bufferPtr, bitMapData.data(), bitMapSize);
     // bufferPtr += bitMapSize;
 
-    const auto bitMapSize = row.nullBitMap.GetSize();
-
-    memcpy(bufferPtr, &bitMapSize, sizeof(Constants::bit_map_size_t));
-    bufferPtr += sizeof(Constants::bit_map_size_t);
-
-    const int dataSize = bitMapData.size() * sizeof(Constants::byte);
-        
-    memcpy(bufferPtr, bitMapData.data(), dataSize);
-    bufferPtr += dataSize;
+    // const auto bitMapSize = row.nullBitMap.GetSize();
+    //
+    // memcpy(bufferPtr, &bitMapSize, sizeof(Constants::bit_map_size_t));
+    // bufferPtr += sizeof(Constants::bit_map_size_t);
+    //
+    // const int dataSize = bitMapData.size() * sizeof(Constants::byte);
+    //     
+    // memcpy(bufferPtr, bitMapData.data(), dataSize);
+    // bufferPtr += dataSize;
     
     for (const auto& column: row.columns) {
       const int columnSize = column.size();
@@ -180,21 +180,21 @@ void QueryResponseProtocol::Deserialize(const vector<char> &buffer) {
   for (int i = 0; i < numOfRows; i++) {
     this->rows[i].columns.resize(numOfColumns);
 
-    auto& bitMapSize = this->rows[i].nullBitMap.GetSizeUnsafe();
-
-    memcpy(&bitMapSize, bufferPtr, sizeof(Constants::bit_map_size_t));
-    bufferPtr += sizeof(Constants::bit_map_size_t);
-        
-    const Constants::bit_map_size_t &bytesToRead = (bitMapSize + 7) / 8;
-
-    for (Constants::bit_map_size_t bitMapBytes = 0; i < bytesToRead; i++)
-    {
-      Constants::byte value;
-      memcpy(&value, bufferPtr, sizeof(Constants::byte));
-     this->rows[i].nullBitMap.SetByte(bitMapBytes, value);
-
-      bufferPtr += sizeof(Constants::byte);
-    }
+    // auto& bitMapSize = this->rows[i].nullBitMap.GetSizeUnsafe();
+    //
+    // memcpy(&bitMapSize, bufferPtr, sizeof(Constants::bit_map_size_t));
+    // bufferPtr += sizeof(Constants::bit_map_size_t);
+    //     
+    // const Constants::bit_map_size_t &bytesToRead = (bitMapSize + 7) / 8;
+    //
+    // for (Constants::bit_map_size_t bitMapBytes = 0; i < bytesToRead; i++)
+    // {
+    //   Constants::byte value;
+    //   memcpy(&value, bufferPtr, sizeof(Constants::byte));
+    //   this->rows[i].nullBitMap.SetByte(bitMapBytes, value);
+    //
+    //   bufferPtr += sizeof(Constants::byte);
+    // }
 
     // int bitMapSize = 0;
     // memcpy(&bitMapSize, bufferPtr, sizeof(int));
@@ -233,10 +233,10 @@ ostream & operator<<(ostream &os, const QueryResponseProtocol &protocol){
 
   for (const auto& row: protocol.rows) {
     for (int i = 0; i< row.columns.size(); i++) {
-      if (row.nullBitMap.Get(i)) {
-        os << "NULL" << " | ";
-        continue;
-      }
+      // if (row.nullBitMap.Get(i)) {
+      //   os << "NULL" << " | ";
+      //   continue;
+      // }
 
       os << row.columns[i] << " | ";
     }
