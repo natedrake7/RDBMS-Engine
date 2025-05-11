@@ -3,6 +3,7 @@
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
 #include "../Threadpool/ThreadPool.h"
 
 #include <atomic>
@@ -292,8 +293,28 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Connec
 
     protocol.Deserialize(buffer);
 
-    this->threadPool.Enqueue([query = protocol.GetQuery()] {
-      cout << query << endl;
+    this->threadPool.Enqueue([query = protocol.GetQuery(), clientSocket] {
+      const vector<string> columns = {
+        {"1"},
+        {"2"},
+        {"3"}
+      };
+
+      const vector<ResponseRow> rows = {
+        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+      };
+
+      const vector<string> tableColumns = {
+        {"id"},
+        {"user"},
+        {"result"}
+      };
+      
+      QueryResponseProtocol response(tableColumns, rows);
+      
+      ConnectionManager::SendToClient(clientSocket, &response);
     });
 }
 

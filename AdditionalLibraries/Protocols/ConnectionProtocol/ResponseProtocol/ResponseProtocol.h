@@ -10,6 +10,7 @@ enum ResponseType : uint8_t {
   Unauthorized = 1,
   InvalidCredentials = 2,
   Authenticated = 3,
+  QueryResponse = 4,
 };
 
 static string authorizationSuccess = "Successfully Authenticated";

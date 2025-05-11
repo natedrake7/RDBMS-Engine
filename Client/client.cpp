@@ -13,6 +13,8 @@
 #include <sstream>
 #include "client.h"
 
+#include "../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
+
 #ifdef _WIN32
   #include <winsock2.h>
   #pragma comment(lib, "ws2_32.lib")
@@ -45,7 +47,7 @@ int main()
 
   while(true){
     string input;
-
+    
     std::getline(std::cin, input);
 
     if(input == "exit")
@@ -68,6 +70,48 @@ int main()
       cout << "Connection lost" << endl;
       CloseConnection(parameters);
     }
+
+    ResponseProtocolHeader responseHeader;
+    vector<char> buffer;
+
+    auto bytesReceived = recv(parameters.socket, &responseHeader, responseHeader.GetSize(), 0);
+
+    if (bytesReceived < 0) {
+      cerr << "Failed to get response from server" << endl;
+      CloseConnection(parameters);
+      return -1;
+    }
+
+    if (bytesReceived == 0) {
+      cout << "Connection lost" << endl;
+      CloseConnection(parameters);
+    }
+
+    if (responseHeader.statusCode != ResponseType::QueryResponse) {
+      cerr << "Failed to get response from server" << endl;
+      CloseConnection(parameters);
+    }
+
+    QueryResponseProtocol queryResponseProtocol(responseHeader);
+
+    buffer.resize(responseHeader.size);
+
+    bytesReceived = recv(parameters.socket, buffer.data(), responseHeader.size, 0);
+    
+    if (bytesReceived < 0) {
+      cerr << "Failed to get response from server" << endl;
+      CloseConnection(parameters);
+      return -1;
+    }
+
+    if (bytesReceived == 0) {
+      cout << "Connection lost" << endl;
+      CloseConnection(parameters);
+    }
+
+    queryResponseProtocol.Deserialize(buffer);
+
+    cout << queryResponseProtocol << endl;
 
     //get response from server (usually a set of rows)
   }

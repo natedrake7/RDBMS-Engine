@@ -39,12 +39,13 @@ add_library(AdditionalLibraries
         AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
         AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
         AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h)
+        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
+        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
+        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h)
 
 add_library(Database
         Database/Database.cpp

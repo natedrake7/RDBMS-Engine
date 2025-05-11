@@ -31,12 +31,15 @@ namespace ByteMaps
         [[nodiscard]] bit_map_size_t GetSizeInBytes() const;
 
         void GetDataFromFile(const vector<char> &data, page_offset_t &offset);
+        void GetDataFromProtocol(const char*& data);
         void WriteDataToFile(fstream *filePtr);
+        void WriteDataToProtocol(char*& data)const;
         void Print() const;
 
         [[nodiscard]] const vector<Constants::byte> &GetData() const;
+        [[nodiscard]] vector<Constants::byte>& GetDataUnsafe();
 
-        BitMap &operator=(const BitMap &itMap);
+        BitMap &operator=(const BitMap &bitMap);
 
         const bool HasAtLeastOneEntry();
     };
