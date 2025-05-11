@@ -1,28 +1,25 @@
 #pragma once
 #include <string>
-
 #include "../ConnectionProtocol/ConnectionProtocol.h"
 
-using namespace std;
-
 class AuthorizeProtocol final : public ConnectionProtocol{
-  string username;
-  string password;
+  std::string username;
+  std::string password;
 
   public:
     AuthorizeProtocol() = default;
     explicit AuthorizeProtocol(const ConnectionProtocolHeader& header): ConnectionProtocol(header){}
-    AuthorizeProtocol(const string& username, const string& password);
-    explicit AuthorizeProtocol(const vector<unsigned char>& buffer);
+    AuthorizeProtocol(const std::string& username, const std::string& password);
+    explicit AuthorizeProtocol(const std::vector<char>& buffer);
     
     ~AuthorizeProtocol() override = default;
     
     [[nodiscard]] int GetSize() const override;
     void Serialize() override;
-    void Deserialize(const vector<unsigned char>& buffer) override;
-    void DeserializeBody(const vector<unsigned char> &buffer) override;
-    const vector<unsigned char>& GetSerializedProtocol() override;
+    void Deserialize(const std::vector<char>& buffer) override;
+    void DeserializeBody(const std::vector<char> &buffer) override;
+    const std::vector<char>& GetSerializedProtocol() override;
 
-    [[nodiscard]] const string& GetUsername() const;
-    [[nodiscard]] const string& GetPassword() const;
+    [[nodiscard]] const std::string& GetUsername() const;
+    [[nodiscard]] const std::string& GetPassword() const;
 };

@@ -2,8 +2,6 @@
 #include <cstdint>
 #include <vector>
 
-using namespace std;
-
 enum ConnectionProtocolType : uint8_t {
   Invalid = 0,
   Authorize = 1,
@@ -20,7 +18,7 @@ typedef struct ConnectionProtocolHeader {
 class ConnectionProtocol {
   protected:
     ConnectionProtocolHeader header;
-    vector<unsigned char> buffer;
+    std::vector<char> buffer;
 
   public:
     explicit ConnectionProtocol() = default;
@@ -28,7 +26,7 @@ class ConnectionProtocol {
     virtual ~ConnectionProtocol() = default;
     [[nodiscard]] virtual int GetSize() const;
     virtual void Serialize();
-    virtual void Deserialize(const vector<unsigned char>& buffer);
-    virtual void DeserializeBody(const vector<unsigned char>& buffer);
-    virtual const vector<unsigned char>& GetSerializedProtocol();
+    virtual void Deserialize(const std::vector<char>& buffer);
+    virtual void DeserializeBody(const std::vector<char>& buffer);
+    virtual const std::vector<char>& GetSerializedProtocol();
 };

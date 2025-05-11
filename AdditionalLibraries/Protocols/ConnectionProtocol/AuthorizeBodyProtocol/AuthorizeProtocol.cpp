@@ -2,12 +2,12 @@
 
 #include <cstring>
 
- AuthorizeProtocol::AuthorizeProtocol(const string &username, const string &password) : username(username), password(password) {
+ AuthorizeProtocol::AuthorizeProtocol(const std::string &username, const std::string &password) : username(username), password(password) {
   this->header.size = this->GetSize();
   this->header.dataType = ConnectionProtocolType::Authorize; 
 }
 
-AuthorizeProtocol::AuthorizeProtocol(const vector<unsigned char> &buffer){
+AuthorizeProtocol::AuthorizeProtocol(const std::vector<char> &buffer){
   this->Deserialize(buffer);
 }
 
@@ -20,7 +20,7 @@ void AuthorizeProtocol::Serialize(){
 
   ConnectionProtocol::Serialize();
 
-  unsigned char *bufferPtr = this->buffer.data() + sizeof(ConnectionProtocolHeader);
+  char *bufferPtr = this->buffer.data() + sizeof(ConnectionProtocolHeader);
   
   const int usernameSize = this->username.size();
 
@@ -38,13 +38,13 @@ void AuthorizeProtocol::Serialize(){
   memcpy(bufferPtr, this->password.c_str(), passwordSize);
 }
 
-void AuthorizeProtocol::Deserialize(const vector<unsigned char> &buffer){
+void AuthorizeProtocol::Deserialize(const std::vector<char> &buffer){
   ConnectionProtocol::Deserialize(buffer);
   this->DeserializeBody(buffer);
 }
 
-void AuthorizeProtocol::DeserializeBody(const vector<unsigned char> &buffer){
-  const unsigned char* bufferPtr = buffer.data() + sizeof(ConnectionProtocolHeader);
+void AuthorizeProtocol::DeserializeBody(const std::vector<char> &buffer){
+  const char* bufferPtr = buffer.data() + sizeof(ConnectionProtocolHeader);
       
   int usernameSize = 0, passwordSize = 0;
     
@@ -62,15 +62,15 @@ void AuthorizeProtocol::DeserializeBody(const vector<unsigned char> &buffer){
   memcpy(this->password.data(), bufferPtr, passwordSize);
 }
 
-const vector<unsigned char> & AuthorizeProtocol::GetSerializedProtocol(){
+const std::vector<char> & AuthorizeProtocol::GetSerializedProtocol(){
   if (this->buffer.empty())
     this->Serialize();
   
   return this->buffer;
 }
 
-const string & AuthorizeProtocol::GetUsername() const{ return this->username; }
+const std::string & AuthorizeProtocol::GetUsername() const{ return this->username; }
 
-const string & AuthorizeProtocol::GetPassword() const{ return this->password; }
+const std::string & AuthorizeProtocol::GetPassword() const{ return this->password; }
 
 

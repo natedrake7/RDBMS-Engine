@@ -1,4 +1,3 @@
-#include <stdexcept>
 #include <string>
 #include <iostream>
 #include <ostream>
@@ -7,19 +6,23 @@
 #include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h"
 
-#include <cstring>
 #include <sstream>
 
 #ifdef _WIN32
+#define NOMINMAX
+#define byte win_byte_override // Add this before any Windows headers
+
+  #include <ws2tcpip.h>
   #include <winsock2.h>
   #pragma comment(lib, "ws2_32.lib")
+
+#undef byte // Clean up after including
+
 #else
   #include <sys/socket.h>
   #include <arpa/inet.h>
   #include <unistd.h>
 #endif
-
-using namespace std;
 
 typedef struct ConnectionParameters {
   int port;
@@ -104,7 +107,7 @@ void InitializeConnectionToServer(ConnectionParameters& parameters) {
   #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData))
-      throw runtime_error("WSAStartup failed")
+      throw runtime_error("WSAStartup failed");
   #endif
 
   int sock = socket(AF_INET, SOCK_STREAM, 0);

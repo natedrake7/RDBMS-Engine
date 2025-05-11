@@ -1,16 +1,19 @@
 #include "ConnectionManager.h"
-
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h"
-
-#include <atomic>
-#include <cstring>
 #include <iostream>
 #include <ostream>
+#include <iostream>
 #include <stdexcept>
 #include <fcntl.h>
+
 #ifdef _WIN32
+#define NOMINMAX
+#define byte win_byte_override // Add this before any Windows headers
+
+  #include <mutex>
   #include <winsock2.h>
   #pragma comment(lib, "ws2_32.lib")
+
+#undef byte // Clean up after including
 #else
   #include <sys/socket.h>
   #include <sys/epoll.h>
@@ -18,6 +21,8 @@
   #include <arpa/inet.h>
   #include <unistd.h>
 #endif
+
+#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeBodyProtocol/AuthorizeProtocol.h"
 
 namespace Server {
 
@@ -31,7 +36,7 @@ namespace Server {
     this->serverSocket = -1;
   }
 
-  ConnectionParameters::ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime){
+  ConnectionParameters::ConnectionParameters(const std::string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime){
     this->hostName = hostname;
     this->numberOfConnections = numberOfConnections;
     this->timeoutTime = timeoutTime;
@@ -41,7 +46,7 @@ namespace Server {
     this->serverSocket = -1;
   }
 
-  void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning)
+  void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const std::atomic<bool>& isServerRunning)
   {
     ConnectionManager _connectionManager(parameters);
 
@@ -53,20 +58,20 @@ namespace Server {
     this->parameters = parameters;
   }
 
-  void ConnectionManager::HandleNewConnections(const atomic<bool>& isServerRunning)
+  void ConnectionManager::HandleNewConnections(const std::atomic<bool>& isServerRunning)
   {
     this->InitializeServerSocket();
-    vector<mutex> eventMutexes(this->parameters.numberOfConnections);
+    std::vector<std::mutex> eventMutexes(this->parameters.numberOfConnections);
 
     while (isServerRunning) {
 #ifdef _WIN32
-	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 1000);
+	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 10);
 #else
         const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), 10);
 #endif
 
       if (eventCount < 0) {
-        std::cerr << "epoll_wait failed" << endl;
+        std::cerr << "epoll_wait failed" << std::endl;
         break;
       }
 
@@ -89,7 +94,7 @@ namespace Server {
 
         SOCKET clientSocket = accept(this->parameters.serverSocket, nullptr, nullptr);
         if (clientSocket == INVALID_SOCKET) {
-            cerr << "Failed to accept client (Windows)" << endl;
+            std::cerr << "Failed to accept client (Windows)" << std::endl;
             continue;
         }
 
@@ -97,7 +102,7 @@ namespace Server {
         newEvent.fd = clientSocket;
         newEvent.events = POLLIN;
         this->events.push_back(newEvent);
-        cout << "Accepted client (Windows): " << clientSocket << endl;
+        std::cout << "Accepted client (Windows): " << clientSocket << std::endl;
 
 #else
         auto& evt = this->events[i];
@@ -128,9 +133,9 @@ namespace Server {
       }
     }
 
-    cout << "Closing connections" << endl;
+    std::cout << "Closing connections" << std::endl;
 
-    this->CloseServerConnection(events);
+    this->CloseServerConnection();
   }
 
   void ConnectionManager::InitializeServerSocket()
@@ -139,26 +144,31 @@ namespace Server {
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData))
-      throw runtime_error( "WSAStartup failed");
+      throw std::runtime_error( "WSAStartup failed");
 #endif
     
     const int sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sock < 0)
-      throw runtime_error("Failed to create socket");
+      throw std::runtime_error("Failed to create socket");
 
     sockaddr_in serverAddress = {};
 
     serverAddress.sin_family = AF_INET;
+#ifdef _WIN32
+    InetPton(AF_INET, this->parameters.hostName.c_str(), &serverAddress.sin_addr);
+#else
     serverAddress.sin_addr.s_addr = inet_addr(this->parameters.hostName.c_str());
+#endif
+    
     serverAddress.sin_port = htons(this->parameters.port);
 
     if (bind(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0)
-      throw runtime_error("Failed to bind socket");
+      throw std::runtime_error("Failed to bind socket");
     
     if (listen(sock, SOMAXCONN) < 0) {
-      this->CloseServerConnection({});
-      throw runtime_error("Failed to listen on socket");
+      this->CloseServerConnection();
+      throw std::runtime_error("Failed to listen on socket");
     }
 
 #ifdef _WIN32
@@ -218,12 +228,12 @@ void ConnectionManager::CloseServerConnection() const
 #endif
   }
 
-  void ConnectionManager::HandleClientConnection(const int &clientSocket, mutex& clientMutex) const{
+  void ConnectionManager::HandleClientConnection(const int &clientSocket, std::mutex& clientMutex) const{
 
     clientMutex.lock();
     
     ConnectionProtocolHeader header;
-    const ssize_t headerBytesRead = recv(clientSocket, &header, sizeof(ConnectionProtocolHeader), 0);
+    const auto headerBytesRead = recv(clientSocket, reinterpret_cast<char*>(&header), sizeof(ConnectionProtocolHeader), 0);
 
     if (headerBytesRead > 0) {
       ConnectionManager::ReadBodyFromClient(clientSocket, header);
@@ -242,7 +252,7 @@ void ConnectionManager::CloseServerConnection() const
   }
 
   void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header){
-    vector<unsigned char> buffer(header.size);
+    std::vector<char> buffer(header.size);
     
     if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
       perror("failed to read body from client or body was empty!");
@@ -255,13 +265,13 @@ void ConnectionManager::CloseServerConnection() const
     }
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer){
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const std::vector<char>& buffer){
     AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
 
     if (protocol.GetUsername() == "natedrake7" && protocol.GetPassword() == "kalispera") {
-      cout << "SuccessFully Authorized!" << endl;
+      std::cout << "SuccessFully Authorized!" << std::endl;
       //send response to client that verification is successfull
       
     }

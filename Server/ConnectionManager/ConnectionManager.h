@@ -1,12 +1,20 @@
 #pragma once
 #include <atomic>
+#include <mutex>
 #include <string>
 
 #ifdef _WIN32
+
+#define NOMINMAX
+#define byte win_byte_override // Add this before any Windows headers
+
     #include <ws2tcpip.h>
     #include <windows.h>
     #include <winsock2.h>
     #pragma comment(lib, "ws2_32.lib")
+
+#undef byte // Clean up after including
+
     using SocketEvent = pollfd;
 #else
     #include <sys/socket.h>
@@ -20,8 +28,6 @@
 
 #include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h"
 
-using namespace std;
-
 namespace Server {
 
   constexpr int MAX_CONNECTIONS = 10;
@@ -30,27 +36,27 @@ namespace Server {
     int port;
     int serverSocket;
     int epollFileDescriptor;
-    string hostName;
+    std::string hostName;
 
     int numberOfConnections;
     int timeoutTime;
 
     ConnectionParameters();
-    explicit ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime);
+    explicit ConnectionParameters(const std::string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime);
   }ConnectionParameters;
 
 
 
-  void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning);
+  void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const std::atomic<bool>& isServerRunning);
 
   class ConnectionManager {
     ConnectionParameters parameters;
-    vector<SocketEvent> events;
+    std::vector<SocketEvent> events;
 
     protected:
-      static void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<unsigned char>& buffer);
+      static void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const std::vector<char>& buffer);
     
-      void HandleClientConnection(const int& clientSocket, mutex& clientMutex) const;
+      void HandleClientConnection(const int& clientSocket, std::mutex& clientMutex) const;
       static void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header);
     
       void CloseServerConnection() const;
@@ -62,7 +68,7 @@ namespace Server {
       explicit ConnectionManager(const ConnectionParameters& parameters);
       ~ConnectionManager() = default;
 
-      void HandleNewConnections(const atomic<bool>& isServerRunning);
+      void HandleNewConnections(const std::atomic<bool>& isServerRunning);
   };
 
 

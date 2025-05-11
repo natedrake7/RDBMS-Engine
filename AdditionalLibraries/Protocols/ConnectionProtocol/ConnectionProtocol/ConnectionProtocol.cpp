@@ -1,4 +1,3 @@
-#pragma once
 #include "ConnectionProtocol.h"
 #include <cstring>
 
@@ -11,20 +10,20 @@ void ConnectionProtocol::Serialize(){
     this->buffer.resize(sizeof(ConnectionProtocolHeader));
   }
   
-  unsigned char* bufferPtr = this->buffer.data();
+  char* bufferPtr = this->buffer.data();
 
   memcpy(bufferPtr, &this->header, sizeof(ConnectionProtocolHeader));
 }
 
-void ConnectionProtocol::Deserialize(const vector<unsigned char> &buffer){
-  const unsigned char* bufferPtr = buffer.data();
+void ConnectionProtocol::Deserialize(const std::vector<char> &buffer){
+  const char* bufferPtr = buffer.data();
 
   memcpy(&this->header, bufferPtr, sizeof(ConnectionProtocolHeader));
 }
 
-void ConnectionProtocol::DeserializeBody(const vector<unsigned char> &buffer) { }
+void ConnectionProtocol::DeserializeBody(const std::vector<char> &buffer) { }
 
-const vector<unsigned char> & ConnectionProtocol::GetSerializedProtocol() {
+const std::vector<char> & ConnectionProtocol::GetSerializedProtocol() {
   if (this->buffer.empty())
     this->Serialize();
 
