@@ -68,16 +68,18 @@ namespace QueryParser
     Query& Parser::Parse(vector<Token>& tokens)
     {
 
-        std::string input = "SELECT user , test FROM table;";
+        std::string input = "SELECT user, test FROM table";
         FILE* filePtr = fmemopen(input.data(), input.size(), "r");
 
         set_yyin(filePtr);
 
         // yyin = filePtr;
 
-        yy::parser parser;
+        string temp;
 
-        parser.parse();
+        if (yy::parser parser(&temp);parser.parse() == 0) {
+            cout << temp << endl;
+        }
 
         throw invalid_argument("stop debug");
 

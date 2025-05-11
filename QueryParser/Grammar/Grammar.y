@@ -14,6 +14,8 @@ extern int yylex(yy::parser::semantic_type *yyval);
     char* str;
 }
 
+%parse-param { std::string* ast }
+
 // Declare tokens here
 %token SELECT FROM WHERE INSERT INTO VALUES CREATE TABLE
 
@@ -30,17 +32,21 @@ extern int yylex(yy::parser::semantic_type *yyval);
 
 
 root
-  : SELECT column_list_statement FROM IDENTIFIER
-      { std::cout << "Parsed SELECT statement\n"; }
+  : select_statement
+  ;
+  
+select_statement
+    : SELECT column_list_statement FROM IDENTIFIER opt_semicolon { *ast = "Parsed Query"; }
+    ;
+  
+opt_semicolon
+  : SEMICOLON
+  | /* empty */
   ;
   
 column_list_statement
-  : column_list
-  ;
-
-column_list
   : column_name                          { std::cout << "Column: " << $1 << std::endl; }
-  | column_list COMMA column_name         { std::cout << "Column: " << $3 << std::endl; }
+  | column_list_statement COMMA column_name         { std::cout << "Column: " << $3 << std::endl; }
   ;
 
 column_name
