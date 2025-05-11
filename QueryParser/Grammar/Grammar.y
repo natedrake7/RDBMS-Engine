@@ -4,6 +4,7 @@
 %{
 
 #include "parser.hpp"
+
 extern int yylex(yy::parser::semantic_type *yyval);
 %}
 

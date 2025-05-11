@@ -3,6 +3,9 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "../../cmake-build-debug/parser.hpp"
+extern FILE* yyin;
+extern void set_yyin(FILE* file);
 
 namespace QueryParser 
 {
@@ -64,7 +67,17 @@ namespace QueryParser
 
     Query& Parser::Parse(vector<Token>& tokens)
     {
-        std::istringstream input("SELECT * FROM my_table;");
+
+        std::string input = "5";
+        FILE* filePtr = fmemopen(input.data(), input.size(), "r");
+
+        set_yyin(filePtr);
+
+        // yyin = filePtr;
+
+        yy::parser parser;
+
+        parser.parse();
 
         throw invalid_argument("stop debug");
 
