@@ -9,7 +9,7 @@ ResponseRow::ResponseRow(const vector<string> &columns, const ByteMaps::BitMap& 
 }
 
 int ResponseRow::GetSize() const{
-  int size = sizeof(int) + this->nullBitMap.GetData().size();
+  int size = this->nullBitMap.GetSizeInBytes();
   
   for (const auto& column: columns)
     size += sizeof(int) + column.size();
@@ -107,12 +107,22 @@ void QueryResponseProtocol::Serialize(){
   for (auto& row: this->rows) {
     auto& bitMapData = row.nullBitMap.GetDataUnsafe();
     
-    int bitMapSize = bitMapData.size();
-    memcpy(bufferPtr, &bitMapSize, sizeof(int));
-    bufferPtr += sizeof(int);
-    
-    memcpy(bufferPtr, bitMapData.data(), bitMapSize);
-    bufferPtr += bitMapSize;
+    // int bitMapSize = bitMapData.size();
+    // memcpy(bufferPtr, &bitMapSize, sizeof(int));
+    // bufferPtr += sizeof(int);
+    //
+    // memcpy(bufferPtr, bitMapData.data(), bitMapSize);
+    // bufferPtr += bitMapSize;
+
+    const auto bitMapSize = row.nullBitMap.GetSize();
+
+    memcpy(bufferPtr, &bitMapSize, sizeof(Constants::bit_map_size_t));
+    bufferPtr += sizeof(Constants::bit_map_size_t);
+
+    const int dataSize = bitMapData.size() * sizeof(Constants::byte);
+        
+    memcpy(bufferPtr, bitMapData.data(), dataSize);
+    bufferPtr += dataSize;
     
     for (const auto& column: row.columns) {
       const int columnSize = column.size();
@@ -170,15 +180,31 @@ void QueryResponseProtocol::Deserialize(const vector<char> &buffer) {
   for (int i = 0; i < numOfRows; i++) {
     this->rows[i].columns.resize(numOfColumns);
 
-    int bitMapSize = 0;
-    memcpy(&bitMapSize, bufferPtr, sizeof(int));
-    bufferPtr += sizeof(int);
-    
-    auto& bitMapData = this->rows[i].nullBitMap.GetDataUnsafe();
-    bitMapData.resize(bitMapSize);
-    
-    memcpy(bitMapData.data(), bufferPtr, bitMapSize);
-    bufferPtr += bitMapSize;
+    auto& bitMapSize = this->rows[i].nullBitMap.GetSizeUnsafe();
+
+    memcpy(&bitMapSize, bufferPtr, sizeof(Constants::bit_map_size_t));
+    bufferPtr += sizeof(Constants::bit_map_size_t);
+        
+    const Constants::bit_map_size_t &bytesToRead = (bitMapSize + 7) / 8;
+
+    for (Constants::bit_map_size_t bitMapBytes = 0; i < bytesToRead; i++)
+    {
+      Constants::byte value;
+      memcpy(&value, bufferPtr, sizeof(Constants::byte));
+     this->rows[i].nullBitMap.SetByte(bitMapBytes, value);
+
+      bufferPtr += sizeof(Constants::byte);
+    }
+
+    // int bitMapSize = 0;
+    // memcpy(&bitMapSize, bufferPtr, sizeof(int));
+    // bufferPtr += sizeof(int);
+    //
+    // auto& bitMapData = this->rows[i].nullBitMap.GetDataUnsafe();
+    // bitMapData.resize(bitMapSize);
+    //
+    // memcpy(bitMapData.data(), bufferPtr, bitMapSize);
+    // bufferPtr += bitMapSize;
 
     for (int j = 0; j < numOfColumns; j++) {
       int columnSize = 0;

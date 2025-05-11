@@ -301,7 +301,7 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Connec
       };
 
       const vector<ResponseRow> rows = {
-        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 1)),
         ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
         ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
       };

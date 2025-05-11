@@ -71,25 +71,6 @@ namespace ByteMaps
         }
     }
 
-    void BitMap::GetDataFromProtocol(const char *&data){
-        memcpy(&this->size, data, sizeof(Constants::bit_map_size_t));
-        data += sizeof(Constants::bit_map_size_t);
-        
-        const Constants::bit_map_size_t &bytesToRead = (this->size + 7) / 8;
-
-        if (this->data.empty())
-            this->data.resize(bytesToRead);
-
-        for (Constants::bit_map_size_t i = 0; i < bytesToRead; i++)
-        {
-            Constants::byte value;
-            memcpy(&value, data, sizeof(Constants::byte));
-            this->SetByte(i, value);
-
-            data += sizeof(Constants::byte);
-        }
-    }
-
     void BitMap::WriteDataToFile(fstream *filePtr)
     {
         filePtr->write(reinterpret_cast<char *>(&this->size), sizeof(Constants::bit_map_size_t));
@@ -118,12 +99,15 @@ namespace ByteMaps
 
     vector<Constants::byte> & BitMap::GetDataUnsafe(){ return this->data; }
 
+    bit_map_size_t & BitMap::GetSizeUnsafe(){ return this->size; }
+
     BitMap &BitMap::operator=(const BitMap &bitMap)
     {
         if (&bitMap == this)
             return *this;
 
         this->data = bitMap.GetData();
+        this->size = bitMap.GetSize();
 
         return *this;
     }

@@ -41,7 +41,6 @@ void InsertRowsToMoviesTable(Table* table);
 //deletes
 //advanced functions
 
-
 std::atomic<bool> serverRunning{true};
 
 void shutdownServer(int signal) {
@@ -59,7 +58,6 @@ int main()
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
     std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
-    
 
     try {
         cout << "Server Initialized correctly, type exit to shutdown" << endl;

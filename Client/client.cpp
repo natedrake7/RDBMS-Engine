@@ -3,14 +3,15 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
+#include <cstring>
+#include <sstream>
+#include <signal.h>
 
 #include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
 
-#include <cstring>
-#include <sstream>
 #include "client.h"
 
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
@@ -26,8 +27,23 @@
 
 using namespace std;
 
+ConnectionParameters parameters;
+
+void shutdownServer(int signal) {
+  cout << endl << "Client shutting down..." << endl;
+
+  CloseConnection(parameters);
+
+  exit(0);
+}
+ 
+
 int main()
 {
+  signal(SIGINT, shutdownServer);   // Ctrl+C
+  signal(SIGTERM, shutdownServer);  // kill command
+  signal(SIGABRT, shutdownServer);  // abort()
+
   const vector connectionString = {
     string("-h"),
     string("127.0.0.5"),
@@ -39,7 +55,6 @@ int main()
     string("natedrake7")
   };
 
-  ConnectionParameters parameters;
   ValidateConnectionString(parameters, connectionString);
   InitializeConnectionToServer(parameters);
 
@@ -112,8 +127,6 @@ int main()
     queryResponseProtocol.Deserialize(buffer);
 
     cout << queryResponseProtocol << endl;
-
-    //get response from server (usually a set of rows)
   }
 
   CloseConnection(parameters);
