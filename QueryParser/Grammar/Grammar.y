@@ -4,17 +4,40 @@
 %{
 
 #include "parser.hpp"
-#include <string>
 
 extern int yylex(yy::parser::semantic_type *yyval);
+class Expression;
+class BinaryExpression;
+class IdentifierExpression;
+class StringExpression;
+class NumberExpression;
+
 %}
+
+%code requires {
+    #include "QueryParser/Expression.h"
+    #include <string>
+    #include <memory>
+}
 
 %union {
     int intval;
     char* str;
+    Expression* expression;
+    BinaryExpression* binaryExpression;
+    IdentifierExpression* identifierExpression;
+    StringExpression* stringExpression;
+    NumberExpression* numberExpression;
 }
 
 %parse-param { std::string* ast }
+
+%type <str> column_name
+%type <expression> expression
+
+%left OR
+%left AND
+%left '=' '<' '>'
 
 // Declare tokens here
 %token SELECT FROM WHERE INSERT INTO VALUES CREATE TABLE
@@ -24,9 +47,11 @@ extern int yylex(yy::parser::semantic_type *yyval);
 
 %token COMMA
 %token SEMICOLON
-%token EQ
 
-%type <str> column_name
+%token AND OR
+%token EQUAL NOTEQUAL LESS GREATER LESSEQUAL GREATEREQUAL
+%token PLUS MINUS MULTIPLY DIVIDE
+%token LEFT_PARENTHESIS RIGHT_PARENTHESIS
 
 %%
 
@@ -36,7 +61,26 @@ root
   ;
   
 select_statement
-    : SELECT column_list_statement FROM IDENTIFIER opt_semicolon { *ast = "Parsed Query"; }
+    : SELECT column_list_statement FROM IDENTIFIER WHERE expression opt_semicolon { *ast = "Parsed Query"; }
+    ;
+    
+expression
+    : expression PLUS expression                         { $$ = new BinaryExpression($1, "+", $3); }
+    | expression MINUS expression                        { $$ = new BinaryExpression($1, "-", $3); }
+    | expression MULTIPLY expression                     { $$ = new BinaryExpression($1, "*", $3); }
+    | expression DIVIDE expression                       { $$ = new BinaryExpression($1, "/", $3); }
+    | expression EQUAL expression                        { $$ = new BinaryExpression($1, "=", $3); }
+    | expression NOTEQUAL expression                     { $$ = new BinaryExpression($1, "<>", $3); }
+    | expression LESS expression                         { $$ = new BinaryExpression($1, "<", $3); }
+    | expression GREATER expression                      { $$ = new BinaryExpression($1, ">", $3); }
+    | expression LESSEQUAL expression                    { $$ = new BinaryExpression($1, "<=", $3); }
+    | expression GREATEREQUAL expression                 { $$ = new BinaryExpression($1, ">=", $3); }
+    | expression AND expression                          { $$ = new BinaryExpression($1, "AND", $3); }
+    | expression OR expression                           { $$ = new BinaryExpression($1, "OR", $3); }
+    | LEFT_PARENTHESIS expression RIGHT_PARENTHESIS      { $$ = $2; }
+    | IDENTIFIER                                         { $$ = new IdentifierExpression($1); }
+    | NUMBER                                             { $$ = new NumberExpression(std::to_string($1)); }   
+    | STRING                                             { $$ = new StringExpression($1); }
     ;
   
 opt_semicolon

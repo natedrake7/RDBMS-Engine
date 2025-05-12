@@ -35,9 +35,20 @@ STRING     \'[^\']*\'
 {NUMBER}        { yyval->intval = std::stoi(yytext); return yy::parser::token::NUMBER; }
 {STRING}        { yyval->str = strdup(yytext + 1); yyval->str[strlen(yyval->str) - 1] = '\0'; return yy::parser::token::STRING; }
 
-","             { return yy::parser::token::COMMA; }
-";"             { return yy::parser::token::SEMICOLON; }
-"="             { return yy::parser::token::EQ; }
+"AND"       { return yy::parser::token::AND; }
+"OR"        { return yy::parser::token::OR; }
+"="         { return yy::parser::token::EQUAL; }
+"<>"        { return yy::parser::token::NOTEQUAL; }
+"<"         { return yy::parser::token::LESS; }
+">"         { return yy::parser::token::GREATER; }
+"<="        { return yy::parser::token::LESSEQUAL; }
+">="        { return yy::parser::token::GREATEREQUAL; }
+"+"         { return yy::parser::token::PLUS; }
+"-"         { return yy::parser::token::MINUS; }
+"*"         { return yy::parser::token::MULTIPLY; }
+"/"         { return yy::parser::token::DIVIDE; }
+"("         { return yy::parser::token::LEFT_PARENTHESIS; }
+")"         { return yy::parser::token::RIGHT_PARENTHESIS; }
 
 [ \t\n\r]+      { /* skip whitespace */ }
 

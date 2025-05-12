@@ -15,52 +15,52 @@ BISON_TARGET(Parser ${CMAKE_CURRENT_SOURCE_DIR}/QueryParser/Grammar/Grammar.y
 
 ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-add_executable(DatabaseInterface
-        main.cpp)
+add_executable(DatabaseInterface main.cpp)
 
 add_library(QueryParser
-            QueryParser/Tokenizer/Tokenizer.cpp
-            QueryParser/Tokenizer/Tokenizer.h
-            QueryParser/Parser/Parser.cpp
-            QueryParser/Parser/Parser.h
-            ${BISON_Parser_OUTPUTS}
-            ${FLEX_Lexer_OUTPUTS}
-            ${FLEX_LIBRARIES})
+        QueryParser/Tokenizer/Tokenizer.cpp
+        QueryParser/Tokenizer/Tokenizer.h
+        QueryParser/Parser/Parser.cpp
+        QueryParser/Parser/Parser.h
+        QueryParser/Expression.h
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${BISON_Parser_OUTPUTS}
+        ${FLEX_Lexer_OUTPUTS} 
+)
+
 
 add_library(AdditionalLibraries
-        AdditionalLibraries/BitMap/BitMap.cpp
-        AdditionalLibraries/BitMap/BitMap.h
-        AdditionalLibraries/ByteMap/ByteMap.cpp
-        AdditionalLibraries/ByteMap/ByteMap.h
-        AdditionalLibraries/AdditionalDataTypes/Field/Field.cpp
-        AdditionalLibraries/AdditionalDataTypes/Field/Field.h
-        AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.cpp
-        AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h
-        AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
-        AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
-        AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
-        AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
-        Database/RowCondition/RowCondition.cpp
-        Database/RowCondition/RowCondition.h
-        AdditionalLibraries/SafeConverter/SafeConverter.cpp
-        AdditionalLibraries/SafeConverter/SafeConverter.h
-        AdditionalLibraries/HashSet/HashSet.h
-        AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
-        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
-        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h)
+            AdditionalLibraries/BitMap/BitMap.cpp
+            AdditionalLibraries/BitMap/BitMap.h
+            AdditionalLibraries/ByteMap/ByteMap.cpp
+            AdditionalLibraries/ByteMap/ByteMap.h
+            AdditionalLibraries/AdditionalDataTypes/Field/Field.cpp
+            AdditionalLibraries/AdditionalDataTypes/Field/Field.h
+            AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.cpp
+            AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h
+            AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
+            AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
+            AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
+            AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
+            Database/RowCondition/RowCondition.cpp
+            Database/RowCondition/RowCondition.h
+            AdditionalLibraries/SafeConverter/SafeConverter.cpp
+            AdditionalLibraries/SafeConverter/SafeConverter.h
+            AdditionalLibraries/HashSet/HashSet.h
+            AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
+            AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
+            AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
+            AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
+            AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
+            AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
+            AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
+            AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
+            AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
+            AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
+            AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
+            AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
+            AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
+            AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h)
 
 add_library(Database
         Database/Database.cpp
@@ -118,8 +118,8 @@ add_library(Server  Server/ConnectionManager/ConnectionManager.cpp
 add_executable(Client   Client/client.cpp
                         Client/client.h)
 
-target_link_libraries(Client PRIVATE AdditionalLibraries)
+target_include_directories(DatabaseInterface PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-#target_include_directories(DatabaseInterface PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(Client PRIVATE AdditionalLibraries)
 
 target_link_libraries(DatabaseInterface PRIVATE Database Server AdditionalLibraries QueryParser)

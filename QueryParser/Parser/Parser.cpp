@@ -3,9 +3,16 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include "../../cmake-build-debug/parser.hpp"
 extern FILE* yyin;
 extern void set_yyin(FILE* file);
+
+namespace yy {
+    class parser {
+        public:
+            parser(const std::string* ast);
+            int parse();
+    };
+}
 
 namespace QueryParser 
 {
