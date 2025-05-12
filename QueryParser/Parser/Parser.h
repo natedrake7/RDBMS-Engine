@@ -101,7 +101,7 @@ namespace QueryParser{
                 return instance;
             }
 
-            Query& Parse(vector<Token>& tokens);
+            void Parse();
     };
 
 

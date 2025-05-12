@@ -3,16 +3,11 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-extern FILE* yyin;
-extern void set_yyin(FILE* file);
+#include "SQLParser.h"
 
-namespace yy {
-    class parser {
-        public:
-            parser(const std::string* ast);
-            int parse();
-    };
-}
+#include <SQLBaseListener.h>
+#include <SQLLexer.h>
+#include <SQLListener.h>
 
 namespace QueryParser 
 {
@@ -72,86 +67,31 @@ namespace QueryParser
         return os;
     }
 
-    Query& Parser::Parse(vector<Token>& tokens)
+    void Parser::Parse()
     {
+        std::string query = "SELECT user, test FROM table";
 
-        std::string input = "SELECT user, test FROM table";
-        FILE* filePtr = fmemopen(input.data(), input.size(), "r");
+        std::ifstream stream(query);
 
-        set_yyin(filePtr);
+        // Create an ANTLR input stream from the file
+        antlr4::ANTLRInputStream input(stream);
 
-        // yyin = filePtr;
+        // Create a lexer for the input stream
+        SQLLexer lexer(&input);
 
-        string temp;
+        // Create a token stream for the lexer
+        antlr4::CommonTokenStream tokens(&lexer);
 
-        if (yy::parser parser(&temp);parser.parse() == 0) {
-            cout << temp << endl;
-        }
+        // Create the parser, passing the token stream
+        SQLParser parser(&tokens);
+
+
+        // Start parsing, typically using the start rule of the grammar
+        SQLParser::SqlStatementContext *tree = parser.sqlStatement();
 
         throw invalid_argument("stop debug");
 
-        if(tokens.empty())
-        {
-            return this->query;
-        }
-
-        Statement* firstStatement = new Statement();
-        this->query.statements.push_back(firstStatement);
-
-        bool subquery = false;
-        bool semicolon = false;
-
-        for (int i = 0; i < tokens.size(); i++)
-        {
-            Node* node = nullptr;
-            const auto& token = tokens[i];
-
-            switch (token.type) 
-            {
-                case WordType::Number:
-                    node = Parser::ParseNumber(token);
-                    break;
-                case WordType::String:
-                    node = Parser::ParseString(token);
-                    break;
-                case WordType::LeftParenthesis:
-                {
-                    Statement* statement = Parser::ParseSubQuery(tokens, ++i);
-                    this->query.statements.back()->subStatements.push_back(statement);
-
-                    subquery = true;
-                    break;
-                }
-                case WordType::RightParenthesis:
-                {
-                    if(!subquery)
-                        throw runtime_error("Enclosing parenthesis not specified");
-                    
-                    subquery = false;
-                    break;
-                }
-                case WordType::Semicolon:
-                {
-                    semicolon = true;
-                    break;
-                }
-                default:
-                    throw runtime_error("Invalid token type");
-            }
-
-            if(node == nullptr)
-                continue;
-
-            if (semicolon)
-            {
-                this->query.statements.push_back(new Statement());
-                semicolon = false;
-            }
-
-            this->query.statements.back()->nodes.push_back(node);
-        }
-
-        return this->query;
+        
     }
 
     Statement* Parser::ParseSubQuery(vector<Token>& tokens, int& indexToStart)

@@ -55,10 +55,8 @@ int main()
     signal(SIGABRT, shutdownServer);  // abort()
 
     const string test = "SELECT users FROM dbo.test";
-    vector<Token> temp = {
-    };
     
-    Parser::Get().Parse(temp);
+    Parser::Get().Parse();
 
     // // Parse the query
     // if (yyparse() == 0) {
