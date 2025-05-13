@@ -15,10 +15,10 @@ file(MAKE_DIRECTORY ${GENERATED_DIR})
 add_custom_command(
         OUTPUT ${GENERATED_DIR}/SQLParser.cpp
         COMMAND java -Xmx500M -cp ${ANTLR_JAR_PATH} org.antlr.v4.Tool
-        -Dlanguage=Cpp
+        -Dlanguage=Cpp -visitor
         -o ${GENERATED_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/QueryParser/Grammar/SQL.g4
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/QueryParser/Grammar/SQL.g4
+        ${CMAKE_CURRENT_SOURCE_DIR}/QueryPipeline/Grammar/SQL.g4
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/QueryPipeline/Grammar/SQL.g4
         COMMENT "Generating ANTLR C++ parser for SQL.g4"
 )
 
@@ -29,19 +29,19 @@ add_custom_target(
 
 file(GLOB ANTLR_SRC "${GENERATED_DIR}/*.cpp")
 
-add_library(QueryParser QueryParser/Tokenizer/Tokenizer.cpp
-                        QueryParser/Tokenizer/Tokenizer.h
-                        QueryParser/Parser/Parser.cpp
-                        QueryParser/Parser/Parser.h
-                        QueryParser/Expression.h
+add_library(QueryPipeline QueryPipeline/Tokenizer/Tokenizer.cpp
+        QueryPipeline/Tokenizer/Tokenizer.h
+        QueryPipeline/Parser/Parser.cpp
+        QueryPipeline/Parser/Parser.h
+        QueryPipeline/Visitor.h
                         ${ANTLR_SRC})
 
-add_dependencies(QueryParser GenerateSQLParser)
+add_dependencies(QueryPipeline GenerateSQLParser)
 
-target_link_libraries(QueryParser PRIVATE antlr4_static)
+target_link_libraries(QueryPipeline PRIVATE antlr4_static)
 
 # Include the generated parser and lexer files
-target_include_directories(QueryParser PRIVATE
+target_include_directories(QueryPipeline PRIVATE
         ${GENERATED_DIR}
 )
 
@@ -136,4 +136,4 @@ add_executable(Client   Client/client.cpp
 target_link_libraries(Client PRIVATE AdditionalLibraries)
 
 target_link_libraries(DatabaseInterface 
-                        PRIVATE Database Server AdditionalLibraries QueryParser)
+                        PRIVATE Database Server AdditionalLibraries QueryPipeline)

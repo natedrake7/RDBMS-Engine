@@ -15,8 +15,8 @@
 #include "Database/AdditionalFunctions/SortingFunctions.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
-#include "QueryParser/Tokenizer/Tokenizer.h"
-#include "QueryParser/Parser/Parser.h"
+#include "QueryPipeline/Tokenizer/Tokenizer.h"
+#include "QueryPipeline/Parser/Parser.h"
 #include "Server/ConnectionManager/ConnectionManager.h"
 #include "Server/Threadpool/ThreadPool.h"
 
@@ -55,8 +55,12 @@ int main()
     signal(SIGABRT, shutdownServer);  // abort()
 
     const string test = "SELECT users FROM dbo.test";
+
+    Database *db = nullptr;
+    UseDatabase("stakosDb", &db);
+
     
-    Parser::Get().Parse();
+    Parser::Parse(*db);
 
     // // Parse the query
     // if (yyparse() == 0) {
@@ -90,14 +94,12 @@ int main()
     
     return 0;
     setlocale(LC_ALL, "");
-    Database *db = nullptr;
     try 
     {
         const string dbName = "stakosDb";
 
          //CreateDatabase(dbName);
 
-        UseDatabase(dbName, &db);
 
         StorageManager::Get().BindDatabase(db);
 
