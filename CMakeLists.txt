@@ -6,6 +6,7 @@ project(DatabaseInterface)
 
 add_executable(DatabaseInterface main.cpp)
 find_package(antlr4-runtime CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # === ANTLR Setup ===
 set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.0-complete.jar")
@@ -29,12 +30,10 @@ add_custom_target(
 
 file(GLOB ANTLR_SRC "${GENERATED_DIR}/*.cpp")
 
-add_library(QueryPipeline QueryPipeline/Tokenizer/Tokenizer.cpp
-        QueryPipeline/Tokenizer/Tokenizer.h
-        QueryPipeline/Parser/Parser.cpp
-        QueryPipeline/Parser/Parser.h
-        QueryPipeline/Visitor.h
-                        ${ANTLR_SRC})
+add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
+                            QueryPipeline/Parser/Parser.h
+                            QueryPipeline/Visitor.h
+                            ${ANTLR_SRC})
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
@@ -128,7 +127,11 @@ add_library(Database    Database/Database.cpp
 add_library(Server  Server/ConnectionManager/ConnectionManager.cpp
                     Server/ConnectionManager/ConnectionManager.h
                     Server/Threadpool/ThreadPool.cpp
-                    Server/Threadpool/ThreadPool.h)
+                    Server/Threadpool/ThreadPool.h
+                    Server/Server.cpp
+                    Server/Server.h)
+
+target_link_libraries(Server PRIVATE nlohmann_json::nlohmann_json)
 
 add_executable(Client   Client/client.cpp
                         Client/client.h)

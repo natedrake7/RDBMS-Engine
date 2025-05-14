@@ -202,7 +202,7 @@ void StorageManager::OpenExtent(const extent_id_t &extentId, const Table *table)
 
 HeaderPage *StorageManager::CreateHeaderPage(const string &filename) 
 {
-  const page_id_t pageId = 0;
+   constexpr page_id_t pageId = 0;
 
   HeaderPage *page = new HeaderPage(pageId);
 
@@ -275,9 +275,7 @@ HeaderPage *StorageManager::GetHeaderPage(const string &filename)
 {
   constexpr page_id_t pageId = 0;
 
-  HeaderPage *page =
-      dynamic_cast<HeaderPage *>(this->GetSystemPage(pageId, filename));
-  return page;
+  return dynamic_cast<HeaderPage *>(this->GetSystemPage(pageId, filename));
 }
 
 PageFreeSpacePage *StorageManager::GetPageFreeSpacePage(const page_id_t &pageId) 

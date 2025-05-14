@@ -2,9 +2,13 @@
 
 #include <cstdint>
 #include <cstddef>
+#include "../AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
+#include "../AdditionalLibraries/Dictionary/Dictionary.h"
 
 namespace Constants
 {
+
+
     constexpr size_t PAGE_SIZE = 8 * 1024;
     constexpr size_t MAX_NUMBER_OF_PAGES = 15000;
     constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 100000;
@@ -128,4 +132,17 @@ namespace Constants
     constexpr uint16_t PAGE_FREE_SPACE_SIZE = 8088;
     constexpr uint16_t GAM_PAGE_SIZE = 64000;
     constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;
+
+    static Dictionary<string, block_size_t> ColumnTypeSizes = {
+        {"TinyInt", sizeof(int8_t)},
+        {"SmallInt", sizeof(int16_t)},
+        {"Int", sizeof(int32_t)},
+        {"BigInt", sizeof(int64_t)},
+        {"DateTime", DataTypes::DateTime::DateTimeSize()},
+        {"Bool", sizeof(bool)},
+        {"String", 0},
+        {"Decimal", 0},
+        {"UnicodeString", 0}
+        //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
+    };
 }

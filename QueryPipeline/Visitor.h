@@ -8,7 +8,11 @@ typedef struct SelectStatement{
   std::vector<std::string> columns;
 }SelectStatement;
 
-class SQLVisitorImplementation final : public SQLVisitor {
+typedef struct CreateDbStatement {
+  string name;
+}CreateDbStatement;
+
+class SQLVisitorImplementation : public SQLVisitor {
 public:
   antlrcpp::Any visitSelectStatement(SQLParser::SelectStatementContext *ctx) override {
     SelectStatement statement;
@@ -25,12 +29,16 @@ public:
     return statement;
   }
 
-  antlrcpp::Any visitColumnName(SQLParser::ColumnNameContext *ctx) override {
-    return ctx == nullptr ? "" : ctx->getText();
+  antlrcpp::Any visitColumnName(SQLParser::ColumnNameContext *context) override {
+    return context == nullptr ? "" : context->getText();
   }
 
-  antlrcpp::Any visitTableName(SQLParser::TableNameContext *ctx) override {
-    return ctx == nullptr ? "" : ctx->getText();
+  antlrcpp::Any visitTableName(SQLParser::TableNameContext *context) override {
+    return context == nullptr ? "" : context->getText();
+  }
+
+   antlrcpp::Any visitDbName(SQLParser::DbNameContext *context) override {
+    return context == nullptr ? "" : context->getText();
   }
 
   antlrcpp::Any visitColumnList(SQLParser::ColumnListContext *context) override {
@@ -43,10 +51,21 @@ public:
   }
 
   antlrcpp::Any visitSqlStatement(SQLParser::SqlStatementContext *context) override {
-    if (context->selectStatement()) {
+    if (context->selectStatement())
       return visit(context->selectStatement());
-    }
-
+    if (context->createDbStatement())
+      return visit(context->createDbStatement());
+    
     return nullptr;
+  }
+
+   antlrcpp::Any visitCreateDbStatement(SQLParser::CreateDbStatementContext *context) override {
+    CreateDbStatement statement;
+
+    if (context->dbName())
+      statement.name = context->dbName()->getText();
+    
+    return statement;
+      
   }
 };

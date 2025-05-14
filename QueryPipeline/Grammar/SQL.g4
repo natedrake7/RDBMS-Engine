@@ -1,11 +1,14 @@
 grammar SQL;
 
-sqlStatement : selectStatement ;
+sqlStatement : selectStatement | createDbStatement;
 
 selectStatement : 'SELECT' columnList 'FROM' tableName;
 
+createDbStatement: 'CREATE' 'DATABASE' dbName;
+
 columnList : columnName (',' columnName)*;
 
+dbName: ID;
 columnName : ID;
 tableName : ID;
 

@@ -1,5 +1,4 @@
 #include "Parser.h"
-#include "../Tokenizer/Tokenizer.h"
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -19,7 +18,6 @@ namespace QueryParser
     void Parser::Parse(const DatabaseEngine::Database& db)
     {
         std::string query = "SELECT user, test FROM table";
-
 
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
@@ -44,7 +42,9 @@ namespace QueryParser
             const auto selectStatement = std::any_cast<SelectStatement>(response);
             
             const auto table = db.OpenTable(selectStatement.table);
-
+        }
+        else if (response.type() == typeid(CreateDbStatement)) {
+            
         }
 
 

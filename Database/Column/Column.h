@@ -1,7 +1,5 @@
 ﻿#pragma once
 #include <string>
-#include <stdexcept>
-#include <vector>
 #include "../Constants.h"
 
 using namespace std;
@@ -25,6 +23,8 @@ namespace DatabaseEngine::StorageTypes
         DateTime = 8,
         ColumnTypeCount = 9
     };
+
+
 
     typedef struct ColumnHeader
     {

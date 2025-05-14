@@ -1,0 +1,81 @@
+{
+  "dbName": "masterDb",
+  "dbPath": "./",
+  "tables": [
+    {
+      "name": "sys_databases",
+      "columns": [
+        {
+          "name": "id",
+          "type": "SmallInt"
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "size": 100
+        }
+      ],
+      "primaryKey": [
+        "id"
+      ]
+    },
+    {
+      "name": "sys_tables",
+      "columns": [
+        {
+          "name": "id",
+          "type": "SmallInt"
+        },
+        {
+          "name": "db_id",
+          "type": "SmallInt"
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "size": 100
+        },
+        {
+          "name": "is_system",
+          "type": "Bool"
+        }
+      ],
+      "primaryKey": [
+        "id"
+      ]
+    },
+    {
+      "name": "sys_columns",
+      "columns": [
+        {
+          "name": "id",
+          "type": "SmallInt"
+        },
+        {
+          "name": "table_id",
+          "type": "SmallInt"
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "size": 100
+        },
+        {
+          "name": "data_type",
+          "type": "String"
+        },
+        {
+          "name": "is_nullable",
+          "type": "Bool"
+        },
+        {
+          "name": "table_position",
+          "type": "SmallInt"
+        }
+      ],
+      "primaryKey": [
+        "id"
+      ]
+    }
+  ]
+}

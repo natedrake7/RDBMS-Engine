@@ -15,15 +15,16 @@
 #include "Database/AdditionalFunctions/SortingFunctions.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
-#include "QueryPipeline/Tokenizer/Tokenizer.h"
 #include "QueryPipeline/Parser/Parser.h"
 #include "Server/ConnectionManager/ConnectionManager.h"
 #include "Server/Threadpool/ThreadPool.h"
+#include "Server/Server.h"
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
 using namespace Storage;
 using namespace QueryParser;
+using namespace Server;
 
 void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& selectedColumnIndices);
 void CreateMoviesTables(Database *db);
@@ -47,12 +48,30 @@ void shutdownServer(int signal) {
 
     cout << "Server shutting down..." << endl;
 }
+
+void InitializeServer(const string& filePath) {
+    //create sys tables(read from file).
+}
  
 int main() 
 {
     signal(SIGINT, shutdownServer);   // Ctrl+C
     signal(SIGTERM, shutdownServer);  // kill command
     signal(SIGABRT, shutdownServer);  // abort()
+
+    vector<Database*> systemDatabases;
+    vector<Database*> databases;
+
+    Database* systemDb = Server::ServerInstance::Get().Initialize("configuration.json");
+    systemDatabases.push_back(systemDb);
+
+    for (const auto& database: databases)
+        delete database;
+    
+    for (const auto& database : systemDatabases)
+        delete database;
+    
+    return 0;
 
     const string test = "SELECT users FROM dbo.test";
 
@@ -61,16 +80,6 @@ int main()
 
     
     Parser::Parse(*db);
-
-    // // Parse the query
-    // if (yyparse() == 0) {
-    //     std::cout << "Query parsed successfully.\n";
-    // } else {
-    //     std::cout << "Failed to parse query.\n";
-    // }
-
-    // Clean up the buffer
-    // yy_delete_buffer(buffer);
     
     return 0;
     
@@ -224,7 +233,7 @@ void CreateActorsTable(Database *db)
     columns.push_back(new Column("ActorBirthDay", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
     columns.push_back(new Column("ActorHeight", "Decimal", 10, true));
 
-    const vector<column_index_t> clusteredIndexes= { 0 };
+    const vector<column_index_t> clusteredIndexes = { 0 };
     const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
 
     Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, nullptr);
