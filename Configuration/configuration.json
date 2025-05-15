@@ -6,29 +6,27 @@
       "name": "sys_databases",
       "columns": [
         {
-          "name": "id",
-          "type": "SmallInt"
+          "name": "name",
+          "type": "String",
+          "size": 100
         },
         {
-          "name": "name",
+          "name": "filepath",
           "type": "String",
           "size": 100
         }
       ],
       "primaryKey": [
-        "id"
+        "name"
       ]
     },
     {
       "name": "sys_tables",
       "columns": [
         {
-          "name": "id",
-          "type": "SmallInt"
-        },
-        {
-          "name": "db_id",
-          "type": "SmallInt"
+          "name": "dbName",
+          "type": "String",
+          "size": 100
         },
         {
           "name": "name",
@@ -36,24 +34,27 @@
           "size": 100
         },
         {
-          "name": "is_system",
+          "name": "isSystem",
           "type": "Bool"
         }
       ],
       "primaryKey": [
-        "id"
+        "dbName",
+        "name"
       ]
     },
     {
       "name": "sys_columns",
       "columns": [
         {
-          "name": "id",
-          "type": "SmallInt"
+          "name": "dbName",
+          "type": "String",
+          "size": 100
         },
         {
-          "name": "table_id",
-          "type": "SmallInt"
+          "name": "tableName",
+          "type": "String",
+          "size": 100
         },
         {
           "name": "name",
@@ -61,20 +62,26 @@
           "size": 100
         },
         {
-          "name": "data_type",
-          "type": "String"
+          "name": "dataType",
+          "type": "TinyInt"
         },
         {
-          "name": "is_nullable",
+          "name": "recordSize",
+          "type": "SmallInt"
+        },
+        {
+          "name": "isNullable",
           "type": "Bool"
         },
         {
-          "name": "table_position",
+          "name": "tablePosition",
           "type": "SmallInt"
         }
       ],
       "primaryKey": [
-        "id"
+        "dbName",
+        "tableName",
+        "name"
       ]
     }
   ]

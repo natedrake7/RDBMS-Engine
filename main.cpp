@@ -59,17 +59,14 @@ int main()
     signal(SIGTERM, shutdownServer);  // kill command
     signal(SIGABRT, shutdownServer);  // abort()
 
-    vector<Database*> systemDatabases;
     vector<Database*> databases;
 
-    Database* systemDb = Server::ServerInstance::Get().Initialize("configuration.json");
-    systemDatabases.push_back(systemDb);
+    ServerInstance::Get().Initialize("configuration.json");
 
     for (const auto& database: databases)
         delete database;
-    
-    for (const auto& database : systemDatabases)
-        delete database;
+
+    ServerInstance::Get().Shutdown();
     
     return 0;
 

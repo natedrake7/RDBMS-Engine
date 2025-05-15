@@ -25,11 +25,13 @@ namespace Server {
     string sysDbPath;
     vector<sysTable> sysTables;
 
+    DatabaseEngine::Database* masterDb;
+
     ServerInstance() = default;
     ~ServerInstance() = default;
 
     void ReadConfiguration(const string& configPath);
-    [[nodiscard]] DatabaseEngine::Database* CreateSystemDatabase()const;
+    void CreateSystemDatabase();
 
   public:
     static ServerInstance& Get() {
@@ -38,6 +40,11 @@ namespace Server {
       return instance;
     }
 
-    [[nodiscard]] DatabaseEngine::Database* Initialize(const string& configPath);
+    void Initialize(const string& configPath);
+    void InsertDbToMasterDb(const vector<Field>& fields) const;
+    void InsertTableToMasterDb(const vector<Field>& fields) const;
+    [[nodiscard]] DatabaseEngine::Database* GetMasterDb();
+
+    void Shutdown()const;
   };
 }
