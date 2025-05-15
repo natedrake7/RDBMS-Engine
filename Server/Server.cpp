@@ -1,6 +1,7 @@
 #include "Server.h"
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include "../Database/Row/Row.h"
 #include "../Database/Table/Table.h"
 #include "../Database/Database.h"
 #include "../Database/Storage/StorageManager/StorageManager.h"
@@ -50,12 +51,7 @@ namespace Server {
 
     this->CreateSystemDatabase();
 
-    const vector<Field> dbFields = {
-      Field(this->sysDbName, 0),
-      Field(this->sysDbPath, 1)
-    };
-    
-    this->InsertDbToMasterDb(dbFields);
+    this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath);
 
     DatabaseEngine::StorageTypes::Table* sysTables = this->masterDb->OpenTable("sys_tables");
     DatabaseEngine::StorageTypes::Table* sysColumns = this->masterDb->OpenTable("sys_columns");
@@ -71,7 +67,7 @@ namespace Server {
 
       tableFields[i].emplace_back(this->sysDbName, counter++);
       tableFields[i].emplace_back(table.name, counter++);
-      tableFields[i].emplace_back("0", counter++);
+      tableFields[i].emplace_back("1", counter++);
 
       for (int j = 0; j < table.columns.size(); j++) {
         const auto& column = table.columns[j];
@@ -108,16 +104,72 @@ namespace Server {
     delete this->masterDb;
   }
 
-  void ServerInstance::InsertDbToMasterDb(const vector<Field> &fields) const{
+  void ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_databases");
 
-      table->InsertRows({fields});
+    const vector<Field> fields = {
+      Field(dbName, 0),
+      Field(dbPath, 1),
+    };
+    
+    table->InsertRows({fields});
   }
 
-  void ServerInstance::InsertTableToMasterDb(const vector<Field> &fields) const{
+  void ServerInstance::InsertTableToMasterDb(const string& dbName, const string& tableName) const{
+
     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_tables");
 
+    const vector<Field> fields = {
+      Field(dbName, 0),
+      Field(tableName, 1),
+      Field("0", 2),
+    };
+    
     table->InsertRows({fields});
+  }
+
+  void ServerInstance::InsertColumnToMasterDb(const string &dbName, const string &tableName, const string &columnName, const string &columnType, const int &columnSize, const int &tablePosition) const{
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_columns");
+
+    const vector<Field> fields = {
+      Field(dbName, 0),
+      Field(tableName, 1),
+      Field(columnName, 2),
+      Field(columnType, 3),
+      Field(to_string(columnSize), 4),
+      Field("0", 5),
+      Field(to_string(tablePosition), 6),
+    };
+
+    table->InsertRows({fields});
+  }
+
+  void ServerInstance::SelectDb(const string &dbName) const{
+    DatabaseEngine::StorageTypes::Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+
+    vector<DatabaseEngine::StorageTypes::Row> selectedDatabases;
+    const vector<Field> conditions = {
+      Field(dbName, 0),
+    };
+    
+    sysDatabases->Select(selectedDatabases, {0, 1}, &conditions);
+
+    if (selectedDatabases.empty())
+      return;
+
+    vector<DatabaseEngine::StorageTypes::Row> selectedTables;
+    DatabaseEngine::StorageTypes::Table* sysTables = this->masterDb->OpenTable("sys_tables");
+
+    sysTables->Select(selectedTables, {0, 1, 2}, &conditions);
+
+    if (selectedTables.empty())
+      return;
+
+    DatabaseEngine::StorageTypes::Table* sysColumns = this->masterDb->OpenTable("sys_columns");
+    vector<vector<DatabaseEngine::StorageTypes::Row>> selectedColumns(selectedTables.size());
+
+    for (int i = 0; i < selectedTables.size(); i++)
+      sysColumns->Select(selectedColumns[i], {0, 1, 2, 3, 4, 5, 6}, &conditions);
   }
 
   void ServerInstance::CreateSystemDatabase(){

@@ -98,7 +98,12 @@ namespace DatabaseEngine
         this->filename = dbName;
         this->fileExtension = ".db";
 
+        
+
+        
         const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->filename + this->fileExtension);
+
+        //query get from masterDb
 
         this->header = *headerPage->GetDatabaseHeader();
         const vector<TableFullHeader> tablesFullHeaders = headerPage->GetTablesFullHeaders();
@@ -116,7 +121,7 @@ namespace DatabaseEngine
             delete dbTable;
     }
 
-    Table *Database::CreateTable(const string &tableName, const vector<Column *> &columns, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes)
+    Table *Database::CreateTable(const string &tableName, const vector<StorageTypes::Column *> &columns, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes)
     {
         for (const auto& table : this->tables)
         {
@@ -125,9 +130,6 @@ namespace DatabaseEngine
         }
 
         Table *table = new Table(tableName, this->header.lastTableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
-
-        //insert table to master db
-        
 
         this->header.lastTableId++;
 

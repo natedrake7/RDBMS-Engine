@@ -63,6 +63,8 @@ int main()
 
     ServerInstance::Get().Initialize("configuration.json");
 
+    ServerInstance::Get().SelectDb("masterDb");
+
     for (const auto& database: databases)
         delete database;
 

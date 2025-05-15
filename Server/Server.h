@@ -41,8 +41,10 @@ namespace Server {
     }
 
     void Initialize(const string& configPath);
-    void InsertDbToMasterDb(const vector<Field>& fields) const;
-    void InsertTableToMasterDb(const vector<Field>& fields) const;
+    void InsertDbToMasterDb(const string& dbName, const string& dbPath) const;
+    void InsertTableToMasterDb(const string& dbName, const string& tableName) const;
+    void InsertColumnToMasterDb(const string& dbName, const string& tableName, const string& columnName, const string& columnType, const int& columnSize, const int& tablePosition) const;
+    void SelectDb(const string& dbName) const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb();
 
     void Shutdown()const;
