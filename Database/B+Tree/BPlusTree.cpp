@@ -62,7 +62,7 @@ namespace Indexing
 
     Node::~Node() = default;
 
-    BPlusTree::BPlusTree(const Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
+    BPlusTree::BPlusTree(Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
     {
         const auto &tableHeader = table->GetTableHeader();
 
@@ -547,6 +547,7 @@ namespace Indexing
         node->header.pageId = indexPage->GetPageId();
         
         this->firstIndexPageId = root->header.pageId;
+        this->table->SetClusteredIndexPageId(root->header.pageId);
     }
 
     Node* BPlusTree::GetNodeFromPage(const NodeHeader & header) const

@@ -122,7 +122,7 @@ namespace Indexing
         TreeType type;
         int nonClusteredIndexId;
         DatabaseEngine::Database* database;
-        const DatabaseEngine::StorageTypes::Table* table;
+        DatabaseEngine::StorageTypes::Table* table;
 
         void SplitChild(Node *parent, const int &index, Node *child);
         void PrintTree(const Node *node, const int &level);
@@ -136,7 +136,7 @@ namespace Indexing
         static int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
 
     public:
-        explicit BPlusTree(const DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId = -1);
+        explicit BPlusTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId = -1);
         BPlusTree();
         ~BPlusTree();
 

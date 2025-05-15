@@ -1,6 +1,6 @@
 {
   "dbName": "masterDb",
-  "dbPath": "./",
+  "dbPath": "./masterDb.db",
   "tables": [
     {
       "name": "sys_databases",
@@ -63,7 +63,8 @@
         },
         {
           "name": "dataType",
-          "type": "TinyInt"
+          "type": "String",
+          "size": 100
         },
         {
           "name": "recordSize",
@@ -82,6 +83,45 @@
         "dbName",
         "tableName",
         "name"
+      ]
+    },
+    {
+      "name": "sys_indexes",
+      "columns": [
+
+        {
+          "name": "dbName",
+          "type": "String",
+          "size": 100
+        },
+        {
+          "name": "tableName",
+          "type": "String",
+          "size": 100
+        },
+        {
+          "name": "id",
+          "type": "SmallInt"
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "size": 100
+        },
+        {
+          "name": "columns",
+          "type": "String",
+          "size": 500
+        },
+        {
+          "name": "is_clustered",
+          "type": "Bool"
+        }
+      ],
+      "primaryKey": [
+        "dbName",
+        "tableName",
+        "id"
       ]
     }
   ]

@@ -23,6 +23,10 @@ void from_json(const json& j, sysTable& t) {
 }
 
 namespace Server {
+   ServerInstance::ServerInstance(){
+     this->masterDb = nullptr;
+  }
+
   void ServerInstance::ReadConfiguration(const string &configPath){
     std::ifstream file(configPath);
 
@@ -49,16 +53,31 @@ namespace Server {
   void ServerInstance::Initialize(const string &configPath){
     this->ReadConfiguration(configPath);
 
+     if (this->CheckIfMasterDbExists()) {
+       DatabaseEngine::UseDatabase(this->sysDbName, &this->masterDb);
+       Storage::StorageManager::Get().BindDatabase(this->masterDb);
+       return;
+     }
+     
     this->CreateSystemDatabase();
+    Storage::StorageManager::Get().BindDatabase(this->masterDb);
 
-    this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath);
+    DatabaseEngine::StorageTypes::Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+     
+     const vector<Field> dbFields = {
+       Field(this->sysDbName, 0),
+       Field(this->sysDbPath, 1),
+     };
 
+     sysDatabases->InsertRows({dbFields});
+     
     DatabaseEngine::StorageTypes::Table* sysTables = this->masterDb->OpenTable("sys_tables");
     DatabaseEngine::StorageTypes::Table* sysColumns = this->masterDb->OpenTable("sys_columns");
-    
+    DatabaseEngine::StorageTypes::Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
+     
     vector<vector<Field>> tableFields(this->sysTables.size());
-
     vector<vector<Field>> tableColumns;
+    vector<vector<Field>> tableIndexes;     
 
     for (int i = 0; i < this->sysTables.size(); i++) {
       int counter = 0;
@@ -91,11 +110,28 @@ namespace Server {
         tableColumns.back().emplace_back("0", columnCounter++);
         tableColumns.back().emplace_back(to_string(j), columnCounter++);
       }
+
+      string concatenatedColumns;
+      string _columns;
+      for (const auto & j : table.primaryKey) {
+        concatenatedColumns += j;
+        _columns +="_" + j;  
+      }
+
+      int indexCounter = 0;
+      tableIndexes.emplace_back();
+
+      tableIndexes.back().emplace_back(this->sysDbName, indexCounter++);
+      tableIndexes.back().emplace_back(table.name, indexCounter++);
+      tableIndexes.back().emplace_back(to_string(i), indexCounter++);
+      tableIndexes.back().emplace_back("PK" + _columns , indexCounter++);
+      tableIndexes.back().emplace_back(concatenatedColumns , indexCounter++);
+      tableIndexes.back().emplace_back("1" , indexCounter++);
     }
 
     sysTables->InsertRows(tableFields);
     sysColumns->InsertRows(tableColumns);
-
+    sysIndexes->InsertRows(tableIndexes);
   }
 
   DatabaseEngine::Database * ServerInstance::GetMasterDb(){ return this->masterDb; }
@@ -170,6 +206,12 @@ namespace Server {
 
     for (int i = 0; i < selectedTables.size(); i++)
       sysColumns->Select(selectedColumns[i], {0, 1, 2, 3, 4, 5, 6}, &conditions);
+
+     DatabaseEngine::StorageTypes::Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
+     vector<vector<DatabaseEngine::StorageTypes::Row>> selectedIndexes(selectedTables.size());
+     
+     for (int i = 0; i < selectedTables.size(); i++)
+       sysIndexes->Select(selectedIndexes[i], {0, 1, 2, 3, 4, 5}, &conditions);
   }
 
   void ServerInstance::CreateSystemDatabase(){
@@ -212,8 +254,8 @@ namespace Server {
         
       this->masterDb->CreateTable(table.name, columns, &primaryKey);
     }
-    
-    Storage::StorageManager::Get().BindDatabase(this->masterDb);
   }
+
+  bool ServerInstance::CheckIfMasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }
 }
 

@@ -27,11 +27,12 @@ namespace Server {
 
     DatabaseEngine::Database* masterDb;
 
-    ServerInstance() = default;
+    ServerInstance();
     ~ServerInstance() = default;
 
     void ReadConfiguration(const string& configPath);
     void CreateSystemDatabase();
+    [[nodiscard]] bool CheckIfMasterDbExists()const;
 
   public:
     static ServerInstance& Get() {
