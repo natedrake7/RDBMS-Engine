@@ -35,7 +35,18 @@ add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
                             QueryPipeline/Visitor.h
                             ${ANTLR_SRC}
         QueryPipeline/Validator/Validator.cpp
-        QueryPipeline/Validator/Validator.h)
+        QueryPipeline/Validator/Validator.h
+        QueryPipeline/LogicalPlan/LogicalTableScan.h
+        QueryPipeline/LogicalPlan/LogicalProject.h
+        QueryPipeline/LogicalPlan/LogicalOperator.cpp
+        QueryPipeline/LogicalPlan/LogicalOperator.h
+        QueryPipeline/PhysicalPlan/PhysicalOperator.h
+        QueryPipeline/PhysicalPlan/PhysicalTableScan/PhysicalTableScan.cpp
+        QueryPipeline/PhysicalPlan/PhysicalTableScan/PhysicalTableScan.h
+        QueryPipeline/PhysicalPlan/PhysicalProject/PhysicalProject.cpp
+        QueryPipeline/PhysicalPlan/PhysicalProject/PhysicalProject.h
+        QueryPipeline/PhysicalPlan/PhysicalOperator.cpp
+)
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 

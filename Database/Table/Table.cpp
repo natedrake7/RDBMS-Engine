@@ -256,6 +256,12 @@ namespace DatabaseEngine::StorageTypes {
           const auto& clusteredIndexes = this->GetClusteredIndex();
           const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
 
+          vector<column_index_t> selectedColumnIndexes = selectedColumnIndices;
+          if (selectedColumnIndices.empty()) {
+            for (const auto& column: this->columns)
+              selectedColumnIndexes.emplace_back(column->GetColumnIndex());
+          }
+
           Key minimumValue;
           Key maximumValue;
 
@@ -345,13 +351,13 @@ namespace DatabaseEngine::StorageTypes {
             conditions != nullptr ? &minimumValue : nullptr, 
             conditions != nullptr ? &maximumValue : nullptr, 
             clusteredIndexSeek, 
-            selectedColumnIndices
+            selectedColumnIndexes
           );
           return;
         }
         else if (useNonClusteredIndex)
         {
-          this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions, selectedColumnIndices);
+          this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions, selectedColumnIndexes);
           return;
         }
       

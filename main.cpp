@@ -64,7 +64,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "SELECT name, columns FROM sys_indexes";
+    const string test = "SELECT name FROM sys_databases";
 
     try {
         QueryPipeline::Parser::Parse(test);
