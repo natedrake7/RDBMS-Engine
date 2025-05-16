@@ -31,7 +31,7 @@ namespace Server {
     std::ifstream file(configPath);
 
     if (!file.is_open())
-      throw runtime_error("System Tables file: " + configPath + "could not be opened");
+      throw runtime_error("System Tables file: " + configPath + " could not be opened");
 
     json jsonFile;
 
@@ -181,9 +181,11 @@ namespace Server {
   }
 
   void ServerInstance::SelectDb(const string &dbName) const{
-    DatabaseEngine::StorageTypes::Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+    using namespace DatabaseEngine::StorageTypes;
 
-    vector<DatabaseEngine::StorageTypes::Row> selectedDatabases;
+    Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+
+    vector<Row> selectedDatabases;
     const vector<Field> conditions = {
       Field(dbName, 0),
     };
@@ -193,22 +195,22 @@ namespace Server {
     if (selectedDatabases.empty())
       return;
 
-    vector<DatabaseEngine::StorageTypes::Row> selectedTables;
-    DatabaseEngine::StorageTypes::Table* sysTables = this->masterDb->OpenTable("sys_tables");
+    vector<Row> selectedTables;
+    Table* sysTables = this->masterDb->OpenTable("sys_tables");
 
     sysTables->Select(selectedTables, {0, 1, 2}, &conditions);
 
     if (selectedTables.empty())
       return;
 
-    DatabaseEngine::StorageTypes::Table* sysColumns = this->masterDb->OpenTable("sys_columns");
-    vector<vector<DatabaseEngine::StorageTypes::Row>> selectedColumns(selectedTables.size());
+    Table* sysColumns = this->masterDb->OpenTable("sys_columns");
+    vector<vector<Row>> selectedColumns(selectedTables.size());
 
     for (int i = 0; i < selectedTables.size(); i++)
       sysColumns->Select(selectedColumns[i], {0, 1, 2, 3, 4, 5, 6}, &conditions);
 
-     DatabaseEngine::StorageTypes::Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
-     vector<vector<DatabaseEngine::StorageTypes::Row>> selectedIndexes(selectedTables.size());
+     Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
+     vector<vector<Row>> selectedIndexes(selectedTables.size());
      
      for (int i = 0; i < selectedTables.size(); i++)
        sysIndexes->Select(selectedIndexes[i], {0, 1, 2, 3, 4, 5}, &conditions);
