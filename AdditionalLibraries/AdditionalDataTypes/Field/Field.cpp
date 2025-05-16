@@ -13,6 +13,7 @@ Field::Field(const string &data, const Constants::column_index_t& columnIndex, c
     this->data = data;
     this->isNull = isNull;
     this->columnIndex = columnIndex;
+    this->conditionType = Constants::ConditionNone;
 }
 
 Field::Field(const u16string &data, const Constants::column_index_t &columnIndex, const bool &isNull)

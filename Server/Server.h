@@ -62,8 +62,10 @@ namespace Server {
       const string& user = "system") const;
     void InsertSchemaToMasterDb(const string& dbName, const string& schemaName, const string& user = "system") const;
 
-
     void SelectDb(const string& dbName) const;
+    void SelectTables(const string& dbName) const;
+    void SelectColumns(const string& dbName, const string& tableName) const;
+    void SelectIndexes(const string& dbName, const string& tableName) const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb();
 
     void Shutdown()const;

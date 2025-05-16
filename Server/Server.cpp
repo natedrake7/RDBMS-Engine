@@ -43,8 +43,8 @@ namespace Server {
       throw runtime_error(e.what());
     }
 
-    this->sysDbName = jsonFile.at("dbName");
-    this->sysDbPath = jsonFile.at("dbPath");
+    this->sysDbName = jsonFile.at("db_name");
+    this->sysDbPath = jsonFile.at("db_path");
 
     jsonFile.at("tables").get_to(this->sysTables);  
 
@@ -250,6 +250,51 @@ namespace Server {
      vector<Row> selectedSchemas;
 
      sysSchemas->Select(selectedSchemas, {0, 1, 2, 3, 4}, &conditions);
+  }
+
+  void ServerInstance::SelectTables(const string &dbName) const{
+     using namespace DatabaseEngine::StorageTypes;
+
+     const vector<Field> conditions = {
+       Field(dbName, 0)
+     };
+
+     vector<Row> selectedTables;
+     Table* sysTables = this->masterDb->OpenTable("sys_tables");
+
+     sysTables->Select(selectedTables, {0, 1, 2, 3, 4, 5, 6}, &conditions);
+  }
+
+  void ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
+     using namespace DatabaseEngine::StorageTypes;
+
+     const vector<Field> conditions = {
+       Field(dbName, 0),
+       Field(tableName, 1),
+     };
+
+     vector<Row> selectedColumns;
+     Table* sysColumns = this->masterDb->OpenTable("sys_columns");
+
+     sysColumns->Select(selectedColumns, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, &conditions);
+
+     for (const auto& column : selectedColumns) {
+       column.PrintRow();
+     }
+  }
+
+  void ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
+     using namespace DatabaseEngine::StorageTypes;
+
+     const vector<Field> conditions = {
+       Field(dbName, 0),
+       Field(tableName, 1),
+     };
+
+     Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
+     vector<Row> selectedIndexes;
+
+      sysIndexes->Select(selectedIndexes, {0, 1, 2, 3, 4, 5, 6, 7}, &conditions);
   }
 
   void ServerInstance::CreateSystemDatabase(){

@@ -61,14 +61,20 @@ int main()
 
     vector<Database*> databases;
 
-    ServerInstance::Get().Initialize("configuration.json");
+    auto& server = ServerInstance::Get();
 
-    ServerInstance::Get().SelectDb("masterDb");
+    server.Initialize("configuration.json");
+
+    const string dbName = "masterDb";
+
+    server.SelectTables(dbName);
+
+    server.SelectColumns(dbName, "sys_indexes");
 
     for (const auto& database: databases)
         delete database;
 
-    ServerInstance::Get().Shutdown();
+    server.Shutdown();
     
     return 0;
 

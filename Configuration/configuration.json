@@ -1,6 +1,6 @@
 {
-  "dbName": "masterDb",
-  "dbPath": "./masterDb.db",
+  "db_name": "masterDb",
+  "db_path": "./masterDb.db",
   "tables": [
     {
       "name": "sys_databases",
@@ -37,7 +37,7 @@
       "name": "sys_tables",
       "columns": [
         {
-          "name": "dbName",
+          "name": "db_name",
           "type": "String",
           "size": 100
         },
@@ -70,7 +70,7 @@
         }
       ],
       "primaryKey": [
-        "dbName",
+        "db_name",
         "name"
       ]
     },
@@ -78,12 +78,12 @@
       "name": "sys_columns",
       "columns": [
         {
-          "name": "dbName",
+          "name": "db_name",
           "type": "String",
           "size": 100
         },
         {
-          "name": "tableName",
+          "name": "table_name",
           "type": "String",
           "size": 100
         },
@@ -98,15 +98,15 @@
           "size": 100
         },
         {
-          "name": "recordSize",
+          "name": "record_size",
           "type": "SmallInt"
         },
         {
-          "name": "isNullable",
+          "name": "is_nullable",
           "type": "Bool"
         },
         {
-          "name": "tablePosition",
+          "name": "table_position",
           "type": "SmallInt"
         },
         {
@@ -124,8 +124,8 @@
         }
       ],
       "primaryKey": [
-        "dbName",
-        "tableName",
+        "db_name",
+        "table_name",
         "name"
       ]
     },
@@ -133,12 +133,12 @@
       "name": "sys_indexes",
       "columns": [
         {
-          "name": "dbName",
+          "name": "db_name",
           "type": "String",
           "size": 100
         },
         {
-          "name": "tableName",
+          "name": "table_name",
           "type": "String",
           "size": 100
         },
@@ -171,8 +171,8 @@
         }
       ],
       "primaryKey": [
-        "dbName",
-        "tableName",
+        "db_name",
+        "table_name",
         "name"
       ]
     },
@@ -180,7 +180,7 @@
       "name": "sys_schemas",
       "columns": [
         {
-          "name": "dbName",
+          "name": "db_name",
           "type": "String",
           "size": 100
         },
@@ -204,7 +204,7 @@
         }
       ],
       "primaryKey": [
-        "dbName",
+        "db_name",
         "name"
       ]
     }
