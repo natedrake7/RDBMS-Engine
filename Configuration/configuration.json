@@ -16,6 +16,10 @@
           "size": 100
         },
         {
+          "name": "is_system",
+          "type": "Bool"
+        },
+        {
           "name": "created_at",
           "type": "DateTime"
         },

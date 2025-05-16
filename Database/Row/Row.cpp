@@ -195,7 +195,7 @@ namespace DatabaseEngine::StorageTypes {
                 }
                 case ColumnType::Bool:
                 {
-                    cout << *reinterpret_cast<const bool*>(blockData);
+                    cout << (*reinterpret_cast<const bool*>(blockData) ? "true" : "false");
                     break;
                 }
                 case ColumnType::DateTime:

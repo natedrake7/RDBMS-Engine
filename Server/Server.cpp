@@ -4,25 +4,26 @@
 #include "../Database/Row/Row.h"
 #include "../Database/Table/Table.h"
 #include "../Database/Database.h"
+#include "../Database/Block/Block.h"
 #include "../Database/Storage/StorageManager/StorageManager.h"
 
 using json = nlohmann::json;
 
-void from_json(const json& j, sysColumn& c) {
-  j.at("name").get_to(c.name);
-  j.at("type").get_to(c.type);
-
-  if (j.contains("size"))
-    j.at("size").get_to(c.size);
-}
-
-void from_json(const json& j, sysTable& t) {
-  j.at("name").get_to(t.name);
-  j.at("columns").get_to(t.columns);
-  j.at("primaryKey").get_to(t.primaryKey);
-}
-
 namespace Server {
+  void from_json(const json& j, sysColumn& c) {
+    j.at("name").get_to(c.name);
+    j.at("type").get_to(c.type);
+
+    if (j.contains("size"))
+      j.at("size").get_to(c.size);
+  }
+
+  void from_json(const json& j, sysTable& t) {
+    j.at("name").get_to(t.name);
+    j.at("columns").get_to(t.columns);
+    j.at("primaryKey").get_to(t.primaryKey);
+  }
+
    ServerInstance::ServerInstance(){
      this->masterDb = nullptr;
   }
@@ -107,7 +108,7 @@ namespace Server {
     delete this->masterDb;
   }
 
-  void ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath, const string& user) const{
+  void ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath, const bool& isSystem, const string& user) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_databases");
 
       const auto currentDate = DataTypes::DateTime::Now().ToString();
@@ -115,9 +116,10 @@ namespace Server {
       const vector<Field> fields = {
         Field(dbName, 0),
         Field(dbPath, 1),
-        Field(currentDate, 2),
+        Field(isSystem ? "1" : "0", 2),
         Field(currentDate, 3),
-        Field(user, 4),
+        Field(currentDate, 4),
+        Field(user, 5),
     };
     
     table->InsertRows({fields});
@@ -221,7 +223,7 @@ namespace Server {
       Field(dbName, 0),
     };
 
-    sysDatabases->Select(selectedDatabases, {0, 1, 2, 3, 4}, &conditions);
+    sysDatabases->Select(selectedDatabases, {0, 1, 2, 3, 4, 5}, &conditions);
 
     if (selectedDatabases.empty())
       return;
@@ -252,7 +254,79 @@ namespace Server {
      sysSchemas->Select(selectedSchemas, {0, 1, 2, 3, 4}, &conditions);
   }
 
-  void ServerInstance::SelectTables(const string &dbName) const{
+  bool ServerInstance::DatabaseExists(const string &dbName) const{
+     using namespace DatabaseEngine::StorageTypes;
+
+     Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+
+     vector<Row> selectedDatabases;
+     const vector<Field> conditions = {
+       Field(dbName, 0),
+     };
+
+     sysDatabases->Select(selectedDatabases, {0}, &conditions);
+
+     return !selectedDatabases.empty();
+  }
+
+  DatabaseHeader ServerInstance::SelectDatabases(const string &dbName) const{
+     using namespace DatabaseEngine::StorageTypes;
+
+     Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+
+     vector<Row> selectedDatabases;
+     const vector<Field> conditions = {
+       Field(dbName, 0),
+     };
+
+     sysDatabases->Select(selectedDatabases, {0, 1, 2, 3, 4, 5}, &conditions);
+
+     DatabaseHeader header;
+
+     if (selectedDatabases.empty())
+       return header;
+
+     const auto& database = selectedDatabases.front();
+
+     const auto& data = database.GetData();
+
+     header.name = dbName;
+
+     header.filepath.resize(data[1]->GetBlockSize());
+     memcpy(header.filepath.data(), data[1]->GetBlockData(), data[1]->GetBlockSize());
+     memcpy(&header.isSystem, data[2]->GetBlockData(), sizeof(bool));
+
+     time_t createdAt;
+     memcpy(&createdAt, data[3]->GetBlockData(), data[3]->GetBlockSize());
+     header.createdAt = DataTypes::DateTime(createdAt);
+
+     time_t lastModified;
+     memcpy(&lastModified, data[4]->GetBlockData(), data[4]->GetBlockSize());
+     header.lastModified = DataTypes::DateTime(lastModified);
+
+
+     header.lastModifiedBy.resize(data[5]->GetBlockSize());
+     memcpy(header.lastModifiedBy.data(), data[5]->GetBlockData(), data[5]->GetBlockSize());
+
+     return header;
+  }
+
+  vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectSchemas(const string &dbName) const{
+     using namespace DatabaseEngine::StorageTypes;
+
+     const vector<Field> conditions = {
+       Field(dbName, 0),
+     };
+
+     Table* sysSchemas = this->masterDb->OpenTable("sys_schemas");
+     vector<Row> selectedSchemas;
+
+     sysSchemas->Select(selectedSchemas, {0, 1, 2, 3, 4}, &conditions);
+
+     return selectedSchemas;
+  }
+
+  vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectTables(const string &dbName) const{
      using namespace DatabaseEngine::StorageTypes;
 
      const vector<Field> conditions = {
@@ -263,9 +337,11 @@ namespace Server {
      Table* sysTables = this->masterDb->OpenTable("sys_tables");
 
      sysTables->Select(selectedTables, {0, 1, 2, 3, 4, 5, 6}, &conditions);
+
+     return selectedTables;
   }
 
-  void ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
+  vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
      using namespace DatabaseEngine::StorageTypes;
 
      const vector<Field> conditions = {
@@ -278,12 +354,10 @@ namespace Server {
 
      sysColumns->Select(selectedColumns, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, &conditions);
 
-     for (const auto& column : selectedColumns) {
-       column.PrintRow();
-     }
+     return selectedColumns;
   }
 
-  void ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
+  vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
      using namespace DatabaseEngine::StorageTypes;
 
      const vector<Field> conditions = {
@@ -295,6 +369,8 @@ namespace Server {
      vector<Row> selectedIndexes;
 
       sysIndexes->Select(selectedIndexes, {0, 1, 2, 3, 4, 5, 6, 7}, &conditions);
+
+     return selectedIndexes;
   }
 
   void ServerInstance::CreateSystemDatabase(){

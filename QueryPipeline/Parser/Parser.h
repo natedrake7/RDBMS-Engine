@@ -8,7 +8,7 @@
 
 using namespace std;
 
-namespace QueryParser{
+namespace QueryPipeline{
 
     class Parser{
         ~Parser();
@@ -22,7 +22,7 @@ namespace QueryParser{
                 return instance;
             }
 
-            static void Parse(const DatabaseEngine::Database& db);
+            static void Parse(const string& query);
     };
 
 }

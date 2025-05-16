@@ -5,20 +5,19 @@
 #include "SQLParser.h"
 #include "../Visitor.h"
 #include "../../Database/Database.h"
+#include "../Validator/Validator.h"
 
 #include <SQLBaseListener.h>
 #include <SQLLexer.h>
 
-namespace QueryParser 
+namespace QueryPipeline
 {
     Parser::Parser() = default;
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(const DatabaseEngine::Database& db)
+    void Parser::Parse(const string& query)
     {
-        std::string query = "SELECT user, test FROM table";
-
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
 
@@ -38,16 +37,20 @@ namespace QueryParser
         SQLVisitorImplementation visitor;
         const auto response = visitor.visit(tree);
 
-        if (response.type() == typeid(SelectStatement)) {
-            const auto selectStatement = std::any_cast<SelectStatement>(response);
-            
-            const auto table = db.OpenTable(selectStatement.table);
+        switch (response.type()) {
+            case typeid(SelectStatement):
+                const auto selectStatement = std::any_cast<SelectStatement>(response);
+                break;
+            case typeid(CreateDbStatement):
+                const auto createDbStatement = std::any_cast<CreateDbStatement>(response);
+                Validator::Get().Validate(createDbStatement);
+                break;
+            case typeid(DropDbStatement):
+                const auto dropDbStatement = std::any_cast<DropDbStatement>(response);
+                Validator::Get().Validate(dropDbStatement);
+                break;
+            default:
+                throw runtime_error("Invalid query type");
         }
-        else if (response.type() == typeid(CreateDbStatement)) {
-            
-        }
-
-
-        throw invalid_argument("stop debug");
     }
 }

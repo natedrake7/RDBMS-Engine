@@ -23,7 +23,6 @@
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
 using namespace Storage;
-using namespace QueryParser;
 using namespace Server;
 
 void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& selectedColumnIndices);
@@ -65,11 +64,15 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string dbName = "masterDb";
 
-    server.SelectTables(dbName);
+    const string test = "CREATE DATABASE masterDb";
 
-    server.SelectColumns(dbName, "sys_indexes");
+    try {
+        QueryPipeline::Parser::Parse(test);
+    }
+    catch (const std::exception& e) {
+        cerr << e.what() << endl;
+    }
 
     for (const auto& database: databases)
         delete database;
@@ -78,14 +81,10 @@ int main()
     
     return 0;
 
-    const string test = "SELECT users FROM dbo.test";
 
     Database *db = nullptr;
     UseDatabase("stakosDb", &db);
 
-    
-    Parser::Parse(*db);
-    
     return 0;
     
     

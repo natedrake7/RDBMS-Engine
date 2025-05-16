@@ -1,18 +1,20 @@
 grammar SQL;
 
-sqlStatement : selectStatement | createDbStatement;
+sqlStatement : selectStatement | createDbStatement | dropDbStatement;
 
 selectStatement : 'SELECT' columnList 'FROM' tableName;
 
-createDbStatement: 'CREATE' 'DATABASE' dbName;
+createDbStatement: 'CREATE' 'DATABASE' IDENTIFIER;
+
+dropDbStatement: 'DROP' 'DATABASE' IDENTIFIER;
 
 columnList : columnName (',' columnName)*;
 
-dbName: ID;
-columnName : ID;
-tableName : ID;
+dbName: IDENTIFIER;
+columnName : IDENTIFIER;
+tableName : IDENTIFIER;
 
-ID : [a-zA-Z_][a-zA-Z0-9_]*;
+IDENTIFIER : [a-zA-Z_][a-zA-Z0-9_]*;
 STRING : '\'' ( ~['\\] | '\\' . )* '\''; 
 NUMBER : [0-9]+;
 WS : [ \t\r\n]+ -> skip;
