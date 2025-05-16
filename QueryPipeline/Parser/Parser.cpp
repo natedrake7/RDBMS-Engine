@@ -37,20 +37,13 @@ namespace QueryPipeline
         SQLVisitorImplementation visitor;
         const auto response = visitor.visit(tree);
 
-        // switch (response.type()) {
-        //     case typeid(SelectStatement):
-        //         const auto selectStatement = std::any_cast<SelectStatement>(response);
-        //         break;
-        //     case typeid(CreateDbStatement):
-        //         const auto createDbStatement = std::any_cast<CreateDbStatement>(response);
-        //         Validator::Get().Validate(createDbStatement);
-        //         break;
-        //     case typeid(DropDbStatement):
-        //         const auto dropDbStatement = std::any_cast<DropDbStatement>(response);
-        //         Validator::Get().Validate(dropDbStatement);
-        //         break;
-        //     default:
-        //         throw runtime_error("Invalid query type");
-        // }
+        if (response.type() == typeid(CreateDbStatement)) {
+            const auto createDbStatement = std::any_cast<CreateDbStatement>(response);
+            Validator::Validate(createDbStatement);
+        }
+        else if (response.type() == typeid(DropDbStatement)) {
+            const auto dropDbStatement = std::any_cast<DropDbStatement>(response);
+            Validator::Validate(dropDbStatement);
+        }
     }
 }

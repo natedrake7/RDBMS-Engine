@@ -1,8 +1,10 @@
 ﻿#include "Block.h"
 #include "../Database.h"
 #include "../Column/Column.h"
+#include "../Pages/LargeObject/LargeDataPage.h"
 
 #include <cstring>
+#include <iostream>
 
 namespace DatabaseEngine::StorageTypes {
     
@@ -61,6 +63,26 @@ namespace DatabaseEngine::StorageTypes {
     object_t* Block::GetBlockData() const { return this->data; }
 
     block_size_t Block::GetBlockSize() const { return this->size; }
+
+    bool Block::GetBool() const { return *reinterpret_cast<bool*>(this->data); }
+
+    int8_t Block::GetTinyInt() const { return *reinterpret_cast<int8_t*>(this->data); }
+
+    int16_t Block::GetSmallInt() const { return *reinterpret_cast<int16_t*>(this->data); }
+
+    int32_t Block::GetInt() const { return *reinterpret_cast<int32_t*>(this->data); }
+
+    int64_t Block::GetBigInt() const { return *reinterpret_cast<int64_t*>(this->data); }
+
+    string Block::GetString() const { return std::string(reinterpret_cast<char*>(this->data), this->size);}
+
+    u16string Block::GetUnicodeString() const { return std::u16string(reinterpret_cast<char16_t*>(this->data), this->size / 2); }
+
+    DataTypes::DateTime Block::GetDateTime() const { return DataTypes::DateTime(*reinterpret_cast<time_t*>(this->data)); }
+
+    Pages::DataObjectPointer Block::GeObjectPointer() const { return *reinterpret_cast<Pages::DataObjectPointer*>(this->data); }
+
+    DataTypes::Decimal Block::GetDecimal() const { return DataTypes::Decimal(this->data, this->size); }
 
     const column_index_t& Block::GetColumnIndex() const { return this->column->GetColumnIndex(); }
 

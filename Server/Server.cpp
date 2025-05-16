@@ -63,7 +63,7 @@ namespace Server {
     this->CreateSystemDatabase();
     Storage::StorageManager::Get().BindDatabase(this->masterDb);
 
-    this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath);
+    this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
 
      for (const auto& table: this->sysTables) {
       this->InsertTableToMasterDb(this->sysDbName, table.name, "dbo", true, "system");
@@ -91,11 +91,14 @@ namespace Server {
 
        string concatenatedColumns;
        string _columns;
-       for (const auto & j : table.primaryKey) {
-         concatenatedColumns += j;
-         _columns +="_" + j;
-       }
 
+       for (int i = 0; i < table.primaryKey.size(); i++) {
+        const auto& key = table.primaryKey[i];
+         
+         concatenatedColumns +=  i > 0  ? "," + key : key;
+         _columns +="_" + key;
+       }
+       
        this->InsertIndexToMasterDb(this->sysDbName, table.name, "PK" + _columns, concatenatedColumns, true);
      }
 
@@ -116,7 +119,7 @@ namespace Server {
       const vector<Field> fields = {
         Field(dbName, 0),
         Field(dbPath, 1),
-        Field(isSystem ? "1" : "0", 2),
+        Field(isSystem, 2),
         Field(currentDate, 3),
         Field(currentDate, 4),
         Field(user, 5),
@@ -138,7 +141,7 @@ namespace Server {
         Field(dbName, 0),
         Field(tableName, 1),
         Field(schemaName, 2),
-        Field(isSystem ? "1" : "0", 3),
+        Field(isSystem, 3),
         Field(currentDate, 4),
         Field(currentDate, 5),
         Field(user, 6),
@@ -157,16 +160,16 @@ namespace Server {
     const int &tablePosition,
     const string& user) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_columns");
-      const auto currentDate = DataTypes::DateTime::Now().ToString();
+      const auto currentDate = DataTypes::DateTime::Now();
 
     const vector<Field> fields = {
       Field(dbName, 0),
       Field(tableName, 1),
       Field(columnName, 2),
       Field(columnType, 3),
-      Field(to_string(columnSize), 4),
-      Field(isNullable ? "1" : "0", 5),
-      Field(to_string(tablePosition), 6),
+      Field(columnSize, 4),
+      Field(isNullable, 5),
+      Field(tablePosition, 6),
       Field(currentDate, 7),
       Field(currentDate, 8),
       Field(user, 9),
@@ -190,7 +193,7 @@ namespace Server {
        Field(tableName, 1),
        Field(indexName, 2),
        Field(columns, 3),
-       Field(isClustered ? "1" : "0", 4),
+       Field(isClustered, 4),
        Field(currentDate, 5),
        Field(currentDate, 6),
        Field(user, 7),
@@ -284,31 +287,20 @@ namespace Server {
      DatabaseHeader header;
 
      if (selectedDatabases.empty())
-       return header;
+       return {};
 
      const auto& database = selectedDatabases.front();
 
      const auto& data = database.GetData();
 
-     header.name = dbName;
-
-     header.filepath.resize(data[1]->GetBlockSize());
-     memcpy(header.filepath.data(), data[1]->GetBlockData(), data[1]->GetBlockSize());
-     memcpy(&header.isSystem, data[2]->GetBlockData(), sizeof(bool));
-
-     time_t createdAt;
-     memcpy(&createdAt, data[3]->GetBlockData(), data[3]->GetBlockSize());
-     header.createdAt = DataTypes::DateTime(createdAt);
-
-     time_t lastModified;
-     memcpy(&lastModified, data[4]->GetBlockData(), data[4]->GetBlockSize());
-     header.lastModified = DataTypes::DateTime(lastModified);
-
-
-     header.lastModifiedBy.resize(data[5]->GetBlockSize());
-     memcpy(header.lastModifiedBy.data(), data[5]->GetBlockData(), data[5]->GetBlockSize());
-
-     return header;
+      return {
+        .name = dbName,
+        .filepath = data[1]->GetString(),
+        .isSystem = data[2]->GetBool(),
+        .createdAt = data[3]->GetDateTime(),
+        .lastModified = data[4]->GetDateTime(),
+        .lastModifiedBy = data[5]->GetString()
+      };
   }
 
   vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectSchemas(const string &dbName) const{

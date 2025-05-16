@@ -157,6 +157,7 @@ void Field::SetData(const DataTypes::DateTime &data) {
     
     this->size = DataTypes::DateTime::DateTimeSize();
 }
+
 void Field::SetData(const DataTypes::Decimal &data) { 
     delete this->data;
     
@@ -165,14 +166,27 @@ void Field::SetData(const DataTypes::Decimal &data) {
     memcpy(this->data, data.GetRawData(), this->size);
 }
 
-bool Field::GetBool() const { return *reinterpret_cast<bool*>(this->data); }
-int8_t Field::GetTinyInt() const { return *reinterpret_cast<int8_t *>(this->data); }
-int16_t Field::GetSmallInt() const { return *reinterpret_cast<int16_t *>(this->data); }
-int32_t Field::GetInt() const { return *reinterpret_cast<int32_t *>(this->data); }
-int64_t Field::GetBigInt() const { return *reinterpret_cast<int64_t *>(this->data); }
-char* Field::GetString() const { return reinterpret_cast<char *>(this->data); }
-wchar_t* Field::GetUnicodeString() const { return reinterpret_cast<wchar_t *>(this->data); }
+const object_t * Field::GetRawData() const{ return this->data; }
 
+bool Field::GetBool() const { return *reinterpret_cast<bool*>(this->data); }
+
+int8_t Field::GetTinyInt() const { return *reinterpret_cast<int8_t *>(this->data); }
+
+int16_t Field::GetSmallInt() const { return *reinterpret_cast<int16_t *>(this->data); }
+
+int32_t Field::GetInt() const { return *reinterpret_cast<int32_t *>(this->data); }
+
+int64_t Field::GetBigInt() const { return *reinterpret_cast<int64_t *>(this->data); }
+
+string Field::GetString() const { return { reinterpret_cast<char *>(this->data)}; }
+
+u16string Field::GetUnicodeString() const { return {reinterpret_cast<char16_t *>(this->data)}; }
+
+DataTypes::Decimal Field::GetDecimal() const{ return DataTypes::Decimal(this->data, this->size); }
+
+DataTypes::DateTime Field::GetDateTime() const{ return DataTypes::DateTime(*reinterpret_cast<time_t *>(this->data));}
+
+time_t Field::GetUnixTimeStamp() const{ return *reinterpret_cast<time_t *>(this->data); }
 
 void Field::SetColumnIndex(const Constants::column_index_t &columnIndex) { this->columnIndex = columnIndex; }
 
@@ -181,3 +195,5 @@ const Constants::ConditionType& Field::GetConditionType() const { return this->c
 const Constants::Operator& Field::GetOperatorType() const { return this->operatorType; }
 
 const vector<Field>& Field::GetChildren() const { return this->children; }
+
+const block_size_t& Field::GetSize() const{ return this->size; }

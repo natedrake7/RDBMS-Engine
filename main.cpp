@@ -64,7 +64,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "CREATE DATABASE masterDb";
+    const string test = "DROP DATABASE masterDb";
 
     try {
         QueryPipeline::Parser::Parse(test);

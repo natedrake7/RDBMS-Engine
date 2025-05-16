@@ -92,8 +92,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case ColumnType::Bool:
         {
-            const auto& firstBlockData = *reinterpret_cast<const bool*>(firstBlock->GetBlockData());
-            const auto& secondBlockData = *reinterpret_cast<const bool*>(secondBlock->GetBlockData());
+            const auto& firstBlockData = firstBlock->GetBool();
+            const auto& secondBlockData = secondBlock->GetBool();
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;

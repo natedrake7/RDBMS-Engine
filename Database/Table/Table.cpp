@@ -13,6 +13,8 @@
 #include "../Pages/Page.h"
 #include "../Row/Row.h"
 #include "../B+Tree/BPlusTree.h"
+
+#include <iostream>
 #include <stdexcept>
 #include <unordered_set>
 
@@ -210,7 +212,9 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, i);
+          block->SetData(i.GetRawData(), i.GetSize());
+          
+          // this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, i);
 
           const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
       
@@ -267,7 +271,8 @@ namespace DatabaseEngine::StorageTypes {
             for(const auto& condition: *conditions)
             {
                 const auto& columnIndex = condition.GetColumnIndex();
-                const auto& data = condition.GetData();
+                const auto& data = condition.GetRawData();
+              
 
                 Block *block = new Block(columns[columnIndex]);
 
@@ -275,8 +280,9 @@ namespace DatabaseEngine::StorageTypes {
       
                 if (columnType > ColumnType::ColumnTypeCount)
                   throw invalid_argument("Table::Select: Unsupported Column Type");
-      
-                this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, condition);
+
+                block->SetData(data, condition.GetSize());
+                // this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, condition);
 
                 int indexPosition = 0;
                 if(Table::VectorContainsIndex(clusteredIndexes, columnIndex, indexPosition))
@@ -468,8 +474,6 @@ namespace DatabaseEngine::StorageTypes {
            const auto &columnType = this->columns[associatedColumnIndex]->GetColumnType();
 
            Block *block = new Block(this->columns[associatedColumnIndex]);
-
-           this->setBlockDataByDataTypeArray[static_cast<int>(columnType)](block, field);
 
            updateBlocks.push_back(block);
          }

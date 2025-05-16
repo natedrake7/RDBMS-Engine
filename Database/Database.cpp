@@ -17,6 +17,8 @@
 #include "../AdditionalLibraries/BitMap/BitMap.h"
 #include "B+Tree/BPlusTree.h"
 
+#include <iostream>
+
 using namespace Pages;
 using namespace DatabaseEngine::StorageTypes;
 using namespace Storage;

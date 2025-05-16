@@ -88,7 +88,6 @@ namespace DatabaseEngine::StorageTypes
         TableHeader header;
         vector<Column *> columns;
         Database *database;
-        const vector<void (*)(Block *&block, const Field &inputData)> setBlockDataByDataTypeArray = {&Table::SetTinyIntData, &Table::SetSmallIntData, &Table::SetIntData, &Table::SetBigIntData, &Table::SetDecimalData, &Table::SetStringData, &Table::SetUnicodeStringData, &Table::SetBoolData, &Table::SetDateTimeData};
         Indexing::BPlusTree* clusteredIndexedTree;
         vector<Indexing::BPlusTree*> nonClusteredIndexedTrees;
         mutex pageSelectMutex;
@@ -106,15 +105,6 @@ namespace DatabaseEngine::StorageTypes
             void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
             void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
         
-            static void SetTinyIntData(Block *&block, const Field &inputData);
-            static void SetSmallIntData(Block *&block, const Field &inputData);
-            static void SetIntData(Block *&block, const Field &inputData);
-            static void SetBigIntData(Block *&block, const Field &inputData);
-            static void SetStringData(Block *&block, const Field &inputData);
-            static void SetUnicodeStringData(Block *&block, const Field &inputData);
-            static void SetBoolData(Block *&block, const Field &inputData);
-            static void SetDateTimeData(Block *&block, const Field &inputData);
-            static void SetDecimalData(Block *&block, const Field &inputData);
             void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
 
             static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);

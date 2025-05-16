@@ -60,6 +60,8 @@ namespace QueryPipeline {
           return visit(context->selectStatement());
         if (context->createDbStatement())
           return visit(context->createDbStatement());
+        if (context->dropDbStatement())
+          return visit(context->dropDbStatement());
 
         return nullptr;
       }

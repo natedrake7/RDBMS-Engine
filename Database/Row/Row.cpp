@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstring>
 #include <ctime>
+#include <iostream>
 #include <stdexcept>
 
 using namespace Pages;
