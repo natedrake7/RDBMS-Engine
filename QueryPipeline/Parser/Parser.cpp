@@ -37,7 +37,11 @@ namespace QueryPipeline
         SQLVisitorImplementation visitor;
         const auto response = visitor.visit(tree);
 
-        if (response.type() == typeid(CreateDbStatement)) {
+        if (response.type() == typeid(SelectStatement)) {
+            const auto selectStatement = std::any_cast<SelectStatement>(response);
+            Validator::Validate(selectStatement);
+        }
+        else if (response.type() == typeid(CreateDbStatement)) {
             const auto createDbStatement = std::any_cast<CreateDbStatement>(response);
             Validator::Validate(createDbStatement);
         }

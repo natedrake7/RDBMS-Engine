@@ -318,35 +318,83 @@ namespace Server {
      return selectedSchemas;
   }
 
-  vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectTables(const string &dbName) const{
-     using namespace DatabaseEngine::StorageTypes;
+  vector<TableHeader> ServerInstance::SelectTables(const string &dbName) const{
+    using namespace DatabaseEngine::StorageTypes;
 
-     const vector<Field> conditions = {
-       Field(dbName, 0)
-     };
+    const vector<Field> conditions = {
+      Field(dbName, 0)
+    };
 
-     vector<Row> selectedTables;
-     Table* sysTables = this->masterDb->OpenTable("sys_tables");
+    vector<Row> selectedTables;
+    Table* sysTables = this->masterDb->OpenTable("sys_tables");
 
-     sysTables->Select(selectedTables, {0, 1, 2, 3, 4, 5, 6}, &conditions);
+    sysTables->Select(selectedTables, {0, 1, 2, 3, 4, 5, 6}, &conditions);
 
-     return selectedTables;
+    if (selectedTables.empty())
+      return {};
+      
+    vector<TableHeader> selectedTableHeaders;
+    selectedTableHeaders.reserve(selectedTables.size());
+
+    for (const auto& table : selectedTables) {
+      const auto& data = table.GetData();
+      
+      selectedTableHeaders.emplace_back(
+          TableHeader{
+              data[0]->GetString(),
+              data[1]->GetString(),
+              data[2]->GetString(),
+              data[3]->GetBool(),
+              data[4]->GetDateTime(),
+              data[5]->GetDateTime(),
+              data[6]->GetString()
+          }
+      );
+    }
+
+    return selectedTableHeaders;
+
   }
 
-  vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
-     using namespace DatabaseEngine::StorageTypes;
+  vector<ColumnHeader> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
+    using namespace DatabaseEngine::StorageTypes;
 
-     const vector<Field> conditions = {
-       Field(dbName, 0),
-       Field(tableName, 1),
-     };
+    const vector<Field> conditions = {
+      Field(dbName, 0),
+      Field(tableName, 1),
+    };
 
-     vector<Row> selectedColumns;
-     Table* sysColumns = this->masterDb->OpenTable("sys_columns");
+    vector<Row> selectedColumns;
+    Table* sysColumns = this->masterDb->OpenTable("sys_columns");
 
-     sysColumns->Select(selectedColumns, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, &conditions);
+    sysColumns->Select(selectedColumns, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, &conditions);
 
-     return selectedColumns;
+    if (selectedColumns.empty())
+      return {};
+
+    vector<ColumnHeader> selectedColumnHeaders;
+    selectedColumnHeaders.reserve(selectedColumns.size());
+
+    for (const auto& column : selectedColumns) {
+      const auto& data = column.GetData();
+
+      selectedColumnHeaders.emplace_back(
+        ColumnHeader{
+          data[0]->GetString(),
+          data[1]->GetString(),
+          data[2]->GetString(),
+          data[3]->GetString(),
+          data[4]->GetSmallInt(),
+          data[5]->GetBool(),
+          data[6]->GetSmallInt(),
+          data[7]->GetDateTime(),
+          data[8]->GetDateTime(),
+          data[9]->GetString()
+        }
+      );
+    }    
+    
+     return selectedColumnHeaders;
   }
 
   vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{

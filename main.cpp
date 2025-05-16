@@ -64,7 +64,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "DROP DATABASE masterDb";
+    const string test = "SELECT name, columns FROM sys_indexes";
 
     try {
         QueryPipeline::Parser::Parse(test);

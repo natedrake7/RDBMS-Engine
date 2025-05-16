@@ -13,5 +13,6 @@ namespace QueryPipeline {
 
       static void Validate(const CreateDbStatement& statement);
       static void Validate(const DropDbStatement& statement);
+      static void Validate(const SelectStatement& statement);
   };
 }
