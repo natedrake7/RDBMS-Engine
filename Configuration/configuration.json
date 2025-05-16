@@ -14,6 +14,19 @@
           "name": "filepath",
           "type": "String",
           "size": 100
+        },
+        {
+          "name": "created_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified_by",
+          "type": "String",
+          "size": 100
         }
       ],
       "primaryKey": [
@@ -34,8 +47,26 @@
           "size": 100
         },
         {
+          "name": "schema_name",
+          "type": "String",
+          "size": 100
+        },
+        {
           "name": "isSystem",
           "type": "Bool"
+        },
+        {
+          "name": "created_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified_by",
+          "type": "String",
+          "size": 100
         }
       ],
       "primaryKey": [
@@ -77,6 +108,19 @@
         {
           "name": "tablePosition",
           "type": "SmallInt"
+        },
+        {
+          "name": "created_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified_by",
+          "type": "String",
+          "size": 100
         }
       ],
       "primaryKey": [
@@ -88,7 +132,6 @@
     {
       "name": "sys_indexes",
       "columns": [
-
         {
           "name": "dbName",
           "type": "String",
@@ -98,10 +141,6 @@
           "name": "tableName",
           "type": "String",
           "size": 100
-        },
-        {
-          "name": "id",
-          "type": "SmallInt"
         },
         {
           "name": "name",
@@ -116,12 +155,57 @@
         {
           "name": "is_clustered",
           "type": "Bool"
+        },
+        {
+          "name": "created_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified_by",
+          "type": "String",
+          "size": 100
         }
       ],
       "primaryKey": [
         "dbName",
         "tableName",
-        "id"
+        "name"
+      ]
+    },
+    {
+      "name": "sys_schemas",
+      "columns": [
+        {
+          "name": "dbName",
+          "type": "String",
+          "size": 100
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "size": 100
+        },
+        {
+          "name": "created_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified_by",
+          "type": "String",
+          "size": 100
+        }
+      ],
+      "primaryKey": [
+        "dbName",
+        "name"
       ]
     }
   ]

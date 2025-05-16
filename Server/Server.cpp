@@ -62,76 +62,43 @@ namespace Server {
     this->CreateSystemDatabase();
     Storage::StorageManager::Get().BindDatabase(this->masterDb);
 
-    DatabaseEngine::StorageTypes::Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
-     
-     const vector<Field> dbFields = {
-       Field(this->sysDbName, 0),
-       Field(this->sysDbPath, 1),
-     };
+    this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath);
 
-     sysDatabases->InsertRows({dbFields});
-     
-    DatabaseEngine::StorageTypes::Table* sysTables = this->masterDb->OpenTable("sys_tables");
-    DatabaseEngine::StorageTypes::Table* sysColumns = this->masterDb->OpenTable("sys_columns");
-    DatabaseEngine::StorageTypes::Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
-     
-    vector<vector<Field>> tableFields(this->sysTables.size());
-    vector<vector<Field>> tableColumns;
-    vector<vector<Field>> tableIndexes;     
+     for (const auto& table: this->sysTables) {
+      this->InsertTableToMasterDb(this->sysDbName, table.name, "dbo", true, "system");
 
-    for (int i = 0; i < this->sysTables.size(); i++) {
-      int counter = 0;
-      
-      const auto& table = this->sysTables[i];
+       int columnPos = 0;
+       for (const auto& column: table.columns) {
 
-      tableFields[i].emplace_back(this->sysDbName, counter++);
-      tableFields[i].emplace_back(table.name, counter++);
-      tableFields[i].emplace_back("1", counter++);
+         block_size_t columnSize;
+         ColumnTypeSizes.TryGetValue(column.type, columnSize);
 
-      for (int j = 0; j < table.columns.size(); j++) {
-        const auto& column = table.columns[j];
-        tableColumns.emplace_back();
+         if (columnSize == 0)
+           columnSize = column.size;
 
-        
-        int columnCounter = 0;
+         this->InsertColumnToMasterDb(
+            this->sysDbName,
+            table.name,
+            column.name,
+            column.type,
+            columnSize,
+            false,
+            columnPos);
 
-        tableColumns.back().emplace_back(this->sysDbName, columnCounter++);
-        tableColumns.back().emplace_back(table.name, columnCounter++);
-        tableColumns.back().emplace_back(column.name, columnCounter++);
+          columnPos++;
+       }
 
-        block_size_t columnSize;
-        ColumnTypeSizes.TryGetValue(column.type, columnSize);
+       string concatenatedColumns;
+       string _columns;
+       for (const auto & j : table.primaryKey) {
+         concatenatedColumns += j;
+         _columns +="_" + j;
+       }
 
-        if (columnSize == 0)
-          columnSize = column.size;
-        
-        tableColumns.back().emplace_back(column.type, columnCounter++);
-        tableColumns.back().emplace_back(to_string(columnSize), columnCounter++);
-        tableColumns.back().emplace_back("0", columnCounter++);
-        tableColumns.back().emplace_back(to_string(j), columnCounter++);
-      }
+       this->InsertIndexToMasterDb(this->sysDbName, table.name, "PK" + _columns, concatenatedColumns, true);
+     }
 
-      string concatenatedColumns;
-      string _columns;
-      for (const auto & j : table.primaryKey) {
-        concatenatedColumns += j;
-        _columns +="_" + j;  
-      }
-
-      int indexCounter = 0;
-      tableIndexes.emplace_back();
-
-      tableIndexes.back().emplace_back(this->sysDbName, indexCounter++);
-      tableIndexes.back().emplace_back(table.name, indexCounter++);
-      tableIndexes.back().emplace_back(to_string(i), indexCounter++);
-      tableIndexes.back().emplace_back("PK" + _columns , indexCounter++);
-      tableIndexes.back().emplace_back(concatenatedColumns , indexCounter++);
-      tableIndexes.back().emplace_back("1" , indexCounter++);
-    }
-
-    sysTables->InsertRows(tableFields);
-    sysColumns->InsertRows(tableColumns);
-    sysIndexes->InsertRows(tableIndexes);
+     this->InsertSchemaToMasterDb(this->sysDbName, "dbo");
   }
 
   DatabaseEngine::Database * ServerInstance::GetMasterDb(){ return this->masterDb; }
@@ -140,32 +107,55 @@ namespace Server {
     delete this->masterDb;
   }
 
-  void ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath) const{
+  void ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath, const string& user) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_databases");
 
-    const vector<Field> fields = {
-      Field(dbName, 0),
-      Field(dbPath, 1),
+      const auto currentDate = DataTypes::DateTime::Now().ToString();
+
+      const vector<Field> fields = {
+        Field(dbName, 0),
+        Field(dbPath, 1),
+        Field(currentDate, 2),
+        Field(currentDate, 3),
+        Field(user, 4),
     };
     
     table->InsertRows({fields});
   }
 
-  void ServerInstance::InsertTableToMasterDb(const string& dbName, const string& tableName) const{
+  void ServerInstance::InsertTableToMasterDb(
+    const string& dbName,
+    const string& tableName,
+    const string& schemaName,
+    const bool& isSystem,
+    const string& user) const{
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_tables");
+      const auto currentDate = DataTypes::DateTime::Now().ToString();
 
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_tables");
-
-    const vector<Field> fields = {
-      Field(dbName, 0),
-      Field(tableName, 1),
-      Field("0", 2),
-    };
+      const vector<Field> fields = {
+        Field(dbName, 0),
+        Field(tableName, 1),
+        Field(schemaName, 2),
+        Field(isSystem ? "1" : "0", 3),
+        Field(currentDate, 4),
+        Field(currentDate, 5),
+        Field(user, 6),
+      };
     
     table->InsertRows({fields});
   }
 
-  void ServerInstance::InsertColumnToMasterDb(const string &dbName, const string &tableName, const string &columnName, const string &columnType, const int &columnSize, const int &tablePosition) const{
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_columns");
+  void ServerInstance::InsertColumnToMasterDb(
+    const string &dbName,
+    const string &tableName,
+    const string &columnName,
+    const string &columnType,
+    const int &columnSize,
+    const bool& isNullable,
+    const int &tablePosition,
+    const string& user) const{
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_columns");
+      const auto currentDate = DataTypes::DateTime::Now().ToString();
 
     const vector<Field> fields = {
       Field(dbName, 0),
@@ -173,11 +163,52 @@ namespace Server {
       Field(columnName, 2),
       Field(columnType, 3),
       Field(to_string(columnSize), 4),
-      Field("0", 5),
+      Field(isNullable ? "1" : "0", 5),
       Field(to_string(tablePosition), 6),
+      Field(currentDate, 7),
+      Field(currentDate, 8),
+      Field(user, 9),
     };
 
     table->InsertRows({fields});
+  }
+
+  void ServerInstance::InsertIndexToMasterDb(
+    const string &dbName,
+    const string &tableName,
+    const string &indexName,
+    const string &columns,
+    const bool &isClustered,
+    const string &user) const{
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_indexes");
+     const auto currentDate = DataTypes::DateTime::Now().ToString();
+
+     const vector<Field> fields = {
+       Field(dbName, 0),
+       Field(tableName, 1),
+       Field(indexName, 2),
+       Field(columns, 3),
+       Field(isClustered ? "1" : "0", 4),
+       Field(currentDate, 5),
+       Field(currentDate, 6),
+       Field(user, 7),
+     };
+
+     table->InsertRows({fields});
+  }
+  void ServerInstance::InsertSchemaToMasterDb(const string &dbName, const string &schemaName, const string &user) const{
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_schemas");
+     const auto currentDate = DataTypes::DateTime::Now().ToString();
+
+     const vector<Field> fields = {
+       Field(dbName, 0),
+       Field(schemaName, 1),
+       Field(currentDate, 2),
+       Field(currentDate, 3),
+       Field(user, 4),
+     };
+
+     table->InsertRows({fields});
   }
 
   void ServerInstance::SelectDb(const string &dbName) const{
@@ -189,8 +220,8 @@ namespace Server {
     const vector<Field> conditions = {
       Field(dbName, 0),
     };
-    
-    sysDatabases->Select(selectedDatabases, {0, 1}, &conditions);
+
+    sysDatabases->Select(selectedDatabases, {0, 1, 2, 3, 4}, &conditions);
 
     if (selectedDatabases.empty())
       return;
@@ -198,7 +229,7 @@ namespace Server {
     vector<Row> selectedTables;
     Table* sysTables = this->masterDb->OpenTable("sys_tables");
 
-    sysTables->Select(selectedTables, {0, 1, 2}, &conditions);
+    sysTables->Select(selectedTables, {0, 1, 2, 3, 4, 5, 6}, &conditions);
 
     if (selectedTables.empty())
       return;
@@ -207,13 +238,18 @@ namespace Server {
     vector<vector<Row>> selectedColumns(selectedTables.size());
 
     for (int i = 0; i < selectedTables.size(); i++)
-      sysColumns->Select(selectedColumns[i], {0, 1, 2, 3, 4, 5, 6}, &conditions);
+      sysColumns->Select(selectedColumns[i], {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, &conditions);
 
      Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
      vector<vector<Row>> selectedIndexes(selectedTables.size());
      
      for (int i = 0; i < selectedTables.size(); i++)
-       sysIndexes->Select(selectedIndexes[i], {0, 1, 2, 3, 4, 5}, &conditions);
+       sysIndexes->Select(selectedIndexes[i], {0, 1, 2, 3, 4, 5, 6, 7}, &conditions);
+
+     Table* sysSchemas = this->masterDb->OpenTable("sys_schemas");
+     vector<Row> selectedSchemas;
+
+     sysSchemas->Select(selectedSchemas, {0, 1, 2, 3, 4}, &conditions);
   }
 
   void ServerInstance::CreateSystemDatabase(){
