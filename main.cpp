@@ -64,7 +64,6 @@ int main()
 
     server.Initialize("configuration.json");
 
-
     const string test = "CREATE DATABASE masterDb";
 
     try {
