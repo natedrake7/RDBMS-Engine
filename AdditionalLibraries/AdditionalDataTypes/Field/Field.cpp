@@ -1,53 +1,178 @@
 #include "Field.h"
 
+#include <cstring>
+
 using namespace Constants;
 
 Field::Field()
 {
-    this->isNull = true;
+    this->data = nullptr;
     this->columnIndex = 0;
 }
 
-Field::Field(const string &data, const Constants::column_index_t& columnIndex, const bool &isNull)
+Field::Field(const void *data, const Constants::column_index_t &columnIndex){
+    this->data = nullptr;
+    this->columnIndex = columnIndex;    
+}
+
+Field::Field(const bool &data, const column_index_t &columnIndex){
+    this->data = new object_t[sizeof(bool)];
+    memcpy(this->data, &data, sizeof(bool));
+    
+    this->size = sizeof(bool);
+    this->columnIndex = columnIndex;
+}
+
+Field::Field(const int8_t &data, const column_index_t &columnIndex){
+    this->data = new object_t[sizeof(int8_t)];
+    memcpy(this->data, &data, sizeof(int8_t));
+    
+    this->size = sizeof(int8_t);
+    this->columnIndex = columnIndex;
+}
+
+Field::Field(const int16_t &data, const column_index_t &columnIndex){
+    this->data = new object_t[sizeof(int16_t)];
+    memcpy(this->data, &data, sizeof(int16_t));
+    
+    this->size = sizeof(int16_t);
+    this->columnIndex = columnIndex;
+}
+
+Field::Field(const int32_t &data, const column_index_t &columnIndex){
+    this->data = new object_t[sizeof(int32_t)];
+    memcpy(this->data, &data, sizeof(int32_t));
+    
+    this->size = sizeof(int32_t);
+    this->columnIndex = columnIndex;
+}
+
+Field::Field(const int64_t &data, const column_index_t &columnIndex){
+    this->data = new object_t[sizeof(int64_t)];
+    memcpy(this->data, &data, sizeof(int64_t));
+    
+    this->size = sizeof(int64_t);
+    this->columnIndex = columnIndex;
+}
+
+Field::Field(const DataTypes::DateTime &data, const column_index_t &columnIndex){
+    this->data = new object_t[DataTypes::DateTime::DateTimeSize()];
+    memcpy(this->data, &data.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
+    
+    this->size = DataTypes::DateTime::DateTimeSize();
+    this->columnIndex = columnIndex;
+}
+
+Field::Field(const DataTypes::Decimal &data, const column_index_t &columnIndex){
+    this->size = data.GetRawDataSize();
+    this->data = new object_t[this->size];
+
+    memcpy(this->data, data.GetRawData(), this->size);
+    this->columnIndex = columnIndex;
+}
+
+Field::Field(const string &data, const Constants::column_index_t& columnIndex)
 {
-    this->data = data;
-    this->isNull = isNull;
+    this->size = data.size();
+    this->data = new object_t[this->size];
+    memcpy(this->data, data.data(), this->size);
+    
     this->columnIndex = columnIndex;
     this->conditionType = Constants::ConditionNone;
 }
 
-Field::Field(const u16string &data, const Constants::column_index_t &columnIndex, const bool &isNull)
+Field::Field(const u16string &data, const Constants::column_index_t &columnIndex)
 {
-    this->unicodeData = data;
-    this->isNull = isNull;
+    this->size = data.size();
+    this->data = new object_t[this->size];
+    memcpy(this->data, data.data(), this->size);
+    
     this->columnIndex = columnIndex;
-}
-
-Field::Field(const string& data, const Constants::column_index_t& columnIndex , const Operator& operatorType, const ConditionType& conditionType, const bool& isNull, const bool& isNotConstant)
-{
-    this->data = data;
-    this->columnIndex = columnIndex;
-    this->operatorType = operatorType;
-    this->conditionType = conditionType;
-    this->isNull = isNull;
-    this->isNotConstant = isNotConstant;
+    this->conditionType = Constants::ConditionNone;
 }
 
 Field::~Field() = default;
 
-const string& Field::GetData() const { return this->data; }
-
-const u16string & Field::GetUnicodeData() const { return this->unicodeData; }
-
-const bool & Field::GetIsNull() const { return this->isNull; }
+bool Field::GetIsNull() const { return this->data == nullptr; }
 
 const bool & Field::GetIsNotConstant() const { return this->isNotConstant; }
 
 const Constants::column_index_t & Field::GetColumnIndex() const { return this->columnIndex;}
 
-void Field::SetData(const string &data) { this->data = data; }
+void Field::SetData(const bool &data){
+    delete this->data;
+    
+    this->data = new object_t[sizeof(bool)];
+    memcpy(this->data, &data, sizeof(bool));
+    this->size = sizeof(bool);
+}
 
-void Field::SetIsNull(const bool &isNull) { this->isNull = isNull; }
+void Field::SetData(const string &data) {
+    delete this->data;
+
+    this->size = data.size();
+    this->data = new object_t[this->size];
+    memcpy(this->data, data.data(), this->size);
+}
+void Field::SetData(const u16string &data) {
+    delete this->data;
+    
+    this->size = data.size();
+    this->data = new object_t[this->size];
+    memcpy(this->data, data.data(), this->size);
+}
+void Field::SetData(const int8_t &data) { 
+    delete this->data;
+    
+    this->data = new object_t[sizeof(int8_t)];
+    memcpy(this->data, &data, sizeof(int8_t));
+    this->size = sizeof(int8_t);
+}
+void Field::SetData(const int16_t &data) { 
+    delete this->data;
+    
+    this->data = new object_t[sizeof(int16_t)];
+    memcpy(this->data, &data, sizeof(int16_t));
+    this->size = sizeof(int16_t);
+}
+void Field::SetData(const int32_t &data) { 
+    delete this->data;
+    
+    this->data = new object_t[sizeof(int32_t)];
+    memcpy(this->data, &data, sizeof(int32_t));
+    this->size = sizeof(int32_t);
+}
+void Field::SetData(const int64_t &data) { 
+    delete this->data;
+    
+    this->data = new object_t[sizeof(int64_t)];
+    memcpy(this->data, &data, sizeof(int64_t));
+    this->size = sizeof(int64_t);
+}
+void Field::SetData(const DataTypes::DateTime &data) { 
+    delete this->data;
+    
+    this->data = new object_t[DataTypes::DateTime::DateTimeSize()];
+    memcpy(this->data, &data.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
+    
+    this->size = DataTypes::DateTime::DateTimeSize();
+}
+void Field::SetData(const DataTypes::Decimal &data) { 
+    delete this->data;
+    
+    this->size = data.GetRawDataSize();
+    this->data = new object_t[this->size];
+    memcpy(this->data, data.GetRawData(), this->size);
+}
+
+bool Field::GetBool() const { return *reinterpret_cast<bool*>(this->data); }
+int8_t Field::GetTinyInt() const { return *reinterpret_cast<int8_t *>(this->data); }
+int16_t Field::GetSmallInt() const { return *reinterpret_cast<int16_t *>(this->data); }
+int32_t Field::GetInt() const { return *reinterpret_cast<int32_t *>(this->data); }
+int64_t Field::GetBigInt() const { return *reinterpret_cast<int64_t *>(this->data); }
+char* Field::GetString() const { return reinterpret_cast<char *>(this->data); }
+wchar_t* Field::GetUnicodeString() const { return reinterpret_cast<wchar_t *>(this->data); }
+
 
 void Field::SetColumnIndex(const Constants::column_index_t &columnIndex) { this->columnIndex = columnIndex; }
 

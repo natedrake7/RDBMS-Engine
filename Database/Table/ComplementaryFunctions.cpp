@@ -108,7 +108,7 @@ namespace DatabaseEngine::StorageTypes{
 
     void Table::SetDateTimeData(Block *&block, const Field &inputData) 
     {
-        const string &data = inputData.GetData();
+        const string &data = inputData.GetDate();
 
         const time_t unixMilliseconds = DateTime::ToUnixTimeStamp(data);
 

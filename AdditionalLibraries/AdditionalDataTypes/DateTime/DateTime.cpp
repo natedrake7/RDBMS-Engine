@@ -142,6 +142,8 @@ namespace DataTypes
 #endif
 	}
 
+	const time_t & DateTime::GetUnixTimeStamp() const { return this->timeStamp; }
+
 	time_t DateTime::ToUnixTimeStamp(const int year, const int month, const int day, const int hour, const int minute, const int second)
 	{
 		tm time = {};

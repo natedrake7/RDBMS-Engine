@@ -149,7 +149,7 @@ int main()
 
         const vector<Field> updates = 
         {
-            Field("Michael Jackson", 1, false)
+            Field("Michael Jackson", 1)
         };
 
         //table->Update(updates, nullptr);
@@ -165,67 +165,67 @@ int main()
     return 0;
 }
 
-void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& selectedColumnIndices)
-{
-    //constexpr int searchKey = 90;
-    //vector<Field> conditions = 
-    //{
-    //    Field("5", 0 , Operator::OperatorNone, ConditionType::ConditionNone)
-    //};
-
-    vector<Row> rows;
-    vector<Row*> result;
-
-    const auto start = std::chrono::high_resolution_clock::now();
-
-    const vector<Field> conditions = {
-        Field("10", 0, Operator::GreaterThan, ConditionType::ConditionNone),
-    };
-
-    table->Select(rows, selectedColumnIndices, &conditions);
-
-    const auto end = std::chrono::high_resolution_clock::now();
-
-    result.reserve(rows.size());
-    for(auto& row: rows)
-            result.push_back(&row);
-
-    
-    const vector<JoinField> joinConditions = {
-        JoinField(Field("", 0, Operator::GreaterThan, ConditionType::ConditionNone), Field("", 0, Operator::GreaterThan, ConditionType::ConditionNone)),
-    };
-
-    Table* actorsTable = db->OpenTable("Actors");
-    
-    Database::JoinTables(rows, table, actorsTable, {0, 1}, joinConditions);
-
-    // Database::JoinTables(result, table, { Field("", 0, Operator::OperatorNone, ConditionType::ConditionNone) });
-    const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
-
-    const auto orderStart = std::chrono::high_resolution_clock::now();
-
-    SortingFunctions::OrderBy(result, { SortCondition(0, SortType::DESCENDING, false)});
-
-    const auto orderEnd = std::chrono::high_resolution_clock::now();
-
-    const auto orderElapsed = std::chrono::duration<double, std::milli>(orderEnd - orderStart);
-
-    const auto groupByStart = std::chrono::high_resolution_clock::now();
-
-    const auto groupByResult = SortingFunctions::GroupBy(result, { GroupCondition(0, ColumnType::Int, AggregateFunction::COUNT, false, nullptr)});
-
-    const auto groupByEnd = std::chrono::high_resolution_clock::now();
-
-    const auto groupByElapsed = std::chrono::duration<double, std::milli>(groupByEnd - groupByStart);
-
-    //construct the query result here
-
-    PrintRows(rows);
-    
-    cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
-    cout<< "Order By Time: "<< orderElapsed.count() << "ms" << endl;
-    cout<< "Group By Time: "<< groupByElapsed.count() << "ms" << endl;
-}
+// void ExecuteQuery(Table* table, Database* db, const vector<column_index_t>& selectedColumnIndices)
+// {
+//     //constexpr int searchKey = 90;
+//     //vector<Field> conditions = 
+//     //{
+//     //    Field("5", 0 , Operator::OperatorNone, ConditionType::ConditionNone)
+//     //};
+//
+//     vector<Row> rows;
+//     vector<Row*> result;
+//
+//     const auto start = std::chrono::high_resolution_clock::now();
+//
+//     const vector<Field> conditions = {
+//         Field("10", 0, Operator::GreaterThan, ConditionType::ConditionNone),
+//     };
+//
+//     table->Select(rows, selectedColumnIndices, &conditions);
+//
+//     const auto end = std::chrono::high_resolution_clock::now();
+//
+//     result.reserve(rows.size());
+//     for(auto& row: rows)
+//             result.push_back(&row);
+//
+//     
+//     const vector<JoinField> joinConditions = {
+//         JoinField(Field("", 0, Operator::GreaterThan, ConditionType::ConditionNone), Field("", 0, Operator::GreaterThan, ConditionType::ConditionNone)),
+//     };
+//
+//     Table* actorsTable = db->OpenTable("Actors");
+//     
+//     Database::JoinTables(rows, table, actorsTable, {0, 1}, joinConditions);
+//
+//     // Database::JoinTables(result, table, { Field("", 0, Operator::OperatorNone, ConditionType::ConditionNone) });
+//     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+//
+//     const auto orderStart = std::chrono::high_resolution_clock::now();
+//
+//     SortingFunctions::OrderBy(result, { SortCondition(0, SortType::DESCENDING, false)});
+//
+//     const auto orderEnd = std::chrono::high_resolution_clock::now();
+//
+//     const auto orderElapsed = std::chrono::duration<double, std::milli>(orderEnd - orderStart);
+//
+//     const auto groupByStart = std::chrono::high_resolution_clock::now();
+//
+//     const auto groupByResult = SortingFunctions::GroupBy(result, { GroupCondition(0, ColumnType::Int, AggregateFunction::COUNT, false, nullptr)});
+//
+//     const auto groupByEnd = std::chrono::high_resolution_clock::now();
+//
+//     const auto groupByElapsed = std::chrono::duration<double, std::milli>(groupByEnd - groupByStart);
+//
+//     //construct the query result here
+//
+//     PrintRows(rows);
+//     
+//     cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
+//     cout<< "Order By Time: "<< orderElapsed.count() << "ms" << endl;
+//     cout<< "Group By Time: "<< groupByElapsed.count() << "ms" << endl;
+// }
 
 void CreateActorsTable(Database *db) 
 {
