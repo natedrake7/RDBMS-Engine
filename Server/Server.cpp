@@ -56,13 +56,10 @@ namespace Server {
 
      if (this->CheckIfMasterDbExists()) {
        DatabaseEngine::UseDatabase(this->sysDbName, &this->masterDb);
-       Storage::StorageManager::Get().BindDatabase(this->masterDb);
        return;
      }
      
     this->CreateSystemDatabase();
-    Storage::StorageManager::Get().BindDatabase(this->masterDb);
-
     this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
 
      for (const auto& table: this->sysTables) {

@@ -64,7 +64,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "SELECT name FROM sys_databases";
+    const string test = "CREATE DATABASE Movies";
 
     try {
         QueryPipeline::Parser::Parse(test);
@@ -112,8 +112,6 @@ int main()
 
          //CreateDatabase(dbName);
 
-
-        StorageManager::Get().BindDatabase(db);
 
         string sql = "       'hello' (42 (53)); 43";
 

@@ -3,10 +3,9 @@
 #include <vector>
 #include "SQLParser.h"
 #include "../Visitor.h"
-#include "../../Database/Row/Row.h"
-#include "../LogicalPlan/LogicalOperator.h"
-#include "../PhysicalPlan/PhysicalOperator.h"
+#include "../LogicalPlan/LogicalPlan.h"
 #include "../Validator/Validator.h"
+#include "../PhysicalPlan/PhysicalPlan.h"
 
 #include <SQLBaseListener.h>
 #include <SQLLexer.h>
@@ -31,36 +30,33 @@ namespace QueryPipeline
         // Create the parser, passing the token stream
         SQLParser parser(&tokens);
 
-
         // Start parsing, typically using the start rule of the grammar
         SQLParser::SqlStatementContext *tree = parser.sqlStatement();
 
         SQLVisitorImplementation visitor;
         const auto response = visitor.visit(tree);
 
+        LogicalPlan* logicalPlan = nullptr;
         if (response.type() == typeid(SelectStatement)) {
             const auto selectStatement = std::any_cast<SelectStatement>(response);
             Validator::Validate(selectStatement);
-
-            LogicalOperator* logicalPlan = BuildLogicalPlan(selectStatement);
-            PhysicalPlan::PhysicalOperator* physicalPlan = PhysicalPlan::BuildPhysicalPlan(logicalPlan);
-
-            const auto results = physicalPlan->Execute();
-
-            for (const auto& result : results) {
-                result.PrintRow();
-            }
-
-            delete logicalPlan;
-            delete physicalPlan;
+            logicalPlan = BuildLogicalPlan(selectStatement);
         }
         else if (response.type() == typeid(CreateDbStatement)) {
             const auto createDbStatement = std::any_cast<CreateDbStatement>(response);
             Validator::Validate(createDbStatement);
+            logicalPlan = BuildLogicalPlan(createDbStatement);
         }
         else if (response.type() == typeid(DropDbStatement)) {
             const auto dropDbStatement = std::any_cast<DropDbStatement>(response);
             Validator::Validate(dropDbStatement);
+
         }
+
+        PhysicalPlan::PhysicalOperator* physicalPlan = PhysicalPlan::BuildPhysicalPlan(logicalPlan);
+        const auto results = physicalPlan->Execute();
+
+        delete logicalPlan;
+        delete physicalPlan;
     }
 }

@@ -557,8 +557,10 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
+        const auto& filename = this->database->GetFileName();
+
         extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
-        const Page *page = StorageManager::Get().GetPage(results[0].pageId, pageExtentId, this);
+        const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
         {
@@ -566,7 +568,7 @@ namespace DatabaseEngine::StorageTypes {
             if (result.pageId != 0 && result.pageId != page->GetPageId())
             {
                 pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
-                page = StorageManager::Get().GetPage(result.pageId, pageExtentId, this);
+                page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
             }
 
             page->GetRowByIndex(selectedRows, *this, result.indexPosition, selectedColumnIndices);
@@ -599,8 +601,10 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
+        const auto& filename = this->database->GetFileName();
+
         extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
-        const Page *page = StorageManager::Get().GetPage(results[0].pageId, pageExtentId, this);
+        const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
         {
@@ -608,7 +612,7 @@ namespace DatabaseEngine::StorageTypes {
             if (result.pageId != 0 && result.pageId != page->GetPageId())
             {
                 pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
-                page = StorageManager::Get().GetPage(result.pageId, pageExtentId, this);
+                page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
             }
 
             page->GetRowByIndex(selectedRows, *this, result.index, selectedColumnIndices);
@@ -620,7 +624,9 @@ namespace DatabaseEngine::StorageTypes {
         if(this->header.indexAllocationMapPageId == 0)
             return;
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->header.indexAllocationMapPageId);
+        const auto& filename = this->database->GetFileName();
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds);
@@ -638,11 +644,14 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows)
     {
+
+        const auto& filename = this->database->GetFileName();
+
         const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
         const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
 
-        const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(pfsPageId);
+        const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
 
         const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                     ? extentFirstPageId
@@ -653,7 +662,7 @@ namespace DatabaseEngine::StorageTypes {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
                 break;
 
-            const Page *page = StorageManager::Get().GetPage(extentPageId, extentId, this);
+            const Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
 
             if (page->GetPageSize() == 0)
                 continue;

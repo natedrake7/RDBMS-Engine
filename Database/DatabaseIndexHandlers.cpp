@@ -99,7 +99,7 @@ namespace DatabaseEngine {
 
         const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(pageId);
 
-        Page *page = StorageManager::Get().GetPage(pageId, pageExtentId, table);
+        Page *page = StorageManager::Get().GetPage(this->filename, pageId, pageExtentId, table);
 
         const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(pageExtentId);
 
@@ -167,7 +167,7 @@ namespace DatabaseEngine {
             return newIndexPage;
         }
 
-        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(tableHeader.indexAllocationMapPageId);
+        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId);
         
         vector<extent_id_t> allocatedExtents;
         indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -191,7 +191,7 @@ namespace DatabaseEngine {
                 if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
                     continue;
 
-                IndexPage* indexPage = StorageManager::Get().GetIndexPage(nextIndexPageId, extentId, table);
+                IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, extentId, table);
 
                 if(indexPage->GetBytesLeft() < nodeSize
                     || indexPage->GetTreeId() != indexId)
@@ -216,7 +216,7 @@ namespace DatabaseEngine {
 
     void Database::SplitNodeFromIndexPage(const table_id_t& tableId, Node*& node, const int& nonClusteredIndexId)
     {
-        IndexPage* overflowedPage = StorageManager::Get().GetIndexPage(node->header.pageId);
+        IndexPage* overflowedPage = StorageManager::Get().GetIndexPage(this->filename, node->header.pageId);
 
         overflowedPage->UpdateBytesLeft();
 
@@ -273,7 +273,7 @@ namespace DatabaseEngine {
     {
         if (node->parentHeader.pageId != 0)
         {
-            IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(node->parentHeader.pageId);
+            IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->parentHeader.pageId);
             const Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
             for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
@@ -291,14 +291,14 @@ namespace DatabaseEngine {
         {
             if (node->previousNodeHeader.pageId != 0)
             {
-                IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(node->previousNodeHeader.pageId);
+                IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->previousNodeHeader.pageId);
 
                 previousLeafNodeIndexPage->UpdateNodeNextLeafHeader(node->previousNodeHeader.indexPosition, newNodeHeader);
             }
 
             if (node->nextNodeHeader.pageId != 0)
             {
-                IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(node->nextNodeHeader.pageId);
+                IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->nextNodeHeader.pageId);
 
                 nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, newNodeHeader);
             }
@@ -308,7 +308,7 @@ namespace DatabaseEngine {
 
         for (auto& child : node->childrenHeaders)
         {
-            IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(child.pageId);
+            IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(this->filename, child.pageId);
 
             childIndexPage->UpdateNodeParentHeader(child.indexPosition, newNodeHeader);
         }
@@ -318,7 +318,7 @@ namespace DatabaseEngine {
     {
         if (node->parentHeader.pageId != 0)
         {
-            IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(node->parentHeader.pageId);
+            IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->parentHeader.pageId);
             const Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
             for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
@@ -336,14 +336,14 @@ namespace DatabaseEngine {
         {
             if (node->previousNodeHeader.pageId != 0)
             {
-                IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(node->previousNodeHeader.pageId);
+                IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->previousNodeHeader.pageId);
 
                 previousLeafNodeIndexPage->UpdateNodeNextLeafHeader(node->previousNodeHeader.indexPosition, node->header);
             }
 
             if (node->nextNodeHeader.pageId != 0)
             {
-                IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(node->nextNodeHeader.pageId);
+                IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->nextNodeHeader.pageId);
 
                 nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, node->header);
             }
@@ -353,7 +353,7 @@ namespace DatabaseEngine {
 
         for (auto& child : node->childrenHeaders)
         {
-            IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(child.pageId);
+            IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(this->filename, child.pageId);
 
             childIndexPage->UpdateNodeParentHeader(child.indexPosition, node->header);
         }  
@@ -383,7 +383,7 @@ namespace DatabaseEngine {
 
         const extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(node->dataPageId);
 
-        Page *page = StorageManager::Get().GetPage(node->dataPageId, pageExtentId, &table);
+        Page *page = StorageManager::Get().GetPage(this->filename, node->dataPageId, pageExtentId, &table);
 
         Database::InsertRowToPage(pageFreeSpacePage, page, row, indexPosition);
 

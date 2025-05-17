@@ -540,7 +540,7 @@ namespace Indexing
     {
         IndexPage* indexPage = parentPageId == 0 
                                 ? this->database->FindOrAllocateNextIndexPage(this->tableId, parentPageId, node->currentNodeSize, this->nonClusteredIndexId)
-                                : StorageManager::Get().GetIndexPage(parentPageId);
+                                : StorageManager::Get().GetIndexPage(this->database->GetFileName(), parentPageId);
 
         //could only be set once and not multiple times but insignificant
         indexPage->InsertNode(node, &node->header.indexPosition);
@@ -554,7 +554,7 @@ namespace Indexing
     {
         const extent_id_t extentId = DatabaseEngine::Database::CalculateExtentIdByPageId(header.pageId);
 
-        const IndexPage* indexPage = StorageManager::Get().GetIndexPage(header.pageId, extentId, this->table);
+        const IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->database->GetFileName(), header.pageId, extentId, this->table);
 
         return indexPage->GetNodeByIndex(header.indexPosition);
     }

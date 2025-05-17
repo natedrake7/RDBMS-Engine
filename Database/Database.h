@@ -118,11 +118,11 @@ protected:
                                   const int &indexPosition);
 
 
-    static void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& newNodeHeader);
+    void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& newNodeHeader);
 
     void UpdateTableIndexes(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId) const;
 
-    [[nodiscard]] static Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId);
+    [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId)const;
 
     [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
@@ -168,7 +168,7 @@ public:
 
     Pages::IndexPage *CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId = 0);
 
-    static void SetPageMetaDataToPfs(const Pages::Page *page);
+    void SetPageMetaDataToPfs(const Pages::Page *page)const;
 
     [[nodiscard]] string GetFileName() const;
 
@@ -196,7 +196,7 @@ public:
     
     void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
 
-    static void UpdateNodeConnections(Indexing::Node*& node);
+    void UpdateNodeConnections(Indexing::Node*& node);
 
     static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 

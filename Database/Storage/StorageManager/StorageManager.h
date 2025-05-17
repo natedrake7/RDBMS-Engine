@@ -35,10 +35,9 @@ typedef list<Pages::Page *>::iterator PageIterator;
 
 class StorageManager final{
   list<Pages::Page *> pageList;
-  unordered_map<Constants::page_id_t, PageIterator> cache;
+  unordered_map<string, PageIterator> cache;
   list<Pages::Page *> systemPageList;
-  unordered_map<Constants::page_id_t, PageIterator> systemCache;
-  const DatabaseEngine::Database *database;
+  unordered_map<string, PageIterator> systemCache;
   mutex pageListMutex;
   mutex systemPageListMutex;
   condition_variable systemConditionVariable;
@@ -55,23 +54,18 @@ protected:
   void RemoveSystemPage();
   static void AllocateMemoryBasedOnSystemPageType(Pages::Page **page, const Pages::PageHeader &pageHeader);
   static void AllocateMemoryBasedOnPageType(Pages::Page **page, const Pages::PageHeader &pageHeader);
-  void OpenExtent(const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
-  void OpenSystemExtent(const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
-  void OpenSystemPage(const Constants::page_id_t &pageId);
-  void OpenSystemPage(const Constants::page_id_t &pageId, const string &filename);
-  Pages::Page *GetSystemPage(const Constants::page_id_t &pageId);
+  void OpenExtent(const string& filename, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  void OpenSystemExtent(const string& filename, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
+  void OpenSystemPage(const string &filename, const Constants::page_id_t &pageId);
+  Pages::Page *GetSystemPage(const string& filename, const Constants::page_id_t &pageId);
   Pages::Page *GetSystemPage(const Constants::page_id_t &pageId, const string &filename);
-  Pages::Page *GetSystemPage(const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table = nullptr);
+  Pages::Page *GetSystemPage(const string &filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table = nullptr);
   static void SetReadFilePointerToOffset(fstream *file, const streampos &offSet);
   static void SetWriteFilePointerToOffset(fstream *file, const streampos &offSet);
   static Pages::PageHeader GetPageHeaderFromFile(const vector<char> &data, Constants::page_offset_t &offSet);
-  bool IsPageCached(const Constants::page_id_t &pageId);
+  bool IsPageCached(const string& filename, const Constants::page_id_t &pageId);
   void MovePageToFrontOfSystemList(Pages::Page *page, const Constants::page_id_t &pageId, const string &filename);
-  void MovePageToFrontOfSystemList(Pages::Page *page, const Constants::page_id_t &pageId);
   void MovePageToFrontOfList(Pages::Page *page, const Constants::page_id_t &pageId, const string &filename);
-  void MovePageToFrontOfList(Pages::Page *page, const Constants::page_id_t &pageId);
-  void ReadSystemPageFromFile(Pages::Page *page, const vector<char> &buffer, const Constants::page_id_t &pageId, Constants::page_offset_t &offSet, fstream *file);
-  void ReadPageFromFile(Pages::Page *page, const vector<char> &buffer, const DatabaseEngine::StorageTypes::Table *table, Constants::page_offset_t &offSet, fstream *file);
   bool IsSystemCacheFull() const;
   void LockSystemPageRead();
   void UnlockSystemPageRead();
@@ -81,32 +75,29 @@ protected:
   void UnlockPageRead();
   void LockPageWrite();
   void UnlockPageWrite();
-  unordered_map<Constants::page_id_t, PageIterator>::iterator
-  SearchSystemPageInCache(const Constants::page_id_t &pageId);
+  unordered_map<string, PageIterator>::iterator
+  SearchSystemPageInCache(const string& key);
   void MoveSystemPageToStart(const PageIterator &pageIterator);
 
 public:
   static StorageManager& Get();
   ~StorageManager();
   void CreateFile(const string& fileName, const string& extension);
-  void BindDatabase(const DatabaseEngine::Database *database);
-  Pages::Page *CreatePage(const Constants::page_id_t &pageId);
-  Pages::Page *GetPage(const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::Page *CreatePage(const string& filename, const Constants::page_id_t &pageId);
+  Pages::Page *GetPage(const string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::HeaderPage *GetHeaderPage(const string &filename);
   Pages::HeaderPage *CreateHeaderPage(const string &filename);
-  Pages::LargeDataPage *CreateLargeDataPage(const Constants::page_id_t &pageId);
-  Pages::LargeDataPage * GetLargeDataPage(const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::LargeDataPage *CreateLargeDataPage(const string& filename, const Constants::page_id_t &pageId);
+  Pages::LargeDataPage * GetLargeDataPage(const string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::GlobalAllocationMapPage *CreateGlobalAllocationMapPage(const string &filename, const Constants::page_id_t &pageId);
-  Pages::GlobalAllocationMapPage *CreateGlobalAllocationMapPage(const Constants::page_id_t &pageId);
-  Pages::GlobalAllocationMapPage *GetGlobalAllocationMapPage(const Constants::page_id_t &pageId);
-  Pages::IndexAllocationMapPage *CreateIndexAllocationMapPage(const Constants::table_id_t &tableId, const Constants::page_id_t &pageId,const Constants::extent_id_t &startingExtentId);
-  Pages::IndexAllocationMapPage *GetIndexAllocationMapPage(const Constants::page_id_t &pageId);
+  Pages::GlobalAllocationMapPage *GetGlobalAllocationMapPage(const string& filename, const Constants::page_id_t &pageId);
+  Pages::IndexAllocationMapPage *CreateIndexAllocationMapPage(const string& filename, const Constants::table_id_t &tableId, const Constants::page_id_t &pageId,const Constants::extent_id_t &startingExtentId);
+  Pages::IndexAllocationMapPage *GetIndexAllocationMapPage(const string& filename, const Constants::page_id_t &pageId);
   Pages::PageFreeSpacePage *CreatePageFreeSpacePage(const string &filename, const Constants::page_id_t &pageId);
-  Pages::PageFreeSpacePage *CreatePageFreeSpacePage(const Constants::page_id_t &pageId);
-  Pages::PageFreeSpacePage * GetPageFreeSpacePage(const Constants::page_id_t &pageId);
-  Pages::IndexPage *CreateIndexPage(const Constants::page_id_t &pageId);
-  Pages::IndexPage *GetIndexPage(const Constants::page_id_t &pageId);
-  Pages::IndexPage *GetIndexPage(const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
+  Pages::PageFreeSpacePage * GetPageFreeSpacePage(const string& filename, const Constants::page_id_t &pageId);
+  Pages::IndexPage *CreateIndexPage(const string& filename, const Constants::page_id_t &pageId);
+  Pages::IndexPage *GetIndexPage(const string& filename, const Constants::page_id_t &pageId);
+  Pages::IndexPage *GetIndexPage(const string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
   [[nodiscard]] bool IsCacheFull() const;
 };
 

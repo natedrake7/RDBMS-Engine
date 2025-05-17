@@ -21,7 +21,6 @@ bool StorageManager::IsSystemCacheFull() const { return this->systemCache.size()
 
 StorageManager::StorageManager() 
 {
-  this->database = nullptr;
   this->cacheReaders = 0;
   this->cacheWriters = 0;
   this->dataReaders = 0;
@@ -47,33 +46,33 @@ StorageManager& StorageManager::Get()
   return storageManager;
 }
 
-void StorageManager::BindDatabase(const Database *database) 
-{
-  this->database = database;
-}
-
 void StorageManager::CreateFile(const string& fileName, const string& extension)
 {
   this->fileManager.CreateFile(fileName, extension);
 }
 
-Page *StorageManager::GetPage(const page_id_t &pageId, const extent_id_t &extentId,
-                           const Table *table) {
+Page *StorageManager::GetPage(
+  const string& filename,
+  const page_id_t &pageId,
+  const extent_id_t &extentId,
+  const Table *table) {
   this->LockPageRead();
 
-  auto pageHashIterator = this->cache.find(pageId);
+  const auto key = filename + to_string(pageId);
+
+  auto pageHashIterator = this->cache.find(key);
 
   if (pageHashIterator == this->cache.end()) 
   {
-    this->OpenExtent(extentId, table);
-    pageHashIterator = this->cache.find(pageId);
+    this->OpenExtent(filename, extentId, table);
+    pageHashIterator = this->cache.find(key);
   }
 
   // assign work to writer thread
 
   this->pageList.push_front(*pageHashIterator->second);
   this->pageList.erase(pageHashIterator->second);
-  this->cache[pageId] = this->pageList.begin();
+  this->cache[key] = this->pageList.begin();
 
   Page *page = *pageHashIterator->second;
 
@@ -82,27 +81,23 @@ Page *StorageManager::GetPage(const page_id_t &pageId, const extent_id_t &extent
   return page;
 }
 
-LargeDataPage *StorageManager::GetLargeDataPage(const page_id_t &pageId, const extent_id_t &extentId, const Table *table) 
+LargeDataPage *StorageManager::GetLargeDataPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table *table)
 {
-  return dynamic_cast<LargeDataPage *>(this->GetPage(pageId, extentId, table));
+  return dynamic_cast<LargeDataPage *>(this->GetPage(filename, pageId, extentId, table));
 }
 
-Page *StorageManager::CreatePage(const page_id_t &pageId) 
+Page *StorageManager::CreatePage(const string& filename, const page_id_t &pageId)
 {
   Page *page = new Page(pageId, true);
-
-  const string &filename = this->database->GetFileName();
 
   this->MovePageToFrontOfList(page, pageId, filename);
 
   return page;
 }
 
-LargeDataPage *StorageManager::CreateLargeDataPage(const page_id_t &pageId) 
+LargeDataPage *StorageManager::CreateLargeDataPage(const string& filename, const page_id_t &pageId)
 {
   LargeDataPage *page = new LargeDataPage(pageId, true);
-
-  const string &filename = this->database->GetFileName();
 
   this->MovePageToFrontOfList(page, pageId, filename);
 
@@ -114,9 +109,12 @@ void StorageManager::RemovePage()
   Page *page = this->pageList.back();
   const page_id_t pageId = page->GetPageId();
 
+  const string &filename = page->GetFileName();
+
+  const auto key = filename + to_string(pageId);
+
   if (page->GetPageDirtyStatus()) 
   {
-    const string &filename = page->GetFileName();
 
     fstream *file = this->fileManager.GetFile(filename);
 
@@ -127,17 +125,15 @@ void StorageManager::RemovePage()
     page->WritePageToFile(file);
   }
 
-  this->cache.erase(pageId);
+  this->cache.erase(key);
 
   this->pageList.pop_back();
 
   delete page;
 }
 
-void StorageManager::OpenExtent(const extent_id_t &extentId, const Table *table) 
+void StorageManager::OpenExtent(const string& filename, const extent_id_t &extentId, const Table *table)
 {
-  const string &filename = this->database->GetFileName();
-
   // read page from disk, call this->fileManager
   fstream *file = this->fileManager.GetFile(filename);
 
@@ -165,7 +161,7 @@ void StorageManager::OpenExtent(const extent_id_t &extentId, const Table *table)
 
     const page_id_t currentPageId = firstExtentPageId + i;
 
-    if (this->IsPageCached(currentPageId))
+    if (this->IsPageCached(filename, currentPageId))
       continue;
 
     if (this->pageList.size() == MAX_NUMBER_OF_PAGES)
@@ -183,13 +179,16 @@ void StorageManager::OpenExtent(const extent_id_t &extentId, const Table *table)
     {
       this->systemPageList.push_front(page);
 
-      this->systemCache[pageHeader.pageId] = this->systemPageList.begin();
+      const auto key = filename + to_string(pageHeader.pageId);
+      this->systemCache[key] = this->systemPageList.begin();
     }
     else 
     {
       this->pageList.push_front(page);
 
-      this->cache[page->GetPageId()] = this->pageList.begin();
+      const auto key = filename + to_string(page->GetPageId());
+
+      this->cache[key] = this->pageList.begin();
     }
     page->SetFileName(filename);
 
@@ -220,38 +219,19 @@ GlobalAllocationMapPage *StorageManager::CreateGlobalAllocationMapPage(const str
   return page;
 }
 
-GlobalAllocationMapPage *StorageManager::CreateGlobalAllocationMapPage(const page_id_t &pageId) 
-{
-  GlobalAllocationMapPage *page = new GlobalAllocationMapPage(pageId);
-
-  const string &filename = this->database->GetFileName();
-
-  this->MovePageToFrontOfSystemList(page, pageId, filename);
-
-  return page;
-}
-
-IndexAllocationMapPage *StorageManager::CreateIndexAllocationMapPage(const table_id_t &tableId, const page_id_t &pageId, const extent_id_t &startingExtentId) 
+IndexAllocationMapPage *StorageManager::CreateIndexAllocationMapPage(
+  const string& filename,
+  const table_id_t &tableId,
+  const page_id_t &pageId,
+  const extent_id_t &startingExtentId)
 {
   IndexAllocationMapPage *page = new IndexAllocationMapPage(tableId, pageId, startingExtentId);
 
-  const string &filename = this->database->GetFileName();
-
   this->MovePageToFrontOfSystemList(page, pageId, filename);
 
   return page;
 }
 
-PageFreeSpacePage *StorageManager::CreatePageFreeSpacePage(const page_id_t &pageId) 
-{
-  PageFreeSpacePage *page = new PageFreeSpacePage(pageId);
-
-  const string &filename = this->database->GetFileName();
-
-  this->MovePageToFrontOfSystemList(page, pageId, filename);
-
-  return page;
-}
 
 PageFreeSpacePage *StorageManager::CreatePageFreeSpacePage(const string &filename, const page_id_t &pageId) 
 {
@@ -262,11 +242,11 @@ PageFreeSpacePage *StorageManager::CreatePageFreeSpacePage(const string &filenam
   return page;
 }
 
-IndexPage *StorageManager::CreateIndexPage(const page_id_t &pageId) 
+IndexPage *StorageManager::CreateIndexPage(const string& filename, const page_id_t &pageId)
 {
   IndexPage *page = new IndexPage(pageId, true);
 
-  this->MovePageToFrontOfSystemList(page, pageId);
+  this->MovePageToFrontOfSystemList(page, pageId, filename);
 
   return page;
 }
@@ -278,19 +258,19 @@ HeaderPage *StorageManager::GetHeaderPage(const string &filename)
   return dynamic_cast<HeaderPage *>(this->GetSystemPage(pageId, filename));
 }
 
-PageFreeSpacePage *StorageManager::GetPageFreeSpacePage(const page_id_t &pageId) 
+PageFreeSpacePage *StorageManager::GetPageFreeSpacePage(const string& filename, const page_id_t &pageId)
 {
-  return dynamic_cast<PageFreeSpacePage *>(this->GetSystemPage(pageId));
+  return dynamic_cast<PageFreeSpacePage *>(this->GetSystemPage(filename, pageId));
 }
 
-IndexPage *StorageManager::GetIndexPage(const page_id_t &pageId) 
+IndexPage *StorageManager::GetIndexPage(const string& filename, const page_id_t &pageId)
 {
-  return dynamic_cast<IndexPage *>(this->GetSystemPage(pageId));
+  return dynamic_cast<IndexPage *>(this->GetSystemPage(filename, pageId));
 }
 
-IndexPage *StorageManager::GetIndexPage(const page_id_t &pageId, const extent_id_t &extentId, const Table* table) 
+IndexPage *StorageManager::GetIndexPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table* table)
 {
-  return dynamic_cast<IndexPage *>(this->GetSystemPage(pageId, extentId, table));
+  return dynamic_cast<IndexPage *>(this->GetSystemPage(filename, pageId, extentId, table));
 }
 
 bool StorageManager::IsCacheFull() const 
@@ -298,32 +278,33 @@ bool StorageManager::IsCacheFull() const
   return this->pageList.size() == MAX_NUMBER_OF_PAGES;
 }
 
-IndexAllocationMapPage *StorageManager::GetIndexAllocationMapPage(const page_id_t &pageId) 
+IndexAllocationMapPage *StorageManager::GetIndexAllocationMapPage(const string& filename, const page_id_t &pageId)
 {
-  return dynamic_cast<IndexAllocationMapPage *>(this->GetSystemPage(pageId));
+  return dynamic_cast<IndexAllocationMapPage *>(this->GetSystemPage(filename, pageId));
 }
 
-GlobalAllocationMapPage *StorageManager::GetGlobalAllocationMapPage(const page_id_t &pageId) 
+GlobalAllocationMapPage *StorageManager::GetGlobalAllocationMapPage(const string& filename, const page_id_t &pageId)
 {
-  return dynamic_cast<GlobalAllocationMapPage *>(this->GetSystemPage(pageId));
+  return dynamic_cast<GlobalAllocationMapPage *>(this->GetSystemPage(filename, pageId));
 }
 
-Page *StorageManager::GetSystemPage(const page_id_t &pageId) 
+Page *StorageManager::GetSystemPage(const string& filename, const page_id_t &pageId)
 {
   this->LockSystemPageWrite();
 
-  auto pageHashIterator = this->systemCache.find(pageId);
-  const string &filename = this->database->GetFileName();
+  const auto key = filename + to_string(pageId);
 
-  if (pageHashIterator == this->systemCache.end()) 
+  auto pageHashIterator = this->systemCache.find(key);
+
+  if (pageHashIterator == this->systemCache.end())
   {
-    this->OpenSystemPage(pageId);
-    pageHashIterator = this->systemCache.find(pageId);
+    this->OpenSystemPage(filename, pageId);
+    pageHashIterator = this->systemCache.find(key);
   }
 
   this->systemPageList.push_front(*pageHashIterator->second);
   this->systemPageList.erase(pageHashIterator->second);
-  this->systemCache[pageId] = this->systemPageList.begin();
+  this->systemCache[key] = this->systemPageList.begin();
 
   (*pageHashIterator->second)->SetFileName(filename);
 
@@ -336,16 +317,18 @@ Page *StorageManager::GetSystemPage(const page_id_t &pageId)
 
 Page *StorageManager::GetSystemPage(const page_id_t &pageId, const string &filename) 
 {
-  auto pageHashIterator = this->SearchSystemPageInCache(pageId);
+  const auto key = filename + to_string(pageId);
+
+  auto pageHashIterator = this->SearchSystemPageInCache(key);
 
   if (pageHashIterator == this->systemCache.end()) {
-    this->OpenSystemPage(pageId, filename);
+    this->OpenSystemPage(filename, pageId);
 
-    pageHashIterator = this->SearchSystemPageInCache(pageId);
+    pageHashIterator = this->SearchSystemPageInCache(key);
   }
   this->systemPageList.push_front(*pageHashIterator->second);
   this->systemPageList.erase(pageHashIterator->second);
-  this->systemCache[pageId] = this->systemPageList.begin();
+  this->systemCache[key] = this->systemPageList.begin();
   // this->MoveSystemPageToStart(pageHashIterator->second);
 
   (*pageHashIterator->second)->SetFileName(filename);
@@ -353,30 +336,30 @@ Page *StorageManager::GetSystemPage(const page_id_t &pageId, const string &filen
   return (*pageHashIterator->second);
 }
 
-Page *StorageManager::GetSystemPage(const page_id_t &pageId, const extent_id_t &extentId, const Table* table) 
+Page *StorageManager::GetSystemPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table* table)
 {
-  auto pageHashIterator = this->SearchSystemPageInCache(pageId);
+  const auto key = filename + to_string(pageId);
+
+  auto pageHashIterator = this->SearchSystemPageInCache(key);
 
   if (pageHashIterator == this->systemCache.end()) 
   {
-    this->OpenSystemExtent(extentId, table);
-    pageHashIterator = this->SearchSystemPageInCache(pageId);
+    this->OpenSystemExtent(filename, extentId, table);
+    pageHashIterator = this->SearchSystemPageInCache(key);
   }
 
   this->systemPageList.push_front(*pageHashIterator->second);
   this->systemPageList.erase(pageHashIterator->second);
-  this->systemCache[pageId] = this->systemPageList.begin();
+  this->systemCache[key] = this->systemPageList.begin();
   // this->MoveSystemPageToStart(pageHashIterator->second);
 
   return (*pageHashIterator->second);
 }
 
-void StorageManager::OpenSystemPage(const page_id_t &pageId) 
+void StorageManager::OpenSystemPage(const string& filename, const page_id_t &pageId)
 {
   if (this->IsSystemCacheFull())
     this->RemoveSystemPage();
-
-  const string &filename = this->database->GetFileName();
 
   fstream *file = this->fileManager.GetFile(filename);
 
@@ -397,18 +380,18 @@ void StorageManager::OpenSystemPage(const page_id_t &pageId)
 
   // this->LockSystemPageWrite();
 
+  const auto key = filename + to_string(pageId);
+
   this->systemPageList.push_front(page);
-  this->systemCache[pageId] = this->systemPageList.begin();
+  this->systemCache[key] = this->systemPageList.begin();
 
   // this->UnlockSystemPageWrite();
 
   page->GetPageDataFromFile(buffer, nullptr, offSet, file);
 }
 
-void StorageManager::OpenSystemExtent(const extent_id_t &extentId, const Table* table)
+void StorageManager::OpenSystemExtent(const string &filename, const extent_id_t &extentId, const Table* table)
 {
-  const string &filename = this->database->GetFileName();
-
   // read page from disk, call this->fileManager
   fstream *file = this->fileManager.GetFile(filename);
 
@@ -435,7 +418,7 @@ void StorageManager::OpenSystemExtent(const extent_id_t &extentId, const Table* 
 
     const page_id_t currentPageId = firstExtentPageId + i;
 
-    if (this->IsPageCached(currentPageId))
+    if (this->IsPageCached(filename, currentPageId))
       continue;
 
     if (this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
@@ -451,42 +434,12 @@ void StorageManager::OpenSystemExtent(const extent_id_t &extentId, const Table* 
 
     this->systemPageList.push_front(page);
 
-    this->systemCache[page->GetPageId()] = this->systemPageList.begin();
+    const auto key = filename + to_string(page->GetPageId());
+
+    this->systemCache[key] = this->systemPageList.begin();
 
     page->SetFileName(filename);
   }
-}
-
-void StorageManager::OpenSystemPage(const page_id_t &pageId,const string &filename) 
-{
-  if (this->IsSystemCacheFull())
-    this->RemoveSystemPage();
-
-  fstream *file = this->fileManager.GetFile(filename);
-
-  const streampos pageOffset = pageId * PAGE_SIZE;
-  vector<char> buffer(PAGE_SIZE);
-  SetReadFilePointerToOffset(file, pageOffset);
-
-  file->read(buffer.data(), PAGE_SIZE);
-
-  page_offset_t offSet = 0;
-
-  const PageHeader pageHeader =
-      StorageManager::GetPageHeaderFromFile(buffer, offSet);
-
-  Page *page = nullptr;
-  StorageManager::AllocateMemoryBasedOnSystemPageType(&page, pageHeader);
-
-  // this->LockSystemPageWrite();
-
-  this->systemPageList.push_front(page);
-
-  this->systemCache[pageId] = this->systemPageList.begin();
-
-  // this->UnlockSystemPageWrite();
-
-  page->GetPageDataFromFile(buffer, nullptr, offSet, file);
 }
 
 void StorageManager::RemoveSystemPage() 
@@ -497,7 +450,11 @@ void StorageManager::RemoveSystemPage()
 
   const page_id_t pageId = page->GetPageId();
 
-  this->systemCache.erase(pageId);
+  const string &filename = page->GetFileName();
+
+  const auto key = filename + to_string(pageId);
+
+  this->systemCache.erase(key);
 
   this->systemPageList.pop_back();
 
@@ -505,7 +462,6 @@ void StorageManager::RemoveSystemPage()
 
   if (page->GetPageDirtyStatus()) 
   {
-    const string &filename = page->GetFileName();
 
     fstream *file = this->fileManager.GetFile(filename);
 
@@ -547,30 +503,19 @@ void StorageManager::AllocateMemoryBasedOnSystemPageType(Page **page, const Page
 /////////////////////////Globally Used Functions///////////////////
 //////////////////////////////////////////////////////////////////
 
-unordered_map<page_id_t, PageIterator>::iterator
-StorageManager::SearchSystemPageInCache(const page_id_t &pageId) 
+unordered_map<string, PageIterator>::iterator
+StorageManager::SearchSystemPageInCache(const string& key)
 {
   // Page* page = nullptr;
 
   // this->LockSystemPageRead();
 
-  return this->systemCache.find(pageId);
+  return this->systemCache.find(key);
 
   // this->UnlockSystemPageRead();
 }
 
-void StorageManager::MoveSystemPageToStart(const PageIterator &pageIterator) 
-{
-  // this->LockSystemPageWrite();
-
-  this->systemPageList.push_front(*pageIterator);
-  this->systemPageList.erase(pageIterator);
-  this->systemCache[(*pageIterator)->GetPageId()] = this->systemPageList.begin();
-
-  // this->UnlockSystemPageWrite();
-}
-
-void StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader &pageHeader) 
+void StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader &pageHeader)
 {
   switch (pageHeader.pageType) 
   {
@@ -594,34 +539,27 @@ void StorageManager::MovePageToFrontOfSystemList(Page *page,
   if (this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
     this->RemoveSystemPage();
 
-  page->SetFileName(filename);
-
-  this->systemPageList.push_front(page);
-  this->systemCache[pageId] = this->systemPageList.begin();
-}
-
-void StorageManager::MovePageToFrontOfSystemList(Page *page,
-                                              const page_id_t &pageId) {
-  if (this->systemPageList.size() == MAX_NUMBER_SYSTEM_PAGES)
-    this->RemoveSystemPage();
-
-  const string &filename = this->database->GetFileName();
+  const auto key = filename + to_string(pageId);
 
   page->SetFileName(filename);
 
   this->systemPageList.push_front(page);
-  this->systemCache[pageId] = this->systemPageList.begin();
+  this->systemCache[key] = this->systemPageList.begin();
 }
 
-void StorageManager::MovePageToFrontOfList(Page *page, const page_id_t &pageId,
-                                        const string &filename) {
+void StorageManager::MovePageToFrontOfList(
+  Page *page,
+  const page_id_t &pageId,
+  const string &filename) {
   if (this->pageList.size() == MAX_NUMBER_SYSTEM_PAGES)
     this->RemovePage();
+
+  const auto key = filename + to_string(pageId);
 
   page->SetFileName(filename);
 
   this->pageList.push_front(page);
-  this->cache[pageId] = this->pageList.begin();
+  this->cache[key] = this->pageList.begin();
 }
 
 PageHeader StorageManager::GetPageHeaderFromFile(const vector<char> &data,
@@ -643,28 +581,29 @@ PageHeader StorageManager::GetPageHeaderFromFile(const vector<char> &data,
   return pageHeader;
 }
 
-bool StorageManager::IsPageCached(const page_id_t &pageId) 
+bool StorageManager::IsPageCached(const string& filename, const page_id_t &pageId)
 {
-  const auto &pageIterator = this->cache.find(pageId);
+  const auto key = filename + to_string(pageId);
+  const auto pageIterator = this->cache.find(key);
 
   if (pageIterator != this->cache.end()) 
   {
     this->pageList.push_front(*pageIterator->second);
     this->pageList.erase(pageIterator->second);
 
-    this->cache[pageId] = this->pageList.begin();
+    this->cache[key] = this->pageList.begin();
 
     return true;
   }
 
-  const auto &systemPageIterator = this->systemCache.find(pageId);
+  const auto &systemPageIterator = this->systemCache.find(key);
 
   if (systemPageIterator != this->systemCache.end()) 
   {
     this->systemPageList.push_front(*systemPageIterator->second);
     this->systemPageList.erase(systemPageIterator->second);
 
-    this->systemCache[pageId] = this->systemPageList.begin();
+    this->systemCache[key] = this->systemPageList.begin();
 
     return true;
   }
