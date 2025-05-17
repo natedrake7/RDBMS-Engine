@@ -5,18 +5,7 @@
 #include "../LogicalPlan/LogicalPlan.h"
 
 namespace QueryPipeline::PhysicalPlan {
-  PhysicalOperator* BuildPhysicalPlan(LogicalPlan* logicalOperator) {
-    if (auto project = dynamic_cast<LogicalProject*>(logicalOperator))
-      return new PhysicalProject(BuildPhysicalPlan(project->child), project->columns);
-
-    if (auto scan = dynamic_cast<LogicalTableScan*>(logicalOperator))
-      return new PhysicalTableScan(scan->tableName);
-
-    if (auto createDb = dynamic_cast<LogicalCreateDatabase*>(logicalOperator))
-      return new PhysicalCreateDatabase(createDb->dbName);
-
-    throw std::runtime_error("Unknown logical operator.");
-  }
+  PhysicalCreateDatabase::PhysicalCreateDatabase(const std::string &name) : dbName(name){}
 
   std::vector<DatabaseEngine::StorageTypes::Row> PhysicalCreateDatabase::Execute(){
     Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
@@ -26,7 +15,7 @@ namespace QueryPipeline::PhysicalPlan {
     return {};
   }
 
-   PhysicalProject::PhysicalProject(PhysicalOperator *child, std::vector<std::string> columns)
+  PhysicalProject::PhysicalProject(PhysicalOperator *child, std::vector<std::string> columns)
     : columns(std::move(columns)), child(child) {}
 
   PhysicalProject::~PhysicalProject(){ delete this->child; }
@@ -36,6 +25,8 @@ namespace QueryPipeline::PhysicalPlan {
 
       return rows;
   }
+
+  PhysicalTableScan::PhysicalTableScan(const std::string &tableName): tableName(tableName) {}
 
   std::vector<DatabaseEngine::StorageTypes::Row> PhysicalTableScan::Execute(){
       using namespace DatabaseEngine;

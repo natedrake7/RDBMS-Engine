@@ -50,10 +50,9 @@ namespace QueryPipeline
         else if (response.type() == typeid(DropDbStatement)) {
             const auto dropDbStatement = std::any_cast<DropDbStatement>(response);
             Validator::Validate(dropDbStatement);
-
         }
 
-        PhysicalPlan::PhysicalOperator* physicalPlan = PhysicalPlan::BuildPhysicalPlan(logicalPlan);
+        PhysicalPlan::PhysicalOperator* physicalPlan = logicalPlan->ToPhysical();
         const auto results = physicalPlan->Execute();
 
         delete logicalPlan;

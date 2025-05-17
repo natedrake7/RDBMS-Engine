@@ -1,7 +1,31 @@
 #include "LogicalPlan.h"
 
 namespace QueryPipeline {
- 
+  LogicalPlan::~LogicalPlan() = default;
+
+  LogicalProject::LogicalProject(LogicalPlan *child, const std::vector<std::string> &columns)
+        : child(child), columns(columns) {}
+
+  LogicalProject::~LogicalProject(){
+      delete child;
+  }
+
+  PhysicalPlan::PhysicalProject * LogicalProject::ToPhysical() {
+     return new PhysicalPlan::PhysicalProject(this->child->ToPhysical(), this->columns);
+  }
+
+  LogicalTableScan::LogicalTableScan(const std::string &name) : tableName(name) {}
+
+  PhysicalPlan::PhysicalTableScan * LogicalTableScan::ToPhysical(){
+      return new PhysicalPlan::PhysicalTableScan(this->tableName);
+  }
+
+  LogicalCreateDatabase::LogicalCreateDatabase(const std::string &dbName) : dbName(dbName) {}
+
+  PhysicalPlan::PhysicalCreateDatabase * LogicalCreateDatabase::ToPhysical(){
+     return new PhysicalPlan::PhysicalCreateDatabase(this->dbName);
+  }
+
   LogicalPlan * BuildLogicalPlan(const SelectStatement &statement){
       const auto scanTable = new LogicalTableScan(statement.table);
 

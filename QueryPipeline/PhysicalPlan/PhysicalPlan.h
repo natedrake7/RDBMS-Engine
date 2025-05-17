@@ -19,12 +19,10 @@ namespace QueryPipeline::PhysicalPlan{
         virtual std::vector<DatabaseEngine::StorageTypes::Row> Execute() = 0;
     };
 
-  PhysicalOperator* BuildPhysicalPlan(LogicalPlan* logicalOperator);
-
   class PhysicalCreateDatabase final : public PhysicalOperator{
       std::string dbName;
     public:
-      explicit PhysicalCreateDatabase(const std::string& name) : dbName(name){};
+      explicit PhysicalCreateDatabase(const std::string& name);
       ~PhysicalCreateDatabase() override = default;
       std::vector<DatabaseEngine::StorageTypes::Row> Execute() override;
   };
@@ -33,12 +31,12 @@ namespace QueryPipeline::PhysicalPlan{
     std::string tableName;
 
     public:
-      explicit PhysicalTableScan(const std::string& tableName): tableName(tableName) {}
+      explicit PhysicalTableScan(const std::string& tableName);
       ~PhysicalTableScan()override = default;
       std::vector<DatabaseEngine::StorageTypes::Row> Execute() override;
   };
 
-  class PhysicalProject : public PhysicalOperator{
+  class PhysicalProject final : public PhysicalOperator{
     std::vector<std::string> columns;
     PhysicalOperator* child;
 
