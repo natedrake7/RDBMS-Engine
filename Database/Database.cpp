@@ -157,9 +157,7 @@ namespace DatabaseEngine
                 return table;
         }
 
-        const string exceptionMsg = "Database::OpenTable: No table with name " + tableName + " exists.";
-
-        throw invalid_argument(exceptionMsg);
+        throw invalid_argument("Database::OpenTable: No table with name " + tableName + " exists.");
     }
 
     void Database::DeleteTable(const string& tableName)

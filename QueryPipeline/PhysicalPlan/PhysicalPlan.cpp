@@ -1,6 +1,7 @@
 #include "PhysicalPlan.h"
 #include "../../Database/Database.h"
 #include "../../Database/Table/Table.h"
+#include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
 
 namespace QueryPipeline::PhysicalPlan {
@@ -18,7 +19,10 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   std::vector<DatabaseEngine::StorageTypes::Row> PhysicalCreateDatabase::Execute(){
+    Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
+
     DatabaseEngine::CreateDatabase(this->dbName);
+
     return {};
   }
 
