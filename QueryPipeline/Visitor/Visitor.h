@@ -1,4 +1,5 @@
 #pragma once
+#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "../../Database/Constants.h"
 
 
@@ -29,29 +30,14 @@ namespace QueryPipeline {
     static Expression Predicate(
       const std::string& column,
       const std::string& operation,
-      const std::string& value) {
-      return Expression{
-        ExpressionType::Predicate,
-        nullptr,
-        nullptr,
-        column,
-        operation,
-        value
-      };
-    }
+      const std::string& value);
 
-    static Expression Logical(const ExpressionType& type, Expression* leftExpression, Expression* RightExpression) {
-      return Expression{
-        type,
-        leftExpression,
-        RightExpression
-      };
-    }
+    static Expression Logical(
+      const ExpressionType& type,
+      Expression* leftExpression,
+      Expression* RightExpression);
 
-    ~Expression() {
-      delete left;
-      delete right;
-    }
+    ~Expression();
     
   }Expression;
 
@@ -74,6 +60,14 @@ namespace QueryPipeline {
   typedef struct DropDbStatement {
     std::string name;
   }DropDbStatement;
+
+  typedef struct InsertStatement {
+    std::string tableName;
+    std::vector<std::string> columns;
+    std::vector<Field> values;
+  }InsertStatement;
+
+  static string ParseString(const string& str);
 
   class SQLVisitorImplementation final : public SQLVisitor {
     public:
@@ -104,5 +98,9 @@ namespace QueryPipeline {
       antlrcpp::Any visitAndExpression(SQLParser::AndExpressionContext *context) override;
     
       antlrcpp::Any visitPredicate(SQLParser::PredicateContext *context) override;
+
+      antlrcpp::Any visitInsertStatement(SQLParser::InsertStatementContext *context) override;
+
+      antlrcpp::Any visitLiteralValueList(SQLParser::LiteralValueListContext *context) override;
   };
 }

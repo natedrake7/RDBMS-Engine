@@ -105,6 +105,8 @@ void Field::SetData(const bool &data){
     this->data = new object_t[sizeof(bool)];
     memcpy(this->data, &data, sizeof(bool));
     this->size = sizeof(bool);
+
+    this->type = ColumnType::Bool;
 }
 
 void Field::SetData(const string &data) {
@@ -113,6 +115,8 @@ void Field::SetData(const string &data) {
     this->size = data.size();
     this->data = new object_t[this->size];
     memcpy(this->data, data.data(), this->size);
+
+    this->type = ColumnType::String;
 }
 void Field::SetData(const u16string &data) {
     delete this->data;
@@ -120,6 +124,8 @@ void Field::SetData(const u16string &data) {
     this->size = data.size();
     this->data = new object_t[this->size];
     memcpy(this->data, data.data(), this->size);
+
+    this->type = ColumnType::UnicodeString;
 }
 void Field::SetData(const int8_t &data) { 
     delete this->data;
@@ -127,13 +133,18 @@ void Field::SetData(const int8_t &data) {
     this->data = new object_t[sizeof(int8_t)];
     memcpy(this->data, &data, sizeof(int8_t));
     this->size = sizeof(int8_t);
+
+    this->type = ColumnType::TinyInt;
 }
+
 void Field::SetData(const int16_t &data) { 
     delete this->data;
     
     this->data = new object_t[sizeof(int16_t)];
     memcpy(this->data, &data, sizeof(int16_t));
     this->size = sizeof(int16_t);
+
+    this->type = ColumnType::SmallInt;
 }
 void Field::SetData(const int32_t &data) { 
     delete this->data;
@@ -141,6 +152,8 @@ void Field::SetData(const int32_t &data) {
     this->data = new object_t[sizeof(int32_t)];
     memcpy(this->data, &data, sizeof(int32_t));
     this->size = sizeof(int32_t);
+
+    this->type = ColumnType::Int;
 }
 void Field::SetData(const int64_t &data) { 
     delete this->data;
@@ -148,6 +161,8 @@ void Field::SetData(const int64_t &data) {
     this->data = new object_t[sizeof(int64_t)];
     memcpy(this->data, &data, sizeof(int64_t));
     this->size = sizeof(int64_t);
+
+    this->type = ColumnType::BigInt;
 }
 void Field::SetData(const DataTypes::DateTime &data) { 
     delete this->data;
@@ -156,6 +171,8 @@ void Field::SetData(const DataTypes::DateTime &data) {
     memcpy(this->data, &data.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
     
     this->size = DataTypes::DateTime::DateTimeSize();
+
+    this->type = ColumnType::DateTime;
 }
 
 void Field::SetData(const DataTypes::Decimal &data) { 
@@ -164,6 +181,8 @@ void Field::SetData(const DataTypes::Decimal &data) {
     this->size = data.GetRawDataSize();
     this->data = new object_t[this->size];
     memcpy(this->data, data.GetRawData(), this->size);
+
+    this->type = ColumnType::Decimal;
 }
 
 const object_t * Field::GetRawData() const{ return this->data; }
@@ -195,5 +214,7 @@ const Constants::ConditionType& Field::GetConditionType() const { return this->c
 const Constants::Operator& Field::GetOperatorType() const { return this->operatorType; }
 
 const vector<Field>& Field::GetChildren() const { return this->children; }
+
+const ColumnType & Field::GetType() const{ return this->type; }
 
 const block_size_t& Field::GetSize() const{ return this->size; }

@@ -7,8 +7,6 @@
 
 namespace Constants
 {
-
-
     constexpr size_t PAGE_SIZE = 8 * 1024;
     constexpr size_t MAX_NUMBER_OF_PAGES = 15000;
     constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 100000;
@@ -133,6 +131,20 @@ namespace Constants
     constexpr uint16_t GAM_PAGE_SIZE = 64000;
     constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;
 
+    enum class ColumnType : uint8_t
+    {
+        TinyInt = 0,
+        SmallInt = 1,
+        Int = 2,
+        BigInt = 3,
+        Decimal = 4,
+        String = 5,
+        UnicodeString = 6,
+        Bool = 7,
+        DateTime = 8,
+        ColumnTypeCount = 9
+    };
+
     static Dictionary<string, block_size_t> ColumnTypeSizes = {
         {"TinyInt", sizeof(int8_t)},
         {"SmallInt", sizeof(int16_t)},
@@ -143,6 +155,19 @@ namespace Constants
         {"String", 0},
         {"Decimal", 0},
         {"UnicodeString", 0}
+        //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
+    };
+
+    static Dictionary<string, ColumnType> ColumnTypesDictionary = {
+        {"TinyInt", ColumnType::TinyInt},
+        {"SmallInt", ColumnType::SmallInt},
+        {"Int", ColumnType::Int},
+        {"BigInt", ColumnType::BigInt},
+        {"DateTime", ColumnType::DateTime},
+        {"Bool", ColumnType::Bool},
+        {"String", ColumnType::String},
+        {"Decimal", ColumnType::Decimal},
+        {"UnicodeString", ColumnType::UnicodeString}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 }

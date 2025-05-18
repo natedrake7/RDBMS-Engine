@@ -10,22 +10,6 @@ namespace DatabaseEngine::StorageTypes
     class Table;
     class Block;
 
-    enum class ColumnType : uint8_t
-    {
-        TinyInt = 0,
-        SmallInt = 1,
-        Int = 2,
-        BigInt = 3,
-        Decimal = 4,
-        String = 5,
-        UnicodeString = 6,
-        Bool = 7,
-        DateTime = 8,
-        ColumnTypeCount = 9
-    };
-
-
-
     typedef struct ColumnHeader
     {
         header_literal_t columnNameSize;

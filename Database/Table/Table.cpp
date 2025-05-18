@@ -23,6 +23,7 @@ using namespace Pages;
 using namespace ByteMaps;
 using namespace Indexing;
 using namespace Storage;
+using namespace Constants;
 
 namespace DatabaseEngine::StorageTypes {
       TableHeader::TableHeader() 
@@ -203,7 +204,7 @@ namespace DatabaseEngine::StorageTypes {
 
           const ColumnType columnType = columns[associatedColumnIndex]->GetColumnType();
 
-          if (columnType > ColumnType::ColumnTypeCount)
+          if (columnType > Constants::ColumnType::ColumnTypeCount)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
           if (i.GetIsNull()) 
@@ -281,9 +282,9 @@ namespace DatabaseEngine::StorageTypes {
 
                 Block *block = new Block(columns[columnIndex]);
 
-                const ColumnType columnType = columns[columnIndex]->GetColumnType();
+                const Constants::ColumnType columnType = columns[columnIndex]->GetColumnType();
       
-                if (columnType > ColumnType::ColumnTypeCount)
+                if (columnType > Constants::ColumnType::ColumnTypeCount)
                   throw invalid_argument("Table::Select: Unsupported Column Type");
 
                 block->SetData(data, condition.GetSize());
@@ -392,7 +393,7 @@ namespace DatabaseEngine::StorageTypes {
 
                 const ColumnType columnType = columns[columnIndex]->GetColumnType();
       
-                if (columnType > ColumnType::ColumnTypeCount)
+                if (columnType > Constants::ColumnType::ColumnTypeCount)
                   throw invalid_argument("Table::Select: Unsupported Column Type");
 
                 int indexPosition = 0;
@@ -648,12 +649,12 @@ namespace DatabaseEngine::StorageTypes {
         const int32_t maxKey = 90500;
 
         Key minimumValue;
-        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), ColumnType::Int));
-        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), ColumnType::Int));
+        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), Constants::ColumnType::Int));
+        minimumValue.InsertKey(Key(&minKey, sizeof(minKey), Constants::ColumnType::Int));
 
         Key maximumValue;
-        maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), ColumnType::Int));
-        maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), ColumnType::Int));
+        maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), Constants::ColumnType::Int));
+        maximumValue.InsertKey(Key(&maxKey, sizeof(maxKey), Constants::ColumnType::Int));
 
         const BPlusTree* tree = this->GetNonClusteredIndexTree(0);
 

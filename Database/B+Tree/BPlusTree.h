@@ -13,11 +13,6 @@ namespace DatabaseEngine
     class Database;
 }
 
-namespace DatabaseEngine::StorageTypes
-{
-    class Table;
-}
-
 namespace Pages
 {
     class IndexPage;
@@ -50,11 +45,11 @@ namespace Indexing
     {
         vector<object_t> value;
         key_size_t size;
-        DatabaseEngine::StorageTypes::ColumnType type;
+        Constants::ColumnType type;
         vector<Key> subKeys;
 
         Key();
-        Key(const void *keyValue, const key_size_t &keySize, const DatabaseEngine::StorageTypes::ColumnType& keyType);
+        Key(const void *keyValue, const key_size_t &keySize, const Constants::ColumnType& keyType);
 
         explicit Key(const vector<Key>& subKeys);
         ~Key();

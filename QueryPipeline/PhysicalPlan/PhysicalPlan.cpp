@@ -92,4 +92,19 @@ namespace QueryPipeline::PhysicalPlan {
 
       return result;
     }
+
+  PhysicalInsert::PhysicalInsert(const std::string &tableName, const std::vector<Field> &fields): tableName(tableName), fields(fields) {}
+
+  PhysicalPlanResult PhysicalInsert::Execute(){
+    using namespace DatabaseEngine;
+    using namespace DatabaseEngine::StorageTypes;
+    Database* db = nullptr;
+
+    UseDatabase("masterDb", &db);
+    Table* table = db->OpenTable(this->tableName);
+
+    table->InsertRows({fields});
+
+    return {};
+  }
 }

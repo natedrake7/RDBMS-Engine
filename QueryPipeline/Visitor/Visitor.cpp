@@ -1,6 +1,36 @@
 #include "Visitor.h"
+#include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
 
 namespace QueryPipeline {
+
+  Expression Expression::Predicate(const std::string &column, const std::string &operation, const std::string &value) {
+    return Expression{
+      ExpressionType::Predicate,
+      nullptr,
+      nullptr,
+      column,
+      operation,
+      value
+    };
+  }
+
+  Expression Expression::Logical(const ExpressionType &type, Expression *leftExpression, Expression *RightExpression){
+    return Expression{
+      type,
+      leftExpression,
+      RightExpression
+    };
+  }
+
+  Expression::~Expression(){
+      delete left;
+      delete right;
+  }
+
+  string ParseString(const string &str){
+    return std::string(str).substr(1, str.size() - 2);
+  }
+
   antlrcpp::Any SQLVisitorImplementation::visitSqlStatement(SQLParser::SqlStatementContext *context)  {
     if (context->selectStatement())
       return visit(context->selectStatement());
@@ -8,6 +38,9 @@ namespace QueryPipeline {
       return visit(context->createDbStatement());
     if (context->dropDbStatement())
       return visit(context->dropDbStatement());
+    if (context->insertStatement())
+      return visit(context->insertStatement());
+    
     return nullptr;
   }
 
@@ -29,7 +62,9 @@ namespace QueryPipeline {
     return statement;
   }
 
-  antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
+
+
+antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
     SelectStatement statement;
 
     // Visit columnList and get column names
@@ -58,7 +93,7 @@ namespace QueryPipeline {
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitLiteralValue(SQLParser::LiteralValueContext *context){
-    return context->STRING()->getText();
+    return ParseString(context->STRING()->getText());
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
@@ -88,16 +123,53 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
     if (context->expression())
       return visit(context->expression());
     
-    const std::string value = context->literalValue()->getText();
-
     return new Expression{
       ExpressionType::Predicate,
       nullptr,
       nullptr,
       context->columnName()->getText(),
       context->op->getText(),
-      value.substr(1, value.size() - 2)
-  };
+      context->literalValue()->getText()
+    };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitInsertStatement(SQLParser::InsertStatementContext *context){
+    InsertStatement statement;
+
+    statement.tableName = context->tableName()->getText();
+    
+    const auto columns = visit(context->columnList());
+
+    statement.columns = std::any_cast<std::vector<string>>(columns);
+
+    const auto values = visit(context->literalValueList());
+
+    statement.values = std::any_cast<std::vector<Field>>(values);
+
+    return statement;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitLiteralValueList(SQLParser::LiteralValueListContext *context){
+    vector<Field> values;
+    
+    for (const auto& literalValue : context->literalValue()) {
+      if (literalValue->STRING()) {
+
+        values.emplace_back();
+        values.back().SetData(literalValue->STRING()->getText());
+        
+        continue;
+      }
+
+      const auto numberNode = literalValue->NUMBER();
+
+      const auto number = SafeConverter<int64_t>::SafeStoi(numberNode->getText());
+
+      values.emplace_back();
+      values.back().SetData(number);
+    }
+
+    return values;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitColumnName(SQLParser::ColumnNameContext *context){

@@ -30,27 +30,6 @@ add_custom_target(
 
 file(GLOB ANTLR_SRC "${GENERATED_DIR}/*.cpp")
 
-add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
-                            QueryPipeline/Parser/Parser.h
-        QueryPipeline/Visitor/Visitor.h
-                            QueryPipeline/Validator/Validator.cpp
-                            QueryPipeline/Validator/Validator.h
-                            QueryPipeline/LogicalPlan/LogicalPlan.cpp
-                            QueryPipeline/LogicalPlan/LogicalPlan.h
-                            QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
-                            QueryPipeline/PhysicalPlan/PhysicalPlan.h
-                            ${ANTLR_SRC}
-        QueryPipeline/Visitor/Visitor.cpp)
-
-add_dependencies(QueryPipeline GenerateSQLParser)
-
-target_link_libraries(QueryPipeline PRIVATE antlr4_static)
-
-# Include the generated parser and lexer files
-target_include_directories(QueryPipeline PRIVATE
-        ${GENERATED_DIR}
-)
-
 add_library(AdditionalLibraries
         AdditionalLibraries/BitMap/BitMap.cpp
         AdditionalLibraries/BitMap/BitMap.h
@@ -66,7 +45,6 @@ add_library(AdditionalLibraries
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
         Database/RowCondition/RowCondition.cpp
         Database/RowCondition/RowCondition.h
-        AdditionalLibraries/SafeConverter/SafeConverter.cpp
         AdditionalLibraries/SafeConverter/SafeConverter.h
         AdditionalLibraries/HashSet/HashSet.h
         AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
@@ -83,6 +61,27 @@ add_library(AdditionalLibraries
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h)
+
+add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
+                            QueryPipeline/Parser/Parser.h
+                            QueryPipeline/Visitor/Visitor.cpp
+                            QueryPipeline/Visitor/Visitor.h
+                            QueryPipeline/Validator/Validator.cpp
+                            QueryPipeline/Validator/Validator.h
+                            QueryPipeline/LogicalPlan/LogicalPlan.cpp
+                            QueryPipeline/LogicalPlan/LogicalPlan.h
+                            QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
+                            QueryPipeline/PhysicalPlan/PhysicalPlan.h
+                            ${ANTLR_SRC} )
+
+add_dependencies(QueryPipeline GenerateSQLParser)
+
+target_link_libraries(QueryPipeline PRIVATE antlr4_static PRIVATE AdditionalLibraries)
+
+# Include the generated parser and lexer files
+target_include_directories(QueryPipeline PRIVATE
+        ${GENERATED_DIR}
+)
 
 add_library(Database    Database/Database.cpp
                         Database/DatabaseIndexHandlers.cpp

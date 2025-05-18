@@ -54,16 +54,10 @@ namespace DatabaseEngine::StorageTypes{
 
     void Table::SetIndexAllocationMapPageId(const page_id_t & pageId) { this->header.indexAllocationMapPageId = pageId; }
 
-    void Table::CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex) 
+    void Table::CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex)  
     {
-        if (!columns[associatedColumnIndex]->GetAllowNulls())
-            throw invalid_argument("Column " + columns[associatedColumnIndex]->GetColumnName() + " does not allow NULLs. Insert Fails.");
-
         block->SetData(nullptr, 0);
-
         row->SetNullBitMapValue(associatedColumnIndex, true);
-
-        const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
-        row->InsertColumnData(block, columnIndex);
+        row->InsertColumnData(block, associatedColumnIndex);
     }
 }

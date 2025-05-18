@@ -40,7 +40,6 @@ namespace ByteMaps
 
 namespace DatabaseEngine::StorageTypes
 {
-    enum class ColumnType : uint8_t;
     class Block;
     class Column;
     struct ColumnHeader;
@@ -105,8 +104,7 @@ namespace DatabaseEngine::StorageTypes
             void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
             void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
         
-            void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
-
+            static void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
             static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);
         
             void GetClusteredIndexFromDisk() const;

@@ -3,7 +3,7 @@
 using namespace std;
 
 template<typename Key, typename Value>
-class Dictionary : std::unordered_map<Key, Value>
+class Dictionary : public std::unordered_map<Key, Value>
 {
     public:
         Dictionary() : std::unordered_map<Key, Value>() {}

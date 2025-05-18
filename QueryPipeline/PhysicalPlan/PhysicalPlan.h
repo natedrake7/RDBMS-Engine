@@ -65,4 +65,13 @@ namespace QueryPipeline::PhysicalPlan{
       PhysicalPlanResult Execute() override;
   };
 
+  class PhysicalInsert final : public PhysicalOperator{
+    std::string tableName;
+    std::vector<Field> fields;
+
+  public:
+    PhysicalInsert(const std::string& tableName, const std::vector<Field>& fields);
+    ~PhysicalInsert()override = default;
+    PhysicalPlanResult Execute() override;
+  };
 }

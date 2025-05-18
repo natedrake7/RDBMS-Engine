@@ -11,6 +11,7 @@ namespace QueryPipeline {
 
   LogicalPlan* BuildLogicalPlan(const SelectStatement& statement);
   LogicalPlan* BuildLogicalPlan(const CreateDbStatement& statement);
+  LogicalPlan* BuildLogicalPlan(const InsertStatement& statement);
 
   class LogicalCreateDatabase final : public LogicalPlan {
     public:
@@ -41,6 +42,14 @@ namespace QueryPipeline {
       Expression* filter;
       explicit LogicalFilter(LogicalPlan* child, Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
+  };
+
+  class LogicalInsert final : public LogicalPlan {
+    public:
+      std::string tableName;
+      std::vector<Field> fields;
+      explicit LogicalInsert(const std::string& tableName, const std::vector<Field>& fields);
+      PhysicalPlan::PhysicalInsert* ToPhysical()override;
   };
 }
 

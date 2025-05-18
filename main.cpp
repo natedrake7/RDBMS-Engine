@@ -64,10 +64,12 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "SELECT table_position FROM sys_columns "
-                        "WHERE (table_name = 'sys_databases' OR dataType = 'Bool') "
-                        "OR table_name = 'sys_columns'";
+    // const string test = "SELECT table_position FROM sys_columns "
+    //                     "WHERE (table_name = 'sys_databases' OR dataType = 'Bool') "
+    //                     "OR table_name = 'sys_columns'";
 
+    const string test = "INSERT INTO sys_databases(name, filepath, is_system) "
+                        "VALUES ('stakosDb', '../stakosDb', 1)";
     try {
         QueryPipeline::Parser::Parse(test);
     }

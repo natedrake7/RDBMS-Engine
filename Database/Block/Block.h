@@ -18,7 +18,6 @@ namespace DataTypes {
 
 namespace DatabaseEngine::StorageTypes {
     class Column;
-    enum class ColumnType : uint8_t;
     
     class Block {
         object_t* data;

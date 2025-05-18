@@ -32,6 +32,12 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalFilter(this->child->ToPhysical(), this->filter);
   }
 
+  LogicalInsert::LogicalInsert(const std::string &tableName, const std::vector<Field> &fields): tableName(tableName), fields(fields) {}
+
+  PhysicalPlan::PhysicalInsert * LogicalInsert::ToPhysical(){
+    return new PhysicalPlan::PhysicalInsert(this->tableName, this->fields);
+  }
+
   LogicalPlan * BuildLogicalPlan(const SelectStatement &statement){
       const auto scanTable = new LogicalTableScan(statement.table);
 
@@ -50,5 +56,9 @@ namespace QueryPipeline {
   LogicalPlan * BuildLogicalPlan(const CreateDbStatement &statement){
       return new LogicalCreateDatabase(statement.name);
     }
+
+  LogicalPlan* BuildLogicalPlan(const InsertStatement& statement) {
+    return new LogicalInsert(statement.tableName, statement.values);
+  }
 }
 

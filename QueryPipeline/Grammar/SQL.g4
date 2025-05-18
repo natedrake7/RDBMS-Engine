@@ -1,7 +1,8 @@
 grammar SQL;
 
-sqlStatement : selectStatement | createDbStatement | dropDbStatement;
+sqlStatement : selectStatement | createDbStatement | dropDbStatement | insertStatement;
 
+//select statement
 selectStatement : 'SELECT' columnList 'FROM' tableName whereClause?;
 
 whereClause
@@ -25,18 +26,30 @@ predicate
     | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
     ;
 
+//insert statement
+insertStatement: 'INSERT' 'INTO' tableName '(' columnList ')' 'VALUES' '(' literalValueList ')'
+        ;
+
+//helpers
+literalValueList
+    : literalValue (',' literalValue)*;
+
 literalValue
         : STRING 
         | NUMBER;
         
 columnList : columnName (',' columnName)*;
 
+//declarations for clarification
 dbName: IDENTIFIER;
 columnName : IDENTIFIER;
 tableName : IDENTIFIER;
 
+
+//create database statement
 createDbStatement: 'CREATE' 'DATABASE' IDENTIFIER;
 
+//drop database statement
 dropDbStatement: 'DROP' 'DATABASE' IDENTIFIER;
 
 IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;

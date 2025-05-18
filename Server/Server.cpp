@@ -350,7 +350,6 @@ namespace Server {
     }
 
     return selectedTableHeaders;
-
   }
 
   vector<ColumnHeader> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
