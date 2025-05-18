@@ -144,8 +144,6 @@ namespace Indexing
         void PrintTree();
 
         void IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
-        void IndexSeek(const Key &minKey, const Key &maxKey, vector<BPlusTreeNonClusteredData> &result) const;
-
         void IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
         void IndexScan(vector<QueryData> &result) const;
         

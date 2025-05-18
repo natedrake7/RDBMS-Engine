@@ -394,6 +394,17 @@ namespace Server {
      return selectedColumnHeaders;
   }
 
+  Dictionary<string, ColumnHeader> ServerInstance::SelectColumnsToDictionary(const string &dbName, const string &tableName) const{
+    const auto columns = this->SelectColumns(dbName, tableName);
+
+    Dictionary<string, ColumnHeader> selectedColumns;
+
+    for (const auto& column : columns)
+      selectedColumns.Add(column.name, column);
+
+    return selectedColumns;
+  }
+
   vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
      using namespace DatabaseEngine::StorageTypes;
 

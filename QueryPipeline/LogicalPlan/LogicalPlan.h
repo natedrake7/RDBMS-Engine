@@ -1,5 +1,5 @@
 #pragma once
-#include "../Visitor.h"
+#include "../Visitor/Visitor.h"
 #include "../PhysicalPlan/PhysicalPlan.h"
 
 namespace QueryPipeline {
@@ -33,6 +33,14 @@ namespace QueryPipeline {
       std::string tableName;
       explicit LogicalTableScan(const std::string& name);
       PhysicalPlan::PhysicalTableScan* ToPhysical()override;
+  };
+
+  class LogicalFilter final : public LogicalPlan {
+    public:
+      LogicalPlan* child;
+      vector<Expression> filters;
+      explicit LogicalFilter(LogicalPlan* child, const vector<Expression>& filters);
+      PhysicalPlan::PhysicalFilter* ToPhysical()override;
   };
 }
 

@@ -64,7 +64,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "CREATE DATABASE Movies";
+    const string test = "SELECT table_position FROM sys_columns WHERE table_name = 'sys_databases' AND dataType = 'String'";
 
     try {
         QueryPipeline::Parser::Parse(test);

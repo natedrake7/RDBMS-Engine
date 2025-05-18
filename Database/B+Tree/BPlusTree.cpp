@@ -349,44 +349,6 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexSeek(const Key & minKey, const Key & maxKey, vector<BPlusTreeNonClusteredData>& result) const
-    {
-        if (!root)
-            return;
-
-        const Node *currentNode = this->SearchKey(minKey);
-        const Node *previousNode = nullptr;
-
-        while (currentNode)
-        {
-            if (previousNode && maxKey >= currentNode->keys[0])
-            {
-                if (maxKey >= previousNode->keys[previousNode->keys.size() - 1])
-                    result.push_back(previousNode->nonClusteredData[previousNode->keys.size()]);
-            }
-
-            for (int i = 0; i < currentNode->keys.size(); i++)
-            {
-                const auto &key = currentNode->keys[i];
-
-                if (minKey <= key && maxKey >= key)
-                {
-                    result.push_back(currentNode->nonClusteredData[i]);
-                    continue;
-                }
-
-                if (maxKey < key)
-                    return;
-            }
-
-            if(currentNode->nextNodeHeader.pageId == 0)
-                return;
-
-            previousNode = currentNode;
-            currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
-        }
-    }
-
     void BPlusTree::SearchKey(const Key &key, QueryData &result) const
     {
         if (!root)

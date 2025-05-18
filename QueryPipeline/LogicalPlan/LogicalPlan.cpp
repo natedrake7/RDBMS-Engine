@@ -26,13 +26,23 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalCreateDatabase(this->dbName);
   }
 
+  LogicalFilter::LogicalFilter(LogicalPlan* child, const vector<Expression>& filters): child(child), filters(filters) {}
+
+  PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(){
+    return new PhysicalPlan::PhysicalFilter(this->child->ToPhysical(), this->filters);
+  }
+
   LogicalPlan * BuildLogicalPlan(const SelectStatement &statement){
       const auto scanTable = new LogicalTableScan(statement.table);
 
       LogicalPlan* current = scanTable;
 
-    if (!statement.columns.empty())
-      current = new LogicalProject(current, statement.columns);
+      if (!statement.where.expressions.empty())
+        current = new LogicalFilter(current, statement.where.expressions);
+    
+
+      if (!statement.columns.empty())
+        current = new LogicalProject(current, statement.columns);
 
     return current;
   }

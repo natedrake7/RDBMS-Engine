@@ -112,11 +112,10 @@ namespace DatabaseEngine::StorageTypes
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Indexing::Node* GetIndexFromDisk(const page_id_t& indexPageId) const;
-        
+
             void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Indexing::Key* minimumValue, const Indexing::Key* maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices);
             void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions, const vector<column_index_t>& selectedColumnIndices);
-            void SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions);
-            void ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows);
+            void HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const;
             
             Row* CreateRow(const vector<Field>& inputData);
 
@@ -144,6 +143,18 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] const vector<vector<column_index_t>>& GetNonClusteredIndexes() const;
 
             [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
+
+            void ClusteredIndexSeek(
+                vector<Row> *selectedRows,
+                const Indexing::Key* minimumValue,
+                const Indexing::Key* maximumValue,
+                const vector<column_index_t>& selectedColumnIndices);
+
+            void ClusteredIndexScan(
+                vector<Row> *selectedRows,
+                const Indexing::Key* minimumValue,
+                const Indexing::Key* maximumValue,
+                const vector<column_index_t>& selectedColumnIndices);
 
             void Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Field> *conditions = nullptr, const size_t &count = -1);
 

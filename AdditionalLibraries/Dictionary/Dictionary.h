@@ -10,7 +10,7 @@ class Dictionary : std::unordered_map<Key, Value>
 
         Dictionary(const initializer_list<pair<const Key, Value>>& values) : unordered_map<Key, Value>(values) {}
 
-        bool TryGetValue(const Key& key, Value& value) 
+        bool TryGetValue(const Key& key, Value& value) const
         {
             auto it = this->find(key);
             if (it != this->end()) 
@@ -37,7 +37,7 @@ class Dictionary : std::unordered_map<Key, Value>
             this->insert(std::make_pair(key, value));
         }
 
-        Value& Get(const Key& key) 
+        Value& Get(const Key& key)
         {
             return this->at(key);
         }

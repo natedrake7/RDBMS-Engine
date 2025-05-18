@@ -245,8 +245,7 @@ namespace DatabaseEngine::StorageTypes {
         return false;
       }
 
-      void Table::Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Field> *conditions, const size_t &count) 
-      {
+      void Table::Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Field> *conditions, const size_t &count) {
           const size_t rowsToSelect =  (count == -1) 
                                     ? numeric_limits<size_t>::max() 
                                     : count;
@@ -361,7 +360,7 @@ namespace DatabaseEngine::StorageTypes {
           return;
         }
       
-        this->SelectRowsFromHeap(&selectedRows, rowsToSelect, conditions);
+        this->HeapScan(&selectedRows, rowsToSelect);
       }
 
       void Table::SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions, const size_t &count)
@@ -466,8 +465,8 @@ namespace DatabaseEngine::StorageTypes {
             this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, nullptr, selectedColumnIndices);
             return;
         }
-      
-        this->SelectRowsFromHeap(&selectedRows, rowsToSelect, nullptr);
+
+        this->HeapScan(&selectedRows, rowsToSelect);
       }
 
       void Table::Update(const vector<Field> &updates, const vector<Field> *conditions) const 
@@ -542,8 +541,6 @@ namespace DatabaseEngine::StorageTypes {
     void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Key* minimumValue, const Key* maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices)
     {
         vector<QueryData> results;
-        const int32_t minKey = 0;
-        const int32_t maxKey = 100;
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
 
@@ -575,6 +572,70 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
+    void Table::ClusteredIndexSeek(
+      vector<Row> *selectedRows,
+      const Indexing::Key *minimumValue,
+      const Indexing::Key *maximumValue,
+      const vector<column_index_t> &selectedColumnIndices){
+        vector<QueryData> results;
+
+        const BPlusTree* tree = this->GetClusteredIndexedTree();
+
+        tree->IndexSeek(*minimumValue, *maximumValue, results);
+
+        if(results.empty())
+          return;
+
+        const auto& filename = this->database->GetFileName();
+
+        extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
+
+        for (const auto &result : results)
+        {
+          // get new page else use current one
+          if (result.pageId != 0 && result.pageId != page->GetPageId())
+          {
+            pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+            page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
+          }
+
+          page->GetRowByIndex(selectedRows, *this, result.indexPosition, selectedColumnIndices);
+        }
+    }
+
+    void Table::ClusteredIndexScan(
+      vector<Row> *selectedRows,
+      const Indexing::Key *minimumValue,
+      const Indexing::Key *maximumValue,
+      const vector<column_index_t> &selectedColumnIndices){
+        vector<QueryData> results;
+
+        const BPlusTree* tree = this->GetClusteredIndexedTree();
+
+        tree->IndexScan(*minimumValue, *maximumValue, results);
+
+        if(results.empty())
+          return;
+
+        const auto& filename = this->database->GetFileName();
+
+        extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
+
+        for (const auto &result : results)
+        {
+          // get new page else use current one
+          if (result.pageId != 0 && result.pageId != page->GetPageId())
+          {
+            pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+            page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
+          }
+
+          page->GetRowByIndex(selectedRows, *this, result.indexPosition, selectedColumnIndices);
+        }
+    }
+
     void Table::SelectRowsFromNonClusteredIndex(vector<Row>* selectedRows, const size_t & rowsToSelect, const vector<Field>* conditions, const vector<column_index_t>& selectedColumnIndices)
     {
         //find which index to use
@@ -582,7 +643,7 @@ namespace DatabaseEngine::StorageTypes {
         vector<vector<column_index_t>> indexes;
         this->GetNonClusteredIndexedColumnKeys(&indexes);
 
-        vector<BPlusTreeNonClusteredData> results;
+        vector<QueryData> results;
         const int32_t minKey = 90000;
         const int32_t maxKey = 90500;
 
@@ -615,11 +676,11 @@ namespace DatabaseEngine::StorageTypes {
                 page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
             }
 
-            page->GetRowByIndex(selectedRows, *this, result.index, selectedColumnIndices);
+            page->GetRowByIndex(selectedRows, *this, result.indexPosition, selectedColumnIndices);
         }
     }
 
-    void Table::SelectRowsFromHeap(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions)
+    void Table::HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const
     {
         if(this->header.indexAllocationMapPageId == 0)
             return;
@@ -631,50 +692,29 @@ namespace DatabaseEngine::StorageTypes {
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds);
 
-        vector<thread> workerThreads;
-        for (const auto &extentId : tableExtentIds)
-        {
-            workerThreads.emplace_back([this, selectedRows, conditions, rowsToSelect, extentId, tableMapPage]
-                                        { ThreadSelect(tableMapPage, extentId, rowsToSelect, conditions, selectedRows); });
-        }
+        for (const auto& extentId : tableExtentIds){
+          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-        for (auto &workerThread : workerThreads)
-            workerThread.join();
-    }
+          const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
 
-    void Table::ThreadSelect(const Pages::IndexAllocationMapPage *tableMapPage, const extent_id_t &extentId, const size_t &rowsToSelect, const vector<Field> *conditions, vector<Row> *selectedRows)
-    {
+          const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
 
-        const auto& filename = this->database->GetFileName();
-
-        const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
-
-        const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
-
-        const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
-
-        const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
-                                    ? extentFirstPageId
-                                    : extentFirstPageId + 1;
-
-        for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
-        {
+          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                      ? extentFirstPageId
+                                      : extentFirstPageId + 1;
+          
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
-                break;
+              break;
 
             const Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
 
             if (page->GetPageSize() == 0)
-                continue;
+              continue;
 
-            this->pageSelectMutex.lock();
-
-            page->GetRows(selectedRows, *this, rowsToSelect, conditions);
-
-            this->pageSelectMutex.unlock();
-
-            if (selectedRows->size() >= rowsToSelect)
-                return;
+            page->GetRows(selectedRows, *this, rowsToSelect);
+          }
         }
     }
 

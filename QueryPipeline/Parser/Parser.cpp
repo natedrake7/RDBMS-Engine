@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include "SQLParser.h"
-#include "../Visitor.h"
+#include "../Visitor/Visitor.h"
 #include "../LogicalPlan/LogicalPlan.h"
 #include "../Validator/Validator.h"
 #include "../PhysicalPlan/PhysicalPlan.h"
@@ -53,7 +53,11 @@ namespace QueryPipeline
         }
 
         PhysicalPlan::PhysicalOperator* physicalPlan = logicalPlan->ToPhysical();
-        const auto results = physicalPlan->Execute();
+        const auto result = physicalPlan->Execute();
+
+        for (const auto& row: result.rows) {
+            row.PrintRow();
+        }
 
         delete logicalPlan;
         delete physicalPlan;

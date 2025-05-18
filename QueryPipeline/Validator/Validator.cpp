@@ -1,5 +1,5 @@
 #include "Validator.h"
-#include "../Visitor.h"
+#include "../Visitor/Visitor.h"
 #include "../../Server/Server.h"
 
 namespace QueryPipeline {
@@ -22,6 +22,7 @@ namespace QueryPipeline {
   }
 
   void  Validator::Validate(const SelectStatement& statement) {
+    //get only table needed. if joins occur get them all
     const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
 
     const Server::TableHeader* headerPtr = nullptr;
@@ -35,23 +36,25 @@ namespace QueryPipeline {
     if (headerPtr == nullptr)
       throw runtime_error("Table " + statement.table + " does not exist");
 
-    const auto columns = Server::ServerInstance::Get().SelectColumns("masterDb", headerPtr->name);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary("masterDb", headerPtr->name);
 
-    vector<const Server::ColumnHeader*> columnsPtrs;
     for (const auto& selectColumn : statement.columns) {
-      for (const auto& column : columns) {
-          if (selectColumn == column.name) {
-            columnsPtrs.push_back(&column);
-            break;
-          }
-      }
+      if (columnsDict.Contains(selectColumn))
+        continue;
+      
+      throw runtime_error("Column " + selectColumn + " does not exist");
     }
 
-    if (columnsPtrs.empty())
-      throw runtime_error("Columns not found");
+    if (statement.where.expressions.empty())
+      return;
 
-    if (columnsPtrs.size() != statement.columns.size())
-      throw runtime_error("Number of specified columns does not match actual number of columns");
+    for (const auto& expression : statement.where.expressions) {
+      if (columnsDict.Contains(expression.column))
+        continue;
+
+      throw runtime_error("Column " + expression.column + " does not exist");
+    }
+    
   }
 
 }

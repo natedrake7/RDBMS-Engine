@@ -32,14 +32,15 @@ file(GLOB ANTLR_SRC "${GENERATED_DIR}/*.cpp")
 
 add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
                             QueryPipeline/Parser/Parser.h
-                            QueryPipeline/Visitor.h
+        QueryPipeline/Visitor/Visitor.h
                             QueryPipeline/Validator/Validator.cpp
                             QueryPipeline/Validator/Validator.h
                             QueryPipeline/LogicalPlan/LogicalPlan.cpp
                             QueryPipeline/LogicalPlan/LogicalPlan.h
                             QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
                             QueryPipeline/PhysicalPlan/PhysicalPlan.h
-                            ${ANTLR_SRC})
+                            ${ANTLR_SRC}
+        QueryPipeline/Visitor/Visitor.cpp)
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
