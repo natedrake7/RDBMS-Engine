@@ -170,3 +170,24 @@ namespace DataTypes
 			throw invalid_argument("Invalid date/time components.");
 	}
 }
+
+bool operator!=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
+	return !(firstDate == secondDate);
+}
+
+bool operator==(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
+	return firstDate.GetUnixTimeStamp() == secondDate.GetUnixTimeStamp();
+}
+
+bool operator>=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
+	return !(firstDate < secondDate);
+}
+bool operator<=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
+	return !(firstDate > secondDate);
+}
+bool operator>(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
+	return firstDate.GetUnixTimeStamp() > secondDate.GetUnixTimeStamp();
+}
+bool operator<(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
+	return firstDate.GetUnixTimeStamp() < secondDate.GetUnixTimeStamp();
+}

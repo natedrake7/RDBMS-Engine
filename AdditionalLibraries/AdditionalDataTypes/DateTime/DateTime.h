@@ -42,3 +42,11 @@ namespace DataTypes {
 		static bool ValidateDate(const DateTime& datetime);
 	};
 }
+
+
+bool operator==(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
+bool operator!=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
+bool operator>=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
+bool operator<=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
+bool operator>(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
+bool operator<(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);

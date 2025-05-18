@@ -60,7 +60,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "SELECT name, is_system FROM sys_databases WHERE is_system = 1";
+    const string test = "SELECT name, is_system FROM sys_databases WHERE created_at != GETDATE()";
 
     //insert statement
     // const string test = "INSERT INTO sys_databases(name, filepath, is_system, created_at, last_modified, last_modified_by) "
