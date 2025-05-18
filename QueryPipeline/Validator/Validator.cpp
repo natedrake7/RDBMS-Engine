@@ -116,6 +116,9 @@ namespace QueryPipeline {
       if (!columnExistsInStatement && !header.isNullable)
         throw invalid_argument("Column " + columnName + " does not allow NULLS. Insert fails");
 
+      if (columnExistsInStatement)
+        continue;
+
       statement.values.emplace_back(nullptr, header.tablePosition);
     }
   }
@@ -150,9 +153,13 @@ namespace QueryPipeline {
         field->SetData(value);
         break;
       }
-      case ColumnType::DateTime:
+      case ColumnType::DateTime: {
+        const auto datetime = field->GetDateTime();
+        if (!DataTypes::DateTime::ValidateDate(datetime))
+            throw invalid_argument("failed to validate date");
 
         break;
+      }
       case ColumnType::Decimal:
 
         break;

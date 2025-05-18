@@ -32,21 +32,22 @@ namespace QueryPipeline::PhysicalPlan {
     delete this->filter;
   }
 
-  bool PhysicalFilter::EvaluateExpression(const Expression* filter, const DatabaseEngine::StorageTypes::Row &row){
+
+bool PhysicalFilter::EvaluateExpression(const Expression* filter, const DatabaseEngine::StorageTypes::Row &row){
     switch (filter->type) {
     case ExpressionType::Predicate: {
 
-      const auto actualData = row.GetData()[filter->columnIndex]->GetString();;
+      const auto actualData = row.GetData()[filter->columnIndex];
 
-      const std::string& expected = filter->value;
+      const auto& expected = filter->value;
       const std::string& op = filter->operation;
 
-      if (op == "=") return actualData == expected;
-      if (op == "!=" || op == "<>") return actualData != expected;
-      if (op == "<") return actualData < expected;
-      if (op == ">") return actualData > expected;
-      if (op == "<=") return actualData <= expected;
-      if (op == ">=") return actualData >= expected;
+      if (op == "=") return *actualData == expected;
+      if (op == "!=" || op == "<>") return *actualData != expected;
+      if (op == "<") return *actualData < expected;
+      if (op == ">") return *actualData > expected;
+      if (op == "<=") return *actualData <= expected;
+      if (op == ">=") return *actualData >= expected;
 
       throw std::runtime_error("Unknown operator: " + op);
     }

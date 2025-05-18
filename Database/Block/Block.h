@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../Constants.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 
 using namespace std;
 using namespace Constants;
@@ -70,3 +71,11 @@ namespace DatabaseEngine::StorageTypes {
         void PrintBlockData() const;
     };
 }
+
+
+bool operator==(const DatabaseEngine::StorageTypes::Block& block, const Field& field);
+bool operator!=(const DatabaseEngine::StorageTypes::Block& block, const Field& field);
+bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Field &field);
+bool operator<(const DatabaseEngine::StorageTypes::Block &block, const Field &field);
+bool operator>=(const DatabaseEngine::StorageTypes::Block &block, const Field &field);
+bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Field &field);

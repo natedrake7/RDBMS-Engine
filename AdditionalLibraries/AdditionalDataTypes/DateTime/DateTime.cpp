@@ -144,6 +144,12 @@ namespace DataTypes
 
 	const time_t & DateTime::GetUnixTimeStamp() const { return this->timeStamp; }
 
+	bool DateTime::ValidateDate(const DateTime &datetime){
+		const auto& timestamp = datetime.GetUnixTimeStamp();
+
+		return localtime(&timestamp) != nullptr;
+	}
+
 	time_t DateTime::ToUnixTimeStamp(const int year, const int month, const int day, const int hour, const int minute, const int second)
 	{
 		tm time = {};

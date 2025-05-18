@@ -25,6 +25,8 @@ predicate
     : '(' expression ')'
     | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
     ;
+    
+
 
 //insert statement
 insertStatement: 'INSERT' 'INTO' tableName '(' columnList ')' 'VALUES' '(' literalValueList ')'
@@ -36,8 +38,13 @@ literalValueList
 
 literalValue
         : STRING 
-        | NUMBER;
+        | NUMBER
+        | getDate;
         
+getDate
+    : 'GETDATE()'
+    ;
+    
 columnList : columnName (',' columnName)*;
 
 //declarations for clarification

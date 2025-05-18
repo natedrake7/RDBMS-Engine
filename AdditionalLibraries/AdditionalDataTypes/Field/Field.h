@@ -21,7 +21,7 @@ class Field {
         Field();
         ~Field();
         
-        explicit Field(const void* data, const column_index_t& columnIndex);
+        explicit Field(const void* data, const column_index_t& columnIndex = 0);
         
         explicit Field(const bool& data, const column_index_t& columnIndex);
         

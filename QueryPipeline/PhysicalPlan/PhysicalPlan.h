@@ -57,6 +57,7 @@ namespace QueryPipeline::PhysicalPlan{
     Expression* filter;
     PhysicalOperator* child;
 
+    static bool CompareByDataType (const Field& field, const DatabaseEngine::StorageTypes::Row &row);
     static bool EvaluateExpression(const Expression* filter, const DatabaseEngine::StorageTypes::Row &row);
 
     public:

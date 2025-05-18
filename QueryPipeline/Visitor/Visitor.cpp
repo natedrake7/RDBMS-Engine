@@ -3,7 +3,7 @@
 
 namespace QueryPipeline {
 
-  Expression Expression::Predicate(const std::string &column, const std::string &operation, const std::string &value) {
+  Expression Expression::Predicate(const std::string &column, const std::string &operation, const Field &value) {
     return Expression{
       ExpressionType::Predicate,
       nullptr,
@@ -93,7 +93,19 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitLiteralValue(SQLParser::LiteralValueContext *context){
-    return ParseString(context->STRING()->getText());
+    if (context->STRING())
+      return Field(ParseString(context->STRING()->getText()), 0);
+
+    if (context->NUMBER()) {
+      const auto number = SafeConverter<int64_t>::SafeStoi(context->NUMBER()->getText());
+
+      return Field(number, 0);
+    }
+    //datetime obj
+    if (context->getDate())
+      return Field(DataTypes::DateTime::Now(), 0);
+
+    throw invalid_argument("Invalid value specified");
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
@@ -122,14 +134,14 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
   antlrcpp::Any SQLVisitorImplementation::visitPredicate(SQLParser::PredicateContext *context){
     if (context->expression())
       return visit(context->expression());
-    
+
     return new Expression{
       ExpressionType::Predicate,
       nullptr,
       nullptr,
       context->columnName()->getText(),
       context->op->getText(),
-      context->literalValue()->getText()
+      std::any_cast<Field>(visit(context->literalValue()))
     };
   }
 
@@ -153,23 +165,18 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
     vector<Field> values;
     
     for (const auto& literalValue : context->literalValue()) {
-      if (literalValue->STRING()) {
+      const auto value = std::any_cast<Field>(visit(literalValue));
 
-        values.emplace_back();
-        values.back().SetData(literalValue->STRING()->getText());
-        
-        continue;
-      }
+      values.push_back(value);
 
-      const auto numberNode = literalValue->NUMBER();
-
-      const auto number = SafeConverter<int64_t>::SafeStoi(numberNode->getText());
-
-      values.emplace_back();
-      values.back().SetData(number);
+      throw invalid_argument("Invalid value specified");
     }
 
     return values;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitGetDate(SQLParser::GetDateContext *context){
+      return {};
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitColumnName(SQLParser::ColumnNameContext *context){

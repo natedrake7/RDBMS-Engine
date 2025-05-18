@@ -38,5 +38,7 @@ namespace DataTypes {
 
 		[[nodiscard]] string ToString(const string& format = "%Y-%m-%d %H:%M:%S") const;
 		[[nodiscard]] const time_t& GetUnixTimeStamp()const;
+
+		static bool ValidateDate(const DateTime& datetime);
 	};
 }

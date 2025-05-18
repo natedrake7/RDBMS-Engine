@@ -64,12 +64,11 @@ int main()
 
     server.Initialize("configuration.json");
 
-    // const string test = "SELECT table_position FROM sys_columns "
-    //                     "WHERE (table_name = 'sys_databases' OR dataType = 'Bool') "
-    //                     "OR table_name = 'sys_columns'";
+    const string test = "SELECT name FROM sys_databases WHERE is_system = 1";
 
-    const string test = "INSERT INTO sys_databases(name, filepath, is_system) "
-                        "VALUES ('stakosDb', '../stakosDb', 1)";
+    //insert statement
+    // const string test = "INSERT INTO sys_databases(name, filepath, is_system, created_at, last_modified, last_modified_by) "
+    //                     "VALUES ('stakosDb', '../stakosDb', 1, GETDATE(), GETDATE(), 'system')";
     try {
         QueryPipeline::Parser::Parse(test);
     }

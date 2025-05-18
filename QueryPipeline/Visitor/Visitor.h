@@ -23,14 +23,14 @@ namespace QueryPipeline {
       
     std::string column;
     std::string operation;
-    std::string value;
+    Field value;
 
     Constants::column_index_t columnIndex;
     
     static Expression Predicate(
       const std::string& column,
       const std::string& operation,
-      const std::string& value);
+      const Field& value);
 
     static Expression Logical(
       const ExpressionType& type,
@@ -102,5 +102,7 @@ namespace QueryPipeline {
       antlrcpp::Any visitInsertStatement(SQLParser::InsertStatementContext *context) override;
 
       antlrcpp::Any visitLiteralValueList(SQLParser::LiteralValueListContext *context) override;
+
+      antlrcpp::Any visitGetDate(SQLParser::GetDateContext *context) override;
   };
 }
