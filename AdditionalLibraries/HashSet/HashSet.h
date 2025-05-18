@@ -12,7 +12,7 @@ class HashSet : public unordered_set<T>
         
         HashSet(const initializer_list<T>& values) : unordered_set<T>(values) {}
         
-        HashSet(const vector<T>& values) : unordered_set<T>(values.begin(), values.end()) {}
+        explicit HashSet(const vector<T>& values) : unordered_set<T>(values.begin(), values.end()) {}
         
         bool TryGetValue(const T& key, T& value)
         {

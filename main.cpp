@@ -1,18 +1,14 @@
 ﻿#include <chrono>
-#include <cstdint>
 #include <csignal>
 #include <exception>
 #include <iostream>
 #include <string>
 #include <vector>
 #include "./Database/Database.h"
-#include "./Database/Row/Row.h"
 #include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
 #include "AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
-#include "AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h"
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
-#include "Database/AdditionalFunctions/SortingFunctions.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
 #include "Database/Table/Table.h"
 #include "QueryPipeline/Parser/Parser.h"
@@ -64,7 +60,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "SELECT name FROM sys_databases WHERE is_system = 1";
+    const string test = "SELECT name, is_system FROM sys_databases WHERE is_system = 1";
 
     //insert statement
     // const string test = "INSERT INTO sys_databases(name, filepath, is_system, created_at, last_modified, last_modified_by) "

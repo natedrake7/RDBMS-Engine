@@ -3,7 +3,7 @@
 namespace QueryPipeline {
   LogicalPlan::~LogicalPlan() = default;
 
-  LogicalProject::LogicalProject(LogicalPlan *child, const std::vector<std::string> &columns)
+  LogicalProject::LogicalProject(LogicalPlan *child, const std::vector<column_index_t> &columns)
         : child(child), columns(columns) {}
 
   LogicalProject::~LogicalProject(){
@@ -48,7 +48,7 @@ namespace QueryPipeline {
     
 
       if (!statement.columns.empty())
-        current = new LogicalProject(current, statement.columns);
+        current = new LogicalProject(current, statement.columnIndices);
 
     return current;
   }

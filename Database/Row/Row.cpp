@@ -137,6 +137,8 @@ namespace DatabaseEngine::StorageTypes {
 
     const vector<Block *> & Row::GetData() const { return this->data; }
 
+    vector<Block *> &Row::GetData() { return this->data; }
+
     void Row::PrintRow() const
     {
         for(size_t i = 0; i < this->data.size(); i++)

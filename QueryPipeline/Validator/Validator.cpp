@@ -22,7 +22,7 @@ namespace QueryPipeline {
       throw runtime_error("Cannot drop: a system database");
   }
 
-  void  Validator::Validate(const SelectStatement& statement) {
+  void  Validator::Validate(SelectStatement& statement) {
     //get only table needed. if joins occur get them all
     const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
 
@@ -40,8 +40,10 @@ namespace QueryPipeline {
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary("masterDb", headerPtr->name);
 
     for (const auto& selectColumn : statement.columns) {
-      if (columnsDict.Contains(selectColumn))
+      if (Server::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
+        statement.columnIndices.emplace_back(header.tablePosition);
         continue;
+      }
       
       throw runtime_error("Column " + selectColumn + " does not exist");
     }
@@ -64,7 +66,6 @@ namespace QueryPipeline {
     }
 
     Server::ColumnHeader header;
-
     if (!columnsDictionary.TryGetValue(expression->column, header))
       throw runtime_error("Column " + expression->column + " does not exist");
 

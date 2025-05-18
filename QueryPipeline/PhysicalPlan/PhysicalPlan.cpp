@@ -16,13 +16,32 @@ namespace QueryPipeline::PhysicalPlan {
     return {};
   }
 
-  PhysicalProject::PhysicalProject(PhysicalOperator *child, std::vector<std::string> columns)
+  PhysicalProject::PhysicalProject(PhysicalOperator *child, const std::vector<column_index_t>& columns)
     : columns(std::move(columns)), child(child) {}
 
   PhysicalProject::~PhysicalProject(){ delete this->child; }
 
   PhysicalPlanResult PhysicalProject::Execute(){
-      return this->child->Execute();
+      auto result = this->child->Execute();
+
+      for (auto& row: result.rows) {
+          auto& data = row.GetData();
+
+        vector<DatabaseEngine::StorageTypes::Block*> newData;
+
+        for (int i = 0;i < data.size(); i++) {
+          if (!columns.Contains(i)) {
+            delete data[i];
+            continue;
+          }
+
+          newData.push_back(std::move(data[i]));
+        }
+
+        data = std::move(newData);
+      }
+
+    return result;
   }
 
   PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Expression* filter): child(child) , filter(filter) {}

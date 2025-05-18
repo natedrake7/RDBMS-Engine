@@ -38,7 +38,7 @@ namespace QueryPipeline
 
         LogicalPlan* logicalPlan = nullptr;
         if (response.type() == typeid(SelectStatement)) {
-            const auto selectStatement = std::any_cast<SelectStatement>(response);
+            auto selectStatement = std::any_cast<SelectStatement>(response);
             Validator::Validate(selectStatement);
             logicalPlan = BuildLogicalPlan(selectStatement);
         }

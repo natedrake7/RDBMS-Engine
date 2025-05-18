@@ -1,4 +1,7 @@
 #pragma once
+#include "../../AdditionalLibraries/HashSet/HashSet.h"
+
+
 #include <string>
 #include <vector>
 #include "../../Database/Row/Row.h"
@@ -44,11 +47,11 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalProject final : public PhysicalOperator{
-    std::vector<std::string> columns;
+    HashSet<column_index_t> columns;
     PhysicalOperator* child;
 
     public:
-      PhysicalProject(PhysicalOperator* child, std::vector<std::string> columns);
+      PhysicalProject(PhysicalOperator* child, const std::vector<column_index_t>& columns);
       ~PhysicalProject() override;
       PhysicalPlanResult Execute() override;
   };
@@ -57,7 +60,6 @@ namespace QueryPipeline::PhysicalPlan{
     Expression* filter;
     PhysicalOperator* child;
 
-    static bool CompareByDataType (const Field& field, const DatabaseEngine::StorageTypes::Row &row);
     static bool EvaluateExpression(const Expression* filter, const DatabaseEngine::StorageTypes::Row &row);
 
     public:

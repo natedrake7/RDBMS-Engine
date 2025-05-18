@@ -50,6 +50,8 @@ namespace QueryPipeline {
   typedef struct SelectStatement{
     std::string table;
     std::vector<std::string> columns;
+    std::vector<column_index_t> columnIndices;
+    
     WhereClause where;
   }SelectStatement;
 

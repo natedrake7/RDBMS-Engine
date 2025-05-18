@@ -63,6 +63,8 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] const vector<Block *> &GetData() const;
 
+        [[nodiscard]] vector<Block *> &GetData();
+
         void PrintRow() const;
 
         [[nodiscard]] const uint32_t &GetRowSize() const;
