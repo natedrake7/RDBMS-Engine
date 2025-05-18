@@ -26,10 +26,10 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalCreateDatabase(this->dbName);
   }
 
-  LogicalFilter::LogicalFilter(LogicalPlan* child, const vector<Expression>& filters): child(child), filters(filters) {}
+  LogicalFilter::LogicalFilter(LogicalPlan* child, Expression* filter): child(child), filter(filter) {}
 
   PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(){
-    return new PhysicalPlan::PhysicalFilter(this->child->ToPhysical(), this->filters);
+    return new PhysicalPlan::PhysicalFilter(this->child->ToPhysical(), this->filter);
   }
 
   LogicalPlan * BuildLogicalPlan(const SelectStatement &statement){
@@ -37,8 +37,8 @@ namespace QueryPipeline {
 
       LogicalPlan* current = scanTable;
 
-      if (!statement.where.expressions.empty())
-        current = new LogicalFilter(current, statement.where.expressions);
+      if (statement.where.expression != nullptr)
+        current = new LogicalFilter(current, statement.where.expression);
     
 
       if (!statement.columns.empty())

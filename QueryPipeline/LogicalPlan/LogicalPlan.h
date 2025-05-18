@@ -38,8 +38,8 @@ namespace QueryPipeline {
   class LogicalFilter final : public LogicalPlan {
     public:
       LogicalPlan* child;
-      vector<Expression> filters;
-      explicit LogicalFilter(LogicalPlan* child, const vector<Expression>& filters);
+      Expression* filter;
+      explicit LogicalFilter(LogicalPlan* child, Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
   };
 }

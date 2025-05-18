@@ -3,7 +3,6 @@
 #include "../../Server/Server.h"
 
 namespace QueryPipeline {
-
   void Validator::Validate(const CreateDbStatement& statement){
     if (!Server::ServerInstance::Get().DatabaseExists(statement.name))
       return;
@@ -45,16 +44,29 @@ namespace QueryPipeline {
       throw runtime_error("Column " + selectColumn + " does not exist");
     }
 
-    if (statement.where.expressions.empty())
+    if (statement.where.expression == nullptr)
       return;
 
-    for (const auto& expression : statement.where.expressions) {
-      if (columnsDict.Contains(expression.column))
-        continue;
+    Validator::Validate(statement.where.expression, columnsDict);
+  }
 
-      throw runtime_error("Column " + expression.column + " does not exist");
+  void Validator::Validate(Expression *expression, const Dictionary<string, Server::ColumnHeader>& columnsDictionary){
+
+    if (expression->type != ExpressionType::Predicate
+      && expression->left != nullptr
+      && expression->right != nullptr) {
+      Validator::Validate(expression->left, columnsDictionary);
+      Validator::Validate(expression->right, columnsDictionary);
+
+      return;
     }
-    
+
+    Server::ColumnHeader header;
+
+    if (!columnsDictionary.TryGetValue(expression->column, header))
+      throw runtime_error("Column " + expression->column + " does not exist");
+
+    expression->columnIndex = header.tablePosition;
   }
 
 }

@@ -25,36 +25,38 @@ namespace QueryPipeline::PhysicalPlan {
       return this->child->Execute();
   }
 
-  PhysicalFilter::PhysicalFilter(PhysicalOperator *child, const vector<Expression> &filters): child(child) {
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary("masterDb", "sys_columns");
-
-    for (const auto &filter : filters) {
-      Server::ColumnHeader header;
-      columnsDict.TryGetValue(filter.column, header);
-      
-      this->filters.emplace_back(PhysicalExpression{
-        static_cast<column_index_t>(header.tablePosition),
-        filter.operation,
-        filter.value,
-      });
-    }
-  }
+  PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Expression* filter): child(child) , filter(filter) {}
 
   PhysicalFilter::~PhysicalFilter(){
     delete this->child;
+    delete this->filter;
   }
 
-  bool PhysicalFilter::EvaluateExpression(const DatabaseEngine::StorageTypes::Row &row)const{
-      const auto& data = row.GetData();
-    
-      for (const auto& filter: this->filters) {
-        const auto columnIndex = filter.column;
+  bool PhysicalFilter::EvaluateExpression(const Expression* filter, const DatabaseEngine::StorageTypes::Row &row){
+    switch (filter->type) {
+    case ExpressionType::Predicate: {
 
-        if (data[columnIndex]->GetString() != filter.value)
-          return false;
-      }
+      const auto actualData = row.GetData()[filter->columnIndex]->GetString();;
 
-    return true;
+      const std::string& expected = filter->value;
+      const std::string& op = filter->operation;
+
+      if (op == "=") return actualData == expected;
+      if (op == "!=" || op == "<>") return actualData != expected;
+      if (op == "<") return actualData < expected;
+      if (op == ">") return actualData > expected;
+      if (op == "<=") return actualData <= expected;
+      if (op == ">=") return actualData >= expected;
+
+      throw std::runtime_error("Unknown operator: " + op);
+    }
+    case ExpressionType::And:
+      return EvaluateExpression(filter->left, row) && EvaluateExpression(filter->right, row);
+    case ExpressionType::Or:
+      return EvaluateExpression(filter->left, row) || EvaluateExpression(filter->right, row);
+    default:
+      throw std::runtime_error("Invalid expression type");
+    }
   }
 
   PhysicalPlanResult PhysicalFilter::Execute(){
@@ -63,7 +65,7 @@ namespace QueryPipeline::PhysicalPlan {
     PhysicalPlanResult result;
     for (const auto &row : childResult.rows) {
       
-      if (!this->EvaluateExpression(row))
+      if (!this->EvaluateExpression(this->filter, row))
         continue;
 
       result.rows.emplace_back(row);

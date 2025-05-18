@@ -64,7 +64,9 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string test = "SELECT table_position FROM sys_columns WHERE table_name = 'sys_databases' AND dataType = 'String'";
+    const string test = "SELECT table_position FROM sys_columns "
+                        "WHERE (table_name = 'sys_databases' OR dataType = 'Bool') "
+                        "OR table_name = 'sys_columns'";
 
     try {
         QueryPipeline::Parser::Parse(test);

@@ -4,11 +4,26 @@ sqlStatement : selectStatement | createDbStatement | dropDbStatement;
 
 selectStatement : 'SELECT' columnList 'FROM' tableName whereClause?;
 
-whereClause: 'WHERE' expression ('AND' expression)*
-            ;
+whereClause
+    : 'WHERE' expression
+    ;
+
 expression
-        : columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
-        ;
+    : orExpression
+    ;
+
+orExpression
+    : andExpression ('OR' andExpression)*
+    ;
+
+andExpression
+    : predicate ('AND' predicate)*
+    ;
+
+predicate
+    : '(' expression ')'
+    | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
+    ;
 
 literalValue
         : STRING 

@@ -49,26 +49,55 @@ namespace QueryPipeline {
 
   antlrcpp::Any SQLVisitorImplementation::visitWhereClause(SQLParser::WhereClauseContext *context){
     WhereClause where;
-    for (const auto& exprCtx : context->expression()) {
-      const auto expr = std::any_cast<Expression>(visitExpression(exprCtx));
-      where.expressions.push_back(expr);
-    }
-
+    where.expression = std::any_cast<Expression*>(visitExpression(context->expression()));
     return where;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitExpression(SQLParser::ExpressionContext *context){
-    const std::string raw = context->literalValue()->getText();
-    
-    return Expression {
-      .column = context->columnName()->getText(),
-      .operation = context->op->getText(),
-      .value = raw.substr(1, raw.length() - 2)
-    };
+    return visit(context->orExpression());
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitLiteralValue(SQLParser::LiteralValueContext *context){
     return context->STRING()->getText();
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
+    auto* expression = std::any_cast<Expression*>(visit(context->andExpression(0)));
+
+    for (size_t i = 1; i < context->andExpression().size(); i++) {
+      auto* right = std::any_cast<Expression*>(visit(context->andExpression(i)));
+      
+      expression = new Expression(ExpressionType::Or, expression, right);  // assuming you have a class like this
+    }
+
+    return expression;
+  }
+
+antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpressionContext *context) {
+    auto* expression = std::any_cast<Expression*>(visit(context->predicate(0)));
+
+    for (size_t i = 1; i < context->predicate().size(); i++) {
+      auto* right = std::any_cast<Expression*>(visit(context->predicate(i)));
+      
+      expression = new Expression(ExpressionType::And, expression, right);  // assuming you have a class like this
+    }
+
+    return expression;
+  }
+  antlrcpp::Any SQLVisitorImplementation::visitPredicate(SQLParser::PredicateContext *context){
+    if (context->expression())
+      return visit(context->expression());
+    
+    const std::string value = context->literalValue()->getText();
+
+    return new Expression{
+      ExpressionType::Predicate,
+      nullptr,
+      nullptr,
+      context->columnName()->getText(),
+      context->op->getText(),
+      value.substr(1, value.size() - 2)
+  };
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitColumnName(SQLParser::ColumnNameContext *context){

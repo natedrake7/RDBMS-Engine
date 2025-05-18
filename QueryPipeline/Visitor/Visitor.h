@@ -1,18 +1,64 @@
 #pragma once
+#include "../../Database/Constants.h"
+
+
 #include <SQLVisitor.h>
 #include <string>
 #include <vector>
 
 namespace QueryPipeline {
 
+  enum class ExpressionType {
+    And = 0,
+    Or = 1,
+    Predicate = 2
+  };
+
   typedef struct Expression {
+    ExpressionType type;
+
+    Expression* left;
+    Expression* right;
+      
     std::string column;
     std::string operation;
     std::string value;
+
+    Constants::column_index_t columnIndex;
+    
+    static Expression Predicate(
+      const std::string& column,
+      const std::string& operation,
+      const std::string& value) {
+      return Expression{
+        ExpressionType::Predicate,
+        nullptr,
+        nullptr,
+        column,
+        operation,
+        value
+      };
+    }
+
+    static Expression Logical(const ExpressionType& type, Expression* leftExpression, Expression* RightExpression) {
+      return Expression{
+        type,
+        leftExpression,
+        RightExpression
+      };
+    }
+
+    ~Expression() {
+      delete left;
+      delete right;
+    }
+    
   }Expression;
 
   typedef struct WhereClause{
-    std::vector<Expression> expressions;
+    Expression* expression;
+
+    WhereClause() { this->expression = nullptr; }
   }WhereClause;
 
   typedef struct SelectStatement{
@@ -52,5 +98,11 @@ namespace QueryPipeline {
       antlrcpp::Any visitExpression(SQLParser::ExpressionContext *context) override;
   
       antlrcpp::Any visitLiteralValue(SQLParser::LiteralValueContext *context) override;
+    
+      antlrcpp::Any visitOrExpression(SQLParser::OrExpressionContext *context) override;
+    
+      antlrcpp::Any visitAndExpression(SQLParser::AndExpressionContext *context) override;
+    
+      antlrcpp::Any visitPredicate(SQLParser::PredicateContext *context) override;
   };
 }

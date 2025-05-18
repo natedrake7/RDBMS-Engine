@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "../../Database/Row/Row.h"
+#include "../../Server/Server.h"
 #include "../Visitor/Visitor.h"
 
 namespace QueryPipeline {
@@ -18,12 +19,6 @@ namespace QueryPipeline::PhysicalPlan{
       std::vector<DatabaseEngine::StorageTypes::Row> rows;
       vector<column_index_t> columnIndices;
     }PhysicalPlanResult;
-
-  typedef struct PhysicalExpression {
-    column_index_t column;
-    std::string operation;
-    std::string value;
-  }PhysicalExpression;
 
     class PhysicalOperator {
       public:
@@ -59,13 +54,13 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalFilter final : public PhysicalOperator{
-    std::vector<PhysicalExpression> filters;
+    Expression* filter;
     PhysicalOperator* child;
 
-    bool EvaluateExpression(const DatabaseEngine::StorageTypes::Row& row)const;
+    static bool EvaluateExpression(const Expression* filter, const DatabaseEngine::StorageTypes::Row &row);
 
     public:
-      PhysicalFilter(PhysicalOperator* child, const vector<Expression>& filters);
+      PhysicalFilter(PhysicalOperator* child, Expression* filter);
       ~PhysicalFilter() override;
       PhysicalPlanResult Execute() override;
   };

@@ -1,8 +1,11 @@
 #pragma once
 #include "../Visitor/Visitor.h"
+#include "../../Server/Server.h"
 
 namespace QueryPipeline {
   class Validator {
+
+    static void Validate(Expression* expression, const Dictionary<std::string, Server::ColumnHeader>& columnsDictionary);
 
     public:
       static Validator& Get() {
