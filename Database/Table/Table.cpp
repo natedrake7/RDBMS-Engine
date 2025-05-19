@@ -116,8 +116,8 @@ namespace DatabaseEngine::StorageTypes {
       {
         delete this->clusteredIndexedTree;
 
-        for (int i = 0; i < this->nonClusteredIndexedTrees.size(); i++)
-            delete this->nonClusteredIndexedTrees[i];
+        for (const auto & nonClusteredIndexedTree : this->nonClusteredIndexedTrees)
+            delete nonClusteredIndexedTree;
 
         HeaderPage* headerPage = StorageManager::Get().GetHeaderPage(this->database->GetFileName());
 

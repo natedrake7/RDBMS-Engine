@@ -128,7 +128,9 @@ add_library(Database    Database/Database.cpp
                         Database/AdditionalFunctions/SortingAlgorithms/MergeSort/MergeSort.cpp
                         Database/AdditionalFunctions/SortingAlgorithms/MergeSort/MergeSort.h
                         Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
-                        Database/AdditionalFunctions/StringFunctions/StringFunctions.h)
+                        Database/AdditionalFunctions/StringFunctions/StringFunctions.h
+        Database/LockManager/LockManager.cpp
+        Database/LockManager/LockManager.h)
 
 add_library(Server  Server/ConnectionManager/ConnectionManager.cpp
                     Server/ConnectionManager/ConnectionManager.h
