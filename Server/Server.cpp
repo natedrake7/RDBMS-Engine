@@ -30,6 +30,8 @@ namespace Server {
      this->masterDb = nullptr;
   }
 
+  ServerInstance::~ServerInstance() = default;
+
   void ServerInstance::ReadConfiguration(const string &configPath){
     std::ifstream file(configPath);
 
@@ -57,7 +59,7 @@ namespace Server {
     this->ReadConfiguration(configPath);
 
      if (this->CheckIfMasterDbExists()) {
-       DatabaseEngine::UseDatabase(this->sysDbName, &this->masterDb, this->sysTables);
+       this->UseMasterDb();
        return;
      }
      
@@ -104,16 +106,39 @@ namespace Server {
      this->InsertSchemaToMasterDb(this->sysDbName, "dbo");
   }
 
-  DatabaseEngine::Database * ServerInstance::GetMasterDb(){ return this->masterDb; }
+  DatabaseEngine::Database * ServerInstance::GetMasterDb()const{ return this->masterDb; }
 
   void ServerInstance::Shutdown() const{
     delete this->masterDb;
+
+     for (const auto& [name, database]: this->databases)
+       delete database;
+  }
+
+  DatabaseEngine::Database* ServerInstance::UseDatabase(const string &dbName, const bool& isServerInitialization){
+     if (dbName == this->sysDbName && this->masterDb != nullptr)
+       return this->masterDb;
+
+     DatabaseEngine::Database *db = nullptr;
+     if (this->databases.TryGetValue(dbName, db))
+       return db;
+
+     db = new DatabaseEngine::Database(dbName, isServerInitialization);
+
+     if (dbName != this->sysDbName)
+        this->databases.Add(dbName, db);
+     
+     return db;
+  }
+
+  void ServerInstance::UseMasterDb(){
+       this->masterDb = new DatabaseEngine::Database(this->sysDbName, this->sysTables);
   }
 
   void ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath, const bool& isSystem, const string& user) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_databases");
 
-      const auto currentDate = DataTypes::DateTime::Now().ToString();
+      const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Field> fields = {
         Field(dbName, 0),
@@ -134,7 +159,7 @@ namespace Server {
     const bool& isSystem,
     const string& user) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_tables");
-      const auto currentDate = DataTypes::DateTime::Now().ToString();
+      const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Field> fields = {
         Field(dbName, 0),
@@ -185,7 +210,7 @@ namespace Server {
     const bool &isClustered,
     const string &user) const{
      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_indexes");
-     const auto currentDate = DataTypes::DateTime::Now().ToString();
+     const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Field> fields = {
        Field(dbName, 0),
@@ -202,7 +227,7 @@ namespace Server {
   }
   void ServerInstance::InsertSchemaToMasterDb(const string &dbName, const string &schemaName, const string &user) const{
      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_schemas");
-     const auto currentDate = DataTypes::DateTime::Now().ToString();
+     const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Field> fields = {
        Field(dbName, 0),
@@ -426,9 +451,9 @@ namespace Server {
     using namespace DatabaseEngine;
     using namespace DatabaseEngine::StorageTypes;
 
-   CreateDatabase(this->sysDbName);
+    CreateDatabase(this->sysDbName);
 
-   UseDatabase(this->sysDbName, &this->masterDb, true);
+    this->masterDb = this->UseDatabase(this->sysDbName, true);
 
     if (this->masterDb == nullptr)
       throw runtime_error("Failed to create" + this->sysDbName + " database");

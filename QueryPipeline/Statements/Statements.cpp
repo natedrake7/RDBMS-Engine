@@ -45,7 +45,22 @@ namespace QueryPipeline::Statements {
   }
 
   void CreateTableStatement::Validate(){
-    
+    const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
+
+    const Headers::TableHeader* headerPtr = nullptr;
+    for (const auto& table : tables) {
+      if (table.name == this->name) {
+        headerPtr = &table;
+        break;
+      }
+    }
+
+    if (headerPtr == nullptr)
+      throw runtime_error("Table " + this->name + " already exists");
+
+    // for (const auto& column: this->columns) {
+    //   column.type = 
+    // }
   }
 
   LogicalPlan * CreateTableStatement::ToLogical(){

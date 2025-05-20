@@ -47,6 +47,8 @@ void shutdownServer(int signal) {
 void InitializeServer(const string& filePath) {
     //create sys tables(read from file).
 }
+
+static std::string DatabaseName = "MoviesDb";
  
 int main() 
 {
@@ -54,42 +56,41 @@ int main()
     signal(SIGTERM, shutdownServer);  // kill command
     signal(SIGABRT, shutdownServer);  // abort()
 
-    static vector<Database*> databases;
-
     auto& server = ServerInstance::Get();
 
     server.Initialize("configuration.json");
 
     //select statement
-    const string test = "SELECT name, is_system FROM sys_databases WHERE created_at != GETDATE()";
+    const string test = "SELECT is_nullable FROM sys_columns WHERE name = 'db_name'";
 
     //insert statement
     // const string test = "INSERT INTO sys_databases(name, filepath, is_system, created_at, last_modified, last_modified_by) "
     //                     "VALUES ('stakosDb', '../stakosDb', 1, GETDATE(), GETDATE(), 'system')";
 
     //create table
-    // const string test = "CREATE TABLE kostasis ( data VARCHAR(MAX) NULL, isNull Bool NOT NULL, Id INT PRIMARY KEY IDENTITY)";
+    // const string test = "CREATE TABLE Actors ( data VARCHAR(MAX) NULL, isNull Bool NOT NULL, Id INT PRIMARY KEY IDENTITY)";
+
+    // const string test = "CREATE DATABASE MoviesDb";
 
     try {
+        const auto start = std::chrono::high_resolution_clock::now();
+        
         QueryPipeline::Parser::Parse(test);
+
+        const auto end = std::chrono::high_resolution_clock::now();
+
+        const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+
+        cout << "Time: " << elapsed.count() << " ms" << endl;
     }
     catch (const std::exception& e) {
         cerr << e.what() << endl;
     }
 
-    for (const auto& database: databases)
-        delete database;
-
     server.Shutdown();
     
     return 0;
 
-
-    Database *db = nullptr;
-    UseDatabase("stakosDb", &db);
-
-    return 0;
-    
     
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 

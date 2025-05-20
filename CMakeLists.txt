@@ -148,4 +148,4 @@ add_executable(Client   Client/client.cpp
 target_link_libraries(Client PRIVATE AdditionalLibraries)
 
 target_link_libraries(DatabaseInterface 
-                        PRIVATE Database Server AdditionalLibraries QueryPipeline)
+                        PRIVATE Server Database AdditionalLibraries QueryPipeline)

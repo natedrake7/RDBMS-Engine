@@ -278,10 +278,8 @@ namespace Pages
         vector<Block *> copyBlocks;
 
         const auto& rowData = row->GetData();
-        for(const auto& columnIndex: selectedColumnIndices)
+        for(const auto& block: rowData)
         {
-            const auto& block = rowData[columnIndex];
-
             Block *blockCopy = new Block(block);
             if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
             {

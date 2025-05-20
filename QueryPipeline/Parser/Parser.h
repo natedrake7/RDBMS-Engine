@@ -1,16 +1,38 @@
 #pragma once
-
-#include "../../Database/B+Tree/BPlusTree.h"
 #include "../Statements/Statements.h"
-
-
 #include <any>
-#include <iostream>
+#include <functional>
+#include <typeindex>
 
 
 using namespace std;
 
 namespace QueryPipeline{
+
+        static Dictionary<std::type_index, function<Statements::Statement*(const std::any&)>> handlers = {
+            {
+                typeid(Statements::SelectStatement),
+                [](const auto& r) { return new Statements::SelectStatement(std::any_cast<Statements::SelectStatement>(r)); }
+            },
+            {
+                typeid(Statements::CreateTableStatement),
+                [](const auto& r) { return new Statements::CreateTableStatement(std::any_cast<Statements::CreateTableStatement>(r)); }
+            },
+            {
+                typeid(Statements::InsertStatement),
+                [](const auto& r) { return new Statements::InsertStatement(std::any_cast<Statements::InsertStatement>(r)); }
+            },
+
+            {
+                typeid(Statements::CreateDbStatement),
+                [](const auto& r) { return new Statements::CreateDbStatement(std::any_cast<Statements::CreateDbStatement>(r)); }
+            },
+
+            {
+                typeid(Statements::DropDbStatement),
+                [](const auto& r) { return new Statements::DropDbStatement(std::any_cast<Statements::DropDbStatement>(r)); }
+            },
+        };
 
     class Parser{
         ~Parser();

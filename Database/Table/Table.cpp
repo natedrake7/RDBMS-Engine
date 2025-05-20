@@ -362,7 +362,8 @@ namespace DatabaseEngine::StorageTypes {
           );
           return;
         }
-        else if (useNonClusteredIndex)
+        
+        if (useNonClusteredIndex)
         {
           this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, conditions, selectedColumnIndexes);
           return;

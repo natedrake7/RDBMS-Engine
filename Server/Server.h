@@ -20,15 +20,17 @@ namespace Server {
     string sysDbName;
     string sysDbPath;
     vector<Headers::sysTable> sysTables;
-
     DatabaseEngine::Database* masterDb;
 
+    Dictionary<string, DatabaseEngine::Database*> databases;
+
     ServerInstance();
-    ~ServerInstance() = default;
+    ~ServerInstance();
 
     void ReadConfiguration(const string& configPath);
     void CreateSystemDatabase();
     [[nodiscard]] bool CheckIfMasterDbExists()const;
+    
 
   public:
     static ServerInstance& Get() {
@@ -66,8 +68,11 @@ namespace Server {
     [[nodiscard]] vector<Headers::ColumnHeader> SelectColumns(const string& dbName, const string& tableName) const;
     [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const string& dbName, const string& tableName) const;
     [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row> SelectIndexes(const string& dbName, const string& tableName) const;
-    [[nodiscard]] DatabaseEngine::Database* GetMasterDb();
+    [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     void Shutdown()const;
+    [[nodiscard]] DatabaseEngine::Database* UseDatabase(const string& dbName, const bool& isServerInitialization = false);
+    void UseMasterDb();
+    
   };
 }

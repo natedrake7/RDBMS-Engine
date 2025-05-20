@@ -3,7 +3,6 @@
 #include "../../Database/Block/Block.h"
 #include "../../Database/Table/Table.h"
 #include "../../Server/Server.h"
-#include "../LogicalPlan/LogicalPlan.h"
 #include "../Statements/Statements.h"
 
 namespace QueryPipeline::PhysicalPlan {
@@ -72,9 +71,9 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
       throw std::runtime_error("Unknown operator: " + op);
     }
     case Statements::ExpressionType::And:
-      return EvaluateExpression(filter->left, row) && EvaluateExpression(filter->right, row);
+      return PhysicalFilter::EvaluateExpression(filter->left, row) && PhysicalFilter::EvaluateExpression(filter->right, row);
     case Statements::ExpressionType::Or:
-      return EvaluateExpression(filter->left, row) || EvaluateExpression(filter->right, row);
+      return PhysicalFilter::EvaluateExpression(filter->left, row) || PhysicalFilter::EvaluateExpression(filter->right, row);
     default:
       throw std::runtime_error("Invalid expression type");
     }
@@ -86,7 +85,7 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
     PhysicalPlanResult result;
     for (const auto &row : childResult.rows) {
       
-      if (!this->EvaluateExpression(this->filter, row))
+      if (!PhysicalFilter::EvaluateExpression(this->filter, row))
         continue;
 
       result.rows.emplace_back(row);
@@ -99,16 +98,13 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
 
   PhysicalPlanResult PhysicalTableScan::Execute(){
       using namespace DatabaseEngine::StorageTypes;
-      DatabaseEngine::Database* db = nullptr;
-
-      UseDatabase("masterDb", &db);
+      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase("masterDb");
 
       Table* table = db->OpenTable(this->tableName);
 
       PhysicalPlanResult result;
 
-      const vector<column_index_t> columnIndices;
-      table->Select(result.rows, columnIndices);
+      table->Select(result.rows, {});
 
       return result;
     }
@@ -117,9 +113,8 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
 
   PhysicalPlanResult PhysicalInsert::Execute(){
     using namespace DatabaseEngine::StorageTypes;
-    DatabaseEngine::Database* db = nullptr;
-
-    UseDatabase("masterDb", &db);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase("masterDb");
+    
     Table* table = db->OpenTable(this->tableName);
 
     table->InsertRows({fields});

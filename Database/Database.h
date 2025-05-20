@@ -210,10 +210,6 @@ public:
 
 void CreateDatabase(const string &dbName);
 
-void UseDatabase(const string &dbName, Database **db, const bool& isServerInitialization = false);
-
-void UseDatabase(const string &dbName, Database **db, const vector<Headers::sysTable>& tables);
-
 void PrintRows(const vector<StorageTypes::Row> &rows);
 
 void PrintRows(const vector<StorageTypes::Row*> &rows);

@@ -107,8 +107,21 @@ namespace DatabaseEngine
 
         const auto& headerPageTables = headerPage->GetTablesFullHeaders();
 
-        for (int i = 0;i < tables.size(); i++)
-            this->CreateTable(tables[i], headerPageTables[i]);
+        for (int i = 0; i < tables.size(); i++) {
+            const TableHeader* ptr = nullptr;
+
+            for (const auto& header: headerPageTables) {
+                if (header.tableId == i) {
+                    ptr = &header;
+                    break;
+                }
+            }
+
+            if (ptr == nullptr)
+                continue;
+            
+            this->CreateTable(tables[i], *ptr);
+        }
     }
 
     Database::Database(const string &dbName, const bool& isServerInitialization)
@@ -262,16 +275,6 @@ namespace DatabaseEngine
         HeaderPage *headerPage = StorageManager::Get().CreateHeaderPage(dbName + ".db");
 
         headerPage->SetDbHeader(DatabaseHeader(0, firstPfsPageId, firstGamePageId));
-    }
-
-    void UseDatabase(const string &dbName, Database **db, const bool& isServerInitialization)
-    {
-        *db = new Database(dbName, isServerInitialization);
-    }
-
-    void UseDatabase(const string &dbName, Database **db, const vector<Headers::sysTable>& tables)
-    {
-        *db = new Database(dbName, tables);
     }
 
     void PrintRows(const vector<Row> &rows)

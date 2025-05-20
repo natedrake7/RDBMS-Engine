@@ -8,33 +8,32 @@
 
 #include <SQLBaseListener.h>
 #include <SQLLexer.h>
+#include <variant>
 
 namespace QueryPipeline
 {
     Parser::Parser() = default;
 
-    Statements::Statement * Parser::CreateStatement(const std::any &ast){
-        if (ast.type() == typeid(Statements::SelectStatement))
-            return new Statements::SelectStatement(std::any_cast<Statements::SelectStatement>(ast));
-        if (ast.type() == typeid(Statements::CreateDbStatement))
-            return new Statements::CreateDbStatement(std::any_cast<Statements::CreateDbStatement>(ast));
-        if (ast.type() == typeid(Statements::DropDbStatement))
-            return new Statements::DropDbStatement(std::any_cast<Statements::DropDbStatement>(ast));
-        if (ast.type() == typeid(Statements::InsertStatement))
-            return new Statements::InsertStatement(std::any_cast<Statements::InsertStatement>(ast));
-        if (ast.type() == typeid(Statements::InsertStatement))
-            return new Statements::InsertStatement(std::any_cast<Statements::InsertStatement>(ast));
-        if (ast.type() == typeid(Statements::CreateTableStatement))
-            return new Statements::CreateTableStatement(std::any_cast<Statements::CreateTableStatement>(ast));
+    using StatementVariant = variant<
+        Statements::SelectStatement,
+        Statements::CreateDbStatement,
+        Statements::DropDbStatement,
+        Statements::InsertStatement,
+        Statements::CreateTableStatement
+    >;
 
-        return nullptr;
-    }        
+    Statements::Statement* Parser::CreateStatement(const std::any &ast){
+        function<Statements::Statement *(const any &)> handler;
 
+        if (!handlers.TryGetValue(ast.type(), handler))
+            return nullptr;
+
+        return handler(ast);
+    }
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(const string& query)
-    {
+    void Parser::Parse(const string& query){
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
 
@@ -52,7 +51,6 @@ namespace QueryPipeline
 
         SQLVisitorImplementation visitor;
         const auto response = visitor.visit(tree);
-
         Statements::Statement* statement = Parser::CreateStatement(response);
 
         if (statement == nullptr)
@@ -71,7 +69,6 @@ namespace QueryPipeline
         for (const auto& row: result.rows) {
             row.PrintRow();
         }
-
         
         delete statement;
         delete logicalPlan;
