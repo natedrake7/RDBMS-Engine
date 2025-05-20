@@ -3,6 +3,7 @@
 #include <vector>
 #include "../../../Database/Constants.h"
 #include "../Decimal/Decimal.h"
+#include "../Headers/Headers.h"
 
 using namespace std;
 
@@ -100,4 +101,6 @@ class Field {
   
   
         void SetColumnIndex(const Constants::column_index_t &columnIndex);
+
+        void Validate(const Headers::ColumnHeader &header);
 };

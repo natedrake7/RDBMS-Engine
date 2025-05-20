@@ -1,0 +1,182 @@
+#include "Statements.h"
+#include "../../Server/Server.h"
+#include "../LogicalPlan/LogicalPlan.h"
+
+namespace QueryPipeline::Statements {
+  Expression Expression::Predicate(const std::string &column, const std::string &operation, const Field &value) {
+    return Expression{
+      ExpressionType::Predicate,
+      nullptr,
+      nullptr,
+      column,
+      operation,
+      value
+    };
+  }
+
+  Expression Expression::Logical(const ExpressionType &type, Expression *leftExpression, Expression *RightExpression){
+    return Expression{
+      type,
+      leftExpression,
+      RightExpression
+    };
+  }
+
+  Expression::~Expression(){
+    delete left;
+    delete right;
+  }
+
+  void Expression::Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary){
+    if (this->type != Statements::ExpressionType::Predicate
+      && this->left != nullptr
+      && this->right != nullptr) {
+       this->left->Validate(columnsDictionary);
+        this->right->Validate(columnsDictionary);
+
+      return;
+    }
+
+    Headers::ColumnHeader header;
+    if (!columnsDictionary.TryGetValue(this->column, header))
+      throw runtime_error("Column " + this->column + " does not exist");
+
+    this->columnIndex = header.tablePosition;  
+  }
+
+  void CreateTableStatement::Validate(){
+    
+  }
+
+  LogicalPlan * CreateTableStatement::ToLogical(){
+    return nullptr;
+  }
+
+  void SelectStatement::Validate(){
+    const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
+
+    const Headers::TableHeader* headerPtr = nullptr;
+    for (const auto& table : tables) {
+      if (table.name == this->table) {
+        headerPtr = &table;
+        break;
+      }
+    }
+
+    if (headerPtr == nullptr)
+      throw runtime_error("Table " + this->table + " does not exist");
+
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary("masterDb", headerPtr->name);
+
+    for (const auto& selectColumn : this->columns) {
+      if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
+        this->columnIndices.emplace_back(header.tablePosition);
+        continue;
+      }
+      
+      throw runtime_error("Column " + selectColumn + " does not exist");
+    }
+
+    if (this->where.expression == nullptr)
+      return;
+
+    this->where.expression->Validate(columnsDict);
+  }
+
+  LogicalPlan * SelectStatement::ToLogical(){
+    const auto scanTable = new LogicalTableScan(this->table);
+
+    LogicalPlan* current = scanTable;
+
+    if (this->where.expression != nullptr)
+      current = new LogicalFilter(current, this->where.expression);
+    
+
+    if (!this->columns.empty())
+      current = new LogicalProject(current, this->columnIndices);
+
+    return current;
+  }
+
+  void CreateDbStatement::Validate(){
+    if (!Server::ServerInstance::Get().DatabaseExists(this->name))
+      return;
+
+    throw runtime_error("Database " + this->name + " already exists");
+  }
+
+  LogicalPlan * CreateDbStatement::ToLogical(){
+    return new LogicalCreateDatabase(this->name);
+  }
+
+  void DropDbStatement::Validate(){
+    const auto database = Server::ServerInstance::Get().SelectDatabases(this->name);
+
+    if (database.name.empty())
+      throw runtime_error("Cannot drop: " + this->name + ". Database" + this->name + " does not exist");
+
+    if (database.isSystem)
+      throw runtime_error("Cannot drop: a system database");
+  }
+  
+  LogicalPlan * DropDbStatement::ToLogical(){
+    return nullptr;
+  }
+
+  void InsertStatement::Validate(){
+    const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
+
+    const Headers::TableHeader* headerPtr = nullptr;
+    for (const auto& table : tables) {
+      if (table.name == this->tableName) {
+        headerPtr = &table;
+        break;
+      }
+    }
+
+    if (headerPtr == nullptr)
+      throw runtime_error("Table " + this->tableName + " does not exist");
+
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary("masterDb", headerPtr->name);
+
+    if (this->columns.size() != this->values.size())
+      throw runtime_error("Invalid number of arguments supplied");
+
+    for (int i = 0;i < this->columns.size(); i++) {
+      const auto& column = this->columns[i];
+
+      Headers::ColumnHeader header;
+
+      if (!columnsDict.TryGetValue(column, header))
+        throw runtime_error("Column " + column + " does not exist on table: " + headerPtr->name);
+
+      this->values.at(i).Validate(header);
+    }
+
+    for (const auto&[columnName, header]:  columnsDict) {
+      bool columnExistsInStatement = false;
+      
+      for (const auto& statementColumn: this->columns) {
+        if (columnName != statementColumn)
+          continue;
+          
+        columnExistsInStatement = true;
+        break;
+      }
+
+      if (!columnExistsInStatement && !header.isNullable)
+        throw invalid_argument("Column " + columnName + " does not allow NULLS. Insert fails");
+
+      if (columnExistsInStatement)
+        continue;
+
+      this->values.emplace_back(nullptr, header.tablePosition);
+    }
+  }
+
+  LogicalPlan* InsertStatement::ToLogical() {
+    return new QueryPipeline::LogicalInsert(this->tableName, this->values);
+  }
+
+
+}

@@ -4,7 +4,12 @@ options {
   caseInsensitive = true;
 }
 
-sqlStatement : selectStatement | createDbStatement | dropDbStatement | insertStatement | createTableStatement;
+sqlStatement 
+    : selectStatement 
+    | createDbStatement 
+    | dropDbStatement 
+    | insertStatement 
+    | createTableStatement;
 
 //select statement
 selectStatement : 'SELECT' columnList 'FROM' tableName whereClause?;
@@ -37,12 +42,10 @@ insertStatement: 'INSERT' 'INTO' tableName '(' columnList ')' 'VALUES' '(' liter
 
 
 //create table statement
-createTableStatement: 'CREATE' 'TABLE' tableName '('
-                        (addColumn)*
-                    ')';
+createTableStatement: 'CREATE' 'TABLE' tableName '(' addColumn (',' addColumn)* ')';
 
 addColumn
-    : columnName dataType primaryKey? NULL? NOTNULL? ','
+    : columnName dataType (NOT NULL | NULL)? primaryKey?
     ;
 
 dataType
@@ -54,12 +57,11 @@ dataType
     | varcharType
     | nvarcharType
     | decimalType
-    | NVARCHAR
     | DATETIME
     ;
 
 varcharType
-    : VARCHAR '(' (num=NUMBER | max=MAX) ')'
+    : 'VARCHAR' '(' (num=NUMBER | max=MAX) ')'
     ;
 
 nvarcharType
@@ -101,11 +103,6 @@ createDbStatement: 'CREATE' 'DATABASE' IDENTIFIER;
 //drop database statement
 dropDbStatement: 'DROP' 'DATABASE' IDENTIFIER;
 
-IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
-STRING          : '\'' ( ~['\\] | '\\' . )* '\''; 
-NUMBER          : [0-9]+;
-WS              : [ \t\r\n]+ -> skip;
-
 //Comparison Operators
 NOTEQUAL        : '!=' | '<>';
 LESS            : '<=';
@@ -126,5 +123,10 @@ VARCHAR         : 'VARCHAR';
 NVARCHAR        : 'NVARCHAR';
 MAX             : 'MAX';
 
-NULL: 'NULL';
-NOTNULL: 'NOT' 'NULL';
+NOT             : 'NOT';
+NULL            : 'NULL';
+
+IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
+STRING          : '\'' ( ~['\\] | '\\' . )* '\''; 
+NUMBER          : [0-9]+;
+WS              : [ \t\r\n]+ -> skip;

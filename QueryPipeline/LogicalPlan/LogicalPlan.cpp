@@ -1,5 +1,7 @@
 #include "LogicalPlan.h"
 
+#include "../Statements/Statements.h"
+
 namespace QueryPipeline {
   LogicalPlan::~LogicalPlan() = default;
 
@@ -26,7 +28,7 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalCreateDatabase(this->dbName);
   }
 
-  LogicalFilter::LogicalFilter(LogicalPlan* child, Expression* filter): child(child), filter(filter) {}
+  LogicalFilter::LogicalFilter(LogicalPlan* child, Statements::Expression* filter): child(child), filter(filter) {}
 
   PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(){
     return new PhysicalPlan::PhysicalFilter(this->child->ToPhysical(), this->filter);
@@ -36,29 +38,6 @@ namespace QueryPipeline {
 
   PhysicalPlan::PhysicalInsert * LogicalInsert::ToPhysical(){
     return new PhysicalPlan::PhysicalInsert(this->tableName, this->fields);
-  }
-
-  LogicalPlan * BuildLogicalPlan(const SelectStatement &statement){
-      const auto scanTable = new LogicalTableScan(statement.table);
-
-      LogicalPlan* current = scanTable;
-
-      if (statement.where.expression != nullptr)
-        current = new LogicalFilter(current, statement.where.expression);
-    
-
-      if (!statement.columns.empty())
-        current = new LogicalProject(current, statement.columnIndices);
-
-    return current;
-  }
-
-  LogicalPlan * BuildLogicalPlan(const CreateDbStatement &statement){
-      return new LogicalCreateDatabase(statement.name);
-    }
-
-  LogicalPlan* BuildLogicalPlan(const InsertStatement& statement) {
-    return new LogicalInsert(statement.tableName, statement.values);
   }
 }
 

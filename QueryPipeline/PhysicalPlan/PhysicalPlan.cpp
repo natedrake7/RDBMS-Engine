@@ -4,6 +4,7 @@
 #include "../../Database/Table/Table.h"
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
+#include "../Statements/Statements.h"
 
 namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(const std::string &name) : dbName(name){}
@@ -44,7 +45,7 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-  PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Expression* filter): child(child) , filter(filter) {}
+  PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Statements::Expression* filter): child(child) , filter(filter) {}
 
   PhysicalFilter::~PhysicalFilter(){
     delete this->child;
@@ -52,9 +53,9 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
 
-bool PhysicalFilter::EvaluateExpression(const Expression* filter, const DatabaseEngine::StorageTypes::Row &row){
+bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, const DatabaseEngine::StorageTypes::Row &row){
     switch (filter->type) {
-    case ExpressionType::Predicate: {
+    case Statements::ExpressionType::Predicate: {
 
       const auto actualData = row.GetData()[filter->columnIndex];
 
@@ -70,9 +71,9 @@ bool PhysicalFilter::EvaluateExpression(const Expression* filter, const Database
 
       throw std::runtime_error("Unknown operator: " + op);
     }
-    case ExpressionType::And:
+    case Statements::ExpressionType::And:
       return EvaluateExpression(filter->left, row) && EvaluateExpression(filter->right, row);
-    case ExpressionType::Or:
+    case Statements::ExpressionType::Or:
       return EvaluateExpression(filter->left, row) || EvaluateExpression(filter->right, row);
     default:
       throw std::runtime_error("Invalid expression type");
@@ -106,7 +107,7 @@ bool PhysicalFilter::EvaluateExpression(const Expression* filter, const Database
 
       PhysicalPlanResult result;
 
-      constexpr vector<column_index_t> columnIndices;
+      const vector<column_index_t> columnIndices;
       table->Select(result.rows, columnIndices);
 
       return result;

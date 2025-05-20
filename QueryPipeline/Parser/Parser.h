@@ -1,8 +1,10 @@
 #pragma once
 
 #include "../../Database/B+Tree/BPlusTree.h"
+#include "../Statements/Statements.h"
 
 
+#include <any>
 #include <iostream>
 
 
@@ -13,6 +15,8 @@ namespace QueryPipeline{
     class Parser{
         ~Parser();
         Parser();
+
+        static Statements::Statement* CreateStatement(const std::any &ast);
 
         public:
             static Parser& Get()

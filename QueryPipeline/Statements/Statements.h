@@ -1,0 +1,108 @@
+#pragma once
+#include <string>
+#include <vector>
+#include "../../Database/Constants.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
+
+namespace QueryPipeline {
+class LogicalPlan;}namespace QueryPipeline::Statements {
+  enum class ExpressionType {
+    And = 0,
+    Or = 1,
+    Predicate = 2
+  };
+
+  struct Expression {
+    ExpressionType type;
+
+    Expression* left;
+    Expression* right;
+        
+    std::string column;
+    std::string operation;
+    Field value;
+
+    Constants::column_index_t columnIndex;
+      
+    static Expression Predicate(
+      const std::string& column,
+      const std::string& operation,
+      const Field& value);
+
+    static Expression Logical(
+      const ExpressionType& type,
+      Expression* leftExpression,
+      Expression* RightExpression);
+
+    ~Expression();
+    void Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
+      
+  };
+
+  struct ColumnType {
+    std::string name;
+    int64_t size;
+    int64_t beforeFraction;
+    int64_t afterFraction;
+  };
+
+  struct AddColumn {
+    std::string name;
+    ColumnType type;
+    bool isPrimaryKey;
+    bool isNullable;
+  };
+
+  struct WhereClause{
+    Expression* expression;
+
+    WhereClause() { this->expression = nullptr; }
+  };
+
+  struct Statement {
+    Statement() = default;
+    virtual ~Statement() = default;
+    virtual void Validate() = 0;
+    virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
+  };
+
+  struct CreateTableStatement final: Statement {
+    std::string name;
+    std::vector<AddColumn> columns;
+
+    void Validate() override;
+    QueryPipeline::LogicalPlan* ToLogical() override;
+  };
+
+  struct SelectStatement final : Statement{
+    std::string table;
+    std::vector<std::string> columns;
+    std::vector<Constants::column_index_t> columnIndices;
+    WhereClause where;
+    
+    void Validate() override;
+    LogicalPlan* ToLogical() override;
+  };
+
+  struct CreateDbStatement final : Statement{
+    std::string name;
+    void Validate() override;
+    LogicalPlan* ToLogical() override;
+  };
+
+  struct DropDbStatement final : Statement{
+    std::string name;
+    void Validate() override;
+    LogicalPlan* ToLogical() override;
+  };
+
+  struct InsertStatement final : Statement{
+    std::string tableName;
+    std::vector<std::string> columns;
+    std::vector<Field> values;
+    void Validate() override;
+    LogicalPlan* ToLogical() override;
+  };
+
+}

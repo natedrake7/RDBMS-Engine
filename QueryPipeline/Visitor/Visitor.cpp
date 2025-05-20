@@ -1,31 +1,8 @@
 #include "Visitor.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../Statements/Statements.h"
 
 namespace QueryPipeline {
-
-  Expression Expression::Predicate(const std::string &column, const std::string &operation, const Field &value) {
-    return Expression{
-      ExpressionType::Predicate,
-      nullptr,
-      nullptr,
-      column,
-      operation,
-      value
-    };
-  }
-
-  Expression Expression::Logical(const ExpressionType &type, Expression *leftExpression, Expression *RightExpression){
-    return Expression{
-      type,
-      leftExpression,
-      RightExpression
-    };
-  }
-
-  Expression::~Expression(){
-      delete left;
-      delete right;
-  }
 
   string ParseString(const string &str){
     return std::string(str).substr(1, str.size() - 2);
@@ -40,12 +17,14 @@ namespace QueryPipeline {
       return visit(context->dropDbStatement());
     if (context->insertStatement())
       return visit(context->insertStatement());
+    if (context->createTableStatement())
+      return visit(context->createTableStatement());
     
     return nullptr;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitCreateDbStatement(SQLParser::CreateDbStatementContext *context) {
-    CreateDbStatement statement;
+    Statements::CreateDbStatement statement;
 
     if (context->IDENTIFIER())
       statement.name = context->IDENTIFIER()->getText();
@@ -54,7 +33,7 @@ namespace QueryPipeline {
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitDropDbStatement(SQLParser::DropDbStatementContext *context) {
-    DropDbStatement statement;
+    Statements::DropDbStatement statement;
 
     if (context->IDENTIFIER())
       statement.name = context->IDENTIFIER()->getText();
@@ -62,10 +41,8 @@ namespace QueryPipeline {
     return statement;
   }
 
-
-
 antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
-    SelectStatement statement;
+    Statements::SelectStatement statement;
 
     // Visit columnList and get column names
     auto colCtx = ctx->columnList();
@@ -77,14 +54,14 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     statement.table = tableName == nullptr ?  "" : tableName->getText();
 
     if (const auto& whereClause = ctx->whereClause();whereClause != nullptr)
-      statement.where = std::any_cast<WhereClause>(visit(whereClause));
+      statement.where = std::any_cast<Statements::WhereClause>(visit(whereClause));
 
     return statement;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitWhereClause(SQLParser::WhereClauseContext *context){
-    WhereClause where;
-    where.expression = std::any_cast<Expression*>(visitExpression(context->expression()));
+    Statements::WhereClause where;
+    where.expression = std::any_cast<Statements::Expression*>(visitExpression(context->expression()));
     return where;
   }
 
@@ -109,24 +86,24 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
-    auto* expression = std::any_cast<Expression*>(visit(context->andExpression(0)));
+    auto* expression = std::any_cast<Statements::Expression*>(visit(context->andExpression(0)));
 
     for (size_t i = 1; i < context->andExpression().size(); i++) {
-      auto* right = std::any_cast<Expression*>(visit(context->andExpression(i)));
+      auto* right = std::any_cast<Statements::Expression*>(visit(context->andExpression(i)));
       
-      expression = new Expression(ExpressionType::Or, expression, right);  // assuming you have a class like this
+      expression = new Statements::Expression(Statements::ExpressionType::Or, expression, right);  // assuming you have a class like this
     }
 
     return expression;
   }
 
 antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpressionContext *context) {
-    auto* expression = std::any_cast<Expression*>(visit(context->predicate(0)));
+    auto* expression = std::any_cast<Statements::Expression*>(visit(context->predicate(0)));
 
     for (size_t i = 1; i < context->predicate().size(); i++) {
-      auto* right = std::any_cast<Expression*>(visit(context->predicate(i)));
+      auto* right = std::any_cast<Statements::Expression*>(visit(context->predicate(i)));
       
-      expression = new Expression(ExpressionType::And, expression, right);  // assuming you have a class like this
+      expression = new Statements::Expression(Statements::ExpressionType::And, expression, right);  // assuming you have a class like this
     }
 
     return expression;
@@ -135,8 +112,8 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
     if (context->expression())
       return visit(context->expression());
 
-    return new Expression{
-      ExpressionType::Predicate,
+    return new Statements::Expression{
+      Statements::ExpressionType::Predicate,
       nullptr,
       nullptr,
       context->columnName()->getText(),
@@ -146,7 +123,7 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitInsertStatement(SQLParser::InsertStatementContext *context){
-    InsertStatement statement;
+    Statements::InsertStatement statement;
 
     statement.tableName = context->tableName()->getText();
     
@@ -180,17 +157,18 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitCreateTableStatement(SQLParser::CreateTableStatementContext *context){
-    CreateTableStatement statement;
-
-    for (const auto& columnContext: context->addColumn()) {
-      statement.columns.push_back(std::any_cast<AddColumn>(visit(columnContext)));
-    }
+    Statements::CreateTableStatement statement;
 
     statement.name = std::any_cast<string>(visit(context->tableName()));
 
+    const auto columns = context->addColumn();
+    for (const auto columnContext: columns) {
+      const auto column = std::any_cast<Statements::AddColumn>(visit(columnContext));
+      statement.columns.push_back(column);
+    }
+
+
     return statement;
-
-
   }
 
 antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext *context) {
@@ -199,7 +177,9 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (context->nvarcharType())
       return visit(context->varcharType());
 
-    return Type{
+    const auto text = context->getText();
+
+    return Statements::ColumnType{
       .name = context->getText(),
     };
   }
@@ -209,22 +189,22 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAddColumn(SQLParser::AddColumnContext *context){
-    if (context->NOTNULL() && context->NOTNULL())
-      throw invalid_argument("NULL AND NOT NULL cannot be declared on the same column");
+    const bool isPrimaryKey = (context->primaryKey()) ? true : false;
+    const bool isNullable = ((context->NULL_() && !context->NOT()) && !isPrimaryKey);
 
-    return AddColumn{
+    return Statements::AddColumn{
       .name = std::any_cast<string>(visit(context->columnName())),
-      .type = std::any_cast<Type>(visit(context->dataType())),
-      .isPrimaryKey = (context->primaryKey()) ? true : false,
-      .isNullable = (context->NOTNULL()) ? false : true,
+      .type = std::any_cast<Statements::ColumnType>(visit(context->dataType())),
+      .isPrimaryKey = isPrimaryKey,
+      .isNullable = isNullable,
     };
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitVarcharType(SQLParser::VarcharTypeContext *context){
     const auto& number = context->NUMBER();
 
-    return
-    Type{
+    return Statements::ColumnType{
+      .name = "String",
       .size = number ? SafeConverter<int64_t>::SafeStoi(number->getText()) : -1,
       .beforeFraction =  -1,
       .afterFraction = -1
@@ -234,8 +214,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitNvarcharType(SQLParser::NvarcharTypeContext *context){
     const auto& number = context->NUMBER();
 
-    return
-    Type{
+    return Statements::ColumnType{
         .size = number ? SafeConverter<int64_t>::SafeStoi(number->getText()) : -1,
         .beforeFraction =  -1,
         .afterFraction = -1
@@ -243,7 +222,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
-    return Type{
+    return Statements::ColumnType{
       .size = 0,
       .beforeFraction = SafeConverter<int64_t>::SafeStoi(context->beforePoint->getText()),
       .afterFraction = SafeConverter<int64_t>::SafeStoi(context->afterPoint->getText()),

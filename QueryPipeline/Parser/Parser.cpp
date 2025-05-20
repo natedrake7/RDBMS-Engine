@@ -4,7 +4,6 @@
 #include "SQLParser.h"
 #include "../Visitor/Visitor.h"
 #include "../LogicalPlan/LogicalPlan.h"
-#include "../Validator/Validator.h"
 #include "../PhysicalPlan/PhysicalPlan.h"
 
 #include <SQLBaseListener.h>
@@ -13,6 +12,24 @@
 namespace QueryPipeline
 {
     Parser::Parser() = default;
+
+    Statements::Statement * Parser::CreateStatement(const std::any &ast){
+        if (ast.type() == typeid(Statements::SelectStatement))
+            return new Statements::SelectStatement(std::any_cast<Statements::SelectStatement>(ast));
+        if (ast.type() == typeid(Statements::CreateDbStatement))
+            return new Statements::CreateDbStatement(std::any_cast<Statements::CreateDbStatement>(ast));
+        if (ast.type() == typeid(Statements::DropDbStatement))
+            return new Statements::DropDbStatement(std::any_cast<Statements::DropDbStatement>(ast));
+        if (ast.type() == typeid(Statements::InsertStatement))
+            return new Statements::InsertStatement(std::any_cast<Statements::InsertStatement>(ast));
+        if (ast.type() == typeid(Statements::InsertStatement))
+            return new Statements::InsertStatement(std::any_cast<Statements::InsertStatement>(ast));
+        if (ast.type() == typeid(Statements::CreateTableStatement))
+            return new Statements::CreateTableStatement(std::any_cast<Statements::CreateTableStatement>(ast));
+
+        return nullptr;
+    }        
+
 
     Parser::~Parser() = default;
 
@@ -36,34 +53,15 @@ namespace QueryPipeline
         SQLVisitorImplementation visitor;
         const auto response = visitor.visit(tree);
 
-        LogicalPlan* logicalPlan = nullptr;
-        if (response.type() == typeid(SelectStatement)) {
-            auto selectStatement = std::any_cast<SelectStatement>(response);
-            Validator::Validate(selectStatement);
-            logicalPlan = BuildLogicalPlan(selectStatement);
-        }
-        else if (response.type() == typeid(CreateDbStatement)) {
-            const auto createDbStatement = std::any_cast<CreateDbStatement>(response);
-            Validator::Validate(createDbStatement);
-            logicalPlan = BuildLogicalPlan(createDbStatement);
-        }
-        else if (response.type() == typeid(DropDbStatement)) {
-            const auto dropDbStatement = std::any_cast<DropDbStatement>(response);
-            Validator::Validate(dropDbStatement);
-        }
-        else if (response.type() == typeid(InsertStatement)) {
-            auto insertStatement = std::any_cast<InsertStatement>(response);
-            Validator::Validate(insertStatement);
+        Statements::Statement* statement = Parser::CreateStatement(response);
 
-            logicalPlan = BuildLogicalPlan(insertStatement);
-        }
-        if (response.type() == typeid(CreateTableStatement)) {
-            auto createTableStatement = std::any_cast<CreateTableStatement>(response);
-            // Validator::Validate(insertStatement);
-            //
-            // logicalPlan = BuildLogicalPlan(insertStatement);
-        }
+        if (statement == nullptr)
+            throw runtime_error("Failed to parse query");
+        
+        statement->Validate();
 
+        LogicalPlan* logicalPlan = statement->ToLogical();
+        
         if (logicalPlan == nullptr)
             return;
 
@@ -74,6 +72,8 @@ namespace QueryPipeline
             row.PrintRow();
         }
 
+        
+        delete statement;
         delete logicalPlan;
         delete physicalPlan;
     }

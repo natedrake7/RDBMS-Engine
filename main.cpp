@@ -61,14 +61,14 @@ int main()
     server.Initialize("configuration.json");
 
     //select statement
-    // const string test = "SELECT name, is_system FROM sys_databases WHERE created_at != GETDATE()";
+    const string test = "SELECT name, is_system FROM sys_databases WHERE created_at != GETDATE()";
 
     //insert statement
     // const string test = "INSERT INTO sys_databases(name, filepath, is_system, created_at, last_modified, last_modified_by) "
     //                     "VALUES ('stakosDb', '../stakosDb', 1, GETDATE(), GETDATE(), 'system')";
 
     //create table
-    const string test = "CREATE TABLE kostasis ( data VARCHAR(MAX), isNull Bool, Id INT PRIMARY KEY IDENTITY)";
+    // const string test = "CREATE TABLE kostasis ( data VARCHAR(MAX) NULL, isNull Bool NOT NULL, Id INT PRIMARY KEY IDENTITY)";
 
     try {
         QueryPipeline::Parser::Parse(test);

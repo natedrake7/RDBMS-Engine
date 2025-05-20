@@ -1,5 +1,4 @@
 #pragma once
-#include "../Visitor/Visitor.h"
 #include "../PhysicalPlan/PhysicalPlan.h"
 
 namespace QueryPipeline {
@@ -9,9 +8,9 @@ namespace QueryPipeline {
     virtual PhysicalPlan::PhysicalOperator* ToPhysical() = 0;
   };
 
-  LogicalPlan* BuildLogicalPlan(const SelectStatement& statement);
-  LogicalPlan* BuildLogicalPlan(const CreateDbStatement& statement);
-  LogicalPlan* BuildLogicalPlan(const InsertStatement& statement);
+  LogicalPlan* BuildLogicalPlan(const Statements::SelectStatement& statement);
+  LogicalPlan* BuildLogicalPlan(const Statements::CreateDbStatement& statement);
+  LogicalPlan* BuildLogicalPlan(const Statements::InsertStatement& statement);
 
   class LogicalCreateDatabase final : public LogicalPlan {
     public:
@@ -39,8 +38,8 @@ namespace QueryPipeline {
   class LogicalFilter final : public LogicalPlan {
     public:
       LogicalPlan* child;
-      Expression* filter;
-      explicit LogicalFilter(LogicalPlan* child, Expression* filter);
+      Statements::Expression* filter;
+      explicit LogicalFilter(LogicalPlan* child, Statements::Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
   };
 

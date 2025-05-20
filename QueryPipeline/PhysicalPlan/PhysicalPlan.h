@@ -1,12 +1,9 @@
 #pragma once
 #include "../../AdditionalLibraries/HashSet/HashSet.h"
-
-
 #include <string>
 #include <vector>
 #include "../../Database/Row/Row.h"
-#include "../../Server/Server.h"
-#include "../Visitor/Visitor.h"
+#include "../Statements/Statements.h"
 
 namespace QueryPipeline {
   class LogicalPlan;
@@ -57,13 +54,13 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalFilter final : public PhysicalOperator{
-    Expression* filter;
+    Statements::Expression* filter;
     PhysicalOperator* child;
 
-    static bool EvaluateExpression(const Expression* filter, const DatabaseEngine::StorageTypes::Row &row);
+    static bool EvaluateExpression(const Statements::Expression* filter, const DatabaseEngine::StorageTypes::Row &row);
 
     public:
-      PhysicalFilter(PhysicalOperator* child, Expression* filter);
+      PhysicalFilter(PhysicalOperator* child, Statements::Expression* filter);
       ~PhysicalFilter() override;
       PhysicalPlanResult Execute() override;
   };

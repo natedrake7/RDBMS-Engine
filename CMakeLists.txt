@@ -67,13 +67,13 @@ add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
                             QueryPipeline/Parser/Parser.h
                             QueryPipeline/Visitor/Visitor.cpp
                             QueryPipeline/Visitor/Visitor.h
-                            QueryPipeline/Validator/Validator.cpp
-                            QueryPipeline/Validator/Validator.h
                             QueryPipeline/LogicalPlan/LogicalPlan.cpp
                             QueryPipeline/LogicalPlan/LogicalPlan.h
                             QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
                             QueryPipeline/PhysicalPlan/PhysicalPlan.h
-                            ${ANTLR_SRC} )
+                            QueryPipeline/Statements/Statements.cpp
+                            QueryPipeline/Statements/Statements.h
+                            ${ANTLR_SRC})
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
