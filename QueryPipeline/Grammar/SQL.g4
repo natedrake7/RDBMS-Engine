@@ -42,7 +42,7 @@ createTableStatement: 'CREATE' 'TABLE' tableName '('
                     ')';
 
 addColumn
-    : columnName dataType primaryKey? NULL? NOTNULL?
+    : columnName dataType primaryKey? NULL? NOTNULL? ','
     ;
 
 dataType

@@ -57,6 +57,12 @@ namespace QueryPipeline
 
             logicalPlan = BuildLogicalPlan(insertStatement);
         }
+        if (response.type() == typeid(CreateTableStatement)) {
+            auto createTableStatement = std::any_cast<CreateTableStatement>(response);
+            // Validator::Validate(insertStatement);
+            //
+            // logicalPlan = BuildLogicalPlan(insertStatement);
+        }
 
         if (logicalPlan == nullptr)
             return;
