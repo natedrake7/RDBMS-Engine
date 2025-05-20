@@ -1,6 +1,10 @@
 grammar SQL;
 
-sqlStatement : selectStatement | createDbStatement | dropDbStatement | insertStatement;
+options {
+  caseInsensitive = true;
+}
+
+sqlStatement : selectStatement | createDbStatement | dropDbStatement | insertStatement | createTableStatement;
 
 //select statement
 selectStatement : 'SELECT' columnList 'FROM' tableName whereClause?;
@@ -25,12 +29,50 @@ predicate
     : '(' expression ')'
     | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
     ;
-    
 
 
 //insert statement
 insertStatement: 'INSERT' 'INTO' tableName '(' columnList ')' 'VALUES' '(' literalValueList ')'
         ;
+
+
+//create table statement
+createTableStatement: 'CREATE' 'TABLE' tableName '('
+                        (addColumn)*
+                    ')';
+
+addColumn
+    : columnName dataType primaryKey? NULL? NOTNULL?
+    ;
+
+dataType
+    : BOOL
+    | TINYINT
+    | SMALLINT
+    | INT
+    | BIGINT
+    | varcharType
+    | nvarcharType
+    | decimalType
+    | NVARCHAR
+    | DATETIME
+    ;
+
+varcharType
+    : VARCHAR '(' (num=NUMBER | max=MAX) ')'
+    ;
+
+nvarcharType
+    : NVARCHAR '(' (num=NUMBER | max=MAX) ')'
+    ;
+
+decimalType
+    : DECIMAL '(' (beforePoint=NUMBER) ',' (afterPoint=NUMBER) ')'
+    ;
+
+primaryKey
+    : 'PRIMARY' 'KEY' 'IDENTITY'
+    ;
 
 //helpers
 literalValueList
@@ -71,3 +113,18 @@ GREATER         : '>=';
 LESSTHAN        : '<';
 GREATERTHAN     : '>';
 EQUAL           : '=';
+
+BOOL            : 'BOOL';
+DATETIME        : 'DATETIME';
+DECIMAL         : 'DECIMAL';
+TINYINT         : 'TINYINT';
+SMALLINT        : 'SMALLINT';
+INT             : 'INT';
+BIGINT          : 'BIGINT';
+
+VARCHAR         : 'VARCHAR';
+NVARCHAR        : 'NVARCHAR';
+MAX             : 'MAX';
+
+NULL: 'NULL';
+NOTNULL: 'NOT' 'NULL';

@@ -281,7 +281,7 @@ namespace Server {
        Field(dbName, 0),
      };
 
-     sysDatabases->Select(selectedDatabases, {0, 1, 2, 3, 4, 5}, &conditions);
+     sysDatabases->Select(selectedDatabases, {}, &conditions);
 
      Headers::DatabaseHeader header;
 
@@ -312,7 +312,7 @@ namespace Server {
      Table* sysSchemas = this->masterDb->OpenTable("sys_schemas");
      vector<Row> selectedSchemas;
 
-     sysSchemas->Select(selectedSchemas, {0, 1, 2, 3, 4}, &conditions);
+     sysSchemas->Select(selectedSchemas, {}, &conditions);
 
      return selectedSchemas;
   }
@@ -327,7 +327,7 @@ namespace Server {
     vector<Row> selectedTables;
     Table* sysTables = this->masterDb->OpenTable(1);
 
-    sysTables->Select(selectedTables, {0, 1, 2, 3, 4, 5, 6}, &conditions);
+    sysTables->Select(selectedTables, {}, &conditions);
 
     if (selectedTables.empty())
       return {};
@@ -365,7 +365,7 @@ namespace Server {
     vector<Row> selectedColumns;
     Table* sysColumns = this->masterDb->OpenTable("sys_columns");
 
-    sysColumns->Select(selectedColumns, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, &conditions);
+    sysColumns->Select(selectedColumns, {}, &conditions);
 
     if (selectedColumns.empty())
       return {};
@@ -417,7 +417,7 @@ namespace Server {
      Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
      vector<Row> selectedIndexes;
 
-      sysIndexes->Select(selectedIndexes, {0, 1, 2, 3, 4, 5, 6, 7}, &conditions);
+    sysIndexes->Select(selectedIndexes, {}, &conditions);
 
      return selectedIndexes;
   }

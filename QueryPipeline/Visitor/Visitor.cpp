@@ -179,6 +179,77 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
       return {};
   }
 
+  antlrcpp::Any SQLVisitorImplementation::visitCreateTableStatement(SQLParser::CreateTableStatementContext *context){
+    CreateTableStatement statement;
+
+    for (const auto& columnContext: context->addColumn()) {
+      statement.columns.push_back(std::any_cast<AddColumn>(visit(columnContext)));
+    }
+
+    statement.name = std::any_cast<string>(visit(context->tableName()));
+
+    return statement;
+
+
+  }
+
+antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext *context) {
+    if (context->varcharType())
+      return visit(context->varcharType());
+    if (context->nvarcharType())
+      return visit(context->varcharType());
+
+    return Type{
+      .name = context->getText(),
+    };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitPrimaryKey(SQLParser::PrimaryKeyContext *context){
+    return {};
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAddColumn(SQLParser::AddColumnContext *context){
+    if (context->NOTNULL() && context->NOTNULL())
+      throw invalid_argument("NULL AND NOT NULL cannot be declared on the same column");
+
+    return AddColumn{
+      .name = std::any_cast<string>(visit(context->columnName())),
+      .type = std::any_cast<Type>(visit(context->dataType())),
+      .isPrimaryKey = (context->primaryKey()) ? true : false,
+      .isNullable = (context->NOTNULL()) ? false : true,
+    };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitVarcharType(SQLParser::VarcharTypeContext *context){
+    const auto& number = context->NUMBER();
+
+    return
+    Type{
+      .size = number ? SafeConverter<int64_t>::SafeStoi(number->getText()) : -1,
+      .beforeFraction =  -1,
+      .afterFraction = -1
+    };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitNvarcharType(SQLParser::NvarcharTypeContext *context){
+    const auto& number = context->NUMBER();
+
+    return
+    Type{
+        .size = number ? SafeConverter<int64_t>::SafeStoi(number->getText()) : -1,
+        .beforeFraction =  -1,
+        .afterFraction = -1
+      };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
+    return Type{
+      .size = 0,
+      .beforeFraction = SafeConverter<int64_t>::SafeStoi(context->beforePoint->getText()),
+      .afterFraction = SafeConverter<int64_t>::SafeStoi(context->afterPoint->getText()),
+    };
+  }
+
   antlrcpp::Any SQLVisitorImplementation::visitColumnName(SQLParser::ColumnNameContext *context){
     return context == nullptr ? "" : context->getText();
   }

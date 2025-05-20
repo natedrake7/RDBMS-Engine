@@ -41,11 +41,31 @@ namespace QueryPipeline {
     
   }Expression;
 
+
+  struct Type {
+    std::string name;
+    int64_t size;
+    int64_t beforeFraction;
+    int64_t afterFraction;
+  };
+
+  struct AddColumn {
+    std::string name;
+    Type type;
+    bool isPrimaryKey;
+    bool isNullable;
+  };
+
   typedef struct WhereClause{
     Expression* expression;
 
     WhereClause() { this->expression = nullptr; }
   }WhereClause;
+
+  struct CreateTableStatement {
+    std::string name;
+    vector<AddColumn> columns;
+  };
 
   typedef struct SelectStatement{
     std::string table;
@@ -68,6 +88,7 @@ namespace QueryPipeline {
     std::vector<std::string> columns;
     std::vector<Field> values;
   }InsertStatement;
+
 
   static string ParseString(const string& str);
 
@@ -106,5 +127,19 @@ namespace QueryPipeline {
       antlrcpp::Any visitLiteralValueList(SQLParser::LiteralValueListContext *context) override;
 
       antlrcpp::Any visitGetDate(SQLParser::GetDateContext *context) override;
+
+      antlrcpp::Any visitCreateTableStatement(SQLParser::CreateTableStatementContext *context) override;
+
+      antlrcpp::Any visitDataType(SQLParser::DataTypeContext *context) override;
+
+      antlrcpp::Any visitPrimaryKey(SQLParser::PrimaryKeyContext *context) override;
+
+      antlrcpp::Any visitAddColumn(SQLParser::AddColumnContext *context) override;
+
+      antlrcpp::Any visitVarcharType(SQLParser::VarcharTypeContext *context) override;
+
+      antlrcpp::Any visitNvarcharType(SQLParser::NvarcharTypeContext *context) override;
+
+      antlrcpp::Any visitDecimalType(SQLParser::DecimalTypeContext *context) override;
   };
 }
