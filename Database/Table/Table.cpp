@@ -32,15 +32,14 @@ namespace DatabaseEngine::StorageTypes {
         this->tableId = 0;
         this->maxRowSize = 0;
         this->numberOfColumns = 0;
-        this->tableNameSize = 0;
         this->clusteredIndexPageId = 0;
-        this->columnsNullBitMap = nullptr;
+        // this->columnsNullBitMap = nullptr;
         // this->clusteredIndexesBitMap = nullptr;
       }
 
       TableHeader::~TableHeader() 
       {
-        delete this->columnsNullBitMap;
+        // delete this->columnsNullBitMap;
         // delete this->clusteredIndexesBitMap;
 
         // for(const auto& nonClusteredIndexMap: this->nonClusteredIndexesBitMap)
@@ -55,14 +54,12 @@ namespace DatabaseEngine::StorageTypes {
         this->indexAllocationMapPageId = tableHeader.indexAllocationMapPageId;
         this->maxRowSize = tableHeader.maxRowSize;
         this->numberOfColumns = tableHeader.numberOfColumns;
-        this->tableNameSize = tableHeader.tableNameSize;
-        this->tableName = tableHeader.tableName;
         this->tableId = tableHeader.tableId;
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
         this->nonClusteredIndexPageIds = tableHeader.nonClusteredIndexPageIds;
         this->nonClusteredIndexesIds = tableHeader.nonClusteredIndexesIds;
 
-        this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
+        // this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
         this->clusteredColumnIndexes = tableHeader.clusteredColumnIndexes;
 
           for(const auto& nonClusteredIndexes: tableHeader.nonClusteredColumnIndexes)
@@ -71,21 +68,13 @@ namespace DatabaseEngine::StorageTypes {
         return *this;
       }
 
-      TableFullHeader::TableFullHeader() = default;
-
-      TableFullHeader::TableFullHeader(const TableFullHeader &tableHeader) 
+      Table::Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns,  DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes)
       {
-        this->tableHeader = tableHeader.tableHeader;
-        this->columnsHeaders = tableHeader.columnsHeaders;
-      }
-
-      Table::Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns,  DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes) 
-      {
+        this->name = tableName;
         this->columns = columns;
         this->database = database;
-        this->header.tableName = tableName;
         this->header.numberOfColumns = columns.size();
-        this->header.columnsNullBitMap = new BitMap(this->header.numberOfColumns);
+        // this->header.columnsNullBitMap = new BitMap(this->header.numberOfColumns);
         this->header.tableId = tableId;
 
         this->clusteredIndexedTree = nullptr;
@@ -95,7 +84,7 @@ namespace DatabaseEngine::StorageTypes {
         uint16_t counter = 0;
         for (const auto &column : columns) 
         {
-          this->header.columnsNullBitMap->Set(counter, column->GetAllowNulls());
+          // this->header.columnsNullBitMap->Set(counter, column->GetAllowNulls());
 
           this->header.maxRowSize += column->GetColumnSize();
           column->SetColumnIndex(counter);
@@ -104,15 +93,33 @@ namespace DatabaseEngine::StorageTypes {
         }
       }
 
-      Table::Table(const TableHeader &tableHeader, DatabaseEngine::Database *database) 
+      Table::Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database)
       {
         this->header = tableHeader;
         this->database = database;
+        this->name = masterDbHeader.name;
 
         this->clusteredIndexedTree = nullptr;
       }
 
-      Table::~Table() 
+      Table::Table(const std::string& tableName, const TableHeader &tableHeader, DatabaseEngine::Database *database)
+      {
+        this->header = tableHeader;
+        this->database = database;
+        this->name = tableName;
+
+        this->clusteredIndexedTree = nullptr;
+      }
+
+      Table::Table(const Headers::sysTable &systemHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database){
+        this->header = tableHeader;
+        this->database = database;
+        this->name = systemHeader.name;
+
+        this->clusteredIndexedTree = nullptr;
+      }
+
+      Table::~Table()
       {
         delete this->clusteredIndexedTree;
 
@@ -193,14 +200,14 @@ namespace DatabaseEngine::StorageTypes {
         this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
       }
 
-      Row* Table::CreateRow(const vector<Field>& inputData)
+      Row* Table::CreateRow(const vector<Field>& inputData)const
       {
-        Row *row = new Row(*this);
+        auto *row = new Row(*this);
         for (const auto & i : inputData) 
         {
           const column_index_t &associatedColumnIndex = i.GetColumnIndex();
 
-          Block *block = new Block(columns[associatedColumnIndex]);
+          auto *block = new Block(columns[associatedColumnIndex]);
 
           const ColumnType columnType = columns[associatedColumnIndex]->GetColumnType();
 
@@ -209,7 +216,7 @@ namespace DatabaseEngine::StorageTypes {
 
           if (i.GetIsNull()) 
           {
-            this->CheckAndInsertNullValues(block, row, associatedColumnIndex);
+            Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
             continue;
           }
 
@@ -510,12 +517,12 @@ namespace DatabaseEngine::StorageTypes {
 
     bool Table::IsColumnNullable(const column_index_t &columnIndex) const 
     {
-        return this->header.columnsNullBitMap->Get(columnIndex);
+        return this->columns.at(columnIndex)->IsColumnNullable();
     }
 
     void Table::AddColumn(Column *column) { this->columns.push_back(column); }
 
-    string &Table::GetTableName() { return this->header.tableName; }
+    string &Table::GetTableName() { return this->name; }
 
     row_size_t &Table::GetMaxRowSize() { return this->header.maxRowSize; }
 
@@ -557,7 +564,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        extent_id_t pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(results[0].pageId);
         const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
@@ -565,7 +572,7 @@ namespace DatabaseEngine::StorageTypes {
             // get new page else use current one
             if (result.pageId != 0 && result.pageId != page->GetPageId())
             {
-                pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+                pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(result.pageId);
                 page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
             }
 
@@ -589,7 +596,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        extent_id_t pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(results[0].pageId);
         const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
@@ -597,7 +604,7 @@ namespace DatabaseEngine::StorageTypes {
           // get new page else use current one
           if (result.pageId != 0 && result.pageId != page->GetPageId())
           {
-            pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+            pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(result.pageId);
             page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
           }
 
@@ -621,7 +628,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        extent_id_t pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(results[0].pageId);
         const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
@@ -629,7 +636,7 @@ namespace DatabaseEngine::StorageTypes {
           // get new page else use current one
           if (result.pageId != 0 && result.pageId != page->GetPageId())
           {
-            pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+            pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(result.pageId);
             page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
           }
 
@@ -665,7 +672,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        extent_id_t pageExtentId = Database::CalculateExtentIdByPageId(results[0].pageId);
+        extent_id_t pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(results[0].pageId);
         const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
 
         for (const auto &result : results)
@@ -673,7 +680,7 @@ namespace DatabaseEngine::StorageTypes {
             // get new page else use current one
             if (result.pageId != 0 && result.pageId != page->GetPageId())
             {
-                pageExtentId = Database::CalculateExtentIdByPageId(result.pageId);
+                pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(result.pageId);
                 page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
             }
 
@@ -694,9 +701,9 @@ namespace DatabaseEngine::StorageTypes {
         tableMapPage->GetAllocatedExtents(&tableExtentIds);
 
         for (const auto& extentId : tableExtentIds){
-          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-          const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
+          const page_id_t pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(extentFirstPageId);
 
           const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
 

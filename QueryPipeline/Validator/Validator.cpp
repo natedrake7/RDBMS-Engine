@@ -26,7 +26,7 @@ namespace QueryPipeline {
     //get only table needed. if joins occur get them all
     const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
 
-    const Server::TableHeader* headerPtr = nullptr;
+    const Headers::TableHeader* headerPtr = nullptr;
     for (const auto& table : tables) {
       if (table.name == statement.table) {
         headerPtr = &table;
@@ -40,7 +40,7 @@ namespace QueryPipeline {
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary("masterDb", headerPtr->name);
 
     for (const auto& selectColumn : statement.columns) {
-      if (Server::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
+      if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
         statement.columnIndices.emplace_back(header.tablePosition);
         continue;
       }
@@ -54,7 +54,7 @@ namespace QueryPipeline {
     Validator::Validate(statement.where.expression, columnsDict);
   }
 
-  void Validator::Validate(Expression *expression, const Dictionary<string, Server::ColumnHeader>& columnsDictionary){
+  void Validator::Validate(Expression *expression, const Dictionary<string, Headers::ColumnHeader>& columnsDictionary){
 
     if (expression->type != ExpressionType::Predicate
       && expression->left != nullptr
@@ -65,7 +65,7 @@ namespace QueryPipeline {
       return;
     }
 
-    Server::ColumnHeader header;
+    Headers::ColumnHeader header;
     if (!columnsDictionary.TryGetValue(expression->column, header))
       throw runtime_error("Column " + expression->column + " does not exist");
 
@@ -75,7 +75,7 @@ namespace QueryPipeline {
   void Validator::Validate(InsertStatement &statement){
     const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
 
-    const Server::TableHeader* headerPtr = nullptr;
+    const Headers::TableHeader* headerPtr = nullptr;
     for (const auto& table : tables) {
       if (table.name == statement.tableName) {
         headerPtr = &table;
@@ -94,7 +94,7 @@ namespace QueryPipeline {
     for (int i = 0;i < statement.columns.size(); i++) {
       const auto& column = statement.columns[i];
 
-      Server::ColumnHeader header;
+     Headers::ColumnHeader header;
 
       if (!columnsDict.TryGetValue(column, header))
         throw runtime_error("Column " + column + " does not exist on table: " + headerPtr->name);
@@ -124,7 +124,7 @@ namespace QueryPipeline {
     }
   }
 
-  void Validator::Validate(Field* field, const Server::ColumnHeader &header){
+  void Validator::Validate(Field* field, const Headers::ColumnHeader &header){
     switch (const auto& columnType = ColumnTypesDictionary.Get(header.dataType)) {
       case ColumnType::TinyInt: {
         const auto value = SafeConverter<int8_t>::SafeStoi(field->GetBigInt());

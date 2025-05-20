@@ -36,7 +36,7 @@ struct TableLockKey {
     LockManager() = default;
     ~LockManager() = default;
 
-    Dictionary<TableLockKey, shared_mutex> locks;
+    // Dictionary<TableLockKey, shared_mutex> locks;
     std::shared_mutex locksMutex;
 
     void AddKeyToDictionary(const TableLockKey& lockKey);

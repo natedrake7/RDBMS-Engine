@@ -2,6 +2,11 @@
 #include <string>
 #include "../Constants.h"
 
+namespace Headers {
+    struct ColumnHeader;
+    struct sysColumn;
+}
+
 using namespace std;
 using namespace Constants;
 
@@ -12,12 +17,6 @@ namespace DatabaseEngine::StorageTypes
 
     typedef struct ColumnHeader
     {
-        header_literal_t columnNameSize;
-        string columnName;
-
-        header_literal_t columnTypeLiteralSize;
-        string columnTypeLiteral;
-
         ColumnType columnType;
         column_index_t columnIndex;
         row_size_t recordSize;
@@ -26,6 +25,7 @@ namespace DatabaseEngine::StorageTypes
     class Column
     {
         ColumnHeader header;
+        std::string name;
         const Table *table;
         bool allowNulls;
 
@@ -33,9 +33,11 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] ColumnType SetColumnType() const;
 
     public:
-        Column(const string &columnName, const string &columnTypeLiteral, const row_size_t &recordSize, const bool &allowNulls);
+        Column(const string &columnName, const ColumnType& type, const row_size_t &recordSize, const bool &allowNulls);
 
-        explicit Column(const ColumnHeader &header, const Table *table);
+        Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table);
+
+        explicit Column(const Headers::ColumnHeader& masterDbHeader, const Table *table);
 
         ~Column();
 

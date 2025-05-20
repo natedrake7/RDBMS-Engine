@@ -5,8 +5,8 @@
 namespace QueryPipeline {
   class Validator {
 
-    static void Validate(Expression* expression, const Dictionary<std::string, Server::ColumnHeader>& columnsDictionary);
-    static void Validate(Field* field, const Server::ColumnHeader& header);
+    static void Validate(Expression* expression, const Dictionary<std::string, Headers::ColumnHeader>& columnsDictionary);
+    static void Validate(Field* field, const Headers::ColumnHeader& header);
     
     public:
       static Validator& Get() {

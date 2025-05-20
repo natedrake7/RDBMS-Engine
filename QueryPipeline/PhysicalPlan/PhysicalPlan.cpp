@@ -97,9 +97,8 @@ bool PhysicalFilter::EvaluateExpression(const Expression* filter, const Database
   PhysicalTableScan::PhysicalTableScan(const std::string &tableName): tableName(tableName) {}
 
   PhysicalPlanResult PhysicalTableScan::Execute(){
-      using namespace DatabaseEngine;
       using namespace DatabaseEngine::StorageTypes;
-      Database* db = nullptr;
+      DatabaseEngine::Database* db = nullptr;
 
       UseDatabase("masterDb", &db);
 
@@ -107,7 +106,7 @@ bool PhysicalFilter::EvaluateExpression(const Expression* filter, const Database
 
       PhysicalPlanResult result;
 
-      const vector<column_index_t> columnIndices;
+      constexpr vector<column_index_t> columnIndices;
       table->Select(result.rows, columnIndices);
 
       return result;
@@ -116,9 +115,8 @@ bool PhysicalFilter::EvaluateExpression(const Expression* filter, const Database
   PhysicalInsert::PhysicalInsert(const std::string &tableName, const std::vector<Field> &fields): tableName(tableName), fields(fields) {}
 
   PhysicalPlanResult PhysicalInsert::Execute(){
-    using namespace DatabaseEngine;
     using namespace DatabaseEngine::StorageTypes;
-    Database* db = nullptr;
+    DatabaseEngine::Database* db = nullptr;
 
     UseDatabase("masterDb", &db);
     Table* table = db->OpenTable(this->tableName);

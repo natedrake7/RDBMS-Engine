@@ -41,33 +41,29 @@ namespace Pages
     {
         this->WritePageHeaderToFile(filePtr);
 
-        filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->databaseNameSize), sizeof(header_literal_t));
-        filePtr->write(this->databaseHeader->databaseName.c_str(), this->databaseHeader->databaseNameSize);
         filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->numberOfTables), sizeof(table_number_t));
         filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->lastTableId), sizeof(table_id_t));
         filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->lastPageFreeSpacePageId), sizeof(page_id_t));
         filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->lastGamPageId), sizeof(page_id_t));
 
-        for (const auto &tableFullHeader : this->tablesHeaders)
+        for (const auto &tableHeader : this->tablesHeaders)
         {
-            filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableId), sizeof(table_id_t));
-            filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.tableNameSize), sizeof(header_literal_t));
-            filePtr->write(tableFullHeader.tableHeader.tableName.c_str(), tableFullHeader.tableHeader.tableNameSize);
-            filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.indexAllocationMapPageId), sizeof(page_id_t));
-            filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.maxRowSize), sizeof(row_size_t));
-            filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.numberOfColumns), sizeof(column_number_t));
-            filePtr->write(reinterpret_cast<const char *>(&tableFullHeader.tableHeader.clusteredIndexPageId), sizeof(page_id_t));
+            filePtr->write(reinterpret_cast<const char *>(&tableHeader.tableId), sizeof(table_id_t));
+            filePtr->write(reinterpret_cast<const char *>(&tableHeader.indexAllocationMapPageId), sizeof(page_id_t));
+            filePtr->write(reinterpret_cast<const char *>(&tableHeader.maxRowSize), sizeof(row_size_t));
+            filePtr->write(reinterpret_cast<const char *>(&tableHeader.numberOfColumns), sizeof(column_number_t));
+            filePtr->write(reinterpret_cast<const char *>(&tableHeader.clusteredIndexPageId), sizeof(page_id_t));
 
-            tableFullHeader.tableHeader.columnsNullBitMap->WriteDataToFile(filePtr);
+            // tableHeader.columnsNullBitMap->WriteDataToFile(filePtr);
 
-            const uint8_t numberOfClusteredIndexedColumns = tableFullHeader.tableHeader.clusteredColumnIndexes.size();
+            const uint8_t numberOfClusteredIndexedColumns = tableHeader.clusteredColumnIndexes.size();
             filePtr->write(reinterpret_cast<const char *>(&numberOfClusteredIndexedColumns), sizeof(uint8_t));
-            filePtr->write(reinterpret_cast<const char *>(tableFullHeader.tableHeader.clusteredColumnIndexes.data()), numberOfClusteredIndexedColumns * sizeof(column_index_t));
+            filePtr->write(reinterpret_cast<const char *>(tableHeader.clusteredColumnIndexes.data()), numberOfClusteredIndexedColumns * sizeof(column_index_t));
 
-            const uint8_t numberOfNonClusteredIndexes = tableFullHeader.tableHeader.nonClusteredColumnIndexes.size();
+            const uint8_t numberOfNonClusteredIndexes = tableHeader.nonClusteredColumnIndexes.size();
             filePtr->write(reinterpret_cast<const char *>(&numberOfNonClusteredIndexes), sizeof(uint8_t));
 
-            for(const auto& nonClusteredIndexes: tableFullHeader.tableHeader.nonClusteredColumnIndexes)
+            for(const auto& nonClusteredIndexes: tableHeader.nonClusteredColumnIndexes)
             {
                 const uint8_t numberOfNonClusteredIndexedColumns = nonClusteredIndexes.size();
                 filePtr->write(reinterpret_cast<const char *>(&numberOfNonClusteredIndexedColumns), sizeof(uint8_t));
@@ -76,34 +72,16 @@ namespace Pages
             }
 
 
-            for(const auto& nonClusteredIndexPageId: tableFullHeader.tableHeader.nonClusteredIndexPageIds)
+            for(const auto& nonClusteredIndexPageId: tableHeader.nonClusteredIndexPageIds)
                 filePtr->write(reinterpret_cast<const char *>(&nonClusteredIndexPageId), sizeof(page_id_t));
 
-            for(const auto& nonClusteredIndexPageId: tableFullHeader.tableHeader.nonClusteredIndexesIds)
+            for(const auto& nonClusteredIndexPageId: tableHeader.nonClusteredIndexesIds)
                 filePtr->write(reinterpret_cast<const char *>(&nonClusteredIndexPageId), sizeof(uint8_t));
-
-            for (const auto &columnMetaData : tableFullHeader.columnsHeaders)
-            {
-                filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnNameSize), sizeof(header_literal_t));
-                filePtr->write(columnMetaData.columnName.c_str(), columnMetaData.columnNameSize);
-                filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnTypeLiteralSize), sizeof(header_literal_t));
-                filePtr->write(columnMetaData.columnTypeLiteral.c_str(), columnMetaData.columnTypeLiteralSize);
-                filePtr->write(reinterpret_cast<const char *>(&columnMetaData.recordSize), sizeof(row_size_t));
-                filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnType), sizeof(ColumnType));
-                filePtr->write(reinterpret_cast<const char *>(&columnMetaData.columnIndex), sizeof(column_index_t));
-            }
         }
     }
 
     void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
     {
-        memcpy(&this->databaseHeader->databaseNameSize, data.data() + offSet, sizeof(header_literal_t));
-        offSet += sizeof(header_literal_t);
-
-        this->databaseHeader->databaseName.resize(this->databaseHeader->databaseNameSize);
-        memcpy(&this->databaseHeader->databaseName[0], data.data() + offSet, this->databaseHeader->databaseNameSize);
-        offSet += this->databaseHeader->databaseNameSize;
-
         memcpy(&this->databaseHeader->numberOfTables, data.data() + offSet, sizeof(table_number_t));
         offSet += sizeof(table_number_t);
 
@@ -118,32 +96,25 @@ namespace Pages
 
         for (int i = 0; i < this->databaseHeader->numberOfTables; i++)
         {
-            TableFullHeader tableFullHeader;
+            TableHeader tableHeader;
 
-            memcpy(&tableFullHeader.tableHeader.tableId, data.data() + offSet, sizeof(table_id_t));
+            memcpy(&tableHeader.tableId, data.data() + offSet, sizeof(table_id_t));
             offSet += sizeof(table_id_t);
 
-            memcpy(&tableFullHeader.tableHeader.tableNameSize, data.data() + offSet, sizeof(header_literal_t));
-            offSet += sizeof(header_literal_t);
-            tableFullHeader.tableHeader.tableName.resize(tableFullHeader.tableHeader.tableNameSize);
-
-            memcpy(&tableFullHeader.tableHeader.tableName[0], data.data() + offSet, tableFullHeader.tableHeader.tableNameSize);
-            offSet += tableFullHeader.tableHeader.tableNameSize;
-
-            memcpy(&tableFullHeader.tableHeader.indexAllocationMapPageId, data.data() + offSet, sizeof(page_id_t));
+            memcpy(&tableHeader.indexAllocationMapPageId, data.data() + offSet, sizeof(page_id_t));
             offSet += sizeof(page_id_t);
 
-            memcpy(&tableFullHeader.tableHeader.maxRowSize, data.data() + offSet, sizeof(row_size_t));
+            memcpy(&tableHeader.maxRowSize, data.data() + offSet, sizeof(row_size_t));
             offSet += sizeof(row_size_t);
 
-            memcpy(&tableFullHeader.tableHeader.numberOfColumns, data.data() + offSet, sizeof(column_number_t));
+            memcpy(&tableHeader.numberOfColumns, data.data() + offSet, sizeof(column_number_t));
             offSet += sizeof(column_number_t);
 
-            memcpy(&tableFullHeader.tableHeader.clusteredIndexPageId, data.data() + offSet, sizeof(page_id_t));
+            memcpy(&tableHeader.clusteredIndexPageId, data.data() + offSet, sizeof(page_id_t));
             offSet += sizeof(page_id_t);
 
-            tableFullHeader.tableHeader.columnsNullBitMap = new BitMap(tableFullHeader.tableHeader.numberOfColumns);
-            tableFullHeader.tableHeader.columnsNullBitMap->GetDataFromFile(data, offSet);
+            // tableHeader.columnsNullBitMap = new BitMap(tableHeader.numberOfColumns);
+            // tableHeader.columnsNullBitMap->GetDataFromFile(data, offSet);
 
             uint8_t numberOfClusteredIndexedColumns;
             memcpy(&numberOfClusteredIndexedColumns, data.data() + offSet, sizeof(uint8_t));
@@ -155,14 +126,14 @@ namespace Pages
                 memcpy(&columnIndex, data.data() + offSet, sizeof(column_index_t));
                 offSet += sizeof(column_index_t);
 
-                tableFullHeader.tableHeader.clusteredColumnIndexes.push_back(columnIndex);
+                tableHeader.clusteredColumnIndexes.push_back(columnIndex);
             }
 
             uint8_t numberOfNonClusteredIndexes;
             memcpy(&numberOfNonClusteredIndexes, data.data() + offSet, sizeof(uint8_t));
             offSet += sizeof(uint8_t);
 
-            tableFullHeader.tableHeader.nonClusteredColumnIndexes.resize(numberOfNonClusteredIndexes);
+            tableHeader.nonClusteredColumnIndexes.resize(numberOfNonClusteredIndexes);
             for(int j = 0; j < numberOfNonClusteredIndexes; j++)
             {
                 uint8_t numberOfNonClusteredIndexedColumns;
@@ -175,7 +146,7 @@ namespace Pages
                     memcpy(&columnIndex, data.data() + offSet, sizeof(column_index_t));
                     offSet += sizeof(column_index_t);
                     
-                    tableFullHeader.tableHeader.nonClusteredColumnIndexes[j].push_back(columnIndex);
+                    tableHeader.nonClusteredColumnIndexes[j].push_back(columnIndex);
                 }
             }
 
@@ -184,7 +155,7 @@ namespace Pages
                 page_id_t pageId = 0;
                 memcpy(&pageId, data.data() + offSet, sizeof(page_id_t));
 
-                tableFullHeader.tableHeader.nonClusteredIndexPageIds.push_back(pageId);
+                tableHeader.nonClusteredIndexPageIds.push_back(pageId);
                 offSet += sizeof(page_id_t);
             }
 
@@ -193,46 +164,17 @@ namespace Pages
                 uint8_t indexId = 0;
                 memcpy(&indexId, data.data() + offSet, sizeof(uint8_t));
 
-                tableFullHeader.tableHeader.nonClusteredIndexesIds.push_back(indexId);
+                tableHeader.nonClusteredIndexesIds.push_back(indexId);
                 offSet += sizeof(uint8_t);
             }
 
-            for (int j = 0; j < tableFullHeader.tableHeader.numberOfColumns; j++)
-            {
-                ColumnHeader columnHeader;
-                memcpy(&columnHeader.columnNameSize, data.data() + offSet, sizeof(header_literal_t));
-                offSet += sizeof(header_literal_t);
-                columnHeader.columnName.resize(columnHeader.columnNameSize);
-
-                memcpy(&columnHeader.columnName[0], data.data() + offSet, columnHeader.columnNameSize);
-                offSet += columnHeader.columnNameSize;
-
-                memcpy(&columnHeader.columnTypeLiteralSize, data.data() + offSet, sizeof(header_literal_t));
-                offSet += sizeof(header_literal_t);
-                columnHeader.columnTypeLiteral.resize(columnHeader.columnTypeLiteralSize);
-
-                memcpy(&columnHeader.columnTypeLiteral[0], data.data() + offSet, columnHeader.columnTypeLiteralSize);
-                offSet += columnHeader.columnTypeLiteralSize;
-
-                memcpy(&columnHeader.recordSize, data.data() + offSet, sizeof(row_size_t));
-                offSet += sizeof(row_size_t);
-
-                memcpy(&columnHeader.columnType, data.data() + offSet, sizeof(ColumnType));
-                offSet += sizeof(ColumnType);
-
-                memcpy(&columnHeader.columnIndex, data.data() + offSet, sizeof(column_index_t));
-                offSet += sizeof(column_index_t);
-
-                tableFullHeader.columnsHeaders.push_back(columnHeader);
-            }
-            this->tablesHeaders.push_back(tableFullHeader);
+            this->tablesHeaders.push_back(tableHeader);
         }
     }
 
     void HeaderPage::SetDbHeader(const DatabaseHeader &databaseHeader)
     {
         *this->databaseHeader = databaseHeader;
-        this->databaseHeader->databaseNameSize = this->databaseHeader->databaseName.size();
         this->isDirty = true;
 
         this->tablesHeaders.clear();
@@ -240,27 +182,14 @@ namespace Pages
 
     void HeaderPage::SetTableHeader(const Table* table)
     {
-        TableFullHeader tableFullHeader;
-        tableFullHeader.tableHeader = table->GetTableHeader();
-        tableFullHeader.tableHeader.tableNameSize = tableFullHeader.tableHeader.tableName.size();
+        TableHeader header = table->GetTableHeader();
 
-        const auto &columns = table->GetColumns();
-
-        for (const auto &column : columns)
-        {
-            ColumnHeader columnHeader = column->GetColumnHeader();
-            columnHeader.columnTypeLiteralSize = columnHeader.columnTypeLiteral.size();
-            columnHeader.columnNameSize = columnHeader.columnName.size();
-
-            tableFullHeader.columnsHeaders.push_back(columnHeader);
-        }
-
-        this->tablesHeaders.push_back(tableFullHeader);
+        this->tablesHeaders.push_back(header);
 
         this->isDirty = true;
     }
 
     const DatabaseHeader *HeaderPage::GetDatabaseHeader() const { return this->databaseHeader; }
 
-    const vector<TableFullHeader> &HeaderPage::GetTablesFullHeaders() const { return this->tablesHeaders; }
+    const vector<TableHeader> &HeaderPage::GetTablesFullHeaders() const { return this->tablesHeaders; }
 }

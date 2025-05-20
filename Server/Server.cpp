@@ -9,7 +9,7 @@
 
 using json = nlohmann::json;
 
-namespace Server {
+namespace Headers {
   void from_json(const json& j, sysColumn& c) {
     j.at("name").get_to(c.name);
     j.at("type").get_to(c.type);
@@ -23,7 +23,9 @@ namespace Server {
     j.at("columns").get_to(t.columns);
     j.at("primaryKey").get_to(t.primaryKey);
   }
+}
 
+namespace Server {
    ServerInstance::ServerInstance(){
      this->masterDb = nullptr;
   }
@@ -55,7 +57,7 @@ namespace Server {
     this->ReadConfiguration(configPath);
 
      if (this->CheckIfMasterDbExists()) {
-       DatabaseEngine::UseDatabase(this->sysDbName, &this->masterDb);
+       DatabaseEngine::UseDatabase(this->sysDbName, &this->masterDb, this->sysTables);
        return;
      }
      
@@ -269,10 +271,10 @@ namespace Server {
      return !selectedDatabases.empty();
   }
 
-  DatabaseHeader ServerInstance::SelectDatabases(const string &dbName) const{
+  Headers::DatabaseHeader ServerInstance::SelectDatabases(const string &dbName) const{
      using namespace DatabaseEngine::StorageTypes;
 
-     Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+     Table* sysDatabases = this->masterDb->OpenTable(0);
 
      vector<Row> selectedDatabases;
      const vector<Field> conditions = {
@@ -281,7 +283,7 @@ namespace Server {
 
      sysDatabases->Select(selectedDatabases, {0, 1, 2, 3, 4, 5}, &conditions);
 
-     DatabaseHeader header;
+     Headers::DatabaseHeader header;
 
      if (selectedDatabases.empty())
        return {};
@@ -315,7 +317,7 @@ namespace Server {
      return selectedSchemas;
   }
 
-  vector<TableHeader> ServerInstance::SelectTables(const string &dbName) const{
+  vector<Headers::TableHeader> ServerInstance::SelectTables(const string &dbName) const{
     using namespace DatabaseEngine::StorageTypes;
 
     const vector<Field> conditions = {
@@ -323,21 +325,21 @@ namespace Server {
     };
 
     vector<Row> selectedTables;
-    Table* sysTables = this->masterDb->OpenTable("sys_tables");
+    Table* sysTables = this->masterDb->OpenTable(1);
 
     sysTables->Select(selectedTables, {0, 1, 2, 3, 4, 5, 6}, &conditions);
 
     if (selectedTables.empty())
       return {};
       
-    vector<TableHeader> selectedTableHeaders;
+    vector<Headers::TableHeader> selectedTableHeaders;
     selectedTableHeaders.reserve(selectedTables.size());
 
     for (const auto& table : selectedTables) {
       const auto& data = table.GetData();
       
       selectedTableHeaders.emplace_back(
-          TableHeader{
+          Headers::TableHeader{
               data[0]->GetString(),
               data[1]->GetString(),
               data[2]->GetString(),
@@ -352,7 +354,7 @@ namespace Server {
     return selectedTableHeaders;
   }
 
-  vector<ColumnHeader> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
+  vector<Headers::ColumnHeader> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
     using namespace DatabaseEngine::StorageTypes;
 
     const vector<Field> conditions = {
@@ -368,14 +370,14 @@ namespace Server {
     if (selectedColumns.empty())
       return {};
 
-    vector<ColumnHeader> selectedColumnHeaders;
+    vector<Headers::ColumnHeader> selectedColumnHeaders;
     selectedColumnHeaders.reserve(selectedColumns.size());
 
     for (const auto& column : selectedColumns) {
       const auto& data = column.GetData();
 
       selectedColumnHeaders.emplace_back(
-        ColumnHeader{
+        Headers::ColumnHeader{
           data[0]->GetString(),
           data[1]->GetString(),
           data[2]->GetString(),
@@ -393,10 +395,10 @@ namespace Server {
      return selectedColumnHeaders;
   }
 
-  Dictionary<string, ColumnHeader> ServerInstance::SelectColumnsToDictionary(const string &dbName, const string &tableName) const{
+  Dictionary<string, Headers::ColumnHeader> ServerInstance::SelectColumnsToDictionary(const string &dbName, const string &tableName) const{
     const auto columns = this->SelectColumns(dbName, tableName);
 
-    Dictionary<string, ColumnHeader> selectedColumns;
+    Dictionary<string, Headers::ColumnHeader> selectedColumns;
 
     for (const auto& column : columns)
       selectedColumns.Add(column.name, column);
@@ -426,7 +428,7 @@ namespace Server {
 
    CreateDatabase(this->sysDbName);
 
-   UseDatabase(this->sysDbName, &this->masterDb);
+   UseDatabase(this->sysDbName, &this->masterDb, true);
 
     if (this->masterDb == nullptr)
       throw runtime_error("Failed to create" + this->sysDbName + " database");
@@ -445,7 +447,9 @@ namespace Server {
         if (columnSize == 0) 
           columnSize = column.size;
 
-        columns.push_back(new Column(column.name, column.type, columnSize, false));
+        const auto columnType = ColumnTypesDictionary.Get(column.type);
+
+        columns.push_back(new Column(column.name, columnType, columnSize, false));
 
         for (const auto& key: table.primaryKey) {
           if (column.name != key)

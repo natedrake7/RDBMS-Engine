@@ -60,7 +60,8 @@ add_library(AdditionalLibraries
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h)
+        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
+        AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h)
 
 add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
                             QueryPipeline/Parser/Parser.h

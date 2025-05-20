@@ -15,6 +15,7 @@
 #include "Storage/StorageManager/StorageManager.h"
 #include "Block/Block.h"
 #include "../AdditionalLibraries/BitMap/BitMap.h"
+#include "../Server/Server.h"
 #include "B+Tree/BPlusTree.h"
 
 #include <iostream>
@@ -95,20 +96,44 @@ namespace DatabaseEngine
         return (pageId - ( pfsPages + gamPages + 1 )) / 8 ;
     }
 
-    Database::Database(const string &dbName)
-    {
+    Database::Database(const string &dbName, const vector<Headers::sysTable>& tables) {
         this->filename = dbName + ".db";
         this->fileExtension = ".db";
+        this->name = dbName;
 
         const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->filename);
 
-        //query get from masterDb
+        this->header = *headerPage->GetDatabaseHeader();
+
+        const auto& headerPageTables = headerPage->GetTablesFullHeaders();
+
+        for (int i = 0;i < tables.size(); i++)
+            this->CreateTable(tables[i], headerPageTables[i]);
+    }
+
+    Database::Database(const string &dbName, const bool& isServerInitialization)
+    {
+        this->filename = dbName + ".db";
+        this->fileExtension = ".db";
+        this->name = dbName;
+
+        const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->filename);
 
         this->header = *headerPage->GetDatabaseHeader();
-        const vector<TableFullHeader> tablesFullHeaders = headerPage->GetTablesFullHeaders();
 
-        for (auto &tableHeader : tablesFullHeaders)
-            this->CreateTable(tableHeader);
+        if (isServerInitialization)
+            return;
+
+        //query get from masterDb
+        const auto& masterDbData = Server::ServerInstance::Get().SelectTables(dbName);
+
+        const auto& headerPageTables = headerPage->GetTablesFullHeaders();
+
+        if (headerPageTables.size() != masterDbData.size())
+            return;
+
+        for (int i = 0;i < masterDbData.size(); i++)
+            this->CreateTable(masterDbData[i], headerPageTables[i]);
     }
 
     Database::~Database()
@@ -139,12 +164,24 @@ namespace DatabaseEngine
         return table;
     }
 
-    void Database::CreateTable(const TableFullHeader &tableFullHeader)
+    void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader)
     {
-        Table *table = new Table(tableFullHeader.tableHeader, this);
+        auto *table = new Table(masterDbHeader, tableHeader, this);
 
-        for (const auto &columnHeader : tableFullHeader.columnsHeaders)
-            table->AddColumn(new Column(columnHeader, table));
+        const auto masterDbColumns = Server::ServerInstance::Get().SelectColumns(this->name, masterDbHeader.name);
+
+        for (const auto & masterDbColumn : masterDbColumns)
+            table->AddColumn(new Column(masterDbColumn, table));
+
+        this->tables.push_back(table);
+    }
+
+    void Database::CreateTable(const Headers::sysTable &sysHeader, const TableHeader &tableHeader)
+    {
+        auto *table = new Table(sysHeader, tableHeader, this);
+
+        for (int i = 0;i < sysHeader.columns.size(); i++)
+            table->AddColumn(new Column(sysHeader.columns[i], i,  table));
 
         this->tables.push_back(table);
     }
@@ -153,11 +190,15 @@ namespace DatabaseEngine
     {
         for (const auto &table : this->tables)
         {
-            if (table->GetTableHeader().tableName == tableName)
+            if (table->GetTableName() == tableName)
                 return table;
         }
 
         throw invalid_argument("Database::OpenTable: No table with name " + tableName + " exists.");
+    }
+
+    StorageTypes::Table * Database::OpenTable(const table_id_t &tableId) const{
+        return this->tables.at(tableId);
     }
 
     void Database::DeleteTable(const string& tableName)
@@ -220,12 +261,17 @@ namespace DatabaseEngine
 
         HeaderPage *headerPage = StorageManager::Get().CreateHeaderPage(dbName + ".db");
 
-        headerPage->SetDbHeader(DatabaseHeader(dbName, 0, firstPfsPageId, firstGamePageId));
+        headerPage->SetDbHeader(DatabaseHeader(0, firstPfsPageId, firstGamePageId));
     }
 
-    void UseDatabase(const string &dbName, Database **db)
+    void UseDatabase(const string &dbName, Database **db, const bool& isServerInitialization)
     {
-        *db = new Database(dbName);
+        *db = new Database(dbName, isServerInitialization);
+    }
+
+    void UseDatabase(const string &dbName, Database **db, const vector<Headers::sysTable>& tables)
+    {
+        *db = new Database(dbName, tables);
     }
 
     void PrintRows(const vector<Row> &rows)
@@ -799,18 +845,15 @@ namespace DatabaseEngine
 
     DatabaseHeader::DatabaseHeader()
     {
-        this->databaseNameSize = 0;
         this->numberOfTables = 0;
         this->lastTableId = 0;
         this->lastPageFreeSpacePageId = 0;
         this->lastGamPageId = 0;
     }
 
-    DatabaseHeader::DatabaseHeader(const string &databaseName, const table_number_t &numberOfTables, const page_id_t &lastPageFreeSpacePageId, const page_id_t &lastGamPageId)
+    DatabaseHeader::DatabaseHeader(const table_number_t &numberOfTables, const page_id_t &lastPageFreeSpacePageId, const page_id_t &lastGamPageId)
     {
-        this->databaseName = databaseName;
-        this->numberOfTables = numberOfTables;
-        this->databaseNameSize = 0;
+        this->numberOfTables = 0;
         this->lastTableId = 0;
         this->lastPageFreeSpacePageId = lastPageFreeSpacePageId;
         this->lastGamPageId = lastGamPageId;
@@ -818,9 +861,7 @@ namespace DatabaseEngine
 
     DatabaseHeader::DatabaseHeader(const DatabaseHeader &dbHeader)
     {
-        this->databaseName = dbHeader.databaseName;
         this->numberOfTables = dbHeader.numberOfTables;
-        this->databaseNameSize = this->databaseName.size();
         this->lastTableId = dbHeader.lastTableId;
         this->lastPageFreeSpacePageId = dbHeader.lastPageFreeSpacePageId;
         this->lastGamPageId = dbHeader.lastGamPageId;
@@ -831,8 +872,6 @@ namespace DatabaseEngine
         if (&dbHeader == this)
             return *this;
 
-        this->databaseName = dbHeader.databaseName;
-        this->databaseNameSize = dbHeader.databaseNameSize;
         this->numberOfTables = dbHeader.numberOfTables;
         this->lastTableId = dbHeader.lastTableId;
         this->lastGamPageId = dbHeader.lastGamPageId;

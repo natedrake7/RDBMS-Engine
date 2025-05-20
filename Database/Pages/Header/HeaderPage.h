@@ -5,7 +5,7 @@ namespace DatabaseEngine {
     struct DatabaseHeader;
     namespace StorageTypes {
         class Table;
-        struct TableFullHeader;
+        struct TableHeader;
     }
 }
 
@@ -13,7 +13,7 @@ namespace Pages {
     class HeaderPage final : public Page
     {
         DatabaseEngine::DatabaseHeader* databaseHeader;
-        vector<DatabaseEngine::StorageTypes::TableFullHeader> tablesHeaders;
+        vector<DatabaseEngine::StorageTypes::TableHeader> tablesHeaders;
 
     public:
         explicit HeaderPage(const int &pageId);
@@ -25,6 +25,6 @@ namespace Pages {
         void SetDbHeader(const DatabaseEngine::DatabaseHeader& databaseHeader);
         void SetTableHeader(const DatabaseEngine::StorageTypes::Table* table);
         [[nodiscard]] const DatabaseEngine::DatabaseHeader* GetDatabaseHeader() const;
-        [[nodiscard]] const vector<DatabaseEngine::StorageTypes::TableFullHeader>& GetTablesFullHeaders() const;
+        [[nodiscard]] const vector<DatabaseEngine::StorageTypes::TableHeader>& GetTablesFullHeaders() const;
     };
 }

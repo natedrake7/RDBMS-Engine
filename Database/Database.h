@@ -4,8 +4,10 @@
 #include <string>
 #include <vector>
 #include "../AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h"
+#include "../Server/Server.h"
 #include "B+Tree/BPlusTree.h"
 #include "Column/Column.h"
+#include "Table/Table.h"
 
 using namespace Constants;
 using namespace std;
@@ -22,10 +24,10 @@ namespace Indexing {
 
 namespace DatabaseEngine::StorageTypes {
   class Table;
-  struct TableFullHeader;
   class Block;
   class Column;
   class Row;
+  struct TableHeader;
 } // namespace DatabaseEngine::StorageTypes
 
 namespace Storage {
@@ -46,15 +48,12 @@ enum { MAX_TABLE_SIZE = 10 * 1024 };
 
 typedef struct DatabaseHeader {
   table_number_t numberOfTables;
-  header_literal_t databaseNameSize;
-  string databaseName;
   table_id_t lastTableId;
   page_id_t lastPageFreeSpacePageId;
   page_id_t lastGamPageId;
 
   DatabaseHeader();
-  DatabaseHeader(const string &databaseName,
-                 const table_number_t &numberOfTables,
+  DatabaseHeader(const table_number_t &numberOfTables,
                  const page_id_t &lastPageFreeSpacePageId,
                  const page_id_t &lastGamPageId);
   DatabaseHeader(const DatabaseHeader &dbHeader);
@@ -63,10 +62,10 @@ typedef struct DatabaseHeader {
 
 class Database {
   DatabaseHeader header;
+  std::string name;
   string filename;
   string fileExtension;
   vector<StorageTypes::Table *> tables;
-  const vector<string (*)(DatabaseEngine::StorageTypes::Block *&block)> getBlockDataByDataTypeArray = {};
 
 protected:
     static void MergeRows(StorageTypes::Row& row, const vector<StorageTypes::Row>& selectedRows, const vector<column_index_t>& selectedColumnIndices, const StorageTypes::Table *secondTable);
@@ -127,7 +126,9 @@ protected:
     [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
 public:
-    explicit Database(const string &dbName);
+    explicit Database(const string &dbName, const bool& isServerInitialization = false);
+
+    explicit Database(const std::string& dbName, const vector<Headers::sysTable>& tables);
 
     ~Database();
 
@@ -142,9 +143,13 @@ public:
                                       const vector<column_index_t> *clusteredKeyIndexes = nullptr, 
                                       const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
 
-    void CreateTable(const StorageTypes::TableFullHeader &tableMetaData);
+    void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
+
+    void CreateTable(const Headers::sysTable& sysHeader, const StorageTypes::TableHeader &tableHeader);
 
     [[nodiscard]] StorageTypes::Table *OpenTable(const string &tableName) const;
+
+    [[nodiscard]] StorageTypes::Table *OpenTable(const table_id_t& tableId) const;
 
     void DeleteTable(const string& tableName);
 
@@ -205,7 +210,9 @@ public:
 
 void CreateDatabase(const string &dbName);
 
-void UseDatabase(const string &dbName, Database **db);
+void UseDatabase(const string &dbName, Database **db, const bool& isServerInitialization = false);
+
+void UseDatabase(const string &dbName, Database **db, const vector<Headers::sysTable>& tables);
 
 void PrintRows(const vector<StorageTypes::Row> &rows);
 

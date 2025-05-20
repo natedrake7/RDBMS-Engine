@@ -1,6 +1,4 @@
 ﻿#pragma once
-#include <cstddef>
-#include <mutex>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -48,9 +46,6 @@ namespace DatabaseEngine::StorageTypes
     {
         table_id_t tableId;
 
-        header_literal_t tableNameSize;
-        string tableName;
-
         row_size_t maxRowSize;
         page_id_t indexAllocationMapPageId;
         column_number_t numberOfColumns;
@@ -59,7 +54,7 @@ namespace DatabaseEngine::StorageTypes
         vector<page_id_t> nonClusteredIndexPageIds;
         vector<uint8_t> nonClusteredIndexesIds;
 
-        ByteMaps::BitMap *columnsNullBitMap;
+        // ByteMaps::BitMap *columnsNullBitMap;
 
         // bitmaps to store the composite key
         vector<column_index_t> clusteredColumnIndexes;
@@ -73,23 +68,15 @@ namespace DatabaseEngine::StorageTypes
         TableHeader &operator=(const TableHeader &tableHeader);
     } TableHeader;
 
-    typedef struct TableFullHeader
-    {
-        TableHeader tableHeader;
-        vector<ColumnHeader> columnsHeaders;
-
-        TableFullHeader();
-        TableFullHeader(const TableFullHeader &tableHeader);
-    } TableFullHeader;
-
     class Table final
     {
+        std::string name;
         TableHeader header;
         vector<Column *> columns;
-        Database *database;
+        DatabaseEngine::Database *database;
+
         Indexing::BPlusTree* clusteredIndexedTree;
         vector<Indexing::BPlusTree*> nonClusteredIndexedTrees;
-        mutex pageSelectMutex;
 
         protected:
 
@@ -115,12 +102,16 @@ namespace DatabaseEngine::StorageTypes
             void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions, const vector<column_index_t>& selectedColumnIndices);
             void HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const;
             
-            Row* CreateRow(const vector<Field>& inputData);
+            [[nodiscard]] Row* CreateRow(const vector<Field>& inputData)const;
 
         public:
             Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
 
-            Table(const TableHeader &tableHeader, Database *database);
+            Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
+
+            Table(const std::string& tableName, const TableHeader &tableHeader, DatabaseEngine::Database *database);
+
+            Table(const Headers::sysTable& systemHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database);
 
             ~Table();
 
