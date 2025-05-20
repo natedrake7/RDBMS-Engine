@@ -45,7 +45,12 @@ namespace QueryPipeline::Statements {
   }
 
   void CreateTableStatement::Validate(){
-    const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
+    const auto tables = Server::ServerInstance::Get().SelectTables("MoviesDb");
+
+    const std::string temp = "MoviesDb";
+    
+    // if (tables.empty())
+    //   throw runtime_error("No Database with name: " + temp + " exists");
 
     const Headers::TableHeader* headerPtr = nullptr;
     for (const auto& table : tables) {
@@ -55,12 +60,27 @@ namespace QueryPipeline::Statements {
       }
     }
 
-    if (headerPtr == nullptr)
+    if (headerPtr != nullptr)
       throw runtime_error("Table " + this->name + " already exists");
+    
+    column_index_t tablePosition = 0;
+    for (auto& column: this->columns) {
+      uint16_t columnSize;
+      if (!ColumnTypeSizes.TryGetValue(column.type.name, columnSize))
+        throw runtime_error("Column Type: " + column.type.name + " does not exist");
 
-    // for (const auto& column: this->columns) {
-    //   column.type = 
-    // }
+      if (columnSize != 0) {
+        column.type.size = columnSize;
+      }
+
+      if (column.type.beforeFraction != 0 || column.type.afterFraction != 0) {
+        //decimal handle
+      }
+
+      column.index = tablePosition++;
+      if (column.isPrimaryKey)
+        this->primaryKey.push_back(column.index);
+    }
   }
 
   LogicalPlan * CreateTableStatement::ToLogical(){

@@ -52,6 +52,8 @@ class LogicalPlan;}namespace QueryPipeline::Statements {
     ColumnType type;
     bool isPrimaryKey;
     bool isNullable;
+
+    column_index_t index;
   };
 
   struct WhereClause{
@@ -70,6 +72,8 @@ class LogicalPlan;}namespace QueryPipeline::Statements {
   struct CreateTableStatement final: Statement {
     std::string name;
     std::vector<AddColumn> columns;
+    vector<column_index_t> primaryKey;
+
 
     void Validate() override;
     QueryPipeline::LogicalPlan* ToLogical() override;

@@ -48,7 +48,6 @@ void InitializeServer(const string& filePath) {
     //create sys tables(read from file).
 }
 
-static std::string DatabaseName = "MoviesDb";
  
 int main() 
 {
@@ -61,14 +60,14 @@ int main()
     server.Initialize("configuration.json");
 
     //select statement
-    const string test = "SELECT is_nullable FROM sys_columns WHERE name = 'db_name'";
+    // const string test = "SELECT is_nullable FROM sys_columns WHERE name = 'db_name'";
 
     //insert statement
     // const string test = "INSERT INTO sys_databases(name, filepath, is_system, created_at, last_modified, last_modified_by) "
     //                     "VALUES ('stakosDb', '../stakosDb', 1, GETDATE(), GETDATE(), 'system')";
 
     //create table
-    // const string test = "CREATE TABLE Actors ( data VARCHAR(MAX) NULL, isNull Bool NOT NULL, Id INT PRIMARY KEY IDENTITY)";
+    const string test = "CREATE TABLE Actors ( ID INT NOT NULL, ActorName VARCHAR(255) NOT NULL, ActorAge INT NOT NULL)";
 
     // const string test = "CREATE DATABASE MoviesDb";
 
