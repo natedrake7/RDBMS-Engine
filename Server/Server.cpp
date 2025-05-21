@@ -6,6 +6,10 @@
 #include "../Database/Database.h"
 #include "../Database/Block/Block.h"
 #include "../Database/Storage/StorageManager/StorageManager.h"
+#include "../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../Database/AdditionalFunctions/SortingFunctions.h"
+
+#include <iostream>
 
 using json = nlohmann::json;
 
@@ -60,50 +64,62 @@ namespace Server {
 
      if (this->CheckIfMasterDbExists()) {
        this->UseMasterDb();
+       std::cout << this->sysDbName << " initialized successfully" << std::endl;
        return;
      }
      
     this->CreateSystemDatabase();
     this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
 
-     for (const auto& table: this->sysTables) {
-      this->InsertTableToMasterDb(this->sysDbName, table.name, "dbo", true, "system");
+    for (int i = 0;i < this->sysTables.size(); i++) {
+      const auto& table = this->sysTables[i];
+      
+      this->InsertTableToMasterDb(
+        this->sysDbName,
+        table.name,
+        i,
+        "dbo",
+        true,
+        "system");
 
-       int columnPos = 0;
-       for (const auto& column: table.columns) {
+      int columnPos = 0;
+      for (auto& column: table.columns) {
 
-         block_size_t columnSize;
-         ColumnTypeSizes.TryGetValue(column.type, columnSize);
+        block_size_t columnSize;
 
-         if (columnSize == 0)
-           columnSize = column.size;
+        ColumnTypeSizes.TryGetValue(AdditionalLibraries::NormalizeString(column.type), columnSize);
 
-         this->InsertColumnToMasterDb(
-            this->sysDbName,
-            table.name,
-            column.name,
-            column.type,
-            columnSize,
-            false,
-            columnPos);
+        if (columnSize == 0)
+          columnSize = column.size;
 
-          columnPos++;
-       }
+        this->InsertColumnToMasterDb(
+           this->sysDbName,
+           table.name,
+           column.name,
+           column.type,
+           columnSize,
+           false,
+           columnPos,
+           true);
 
-       string concatenatedColumns;
-       string _columns;
+        columnPos++;
+      }
 
-       for (int i = 0; i < table.primaryKey.size(); i++) {
+      string concatenatedColumns;
+      string _columns;
+
+      for (int i = 0; i < table.primaryKey.size(); i++) {
         const auto& key = table.primaryKey[i];
          
-         concatenatedColumns +=  i > 0  ? "," + key : key;
-         _columns +="_" + key;
-       }
+        concatenatedColumns +=  i > 0  ? "," + key : key;
+        _columns +="_" + key;
+      }
        
-       this->InsertIndexToMasterDb(this->sysDbName, table.name, "PK" + _columns, concatenatedColumns, true);
-     }
+      this->InsertIndexToMasterDb(this->sysDbName, table.name, "PK" + _columns, concatenatedColumns, true); 
+    }
 
-     this->InsertSchemaToMasterDb(this->sysDbName, "dbo");
+    this->InsertSchemaToMasterDb(this->sysDbName, "dbo");
+    std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
   DatabaseEngine::Database * ServerInstance::GetMasterDb()const{ return this->masterDb; }
@@ -155,6 +171,7 @@ namespace Server {
   void ServerInstance::InsertTableToMasterDb(
     const string& dbName,
     const string& tableName,
+    const table_id_t& tableId,
     const string& schemaName,
     const bool& isSystem,
     const string& user) const{
@@ -164,11 +181,12 @@ namespace Server {
       const vector<Field> fields = {
         Field(dbName, 0),
         Field(tableName, 1),
-        Field(schemaName, 2),
-        Field(isSystem, 3),
-        Field(currentDate, 4),
+        Field(tableId, 2),
+        Field(schemaName, 3),
+        Field(isSystem, 4),
         Field(currentDate, 5),
-        Field(user, 6),
+        Field(currentDate, 6),
+        Field(user, 7),
       };
     
     table->InsertRows({fields});
@@ -182,22 +200,24 @@ namespace Server {
     const int &columnSize,
     const bool& isNullable,
     const int &tablePosition,
+    const bool& isSystem,
     const string& user) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_columns");
       const auto currentDate = DataTypes::DateTime::Now();
 
-    const vector<Field> fields = {
-      Field(dbName, 0),
-      Field(tableName, 1),
-      Field(columnName, 2),
-      Field(columnType, 3),
-      Field(columnSize, 4),
-      Field(isNullable, 5),
-      Field(tablePosition, 6),
-      Field(currentDate, 7),
-      Field(currentDate, 8),
-      Field(user, 9),
-    };
+      const vector<Field> fields = {
+        Field(dbName, 0),
+        Field(tableName, 1),
+        Field(columnName, 2),
+        Field(columnType, 3),
+        Field(columnSize, 4),
+        Field(isNullable, 5),
+        Field(tablePosition, 6),
+        Field(isSystem, 7),
+        Field(currentDate, 8),
+        Field(currentDate, 9),
+        Field(user, 10),
+      };
 
     table->InsertRows({fields});
   }
@@ -367,14 +387,21 @@ namespace Server {
           Headers::TableHeader{
               data[0]->GetString(),
               data[1]->GetString(),
-              data[2]->GetString(),
-              data[3]->GetBool(),
-              data[4]->GetDateTime(),
+            data[2]->GetSmallInt(),
+              data[3]->GetString(),
+              data[4]->GetBool(),
               data[5]->GetDateTime(),
-              data[6]->GetString()
+              data[6]->GetDateTime(),
+              data[7]->GetString()
           }
       );
     }
+
+      ranges::sort(selectedTableHeaders,
+      [](const Headers::TableHeader& a, const Headers::TableHeader& b) {
+          return a.id < b.id;
+      }
+    );
 
     return selectedTableHeaders;
   }
@@ -397,7 +424,7 @@ namespace Server {
 
     vector<Headers::ColumnHeader> selectedColumnHeaders;
     selectedColumnHeaders.reserve(selectedColumns.size());
-
+    
     for (const auto& column : selectedColumns) {
       const auto& data = column.GetData();
 
@@ -410,13 +437,20 @@ namespace Server {
           data[4]->GetSmallInt(),
           data[5]->GetBool(),
           data[6]->GetSmallInt(),
-          data[7]->GetDateTime(),
+          data[7]->GetBool(),
           data[8]->GetDateTime(),
-          data[9]->GetString()
+          data[9]->GetDateTime(),
+          data[10]->GetString()
         }
       );
-    }    
-    
+    }
+
+    ranges::sort(selectedColumnHeaders,
+        [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
+            return a.tablePosition < b.tablePosition;
+        }
+    );
+
      return selectedColumnHeaders;
   }
 
@@ -457,24 +491,29 @@ namespace Server {
 
     if (this->masterDb == nullptr)
       throw runtime_error("Failed to create" + this->sysDbName + " database");
-    
-    for (const auto& table: this->sysTables) {
+
+    for (int i = 0;i < this->sysTables.size(); i++) {
+      const auto& table = this->sysTables[i];
+      
       vector<Column *> columns;
       vector<column_index_t> primaryKey;
       
       for (int i = 0;i < table.columns.size(); i++) {
         const auto& column = table.columns[i];
 
-        block_size_t columnSize = 0; 
-        if (!ColumnTypeSizes.TryGetValue(column.type, columnSize))
+        block_size_t columnSize = 0;
+
+        const auto normalizedColumnType = AdditionalLibraries::NormalizeString(column.type);
+        
+        if (!ColumnTypeSizes.TryGetValue(normalizedColumnType, columnSize))
           throw runtime_error("Column type " + column.type + " does not exist");
 
         if (columnSize == 0) 
           columnSize = column.size;
 
-        const auto columnType = ColumnTypesDictionary.Get(column.type);
+        const auto columnType = ColumnTypesDictionary.Get(normalizedColumnType);
 
-        columns.push_back(new Column(column.name, columnType, columnSize, false));
+        columns.push_back(new Column(column.name, columnType, columnSize, i, false));
 
         for (const auto& key: table.primaryKey) {
           if (column.name != key)
@@ -487,7 +526,7 @@ namespace Server {
       if (primaryKey.empty())
         throw runtime_error("All tables in masterDb must have a primary key");
         
-      this->masterDb->CreateTable(table.name, columns, &primaryKey);
+      this->masterDb->CreateTable(table.name, i, columns, &primaryKey); 
     }
   }
 

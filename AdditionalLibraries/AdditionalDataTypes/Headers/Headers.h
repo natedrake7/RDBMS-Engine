@@ -17,6 +17,7 @@ namespace Headers {
   typedef struct TableHeader {
     std::string dbName;
     std::string name;
+    int16_t id;
     std::string schemaName;
     bool isSystem;
     DataTypes::DateTime createdAt;
@@ -32,6 +33,7 @@ namespace Headers {
     int16_t recordSize;
     bool isNullable;
     int16_t tablePosition;
+    bool isSystem;
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
     std::string lastModifiedBy;

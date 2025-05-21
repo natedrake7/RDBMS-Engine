@@ -3,7 +3,9 @@
 #include <unordered_set>
 #include <vector>
 #include "../Constants.h"
-#include "../Database.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
+#include "../B+Tree/BPlusTree.h"
+
 using namespace std;
 using namespace Constants;
 

@@ -19,6 +19,9 @@ namespace DatabaseEngine::StorageTypes {
         {
             this->clusteredIndexedTree = new BPlusTree(this, this->header.clusteredIndexPageId, TreeType::Clustered);
 
+            if (this->header.clusteredIndexPageId == 0)
+                return this->clusteredIndexedTree;
+            
             this->GetClusteredIndexFromDisk();
         }
 

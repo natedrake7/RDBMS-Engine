@@ -45,12 +45,13 @@ namespace QueryPipeline::Statements {
   }
 
   void CreateTableStatement::Validate(){
-    const auto tables = Server::ServerInstance::Get().SelectTables("MoviesDb");
-
     const std::string temp = "MoviesDb";
+
+    if (!Server::ServerInstance::Get().DatabaseExists(temp))
+      throw runtime_error("No Database with name: "  + temp + " exists");
     
-    // if (tables.empty())
-    //   throw runtime_error("No Database with name: " + temp + " exists");
+    const auto tables = Server::ServerInstance::Get().SelectTables(temp);
+
 
     const Headers::TableHeader* headerPtr = nullptr;
     for (const auto& table : tables) {
@@ -84,11 +85,11 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * CreateTableStatement::ToLogical(){
-    return nullptr;
+    return new LogicalTableCreate(this->dbName, this->name, this->columns, this->primaryKey);
   }
 
   void SelectStatement::Validate(){
-    const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
+    const auto tables = Server::ServerInstance::Get().SelectTables(this->dbName);
 
     const Headers::TableHeader* headerPtr = nullptr;
     for (const auto& table : tables) {
@@ -101,7 +102,7 @@ namespace QueryPipeline::Statements {
     if (headerPtr == nullptr)
       throw runtime_error("Table " + this->table + " does not exist");
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary("masterDb", headerPtr->name);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, headerPtr->name);
 
     for (const auto& selectColumn : this->columns) {
       if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
@@ -119,16 +120,16 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
-    const auto scanTable = new LogicalTableScan(this->table);
+    const auto scanTable = new LogicalTableScan(this->dbName, this->table);
 
     LogicalPlan* current = scanTable;
 
     if (this->where.expression != nullptr)
-      current = new LogicalFilter(current, this->where.expression);
+      current = new LogicalFilter(this->dbName, current, this->where.expression);
     
 
     if (!this->columns.empty())
-      current = new LogicalProject(current, this->columnIndices);
+      current = new LogicalProject(this->dbName, current, this->columnIndices);
 
     return current;
   }
@@ -159,7 +160,7 @@ namespace QueryPipeline::Statements {
   }
 
   void InsertStatement::Validate(){
-    const auto tables = Server::ServerInstance::Get().SelectTables("masterDb");
+    const auto tables = Server::ServerInstance::Get().SelectTables(this->dbName);
 
     const Headers::TableHeader* headerPtr = nullptr;
     for (const auto& table : tables) {
@@ -172,7 +173,7 @@ namespace QueryPipeline::Statements {
     if (headerPtr == nullptr)
       throw runtime_error("Table " + this->tableName + " does not exist");
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary("masterDb", headerPtr->name);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, headerPtr->name);
 
     if (this->columns.size() != this->values.size())
       throw runtime_error("Invalid number of arguments supplied");
@@ -189,6 +190,9 @@ namespace QueryPipeline::Statements {
     }
 
     for (const auto&[columnName, header]:  columnsDict) {
+      if (header.isSystem)
+        continue;
+      
       bool columnExistsInStatement = false;
       
       for (const auto& statementColumn: this->columns) {
@@ -210,7 +214,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan* InsertStatement::ToLogical() {
-    return new QueryPipeline::LogicalInsert(this->tableName, this->values);
+    return new QueryPipeline::LogicalInsert(this->dbName, this->tableName, this->values);
   }
 
 

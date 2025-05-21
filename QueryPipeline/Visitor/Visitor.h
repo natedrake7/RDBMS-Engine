@@ -2,7 +2,8 @@
 #include <SQLVisitor.h>
 
 namespace QueryPipeline {
-  static std::string ParseString(const std::string& str);
+  static std::string String = "string";
+  static std::string UnicodeString = "unicodestring";
 
   class SQLVisitorImplementation final : public SQLVisitor {
     public:

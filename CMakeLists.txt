@@ -30,38 +30,39 @@ add_custom_target(
 
 file(GLOB ANTLR_SRC "${GENERATED_DIR}/*.cpp")
 
-add_library(AdditionalLibraries
-        AdditionalLibraries/BitMap/BitMap.cpp
-        AdditionalLibraries/BitMap/BitMap.h
-        AdditionalLibraries/ByteMap/ByteMap.cpp
-        AdditionalLibraries/ByteMap/ByteMap.h
-        AdditionalLibraries/AdditionalDataTypes/Field/Field.cpp
-        AdditionalLibraries/AdditionalDataTypes/Field/Field.h
-        AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.cpp
-        AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h
-        AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
-        AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
-        AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
-        AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
-        Database/RowCondition/RowCondition.cpp
-        Database/RowCondition/RowCondition.h
-        AdditionalLibraries/SafeConverter/SafeConverter.h
-        AdditionalLibraries/HashSet/HashSet.h
-        AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
-        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
-        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
-        AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
-        AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h)
+add_library(AdditionalLibraries AdditionalLibraries/BitMap/BitMap.cpp
+                                AdditionalLibraries/BitMap/BitMap.h
+                                AdditionalLibraries/ByteMap/ByteMap.cpp
+                                AdditionalLibraries/ByteMap/ByteMap.h
+                                AdditionalLibraries/AdditionalDataTypes/Field/Field.cpp
+                                AdditionalLibraries/AdditionalDataTypes/Field/Field.h
+                                AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.cpp
+                                AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h
+                                AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
+                                AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
+                                AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
+                                AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
+                                Database/RowCondition/RowCondition.cpp
+                                Database/RowCondition/RowCondition.h
+                                AdditionalLibraries/SafeConverter/SafeConverter.h
+                                AdditionalLibraries/HashSet/HashSet.h
+                                AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
+                                AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
+                                AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
+                                AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
+                                AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
+                                AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
+                                AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
+                                AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
+                                AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
+                                AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
+                                AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
+                                AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
+                                AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
+                                AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
+                                AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h
+                                AdditionalLibraries/StringFunctions/StringFunctions.h
+                                AdditionalLibraries/StringFunctions/StringFunctions.cpp)
 
 add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
                             QueryPipeline/Parser/Parser.h
@@ -130,8 +131,8 @@ add_library(Database    Database/Database.cpp
                         Database/AdditionalFunctions/SortingAlgorithms/MergeSort/MergeSort.h
                         Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
                         Database/AdditionalFunctions/StringFunctions/StringFunctions.h
-        Database/LockManager/LockManager.cpp
-        Database/LockManager/LockManager.h)
+                        Database/LockManager/LockManager.cpp
+                        Database/LockManager/LockManager.h)
 
 add_library(Server  Server/ConnectionManager/ConnectionManager.cpp
                     Server/ConnectionManager/ConnectionManager.h
@@ -141,6 +142,8 @@ add_library(Server  Server/ConnectionManager/ConnectionManager.cpp
                     Server/Server.h)
 
 target_link_libraries(Server PRIVATE nlohmann_json::nlohmann_json)
+
+target_link_libraries(Server PRIVATE AdditionalLibraries)
 
 add_executable(Client   Client/client.cpp
                         Client/client.h)

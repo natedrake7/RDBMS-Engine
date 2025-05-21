@@ -33,7 +33,7 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] ColumnType SetColumnType() const;
 
     public:
-        Column(const string &columnName, const ColumnType& type, const row_size_t &recordSize, const bool &allowNulls);
+        Column(const std::string& columnName, const ColumnType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls);
 
         Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table);
 

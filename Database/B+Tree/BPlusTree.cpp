@@ -11,6 +11,7 @@
 #include "../../Database/Storage/StorageManager/StorageManager.h"
 #include "../../Database/Column/Column.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
+#include "../Database.h"
 
 using namespace std;
 using namespace DatabaseEngine::StorageTypes;

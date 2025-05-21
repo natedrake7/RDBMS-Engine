@@ -1,13 +1,9 @@
 #include "Visitor.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
 #include "../Statements/Statements.h"
 
 namespace QueryPipeline {
-
-  string ParseString(const string &str){
-    return std::string(str).substr(1, str.size() - 2);
-  }
-
   antlrcpp::Any SQLVisitorImplementation::visitSqlStatement(SQLParser::SqlStatementContext *context)  {
     if (context->selectStatement())
       return visit(context->selectStatement());
@@ -70,8 +66,11 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitLiteralValue(SQLParser::LiteralValueContext *context){
-    if (context->STRING())
-      return Field(ParseString(context->STRING()->getText()), 0);
+    if (context->STRING()) {
+      const auto& str = context->STRING()->getText();
+
+      return Field(AdditionalLibraries::RemoveQuotesFromString(str), 0);
+    }
 
     if (context->NUMBER()) {
       const auto number = SafeConverter<int64_t>::SafeStoi(context->NUMBER()->getText());
@@ -141,13 +140,8 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
   antlrcpp::Any SQLVisitorImplementation::visitLiteralValueList(SQLParser::LiteralValueListContext *context){
     vector<Field> values;
     
-    for (const auto& literalValue : context->literalValue()) {
-      const auto value = std::any_cast<Field>(visit(literalValue));
-
-      values.push_back(value);
-
-      throw invalid_argument("Invalid value specified");
-    }
+    for (const auto& literalValue : context->literalValue())
+       values.emplace_back(std::any_cast<Field>(visit(literalValue)));
 
     return values;
   }
@@ -167,7 +161,6 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
       statement.columns.push_back(column);
     }
 
-
     return statement;
   }
 
@@ -177,10 +170,10 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (context->nvarcharType())
       return visit(context->varcharType());
 
-    const auto text = context->getText();
+    const auto& text = context->getText();
 
     return Statements::ColumnType{
-      .name = context->getText(),
+      .name = AdditionalLibraries::NormalizeString(text),
     };
   }
 
@@ -204,7 +197,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     const auto& number = context->NUMBER();
 
     return Statements::ColumnType{
-      .name = "String",
+      .name = QueryPipeline::String,
       .size = number ? SafeConverter<int64_t>::SafeStoi(number->getText()) : -1,
       .beforeFraction =  -1,
       .afterFraction = -1
@@ -215,6 +208,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     const auto& number = context->NUMBER();
 
     return Statements::ColumnType{
+        .name = QueryPipeline::UnicodeString,
         .size = number ? SafeConverter<int64_t>::SafeStoi(number->getText()) : -1,
         .beforeFraction =  -1,
         .afterFraction = -1

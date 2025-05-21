@@ -1,14 +1,17 @@
 ﻿#include "Column.h"
+#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
 #include "../Table/Table.h"
 
 namespace DatabaseEngine::StorageTypes {
-     Column::Column(const std::string& columnName, const ColumnType& type, const row_size_t&  recordSize, const bool& allowNulls)
+    
+
+     Column::Column(const std::string& columnName, const ColumnType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls)
     {
         this->name = columnName;
         this->header.recordSize = recordSize;
         this->allowNulls = allowNulls;
         this->header.columnType = type;
-        this->header.columnIndex = 0;
+        this->header.columnIndex = index;
         this->table = nullptr;
     }
 
@@ -16,7 +19,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         this->name = masterDbHeader.name;
         this->allowNulls = masterDbHeader.isNullable;
-        this->header.columnType = ColumnTypesDictionary.Get(masterDbHeader.dataType);
+        this->header.columnType = ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(masterDbHeader.dataType));
         this->header.recordSize = masterDbHeader.recordSize;
         this->header.columnIndex = masterDbHeader.tablePosition;
         this->table = table;
@@ -26,7 +29,7 @@ namespace DatabaseEngine::StorageTypes {
     {
        this->name = header.name;
        this->allowNulls = false;
-       this->header.columnType = ColumnTypesDictionary.Get(header.type);
+       this->header.columnType = ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(header.type));
        this->header.recordSize = header.size;
        this->header.columnIndex = tablePos;
        this->table = table;

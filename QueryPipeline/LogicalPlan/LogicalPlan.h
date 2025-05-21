@@ -4,18 +4,17 @@
 namespace QueryPipeline {
   class LogicalPlan {
   public:
+    std::string dbName;
+    explicit LogicalPlan(const std::string& dbName);
+    LogicalPlan() = default;
     virtual ~LogicalPlan();
     virtual PhysicalPlan::PhysicalOperator* ToPhysical() = 0;
   };
 
-  LogicalPlan* BuildLogicalPlan(const Statements::SelectStatement& statement);
-  LogicalPlan* BuildLogicalPlan(const Statements::CreateDbStatement& statement);
-  LogicalPlan* BuildLogicalPlan(const Statements::InsertStatement& statement);
-
   class LogicalCreateDatabase final : public LogicalPlan {
     public:
       std::string dbName;
-      explicit LogicalCreateDatabase(const std::string &dbName);
+      explicit LogicalCreateDatabase(std::string dbName);
       PhysicalPlan::PhysicalCreateDatabase* ToPhysical()override;
   };
 
@@ -23,7 +22,7 @@ namespace QueryPipeline {
     public:
       LogicalPlan* child;
       std::vector<column_index_t> columns;
-      LogicalProject(LogicalPlan* child, const std::vector<column_index_t>& columns);
+      LogicalProject(const std::string& dbName, LogicalPlan* child, const std::vector<column_index_t>& columns);
       ~LogicalProject() override;
       PhysicalPlan::PhysicalProject* ToPhysical()override;
   };
@@ -31,7 +30,7 @@ namespace QueryPipeline {
   class LogicalTableScan final : public LogicalPlan {
     public:
       std::string tableName;
-      explicit LogicalTableScan(const std::string& name);
+      explicit LogicalTableScan(const std::string& dbName, std::string  name);
       PhysicalPlan::PhysicalTableScan* ToPhysical()override;
   };
 
@@ -39,7 +38,7 @@ namespace QueryPipeline {
     public:
       LogicalPlan* child;
       Statements::Expression* filter;
-      explicit LogicalFilter(LogicalPlan* child, Statements::Expression* filter);
+      explicit LogicalFilter(const std::string& dbName, LogicalPlan* child, Statements::Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
   };
 
@@ -47,8 +46,17 @@ namespace QueryPipeline {
     public:
       std::string tableName;
       std::vector<Field> fields;
-      explicit LogicalInsert(const std::string& tableName, const std::vector<Field>& fields);
+      explicit LogicalInsert(const std::string& dbName, std::string  tableName, const std::vector<Field>& fields);
       PhysicalPlan::PhysicalInsert* ToPhysical()override;
+  };
+
+  class LogicalTableCreate final : public LogicalPlan {
+    public:
+      std::string name;
+      std::vector<Statements::AddColumn> columns;
+      std::vector<column_index_t> primaryKey;
+      explicit LogicalTableCreate(const std::string& dbName, std::string  name, std::vector<Statements::AddColumn>& columns, std::vector<column_index_t>& primaryKey);
+      PhysicalPlan::PhysicalTableCreate* ToPhysical()override;
   };
 }
 

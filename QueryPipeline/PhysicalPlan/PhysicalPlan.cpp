@@ -1,4 +1,6 @@
 #include "PhysicalPlan.h"
+
+#include <utility>
 #include "../../Database/Database.h"
 #include "../../Database/Block/Block.h"
 #include "../../Database/Table/Table.h"
@@ -6,7 +8,7 @@
 #include "../Statements/Statements.h"
 
 namespace QueryPipeline::PhysicalPlan {
-  PhysicalCreateDatabase::PhysicalCreateDatabase(const std::string &name) : dbName(name){}
+  PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
 
   PhysicalPlanResult PhysicalCreateDatabase::Execute(){
     Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
@@ -16,8 +18,8 @@ namespace QueryPipeline::PhysicalPlan {
     return {};
   }
 
-  PhysicalProject::PhysicalProject(PhysicalOperator *child, const std::vector<column_index_t>& columns)
-    : columns(std::move(columns)), child(child) {}
+  PhysicalProject::PhysicalProject(const std::string& dbName, PhysicalOperator *child, const std::vector<column_index_t>& columns)
+    : PhysicalOperator(dbName), columns(columns), child(child) {}
 
   PhysicalProject::~PhysicalProject(){ delete this->child; }
 
@@ -35,7 +37,7 @@ namespace QueryPipeline::PhysicalPlan {
             continue;
           }
 
-          newData.push_back(std::move(data[i]));
+          newData.push_back(data[i]);
         }
 
         data = std::move(newData);
@@ -44,7 +46,8 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-  PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Statements::Expression* filter): child(child) , filter(filter) {}
+  PhysicalFilter::PhysicalFilter(const std::string& dbName, PhysicalOperator *child, Statements::Expression* filter)
+        : PhysicalOperator(dbName), child(child) , filter(filter) {}
 
   PhysicalFilter::~PhysicalFilter(){
     delete this->child;
@@ -94,11 +97,11 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
     return result;
   }
 
-  PhysicalTableScan::PhysicalTableScan(const std::string &tableName): tableName(tableName) {}
+  PhysicalTableScan::PhysicalTableScan(const std::string& dbName, std::string tableName): PhysicalOperator(dbName), tableName(std::move(tableName)) {}
 
   PhysicalPlanResult PhysicalTableScan::Execute(){
       using namespace DatabaseEngine::StorageTypes;
-      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase("masterDb");
+      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
       Table* table = db->OpenTable(this->tableName);
 
@@ -109,15 +112,57 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
       return result;
     }
 
-  PhysicalInsert::PhysicalInsert(const std::string &tableName, const std::vector<Field> &fields): tableName(tableName), fields(fields) {}
+  PhysicalInsert::PhysicalInsert(const std::string& dbName, std::string tableName, const std::vector<Field> &fields): PhysicalOperator(dbName), tableName(std::move(tableName)), fields(fields) {}
 
   PhysicalPlanResult PhysicalInsert::Execute(){
     using namespace DatabaseEngine::StorageTypes;
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase("masterDb");
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
     
     Table* table = db->OpenTable(this->tableName);
 
     table->InsertRows({fields});
+
+    return {};
+  }
+
+  PhysicalTableCreate::PhysicalTableCreate(const std::string& dbName, std::string &name, std::vector<Statements::AddColumn> &columns, std::vector<column_index_t>& primaryKey)
+    : PhysicalOperator(dbName), name(std::move(name)), columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
+
+  PhysicalPlanResult PhysicalTableCreate::Execute(){
+    
+    DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
+    columnsPtrs.reserve(columns.size());
+    
+    for (const auto& column: this->columns)
+      columnsPtrs.push_back(new DatabaseEngine::StorageTypes::Column(
+        column.name,
+        ColumnTypesDictionary.Get(column.type.name),
+        column.type.size,
+        column.index,
+        column.isNullable
+        ));
+
+    const auto tables = Server::ServerInstance::Get().SelectTables(this->dbName);
+
+    const auto index = tables.empty() ? 0 : tables[tables.size() - 1].id + 1;
+
+    db->CreateTable(this->name, index, columnsPtrs, &this->primaryKey);
+
+    Server::ServerInstance::Get().InsertTableToMasterDb(dbName, this->name, index);
+
+    for (const auto& column: this->columns) {
+      Server::ServerInstance::Get().InsertColumnToMasterDb(
+        dbName,
+        this->name,
+        column.name,
+        column.type.name,
+        column.type.size,
+        column.isNullable,
+        column.index
+        );
+    }
 
     return {};
   }

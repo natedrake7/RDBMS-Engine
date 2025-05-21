@@ -15,7 +15,6 @@ namespace DatabaseEngine {
 }
 
 namespace Server {
-
   class ServerInstance {
     string sysDbName;
     string sysDbPath;
@@ -41,7 +40,13 @@ namespace Server {
 
     void Initialize(const string& configPath);
     void InsertDbToMasterDb(const string& dbName, const string& dbPath, const bool& isSystem = false, const string& user = "system") const;
-    void InsertTableToMasterDb(const string& dbName, const string& tableName, const string& schemaName = "dbo", const bool& isSystem = false, const string& user = "system") const;
+    void InsertTableToMasterDb(
+      const string& dbName,
+      const string& tableName,
+      const table_id_t& tableId,
+      const string& schemaName = "dbo",
+      const bool& isSystem = false,
+      const string& user = "system") const;
     void InsertColumnToMasterDb(
       const string& dbName,
       const string& tableName,
@@ -50,6 +55,7 @@ namespace Server {
       const int& columnSize,
       const bool& isNullable,
       const int& tablePosition,
+      const bool& isSystem = false,
       const string& user = "system") const;
     void InsertIndexToMasterDb(
       const string& dbName,

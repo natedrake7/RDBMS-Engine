@@ -37,14 +37,7 @@ namespace DatabaseEngine::StorageTypes {
         // this->clusteredIndexesBitMap = nullptr;
       }
 
-      TableHeader::~TableHeader() 
-      {
-        // delete this->columnsNullBitMap;
-        // delete this->clusteredIndexesBitMap;
-
-        // for(const auto& nonClusteredIndexMap: this->nonClusteredIndexesBitMap)
-            // delete nonClusteredIndexMap;
-      }
+      TableHeader::~TableHeader() = default;
 
       TableHeader &TableHeader::operator=(const TableHeader &tableHeader) 
       {
@@ -81,21 +74,17 @@ namespace DatabaseEngine::StorageTypes {
 
         this->SetTableIndexesToHeader(clusteredKeyIndexes, nonClusteredIndexes);
 
-        uint16_t counter = 0;
         for (const auto &column : columns) 
         {
           // this->header.columnsNullBitMap->Set(counter, column->GetAllowNulls());
-
           this->header.maxRowSize += column->GetColumnSize();
-          column->SetColumnIndex(counter);
-
-          counter++;
         }
       }
 
       Table::Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database)
       {
         this->header = tableHeader;
+        this->header.tableId = masterDbHeader.id;
         this->database = database;
         this->name = masterDbHeader.name;
 
@@ -221,12 +210,8 @@ namespace DatabaseEngine::StorageTypes {
           }
 
           block->SetData(i.GetRawData(), i.GetSize());
-          
-          // this->setBlockDataByDataTypeArray[static_cast<int>(columnType)]( block, i);
 
-          const auto &columnIndex = columns[associatedColumnIndex]->GetColumnIndex();
-      
-          row->InsertColumnData(block, columnIndex);
+          row->InsertColumnData(block, associatedColumnIndex);
         }
 
         return row;

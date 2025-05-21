@@ -38,7 +38,7 @@ namespace QueryPipeline{
         ~Parser();
         Parser();
 
-        static Statements::Statement* CreateStatement(const std::any &ast);
+        static Statements::Statement* CreateStatement(const std::any &ast, const std::string& dbName);
 
         public:
             static Parser& Get()
@@ -48,7 +48,7 @@ namespace QueryPipeline{
                 return instance;
             }
 
-            static void Parse(const string& query);
+            static void Parse(const string& query, const std::string& dbName);
     };
 
 }

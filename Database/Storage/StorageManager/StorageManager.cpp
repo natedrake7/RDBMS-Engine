@@ -89,6 +89,7 @@ LargeDataPage *StorageManager::GetLargeDataPage(const string& filename, const pa
 Page *StorageManager::CreatePage(const string& filename, const page_id_t &pageId)
 {
   Page *page = new Page(pageId, true);
+  page->SetDirty();
 
   this->MovePageToFrontOfList(page, pageId, filename);
 
@@ -98,6 +99,7 @@ Page *StorageManager::CreatePage(const string& filename, const page_id_t &pageId
 LargeDataPage *StorageManager::CreateLargeDataPage(const string& filename, const page_id_t &pageId)
 {
   LargeDataPage *page = new LargeDataPage(pageId, true);
+  page->SetDirty();
 
   this->MovePageToFrontOfList(page, pageId, filename);
 
@@ -204,7 +206,8 @@ HeaderPage *StorageManager::CreateHeaderPage(const string &filename)
    constexpr page_id_t pageId = 0;
 
   HeaderPage *page = new HeaderPage(pageId);
-
+  page->SetDirty();
+  
   this->MovePageToFrontOfSystemList(page, pageId, filename);
 
   return page;
@@ -213,7 +216,8 @@ HeaderPage *StorageManager::CreateHeaderPage(const string &filename)
 GlobalAllocationMapPage *StorageManager::CreateGlobalAllocationMapPage(const string &filename, const page_id_t &pageId) 
 {
   GlobalAllocationMapPage *page = new GlobalAllocationMapPage(pageId);
-
+  page->SetDirty();
+  
   this->MovePageToFrontOfSystemList(page, pageId, filename);
 
   return page;
@@ -226,7 +230,8 @@ IndexAllocationMapPage *StorageManager::CreateIndexAllocationMapPage(
   const extent_id_t &startingExtentId)
 {
   IndexAllocationMapPage *page = new IndexAllocationMapPage(tableId, pageId, startingExtentId);
-
+  page->SetDirty();
+  
   this->MovePageToFrontOfSystemList(page, pageId, filename);
 
   return page;
@@ -236,7 +241,8 @@ IndexAllocationMapPage *StorageManager::CreateIndexAllocationMapPage(
 PageFreeSpacePage *StorageManager::CreatePageFreeSpacePage(const string &filename, const page_id_t &pageId) 
 {
   PageFreeSpacePage *page = new PageFreeSpacePage(pageId);
-
+  page->SetDirty();
+  
   this->MovePageToFrontOfSystemList(page, pageId, filename);
 
   return page;
@@ -245,7 +251,8 @@ PageFreeSpacePage *StorageManager::CreatePageFreeSpacePage(const string &filenam
 IndexPage *StorageManager::CreateIndexPage(const string& filename, const page_id_t &pageId)
 {
   IndexPage *page = new IndexPage(pageId, true);
-
+  page->SetDirty();
+  
   this->MovePageToFrontOfSystemList(page, pageId, filename);
 
   return page;

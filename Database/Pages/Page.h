@@ -64,6 +64,7 @@ namespace Pages
         [[nodiscard]] const page_id_t &GetPageId() const;
         [[nodiscard]] const bool &GetPageDirtyStatus() const;
         [[nodiscard]] const page_size_t &GetBytesLeft() const;
+        void SetDirty();
 
         void GetRows(vector<DatabaseEngine::StorageTypes::Row> *copiedRows, const DatabaseEngine::StorageTypes::Table &table, const size_t &rowsToSelect, const vector<Field> *conditions = nullptr) const;
         void UpdateRows(const vector<DatabaseEngine::StorageTypes::Block*>* updates, const vector<Field> *conditions = nullptr);

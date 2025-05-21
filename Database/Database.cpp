@@ -158,7 +158,12 @@ namespace DatabaseEngine
             delete dbTable;
     }
 
-    Table *Database::CreateTable(const string &tableName, const vector<StorageTypes::Column *> &columns, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes)
+    Table *Database::CreateTable(
+        const string &tableName,
+        const table_id_t &tableId,
+        const vector<StorageTypes::Column *> &columns,
+        const vector<column_index_t> *clusteredKeyIndexes,
+        const vector<vector<column_index_t>> *nonClusteredIndexes)
     {
         for (const auto& table : this->tables)
         {
@@ -166,14 +171,11 @@ namespace DatabaseEngine
                 throw invalid_argument("Database::CreateTable: Table with name " + tableName + " already exists!");
         }
 
-        Table *table = new Table(tableName, this->header.lastTableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
-
-        this->header.lastTableId++;
+        Table *table = new Table(tableName, tableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
 
         this->tables.push_back(table);
-
         this->header.numberOfTables = this->tables.size();
-
+        
         return table;
     }
 
@@ -183,8 +185,12 @@ namespace DatabaseEngine
 
         const auto masterDbColumns = Server::ServerInstance::Get().SelectColumns(this->name, masterDbHeader.name);
 
-        for (const auto & masterDbColumn : masterDbColumns)
+        for (const auto & masterDbColumn : masterDbColumns) {
+            if (masterDbColumn.isSystem)
+                continue;
+            
             table->AddColumn(new Column(masterDbColumn, table));
+        }
 
         this->tables.push_back(table);
     }

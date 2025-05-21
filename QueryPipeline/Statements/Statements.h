@@ -63,6 +63,7 @@ class LogicalPlan;}namespace QueryPipeline::Statements {
   };
 
   struct Statement {
+    std::string dbName;
     Statement() = default;
     virtual ~Statement() = default;
     virtual void Validate() = 0;

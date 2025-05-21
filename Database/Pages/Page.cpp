@@ -197,6 +197,8 @@ namespace Pages
 
     const page_size_t &Page::GetBytesLeft() const { return this->header.bytesLeft; }
 
+    void Page::SetDirty(){ this->isDirty = true; }
+
     page_size_t Page::GetPageSize() const { return this->header.pageSize; }
 
     const PageType &Page::GetPageType() const { return this->header.pageType; }

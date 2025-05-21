@@ -51,6 +51,10 @@
           "size": 100
         },
         {
+          "name": "Identifier",
+          "type": "Int"
+        },
+        {
           "name": "schema_name",
           "type": "String",
           "size": 100
@@ -112,6 +116,10 @@
         {
           "name": "table_position",
           "type": "SmallInt"
+        },
+        {
+          "name": "is_system",
+          "type": "Bool"
         },
         {
           "name": "created_at",

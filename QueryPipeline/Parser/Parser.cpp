@@ -22,18 +22,21 @@ namespace QueryPipeline
         Statements::CreateTableStatement
     >;
 
-    Statements::Statement* Parser::CreateStatement(const std::any &ast){
+    Statements::Statement* Parser::CreateStatement(const std::any &ast, const std::string& dbName){
         function<Statements::Statement *(const any &)> handler;
 
         if (!handlers.TryGetValue(ast.type(), handler))
             return nullptr;
 
-        return handler(ast);
+        Statements::Statement* statement = handler(ast);
+        statement->dbName = dbName;
+        
+        return statement;
     }
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(const string& query){
+    void Parser::Parse(const string& query, const std::string& dbName){
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
 
@@ -51,7 +54,7 @@ namespace QueryPipeline
 
         SQLVisitorImplementation visitor;
         const auto response = visitor.visit(tree);
-        Statements::Statement* statement = Parser::CreateStatement(response);
+        Statements::Statement* statement = Parser::CreateStatement(response, dbName);
 
         if (statement == nullptr)
             throw runtime_error("Failed to parse query");

@@ -146,28 +146,28 @@ namespace Constants
     };
 
     static Dictionary<string, block_size_t> ColumnTypeSizes = {
-        {"TinyInt", sizeof(int8_t)},
-        {"SmallInt", sizeof(int16_t)},
-        {"Int", sizeof(int32_t)},
-        {"BigInt", sizeof(int64_t)},
-        {"DateTime", DataTypes::DateTime::DateTimeSize()},
-        {"Bool", sizeof(bool)},
-        {"String", 0},
-        {"Decimal", 0},
-        {"UnicodeString", 0}
+        {"tinyint", sizeof(int8_t)},
+        {"smallint", sizeof(int16_t)},
+        {"int", sizeof(int32_t)},
+        {"bigint", sizeof(int64_t)},
+        {"datetime", DataTypes::DateTime::DateTimeSize()},
+        {"bool", sizeof(bool)},
+        {"string", 0},
+        {"decimal", 0},
+        {"unicodestring", 0}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 
     static Dictionary<string, ColumnType> ColumnTypesDictionary = {
-        {"TinyInt", ColumnType::TinyInt},
-        {"SmallInt", ColumnType::SmallInt},
-        {"Int", ColumnType::Int},
-        {"BigInt", ColumnType::BigInt},
-        {"DateTime", ColumnType::DateTime},
-        {"Bool", ColumnType::Bool},
-        {"String", ColumnType::String},
-        {"Decimal", ColumnType::Decimal},
-        {"UnicodeString", ColumnType::UnicodeString}
+        {"tinyint", ColumnType::TinyInt},
+        {"smallint", ColumnType::SmallInt},
+        {"int", ColumnType::Int},
+        {"bigint", ColumnType::BigInt},
+        {"datetime", ColumnType::DateTime},
+        {"bool", ColumnType::Bool},
+        {"string", ColumnType::String},
+        {"decimal", ColumnType::Decimal},
+        {"unicodestring", ColumnType::UnicodeString}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 }

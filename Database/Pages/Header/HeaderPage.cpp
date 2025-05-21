@@ -182,7 +182,7 @@ namespace Pages
 
     void HeaderPage::SetTableHeader(const Table* table)
     {
-        TableHeader header = table->GetTableHeader();
+        const TableHeader& header = table->GetTableHeader();
 
         this->tablesHeaders.push_back(header);
 

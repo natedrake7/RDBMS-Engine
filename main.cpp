@@ -42,6 +42,7 @@ void shutdownServer(int signal) {
     serverRunning.store(false);
 
     cout << "Server shutting down..." << endl;
+    ServerInstance::Get().Shutdown();
 }
 
 void InitializeServer(const string& filePath) {
@@ -59,32 +60,45 @@ int main()
 
     server.Initialize("configuration.json");
 
+    const string dbName = "MoviesDb";
+
     //select statement
-    // const string test = "SELECT is_nullable FROM sys_columns WHERE name = 'db_name'";
+    const string selectActors = "SELECT ID, ActorName, ActorAge FROM Actors WHERE ID = 3 OR ID = 2";
 
     //insert statement
-    // const string test = "INSERT INTO sys_databases(name, filepath, is_system, created_at, last_modified, last_modified_by) "
-    //                     "VALUES ('stakosDb', '../stakosDb', 1, GETDATE(), GETDATE(), 'system')";
+    const string insertActors = "INSERT INTO Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
 
     //create table
-    const string test = "CREATE TABLE Actors ( ID INT NOT NULL, ActorName VARCHAR(255) NOT NULL, ActorAge INT NOT NULL)";
+    const string createMoviesTable = "CREATE TABLE Movies ( ID INT NOT NULL, MovieName VARCHAR(255) NOT NULL, MovieLength INT NOT NULL)";
 
-    // const string test = "CREATE DATABASE MoviesDb";
+    //create table
+    const string createActorsTable = "CREATE TABLE Actors ( ID INT PRIMARY KEY IDENTITY, ActorName VARCHAR(255) NOT NULL, ActorAge INT NOT NULL)";
 
-    try {
-        const auto start = std::chrono::high_resolution_clock::now();
+    const string createDb = "CREATE DATABASE MoviesDb";
+
+    const auto start = std::chrono::high_resolution_clock::now();
+    // QueryPipeline::Parser::Parse(insertActors, dbName);
+    
+    QueryPipeline::Parser::Parse(selectActors, dbName);
+    
+    return 0;
         
-        QueryPipeline::Parser::Parse(test);
+    QueryPipeline::Parser::Parse(createDb, dbName);
 
-        const auto end = std::chrono::high_resolution_clock::now();
+    QueryPipeline::Parser::Parse(createActorsTable, dbName);
 
-        const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+    QueryPipeline::Parser::Parse(createMoviesTable, dbName);
 
-        cout << "Time: " << elapsed.count() << " ms" << endl;
-    }
-    catch (const std::exception& e) {
-        cerr << e.what() << endl;
-    }
+    QueryPipeline::Parser::Parse(insertActors, dbName);
+    
+    QueryPipeline::Parser::Parse(selectActors, dbName);
+
+
+    const auto end = std::chrono::high_resolution_clock::now();
+
+    const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+
+    cout << "Time: " << elapsed.count() << " ms" << endl;
 
     server.Shutdown();
     
