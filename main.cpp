@@ -63,7 +63,7 @@ int main()
     const string dbName = "MoviesDb";
 
     //select statement
-    const string selectActors = "SELECT * FROM Actors WHERE ID = 3 OR ID = 2";
+    const string selectActors = "SELECT * FROM Actors";
 
     //insert statement
     const string insertActors = "INSERT INTO Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
@@ -80,7 +80,13 @@ int main()
     // QueryPipeline::Parser::Parse(insertActors, dbName);
     
     QueryPipeline::Parser::Parse(selectActors, dbName);
-    
+
+    const auto end = std::chrono::high_resolution_clock::now();
+
+    const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+
+    cout << "Time: " << elapsed.count() << " ms" << endl;
+
     return 0;
         
     QueryPipeline::Parser::Parse(createDb, dbName);
@@ -93,12 +99,6 @@ int main()
     
     QueryPipeline::Parser::Parse(selectActors, dbName);
 
-
-    const auto end = std::chrono::high_resolution_clock::now();
-
-    const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
-
-    cout << "Time: " << elapsed.count() << " ms" << endl;
 
     server.Shutdown();
     
