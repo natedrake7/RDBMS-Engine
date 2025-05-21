@@ -63,7 +63,7 @@ int main()
     const string dbName = "MoviesDb";
 
     //select statement
-    const string selectActors = "SELECT ID, ActorName, ActorAge FROM Actors WHERE ID = 3 OR ID = 2";
+    const string selectActors = "SELECT * FROM Actors WHERE ID = 3 OR ID = 2";
 
     //insert statement
     const string insertActors = "INSERT INTO Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";

@@ -12,7 +12,7 @@ sqlStatement
     | createTableStatement;
 
 //select statement
-selectStatement : 'SELECT' columnList 'FROM' tableName whereClause?;
+selectStatement : 'SELECT' (columnList | WILDCARD) 'FROM' tableName whereClause?;
 
 whereClause
     : 'WHERE' expression
@@ -126,6 +126,8 @@ MAX             : 'MAX';
 NOT             : 'NOT';
 NULL            : 'NULL';
 
+
+WILDCARD        : '*';
 IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
 STRING          : '\'' ( ~['\\] | '\\' . )* '\''; 
 NUMBER          : [0-9]+;

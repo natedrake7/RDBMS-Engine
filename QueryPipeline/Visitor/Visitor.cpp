@@ -40,10 +40,14 @@ namespace QueryPipeline {
 antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
     Statements::SelectStatement statement;
 
-    // Visit columnList and get column names
-    auto colCtx = ctx->columnList();
-    for (const auto col : colCtx->columnName())
-      statement.columns.push_back(col->getText());
+    if (!ctx->WILDCARD()) {
+      // Visit columnList and get column names
+      auto colCtx = ctx->columnList();
+      for (const auto col : colCtx->columnName())
+        statement.columns.push_back(col->getText());
+    }
+    else
+      statement.columns = {"*"};
 
     const auto tableName = ctx->tableName();
 
@@ -237,7 +241,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
   antlrcpp::Any SQLVisitorImplementation::visitColumnList(SQLParser::ColumnListContext *context){
       std::vector<std::string> columns;
-
+    
       for (const auto &columnName : context->columnName())
         columns.push_back(columnName->getText());
 

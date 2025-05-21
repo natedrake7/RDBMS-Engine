@@ -104,13 +104,20 @@ namespace QueryPipeline::Statements {
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, headerPtr->name);
 
-    for (const auto& selectColumn : this->columns) {
-      if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
+    if (!this->columns.empty() && this->columns[0] == "*") {
+      for (const auto& [key, header] : columnsDict) {
         this->columnIndices.emplace_back(header.tablePosition);
-        continue;
       }
+    }
+    else {
+      for (const auto& selectColumn : this->columns) {
+        if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
+          this->columnIndices.emplace_back(header.tablePosition);
+          continue;
+        }
       
-      throw runtime_error("Column " + selectColumn + " does not exist");
+        throw runtime_error("Column " + selectColumn + " does not exist");
+      }
     }
 
     if (this->where.expression == nullptr)
