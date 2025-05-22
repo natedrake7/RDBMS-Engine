@@ -143,8 +143,6 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexScan(
                 vector<Row> *selectedRows,
-                const Indexing::Key* minimumValue,
-                const Indexing::Key* maximumValue,
                 const vector<column_index_t>& selectedColumnIndices);
 
             void Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Field> *conditions = nullptr, const size_t &count = -1);

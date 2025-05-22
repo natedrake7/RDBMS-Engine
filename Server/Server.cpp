@@ -1,4 +1,7 @@
 #include "Server.h"
+
+#include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
+
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include "../Database/Row/Row.h"
@@ -465,7 +468,7 @@ namespace Server {
     return selectedColumns;
   }
 
-  vector<DatabaseEngine::StorageTypes::Row> ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
+  vector<Headers::IndexHeader> ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
      using namespace DatabaseEngine::StorageTypes;
 
      const vector<Field> conditions = {
@@ -478,7 +481,42 @@ namespace Server {
 
     sysIndexes->Select(selectedIndexes, {}, &conditions);
 
-     return selectedIndexes;
+    vector<Headers::IndexHeader> selectedIndexHeaders;
+
+    for (const auto& index : selectedIndexes) {
+      const auto& data = index.GetData();
+
+      std::vector<column_index_t> columns;
+
+      constexpr auto delimiter = ",";
+
+      const char* token = strtok(data[3]->GetString().data(), delimiter);
+
+      while (token != nullptr) {
+        columns.emplace_back(SafeConverter<column_index_t>::SafeStoi(token));
+        token = strtok(nullptr, delimiter);
+      }
+
+      selectedIndexHeaders.emplace_back(
+        Headers::IndexHeader{
+          data[0]->GetString(),
+          data[1]->GetString(),
+          data[2]->GetString(),
+          std::move(columns),
+          data[4]->GetBool(),
+          data[5]->GetDateTime(),
+          data[6]->GetDateTime(),
+          data[7]->GetString()
+        });
+    }
+
+    //get the clustered first
+    ranges::sort(selectedIndexHeaders,
+    [](const Headers::IndexHeader& a, const Headers::IndexHeader& b) {
+        return a.isClustered > b.isClustered;
+    });
+
+     return selectedIndexHeaders;
   }
 
   void ServerInstance::CreateSystemDatabase(){

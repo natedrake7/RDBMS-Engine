@@ -10,12 +10,12 @@
 namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
 
-  PhysicalPlanResult PhysicalCreateDatabase::Execute(){
+  PhysicalPlanResult* PhysicalCreateDatabase::Execute(){
     Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
 
     DatabaseEngine::CreateDatabase(this->dbName);
 
-    return {};
+    return nullptr;
   }
 
   PhysicalProject::PhysicalProject(const std::string& dbName, PhysicalOperator *child, const std::vector<column_index_t>& columns)
@@ -23,10 +23,10 @@ namespace QueryPipeline::PhysicalPlan {
 
   PhysicalProject::~PhysicalProject(){ delete this->child; }
 
-  PhysicalPlanResult PhysicalProject::Execute(){
-      auto result = this->child->Execute();
+  PhysicalPlanResult* PhysicalProject::Execute(){
+      auto* result = this->child->Execute();
 
-      for (auto& row: result.rows) {
+      for (auto& row: result->rows) {
           auto& data = row.GetData();
 
         vector<DatabaseEngine::StorageTypes::Block*> newData;
@@ -47,7 +47,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   PhysicalFilter::PhysicalFilter(const std::string& dbName, PhysicalOperator *child, Statements::Expression* filter)
-        : PhysicalOperator(dbName), child(child) , filter(filter) {}
+        : PhysicalOperator(dbName), filter(filter) , child(child) {}
 
   PhysicalFilter::~PhysicalFilter(){
     delete this->child;
@@ -82,16 +82,15 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
     }
   }
 
-  PhysicalPlanResult PhysicalFilter::Execute(){
-    const auto childResult = child->Execute();
-    
-    PhysicalPlanResult result;
-    for (const auto &row : childResult.rows) {
+  PhysicalPlanResult* PhysicalFilter::Execute(){
+    auto* result = child->Execute();
+
+    for (const auto &row : result->rows) {
       
       if (!PhysicalFilter::EvaluateExpression(this->filter, row))
         continue;
 
-      result.rows.emplace_back(row);
+      result->rows.emplace_back(row);
     }
 
     return result;
@@ -99,36 +98,81 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
 
   PhysicalTableScan::PhysicalTableScan(const std::string& dbName, std::string tableName): PhysicalOperator(dbName), tableName(std::move(tableName)) {}
 
-  PhysicalPlanResult PhysicalTableScan::Execute(){
+  PhysicalPlanResult* PhysicalTableScan::Execute(){
       using namespace DatabaseEngine::StorageTypes;
       const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
       Table* table = db->OpenTable(this->tableName);
 
-      PhysicalPlanResult result;
+      auto* result = new PhysicalPlanResult();
 
-      table->Select(result.rows, {});
+      table->Select(result->rows, {});
 
       return result;
     }
 
+  PhysicalIndexScan::PhysicalIndexScan(const std::string &dbName, std::string &tableName, const bool& isClustered)
+    : PhysicalOperator(dbName), tableName(std::move(tableName)), isClustered(isClustered) {}
+
+  PhysicalPlanResult * PhysicalIndexScan::Execute(){
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    Table* table = db->OpenTable(this->tableName);
+
+    if (isClustered) {
+      table->ClusteredIndexScan(&result->rows, {});
+      return result;
+    }
+
+    return result;
+  }
+
+  PhysicalIndexSeek::PhysicalIndexSeek(const std::string &dbName, std::string& tableName, const Field& minValue, const Field& maxValue)
+    : PhysicalOperator(dbName), tableName(std::move(tableName)), minValue(minValue), maxValue(maxValue) {}
+
+  PhysicalPlanResult* PhysicalIndexSeek::Execute(){
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    Table* table = db->OpenTable(this->tableName);
+
+    const Indexing::Key minKey(minValue);
+    const Indexing::Key maxKey(maxValue);
+
+    //select if to use clustered or non clustered index here
+
+    table->ClusteredIndexSeek(&result->rows,&minKey, &maxKey , {});
+
+    return result;
+  }
+
   PhysicalInsert::PhysicalInsert(const std::string& dbName, std::string tableName, const std::vector<Field> &fields): PhysicalOperator(dbName), tableName(std::move(tableName)), fields(fields) {}
 
-  PhysicalPlanResult PhysicalInsert::Execute(){
+  PhysicalPlanResult* PhysicalInsert::Execute(){
     using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
     
     Table* table = db->OpenTable(this->tableName);
 
     table->InsertRows({fields});
 
-    return {};
+    return result;
   }
 
   PhysicalTableCreate::PhysicalTableCreate(const std::string& dbName, std::string &name, std::vector<Statements::AddColumn> &columns, std::vector<column_index_t>& primaryKey)
     : PhysicalOperator(dbName), name(std::move(name)), columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
-  PhysicalPlanResult PhysicalTableCreate::Execute(){
+  PhysicalPlanResult* PhysicalTableCreate::Execute(){
     
     DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
@@ -152,6 +196,9 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
 
     Server::ServerInstance::Get().InsertTableToMasterDb(dbName, this->name, index);
 
+    std::string indexColumns;
+    std::string indexKey = "PK_";
+
     for (const auto& column: this->columns) {
       Server::ServerInstance::Get().InsertColumnToMasterDb(
         dbName,
@@ -162,8 +209,16 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
         column.isNullable,
         column.index
         );
+
+      if (column.isPrimaryKey) {
+        indexColumns += "," + column.name;
+        indexKey += "_" + column.name;
+      }
     }
 
-    return {};
+    if (!indexColumns.empty())
+      Server::ServerInstance::Get().InsertIndexToMasterDb(dbName, this->name, indexKey, indexColumns, true);
+
+    return nullptr;
   }
 }

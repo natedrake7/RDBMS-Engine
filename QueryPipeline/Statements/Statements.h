@@ -4,9 +4,13 @@
 #include "../../Database/Constants.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
+#include "../../AdditionalLibraries/HashSet/HashSet.h"
 
 namespace QueryPipeline {
-class LogicalPlan;}namespace QueryPipeline::Statements {
+  class LogicalPlan;
+}
+
+namespace QueryPipeline::Statements {
   enum class ExpressionType {
     And = 0,
     Or = 1,
@@ -37,7 +41,8 @@ class LogicalPlan;}namespace QueryPipeline::Statements {
 
     ~Expression();
     void Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
-      
+    [[nodiscard]] bool IsComplex()const;
+    void GetColumns(HashSet<column_index_t>& columnsSet)const;
   };
 
   struct ColumnType {

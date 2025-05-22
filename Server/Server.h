@@ -73,7 +73,7 @@ namespace Server {
     [[nodiscard]] vector<Headers::TableHeader> SelectTables(const string& dbName) const;
     [[nodiscard]] vector<Headers::ColumnHeader> SelectColumns(const string& dbName, const string& tableName) const;
     [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const string& dbName, const string& tableName) const;
-    [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row> SelectIndexes(const string& dbName, const string& tableName) const;
+    [[nodiscard]] vector<Headers::IndexHeader> SelectIndexes(const string& dbName, const string& tableName) const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     void Shutdown()const;

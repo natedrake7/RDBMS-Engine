@@ -600,14 +600,12 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
       vector<Row> *selectedRows,
-      const Indexing::Key *minimumValue,
-      const Indexing::Key *maximumValue,
       const vector<column_index_t> &selectedColumnIndices){
         vector<QueryData> results;
 
         const BPlusTree* tree = this->GetClusteredIndexedTree();
 
-        tree->IndexScan(*minimumValue, *maximumValue, results);
+        tree->IndexScan(results);
 
         if(results.empty())
           return;
@@ -684,7 +682,7 @@ namespace DatabaseEngine::StorageTypes {
         const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
 
         vector<extent_id_t> tableExtentIds;
-        tableMapPage->GetAllocatedExtents(&tableExtentIds);
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto& extentId : tableExtentIds){
           const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);

@@ -1,4 +1,7 @@
 ﻿#pragma once
+#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+
+
 #include <vector>
 #include "../../Database/Constants.h"
 #include <fstream>
@@ -50,6 +53,7 @@ namespace Indexing
 
         Key();
         Key(const void *keyValue, const key_size_t &keySize, const Constants::ColumnType& keyType);
+        Key(const Field& field);
 
         explicit Key(const vector<Key>& subKeys);
         ~Key();

@@ -43,6 +43,7 @@ void shutdownServer(int signal) {
 
     cout << "Server shutting down..." << endl;
     ServerInstance::Get().Shutdown();
+    exit(0);
 }
 
 void InitializeServer(const string& filePath) {
@@ -65,8 +66,13 @@ int main()
     //select statement
     const string selectActors = "SELECT * FROM Actors";
 
+    //select statement
+    const string selectMovies = "SELECT * FROM Movies WHERE ID = 2";
+
     //insert statement
     const string insertActors = "INSERT INTO Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
+
+    const string insertMovies = "INSERT INTO Movies(ID, MovieName, MovieLength) VALUES(1, 'Batman: The Dark Knight', 2)";
 
     //create table
     const string createMoviesTable = "CREATE TABLE Movies ( ID INT NOT NULL, MovieName VARCHAR(255) NOT NULL, MovieLength INT NOT NULL)";
@@ -77,8 +83,7 @@ int main()
     const string createDb = "CREATE DATABASE MoviesDb";
 
     const auto start = std::chrono::high_resolution_clock::now();
-    // QueryPipeline::Parser::Parse(insertActors, dbName);
-    
+
     QueryPipeline::Parser::Parse(selectActors, dbName);
 
     const auto end = std::chrono::high_resolution_clock::now();
@@ -86,6 +91,8 @@ int main()
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
     cout << "Time: " << elapsed.count() << " ms" << endl;
+
+    ServerInstance::Get().Shutdown();
 
     return 0;
         
@@ -96,9 +103,10 @@ int main()
     QueryPipeline::Parser::Parse(createMoviesTable, dbName);
 
     QueryPipeline::Parser::Parse(insertActors, dbName);
-    
+
     QueryPipeline::Parser::Parse(selectActors, dbName);
 
+    QueryPipeline::Parser::Parse(insertMovies, dbName);
 
     server.Shutdown();
     

@@ -575,6 +575,18 @@ namespace Indexing
         this->currentSearchKeyPosition = -1;
     }
 
+    Key::Key(const Field &field){
+        const auto& keySize = field.GetSize();
+
+        this->value.resize(keySize);
+        memcpy(this->value.data(), field.GetRawData(), keySize);
+
+        this->size = keySize;
+        this->type = field.GetType();
+        this->indexKeyPosition = -1;
+        this->currentSearchKeyPosition = -1;
+    }
+
     Key::Key(const vector<Key> &subKeys)
     {
         this->size = 0;

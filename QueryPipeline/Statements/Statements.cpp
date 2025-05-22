@@ -44,6 +44,26 @@ namespace QueryPipeline::Statements {
     this->columnIndex = header.tablePosition;  
   }
 
+  bool Expression::IsComplex()const{
+    if (this->left != nullptr && this->right != nullptr)
+      return this->left->IsComplex() || this->right->IsComplex();
+
+    if (this->type == ExpressionType::Or)
+      return true;
+
+    return false;
+  }
+
+  void Expression::GetColumns(HashSet<column_index_t>& columnsSet) const{
+    if (this->left != nullptr && this->right != nullptr) {
+        this->left->GetColumns(columnsSet);
+        this->right->GetColumns(columnsSet);
+    }
+
+    if (!columnsSet.contains(this->columnIndex))
+      columnsSet.Add(this->columnIndex);
+  }
+
   void CreateTableStatement::Validate(){
     const std::string temp = "MoviesDb";
 
@@ -127,7 +147,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
-    const auto scanTable = new LogicalTableScan(this->dbName, this->table);
+    const auto scanTable = new LogicalTableScan(this->dbName, this->table, this->where.expression);
 
     LogicalPlan* current = scanTable;
 

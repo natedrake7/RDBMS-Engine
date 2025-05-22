@@ -26,7 +26,7 @@ namespace QueryPipeline::PhysicalPlan{
         explicit PhysicalOperator(const std::string& dbName) : dbName(dbName) {}
         PhysicalOperator() = default;
         virtual ~PhysicalOperator() = default;
-        virtual PhysicalPlanResult Execute() = 0;
+        virtual PhysicalPlanResult* Execute() = 0;
     };
 
   class PhysicalCreateDatabase final : public PhysicalOperator{
@@ -34,7 +34,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalCreateDatabase(std::string  name);
       ~PhysicalCreateDatabase() override = default;
-      PhysicalPlanResult Execute() override;
+      PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalTableScan final : public PhysicalOperator{
@@ -43,7 +43,28 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalTableScan(const std::string& dbName, std::string  tableName);
       ~PhysicalTableScan()override = default;
-      PhysicalPlanResult Execute() override;
+      PhysicalPlanResult* Execute() override;
+  };
+
+  class PhysicalIndexScan final : public PhysicalOperator{
+    std::string tableName;
+    bool isClustered;
+
+  public:
+    explicit PhysicalIndexScan(const std::string& dbName, std::string&  tableName, const bool& isClustered = false);
+    ~PhysicalIndexScan()override = default;
+    PhysicalPlanResult* Execute() override;
+  };
+
+  class PhysicalIndexSeek final : public PhysicalOperator{
+    std::string tableName;
+    Field minValue;
+    Field maxValue;
+
+    public:
+      explicit PhysicalIndexSeek(const std::string& dbName, std::string&  tableName, const Field& minValue, const Field& maxValue);
+      ~PhysicalIndexSeek()override = default;
+      PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalProject final : public PhysicalOperator{
@@ -53,7 +74,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalProject(const std::string& dbName, PhysicalOperator* child, const std::vector<column_index_t>& columns);
       ~PhysicalProject() override;
-      PhysicalPlanResult Execute() override;
+      PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalFilter final : public PhysicalOperator{
@@ -65,7 +86,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalFilter(const std::string& dbName, PhysicalOperator* child, Statements::Expression* filter);
       ~PhysicalFilter() override;
-      PhysicalPlanResult Execute() override;
+      PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalInsert final : public PhysicalOperator{
@@ -75,7 +96,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalInsert(const std::string& dbName, std::string  tableName, const std::vector<Field>& fields);
     ~PhysicalInsert()override = default;
-    PhysicalPlanResult Execute() override;
+    PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalTableCreate final : public PhysicalOperator{
@@ -86,6 +107,6 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalTableCreate(const std::string& dbName, std::string& name, std::vector<Statements::AddColumn>& columns, std::vector<column_index_t>& primaryKey);
       ~PhysicalTableCreate()override = default;
-      PhysicalPlanResult Execute() override;
+      PhysicalPlanResult* Execute() override;
   };
 }

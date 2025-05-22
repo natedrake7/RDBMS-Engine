@@ -30,8 +30,18 @@ namespace QueryPipeline {
   class LogicalTableScan final : public LogicalPlan {
     public:
       std::string tableName;
-      explicit LogicalTableScan(const std::string& dbName, std::string  name);
-      PhysicalPlan::PhysicalTableScan* ToPhysical()override;
+      Statements::Expression* expression;
+      explicit LogicalTableScan(const std::string& dbName, std::string  name, Statements::Expression* expression);
+      PhysicalPlan::PhysicalOperator* ToPhysical() override;
+  };
+
+  class LogicalTableIndexSeek final : public LogicalPlan {
+    public:
+      std::string tableName;
+      Field minValue;
+      Field maxValue;
+      explicit LogicalTableIndexSeek(const std::string& dbName, std::string tableName, const Field& minValue, const Field& maxValue);
+      PhysicalPlan::PhysicalIndexSeek* ToPhysical()override;
   };
 
   class LogicalFilter final : public LogicalPlan {

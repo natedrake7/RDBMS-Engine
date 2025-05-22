@@ -20,41 +20,41 @@ namespace QueryPipeline {
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitCreateDbStatement(SQLParser::CreateDbStatementContext *context) {
-    Statements::CreateDbStatement statement;
+    auto* statement = new Statements::CreateDbStatement();
 
     if (context->IDENTIFIER())
-      statement.name = context->IDENTIFIER()->getText();
+      statement->name = context->IDENTIFIER()->getText();
 
     return statement;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitDropDbStatement(SQLParser::DropDbStatementContext *context) {
-    Statements::DropDbStatement statement;
+    auto* statement = new Statements::DropDbStatement();
 
     if (context->IDENTIFIER())
-      statement.name = context->IDENTIFIER()->getText();
+      statement->name = context->IDENTIFIER()->getText();
 
     return statement;
   }
 
 antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
-    Statements::SelectStatement statement;
+    auto* statement = new Statements::SelectStatement();
 
     if (!ctx->WILDCARD()) {
       // Visit columnList and get column names
       auto colCtx = ctx->columnList();
       for (const auto col : colCtx->columnName())
-        statement.columns.push_back(col->getText());
+        statement->columns.push_back(col->getText());
     }
     else
-      statement.columns = {"*"};
+      statement->columns = {"*"};
 
     const auto tableName = ctx->tableName();
 
-    statement.table = tableName == nullptr ?  "" : tableName->getText();
+    statement->table = tableName == nullptr ?  "" : tableName->getText();
 
     if (const auto& whereClause = ctx->whereClause();whereClause != nullptr)
-      statement.where = std::any_cast<Statements::WhereClause>(visit(whereClause));
+      statement->where = std::any_cast<Statements::WhereClause>(visit(whereClause));
 
     return statement;
   }
@@ -126,17 +126,17 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitInsertStatement(SQLParser::InsertStatementContext *context){
-    Statements::InsertStatement statement;
+    auto* statement = new Statements::InsertStatement();
 
-    statement.tableName = context->tableName()->getText();
+    statement->tableName = context->tableName()->getText();
     
     const auto columns = visit(context->columnList());
 
-    statement.columns = std::any_cast<std::vector<string>>(columns);
+    statement->columns = std::any_cast<std::vector<string>>(columns);
 
     const auto values = visit(context->literalValueList());
 
-    statement.values = std::any_cast<std::vector<Field>>(values);
+    statement->values = std::any_cast<std::vector<Field>>(values);
 
     return statement;
   }
@@ -155,14 +155,14 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitCreateTableStatement(SQLParser::CreateTableStatementContext *context){
-    Statements::CreateTableStatement statement;
+    auto* statement = new Statements::CreateTableStatement();
 
-    statement.name = std::any_cast<string>(visit(context->tableName()));
+    statement->name = std::any_cast<string>(visit(context->tableName()));
 
     const auto columns = context->addColumn();
     for (const auto columnContext: columns) {
       const auto column = std::any_cast<Statements::AddColumn>(visit(columnContext));
-      statement.columns.push_back(column);
+      statement->columns.push_back(column);
     }
 
     return statement;

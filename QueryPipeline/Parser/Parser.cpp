@@ -53,7 +53,9 @@ namespace QueryPipeline
         SQLParser::SqlStatementContext *tree = parser.sqlStatement();
 
         SQLVisitorImplementation visitor;
+
         const auto response = visitor.visit(tree);
+
         Statements::Statement* statement = Parser::CreateStatement(response, dbName);
 
         if (statement == nullptr)
@@ -67,12 +69,15 @@ namespace QueryPipeline
             return;
 
         PhysicalPlan::PhysicalOperator* physicalPlan = logicalPlan->ToPhysical();
-        const auto result = physicalPlan->Execute();
+        const auto* result = physicalPlan->Execute();
 
-        for (const auto& row: result.rows) {
-            row.PrintRow();
+        if (result != nullptr) {
+            for (const auto& row: result->rows) {
+                row.PrintRow();
+            }
         }
-        
+
+        delete result;
         delete statement;
         delete logicalPlan;
         delete physicalPlan;
