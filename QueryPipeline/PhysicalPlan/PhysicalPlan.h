@@ -2,6 +2,7 @@
 #include "../../AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h"
 #include "../../AdditionalLibraries/HashSet/HashSet.h"
 #include <string>
+#include <utility>
 #include <vector>
 #include "../../Database/Row/Row.h"
 #include "../Statements/Statements.h"
@@ -25,7 +26,7 @@ namespace QueryPipeline::PhysicalPlan{
     class PhysicalOperator {
       public:
         std::string dbName;
-        explicit PhysicalOperator(const std::string& dbName) : dbName(dbName) {}
+        explicit PhysicalOperator(std::string  dbName) : dbName(std::move(dbName)) {}
         PhysicalOperator() = default;
         virtual ~PhysicalOperator() = default;
         virtual PhysicalPlanResult* Execute() = 0;
@@ -40,7 +41,6 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalSchemaCreate final : public PhysicalOperator{
-    std::string dbName;
     std::string schemaName;
     public:
       explicit PhysicalSchemaCreate(const std::string& dbName, std::string& schemaName);

@@ -188,7 +188,7 @@ namespace QueryPipeline::Statements {
   }
 
   bool DropDbStatement::Validate(){
-    const auto database = Server::ServerInstance::Get().SelectDatabases(this->name);
+    const auto database = Server::ServerInstance::Get().SelectDatabase(this->name);
 
     if (database.name.empty()) {
       cerr << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist" << endl;

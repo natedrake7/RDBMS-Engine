@@ -12,7 +12,8 @@ namespace QueryPipeline::PhysicalPlan {
 
   PhysicalPlanResult* PhysicalCreateDatabase::Execute(){
     Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
-
+    Server::ServerInstance::Get().InsertSchemaToMasterDb(this->dbName, "dbo");
+    
     DatabaseEngine::CreateDatabase(this->dbName);
 
     return new PhysicalPlanResult();

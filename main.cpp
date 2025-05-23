@@ -110,7 +110,9 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    QueryPipeline::Parser::Parse(selectMovies, dbName);
+    // QueryPipeline::Parser::Parse(schemaCreate, dbName);
+    
+    const auto& databases = server.GetCatalog();
     
     const auto end = std::chrono::high_resolution_clock::now();
 

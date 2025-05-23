@@ -4,36 +4,13 @@
 #include <vector>
 
 namespace Headers {
-  typedef struct IndexHeader {
-    std::string dbName;
-    std::string tableName;
-    std::string name;
-    std::vector<uint8_t> columns;
-    bool isClustered;
-    DataTypes::DateTime createdAt;
-    DataTypes::DateTime lastModified;
-    std::string lastModifiedBy;
-  }IndexHeader;
-
-  typedef struct DatabaseHeader {
-    std::string name;
-    std::string filepath;
-    bool isSystem;
-    DataTypes::DateTime createdAt;
-    DataTypes::DateTime lastModified;
-    std::string lastModifiedBy;
-  }DatabaseHeader;
-
-  typedef struct TableHeader {
+  struct SchemaHeader {
     std::string dbName;
     std::string name;
-    int16_t id;
-    std::string schemaName;
-    bool isSystem;
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
     std::string lastModifiedBy;
-  }TableHeader;
+  };
 
   struct ColumnHeader {
     std::string dbName;
@@ -48,6 +25,42 @@ namespace Headers {
     DataTypes::DateTime lastModified;
     std::string lastModifiedBy;
   };
+
+  typedef struct IndexHeader {
+    std::string dbName;
+    std::string tableName;
+    std::string name;
+    std::vector<uint8_t> columns;
+    bool isClustered;
+    DataTypes::DateTime createdAt;
+    DataTypes::DateTime lastModified;
+    std::string lastModifiedBy;
+  }IndexHeader;
+
+  typedef struct TableHeader {
+    std::string dbName;
+    std::string name;
+    int16_t id;
+    std::string schemaName;
+    bool isSystem;
+    DataTypes::DateTime createdAt;
+    DataTypes::DateTime lastModified;
+    std::string lastModifiedBy;
+    
+    vector<ColumnHeader> columns;
+    vector<IndexHeader> indexes;
+  }TableHeader;
+
+  typedef struct DatabaseHeader {
+    std::string name;
+    std::string filepath;
+    bool isSystem;
+    DataTypes::DateTime createdAt;
+    DataTypes::DateTime lastModified;
+    std::string lastModifiedBy;
+    std::vector<TableHeader> tables;
+    std::vector<SchemaHeader> schemas;
+  }DatabaseHeader;
 
   struct sysColumn {
     string name;

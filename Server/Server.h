@@ -66,10 +66,10 @@ namespace Server {
       const string& user = "system") const;
     void InsertSchemaToMasterDb(const string& dbName, const string& schemaName, const string& user = "system") const;
 
-    void SelectDb(const string& dbName) const;
+    [[nodiscard]] vector<Headers::DatabaseHeader> GetCatalog()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
-    [[nodiscard]] Headers::DatabaseHeader SelectDatabases(const string& dbName) const;
-    [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row> SelectSchemas(const string& dbName) const;
+    [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
+    [[nodiscard]] vector<Headers::SchemaHeader>  SelectSchemas(const string& dbName) const;
     [[nodiscard]] bool SchemaExists(const string &dbName, const std::string& schema) const;
     [[nodiscard]] vector<Headers::TableHeader> SelectTables(const string& dbName) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
