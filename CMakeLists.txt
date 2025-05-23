@@ -142,7 +142,6 @@ add_library(Server  Server/ConnectionManager/ConnectionManager.cpp
                     Server/Server.h)
 
 target_link_libraries(Server PRIVATE nlohmann_json::nlohmann_json)
-
 target_link_libraries(Server PRIVATE AdditionalLibraries)
 
 add_executable(Client   Client/client.cpp

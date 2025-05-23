@@ -61,9 +61,10 @@ namespace DatabaseEngine::StorageTypes {
         return *this;
       }
 
-      Table::Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns,  DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes)
+      Table::Table(const string &tableName, const std::string& schema, const table_id_t &tableId, const vector<Column *> &columns,  DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes)
       {
         this->name = tableName;
+        this->schema = schema;
         this->columns = columns;
         this->database = database;
         this->header.numberOfColumns = columns.size();
@@ -87,7 +88,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header.tableId = masterDbHeader.id;
         this->database = database;
         this->name = masterDbHeader.name;
-
+        this->schema = masterDbHeader.schemaName;
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -96,7 +97,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header = tableHeader;
         this->database = database;
         this->name = tableName;
-
+        this->schema = "dbo";
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -104,7 +105,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header = tableHeader;
         this->database = database;
         this->name = systemHeader.name;
-
+        this->schema = "dbo";
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -180,6 +181,15 @@ namespace DatabaseEngine::StorageTypes {
 
         cout << "Rows affected: " << rowsInserted << endl;
       }
+
+    void Table::InsertRow(const vector<Field> &inputData){
+        extent_id_t startingExtentIndex = 0;
+        vector<extent_id_t> extents;
+
+        this->InsertRow(inputData, extents, startingExtentIndex);
+
+        cout << "Rows affected: 1"<< endl;
+    }
 
       void Table::InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex) 
       {
@@ -509,6 +519,8 @@ namespace DatabaseEngine::StorageTypes {
     void Table::AddColumn(Column *column) { this->columns.push_back(column); }
 
     string &Table::GetTableName() { return this->name; }
+
+    string & Table::GetSchema(){ return this->schema; }
 
     row_size_t &Table::GetMaxRowSize() { return this->header.maxRowSize; }
 

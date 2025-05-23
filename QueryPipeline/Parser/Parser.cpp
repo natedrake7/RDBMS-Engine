@@ -72,9 +72,8 @@ namespace QueryPipeline
         const auto* result = physicalPlan->Execute();
 
         if (result != nullptr) {
-            for (const auto& row: result->rows) {
+            for (const auto& row: result->rows)
                 row.PrintRow();
-            }
         }
 
         delete result;

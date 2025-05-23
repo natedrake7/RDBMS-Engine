@@ -45,6 +45,11 @@ namespace QueryPipeline::Statements {
     void GetColumns(HashSet<column_index_t>& columnsSet)const;
   };
 
+  struct PrimaryKeyConstraint {
+    std::string name;
+    vector<std::string> columns;
+  };
+
   struct ColumnType {
     std::string name;
     int64_t size;
@@ -67,6 +72,13 @@ namespace QueryPipeline::Statements {
     WhereClause() { this->expression = nullptr; }
   };
 
+  struct TableName {
+    std::string name;
+    std::string schema;
+
+    TableName() { this->schema = "dbo"; }
+  };
+
   struct Statement {
     std::string dbName;
     Statement() = default;
@@ -76,20 +88,24 @@ namespace QueryPipeline::Statements {
   };
 
   struct CreateTableStatement final: Statement {
-    std::string name;
+    TableName* table;
     std::vector<AddColumn> columns;
+    PrimaryKeyConstraint* constraint;
     vector<column_index_t> primaryKey;
 
+    ~CreateTableStatement() override;
 
     void Validate() override;
     QueryPipeline::LogicalPlan* ToLogical() override;
   };
 
   struct SelectStatement final : Statement{
-    std::string table;
+    TableName* table;
     std::vector<std::string> columns;
     std::vector<Constants::column_index_t> columnIndices;
     WhereClause where;
+
+    ~SelectStatement() override { delete this->table; };
     
     void Validate() override;
     LogicalPlan* ToLogical() override;
@@ -108,11 +124,21 @@ namespace QueryPipeline::Statements {
   };
 
   struct InsertStatement final : Statement{
-    std::string tableName;
+    TableName* table;
     std::vector<std::string> columns;
     std::vector<Field> values;
+
+    ~InsertStatement() override { delete this->table; };
+    
     void Validate() override;
     LogicalPlan* ToLogical() override;
+  };
+
+  struct CreateSchemaStatement final : Statement {
+    std::string name;
+
+    void Validate() override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
   };
 
 }

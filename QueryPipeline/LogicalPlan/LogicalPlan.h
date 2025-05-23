@@ -29,19 +29,10 @@ namespace QueryPipeline {
 
   class LogicalTableScan final : public LogicalPlan {
     public:
-      std::string tableName;
+      Statements::TableName* table;
       Statements::Expression* expression;
-      explicit LogicalTableScan(const std::string& dbName, std::string  name, Statements::Expression* expression);
+      explicit LogicalTableScan(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical() override;
-  };
-
-  class LogicalTableIndexSeek final : public LogicalPlan {
-    public:
-      std::string tableName;
-      Field minValue;
-      Field maxValue;
-      explicit LogicalTableIndexSeek(const std::string& dbName, std::string tableName, const Field& minValue, const Field& maxValue);
-      PhysicalPlan::PhysicalIndexSeek* ToPhysical()override;
   };
 
   class LogicalFilter final : public LogicalPlan {
@@ -54,18 +45,32 @@ namespace QueryPipeline {
 
   class LogicalInsert final : public LogicalPlan {
     public:
-      std::string tableName;
+      Statements::TableName* table;
       std::vector<Field> fields;
-      explicit LogicalInsert(const std::string& dbName, std::string  tableName, const std::vector<Field>& fields);
+      explicit LogicalInsert(const std::string& dbName, Statements::TableName* table, const std::vector<Field>& fields);
       PhysicalPlan::PhysicalInsert* ToPhysical()override;
+  };
+
+  class LogicalSchemaCreate final : public LogicalPlan {
+    public:
+      std::string schemaName;
+      explicit LogicalSchemaCreate(const std::string& dbName, std::string& schemaName);
+      PhysicalPlan::PhysicalSchemaCreate* ToPhysical()override;
   };
 
   class LogicalTableCreate final : public LogicalPlan {
     public:
-      std::string name;
+      Statements::TableName* table;
+      std::string constraintName;
       std::vector<Statements::AddColumn> columns;
       std::vector<column_index_t> primaryKey;
-      explicit LogicalTableCreate(const std::string& dbName, std::string  name, std::vector<Statements::AddColumn>& columns, std::vector<column_index_t>& primaryKey);
+    
+      explicit LogicalTableCreate(
+        const std::string& dbName,
+        Statements::TableName*  table,
+        std::vector<Statements::AddColumn>& columns,
+        std::vector<column_index_t>& primaryKey,
+        std::string  constraintName);
       PhysicalPlan::PhysicalTableCreate* ToPhysical()override;
   };
 }

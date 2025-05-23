@@ -70,7 +70,10 @@ namespace Server {
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabases(const string& dbName) const;
     [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row> SelectSchemas(const string& dbName) const;
+    [[nodiscard]] bool SchemaExists(const string &dbName, const std::string& schema) const;
     [[nodiscard]] vector<Headers::TableHeader> SelectTables(const string& dbName) const;
+    [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
+    [[nodiscard]] bool TableExists(const string &dbName, const string &tableName, const std::string& schema) const;
     [[nodiscard]] vector<Headers::ColumnHeader> SelectColumns(const string& dbName, const string& tableName) const;
     [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const string& dbName, const string& tableName) const;
     [[nodiscard]] vector<Headers::IndexHeader> SelectIndexes(const string& dbName, const string& tableName) const;

@@ -37,32 +37,42 @@ namespace QueryPipeline::PhysicalPlan{
       PhysicalPlanResult* Execute() override;
   };
 
+  class PhysicalSchemaCreate final : public PhysicalOperator{
+    std::string dbName;
+    std::string schemaName;
+    public:
+      explicit PhysicalSchemaCreate(const std::string& dbName, std::string& schemaName);
+      ~PhysicalSchemaCreate() override = default;
+      PhysicalPlanResult* Execute() override;
+  };
+
+
   class PhysicalTableScan final : public PhysicalOperator{
-    std::string tableName;
+    Statements::TableName* table;
 
     public:
-      explicit PhysicalTableScan(const std::string& dbName, std::string  tableName);
+      explicit PhysicalTableScan(const std::string& dbName, Statements::TableName* table);
       ~PhysicalTableScan()override = default;
       PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalIndexScan final : public PhysicalOperator{
-    std::string tableName;
+    Statements::TableName* table;
     bool isClustered;
 
   public:
-    explicit PhysicalIndexScan(const std::string& dbName, std::string&  tableName, const bool& isClustered = false);
+    explicit PhysicalIndexScan(const std::string& dbName, Statements::TableName* table, const bool& isClustered = false);
     ~PhysicalIndexScan()override = default;
     PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalIndexSeek final : public PhysicalOperator{
-    std::string tableName;
+    Statements::TableName* table;
     Field minValue;
     Field maxValue;
 
     public:
-      explicit PhysicalIndexSeek(const std::string& dbName, std::string&  tableName, const Field& minValue, const Field& maxValue);
+      explicit PhysicalIndexSeek(const std::string& dbName, Statements::TableName* table, const Field& minValue, const Field& maxValue);
       ~PhysicalIndexSeek()override = default;
       PhysicalPlanResult* Execute() override;
   };
@@ -90,22 +100,28 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalInsert final : public PhysicalOperator{
-    std::string tableName;
+    Statements::TableName* table;
     std::vector<Field> fields;
 
   public:
-    PhysicalInsert(const std::string& dbName, std::string  tableName, const std::vector<Field>& fields);
+    PhysicalInsert(const std::string& dbName, Statements::TableName* table, const std::vector<Field>& fields);
     ~PhysicalInsert()override = default;
     PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalTableCreate final : public PhysicalOperator{
-      std::string name;
+      Statements::TableName*  table;
+      std::string constraintName;
       std::vector<Statements::AddColumn> columns;
       std::vector<column_index_t> primaryKey;
 
     public:
-      PhysicalTableCreate(const std::string& dbName, std::string& name, std::vector<Statements::AddColumn>& columns, std::vector<column_index_t>& primaryKey);
+      PhysicalTableCreate(
+        const std::string& dbName,
+        Statements::TableName*  table,
+        std::vector<Statements::AddColumn>& columns,
+        std::vector<column_index_t>& primaryKey,
+        std::string& constraintName);
       ~PhysicalTableCreate()override = default;
       PhysicalPlanResult* Execute() override;
   };

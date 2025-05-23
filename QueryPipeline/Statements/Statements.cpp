@@ -64,70 +64,72 @@ namespace QueryPipeline::Statements {
       columnsSet.Add(this->columnIndex);
   }
 
+  CreateTableStatement::~CreateTableStatement() {
+      delete this->constraint;
+      delete this->table;
+  }
+
   void CreateTableStatement::Validate(){
-    const std::string temp = "MoviesDb";
-
-    if (!Server::ServerInstance::Get().DatabaseExists(temp))
-      throw runtime_error("No Database with name: "  + temp + " exists");
+    //no need to check as the below query will just return 0 results
+    // if (!Server::ServerInstance::Get().DatabaseExists(this->dbName))
+    //   throw runtime_error("No Database with name: "  + this->dbName + " exists");
     
-    const auto tables = Server::ServerInstance::Get().SelectTables(temp);
-
-
-    const Headers::TableHeader* headerPtr = nullptr;
-    for (const auto& table : tables) {
-      if (table.name == this->name) {
-        headerPtr = &table;
-        break;
-      }
-    }
-
-    if (headerPtr != nullptr)
-      throw runtime_error("Table " + this->name + " already exists");
+    if (Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
+      throw runtime_error("Table " + this->table->name + " already exists");
     
     column_index_t tablePosition = 0;
+    bool primaryKeyFound = false;
+    Dictionary<string, column_index_t> columnNamesToIndexes;
+    
     for (auto& column: this->columns) {
       uint16_t columnSize;
+      
       if (!ColumnTypeSizes.TryGetValue(column.type.name, columnSize))
         throw runtime_error("Column Type: " + column.type.name + " does not exist");
 
-      if (columnSize != 0) {
+      if (columnSize != 0)
         column.type.size = columnSize;
-      }
 
       if (column.type.beforeFraction != 0 || column.type.afterFraction != 0) {
         //decimal handle
       }
 
       column.index = tablePosition++;
-      if (column.isPrimaryKey)
+
+      columnNamesToIndexes.Add(column.name, column.index);
+      
+      if (column.isPrimaryKey) {
         this->primaryKey.push_back(column.index);
+        primaryKeyFound = true;
+      }
     }
+
+    if (this->constraint == nullptr)
+      return;
+
+    if (primaryKeyFound)
+      throw runtime_error("Cannot have a primary key and a constraint declared");
+
+    //primary key will be clear for sure here
+    for (const auto& column: this->constraint->columns)
+      this->primaryKey.push_back(columnNamesToIndexes[column]);
   }
 
   LogicalPlan * CreateTableStatement::ToLogical(){
-    return new LogicalTableCreate(this->dbName, this->name, this->columns, this->primaryKey);
+    const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
+    
+    return new LogicalTableCreate(this->dbName, this->table, this->columns, this->primaryKey, constraintName);
   }
 
   void SelectStatement::Validate(){
-    const auto tables = Server::ServerInstance::Get().SelectTables(this->dbName);
+    if (!Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
+      throw runtime_error("Table " + this->table->schema + "." + this->table->name + " does not exist");
 
-    const Headers::TableHeader* headerPtr = nullptr;
-    for (const auto& table : tables) {
-      if (table.name == this->table) {
-        headerPtr = &table;
-        break;
-      }
-    }
-
-    if (headerPtr == nullptr)
-      throw runtime_error("Table " + this->table + " does not exist");
-
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, headerPtr->name);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, this->table->name);
 
     if (!this->columns.empty() && this->columns[0] == "*") {
-      for (const auto& [key, header] : columnsDict) {
+      for (const auto& [key, header] : columnsDict)
         this->columnIndices.emplace_back(header.tablePosition);
-      }
     }
     else {
       for (const auto& selectColumn : this->columns) {
@@ -187,20 +189,10 @@ namespace QueryPipeline::Statements {
   }
 
   void InsertStatement::Validate(){
-    const auto tables = Server::ServerInstance::Get().SelectTables(this->dbName);
-
-    const Headers::TableHeader* headerPtr = nullptr;
-    for (const auto& table : tables) {
-      if (table.name == this->tableName) {
-        headerPtr = &table;
-        break;
-      }
-    }
-
-    if (headerPtr == nullptr)
-      throw runtime_error("Table " + this->tableName + " does not exist");
-
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, headerPtr->name);
+    if (!Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
+      throw runtime_error("Table " + this->table->schema + "." + this->table->name + " does not exist");
+    
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, this->table->name);
 
     if (this->columns.size() != this->values.size())
       throw runtime_error("Invalid number of arguments supplied");
@@ -211,7 +203,7 @@ namespace QueryPipeline::Statements {
       Headers::ColumnHeader header;
 
       if (!columnsDict.TryGetValue(column, header))
-        throw runtime_error("Column " + column + " does not exist on table: " + headerPtr->name);
+        throw runtime_error("Column " + column + " does not exist on table: " + this->table->name);
 
       this->values.at(i).Validate(header);
     }
@@ -241,7 +233,16 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan* InsertStatement::ToLogical() {
-    return new QueryPipeline::LogicalInsert(this->dbName, this->tableName, this->values);
+    return new QueryPipeline::LogicalInsert(this->dbName, this->table, this->values);
+  }
+
+  void CreateSchemaStatement::Validate(){
+    if (Server::ServerInstance::Get().SchemaExists(this->dbName, this->name))
+      throw runtime_error("Schema " + this->name + " already exists");
+  }
+
+  QueryPipeline::LogicalPlan * CreateSchemaStatement::ToLogical(){
+    return new LogicalSchemaCreate(this->dbName, this->name);
   }
 
 

@@ -138,17 +138,19 @@ public:
 
     static page_id_t CalculateSystemPageOffset(const page_id_t &pageId);
 
-    StorageTypes::Table *CreateTable( const string &tableName,
-                                      const table_id_t &tableId,
-                                      const vector<StorageTypes::Column *> &columns, 
-                                      const vector<column_index_t> *clusteredKeyIndexes = nullptr, 
-                                      const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
+    StorageTypes::Table *CreateTable(
+      const string &tableName,
+      const string &schemaName,
+      const table_id_t &tableId,
+      const vector<StorageTypes::Column *> &columns, 
+      const vector<column_index_t> *clusteredKeyIndexes = nullptr, 
+      const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
 
     void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
 
     void CreateTable(const Headers::sysTable& sysHeader, const StorageTypes::TableHeader &tableHeader);
 
-    [[nodiscard]] StorageTypes::Table *OpenTable(const string &tableName) const;
+    [[nodiscard]] StorageTypes::Table *OpenTable(const string& schemaName, const string &tableName) const;
 
     [[nodiscard]] StorageTypes::Table *OpenTable(const table_id_t& tableId) const;
 

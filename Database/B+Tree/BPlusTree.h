@@ -74,7 +74,11 @@ namespace Indexing
         //key comparison index used only on queries and not on key saveon db
         int indexKeyPosition = -1;
         int currentSearchKeyPosition = -1;
+
+        friend std::ostream& operator<<(std::ostream& os, const Key& key);
     }Key;
+
+
 
     typedef struct NodeHeader{
         page_id_t pageId;

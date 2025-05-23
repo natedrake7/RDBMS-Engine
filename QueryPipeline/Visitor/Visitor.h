@@ -54,5 +54,9 @@ namespace QueryPipeline {
       antlrcpp::Any visitNvarcharType(SQLParser::NvarcharTypeContext *context) override;
 
       antlrcpp::Any visitDecimalType(SQLParser::DecimalTypeContext *context) override;
+
+      antlrcpp::Any visitPrimaryKeyConstraint(SQLParser::PrimaryKeyConstraintContext *context) override;
+
+      antlrcpp::Any visitCreateSchemaStatement(SQLParser::CreateSchemaStatementContext *context) override;
   };
 }

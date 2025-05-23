@@ -79,7 +79,8 @@
       ],
       "primaryKey": [
         "db_name",
-        "name"
+        "name",
+        "schema_name"
       ]
     },
     {

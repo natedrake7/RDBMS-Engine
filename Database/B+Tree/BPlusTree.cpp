@@ -202,13 +202,13 @@ namespace Indexing
 
             const int indexPos = iterator - node->keys.begin();
 
-            if (!node->keys.empty() && ((node->keys.size() > indexPos 
-                && key == node->keys[indexPos]) 
-                ||(indexPos > 0 && key == node->keys[indexPos - 1])))
+            if (!node->keys.empty()
+                && ((node->keys.size() > indexPos && key == node->keys[indexPos]) 
+                || (indexPos > 0 && key == node->keys[indexPos - 1])))
             {
                 ostringstream oss;
 
-                oss << "BPlusTree::GetNonFullNode: Key " << node->keys.data() << " already exists";
+                oss << "BPlusTree::GetNonFullNode: Key " << key << " already exists";
 
                 throw invalid_argument(oss.str());
             }
@@ -715,8 +715,6 @@ namespace Indexing
             default:
                 throw invalid_argument(">= Invalid DataType for Key");
         }
-
-        throw invalid_argument(">= Invalid DataType for Key");
     }
 
     int Key::GetKeySize() const
@@ -755,6 +753,60 @@ namespace Indexing
             return -1;
 
         return 1;
+    }
+
+    std::ostream & operator<<(std::ostream &os, const Key &key){
+        if(!key.subKeys.empty())
+        {
+            os << "(";
+
+            for (int i = 0; i < key.subKeys.size(); i++) {
+                const auto& subKey = key.subKeys[i];
+            
+                os << subKey;
+            
+                if (i != key.subKeys.size() - 1)
+                    os << ", ";
+            }
+
+            os << ")";
+            
+            return os;
+        }
+
+        switch (key.type) 
+        {
+            case Constants::ColumnType::TinyInt:
+                os << *reinterpret_cast<const int8_t*>(key.value.data());
+                break;
+            case Constants::ColumnType::SmallInt:
+                os << *reinterpret_cast<const int16_t*>(key.value.data());
+                break;
+            case Constants::ColumnType::Int:
+                os << *reinterpret_cast<const int32_t*>(key.value.data());
+                break;
+            case Constants::ColumnType::BigInt:
+                os << *reinterpret_cast<const int64_t*>(key.value.data());
+                break;
+            case Constants::ColumnType::String:
+            case Constants::ColumnType::UnicodeString:
+                os << reinterpret_cast<const char*>(key.value.data());
+                break;
+            case Constants::ColumnType::Decimal:
+                os << Decimal(key.value.data(), key.size).ToString();
+                break;
+            case Constants::ColumnType::Bool:
+                os << *reinterpret_cast<const bool*>(key.value.data());
+                break;
+            case Constants::ColumnType::DateTime:
+                os << DateTime(*reinterpret_cast<const time_t*>(key.value.data())).ToString();
+                break;
+            case Constants::ColumnType::ColumnTypeCount: 
+            default:
+                throw invalid_argument("Invalid DataType for Key");
+        }
+
+        return os;
     }
 
     bool Key::operator==(const Key& otherKey) const

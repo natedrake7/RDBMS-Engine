@@ -160,18 +160,13 @@ namespace DatabaseEngine
 
     Table *Database::CreateTable(
         const string &tableName,
+        const string &schemaName,
         const table_id_t &tableId,
         const vector<StorageTypes::Column *> &columns,
         const vector<column_index_t> *clusteredKeyIndexes,
         const vector<vector<column_index_t>> *nonClusteredIndexes)
     {
-        for (const auto& table : this->tables)
-        {
-            if(table->GetTableName() == tableName)
-                throw invalid_argument("Database::CreateTable: Table with name " + tableName + " already exists!");
-        }
-
-        Table *table = new Table(tableName, tableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
+        auto *table = new Table(tableName, schemaName, tableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
 
         this->tables.push_back(table);
         this->header.numberOfTables = this->tables.size();
@@ -205,15 +200,16 @@ namespace DatabaseEngine
         this->tables.push_back(table);
     }
 
-    Table *Database::OpenTable(const string &tableName) const
+    Table *Database::OpenTable(const string& schemaName, const string &tableName) const
     {
         for (const auto &table : this->tables)
         {
-            if (table->GetTableName() == tableName)
+            if (table->GetTableName() == tableName
+                && table->GetSchema() == schemaName)
                 return table;
         }
 
-        throw invalid_argument("Database::OpenTable: No table with name " + tableName + " exists.");
+        throw invalid_argument("Database::OpenTable: No table with name " + schemaName + "." + tableName + " exists.");
     }
 
     StorageTypes::Table * Database::OpenTable(const table_id_t &tableId) const{

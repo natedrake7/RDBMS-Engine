@@ -4,13 +4,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "./Database/Database.h"
 #include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
-#include "AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
-#include "Database/Table/Table.h"
 #include "QueryPipeline/Parser/Parser.h"
 #include "Server/ConnectionManager/ConnectionManager.h"
 #include "Server/Threadpool/ThreadPool.h"
@@ -50,6 +47,29 @@ void InitializeServer(const string& filePath) {
     //create sys tables(read from file).
 }
 
+
+string Replace(const string &str, const string &subStr, const string &replaceStr)
+{
+    if(str.empty() || subStr.empty())
+        return str;
+
+    string result(str);
+    int subStrIndex = 0;
+
+    while (true)
+    {
+        subStrIndex = static_cast<int>(result.find(subStr));
+
+        if(subStrIndex == string::npos)
+            break;
+
+        result.replace(subStrIndex, subStr.size(), replaceStr);
+    }
+        
+    return result;
+}
+
+
  
 int main() 
 {
@@ -64,27 +84,35 @@ int main()
     const string dbName = "MoviesDb";
 
     //select statement
-    const string selectActors = "SELECT * FROM Actors";
+    const string selectActors = "SELECT * FROM dbo.Actors";
 
     //select statement
     const string selectMovies = "SELECT * FROM Movies WHERE ID = 2";
 
     //insert statement
-    const string insertActors = "INSERT INTO Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
+    const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
 
-    const string insertMovies = "INSERT INTO Movies(ID, MovieName, MovieLength) VALUES(1, 'Batman: The Dark Knight', 2)";
+    const string insertMovies = "INSERT INTO movies.Movies(ID, MovieName, MovieLength) VALUES(1, 'Batman: The Dark Knight', 2)";
 
     //create table
-    const string createMoviesTable = "CREATE TABLE Movies ( ID INT NOT NULL, MovieName VARCHAR(255) NOT NULL, MovieLength INT NOT NULL)";
+    const string createMoviesTable = "CREATE TABLE movies.Movies ( "
+                                     "ID INT NOT NULL, MovieName VARCHAR(255) NOT NULL, "
+                                     "MovieLength INT NOT NULL, "
+                                     "CONSTRAINT PK_Shows PRIMARY KEY (ID, MovieName)"
+                                     ")";
 
     //create table
     const string createActorsTable = "CREATE TABLE Actors ( ID INT PRIMARY KEY IDENTITY, ActorName VARCHAR(255) NOT NULL, ActorAge INT NOT NULL)";
 
     const string createDb = "CREATE DATABASE MoviesDb";
 
+    const string schemaCreate = "CREATE SCHEMA movies";
+
     const auto start = std::chrono::high_resolution_clock::now();
 
-    QueryPipeline::Parser::Parse(selectActors, dbName);
+    QueryPipeline::Parser::Parse(insertMovies, dbName);
+
+    QueryPipeline::Parser::Parse(selectMovies, dbName);
 
     const auto end = std::chrono::high_resolution_clock::now();
 
@@ -100,6 +128,8 @@ int main()
 
     QueryPipeline::Parser::Parse(createActorsTable, dbName);
 
+    QueryPipeline::Parser::Parse(schemaCreate, dbName);
+    
     QueryPipeline::Parser::Parse(createMoviesTable, dbName);
 
     QueryPipeline::Parser::Parse(insertActors, dbName);

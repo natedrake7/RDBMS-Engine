@@ -73,6 +73,7 @@ namespace DatabaseEngine::StorageTypes
     class Table final
     {
         std::string name;
+        std::string schema;
         TableHeader header;
         vector<Column *> columns;
         DatabaseEngine::Database *database;
@@ -107,7 +108,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Row* CreateRow(const vector<Field>& inputData)const;
 
         public:
-            Table(const string &tableName, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
+            Table(const string &tableName, const std::string& schema, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
 
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
 
@@ -119,7 +120,11 @@ namespace DatabaseEngine::StorageTypes
 
             void InsertRows(const vector<vector<Field>> &inputData);
 
+            void InsertRow(const vector<Field> &inputData);
+
             string &GetTableName();
+
+            string& GetSchema();
 
             row_size_t &GetMaxRowSize();
 

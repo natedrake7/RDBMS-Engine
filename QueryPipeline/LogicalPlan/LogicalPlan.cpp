@@ -22,15 +22,15 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalProject(dbName, this->child->ToPhysical(), this->columns);
   }
 
-  LogicalTableScan::LogicalTableScan(const std::string& dbName, std::string name, Statements::Expression* expression)
-  : LogicalPlan(dbName), tableName(std::move(name)), expression(expression) {}
+  LogicalTableScan::LogicalTableScan(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression)
+  : LogicalPlan(dbName), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalTableScan::ToPhysical(){
-      const auto indexes = Server::ServerInstance::Get().SelectIndexes(dbName, tableName);
+      const auto indexes = Server::ServerInstance::Get().SelectIndexes(dbName, this->table->name);
 
       //if no indexes are available heap scan
       if (indexes.empty())
-        return new PhysicalPlan::PhysicalTableScan(dbName, this->tableName);
+        return new PhysicalPlan::PhysicalTableScan(dbName, this->table);
 
       //if expression is complex defer from index seek
       const bool canIndexSeek = expression != nullptr && !expression->IsComplex();
@@ -54,19 +54,10 @@ namespace QueryPipeline {
           }
 
         //find the first non clustered and use it
-        return new PhysicalPlan::PhysicalIndexScan(dbName, this->tableName, index.isClustered);
+        return new PhysicalPlan::PhysicalIndexScan(dbName, this->table, index.isClustered);
       }
 
-    return new PhysicalPlan::PhysicalTableScan(dbName, this->tableName);
-  }
-
-  LogicalTableIndexSeek::LogicalTableIndexSeek(
-    const std::string &dbName, std::string tableName,
-    const Field& minValue, const Field& maxValue)
-  : LogicalPlan(dbName), tableName(std::move(tableName)), minValue(minValue), maxValue(maxValue) {}
-
-  PhysicalPlan::PhysicalIndexSeek * LogicalTableIndexSeek::ToPhysical(){
-    return new PhysicalPlan::PhysicalIndexSeek(this->dbName, this->tableName, this->minValue, this->maxValue);
+    return new PhysicalPlan::PhysicalTableScan(dbName, this->table);
   }
 
   LogicalCreateDatabase::LogicalCreateDatabase(std::string dbName) : dbName(std::move(dbName)) {}
@@ -81,17 +72,24 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalFilter(dbName, this->child->ToPhysical(), this->filter);
   }
 
-  LogicalInsert::LogicalInsert(const std::string& dbName, std::string tableName, const std::vector<Field> &fields): LogicalPlan(dbName), tableName(std::move(tableName)), fields(fields) {}
+  LogicalInsert::LogicalInsert(const std::string& dbName, Statements::TableName* table, const std::vector<Field> &fields): LogicalPlan(dbName), table(table), fields(fields) {}
 
   PhysicalPlan::PhysicalInsert * LogicalInsert::ToPhysical(){
-    return new PhysicalPlan::PhysicalInsert(dbName, this->tableName, this->fields);
+    return new PhysicalPlan::PhysicalInsert(dbName, this->table, this->fields);
   }
 
-  LogicalTableCreate::LogicalTableCreate(const std::string& dbName, std::string  name, std::vector<Statements::AddColumn>& columns, std::vector<column_index_t>& primaryKey)
-    : LogicalPlan(dbName), name(std::move(name)), columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
+  LogicalSchemaCreate::LogicalSchemaCreate(const std::string &dbName, std::string &schemaName)
+    : LogicalPlan(dbName), schemaName(std::move(schemaName)) {}
+
+  PhysicalPlan::PhysicalSchemaCreate * LogicalSchemaCreate::ToPhysical(){
+    return new PhysicalPlan::PhysicalSchemaCreate(this->dbName, this->schemaName);
+  }
+
+  LogicalTableCreate::LogicalTableCreate(const std::string& dbName, Statements::TableName*  table, std::vector<Statements::AddColumn>& columns, std::vector<column_index_t>& primaryKey, std::string  constraintName)
+    : LogicalPlan(dbName), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
   PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(){
-    return new PhysicalPlan::PhysicalTableCreate(dbName, this->name, this->columns, this->primaryKey);
+    return new PhysicalPlan::PhysicalTableCreate(dbName, this->table, this->columns, this->primaryKey, this->constraintName);
   }
 }
 

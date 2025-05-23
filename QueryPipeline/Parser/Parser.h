@@ -32,6 +32,11 @@ namespace QueryPipeline{
                 typeid(Statements::DropDbStatement*),
                 [](const auto& r) { return std::any_cast<Statements::DropDbStatement*>(r); }
             },
+
+            {
+                typeid(Statements::CreateSchemaStatement*),
+                [](const auto& r) { return std::any_cast<Statements::CreateSchemaStatement*>(r); }
+            },
         };
 
     class Parser{

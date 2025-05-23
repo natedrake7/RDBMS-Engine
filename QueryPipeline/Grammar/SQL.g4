@@ -9,7 +9,8 @@ sqlStatement
     | createDbStatement 
     | dropDbStatement 
     | insertStatement 
-    | createTableStatement;
+    | createTableStatement
+    | createSchemaStatement;
 
 //select statement
 selectStatement : 'SELECT' (columnList | WILDCARD) 'FROM' tableName whereClause?;
@@ -42,7 +43,7 @@ insertStatement: 'INSERT' 'INTO' tableName '(' columnList ')' 'VALUES' '(' liter
 
 
 //create table statement
-createTableStatement: 'CREATE' 'TABLE' tableName '(' addColumn (',' addColumn)* ')';
+createTableStatement: 'CREATE' 'TABLE' tableName '(' addColumn (',' addColumn)* ( ',' primaryKeyConstraint)? ')';
 
 addColumn
     : columnName dataType (NOT NULL | NULL)? primaryKey?
@@ -75,6 +76,16 @@ decimalType
 primaryKey
     : 'PRIMARY' 'KEY' 'IDENTITY'
     ;
+    
+primaryKeyConstraint
+    : ('CONSTRAINT' constraintName=IDENTIFIER)? 'PRIMARY' 'KEY' '(' columnList ')'
+    ;
+
+//Create Schema
+createSchemaStatement
+    : 'CREATE' 'SCHEMA' IDENTIFIER
+    ;
+
 
 //helpers
 literalValueList
@@ -94,8 +105,7 @@ columnList : columnName (',' columnName)*;
 //declarations for clarification
 dbName: IDENTIFIER;
 columnName : IDENTIFIER;
-tableName : IDENTIFIER;
-
+tableName : (schemaName=IDENTIFIER'.')?name=IDENTIFIER;
 
 //create database statement
 createDbStatement: 'CREATE' 'DATABASE' IDENTIFIER;

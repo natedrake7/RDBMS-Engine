@@ -74,6 +74,8 @@ namespace Server {
     this->CreateSystemDatabase();
     this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
 
+    Dictionary<string, column_index_t> columnNameToIndex;
+
     for (int i = 0;i < this->sysTables.size(); i++) {
       const auto& table = this->sysTables[i];
       
@@ -105,17 +107,19 @@ namespace Server {
            columnPos,
            true);
 
+        columnNameToIndex.Add(column.name, columnPos);
+
         columnPos++;
       }
 
       string concatenatedColumns;
       string _columns;
 
-      for (int i = 0; i < table.primaryKey.size(); i++) {
-        const auto& key = table.primaryKey[i];
-         
-        concatenatedColumns +=  i > 0  ? "," + key : key;
-        _columns +="_" + key;
+      for (int j = 0; j < table.primaryKey.size(); j++) {
+        const auto& key = columnNameToIndex.Get(table.primaryKey[j]);
+
+        concatenatedColumns +=  j > 0  ? "," + to_string(key) : to_string(key);
+        _columns +="_" + table.primaryKey[j];
       }
        
       this->InsertIndexToMasterDb(this->sysDbName, table.name, "PK" + _columns, concatenatedColumns, true); 
@@ -155,7 +159,7 @@ namespace Server {
   }
 
   void ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath, const bool& isSystem, const string& user) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_databases");
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_databases");
 
       const auto currentDate = DataTypes::DateTime::Now();
 
@@ -178,7 +182,7 @@ namespace Server {
     const string& schemaName,
     const bool& isSystem,
     const string& user) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_tables");
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_tables");
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Field> fields = {
@@ -205,7 +209,7 @@ namespace Server {
     const int &tablePosition,
     const bool& isSystem,
     const string& user) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_columns");
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_columns");
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Field> fields = {
@@ -232,7 +236,7 @@ namespace Server {
     const string &columns,
     const bool &isClustered,
     const string &user) const{
-     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_indexes");
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_indexes");
      const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Field> fields = {
@@ -249,7 +253,7 @@ namespace Server {
      table->InsertRows({fields});
   }
   void ServerInstance::InsertSchemaToMasterDb(const string &dbName, const string &schemaName, const string &user) const{
-     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("sys_schemas");
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_schemas");
      const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Field> fields = {
@@ -266,7 +270,7 @@ namespace Server {
   void ServerInstance::SelectDb(const string &dbName) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+    Table* sysDatabases = this->masterDb->OpenTable("dbo", "sys_databases");
 
     vector<Row> selectedDatabases;
     const vector<Field> conditions = {
@@ -279,26 +283,26 @@ namespace Server {
       return;
 
     vector<Row> selectedTables;
-    Table* sysTables = this->masterDb->OpenTable("sys_tables");
+    Table* sysTables = this->masterDb->OpenTable("dbo", "sys_tables");
 
     sysTables->Select(selectedTables, {0, 1, 2, 3, 4, 5, 6}, &conditions);
 
     if (selectedTables.empty())
       return;
 
-    Table* sysColumns = this->masterDb->OpenTable("sys_columns");
+    Table* sysColumns = this->masterDb->OpenTable("dbo", "sys_columns");
     vector<vector<Row>> selectedColumns(selectedTables.size());
 
     for (int i = 0; i < selectedTables.size(); i++)
       sysColumns->Select(selectedColumns[i], {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, &conditions);
 
-     Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
+     Table* sysIndexes = this->masterDb->OpenTable("dbo", "sys_indexes");
      vector<vector<Row>> selectedIndexes(selectedTables.size());
      
      for (int i = 0; i < selectedTables.size(); i++)
        sysIndexes->Select(selectedIndexes[i], {0, 1, 2, 3, 4, 5, 6, 7}, &conditions);
 
-     Table* sysSchemas = this->masterDb->OpenTable("sys_schemas");
+     Table* sysSchemas = this->masterDb->OpenTable("dbo", "sys_schemas");
      vector<Row> selectedSchemas;
 
      sysSchemas->Select(selectedSchemas, {0, 1, 2, 3, 4}, &conditions);
@@ -307,7 +311,7 @@ namespace Server {
   bool ServerInstance::DatabaseExists(const string &dbName) const{
      using namespace DatabaseEngine::StorageTypes;
 
-     Table* sysDatabases = this->masterDb->OpenTable("sys_databases");
+     Table* sysDatabases = this->masterDb->OpenTable("dbo", "sys_databases");
 
      vector<Row> selectedDatabases;
      const vector<Field> conditions = {
@@ -322,7 +326,7 @@ namespace Server {
   Headers::DatabaseHeader ServerInstance::SelectDatabases(const string &dbName) const{
      using namespace DatabaseEngine::StorageTypes;
 
-     Table* sysDatabases = this->masterDb->OpenTable(0);
+     Table* sysDatabases = this->masterDb->OpenTable("dbo", 0);
 
      vector<Row> selectedDatabases;
      const vector<Field> conditions = {
@@ -357,12 +361,28 @@ namespace Server {
        Field(dbName, 0),
      };
 
-     Table* sysSchemas = this->masterDb->OpenTable("sys_schemas");
+     Table* sysSchemas = this->masterDb->OpenTable("dbo", "sys_schemas");
      vector<Row> selectedSchemas;
 
      sysSchemas->Select(selectedSchemas, {}, &conditions);
 
      return selectedSchemas;
+  }
+
+  bool ServerInstance::SchemaExists(const string &dbName, const std::string &schema) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    const vector<Field> conditions = {
+      Field(dbName, 0),
+      Field(schema, 1)
+    };
+
+    Table* sysSchemas = this->masterDb->OpenTable("dbo", "sys_schemas");
+    vector<Row> selectedSchemas;
+
+    sysSchemas->Select(selectedSchemas, {}, &conditions);
+
+    return !selectedSchemas.empty();
   }
 
   vector<Headers::TableHeader> ServerInstance::SelectTables(const string &dbName) const{
@@ -373,7 +393,7 @@ namespace Server {
     };
 
     vector<Row> selectedTables;
-    Table* sysTables = this->masterDb->OpenTable(1);
+    Table* sysTables = this->masterDb->OpenTable("dbo", "sys_tables");
 
     sysTables->Select(selectedTables, {}, &conditions);
 
@@ -409,6 +429,52 @@ namespace Server {
     return selectedTableHeaders;
   }
 
+  Headers::TableHeader ServerInstance::SelectTable(const string &dbName, const string &tableName) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    const vector<Field> conditions = {
+      Field(dbName, 0)
+    };
+
+    vector<Row> selectedTables;
+    Table* sysTables = this->masterDb->OpenTable("dbo", "sys_tables");
+
+    sysTables->Select(selectedTables, {}, &conditions);
+
+    if (selectedTables.empty())
+      return {};
+
+    const auto& data = selectedTables[0].GetData();
+
+    return  Headers::TableHeader{
+      data[0]->GetString(),
+      data[1]->GetString(),
+      data[2]->GetSmallInt(),
+      data[3]->GetString(),
+      data[4]->GetBool(),
+      data[5]->GetDateTime(),
+      data[6]->GetDateTime(),
+      data[7]->GetString()
+    };
+  }
+
+  bool ServerInstance::TableExists(const string &dbName, const string &tableName, const std::string& schema) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    const vector<Field> conditions = {
+      Field(dbName, 0),
+      Field(tableName, 1),
+      Field(schema, 3)
+    };
+
+    vector<Row> selectedTables;
+    Table* sysTables = this->masterDb->OpenTable("dbo", "sys_tables");
+
+    sysTables->Select(selectedTables, {}, &conditions);
+
+    return !selectedTables.empty();
+  }
+
   vector<Headers::ColumnHeader> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
     using namespace DatabaseEngine::StorageTypes;
 
@@ -418,7 +484,7 @@ namespace Server {
     };
 
     vector<Row> selectedColumns;
-    Table* sysColumns = this->masterDb->OpenTable("sys_columns");
+    Table* sysColumns = this->masterDb->OpenTable("dbo", "sys_columns");
 
     sysColumns->Select(selectedColumns, {}, &conditions);
 
@@ -476,7 +542,7 @@ namespace Server {
        Field(tableName, 1),
      };
 
-     Table* sysIndexes = this->masterDb->OpenTable("sys_indexes");
+     Table* sysIndexes = this->masterDb->OpenTable("dbo", "sys_indexes");
      vector<Row> selectedIndexes;
 
     sysIndexes->Select(selectedIndexes, {}, &conditions);
@@ -564,7 +630,7 @@ namespace Server {
       if (primaryKey.empty())
         throw runtime_error("All tables in masterDb must have a primary key");
         
-      this->masterDb->CreateTable(table.name, i, columns, &primaryKey); 
+      this->masterDb->CreateTable(table.name, "dbo", i, columns, &primaryKey); 
     }
   }
 
