@@ -91,7 +91,7 @@ namespace DatabaseEngine::StorageTypes
             static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
-            void InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
+            AdditionalDataTypes::ResultStatus InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
             void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
         
             static void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
@@ -118,9 +118,9 @@ namespace DatabaseEngine::StorageTypes
 
             ~Table();
 
-            void InsertRows(const vector<vector<Field>> &inputData);
+            AdditionalDataTypes::ResultStatus InsertRows(const vector<vector<Field>> &inputData);
 
-            void InsertRow(const vector<Field> &inputData);
+            AdditionalDataTypes::ResultStatus InsertRow(const vector<Field> &inputData);
 
             string &GetTableName();
 

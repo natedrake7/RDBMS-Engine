@@ -94,6 +94,7 @@ namespace Constants
         NonClustered = 1
     };
 
+
     typedef uint8_t byte;
 
     // block types

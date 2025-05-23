@@ -8,7 +8,8 @@
 
 #include "../Column/Column.h"
 
-using namespace std;
+namespace AdditionalDataTypes {
+struct ResultStatus;}using namespace std;
 using namespace Constants;
 
 namespace DatabaseEngine 
@@ -129,7 +130,7 @@ namespace Indexing
 
         void SplitChild(Node *parent, const int &index, Node *child);
         void PrintTree(const Node *node, const int &level);
-        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition);
+        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
         void DeleteNode(const Node *node);
         [[nodiscard]] Node *SearchKey(const Key &key) const;
         [[nodiscard]] Node* SearchLeftMostLeafNode() const;
@@ -143,7 +144,7 @@ namespace Indexing
         BPlusTree();
         ~BPlusTree();
 
-        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition);
+        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
         void PrintTree();
 
         void IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;

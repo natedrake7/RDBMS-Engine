@@ -41,7 +41,7 @@ namespace QueryPipeline::Statements {
 
     ~Expression();
     void Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
-    [[nodiscard]] bool IsComplex()const;
+    [[nodiscard]] bool IsComplex() const;
     void GetColumns(HashSet<column_index_t>& columnsSet)const;
   };
 
@@ -83,7 +83,7 @@ namespace QueryPipeline::Statements {
     std::string dbName;
     Statement() = default;
     virtual ~Statement() = default;
-    virtual void Validate() = 0;
+    virtual bool Validate() = 0;
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
   };
 
@@ -95,7 +95,7 @@ namespace QueryPipeline::Statements {
 
     ~CreateTableStatement() override;
 
-    void Validate() override;
+    bool Validate() override;
     QueryPipeline::LogicalPlan* ToLogical() override;
   };
 
@@ -107,19 +107,19 @@ namespace QueryPipeline::Statements {
 
     ~SelectStatement() override { delete this->table; };
     
-    void Validate() override;
+    bool Validate() override;
     LogicalPlan* ToLogical() override;
   };
 
   struct CreateDbStatement final : Statement{
     std::string name;
-    void Validate() override;
+    bool Validate() override;
     LogicalPlan* ToLogical() override;
   };
 
   struct DropDbStatement final : Statement{
     std::string name;
-    void Validate() override;
+    bool Validate() override;
     LogicalPlan* ToLogical() override;
   };
 
@@ -130,14 +130,14 @@ namespace QueryPipeline::Statements {
 
     ~InsertStatement() override { delete this->table; };
     
-    void Validate() override;
+    bool Validate() override;
     LogicalPlan* ToLogical() override;
   };
 
   struct CreateSchemaStatement final : Statement {
     std::string name;
 
-    void Validate() override;
+    bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
   };
 

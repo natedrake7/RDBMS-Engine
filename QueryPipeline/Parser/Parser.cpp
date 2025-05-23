@@ -58,10 +58,15 @@ namespace QueryPipeline
 
         Statements::Statement* statement = Parser::CreateStatement(response, dbName);
 
-        if (statement == nullptr)
-            throw runtime_error("Failed to parse query");
+        if (statement == nullptr) {
+            cerr << "Failed to parse query" << endl;
+            return;
+        }
         
-        statement->Validate();
+        if (!statement->Validate()) {
+            delete statement;
+            return;
+        }
 
         LogicalPlan* logicalPlan = statement->ToLogical();
         
@@ -72,8 +77,20 @@ namespace QueryPipeline
         const auto* result = physicalPlan->Execute();
 
         if (result != nullptr) {
+            if (result->code != AdditionalDataTypes::ResultCode::Ok) {
+                cerr << result->message << endl;
+
+                delete result;
+                delete statement;
+                delete logicalPlan;
+                delete physicalPlan;
+                return;
+            }
+            
             for (const auto& row: result->rows)
                 row.PrintRow();
+
+            cout << result->message << endl;
         }
 
         delete result;

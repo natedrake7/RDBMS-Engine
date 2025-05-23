@@ -29,16 +29,6 @@ using namespace ByteMaps;
 
 namespace DatabaseEngine
 {
-    void Database::ValidateTableCreation(Table *table) const
-    {
-        for (const auto &dbTable : this->tables)
-            if (dbTable->GetTableName() == table->GetTableName())
-                throw runtime_error("Table already exists");
-
-        if (table->GetMaxRowSize() > MAX_TABLE_SIZE)
-            throw runtime_error("Table size exceeds limit");
-    }
-
     void Database::WriteHeaderToFile() const
     {
         HeaderPage *metaDataPage = StorageManager::Get().GetHeaderPage(this->filename);
@@ -209,7 +199,7 @@ namespace DatabaseEngine
                 return table;
         }
 
-        throw invalid_argument("Database::OpenTable: No table with name " + schemaName + "." + tableName + " exists.");
+        return nullptr;
     }
 
     StorageTypes::Table * Database::OpenTable(const table_id_t &tableId) const{
@@ -231,11 +221,7 @@ namespace DatabaseEngine
         }
 
         if (table == nullptr)
-        {
-            const string exceptionMsg = "Database::OpenTable: No table with name " + tableName + " exists.";
-
-            throw invalid_argument(exceptionMsg);
-        }
+            return;
 
         const auto& tableHeader = table->GetTableHeader();
 
@@ -312,26 +298,42 @@ namespace DatabaseEngine
     }
 
     //optimize for multiple inserts
-    void Database::InsertRowToPage(const table_id_t &tableId, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row)
+    AdditionalDataTypes::ResultStatus Database::InsertRowToPage(
+        const table_id_t &tableId,
+        vector<extent_id_t> &allocatedExtents,
+        extent_id_t &lastExtentIndex,
+        Row *row)
     {
         const Table* table = this->GetTable(tableId);
         page_id_t rowPageId;int rowIndexPosition;
 
-        if (table->GetTableType() == TableType::CLUSTERED)
-            this->InsertRowToClusteredIndex(tableId, row, &rowPageId, &rowIndexPosition);
+        AdditionalDataTypes::ResultStatus status;
+
+        if (table->GetTableType() == TableType::CLUSTERED) {
+            status = this->InsertRowToClusteredIndex(tableId, row, &rowPageId, &rowIndexPosition);
+
+            if (status.code != AdditionalDataTypes::ResultCode::Ok)
+                return status;
+        }
         else
             this->InsertRowToHeapTable(*table, allocatedExtents, lastExtentIndex, row, &rowPageId, &rowIndexPosition);
 
         //insert to Non Clustered Indexes
         if(!table->HasNonClusteredIndexes())
-            return;
+           return status;
 
         const BPlusTreeNonClusteredData nonClusteredData(rowPageId, rowIndexPosition);
 
         const auto& nonClusteredIndexes = table->GetNonClusteredIndexes();
 
-        for (int i = 0; i < nonClusteredIndexes.size(); i++)
-            this->InsertRowToNonClusteredIndex(tableId, row, i, nonClusteredIndexes[i], nonClusteredData);
+        for (int i = 0; i < nonClusteredIndexes.size(); i++) {
+            status = this->InsertRowToNonClusteredIndex(tableId, row, i, nonClusteredIndexes[i], nonClusteredData);
+
+            if (status.code != AdditionalDataTypes::ResultCode::Ok)
+                return status;
+        }
+
+        return status;
     }
 
     Page *Database::FindOrAllocateNextDataPage(PageFreeSpacePage *&pageFreeSpacePage, const page_id_t &pageId, const page_id_t &extentFirstPageId, const extent_id_t &extentId, const Table &table, extent_id_t *nextExtentId)

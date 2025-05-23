@@ -380,7 +380,11 @@ namespace Server {
     Table* sysSchemas = this->masterDb->OpenTable("dbo", "sys_schemas");
     vector<Row> selectedSchemas;
 
-    sysSchemas->Select(selectedSchemas, {}, &conditions);
+    Indexing::Key key;
+    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+    key.InsertKey(Indexing::Key(schema.data(), schema.size(), ColumnType::String));
+
+    sysSchemas->ClusteredIndexSeek(&selectedSchemas, &key, &key, {});
 
     return !selectedSchemas.empty();
   }
@@ -439,6 +443,12 @@ namespace Server {
     vector<Row> selectedTables;
     Table* sysTables = this->masterDb->OpenTable("dbo", "sys_tables");
 
+    Indexing::Key key;
+    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+    key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
+
+    sysTables->ClusteredIndexSeek(&selectedTables, &key, &key, {});
+
     sysTables->Select(selectedTables, {}, &conditions);
 
     if (selectedTables.empty())
@@ -461,16 +471,18 @@ namespace Server {
   bool ServerInstance::TableExists(const string &dbName, const string &tableName, const std::string& schema) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    const vector<Field> conditions = {
-      Field(dbName, 0),
-      Field(tableName, 1),
-      Field(schema, 3)
-    };
-
     vector<Row> selectedTables;
     Table* sysTables = this->masterDb->OpenTable("dbo", "sys_tables");
 
-    sysTables->Select(selectedTables, {}, &conditions);
+    Indexing::Key key;
+
+    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+    key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
+    key.InsertKey(Indexing::Key(schema.data(), schema.size(), ColumnType::String));
+
+    sysTables->ClusteredIndexSeek(&selectedTables, &key, &key, {});
+
+    // sysTables->Select(selectedTables, {}, &conditions);
 
     return !selectedTables.empty();
   }

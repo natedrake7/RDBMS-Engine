@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Constants.h"
+#include "../AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h"
 #include "../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include <string>
 #include <vector>
@@ -70,8 +71,6 @@ class Database {
 protected:
     static void MergeRows(StorageTypes::Row& row, const vector<StorageTypes::Row>& selectedRows, const vector<column_index_t>& selectedColumnIndices, const StorageTypes::Table *secondTable);
 
-    void ValidateTableCreation(StorageTypes::Table *table) const;
-
     void WriteHeaderToFile() const;
 
     static bool IsSystemPage(const page_id_t &pageId);
@@ -86,23 +85,26 @@ protected:
 
     [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
 
-    void InsertRowToClusteredIndex( const table_id_t& tableId, 
-                                    StorageTypes::Row *row, 
-                                    page_id_t* rowPageId,
-                                    int* rowIndex);
+    AdditionalDataTypes::ResultStatus InsertRowToClusteredIndex(
+        const table_id_t& tableId, 
+        StorageTypes::Row *row, 
+        page_id_t* rowPageId,
+        int* rowIndex);
 
-    void InsertRowToNonClusteredIndex(  const table_id_t& tableId,
-                                        const StorageTypes::Row *row,
-                                        const int& nonClusteredIndexId,
-                                        const vector<column_index_t>& indexedColumns,
-                                        const Indexing::BPlusTreeNonClusteredData& data);
+    AdditionalDataTypes::ResultStatus InsertRowToNonClusteredIndex(
+        const table_id_t& tableId,
+        const StorageTypes::Row *row,
+        const int& nonClusteredIndexId,
+        const vector<column_index_t>& indexedColumns,
+        const Indexing::BPlusTreeNonClusteredData& data);
 
-    void InsertRowToHeapTable(  const StorageTypes::Table &table,
-                                vector<extent_id_t> &allocatedExtents,
-                                extent_id_t &lastExtentIndex,
-                                StorageTypes::Row *row,
-                                page_id_t* rowPageId,
-                                int* rowIndex);
+    void InsertRowToHeapTable(
+        const StorageTypes::Table &table,
+        vector<extent_id_t> &allocatedExtents,
+        extent_id_t &lastExtentIndex,
+        StorageTypes::Row *row,
+        page_id_t* rowPageId,
+        int* rowIndex);
 
     void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId) const;
 
@@ -158,7 +160,7 @@ public:
 
     void DeleteDatabase() const;
 
-    void InsertRowToPage(const table_id_t& tableId, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, StorageTypes::Row *row);
+    AdditionalDataTypes::ResultStatus InsertRowToPage(const table_id_t& tableId, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, StorageTypes::Row *row);
 
     void UpdateTableRows(const table_id_t &tableId, const vector<StorageTypes::Block*> &updateBlocks, const vector<Field> *conditions);
 

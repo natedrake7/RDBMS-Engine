@@ -174,7 +174,10 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
     
     Table* table = db->OpenTable(this->table->schema, this->table->name);
 
-    table->InsertRows({fields});
+    const auto insertResult = table->InsertRow(fields);
+
+    result->code = insertResult.code;
+    result->message = insertResult.message;
 
     return result;
   }

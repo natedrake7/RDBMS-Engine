@@ -1,4 +1,5 @@
 #pragma once
+#include "../../AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h"
 #include "../../AdditionalLibraries/HashSet/HashSet.h"
 #include <string>
 #include <vector>
@@ -17,7 +18,8 @@ namespace QueryPipeline::PhysicalPlan{
 
     typedef struct PhysicalPlanResult {
       std::vector<DatabaseEngine::StorageTypes::Row> rows;
-      vector<column_index_t> columnIndices;
+      std::string message;
+      AdditionalDataTypes::ResultCode code;
     }PhysicalPlanResult;
 
     class PhysicalOperator {

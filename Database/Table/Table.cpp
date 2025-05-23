@@ -164,39 +164,47 @@ namespace DatabaseEngine::StorageTypes {
           return columns;
       }
 
-      void Table::InsertRows(const vector<vector<Field>> &inputData) 
+      AdditionalDataTypes::ResultStatus Table::InsertRows(const vector<vector<Field>> &inputData) 
       {
         uint32_t rowsInserted = 0;
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
         for (const auto &rowData : inputData) 
         {
-            this->InsertRow(rowData, extents, startingExtentIndex);
+            const auto result = this->InsertRow(rowData, extents, startingExtentIndex);
 
+            if (result.code != AdditionalDataTypes::ResultCode::Ok)
+              return result;
+          
             rowsInserted++;
 
             if (rowsInserted % 1000 == 0)
                 cout << rowsInserted << endl;
         }
 
-        cout << "Rows affected: " << rowsInserted << endl;
+        AdditionalDataTypes::ResultStatus status;
+        status.message = "Rows affected: " + to_string(rowsInserted);
+
+        return status;
       }
 
-    void Table::InsertRow(const vector<Field> &inputData){
+    AdditionalDataTypes::ResultStatus Table::InsertRow(const vector<Field> &inputData){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
-        this->InsertRow(inputData, extents, startingExtentIndex);
+        auto result =  this->InsertRow(inputData, extents, startingExtentIndex);
 
-        cout << "Rows affected: 1"<< endl;
+        result.message = "Rows affected: 1";
+        
+        return result;
     }
 
-      void Table::InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex) 
+      AdditionalDataTypes::ResultStatus Table::InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex) 
       {
         Row* row = this->CreateRow(inputData);
 
         this->InsertLargeObjectToPage(row);
-        this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
+        return this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
       }
 
       Row* Table::CreateRow(const vector<Field>& inputData)const

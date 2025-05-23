@@ -165,7 +165,7 @@ namespace Indexing
         this->database->SplitNodeFromIndexPage(tableId, newChild, nonClusteredIndexId);
     }
 
-    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition)
+    Node *BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status)
     {
         if (this->root == nullptr)
         {
@@ -191,10 +191,15 @@ namespace Indexing
             root = newRoot;
         }
 
-        return this->GetNonFullNode(root, key, indexPosition);
+        Node *node = this->GetNonFullNode(root, key, indexPosition, status);
+
+        if (status.code != AdditionalDataTypes::ResultCode::Ok)
+            return nullptr;
+
+        return node;
     }
 
-    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition)
+    Node *BPlusTree::GetNonFullNode(Node *node, const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status)
     {
         if (node->isLeaf)
         {
@@ -206,11 +211,13 @@ namespace Indexing
                 && ((node->keys.size() > indexPos && key == node->keys[indexPos]) 
                 || (indexPos > 0 && key == node->keys[indexPos - 1])))
             {
-                ostringstream oss;
+                const ostringstream oss;
 
-                oss << "BPlusTree::GetNonFullNode: Key " << key << " already exists";
+                cerr << "BPlusTree::GetNonFullNode: Key " << key << " already exists";
 
-                throw invalid_argument(oss.str());
+                status.code = AdditionalDataTypes::ResultCode::DuplicateKey;
+                status.message = oss.str();
+                return nullptr;
             }
 
 
@@ -227,13 +234,18 @@ namespace Indexing
 
         if (child->keys.size() == 2 * t - 1)
         {
-            SplitChild(node, childIndex, child);
+            this->SplitChild(node, childIndex, child);
 
             if (key > node->keys[childIndex])
                 childIndex++;
         }
 
-        return GetNonFullNode(this->GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition);
+        Node* returnedNode = this->GetNonFullNode(this->GetNodeFromPage(node->childrenHeaders[childIndex]), key, indexPosition, status);
+
+        if (status.code != AdditionalDataTypes::ResultCode::Ok)
+            return nullptr;
+        
+        return returnedNode;
     }
 
     void BPlusTree::DeleteNode(const Node *node)

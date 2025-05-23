@@ -62,7 +62,8 @@ add_library(AdditionalLibraries AdditionalLibraries/BitMap/BitMap.cpp
                                 AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
                                 AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h
                                 AdditionalLibraries/StringFunctions/StringFunctions.h
-                                AdditionalLibraries/StringFunctions/StringFunctions.cpp)
+                                AdditionalLibraries/StringFunctions/StringFunctions.cpp
+        AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h)
 
 add_library(QueryPipeline   QueryPipeline/Parser/Parser.cpp
                             QueryPipeline/Parser/Parser.h

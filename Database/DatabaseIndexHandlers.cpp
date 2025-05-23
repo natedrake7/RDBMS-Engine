@@ -4,6 +4,7 @@
 #include "./Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "./Pages/IndexPage/IndexPage.h"
 #include "Constants.h"
+#include "../AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h"
 #include "B+Tree/BPlusTree.h"
 #include "Pages/Page.h"
 #include "Table/Table.h"
@@ -31,7 +32,7 @@ namespace DatabaseEngine {
         return key;
     }
 
-    void Database::InsertRowToClusteredIndex(const table_id_t& tableId, Row* row, page_id_t* rowPageId, int* rowIndex)
+    AdditionalDataTypes::ResultStatus Database::InsertRowToClusteredIndex(const table_id_t& tableId, Row* row, page_id_t* rowPageId, int* rowIndex)
     {
         Table* table = this->tables.at(tableId);
 
@@ -41,7 +42,12 @@ namespace DatabaseEngine {
 
         int indexPosition = 0;
 
-        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition);
+        AdditionalDataTypes::ResultStatus status;
+
+        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+
+        if (status.code != AdditionalDataTypes::ResultCode::Ok)
+            return status;
 
         *rowIndex = indexPosition;
 
@@ -50,7 +56,7 @@ namespace DatabaseEngine {
             this->InsertRowToNonEmptyNode(node, *table, row, key, indexPosition);
 
             *rowPageId = node->dataPageId;
-            return;
+            return {};
         }
 
         //first Insert
@@ -70,9 +76,10 @@ namespace DatabaseEngine {
         *rowPageId = newPageId;
 
         this->SplitNodeFromIndexPage(tableId, node);
+        return {};
     }
 
-    void Database::InsertRowToNonClusteredIndex(const table_id_t& tableId, const Row* row, const int& nonClusteredIndexId, const vector<column_index_t>& indexedColumns, const BPlusTreeNonClusteredData& data)
+    AdditionalDataTypes::ResultStatus Database::InsertRowToNonClusteredIndex(const table_id_t& tableId, const Row* row, const int& nonClusteredIndexId, const vector<column_index_t>& indexedColumns, const BPlusTreeNonClusteredData& data)
     {
         Table* table = this->tables.at(tableId);
 
@@ -80,7 +87,12 @@ namespace DatabaseEngine {
         const auto key = Database::CreateKey(indexedColumns, row);
 
         int indexPosition = 0;
-        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition);
+        AdditionalDataTypes::ResultStatus status;
+
+        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+
+        if (status.code != AdditionalDataTypes::ResultCode::Ok)
+            return status;
 
         node->keys.insert(node->keys.begin() + indexPosition, key);
         node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
@@ -88,6 +100,8 @@ namespace DatabaseEngine {
         node->currentNodeSize = node->GetNodeSize();
 
         this->SplitNodeFromIndexPage(tableId, node, nonClusteredIndexId);
+
+        return status;
     }
 
     void Database::SplitPage(Node*& firstNode, Node*& secondNode, const int &branchingFactor, const table_id_t& tableId)
