@@ -105,7 +105,7 @@ columnList : columnName (',' columnName)*;
 //declarations for clarification
 dbName: IDENTIFIER;
 columnName : IDENTIFIER;
-tableName : (schemaName=IDENTIFIER'.')?name=IDENTIFIER;
+tableName : (schemaName=IDENTIFIER '.')? name=IDENTIFIER;
 
 //create database statement
 createDbStatement: 'CREATE' 'DATABASE' IDENTIFIER;

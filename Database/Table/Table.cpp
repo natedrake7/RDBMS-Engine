@@ -194,6 +194,9 @@ namespace DatabaseEngine::StorageTypes {
 
         auto result =  this->InsertRow(inputData, extents, startingExtentIndex);
 
+        if (result.code != AdditionalDataTypes::ResultCode::Ok)
+          return result;
+
         result.message = "Rows affected: 1";
         
         return result;
@@ -204,7 +207,14 @@ namespace DatabaseEngine::StorageTypes {
         Row* row = this->CreateRow(inputData);
 
         this->InsertLargeObjectToPage(row);
-        return this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
+         auto result =  this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
+
+        if (result.code != AdditionalDataTypes::ResultCode::Ok)
+          return result;
+
+        result.message = "Rows affected: 1";
+        
+        return result;
       }
 
       Row* Table::CreateRow(const vector<Field>& inputData)const

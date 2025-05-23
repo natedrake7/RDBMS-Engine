@@ -92,7 +92,7 @@ int main()
     //insert statement
     const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
 
-    const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName, MovieLength) VALUES(1, 'Batman: The Dark Knight', 2)";
+    const string insertMovies = "INSERT INTO movies.Movies(ID, MovieName, MovieLength) VALUES(1, 'Batman: The Dark Knight', 2)";
 
     //create table
     const string createMoviesTable = "CREATE TABLE movies.Movies ( "
@@ -110,9 +110,7 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    QueryPipeline::Parser::Parse(insertMovies, dbName);
-    
-    // QueryPipeline::Parser::Parse(selectMovies, dbName);
+    QueryPipeline::Parser::Parse(selectMovies, dbName);
     
     const auto end = std::chrono::high_resolution_clock::now();
 
