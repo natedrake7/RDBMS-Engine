@@ -246,7 +246,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         LargeDataPage* page = this->table->GetLargeDataPage(objectPointer.pageId);
 
-        DataObject* object = page->GetObject(objectPointer.objectIndex);
+        const DataObject* object = page->GetObject(objectPointer.objectIndex);
 
         uint32_t currentObjectSize = object->objectSize;
 

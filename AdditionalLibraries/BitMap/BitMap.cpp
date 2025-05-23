@@ -138,7 +138,7 @@ namespace ByteMaps
 
     void BitMap::Resize(const Constants::bit_map_size_t &newSize)
     {
-        uint16_t newByteCount = (newSize + 7) / 8;
+        const uint16_t newByteCount = (newSize + 7) / 8;
         this->data.resize(newByteCount, 0);
         this->size = newSize;
     }

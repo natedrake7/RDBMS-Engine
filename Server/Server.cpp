@@ -614,8 +614,8 @@ namespace Server {
       vector<Column *> columns;
       vector<column_index_t> primaryKey;
       
-      for (int i = 0;i < table.columns.size(); i++) {
-        const auto& column = table.columns[i];
+      for (int j = 0;j < table.columns.size(); j++) {
+        const auto& column = table.columns[j];
 
         block_size_t columnSize = 0;
 
@@ -629,13 +629,13 @@ namespace Server {
 
         const auto columnType = ColumnTypesDictionary.Get(normalizedColumnType);
 
-        columns.push_back(new Column(column.name, columnType, columnSize, i, false));
+        columns.push_back(new Column(column.name, columnType, columnSize, j, false));
 
         for (const auto& key: table.primaryKey) {
           if (column.name != key)
             continue;
 
-          primaryKey.push_back(i);
+          primaryKey.push_back(j);
         }
       }
 

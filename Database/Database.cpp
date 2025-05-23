@@ -483,7 +483,7 @@ namespace DatabaseEngine
                     if(row == nullptr)
                         continue;
 
-                    RowHeader* rowHeader = row->GetHeader();
+                    const RowHeader* rowHeader = row->GetHeader();
 
                     const row_size_t rowPreviousSize = row->GetTotalRowSize();
 
@@ -554,7 +554,7 @@ namespace DatabaseEngine
 
         //skip inserting to non clustered indexes again and just update their position(if index values changes handle)
 
-        for(auto& row: rowsToBeInserted)
+        for(const auto& row: rowsToBeInserted)
             this->InsertRowToPage(table->GetTableId(), tableExtentIds, lastExtentIndex, row);
     }
 
@@ -815,7 +815,7 @@ namespace DatabaseEngine
 
         const page_id_t tableMapPageId = this->tables[tableId]->GetTableHeader().indexAllocationMapPageId;
 
-        IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId);
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId);
 
         vector<extent_id_t> allocatedExtents;
         tableMapPage->GetAllocatedExtents(&allocatedExtents);
