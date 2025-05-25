@@ -6,6 +6,10 @@
 #include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
 #include "../B+Tree/BPlusTree.h"
 
+namespace QueryPipeline::Statements {
+    struct Expression;
+}
+
 using namespace std;
 using namespace Constants;
 
@@ -156,7 +160,11 @@ namespace DatabaseEngine::StorageTypes
 
             void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
 
-            void Delete(const vector<Field> *conditions = nullptr) const;
+            void HeapDelete(const QueryPipeline::Statements::Expression* expression) const;
+
+            void ClusteredIndexScanDelete(const QueryPipeline::Statements::Expression* expression);
+
+            void ClusteredIndexSeekDelete(const QueryPipeline::Statements::Expression* expression);
 
             void Truncate();
 

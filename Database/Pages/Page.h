@@ -3,6 +3,7 @@
 #include <string>
 #include "../Constants.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+#include "../../QueryPipeline/Statements/Statements.h"
 
 class RowCondition;
 
@@ -53,6 +54,9 @@ namespace Pages
 
         virtual void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
         virtual void WritePageToFile(fstream *filePtr);
+
+        void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const QueryPipeline::Statements::Expression* expression);
+        void Delete(const QueryPipeline::Statements::Expression* expression);
 
         void SetFileName(const string &filename);
         void SetPageId(const page_id_t &pageId);

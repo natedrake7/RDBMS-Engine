@@ -40,7 +40,7 @@ namespace QueryPipeline::Statements {
       Expression* RightExpression);
 
     ~Expression();
-    void Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
+    bool Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
     [[nodiscard]] bool IsComplex() const;
     void GetColumns(HashSet<column_index_t>& columnsSet)const;
   };
@@ -85,6 +85,14 @@ namespace QueryPipeline::Statements {
     virtual ~Statement() = default;
     virtual bool Validate() = 0;
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
+  };
+
+  struct DeleteStatement final : Statement {
+    TableName* table;
+    WhereClause where;
+    ~DeleteStatement() override = default;
+    bool Validate() override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
   };
 
   struct CreateTableStatement final: Statement {

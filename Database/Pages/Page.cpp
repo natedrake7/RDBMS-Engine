@@ -166,6 +166,45 @@ namespace Pages
         }
     }
 
+    void Page::Delete(vector<Row*> &deletedRows, const QueryPipeline::Statements::Expression *expression){
+        for (int i = 0; i < this->rows.size(); i++) {
+            auto* row = this->rows[i];
+
+            if (row->Evaluate(expression)) {
+                this->rows.erase(this->rows.begin() + i);
+                i--;
+
+                //remove it from index as well
+
+                deletedRows.push_back(row);
+
+                //deleted row, mark it as dirty
+                this->isDirty = true;
+            }
+        }
+
+        this->header.pageSize = this->rows.size();
+    }
+
+    void Page::Delete(const QueryPipeline::Statements::Expression *expression){
+        for (int i = 0; i < this->rows.size(); i++) {
+            auto* row = this->rows[i];
+
+            if (row->Evaluate(expression)) {
+                this->rows.erase(this->rows.begin() + i);
+                i--;
+
+                //delete row to deallocate space
+                delete row;
+
+                //deleted row, mark it as dirty
+                this->isDirty = true;
+            }
+        }
+
+        this->header.pageSize = this->rows.size();
+    }
+
     void Page::SetFileName(const string &filename) { this->filename = filename; }
 
     void Page::SetPageId(const page_id_t &pageId) { this->header.pageId = pageId; }

@@ -247,7 +247,7 @@ namespace DatabaseEngine
 
         }
         //deletes all rows
-        table->Delete(nullptr);
+        // table->Delete(nullptr);
     }
 
     void CreateDatabase(const string &dbName)
@@ -558,50 +558,11 @@ namespace DatabaseEngine
             this->InsertRowToPage(table->GetTableId(), tableExtentIds, lastExtentIndex, row);
     }
 
-    void Database::DeleteTableRows(const table_id_t& tableId, const vector<Field>* conditions)
+    void Database::DeleteTableRows(const table_id_t& tableId, const QueryPipeline::Statements::Expression* expression)const
     {
-         const Table *table = this->GetTable(tableId);
+        const Table *table = this->GetTable(tableId);
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, table->GetTableHeader().indexAllocationMapPageId);
 
-        vector<extent_id_t> tableExtentIds;
-        tableMapPage->GetAllocatedExtents(&tableExtentIds);
-
-        const auto& columns = table->GetColumns();
-
-        vector<Row*> rowsToBeInserted;
-
-        for (const auto &extentId : tableExtentIds)
-        {
-            const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
-
-            const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
-
-            PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(this->filename, pfsPageId);
-
-            const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
-                                         ? extentFirstPageId
-                                         : extentFirstPageId + 1;
-
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
-            {
-                if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
-                    break;
-
-                Page *page = StorageManager::Get().GetPage(this->filename, extentPageId, extentId, table);
-
-                vector<Row*>* rows = page->GetDataRowsUnsafe();
-
-                for(const auto& row: *rows)
-                    delete row;
-
-                rows->clear();
-
-                page->UpdateBytesLeft();
-                page->UpdatePageSize();
-                pageFreeSpacePage->SetPageMetaData(page);
-            }
-        }
     }
 
     void Database::TruncateTable(const table_id_t & tableId)

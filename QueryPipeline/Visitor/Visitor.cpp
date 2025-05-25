@@ -17,6 +17,8 @@ namespace QueryPipeline {
       return visit(context->createTableStatement());
     if (context->createSchemaStatement())
       return visit(context->createSchemaStatement());
+    if (context->deleteStatement())
+      return visit(context->deleteStatement());
     
     return nullptr;
   }
@@ -249,6 +251,17 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     statement->name = context->IDENTIFIER()->getText();
     
+    return statement;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitDeleteStatement(SQLParser::DeleteStatementContext *context){
+    auto* statement = new Statements::DeleteStatement();
+
+    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+
+    if (context->whereClause())
+      statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));
+
     return statement;
   }
 

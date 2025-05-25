@@ -308,4 +308,30 @@ namespace DatabaseEngine::StorageTypes {
 
         return rowHeaderSize;
     }
+
+    bool Row::Evaluate(const QueryPipeline::Statements::Expression *expression) const{
+        switch (expression->type) {
+            case QueryPipeline::Statements::ExpressionType::Predicate: {
+                const auto actualData = this->GetData()[expression->columnIndex];
+
+                const auto& expected = expression->value;
+                const std::string& op = expression->operation;
+
+                if (op == "=") return *actualData == expected;
+                if (op == "!=" || op == "<>") return *actualData != expected;
+                if (op == "<") return *actualData < expected;
+                if (op == ">") return *actualData > expected;
+                if (op == "<=") return *actualData <= expected;
+                if (op == ">=") return *actualData >= expected;
+
+                throw std::runtime_error("Unknown operator: " + op);
+            }
+            case QueryPipeline::Statements::ExpressionType::And:
+                return this->Evaluate(expression->left) && this->Evaluate(expression->right);
+            case QueryPipeline::Statements::ExpressionType::Or:
+                return this->Evaluate(expression->left) || this->Evaluate(expression->right);
+            default:
+                throw std::runtime_error("Invalid expression type");
+        }
+    }
 }

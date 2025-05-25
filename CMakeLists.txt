@@ -69,17 +69,17 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h)
 
 add_library(QueryPipeline  SHARED
-        QueryPipeline/Parser/Parser.cpp
-        QueryPipeline/Parser/Parser.h
-        QueryPipeline/Visitor/Visitor.cpp
-        QueryPipeline/Visitor/Visitor.h
-        QueryPipeline/LogicalPlan/LogicalPlan.cpp
-        QueryPipeline/LogicalPlan/LogicalPlan.h
-        QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
-        QueryPipeline/PhysicalPlan/PhysicalPlan.h
-        QueryPipeline/Statements/Statements.cpp
-        QueryPipeline/Statements/Statements.h
-        ${ANTLR_SRC})
+                QueryPipeline/Parser/Parser.cpp
+                QueryPipeline/Parser/Parser.h
+                QueryPipeline/Visitor/Visitor.cpp
+                QueryPipeline/Visitor/Visitor.h
+                QueryPipeline/LogicalPlan/LogicalPlan.cpp
+                QueryPipeline/LogicalPlan/LogicalPlan.h
+                QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
+                QueryPipeline/PhysicalPlan/PhysicalPlan.h
+                QueryPipeline/Statements/Statements.cpp
+                QueryPipeline/Statements/Statements.h
+                ${ANTLR_SRC})
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 

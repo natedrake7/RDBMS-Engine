@@ -139,6 +139,14 @@ namespace Indexing
         [[nodiscard]] Node* GetNodeFromPage(const NodeHeader& header) const;
         static int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
 
+        void HandleUnderflow(Node* node);
+        void HandleRootUnderflow();
+
+        bool TryBorrowFromLeftSibling(Node* node, Node* parent, const int& index)const;
+        bool TryBorrowFromRightSibling(Node* node, Node* parent, const int& index)const;
+
+        void MergeNodes(Node* leftNode, Node* rightNode, Node* parent, int parentKeyIndex);
+
     public:
         explicit BPlusTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId = -1);
         BPlusTree();
@@ -153,6 +161,9 @@ namespace Indexing
         
         void SearchKey(const Key &key, QueryData &result) const;
         [[nodiscard]] page_size_t GetTreeSize() const;
+
+
+        void Remove(const Key& key);
 
         Node*& GetRoot();
 

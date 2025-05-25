@@ -5,6 +5,7 @@
 #include "../Column/Column.h"
 #include "../Constants.h"
 #include "../Database.h"
+#include "../../QueryPipeline/Statements/Statements.h"
 #include "../Pages/LargeObject/LargeDataPage.h"
 #include "../Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "../Pages/Header/HeaderPage.h"
@@ -511,13 +512,107 @@ namespace DatabaseEngine::StorageTypes {
            delete block;
       }
 
-    void Table::Delete(const vector<Field>* conditions) const
+    void Table::HeapDelete(const QueryPipeline::Statements::Expression* expression) const
     {
-        //build conditions
-        this->database->DeleteTableRows(this->header.tableId, conditions);
+        const auto& filename = this->database->GetFileName();
 
-        //update indexes as well
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
+
+        vector<Row*> rowsToBeInserted;
+
+        for (const auto &extentId : tableExtentIds)
+        {
+          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+          const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
+
+          PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
+
+          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                       ? extentFirstPageId
+                                       : extentFirstPageId + 1;
+
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
+            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+              break;
+
+            Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
+
+            page->Delete(expression);
+
+            page->UpdateBytesLeft();
+            page->UpdatePageSize();
+
+            pageFreeSpacePage->SetPageMetaData(page);
+          }
+        }
     }
+
+    void Table::ClusteredIndexScanDelete(const QueryPipeline::Statements::Expression *expression){
+        auto* tree = this->GetClusteredIndexedTree();
+
+        vector<QueryData> results;
+        tree->IndexScan(results);
+
+        if(results.empty())
+          return;
+
+        const auto& filename = this->database->GetFileName();
+
+        extent_id_t pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(results[0].pageId);
+        Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
+
+        for (const auto &result : results)
+        {
+          // get new page else use current one
+          if (result.pageId != 0 && result.pageId != page->GetPageId())
+          {
+            pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(result.pageId);
+            page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
+          }
+
+          vector<Row*>* rows = page->GetDataRowsUnsafe();
+
+          int counter = 0;
+
+          for (int i = 0; i < rows->size(); i++) {
+            auto* row = (*rows)[i];
+
+            if (row->Evaluate(expression)) {
+              //remove it from index as well
+              const auto& key = Database::CreateKey(this->header.clusteredColumnIndexes, row);
+
+              tree->Remove(key);
+
+              for (int j = 0;j < this->header.nonClusteredColumnIndexes.size(); j++) {
+                const auto& index = this->header.nonClusteredColumnIndexes[j];
+
+                const auto& nonClusteredKey = Database::CreateKey(index, row);
+
+                auto* nonClusteredTree = this->GetNonClusteredIndexTree(j);
+
+                nonClusteredTree->Remove(nonClusteredKey);
+              }
+
+              rows->erase(rows->begin() + i);
+              i--;
+
+              delete row;
+
+              page->SetDirty();
+
+              cout << counter++ << endl;
+            }
+          }
+        }
+  }
+
+  void Table::ClusteredIndexSeekDelete(const QueryPipeline::Statements::Expression *expression){
+  }
 
     void Table::Truncate()
     {

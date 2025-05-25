@@ -119,13 +119,11 @@ protected:
                                   const int &indexPosition);
 
 
-    void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& newNodeHeader);
 
     void UpdateTableIndexes(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId) const;
 
     [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId)const;
 
-    [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
 public:
     explicit Database(const string &dbName, const bool& isServerInitialization = false);
@@ -133,6 +131,8 @@ public:
     explicit Database(const std::string& dbName, const vector<Headers::sysTable>& tables);
 
     ~Database();
+
+    [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
     static page_id_t GetGamAssociatedPage(const page_id_t &pageId);
 
@@ -144,8 +144,8 @@ public:
       const string &tableName,
       const string &schemaName,
       const table_id_t &tableId,
-      const vector<StorageTypes::Column *> &columns, 
-      const vector<column_index_t> *clusteredKeyIndexes = nullptr, 
+      const vector<StorageTypes::Column *> &columns,
+      const vector<column_index_t> *clusteredKeyIndexes = nullptr,
       const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
 
     void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
@@ -164,10 +164,10 @@ public:
 
     void UpdateTableRows(const table_id_t &tableId, const vector<StorageTypes::Block*> &updateBlocks, const vector<Field> *conditions);
 
-    void DeleteTableRows(const table_id_t& tableId, const vector<Field>* conditions);
+    void DeleteTableRows(const table_id_t& tableId, const QueryPipeline::Statements::Expression* expression)const;
 
     void TruncateTable(const table_id_t& tableId);
-  
+
     Pages::Page *CreateDataPage(const table_id_t &tableId);
 
     Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
@@ -186,11 +186,11 @@ public:
 
     static extent_id_t CalculateExtentIdByPageId(const page_id_t &pageId);
 
-    [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage(  Pages::PageFreeSpacePage *&pageFreeSpacePage, 
-                                                            const page_id_t &pageId, 
-                                                            const page_id_t &extentFirstPageId, 
-                                                            const extent_id_t &extentId, 
-                                                            const StorageTypes::Table &table, 
+    [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage(  Pages::PageFreeSpacePage *&pageFreeSpacePage,
+                                                            const page_id_t &pageId,
+                                                            const page_id_t &extentFirstPageId,
+                                                            const extent_id_t &extentId,
+                                                            const StorageTypes::Table &table,
                                                             extent_id_t *nextExtentId);
 
     [[nodiscard]] Pages::IndexPage* FindOrAllocateNextIndexPage(  const table_id_t& tableId
@@ -203,10 +203,14 @@ public:
                 Indexing::Node*& secondNode,
                 const int &branchingFactor,
                 const table_id_t& tableId);
-    
+
     void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
 
     void UpdateNodeConnections(Indexing::Node*& node);
+
+    void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& newNodeHeader);
+
+    void UpdateNodeConnectionsOnDelete(Indexing::Node*& node, Indexing::Node* deletedNode, const Indexing::NodeHeader& newNodeHeader);
 
     static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 

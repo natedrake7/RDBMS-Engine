@@ -58,6 +58,14 @@ namespace QueryPipeline {
       PhysicalPlan::PhysicalSchemaCreate* ToPhysical()override;
   };
 
+  class LogicalDelete final : public LogicalPlan {
+  public:
+    Statements::TableName* table;
+    Statements::Expression* expression;
+    explicit LogicalDelete(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression);
+    PhysicalPlan::PhysicalOperator* ToPhysical()override;
+  };
+
   class LogicalTableCreate final : public LogicalPlan {
     public:
       Statements::TableName* table;

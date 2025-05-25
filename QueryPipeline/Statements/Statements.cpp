@@ -29,21 +29,20 @@ namespace QueryPipeline::Statements {
     delete right;
   }
 
-  void Expression::Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary){
+  bool Expression::Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary){
     if (this->type != Statements::ExpressionType::Predicate
       && this->left != nullptr
-      && this->right != nullptr) {
-       this->left->Validate(columnsDictionary);
-        this->right->Validate(columnsDictionary);
-
-      return;
-    }
+      && this->right != nullptr)
+       return this->left->Validate(columnsDictionary) &&
+              this->right->Validate(columnsDictionary);
 
     Headers::ColumnHeader header;
     if (!columnsDictionary.TryGetValue(this->column, header))
-      throw runtime_error("Column " + this->column + " does not exist");
+      return false;
 
-    this->columnIndex = header.tablePosition;  
+    this->columnIndex = header.tablePosition;
+
+    return true;
   }
 
   bool Expression::IsComplex()const{
@@ -64,6 +63,22 @@ namespace QueryPipeline::Statements {
 
     if (!columnsSet.contains(this->columnIndex))
       columnsSet.Add(this->columnIndex);
+  }
+
+  bool DeleteStatement::Validate(){
+    if (!Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
+      return false;
+
+    if (this->where.expression == nullptr)
+      return true;
+
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, this->table->name);
+
+    return this->where.expression->Validate(columnsDict);
+  }
+
+  LogicalPlan * DeleteStatement::ToLogical(){
+    return new LogicalDelete(this->dbName, this->table, this->where.expression);
   }
 
   CreateTableStatement::~CreateTableStatement() {
@@ -155,9 +170,7 @@ namespace QueryPipeline::Statements {
     if (this->where.expression == nullptr)
       return true;
 
-    this->where.expression->Validate(columnsDict);
-
-    return true;
+    return this->where.expression->Validate(columnsDict);
   }
 
   LogicalPlan * SelectStatement::ToLogical(){

@@ -10,7 +10,8 @@ sqlStatement
     | dropDbStatement 
     | insertStatement 
     | createTableStatement
-    | createSchemaStatement;
+    | createSchemaStatement
+    | deleteStatement;
 
 //select statement
 selectStatement : 'SELECT' (columnList | WILDCARD) 'FROM' tableName whereClause?;
@@ -36,11 +37,14 @@ predicate
     | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
     ;
 
-
 //insert statement
-insertStatement: 'INSERT' 'INTO' tableName '(' columnList ')' 'VALUES' '(' literalValueList ')'
+insertStatement
+        : 'INSERT' 'INTO' tableName '(' columnList ')' 'VALUES' '(' literalValueList ')'
         ;
 
+deleteStatement
+        : 'DELETE' 'FROM' tableName whereClause?
+        ;
 
 //create table statement
 createTableStatement: 'CREATE' 'TABLE' tableName '(' addColumn (',' addColumn)* ( ',' primaryKeyConstraint)? ')';

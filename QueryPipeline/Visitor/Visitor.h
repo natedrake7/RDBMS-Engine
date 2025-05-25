@@ -58,5 +58,7 @@ namespace QueryPipeline {
       antlrcpp::Any visitPrimaryKeyConstraint(SQLParser::PrimaryKeyConstraintContext *context) override;
 
       antlrcpp::Any visitCreateSchemaStatement(SQLParser::CreateSchemaStatementContext *context) override;
+
+      antlrcpp::Any visitDeleteStatement(SQLParser::DeleteStatementContext *context) override;
   };
 }

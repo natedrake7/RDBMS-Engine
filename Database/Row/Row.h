@@ -2,6 +2,10 @@
 #include <vector>
 #include "../Constants.h"
 
+namespace QueryPipeline::Statements {
+    struct Expression;
+}
+
 namespace DatabaseEngine
 {
     class Database;
@@ -84,5 +88,7 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] row_size_t GetTotalRowSize() const;
 
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
+
+        [[nodiscard]] bool Evaluate(const QueryPipeline::Statements::Expression* expression) const;
     };
 }

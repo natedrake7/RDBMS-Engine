@@ -65,39 +65,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   }
 
 
-bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, const DatabaseEngine::StorageTypes::Row &row){
-    switch (filter->type) {
-    case Statements::ExpressionType::Predicate: {
-
-      const auto actualData = row.GetData()[filter->columnIndex];
-
-      const auto& expected = filter->value;
-      const std::string& op = filter->operation;
-
-      if (op == "=") return *actualData == expected;
-      if (op == "!=" || op == "<>") return *actualData != expected;
-      if (op == "<") return *actualData < expected;
-      if (op == ">") return *actualData > expected;
-      if (op == "<=") return *actualData <= expected;
-      if (op == ">=") return *actualData >= expected;
-
-      throw std::runtime_error("Unknown operator: " + op);
-    }
-    case Statements::ExpressionType::And:
-      return PhysicalFilter::EvaluateExpression(filter->left, row) && PhysicalFilter::EvaluateExpression(filter->right, row);
-    case Statements::ExpressionType::Or:
-      return PhysicalFilter::EvaluateExpression(filter->left, row) || PhysicalFilter::EvaluateExpression(filter->right, row);
-    default:
-      throw std::runtime_error("Invalid expression type");
-    }
-  }
-
   PhysicalPlanResult* PhysicalFilter::Execute(){
     auto* result = child->Execute();
 
     for (const auto &row : result->rows) {
       
-      if (!PhysicalFilter::EvaluateExpression(this->filter, row))
+      if (!row.Evaluate(this->filter))
         continue;
 
       result->rows.emplace_back(row);
@@ -151,14 +124,14 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    Table* table = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
     const Indexing::Key minKey(minValue);
     const Indexing::Key maxKey(maxValue);
 
     //select if to use clustered or non clustered index here
 
-    table->ClusteredIndexSeek(&result->rows,&minKey, &maxKey , {});
+    tablePtr->ClusteredIndexSeek(&result->rows,&minKey, &maxKey , {});
 
     return result;
   }
@@ -173,12 +146,78 @@ bool PhysicalFilter::EvaluateExpression(const Statements::Expression* filter, co
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
     
-    Table* table = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
-    const auto insertResult = table->InsertRow(fields);
+    for (int i = 0;i < 1000; i++) {
+      this->fields[0].SetData(i);
+      const auto insertResult = tablePtr->InsertRow(fields);
 
-    result->code = insertResult.code;
-    result->message = insertResult.message;
+    }
+
+    // const auto insertResult = tablePtr->InsertRow(fields);
+    //
+    // result->code = insertResult.code;
+    // result->message = insertResult.message;
+
+    return result;
+  }
+
+  PhysicalHeapDelete::PhysicalHeapDelete(const std::string &dbName, Statements::TableName *table, Statements::Expression *expression)
+    : PhysicalOperator(dbName), table(table), expression(expression) {}
+
+  PhysicalHeapDelete::~PhysicalHeapDelete(){
+    delete this->expression;
+    delete this->table;
+  }
+
+  PhysicalPlanResult * PhysicalHeapDelete::Execute(){
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+
+    tablePtr->HeapDelete(this->expression);
+
+    return result;
+  }
+
+  PhysicalIndexScanDelete::PhysicalIndexScanDelete(const std::string &dbName, Statements::TableName *table, Statements::Expression *expression)
+    : PhysicalOperator(dbName), table(table), expression(expression) {}
+
+  PhysicalIndexScanDelete::~PhysicalIndexScanDelete(){
+      delete this->expression;
+      delete this->table;
+  }
+
+  PhysicalPlanResult * PhysicalIndexScanDelete::Execute(){
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+
+    tablePtr->ClusteredIndexScanDelete(this->expression);
+
+    return result;
+  }
+
+  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(const std::string &dbName, Statements::TableName *table, Statements::Expression *expression)
+    : PhysicalOperator(dbName), table(table), expression(expression) {}
+
+  PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete(){
+    delete this->expression;
+    delete this->table;
+  }
+
+  PhysicalPlanResult * PhysicalIndexSeekDelete::Execute(){
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+
+    tablePtr->ClusteredIndexSeekDelete(expression);
 
     return result;
   }
