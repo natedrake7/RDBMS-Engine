@@ -63,7 +63,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
 
   antlrcpp::Any SQLVisitorImplementation::visitWhereClause(SQLParser::WhereClauseContext *context){
     Statements::WhereClause where;
-    where.expression = std::any_cast<Statements::Expression*>(visitExpression(context->expression()));
+    where.expression = std::any_cast<Expressions::Expression*>(visitExpression(context->expression()));
     return where;
   }
 
@@ -91,24 +91,24 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
-    auto* expression = std::any_cast<Statements::Expression*>(visit(context->andExpression(0)));
+    auto* expression = std::any_cast<Expressions::Expression*>(visit(context->andExpression(0)));
 
     for (size_t i = 1; i < context->andExpression().size(); i++) {
-      auto* right = std::any_cast<Statements::Expression*>(visit(context->andExpression(i)));
+      auto* right = std::any_cast<Expressions::Expression*>(visit(context->andExpression(i)));
       
-      expression = new Statements::Expression(Statements::ExpressionType::Or, expression, right);  // assuming you have a class like this
+      expression = new Expressions::Expression(Expressions::ExpressionType::Or, expression, right);  // assuming you have a class like this
     }
 
     return expression;
   }
 
 antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpressionContext *context) {
-    auto* expression = std::any_cast<Statements::Expression*>(visit(context->predicate(0)));
+    auto* expression = std::any_cast<Expressions::Expression*>(visit(context->predicate(0)));
 
     for (size_t i = 1; i < context->predicate().size(); i++) {
-      auto* right = std::any_cast<Statements::Expression*>(visit(context->predicate(i)));
+      auto* right = std::any_cast<Expressions::Expression*>(visit(context->predicate(i)));
       
-      expression = new Statements::Expression(Statements::ExpressionType::And, expression, right);  // assuming you have a class like this
+      expression = new Expressions::Expression(Expressions::ExpressionType::And, expression, right);  // assuming you have a class like this
     }
 
     return expression;
@@ -117,8 +117,8 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
     if (context->expression())
       return visit(context->expression());
 
-    return new Statements::Expression{
-      Statements::ExpressionType::Predicate,
+    return new Expressions::Expression{
+      Expressions::ExpressionType::Predicate,
       nullptr,
       nullptr,
       context->columnName()->getText(),

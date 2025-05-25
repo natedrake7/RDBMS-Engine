@@ -276,7 +276,7 @@ namespace Server {
     Indexing::Key key;
     key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
 
-     sysDatabases->ClusteredIndexSeek(&selectedDatabases, &key, &key, {});
+     sysDatabases->ClusteredIndexSeek(&selectedDatabases, &key, &key);
 
      return !selectedDatabases.empty();
   }
@@ -288,7 +288,7 @@ namespace Server {
 
      vector<Row> selectedDatabases;
 
-     sysDatabases->ClusteredIndexScan(&selectedDatabases, {});
+     sysDatabases->ClusteredIndexScan(&selectedDatabases);
 
      vector<Headers::DatabaseHeader> databasesHeaders;
 
@@ -337,7 +337,7 @@ namespace Server {
     Indexing::Key key;
     key.InsertKey(Indexing::Key(name.data(), name.size(), ColumnType::String));
 
-    sysDatabases->ClusteredIndexSeek(&selectedDatabases, &key, &key, {});
+    sysDatabases->ClusteredIndexSeek(&selectedDatabases, &key, &key);
 
     if (selectedDatabases.empty())
       return {};
@@ -367,7 +367,7 @@ namespace Server {
     Indexing::Key key;
     key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
 
-    sysSchemas->ClusteredIndexSeek(&selectedSchemas, &key, &key, {});
+    sysSchemas->ClusteredIndexSeek(&selectedSchemas, &key, &key);
 
     if (selectedSchemas.empty())
       return {};
@@ -404,7 +404,7 @@ namespace Server {
     key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
     key.InsertKey(Indexing::Key(schema.data(), schema.size(), ColumnType::String));
 
-    sysSchemas->ClusteredIndexSeek(&selectedSchemas, &key, &key, {});
+    sysSchemas->ClusteredIndexSeek(&selectedSchemas, &key, &key);
 
     return !selectedSchemas.empty();
   }
@@ -418,7 +418,7 @@ namespace Server {
     key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
 
     Table* sysTablesPtr = this->masterDb->OpenTable(1);
-    sysTablesPtr->ClusteredIndexSeek(&selectedTables, &key, &key, {});
+    sysTablesPtr->ClusteredIndexSeek(&selectedTables, &key, &key);
 
     if (selectedTables.empty())
       return {};
@@ -466,9 +466,7 @@ namespace Server {
     key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
     key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
 
-    sysTables->ClusteredIndexSeek(&selectedTables, &key, &key, {});
-
-    sysTables->Select(selectedTables, {}, &conditions);
+    sysTables->ClusteredIndexSeek(&selectedTables, &key, &key);
 
     if (selectedTables.empty())
       return {};
@@ -499,7 +497,7 @@ namespace Server {
     key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
     key.InsertKey(Indexing::Key(schema.data(), schema.size(), ColumnType::String));
 
-    sysTablesPtr->ClusteredIndexSeek(&selectedTables, &key, &key, {});
+    sysTablesPtr->ClusteredIndexSeek(&selectedTables, &key, &key);
 
     // sysTables->Select(selectedTables, {}, &conditions);
 
@@ -517,7 +515,7 @@ namespace Server {
     key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
     key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
 
-    sysColumns->ClusteredIndexSeek(&selectedColumns, &key, &key, {});
+    sysColumns->ClusteredIndexSeek(&selectedColumns, &key, &key);
 
     if (selectedColumns.empty())
       return {};
@@ -575,7 +573,7 @@ namespace Server {
       key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
       key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
 
-      sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key, {});
+      sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key);
 
       vector<Headers::IndexHeader> selectedIndexHeaders;
 

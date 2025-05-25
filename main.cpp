@@ -87,7 +87,7 @@ int main()
     const string selectActors = "SELECT * FROM dbo.Actors";
 
     //select statement
-    const string selectMovies = "SELECT * FROM movies.Movies";
+    const string selectMovies = "SELECT * FROM movies.Movies WHERE ID = 1 OR ID = 10";
 
     //insert statement
     const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
@@ -111,6 +111,7 @@ int main()
     const string schemaCreate = "CREATE SCHEMA movies";
 
     const auto start = std::chrono::high_resolution_clock::now();
+
     QueryPipeline::Parser::Parse(selectMovies, dbName);
 
     const auto& databases = server.GetCatalog();

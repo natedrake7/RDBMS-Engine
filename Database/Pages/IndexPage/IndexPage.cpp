@@ -21,6 +21,7 @@ void IndexPage::WriteAdditionalHeaderToFile(fstream * filePtr) const
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.numberOfSubKeys), sizeof(uint8_t));
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.isLeaf), sizeof(bool));
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.isRoot), sizeof(bool));
+    filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.isEmpty), sizeof(bool));
 }
 
 void IndexPage::ReadAdditionalHeaderFromFile(const vector<char>& data, page_offset_t & offSet)
@@ -34,6 +35,8 @@ void IndexPage::ReadAdditionalHeaderFromFile(const vector<char>& data, page_offs
     memcpy(&this->additionalHeader.isLeaf, data.data() + offSet, sizeof(bool));
     offSet += sizeof(bool);
     memcpy(&this->additionalHeader.isRoot, data.data() + offSet, sizeof(bool));
+    offSet += sizeof(bool);
+    memcpy(&this->additionalHeader.isEmpty, data.data() + offSet, sizeof(bool));
     offSet += sizeof(bool);
 }
 
@@ -235,7 +238,9 @@ void IndexPage::ResizeNodes(const int& splitFactor)
     this->isDirty = true;
 }
 
-bool IndexPage::isEmpty() const{ return this->rows.empty() && this->keys.empty() && this->nonClusteredData.empty(); }
+bool IndexPage::isEmpty() const{
+    return this->additionalHeader.isEmpty;
+}
 
 const bool & IndexPage::IsLeaf() const{ return this->additionalHeader.isLeaf; }
 
@@ -243,11 +248,13 @@ const bool & IndexPage::IsRoot() const{ return this->additionalHeader.isRoot; }
 
 void IndexPage::SetIsLeaf(const bool& isLeaf) {
     this->additionalHeader.isLeaf = isLeaf;
+    this->additionalHeader.isEmpty = false;
     this->isDirty = true;
 }
 
 void IndexPage::SetIsRoot(const bool &isRoot) {
     this->additionalHeader.isRoot = isRoot;
+    this->additionalHeader.isEmpty = false;
     this->isDirty = true;
 }
 
@@ -269,7 +276,35 @@ void IndexPage::UpdatePageSize()
             ? this->rows.size()
             : this->nonClusteredData.size();
 
+    this->additionalHeader.isEmpty = false;
     this->isDirty = true;
+}
+
+void IndexPage::MarkEmpty(){
+  this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+
+  this->header.pageSize = 0;
+
+  for(const auto& key : this->keys)
+    delete key;
+
+  this->keys.clear();
+
+  for(const auto& nonClusteredData : this->nonClusteredData)
+    delete nonClusteredData;
+
+  this->nonClusteredData.clear();
+
+  for(const auto& row : this->rows)
+    delete row;
+
+  this->rows.clear();
+
+  this->children.clear();
+
+  this->additionalHeader.isEmpty = true;
+
+  this->isDirty = true;
 }
 
 IndexPageAdditionalHeader::IndexPageAdditionalHeader()
@@ -279,12 +314,13 @@ IndexPageAdditionalHeader::IndexPageAdditionalHeader()
     this->numberOfSubKeys = 0;
     this->isLeaf = false;
     this->isRoot = false;
+    this->isEmpty = true;
 }
 
 IndexPageAdditionalHeader::~IndexPageAdditionalHeader() = default;
 
 page_size_t IndexPageAdditionalHeader::GetAdditionalHeaderSize()
 {
-    return sizeof(page_id_t) + sizeof(TreeType) + sizeof(uint8_t) + 2* sizeof(bool) + sizeof(uint16_t);
+    return sizeof(page_id_t) + sizeof(TreeType) + sizeof(uint8_t) + 3 * sizeof(bool) + sizeof(uint16_t);
 }
 } // namespace Pages

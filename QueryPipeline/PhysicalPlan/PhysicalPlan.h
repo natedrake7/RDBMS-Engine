@@ -60,10 +60,12 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalIndexScan final : public PhysicalOperator{
     Statements::TableName* table;
+    Expressions::Expression* expression;
     bool isClustered;
 
   public:
     explicit PhysicalIndexScan(const std::string& dbName, Statements::TableName* table, const bool& isClustered = false);
+    explicit PhysicalIndexScan(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression, const bool& isClustered = false);
     ~PhysicalIndexScan()override = default;
     PhysicalPlanResult* Execute() override;
   };
@@ -90,11 +92,11 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalFilter final : public PhysicalOperator{
-    Statements::Expression* filter;
+    Expressions::Expression* filter;
     PhysicalOperator* child;
 
     public:
-      PhysicalFilter(const std::string& dbName, PhysicalOperator* child, Statements::Expression* filter);
+      PhysicalFilter(const std::string& dbName, PhysicalOperator* child, Expressions::Expression* filter);
       ~PhysicalFilter() override;
       PhysicalPlanResult* Execute() override;
   };
@@ -111,30 +113,30 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalHeapDelete final : public PhysicalOperator{
     Statements::TableName* table;
-    Statements::Expression* expression;
+    Expressions::Expression* expression;
 
   public:
-    PhysicalHeapDelete(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression);
+    PhysicalHeapDelete(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalHeapDelete()override;
     PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalIndexScanDelete final : public PhysicalOperator{
     Statements::TableName* table;
-    Statements::Expression* expression;
+    Expressions::Expression* expression;
 
   public:
-    PhysicalIndexScanDelete(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression);
+    PhysicalIndexScanDelete(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalIndexScanDelete()override;
     PhysicalPlanResult* Execute() override;
   };
 
   class PhysicalIndexSeekDelete final : public PhysicalOperator{
     Statements::TableName* table;
-    Statements::Expression* expression;
+    Expressions::Expression* expression;
 
   public:
-    PhysicalIndexSeekDelete(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression);
+    PhysicalIndexSeekDelete(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalIndexSeekDelete()override;
     PhysicalPlanResult* Execute() override;
   };

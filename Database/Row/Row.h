@@ -1,10 +1,7 @@
 ﻿#pragma once
 #include <vector>
 #include "../Constants.h"
-
-namespace QueryPipeline::Statements {
-    struct Expression;
-}
+#include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
 
 namespace DatabaseEngine
 {
@@ -89,6 +86,6 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
 
-        [[nodiscard]] bool Evaluate(const QueryPipeline::Statements::Expression* expression) const;
+        [[nodiscard]] bool Evaluate(const Expressions::Expression* expression) const;
     };
 }

@@ -22,48 +22,6 @@ using namespace DataTypes;
 
 namespace Indexing
 {
-
-    Node::Node(const bool &isLeaf, const bool& isRoot, const bool& isNodeClustered)
-    {
-        this->isLeaf = isLeaf;
-        this->isRoot = isRoot;
-        this->isNodeClustered = isNodeClustered;
-        this->currentNodeSize = this->GetNodeSize();
-        this->prevNodeSize = this->GetNodeSize();
-        this->dataPageId = 0;
-    }
-
-    page_size_t Node::GetNodeSize() const
-    {
-        //included self and parent header + prev and next
-        page_size_t size = 2 * NodeHeader::GetNodeHeaderSize();
-
-        //if node is leaf or not
-        size += 2 * sizeof(bool);
-
-        //num of keys to read for node
-        size += sizeof(uint16_t);
-        size += sizeof(uint8_t);
-
-        for (const auto &key : this->keys)
-            size += key.GetKeySize();
-
-        if (this->isLeaf)
-        {
-            size += this->isNodeClustered 
-                    ? sizeof(page_id_t) 
-                    : ((this->nonClusteredData.size() * BPlusTreeNonClusteredData::GetNonClusteredDataSize())+ sizeof(uint16_t));
-
-            size += 2 * NodeHeader::GetNodeHeaderSize();
-        }
-        else
-            size += sizeof(uint16_t) + (this->childrenHeaders.size() * NodeHeader::GetNodeHeaderSize());
-
-        return size;
-    }
-
-    Node::~Node() = default;
-
     BPlusTree::BPlusTree(Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
     {
         const auto &tableHeader = table->GetTableHeader();
@@ -110,7 +68,7 @@ namespace Indexing
         }
 
         return (PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize()) 
-                    / ((keySize + BPlusTreeNonClusteredData::GetNonClusteredDataSize() + 4 * NodeHeader::GetNodeHeaderSize()) * 2);
+                    / (keySize + BPlusTreeNonClusteredData::GetNonClusteredDataSize());
     }
 
     void BPlusTree::SplitChild(IndexPage *parent, const int &index, IndexPage *child)
@@ -118,7 +76,7 @@ namespace Indexing
         auto* newChild = this->AllocateNewPage(parent->GetPageId());
 
         newChild->SetIsLeaf(child->IsLeaf());
-        newChild->SetIsRoot(child->IsRoot());
+        newChild->SetIsRoot(false);
         newChild->SetTreeType(this->type);
 
         auto* childKeys = child->GetKeysUnsafe();
@@ -150,8 +108,6 @@ namespace Indexing
                 newChildRows->assign(childRows->begin() + t, childRows->end());
 
                 childRows->resize(t);
-
-
             }
             else
             {
@@ -178,19 +134,12 @@ namespace Indexing
 
             auto* childChildren = child->GetChildren();
 
-
             // Assign the second half of the child pointers to the new child
             newChildChildren->assign(childChildren->begin() + t, childChildren->end());
 
             // Resize the old child's childrenHeaders vector to keep only the first half
             childChildren->resize(t);
         }
-
-
-        if(this->nonClusteredIndexId != -1)
-          this->table->SetNonClusteredIndexPageId(this->firstIndexPageId, this->nonClusteredIndexId);
-        else
-          this->table->SetClusteredIndexPageId(this->firstIndexPageId);
 
         parent->UpdateBytesLeft();
         child->UpdateBytesLeft();
@@ -211,6 +160,11 @@ namespace Indexing
 
             this->firstIndexPageId = this->root->GetPageId();
 
+            if(this->nonClusteredIndexId != -1)
+              this->table->SetNonClusteredIndexPageId(this->firstIndexPageId, this->nonClusteredIndexId);
+            else
+              this->table->SetClusteredIndexPageId(this->firstIndexPageId);
+
             // this->InsertNodeToPage(this->root, 0);
         }
 
@@ -225,7 +179,12 @@ namespace Indexing
             newRoot->InsertChild(this->root->GetPageId());
 
             this->root->SetIsRoot(false);
-            this->firstIndexPageId = this->root->GetPageId();
+            this->firstIndexPageId = newRoot->GetPageId();
+
+            if(this->nonClusteredIndexId != -1)
+              this->table->SetNonClusteredIndexPageId(this->firstIndexPageId, this->nonClusteredIndexId);
+            else
+              this->table->SetClusteredIndexPageId(this->firstIndexPageId);
 
             // split the root
             this->SplitChild(newRoot, 0, this->root);
@@ -234,7 +193,7 @@ namespace Indexing
             this->root = newRoot;
         }
 
-        auto* node = this->GetNonFullNode(root, key, indexPosition, status);
+        auto* node = this->GetNonFullNode(this->root, key, indexPosition, status);
 
         if (status.code != AdditionalDataTypes::ResultCode::Ok)
             return nullptr;
@@ -296,23 +255,6 @@ namespace Indexing
             return nullptr;
         
         return returnedNode;
-    }
-
-    void BPlusTree::DeleteNode(const Node *node)
-    {
-        if (!node)
-            return;
-
-        //if (!node->isLeaf)
-        //    for (const auto &child : node->children)
-        //        this->DeleteNode(child);
-
-        delete node;
-    }
-
-    void BPlusTree::PrintTree()
-    {
-        // this->PrintTree(root, 0);
     }
 
     void BPlusTree::IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result)
@@ -400,13 +342,45 @@ namespace Indexing
             auto* keys = currentNode->GetKeysUnsafe();
 
             for (int i = 0; i < keys->size(); i++)
-                currentNode->GetRowByIndex(result, *this->table, i, {});
+              currentNode->GetRowByIndex(result, *this->table, i);
 
             if(currentNode->GetNextPage() == 0)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
+    }
+
+    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, Expressions::Expression *expression){
+        if (!this->root) {
+          this->root = this->GetNode(this->firstIndexPageId);
+
+          if (!this->root)
+              return;
+        }
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+          auto* keys = currentNode->GetKeysUnsafe();
+
+          auto* rows = currentNode->GetDataRowsUnsafe();
+
+          for (int i = 0; i < keys->size(); i++){
+            auto* row = rows->at(i);
+
+            if(!row->Evaluate(expression))
+              continue;
+
+            currentNode->GetRowByIndex(result, *this->table, i);
+          }
+
+          if(currentNode->GetNextPage() == 0)
+              return;
+
+          currentNode = this->GetNode(currentNode->GetNextPage());
+      }
     }
 
     void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
@@ -471,7 +445,7 @@ namespace Indexing
 
                 // Check if the last key in the previous node is within the range
                 if (maxKey >= *previousKeys->at(previousKeys->size() - 1)) {
-                    previousNode->GetRowByIndex(result, *table, previousKeys->size() - 1, {});
+                    previousNode->GetRowByIndex(result, *table, previousKeys->size() - 1);
                 }
             }
 
@@ -481,7 +455,7 @@ namespace Indexing
 
                 if (minKey <= *key && maxKey >= *key)
                 {
-                    currentNode->GetRowByIndex(result, *table, i, {});
+                    currentNode->GetRowByIndex(result, *table, i);
                     continue;
                 }
 
@@ -545,395 +519,314 @@ namespace Indexing
         }
     }
 
-    page_size_t BPlusTree::GetTreeSize() const
-    {
-        page_size_t result = 0;
-
-        // GetNodeSize(root, result);
-
-        return result;
-    }
-
     void BPlusTree::Remove(const Key &key){
 
-    //     if (!this->root)
-    //         return;
+      if (!this->root)
+        return;
 
-    //     auto *currentNode = this->SearchKey(key);
+      std::vector<Pages::IndexPage*> ancestors;
+      auto *currentNode = this->SearchKeyWithAncestors(key, ancestors);
 
-    //     int keyIndex = -1;
-    //     for (int i = 0; i < currentNode->keys.size(); i++) {
-    //         if (currentNode->keys[i] == key) {
-    //             keyIndex = i;
-    //             break;
-    //         }
-    //     }
+      auto* keys = currentNode->GetKeysUnsafe();
 
-    //     if (keyIndex == -1)
-    //         return;
+      int keyIndex = -1;
 
-    //     currentNode->keys.erase(currentNode->keys.begin() + keyIndex);
+      for (int i = 0; i < keys->size(); i++) {
+        if (*keys->at(i) == key) {
+          keyIndex = i;
+          break;
+        }
+      }
 
-    //     if (this->type == TreeType::NonClustered)
-    //         currentNode->nonClusteredData.erase(currentNode->nonClusteredData.begin() + keyIndex);
+      if (keyIndex == -1)
+        return;
 
-    //     //get the index page and update it
-    //     auto* indexPage = StorageManager::Get().GetIndexPage(this->database->GetFileName(), currentNode->header.pageId);
-    //     indexPage->UpdateBytesLeft();
-    //     indexPage->SetDirty();
+      keys->erase(keys->begin() + keyIndex);
 
-    //     if (currentNode->keys.size() >= (t - 1 ) / 2)
-    //         return;
+      if (this->type == TreeType::NonClustered){
+        auto* nonClusteredData = currentNode->GetNonClusteredDataUnsafe();
 
-    //     this->HandleUnderflow(currentNode);
-    // }
+        nonClusteredData->erase(nonClusteredData->begin() + keyIndex);
+      }
+      else{
+            auto* rows = currentNode->GetDataRowsUnsafe();
+            Row* row = rows->at(keyIndex);
 
-    // void BPlusTree::HandleUnderflow(Node* node) {
-    //     if (node->isRoot) {
-    //         this->HandleRootUnderflow();
-    //         return;
-    //     }
+            rows->erase(rows->begin() + keyIndex);
 
-    //     Node* parent = this->GetNodeFromPage(node->parentHeader);
-    //     int index = -1;
-    //     for (int i = 0; i < parent->childrenHeaders.size(); i++) {
-    //         if (parent->childrenHeaders[i].pageId == node->header.pageId
-    //             && parent->childrenHeaders[i].indexPosition == node->header.indexPosition) {
-    //             index = i;
-    //             break;
-    //         }
-    //     }
+            delete row;
+      }
 
-    //     if (index > 0 && this->TryBorrowFromLeftSibling(node, parent, index))
-    //         return;
+      currentNode->UpdatePageSize();
+      currentNode->UpdateBytesLeft();
 
-    //     if (index < parent->childrenHeaders.size() - 1
-    //         && this->TryBorrowFromRightSibling(node, parent, index))
-    //         return;
+      if (keys->size() >= (t - 1 ) / 2)
+        return;
 
-    //     //if borrowing failed merge nodes
-    //     if (index > 0) {
-    //         Node* leftSibling = this->GetNodeFromPage(parent->childrenHeaders[index - 1]);
-    //         this->MergeNodes(leftSibling, node, parent, index - 1);
+      int parentIndex = ancestors.size() - 1;
+      this->HandleUnderflow(currentNode, ancestors, parentIndex);
+   }
 
-    //         return;
-    //     }
+   void BPlusTree::HandleUnderflow(Pages::IndexPage* node, const std::vector<Pages::IndexPage*>& ancestors, int& parentIndex) {
+        if (node->IsRoot()) {
+           this->HandleRootUnderflow();
+           return;
+        }
 
-    //     Node* rightSibling = this->GetNodeFromPage(parent->childrenHeaders[index + 1]);
-    //     this->MergeNodes(node, rightSibling, parent, index);
-    }
+        auto* parent = ancestors.at(parentIndex);
+
+        int index = -1;
+
+        auto* children = parent->GetChildren();
+
+        for (int i = 0; i < children->size(); i++) {
+         if (children->at(i) == node->GetPageId()) {
+             index = i;
+             break;
+         }
+       }
+
+       if (index > 0 && this->TryBorrowFromLeftSibling(node, parent, index))
+           return;
+
+       if (index < children->size() - 1
+           && this->TryBorrowFromRightSibling(node, parent, index))
+           return;
+
+       //if borrowing failed merge nodes
+       if (index > 0) {
+           auto* leftSibling = this->GetNode(children->at(index - 1));
+           this->MergeNodes(leftSibling, node, parent, index - 1, ancestors, parentIndex);
+
+           return;
+       }
+
+      auto* rightSibling = this->GetNode(children->at(index + 1));
+      this->MergeNodes(node, rightSibling, parent, index, ancestors, parentIndex);
+  }
 
     void BPlusTree::HandleRootUnderflow() {
-        // if (this->root->keys.empty() && !this->root->childrenHeaders.empty()) {
-        //     const Node* oldRoot = this->root;
+        auto* keys = this->root->GetKeysUnsafe();
+        auto* children = this->root->GetChildren();
 
-        //     Node* newRoot = this->GetNodeFromPage(root->childrenHeaders[0]);
+        //root only has one child, delete current root and make child root
+         if (keys->empty() && !children->empty()) {
+              const auto* oldRoot = this->root;
 
-        //     newRoot->isRoot = true;
-        //     newRoot->parentHeader = NodeHeader();
+              auto* newRoot = this->GetNode(children->at(0));
 
-        //     auto* indexPage = StorageManager::Get().GetIndexPage(this->database->GetFileName(),
-        //                                                         oldRoot->header.pageId);
+              newRoot->SetIsRoot(true);
 
-        //     auto* nodes = indexPage->GetNodesUnsafe();
+              this->root->MarkEmpty();
 
-        //     indexPage->DeleteNode(oldRoot->header.indexPosition);
+              this->root = newRoot;
 
-        //     for (int i = oldRoot->header.indexPosition; i < nodes->size(); i++)
-        //         this->database->UpdateNodeConnections((*nodes)[i]);
+             return;
+         }
 
-        //     delete root;
-        //     root = newRoot;
+         if (!keys->empty())
+             return;
 
-        //     indexPage->UpdateBytesLeft();
-        //     indexPage->SetDirty();
+         //else root is empty and delete it (no more index items should be available but just to be sure
 
-        //     return;
-        // }
-
-        // if (!this->root->keys.empty())
-        //     return;
-
-        // //else root is empty and delete it (no more index items should be available but just to be sure
-        // auto* indexPage = StorageManager::Get().GetIndexPage(this->database->GetFileName(),
-        //                                              root->header.pageId);
-
-        // auto* nodes = indexPage->GetNodesUnsafe();
-
-        // indexPage->DeleteNode(this->root->header.indexPosition);
-
-        // for (int i = root->header.indexPosition; i < nodes->size(); i++)
-        //     this->database->UpdateNodeConnections((*nodes)[i]);
-
-        // delete root;
-        // this->root = nullptr; // Tree is now empty
-
-        // indexPage->SetDirty();
-        // indexPage->UpdateBytesLeft();
-        // indexPage->UpdatePageSize();
+        this->root->MarkEmpty();
+        this->root = nullptr; // Tree is now empty
     }
 
-    bool BPlusTree::TryBorrowFromLeftSibling(Node* node, Node* parent, const int& index)const{
-        // Node* sibling = this->GetNodeFromPage(parent->childrenHeaders[index - 1]);
+    bool BPlusTree::TryBorrowFromLeftSibling(IndexPage* node, IndexPage* parent, const int& index)const{
+        auto* children = parent->GetChildren();
 
-        // if (sibling->keys.size() <= (t - 1) / 2)
-        //     return false;
+        auto* sibling = this->GetNode(children->at(index - 1));
 
-        // if (node->isLeaf) {
-        //     node->keys.insert(node->keys.begin(), sibling->keys.back());
+        auto* siblingKeys = sibling->GetKeysUnsafe();
 
-        //     if (this->type == TreeType::Clustered) {
+         if (siblingKeys->size() <= (t - 1) / 2)
+             return false;
 
-        //         //insert last child from left sibling to the current page
+        auto* parentKeys = parent->GetKeysUnsafe();
+        auto* nodeKeys = node->GetKeysUnsafe();
 
-        //         const auto nodeExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(node->dataPageId);
-        //         const auto siblingExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(sibling->dataPageId);
+         if (node->IsLeaf()) {
+            //get from left sibling the last key
+            nodeKeys->insert(nodeKeys->begin(), siblingKeys->back());
 
-        //         //update page
-        //         auto* nodeDataPage = StorageManager::Get().GetPage(this->database->GetFileName(), node->dataPageId, nodeExtentId, this->table);
-        //         auto* siblingDataPage = StorageManager::Get().GetPage(this->database->GetFileName(), sibling->dataPageId, siblingExtentId, this->table);
+             if (this->type == TreeType::Clustered) {
 
-        //         vector<Row*>* nodeRows = nodeDataPage->GetDataRowsUnsafe();
-        //         vector<Row*>* siblingRows = siblingDataPage->GetDataRowsUnsafe();
+              //insert last child from left sibling to the current page
+              auto* nodeRows = node->GetDataRowsUnsafe();
+              auto* siblingRows = sibling->GetDataRowsUnsafe();
 
-        //         if (!siblingRows->empty()) {
-        //             nodeRows->push_back(siblingRows->back());
-        //             siblingRows->pop_back();
-        //         }
+              if (!siblingRows->empty()) {
+                   nodeRows->push_back(siblingRows->back());
+                   siblingRows->pop_back();
+               }
+             }
+             else {
+              auto* nodeNonClusteredData = node->GetNonClusteredDataUnsafe();
+              auto* siblingNonClusteredData = sibling->GetNonClusteredDataUnsafe();
 
-        //         siblingDataPage->UpdatePageSize();
-        //         siblingDataPage->UpdateBytesLeft();
-        //         siblingDataPage->SetDirty();
+              if(!siblingNonClusteredData->empty()){
+                nodeNonClusteredData->insert(nodeNonClusteredData->begin(), siblingNonClusteredData->back());
+                siblingNonClusteredData->pop_back();
+              }
+             }
 
-        //         nodeDataPage->UpdatePageSize();
-        //         nodeDataPage->SetDirty();
-        //         nodeDataPage->UpdateBytesLeft();
-        //     }
-        //     else {
-        //         node->nonClusteredData.insert(node->nonClusteredData.begin(), sibling->nonClusteredData.back());
-        //         sibling->nonClusteredData.pop_back();
-        //     }
+            siblingKeys->pop_back();
 
-        //     sibling->keys.pop_back();
+            parentKeys->at(index - 1) = nodeKeys->front();
+         }
+         else {
+            // Move parent key down to node
+            nodeKeys->insert(nodeKeys->begin(), parentKeys->at(index - 1));
 
-        //     parent->keys[index - 1] = node->keys[0];
-        // }
-        // else {
-        //     // Move parent key down to node
-        //     node->keys.insert(node->keys.begin(), parent->keys[index - 1]);
-        //     // Move last key from left sibling up to parent
-        //     parent->keys[index - 1] = sibling->keys.back();
-        //     sibling->keys.pop_back();
+            // Move last key from left sibling up to parent
+            parentKeys->at(index - 1) = siblingKeys->back();
+            siblingKeys->pop_back();
+         }
 
-        //     const auto& childHeader = sibling->childrenHeaders.back();
+        node->UpdatePageSize();
+        node->UpdateBytesLeft();
 
-        //     // Move last child pointer
-        //     node->childrenHeaders.insert(node->childrenHeaders.begin(),
-        //                               childHeader);
+        sibling->UpdatePageSize();
+        sibling->UpdateBytesLeft();
 
-        //     auto* childIndexPage = StorageManager::Get().GetIndexPage(this->database->GetFileName(), childHeader.pageId);
-
-        //     auto* childNode = childIndexPage->GetNodeByIndex(childHeader.indexPosition);
-
-        //     childNode->parentHeader = node->header;
-
-        //     childIndexPage->SetDirty();
-
-        //     sibling->childrenHeaders.pop_back();
-        // }
-
-        // this->database->SplitNodeFromIndexPage(tableId, parent, nonClusteredIndexId);
-        // this->database->SplitNodeFromIndexPage(tableId, node, nonClusteredIndexId);
-        // this->database->SplitNodeFromIndexPage(tableId, sibling, nonClusteredIndexId);
+        parent->UpdatePageSize();
+        parent->UpdateBytesLeft();
 
         return true;
     }
 
-    bool BPlusTree::TryBorrowFromRightSibling(Node *node, Node *parent, const int &index) const{
-        // Node* sibling = this->GetNodeFromPage(parent->childrenHeaders[index + 1]);
+    bool BPlusTree::TryBorrowFromRightSibling(IndexPage *node, IndexPage *parent, const int &index) const{
 
-        // if (sibling->keys.size() <= (t - 1) / 2)
-        //     return false;
+          auto* children = parent->GetChildren();
 
-        // if (node->isLeaf) {
-        //     node->keys.insert(node->keys.begin(), sibling->keys.front());
+          auto* sibling = this->GetNode(children->at(index + 1));
 
-        //     if (this->type == TreeType::Clustered) {
-        //         const auto nodeExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(node->dataPageId);
-        //         const auto siblingExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(sibling->dataPageId);
+          auto* siblingKeys = sibling->GetKeysUnsafe();
 
-        //         //update page
-        //         auto* nodeDataPage = StorageManager::Get().GetPage(this->database->GetFileName(), node->dataPageId, nodeExtentId, this->table);
-        //         auto* siblingDataPage = StorageManager::Get().GetPage(this->database->GetFileName(), sibling->dataPageId, siblingExtentId, this->table);
+         if (siblingKeys->size() <= (t - 1) / 2)
+             return false;
 
-        //         vector<Row*>* nodeRows = nodeDataPage->GetDataRowsUnsafe();
-        //         vector<Row*>* siblingRows = siblingDataPage->GetDataRowsUnsafe();
+          auto* nodeKeys = node->GetKeysUnsafe();
+          auto* parentKeys = parent->GetKeysUnsafe();
 
-        //         if (!siblingRows->empty()) {
-        //             nodeRows->push_back(siblingRows->front());
-        //             siblingRows->erase(siblingRows->begin());
-        //         }
+         if (node->IsLeaf()) {
+             nodeKeys->insert(nodeKeys->begin(), siblingKeys->front());
 
-        //         siblingDataPage->UpdatePageSize();
-        //         siblingDataPage->UpdateBytesLeft();
-        //         siblingDataPage->SetDirty();
+             if (this->type == TreeType::Clustered) {
+                 vector<Row*>* nodeRows = node->GetDataRowsUnsafe();
+                 vector<Row*>* siblingRows = sibling->GetDataRowsUnsafe();
 
-        //         nodeDataPage->UpdatePageSize();
-        //         nodeDataPage->SetDirty();
-        //         nodeDataPage->UpdateBytesLeft();
-        //     }
-        //     else {
-        //         node->nonClusteredData.push_back(sibling->nonClusteredData.front());
-        //         sibling->nonClusteredData.erase(sibling->nonClusteredData.begin());
-        //     }
+                 if (!siblingRows->empty()) {
+                     nodeRows->push_back(siblingRows->front());
+                     siblingRows->erase(siblingRows->begin());
+                 }
+             }
+             else {
+              auto* nodeNonClusteredData = node->GetNonClusteredDataUnsafe();
+              auto* siblingNonClusteredData = sibling->GetNonClusteredDataUnsafe();
 
-        //     sibling->keys.erase(sibling->keys.begin());
+              if(!siblingNonClusteredData->empty()){
+                nodeNonClusteredData->push_back(siblingNonClusteredData->front());
+                siblingNonClusteredData->erase(siblingNonClusteredData->begin());
+              }
+             }
 
-        //     parent->keys[index] = sibling->keys[0];
-        // }
-        // else {
-        //     node->keys.push_back(parent->keys[index]);
+              siblingKeys->erase(siblingKeys->begin());
 
+              parentKeys->at(index) = nodeKeys->front();
+         }
+         else {
 
-        //     // Move first key from right sibling up to parent
-        //     parent->keys[index] = sibling->keys.front();
-        //     sibling->keys.erase(sibling->keys.begin());
+            nodeKeys->push_back(parentKeys->at(index));
+            parentKeys->at(index) = siblingKeys->front();
 
-        //     const auto& childHeader = sibling->childrenHeaders.front();
+             // Move first key from right sibling up to parent
+            siblingKeys->erase(siblingKeys->begin());
+         }
 
-        //     // Move first child pointer
-        //     node->childrenHeaders.push_back(childHeader);
+        node->UpdatePageSize();
+        node->UpdateBytesLeft();
 
-        //     auto* childIndexPage = StorageManager::Get().GetIndexPage(this->database->GetFileName(), childHeader.pageId);
+        sibling->UpdatePageSize();
+        sibling->UpdateBytesLeft();
 
-        //     auto* childNode = childIndexPage->GetNodeByIndex(childHeader.indexPosition);
-
-        //     childNode->parentHeader = node->header;
-
-        //     childIndexPage->SetDirty();
-
-        //     sibling->childrenHeaders.erase(sibling->childrenHeaders.begin());
-        // }
-
-        // this->database->SplitNodeFromIndexPage(tableId, parent, nonClusteredIndexId);
-        // this->database->SplitNodeFromIndexPage(tableId, node, nonClusteredIndexId);
-        // this->database->SplitNodeFromIndexPage(tableId, sibling, nonClusteredIndexId);
+        parent->UpdatePageSize();
+        parent->UpdateBytesLeft();
 
         return true;
     }
 
-    void BPlusTree::MergeNodes(Node *leftNode, Node *rightNode, Node *parent, int parentKeyIndex){
-        // if (leftNode->isLeaf) {
-        //     leftNode->keys.insert(leftNode->keys.end(), rightNode->keys.begin(), rightNode->keys.end());
+    void BPlusTree::MergeNodes(
+        IndexPage *leftNode,
+        IndexPage *rightNode,
+        IndexPage *parent,
+        int parentKeyIndex,
+        const std::vector<Pages::IndexPage*>& ancestors,
+        int& parentIndex){
+          auto* leftNodeKeys = leftNode->GetKeysUnsafe();
+          auto* rightNodeKeys = rightNode->GetKeysUnsafe();
 
-        //     if (this->type == TreeType::Clustered) {
+          auto* parentKeys = parent->GetKeysUnsafe();
+         if (leftNode->IsLeaf()) {
+              leftNodeKeys->insert(leftNodeKeys->end(), rightNodeKeys->begin(), rightNodeKeys->end());
 
-        //         const auto leftPageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(leftNode->dataPageId);
-        //         const auto rightPageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(rightNode->dataPageId);
+             if (this->type == TreeType::Clustered) {
+                auto* leftNodeRows = leftNode->GetDataRowsUnsafe();
+                auto* rightNodeRows = rightNode->GetDataRowsUnsafe();
 
-        //         //update page
-        //         auto* leftPage = StorageManager::Get().GetPage(this->database->GetFileName(), leftNode->dataPageId, leftPageExtentId, this->table);
-        //         auto* rightPage = StorageManager::Get().GetPage(this->database->GetFileName(), rightNode->dataPageId, rightPageExtentId, this->table);
+                leftNodeRows->insert(leftNodeRows->end(), rightNodeRows->begin(), rightNodeRows->end());
+                rightNodeRows->clear();
+             }
+             else {
+                auto* leftNodeNonClusteredData = leftNode->GetNonClusteredDataUnsafe();
+                auto* rightNodeNonClusteredData = rightNode->GetNonClusteredDataUnsafe();
 
-        //         vector<Row*>* leftRows = leftPage->GetDataRowsUnsafe();
-        //         vector<Row*>* rightRows = rightPage->GetDataRowsUnsafe();
+                leftNodeNonClusteredData->insert(leftNodeNonClusteredData->end(), rightNodeNonClusteredData->begin(), rightNodeNonClusteredData->end());
+                leftNodeNonClusteredData->clear();
+             }
 
-        //         leftRows->insert(leftRows->end(), rightRows->begin(), rightRows->end());
+              leftNode->SetNextPage(rightNode->GetNextPage());
 
-        //         rightRows->clear();
 
-        //         leftPage->UpdatePageSize();
-        //         leftPage->UpdateBytesLeft();
-        //         leftPage->SetDirty();
+              if(rightNode->GetNextPage() != 0){
+                auto* nextNode = this->GetNode(rightNode->GetNextPage());
+                nextNode->SetPreviousPage(leftNode->GetPageId());
+              }
+         }
+         else {
+             // Merge internal nodes
+              leftNodeKeys->push_back(parentKeys->at(parentKeyIndex));
 
-        //         rightPage->UpdatePageSize();
-        //         rightPage->SetDirty();
-        //         rightPage->UpdateBytesLeft();
-        //     }
-        //     else {
-        //         leftNode->nonClusteredData.insert(leftNode->nonClusteredData.end(), rightNode->nonClusteredData.begin(), rightNode->nonClusteredData.end());
-        //         rightNode->nonClusteredData.clear();
-        //     }
+              parentKeys->erase(parentKeys->begin() + parentKeyIndex);
 
-        //     leftNode->nextNodeHeader = rightNode->nextNodeHeader;
-        //     if (rightNode->nextNodeHeader.pageId != 0) {
-        //         Node* nextNode = this->GetNodeFromPage(rightNode->nextNodeHeader);
-        //         nextNode->previousNodeHeader = leftNode->header;
-        //     }
-        // }
-        // else {
-        //     // Merge internal nodes
-        //     leftNode->keys.push_back(parent->keys[parentKeyIndex]);
-        //     leftNode->keys.insert(leftNode->keys.end(), rightNode->keys.begin(), rightNode->keys.end());
+              leftNodeKeys->insert(leftNodeKeys->end(), rightNodeKeys->begin(), rightNodeKeys->end());
 
-        //     leftNode->childrenHeaders.insert(leftNode->childrenHeaders.end(),
-        //                                    rightNode->childrenHeaders.begin(),
-        //                                    rightNode->childrenHeaders.end());
+              auto* leftNodeChildren = leftNode->GetChildren();
+              auto* rightNodeChildren = rightNode->GetChildren();
 
-        //     for (const auto& childHeader : rightNode->childrenHeaders) {
-        //         auto* childIndexPage = StorageManager::Get().GetIndexPage(this->database->GetFileName(), childHeader.pageId);
+              leftNodeChildren->insert(leftNodeChildren->end(), rightNodeChildren->begin(), rightNodeChildren->end());
+         }
 
-        //         auto* childNode = childIndexPage->GetNodeByIndex(childHeader.indexPosition);
+         // Remove the parent key and right node pointer
+          auto* parentChildrenHeaders = parent->GetChildren();
+          parentChildrenHeaders->erase(parentChildrenHeaders->begin() + parentKeyIndex + 1);
 
-        //         childNode->parentHeader = leftNode->header;
+          rightNode->MarkEmpty();
 
-        //         childIndexPage->SetDirty();
-        //     }
-        // }
+          leftNode->UpdatePageSize();
+          leftNode->UpdateBytesLeft();
 
-        // // Remove the parent key and right node pointer
-        // parent->keys.erase(parent->keys.begin() + parentKeyIndex);
-        // parent->childrenHeaders.erase(parent->childrenHeaders.begin() + parentKeyIndex + 1);
+          parent->UpdatePageSize();
+          parent->UpdateBytesLeft();
 
-        // // Remove the right node from its page
-        // auto* indexPage = StorageManager::Get().GetIndexPage(this->database->GetFileName(),
-        //                                                     rightNode->header.pageId);
-        // auto* nodes = indexPage->GetNodesUnsafe();
-        // nodes->Remove(rightNode->header.indexPosition);
+         // Handle parent underflow if necessary
+         if (parentKeys->size() < (t - 1) / 2 && !parent->IsRoot()){
+            parentIndex--;
+            this->HandleUnderflow(parent, ancestors, parentIndex);
+          }
 
-        // // Update page connections
-
-        // // auto leftNodeHeader = leftNode->header;
-        // //
-        // // if ( rightNode->header.pageId == leftNode->header.pageId &&
-        // //     rightNode->header.indexPosition < leftNode->header.indexPosition)
-        // //     leftNodeHeader.indexPosition--;
-        // //
-        // // auto parentNodeHeader = parent->header;
-        // //
-        // // if ( rightNode->header.pageId == parent->header.pageId &&
-        // //     rightNode->header.indexPosition < parent->header.indexPosition)
-        // //     parentNodeHeader.indexPosition--;
-        // //
-        // // this->database->UpdateNodeConnectionsOnDelete(leftNode, rightNode, leftNodeHeader);
-        // // this->database->UpdateNodeConnectionsOnDelete(parent, rightNode, parentNodeHeader);
-
-        // // for (int i = rightNode->header.indexPosition; i < nodes->size(); i++) {
-        // //     auto* node = (*nodes)[i];
-        // //
-        // //     // if (node == leftNode
-        // //     //     || node == parent)
-        // //     //     continue;
-        // //
-        // //     const auto nodeHeader = NodeHeader(node->header.pageId, i);
-        // //
-        // //     this->database->UpdateNodeConnectionsOnDelete(node, rightNode, nodeHeader);
-        // //
-        // //     node->header = nodeHeader;
-        // // }
-
-        // indexPage->SetDirty();
-        // indexPage->UpdateBytesLeft();
-        // indexPage->UpdatePageSize();
-
-        // this->database->SplitNodeFromIndexPage(tableId, leftNode, nonClusteredIndexId);
-        // this->database->SplitNodeFromIndexPage(tableId, parent, nonClusteredIndexId);
-
-        // // Handle parent underflow if necessary
-        // if (parent->keys.size() < (t - 1) / 2 && !parent->isRoot)
-        //     this->HandleUnderflow(parent);
-
-        // delete rightNode;
+         delete rightNode;
     }
 
     IndexPage*& BPlusTree::GetRoot() { return this->root; }
@@ -943,12 +836,6 @@ namespace Indexing
     void BPlusTree::SetBranchingFactor(const int &branchingFactor) { this->t = branchingFactor; }
 
     const int &BPlusTree::GetBranchingFactor() const { return this->t; }
-
-    void BPlusTree::WriteTreeHeaderToFile(fstream *filePtr) const
-    {
-        filePtr->write(reinterpret_cast<const char *>(&this->t), sizeof(int));
-        filePtr->write(reinterpret_cast<const char *>(&this->tableId), sizeof(table_id_t));
-    }
 
     void BPlusTree::SetTreeType(const TreeType & treeType) { this->type = treeType; }
 
@@ -987,30 +874,6 @@ namespace Indexing
 
     const page_id_t & BPlusTree::GetFirstIndexPageId() const { return this->firstIndexPageId; }
 
-    void BPlusTree::ReadTreeHeaderFromFile(const vector<char> &data, page_offset_t &offSet)
-    {
-        memcpy(&this->t, data.data() + offSet, sizeof(int));
-        offSet += sizeof(int);
-
-        memcpy(&this->tableId, data.data() + offSet, sizeof(table_id_t));
-        offSet += sizeof(table_id_t);
-    }
-
-    void BPlusTree::GetNodeSize(const Node *node, page_size_t &size) const
-    {
-        if (!node)
-            return;
-
-        for (const auto &key : node->keys)
-            size += sizeof(key);
-
-        if(node->isLeaf)
-            size += sizeof(page_id_t); 
-
-        //for (const auto &child : node->children)
-        //    GetNodeSize(child, size);
-    }
-
     Pages::IndexPage *BPlusTree::SearchKey(const Key &key) const
     {
         auto *currentNode = this->root;
@@ -1023,10 +886,29 @@ namespace Indexing
 
             const int index = iterator - keys->begin();
 
-           currentNode = this->GetNode(currentNode->GetChildren()->at(index));
+            currentNode = this->GetNode(currentNode->GetChildren()->at(index));
         }
 
         return currentNode;
+    }
+
+    Pages::IndexPage* BPlusTree::SearchKeyWithAncestors(const Key & key, vector<Pages::IndexPage *> & ancestors) const{
+      auto *currentNode = this->root;
+
+      while (!currentNode->IsLeaf())
+      {
+        auto* keys = currentNode->GetKeysUnsafe();
+
+        const auto iterator = std::lower_bound(keys->begin(), keys->end(), &key);
+
+        const int index = iterator - keys->begin();
+
+        ancestors.push_back(currentNode);
+
+        currentNode = this->GetNode(currentNode->GetChildren()->at(index));
+      }
+
+      return currentNode;
     }
 
    Pages::IndexPage *BPlusTree::SearchLeftMostLeafNode() const
@@ -1048,40 +930,6 @@ namespace Indexing
         const extent_id_t extentId = DatabaseEngine::Database::CalculateExtentIdByPageId(pageId);
 
         return StorageManager::Get().GetIndexPage(this->database->GetFileName(), pageId, extentId, this->table);
-    }
-
-    void BPlusTree::PrintTree(const Node *node, const int &level)
-    {
-        if (!node)
-            return;
-
-        // Indentation for the current level
-        for (int i = 0; i < level; ++i)
-            cout << "  ";
-
-        // Print node information
-        if (node->isLeaf)
-            cout << "[Leaf] ";
-        else
-            cout << "[Internal] ";
-
-        // Print keys in the current node
-
-        cout << "Keys: ";
-        for (const auto &key : node->keys)
-            cout << key.value.data() << " ";
-        if (node->isLeaf)
-        {
-            cout << "Data: ";
-            cout << node->dataPageId << " ";
-        }
-
-        cout << "\n";
-
-        //// Recursively print children, if any
-        //if (!node->isLeaf)
-        //    for (const auto &childNode : node->children)
-        //        PrintTree(childNode, level + 1);
     }
 
     Key::Key()
@@ -1397,26 +1245,4 @@ namespace Indexing
     BPlusTreeNonClusteredData::~BPlusTreeNonClusteredData() = default;
 
     page_size_t BPlusTreeNonClusteredData::GetNonClusteredDataSize() { return sizeof(page_id_t) + sizeof(page_offset_t); }
-
-    NodeHeader::NodeHeader()
-    {
-        this->pageId = 0;
-        this->indexPosition = 0;
-    }
-
-    NodeHeader::NodeHeader(const page_id_t & pageId, const page_offset_t & indexPosition)
-    {
-        this->pageId = pageId;
-        this->indexPosition = indexPosition;
-    }
-
-    NodeHeader::NodeHeader(const NodeHeader & otherHeader)
-    {
-        this->pageId = otherHeader.pageId;
-        this->indexPosition = otherHeader.indexPosition;
-    }
-
-    NodeHeader::~NodeHeader() = default;
-
-    page_size_t NodeHeader::GetNodeHeaderSize() { return sizeof(page_id_t) + sizeof(page_offset_t); }
 }

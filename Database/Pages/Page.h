@@ -62,8 +62,8 @@ namespace Pages
         virtual void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
         virtual void WritePageToFile(fstream *filePtr);
 
-        void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const QueryPipeline::Statements::Expression* expression);
-        void Delete(const QueryPipeline::Statements::Expression* expression);
+        void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
+        void Delete(const Expressions::Expression* expression);
 
         void SetFileName(const string &filename);
         void SetPageId(const page_id_t &pageId);
@@ -82,7 +82,7 @@ namespace Pages
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const PageType &GetPageType() const;
-        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const vector<column_index_t>& selectedColumnIndices) const;
+        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
         [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
         void SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const DatabaseEngine::StorageTypes::Table &table);
     };

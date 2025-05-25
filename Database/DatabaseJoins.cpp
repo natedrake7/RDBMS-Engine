@@ -25,7 +25,7 @@ namespace DatabaseEngine
             columnIndices.push_back(column->GetColumnIndex());
 
         //join conditions should have 2 columnIndices for each field to indicate which columns to match
-        firstTable->Select(selectedRows, columnIndices);
+//        firstTable->Select(selectedRows, columnIndices);
 
         Database::JoinTables(selectedRows, secondTable, secondTableSelectedColumnIndices, conditions);
     }

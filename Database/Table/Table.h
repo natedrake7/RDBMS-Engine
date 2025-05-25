@@ -105,10 +105,6 @@ namespace DatabaseEngine::StorageTypes
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
 
-            void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Indexing::Key* minimumValue, const Indexing::Key* maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices);
-            void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions, const vector<column_index_t>& selectedColumnIndices);
-            void HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const;
-            
             [[nodiscard]] Row* CreateRow(const vector<Field>& inputData)const;
 
         public:
@@ -147,24 +143,21 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexSeek(
                 vector<Row> *selectedRows,
                 const Indexing::Key* minimumValue,
-                const Indexing::Key* maximumValue,
-                const vector<column_index_t>& selectedColumnIndices);
+                const Indexing::Key* maximumValue);
 
-            void ClusteredIndexScan(
-                vector<Row> *selectedRows,
-                const vector<column_index_t>& selectedColumnIndices);
+            void ClusteredIndexScan(vector<Row> *selectedRows, Expressions::Expression* expression = nullptr);
 
-            void Select(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Field> *conditions = nullptr, const size_t &count = -1);
+            void HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const;
 
             void SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
 
             void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
 
-            void HeapDelete(const QueryPipeline::Statements::Expression* expression) const;
+            void HeapDelete(const Expressions::Expression* expression) const;
 
-            void ClusteredIndexScanDelete(const QueryPipeline::Statements::Expression* expression);
+            void ClusteredIndexScanDelete(const Expressions::Expression* expression);
 
-            void ClusteredIndexSeekDelete(const QueryPipeline::Statements::Expression* expression);
+            void ClusteredIndexSeekDelete(const Expressions::Expression* expression);
 
             void Truncate();
 

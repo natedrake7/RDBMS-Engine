@@ -56,7 +56,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalFilter::PhysicalFilter(const std::string& dbName, PhysicalOperator *child, Statements::Expression* filter)
+  PhysicalFilter::PhysicalFilter(const std::string& dbName, PhysicalOperator *child, Expressions::Expression* filter)
         : PhysicalOperator(dbName), filter(filter) , child(child) {}
 
   PhysicalFilter::~PhysicalFilter(){
@@ -67,6 +67,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
   PhysicalPlanResult* PhysicalFilter::Execute(){
     auto* result = child->Execute();
+
+    if(dynamic_cast<PhysicalIndexScan*>(child) != nullptr
+      || dynamic_cast<PhysicalIndexSeek*>(child) != nullptr)
+      return result;
 
     for (const auto &row : result->rows) {
       
@@ -89,13 +93,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
       auto* result = new PhysicalPlanResult();
 
-      table->Select(result->rows, {});
+      table->HeapScan(&result->rows, -1);
 
       return result;
     }
 
   PhysicalIndexScan::PhysicalIndexScan(const std::string &dbName, Statements::TableName* table, const bool& isClustered)
-    : PhysicalOperator(dbName), table(table), isClustered(isClustered) {}
+    : PhysicalOperator(dbName), table(table), isClustered(isClustered), expression(nullptr) {}
 
   PhysicalPlanResult * PhysicalIndexScan::Execute(){
     using namespace DatabaseEngine::StorageTypes;
@@ -107,12 +111,15 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
     if (isClustered) {
-      tablePtr->ClusteredIndexScan(&result->rows, {});
+      tablePtr->ClusteredIndexScan(&result->rows, this->expression);
       return result;
     }
 
     return result;
   }
+
+  PhysicalIndexScan::PhysicalIndexScan(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
+    : PhysicalOperator(dbName), table(table), expression(expression), isClustered(isClustered) {}
 
   PhysicalIndexSeek::PhysicalIndexSeek(const std::string &dbName, Statements::TableName* table, const Field& minValue, const Field& maxValue)
     : PhysicalOperator(dbName), table(table), minValue(minValue), maxValue(maxValue) {}
@@ -131,7 +138,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     //select if to use clustered or non clustered index here
 
-    tablePtr->ClusteredIndexSeek(&result->rows,&minKey, &maxKey , {});
+    tablePtr->ClusteredIndexSeek(&result->rows,&minKey, &maxKey);
 
     return result;
   }
@@ -162,7 +169,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalHeapDelete::PhysicalHeapDelete(const std::string &dbName, Statements::TableName *table, Statements::Expression *expression)
+  PhysicalHeapDelete::PhysicalHeapDelete(const std::string &dbName, Statements::TableName *table, Expressions::Expression *expression)
     : PhysicalOperator(dbName), table(table), expression(expression) {}
 
   PhysicalHeapDelete::~PhysicalHeapDelete(){
@@ -182,7 +189,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalIndexScanDelete::PhysicalIndexScanDelete(const std::string &dbName, Statements::TableName *table, Statements::Expression *expression)
+  PhysicalIndexScanDelete::PhysicalIndexScanDelete(const std::string &dbName, Statements::TableName *table, Expressions::Expression *expression)
     : PhysicalOperator(dbName), table(table), expression(expression) {}
 
   PhysicalIndexScanDelete::~PhysicalIndexScanDelete(){
@@ -202,7 +209,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(const std::string &dbName, Statements::TableName *table, Statements::Expression *expression)
+  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(const std::string &dbName, Statements::TableName *table, Expressions::Expression *expression)
     : PhysicalOperator(dbName), table(table), expression(expression) {}
 
   PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete(){

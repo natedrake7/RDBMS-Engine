@@ -11,6 +11,7 @@
 #include <ctime>
 #include <iostream>
 #include <stdexcept>
+#include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
 
 using namespace Pages;
 using namespace DataTypes;
@@ -309,10 +310,10 @@ namespace DatabaseEngine::StorageTypes {
         return rowHeaderSize;
     }
 
-    bool Row::Evaluate(const QueryPipeline::Statements::Expression *expression) const{
+    bool Row::Evaluate(const Expressions::Expression *expression) const{
         switch (expression->type) {
-            case QueryPipeline::Statements::ExpressionType::Predicate: {
-                const auto actualData = this->GetData()[expression->columnIndex];
+            case Expressions::ExpressionType::Predicate: {
+                const auto& actualData = this->GetData()[expression->columnIndex];
 
                 const auto& expected = expression->value;
                 const std::string& op = expression->operation;
@@ -326,9 +327,9 @@ namespace DatabaseEngine::StorageTypes {
 
                 throw std::runtime_error("Unknown operator: " + op);
             }
-            case QueryPipeline::Statements::ExpressionType::And:
+            case Expressions::ExpressionType::And:
                 return this->Evaluate(expression->left) && this->Evaluate(expression->right);
-            case QueryPipeline::Statements::ExpressionType::Or:
+            case Expressions::ExpressionType::Or:
                 return this->Evaluate(expression->left) || this->Evaluate(expression->right);
             default:
                 throw std::runtime_error("Invalid expression type");

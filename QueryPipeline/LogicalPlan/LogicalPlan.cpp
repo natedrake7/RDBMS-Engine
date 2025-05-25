@@ -22,7 +22,7 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalProject(dbName, this->child->ToPhysical(), this->columns);
   }
 
-  LogicalTableScan::LogicalTableScan(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression)
+  LogicalTableScan::LogicalTableScan(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression)
   : LogicalPlan(dbName), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalTableScan::ToPhysical(){
@@ -53,7 +53,7 @@ namespace QueryPipeline {
           }
 
         //find the first non clustered and use it
-        return new PhysicalPlan::PhysicalIndexScan(dbName, this->table, index.isClustered);
+        return new PhysicalPlan::PhysicalIndexScan(dbName, this->table, this->expression, index.isClustered);
       }
 
     return new PhysicalPlan::PhysicalTableScan(dbName, this->table);
@@ -65,7 +65,7 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalCreateDatabase(this->dbName);
   }
 
-  LogicalFilter::LogicalFilter(const std::string& dbName, LogicalPlan* child, Statements::Expression* filter): LogicalPlan(dbName), child(child), filter(filter) {}
+  LogicalFilter::LogicalFilter(const std::string& dbName, LogicalPlan* child, Expressions::Expression* filter): LogicalPlan(dbName), child(child), filter(filter) {}
 
   PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(){
     return new PhysicalPlan::PhysicalFilter(dbName, this->child->ToPhysical(), this->filter);
@@ -84,7 +84,7 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalSchemaCreate(this->dbName, this->schemaName);
   }
 
-  LogicalDelete::LogicalDelete(const std::string &dbName, Statements::TableName *table, Statements::Expression *expression)
+  LogicalDelete::LogicalDelete(const std::string &dbName, Statements::TableName *table, Expressions::Expression *expression)
     : LogicalPlan(dbName), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalDelete::ToPhysical(){

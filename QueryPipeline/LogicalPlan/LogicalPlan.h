@@ -30,16 +30,16 @@ namespace QueryPipeline {
   class LogicalTableScan final : public LogicalPlan {
     public:
       Statements::TableName* table;
-      Statements::Expression* expression;
-      explicit LogicalTableScan(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression);
+      Expressions::Expression* expression;
+      explicit LogicalTableScan(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical() override;
   };
 
   class LogicalFilter final : public LogicalPlan {
     public:
       LogicalPlan* child;
-      Statements::Expression* filter;
-      explicit LogicalFilter(const std::string& dbName, LogicalPlan* child, Statements::Expression* filter);
+      Expressions::Expression* filter;
+      explicit LogicalFilter(const std::string& dbName, LogicalPlan* child, Expressions::Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
   };
 
@@ -61,8 +61,8 @@ namespace QueryPipeline {
   class LogicalDelete final : public LogicalPlan {
   public:
     Statements::TableName* table;
-    Statements::Expression* expression;
-    explicit LogicalDelete(const std::string& dbName, Statements::TableName* table, Statements::Expression* expression);
+    Expressions::Expression* expression;
+    explicit LogicalDelete(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression);
     PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 

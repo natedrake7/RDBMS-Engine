@@ -174,7 +174,7 @@ namespace Pages
             Page::WriteRowToFile(filePtr, row);
     }
 
-    void Page::Delete(vector<Row*> &deletedRows, const QueryPipeline::Statements::Expression *expression){
+    void Page::Delete(vector<Row*> &deletedRows, const Expressions::Expression *expression){
         for (int i = 0; i < this->rows.size(); i++) {
             auto* row = this->rows[i];
 
@@ -194,7 +194,7 @@ namespace Pages
         this->header.pageSize = this->rows.size();
     }
 
-    void Page::Delete(const QueryPipeline::Statements::Expression *expression){
+    void Page::Delete(const Expressions::Expression *expression){
         for (int i = 0; i < this->rows.size(); i++) {
             auto* row = this->rows[i];
 
@@ -318,7 +318,7 @@ namespace Pages
         }
     }
 
-    void Page::GetRowByIndex(vector<Row>* rows, const Table &table, const int &indexPosition, const vector<column_index_t>& selectedColumnIndices) const
+    void Page::GetRowByIndex(vector<Row>* rows, const Table &table, const int &indexPosition) const
     {
         const auto &row = this->rows[indexPosition];
 

@@ -31,6 +31,7 @@ namespace Pages {
 		uint8_t numberOfSubKeys;
 		bool isLeaf;
 		bool isRoot;
+                bool isEmpty;
 
 		IndexPageAdditionalHeader();
 		~IndexPageAdditionalHeader();
@@ -64,6 +65,8 @@ namespace Pages {
 
 			void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
 			void WritePageToFile(fstream *filePtr) override;
+
+                        void MarkEmpty();
 
 			void SetTreeType(const TreeType& treeType);
 			void SetTreeId(const page_id_t& treeId);

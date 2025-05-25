@@ -68,7 +68,9 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h
         AdditionalLibraries/StringFunctions/StringFunctions.h
         AdditionalLibraries/StringFunctions/StringFunctions.cpp
-        AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h)
+        AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h
+        AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h
+        AdditionalLibraries/AdditionalDataTypes/Expression/Expression.cpp)
 
 add_library(QueryPipeline  SHARED
                 QueryPipeline/Parser/Parser.cpp
