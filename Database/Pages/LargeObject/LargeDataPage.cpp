@@ -15,7 +15,7 @@ namespace Pages {
 
     DataObject::~DataObject()
     {
-        delete[] this->object;
+        delete this->object;
     }
 
     DataObjectPointer::DataObjectPointer()
@@ -33,15 +33,19 @@ namespace Pages {
     LargeDataPage::LargeDataPage(const page_id_t& pageId, const bool& isPageCreation) : Page(pageId, isPageCreation)
     {
         this->header.pageType = PageType::LOB;
+        this->data = nullptr;
     }
 
     LargeDataPage::LargeDataPage() : Page()
     {
         this->isDirty = false;
         this->header.pageType = PageType::LOB;
+        this->data = nullptr;
     }
 
-    LargeDataPage::LargeDataPage(const PageHeader& pageHeader) : Page(pageHeader) { }
+    LargeDataPage::LargeDataPage(const PageHeader& pageHeader) : Page(pageHeader) {
+      this->data = nullptr;
+    }
 
     LargeDataPage::~LargeDataPage()
     {
@@ -50,6 +54,9 @@ namespace Pages {
 
     void LargeDataPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t& offSet, fstream* filePtr)
     {
+      if(this->header.pageSize == 0)
+        return;
+
       this->data = new DataObject();
 
       memcpy(&this->data->objectSize, data.data() + offSet, sizeof(page_size_t));
@@ -66,6 +73,9 @@ namespace Pages {
     void LargeDataPage::WritePageToFile(fstream *filePtr)
     {
         this->WritePageHeaderToFile(filePtr);
+
+      if(this->header.pageSize == 0)
+        return;
 
       filePtr->write(reinterpret_cast<const char*>(&this->data->objectSize), sizeof(page_size_t));
       filePtr->write(reinterpret_cast<const char*>(&this->data->nextPageId), sizeof(page_id_t));

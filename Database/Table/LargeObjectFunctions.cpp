@@ -112,7 +112,12 @@ namespace DatabaseEngine::StorageTypes {
         row->UpdateColumnData(block);
     }
 
-    LargeDataPage *Table::GetLargeDataPage(const page_id_t &pageId) const { return this->database->GetLargeDataPage(pageId, this->header.tableId); }
+    LargeDataPage *Table::GetLargeDataPage(const page_id_t &pageId) const {
+      const auto extentId = Database::CalculateExtentIdByPageId(pageId);
+
+      return StorageManager::Get().GetLargeDataPage(this->database->GetFileName(), pageId, extentId, this);
+//      return this->database->GetLargeDataPage(pageId, this->header.tableId);
+    }
 
     const vector<vector<column_index_t>> & Table::GetNonClusteredIndexes() const { return this->header.nonClusteredColumnIndexes; }
 

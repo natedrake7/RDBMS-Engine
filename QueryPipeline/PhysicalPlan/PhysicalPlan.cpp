@@ -155,11 +155,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     
     Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
-    for (int i = 0;i < 1000; i++) {
-      this->fields[0].SetData(i);
-      const auto insertResult = tablePtr->InsertRow(fields);
-
-    }
+    this->fields[0].SetData(1001);
+    const auto str = std::string(1000000000, 'a');
+    this->fields[1].SetData(str);
+    const auto insertResult = tablePtr->InsertRow(fields);
 
     // const auto insertResult = tablePtr->InsertRow(fields);
     //

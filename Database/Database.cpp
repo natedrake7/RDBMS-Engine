@@ -767,33 +767,37 @@ namespace DatabaseEngine
 
     LargeDataPage *Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)
     {
-        if (tableId >= this->tables.size())
-            return nullptr;
+        const auto extentId = Database::CalculateExtentIdByPageId(pageId);
 
-        const page_id_t tableMapPageId = this->tables[tableId]->GetTableHeader().indexAllocationMapPageId;
+        return StorageManager::Get().GetLargeDataPage(this->filename, pageId, extentId, this->tables[tableId]);
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId);
-
-        vector<extent_id_t> allocatedExtents;
-        tableMapPage->GetAllocatedExtents(&allocatedExtents);
-
-        extent_id_t associatedExtentId = 0;
-        bool extentFound = false;
-        for (const auto &extentId : allocatedExtents)
-        {
-            const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
-
-            if (pageId >= firstExtentPageId && pageId < firstExtentPageId + EXTENT_SIZE)
-            {
-                associatedExtentId = extentId;
-                extentFound = true;
-                break;
-            }
-        }
-
-        return (extentFound)
-                   ? StorageManager::Get().GetLargeDataPage(this->filename, pageId, associatedExtentId, this->tables[tableId])
-                   : nullptr;
+//        if (tableId >= this->tables.size())
+//            return nullptr;
+//
+//        const page_id_t tableMapPageId = this->tables[tableId]->GetTableHeader().indexAllocationMapPageId;
+//
+//        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId);
+//
+//        vector<extent_id_t> allocatedExtents;
+//        tableMapPage->GetAllocatedExtents(&allocatedExtents);
+//
+//        extent_id_t associatedExtentId = 0;
+//        bool extentFound = false;
+//        for (const auto &extentId : allocatedExtents)
+//        {
+//            const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+//
+//            if (pageId >= firstExtentPageId && pageId < firstExtentPageId + EXTENT_SIZE)
+//            {
+//                associatedExtentId = extentId;
+//                extentFound = true;
+//                break;
+//            }
+//        }
+//
+//        return (extentFound)
+//                   ? StorageManager::Get().GetLargeDataPage(this->filename, pageId, associatedExtentId, this->tables[tableId])
+//                   : nullptr;
     }
 
     void Database::SetPageMetaDataToPfs(const Page *page)const

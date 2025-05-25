@@ -87,7 +87,7 @@ int main()
     const string selectActors = "SELECT * FROM dbo.Actors";
 
     //select statement
-    const string selectMovies = "SELECT * FROM movies.Movies WHERE ID = 1 OR ID = 10";
+    const string selectMovies = "SELECT * FROM movies.Movies";
 
     //insert statement
     const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
@@ -104,7 +104,7 @@ int main()
                                      ")";
 
     //create table
-    const string createActorsTable = "CREATE TABLE Actors ( ID INT PRIMARY KEY IDENTITY, ActorName VARCHAR(255) NOT NULL, ActorAge INT NOT NULL)";
+    const string createActorsTable = "CREATE TABLE Actors ( ID INT NULL, ActorName VARCHAR(255) NULL, ActorAge INT NOT NULL)";
 
     const string createDb = "CREATE DATABASE MoviesDb";
 
@@ -114,7 +114,8 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-//    QueryPipeline::Parser::Parse(updateMovies, dbName);
+
+    QueryPipeline::Parser::Parse(selectMovies, dbName);
 
     const auto& databases = server.GetCatalog();
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);
