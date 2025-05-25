@@ -1,5 +1,8 @@
 ﻿#pragma once
 #include "../Page.h"
+#include "../../B+Tree/BPlusTree.h"
+#include "../../Row/Row.h"
+
 #include <fstream>
 
 using namespace std;
@@ -26,6 +29,8 @@ namespace Pages {
 		TreeType treeType;
 		page_id_t treeId;
 		uint8_t numberOfSubKeys;
+		bool isLeaf;
+		bool isRoot;
 
 		IndexPageAdditionalHeader();
 		~IndexPageAdditionalHeader();
@@ -34,7 +39,18 @@ namespace Pages {
 
 	class IndexPage final : public Page {
 		IndexPageAdditionalHeader additionalHeader;
-		vector<Indexing::Node*> nodes; 
+		std::vector<Indexing::Key*> keys;
+
+		//leaf
+		std::vector<Indexing::BPlusTreeNonClusteredData*> nonClusteredData;
+
+		//internal node
+		std::vector<page_id_t> children;
+
+		//only leaf
+		page_id_t previousNode;
+		page_id_t nextNode;
+
 		vector<column_index_t> indexedColumns;
 
 		protected:
@@ -52,34 +68,38 @@ namespace Pages {
 			void SetTreeType(const TreeType& treeType);
 			void SetTreeId(const page_id_t& treeId);
 
-			[[nodiscard]] const page_id_t& GetTreeId() const; 
+			[[nodiscard]] const page_id_t& GetTreeId() const;
 
-			void InsertNode(Indexing::Node*& node, page_offset_t* indexPosition);
-			void DeleteNode(const page_offset_t& indexPosition);
-			void DeleteLastNode();
-			[[nodiscard]] Indexing::Node* GetLastNode();
+			[[nodiscard]] vector<Indexing::Key*>* GetKeysUnsafe();
 
-			void UpdateBytesLeft() override;
-			void UpdateBytesLeft(const page_size_t& prevNodeSize, const page_size_t& currentNodeSize);
+			[[nodiscard]] vector<Indexing::BPlusTreeNonClusteredData*>* GetNonClusteredDataUnsafe();
 
-			[[nodiscard]] Indexing::Node* GetNodeByIndex(const page_offset_t& indexPosition) const;
-
-			[[nodiscard]] Indexing::Node* GetRoot() const;
-
-			[[nodiscard]] vector<Indexing::Node*>* GetNodesUnsafe();
+			[[nodiscard]] vector<page_id_t>* GetChildren();
 
 			void ResizeNodes(const int& splitFactor);
 
-			void UpdatePageSize();
+			[[nodiscard]] bool isEmpty() const;
 
-			void UpdateNodeParentHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
+			[[nodiscard]] const bool& IsLeaf() const;
 
-			void UpdateNodeChildHeader(const page_offset_t& indexPosition, const page_offset_t& childIndexPosition, const Indexing::NodeHeader& nodeHeader);
+			[[nodiscard]] const bool& IsRoot() const;
 
-			void UpdateNodeNextLeafHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
+			void SetIsLeaf(const bool& isLeaf);
 
-			void UpdateNodePreviousLeafHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& nodeHeader);
+			void SetIsRoot(const bool& isRoot);
 
-			void UpdateNodeHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader& header);
+			void InsertChild(const page_id_t& child);
+
+			void SetPreviousPage(const page_id_t& previousPage);
+
+			void SetNextPage(const page_id_t& nextPage);
+
+			[[nodiscard]] const page_id_t& GetPreviousPage()const;
+
+			[[nodiscard]] const page_id_t& GetNextPage()const;
+
+			void UpdateBytesLeft() override;
+
+			void UpdatePageSize()override;
 		};
 } // namespace Pages

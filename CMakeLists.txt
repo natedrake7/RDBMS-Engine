@@ -7,6 +7,8 @@ project(DatabaseInterface)
 set(BUILD_SHARED_LIBS ON)
 
 add_executable(DatabaseInterface main.cpp)
+
+# Set this to the directory containing antlr4-runtimeConfig.cmake or antlr4-runtime-config.cmake
 find_package(antlr4-runtime CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 

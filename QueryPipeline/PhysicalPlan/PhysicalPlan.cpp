@@ -104,10 +104,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    Table* table = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
     if (isClustered) {
-      table->ClusteredIndexScan(&result->rows, {});
+      tablePtr->ClusteredIndexScan(&result->rows, {});
       return result;
     }
 

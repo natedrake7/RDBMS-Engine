@@ -11,7 +11,7 @@ using namespace std;
 using namespace Constants;
 
 namespace DatabaseEngine::StorageTypes
-{
+{class Column;
     class Block;
     class Row;
     class Table;
@@ -33,13 +33,20 @@ namespace Pages
 
     class Page
     {
-        vector<DatabaseEngine::StorageTypes::Row *> rows;
-
     protected:
         bool isDirty;
         string filename;
         PageHeader header;
+
+        vector<DatabaseEngine::StorageTypes::Row *> rows;
         void WritePageHeaderToFile(fstream *filePtr) const;
+        static DatabaseEngine::StorageTypes::Row* ReadRowFromFile(
+            const vector<char>& data,
+            const DatabaseEngine::StorageTypes::Table *table,
+            page_offset_t &offSet,
+            const vector<DatabaseEngine::StorageTypes::Column*>& columns);
+
+        static void WriteRowToFile(fstream* filePtr, DatabaseEngine::StorageTypes::Row* row);
 
     public:
         explicit Page(const page_id_t &pageId, const bool &isPageCreation = false);
@@ -60,7 +67,7 @@ namespace Pages
 
         void SetFileName(const string &filename);
         void SetPageId(const page_id_t &pageId);
-        void UpdatePageSize();
+        virtual void UpdatePageSize();
         virtual void UpdateBytesLeft();
         void UpdateBytesLeft(const row_size_t& previousRowSize, const row_size_t& currentRowSize);
 
@@ -75,7 +82,7 @@ namespace Pages
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const PageType &GetPageType() const;
-        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>*& rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const vector<column_index_t>& selectedColumnIndices) const;
+        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const vector<column_index_t>& selectedColumnIndices) const;
         [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
         void SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const DatabaseEngine::StorageTypes::Table &table);
     };

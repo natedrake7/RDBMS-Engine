@@ -290,7 +290,7 @@ namespace Server {
 
      sysDatabases->ClusteredIndexScan(&selectedDatabases, {});
 
-     vector<Headers::DatabaseHeader> databases;
+     vector<Headers::DatabaseHeader> databasesHeaders;
 
      if (selectedDatabases.empty())
        return {};
@@ -309,7 +309,7 @@ namespace Server {
         table.indexes = this->SelectIndexes(dbName, table.name);        
       }
 
-      databases.emplace_back(Headers::DatabaseHeader{
+      databasesHeaders.emplace_back(Headers::DatabaseHeader{
         .name = dbName,
         .filepath = data[1]->GetString(),
         .isSystem = data[2]->GetBool(),
@@ -321,7 +321,7 @@ namespace Server {
       });
     }
 
-    return databases;
+    return databasesHeaders;
   }
 
   Headers::DatabaseHeader ServerInstance::SelectDatabase(const std::string &name) const{
@@ -412,14 +412,13 @@ namespace Server {
   vector<Headers::TableHeader> ServerInstance::SelectTables(const string &dbName) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    const vector<Field> conditions = {
-      Field(dbName, 0)
-    };
-
     vector<Row> selectedTables;
-    Table* sysTables = this->masterDb->OpenTable(1);
+    Indexing::Key key;
 
-    sysTables->Select(selectedTables, {}, &conditions);
+    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+
+    Table* sysTablesPtr = this->masterDb->OpenTable(1);
+    sysTablesPtr->ClusteredIndexSeek(&selectedTables, &key, &key, {});
 
     if (selectedTables.empty())
       return {};
@@ -434,7 +433,7 @@ namespace Server {
           Headers::TableHeader{
               data[0]->GetString(),
               data[1]->GetString(),
-            data[2]->GetSmallInt(),
+              data[2]->GetSmallInt(),
               data[3]->GetString(),
               data[4]->GetBool(),
               data[5]->GetDateTime(),
@@ -492,7 +491,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     vector<Row> selectedTables;
-    Table* sysTables = this->masterDb->OpenTable("dbo", "sys_tables");
+    Table* sysTablesPtr = this->masterDb->OpenTable(1);
 
     Indexing::Key key;
 
@@ -500,7 +499,7 @@ namespace Server {
     key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
     key.InsertKey(Indexing::Key(schema.data(), schema.size(), ColumnType::String));
 
-    sysTables->ClusteredIndexSeek(&selectedTables, &key, &key, {});
+    sysTablesPtr->ClusteredIndexSeek(&selectedTables, &key, &key, {});
 
     // sysTables->Select(selectedTables, {}, &conditions);
 
@@ -510,15 +509,15 @@ namespace Server {
   vector<Headers::ColumnHeader> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    const vector<Field> conditions = {
-      Field(dbName, 0),
-      Field(tableName, 1),
-    };
-
     vector<Row> selectedColumns;
     Table* sysColumns = this->masterDb->OpenTable("dbo", "sys_columns");
 
-    sysColumns->Select(selectedColumns, {}, &conditions);
+    Indexing::Key key;
+
+    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+    key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
+
+    sysColumns->ClusteredIndexSeek(&selectedColumns, &key, &key, {});
 
     if (selectedColumns.empty())
       return {};
@@ -556,46 +555,45 @@ namespace Server {
   }
 
   Dictionary<string, Headers::ColumnHeader> ServerInstance::SelectColumnsToDictionary(const string &dbName, const string &tableName) const{
-    const auto columns = this->SelectColumns(dbName, tableName);
+      const auto columns = this->SelectColumns(dbName, tableName);
 
-    Dictionary<string, Headers::ColumnHeader> selectedColumns;
+      Dictionary<string, Headers::ColumnHeader> selectedColumns;
 
-    for (const auto& column : columns)
-      selectedColumns.Add(column.name, column);
+      for (const auto& column : columns)
+        selectedColumns.Add(column.name, column);
 
-    return selectedColumns;
-  }
+      return selectedColumns;
+    }
 
-  vector<Headers::IndexHeader> ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
-     using namespace DatabaseEngine::StorageTypes;
+    vector<Headers::IndexHeader> ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
+      using namespace DatabaseEngine::StorageTypes;
 
-     const vector<Field> conditions = {
-       Field(dbName, 0),
-       Field(tableName, 1),
-     };
+      Table* sysIndexes = this->masterDb->OpenTable("dbo", "sys_indexes");
+      vector<Row> selectedIndexes;
 
-     Table* sysIndexes = this->masterDb->OpenTable("dbo", "sys_indexes");
-     vector<Row> selectedIndexes;
+      Indexing::Key key;
+      key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+      key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
 
-    sysIndexes->Select(selectedIndexes, {}, &conditions);
+      sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key, {});
 
-    vector<Headers::IndexHeader> selectedIndexHeaders;
+      vector<Headers::IndexHeader> selectedIndexHeaders;
 
-    for (const auto& index : selectedIndexes) {
-      const auto& data = index.GetData();
+      for (const auto& index : selectedIndexes) {
+        const auto& data = index.GetData();
 
-      std::vector<column_index_t> columns;
+        std::vector<column_index_t> columns;
 
-      constexpr auto delimiter = ",";
+        constexpr auto delimiter = ",";
 
-      const char* token = strtok(data[3]->GetString().data(), delimiter);
+        const char* token = strtok(data[3]->GetString().data(), delimiter);
 
-      while (token != nullptr) {
-        columns.emplace_back(SafeConverter<column_index_t>::SafeStoi(token));
-        token = strtok(nullptr, delimiter);
-      }
+        while (token != nullptr) {
+          columns.emplace_back(SafeConverter<column_index_t>::SafeStoi(token));
+          token = strtok(nullptr, delimiter);
+        }
 
-      selectedIndexHeaders.emplace_back(
+        selectedIndexHeaders.emplace_back(
         Headers::IndexHeader{
           data[0]->GetString(),
           data[1]->GetString(),
@@ -606,15 +604,15 @@ namespace Server {
           data[6]->GetDateTime(),
           data[7]->GetString()
         });
-    }
+      }
 
-    //get the clustered first
-    ranges::sort(selectedIndexHeaders,
-    [](const Headers::IndexHeader& a, const Headers::IndexHeader& b) {
+      //get the clustered first
+      ranges::sort(selectedIndexHeaders,
+      [](const Headers::IndexHeader& a, const Headers::IndexHeader& b) {
         return a.isClustered > b.isClustered;
-    });
+      });
 
-     return selectedIndexHeaders;
+      return selectedIndexHeaders;
   }
 
   void ServerInstance::CreateSystemDatabase(){

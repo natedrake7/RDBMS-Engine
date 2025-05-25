@@ -12,34 +12,54 @@ namespace Pages {
 
 void IndexPage::WriteAdditionalHeaderToFile(fstream * filePtr) const
 {
+    if (this->additionalHeader.treeType == TreeType::Clustered) {
+        const auto val = 5;
+    }
+
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeType), sizeof(TreeType));
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeId), sizeof(page_id_t));
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.numberOfSubKeys), sizeof(uint8_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.isLeaf), sizeof(bool));
+    filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.isRoot), sizeof(bool));
 }
 
 void IndexPage::ReadAdditionalHeaderFromFile(const vector<char>& data, page_offset_t & offSet)
 {
     memcpy(&this->additionalHeader.treeType, data.data() + offSet, sizeof(TreeType));
     offSet += sizeof(TreeType);
-
     memcpy(&this->additionalHeader.treeId, data.data() + offSet, sizeof(page_id_t));
     offSet += sizeof(page_id_t);
-
     memcpy(&this->additionalHeader.numberOfSubKeys, data.data() + offSet, sizeof(uint8_t));
     offSet += sizeof(uint8_t);
+    memcpy(&this->additionalHeader.isLeaf, data.data() + offSet, sizeof(bool));
+    offSet += sizeof(bool);
+    memcpy(&this->additionalHeader.isRoot, data.data() + offSet, sizeof(bool));
+    offSet += sizeof(bool);
 }
 
 IndexPage::IndexPage(const page_id_t &pageId, const bool &isPageCreation) : Page(pageId, isPageCreation) 
 {
-  this->header.pageType = PageType::INDEX;
+    this->header.pageType = PageType::INDEX;
+    this->nextNode = 0;
+    this->previousNode = 0;
+    this->header.bytesLeft  = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
 }
 
-IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader) { }
+IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader) {
+    this->nextNode = 0;
+    this->previousNode = 0;
+}
 
 IndexPage::~IndexPage() 
-{ 
-    for(const auto& node : this->nodes)
-        delete node;
+{
+    // for (const auto& rows: this->rows)
+    //     delete rows;
+
+    for (const auto& nonClusteredData: this->nonClusteredData)
+        delete nonClusteredData;
+
+    for (const auto& key : keys)
+        delete key;
 }
 
 void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) 
@@ -47,156 +67,110 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
     this->ReadAdditionalHeaderFromFile(data, offSet);
     const vector<ColumnType> indexedColumnTypes = table->GetColumnTypeByTreeId(this->additionalHeader.treeId);
 
-    for (int i = 0; i < this->header.pageSize; i++)
-    {
-        bool isLeaf;
-        memcpy(&isLeaf, data.data() + offSet, sizeof(bool));
-        offSet += sizeof(bool);
+    uint16_t numOfKeys = 0;
+    memcpy(&numOfKeys, data.data() + offSet, sizeof(uint16_t));
+    offSet += sizeof(uint16_t);
 
-        bool isRoot;
-        memcpy(&isRoot, data.data() + offSet, sizeof(bool));
-        offSet += sizeof(bool);
+    for (int i = 0;i < numOfKeys; i++) {
+        auto* key = new Key();
 
-        Node* node = new Node(isLeaf, isRoot);
-
-        memcpy(&node->header, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
-        offSet += NodeHeader::GetNodeHeaderSize();
-
-        memcpy(&node->parentHeader, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
-        offSet += NodeHeader::GetNodeHeaderSize();
-
-        uint16_t numberOfKeys;
-        memcpy(&numberOfKeys, data.data() + offSet, sizeof(uint16_t));
-        offSet += sizeof(uint16_t);
-
-        for (int j = 0; j < numberOfKeys; j++)
+        for (int k = 0; k < this->additionalHeader.numberOfSubKeys; k++)
         {
-            Key key;
-            for (int k = 0; k < this->additionalHeader.numberOfSubKeys; k++)
-            {
-                key_size_t keySize;
-                memcpy(&keySize, data.data() + offSet, sizeof(key_size_t));
-                offSet += sizeof(key_size_t);
+            key_size_t keySize;
+            memcpy(&keySize, data.data() + offSet, sizeof(key_size_t));
+            offSet += sizeof(key_size_t);
 
-                vector<object_t> keyValue(keySize);
-                memcpy(keyValue.data(), data.data() + offSet, keySize);
-                offSet += keySize;
+            vector<object_t> keyValue(keySize);
+            memcpy(keyValue.data(), data.data() + offSet, keySize);
+            offSet += keySize;
 
-                key.InsertKey(Key(keyValue.data(), keySize, indexedColumnTypes[k]));
-            }
-
-            node->keys.push_back(key);
+            key->InsertKey(Key(keyValue.data(), keySize, indexedColumnTypes[k]));
         }
 
-        if (!node->isLeaf)
-        {
-            uint16_t numberOfChildren;
-            memcpy(&numberOfChildren, data.data() + offSet, sizeof(uint16_t));
-            offSet += sizeof(uint16_t);
+        this->keys.push_back(key);
+    }
 
-            for (int childPtr = 0; childPtr < numberOfChildren; childPtr++)
-            {
-                NodeHeader childHeader;
-                memcpy(&childHeader, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
-                offSet += NodeHeader::GetNodeHeaderSize();
+    if (!this->additionalHeader.isLeaf) {
+        uint16_t numberOfChildren;
+        memcpy(&numberOfChildren, data.data() + offSet, sizeof(uint16_t));
+        offSet += sizeof(uint16_t);
 
-                node->childrenHeaders.push_back(childHeader);
-            }
+        if(numberOfChildren == 0)
+          return;
 
-            this->nodes.push_back(node);
+        this->children.resize(numberOfChildren);
+
+        memcpy(this->children.data(), data.data() + offSet, numberOfChildren * sizeof(page_id_t));
+
+        return;
+    }
+
+    //is leaf
+    memcpy(&this->previousNode, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
+
+    memcpy(&this->nextNode, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
+
+    const auto& columns = table->GetColumns();
+
+    for (int i = 0;i < this->header.pageSize; i++) {
+        if (this->additionalHeader.treeType == TreeType::Clustered) {
+            auto* row = Page::ReadRowFromFile(data, table, offSet, columns);
+
+            this->rows.push_back(row);
             continue;
         }
 
-        if (this->additionalHeader.treeType == TreeType::Clustered)
-        {
-            memcpy(&node->dataPageId, data.data() + offSet, sizeof(page_id_t));
-            offSet += sizeof(page_id_t);
-        }
-        else
-        {
-            uint16_t numberOfRows;
-            memcpy(&numberOfRows, data.data() + offSet, sizeof(uint16_t));
-            offSet += sizeof(uint16_t);
+        auto* item = new BPlusTreeNonClusteredData();
 
-            for (uint16_t rowIndex = 0; rowIndex < numberOfRows; rowIndex++)
-            {
-                page_id_t pageId = 0;
-                memcpy(&pageId, data.data() + offSet, sizeof(page_id_t));
-                offSet += sizeof(page_id_t);
+        memcpy(&item, data.data() + offSet, sizeof(page_id_t) + sizeof(page_offset_t));
+        offSet += sizeof(page_id_t) + sizeof(page_offset_t);
 
-                page_offset_t pageIndex = 0;
-                memcpy(&pageIndex, data.data() + offSet, sizeof(page_offset_t));
-                offSet += sizeof(page_offset_t);
 
-                node->nonClusteredData.emplace_back(pageId, pageIndex);
-            }
-        }
-            
-        memcpy(&node->nextNodeHeader, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
-        offSet += NodeHeader::GetNodeHeaderSize();
-
-        memcpy(&node->previousNodeHeader, data.data() + offSet, NodeHeader::GetNodeHeaderSize());
-        offSet += NodeHeader::GetNodeHeaderSize();
-        
-        this->nodes.push_back(node);
+        this->nonClusteredData.push_back(item);
     }
 }
 
 void IndexPage::WritePageToFile(fstream *filePtr) 
 {
-    if (!this->nodes.empty())
-        this->additionalHeader.numberOfSubKeys = this->nodes.front()->keys.front().subKeys.size();
+    if (!this->keys.empty())
+        this->additionalHeader.numberOfSubKeys = this->keys.front()->subKeys.size();
     
-  this->WritePageHeaderToFile(filePtr);
-  this->WriteAdditionalHeaderToFile(filePtr);
+    this->WritePageHeaderToFile(filePtr);
+    this->WriteAdditionalHeaderToFile(filePtr);
 
-  for (const auto& node : nodes)
-  {
-      filePtr->write(reinterpret_cast<const char*>(&node->isLeaf), sizeof(bool));
-      filePtr->write(reinterpret_cast<const char*>(&node->isRoot), sizeof(bool));
+    const uint16_t numOfKeys = this->keys.size();
+    filePtr->write(reinterpret_cast<const char*>(&numOfKeys), sizeof(uint16_t));
 
-      filePtr->write(reinterpret_cast<const char*>(&node->header), NodeHeader::GetNodeHeaderSize());
-      filePtr->write(reinterpret_cast<const char*>(&node->parentHeader), NodeHeader::GetNodeHeaderSize());
-
-      const uint16_t numberOfKeys = node->keys.size();
-      filePtr->write(reinterpret_cast<const char*>(&numberOfKeys), sizeof(uint16_t));
-      
-      for (const auto& key : node->keys)
-        for (const auto& subKey: key.subKeys)
+    for (const auto& key : this->keys) {
+        for (const auto& subKey: key->subKeys)
         {
-          filePtr->write(reinterpret_cast<const char*>(&subKey.size), sizeof(key_size_t));
-          filePtr->write(reinterpret_cast<const char*>(subKey.value.data()), subKey.size);
+            filePtr->write(reinterpret_cast<const char*>(&subKey.size), sizeof(key_size_t));
+            filePtr->write(reinterpret_cast<const char*>(subKey.value.data()), subKey.size);
         }
+    }
 
-      if (!node->isLeaf)
-      {
-          const uint16_t numberOfChildren = node->childrenHeaders.size();
+    if (!this->additionalHeader.isLeaf) {
+        const uint16_t childrenSize = this->children.size();
 
-          filePtr->write(reinterpret_cast<const char*>(&numberOfChildren), sizeof(uint16_t));
-          for (const auto& childHeader : node->childrenHeaders)
-              filePtr->write(reinterpret_cast<const char*>(&childHeader), NodeHeader::GetNodeHeaderSize());
+        filePtr->write(reinterpret_cast<const char*>(&childrenSize), sizeof(uint16_t));
+        filePtr->write(reinterpret_cast<const char*>(this->children.data()), childrenSize * sizeof(page_id_t));
+        return;
+    }
 
-          continue;
-      }
+    //leaf nodes
+    filePtr->write(reinterpret_cast<const char*>(&this->previousNode), sizeof(page_id_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->nextNode), sizeof(page_id_t));
 
-      //clustered indexed tree
-      if (this->additionalHeader.treeType == TreeType::Clustered)
-      {
-           filePtr->write(reinterpret_cast<const char*>(&node->dataPageId), sizeof(page_id_t));
-      }
-      else
-      {
-          //non clustered indexed tree
-          const uint16_t numberOfRows = node->nonClusteredData.size();
-          filePtr->write(reinterpret_cast<const char*>(&numberOfRows), sizeof(uint16_t));
-
-          for (const auto& nonClusteredData : node->nonClusteredData)
-            filePtr->write(reinterpret_cast<const char*>(&nonClusteredData), sizeof(page_id_t) + sizeof(page_offset_t));
-      }
-
-      filePtr->write(reinterpret_cast<const char*>(&node->nextNodeHeader),  NodeHeader::GetNodeHeaderSize());
-      filePtr->write(reinterpret_cast<const char*>(&node->previousNodeHeader),  NodeHeader::GetNodeHeaderSize());
-  }
+    if (this->additionalHeader.treeType == TreeType::Clustered) {
+        for (const auto& row : this->rows)
+            Page::WriteRowToFile(filePtr, row);
+    }
+    else {
+        for (const auto& data : this->nonClusteredData)
+            filePtr->write(reinterpret_cast<const char*>(data), sizeof(page_id_t) + sizeof(page_offset_t));
+    }
 }
 
 void IndexPage::SetTreeType(const TreeType & treeType) { this->additionalHeader.treeType = treeType; }
@@ -205,130 +179,95 @@ void IndexPage::SetTreeId(const page_id_t & treeId) { this->additionalHeader.tre
 
 const page_id_t & IndexPage::GetTreeId() const { return this->additionalHeader.treeId; }
 
-void IndexPage::InsertNode(Indexing::Node *& node, page_offset_t* indexPosition)
-{
-    *indexPosition = this->nodes.size();
-    this->nodes.push_back(node);
-
-    this->header.bytesLeft -= node->GetNodeSize();
-
-    this->header.pageSize++;
-    this->isDirty = true;
-}
-
-void IndexPage::DeleteNode(const page_offset_t & indexPosition) 
-{
-    this->header.bytesLeft += this->nodes.at(indexPosition)->prevNodeSize;
-
-    this->nodes.erase(this->nodes.begin() + indexPosition);
-
-    this->header.pageSize--;
-    this->isDirty = true;
-}
-
-Indexing::Node * IndexPage::GetLastNode()
-{
-    return this->nodes.back();
-}
-
-void IndexPage::DeleteLastNode()
-{
-    this->nodes.pop_back();
-
-    this->header.pageSize--;
-    this->isDirty = true;
-}
-
 void IndexPage::UpdateBytesLeft()
 {
     this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
 
-    for(const auto& node: this->nodes)
-        this->header.bytesLeft -= node->GetNodeSize();
+    for (const auto& key : this->keys)
+        this->header.bytesLeft -= key->size;
+
+    if (!this->additionalHeader.isLeaf) {
+        this->header.bytesLeft -= this->children.size() * sizeof(page_id_t);
+
+        this->isDirty = true;
+        return;
+    }
+
+    if (this->additionalHeader.treeType == TreeType::Clustered) {
+        for (const auto& row: this->rows)
+            this->header.bytesLeft -= row->GetRowSize();
+    }
+    else
+        this->header.bytesLeft -= this->nonClusteredData.size() * (sizeof(page_id_t) + sizeof(page_offset_t));
+
+    this->header.bytesLeft -= 2 * sizeof(page_id_t);
 
     this->isDirty = true;
 }
 
-void IndexPage::UpdateBytesLeft(const page_size_t & prevNodeSize, const page_size_t & currentNodeSize)
-{
-    this->header.bytesLeft += prevNodeSize - currentNodeSize;
+vector<Indexing::Key *>* IndexPage::GetKeysUnsafe(){ return &this->keys; }
 
-    this->isDirty = true;
-}
+vector<Indexing::BPlusTreeNonClusteredData *> * IndexPage::GetNonClusteredDataUnsafe(){ return &this->nonClusteredData; }
 
-Node * IndexPage::GetNodeByIndex(const page_offset_t & indexPosition) const
-{
-    Node* node = this->nodes.at(indexPosition);
-    node->isNodeClustered = this->additionalHeader.treeType == TreeType::Clustered;
-
-    return node; 
-}
-
-Node* IndexPage::GetRoot() const
-{
-    for (const auto& node : this->nodes)
-        if (node->isRoot)
-        {
-            node->isNodeClustered = this->additionalHeader.treeType == TreeType::Clustered;
-            return node;
-        }
-
-    return nullptr;
-}
-
-vector<Node*>* IndexPage::GetNodesUnsafe() { return &this->nodes; }
+vector<page_id_t> * IndexPage::GetChildren(){ return &this->children; }
 
 void IndexPage::ResizeNodes(const int& splitFactor)
 {
+    //next
     if(this->header.pageSize <= splitFactor)
         throw invalid_argument("IndexPage::split factor cannot be equal or less to pageSize");
 
-    this->nodes.resize(splitFactor);
-    this->header.pageSize = this->nodes.size();
+    // auto it = this->nodes.begin();
+    // int counter = 0;
+    // while (it != this->nodes.end()) {
+    //     if (counter >= splitFactor) {
+    //         it = this->nodes.erase(it);  // erase returns iterator to next element
+    //         continue;
+    //     }
+    //
+    //     ++it;
+    //     ++counter;
+    // }
+    //
+    //
+    // this->header.pageSize = this->nodes.size();
 
     this->isDirty = true;
 }
+
+bool IndexPage::isEmpty() const{ return this->rows.empty() && this->keys.empty() && this->nonClusteredData.empty(); }
+
+const bool & IndexPage::IsLeaf() const{ return this->additionalHeader.isLeaf; }
+
+const bool & IndexPage::IsRoot() const{ return this->additionalHeader.isRoot; }
+
+void IndexPage::SetIsLeaf(const bool& isLeaf) {
+    this->additionalHeader.isLeaf = isLeaf;
+    this->isDirty = true;
+}
+
+void IndexPage::SetIsRoot(const bool &isRoot) {
+    this->additionalHeader.isRoot = isRoot;
+    this->isDirty = true;
+}
+
+void IndexPage::InsertChild(const page_id_t &child){
+    this->children.push_back(child);
+}
+
+void IndexPage::SetPreviousPage(const page_id_t &previousPage){ this->previousNode = previousPage; }
+
+void IndexPage::SetNextPage(const page_id_t &nextPage){ this->nextNode = nextPage; }
+
+const page_id_t & IndexPage::GetPreviousPage()const{ return this->previousNode; }
+
+const page_id_t & IndexPage::GetNextPage()const{ return this->nextNode; }
 
 void IndexPage::UpdatePageSize()
 {
-    this->header.pageSize = this->nodes.size();
-
-    this->isDirty = true;
-}
-
-void IndexPage::UpdateNodeParentHeader(const page_offset_t& indexPosition, const Indexing::NodeHeader & nodeHeader)
-{
-   this->nodes.at(indexPosition)->parentHeader = nodeHeader;
-
-   this->isDirty = true;
-}
-
-void IndexPage::UpdateNodeChildHeader(const page_offset_t & indexPosition, const page_offset_t & childIndexPosition, const Indexing::NodeHeader & nodeHeader)
-{
-    this->nodes.at(indexPosition)->childrenHeaders[childIndexPosition] = nodeHeader;
-
-    this->isDirty = true;
-}
-
-void IndexPage::UpdateNodeNextLeafHeader(const page_offset_t & indexPosition, const Indexing::NodeHeader & nodeHeader)
-{
-    this->nodes.at(indexPosition)->nextNodeHeader = nodeHeader;
-
-    this->isDirty = true;
-}
-
-void IndexPage::UpdateNodePreviousLeafHeader(const page_offset_t & indexPosition, const Indexing::NodeHeader & nodeHeader)
-{
-    this->nodes.at(indexPosition)->previousNodeHeader = nodeHeader;
-
-    this->isDirty = true;
-}
-
-void IndexPage::UpdateNodeHeader(const page_offset_t & indexPosition, const NodeHeader & header)
-{
-    Node* node = this->nodes.at(indexPosition);
-
-    node->header = header;
+    this->header.pageSize = (this->additionalHeader.treeType == TreeType::Clustered)
+            ? this->rows.size()
+            : this->nonClusteredData.size();
 
     this->isDirty = true;
 }
@@ -338,12 +277,14 @@ IndexPageAdditionalHeader::IndexPageAdditionalHeader()
     this->treeId = 0;
     this->treeType = TreeType::NonClustered;
     this->numberOfSubKeys = 0;
+    this->isLeaf = false;
+    this->isRoot = false;
 }
 
 IndexPageAdditionalHeader::~IndexPageAdditionalHeader() = default;
 
 page_size_t IndexPageAdditionalHeader::GetAdditionalHeaderSize()
 {
-    return sizeof(page_id_t) + sizeof(TreeType) + sizeof(uint8_t);
+    return sizeof(page_id_t) + sizeof(TreeType) + sizeof(uint8_t) + 2* sizeof(bool) + sizeof(uint16_t);
 }
 } // namespace Pages

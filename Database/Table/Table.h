@@ -103,7 +103,7 @@ namespace DatabaseEngine::StorageTypes
         
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
-            [[nodiscard]] Indexing::Node* GetIndexFromDisk(const page_id_t& indexPageId) const;
+            [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
 
             void SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Indexing::Key* minimumValue, const Indexing::Key* maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices);
             void SelectRowsFromNonClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const vector<Field> *conditions, const vector<column_index_t>& selectedColumnIndices);

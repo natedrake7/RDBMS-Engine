@@ -44,38 +44,27 @@ namespace DatabaseEngine {
 
         AdditionalDataTypes::ResultStatus status;
 
-        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+        auto *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
 
         if (status.code != AdditionalDataTypes::ResultCode::Ok)
             return status;
 
         *rowIndex = indexPosition;
 
-        if (node->dataPageId != 0)
-        {
-            this->InsertRowToNonEmptyNode(node, *table, row, key, indexPosition);
-
-            *rowPageId = node->dataPageId;
-            return {};
-        }
-
-        //first Insert
-        Page *newPage = this->CreateDataPage(table->GetTableId());
-
-        const page_id_t &newPageId = newPage->GetPageId();
-
-        PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(newPageId);
+        PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(node->GetPageId());
 
         // should never fail
-        Database::InsertRowToPage(pageFreeSpacePage, newPage, row, indexPosition);
+        Database::InsertRowToPage(pageFreeSpacePage, node, row, indexPosition);
 
-        node->keys.insert(node->keys.begin() + indexPosition, key);
-        node->currentNodeSize += key.GetKeySize();
+        auto* keys = node->GetKeysUnsafe();
 
-        node->dataPageId = newPageId;
-        *rowPageId = newPageId;
+        keys->insert(keys->begin() + indexPosition, new Key(key));
 
-        this->SplitNodeFromIndexPage(tableId, node);
+        node->UpdateBytesLeft();
+
+        *rowPageId = node->GetPageId();
+
+        // this->SplitNodeFromIndexPage(tableId, node);
         return {};
     }
 
@@ -89,17 +78,17 @@ namespace DatabaseEngine {
         int indexPosition = 0;
         AdditionalDataTypes::ResultStatus status;
 
-        Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+        // Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
 
-        if (status.code != AdditionalDataTypes::ResultCode::Ok)
-            return status;
+        // if (status.code != AdditionalDataTypes::ResultCode::Ok)
+        //     return status;
 
-        node->keys.insert(node->keys.begin() + indexPosition, key);
-        node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
-        node->prevNodeSize = node->currentNodeSize;
-        node->currentNodeSize = node->GetNodeSize();
+        // node->keys.insert(node->keys.begin() + indexPosition, key);
+        // node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
+        // node->prevNodeSize = node->currentNodeSize;
+        // node->currentNodeSize = node->GetNodeSize();
 
-        this->SplitNodeFromIndexPage(tableId, node, nonClusteredIndexId);
+        // this->SplitNodeFromIndexPage(tableId, node, nonClusteredIndexId);
 
         return status;
     }
@@ -157,7 +146,7 @@ namespace DatabaseEngine {
         }
     }
 
-	IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nodeSize, const int& nonClusteredIndexId, const bool& findPageDifferentFromCurrent)
+	IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nonClusteredIndexId, const bool& findPageDifferentFromCurrent)
     {
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
@@ -206,8 +195,7 @@ namespace DatabaseEngine {
 
                 IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, extentId, table);
 
-                if(indexPage->GetBytesLeft() < nodeSize
-                    || indexPage->GetTreeId() != indexId)
+                if(!indexPage->isEmpty())
                     continue;
 
                 indexPage->SetTreeType(isNonClusteredIndex 
@@ -229,147 +217,199 @@ namespace DatabaseEngine {
 
     void Database::SplitNodeFromIndexPage(const table_id_t& tableId, Node*& node, const int& nonClusteredIndexId)
     {
-        IndexPage* overflowedPage = StorageManager::Get().GetIndexPage(this->filename, node->header.pageId);
+        // IndexPage* overflowedPage = StorageManager::Get().GetIndexPage(this->filename, node->header.pageId);
 
-        overflowedPage->UpdateBytesLeft();
+        // overflowedPage->UpdateBytesLeft();
 
-        if(overflowedPage->GetBytesLeft() > 0)
-        {
-            PageFreeSpacePage* overflowedPagePFS = Database::GetAssociatedPfsPage(overflowedPage->GetPageId());
-            overflowedPagePFS->SetPageMetaData(overflowedPage);
-            return;
-        }
+        // if(overflowedPage->GetBytesLeft() > 0)
+        // {
+        //     PageFreeSpacePage* overflowedPagePFS = Database::GetAssociatedPfsPage(overflowedPage->GetPageId());
+        //     overflowedPagePFS->SetPageMetaData(overflowedPage);
+        //     return;
+        // }
 
-        vector<Node*>* overflowedPageNodes = overflowedPage->GetNodesUnsafe();
+        // auto* overflowedPageNodes = overflowedPage->GetNodesUnsafe();
 
-        const int splitFactor = overflowedPage->GetPageSize() / 2;
+        // const int splitFactor = overflowedPage->GetPageSize() / 2;
 
-        const page_size_t availablePageBytes = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+        // const page_size_t availablePageBytes = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
 
-        IndexPage* nextIndexPage = this->FindOrAllocateNextIndexPage(tableId, overflowedPage->GetPageId(), availablePageBytes, nonClusteredIndexId, true);
+        // IndexPage* nextIndexPage = this->FindOrAllocateNextIndexPage(tableId, overflowedPage->GetPageId(), availablePageBytes, nonClusteredIndexId, true);
 
-        vector<Node*>* nextIndexPageNodes = nextIndexPage->GetNodesUnsafe();
+        // auto* nextIndexPageNodes = nextIndexPage->GetNodesUnsafe();
 
-        const page_id_t& nextIndexPageId = nextIndexPage->GetPageId();
+        // const page_id_t& nextIndexPageId = nextIndexPage->GetPageId();
 
-        page_offset_t indexPosition = 0;
+        // page_offset_t counter = 0;
+        // for (auto& [key, node] : *overflowedPageNodes) {
+        //     if (counter < splitFactor)
+        //         continue;
 
-        for(page_offset_t i = splitFactor; i < overflowedPageNodes->size(); i++)
-        {
-           const NodeHeader newNodeHeader(nextIndexPageId, indexPosition);
+        //     page_offset_t indexPosition = 0;
 
-            Database::UpdateNodeConnections((*overflowedPageNodes)[i], newNodeHeader);
+        //     nextIndexPage->InsertNode(node, &indexPosition);
 
-            (*overflowedPageNodes)[i]->header = newNodeHeader;
+        //     const NodeHeader newNodeHeader(nextIndexPageId, indexPosition);
 
-            this->UpdateTableIndexes(tableId, (*overflowedPageNodes)[i], nonClusteredIndexId);
+        //     Database::UpdateNodeConnections(node, newNodeHeader);
 
-            nextIndexPageNodes->push_back((*overflowedPageNodes)[i]);
+        //     node->header = newNodeHeader;
 
-            indexPosition++;
-        }
+        //     this->UpdateTableIndexes(tableId, node, nonClusteredIndexId);
 
-        overflowedPage->ResizeNodes(splitFactor);
-        overflowedPage->UpdateBytesLeft();
-        
-        nextIndexPage->UpdateBytesLeft();
-        nextIndexPage->UpdatePageSize();
+        // }
 
-        PageFreeSpacePage* overflowedPagePFS = Database::GetAssociatedPfsPage(overflowedPage->GetPageId());
-        overflowedPagePFS->SetPageMetaData(overflowedPage);
+        // overflowedPage->ResizeNodes(splitFactor);
+        // overflowedPage->UpdateBytesLeft();
 
-        PageFreeSpacePage* nextIndexPagePFS = Database::GetAssociatedPfsPage(nextIndexPageId);
-        nextIndexPagePFS->SetPageMetaData(nextIndexPage);
+        // nextIndexPage->UpdateBytesLeft();
+        // nextIndexPage->UpdatePageSize();
+
+        // PageFreeSpacePage* overflowedPagePFS = Database::GetAssociatedPfsPage(overflowedPage->GetPageId());
+        // overflowedPagePFS->SetPageMetaData(overflowedPage);
+
+        // PageFreeSpacePage* nextIndexPagePFS = Database::GetAssociatedPfsPage(nextIndexPageId);
+        // nextIndexPagePFS->SetPageMetaData(nextIndexPage);
     }
 
     void Database::UpdateNodeConnections(Node *& node, const NodeHeader& newNodeHeader)
     {
-        if (node->parentHeader.pageId != 0)
-        {
-            IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->parentHeader.pageId);
-            const Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
+        // if (node->parentHeader.pageId != node->header.pageId)
+        // {
+        //     IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->parentHeader.pageId);
+        //     const Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
-            for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
-            {
-                if (parentNode->childrenHeaders[index].pageId == node->header.pageId
-                    && parentNode->childrenHeaders[index].indexPosition == node->header.indexPosition)
-                {
-                    parentNodeIndexPage->UpdateNodeChildHeader(parentNode->header.indexPosition, index, newNodeHeader);
-                    break;
-                }
-            }
-        }
+        //     for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
+        //     {
+        //         if (parentNode->childrenHeaders[index].pageId == node->header.pageId
+        //             && parentNode->childrenHeaders[index].indexPosition == node->header.indexPosition)
+        //         {
+        //             parentNodeIndexPage->UpdateNodeChildHeader(parentNode->header.indexPosition, index, newNodeHeader);
+        //             break;
+        //         }
+        //     }
+        // }
 
-        if (node->isLeaf)
-        {
-            if (node->previousNodeHeader.pageId != 0)
-            {
-                IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->previousNodeHeader.pageId);
+        // if (node->isLeaf)
+        // {
+        //     if (node->previousNodeHeader.pageId != node->header.pageId)
+        //     {
+        //         IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->previousNodeHeader.pageId);
 
-                previousLeafNodeIndexPage->UpdateNodeNextLeafHeader(node->previousNodeHeader.indexPosition, newNodeHeader);
-            }
+        //         previousLeafNodeIndexPage->UpdateNodeNextLeafHeader(node->previousNodeHeader.indexPosition, newNodeHeader);
+        //     }
 
-            if (node->nextNodeHeader.pageId != 0)
-            {
-                IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->nextNodeHeader.pageId);
+        //     if (node->nextNodeHeader.pageId != node->header.pageId)
+        //     {
+        //         IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->nextNodeHeader.pageId);
 
-                nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, newNodeHeader);
-            }
+        //         nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, newNodeHeader);
+        //     }
 
-            return; //leaf has no children so return
-        }
+        //     return; //leaf has no children so return
+        // }
 
-        for (auto& child : node->childrenHeaders)
-        {
-            IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(this->filename, child.pageId);
+        // for (auto& child : node->childrenHeaders)
+        // {
+        //     if (child.pageId == node->header.pageId)
+        //         continue;
 
-            childIndexPage->UpdateNodeParentHeader(child.indexPosition, newNodeHeader);
-        }
+        //     IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(this->filename, child.pageId);
+
+        //     childIndexPage->UpdateNodeParentHeader(child.indexPosition, newNodeHeader);
+        // }
     }
+
+    // void Database::UpdateNodeConnectionsOnDelete(Indexing::Node *&node, Indexing::Node* deletedNode, const Indexing::NodeHeader &newNodeHeader){
+    //     if (node->parentHeader.pageId != 0)
+    //     {
+    //         IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->parentHeader.pageId);
+    //         const Node* parentNode = parentNodeIndexPage->GetNodeByKey(node->parentHeader.indexPosition);
+    //
+    //         for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
+    //         {
+    //             if (parentNode->childrenHeaders[index].pageId == node->header.pageId
+    //                 && parentNode->childrenHeaders[index].indexPosition == node->header.indexPosition)
+    //             {
+    //                 parentNodeIndexPage->UpdateNodeChildHeaderById(node->parentHeader.indexPosition, index, newNodeHeader);
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //
+    //     if (node->isLeaf)
+    //     {
+    //         if (node->previousNodeHeader.pageId != 0)
+    //         {
+    //             IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->previousNodeHeader.pageId);
+    //
+    //             previousLeafNodeIndexPage->UpdateNodeNextLeafHeaderById(node->previousNodeHeader.indexPosition, newNodeHeader);
+    //         }
+    //
+    //         if (node->nextNodeHeader.pageId != 0)
+    //         {
+    //             IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->nextNodeHeader.pageId);
+    //
+    //             nextLeafNodeIndexPage->UpdateNodePreviousLeafHeaderById(node->nextNodeHeader.indexPosition, newNodeHeader);
+    //         }
+    //
+    //         return; //leaf has no children so return
+    //     }
+    //
+    //     for (auto& child : node->childrenHeaders)
+    //     {
+    //         IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(this->filename, child.pageId);
+    //
+    //         childIndexPage->UpdateNodeParentHeaderById(child.indexPosition, newNodeHeader);
+    //     }
+    // }
 
     void Database::UpdateNodeConnections(Node*& node)
     {
-        if (node->parentHeader.pageId != 0)
-        {
-            IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->parentHeader.pageId);
-            const Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
+        // if (node->parentHeader.pageId != 0 && node->parentHeader.pageId != node->header.pageId)
+        // {
+        //     IndexPage* parentNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->parentHeader.pageId);
+        //     const Node* parentNode = parentNodeIndexPage->GetNodeByIndex(node->parentHeader.indexPosition);
 
-            for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
-            {
-                if (parentNode->childrenHeaders[index].pageId == node->header.pageId
-                    && parentNode->childrenHeaders[index].indexPosition == node->header.indexPosition)
-                {
-                    parentNodeIndexPage->UpdateNodeChildHeader(parentNode->header.indexPosition, index, node->header);
-                    break;
-                }
-            }
-        }
+        //     for (int index = 0; index < parentNode->childrenHeaders.size(); index++)
+        //     {
+        //         if (parentNode->childrenHeaders[index].pageId == node->header.pageId
+        //             && parentNode->childrenHeaders[index].indexPosition == node->header.indexPosition)
+        //         {
+        //             parentNodeIndexPage->UpdateNodeChildHeader(parentNode->header.indexPosition, index, node->header);
+        //             break;
+        //         }
+        //     }
+        // }
 
-        if (node->isLeaf)
-        {
-            if (node->previousNodeHeader.pageId != 0)
-            {
-                IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->previousNodeHeader.pageId);
+        // if (node->isLeaf)
+        // {
+        //     if (node->previousNodeHeader.pageId != 0 && node->previousNodeHeader.pageId != node->header.pageId)
+        //     {
+        //         IndexPage* previousLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->previousNodeHeader.pageId);
 
-                previousLeafNodeIndexPage->UpdateNodeNextLeafHeader(node->previousNodeHeader.indexPosition, node->header);
-            }
+        //         previousLeafNodeIndexPage->UpdateNodeNextLeafHeader(node->previousNodeHeader.indexPosition, node->header);
+        //     }
 
-            if (node->nextNodeHeader.pageId != 0)
-            {
-                IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->nextNodeHeader.pageId);
+        //     if (node->nextNodeHeader.pageId != 0 && node->nextNodeHeader.pageId != node->header.pageId)
+        //     {
+        //         IndexPage* nextLeafNodeIndexPage = StorageManager::Get().GetIndexPage(this->filename, node->nextNodeHeader.pageId);
 
-                nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, node->header);
-            }
+        //         nextLeafNodeIndexPage->UpdateNodePreviousLeafHeader(node->nextNodeHeader.indexPosition, node->header);
+        //     }
 
-            return; //leaf has no children so return
-        }
+        //     return; //leaf has no children so return
+        // }
 
-        for (auto& child : node->childrenHeaders)
-        {
-            IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(this->filename, child.pageId);
+        // for (auto& child : node->childrenHeaders)
+        // {
+        //     if (child.pageId == node->header.pageId)
+        //         continue;
 
-            childIndexPage->UpdateNodeParentHeader(child.indexPosition, node->header);
-        }  
+        //     IndexPage* childIndexPage = StorageManager::Get().GetIndexPage(this->filename, child.pageId);
+
+        //     childIndexPage->UpdateNodeParentHeader(child.indexPosition, node->header);
+        // }  
     }
 
     void Database::UpdateTableIndexes(const table_id_t & tableId, Indexing::Node *& node, const int & nonClusteredIndexId) const

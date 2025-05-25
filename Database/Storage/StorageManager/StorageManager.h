@@ -53,7 +53,7 @@ protected:
   void RemovePage();
   void RemoveSystemPage();
   static void AllocateMemoryBasedOnSystemPageType(Pages::Page **page, const Pages::PageHeader &pageHeader);
-  static void AllocateMemoryBasedOnPageType(Pages::Page **page, const Pages::PageHeader &pageHeader);
+  static bool AllocateMemoryBasedOnPageType(Pages::Page **page, const Pages::PageHeader &pageHeader);
   void OpenExtent(const string& filename, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
   void OpenSystemExtent(const string& filename, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
   void OpenSystemPage(const string &filename, const Constants::page_id_t &pageId);
@@ -96,7 +96,6 @@ public:
   Pages::PageFreeSpacePage *CreatePageFreeSpacePage(const string &filename, const Constants::page_id_t &pageId);
   Pages::PageFreeSpacePage * GetPageFreeSpacePage(const string& filename, const Constants::page_id_t &pageId);
   Pages::IndexPage *CreateIndexPage(const string& filename, const Constants::page_id_t &pageId);
-  Pages::IndexPage *GetIndexPage(const string& filename, const Constants::page_id_t &pageId);
   Pages::IndexPage *GetIndexPage(const string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
   [[nodiscard]] bool IsCacheFull() const;
 };

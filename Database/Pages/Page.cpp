@@ -14,7 +14,7 @@ namespace Pages
 {
     PageHeader::PageHeader()
     {
-        this->pageType = PageType::DATA;
+        this->pageType = PageType::Error;
         this->pageId = 0;
         this->pageSize = 0;
         this->bytesLeft = PAGE_SIZE - GetPageHeaderSize();
@@ -78,48 +78,82 @@ namespace Pages
     {
         const auto &columns = table->GetColumns();
 
-        for (int i = 0; i < this->header.pageSize; i++)
+        for (int i = 0; i < this->header.pageSize; i++) {
+            auto* row = this->ReadRowFromFile(data, table, offSet, columns);
+            this->rows.push_back(row);
+        }
+    }
+
+    Row* Page::ReadRowFromFile(const vector<char>& data, const Table *table, page_offset_t &offSet, const vector<Column*>& columns){
+        Row *row = new Row(*table);
+        RowHeader *rowHeader = row->GetHeader();
+
+        memcpy(&rowHeader->rowSize, data.data() + offSet, sizeof(row_size_t));
+        offSet += sizeof(row_size_t);
+
+        memcpy(&rowHeader->maxRowSize, data.data() + offSet, sizeof(size_t));
+        offSet += sizeof(size_t);
+
+        rowHeader->nullBitMap->GetDataFromFile(data, offSet);
+        rowHeader->largeObjectBitMap->GetDataFromFile(data, offSet);
+
+        for (int j = 0; j < columns.size(); j++)
         {
-            Row *row = new Row(*table);
-            RowHeader *rowHeader = row->GetHeader();
-
-            memcpy(&rowHeader->rowSize, data.data() + offSet, sizeof(row_size_t));
-            offSet += sizeof(row_size_t);
-
-            memcpy(&rowHeader->maxRowSize, data.data() + offSet, sizeof(size_t));
-            offSet += sizeof(size_t);
-
-            rowHeader->nullBitMap->GetDataFromFile(data, offSet);
-            rowHeader->largeObjectBitMap->GetDataFromFile(data, offSet);
-
-            for (int j = 0; j < columns.size(); j++)
+            if (rowHeader->nullBitMap->Get(j))
             {
-                if (rowHeader->nullBitMap->Get(j))
-                {
-                    Block *block = new Block(nullptr, 0, columns[j]);
-
-                    row->InsertColumnData(block, j);
-
-                    continue;
-                }
-
-                block_size_t bytesToRead;
-
-                memcpy(&bytesToRead, data.data() + offSet, sizeof(block_size_t));
-                offSet += sizeof(block_size_t);
-
-                object_t *bytes = new unsigned char[bytesToRead];
-                memcpy(bytes, data.data() + offSet, bytesToRead);
-
-                offSet += bytesToRead;
-
-                Block *block = new Block(bytes, bytesToRead, columns[j]);
+                Block *block = new Block(nullptr, 0, columns[j]);
 
                 row->InsertColumnData(block, j);
 
-                delete[] bytes;
+                continue;
             }
-            this->rows.push_back(row);
+
+            block_size_t bytesToRead;
+
+            memcpy(&bytesToRead, data.data() + offSet, sizeof(block_size_t));
+            offSet += sizeof(block_size_t);
+
+            object_t *bytes = new unsigned char[bytesToRead];
+            memcpy(bytes, data.data() + offSet, bytesToRead);
+
+            offSet += bytesToRead;
+
+            Block *block = new Block(bytes, bytesToRead, columns[j]);
+
+            row->InsertColumnData(block, j);
+
+            delete[] bytes;
+        }
+
+        return row;
+    }
+
+    void Page::WriteRowToFile(fstream* filePtr, Row* row){
+        RowHeader *rowHeader = row->GetHeader();
+
+        filePtr->write(reinterpret_cast<const char *>(&rowHeader->rowSize), sizeof(row_size_t));
+        filePtr->write(reinterpret_cast<const char *>(&rowHeader->maxRowSize), sizeof(size_t));
+        rowHeader->nullBitMap->WriteDataToFile(filePtr);
+        rowHeader->largeObjectBitMap->WriteDataToFile(filePtr);
+
+        column_index_t columnIndex = 0;
+        for (const auto &block : row->GetData())
+        {
+            if (rowHeader->nullBitMap->Get(columnIndex))
+            {
+                columnIndex++;
+                continue;
+            }
+
+            block_size_t dataSize = block->GetBlockSize();
+
+            filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(block_size_t));
+
+            const auto &data = block->GetBlockData();
+
+            filePtr->write(reinterpret_cast<const char *>(data), dataSize);
+
+            columnIndex++;
         }
     }
 
@@ -131,39 +165,13 @@ namespace Pages
         filePtr->write(reinterpret_cast<const char *>(&this->header.pageType), sizeof(PageType));
     }
 
+
     void Page::WritePageToFile(fstream *filePtr)
     {
         this->WritePageHeaderToFile(filePtr);
 
         for (const auto &row : this->rows)
-        {
-            RowHeader *rowHeader = row->GetHeader();
-
-            filePtr->write(reinterpret_cast<const char *>(&rowHeader->rowSize), sizeof(row_size_t));
-            filePtr->write(reinterpret_cast<const char *>(&rowHeader->maxRowSize), sizeof(size_t));
-            rowHeader->nullBitMap->WriteDataToFile(filePtr);
-            rowHeader->largeObjectBitMap->WriteDataToFile(filePtr);
-
-            column_index_t columnIndex = 0;
-            for (const auto &block : row->GetData())
-            {
-                if (rowHeader->nullBitMap->Get(columnIndex))
-                {
-                    columnIndex++;
-                    continue;
-                }
-
-                block_size_t dataSize = block->GetBlockSize();
-
-                filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(block_size_t));
-
-                const auto &data = block->GetBlockData();
-
-                filePtr->write(reinterpret_cast<const char *>(data), dataSize);
-
-                columnIndex++;
-            }
-        }
+            Page::WriteRowToFile(filePtr, row);
     }
 
     void Page::Delete(vector<Row*> &deletedRows, const QueryPipeline::Statements::Expression *expression){
@@ -310,7 +318,7 @@ namespace Pages
         }
     }
 
-    void Page::GetRowByIndex(vector<Row>*& rows, const Table &table, const int &indexPosition, const vector<column_index_t>& selectedColumnIndices) const
+    void Page::GetRowByIndex(vector<Row>* rows, const Table &table, const int &indexPosition, const vector<column_index_t>& selectedColumnIndices) const
     {
         const auto &row = this->rows[indexPosition];
 

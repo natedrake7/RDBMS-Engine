@@ -10,6 +10,7 @@
 #include "../../Pages/PageFreeSpace/PageFreeSpacePage.h"
 
 #include <cstring>
+#include <iostream>
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
@@ -173,7 +174,10 @@ void StorageManager::OpenExtent(const string& filename, const extent_id_t &exten
 
     Page *page = nullptr;
 
-    StorageManager::AllocateMemoryBasedOnPageType(&page, pageHeader);
+    if(!StorageManager::AllocateMemoryBasedOnPageType(&page, pageHeader)){
+      std::cerr << "Failed to read page id: " << currentPageId << endl;
+//      throw runtime_error("failed to read page");
+    }
 
     page->GetPageDataFromFile(buffer, table, offSet, file);
 
@@ -253,7 +257,7 @@ IndexPage *StorageManager::CreateIndexPage(const string& filename, const page_id
   IndexPage *page = new IndexPage(pageId, true);
   page->SetDirty();
   
-  this->MovePageToFrontOfSystemList(page, pageId, filename);
+  this->MovePageToFrontOfList(page, pageId, filename);
 
   return page;
 }
@@ -270,14 +274,9 @@ PageFreeSpacePage *StorageManager::GetPageFreeSpacePage(const string& filename, 
   return dynamic_cast<PageFreeSpacePage *>(this->GetSystemPage(filename, pageId));
 }
 
-IndexPage *StorageManager::GetIndexPage(const string& filename, const page_id_t &pageId)
-{
-  return dynamic_cast<IndexPage *>(this->GetSystemPage(filename, pageId));
-}
-
 IndexPage *StorageManager::GetIndexPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table* table)
 {
-  return dynamic_cast<IndexPage *>(this->GetSystemPage(filename, pageId, extentId, table));
+  return dynamic_cast<IndexPage *>(this->GetPage(filename, pageId, extentId, table));
 }
 
 bool StorageManager::IsCacheFull() const 
@@ -498,9 +497,6 @@ void StorageManager::AllocateMemoryBasedOnSystemPageType(Page **page, const Page
     case PageType::FREESPACE:
       *page = new PageFreeSpacePage(pageHeader);
       break;
-    case PageType::INDEX:
-      *page = new IndexPage(pageHeader);
-      break;
     default:
       throw runtime_error("Page type not recognized");
   }
@@ -522,7 +518,7 @@ StorageManager::SearchSystemPageInCache(const string& key)
   // this->UnlockSystemPageRead();
 }
 
-void StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader &pageHeader)
+bool StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader &pageHeader)
 {
   switch (pageHeader.pageType) 
   {
@@ -535,9 +531,14 @@ void StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader
     case PageType::IAM:
       *page = new IndexAllocationMapPage(pageHeader, 0, 0);
       break;
+    case PageType::INDEX:
+      *page = new IndexPage(pageHeader);
+      break;
     default:
-      throw runtime_error("Page type not recognized");
+      return false;
   }
+
+  return true;
 }
 
 void StorageManager::MovePageToFrontOfSystemList(Page *page,

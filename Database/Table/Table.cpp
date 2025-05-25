@@ -112,10 +112,15 @@ namespace DatabaseEngine::StorageTypes {
 
       Table::~Table()
       {
+        if (this->clusteredIndexedTree)
+          this->header.clusteredIndexPageId = this->clusteredIndexedTree->GetFirstIndexPageId();
+
         delete this->clusteredIndexedTree;
 
-        for (const auto & nonClusteredIndexedTree : this->nonClusteredIndexedTrees)
+        for (const auto & nonClusteredIndexedTree : this->nonClusteredIndexedTrees) {
+          this->header.nonClusteredIndexPageIds.push_back(nonClusteredIndexedTree->GetFirstIndexPageId());
             delete nonClusteredIndexedTree;
+        }
 
         HeaderPage* headerPage = StorageManager::Get().GetHeaderPage(this->database->GetFileName());
 
@@ -657,11 +662,17 @@ namespace DatabaseEngine::StorageTypes {
         return maximumRowSize;
     }
 
-    void Table::SelectRowsFromClusteredIndex(vector<Row> *selectedRows, const size_t &rowsToSelect, const Key* minimumValue, const Key* maximumValue, const bool indexSeek, const vector<column_index_t>& selectedColumnIndices)
+    void Table::SelectRowsFromClusteredIndex(
+      vector<Row> *selectedRows,
+      const size_t &rowsToSelect,
+      const Key* minimumValue,
+      const Key* maximumValue,
+      const bool indexSeek,
+      const vector<column_index_t>& selectedColumnIndices)
     {
         vector<QueryData> results;
 
-        const BPlusTree* tree = this->GetClusteredIndexedTree();
+        BPlusTree* tree = this->GetClusteredIndexedTree();
 
         if(indexSeek && minimumValue != nullptr && maximumValue != nullptr)
           tree->IndexSeek(*minimumValue, *maximumValue, results);
@@ -698,59 +709,18 @@ namespace DatabaseEngine::StorageTypes {
       const vector<column_index_t> &selectedColumnIndices){
         vector<QueryData> results;
 
-        const BPlusTree* tree = this->GetClusteredIndexedTree();
+        BPlusTree* tree = this->GetClusteredIndexedTree();
 
-        tree->IndexSeek(*minimumValue, *maximumValue, results);
-
-        if(results.empty())
-          return;
-
-        const auto& filename = this->database->GetFileName();
-
-        extent_id_t pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(results[0].pageId);
-        const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
-
-        for (const auto &result : results)
-        {
-          // get new page else use current one
-          if (result.pageId != 0 && result.pageId != page->GetPageId())
-          {
-            pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(result.pageId);
-            page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
-          }
-
-          page->GetRowByIndex(selectedRows, *this, result.indexPosition, selectedColumnIndices);
-        }
+        tree->IndexSeek(*minimumValue, *maximumValue, selectedRows);
     }
 
     void Table::ClusteredIndexScan(
       vector<Row> *selectedRows,
       const vector<column_index_t> &selectedColumnIndices){
-        vector<QueryData> results;
 
-        const BPlusTree* tree = this->GetClusteredIndexedTree();
+        auto* tree = this->GetClusteredIndexedTree();
 
-        tree->IndexScan(results);
-
-        if(results.empty())
-          return;
-
-        const auto& filename = this->database->GetFileName();
-
-        extent_id_t pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(results[0].pageId);
-        const Page *page = StorageManager::Get().GetPage(filename, results[0].pageId, pageExtentId, this);
-
-        for (const auto &result : results)
-        {
-          // get new page else use current one
-          if (result.pageId != 0 && result.pageId != page->GetPageId())
-          {
-            pageExtentId = DatabaseEngine::Database::CalculateExtentIdByPageId(result.pageId);
-            page = StorageManager::Get().GetPage(filename, result.pageId, pageExtentId, this);
-          }
-
-          page->GetRowByIndex(selectedRows, *this, result.indexPosition, selectedColumnIndices);
-        }
+        tree->IndexScan(selectedRows);
     }
 
     void Table::SelectRowsFromNonClusteredIndex(vector<Row>* selectedRows, const size_t & rowsToSelect, const vector<Field>* conditions, const vector<column_index_t>& selectedColumnIndices)

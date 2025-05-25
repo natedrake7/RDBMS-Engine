@@ -50,7 +50,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::GetClusteredIndexFromDisk() const
     {
-        Node* root = Table::GetIndexFromDisk(this->header.clusteredIndexPageId);
+        auto* root = Table::GetIndexFromDisk(this->header.clusteredIndexPageId);
 
         this->clusteredIndexedTree->SetRoot(root);
 
@@ -62,21 +62,19 @@ namespace DatabaseEngine::StorageTypes {
         if(this->header.nonClusteredIndexPageIds[indexId] == 0)
             return;
 
-        Node* root =  Table::GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
+        auto* root =  Table::GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
 
         this->nonClusteredIndexedTrees[indexId]->SetRoot(root);
 
         this->nonClusteredIndexedTrees[indexId]->SetTreeType(TreeType::NonClustered);
     }
 
-    Node* Table::GetIndexFromDisk(const page_id_t & indexPageId) const
+    Pages::IndexPage* Table::GetIndexFromDisk(const page_id_t & indexPageId) const
     {
         const auto& filename = this->database->GetFileName();
 
         const extent_id_t indexPageExtentId = Database::CalculateExtentIdByPageId(indexPageId);
 
-        IndexPage* indexPage = StorageManager::Get().GetIndexPage(filename, indexPageId, indexPageExtentId, this);
-
-        return indexPage->GetRoot();
+        return StorageManager::Get().GetIndexPage(filename, indexPageId, indexPageExtentId, this);
     }
 }

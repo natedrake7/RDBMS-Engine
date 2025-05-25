@@ -7,6 +7,7 @@
 #include <fstream>
 
 #include "../Column/Column.h"
+#include "../Row/Row.h"
 
 namespace AdditionalDataTypes {
 struct ResultStatus;}using namespace std;
@@ -122,22 +123,24 @@ namespace Indexing
         table_id_t tableId;
         page_id_t firstIndexPageId;
         int t;
-        Node *root;
+        Pages::IndexPage *root;
         TreeType type;
         int nonClusteredIndexId;
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
-        void SplitChild(Node *parent, const int &index, Node *child);
+        void SplitChild(Pages::IndexPage *parent, const int &index, Pages::IndexPage *child);
         void PrintTree(const Node *node, const int &level);
-        Node *GetNonFullNode(Node *node, const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
+        Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
         void DeleteNode(const Node *node);
-        [[nodiscard]] Node *SearchKey(const Key &key) const;
-        [[nodiscard]] Node* SearchLeftMostLeafNode() const;
+        [[nodiscard]] Pages::IndexPage *SearchKey(const Key &key) const;
+        [[nodiscard]] Pages::IndexPage *SearchLeftMostLeafNode() const;
         void InsertNodeToPage(Node*& node, const page_id_t& parentPageId);
 
-        [[nodiscard]] Node* GetNodeFromPage(const NodeHeader& header) const;
+        [[nodiscard]] Pages::IndexPage * GetNode(const page_id_t& pageId) const;
         static int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
+
+        [[nodiscard]] Pages::IndexPage* AllocateNewPage(const page_id_t& parentPageId)const;
 
         void HandleUnderflow(Node* node);
         void HandleRootUnderflow();
@@ -152,12 +155,18 @@ namespace Indexing
         BPlusTree();
         ~BPlusTree();
 
-        Node *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
+        Pages::IndexPage *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
         void PrintTree();
 
         void IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
-        void IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
-        void IndexScan(vector<QueryData> &result) const;
+
+        void IndexSeek(const Key &minKey, const Key &maxKey, vector<DatabaseEngine::StorageTypes::Row>* result);
+
+        void IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result);
+
+        void IndexScan(vector<QueryData> &result);
+
+        void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result);
         
         void SearchKey(const Key &key, QueryData &result) const;
         [[nodiscard]] page_size_t GetTreeSize() const;
@@ -165,9 +174,9 @@ namespace Indexing
 
         void Remove(const Key& key);
 
-        Node*& GetRoot();
+        Pages::IndexPage*& GetRoot();
 
-        void SetRoot(Node *&node);
+        void SetRoot(Pages::IndexPage *&node);
 
         void SetBranchingFactor(const int &branchingFactor);
 
