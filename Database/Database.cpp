@@ -726,7 +726,7 @@ namespace DatabaseEngine
         return this->tables[tableId];
     }
 
-    LargeDataPage *Database::GetTableLastLargeDataPage(const table_id_t &tableId, const page_size_t &minObjectSize)
+    LargeDataPage *Database::GetTableLastLargeDataPage(const table_id_t &tableId)
     {
         if (tableId >= this->tables.size())
             return nullptr;
@@ -751,17 +751,13 @@ namespace DatabaseEngine
                 const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
 
                 const PageFreeSpacePage *pageFreeSpace = StorageManager::Get().GetPageFreeSpacePage(this->filename, correspondingPfsPageId);
-                const Constants::byte objectSizeCategory = Database::GetObjectSizeToCategory(minObjectSize);
 
                 if (pageFreeSpace->GetPageType(pageId) != PageType::LOB)
                     break;
 
-                if (objectSizeCategory > pageFreeSpace->GetPageSizeCategory(pageId))
-                    continue;
-
                 lastLargeDataPage = StorageManager::Get().GetLargeDataPage(this->filename, pageId, extentId, this->tables[tableId]);
 
-                if (lastLargeDataPage->GetBytesLeft() >= minObjectSize)
+                if (lastLargeDataPage->GetPageSize() == 0)
                     return lastLargeDataPage;
             }
         }

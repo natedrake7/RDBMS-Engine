@@ -11,7 +11,8 @@ sqlStatement
     | insertStatement 
     | createTableStatement
     | createSchemaStatement
-    | deleteStatement;
+    | deleteStatement
+    | updateStatement;
 
 //select statement
 selectStatement : 'SELECT' (columnList | WILDCARD) 'FROM' tableName whereClause?;
@@ -90,6 +91,18 @@ createSchemaStatement
     : 'CREATE' 'SCHEMA' IDENTIFIER
     ;
 
+//Update statement
+updateStatement
+    : 'UPDATE' tableName 'SET' updateColumnsList whereClause?
+    ;
+
+updateColumnsList
+    :  updateColumn (',' updateColumn)*
+    ;
+
+updateColumn
+    : columnName EQUAL literalValue
+    ;
 
 //helpers
 literalValueList

@@ -42,6 +42,11 @@ namespace QueryPipeline{
                 typeid(Statements::DeleteStatement*),
                 [](const auto& r) { return std::any_cast<Statements::DeleteStatement*>(r); }
             },
+
+            {
+                typeid(Statements::UpdateStatement*),
+                [](const auto& r) { return std::any_cast<Statements::UpdateStatement*>(r); }
+            },
         };
 
     class Parser{

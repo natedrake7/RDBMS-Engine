@@ -172,7 +172,7 @@ public:
 
     Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
 
-    Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId, const page_size_t &minObjectSize);
+    Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId);
 
     Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId);
 

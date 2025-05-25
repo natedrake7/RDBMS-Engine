@@ -60,5 +60,11 @@ namespace QueryPipeline {
       antlrcpp::Any visitCreateSchemaStatement(SQLParser::CreateSchemaStatementContext *context) override;
 
       antlrcpp::Any visitDeleteStatement(SQLParser::DeleteStatementContext *context) override;
+
+      antlrcpp::Any visitUpdateStatement(SQLParser::UpdateStatementContext *context) override;
+
+      antlrcpp::Any visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context) override;
+
+      antlrcpp::Any visitUpdateColumn(SQLParser::UpdateColumnContext *context) override;
   };
 }

@@ -14,14 +14,6 @@ namespace QueryPipeline
 {
     Parser::Parser() = default;
 
-    using StatementVariant = variant<
-        Statements::SelectStatement,
-        Statements::CreateDbStatement,
-        Statements::DropDbStatement,
-        Statements::InsertStatement,
-        Statements::CreateTableStatement
-    >;
-
     Statements::Statement* Parser::CreateStatement(const std::any &ast, const std::string& dbName){
         function<Statements::Statement *(const any &)> handler;
 
@@ -74,6 +66,14 @@ namespace QueryPipeline
             return;
 
         PhysicalPlan::PhysicalOperator* physicalPlan = logicalPlan->ToPhysical();
+
+        if(physicalPlan == nullptr){
+          delete statement;
+          delete logicalPlan;
+          delete physicalPlan;
+          return;
+        }
+
         const auto* result = physicalPlan->Execute();
 
         if (result != nullptr) {

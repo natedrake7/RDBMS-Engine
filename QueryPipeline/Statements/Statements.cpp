@@ -233,4 +233,32 @@ namespace QueryPipeline::Statements {
   }
 
 
+  bool UpdateStatement::Validate(){
+    if(!Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
+      return false;
+
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, this->table->name);
+
+    for(auto& column: this->columns) {
+
+      Headers::ColumnHeader header;
+
+      if (!columnsDict.TryGetValue(column.name, header)) {
+        cerr << "Column " << column.name << " does not exist on table: " << this->table->schema << "." << this->table->name << endl;
+        return false;
+      }
+
+      column.value.Validate(header);
+    }
+
+    if(this->where.expression == nullptr)
+      return true;
+
+    return this->where.expression->Validate(columnsDict);
+  }
+
+
+  QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
+    return nullptr;
+  }
 }

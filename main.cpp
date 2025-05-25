@@ -110,9 +110,11 @@ int main()
 
     const string schemaCreate = "CREATE SCHEMA movies";
 
+    const string updateMovies = "UPDATE movies.Movies SET MovieName = 'Batman: The Dark Knight Rises' WHERE ID = 1";
+
     const auto start = std::chrono::high_resolution_clock::now();
 
-    QueryPipeline::Parser::Parse(selectMovies, dbName);
+//    QueryPipeline::Parser::Parse(updateMovies, dbName);
 
     const auto& databases = server.GetCatalog();
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);

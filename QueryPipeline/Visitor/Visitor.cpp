@@ -19,6 +19,8 @@ namespace QueryPipeline {
       return visit(context->createSchemaStatement());
     if (context->deleteStatement())
       return visit(context->deleteStatement());
+    if(context->updateStatement())
+      return visit(context->updateStatement());
     
     return nullptr;
   }
@@ -292,5 +294,32 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
         columns.push_back(columnName->getText());
 
       return columns; // Return vector of column names
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitUpdateColumn(SQLParser::UpdateColumnContext *context){
+    return Statements::UpdateColumnStatement{
+  std::any_cast<string>(visit(context->columnName())),
+      std::any_cast<Field>(visit(context->literalValue()))
+    };
+}
+  antlrcpp::Any SQLVisitorImplementation::visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context){
+    vector<Statements::UpdateColumnStatement> columns;
+
+    for(const auto& updateColumn : context->updateColumn())
+      columns.push_back(std::any_cast<Statements::UpdateColumnStatement>(visit(updateColumn)));
+
+    return columns;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitUpdateStatement(SQLParser::UpdateStatementContext *context){
+    auto* statement = new Statements::UpdateStatement();
+
+    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+
+    statement->columns = std::any_cast<std::vector<Statements::UpdateColumnStatement>>(visit(context->updateColumnsList()));
+
+    statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));
+
+    return statement;
   }
 }

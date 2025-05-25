@@ -1,10 +1,9 @@
 #include "Page.h"
 #include "../Database.h"
-#include "../Table/Table.h"
-#include "../Row/Row.h"
 #include "./LargeObject/LargeDataPage.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Block/Block.h"
+#include "../Storage/StorageManager/StorageManager.h"
 
 #include <cstring>
 
@@ -202,15 +201,27 @@ namespace Pages
                 this->rows.erase(this->rows.begin() + i);
                 i--;
 
-                //delete row to deallocate space
-                delete row;
+                RowHeader *rowHeader = row->GetHeader();
 
-                //deleted row, mark it as dirty
-                this->isDirty = true;
+                for (const auto &block : row->GetData())
+                {
+                    if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
+                    {
+                        DataObjectPointer objectPointer;
+                        memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
+
+                    }
+                }
+              //delete row to deallocate space
+              delete row;
+
+              //deleted row, mark it as dirty
+              this->isDirty = true;
             }
         }
 
         this->header.pageSize = this->rows.size();
+        this->UpdateBytesLeft();
     }
 
     void Page::SetFileName(const string &filename) { this->filename = filename; }

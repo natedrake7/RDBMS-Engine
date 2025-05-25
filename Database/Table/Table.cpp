@@ -210,7 +210,7 @@ namespace DatabaseEngine::StorageTypes {
         Row* row = this->CreateRow(inputData);
 
         this->InsertLargeObjectToPage(row);
-         auto result =  this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
+        auto result =  this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
@@ -555,6 +555,101 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
+    void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
+        if(this->header.indexAllocationMapPageId == 0)
+          return;
+
+        const auto& filename = this->database->GetFileName();
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
+
+        HashSet<column_index_t> updatedColumns;
+        for(const auto& update : updates)
+              updatedColumns.Add(update.GetColumnIndex());
+
+        for (const auto& extentId : tableExtentIds){
+          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+          const page_id_t pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(extentFirstPageId);
+
+          const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
+
+          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                      ? extentFirstPageId
+                                      : extentFirstPageId + 1;
+
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
+            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+              break;
+
+            Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
+
+            if (page->GetPageSize() == 0)
+              continue;
+
+            auto* rows = page->GetDataRowsUnsafe();
+
+            std::vector<extent_id_t> allocatedExtents;
+            extent_id_t startingExtentIndex = 0;
+
+            for(int i = 0; i < rows->size(); i++){
+                const auto& row = (*rows)[i];
+                if(row->Evaluate(expression)){
+                  const auto diff = this->UpdateRow(row, updates);
+
+                  if(page->GetBytesLeft() - diff > 0){
+                    page->UpdateBytesLeft();
+                    continue;
+                  }
+
+                  this->DeleteLargeObjectFromPage(row, updatedColumns);
+
+                  //TODO add Forwarding Ptr to reduce index updates
+                  rows->erase(rows->begin() + i);
+
+                  this->InsertLargeObjectToPage(row);
+                  auto result = this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
+                }
+            }
+          }
+        }
+    }
+
+    int Table::UpdateRow(Row *row, const vector<Field> & updates){
+      auto& data = row->GetData();
+
+      const auto prevRowSize = row->GetRowSize();
+
+      for (const auto & i : updates)
+      {
+        const column_index_t &associatedColumnIndex = i.GetColumnIndex();
+
+        auto *block = data.at(associatedColumnIndex);
+
+        const ColumnType columnType = columns[associatedColumnIndex]->GetColumnType();
+
+        if (columnType > Constants::ColumnType::ColumnTypeCount)
+          throw invalid_argument("Table::InsertRow: Unsupported Column Type");
+
+        if (i.GetIsNull())
+        {
+          block->SetData(nullptr, 0);
+          row->SetNullBitMapValue(associatedColumnIndex, true);
+          continue;
+        }
+
+        block->SetData(i.GetRawData(), i.GetSize());
+      }
+
+      const auto rowSize = row->GetRowSize();
+
+      return static_cast<int>(rowSize - prevRowSize);
+    }
+
     unordered_set<column_index_t> Table::GetClusteredIndexesMap() const
     {
         unordered_set<column_index_t> hashSet = {};
@@ -564,5 +659,37 @@ namespace DatabaseEngine::StorageTypes {
 
         return hashSet;
     }
+
+    void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns){
+      const auto& filename = this->database->GetFileName();
+
+      RowHeader* rowHeader = row->GetHeader();
+
+      for(const auto& block : row->GetData()){
+        if(!updatedColumns.Contains(block->GetColumnIndex())
+          || !rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
+          continue;
+
+        auto objectPointer = block->GeObjectPointer();
+
+        auto largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPointer.pageId);
+
+        auto* largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, largeObjectExtentId, this);
+
+        auto* objectPtr = largeObjectPage->DeleteObject();
+
+        while(objectPtr->nextPageId != 0){
+            largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPtr->nextPageId);
+
+            largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, largeObjectExtentId, this);
+
+            DataObject* prevObject = objectPtr;
+            objectPtr = largeObjectPage->DeleteObject();
+
+            delete prevObject;
+        }
+      }
+    }
+
 
 } // namespace DatabaseEngine::StorageTypes

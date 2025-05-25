@@ -126,5 +126,41 @@ namespace QueryPipeline {
   PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(){
     return new PhysicalPlan::PhysicalTableCreate(dbName, this->table, this->columns, this->primaryKey, this->constraintName);
   }
+
+  LogicalUpdate::LogicalUpdate(const string & dbName, Statements::TableName *table, vector<Field> & fields, Expressions::Expression *expression)
+  : LogicalPlan(dbName), table(table), fields(std::move(fields)), expression(expression) {}
+
+  PhysicalPlan::PhysicalOperator* LogicalUpdate::ToPhysical(){
+      const auto indexes = Server::ServerInstance::Get().SelectIndexes(dbName, this->table->name);
+
+      //if no indexes are available heap scan
+      if (indexes.empty())
+        return new PhysicalPlan::PhysicalHeapDelete(dbName, this->table, this->expression);
+
+      //if expression is complex defer from index seek
+      const bool canIndexSeek = expression != nullptr && !expression->IsComplex();
+      
+      HashSet<column_index_t> expressionColumns;
+
+      if (expression != nullptr)
+        expression->GetColumns(expressionColumns);
+
+
+      for (const auto& index: indexes) {
+        if (canIndexSeek) {
+          for (const auto& column: index.columns) {
+            //if columns is first prefer it, else break because index scan will occur
+            //index seek
+            if (!expressionColumns.Contains(column))
+              break;
+          }
+        }
+
+        //find the first non clustered and use it
+        return new PhysicalPlan::PhysicalIndexScanDelete(dbName, this->table, this->expression);
+      }
+
+      return new PhysicalPlan::PhysicalHeapDelete(this->dbName, this->table, this->expression);
+  }
 }
 

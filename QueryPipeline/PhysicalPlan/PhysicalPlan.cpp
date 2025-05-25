@@ -282,4 +282,52 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     return nullptr;
   }
+
+  PhysicalHeapUpdate::PhysicalHeapUpdate(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+  : PhysicalOperator(dbName), table(table), expression(expression), fields(std::move(fields)) {}
+
+  PhysicalHeapUpdate::~PhysicalHeapUpdate(){
+    delete this->expression;
+    delete this->table;
+  }
+
+  PhysicalPlanResult* PhysicalHeapUpdate::Execute(){
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+
+    tablePtr->HeapUpdate(this->expression, this->fields);
+
+    return result;
+  }
+
+  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+  : PhysicalOperator(dbName), table(table), expression(expression), fields(std::move(fields)) {}
+
+  PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
+    delete this->expression;
+    delete this->table;
+  }
+
+  PhysicalPlanResult* PhysicalIndexScanUpdate::Execute(){
+    return nullptr;
+  }
+
+
+  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+    : PhysicalOperator(dbName), table(table), expression(expression), fields(std::move(fields)) {}
+
+  PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){
+    delete this->expression;
+    delete this->table;
+  }
+
+  PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(){
+    return nullptr;
+  }
+
 }

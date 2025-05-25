@@ -93,7 +93,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
             
             static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
-            void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
+            void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
             AdditionalDataTypes::ResultStatus InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
             void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
@@ -106,6 +106,9 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
 
             [[nodiscard]] Row* CreateRow(const vector<Field>& inputData)const;
+
+            int UpdateRow(Row *row, const vector<Field> &updates);
+            void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
 
         public:
             Table(const string &tableName, const std::string& schema, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
@@ -158,6 +161,8 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexScanDelete(const Expressions::Expression* expression);
 
             void ClusteredIndexSeekDelete(const Expressions::Expression* expression);
+
+            void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
 
             void Truncate();
 

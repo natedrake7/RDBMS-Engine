@@ -9,7 +9,6 @@ namespace Pages {
     DataObject::DataObject()
     {
         this->objectSize = 0;
-        this->nextObjectIndex = 0;
         this->nextPageId = 0;
         this->object = nullptr;
     }
@@ -21,13 +20,11 @@ namespace Pages {
 
     DataObjectPointer::DataObjectPointer()
     {
-        this->objectIndex = 0;
         this->pageId = 0;
     }
 
-    DataObjectPointer::DataObjectPointer(const large_page_index_t& objectIndex, const page_id_t& pageId)
+    DataObjectPointer::DataObjectPointer(const page_id_t& pageId)
     {
-        this->objectIndex = objectIndex;
         this->pageId = pageId;
     }
 
@@ -48,65 +45,56 @@ namespace Pages {
 
     LargeDataPage::~LargeDataPage()
     {
-        for(const auto& dataObject : this->data)
-            delete dataObject;
+        delete this->data;
     }
 
     void LargeDataPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t& offSet, fstream* filePtr)
     {
-        for(int i = 0; i < this->header.pageSize; i++)
-        {
-            DataObject* dataObject = new DataObject();
+      this->data = new DataObject();
 
-            memcpy(&dataObject->objectSize, data.data() + offSet, sizeof(page_size_t));
-            offSet += sizeof(page_size_t);
+      memcpy(&this->data->objectSize, data.data() + offSet, sizeof(page_size_t));
+      offSet += sizeof(page_size_t);
 
-            memcpy(&dataObject->nextPageId, data.data() + offSet, sizeof(page_id_t));
-            offSet += sizeof(page_id_t);
+      memcpy(&this->data->nextPageId, data.data() + offSet, sizeof(page_id_t));
+      offSet += sizeof(page_id_t);
 
-            memcpy(&dataObject->nextObjectIndex, data.data() + offSet, sizeof(large_page_index_t));
-            offSet += sizeof(large_page_index_t);
-
-            dataObject->object = new unsigned char[dataObject->objectSize];
-            memcpy(dataObject->object, data.data() + offSet, dataObject->objectSize);
-            offSet += dataObject->objectSize;
-
-            this->data.push_back(dataObject);
-        }
-
+      this->data->object = new unsigned char[this->data->objectSize];
+      memcpy(this->data->object, data.data() + offSet, this->data->objectSize);
+      offSet += this->data->objectSize;
     }
 
     void LargeDataPage::WritePageToFile(fstream *filePtr)
     {
         this->WritePageHeaderToFile(filePtr);
 
-        for(const auto& dataObject : this->data)
-        {
-            filePtr->write(reinterpret_cast<const char*>(&dataObject->objectSize), sizeof(page_size_t));
-            filePtr->write(reinterpret_cast<const char*>(&dataObject->nextPageId), sizeof(page_id_t));
-            filePtr->write(reinterpret_cast<const char*>(&dataObject->nextObjectIndex), sizeof(large_page_index_t));
-            filePtr->write(reinterpret_cast<const char*>(dataObject->object), dataObject->objectSize);
-        }
+      filePtr->write(reinterpret_cast<const char*>(&this->data->objectSize), sizeof(page_size_t));
+      filePtr->write(reinterpret_cast<const char*>(&this->data->nextPageId), sizeof(page_id_t));
+      filePtr->write(reinterpret_cast<const char*>(this->data->object), this->data->objectSize);
     }
 
-    DataObject* LargeDataPage::InsertObject(const object_t *object, const page_size_t& size, page_offset_t* objectPosition)
+    DataObject* LargeDataPage::InsertObject(const object_t *object, const page_size_t& size)
     {
-        DataObject* dataObject = new DataObject();
-        dataObject->objectSize = size;
+        this->data = new DataObject();
+        this->data->objectSize = size;
 
-        dataObject->object = new object_t[size];
-        memcpy(dataObject->object, object, dataObject->objectSize);
-
-        this->data.push_back(dataObject);
-
-        *objectPosition = this->data.size() - 1;
+        this->data->object = new object_t[size];
+        memcpy(this->data->object, object, this->data->objectSize);
 
         this->header.bytesLeft -= (size + OBJECT_METADATA_SIZE_T);
-        this->header.pageSize = this->data.size();
+        this->header.pageSize = 1;
         this->isDirty = true;
 
-        return dataObject;
+        return this->data;
     }
 
-    DataObject* LargeDataPage::GetObject(const page_offset_t &offset) { return this->data.at(offset); }
+    DataObject* LargeDataPage::GetObject() { return this->data; }
+
+    DataObject* LargeDataPage::DeleteObject(){
+      this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize();
+      this->header.pageSize = 0;
+
+      this->isDirty = true;
+
+      return this->data;
     }
+}

@@ -47,24 +47,17 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto &data = row->GetData()[columnIndex]->GetBlockData();
 
-        large_page_index_t objectIndex;
-
-        if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize) 
+        if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize)
         {
-
-            largeDataPage->InsertObject(data + offset, remainingBlockSize,
-                                        &objectIndex);
+            largeDataPage->InsertObject(data + offset, remainingBlockSize);
 
             this->database->SetPageMetaDataToPfs(largeDataPage);
 
-            Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion, objectIndex,
-                                                    largeDataPage->GetPageId(),
-                                                    columnIndex);
+            Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion,largeDataPage->GetPageId(),columnIndex);
 
             if (previousDataObject != nullptr) 
             {
-            (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
-            (*previousDataObject)->nextObjectIndex = objectIndex;
+              (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
             }
 
             return;
@@ -76,29 +69,24 @@ namespace DatabaseEngine::StorageTypes {
         remainingBlockSize -= bytesToBeInserted;
 
         DataObject *dataObject = largeDataPage->InsertObject(
-            data + offset, bytesToBeInserted, &objectIndex);
+            data + offset, bytesToBeInserted);
 
         this->database->SetPageMetaDataToPfs(largeDataPage);
 
         if (previousDataObject != nullptr) 
-        {
             (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
-            (*previousDataObject)->nextObjectIndex = objectIndex;
-        }
 
         offset += bytesToBeInserted;
 
         this->RecursiveInsertToLargePage(row, offset, columnIndex, remainingBlockSize,
                                         false, &dataObject);
 
-        Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion, objectIndex,
-                                                largeDataPage->GetPageId(),
-                                                columnIndex);
+        Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion,largeDataPage->GetPageId(),columnIndex);
     }
 
     LargeDataPage *Table::GetOrCreateLargeDataPage() const 
     {
-        LargeDataPage *largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId, OBJECT_METADATA_SIZE_T + 1);
+        LargeDataPage *largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId);
 
         return (largeDataPage == nullptr)
                     ? this->database->CreateLargeDataPage(this->header.tableId)
@@ -108,18 +96,15 @@ namespace DatabaseEngine::StorageTypes {
     void Table::LinkLargePageDataObjectChunks(DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex) 
     {
         if (dataObject != nullptr) 
-        {
             dataObject->nextPageId = lastLargePageId;
-            dataObject->nextObjectIndex = objectIndex;
-        }
-        }
+    }
 
-    void Table::InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const large_page_index_t &objectIndex, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const 
+    void Table::InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const
     {
         if (!isFirstRecursion)
             return;
 
-        const DataObjectPointer objectPointer(objectIndex, lastLargePageId);
+        const DataObjectPointer objectPointer(lastLargePageId);
 
         Block *block = new Block(&objectPointer, sizeof(DataObjectPointer),
                                 this->columns[largeBlockIndex]);

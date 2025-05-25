@@ -116,4 +116,18 @@ namespace QueryPipeline::Statements {
     QueryPipeline::LogicalPlan * ToLogical() override;
   };
 
+  struct UpdateColumnStatement{
+    std::string name;
+    Field value;
+  };
+
+  struct UpdateStatement final : Statement {
+    TableName* table;
+    std::vector<UpdateColumnStatement> columns;
+    WhereClause where;
+
+    bool Validate() override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
+  };
+
 }

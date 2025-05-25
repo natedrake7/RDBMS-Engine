@@ -141,6 +141,39 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalPlanResult* Execute() override;
   };
 
+  class PhysicalHeapUpdate final : public PhysicalOperator{
+    Statements::TableName* table;
+    Expressions::Expression* expression;
+    std::vector<Field> fields;
+
+  public:
+    PhysicalHeapUpdate(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    ~PhysicalHeapUpdate()override;
+    PhysicalPlanResult* Execute() override;
+  };
+
+  class PhysicalIndexScanUpdate final : public PhysicalOperator{
+    Statements::TableName* table;
+    Expressions::Expression* expression;
+    std::vector<Field> fields;
+
+  public:
+    PhysicalIndexScanUpdate(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    ~PhysicalIndexScanUpdate()override;
+    PhysicalPlanResult* Execute() override;
+  };
+
+  class PhysicalIndexSeekUpdate final : public PhysicalOperator{
+    Statements::TableName* table;
+    Expressions::Expression* expression;
+    std::vector<Field> fields;
+
+  public:
+    PhysicalIndexSeekUpdate(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    ~PhysicalIndexSeekUpdate()override;
+    PhysicalPlanResult* Execute() override;
+  };
+
   class PhysicalTableCreate final : public PhysicalOperator{
       Statements::TableName*  table;
       std::string constraintName;

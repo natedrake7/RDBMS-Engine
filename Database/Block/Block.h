@@ -72,7 +72,6 @@ namespace DatabaseEngine::StorageTypes {
     };
 }
 
-
 bool operator==(const DatabaseEngine::StorageTypes::Block& block, const Field& field);
 bool operator!=(const DatabaseEngine::StorageTypes::Block& block, const Field& field);
 bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Field &field);

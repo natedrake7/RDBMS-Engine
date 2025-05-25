@@ -247,7 +247,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         LargeDataPage* page = this->table->GetLargeDataPage(objectPointer.pageId);
 
-        const DataObject* object = page->GetObject(objectPointer.objectIndex);
+        const DataObject* object = page->GetObject();
 
         uint32_t currentObjectSize = object->objectSize;
 
@@ -258,10 +258,9 @@ namespace DatabaseEngine::StorageTypes {
         while (object->nextPageId != 0)
         {
             const page_id_t nextPageId = object->nextPageId;
-            const large_page_index_t nextObjectIndex = object->nextObjectIndex;
-            
+
             page = this->table->GetLargeDataPage(nextPageId);
-            object = page->GetObject(nextObjectIndex);
+            object = page->GetObject();
 
             const page_size_t nextObjectSize = object->objectSize;
 
