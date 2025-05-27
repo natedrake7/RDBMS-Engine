@@ -259,6 +259,11 @@ namespace QueryPipeline::Statements {
 
 
   QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
-    return nullptr;
+    vector<Field> columnsUpdates;
+
+    for(const auto& column: this->columns)
+      columnsUpdates.emplace_back(column.value);
+
+    return new QueryPipeline::LogicalUpdate(this->dbName, this->table, columnsUpdates, this->where.expression);
   }
 }

@@ -38,6 +38,7 @@ namespace Expressions{
       return false;
 
     this->columnIndex = header.tablePosition;
+    this->value.Validate(header);
 
     return true;
   }

@@ -56,8 +56,6 @@ namespace Pages
 
         void InsertRow(DatabaseEngine::StorageTypes::Row *row, int* indexPosition = nullptr);
         void InsertRow(DatabaseEngine::StorageTypes::Row *row, const int& indexPosition);
-        void DeleteRow(DatabaseEngine::StorageTypes::Row *row);
-        void UpdateRows(const vector<DatabaseEngine::StorageTypes::Block> *updates, const vector<Field> *conditions);
 
         virtual void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
         virtual void WritePageToFile(fstream *filePtr);
@@ -77,13 +75,11 @@ namespace Pages
         [[nodiscard]] const page_size_t &GetBytesLeft() const;
         void SetDirty();
 
-        void GetRows(vector<DatabaseEngine::StorageTypes::Row> *copiedRows, const DatabaseEngine::StorageTypes::Table &table, const size_t &rowsToSelect, const vector<Field> *conditions = nullptr) const;
-        void UpdateRows(const vector<DatabaseEngine::StorageTypes::Block*>* updates, const vector<Field> *conditions = nullptr);
+        void GetRows(vector<DatabaseEngine::StorageTypes::Row> *copiedRows, const DatabaseEngine::StorageTypes::Table &table, const size_t &rowsToSelect) const;
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const PageType &GetPageType() const;
         void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
         [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
-        void SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const DatabaseEngine::StorageTypes::Table &table);
     };
 }

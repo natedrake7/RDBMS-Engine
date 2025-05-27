@@ -548,6 +548,8 @@ bool StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader
     case PageType::INDEX:
       *page = new IndexPage(pageHeader);
       break;
+    case PageType::OVERFLOW:
+      *page = new OverflowPage(pageHeader);
     default:
       return false;
   }

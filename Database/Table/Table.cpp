@@ -596,25 +596,11 @@ namespace DatabaseEngine::StorageTypes {
             std::vector<extent_id_t> allocatedExtents;
             extent_id_t startingExtentIndex = 0;
 
-            for(int i = 0; i < rows->size(); i++){
-                auto* row = (*rows)[i];
+            for(auto* row : *rows){
+                if(!row->Evaluate(expression))
+                  continue;
 
-                if(row->Evaluate(expression)){
-                  const auto diff = row->Update(updates);
-
-                  if(page->GetBytesLeft() - diff > 0){
-                    page->UpdateBytesLeft();
-                    continue;
-                  }
-
-                  Table::DeleteLargeObjectFromPage(row, updatedColumns, this);
-
-                  //TODO add Forwarding Ptr to reduce index updates
-                  rows->erase(rows->begin() + i);
-
-                  this->InsertLargeObjectToPage(row);
-                  auto result = this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
-                }
+                this->HandleRowUpdate(page, row, updates, updatedColumns);
             }
           }
         }
@@ -630,8 +616,8 @@ namespace DatabaseEngine::StorageTypes {
         return hashSet;
     }
 
-    void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns, const Table* table){
-      const auto& filename = table->GetFileName();
+    void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns){
+      const auto& filename = this->database->GetFileName();
 
       RowHeader* rowHeader = row->GetHeader();
 
@@ -640,11 +626,13 @@ namespace DatabaseEngine::StorageTypes {
           || !rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
           continue;
 
+        rowHeader->largeObjectBitMap->Set(block->GetColumnIndex(), false);
+
         auto objectPointer = block->GeObjectPointer();
 
         auto largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPointer.pageId);
 
-        auto* largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, largeObjectExtentId, table);
+        auto* largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, largeObjectExtentId, this);
 
         auto* objectPtr = largeObjectPage->DeleteObject();
 
@@ -656,26 +644,110 @@ namespace DatabaseEngine::StorageTypes {
         while(objectPtr->nextPageId != 0){
             largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPtr->nextPageId);
 
-            largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, largeObjectExtentId, table);
+            auto* nextLargeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, largeObjectExtentId, this);
 
             DataObject* prevObject = objectPtr;
-            objectPtr = largeObjectPage->DeleteObject();
+            objectPtr = nextLargeObjectPage->DeleteObject();
 
             pfsPage = StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
 
-            pfsPage->SetPageMetaData(largeObjectPage);
-            pfsPage->SetPageFreed(largeObjectPage->GetPageId());
+            pfsPage->SetPageMetaData(nextLargeObjectPage);
+            pfsPage->SetPageFreed(nextLargeObjectPage->GetPageId());
 
-            delete prevObject;
         }
       }
     }
 
-    void Table::ClusteredIndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
+    void Table::ClusteredIndexScanUpdate(Expressions::Expression *expression, const vector<Field> & updates){
+      auto* tree = this->GetClusteredIndexedTree();
 
-
-
+      tree->IndexScanUpdate(expression, updates);
     }
 
     string Table::GetFileName() const{ return this->database->GetFileName(); }
+
+    int Table::HandleRowOverflow(Row *row){
+      auto* largestBlock = row->FindLargestVariableLengthColumn();
+
+      if(largestBlock == nullptr)
+        return -1;
+
+      auto* overflowPage = this->database->GetLastOverflowPage(this->header.tableId, largestBlock->GetBlockSize());
+
+      int indexPos = 0;
+      overflowPage->InsertObject(largestBlock->GetBlockData(), largestBlock->GetBlockSize(), indexPos);
+
+      row->SetOverflowBitMapValue(largestBlock->GetColumnIndex(), true);
+
+      const auto pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(overflowPage->GetPageId());
+
+      auto* pfsPage = StorageManager::Get().GetPageFreeSpacePage(this->database->GetFileName(), pfsPageId);
+
+      pfsPage->SetPageMetaData(overflowPage);
+
+      OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
+      largestBlock->SetData(&ptr, sizeof(OverflowPointer));
+
+      return largestBlock->GetBlockSize();
+    }
+
+    void Table::DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t> & updatedColumns){
+      const auto& filename = this->database->GetFileName();
+
+      RowHeader* rowHeader = row->GetHeader();
+
+      for(const auto& block : row->GetData()){
+        if(!updatedColumns.Contains(block->GetColumnIndex())
+          || !rowHeader->overflowBitMap->Get(block->GetColumnIndex()))
+            continue;
+
+        rowHeader->overflowBitMap->Set(block->GetColumnIndex(), false);
+
+        auto objectPointer = block->GetOverflowPointer();
+
+        auto overflowExtentId = Database::CalculateExtentIdByPageId(objectPointer.pageId);
+
+        auto* overflowPage = StorageManager::Get().GetOverflowPage(filename, objectPointer.pageId, overflowExtentId, this);
+
+        auto* overflowRow = overflowPage->DeleteObject(objectPointer.index);
+
+        auto* pfsPage = StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
+
+        pfsPage->SetPageMetaData(overflowPage);
+
+        delete overflowRow;
+      }
+    }
+
+    void Table::HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Field> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap){
+        this->DeleteLargeObjectFromPage(row, updatedColumns);
+        this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+
+        int diff = row->Update(updates);
+
+        if(page->GetBytesLeft() - diff > 0){
+          page->UpdateBytesLeft();
+          return;
+        }
+
+        this->InsertLargeObjectToPage(row);
+
+        if(isHeap && (PAGE_SIZE - PageHeader::GetPageHeaderSize() - row->GetRowSize()) > 0){
+          vector<extent_id_t> allocatedExtents;
+          extent_id_t startingExtentIndex = 0;
+
+          auto result = this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
+          return;
+        }
+
+        while(page->GetBytesLeft() - diff < 0){
+          const int result = this->HandleRowOverflow(row);
+          if(result == -1)
+            break;
+
+          diff -= result;
+        }
+
+
+    }
 } // namespace DatabaseEngine::StorageTypes

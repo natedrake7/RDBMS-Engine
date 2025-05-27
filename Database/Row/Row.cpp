@@ -12,6 +12,7 @@
 #include <iostream>
 #include <stdexcept>
 #include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
+#include "../Pages/OverflowPage/OverflowPage.h"
 
 using namespace Pages;
 using namespace DataTypes;
@@ -24,12 +25,14 @@ namespace DatabaseEngine::StorageTypes {
         this->maxRowSize = 0;
         this->nullBitMap = nullptr;
         this->largeObjectBitMap = nullptr;
+        this->overflowBitMap = nullptr;
     }
 
     RowHeader::~RowHeader()
     {
         delete this->nullBitMap;
         delete this->largeObjectBitMap;
+        delete this->overflowBitMap;
     }
 
     RowHeader & RowHeader::operator=(const RowHeader &otherHeader)
@@ -254,7 +257,7 @@ namespace DatabaseEngine::StorageTypes {
 
         uint32_t currentObjectSize = object->objectSize;
 
-        unsigned char* buffer = new unsigned char[currentObjectSize];
+        auto* buffer = new unsigned char[currentObjectSize];
 
         memcpy(buffer, object->object, currentObjectSize);
 
@@ -284,7 +287,7 @@ namespace DatabaseEngine::StorageTypes {
         return buffer;
     }
 
-    void Row::SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) { this->header.nullBitMap->Set(position, value); }
+    void Row::SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) const { this->header.nullBitMap->Set(position, value); }
 
     bool Row::GetNullBitMapValue(const bit_map_pos_t &position) const { return this->header.nullBitMap->Get(position); }
 
@@ -362,6 +365,8 @@ namespace DatabaseEngine::StorageTypes {
         block->SetData(i.GetRawData(), i.GetSize());
       }
 
+      this->UpdateRowSize();
+
       const auto rowSize = this->GetRowSize();
 
       return static_cast<int>(rowSize - prevRowSize);
@@ -390,4 +395,45 @@ namespace DatabaseEngine::StorageTypes {
 
       return largestColumn;
     }
+
+    void Row::SetOverflowBitMapValue(const bit_map_pos_t & position, const bool & value) const{ this->header.overflowBitMap->Set(position, value); }
+
+    bool Row::GetOverflowBitMapValue(const bit_map_pos_t & position) const{ return this->header.overflowBitMap->Get(position); }
+
+    vector<Block*> Row::GetBlockCopies() const{
+
+      vector<Block*> copyBlocks;
+      for (const auto &block : this->data)
+      {
+        Block *blockCopy = new Block(block);
+        if (this->header.largeObjectBitMap->Get(block->GetColumnIndex()))
+        {
+            DataObjectPointer objectPointer;
+            memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
+
+            uint32_t objectSize;
+            unsigned char *largeValue = this->GetLargeObjectValue(objectPointer, &objectSize);
+            blockCopy->SetData(largeValue, objectSize);
+
+            delete[] largeValue;
+        }
+        else if(this->header.overflowBitMap->Get(block->GetColumnIndex())){
+          OverflowPointer overflowPointer;
+           memcpy(&overflowPointer, block->GetBlockData(), sizeof(OverflowPointer));
+
+          const auto* largeValue = this->GetOverflowValue(overflowPointer);
+          blockCopy->SetData(largeValue->object, largeValue->objectSize);
+        }
+
+        copyBlocks.push_back(blockCopy);
+      }
+
+    return copyBlocks;
+  }
+
+  Pages::OverflowRow* Row::GetOverflowValue(const Pages::OverflowPointer & objectPointer) const{
+    OverflowPage* page = this->table->GetOverflowPage(objectPointer.pageId);
+
+    return page->GetObject(objectPointer.index);
+  }
 }

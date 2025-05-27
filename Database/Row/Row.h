@@ -2,6 +2,7 @@
 #include <vector>
 #include "../Constants.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
+#include "../Pages/OverflowPage/OverflowPage.h"
 
 namespace DatabaseEngine
 {
@@ -77,9 +78,15 @@ namespace DatabaseEngine::StorageTypes
 
         unsigned char *GetLargeObjectValue(const Pages::DataObjectPointer &objectPointer, uint32_t *objectSize) const;
 
-        void SetNullBitMapValue(const bit_map_pos_t &position, const bool &value);
+        [[nodiscard]] Pages::OverflowRow* GetOverflowValue(const Pages::OverflowPointer &objectPointer) const;
+
+        void SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) const;
+
+        void SetOverflowBitMapValue(const bit_map_pos_t &position, const bool &value) const;
 
         [[nodiscard]] bool GetNullBitMapValue(const bit_map_pos_t &position) const;
+
+        [[nodiscard]] bool GetOverflowBitMapValue(const bit_map_pos_t &position) const;
 
         RowHeader *GetHeader();
 
@@ -94,5 +101,7 @@ namespace DatabaseEngine::StorageTypes
         void DeleteLargeObjectFromPage(const HashSet<column_index_t>& updatedColumns);
 
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
+
+        [[nodiscard]] vector<Block*> GetBlockCopies() const;
     };
 }

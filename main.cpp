@@ -63,34 +63,35 @@ int main()
     const string selectActors = "SELECT * FROM dbo.Actors";
 
     //select statement
-    const string selectMovies = "SELECT * FROM movies.Movies";
+    const string selectMovies = "SELECT * FROM dbo.Movies";
 
     //insert statement
-    const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorAge) VALUES(3, 'Robert Kirkman', 42)";
+    const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorDesc, ActorAge) VALUES(3, 'Robert Kirkman', 'kalispera', 42)";
 
-    const string insertMovies = "INSERT INTO movies.Movies(ID, MovieName, MovieLength) VALUES(3, 'Batman: The Dark Knight', 2)";
+    const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName, MovieDesc) VALUES(3, 'Batman: The Dark Knight', 'hello its me')";
 
     const string deleteMovies = "DELETE FROM movies.Movies WHERE MovieName = 'Batman: The Dark Knight'";
 
     //create table
-    const string createMoviesTable = "CREATE TABLE movies.Movies ( "
+    const string createMoviesTable = "CREATE TABLE dbo.Movies ( "
                                      "ID INT NOT NULL, MovieName VARCHAR(255) NOT NULL, "
-                                     "MovieLength INT NOT NULL, "
+                                     "MovieDesc VARCHAR(MAX) NOT NULL, "
                                      "CONSTRAINT PK_Shows PRIMARY KEY (ID, MovieName)"
                                      ")";
 
     //create table
-    const string createActorsTable = "CREATE TABLE Actors ( ID INT NULL, ActorName VARCHAR(255) NULL, ActorAge INT NOT NULL)";
+    const string createActorsTable = "CREATE TABLE Actors ( ID INT NULL, ActorName VARCHAR(255) NULL, ActorDesc VARCHAR(MAX), ActorAge INT NOT NULL)";
 
     const string createDb = "CREATE DATABASE MoviesDb";
 
     const string schemaCreate = "CREATE SCHEMA movies";
 
-    const string updateMovies = "UPDATE movies.Movies SET MovieName = 'Batman: The Dark Knight Rises' WHERE ID = 1";
+    const string updateMovies = "UPDATE dbo.Movies SET MovieDesc = 'Batman Fights Bane' WHERE ID = 1001";
+
+    const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID = 1001";
 
     const auto start = std::chrono::high_resolution_clock::now();
-
-
+    QueryPipeline::Parser::Parse(updateMovies, dbName);
     QueryPipeline::Parser::Parse(selectMovies, dbName);
 
     const auto& databases = server.GetCatalog();

@@ -89,18 +89,17 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] unordered_set<column_index_t> GetClusteredIndexesMap() const;
             
-            void InsertLargeObjectToPage(Row *row);
             [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
-            
+
             static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
             AdditionalDataTypes::ResultStatus InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
             void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
-        
+
             static void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
             static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);
-        
+
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
@@ -123,7 +122,9 @@ namespace DatabaseEngine::StorageTypes
 
             AdditionalDataTypes::ResultStatus InsertRow(const vector<Field> &inputData);
 
-            static void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns, const Table* table);
+            void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
+
+            void DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
 
             string &GetTableName();
 
@@ -140,6 +141,8 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] const vector<Column *> &GetColumns() const;
 
             [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId) const;
+
+            [[nodiscard]] Pages::OverflowPage *GetOverflowPage(const page_id_t &pageId) const;
 
             [[nodiscard]] const vector<vector<column_index_t>>& GetNonClusteredIndexes() const;
 
@@ -166,7 +169,7 @@ namespace DatabaseEngine::StorageTypes
 
             void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
 
-            void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
+            void ClusteredIndexScanUpdate(Expressions::Expression* expression, const vector<Field> &updates);
 
             void Truncate();
 
@@ -207,5 +210,11 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Database* GetDatabase() const;
 
             [[nodiscard]] vector<ColumnType> GetColumnTypeByTreeId(const uint8_t& treeId) const;
+
+            int HandleRowOverflow(Row *row);;
+
+            void InsertLargeObjectToPage(Row *row);
+
+            void HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Field> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap = true);
     };
 }

@@ -89,11 +89,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
       using namespace DatabaseEngine::StorageTypes;
       const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-      Table* table = db->OpenTable(this->table->schema, this->table->name);
+      Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
       auto* result = new PhysicalPlanResult();
 
-      table->HeapScan(&result->rows, -1);
+      tablePtr->HeapScan(&result->rows, -1);
 
       return result;
     }
@@ -156,8 +156,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
     this->fields[0].SetData(1001);
-    const auto str = std::string(1000000000, 'a');
-    this->fields[1].SetData(str);
+
+    const auto smallStr = std::string(1000, 'w');
+
+    this->fields[1].SetData(smallStr);
+
+    const auto str = std::string(10000, 'a');
+    this->fields[2].SetData(str);
     const auto insertResult = tablePtr->InsertRow(fields);
 
     // const auto insertResult = tablePtr->InsertRow(fields);
@@ -321,9 +326,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
-    tablePtr->HeapUpdate(this->expression, this->fields);
-
-
+    tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
 
     return result;
   }

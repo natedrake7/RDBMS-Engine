@@ -145,7 +145,6 @@ namespace QueryPipeline {
       if (expression != nullptr)
         expression->GetColumns(expressionColumns);
 
-
       for (const auto& index: indexes) {
         if (canIndexSeek) {
           for (const auto& column: index.columns) {
@@ -154,7 +153,7 @@ namespace QueryPipeline {
             if (!expressionColumns.Contains(column))
               break;
 
-            return new PhysicalPlan::PhysicalIndexSeekUpdate(dbName, this->table, this->expression, this->fields);
+//            return new PhysicalPlan::PhysicalIndexSeekUpdate(dbName, this->table, this->expression, this->fields);
           }
         }
 

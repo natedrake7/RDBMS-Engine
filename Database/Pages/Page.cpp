@@ -68,11 +68,6 @@ namespace Pages
         this->isDirty = true;
     }
 
-    void Page::DeleteRow(Row *row)
-    {
-        this->isDirty = true;
-    }
-
     void Page::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
     {
         const auto &columns = table->GetColumns();
@@ -95,6 +90,7 @@ namespace Pages
 
         rowHeader->nullBitMap->GetDataFromFile(data, offSet);
         rowHeader->largeObjectBitMap->GetDataFromFile(data, offSet);
+        rowHeader->overflowBitMap->GetDataFromFile(data, offSet);
 
         for (int j = 0; j < columns.size(); j++)
         {
@@ -134,6 +130,7 @@ namespace Pages
         filePtr->write(reinterpret_cast<const char *>(&rowHeader->maxRowSize), sizeof(size_t));
         rowHeader->nullBitMap->WriteDataToFile(filePtr);
         rowHeader->largeObjectBitMap->WriteDataToFile(filePtr);
+        rowHeader->overflowBitMap->WriteDataToFile(filePtr);
 
         column_index_t columnIndex = 0;
         for (const auto &block : row->GetData())
@@ -261,70 +258,17 @@ namespace Pages
 
     const PageType &Page::GetPageType() const { return this->header.pageType; }
 
-    void Page::UpdateRows(const vector<Block> *updates, const vector<Field> *conditions)
-    {
-        for (const auto &row : this->rows)
-        {
-            bool updateRow = false;
-            if (conditions != nullptr)
-            {
-                // for (const auto &condition : *conditions)
-                //     if (*condition != row->GetData()[condition->GetColumnIndex()])
-                //     {
-                //         updateRow = true;
-                //         break;
-                //     }
-
-                if (updateRow)
-                    continue;
-            }
-        }
-
-        this->isDirty = true;
-    }
-
-    void Page::GetRows(vector<Row> *copiedRows, const Table &table, const size_t &rowsToSelect, const vector<Field> *conditions) const
+    void Page::GetRows(vector<Row> *copiedRows, const Table &table, const size_t &rowsToSelect) const
     {
         for (const auto &row : this->rows)
         {
             if (copiedRows->size() >= rowsToSelect)
                 return;
 
-            if (conditions != nullptr)
-            {
-                bool skipRow = false;
-                // for (const auto &condition : *conditions)
-                //     if (condition != row->GetData()[condition->GetColumnIndex()])
-                //     {
-                //         skipRow = true;
-                //         break;
-                //     }
-
-                if (skipRow)
-                    continue;
-            }
-
             RowHeader *rowHeader = row->GetHeader();
 
-            vector<Block *> copyBlocks;
+            vector<Block *> copyBlocks = row->GetBlockCopies();
 
-            for (const auto &block : row->GetData())
-            {
-                Block *blockCopy = new Block(block);
-                if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
-                {
-                    DataObjectPointer objectPointer;
-                    memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
-
-                    uint32_t objectSize;
-                    unsigned char *largeValue = row->GetLargeObjectValue(objectPointer, &objectSize);
-                    blockCopy->SetData(largeValue, objectSize);
-
-                    delete[] largeValue;
-                }
-
-                copyBlocks.push_back(blockCopy);
-            }
             copiedRows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
         }
     }
@@ -359,66 +303,5 @@ namespace Pages
         rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
     }
 
-    void Page::SplitPageRowByBranchingFactor(Page *nextLeafPage, const int &branchingFactor, const Table &table)
-    {
-        if (table.GetTableType() != TableType::CLUSTERED)
-            return;
-
-        vector<Row *> *nextLeafPageDataRows = nextLeafPage->GetDataRowsUnsafe();
-
-        nextLeafPageDataRows->assign(this->rows.begin() + branchingFactor, this->rows.end());
-
-        nextLeafPage->UpdatePageSize();
-        nextLeafPage->UpdateBytesLeft();
-
-        this->rows.resize(branchingFactor);
-
-        this->UpdatePageSize();
-        this->UpdateBytesLeft();
-    }
-
     vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsUnsafe() { return &this->rows; }
-
-    void Page::UpdateRows(const vector<Block*> *updates, const vector<Field> *conditions)
-    {
-        //add condition checking prior to update
-        for (auto &row : this->rows)
-        {
-            RowHeader *rowHeader = row->GetHeader();
-            
-            vector<Block*> rowData = row->GetData();
-
-            for(const auto& update: *updates)
-            {
-                const auto& columnIndex = update->GetColumnIndex();
-
-                if (rowHeader->largeObjectBitMap->Get(columnIndex))
-                {
-                    //set lob objects
-
-                    continue;
-                }
-
-                if(row)
-
-                rowData[columnIndex]->SetData(update->GetBlockData(), update->GetBlockSize());
-            }
-
-            for (const auto &block : row->GetData())
-            {
-                Block *blockCopy = new Block(block);
-                if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
-                {
-                    DataObjectPointer objectPointer;
-                    memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
-
-                    uint32_t objectSize;
-                    unsigned char *largeValue = row->GetLargeObjectValue(objectPointer, &objectSize);
-                    blockCopy->SetData(largeValue, objectSize);
-
-                    delete[] largeValue;
-                }
-            }
-        }
-    }
 }

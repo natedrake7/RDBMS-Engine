@@ -74,12 +74,12 @@ namespace Pages {
     {
         this->WritePageHeaderToFile(filePtr);
 
-      if(this->header.pageSize == 0)
-        return;
+        if(this->header.pageSize == 0)
+          return;
 
-      filePtr->write(reinterpret_cast<const char*>(&this->data->objectSize), sizeof(page_size_t));
-      filePtr->write(reinterpret_cast<const char*>(&this->data->nextPageId), sizeof(page_id_t));
-      filePtr->write(reinterpret_cast<const char*>(this->data->object), this->data->objectSize);
+        filePtr->write(reinterpret_cast<const char*>(&this->data->objectSize), sizeof(page_size_t));
+        filePtr->write(reinterpret_cast<const char*>(&this->data->nextPageId), sizeof(page_id_t));
+        filePtr->write(reinterpret_cast<const char*>(this->data->object), this->data->objectSize);
     }
 
     DataObject* LargeDataPage::InsertObject(const object_t *object, const page_size_t& size)

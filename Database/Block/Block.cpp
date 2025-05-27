@@ -1,7 +1,5 @@
 ﻿#include "Block.h"
 #include "../Database.h"
-#include "../Pages/LargeObject/LargeDataPage.h"
-
 #include <cstring>
 #include <iostream>
 
@@ -11,6 +9,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         this->size = size;
         this->column = column;
+        this->data = nullptr;
         this->SetData(data, size);
     }
 
@@ -26,6 +25,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         this->size = block->size;
         this->column = block->column;
+        this->data = nullptr;
         this->SetData(block->data, block->size);
     }
 
@@ -38,18 +38,18 @@ namespace DatabaseEngine::StorageTypes {
 
     Block::~Block()
     {
-        delete[] this->data;
-
+        delete this->data;
         this->data = nullptr;
     }
 
     void Block::SetData(const void* inputData, const block_size_t& inputSize)
     {
+        delete this->data;
+        this->data = nullptr;
+
         if (inputData == nullptr)
         {
-            this->data = nullptr;
             this->size = 0;
-
             return;
         }
 
@@ -80,6 +80,8 @@ namespace DatabaseEngine::StorageTypes {
     DataTypes::DateTime Block::GetDateTime() const { return DataTypes::DateTime(*reinterpret_cast<time_t*>(this->data)); }
 
     Pages::DataObjectPointer Block::GeObjectPointer() const { return *reinterpret_cast<Pages::DataObjectPointer*>(this->data); }
+
+    Pages::OverflowPointer Block::GetOverflowPointer() const { return *reinterpret_cast<Pages::OverflowPointer*>(this->data); }
 
     DataTypes::Decimal Block::GetDecimal() const { return DataTypes::Decimal(this->data, this->size); }
 
@@ -131,7 +133,7 @@ bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Field &f
         case ColumnType::Int:
             return block.GetInt() == field.GetInt();
         case ColumnType::BigInt:
-            return block.GetInt() == field.GetInt();
+            return block.GetBigInt() == field.GetBigInt();
         case ColumnType::Decimal:
             return block.GetDecimal() == field.GetDecimal();
         case ColumnType::String:

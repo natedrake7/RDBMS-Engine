@@ -412,33 +412,7 @@ namespace Indexing
             if(!row->Evaluate(expression))
               continue;
 
-            int diff = row->Update(updates);
-
-            if(currentNode->GetBytesLeft() - diff > 0){
-              currentNode->UpdateBytesLeft();
-              continue;
-            }
-
-            //else handleOverflow (if large object is changed, delete it and free the pages
-            //update overflow bitmap to know block is placed in another page
-            //handle lob bitmaps correctly
-            //handle overflow pages correctly
-            Table::DeleteLargeObjectFromPage(row, updatedColumns, this->table);
-
-            while(currentNode->GetBytesLeft() - diff < 0){
-              auto* largestColumnIndex = row->FindLargestVariableLengthColumn();
-
-              auto* overflowPage = this->table->GetDatabase()->GetLastOverflowPage(this->table->GetTableId(), largestColumnIndex->GetBlockSize());
-
-              int indexPos = 0;
-              auto* overflowRow = overflowPage->InsertObject(largestColumnIndex->GetBlockData(), largestColumnIndex->GetBlockSize(), indexPos);
-
-              OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
-              largestColumnIndex->SetData(&ptr, sizeof(OverflowPointer));
-
-              diff -= largestColumnIndex->GetBlockSize();
-            }
-
+            this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
           }
 
           if(currentNode->GetNextPage() == 0)

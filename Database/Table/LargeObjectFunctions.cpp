@@ -119,6 +119,12 @@ namespace DatabaseEngine::StorageTypes {
 //      return this->database->GetLargeDataPage(pageId, this->header.tableId);
     }
 
+    Pages::OverflowPage* Table::GetOverflowPage(const page_id_t & pageId) const{
+      const auto extentId = Database::CalculateExtentIdByPageId(pageId);
+
+      return StorageManager::Get().GetOverflowPage(this->database->GetFileName(), pageId, extentId, this);
+    }
+
     const vector<vector<column_index_t>> & Table::GetNonClusteredIndexes() const { return this->header.nonClusteredColumnIndexes; }
 
     const vector<column_index_t> & Table::GetClusteredIndex() const { return this->header.clusteredColumnIndexes; }

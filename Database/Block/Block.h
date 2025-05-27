@@ -11,6 +11,7 @@ namespace DatabaseEngine {
 
 namespace Pages {
  struct DataObjectPointer;
+ struct OverflowPointer;
 }
 
 namespace DataTypes {
@@ -59,6 +60,8 @@ namespace DatabaseEngine::StorageTypes {
         [[nodiscard]] DataTypes::DateTime GetDateTime() const;
 
         [[nodiscard]] Pages::DataObjectPointer GeObjectPointer() const;
+
+        [[nodiscard]] Pages::OverflowPointer GetOverflowPointer() const;
         
         [[nodiscard]] const column_index_t& GetColumnIndex() const;
 

@@ -234,47 +234,47 @@ const block_size_t& Field::GetSize() const{ return this->size; }
 
 void Field::Validate(const Headers::ColumnHeader &header){
     switch (const auto& columnType = ColumnTypesDictionary.Get(header.dataType)) {
-    case ColumnType::TinyInt: {
-        const auto value = SafeConverter<int8_t>::SafeStoi(this->GetBigInt());
-        this->SetData(value);
-        break;
-    }
-    case ColumnType::SmallInt: {
-        const auto value = SafeConverter<int16_t>::SafeStoi(this->GetBigInt());
-        this->SetData(value);
-        break;
-    }
-    case ColumnType::Int:{
-        const auto value = SafeConverter<int32_t>::SafeStoi(this->GetBigInt());
-        this->SetData(value);
-        break;
-    }
-    case ColumnType::BigInt:
-        SafeConverter<int64_t>::SafeStoi(this->GetBigInt());
-        break;
-    case ColumnType::String:
-    case ColumnType::UnicodeString:
-        if (columnType != this->GetType())
-            throw runtime_error("Column " + header.name + " has different data type than specified");
-        break;
-    case ColumnType::Bool: {
-        const auto value = SafeConverter<bool>::SafeStoi(this->GetBigInt());
-        this->SetData(value);
-        break;
-    }
-    case ColumnType::DateTime: {
-        const auto datetime = this->GetDateTime();
-        if (!DataTypes::DateTime::ValidateDate(datetime))
-            throw invalid_argument("failed to validate date");
+      case ColumnType::TinyInt: {
+          const auto value = SafeConverter<int8_t>::SafeStoi(this->GetBigInt());
+          this->SetData(value);
+          break;
+      }
+      case ColumnType::SmallInt: {
+          const auto value = SafeConverter<int16_t>::SafeStoi(this->GetBigInt());
+          this->SetData(value);
+          break;
+      }
+      case ColumnType::Int:{
+          const auto value = SafeConverter<int32_t>::SafeStoi(this->GetBigInt());
+          this->SetData(value);
+          break;
+      }
+      case ColumnType::BigInt:
+          SafeConverter<int64_t>::SafeStoi(this->GetBigInt());
+          break;
+      case ColumnType::String:
+      case ColumnType::UnicodeString:
+          if (columnType != this->GetType())
+              throw runtime_error("Column " + header.name + " has different data type than specified");
+          break;
+      case ColumnType::Bool: {
+          const auto value = SafeConverter<bool>::SafeStoi(this->GetBigInt());
+          this->SetData(value);
+          break;
+      }
+      case ColumnType::DateTime: {
+          const auto datetime = this->GetDateTime();
+          if (!DataTypes::DateTime::ValidateDate(datetime))
+              throw invalid_argument("failed to validate date");
 
-        break;
-    }
-    case ColumnType::Decimal:
+          break;
+      }
+      case ColumnType::Decimal:
 
-        break;
-    default:
-    case ColumnType::ColumnTypeCount:
-        throw invalid_argument("Invalid column type");
+          break;
+      default:
+      case ColumnType::ColumnTypeCount:
+          throw invalid_argument("Invalid column type");
     }
 
     this->SetColumnIndex(header.tablePosition);
