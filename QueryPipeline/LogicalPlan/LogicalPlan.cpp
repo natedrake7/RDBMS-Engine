@@ -153,7 +153,9 @@ namespace QueryPipeline {
             if (!expressionColumns.Contains(column))
               break;
 
-//            return new PhysicalPlan::PhysicalIndexSeekUpdate(dbName, this->table, this->expression, this->fields);
+            //create keys for index seek here and pass them to physical plan
+
+            return new PhysicalPlan::PhysicalIndexSeekUpdate(dbName, this->table, this->expression, this->fields);
           }
         }
 

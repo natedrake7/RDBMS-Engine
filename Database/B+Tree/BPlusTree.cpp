@@ -422,6 +422,61 @@ namespace Indexing
         }
     }
 
+    void BPlusTree::IndexSeekUpdate(const Key* minKey, const Key* maxKey, const vector<Field> & updates){
+      if (!this->root) {
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+          return;
+      }
+
+        HashSet<column_index_t> updatedColumns;
+        auto *currentNode = this->SearchKey(*minKey);
+        IndexPage *previousNode = nullptr;
+
+        while (currentNode)
+        {
+          auto* keys = currentNode->GetKeysUnsafe();
+
+          if (previousNode && maxKey >= keys->at(0))
+          {
+            auto* previousKeys = previousNode->GetKeysUnsafe();
+
+            // Check if the last key in the previous node is within the range
+            if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
+                auto* previousRows = previousNode->GetDataRowsUnsafe();
+
+                this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+            }
+          }
+          else if(maxKey < keys->at(0))
+               return;
+
+          auto* rows = currentNode->GetDataRowsUnsafe();
+
+          for (int i = 0; i < keys->size(); i++)
+          {
+            const auto &key = keys->at(i);
+
+            if (minKey <= key && maxKey >= key)
+            {
+                this->table->HandleRowUpdate(previousNode, rows->at(i), updates, updatedColumns, false);
+                continue;
+            }
+
+//            if (maxKey < *key && !previousNode)
+//                return;
+          }
+
+          if(currentNode->GetNextPage() == 0)
+            return;
+
+          previousNode = currentNode;
+          currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+
     void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
     {
         if (!this->root)

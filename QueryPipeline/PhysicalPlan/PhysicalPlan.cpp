@@ -341,7 +341,17 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   }
 
   PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(){
-    return nullptr;
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+
+    tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
+
+    return result;
   }
 
 }

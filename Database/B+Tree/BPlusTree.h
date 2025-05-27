@@ -139,6 +139,8 @@ namespace Indexing
 
         void IndexScanUpdate(Expressions::Expression* expression, const vector<Field> & updates);
 
+        void IndexSeekUpdate(const Key* minKey, const Key* maxKey, const vector<Field> & updates);
+
         void SearchKey(const Key &key, QueryData &result) const;
 
         void Remove(const Key& key);

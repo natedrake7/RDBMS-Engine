@@ -87,8 +87,6 @@ namespace DatabaseEngine::StorageTypes
 
         protected:
 
-            [[nodiscard]] unordered_set<column_index_t> GetClusteredIndexesMap() const;
-            
             [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
 
             static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
@@ -159,8 +157,6 @@ namespace DatabaseEngine::StorageTypes
 
             void SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
 
-            void Update(const vector<Field> &updates, const vector<Field> *conditions = nullptr) const;
-
             void HeapDelete(const Expressions::Expression* expression) const;
 
             void ClusteredIndexScanDelete(const Expressions::Expression* expression);
@@ -170,6 +166,11 @@ namespace DatabaseEngine::StorageTypes
             void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
 
             void ClusteredIndexScanUpdate(Expressions::Expression* expression, const vector<Field> &updates);
+
+            void ClusteredIndexSeekUpdate(
+                const Indexing::Key* minimumValue,
+                const Indexing::Key* maximumValue,
+                const vector<Field> &updates);
 
             void Truncate();
 

@@ -375,26 +375,6 @@ namespace DatabaseEngine::StorageTypes {
 //        this->HeapScan(&selectedRows, rowsToSelect);
       }
 
-      void Table::Update(const vector<Field> &updates, const vector<Field> *conditions) const 
-      {
-         vector<Block *> updateBlocks;
-         for (const auto &field : updates) 
-         {
-           const auto &associatedColumnIndex = field.GetColumnIndex();
-    
-           const auto &columnType = this->columns[associatedColumnIndex]->GetColumnType();
-
-           Block *block = new Block(this->columns[associatedColumnIndex]);
-
-           updateBlocks.push_back(block);
-         }
-
-         this->database->UpdateTableRows(this->header.tableId, updateBlocks, conditions);
-
-         for (const auto &block : updateBlocks)
-           delete block;
-      }
-
     void Table::HeapDelete(const Expressions::Expression* expression) const
     {
         const auto& filename = this->database->GetFileName();
@@ -606,16 +586,6 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    unordered_set<column_index_t> Table::GetClusteredIndexesMap() const
-    {
-        unordered_set<column_index_t> hashSet = {};
-          
-        for(const auto& clusteredColumnIndex: this->header.clusteredColumnIndexes)
-            hashSet.insert(clusteredColumnIndex);
-
-        return hashSet;
-    }
-
     void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns){
       const auto& filename = this->database->GetFileName();
 
@@ -664,6 +634,11 @@ namespace DatabaseEngine::StorageTypes {
       tree->IndexScanUpdate(expression, updates);
     }
 
+    void Table::ClusteredIndexSeekUpdate(const Indexing::Key *minimumValue, const Indexing::Key *maximumValue, const vector<Field> & updates){
+      auto* tree = this->GetClusteredIndexedTree();
+
+      tree->IndexSeekUpdate(minimumValue, maximumValue, updates);
+    }
     string Table::GetFileName() const{ return this->database->GetFileName(); }
 
     int Table::HandleRowOverflow(Row *row){
@@ -747,7 +722,5 @@ namespace DatabaseEngine::StorageTypes {
 
           diff -= result;
         }
-
-
     }
 } // namespace DatabaseEngine::StorageTypes
