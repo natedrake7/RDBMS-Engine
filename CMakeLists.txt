@@ -142,7 +142,9 @@ add_library(Database SHARED
         Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
         Database/AdditionalFunctions/StringFunctions/StringFunctions.h
         Database/LockManager/LockManager.cpp
-        Database/LockManager/LockManager.h)
+        Database/LockManager/LockManager.h
+        Database/Pages/OverflowPage/OverflowPage.cpp
+        Database/Pages/OverflowPage/OverflowPage.h)
 
 add_library(Server SHARED
         Server/ConnectionManager/ConnectionManager.cpp

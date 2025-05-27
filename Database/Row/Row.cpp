@@ -55,6 +55,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->header.nullBitMap = new BitMap(numberOfColumns);
         this->header.largeObjectBitMap = new BitMap(numberOfColumns);
+        this->header.overflowBitMap = new BitMap(numberOfColumns);
     }
 
     Row::Row(const Table& table, const vector<Block*>& data, const BitMap* nullBitMap)
@@ -117,6 +118,8 @@ namespace DatabaseEngine::StorageTypes {
     void Row::InsertNewColumn(Block* block)
     {
         this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
+        this->header.largeObjectBitMap->Set(this->data.size(), false);
+        this->header.overflowBitMap->Set(this->data.size(), false);
 
         this->data.push_back(block);
 
@@ -333,5 +336,58 @@ namespace DatabaseEngine::StorageTypes {
             default:
                 throw std::runtime_error("Invalid expression type");
         }
+    }
+
+    int Row::Update( const vector<Field> & updates){
+      const auto prevRowSize = this->GetRowSize();
+
+      for (const auto & i : updates)
+      {
+        const column_index_t &associatedColumnIndex = i.GetColumnIndex();
+
+        auto *block = this->data.at(associatedColumnIndex);
+
+        const ColumnType columnType = block->GetColumnType();
+
+        if (columnType > Constants::ColumnType::ColumnTypeCount)
+          throw invalid_argument("Table::InsertRow: Unsupported Column Type");
+
+        if (i.GetIsNull())
+        {
+          block->SetData(nullptr, 0);
+          this->SetNullBitMapValue(associatedColumnIndex, true);
+          continue;
+        }
+
+        block->SetData(i.GetRawData(), i.GetSize());
+      }
+
+      const auto rowSize = this->GetRowSize();
+
+      return static_cast<int>(rowSize - prevRowSize);
+    }
+
+    Block* Row::FindLargestVariableLengthColumn() const{
+        Block* largestColumn = nullptr;
+        int size = 0;
+
+        for(const auto& block : this->data){
+
+            const auto& columnType = block->GetColumnType();
+            const auto& columnIndex = block->GetColumnIndex();
+
+            if(columnType != ColumnType::String
+              && columnType != ColumnType::UnicodeString
+              && this->header.largeObjectBitMap->Get(columnIndex))
+              continue;
+
+            if(block->GetBlockSize() <= size)
+              continue;
+
+            largestColumn = block;
+            size = block->GetBlockSize();
+        }
+
+      return largestColumn;
     }
 }

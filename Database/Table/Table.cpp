@@ -597,16 +597,17 @@ namespace DatabaseEngine::StorageTypes {
             extent_id_t startingExtentIndex = 0;
 
             for(int i = 0; i < rows->size(); i++){
-                const auto& row = (*rows)[i];
+                auto* row = (*rows)[i];
+
                 if(row->Evaluate(expression)){
-                  const auto diff = this->UpdateRow(row, updates);
+                  const auto diff = row->Update(updates);
 
                   if(page->GetBytesLeft() - diff > 0){
                     page->UpdateBytesLeft();
                     continue;
                   }
 
-                  this->DeleteLargeObjectFromPage(row, updatedColumns);
+                  Table::DeleteLargeObjectFromPage(row, updatedColumns, this);
 
                   //TODO add Forwarding Ptr to reduce index updates
                   rows->erase(rows->begin() + i);
@@ -619,37 +620,6 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    int Table::UpdateRow(Row *row, const vector<Field> & updates){
-      auto& data = row->GetData();
-
-      const auto prevRowSize = row->GetRowSize();
-
-      for (const auto & i : updates)
-      {
-        const column_index_t &associatedColumnIndex = i.GetColumnIndex();
-
-        auto *block = data.at(associatedColumnIndex);
-
-        const ColumnType columnType = columns[associatedColumnIndex]->GetColumnType();
-
-        if (columnType > Constants::ColumnType::ColumnTypeCount)
-          throw invalid_argument("Table::InsertRow: Unsupported Column Type");
-
-        if (i.GetIsNull())
-        {
-          block->SetData(nullptr, 0);
-          row->SetNullBitMapValue(associatedColumnIndex, true);
-          continue;
-        }
-
-        block->SetData(i.GetRawData(), i.GetSize());
-      }
-
-      const auto rowSize = row->GetRowSize();
-
-      return static_cast<int>(rowSize - prevRowSize);
-    }
-
     unordered_set<column_index_t> Table::GetClusteredIndexesMap() const
     {
         unordered_set<column_index_t> hashSet = {};
@@ -660,8 +630,8 @@ namespace DatabaseEngine::StorageTypes {
         return hashSet;
     }
 
-    void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns){
-      const auto& filename = this->database->GetFileName();
+    void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns, const Table* table){
+      const auto& filename = table->GetFileName();
 
       RowHeader* rowHeader = row->GetHeader();
 
@@ -674,22 +644,38 @@ namespace DatabaseEngine::StorageTypes {
 
         auto largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPointer.pageId);
 
-        auto* largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, largeObjectExtentId, this);
+        auto* largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, largeObjectExtentId, table);
 
         auto* objectPtr = largeObjectPage->DeleteObject();
+
+        auto* pfsPage = StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
+
+        pfsPage->SetPageMetaData(largeObjectPage);
+        pfsPage->SetPageFreed(largeObjectPage->GetPageId());
 
         while(objectPtr->nextPageId != 0){
             largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPtr->nextPageId);
 
-            largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, largeObjectExtentId, this);
+            largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, largeObjectExtentId, table);
 
             DataObject* prevObject = objectPtr;
             objectPtr = largeObjectPage->DeleteObject();
+
+            pfsPage = StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
+
+            pfsPage->SetPageMetaData(largeObjectPage);
+            pfsPage->SetPageFreed(largeObjectPage->GetPageId());
 
             delete prevObject;
         }
       }
     }
 
+    void Table::ClusteredIndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
 
+
+
+    }
+
+    string Table::GetFileName() const{ return this->database->GetFileName(); }
 } // namespace DatabaseEngine::StorageTypes

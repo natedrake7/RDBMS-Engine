@@ -47,31 +47,7 @@ void InitializeServer(const string& filePath) {
     //create sys tables(read from file).
 }
 
-
-string Replace(const string &str, const string &subStr, const string &replaceStr)
-{
-    if(str.empty() || subStr.empty())
-        return str;
-
-    string result(str);
-    int subStrIndex = 0;
-
-    while (true)
-    {
-        subStrIndex = static_cast<int>(result.find(subStr));
-
-        if(subStrIndex == string::npos)
-            break;
-
-        result.replace(subStrIndex, subStr.size(), replaceStr);
-    }
-        
-    return result;
-}
-
-
- 
-int main() 
+int main()
 {
     signal(SIGINT, shutdownServer);   // Ctrl+C
     signal(SIGTERM, shutdownServer);  // kill command

@@ -137,6 +137,8 @@ namespace Indexing
 
         void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result, Expressions::Expression* expression);
 
+        void IndexScanUpdate(Expressions::Expression* expression, const vector<Field> & updates);
+
         void SearchKey(const Key &key, QueryData &result) const;
 
         void Remove(const Key& key);

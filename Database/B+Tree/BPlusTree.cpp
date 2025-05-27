@@ -13,6 +13,8 @@
 #include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
 #include "../Database.h"
 #include "../Row/Row.h"
+#include "../Block/Block.h"
+#include "../../AdditionalLibraries/BitMap/BitMap.h"
 
 using namespace std;
 using namespace DatabaseEngine::StorageTypes;
@@ -381,6 +383,69 @@ namespace Indexing
 
           currentNode = this->GetNode(currentNode->GetNextPage());
       }
+    }
+
+    void BPlusTree::IndexScanUpdate(Expressions::Expression *expression, const vector<Field> & updates){
+        if (!this->root) {
+          this->root = this->GetNode(this->firstIndexPageId);
+
+          if (!this->root)
+            return;
+        }
+
+        HashSet<column_index_t> updatedColumns;
+
+        for(const auto& update : updates)
+          updatedColumns.Add(update.GetColumnIndex());
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+          auto* keys = currentNode->GetKeysUnsafe();
+
+          auto* rows = currentNode->GetDataRowsUnsafe();
+
+          for (int i = 0; i < keys->size(); i++){
+            auto* row = rows->at(i);
+
+            if(!row->Evaluate(expression))
+              continue;
+
+            int diff = row->Update(updates);
+
+            if(currentNode->GetBytesLeft() - diff > 0){
+              currentNode->UpdateBytesLeft();
+              continue;
+            }
+
+            //else handleOverflow (if large object is changed, delete it and free the pages
+            //update overflow bitmap to know block is placed in another page
+            //handle lob bitmaps correctly
+            //handle overflow pages correctly
+            Table::DeleteLargeObjectFromPage(row, updatedColumns, this->table);
+
+            while(currentNode->GetBytesLeft() - diff < 0){
+              auto* largestColumnIndex = row->FindLargestVariableLengthColumn();
+
+              auto* overflowPage = this->table->GetDatabase()->GetLastOverflowPage(this->table->GetTableId(), largestColumnIndex->GetBlockSize());
+
+              int indexPos = 0;
+              auto* overflowRow = overflowPage->InsertObject(largestColumnIndex->GetBlockData(), largestColumnIndex->GetBlockSize(), indexPos);
+
+              OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
+              largestColumnIndex->SetData(&ptr, sizeof(OverflowPointer));
+
+              diff -= largestColumnIndex->GetBlockSize();
+            }
+
+          }
+
+          if(currentNode->GetNextPage() == 0)
+            return;
+
+          currentNode = this->GetNode(currentNode->GetNextPage());
+        }
     }
 
     void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const

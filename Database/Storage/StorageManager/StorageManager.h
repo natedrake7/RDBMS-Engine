@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include "../FileManager/FileManager.h"
+#include "../../Pages/OverflowPage/OverflowPage.h"
 
 namespace DatabaseEngine {
 class Database;
@@ -89,6 +90,8 @@ public:
   Pages::HeaderPage *CreateHeaderPage(const string &filename);
   Pages::LargeDataPage *CreateLargeDataPage(const string& filename, const Constants::page_id_t &pageId);
   Pages::LargeDataPage * GetLargeDataPage(const string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::OverflowPage *CreateOverflowPage(const string& filename, const Constants::page_id_t &pageId);
+  Pages::OverflowPage *GetOverflowPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::GlobalAllocationMapPage *CreateGlobalAllocationMapPage(const string &filename, const Constants::page_id_t &pageId);
   Pages::GlobalAllocationMapPage *GetGlobalAllocationMapPage(const string& filename, const Constants::page_id_t &pageId);
   Pages::IndexAllocationMapPage *CreateIndexAllocationMapPage(const string& filename, const Constants::table_id_t &tableId, const Constants::page_id_t &pageId,const Constants::extent_id_t &startingExtentId);

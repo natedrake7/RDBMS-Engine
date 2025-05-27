@@ -101,6 +101,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   PhysicalIndexScan::PhysicalIndexScan(const std::string &dbName, Statements::TableName* table, const bool& isClustered)
     : PhysicalOperator(dbName), table(table), isClustered(isClustered), expression(nullptr) {}
 
+  PhysicalIndexScan::PhysicalIndexScan(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
+    : PhysicalOperator(dbName), table(table), expression(expression), isClustered(isClustered) {}
+
   PhysicalPlanResult * PhysicalIndexScan::Execute(){
     using namespace DatabaseEngine::StorageTypes;
 
@@ -117,9 +120,6 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     return result;
   }
-
-  PhysicalIndexScan::PhysicalIndexScan(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
-    : PhysicalOperator(dbName), table(table), expression(expression), isClustered(isClustered) {}
 
   PhysicalIndexSeek::PhysicalIndexSeek(const std::string &dbName, Statements::TableName* table, const Field& minValue, const Field& maxValue)
     : PhysicalOperator(dbName), table(table), minValue(minValue), maxValue(maxValue) {}
@@ -313,7 +313,19 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   }
 
   PhysicalPlanResult* PhysicalIndexScanUpdate::Execute(){
-    return nullptr;
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+
+    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+
+    tablePtr->HeapUpdate(this->expression, this->fields);
+
+
+
+    return result;
   }
 
 

@@ -135,7 +135,7 @@ namespace QueryPipeline {
 
       //if no indexes are available heap scan
       if (indexes.empty())
-        return new PhysicalPlan::PhysicalHeapDelete(dbName, this->table, this->expression);
+        return new PhysicalPlan::PhysicalHeapUpdate(this->dbName, this->table, this->expression, this->fields);
 
       //if expression is complex defer from index seek
       const bool canIndexSeek = expression != nullptr && !expression->IsComplex();
@@ -153,14 +153,16 @@ namespace QueryPipeline {
             //index seek
             if (!expressionColumns.Contains(column))
               break;
+
+            return new PhysicalPlan::PhysicalIndexSeekUpdate(dbName, this->table, this->expression, this->fields);
           }
         }
 
         //find the first non clustered and use it
-        return new PhysicalPlan::PhysicalIndexScanDelete(dbName, this->table, this->expression);
+        return new PhysicalPlan::PhysicalIndexScanUpdate(dbName, this->table, this->expression, this->fields);
       }
 
-      return new PhysicalPlan::PhysicalHeapDelete(this->dbName, this->table, this->expression);
+      return new PhysicalPlan::PhysicalHeapUpdate(this->dbName, this->table, this->expression, this->fields);
   }
 }
 

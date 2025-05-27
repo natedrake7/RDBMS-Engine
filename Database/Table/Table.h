@@ -107,8 +107,6 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Row* CreateRow(const vector<Field>& inputData)const;
 
-            int UpdateRow(Row *row, const vector<Field> &updates);
-            void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
 
         public:
             Table(const string &tableName, const std::string& schema, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
@@ -125,9 +123,13 @@ namespace DatabaseEngine::StorageTypes
 
             AdditionalDataTypes::ResultStatus InsertRow(const vector<Field> &inputData);
 
+            static void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns, const Table* table);
+
             string &GetTableName();
 
             string& GetSchema();
+
+            [[nodiscard]] string GetFileName() const;
 
             row_size_t &GetMaxRowSize();
 
@@ -163,6 +165,8 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexSeekDelete(const Expressions::Expression* expression);
 
             void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
+
+            void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
 
             void Truncate();
 

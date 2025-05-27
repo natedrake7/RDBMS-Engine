@@ -604,6 +604,21 @@ namespace DatabaseEngine
         table->SetIndexAllocationMapPageId(0);
     }
 
+    OverflowPage *Database::CreateOverflowPage(const table_id_t &tableId)
+    {
+        PageFreeSpacePage *pageFreeSpacePage = nullptr;
+        extent_id_t newExtentId = 0;
+        page_id_t lowerLimit = 0, newPageId = 0;
+
+        if (!this->AllocateNewExtent(&pageFreeSpacePage, &lowerLimit, &newPageId, &newExtentId, tableId))
+            return nullptr;
+
+        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
+            pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateOverflowPage(this->filename, pageId));
+
+        return StorageManager::Get().GetOverflowPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
+    }
+
     Page *Database::CreateDataPage(const table_id_t &tableId)
     {
         PageFreeSpacePage *pageFreeSpacePage = nullptr;
@@ -763,6 +778,51 @@ namespace DatabaseEngine
         }
 
         return nullptr;
+    }
+
+    Pages::OverflowPage* Database::GetLastOverflowPage(const table_id_t & tableId, const block_size_t& size){
+        if (tableId >= this->tables.size())
+            return nullptr;
+
+        const auto& table = this->tables[tableId];
+
+        const auto& tableMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+
+        if(tableMapPageId == 0)
+            return nullptr;
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId);
+        OverflowPage *lastOverflowPage = nullptr;
+
+        vector<extent_id_t> allocatedExtents;
+        tableMapPage->GetAllocatedExtents(&allocatedExtents);
+
+        for (const auto &extentId : allocatedExtents)
+        {
+            const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++)
+            {
+                const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
+
+                const PageFreeSpacePage *pageFreeSpace = StorageManager::Get().GetPageFreeSpacePage(this->filename, correspondingPfsPageId);
+
+                if (pageFreeSpace->GetPageType(pageId) != PageType::OVERFLOW)
+                    break;
+
+                const auto categorySize = Database::GetObjectSizeToCategory(size);
+
+                if(pageFreeSpace->GetPageSizeCategory(pageId) <= categorySize)
+                    continue;
+
+                lastOverflowPage = StorageManager::Get().GetOverflowPage(this->filename, pageId, extentId, table);
+
+                if (lastOverflowPage->GetBytesLeft() <= size)
+                    return lastOverflowPage;
+            }
+        }
+
+        return this->CreateOverflowPage(tableId);
     }
 
     LargeDataPage *Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)

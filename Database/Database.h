@@ -9,6 +9,7 @@
 #include "B+Tree/BPlusTree.h"
 #include "Column/Column.h"
 #include "Table/Table.h"
+#include "Pages/OverflowPage/OverflowPage.h"
 
 using namespace Constants;
 using namespace std;
@@ -168,6 +169,8 @@ public:
 
     void TruncateTable(const table_id_t& tableId);
 
+    Pages::OverflowPage *CreateOverflowPage(const table_id_t &tableId);
+
     Pages::Page *CreateDataPage(const table_id_t &tableId);
 
     Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
@@ -175,6 +178,8 @@ public:
     Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId);
 
     Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId);
+
+    Pages::OverflowPage* GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
 
     Pages::IndexPage *CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId = 0);
 

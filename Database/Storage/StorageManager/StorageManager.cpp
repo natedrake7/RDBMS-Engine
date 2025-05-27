@@ -87,6 +87,11 @@ LargeDataPage *StorageManager::GetLargeDataPage(const string& filename, const pa
   return dynamic_cast<LargeDataPage *>(this->GetPage(filename, pageId, extentId, table));
 }
 
+OverflowPage *StorageManager::GetOverflowPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table *table)
+{
+  return dynamic_cast<OverflowPage *>(this->GetPage(filename, pageId, extentId, table));
+}
+
 Page *StorageManager::CreatePage(const string& filename, const page_id_t &pageId)
 {
   Page *page = new Page(pageId, true);
@@ -100,6 +105,15 @@ Page *StorageManager::CreatePage(const string& filename, const page_id_t &pageId
 LargeDataPage *StorageManager::CreateLargeDataPage(const string& filename, const page_id_t &pageId)
 {
   LargeDataPage *page = new LargeDataPage(pageId, true);
+  page->SetDirty();
+
+  this->MovePageToFrontOfList(page, pageId, filename);
+
+  return page;
+}
+
+Pages::OverflowPage* StorageManager::CreateOverflowPage(const string & filename, const page_id_t & pageId){
+  auto* page = new OverflowPage(pageId, true);
   page->SetDirty();
 
   this->MovePageToFrontOfList(page, pageId, filename);
@@ -714,4 +728,5 @@ void StorageManager::UnlockPageWrite()
 
   this->dataConditionVariable.notify_all();
 }
+
 } // namespace Storage

@@ -30,6 +30,7 @@ namespace DatabaseEngine::StorageTypes
     {
         ByteMaps::BitMap *nullBitMap;
         ByteMaps::BitMap *largeObjectBitMap;
+        ByteMaps::BitMap *overflowBitMap;
         row_size_t rowSize;
         size_t maxRowSize;
 
@@ -87,5 +88,11 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
 
         [[nodiscard]] bool Evaluate(const Expressions::Expression* expression) const;
+
+        [[nodiscard]] int Update(const vector<Field> & updates);
+
+        void DeleteLargeObjectFromPage(const HashSet<column_index_t>& updatedColumns);
+
+        [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
     };
 }

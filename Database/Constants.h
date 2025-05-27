@@ -54,7 +54,8 @@ namespace Constants
         METADATA = 4,
         GAM = 5,
         FREESPACE = 6,
-        Error = 7
+        OVERFLOW = 7,
+        Error = 8
     };
 
     enum class TableType : uint8_t
