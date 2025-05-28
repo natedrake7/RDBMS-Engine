@@ -34,6 +34,9 @@ namespace Pages
 {
     class Page;
     class LargeDataPage;
+    class PageFreeSpacePage;
+    class IndexPage;
+    class OverflowPage;
     struct DataObject;
 }
 
@@ -92,7 +95,7 @@ namespace DatabaseEngine::StorageTypes
             static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
-            AdditionalDataTypes::ResultStatus InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
+            AdditionalDataTypes::ResultStatus InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
             void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
 
             static void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
@@ -104,6 +107,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Row* CreateRow(const vector<Field>& inputData)const;
 
+            void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
 
         public:
             Table(const string &tableName, const std::string& schema, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
@@ -162,6 +166,16 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexScanDelete(const Expressions::Expression* expression);
 
             void ClusteredIndexSeekDelete(const Expressions::Expression* expression);
+
+            AdditionalDataTypes::ResultStatus HeapInsert(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, page_id_t* rowPageId, int* rowIndex);
+
+            AdditionalDataTypes::ResultStatus ClusteredIndexInsert(Row *row, page_id_t* rowPageId, int* rowIndex);
+
+            AdditionalDataTypes::ResultStatus NonClusteredIndexInsert(
+                const StorageTypes::Row *row,
+                const int& nonClusteredIndexId,
+                const vector<column_index_t>& indexedColumns,
+                const Indexing::BPlusTreeNonClusteredData& data);
 
             void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
 

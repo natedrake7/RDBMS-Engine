@@ -68,15 +68,17 @@ int main()
     //insert statement
     const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorDesc, ActorAge) VALUES(3, 'Robert Kirkman', 'kalispera', 42)";
 
-    const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName, MovieDesc) VALUES(3, 'Batman: The Dark Knight', 'hello its me')";
+    const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName, MovieDesc, MovieNewValue) VALUES(5, 'Batman: The Dark Knight', 'hello its me', 'hello madafaka')";
 
     const string deleteMovies = "DELETE FROM movies.Movies WHERE MovieName = 'Batman: The Dark Knight'";
 
     //create table
     const string createMoviesTable = "CREATE TABLE dbo.Movies ( "
-                                     "ID INT NOT NULL, MovieName VARCHAR(255) NOT NULL, "
-                                     "MovieDesc VARCHAR(MAX) NOT NULL, "
-                                     "CONSTRAINT PK_Shows PRIMARY KEY (ID, MovieName)"
+                                        "ID INT NOT NULL, "
+                                        "MovieName VARCHAR(255) NOT NULL, "
+                                        "MovieDesc VARCHAR(MAX) NOT NULL, "
+                                        "MovieNewValue VARCHAR(MAX) NULL, "
+                                        "CONSTRAINT PK_Shows PRIMARY KEY (ID, MovieName)"
                                      ")";
 
     //create table
@@ -91,7 +93,7 @@ int main()
     const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID = 1001";
 
     const auto start = std::chrono::high_resolution_clock::now();
-    QueryPipeline::Parser::Parse(updateMovies, dbName);
+
     QueryPipeline::Parser::Parse(selectMovies, dbName);
 
     const auto& databases = server.GetCatalog();

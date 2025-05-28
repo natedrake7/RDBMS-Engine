@@ -155,7 +155,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     
     Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
-    this->fields[0].SetData(1001);
+    this->fields[0].SetData(1003);
 
     const auto smallStr = std::string(1000, 'w');
 
@@ -163,6 +163,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const auto str = std::string(10000, 'a');
     this->fields[2].SetData(str);
+
+    const auto medStr = std::string(7500, 'u');
+    this->fields[3].SetData(medStr);
+
     const auto insertResult = tablePtr->InsertRow(fields);
 
     // const auto insertResult = tablePtr->InsertRow(fields);

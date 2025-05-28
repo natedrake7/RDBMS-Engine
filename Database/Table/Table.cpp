@@ -14,6 +14,7 @@
 #include "../Pages/Page.h"
 #include "../Row/Row.h"
 #include "../B+Tree/BPlusTree.h"
+#include "../Pages/IndexPage/IndexPage.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -174,7 +175,9 @@ namespace DatabaseEngine::StorageTypes {
         vector<extent_id_t> extents;
         for (const auto &rowData : inputData) 
         {
-            const auto result = this->InsertRow(rowData, extents, startingExtentIndex);
+            Row* row = this->CreateRow(rowData);
+
+            const auto result = this->InsertRow(row, extents, startingExtentIndex);
 
             if (result.code != AdditionalDataTypes::ResultCode::Ok)
               return result;
@@ -195,7 +198,9 @@ namespace DatabaseEngine::StorageTypes {
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
-        auto result =  this->InsertRow(inputData, extents, startingExtentIndex);
+        Row* row = this->CreateRow(inputData);
+
+        auto result =  this->InsertRow(row, extents, startingExtentIndex);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
@@ -205,19 +210,40 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-      AdditionalDataTypes::ResultStatus Table::InsertRow(const vector<Field> &inputData, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex) 
+      AdditionalDataTypes::ResultStatus Table::InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex)
       {
-        Row* row = this->CreateRow(inputData);
-
         this->InsertLargeObjectToPage(row);
-        auto result =  this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
 
-        if (result.code != AdditionalDataTypes::ResultCode::Ok)
-          return result;
+        page_id_t rowPageId;
+        int rowIndexPosition;
 
-        result.message = "Rows affected: 1";
-        
-        return result;
+        AdditionalDataTypes::ResultStatus status;
+
+        if (this->GetTableType() == TableType::CLUSTERED) {
+            status = this->ClusteredIndexInsert(row, &rowPageId, &rowIndexPosition);
+
+            if (status.code != AdditionalDataTypes::ResultCode::Ok)
+                return status;
+        }
+        else
+            this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowPageId, &rowIndexPosition);
+
+        //insert to Non Clustered Indexes
+        if(!this->HasNonClusteredIndexes())
+           return status;
+
+        const BPlusTreeNonClusteredData nonClusteredData(rowPageId, rowIndexPosition);
+
+        const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
+
+        for (int i = 0; i < nonClusteredIndexes.size(); i++) {
+            status = this->NonClusteredIndexInsert(row, i, nonClusteredIndexes[i], nonClusteredData);
+
+            if (status.code != AdditionalDataTypes::ResultCode::Ok)
+                return status;
+        }
+
+        return status;
       }
 
       Row* Table::CreateRow(const vector<Field>& inputData)const
@@ -535,6 +561,103 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
+    AdditionalDataTypes::ResultStatus Table::ClusteredIndexInsert(Row *row, page_id_t *rowPageId, int *rowIndex){
+
+       BPlusTree* tree = this->GetClusteredIndexedTree();
+
+       const auto key = Database::CreateKey(this->GetClusteredIndex(), row);
+
+       int indexPosition = 0;
+
+       AdditionalDataTypes::ResultStatus status;
+
+       auto *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+
+       if (status.code != AdditionalDataTypes::ResultCode::Ok)
+           return status;
+
+       *rowIndex = indexPosition;
+
+       PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetFileName(), node->GetPageId());
+
+       // should never fail
+       this->InsertRowToPage(pageFreeSpacePage, node, row, indexPosition);
+
+       auto* keys = node->GetKeysUnsafe();
+
+       keys->insert(keys->begin() + indexPosition, new Key(key));
+
+       node->UpdateBytesLeft();
+
+       *rowPageId = node->GetPageId();
+
+       // this->SplitNodeFromIndexPage(tableId, node);
+       return {};
+     }
+
+    AdditionalDataTypes::ResultStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, page_id_t *rowPageId, int *rowIndex){
+      const auto& filename = this->database->GetFileName();
+
+      const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
+
+      if(row->GetTotalRowSize() > PAGE_SIZE - PageHeader::GetPageHeaderSize())
+        this->HandleRowOverflow(row);
+
+      if (tableMapPage == nullptr)
+      {
+          Page *newPage = this->database->CreateDataPage(this->header.tableId);;
+          newPage->InsertRow(row, rowIndex);
+          *rowPageId = newPage->GetPageId();
+          return {};
+      }
+
+      tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
+      lastExtentIndex = allocatedExtents.size() - 1;
+
+      const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
+
+      for (const auto &extentId : allocatedExtents)
+      {
+          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+          const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                                ? extentFirstPageId
+                                                : extentFirstPageId + 1;
+
+          for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+          {
+              const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
+              PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pageFreeSpacePageId);
+
+              if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
+                  break;
+
+              const Constants::byte pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(pageId);
+
+              // find potential candidate
+              if (rowCategory <= pageSizeCategory)
+              {
+                  Page *page = StorageManager::Get().GetPage(filename, pageId, extentId, this);
+
+                  if (row->GetTotalRowSize() > page->GetBytesLeft())
+                      continue;
+
+                  page->InsertRow(row, rowIndex);
+                  pageFreeSpacePage->SetPageMetaData(page);
+
+                  *rowPageId = pageId;
+                  return {};
+              }
+          }
+      }
+
+      Page *newPage = this->database->CreateDataPage(this->header.tableId);
+      newPage->InsertRow(row, rowIndex);
+      *rowPageId = newPage->GetPageId();
+
+      return {};
+    }
+
     void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
         if(this->header.indexAllocationMapPageId == 0)
           return;
@@ -711,7 +834,8 @@ namespace DatabaseEngine::StorageTypes {
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 
-          auto result = this->database->InsertRowToPage(this->header.tableId, allocatedExtents, startingExtentIndex, row);
+          this->InsertRow(row, allocatedExtents, startingExtentIndex);
+
           return;
         }
 
@@ -722,5 +846,36 @@ namespace DatabaseEngine::StorageTypes {
 
           diff -= result;
         }
+    }
+
+    void Table::InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int & indexPosition){
+      if (row->GetTotalRowSize() > page->GetBytesLeft())
+        this->HandleRowOverflow(row);
+
+      page->InsertRow(row, indexPosition);
+      pageFreeSpacePage->SetPageMetaData(page);
+    }
+
+    AdditionalDataTypes::ResultStatus Table::NonClusteredIndexInsert(const StorageTypes::Row *row, const int & nonClusteredIndexId, const vector<column_index_t> & indexedColumns, const BPlusTreeNonClusteredData & data){
+
+      BPlusTree* tree = this->GetNonClusteredIndexTree(nonClusteredIndexId);
+      const auto key = Database::CreateKey(indexedColumns, row);
+
+      int indexPosition = 0;
+      AdditionalDataTypes::ResultStatus status;
+
+      // Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+
+      // if (status.code != AdditionalDataTypes::ResultCode::Ok)
+      //     return status;
+
+      // node->keys.insert(node->keys.begin() + indexPosition, key);
+      // node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
+      // node->prevNodeSize = node->currentNodeSize;
+      // node->currentNodeSize = node->GetNodeSize();
+
+      // this->SplitNodeFromIndexPage(tableId, node, nonClusteredIndexId);
+
+      return status;
     }
 } // namespace DatabaseEngine::StorageTypes

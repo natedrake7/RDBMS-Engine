@@ -39,39 +39,37 @@ namespace ByteMaps {
     // Set the page type (bits 1-2)
     void ByteMap::SetPageType(const byte_map_pos_t& pos, const Constants::byte& type)
     {
-        this->CheckIndex(pos);
-        if (type > 0x03)
-            throw std::invalid_argument("Page type must be between 0 and 3 (2 bits).");
+      this->CheckIndex(pos);
+      if (type > 0x07)  // Changed from 0x03 to 0x07 since we now have 3 bits
+         throw std::invalid_argument("Page type must be between 0 and 7 (3 bits).");
 
-        data[pos] = (data[pos] & ~0x06) | (type << 1); // Clear bits 1-2 and set new type
+      data[pos] = (data[pos] & ~0x0E) | (type << 1); // Clear bits 1-3 and set new type
     }
 
     // Get the page type (bits 1-2)
     Constants::byte ByteMap::GetPageType(const byte_map_pos_t& pos) const
     {
-        this->CheckIndex(pos);
-        return (data[pos] & 0x06) >> 1; // Extract bits 1-2
+      this->CheckIndex(pos);
+      return (data[pos] & 0x0E) >> 1; // Extract bits 1-3
     }
 
     // Set the free space percentage (bits 3-7)
     void ByteMap::SetFreeSpace(const byte_map_pos_t& pos, const Constants::byte& percentage)
     {
-        this->CheckIndex(pos);
-        
-        if (percentage > 31) // 5 bits can represent values from 0 to 31
-            throw std::invalid_argument("Free space percentage must be between 0 and 31.");
+      this->CheckIndex(pos);
 
-        data[pos] &= ~0xF8;
+      if (percentage > 31) // Still 5 bits, but now using bits 4-8
+          throw std::invalid_argument("Free space percentage must be between 0 and 31.");
 
-        data[pos] |= (percentage << 3);
+      data[pos] &= ~0xF0; // Clear bits 4-8
+      data[pos] |= (percentage << 4); // Shift by 4 instead of 3
     }
 
     // Get the free space percentage (bits 3-7)
     page_size_t ByteMap::GetFreeSpace(const byte_map_pos_t& pos) const
     {
-        this->CheckIndex(pos);
-        
-        return (data[pos] & 0xF8) >> 3; // Extract bits 3-7
+      this->CheckIndex(pos);
+      return (data[pos] & 0xF0) >> 4; // Extract bits 4-8
     }
 
     void ByteMap::SetByte(const byte_map_pos_t &position, const Constants::byte &value)

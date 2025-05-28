@@ -76,55 +76,16 @@ protected:
 
     static bool IsSystemPage(const page_id_t &pageId);
 
-    static Constants::byte GetObjectSizeToCategory(const row_size_t &size);
 
     bool AllocateNewExtent( Pages::PageFreeSpacePage **pageFreeSpacePage,
-                            page_id_t *lowerLimit, 
+                            page_id_t *lowerLimit,
                             page_id_t *newPageId,
-                            extent_id_t *newExtentId, 
+                            extent_id_t *newExtentId,
                             const table_id_t &tableId);
 
     [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
 
-    AdditionalDataTypes::ResultStatus InsertRowToClusteredIndex(
-        const table_id_t& tableId, 
-        StorageTypes::Row *row, 
-        page_id_t* rowPageId,
-        int* rowIndex);
-
-    AdditionalDataTypes::ResultStatus InsertRowToNonClusteredIndex(
-        const table_id_t& tableId,
-        const StorageTypes::Row *row,
-        const int& nonClusteredIndexId,
-        const vector<column_index_t>& indexedColumns,
-        const Indexing::BPlusTreeNonClusteredData& data);
-
-    void InsertRowToHeapTable(
-        const StorageTypes::Table &table,
-        vector<extent_id_t> &allocatedExtents,
-        extent_id_t &lastExtentIndex,
-        StorageTypes::Row *row,
-        page_id_t* rowPageId,
-        int* rowIndex);
-
     void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId) const;
-
-    static void InsertRowToPage( Pages::PageFreeSpacePage *pageFreeSpacePage,
-                                 Pages::Page *page, StorageTypes::Row *row,
-                                 const int &indexPosition);
-
-    void InsertRowToNonEmptyNode( Indexing::Node *node,
-                                  const StorageTypes::Table &table,
-                                  StorageTypes::Row *row, 
-                                  const Indexing::Key &key,
-                                  const int &indexPosition);
-
-
-
-    void UpdateTableIndexes(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId) const;
-
-    [[nodiscard]] Pages::PageFreeSpacePage* GetAssociatedPfsPage(const page_id_t& pageId)const;
-
 
 public:
     explicit Database(const string &dbName, const bool& isServerInitialization = false);
@@ -135,11 +96,15 @@ public:
 
     [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
+    [[nodiscard]] static Pages::PageFreeSpacePage* GetAssociatedPfsPage(const string& filename, const page_id_t& pageId);
+
     static page_id_t GetGamAssociatedPage(const page_id_t &pageId);
 
     static page_id_t GetPfsAssociatedPage(const page_id_t &pageId);
 
     static page_id_t CalculateSystemPageOffset(const page_id_t &pageId);
+
+    static Constants::byte GetObjectSizeToCategory(const row_size_t &size);
 
     StorageTypes::Table *CreateTable(
       const string &tableName,
@@ -160,12 +125,6 @@ public:
     void DeleteTable(const string& tableName);
 
     void DeleteDatabase() const;
-
-    AdditionalDataTypes::ResultStatus InsertRowToPage(const table_id_t& tableId, vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, StorageTypes::Row *row);
-
-    void UpdateTableRows(const table_id_t &tableId, const vector<StorageTypes::Block*> &updateBlocks, const vector<Field> *conditions);
-
-    void DeleteTableRows(const table_id_t& tableId, const QueryPipeline::Statements::Expression* expression)const;
 
     void TruncateTable(const table_id_t& tableId);
 
@@ -202,19 +161,6 @@ public:
                                                                 , const page_id_t &indexPageId
                                                                 , const int& nonClusteredIndexId = -1
                                                                 , const bool& findPageDifferentFromCurrent = false);
-
-    void SplitPage( Indexing::Node*& firstNode,
-                Indexing::Node*& secondNode,
-                const int &branchingFactor,
-                const table_id_t& tableId);
-
-    void SplitNodeFromIndexPage(const table_id_t& tableId, Indexing::Node*& node, const int& nonClusteredIndexId = -1);
-
-    void UpdateNodeConnections(Indexing::Node*& node);
-
-    void UpdateNodeConnections(Indexing::Node*& node, const Indexing::NodeHeader& newNodeHeader);
-
-    void UpdateNodeConnectionsOnDelete(Indexing::Node*& node, Indexing::Node* deletedNode, const Indexing::NodeHeader& newNodeHeader);
 
     static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 

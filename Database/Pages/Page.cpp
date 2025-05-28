@@ -279,26 +279,7 @@ namespace Pages
 
         const RowHeader *rowHeader = row->GetHeader();
 
-        vector<Block *> copyBlocks;
-
-        const auto& rowData = row->GetData();
-        for(const auto& block: rowData)
-        {
-            Block *blockCopy = new Block(block);
-            if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
-            {
-                DataObjectPointer objectPointer;
-                memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
-
-                uint32_t objectSize;
-                const unsigned char *largeValue = row->GetLargeObjectValue(objectPointer, &objectSize);
-                blockCopy->SetData(largeValue, objectSize);
-
-                delete[] largeValue;
-            }
-
-            copyBlocks.push_back(blockCopy);
-        }
+        vector<Block *> copyBlocks = row->GetBlockCopies();
 
         rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
     }

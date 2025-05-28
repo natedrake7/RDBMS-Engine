@@ -36,12 +36,16 @@ namespace Pages {
 
   OverflowRow* OverflowPage::InsertObject(const object_t *object, const page_size_t & size, int& indexPos){
     auto* row = new OverflowRow();
+
     row->object = new object_t[size];
+    row->objectSize = size;
+
     memcpy(row->object, object, size);
 
     this->data.push_back(row);
 
     indexPos = this->data.size() - 1;
+    this->header.pageSize++;
 
     return row;
   }

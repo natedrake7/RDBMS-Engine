@@ -405,7 +405,7 @@ namespace DatabaseEngine::StorageTypes {
       vector<Block*> copyBlocks;
       for (const auto &block : this->data)
       {
-        Block *blockCopy = new Block(block);
+        auto *blockCopy = new Block(block);
         if (this->header.largeObjectBitMap->Get(block->GetColumnIndex()))
         {
             DataObjectPointer objectPointer;
@@ -418,7 +418,7 @@ namespace DatabaseEngine::StorageTypes {
             delete[] largeValue;
         }
         else if(this->header.overflowBitMap->Get(block->GetColumnIndex())){
-          OverflowPointer overflowPointer;
+            OverflowPointer overflowPointer;
            memcpy(&overflowPointer, block->GetBlockData(), sizeof(OverflowPointer));
 
           const auto* largeValue = this->GetOverflowValue(overflowPointer);
