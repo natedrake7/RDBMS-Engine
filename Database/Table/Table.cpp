@@ -498,23 +498,61 @@ namespace DatabaseEngine::StorageTypes {
     {
         row_size_t maximumRowSize = 0;
 
-        HashSet<column_index_t> clusteredColumns;
+        for (const auto &column : this->columns)
+            maximumRowSize += column->GetColumnSize();
 
-        for(const auto& column : this->header.clusteredColumnIndexes)
-          clusteredColumns.Add(column);
-
-        uint32_t keySize = 0;
-
-        for (const auto &column : this->columns){
-            if(clusteredColumns.Contains(column->GetColumnIndex()))
-              keySize += column->GetColumnSize();
-
-            maximumRowSize += (column->isColumnLOB()) ? sizeof(DataObjectPointer)
-                              : column->GetColumnSize();
-        }
-
-        return keySize + maximumRowSize;
+        return maximumRowSize;
     }
+
+    key_size_t Table::CalculateIndexKeySize() const {
+      HashSet<column_index_t> clusteredColumns;
+
+      key_size_t keySize = 0;
+      for(const auto& column : this->header.clusteredColumnIndexes)
+        clusteredColumns.Add(column);
+
+      for (const auto &column : this->columns)
+        if(clusteredColumns.Contains(column->GetColumnIndex()))
+          keySize += column->GetColumnSize();
+
+        return keySize;
+    }
+
+    row_size_t Table::ReduceMaximumRowSize() const {
+      row_size_t maximumRowSize = 0;
+
+      row_size_t largestVariableLengthColumnSize = 0;
+
+      Column* largestColumn = nullptr;
+
+      HashSet<column_index_t> clusteredColumns;
+
+      for(const auto& column : this->header.clusteredColumnIndexes)
+        clusteredColumns.Add(column);
+
+      for (auto &column : this->columns) {
+        const auto& columnSize = column->GetColumnSize();
+
+        maximumRowSize += column->isColumnOverflowed() ? sizeof(OverflowPointer) : columnSize;
+
+        if(columnSize <= largestVariableLengthColumnSize
+            || column->isColumnOverflowed()
+            || columnSize >= LARGE_DATA_OBJECT_SIZE
+            || clusteredColumns.Contains(column->GetColumnIndex()))
+          continue;
+
+        largestVariableLengthColumnSize = columnSize;
+        largestColumn = column;
+      }
+
+      maximumRowSize -= largestVariableLengthColumnSize;
+      maximumRowSize += sizeof(OverflowPointer);
+      largestColumn->SetIsOverflowed(true);
+
+      return maximumRowSize;
+    }
+
+
 
     void Table::ClusteredIndexSeek(vector<Row> *selectedRows, const Indexing::Key *minimumValue, const Indexing::Key *maximumValue){
         auto* tree = this->GetClusteredIndexedTree();
@@ -592,7 +630,7 @@ namespace DatabaseEngine::StorageTypes {
        PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetFileName(), node->GetPageId());
 
        // should never fail
-       this->InsertRowToPage(pageFreeSpacePage, node, row, indexPosition);
+       this->InsertRowToClusteredPage(pageFreeSpacePage, node, row, indexPosition);
 
        auto* keys = node->GetKeysUnsafe();
 
@@ -611,7 +649,7 @@ namespace DatabaseEngine::StorageTypes {
 
       const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
 
-      if(row->GetTotalRowSize() > PAGE_SIZE - PageHeader::GetPageHeaderSize())
+      while(row->GetTotalRowSize() > PAGE_SIZE - PageHeader::GetPageHeaderSize())
         this->HandleRowOverflow(row);
 
       if (tableMapPage == nullptr)
@@ -828,6 +866,7 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
+    //create differrent one to handle clustered updates
     void Table::HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Field> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap){
         this->DeleteLargeObjectFromPage(row, updatedColumns);
         this->DeleteOverflowedRowsFromPage(row, updatedColumns);
@@ -850,6 +889,9 @@ namespace DatabaseEngine::StorageTypes {
           return;
         }
 
+        if(!isHeap)
+
+
         while(page->GetBytesLeft() - diff < 0){
           const int result = this->HandleRowOverflow(row);
           if(result == -1)
@@ -860,12 +902,26 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int & indexPosition){
-      if (row->GetTotalRowSize() > page->GetBytesLeft())
+
+      while (row->GetTotalRowSize() > page->GetBytesLeft())
         this->HandleRowOverflow(row);
 
       page->InsertRow(row, indexPosition);
       pageFreeSpacePage->SetPageMetaData(page);
     }
+
+    void Table::InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int & indexPosition){
+      for(auto& column: this->columns){
+        if(!column->isColumnOverflowed())
+          continue;
+
+        this->HandleRowOverflow(row, column);
+      }
+
+      page->InsertRow(row, indexPosition);
+      pageFreeSpacePage->SetPageMetaData(page);
+    }
+
 
     AdditionalDataTypes::ResultStatus Table::NonClusteredIndexInsert(const StorageTypes::Row *row, const int & nonClusteredIndexId, const vector<column_index_t> & indexedColumns, const BPlusTreeNonClusteredData & data){
 
@@ -889,4 +945,36 @@ namespace DatabaseEngine::StorageTypes {
 
       return status;
     }
-} // namespace DatabaseEngine::StorageTypes
+
+    int Table::HandleRowOverflow(Row *row, Column *column){
+
+        auto& data = row->GetData();
+
+        if(data.size() < column->GetColumnIndex())
+          return -1;
+
+        auto* largestBlock = row->GetData().at(column->GetColumnIndex());
+
+        auto* overflowPage = this->database->GetLastOverflowPage(this->header.tableId, largestBlock->GetBlockSize());
+
+        int indexPos = 0;
+        overflowPage->InsertObject(largestBlock->GetBlockData(), largestBlock->GetBlockSize(), indexPos);
+
+        row->SetOverflowBitMapValue(largestBlock->GetColumnIndex(), true);
+
+        const auto pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(overflowPage->GetPageId());
+
+        auto* pfsPage = StorageManager::Get().GetPageFreeSpacePage(this->database->GetFileName(), pfsPageId);
+
+        pfsPage->SetPageMetaData(overflowPage);
+
+        OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
+        largestBlock->SetData(&ptr, sizeof(OverflowPointer));
+
+        return largestBlock->GetBlockSize();
+    }
+
+
+}
+
+ // namespace DatabaseEngine::StorageTypes

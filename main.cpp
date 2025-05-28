@@ -68,15 +68,16 @@ int main()
     //insert statement
     const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorDesc, ActorAge) VALUES(3, 'Robert Kirkman', 'kalispera', 42)";
 
-    const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName, MovieDesc, MovieNewValue) VALUES(5, 'Batman: The Dark Knight', 'hello its me', 'hello madafaka')";
+    const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName, MovieTemp, MovieDesc, MovieNewValue) VALUES(5, 'Batman: The Dark Knight', 'oulala', 'hello its me', 'hello madafaka')";
 
     const string deleteMovies = "DELETE FROM movies.Movies WHERE MovieName = 'Batman: The Dark Knight'";
 
     //create table
     const string createMoviesTable = "CREATE TABLE dbo.Movies ( "
                                         "ID INT NOT NULL, "
-                                        "MovieName VARCHAR(255) NOT NULL, "
-                                        "MovieDesc VARCHAR(MAX) NOT NULL, "
+                                        "MovieName VARCHAR(800) NOT NULL, "
+                                        "MovieTemp VARCHAR(3500) NOT NULL, "
+                                        "MovieDesc VARCHAR(5000) NOT NULL, "
                                         "MovieNewValue VARCHAR(MAX) NULL, "
                                         "CONSTRAINT PK_Shows PRIMARY KEY (ID, MovieName)"
                                      ")";
@@ -93,6 +94,7 @@ int main()
     const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID = 1001";
 
     const auto start = std::chrono::high_resolution_clock::now();
+
     QueryPipeline::Parser::Parse(createDb, dbName);
 
     QueryPipeline::Parser::Parse(createMoviesTable, dbName);

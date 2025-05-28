@@ -86,10 +86,15 @@ namespace Indexing
     {
         table_id_t tableId;
         page_id_t firstIndexPageId;
+
         int t;
+        int keySize;
+
         Pages::IndexPage *root;
+
         TreeType type;
         int nonClusteredIndexId;
+
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
@@ -100,7 +105,7 @@ namespace Indexing
         [[nodiscard]] Pages::IndexPage *SearchLeftMostLeafNode() const;
 
         [[nodiscard]] Pages::IndexPage * GetNode(const page_id_t& pageId) const;
-        static int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
+        [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
 
         [[nodiscard]] Pages::IndexPage* AllocateNewPage(const page_id_t& parentPageId)const;
 

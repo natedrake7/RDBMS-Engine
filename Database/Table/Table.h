@@ -108,6 +108,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Row* CreateRow(const vector<Field>& inputData)const;
 
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
+            void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
 
         public:
             Table(const string &tableName, const std::string& schema, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
@@ -200,6 +201,10 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] row_size_t GetMaximumRowSize() const;
 
+            [[nodiscard]] row_size_t ReduceMaximumRowSize() const;
+
+            [[nodiscard]] key_size_t CalculateIndexKeySize() const;
+
             void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
 
             void GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>> *vector) const;
@@ -226,7 +231,9 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] vector<ColumnType> GetColumnTypeByTreeId(const uint8_t& treeId) const;
 
-            int HandleRowOverflow(Row *row);;
+            int HandleRowOverflow(Row *row);
+
+            int HandleRowOverflow(Row *row, Column* column);
 
             void InsertLargeObjectToPage(Row *row);
 

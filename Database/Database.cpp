@@ -38,9 +38,41 @@ namespace DatabaseEngine
 
     bool Database::IsSystemPage(const page_id_t &pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % PAGE_FREE_SPACE_SIZE == 1 || pageId % GAM_NUMBER_OF_PAGES == 2; }
 
-    page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) { return (pageId / PAGE_FREE_SPACE_SIZE) * PAGE_FREE_SPACE_SIZE + 1; }
+    page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) {
+      //TODO find how to track the pages correctly
+      uint32_t numGamPages = (pageId / GAM_NUMBER_OF_PAGES) + 1;
+      uint32_t numPfsPages = (pageId / PAGE_FREE_SPACE_SIZE) + 1;
 
-    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) { return (pageId / GAM_NUMBER_OF_PAGES) * GAM_NUMBER_OF_PAGES + 2; }
+      // Convert to logical data-only page ID
+      uint32_t logicalDataPageId = pageId - numGamPages - numPfsPages;
+
+      // Find which PFS page covers this logical data page
+      uint32_t pfsIndex = logicalDataPageId / PAGE_FREE_SPACE_SIZE;
+
+      // Now convert back to physical pageId of that PFS page
+      // +1 is often where the first PFS page starts (adjust to your system)
+      page_id_t pfsPageId = (pfsIndex * PAGE_FREE_SPACE_SIZE) + numPfsPages + numGamPages - 1;
+
+      if(pageId == 8088 || pageId == 8092)
+      {
+        cout << "hello";
+      }
+
+      return pfsPageId;
+    }
+
+    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) {
+      uint32_t numGamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
+      uint32_t numPfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
+
+      uint32_t logicalDataPageId = pageId - numGamPages - numPfsPages;
+
+      uint32_t gamIndex = logicalDataPageId / GAM_NUMBER_OF_PAGES;
+
+      page_id_t gamPageId = gamIndex * GAM_NUMBER_OF_PAGES + 2;
+
+      return gamPageId;
+    }
 
     page_id_t Database::CalculateSystemPageOffset(const page_id_t &pageId)
     {
@@ -59,11 +91,10 @@ namespace DatabaseEngine
 
     Constants::byte Database::GetObjectSizeToCategory(const row_size_t &size)
     {
-        static const Constants::byte categories[] = {0, 1, 5, 9, 13, 17, 21, 25, 29};
-        const float freeSpacePercentage = static_cast<float>(size) / PAGE_SIZE;
-        const int index = static_cast<int>(freeSpacePercentage * 8); // Map 0.0–1.0 to 0–8
+      const float freeSpacePercentage = static_cast<float>(size) / PAGE_SIZE;
 
-        return categories[index];
+      // Direct mapping to 16 levels (0-15)
+      return static_cast<Constants::byte>(freeSpacePercentage * 15);
     }
 
     page_id_t Database::CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId)
@@ -381,8 +412,10 @@ namespace DatabaseEngine
         if (!this->AllocateNewExtent(&pageFreeSpacePage, &lowerLimit, &newPageId, &newExtentId, tableId))
             return nullptr;
 
-        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
+        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateOverflowPage(this->filename, pageId));
+        }
 
         return StorageManager::Get().GetOverflowPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
     }
@@ -396,8 +429,10 @@ namespace DatabaseEngine
         if (!this->AllocateNewExtent(&pageFreeSpacePage, &lowerLimit, &newPageId, &newExtentId, tableId))
             return nullptr;
 
-        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
+        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreatePage(this->filename, pageId));
+        }
 
         return StorageManager::Get().GetPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
     }
@@ -411,8 +446,11 @@ namespace DatabaseEngine
         if (!this->AllocateNewExtent(&pageFreeSpacePage, &lowerLimit, &newPageId, &newExtentId, tableId))
             return nullptr;
 
-        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
-            pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateLargeDataPage(this->filename, pageId));
+        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
+          pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
+
+          pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateLargeDataPage(this->filename, pageId));
+        }
 
         return StorageManager::Get().GetLargeDataPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
     }
@@ -430,7 +468,8 @@ namespace DatabaseEngine
         {
             IndexPage* indexPage = StorageManager::Get().CreateIndexPage(this->filename, pageId);
             indexPage->SetTreeId(treeId);
-            
+
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
             pageFreeSpacePage->SetPageMetaData(indexPage);
         }
 
@@ -498,7 +537,15 @@ namespace DatabaseEngine
                           ? *newPageId + 1
                           : *newPageId;
 
-        return true;
+        const auto pfsPageId = Database::GetPfsAssociatedPage(*lowerLimit);
+
+        if(pfsPageId > (*pageFreeSpacePage)->GetPageId()){
+            *pageFreeSpacePage = StorageManager::Get().CreatePageFreeSpacePage(this->filename, pfsPageId);
+            this->header.lastPageFreeSpacePageId = (*pageFreeSpacePage)->GetPageId();
+          }
+
+
+      return true;
     }
 
     const Table *Database::GetTable(const table_id_t &tableId) const

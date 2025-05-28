@@ -28,6 +28,7 @@ namespace DatabaseEngine::StorageTypes
         std::string name;
         const Table *table;
         bool allowNulls;
+        bool isOverflowed;
 
     protected:
         [[nodiscard]] ColumnType SetColumnType() const;
@@ -58,5 +59,9 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] const ColumnHeader &GetColumnHeader() const;
 
         [[nodiscard]] bool isColumnLOB() const;
+
+        [[nodiscard]] bool isColumnOverflowed() const;
+
+        void SetIsOverflowed(const bool &isOverflowed);
     };
 }

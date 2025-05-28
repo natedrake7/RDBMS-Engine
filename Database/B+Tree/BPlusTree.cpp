@@ -29,6 +29,7 @@ namespace Indexing
         const auto &tableHeader = table->GetTableHeader();
 
         //handle degree here correctly based on indexed columns
+        this->keySize = table->CalculateIndexKeySize();
         this->t = BPlusTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
         this->root = nullptr;
         this->tableId = tableHeader.tableId;
@@ -44,6 +45,7 @@ namespace Indexing
         this->root = nullptr;
         this->t = 0;
         this->tableId = 0;
+        this->keySize = 0;
     }
 
     BPlusTree::~BPlusTree() = default;
@@ -56,7 +58,16 @@ namespace Indexing
         if(treeType == TreeType::Clustered){
           const uint32_t pageSize = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
 
-          return static_cast<int>(pageSize / (table->GetMaximumRowSize() * 2));
+          auto rowSize = table->GetMaximumRowSize();
+          int degree = static_cast<int>(pageSize / ((this->keySize + rowSize) * 2));
+
+          while(degree < 2){
+            rowSize = table->ReduceMaximumRowSize();
+
+            degree = static_cast<int>(pageSize / ((this->keySize + rowSize) * 2));
+          }
+
+          return degree;
         }
 
         const vector<Column*>& columns = table->GetColumns();

@@ -9,6 +9,13 @@ using namespace std;
 using namespace Constants;
 
 namespace ByteMaps {
+
+    static constexpr Constants::byte ALLOCATION_MASK = 0x80;  // 1000 0000
+    static constexpr Constants::byte TYPE_MASK      = 0x70;  // 0111 0000
+    static constexpr Constants::byte SIZE_MASK      = 0x0F;  // 0000 1111
+
+    static constexpr int TYPE_SHIFT = 4;
+
     class ByteMap {
         vector<Constants::byte> data;
 

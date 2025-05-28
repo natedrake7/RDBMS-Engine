@@ -13,6 +13,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header.columnType = type;
         this->header.columnIndex = index;
         this->table = nullptr;
+        this->isOverflowed = false;
     }
 
     Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table)
@@ -23,16 +24,18 @@ namespace DatabaseEngine::StorageTypes {
         this->header.recordSize = masterDbHeader.recordSize;
         this->header.columnIndex = masterDbHeader.tablePosition;
         this->table = table;
+        this->isOverflowed = false;
     }
 
     Column::Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table)
     {
-       this->name = header.name;
-       this->allowNulls = false;
-       this->header.columnType = ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(header.type));
-       this->header.recordSize = header.size;
-       this->header.columnIndex = tablePos;
-       this->table = table;
+        this->name = header.name;
+        this->allowNulls = false;
+        this->header.columnType = ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(header.type));
+        this->header.recordSize = header.size;
+        this->header.columnIndex = tablePos;
+        this->table = table;
+        this->isOverflowed = false;
     }
 
     Column::~Column() = default;
@@ -54,4 +57,8 @@ namespace DatabaseEngine::StorageTypes {
     bool Column::isColumnLOB() const { return this->header.recordSize >= LARGE_DATA_OBJECT_SIZE; }
 
     void Column::SetColumnIndex(const column_index_t& columnIndex) { this->header.columnIndex = columnIndex; }
+
+    bool Column::isColumnOverflowed() const{ return this->isOverflowed; }
+
+    void Column::SetIsOverflowed(const bool & isOverflowed){ this->isOverflowed = isOverflowed; }
 }

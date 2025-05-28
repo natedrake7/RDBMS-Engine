@@ -163,8 +163,7 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
 
     statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
 
-    const auto columns = context->addColumn();
-    for (const auto columnContext: columns) {
+    for (const auto columnContext: context->addColumn()) {
       const auto column = std::any_cast<Statements::AddColumn>(visit(columnContext));
       statement->columns.push_back(column);
     }

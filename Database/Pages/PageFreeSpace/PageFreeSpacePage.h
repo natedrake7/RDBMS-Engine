@@ -14,8 +14,8 @@ namespace Pages {
         ByteMaps::ByteMap* pageMap;
 
     protected:
-        void SetPageAllocated(const page_id_t& pageId);
         void SetPageType(const page_id_t& pageId, const PageType& pageType);
+        static page_id_t GetPagePosition(const page_id_t& pageId) ;
 
     public:
         PageFreeSpacePage();
@@ -29,6 +29,7 @@ namespace Pages {
         void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
         void WritePageToFile(fstream *filePtr) override;
         void SetPageMetaData(const Page* page);
+        void SetPageAllocated(const page_id_t& pageId);
         void SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft);
         [[nodiscard]] bool IsFull() const;
     };

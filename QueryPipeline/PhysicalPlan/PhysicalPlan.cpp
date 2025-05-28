@@ -156,18 +156,21 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
 
 
+    //i mean this is really bad
     for(int i = 0;i < 1000; i++){
       this->fields[0].SetData(i);
 
-      const auto smallStr = std::string(1000, 'w');
-
+      const auto smallStr = std::string(800, 'w');
       this->fields[1].SetData(smallStr);
 
-      const auto str = std::string(10000, 'a');
-      this->fields[2].SetData(str);
+      const auto midStr = std::string(3500, 'a');
+      this->fields[2].SetData(midStr);
 
-      const auto medStr = std::string(7500, 'u');
+      const auto medStr = std::string(5000, 'u');
       this->fields[3].SetData(medStr);
+
+      const auto str = std::string(10000, 'a');
+      this->fields[4].SetData(str);
 
       const auto insertResult = tablePtr->InsertRow(fields);
     }
@@ -260,9 +263,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
         column.isNullable
         ));
 
-    const auto tables = Server::ServerInstance::Get().SelectTables(this->dbName);
+    const auto& tables = Server::ServerInstance::Get().SelectTables(this->dbName);
 
-    const auto index = tables.empty() ? 0 : tables[tables.size() - 1].id + 1;
+    const auto& index = tables.empty() ? 0 : tables[tables.size() - 1].id + 1;
 
     db->CreateTable(this->table->name, this->table->schema, index, columnsPtrs, &this->primaryKey);
 
@@ -339,7 +342,6 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     return result;
   }
-
 
   PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
     : PhysicalOperator(dbName), table(table), expression(expression), fields(std::move(fields)) {}

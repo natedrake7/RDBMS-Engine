@@ -134,6 +134,7 @@ namespace Constants
     constexpr uint16_t PAGE_FREE_SPACE_SIZE = 8088;
     constexpr uint16_t GAM_PAGE_SIZE = 64000;
     constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;
+    constexpr page_id_t HEADER_PAGE_ID = 1;
 
     enum class ColumnType : uint8_t
     {

@@ -195,7 +195,8 @@ void StorageManager::OpenExtent(const string& filename, const extent_id_t &exten
 
     page->GetPageDataFromFile(buffer, table, offSet, file);
 
-    if(pageHeader.pageType == PageType::IAM)
+    if(pageHeader.pageType == PageType::IAM
+      || pageHeader.pageType == PageType::FREESPACE)
     {
       this->systemPageList.push_front(page);
 
@@ -544,6 +545,9 @@ bool StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader
       break;
     case PageType::IAM:
       *page = new IndexAllocationMapPage(pageHeader, 0, 0);
+      break;
+    case PageType::FREESPACE:
+      *page = new PageFreeSpacePage(pageHeader);
       break;
     case PageType::INDEX:
       *page = new IndexPage(pageHeader);
