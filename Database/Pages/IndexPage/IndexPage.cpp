@@ -198,7 +198,7 @@ void IndexPage::UpdateBytesLeft()
 
     if (this->additionalHeader.treeType == TreeType::Clustered) {
         for (const auto& row: this->rows)
-            this->header.bytesLeft -= row->GetRowSize();
+            this->header.bytesLeft -= row->GetTotalRowSize();
     }
     else
         this->header.bytesLeft -= this->nonClusteredData.size() * (sizeof(page_id_t) + sizeof(page_offset_t));

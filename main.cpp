@@ -93,6 +93,11 @@ int main()
     const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID = 1001";
 
     const auto start = std::chrono::high_resolution_clock::now();
+    QueryPipeline::Parser::Parse(createDb, dbName);
+
+    QueryPipeline::Parser::Parse(createMoviesTable, dbName);
+
+    QueryPipeline::Parser::Parse(insertMovies, dbName);
 
     QueryPipeline::Parser::Parse(selectMovies, dbName);
 
