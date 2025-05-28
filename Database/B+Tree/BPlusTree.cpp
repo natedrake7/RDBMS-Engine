@@ -53,9 +53,12 @@ namespace Indexing
 
     int BPlusTree::CalculateTreeDegree(const Table* table, const TreeType& treeType, const int& nonClusteredIndexId)
     {
-        if(treeType == TreeType::Clustered)
-            return (PAGE_SIZE - PageHeader::GetPageHeaderSize()) / (table->GetMaximumRowSize() * 2);
-        
+        if(treeType == TreeType::Clustered){
+          const uint32_t pageSize = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+
+          return static_cast<int>(pageSize / (table->GetMaximumRowSize() * 2));
+        }
+
         const vector<Column*>& columns = table->GetColumns();
 
         vector<vector<column_index_t>> nonClusteredIndexes;

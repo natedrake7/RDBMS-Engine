@@ -497,12 +497,23 @@ namespace DatabaseEngine::StorageTypes {
     row_size_t Table::GetMaximumRowSize() const 
     {
         row_size_t maximumRowSize = 0;
-    
-        for (const auto &column : this->columns)
-            maximumRowSize += (column->isColumnLOB()) ? sizeof(DataObjectPointer)
-                                                    : column->GetColumnSize();
 
-        return maximumRowSize;
+        HashSet<column_index_t> clusteredColumns;
+
+        for(const auto& column : this->header.clusteredColumnIndexes)
+          clusteredColumns.Add(column);
+
+        uint32_t keySize = 0;
+
+        for (const auto &column : this->columns){
+            if(clusteredColumns.Contains(column->GetColumnIndex()))
+              keySize += column->GetColumnSize();
+
+            maximumRowSize += (column->isColumnLOB()) ? sizeof(DataObjectPointer)
+                              : column->GetColumnSize();
+        }
+
+        return keySize + maximumRowSize;
     }
 
     void Table::ClusteredIndexSeek(vector<Row> *selectedRows, const Indexing::Key *minimumValue, const Indexing::Key *maximumValue){

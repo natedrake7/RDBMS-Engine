@@ -14,6 +14,7 @@ namespace Constants
     constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
     constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
     constexpr size_t LARGE_DATA_OBJECT_SIZE = 8060;
+    constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
 
     // table types
     typedef uint16_t table_id_t;

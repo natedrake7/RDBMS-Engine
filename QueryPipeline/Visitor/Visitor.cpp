@@ -193,7 +193,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAddColumn(SQLParser::AddColumnContext *context){
-    const bool isPrimaryKey = (context->primaryKey()) ? true : false;
+    const bool isPrimaryKey = (context->primaryKey()) != nullptr;
     const bool isNullable = ((context->NULL_() && !context->NOT()) && !isPrimaryKey);
 
     return Statements::AddColumn{
@@ -206,6 +206,12 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
   antlrcpp::Any SQLVisitorImplementation::visitVarcharType(SQLParser::VarcharTypeContext *context){
     const auto& number = context->NUMBER();
+
+    //TODO handle VARCHAR(MAX) types
+    if(!number)
+    {
+
+    }
 
     return Statements::ColumnType{
       .name = QueryPipeline::String,
