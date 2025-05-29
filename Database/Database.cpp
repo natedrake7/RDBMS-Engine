@@ -509,12 +509,6 @@ namespace DatabaseEngine
 
         *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(this->filename, this->header.lastPageFreeSpacePageId);
 
-        if ((*pageFreeSpacePage)->IsFull())
-        {
-            *pageFreeSpacePage = StorageManager::Get().CreatePageFreeSpacePage(this->filename, (*pageFreeSpacePage)->GetPageId() + PAGE_FREE_SPACE_SIZE);
-            this->header.lastPageFreeSpacePageId = (*pageFreeSpacePage)->GetPageId();
-        }
-
         if (gamPage->IsFull())
         {
             gamPage = StorageManager::Get().CreateGlobalAllocationMapPage(this->filename, gamPage->GetPageId() + GAM_NUMBER_OF_PAGES);
@@ -663,7 +657,7 @@ namespace DatabaseEngine
 
                 lastOverflowPage = StorageManager::Get().GetOverflowPage(this->filename, pageId, extentId, table);
 
-                if (lastOverflowPage->GetBytesLeft() <= size)
+                if (lastOverflowPage->GetBytesLeft() >= size)
                     return lastOverflowPage;
             }
         }

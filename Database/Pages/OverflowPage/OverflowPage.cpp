@@ -46,6 +46,7 @@ namespace Pages {
 
     indexPos = this->data.size() - 1;
     this->header.pageSize++;
+    this->UpdateBytesLeft();
 
     return row;
   }
