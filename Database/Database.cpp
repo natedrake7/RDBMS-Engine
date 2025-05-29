@@ -39,52 +39,71 @@ namespace DatabaseEngine
     bool Database::IsSystemPage(const page_id_t &pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % PAGE_FREE_SPACE_SIZE == 1 || pageId % GAM_NUMBER_OF_PAGES == 2; }
 
     page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) {
-      //TODO find how to track the pages correctly
-      uint32_t numGamPages = (pageId / GAM_NUMBER_OF_PAGES) + 1;
-      uint32_t numPfsPages = (pageId / PAGE_FREE_SPACE_SIZE) + 1;
+        //first pfs page is always at 1
+        constexpr page_id_t FIRST_PFS_PAGE = 1;
 
-      // Convert to logical data-only page ID
-      uint32_t logicalDataPageId = pageId - numGamPages - numPfsPages;
+        //calculate all the gam pages allocated after the 1st one (pageId 2)
+        const page_id_t gamPagesAfterFirst = (pageId / GAM_NUMBER_OF_PAGES);
 
-      // Find which PFS page covers this logical data page
-      uint32_t pfsIndex = logicalDataPageId / PAGE_FREE_SPACE_SIZE;
+        //find the system pages preceding the current pageId
+        const page_id_t SYSTEM_PAGES = (gamPagesAfterFirst + 1) + ((pageId / PAGE_FREE_SPACE_SIZE) + 1); //get all gam pages and pfs pages and header page before the current page
 
-      // Now convert back to physical pageId of that PFS page
-      // +1 is often where the first PFS page starts (adjust to your system)
-      page_id_t pfsPageId = (pfsIndex * PAGE_FREE_SPACE_SIZE) + numPfsPages + numGamPages - 1;
+        // Calculate the logical PageId and find how many pfs precede it excluding the first
+        page_id_t pfsCount = (pageId - SYSTEM_PAGES) / PAGE_FREE_SPACE_SIZE;
 
-      if(pageId == 8088 || pageId == 8092)
-      {
-        cout << "hello";
-      }
-
-      return pfsPageId;
+        return pfsCount == 0 ? FIRST_PFS_PAGE : FIRST_PFS_PAGE + pfsCount * (PAGE_FREE_SPACE_SIZE + 1) + gamPagesAfterFirst + 1;
     }
 
-    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) {
-      uint32_t numGamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
-      uint32_t numPfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
+    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) { return (pageId / GAM_NUMBER_OF_PAGES) * GAM_NUMBER_OF_PAGES + 2; }
 
-      uint32_t logicalDataPageId = pageId - numGamPages - numPfsPages;
-
-      uint32_t gamIndex = logicalDataPageId / GAM_NUMBER_OF_PAGES;
-
-      page_id_t gamPageId = gamIndex * GAM_NUMBER_OF_PAGES + 2;
-
-      return gamPageId;
-    }
+//    page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) {
+//
+//      //TODO find how to track the pages correctly
+//      uint32_t numGamPages = (pageId / GAM_NUMBER_OF_PAGES) + 1;
+//      uint32_t numPfsPages = (pageId / PAGE_FREE_SPACE_SIZE) + 1;
+//
+//      // Convert to logical data-only page ID
+//      uint32_t logicalDataPageId = pageId - numGamPages - numPfsPages;
+//
+//      // Find which PFS page covers this logical data page
+//      uint32_t pfsIndex = logicalDataPageId / PAGE_FREE_SPACE_SIZE;
+//
+//      // Now convert back to physical pageId of that PFS page
+//      // +1 is often where the first PFS page starts (adjust to your system)
+//      page_id_t pfsPageId = (pfsIndex * PAGE_FREE_SPACE_SIZE) + numPfsPages + numGamPages - 1;
+//
+//      if(pageId == 8088 || pageId == 8092)
+//      {
+//        cout << "hello";
+//      }
+//
+//      return pfsPageId;
+//    }
+//
+//    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) {
+//      uint32_t numGamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
+//      uint32_t numPfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
+//
+//      uint32_t logicalDataPageId = pageId - numGamPages - numPfsPages;
+//
+//      uint32_t gamIndex = logicalDataPageId / GAM_NUMBER_OF_PAGES;
+//
+//      page_id_t gamPageId = gamIndex * GAM_NUMBER_OF_PAGES + 2;
+//
+//      return gamPageId;
+//    }
 
     page_id_t Database::CalculateSystemPageOffset(const page_id_t &pageId)
     {
-        page_id_t pfsPages = pageId / PAGE_FREE_SPACE_SIZE;
+        page_id_t pfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
 
-        if (pfsPages == 0)
-            pfsPages = 1;
+//        if (pfsPages == 0)
+//            pfsPages = 1;
 
-        page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES;
+        page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
 
-        if (gamPages == 0)
-            gamPages = 1;
+//        if (gamPages == 0)
+//            gamPages = 1;
 
         return pageId + pfsPages + gamPages + 1;
     }
@@ -430,6 +449,7 @@ namespace DatabaseEngine
             return nullptr;
 
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
+
             pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreatePage(this->filename, pageId));
         }
@@ -537,13 +557,24 @@ namespace DatabaseEngine
                           ? *newPageId + 1
                           : *newPageId;
 
+        if(*lowerLimit == 8171)
+        {
+          cout << "hello";
+        }
+
         const auto pfsPageId = Database::GetPfsAssociatedPage(*lowerLimit);
 
         if(pfsPageId > (*pageFreeSpacePage)->GetPageId()){
             *pageFreeSpacePage = StorageManager::Get().CreatePageFreeSpacePage(this->filename, pfsPageId);
-            this->header.lastPageFreeSpacePageId = (*pageFreeSpacePage)->GetPageId();
-          }
+            this->header.lastPageFreeSpacePageId = pfsPageId;
+        }
 
+        const auto gamPageId = Database::GetGamAssociatedPage(*lowerLimit);
+
+        if(gamPageId > gamPage->GetPageId()){
+            gamPage = StorageManager::Get().CreateGlobalAllocationMapPage(this->filename, gamPageId);
+            this->header.lastGamPageId = gamPageId;
+        }
 
       return true;
     }

@@ -166,7 +166,6 @@ namespace Indexing
     {
         if (this->root == nullptr)
         {
-
             //maybe root page is removed and need to be reopened
             this->root = this->AllocateNewPage(0);
 
@@ -344,52 +343,52 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScan(vector<Row>* result){
-        if (!this->root) {
-            this->root = this->GetNode(this->firstIndexPageId);
+        this->root = this->GetNode(this->firstIndexPageId);
 
-            if (!this->root)
-                return;
-        }
+        if (!this->root)
+          return;
 
         auto *currentNode = this->SearchLeftMostLeafNode();
 
+        int count = 0;
         while (currentNode)
         {
-            auto* keys = currentNode->GetKeysUnsafe();
+          for(auto* row: *currentNode->GetDataRowsUnsafe()){
+            const RowHeader *rowHeader = row->GetHeader();
 
-            for (int i = 0; i < keys->size(); i++)
-              currentNode->GetRowByIndex(result, *this->table, i);
+            vector<Block *> copyBlocks = row->GetBlockCopies();
 
-            if(currentNode->GetNextPage() == 0)
-                return;
+            result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
+          }
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+          if(currentNode->GetNextPage() == 0)
+              return;
+
+          currentNode = this->GetNode(currentNode->GetNextPage());
         }
+
     }
 
     void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, Expressions::Expression *expression){
-        if (!this->root) {
-          this->root = this->GetNode(this->firstIndexPageId);
+        this->root = this->GetNode(this->firstIndexPageId);
 
-          if (!this->root)
-              return;
-        }
+        if (!this->root)
+          return;
 
         auto *currentNode = this->SearchLeftMostLeafNode();
 
         while (currentNode)
         {
-          auto* keys = currentNode->GetKeysUnsafe();
 
-          auto* rows = currentNode->GetDataRowsUnsafe();
-
-          for (int i = 0; i < keys->size(); i++){
-            auto* row = rows->at(i);
-
+          for(auto* row: *currentNode->GetDataRowsUnsafe()){
             if(!row->Evaluate(expression))
               continue;
 
-            currentNode->GetRowByIndex(result, *this->table, i);
+            const RowHeader *rowHeader = row->GetHeader();
+
+            vector<Block *> copyBlocks = row->GetBlockCopies();
+
+            result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
           }
 
           if(currentNode->GetNextPage() == 0)
@@ -400,12 +399,10 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScanUpdate(Expressions::Expression *expression, const vector<Field> & updates){
-        if (!this->root) {
-          this->root = this->GetNode(this->firstIndexPageId);
+        this->root = this->GetNode(this->firstIndexPageId);
 
-          if (!this->root)
-            return;
-        }
+        if (!this->root)
+          return;
 
         HashSet<column_index_t> updatedColumns;
 
@@ -437,12 +434,10 @@ namespace Indexing
     }
 
     void BPlusTree::IndexSeekUpdate(const Key* minKey, const Key* maxKey, const vector<Field> & updates){
-      if (!this->root) {
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
           return;
-      }
 
         HashSet<column_index_t> updatedColumns;
         auto *currentNode = this->SearchKey(*minKey);
@@ -533,12 +528,10 @@ namespace Indexing
     }
 
     void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, vector<DatabaseEngine::StorageTypes::Row> *result){
-        if (!this->root) {
-            this->root = this->GetNode(this->firstIndexPageId);
+        this->root = this->GetNode(this->firstIndexPageId);
 
-            if (!this->root)
-                return;
-        }
+        if (!this->root)
+            return;
 
         auto *currentNode = this->SearchKey(minKey);
         IndexPage *previousNode = nullptr;
