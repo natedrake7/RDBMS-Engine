@@ -24,6 +24,7 @@ namespace QueryPipeline::Statements {
   CreateTableStatement::~CreateTableStatement() {
       delete this->constraint;
       delete this->table;
+      delete this->autoIncrementKey;
 
       for(const auto& column : this->columns)
         delete column.autoIncrementKey;

@@ -95,9 +95,9 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-//    QueryPipeline::Parser::Parse(createDb, dbName);
-////
-//    QueryPipeline::Parser::Parse(createActorsTable, dbName);
+    QueryPipeline::Parser::Parse(createDb, dbName);
+//
+    QueryPipeline::Parser::Parse(createActorsTable, dbName);
 //
 //    QueryPipeline::Parser::Parse(updateMovies, dbName);
 
