@@ -33,6 +33,18 @@ void InsertRowsToMoviesTable(Table* table);
 //deletes
 //advanced functions
 
+//TODO
+//Add Guid Support (set is as a different datatype)
+//Add Decimal full support
+//Fix date retrieval issues
+//Add Alter table (add drop columns)
+//Add joins
+//check index deletes work
+//add identity
+//add reset identity
+//start documenting implementation and optimize wherever possible
+
+
 std::atomic<bool> serverRunning{true};
 
 void shutdownServer(int signal) {
