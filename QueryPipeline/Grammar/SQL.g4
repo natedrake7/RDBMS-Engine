@@ -79,7 +79,11 @@ decimalType
     ;
 
 primaryKey
-    : 'PRIMARY' 'KEY' 'IDENTITY'
+    : 'PRIMARY' 'KEY' autoIncrementKey?
+    ;
+
+autoIncrementKey
+    : 'IDENTITY' '('(seed=NUMBER) ',' (increment=NUMBER)')'
     ;
     
 primaryKeyConstraint

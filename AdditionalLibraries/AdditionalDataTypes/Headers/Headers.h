@@ -28,10 +28,13 @@ namespace Headers {
 
   typedef struct IndexHeader {
     std::string dbName;
+    std::string schemaName;
     std::string tableName;
     std::string name;
     std::vector<uint8_t> columns;
     bool isClustered;
+    int32_t seed;
+    int32_t autoIncrement;
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
     std::string lastModifiedBy;

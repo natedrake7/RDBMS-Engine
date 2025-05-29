@@ -24,9 +24,18 @@ namespace QueryPipeline::Statements {
     int64_t afterFraction;
   };
 
+  struct AutoIncrementKey{
+    uint16_t seed;
+    uint16_t incrementFactor;
+
+    AutoIncrementKey() = default;
+    ~AutoIncrementKey() = default;
+  };
+
   struct AddColumn {
     std::string name;
     ColumnType type;
+    AutoIncrementKey* autoIncrementKey;
     bool isPrimaryKey;
     bool isNullable;
 
@@ -68,6 +77,9 @@ namespace QueryPipeline::Statements {
     PrimaryKeyConstraint* constraint;
     vector<column_index_t> primaryKey;
 
+    AutoIncrementKey* autoIncrementKey;
+
+    CreateTableStatement();
     ~CreateTableStatement() override;
 
     bool Validate() override;

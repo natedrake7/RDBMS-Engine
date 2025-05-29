@@ -245,8 +245,15 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalTableCreate::PhysicalTableCreate(const std::string& dbName, Statements::TableName*  table, std::vector<Statements::AddColumn> &columns, std::vector<column_index_t>& primaryKey, std::string& constraintName)
-    : PhysicalOperator(dbName), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
+  PhysicalTableCreate::PhysicalTableCreate(
+      const std::string& dbName,
+      Statements::TableName*  table,
+      std::vector<Statements::AddColumn> &columns,
+      std::vector<column_index_t>& primaryKey,
+      std::string& constraintName,
+      Statements::AutoIncrementKey* autoIncrementKey)
+    : PhysicalOperator(dbName), table(table), constraintName(std::move(constraintName)),
+      columns(std::move(columns)), primaryKey(std::move(primaryKey)), autoIncrementKey(autoIncrementKey){}
 
   PhysicalPlanResult* PhysicalTableCreate::Execute(){
     DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
@@ -293,8 +300,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
         this->constraintName += this->constraintName.empty() ? "PK_" + this->columns[column].name :"_" + this->columns[column].name;
     }
 
+    uint16_t seed = 0, incrementFactor = 0;
+    if(this->autoIncrementKey != nullptr){
+      seed = this->autoIncrementKey->seed;
+      incrementFactor = this->autoIncrementKey->incrementFactor;
+    }
+
     if (!indexColumns.empty())
-      Server::ServerInstance::Get().InsertIndexToMasterDb(dbName, this->table->name, this->constraintName, indexColumns, true);
+      Server::ServerInstance::Get().InsertIndexToMasterDb(dbName, this->table->schema, this->table->name, this->constraintName, indexColumns, true, seed, incrementFactor);
 
     return nullptr;
   }

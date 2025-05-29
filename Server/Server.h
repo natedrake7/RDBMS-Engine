@@ -58,11 +58,14 @@ namespace Server {
       const bool& isSystem = false,
       const string& user = "system") const;
     void InsertIndexToMasterDb(
-      const string& dbName,
-      const string& tableName,
-      const string& indexName,
-      const string& columns,
-      const bool& isClustered,
+      const string &dbName,
+      const string& schemaName,
+      const string &tableName,
+      const string &indexName,
+      const string &columns,
+      const bool &isClustered,
+      const int32_t& seed,
+      const int32_t& increment_factor,
       const string& user = "system") const;
     void InsertSchemaToMasterDb(const string& dbName, const string& schemaName, const string& user = "system") const;
 

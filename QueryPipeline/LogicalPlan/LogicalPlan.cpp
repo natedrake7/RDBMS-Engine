@@ -120,11 +120,18 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalHeapDelete(this->dbName, this->table, this->expression);
   }
 
-  LogicalTableCreate::LogicalTableCreate(const std::string& dbName, Statements::TableName*  table, std::vector<Statements::AddColumn>& columns, std::vector<column_index_t>& primaryKey, std::string  constraintName)
-    : LogicalPlan(dbName), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
+  LogicalTableCreate::LogicalTableCreate(
+        const std::string& dbName,
+        Statements::TableName*  table,
+        std::vector<Statements::AddColumn>& columns,
+        std::vector<column_index_t>& primaryKey,
+        std::string  constraintName,
+        Statements::AutoIncrementKey* autoIncrementKey)
+    : LogicalPlan(dbName), table(table), constraintName(std::move(constraintName))
+      , columns(std::move(columns)), primaryKey(std::move(primaryKey)), autoIncrementKey(autoIncrementKey) {}
 
   PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(){
-    return new PhysicalPlan::PhysicalTableCreate(dbName, this->table, this->columns, this->primaryKey, this->constraintName);
+    return new PhysicalPlan::PhysicalTableCreate(dbName, this->table, this->columns, this->primaryKey, this->constraintName, this->autoIncrementKey);
   }
 
   LogicalUpdate::LogicalUpdate(const string & dbName, Statements::TableName *table, vector<Field> & fields, Expressions::Expression *expression)

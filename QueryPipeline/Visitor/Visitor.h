@@ -66,5 +66,7 @@ namespace QueryPipeline {
       antlrcpp::Any visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context) override;
 
       antlrcpp::Any visitUpdateColumn(SQLParser::UpdateColumnContext *context) override;
+
+      antlrcpp::Any visitAutoIncrementKey(SQLParser::AutoIncrementKeyContext *context) override;
   };
 }

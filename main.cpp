@@ -63,7 +63,7 @@ int main()
     const string selectActors = "SELECT * FROM dbo.Actors";
 
     //select statement
-    const string selectMovies = "SELECT * FROM dbo.Movies";
+    const string selectMovies = "SELECT * FROM dbo.Movies WHERE ID = 3";
 
     //insert statement
     const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorDesc, ActorAge) VALUES(3, 'Robert Kirkman', 'kalispera', 42)";
@@ -83,25 +83,25 @@ int main()
                                      ")";
 
     //create table
-    const string createActorsTable = "CREATE TABLE Actors ( ID INT NULL, ActorName VARCHAR(255) NULL, ActorDesc VARCHAR(MAX), ActorAge INT NOT NULL)";
+    const string createActorsTable = "CREATE TABLE Actors ( ID INT PRIMARY KEY IDENTITY(1, 1) , ActorName VARCHAR(255) NULL, ActorDesc VARCHAR(MAX), ActorAge INT NOT NULL)";
 
     const string createDb = "CREATE DATABASE MoviesDb";
 
     const string schemaCreate = "CREATE SCHEMA movies";
 
-    const string updateMovies = "UPDATE dbo.Movies SET MovieDesc = 'Batman Fights Bane' WHERE ID = 1001";
+    const string updateMovies = "UPDATE dbo.Movies SET MovieDesc = 'Batman Fights Bane' WHERE ID = 5";
 
     const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID = 1001";
 
     const auto start = std::chrono::high_resolution_clock::now();
 
 //    QueryPipeline::Parser::Parse(createDb, dbName);
+////
+//    QueryPipeline::Parser::Parse(createActorsTable, dbName);
 //
-//    QueryPipeline::Parser::Parse(createMoviesTable, dbName);
-//
-//    QueryPipeline::Parser::Parse(insertMovies, dbName);
+//    QueryPipeline::Parser::Parse(updateMovies, dbName);
 
-    QueryPipeline::Parser::Parse(selectMovies, dbName);
+//    QueryPipeline::Parser::Parse(selectMovies, dbName);
 
     const auto& databases = server.GetCatalog();
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);

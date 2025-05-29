@@ -89,8 +89,8 @@ namespace QueryPipeline
 
             cout << result->rows.size() << endl;
             
-//            for (const auto& row: result->rows)
-//                row.PrintRow();
+            for (const auto& row: result->rows)
+                row.PrintRow();
 
             cout << result->message << endl;
         }

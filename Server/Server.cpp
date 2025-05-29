@@ -122,7 +122,13 @@ namespace Server {
         _columns +="_" + table.primaryKey[j];
       }
        
-      this->InsertIndexToMasterDb(this->sysDbName, table.name, "PK" + _columns, concatenatedColumns, true); 
+      this->InsertIndexToMasterDb(
+      this->sysDbName,
+    "dbo",
+     table.name,
+  "PK" + _columns,
+      concatenatedColumns,
+    true, 0, 0);
     }
 
     this->InsertSchemaToMasterDb(this->sysDbName, "dbo");
@@ -231,23 +237,29 @@ namespace Server {
 
   void ServerInstance::InsertIndexToMasterDb(
     const string &dbName,
+    const string& schemaName,
     const string &tableName,
     const string &indexName,
     const string &columns,
     const bool &isClustered,
+    const int32_t& seed,
+    const int32_t& increment_factor,
     const string &user) const{
      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_indexes");
      const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Field> fields = {
        Field(dbName, 0),
-       Field(tableName, 1),
-       Field(indexName, 2),
-       Field(columns, 3),
-       Field(isClustered, 4),
-       Field(currentDate, 5),
-       Field(currentDate, 6),
-       Field(user, 7),
+       Field(schemaName, 1),
+       Field(tableName, 2),
+       Field(indexName, 3),
+       Field(columns, 4),
+       Field(isClustered, 5),
+       Field(seed, 6),
+       Field(increment_factor, 7),
+       Field(currentDate, 8),
+       Field(currentDate, 9),
+       Field(user, 10),
      };
 
      table->InsertRows({fields});
@@ -584,7 +596,7 @@ namespace Server {
 
         constexpr auto delimiter = ",";
 
-        const char* token = strtok(data[3]->GetString().data(), delimiter);
+        const char* token = strtok(data[4]->GetString().data(), delimiter);
 
         while (token != nullptr) {
           columns.emplace_back(SafeConverter<column_index_t>::SafeStoi(token));
@@ -596,11 +608,14 @@ namespace Server {
           data[0]->GetString(),
           data[1]->GetString(),
           data[2]->GetString(),
+          data[3]->GetString(),
           std::move(columns),
-          data[4]->GetBool(),
-          data[5]->GetDateTime(),
-          data[6]->GetDateTime(),
-          data[7]->GetString()
+          data[5]->GetBool(),
+          data[6]->GetInt(),
+          data[7]->GetInt(),
+          data[8]->GetDateTime(),
+          data[9]->GetDateTime(),
+          data[10]->GetString()
         });
       }
 

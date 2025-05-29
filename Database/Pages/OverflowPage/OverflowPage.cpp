@@ -29,7 +29,12 @@ namespace Pages {
   OverflowRow* OverflowPage::DeleteObject(const page_offset_t& index){
     auto* object = this->data.at(index);
 
-    this->data.at(index) = nullptr; //mark page to defragment it later
+    if(this->data.size() == 1 || index == this->data.size() - 1)
+      this->data.erase(this->data.begin() + index);
+    else
+      this->data.at(index) = nullptr; //mark page to defragment it later (only if there are more items in the page)
+
+    this->UpdateBytesLeft();
 
     return object;
   }
@@ -52,9 +57,12 @@ namespace Pages {
   }
 
   void OverflowPage::UpdateBytesLeft(){
-    this->header.bytesLeft = PAGE_SIZE - this->header.GetPageHeaderSize();
+    this->header.bytesLeft = static_cast<page_size_t>(PAGE_SIZE - PageHeader::GetPageHeaderSize());
 
     for(const auto& row : this->data){
+      if(row == nullptr) //ignore fragmented parts
+        continue;
+
       this->header.bytesLeft -= row->GetSize();
     }
   }

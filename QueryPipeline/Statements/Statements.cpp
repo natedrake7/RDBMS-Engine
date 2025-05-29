@@ -24,23 +24,32 @@ namespace QueryPipeline::Statements {
   CreateTableStatement::~CreateTableStatement() {
       delete this->constraint;
       delete this->table;
+
+      for(const auto& column : this->columns)
+        delete column.autoIncrementKey;
+  }
+
+  CreateTableStatement::CreateTableStatement(){
+    this->table = nullptr;
+    this->constraint = nullptr;
+    this->autoIncrementKey = nullptr;
   }
 
   bool CreateTableStatement::Validate(){
     //no need to check as the below query will just return 0 results
     // if (!Server::ServerInstance::Get().DatabaseExists(this->dbName))
     //   throw runtime_error("No Database with name: "  + this->dbName + " exists");
-    
+
     if (Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
       throw runtime_error("Table " + this->table->name + " already exists");
-    
+
     column_index_t tablePosition = 0;
     bool primaryKeyFound = false;
     Dictionary<string, column_index_t> columnNamesToIndexes;
-    
+
     for (auto& column: this->columns) {
       uint16_t columnSize;
-      
+
       if (!ColumnTypeSizes.TryGetValue(column.type.name, columnSize)) {
         std::cerr << "Column Type: " + column.type.name + " does not exist" << endl;
         return false;
@@ -56,10 +65,25 @@ namespace QueryPipeline::Statements {
       column.index = tablePosition++;
 
       columnNamesToIndexes.Add(column.name, column.index);
-      
+
+      if(column.isPrimaryKey && primaryKeyFound){
+        cerr << "Cannot have multiple primary keys defined. Consider declaring a composite key" << endl;
+        return false;
+      }
+
       if (column.isPrimaryKey) {
         this->primaryKey.push_back(column.index);
         primaryKeyFound = true;
+
+        //store the pointer if found, else let it be null
+        if(column.autoIncrementKey){
+          if(column.autoIncrementKey->incrementFactor <= 0){
+            cerr << "increment factor cannot be less or equal to 0" << endl;
+            return false;
+          }
+
+          this->autoIncrementKey = column.autoIncrementKey;
+        }
       }
     }
 
@@ -80,8 +104,8 @@ namespace QueryPipeline::Statements {
 
   LogicalPlan * CreateTableStatement::ToLogical(){
     const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
-    
-    return new LogicalTableCreate(this->dbName, this->table, this->columns, this->primaryKey, constraintName);
+
+    return new LogicalTableCreate(this->dbName, this->table, this->columns, this->primaryKey, constraintName, this->autoIncrementKey);
   }
 
   bool SelectStatement::Validate(){

@@ -417,9 +417,7 @@ namespace Indexing
 
           auto* rows = currentNode->GetDataRowsUnsafe();
 
-          for (int i = 0; i < keys->size(); i++){
-            auto* row = rows->at(i);
-
+          for(auto* row: *currentNode->GetDataRowsUnsafe()){
             if(!row->Evaluate(expression))
               continue;
 

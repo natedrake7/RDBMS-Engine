@@ -158,21 +158,6 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
       return {};
   }
 
-  antlrcpp::Any SQLVisitorImplementation::visitCreateTableStatement(SQLParser::CreateTableStatementContext *context){
-    auto* statement = new Statements::CreateTableStatement();
-
-    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
-
-    for (const auto columnContext: context->addColumn()) {
-      const auto column = std::any_cast<Statements::AddColumn>(visit(columnContext));
-      statement->columns.push_back(column);
-    }
-
-    if (context->primaryKeyConstraint())
-      statement->constraint = std::any_cast<Statements::PrimaryKeyConstraint*>(visit(context->primaryKeyConstraint()));
-
-    return statement;
-  }
 
 antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext *context) {
     if (context->varcharType())
@@ -184,22 +169,6 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     return Statements::ColumnType{
       .name = AdditionalLibraries::NormalizeString(text),
-    };
-  }
-
-  antlrcpp::Any SQLVisitorImplementation::visitPrimaryKey(SQLParser::PrimaryKeyContext *context){
-    return {};
-  }
-
-  antlrcpp::Any SQLVisitorImplementation::visitAddColumn(SQLParser::AddColumnContext *context){
-    const bool isPrimaryKey = (context->primaryKey()) != nullptr;
-    const bool isNullable = ((context->NULL_() && !context->NOT()) && !isPrimaryKey);
-
-    return Statements::AddColumn{
-      .name = std::any_cast<string>(visit(context->columnName())),
-      .type = std::any_cast<Statements::ColumnType>(visit(context->dataType())),
-      .isPrimaryKey = isPrimaryKey,
-      .isNullable = isNullable,
     };
   }
 
@@ -327,4 +296,5 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     return statement;
   }
+
 }

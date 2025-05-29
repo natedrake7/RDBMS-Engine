@@ -971,6 +971,8 @@ namespace DatabaseEngine::StorageTypes {
         OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
         largestBlock->SetData(&ptr, sizeof(OverflowPointer));
 
+        row->UpdateRowSize();
+
         return largestBlock->GetBlockSize();
     }
 

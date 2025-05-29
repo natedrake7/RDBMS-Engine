@@ -151,6 +151,11 @@
           "size": 100
         },
         {
+          "name": "schema",
+          "type": "String",
+          "size": 100
+        },
+        {
           "name": "table_name",
           "type": "String",
           "size": 100
@@ -170,6 +175,14 @@
           "type": "Bool"
         },
         {
+          "name": "seed",
+          "type": "Int"
+        },
+        {
+          "name": "increment_factor",
+          "type": "Int"
+        },
+        {
           "name": "created_at",
           "type": "DateTime"
         },
@@ -185,6 +198,7 @@
       ],
       "primaryKey": [
         "db_name",
+        "schema_name",
         "table_name",
         "name"
       ]
