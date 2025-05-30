@@ -26,7 +26,7 @@ namespace QueryPipeline {
   : LogicalPlan(dbName), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalTableScan::ToPhysical(){
-      const auto indexes = Server::ServerInstance::Get().SelectIndexes(dbName, this->table->name);
+      const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
       //if no indexes are available heap scan
       if (indexes.empty())
@@ -88,7 +88,7 @@ namespace QueryPipeline {
     : LogicalPlan(dbName), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalDelete::ToPhysical(){
-    const auto indexes = Server::ServerInstance::Get().SelectIndexes(dbName, this->table->name);
+    const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
     //if no indexes are available heap scan
     if (indexes.empty())
@@ -124,21 +124,20 @@ namespace QueryPipeline {
         const std::string& dbName,
         Statements::TableName*  table,
         std::vector<Statements::AddColumn>& columns,
-        std::vector<column_index_t>& primaryKey,
-        std::string  constraintName,
-        Statements::AutoIncrementKey* autoIncrementKey)
-    : LogicalPlan(dbName), table(table), constraintName(std::move(constraintName))
-      , columns(std::move(columns)), primaryKey(std::move(primaryKey)), autoIncrementKey(autoIncrementKey) {}
+        Headers::Index& primaryKey,
+        std::string  constraintName)
+    : LogicalPlan(dbName), table(table), columns(std::move(columns)),
+      primaryKey(std::move(primaryKey)), constraintName(std::move(constraintName)) {}
 
   PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(){
-    return new PhysicalPlan::PhysicalTableCreate(dbName, this->table, this->columns, this->primaryKey, this->constraintName, this->autoIncrementKey);
+    return new PhysicalPlan::PhysicalTableCreate(this->dbName, this->table, this->columns, this->primaryKey, this->constraintName);
   }
 
   LogicalUpdate::LogicalUpdate(const string & dbName, Statements::TableName *table, vector<Field> & fields, Expressions::Expression *expression)
   : LogicalPlan(dbName), table(table), fields(std::move(fields)), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator* LogicalUpdate::ToPhysical(){
-      const auto indexes = Server::ServerInstance::Get().SelectIndexes(dbName, this->table->name);
+      const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
       //if no indexes are available heap scan
       if (indexes.empty())

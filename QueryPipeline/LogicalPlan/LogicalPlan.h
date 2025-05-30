@@ -81,16 +81,14 @@ namespace QueryPipeline {
       Statements::TableName* table;
       std::string constraintName;
       std::vector<Statements::AddColumn> columns;
-      std::vector<column_index_t> primaryKey;
-      Statements::AutoIncrementKey* autoIncrementKey;
-    
+      Headers::Index primaryKey;
+
       explicit LogicalTableCreate(
         const std::string& dbName,
         Statements::TableName* table,
         std::vector<Statements::AddColumn>& columns,
-        std::vector<column_index_t>& primaryKey,
-        std::string  constraintName,
-        Statements::AutoIncrementKey* autoIncrementKey);
+        Headers::Index& primaryKey,
+        std::string  constraintName);
       PhysicalPlan::PhysicalTableCreate* ToPhysical()override;
   };
 }

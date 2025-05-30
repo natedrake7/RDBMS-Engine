@@ -6,6 +6,10 @@
       "name": "sys_databases",
       "columns": [
         {
+          "name": "database_id",
+          "type": "Int"
+        },
+        {
           "name": "name",
           "type": "String",
           "size": 100
@@ -34,16 +38,19 @@
         }
       ],
       "primaryKey": [
-        "name"
+        "database_id"
       ]
     },
     {
-      "name": "sys_tables",
+      "name": "sys_schemas",
       "columns": [
         {
-          "name": "db_name",
-          "type": "String",
-          "size": 100
+          "name": "schema_id",
+          "type": "Int"
+        },
+        {
+          "name": "database_id",
+          "type": "Int"
         },
         {
           "name": "name",
@@ -51,13 +58,46 @@
           "size": 100
         },
         {
-          "name": "Identifier",
+          "name": "created_at",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified",
+          "type": "DateTime"
+        },
+        {
+          "name": "last_modified_by",
+          "type": "String",
+          "size": 100
+        }
+      ],
+      "primaryKey": [
+        "schema_id"
+      ]
+    },
+    {
+      "name": "sys_tables",
+      "columns": [
+        {
+          "name": "table_id",
           "type": "Int"
         },
         {
-          "name": "schema_name",
+          "name": "database_id",
+          "type": "Int"
+        },
+        {
+          "name": "schema_id",
+          "type": "Int"
+        },
+        {
+          "name": "name",
           "type": "String",
           "size": 100
+        },
+        {
+          "name": "tablePosition",
+          "type": "Int"
         },
         {
           "name": "isSystem",
@@ -78,23 +118,19 @@
         }
       ],
       "primaryKey": [
-        "db_name",
-        "name",
-        "schema_name"
+        "table_id"
       ]
     },
     {
       "name": "sys_columns",
       "columns": [
         {
-          "name": "db_name",
-          "type": "String",
-          "size": 100
+          "name": "column_id",
+          "type": "Int"
         },
         {
-          "name": "table_name",
-          "type": "String",
-          "size": 100
+          "name": "table_id",
+          "type": "Int"
         },
         {
           "name": "name",
@@ -137,28 +173,19 @@
         }
       ],
       "primaryKey": [
-        "db_name",
-        "table_name",
-        "name"
+        "column_id"
       ]
     },
     {
       "name": "sys_indexes",
       "columns": [
         {
-          "name": "db_name",
-          "type": "String",
-          "size": 100
+          "name": "index_id",
+          "type": "Int"
         },
         {
-          "name": "schema",
-          "type": "String",
-          "size": 100
-        },
-        {
-          "name": "table_name",
-          "type": "String",
-          "size": 100
+          "name": "table_id",
+          "type": "Int"
         },
         {
           "name": "name",
@@ -183,38 +210,8 @@
           "type": "Int"
         },
         {
-          "name": "created_at",
-          "type": "DateTime"
-        },
-        {
-          "name": "last_modified",
-          "type": "DateTime"
-        },
-        {
-          "name": "last_modified_by",
-          "type": "String",
-          "size": 100
-        }
-      ],
-      "primaryKey": [
-        "db_name",
-        "schema_name",
-        "table_name",
-        "name"
-      ]
-    },
-    {
-      "name": "sys_schemas",
-      "columns": [
-        {
-          "name": "db_name",
-          "type": "String",
-          "size": 100
-        },
-        {
-          "name": "name",
-          "type": "String",
-          "size": 100
+          "name": "last_value",
+          "type": "Int"
         },
         {
           "name": "created_at",
@@ -231,8 +228,7 @@
         }
       ],
       "primaryKey": [
-        "db_name",
-        "name"
+        "index_id"
       ]
     }
   ]

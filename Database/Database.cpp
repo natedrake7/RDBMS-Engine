@@ -148,19 +148,17 @@ namespace DatabaseEngine
         const auto& headerPageTables = headerPage->GetTablesFullHeaders();
 
         for (int i = 0; i < tables.size(); i++) {
-            const TableHeader* ptr = nullptr;
+          HashSet<string> primaryKeysSet(tables[i].primaryKey);
+          Headers::Index index;
 
-            for (const auto& header: headerPageTables) {
-                if (header.tableId == i) {
-                    ptr = &header;
-                    break;
-                }
-            }
+          for(int j = 0;j < tables[i].columns.size(); j++){
+              const auto& column = tables[i].columns[j];
 
-            if (ptr == nullptr)
-                continue;
-            
-            this->CreateTable(tables[i], *ptr);
+              if(primaryKeysSet.Contains(column.name))
+                index.columns.push_back(j);
+          }
+
+            this->CreateTable(tables[i], headerPageTables[i], index);
         }
     }
 
@@ -203,8 +201,8 @@ namespace DatabaseEngine
         const string &schemaName,
         const table_id_t &tableId,
         const vector<StorageTypes::Column *> &columns,
-        const vector<column_index_t> *clusteredKeyIndexes,
-        const vector<vector<column_index_t>> *nonClusteredIndexes)
+        Headers::Index *clusteredKeyIndexes,
+        vector<Headers::Index> *nonClusteredIndexes)
     {
         auto *table = new Table(tableName, schemaName, tableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
 
@@ -218,7 +216,7 @@ namespace DatabaseEngine
     {
         auto *table = new Table(masterDbHeader, tableHeader, this);
 
-        const auto masterDbColumns = Server::ServerInstance::Get().SelectColumns(this->name, masterDbHeader.name);
+        const auto masterDbColumns = Server::ServerInstance::Get().SelectColumns(masterDbHeader.id);
 
         for (const auto & masterDbColumn : masterDbColumns) {
             if (masterDbColumn.isSystem)
@@ -230,9 +228,9 @@ namespace DatabaseEngine
         this->tables.push_back(table);
     }
 
-    void Database::CreateTable(const Headers::sysTable &sysHeader, const TableHeader &tableHeader)
+    void Database::CreateTable(const Headers::sysTable &sysHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey)
     {
-        auto *table = new Table(sysHeader, tableHeader, this);
+        auto *table = new Table(sysHeader, tableHeader, primaryKey, this);
 
         for (int i = 0;i < sysHeader.columns.size(); i++)
             table->AddColumn(new Column(sysHeader.columns[i], i,  table));
@@ -240,17 +238,17 @@ namespace DatabaseEngine
         this->tables.push_back(table);
     }
 
-    Table *Database::OpenTable(const string& schemaName, const string &tableName) const
-    {
-        for (const auto &table : this->tables)
-        {
-            if (table->GetTableName() == tableName
-                && table->GetSchema() == schemaName)
-                return table;
-        }
-
-        return nullptr;
-    }
+//    Table *Database::OpenTable(const string& schemaName, const string &tableName) const
+//    {
+//        for (const auto &table : this->tables)
+//        {
+//            if (table->GetTableName() == tableName
+//                && table->GetSchema() == schemaName)
+//                return table;
+//        }
+//
+//        return nullptr;
+//    }
 
     StorageTypes::Table * Database::OpenTable(const table_id_t &tableId) const{
         return this->tables.at(tableId);
@@ -263,11 +261,11 @@ namespace DatabaseEngine
 
         for (it = this->tables.begin(); it != this->tables.end(); it++)
         {
-            if ((*it)->GetTableName() == tableName)
-            {
-                table = *it;
-                break;
-            }
+//            if ((*it)->GetTableName() == tableName)
+//            {
+//                table = *it;
+//                break;
+//            }
         }
 
         if (table == nullptr)
@@ -337,6 +335,10 @@ namespace DatabaseEngine
         }
 
         cout << "Rows printed: " << rowCount << endl;
+    }
+
+    Database* UseSystemDatabase(const string & dbName, const vector<Headers::sysTable> & tables){
+    return nullptr;
     }
 
     void Database::DeleteDatabase() const

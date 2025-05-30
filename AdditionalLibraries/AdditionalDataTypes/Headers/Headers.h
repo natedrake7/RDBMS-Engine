@@ -5,7 +5,8 @@
 
 namespace Headers {
   struct SchemaHeader {
-    std::string dbName;
+    int32_t id;
+    int32_t databaseId;
     std::string name;
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
@@ -13,8 +14,8 @@ namespace Headers {
   };
 
   struct ColumnHeader {
-    std::string dbName;
-    std::string tableName;
+    int32_t id;
+    int32_t tableId;
     std::string name;
     std::string dataType;
     int16_t recordSize;
@@ -27,24 +28,25 @@ namespace Headers {
   };
 
   typedef struct IndexHeader {
-    std::string dbName;
-    std::string schemaName;
-    std::string tableName;
+    int32_t id;
+    int32_t tableId;
     std::string name;
     std::vector<uint8_t> columns;
     bool isClustered;
     int32_t seed;
     int32_t autoIncrement;
+    int32_t lastValue;
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
     std::string lastModifiedBy;
   }IndexHeader;
 
   typedef struct TableHeader {
-    std::string dbName;
+    int32_t id = -1;
+    int32_t databaseId;
+    int32_t schemaId;
     std::string name;
-    int16_t id;
-    std::string schemaName;
+    int16_t tablePosition;
     bool isSystem;
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
@@ -52,9 +54,11 @@ namespace Headers {
     
     vector<ColumnHeader> columns;
     vector<IndexHeader> indexes;
+
   }TableHeader;
 
   typedef struct DatabaseHeader {
+    int32_t id;
     std::string name;
     std::string filepath;
     bool isSystem;
@@ -75,5 +79,21 @@ namespace Headers {
     string name;
     std::vector<sysColumn> columns;
     std::vector<string> primaryKey;
+  };
+
+  struct Index{
+    vector<uint8_t> columns;
+    int32_t seed;
+    int32_t incrementFactor;
+    int64_t lastValue;
+
+    Index(vector<uint8_t>& columns, const int32_t& seed, const int32_t& incrementFactor)
+      : columns(std::move(columns)), seed(seed), incrementFactor(incrementFactor), lastValue(seed) {}
+
+    Index(){
+      this->seed = 0;
+      this->incrementFactor = 0;
+      this->columns.emplace_back(0);
+    }
   };
 }

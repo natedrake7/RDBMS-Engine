@@ -15,6 +15,14 @@ namespace DatabaseEngine {
 }
 
 namespace Server {
+  enum MasterDbTables: uint8_t {
+    SYSDATABASES = 0,
+    SYSSCHEMAS = 1,
+    SYSTABLES = 2,
+    SYSCOLUMNS = 3,
+    SYSINDEXES = 4
+  };
+
   class ServerInstance {
     string sysDbName;
     string sysDbPath;
@@ -39,17 +47,20 @@ namespace Server {
     }
 
     void Initialize(const string& configPath);
-    void InsertDbToMasterDb(const string& dbName, const string& dbPath, const bool& isSystem = false, const string& user = "system") const;
-    void InsertTableToMasterDb(
+    AdditionalDataTypes::ResultStatus  InsertDbToMasterDb(
       const string& dbName,
-      const string& tableName,
-      const table_id_t& tableId,
-      const string& schemaName = "dbo",
+      const string& dbPath,
       const bool& isSystem = false,
       const string& user = "system") const;
-    void InsertColumnToMasterDb(
-      const string& dbName,
+    AdditionalDataTypes::ResultStatus  InsertTableToMasterDb(
+      const int32_t & databaseId,
+      const int32_t & schemaId,
       const string& tableName,
+      const table_id_t& tablePosition,
+      const bool& isSystem = false,
+      const string& user = "system") const;
+    AdditionalDataTypes::ResultStatus  InsertColumnToMasterDb(
+      const int32_t & tableId,
       const string& columnName,
       const string& columnType,
       const int& columnSize,
@@ -57,29 +68,31 @@ namespace Server {
       const int& tablePosition,
       const bool& isSystem = false,
       const string& user = "system") const;
-    void InsertIndexToMasterDb(
-      const string &dbName,
-      const string& schemaName,
-      const string &tableName,
+    AdditionalDataTypes::ResultStatus  InsertIndexToMasterDb(
+      const int32_t & tableId,
       const string &indexName,
       const string &columns,
       const bool &isClustered,
       const int32_t& seed,
-      const int32_t& increment_factor,
+      const int32_t& incrementFactor,
+      const int32_t& lastValue,
       const string& user = "system") const;
-    void InsertSchemaToMasterDb(const string& dbName, const string& schemaName, const string& user = "system") const;
+    AdditionalDataTypes::ResultStatus  InsertSchemaToMasterDb(
+      const int32_t& databaseId,
+      const string& schemaName,
+      const string& user = "system") const;
 
     [[nodiscard]] vector<Headers::DatabaseHeader> GetCatalog()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
-    [[nodiscard]] vector<Headers::SchemaHeader>  SelectSchemas(const string& dbName) const;
+    [[nodiscard]] vector<Headers::SchemaHeader>  SelectSchemas(const int32_t& databaseId) const;
     [[nodiscard]] bool SchemaExists(const string &dbName, const std::string& schema) const;
     [[nodiscard]] vector<Headers::TableHeader> SelectTables(const string& dbName) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
-    [[nodiscard]] bool TableExists(const string &dbName, const string &tableName, const std::string& schema) const;
-    [[nodiscard]] vector<Headers::ColumnHeader> SelectColumns(const string& dbName, const string& tableName) const;
-    [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const string& dbName, const string& tableName) const;
-    [[nodiscard]] vector<Headers::IndexHeader> SelectIndexes(const string& dbName, const string& tableName) const;
+    [[nodiscard]] Headers::TableHeader SelectTable(const string &dbName, const string &tableName, const std::string& schema) const;
+    [[nodiscard]] vector<Headers::ColumnHeader> SelectColumns(const int32_t& tableId) const;
+    [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const int32_t& tableId) const;
+    [[nodiscard]] vector<Headers::IndexHeader> SelectIndexes(const int32_t& tableId) const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     void Shutdown()const;

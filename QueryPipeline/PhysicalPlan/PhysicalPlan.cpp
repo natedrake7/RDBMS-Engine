@@ -11,8 +11,9 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
 
   PhysicalPlanResult* PhysicalCreateDatabase::Execute(){
-    Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
-    Server::ServerInstance::Get().InsertSchemaToMasterDb(this->dbName, "dbo");
+    auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
+
+    Server::ServerInstance::Get().InsertSchemaToMasterDb(result.primaryKeyVal, "dbo");
     
     DatabaseEngine::CreateDatabase(this->dbName);
 
@@ -23,7 +24,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   : PhysicalOperator(dbName), schemaName(std::move(schemaName)) {}
 
   PhysicalPlanResult * PhysicalSchemaCreate::Execute(){
-    Server::ServerInstance::Get().InsertSchemaToMasterDb(this->dbName, this->schemaName);
+//    Server::ServerInstance::Get().InsertSchemaToMasterDb(this->dbName, this->schemaName);
 
     return new PhysicalPlanResult();
   }
@@ -89,7 +90,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
       using namespace DatabaseEngine::StorageTypes;
       const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-      Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+      Table* tablePtr = db->OpenTable(0);
 
       auto* result = new PhysicalPlanResult();
 
@@ -111,7 +112,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(0);
 
     if (isClustered) {
       tablePtr->ClusteredIndexScan(&result->rows, this->expression);
@@ -131,7 +132,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(0);
 
     const Indexing::Key minKey(minValue);
     const Indexing::Key maxKey(maxValue);
@@ -153,7 +154,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
     
-    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(0);
 
 
     //i mean this is really bad
@@ -198,7 +199,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(0);
 
     tablePtr->HeapDelete(this->expression);
 
@@ -218,7 +219,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(0);
 
     tablePtr->ClusteredIndexScanDelete(this->expression);
 
@@ -238,7 +239,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(0);
 
     tablePtr->ClusteredIndexSeekDelete(expression);
 
@@ -249,11 +250,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
       const std::string& dbName,
       Statements::TableName*  table,
       std::vector<Statements::AddColumn> &columns,
-      std::vector<column_index_t>& primaryKey,
-      std::string& constraintName,
-      Statements::AutoIncrementKey* autoIncrementKey)
+      Headers::Index& primaryKey,
+      std::string& constraintName)
     : PhysicalOperator(dbName), table(table), constraintName(std::move(constraintName)),
-      columns(std::move(columns)), primaryKey(std::move(primaryKey)), autoIncrementKey(autoIncrementKey){}
+      columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
   PhysicalPlanResult* PhysicalTableCreate::Execute(){
     DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
@@ -276,38 +276,40 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     db->CreateTable(this->table->name, this->table->schema, index, columnsPtrs, &this->primaryKey);
 
-    Server::ServerInstance::Get().InsertTableToMasterDb(dbName, this->table->name, index, this->table->schema);
-
-    std::string indexColumns;
-    for (const auto& column: this->columns) {
-      Server::ServerInstance::Get().InsertColumnToMasterDb(
-        dbName,
-        this->table->name,
-        column.name,
-        column.type.name,
-        column.type.size,
-        column.isNullable,
-        column.index
-        );
-    }
-
-    const bool isConstraintEmpty = this->constraintName.empty();
-
-    for (const auto& column: this->primaryKey) {
-      indexColumns += indexColumns.empty() ? to_string(column) : "," + to_string(column);
-
-      if (isConstraintEmpty)
-        this->constraintName += this->constraintName.empty() ? "PK_" + this->columns[column].name :"_" + this->columns[column].name;
-    }
-
-    uint16_t seed = 0, incrementFactor = 0;
-    if(this->autoIncrementKey != nullptr){
-      seed = this->autoIncrementKey->seed;
-      incrementFactor = this->autoIncrementKey->incrementFactor;
-    }
-
-    if (!indexColumns.empty())
-      Server::ServerInstance::Get().InsertIndexToMasterDb(dbName, this->table->schema, this->table->name, this->constraintName, indexColumns, true, seed, incrementFactor);
+//    Server::ServerInstance::Get().InsertTableToMasterDb(dbName, this->table->name, index, this->table->schema);
+//
+//    std::string indexColumns;
+//    for (const auto& column: this->columns) {
+//      Server::ServerInstance::Get().InsertColumnToMasterDb(
+//        dbName,
+//        this->table->name,
+//        column.name,
+//        column.type.name,
+//        column.type.size,
+//        column.isNullable,
+//        column.index
+//        );
+//    }
+//
+//    const bool isConstraintEmpty = this->constraintName.empty();
+//
+//    for (const auto& column: this->primaryKey) {
+//      indexColumns += indexColumns.empty() ? to_string(column) : "," + to_string(column);
+//
+//      if (isConstraintEmpty)
+//        this->constraintName += this->constraintName.empty() ? "PK_" + this->columns[column].name :"_" + this->columns[column].name;
+//    }
+//
+//    if (!indexColumns.empty())
+//      Server::ServerInstance::Get().InsertIndexToMasterDb(
+//        dbName,
+//        this->table->schema,
+//        this->table->name,
+//        this->constraintName,
+//        indexColumns,
+//        true,
+//        seed,
+//        incrementFactor);
 
     return nullptr;
   }
@@ -327,7 +329,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(0);
 
     tablePtr->HeapUpdate(this->expression, this->fields);
 
@@ -349,7 +351,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(0);
 
     tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
 
@@ -371,7 +373,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
 
-    Table* tablePtr = db->OpenTable(this->table->schema, this->table->name);
+    Table* tablePtr = db->OpenTable(0);
 
     tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
 

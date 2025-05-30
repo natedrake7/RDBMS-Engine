@@ -111,14 +111,14 @@ public:
       const string &schemaName,
       const table_id_t &tableId,
       const vector<StorageTypes::Column *> &columns,
-      const vector<column_index_t> *clusteredKeyIndexes = nullptr,
-      const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
+      Headers::Index *clusteredKeyIndexes = nullptr,
+      vector<Headers::Index> *nonClusteredIndexes = nullptr);
 
     void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
 
-    void CreateTable(const Headers::sysTable& sysHeader, const StorageTypes::TableHeader &tableHeader);
+    void CreateTable(const Headers::sysTable& sysHeader, const StorageTypes::TableHeader &tableHeader, const Headers::Index& primaryKey);
 
-    [[nodiscard]] StorageTypes::Table *OpenTable(const string& schemaName, const string &tableName) const;
+//    [[nodiscard]] StorageTypes::Table *OpenTable(const string& schemaName, const string &tableName) const;
 
     [[nodiscard]] StorageTypes::Table *OpenTable(const table_id_t& tableId) const;
 
@@ -172,4 +172,7 @@ void CreateDatabase(const string &dbName);
 void PrintRows(const vector<StorageTypes::Row> &rows);
 
 void PrintRows(const vector<StorageTypes::Row*> &rows);
+
+Database* UseSystemDatabase(const std::string& dbName, const vector<Headers::sysTable>& tables);
+
 }; // namespace DatabaseEngine

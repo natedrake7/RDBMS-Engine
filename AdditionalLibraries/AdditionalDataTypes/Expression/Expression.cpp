@@ -13,6 +13,18 @@ namespace Expressions{
     };
   }
 
+  Expression Expression::Predicate(const column_index_t & column, const string & operation, const Field & value){
+   return Expression{
+   ExpressionType::Predicate,
+   nullptr,
+   nullptr,
+       {},
+       operation,
+       value,
+      column
+  };
+  }
+
   Expression Expression::Logical(const ExpressionType &type, Expression *leftExpression, Expression *RightExpression){
     return Expression{
       type,

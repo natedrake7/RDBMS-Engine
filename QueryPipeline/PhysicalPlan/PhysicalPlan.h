@@ -178,17 +178,15 @@ namespace QueryPipeline::PhysicalPlan{
       Statements::TableName*  table;
       std::string constraintName;
       std::vector<Statements::AddColumn> columns;
-      std::vector<column_index_t> primaryKey;
-      Statements::AutoIncrementKey* autoIncrementKey;
+      Headers::Index primaryKey;
 
     public:
       PhysicalTableCreate(
         const std::string& dbName,
         Statements::TableName*  table,
         std::vector<Statements::AddColumn>& columns,
-        std::vector<column_index_t>& primaryKey,
-        std::string& constraintName,
-        Statements::AutoIncrementKey* autoIncrementKey);
+        Headers::Index& primaryKey,
+        std::string& constraintName);
       ~PhysicalTableCreate()override = default;
       PhysicalPlanResult* Execute() override;
   };

@@ -30,11 +30,11 @@ namespace DatabaseEngine::StorageTypes {
 
     BPlusTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId)
     {
-        if(this->header.nonClusteredColumnIndexes.empty())
+        if(this->header.nonClusteredIndexes.empty())
             return nullptr;
 
         if(this->nonClusteredIndexedTrees.empty())
-            this->nonClusteredIndexedTrees.resize(this->header.nonClusteredColumnIndexes.size());
+            this->nonClusteredIndexedTrees.resize(this->header.nonClusteredIndexes.size());
 
         BPlusTree*& nonClusteredTree = this->nonClusteredIndexedTrees.at(nonClusteredIndexId);
 

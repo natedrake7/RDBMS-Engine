@@ -125,7 +125,7 @@ namespace DatabaseEngine::StorageTypes {
       return StorageManager::Get().GetOverflowPage(this->database->GetFileName(), pageId, extentId, this);
     }
 
-    const vector<vector<column_index_t>> & Table::GetNonClusteredIndexes() const { return this->header.nonClusteredColumnIndexes; }
+    const vector<vector<column_index_t>> & Table::GetNonClusteredIndexes() const { return {}; }
 
-    const vector<column_index_t> & Table::GetClusteredIndex() const { return this->header.clusteredColumnIndexes; }
+    const vector<column_index_t> & Table::GetClusteredIndex() const { return this->header.clusteredIndex.columns; }
 }

@@ -55,7 +55,6 @@ namespace DatabaseEngine::StorageTypes
     {
         table_id_t tableId;
 
-        row_size_t maxRowSize;
         page_id_t indexAllocationMapPageId;
         column_number_t numberOfColumns;
 
@@ -66,8 +65,8 @@ namespace DatabaseEngine::StorageTypes
         // ByteMaps::BitMap *columnsNullBitMap;
 
         // bitmaps to store the composite key
-        vector<column_index_t> clusteredColumnIndexes;
-        vector<vector<column_index_t>> nonClusteredColumnIndexes;
+        Headers::Index clusteredIndex;
+        vector<Headers::Index> nonClusteredIndexes;
         // ByteMaps::BitMap *clusteredIndexesBitMap;
         // vector<ByteMaps::BitMap*> nonClusteredIndexesBitMap;
         //
@@ -79,8 +78,8 @@ namespace DatabaseEngine::StorageTypes
 
     class Table final
     {
-        std::string name;
-        std::string schema;
+
+        int32_t schemaId;
         TableHeader header;
         vector<Column *> columns;
         DatabaseEngine::Database *database;
@@ -90,13 +89,14 @@ namespace DatabaseEngine::StorageTypes
 
         protected:
 
+            [[nodiscard]] int64_t PopulateAutoComputedColumns(Row* row);
+
             [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
 
             static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
             AdditionalDataTypes::ResultStatus InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
-            void SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes);
 
             static void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
             static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);
@@ -105,19 +105,26 @@ namespace DatabaseEngine::StorageTypes
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
 
-            [[nodiscard]] Row* CreateRow(const vector<Field>& inputData)const;
+            [[nodiscard]] Row* CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal);
 
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
 
         public:
-            Table(const string &tableName, const std::string& schema, const table_id_t &tableId, const vector<Column *> &columns, DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes = nullptr, const vector<vector<column_index_t>> *nonClusteredIndexes = nullptr);
+            Table(
+              const string &tableName,
+              const std::string& schema,
+              const table_id_t &tableId,
+              const vector<Column *> &columns,
+              DatabaseEngine::Database *database,
+              Headers::Index* clusteredIndex = nullptr,
+              vector<Headers::Index> *nonClusteredIndexes = nullptr);
 
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
 
             Table(const std::string& tableName, const TableHeader &tableHeader, DatabaseEngine::Database *database);
 
-            Table(const Headers::sysTable& systemHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database);
+            Table(const Headers::sysTable& systemHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey, DatabaseEngine::Database *database);
 
             ~Table();
 
@@ -129,13 +136,9 @@ namespace DatabaseEngine::StorageTypes
 
             void DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
 
-            string &GetTableName();
-
-            string& GetSchema();
+            string GetSchema();
 
             [[nodiscard]] string GetFileName() const;
-
-            row_size_t &GetMaxRowSize();
 
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
 
@@ -205,9 +208,9 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] key_size_t CalculateIndexKeySize() const;
 
-            void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
+//            void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
 
-            void GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>> *vector) const;
+//            void GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>> *vector) const;
 
             void SetClusteredIndexPageId(const page_id_t &indexPageId);
 

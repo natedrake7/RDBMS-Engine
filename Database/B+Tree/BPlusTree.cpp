@@ -70,21 +70,21 @@ namespace Indexing
           return degree;
         }
 
-        const vector<Column*>& columns = table->GetColumns();
-
-        vector<vector<column_index_t>> nonClusteredIndexes;
-        table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexes);
-
-        int keySize = 0;
-        for(const auto& key: nonClusteredIndexes[nonClusteredIndexId])
-        {
-            const Column* column = columns[key];
-
-            keySize += column->GetColumnSize();
-        }
-
-        return (PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize()) 
-                    / (keySize + BPlusTreeNonClusteredData::GetNonClusteredDataSize());
+//        const vector<Column*>& columns = table->GetColumns();
+//
+//        vector<vector<column_index_t>> nonClusteredIndexes;
+//        table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexes);
+//
+//        int keySize = 0;
+//        for(const auto& key: nonClusteredIndexes[nonClusteredIndexId])
+//        {
+//            const Column* column = columns[key];
+//
+//            keySize += column->GetColumnSize();
+//        }
+//
+//        return (PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize())
+//                    / (keySize + BPlusTreeNonClusteredData::GetNonClusteredDataSize());
     }
 
     void BPlusTree::SplitChild(IndexPage *parent, const int &index, IndexPage *child)

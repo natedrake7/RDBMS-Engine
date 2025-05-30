@@ -27,6 +27,11 @@ namespace Expressions{
       const std::string& operation,
       const Field& value);
 
+    static Expression Predicate(
+      const column_index_t & column,
+      const std::string& operation,
+      const Field& value);
+
     static Expression Logical(
       const ExpressionType& type,
       Expression* leftExpression,

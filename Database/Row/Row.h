@@ -57,6 +57,8 @@ namespace DatabaseEngine::StorageTypes
 
         ~Row();
 
+        void PopulateAutoComputedColumns(Table* tablePtr);
+
         void InsertColumnData(Block *block, const column_index_t &columnIndex);
 
         //primarily used by the join operation

@@ -6,13 +6,19 @@
 
 namespace QueryPipeline::Statements {
   bool DeleteStatement::Validate(){
-    if (!Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
-      return false;
+    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->dbName, this->table->name, this->table->schema);
+
+    if (tableHeader.id == -1){
+          cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+          return false;
+    }
+
+    this->table->tableId = tableHeader.id;
 
     if (this->where.expression == nullptr)
       return true;
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, this->table->name);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
 
     return this->where.expression->Validate(columnsDict);
   }
@@ -37,12 +43,10 @@ namespace QueryPipeline::Statements {
   }
 
   bool CreateTableStatement::Validate(){
-    //no need to check as the below query will just return 0 results
-    // if (!Server::ServerInstance::Get().DatabaseExists(this->dbName))
-    //   throw runtime_error("No Database with name: "  + this->dbName + " exists");
+    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->dbName, this->table->name, this->table->schema);
 
-    if (Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
-      throw runtime_error("Table " + this->table->name + " already exists");
+    if (tableHeader.id != -1)
+      return false;
 
     column_index_t tablePosition = 0;
     bool primaryKeyFound = false;
@@ -106,16 +110,21 @@ namespace QueryPipeline::Statements {
   LogicalPlan * CreateTableStatement::ToLogical(){
     const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
 
-    return new LogicalTableCreate(this->dbName, this->table, this->columns, this->primaryKey, constraintName, this->autoIncrementKey);
+//    return new LogicalTableCreate(this->dbName, this->table, this->columns, this->primaryKey, constraintName, this->autoIncrementKey);
   }
 
   bool SelectStatement::Validate(){
-    if (!Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema)) {
-      cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
-      return false;
+
+    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->dbName, this->table->name, this->table->schema);
+
+    if (tableHeader.id == -1){
+          cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+          return false;
     }
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, this->table->name);
+    this->table->tableId = tableHeader.id;
+
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
 
     if (!this->columns.empty() && this->columns[0] == "*") {
       for (const auto& [key, header] : columnsDict)
@@ -186,13 +195,17 @@ namespace QueryPipeline::Statements {
   }
 
   bool InsertStatement::Validate(){
-    if (!Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema)) {
 
-      cerr << "Table " << this->table->schema << "." + this->table->name << " does not exist" << endl;
-      return false;
+    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->dbName, this->table->name, this->table->schema);
+
+    if (tableHeader.id == -1){
+          cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+          return false;
     }
+
+    this->table->tableId = tableHeader.id;
     
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, this->table->name);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
 
     if (this->columns.size() != this->values.size()) {
       cerr << "Invalid number of arguments supplied" << endl;
@@ -259,10 +272,16 @@ namespace QueryPipeline::Statements {
 
 
   bool UpdateStatement::Validate(){
-    if(!Server::ServerInstance::Get().TableExists(this->dbName, this->table->name, this->table->schema))
-      return false;
+    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->dbName, this->table->name, this->table->schema);
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->dbName, this->table->name);
+    if (tableHeader.id == -1){
+          cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+          return false;
+    }
+
+    this->table->tableId = tableHeader.id;
+
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
 
     for(auto& column: this->columns) {
 

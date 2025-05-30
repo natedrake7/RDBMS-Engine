@@ -41,6 +41,7 @@ void InsertRowsToMoviesTable(Table* table);
 //Add joins
 //check index deletes work
 //add identity
+//update sys_indexes periodically by identity and on shutdown for sure.
 //add reset identity
 //start documenting implementation and optimize wherever possible
 
@@ -107,9 +108,9 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    QueryPipeline::Parser::Parse(createDb, dbName);
-//
-    QueryPipeline::Parser::Parse(createActorsTable, dbName);
+//    QueryPipeline::Parser::Parse(createDb, dbName);
+////
+//    QueryPipeline::Parser::Parse(createActorsTable, dbName);
 //
 //    QueryPipeline::Parser::Parse(updateMovies, dbName);
 

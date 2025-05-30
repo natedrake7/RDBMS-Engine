@@ -4,9 +4,6 @@
 
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include "../Database/Row/Row.h"
-#include "../Database/Table/Table.h"
-#include "../Database/Database.h"
 #include "../Database/Block/Block.h"
 #include "../Database/Storage/StorageManager/StorageManager.h"
 #include "../AdditionalLibraries/StringFunctions/StringFunctions.h"
@@ -67,25 +64,31 @@ namespace Server {
 
      if (this->CheckIfMasterDbExists()) {
        this->UseMasterDb();
+
+      //get last value etc for master db tables
+//      this->SelectIndexes()
+
        std::cout << this->sysDbName << " initialized successfully" << std::endl;
        return;
      }
-     
+
     this->CreateSystemDatabase();
-    this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
+    const auto dbInsertResult = this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
+
+    const auto schemaInsertResult = this->InsertSchemaToMasterDb(static_cast<int32_t>(dbInsertResult.primaryKeyVal), "dbo");
+
 
     Dictionary<string, column_index_t> columnNameToIndex;
 
     for (int i = 0;i < this->sysTables.size(); i++) {
       const auto& table = this->sysTables[i];
-      
-      this->InsertTableToMasterDb(
-        this->sysDbName,
+
+      const auto tableResult = this->InsertTableToMasterDb(
+        static_cast<int32_t>(dbInsertResult.primaryKeyVal),
+        static_cast<int32_t>(schemaInsertResult.primaryKeyVal),
         table.name,
         i,
-        "dbo",
-        true,
-        "system");
+        true);
 
       int columnPos = 0;
       for (auto& column: table.columns) {
@@ -98,8 +101,7 @@ namespace Server {
           columnSize = column.size;
 
         this->InsertColumnToMasterDb(
-           this->sysDbName,
-           table.name,
+           static_cast<int32_t>(tableResult.primaryKeyVal),
            column.name,
            column.type,
            columnSize,
@@ -121,17 +123,18 @@ namespace Server {
         concatenatedColumns +=  j > 0  ? "," + to_string(key) : to_string(key);
         _columns +="_" + table.primaryKey[j];
       }
-       
+
+      //TODO keep the last value keys
       this->InsertIndexToMasterDb(
-      this->sysDbName,
-    "dbo",
-     table.name,
-  "PK" + _columns,
+      static_cast<int32_t>(tableResult.primaryKeyVal),
+      "PK" + _columns,
       concatenatedColumns,
-    true, 0, 0);
+      true,
+      1,
+      1,
+      1);
     }
 
-    this->InsertSchemaToMasterDb(this->sysDbName, "dbo");
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
@@ -164,50 +167,50 @@ namespace Server {
        this->masterDb = new DatabaseEngine::Database(this->sysDbName, this->sysTables);
   }
 
-  void ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath, const bool& isSystem, const string& user) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_databases");
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath, const bool& isSystem, const string& user) const{
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
 
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Field> fields = {
-        Field(dbName, 0),
-        Field(dbPath, 1),
-        Field(isSystem, 2),
-        Field(currentDate, 3),
+        Field(dbName, 1),
+        Field(dbPath, 2),
+        Field(isSystem, 3),
         Field(currentDate, 4),
-        Field(user, 5),
+        Field(currentDate, 5),
+        Field(user, 6),
     };
     
-    table->InsertRows({fields});
+    return table->InsertRow(fields);
   }
 
-  void ServerInstance::InsertTableToMasterDb(
-    const string& dbName,
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertTableToMasterDb(
+    const int32_t & databaseId,
+    const int32_t & schemaId,
     const string& tableName,
-    const table_id_t& tableId,
-    const string& schemaName,
+    const table_id_t& tablePosition,
     const bool& isSystem,
     const string& user) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_tables");
+
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Field> fields = {
-        Field(dbName, 0),
-        Field(tableName, 1),
-        Field(tableId, 2),
-        Field(schemaName, 3),
-        Field(isSystem, 4),
-        Field(currentDate, 5),
+        Field(databaseId, 1),
+        Field(schemaId, 2),
+        Field(tableName, 3),
+        Field(tablePosition, 4),
+        Field(isSystem, 5),
         Field(currentDate, 6),
-        Field(user, 7),
+        Field(currentDate, 7),
+        Field(user, 8),
       };
     
-    table->InsertRows({fields});
+    return table->InsertRow(fields);
   }
 
-  void ServerInstance::InsertColumnToMasterDb(
-    const string &dbName,
-    const string &tableName,
+  AdditionalDataTypes::ResultStatus  ServerInstance::InsertColumnToMasterDb(
+    const int32_t & tableId,
     const string &columnName,
     const string &columnType,
     const int &columnSize,
@@ -215,12 +218,11 @@ namespace Server {
     const int &tablePosition,
     const bool& isSystem,
     const string& user) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_columns");
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Field> fields = {
-        Field(dbName, 0),
-        Field(tableName, 1),
+        Field(tableId, 1),
         Field(columnName, 2),
         Field(columnType, 3),
         Field(columnSize, 4),
@@ -232,57 +234,59 @@ namespace Server {
         Field(user, 10),
       };
 
-    table->InsertRows({fields});
+    return table->InsertRow(fields);
   }
 
-  void ServerInstance::InsertIndexToMasterDb(
-    const string &dbName,
-    const string& schemaName,
-    const string &tableName,
+  AdditionalDataTypes::ResultStatus  ServerInstance::InsertIndexToMasterDb(
+    const int32_t & tableId,
     const string &indexName,
     const string &columns,
     const bool &isClustered,
     const int32_t& seed,
-    const int32_t& increment_factor,
+    const int32_t& incrementFactor,
+    const int32_t& lastValue,
     const string &user) const{
-     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_indexes");
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
      const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Field> fields = {
-       Field(dbName, 0),
-       Field(schemaName, 1),
-       Field(tableName, 2),
-       Field(indexName, 3),
-       Field(columns, 4),
-       Field(isClustered, 5),
-       Field(seed, 6),
-       Field(increment_factor, 7),
+       Field(tableId, 1),
+       Field(indexName, 2),
+       Field(columns, 3),
+       Field(isClustered, 4),
+       Field(seed, 5),
+       Field(incrementFactor, 6),
+       Field(lastValue, 7),
        Field(currentDate, 8),
        Field(currentDate, 9),
        Field(user, 10),
      };
 
-     table->InsertRows({fields});
+     return table->InsertRow(fields);
   }
-  void ServerInstance::InsertSchemaToMasterDb(const string &dbName, const string &schemaName, const string &user) const{
-     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable("dbo", "sys_schemas");
+
+  AdditionalDataTypes::ResultStatus  ServerInstance::InsertSchemaToMasterDb(
+    const int32_t &databaseId,
+    const string &schemaName,
+    const string &user) const{
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
      const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Field> fields = {
-       Field(dbName, 0),
-       Field(schemaName, 1),
-       Field(currentDate, 2),
-       Field(currentDate, 3),
-       Field(user, 4),
+        Field(databaseId, 1),
+        Field(schemaName, 2),
+        Field(currentDate, 3),
+        Field(currentDate, 4),
+        Field(user, 5),
      };
 
-     table->InsertRows({fields});
+     return table->InsertRow(fields);
   }
 
   bool ServerInstance::DatabaseExists(const string &dbName) const{
      using namespace DatabaseEngine::StorageTypes;
 
-     Table* sysDatabases = this->masterDb->OpenTable(0);
+     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
      vector<Row> selectedDatabases;
 
     Indexing::Key key;
@@ -296,7 +300,7 @@ namespace Server {
   vector<Headers::DatabaseHeader> ServerInstance::GetCatalog() const{
      using namespace DatabaseEngine::StorageTypes;
 
-     Table* sysDatabases = this->masterDb->OpenTable(0);
+     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
 
      vector<Row> selectedDatabases;
 
@@ -308,26 +312,30 @@ namespace Server {
        return {};
 
     for (const auto& row : selectedDatabases) {
+
       const auto& data = row.GetData();
 
-      const auto& dbName = data[0]->GetString();
+      const auto databaseId = data[0]->GetInt();
 
-      auto schemas = this->SelectSchemas(dbName);
+      const auto& dbName = data[1]->GetString();
+
+      auto schemas = this->SelectSchemas(databaseId);
 
       auto dbTables = this->SelectTables(dbName);
 
       for (auto& table : dbTables) {
-         table.columns = this->SelectColumns(dbName, table.name);
-        table.indexes = this->SelectIndexes(dbName, table.name);        
+          table.columns = this->SelectColumns(table.id);
+          table.indexes = this->SelectIndexes(table.id);
       }
 
       databasesHeaders.emplace_back(Headers::DatabaseHeader{
+        .id = databaseId,
         .name = dbName,
-        .filepath = data[1]->GetString(),
-        .isSystem = data[2]->GetBool(),
-        .createdAt = data[3]->GetDateTime(),
-        .lastModified = data[4]->GetDateTime(),
-        .lastModifiedBy = data[5]->GetString(),
+        .filepath = data[2]->GetString(),
+        .isSystem = data[3]->GetBool(),
+        .createdAt = data[4]->GetDateTime(),
+        .lastModified = data[5]->GetDateTime(),
+        .lastModifiedBy = data[6]->GetString(),
         .tables = std::move(dbTables),
         .schemas = std::move(schemas)
       });
@@ -339,17 +347,12 @@ namespace Server {
   Headers::DatabaseHeader ServerInstance::SelectDatabase(const std::string &name) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    const vector<Field> conditions = {
-      Field(name, 0),
-    };
+    auto expression = Expressions::Expression::Predicate(1, "=", Field(name, 1));
 
-    Table* sysDatabases = this->masterDb->OpenTable(0);
+    Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
     vector<Row> selectedDatabases;
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(name.data(), name.size(), ColumnType::String));
-
-    sysDatabases->ClusteredIndexSeek(&selectedDatabases, &key, &key);
+    sysDatabases->ClusteredIndexScan(&selectedDatabases, &expression);
 
     if (selectedDatabases.empty())
       return {};
@@ -357,29 +360,25 @@ namespace Server {
     const auto& data = selectedDatabases[0].GetData();
     
     return Headers::DatabaseHeader{
-      .name = data[0]->GetString(),
-      .filepath = data[1]->GetString(),
-      .isSystem = data[2]->GetBool(),
-      .createdAt = data[3]->GetDateTime(),
-      .lastModified = data[4]->GetDateTime(),
-      .lastModifiedBy = data[5]->GetString()
+      .id = data[0]->GetInt(),
+      .name = data[1]->GetString(),
+      .filepath = data[2]->GetString(),
+      .isSystem = data[3]->GetBool(),
+      .createdAt = data[4]->GetDateTime(),
+      .lastModified = data[5]->GetDateTime(),
+      .lastModifiedBy = data[6]->GetString()
     };
   }
 
-  vector<Headers::SchemaHeader> ServerInstance::SelectSchemas(const string &dbName) const{
+  vector<Headers::SchemaHeader> ServerInstance::SelectSchemas(const int32_t& databaseId) const{
      using namespace DatabaseEngine::StorageTypes;
 
-     const vector<Field> conditions = {
-       Field(dbName, 0),
-     };
-
-     Table* sysSchemas = this->masterDb->OpenTable("dbo", "sys_schemas");
+     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
      vector<Row> selectedSchemas;
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+    auto expression = Expressions::Expression::Predicate(1, "=", Field(databaseId, 1));
 
-    sysSchemas->ClusteredIndexSeek(&selectedSchemas, &key, &key);
+    sysSchemas->ClusteredIndexScan(&selectedSchemas, &expression);
 
     if (selectedSchemas.empty())
       return {};
@@ -390,11 +389,12 @@ namespace Server {
       const auto& data = row.GetData();
 
       schemas.emplace_back(Headers::SchemaHeader{
-        data[0]->GetString(),
-        data[1]->GetString(),
-        data[2]->GetDateTime(),
+        data[0]->GetInt(),
+        data[1]->GetInt(),
+        data[2]->GetString(),
         data[3]->GetDateTime(),
-        data[4]->GetString()
+  data[4]->GetDateTime(),
+        data[5]->GetString()
       });
     }
 
@@ -404,19 +404,14 @@ namespace Server {
   bool ServerInstance::SchemaExists(const string &dbName, const std::string &schema) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    const vector<Field> conditions = {
-      Field(dbName, 0),
-      Field(schema, 1)
-    };
+    auto databaseHeader = this->SelectDatabase(dbName);
 
-    Table* sysSchemas = this->masterDb->OpenTable("dbo", "sys_schemas");
+    auto expression = Expressions::Expression::Predicate(1, "=", Field(databaseHeader.id, 1));
+
+    Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
     vector<Row> selectedSchemas;
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
-    key.InsertKey(Indexing::Key(schema.data(), schema.size(), ColumnType::String));
-
-    sysSchemas->ClusteredIndexSeek(&selectedSchemas, &key, &key);
+    sysSchemas->ClusteredIndexScan(&selectedSchemas, &expression);
 
     return !selectedSchemas.empty();
   }
@@ -424,13 +419,15 @@ namespace Server {
   vector<Headers::TableHeader> ServerInstance::SelectTables(const string &dbName) const{
     using namespace DatabaseEngine::StorageTypes;
 
+    auto databaseHeader = this->SelectDatabase(dbName);
+
+    auto expression = Expressions::Expression::Predicate(1, "=", Field(databaseHeader.id, 1));
+
     vector<Row> selectedTables;
-    Indexing::Key key;
 
-    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
-    Table* sysTablesPtr = this->masterDb->OpenTable(1);
-    sysTablesPtr->ClusteredIndexSeek(&selectedTables, &key, &key);
+    sysTablesPtr->ClusteredIndexScan(&selectedTables, &expression);
 
     if (selectedTables.empty())
       return {};
@@ -443,21 +440,22 @@ namespace Server {
       
       selectedTableHeaders.emplace_back(
           Headers::TableHeader{
-              data[0]->GetString(),
-              data[1]->GetString(),
-              data[2]->GetSmallInt(),
+              data[0]->GetInt(),
+              data[1]->GetInt(),
+              data[2]->GetInt(),
               data[3]->GetString(),
-              data[4]->GetBool(),
-              data[5]->GetDateTime(),
+              data[4]->GetSmallInt(),
+                data[5]->GetBool(),
               data[6]->GetDateTime(),
-              data[7]->GetString()
+              data[7]->GetDateTime(),
+              data[8]->GetString()
           }
       );
     }
 
       ranges::sort(selectedTableHeaders,
       [](const Headers::TableHeader& a, const Headers::TableHeader& b) {
-          return a.id < b.id;
+          return a.tablePosition < b.tablePosition;
       }
     );
 
@@ -472,13 +470,13 @@ namespace Server {
     };
 
     vector<Row> selectedTables;
-    Table* sysTables = this->masterDb->OpenTable("dbo", "sys_tables");
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
     Indexing::Key key;
     key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
     key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
 
-    sysTables->ClusteredIndexSeek(&selectedTables, &key, &key);
+    table->ClusteredIndexSeek(&selectedTables, &key, &key);
 
     if (selectedTables.empty())
       return {};
@@ -486,48 +484,63 @@ namespace Server {
     const auto& data = selectedTables[0].GetData();
 
     return  Headers::TableHeader{
-      data[0]->GetString(),
-      data[1]->GetString(),
-      data[2]->GetSmallInt(),
-      data[3]->GetString(),
-      data[4]->GetBool(),
-      data[5]->GetDateTime(),
-      data[6]->GetDateTime(),
-      data[7]->GetString()
+          data[0]->GetInt(),
+          data[1]->GetInt(),
+          data[2]->GetInt(),
+          data[3]->GetString(),
+          data[4]->GetSmallInt(),
+            data[5]->GetBool(),
+          data[6]->GetDateTime(),
+          data[7]->GetDateTime(),
+          data[8]->GetString()
     };
   }
 
-  bool ServerInstance::TableExists(const string &dbName, const string &tableName, const std::string& schema) const{
+  Headers::TableHeader ServerInstance::SelectTable(const string &dbName, const string &tableName, const std::string& schema) const{
     using namespace DatabaseEngine::StorageTypes;
 
+    const auto dbHeader = this->SelectDatabase(dbName);
+
+    if(dbHeader.id  == 0)
+      return {};
+
     vector<Row> selectedTables;
-    Table* sysTablesPtr = this->masterDb->OpenTable(1);
+    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
-    Indexing::Key key;
+    auto leftExpr = Expressions::Expression::Predicate(1, "=", Field(dbHeader.id, 1));
+    auto rightExpr = Expressions::Expression::Predicate(1, "=", Field(tableName, 2));
+    auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, &leftExpr, &rightExpr);
 
-    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
-    key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
-    key.InsertKey(Indexing::Key(schema.data(), schema.size(), ColumnType::String));
+    sysTablesPtr->ClusteredIndexScan(&selectedTables, &expr);
 
-    sysTablesPtr->ClusteredIndexSeek(&selectedTables, &key, &key);
+    if (selectedTables.empty())
+      return {};
 
-    // sysTables->Select(selectedTables, {}, &conditions);
+    const auto& data = selectedTables[0].GetData();
 
-    return !selectedTables.empty();
+    return  Headers::TableHeader{
+          data[0]->GetInt(),
+          data[1]->GetInt(),
+          data[2]->GetInt(),
+          data[3]->GetString(),
+          data[4]->GetSmallInt(),
+            data[5]->GetBool(),
+          data[6]->GetDateTime(),
+          data[7]->GetDateTime(),
+          data[8]->GetString()
+    };
   }
 
-  vector<Headers::ColumnHeader> ServerInstance::SelectColumns(const string &dbName, const string &tableName) const{
+  vector<Headers::ColumnHeader> ServerInstance::SelectColumns(const int32_t& tableId) const{
     using namespace DatabaseEngine::StorageTypes;
 
     vector<Row> selectedColumns;
-    Table* sysColumns = this->masterDb->OpenTable("dbo", "sys_columns");
+    Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
-    Indexing::Key key;
 
-    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
-    key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
+    auto expression = Expressions::Expression::Predicate(1, "=", Field(tableId, 1));
 
-    sysColumns->ClusteredIndexSeek(&selectedColumns, &key, &key);
+    sysColumns->ClusteredIndexScan(&selectedColumns, &expression);
 
     if (selectedColumns.empty())
       return {};
@@ -540,8 +553,8 @@ namespace Server {
 
       selectedColumnHeaders.emplace_back(
         Headers::ColumnHeader{
-          data[0]->GetString(),
-          data[1]->GetString(),
+          data[0]->GetInt(),
+          data[1]->GetInt(),
           data[2]->GetString(),
           data[3]->GetString(),
           data[4]->GetSmallInt(),
@@ -564,8 +577,8 @@ namespace Server {
      return selectedColumnHeaders;
   }
 
-  Dictionary<string, Headers::ColumnHeader> ServerInstance::SelectColumnsToDictionary(const string &dbName, const string &tableName) const{
-      const auto columns = this->SelectColumns(dbName, tableName);
+  Dictionary<string, Headers::ColumnHeader> ServerInstance::SelectColumnsToDictionary(const int32_t& tableId) const{
+      const auto columns = this->SelectColumns(tableId);
 
       Dictionary<string, Headers::ColumnHeader> selectedColumns;
 
@@ -575,17 +588,15 @@ namespace Server {
       return selectedColumns;
     }
 
-    vector<Headers::IndexHeader> ServerInstance::SelectIndexes(const string &dbName, const string &tableName) const{
+    vector<Headers::IndexHeader> ServerInstance::SelectIndexes(const int32_t& tableId) const{
       using namespace DatabaseEngine::StorageTypes;
 
-      Table* sysIndexes = this->masterDb->OpenTable("dbo", "sys_indexes");
+      Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
       vector<Row> selectedIndexes;
 
-      Indexing::Key key;
-      key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
-      key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
+      auto expression = Expressions::Expression::Predicate(1, "=", Field(tableId, 1));
 
-      sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key);
+      sysIndexes->ClusteredIndexScan(&selectedIndexes, &expression);
 
       vector<Headers::IndexHeader> selectedIndexHeaders;
 
@@ -596,7 +607,7 @@ namespace Server {
 
         constexpr auto delimiter = ",";
 
-        const char* token = strtok(data[4]->GetString().data(), delimiter);
+        const char* token = strtok(data[3]->GetString().data(), delimiter);
 
         while (token != nullptr) {
           columns.emplace_back(SafeConverter<column_index_t>::SafeStoi(token));
@@ -605,12 +616,12 @@ namespace Server {
 
         selectedIndexHeaders.emplace_back(
         Headers::IndexHeader{
-          data[0]->GetString(),
-          data[1]->GetString(),
+          data[0]->GetInt(),
+          data[1]->GetInt(),
           data[2]->GetString(),
-          data[3]->GetString(),
           std::move(columns),
-          data[5]->GetBool(),
+          data[4]->GetBool(),
+          data[5]->GetInt(),
           data[6]->GetInt(),
           data[7]->GetInt(),
           data[8]->GetDateTime(),
@@ -672,8 +683,10 @@ namespace Server {
 
       if (primaryKey.empty())
         throw runtime_error("All tables in masterDb must have a primary key");
-        
-      this->masterDb->CreateTable(table.name, "dbo", i, columns, &primaryKey); 
+
+      Headers::Index index(primaryKey, 1, 1);
+
+      this->masterDb->CreateTable(table.name, "dbo", i, columns, &index);
     }
   }
 

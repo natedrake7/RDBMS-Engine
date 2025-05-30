@@ -32,11 +32,8 @@ namespace DatabaseEngine::StorageTypes {
       {
         this->indexAllocationMapPageId = 0;
         this->tableId = 0;
-        this->maxRowSize = 0;
         this->numberOfColumns = 0;
         this->clusteredIndexPageId = 0;
-        // this->columnsNullBitMap = nullptr;
-        // this->clusteredIndexesBitMap = nullptr;
       }
 
       TableHeader::~TableHeader() = default;
@@ -47,41 +44,43 @@ namespace DatabaseEngine::StorageTypes {
           return *this;
 
         this->indexAllocationMapPageId = tableHeader.indexAllocationMapPageId;
-        this->maxRowSize = tableHeader.maxRowSize;
         this->numberOfColumns = tableHeader.numberOfColumns;
         this->tableId = tableHeader.tableId;
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
         this->nonClusteredIndexPageIds = tableHeader.nonClusteredIndexPageIds;
         this->nonClusteredIndexesIds = tableHeader.nonClusteredIndexesIds;
 
-        // this->columnsNullBitMap = new BitMap(*tableHeader.columnsNullBitMap);
-        this->clusteredColumnIndexes = tableHeader.clusteredColumnIndexes;
+        this->clusteredIndex = tableHeader.clusteredIndex;
 
-          for(const auto& nonClusteredIndexes: tableHeader.nonClusteredColumnIndexes)
-              this->nonClusteredColumnIndexes.push_back(nonClusteredIndexes);
+        for(const auto& nonClusteredIndex: tableHeader.nonClusteredIndexes)
+            this->nonClusteredIndexes.push_back(nonClusteredIndex);
 
         return *this;
       }
 
-      Table::Table(const string &tableName, const std::string& schema, const table_id_t &tableId, const vector<Column *> &columns,  DatabaseEngine::Database *database, const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes)
+      Table::Table(
+        const string &tableName,
+        const std::string& schema,
+        const table_id_t &tableId,
+        const vector<Column *> &columns,
+        DatabaseEngine::Database *database,
+        Headers::Index* clusteredIndex,
+        vector<Headers::Index> *nonClusteredIndexes)
       {
-        this->name = tableName;
-        this->schema = schema;
+//        this->schema = schema;
         this->columns = columns;
         this->database = database;
         this->header.numberOfColumns = columns.size();
-        // this->header.columnsNullBitMap = new BitMap(this->header.numberOfColumns);
         this->header.tableId = tableId;
 
         this->clusteredIndexedTree = nullptr;
 
-        this->SetTableIndexesToHeader(clusteredKeyIndexes, nonClusteredIndexes);
+        if(clusteredIndex)
+          this->header.clusteredIndex = std::move(*clusteredIndex);
 
-        for (const auto &column : columns) 
-        {
-          // this->header.columnsNullBitMap->Set(counter, column->GetAllowNulls());
-          this->header.maxRowSize += column->GetColumnSize();
-        }
+        if(nonClusteredIndexes)
+          this->header.nonClusteredIndexes = std::move(*nonClusteredIndexes);
+
       }
 
       Table::Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database)
@@ -89,8 +88,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header = tableHeader;
         this->header.tableId = masterDbHeader.id;
         this->database = database;
-        this->name = masterDbHeader.name;
-        this->schema = masterDbHeader.schemaName;
+        this->schemaId = masterDbHeader.schemaId;
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -98,16 +96,15 @@ namespace DatabaseEngine::StorageTypes {
       {
         this->header = tableHeader;
         this->database = database;
-        this->name = tableName;
-        this->schema = "dbo";
+//        this->schemaId = tableHeader.;
         this->clusteredIndexedTree = nullptr;
       }
 
-      Table::Table(const Headers::sysTable &systemHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database){
+      Table::Table(const Headers::sysTable &systemHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey, DatabaseEngine::Database *database){
         this->header = tableHeader;
+        this->header.clusteredIndex = primaryKey;
         this->database = database;
-        this->name = systemHeader.name;
-        this->schema = "dbo";
+//        this->schema = "dbo";
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -128,42 +125,20 @@ namespace DatabaseEngine::StorageTypes {
             delete column;
       }
 
-      void Table::SetTableIndexesToHeader(const vector<column_index_t> *clusteredKeyIndexes, const vector<vector<column_index_t>> *nonClusteredIndexes) 
-      {
-        if (clusteredKeyIndexes != nullptr && !clusteredKeyIndexes->empty())
-        {
-
-            this->header.clusteredColumnIndexes = *clusteredKeyIndexes;
-        
-            this->clusteredIndexedTree = new BPlusTree(this, this->header.clusteredIndexPageId, TreeType::Clustered);
-        }
-
-        if (nonClusteredIndexes != nullptr && !nonClusteredIndexes->empty())
-        {
-            for (int i = 0; i < nonClusteredIndexes->size(); i++)
-            {
-                this->header.nonClusteredColumnIndexes.push_back(nonClusteredIndexes->at(i));
-                this->header.nonClusteredIndexesIds.emplace_back(i + 1);
-            }
-
-            this->header.nonClusteredIndexPageIds.resize(nonClusteredIndexes->size(), 0);
-        }
-      }
-
       vector<ColumnType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const
       {
           vector<ColumnType> columns;
 
           if(treeId == 0)
           {
-            for(const auto& columnIndex: this->header.clusteredColumnIndexes)
+            for(const auto& columnIndex: this->header.clusteredIndex.columns)
                 columns.emplace_back(this->columns[columnIndex]->GetColumnType());
 
             return columns;
           }
 
-          for(const auto& columnIndex: this->header.nonClusteredColumnIndexes[treeId - 1])
-              columns.emplace_back(this->columns[columnIndex]->GetColumnType());
+//          for(const auto& columnIndex: this->header.nonClusteredColumnIndexes[treeId - 1])
+//              columns.emplace_back(this->columns[columnIndex]->GetColumnType());
 
           return columns;
       }
@@ -173,9 +148,11 @@ namespace DatabaseEngine::StorageTypes {
         uint32_t rowsInserted = 0;
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
+
+        int64_t primaryKeyVal = 0;
         for (const auto &rowData : inputData) 
         {
-            Row* row = this->CreateRow(rowData);
+            Row* row = this->CreateRow(rowData, &primaryKeyVal);
 
             const auto result = this->InsertRow(row, extents, startingExtentIndex);
 
@@ -198,14 +175,19 @@ namespace DatabaseEngine::StorageTypes {
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
-        Row* row = this->CreateRow(inputData);
+        int64_t primaryKeyVal = 0;
+
+        Row* row = this->CreateRow(inputData, &primaryKeyVal);
 
         auto result =  this->InsertRow(row, extents, startingExtentIndex);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
 
+
+
         result.message = "Rows affected: 1";
+        result.primaryKeyVal = primaryKeyVal;
         
         return result;
     }
@@ -246,27 +228,32 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-      Row* Table::CreateRow(const vector<Field>& inputData)const
+      Row* Table::CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal)
       {
         auto *row = new Row(*this);
-        for (const auto & i : inputData) 
-        {
-          const column_index_t &associatedColumnIndex = i.GetColumnIndex();
 
-          auto *block = new Block(columns[associatedColumnIndex]);
+        *primaryKeyVal = this->PopulateAutoComputedColumns(row);
 
-          const ColumnType columnType = columns[associatedColumnIndex]->GetColumnType();
+        for(const auto& input : inputData){
+
+          const auto& associatedColumnIndex = input.GetColumnIndex();
+
+          const auto& column = this->columns.at(associatedColumnIndex);
+
+          auto *block = new Block(column);
+
+          const ColumnType columnType = column->GetColumnType();
 
           if (columnType > Constants::ColumnType::ColumnTypeCount)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
-          if (i.GetIsNull()) 
+          if (input.GetIsNull())
           {
             Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
             continue;
           }
 
-          block->SetData(i.GetRawData(), i.GetSize());
+          block->SetData(input.GetRawData(), input.GetSize());
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
@@ -374,11 +361,6 @@ namespace DatabaseEngine::StorageTypes {
                 maximumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
             }
           }
-          else if(!this->header.clusteredColumnIndexes.empty())
-            useClusteredIndex = true;
-          else if(!this->header.nonClusteredColumnIndexes.empty())
-            useNonClusteredIndex = true;
-
         //handle more complex queries like prefer index seek over index scan
 //        if(useClusteredIndex)
 //        {
@@ -453,7 +435,7 @@ namespace DatabaseEngine::StorageTypes {
         for(const auto& row : results){
           if(row.Evaluate(expression))
           {
-            const auto& key = Database::CreateKey(this->header.clusteredColumnIndexes, &row);
+            const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, &row);
             tree->Remove(key);
           }
         }
@@ -479,17 +461,13 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::AddColumn(Column *column) { this->columns.push_back(column); }
 
-    string &Table::GetTableName() { return this->name; }
-
-    string & Table::GetSchema(){ return this->schema; }
-
-    row_size_t &Table::GetMaxRowSize() { return this->header.maxRowSize; }
+    string Table::GetSchema(){ return {}; }
 
     const table_id_t &Table::GetTableId() const { return this->header.tableId; }
 
     TableType Table::GetTableType() const 
     {
-        return !this->header.clusteredColumnIndexes.empty()
+        return !this->header.clusteredIndex.columns.empty()
                     ? TableType::CLUSTERED
                     : TableType::HEAP;
     }
@@ -508,7 +486,7 @@ namespace DatabaseEngine::StorageTypes {
       HashSet<column_index_t> clusteredColumns;
 
       key_size_t keySize = 0;
-      for(const auto& column : this->header.clusteredColumnIndexes)
+      for(const auto& column : this->header.clusteredIndex.columns)
         clusteredColumns.Add(column);
 
       for (const auto &column : this->columns)
@@ -527,7 +505,7 @@ namespace DatabaseEngine::StorageTypes {
 
       HashSet<column_index_t> clusteredColumns;
 
-      for(const auto& column : this->header.clusteredColumnIndexes)
+      for(const auto& column : this->header.clusteredIndex.columns)
         clusteredColumns.Add(column);
 
       for (auto &column : this->columns) {
@@ -976,6 +954,42 @@ namespace DatabaseEngine::StorageTypes {
         return largestBlock->GetBlockSize();
     }
 
+    int64_t Table::PopulateAutoComputedColumns(Row *row){
+      int64_t primaryKeyValue = 0;
+
+      if(this->header.clusteredIndex.incrementFactor != 0){
+        const auto& columnIndex = this->header.clusteredIndex.columns[0];
+
+        const auto& column = this->columns.at(columnIndex);
+
+        const auto& columnSize = column->GetColumnSize();
+
+        this->header.clusteredIndex.lastValue += this->header.clusteredIndex.incrementFactor;
+
+        auto* block = new Block(&this->header.clusteredIndex.lastValue, columnSize ,column);
+
+        row->InsertColumnData(block, columnIndex);
+
+        primaryKeyValue = this->header.clusteredIndex.lastValue;
+      }
+
+      for(auto& nonClusteredIndexes: this->header.nonClusteredIndexes){
+        if(nonClusteredIndexes.incrementFactor == 0)
+          continue;
+
+        const auto& columnIndex = nonClusteredIndexes.columns[0];
+
+        auto* block = row->GetData()[columnIndex];
+
+        const auto& columnSize = this->columns.at(columnIndex)->GetColumnSize();
+
+        nonClusteredIndexes.lastValue += nonClusteredIndexes.incrementFactor;
+
+        block->SetData(&nonClusteredIndexes.lastValue, columnSize);
+      }
+
+      return primaryKeyValue;
+    }
 
 }
 

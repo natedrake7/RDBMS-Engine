@@ -51,6 +51,7 @@ namespace QueryPipeline::Statements {
   struct TableName {
     std::string name;
     std::string schema;
+    int32_t tableId;
 
     TableName() { this->schema = "dbo"; }
   };

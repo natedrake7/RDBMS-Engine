@@ -20,11 +20,13 @@ namespace AdditionalDataTypes {
   struct ResultStatus {
     ResultCode code;
     std::string message;
+    int64_t primaryKeyVal;
     
     ResultStatus() {
       this->code = ResultCode::Ok;
+      this->primaryKeyVal = 0;
     }
-    ~ResultStatus() = default;
+
   };
 }
 

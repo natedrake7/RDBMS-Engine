@@ -19,23 +19,7 @@ using namespace Indexing;
 using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes{
-    void Table::GetIndexedColumnKeys(vector<column_index_t> *vector) const 
-    {
-        *vector = this->header.clusteredColumnIndexes; 
-    }
-
-    void Table::GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>>* vector) const
-    {
-        if(this->header.nonClusteredColumnIndexes.empty())
-            return;
-
-        vector->resize(this->header.nonClusteredColumnIndexes.size());
-
-        for(const auto& nonClusteredIndex : this->header.nonClusteredColumnIndexes)
-            vector->push_back(nonClusteredIndex);
-    }
-
-    bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredColumnIndexes.empty(); }
+    bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredIndexes.empty(); }
 
     Database * Table::GetDatabase() const { return this->database; }
 
