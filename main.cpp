@@ -34,6 +34,7 @@ void InsertRowsToMoviesTable(Table* table);
 //advanced functions
 
 //TODO
+//add server db to return the rest of the fields
 //Add Guid Support (set is as a different datatype)
 //Add Decimal full support
 //Fix date retrieval issues

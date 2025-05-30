@@ -20,6 +20,10 @@ namespace Headers {
 
     if (j.contains("size"))
       j.at("size").get_to(c.size);
+    if (j.contains("default"))
+      j.at("default").get_to(c._default);
+    if (j.contains("nullable"))
+      j.at("nullable").get_to(c.nullable);
   }
 
   void from_json(const json& j, sysTable& t) {
@@ -83,33 +87,41 @@ namespace Server {
     for (int i = 0;i < this->sysTables.size(); i++) {
       const auto& table = this->sysTables[i];
 
-      const auto tableResult = this->InsertTableToMasterDb(
+      const auto tableResult =
+      this->InsertTableToMasterDb(
         static_cast<int32_t>(dbInsertResult.primaryKeyVal),
         static_cast<int32_t>(schemaInsertResult.primaryKeyVal),
         table.name,
-        i,
+        static_cast<int16_t>(i),
         true);
 
       int columnPos = 0;
+
+      Dictionary<std::string, int32_t> columnIdsDict;
+
       for (auto& column: table.columns) {
 
         block_size_t columnSize;
-
         ColumnTypeSizes.TryGetValue(AdditionalLibraries::NormalizeString(column.type), columnSize);
 
         if (columnSize == 0)
           columnSize = column.size;
 
-        this->InsertColumnToMasterDb(
+        ColumnType type;
+        ColumnTypesDictionary.TryGetValue(AdditionalLibraries::NormalizeString(column.type), type);
+
+        const auto columnResult =
+          this->InsertColumnToMasterDb(
            static_cast<int32_t>(tableResult.primaryKeyVal),
            column.name,
-           column.type,
+           type,
            columnSize,
-           false,
+           column.nullable,
            columnPos,
            true);
 
         columnNameToIndex.Add(column.name, columnPos);
+        columnIdsDict.Add(column.name, static_cast<int32_t>(columnResult.primaryKeyVal));
 
         columnPos++;
       }
@@ -125,14 +137,57 @@ namespace Server {
       }
 
       //TODO keep the last value keys
-      this->InsertIndexToMasterDb(
-      static_cast<int32_t>(tableResult.primaryKeyVal),
-      "PK" + _columns,
-      concatenatedColumns,
-      true,
-      1,
-      1,
-      1);
+      const auto indexResult =
+        this->InsertIndexToMasterDb(
+        static_cast<int32_t>(tableResult.primaryKeyVal),
+        "PK" + _columns,
+        true);
+
+      auto indexKey = static_cast<int32_t>(indexResult.primaryKeyVal);
+
+      const auto constraintResult =
+          this->InsertConstraintToMasterDb(
+          static_cast<int32_t>(tableResult.primaryKeyVal),
+          "PK" + _columns,
+          Headers::ConstraintType::PrimaryKey,
+          false,
+          &indexKey);
+
+      for(int j = 0;j < table.primaryKey.size(); j++){
+        const auto& columnIndex = columnNameToIndex.Get(table.primaryKey[j]);
+
+        this->InsertIndexColumnToMasterDb(
+          static_cast<int32_t>(indexResult.primaryKeyVal),
+          columnIdsDict.Get(table.primaryKey[j]),
+          static_cast<int16_t>(j),
+          true);
+
+        this->InsertConstraintColumnToMasterDb(
+          static_cast<int32_t>(constraintResult.primaryKeyVal),
+          columnIdsDict.Get(table.primaryKey[j]),
+          static_cast<int16_t>(j)
+        );
+
+        if(table.primaryKey.size() == 1){
+          this->InsertIdentityColumnToMasterDb(
+            static_cast<int32_t>(tableResult.primaryKeyVal),
+            columnIdsDict.Get(table.primaryKey[j]),
+            1,
+            1,
+            1,
+            true,
+            10000
+          );
+
+        }
+
+      }
+
+
+
+
+
+
     }
 
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
@@ -167,7 +222,13 @@ namespace Server {
        this->masterDb = new DatabaseEngine::Database(this->sysDbName, this->sysTables);
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertDbToMasterDb(const string& dbName, const string& dbPath, const bool& isSystem, const string& user) const{
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertDbToMasterDb(
+    const string& dbName,
+    const string& dbPath,
+    const bool& isSystem,
+    const string& user,
+    const int& version,
+    const bool& isDeleted) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
 
       const auto currentDate = DataTypes::DateTime::Now();
@@ -179,96 +240,20 @@ namespace Server {
         Field(currentDate, 4),
         Field(currentDate, 5),
         Field(user, 6),
+        Field(version, 7),
+        Field(isDeleted, 8),
+        Field(nullptr, 9),
     };
     
     return table->InsertRow(fields);
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertTableToMasterDb(
-    const int32_t & databaseId,
-    const int32_t & schemaId,
-    const string& tableName,
-    const table_id_t& tablePosition,
-    const bool& isSystem,
-    const string& user) const{
-
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
-      const auto currentDate = DataTypes::DateTime::Now();
-
-      const vector<Field> fields = {
-        Field(databaseId, 1),
-        Field(schemaId, 2),
-        Field(tableName, 3),
-        Field(tablePosition, 4),
-        Field(isSystem, 5),
-        Field(currentDate, 6),
-        Field(currentDate, 7),
-        Field(user, 8),
-      };
-    
-    return table->InsertRow(fields);
-  }
-
-  AdditionalDataTypes::ResultStatus  ServerInstance::InsertColumnToMasterDb(
-    const int32_t & tableId,
-    const string &columnName,
-    const string &columnType,
-    const int &columnSize,
-    const bool& isNullable,
-    const int &tablePosition,
-    const bool& isSystem,
-    const string& user) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
-      const auto currentDate = DataTypes::DateTime::Now();
-
-      const vector<Field> fields = {
-        Field(tableId, 1),
-        Field(columnName, 2),
-        Field(columnType, 3),
-        Field(columnSize, 4),
-        Field(isNullable, 5),
-        Field(tablePosition, 6),
-        Field(isSystem, 7),
-        Field(currentDate, 8),
-        Field(currentDate, 9),
-        Field(user, 10),
-      };
-
-    return table->InsertRow(fields);
-  }
-
-  AdditionalDataTypes::ResultStatus  ServerInstance::InsertIndexToMasterDb(
-    const int32_t & tableId,
-    const string &indexName,
-    const string &columns,
-    const bool &isClustered,
-    const int32_t& seed,
-    const int32_t& incrementFactor,
-    const int32_t& lastValue,
-    const string &user) const{
-     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
-     const auto currentDate = DataTypes::DateTime::Now();
-
-     const vector<Field> fields = {
-       Field(tableId, 1),
-       Field(indexName, 2),
-       Field(columns, 3),
-       Field(isClustered, 4),
-       Field(seed, 5),
-       Field(incrementFactor, 6),
-       Field(lastValue, 7),
-       Field(currentDate, 8),
-       Field(currentDate, 9),
-       Field(user, 10),
-     };
-
-     return table->InsertRow(fields);
-  }
-
   AdditionalDataTypes::ResultStatus  ServerInstance::InsertSchemaToMasterDb(
     const int32_t &databaseId,
     const string &schemaName,
-    const string &user) const{
+    const string &user,
+    const int& version,
+    const bool& isDeleted) const{
      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
      const auto currentDate = DataTypes::DateTime::Now();
 
@@ -278,9 +263,212 @@ namespace Server {
         Field(currentDate, 3),
         Field(currentDate, 4),
         Field(user, 5),
+        Field(version, 6),
+        Field(isDeleted, 7),
+        Field(nullptr, 8),
      };
 
      return table->InsertRow(fields);
+  }
+
+  AdditionalDataTypes::ResultStatus  ServerInstance::InsertTableToMasterDb(
+    const int32_t & databaseId,
+    const int32_t & schemaId,
+    const string& tableName,
+    const int16_t& ordinalPosition,
+    const bool& isSystem,
+    const string& user,
+    const int& version,
+    const bool& isDeleted) const{
+
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
+      const auto currentDate = DataTypes::DateTime::Now();
+
+      const vector<Field> fields = {
+        Field(databaseId, 1),
+        Field(schemaId, 2),
+        Field(tableName, 3),
+        Field(ordinalPosition, 4),
+        Field(isSystem, 5),
+        Field(currentDate, 6),
+        Field(currentDate, 7),
+        Field(user, 8),
+        Field(version, 9),
+        Field(isDeleted, 10),
+        Field(nullptr, 11),
+      };
+
+    return table->InsertRow(fields);
+  }
+
+  AdditionalDataTypes::ResultStatus  ServerInstance::InsertColumnToMasterDb(
+    const int32_t & tableId,
+    const string &columnName,
+    const ColumnType &columnType,
+    const int &columnSize,
+    const bool& isNullable,
+    const int &ordinalPosition,
+    const bool& isSystem,
+    const string& user,
+    const int& version,
+    const bool& isDeleted) const{
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
+      const auto currentDate = DataTypes::DateTime::Now();
+
+      const vector<Field> fields = {
+        Field(tableId, 1),
+        Field(columnName, 2),
+        Field(static_cast<int8_t>(columnType), 3),
+        Field(columnSize, 4),
+        Field(isNullable, 5),
+        Field(ordinalPosition, 6),
+        Field(isSystem, 7),
+        Field(currentDate, 8),
+        Field(currentDate, 9),
+        Field(user, 10),
+        Field(version, 11),
+        Field(isDeleted, 12),
+        Field(nullptr, 13),
+      };
+
+    return table->InsertRow(fields);
+  }
+
+  AdditionalDataTypes::ResultStatus  ServerInstance::InsertIndexToMasterDb(
+    const int32_t & tableId,
+    const string &indexName,
+    const bool &isClustered,
+    const bool &isDisabled,
+    const string &user,
+    const int& version,
+    const bool& isDeleted) const{
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
+     const auto currentDate = DataTypes::DateTime::Now();
+
+     const vector<Field> fields = {
+       Field(tableId, 1),
+       Field(indexName, 2),
+       Field(isClustered, 3),
+       Field(isDisabled, 4),
+       Field(currentDate, 5),
+       Field(currentDate, 6),
+       Field(user, 7),
+       Field(version, 8),
+       Field(isDeleted, 9),
+      Field(nullptr, 10),
+     };
+
+     return table->InsertRow(fields);
+  }
+
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertIndexColumnToMasterDb(
+    const int32_t & indexId,
+    const int32_t & columnId,
+    const int16_t & ordinalPosition,
+    const bool & isIncluded,
+    const int& version,
+    const bool& isDeleted) const{
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSINDEXCOLUMNS);
+    const auto currentDate = DataTypes::DateTime::Now();
+
+    const vector<Field> fields = {
+      Field(indexId, 0),
+      Field(columnId, 1),
+      Field(ordinalPosition, 2),
+      Field(isIncluded, 3),
+      Field(version, 4),
+      Field(isDeleted, 5),
+      Field(nullptr, 6),
+    };
+
+    return table->InsertRow(fields);
+  }
+
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertIdentityColumnToMasterDb(
+      const int32_t & tableId,
+      const int32_t & columnId,
+      const int32_t & seedValue,
+      const int32_t & increment,
+      const int32_t & lastValue,
+      const bool & isCached,
+      const int32_t & cacheBlock,
+      const int& version,
+      const bool& isDeleted) const{
+
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
+      const auto currentDate = DataTypes::DateTime::Now();
+
+      const vector<Field> fields = {
+        Field(tableId, 0),
+        Field(columnId, 1),
+        Field(seedValue, 2),
+        Field(increment, 3),
+        Field(lastValue, 4),
+        Field(isCached, 5),
+        Field(cacheBlock, 6),
+        Field(version, 7),
+        Field(isDeleted, 8),
+        Field(nullptr, 9),
+      };
+
+      return table->InsertRow(fields);
+
+  }
+
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintToMasterDb(
+      const int32_t & tableId,
+      const string & constraintName,
+      const Headers::ConstraintType & constraintType,
+      const bool & isDisabled,
+      const int32_t *constraintIndexId,
+      const string & user,
+      const int& version,
+      const bool& isDeleted) const{
+
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
+      const auto currentDate = DataTypes::DateTime::Now();
+
+      vector<Field> fields = {
+          Field(tableId, 1),
+          Field(constraintName, 2),
+          Field(static_cast<int8_t>(constraintType), 3),
+          Field(isDisabled, 4),
+          Field(nullptr, 5),
+          Field(currentDate, 6),
+          Field(currentDate, 7),
+          Field(user, 8),
+          Field(version, 9),
+          Field(isDeleted, 10),
+          Field(nullptr, 11),
+      };
+
+      if(constraintIndexId != nullptr)
+          fields.at(4).SetData(*constraintIndexId);
+
+      return table->InsertRow(fields);
+  }
+
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintColumnToMasterDb(
+    const int32_t & constraintId,
+    const int32_t & columnId,
+    const int32_t & ordinalPosition,
+    const int& version,
+    const bool& isDeleted) const{
+
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTCOLUMNS);
+    const auto currentDate = DataTypes::DateTime::Now();
+
+    vector<Field> fields = {
+        Field(constraintId, 0),
+        Field(columnId, 1),
+        Field(ordinalPosition, 2),
+        Field(version, 3),
+        Field(isDeleted, 4),
+        Field(nullptr, 5),
+    };
+
+    return table->InsertRow(fields);
+
   }
 
   bool ServerInstance::DatabaseExists(const string &dbName) const{
@@ -333,9 +521,6 @@ namespace Server {
         .name = dbName,
         .filepath = data[2]->GetString(),
         .isSystem = data[3]->GetBool(),
-        .createdAt = data[4]->GetDateTime(),
-        .lastModified = data[5]->GetDateTime(),
-        .lastModifiedBy = data[6]->GetString(),
         .tables = std::move(dbTables),
         .schemas = std::move(schemas)
       });
@@ -364,9 +549,6 @@ namespace Server {
       .name = data[1]->GetString(),
       .filepath = data[2]->GetString(),
       .isSystem = data[3]->GetBool(),
-      .createdAt = data[4]->GetDateTime(),
-      .lastModified = data[5]->GetDateTime(),
-      .lastModifiedBy = data[6]->GetString()
     };
   }
 
@@ -455,7 +637,7 @@ namespace Server {
 
       ranges::sort(selectedTableHeaders,
       [](const Headers::TableHeader& a, const Headers::TableHeader& b) {
-          return a.tablePosition < b.tablePosition;
+          return a.ordinalPosition < b.ordinalPosition;
       }
     );
 
@@ -556,7 +738,7 @@ namespace Server {
           data[0]->GetInt(),
           data[1]->GetInt(),
           data[2]->GetString(),
-          data[3]->GetString(),
+          static_cast<uint8_t>(data[3]->GetTinyInt()),
           data[4]->GetSmallInt(),
           data[5]->GetBool(),
           data[6]->GetSmallInt(),
@@ -570,7 +752,7 @@ namespace Server {
 
     ranges::sort(selectedColumnHeaders,
         [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
-            return a.tablePosition < b.tablePosition;
+            return a.ordinalPosition < b.ordinalPosition;
         }
     );
 
@@ -582,8 +764,8 @@ namespace Server {
 
       Dictionary<string, Headers::ColumnHeader> selectedColumns;
 
-      for (const auto& column : columns)
-        selectedColumns.Add(column.name, column);
+//      for (const auto& column : columns)
+//        selectedColumns.Add(column.name, column);
 
       return selectedColumns;
     }
@@ -603,30 +785,13 @@ namespace Server {
       for (const auto& index : selectedIndexes) {
         const auto& data = index.GetData();
 
-        std::vector<column_index_t> columns;
-
-        constexpr auto delimiter = ",";
-
-        const char* token = strtok(data[3]->GetString().data(), delimiter);
-
-        while (token != nullptr) {
-          columns.emplace_back(SafeConverter<column_index_t>::SafeStoi(token));
-          token = strtok(nullptr, delimiter);
-        }
-
         selectedIndexHeaders.emplace_back(
         Headers::IndexHeader{
           data[0]->GetInt(),
           data[1]->GetInt(),
           data[2]->GetString(),
-          std::move(columns),
           data[4]->GetBool(),
-          data[5]->GetInt(),
-          data[6]->GetInt(),
-          data[7]->GetInt(),
-          data[8]->GetDateTime(),
-          data[9]->GetDateTime(),
-          data[10]->GetString()
+          data[5]->GetBool()
         });
       }
 
@@ -671,7 +836,7 @@ namespace Server {
 
         const auto columnType = ColumnTypesDictionary.Get(normalizedColumnType);
 
-        columns.push_back(new Column(column.name, columnType, columnSize, j, false));
+        columns.push_back(new Column(column.name, columnType, columnSize, j, column.nullable));
 
         for (const auto& key: table.primaryKey) {
           if (column.name != key)
@@ -685,6 +850,12 @@ namespace Server {
         throw runtime_error("All tables in masterDb must have a primary key");
 
       Headers::Index index(primaryKey, 1, 1);
+
+      if(index.columns.size() > 1){
+        index.seed = -1;
+        index.incrementFactor = -1;
+        index.lastValue = -1;
+      }
 
       this->masterDb->CreateTable(table.name, "dbo", i, columns, &index);
     }

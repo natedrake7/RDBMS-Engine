@@ -128,12 +128,12 @@ namespace QueryPipeline::Statements {
 
     if (!this->columns.empty() && this->columns[0] == "*") {
       for (const auto& [key, header] : columnsDict)
-        this->columnIndices.emplace_back(header.tablePosition);
+        this->columnIndices.emplace_back(header.ordinalPosition);
     }
     else {
       for (const auto& selectColumn : this->columns) {
         if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
-          this->columnIndices.emplace_back(header.tablePosition);
+          this->columnIndices.emplace_back(header.ordinalPosition);
           continue;
         }
 
@@ -247,7 +247,7 @@ namespace QueryPipeline::Statements {
       if (columnExistsInStatement)
         continue;
 
-      this->values.emplace_back(nullptr, header.tablePosition);
+      this->values.emplace_back(nullptr, header.ordinalPosition);
     }
 
     return true;

@@ -233,7 +233,9 @@ const ColumnType & Field::GetType() const{ return this->type; }
 const block_size_t& Field::GetSize() const{ return this->size; }
 
 void Field::Validate(const Headers::ColumnHeader &header){
-    switch (const auto& columnType = ColumnTypesDictionary.Get(header.dataType)) {
+    const auto columnType = static_cast<ColumnType>(header.dataType);
+
+    switch (columnType) {
       case ColumnType::TinyInt: {
           const auto value = SafeConverter<int8_t>::SafeStoi(this->GetBigInt());
           this->SetData(value);
@@ -277,5 +279,5 @@ void Field::Validate(const Headers::ColumnHeader &header){
           throw invalid_argument("Invalid column type");
     }
 
-    this->SetColumnIndex(header.tablePosition);
+    this->SetColumnIndex(header.ordinalPosition);
 }

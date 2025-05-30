@@ -957,7 +957,7 @@ namespace DatabaseEngine::StorageTypes {
     int64_t Table::PopulateAutoComputedColumns(Row *row){
       int64_t primaryKeyValue = 0;
 
-      if(this->header.clusteredIndex.incrementFactor != 0){
+      if(this->header.clusteredIndex.seed != -1){
         const auto& columnIndex = this->header.clusteredIndex.columns[0];
 
         const auto& column = this->columns.at(columnIndex);
@@ -974,7 +974,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
       for(auto& nonClusteredIndexes: this->header.nonClusteredIndexes){
-        if(nonClusteredIndexes.incrementFactor == 0)
+        if(nonClusteredIndexes.seed == -1)
           continue;
 
         const auto& columnIndex = nonClusteredIndexes.columns[0];

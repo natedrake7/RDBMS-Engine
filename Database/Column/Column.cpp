@@ -20,9 +20,9 @@ namespace DatabaseEngine::StorageTypes {
     {
         this->name = masterDbHeader.name;
         this->allowNulls = masterDbHeader.isNullable;
-        this->header.columnType = ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(masterDbHeader.dataType));
+        this->header.columnType = static_cast<Constants::ColumnType>(masterDbHeader.dataType);
         this->header.recordSize = masterDbHeader.recordSize;
-        this->header.columnIndex = masterDbHeader.tablePosition;
+        this->header.columnIndex = masterDbHeader.ordinalPosition;
         this->table = table;
         this->isOverflowed = false;
     }

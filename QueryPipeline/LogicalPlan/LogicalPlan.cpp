@@ -41,20 +41,20 @@ namespace QueryPipeline {
         expression->GetColumns(expressionColumns);
 
 
-      for (const auto& index: indexes) {
-          if (canIndexSeek) {
-            for (const auto& column: index.columns) {
-                //if columns is first prefer it, else break because index scan will occur
-                //index seek
-              if (!expressionColumns.Contains(column))
-                  break;
-
-            }
-          }
-
-        //find the first non clustered and use it
-        return new PhysicalPlan::PhysicalIndexScan(dbName, this->table, this->expression, index.isClustered);
-      }
+//      for (const auto& index: indexes) {
+//          if (canIndexSeek) {
+//            for (const auto& column: index.) {
+//                //if columns is first prefer it, else break because index scan will occur
+//                //index seek
+//              if (!expressionColumns.Contains(column))
+//                  break;
+//
+//            }
+//          }
+//
+//        //find the first non clustered and use it
+//        return new PhysicalPlan::PhysicalIndexScan(dbName, this->table, this->expression, index.isClustered);
+//      }
 
     return new PhysicalPlan::PhysicalTableScan(dbName, this->table);
   }
@@ -103,19 +103,19 @@ namespace QueryPipeline {
       expression->GetColumns(expressionColumns);
 
 
-    for (const auto& index: indexes) {
-      if (canIndexSeek) {
-        for (const auto& column: index.columns) {
-          //if columns is first prefer it, else break because index scan will occur
-          //index seek
-          if (!expressionColumns.Contains(column))
-            break;
-        }
-      }
-
-      //find the first non clustered and use it
-      return new PhysicalPlan::PhysicalIndexScanDelete(dbName, this->table, this->expression);
-    }
+//    for (const auto& index: indexes) {
+//      if (canIndexSeek) {
+//        for (const auto& column: index.columns) {
+//          //if columns is first prefer it, else break because index scan will occur
+//          //index seek
+//          if (!expressionColumns.Contains(column))
+//            break;
+//        }
+//      }
+//
+//      //find the first non clustered and use it
+//      return new PhysicalPlan::PhysicalIndexScanDelete(dbName, this->table, this->expression);
+//    }
 
     return new PhysicalPlan::PhysicalHeapDelete(this->dbName, this->table, this->expression);
   }
@@ -151,23 +151,23 @@ namespace QueryPipeline {
       if (expression != nullptr)
         expression->GetColumns(expressionColumns);
 
-      for (const auto& index: indexes) {
-        if (canIndexSeek) {
-          for (const auto& column: index.columns) {
-            //if columns is first prefer it, else break because index scan will occur
-            //index seek
-            if (!expressionColumns.Contains(column))
-              break;
-
-            //create keys for index seek here and pass them to physical plan
-
-            return new PhysicalPlan::PhysicalIndexSeekUpdate(dbName, this->table, this->expression, this->fields);
-          }
-        }
-
-        //find the first non clustered and use it
-        return new PhysicalPlan::PhysicalIndexScanUpdate(dbName, this->table, this->expression, this->fields);
-      }
+//      for (const auto& index: indexes) {
+//        if (canIndexSeek) {
+//          for (const auto& column: index.columns) {
+//            //if columns is first prefer it, else break because index scan will occur
+//            //index seek
+//            if (!expressionColumns.Contains(column))
+//              break;
+//
+//            //create keys for index seek here and pass them to physical plan
+//
+//            return new PhysicalPlan::PhysicalIndexSeekUpdate(dbName, this->table, this->expression, this->fields);
+//          }
+//        }
+//
+//        //find the first non clustered and use it
+//        return new PhysicalPlan::PhysicalIndexScanUpdate(dbName, this->table, this->expression, this->fields);
+//      }
 
       return new PhysicalPlan::PhysicalHeapUpdate(this->dbName, this->table, this->expression, this->fields);
   }

@@ -20,7 +20,11 @@ namespace Server {
     SYSSCHEMAS = 1,
     SYSTABLES = 2,
     SYSCOLUMNS = 3,
-    SYSINDEXES = 4
+    SYSINDEXES = 4,
+    SYSIDENTITYCOLUMNS = 5,
+    SYSINDEXCOLUMNS = 6,
+    SYSCONSTRAINTS = 7,
+    SYSCONSTRAINTCOLUMNS = 8
   };
 
   class ServerInstance {
@@ -51,36 +55,83 @@ namespace Server {
       const string& dbName,
       const string& dbPath,
       const bool& isSystem = false,
-      const string& user = "system") const;
+      const string& user = "system",
+      const int& version = 0,
+      const bool& isDeleted = false) const;
+
+    AdditionalDataTypes::ResultStatus  InsertSchemaToMasterDb(
+      const int32_t& databaseId,
+      const string& schemaName,
+      const string& user = "system",
+      const int& version = 0,
+      const bool& isDeleted = false) const;
+
     AdditionalDataTypes::ResultStatus  InsertTableToMasterDb(
       const int32_t & databaseId,
       const int32_t & schemaId,
       const string& tableName,
-      const table_id_t& tablePosition,
+      const int16_t& ordinalPosition,
       const bool& isSystem = false,
-      const string& user = "system") const;
+      const string& user = "system",
+      const int& version = 0,
+      const bool& isDeleted = false) const;
+
     AdditionalDataTypes::ResultStatus  InsertColumnToMasterDb(
       const int32_t & tableId,
       const string& columnName,
-      const string& columnType,
+      const ColumnType& columnType,
       const int& columnSize,
       const bool& isNullable,
-      const int& tablePosition,
+      const int& ordinalPosition,
       const bool& isSystem = false,
-      const string& user = "system") const;
+      const string& user = "system",
+      const int& version = 0,
+      const bool& isDeleted = false) const;
+
     AdditionalDataTypes::ResultStatus  InsertIndexToMasterDb(
       const int32_t & tableId,
       const string &indexName,
-      const string &columns,
       const bool &isClustered,
-      const int32_t& seed,
-      const int32_t& incrementFactor,
-      const int32_t& lastValue,
-      const string& user = "system") const;
-    AdditionalDataTypes::ResultStatus  InsertSchemaToMasterDb(
-      const int32_t& databaseId,
-      const string& schemaName,
-      const string& user = "system") const;
+      const bool &isDisabled = false,
+      const string& user = "system",
+      const int& version = 0,
+      const bool& isDeleted = false) const;
+
+    AdditionalDataTypes::ResultStatus InsertIndexColumnToMasterDb(
+        const int32_t& indexId,
+        const int32_t& columnId,
+        const int16_t& ordinalPosition,
+        const bool& isIncluded,
+        const int& version = 0,
+        const bool& isDeleted = false) const;
+
+    AdditionalDataTypes::ResultStatus InsertConstraintToMasterDb(
+        const int32_t& tableId,
+        const std::string& constraintName,
+        const Headers::ConstraintType& constraintType,
+        const bool& isDisabled,
+        const int32_t* constraintIndexId,
+        const std::string& user = "system",
+        const int& version = 0,
+        const bool& isDeleted = false) const;
+
+    AdditionalDataTypes::ResultStatus InsertConstraintColumnToMasterDb(
+        const int32_t& constraintId,
+        const int32_t& columnId,
+        const int32_t& ordinalPosition,
+        const int& version = 0,
+        const bool& isDeleted = false) const;
+
+    AdditionalDataTypes::ResultStatus InsertIdentityColumnToMasterDb(
+        const int32_t& tableId,
+        const int32_t& columnId,
+        const int32_t& seedValue,
+        const int32_t& increment,
+        const int32_t& lastValue,
+        const bool& isCached,
+        const int32_t& cacheBlock,
+        const int& version = 0,
+        const bool& isDeleted = false) const;
 
     [[nodiscard]] vector<Headers::DatabaseHeader> GetCatalog()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;

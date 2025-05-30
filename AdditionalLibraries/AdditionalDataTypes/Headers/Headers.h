@@ -4,75 +4,121 @@
 #include <vector>
 
 namespace Headers {
-  struct SchemaHeader {
-    int32_t id;
-    int32_t databaseId;
-    std::string name;
+  enum ConstraintType: uint8_t {
+    PrimaryKey = 0,
+    ForeignKey = 1,
+    Unique = 2,
+    IndexKey = 3,
+    Check = 4,
+    NotNull = 5
+  };
+
+  struct AdditionalInformation{
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
     std::string lastModifiedBy;
+    int32_t version;
+    bool isDeleted;
+    DataTypes::DateTime deletedAt;
+  };
+
+  struct ConstraintsColumnsHeader{
+    int32_t constraintId = -1;
+    int32_t columnId;
+    int32_t ordinalPosition;
+    AdditionalInformation additionalInfo;
+  };
+
+  struct ConstraintsHeader{
+    int32_t constraintId = -1;
+    int32_t tableId;
+    std::string name;
+    ConstraintType type;
+    bool isDisabled;
+    int32_t indexId = -1;
+    AdditionalInformation additionalInfo;
+  };
+
+  struct IndexColumnsHeader{
+    int32_t indexId = -1;
+    int32_t columnId;
+    int16_t ordinalPosition;
+    bool isIncluded;
+    AdditionalInformation additionalInfo;
+  };
+
+  struct IdentityColumnsHeader{
+    int32_t tableId = -1;
+    int32_t columnId = -1;
+    int32_t seedValue;
+    int32_t increment;
+    int32_t lastValue;
+    bool isCached;
+    int32_t cacheBlock;
+    AdditionalInformation additionalInfo;
+  };
+
+  struct IndexHeader {
+    int32_t id = -1;
+    int32_t tableId;
+    std::string name;
+    bool isClustered;
+    bool isDisabled;
+    AdditionalInformation additionalInfo;
+
+    IdentityColumnsHeader identity;
   };
 
   struct ColumnHeader {
-    int32_t id;
+    int32_t id = -1;
     int32_t tableId;
     std::string name;
-    std::string dataType;
+    uint8_t dataType;
     int16_t recordSize;
     bool isNullable;
-    int16_t tablePosition;
+    int16_t ordinalPosition;
     bool isSystem;
-    DataTypes::DateTime createdAt;
-    DataTypes::DateTime lastModified;
-    std::string lastModifiedBy;
+    AdditionalInformation additionalInfo;
   };
 
-  typedef struct IndexHeader {
-    int32_t id;
-    int32_t tableId;
-    std::string name;
-    std::vector<uint8_t> columns;
-    bool isClustered;
-    int32_t seed;
-    int32_t autoIncrement;
-    int32_t lastValue;
-    DataTypes::DateTime createdAt;
-    DataTypes::DateTime lastModified;
-    std::string lastModifiedBy;
-  }IndexHeader;
-
-  typedef struct TableHeader {
+  struct TableHeader {
     int32_t id = -1;
     int32_t databaseId;
     int32_t schemaId;
     std::string name;
-    int16_t tablePosition;
+    int16_t ordinalPosition;
     bool isSystem;
-    DataTypes::DateTime createdAt;
-    DataTypes::DateTime lastModified;
-    std::string lastModifiedBy;
+    AdditionalInformation additionalInfo;
     
     vector<ColumnHeader> columns;
     vector<IndexHeader> indexes;
 
-  }TableHeader;
+  };
 
-  typedef struct DatabaseHeader {
-    int32_t id;
+  struct SchemaHeader {
+    int32_t id = -1;
+    int32_t databaseId;
+    std::string name;
+    AdditionalInformation additionalInfo;
+  };
+
+  struct DatabaseHeader {
+    int32_t id = -1;
     std::string name;
     std::string filepath;
     bool isSystem;
-    DataTypes::DateTime createdAt;
-    DataTypes::DateTime lastModified;
-    std::string lastModifiedBy;
+    AdditionalInformation additionalInfo;
+
     std::vector<TableHeader> tables;
     std::vector<SchemaHeader> schemas;
-  }DatabaseHeader;
+  };
 
   struct sysColumn {
     string name;
     string type;
     int size = 0;
+    int _default = 0;
+    bool nullable = false;
   };
 
   struct sysTable {
@@ -94,6 +140,7 @@ namespace Headers {
       this->seed = 0;
       this->incrementFactor = 0;
       this->columns.emplace_back(0);
+      this->lastValue = 0;
     }
   };
 }

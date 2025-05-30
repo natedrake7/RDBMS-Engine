@@ -49,7 +49,7 @@ namespace Expressions{
     if (!columnsDictionary.TryGetValue(this->column, header))
       return false;
 
-    this->columnIndex = header.tablePosition;
+    this->columnIndex = header.ordinalPosition;
     this->value.Validate(header);
 
     return true;
