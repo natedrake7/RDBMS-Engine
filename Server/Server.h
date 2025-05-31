@@ -33,7 +33,7 @@ namespace Server {
     vector<Headers::sysTable> sysTables;
     DatabaseEngine::Database* masterDb;
 
-    Dictionary<string, DatabaseEngine::Database*> databases;
+    Dictionary<int32_t, DatabaseEngine::Database*> databases;
 
     ServerInstance();
     ~ServerInstance();
@@ -136,11 +136,13 @@ namespace Server {
     [[nodiscard]] vector<Headers::DatabaseHeader> GetCatalog()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
+    [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const int32_t& databaseId) const;
     [[nodiscard]] vector<Headers::SchemaHeader>  SelectSchemas(const int32_t& databaseId) const;
-    [[nodiscard]] bool SchemaExists(const string &dbName, const std::string& schema) const;
+    [[nodiscard]] bool SchemaExists(const int32_t &databaseId, const std::string& schema) const;
     [[nodiscard]] vector<Headers::TableHeader> SelectTables(const string& dbName) const;
+    [[nodiscard]] vector<Headers::TableHeader> SelectTables(const int32_t & databaseId) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
-    [[nodiscard]] Headers::TableHeader SelectTable(const string &dbName, const string &tableName, const std::string& schema) const;
+    [[nodiscard]] Headers::TableHeader SelectTable(const int32_t &databaseId, const string &tableName, const std::string& schema) const;
     [[nodiscard]] vector<Headers::ConstraintsHeader> SelectConstraints(const int32_t& tableId) const;
     [[nodiscard]] vector<Headers::ColumnHeader> SelectColumns(const int32_t& tableId) const;
     [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const int32_t& tableId) const;
@@ -148,11 +150,13 @@ namespace Server {
     [[nodiscard]] Headers::IndexHeader SelectIndexById(const int32_t& indexId) const;
     [[nodiscard]] vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const int32_t& indexId) const;
     [[nodiscard]] vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const int32_t& tableId) const;
+    [[nodiscard]] Dictionary<int32_t , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const int32_t& tableId) const;
     [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
+    void UpdateIdentityByTableId(const int32_t & tableId, const int32_t& lastValue);
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
-    void Shutdown()const;
-    [[nodiscard]] DatabaseEngine::Database* UseDatabase(const string& dbName, const bool& isServerInitialization = false);
+    void Shutdown();
+    [[nodiscard]] DatabaseEngine::Database* UseDatabase(const int32_t & databaseId, const bool& isServerInitialization = false);
     void UseMasterDb();
     
   };

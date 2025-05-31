@@ -17,6 +17,7 @@ namespace DatabaseEngine::StorageTypes
 
     typedef struct ColumnHeader
     {
+        int32_t id;
         ColumnType columnType;
         column_index_t columnIndex;
         row_size_t recordSize;
@@ -61,6 +62,8 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] bool isColumnLOB() const;
 
         [[nodiscard]] bool isColumnOverflowed() const;
+
+        [[nodiscard]] const int32_t& GetColumnId() const;
 
         void SetIsOverflowed(const bool &isOverflowed);
     };

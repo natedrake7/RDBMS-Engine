@@ -34,6 +34,7 @@ void InsertRowsToMoviesTable(Table* table);
 //advanced functions
 
 //TODO
+//Verify Identity works correctly and use cache blocks(extend for multiple columns)
 //add server db to return the rest of the fields
 //Add Guid Support (set is as a different datatype)
 //Add Decimal full support
@@ -71,16 +72,18 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const string dbName = "MoviesDb";
+    const int32_t databaseId = 2;
 
     //select statement
     const string selectActors = "SELECT * FROM dbo.Actors";
+
+    const string selectMasterDb = "SELECT * FROM dbo.sys_tables";
 
     //select statement
     const string selectMovies = "SELECT * FROM dbo.Movies WHERE ID = 3";
 
     //insert statement
-    const string insertActors = "INSERT INTO dbo.Actors(ID, ActorName, ActorDesc, ActorAge) VALUES(3, 'Robert Kirkman', 'kalispera', 42)";
+    const string insertActors = "INSERT INTO dbo.Actors(ActorName, ActorDesc, ActorAge) VALUES('Robert Kirkman', 'kalispera', 42)";
 
     const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName, MovieTemp, MovieDesc, MovieNewValue) VALUES(5, 'Batman: The Dark Knight', 'oulala', 'hello its me', 'hello madafaka')";
 
@@ -109,13 +112,13 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-//    QueryPipeline::Parser::Parse(createDb, dbName);
-////
-//    QueryPipeline::Parser::Parse(createActorsTable, dbName);
+//    QueryPipeline::Parser::Parse(createDb, databaseId);
 //
-//    QueryPipeline::Parser::Parse(updateMovies, dbName);
+//    QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 
-//    QueryPipeline::Parser::Parse(selectMovies, dbName);
+    QueryPipeline::Parser::Parse(insertActors, databaseId);
+
+    QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     const auto& databases = server.GetCatalog();
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);
@@ -128,20 +131,20 @@ int main()
     ServerInstance::Get().Shutdown();
 
     return 0;
-        
-    QueryPipeline::Parser::Parse(createDb, dbName);
 
-    QueryPipeline::Parser::Parse(createActorsTable, dbName);
+    QueryPipeline::Parser::Parse(createDb, databaseId);
 
-    QueryPipeline::Parser::Parse(schemaCreate, dbName);
+    QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 
-    QueryPipeline::Parser::Parse(createMoviesTable, dbName);
+    QueryPipeline::Parser::Parse(schemaCreate, databaseId);
 
-    QueryPipeline::Parser::Parse(insertMovies, dbName);
+    QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
 
-    QueryPipeline::Parser::Parse(insertActors, dbName);
+    QueryPipeline::Parser::Parse(insertMovies, databaseId);
 
-    QueryPipeline::Parser::Parse(selectActors, dbName);
+    QueryPipeline::Parser::Parse(insertActors, databaseId);
+
+    QueryPipeline::Parser::Parse(selectActors, databaseId);
     server.Shutdown();
     
     return 0;

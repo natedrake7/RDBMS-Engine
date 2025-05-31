@@ -54,6 +54,7 @@ namespace DatabaseEngine::StorageTypes
     typedef struct TableHeader
     {
         table_id_t tableId;
+        int16_t ordinalPosition;
 
         page_id_t indexAllocationMapPageId;
         column_number_t numberOfColumns;
@@ -79,7 +80,6 @@ namespace DatabaseEngine::StorageTypes
     class Table final
     {
 
-        int32_t schemaId;
         TableHeader header;
         vector<Column *> columns;
         DatabaseEngine::Database *database;
@@ -241,5 +241,9 @@ namespace DatabaseEngine::StorageTypes
             void InsertLargeObjectToPage(Row *row);
 
             void HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Field> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap = true);
+
+            void GetIdentityColumns();
+
+            void UpdateMasterDatabase() const;
     };
 }

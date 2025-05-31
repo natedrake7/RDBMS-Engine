@@ -2,44 +2,44 @@
 #include "../Constants.h"
 #include <shared_mutex>
 #include <string>
-
+#include <memory>
+#include "../Pages/Page.h"
 
 namespace DatabaseEngine::Lock {
 
-enum class LockType {
-  Shared = 0,
-  Exclusive = 1
-};
+  enum class LockType {
+    Shared = 0,
+    Exclusive = 1
+  };
 
-struct TableLockKey {
-    string databaseName;
-    string tableName;
+  enum class ResourceType : uint8_t {
+    Row = 0,
+    Page = 1,
+    Table = 2,
+    Database = 3
+  };
+
+  struct Resource{
+    uint32_t resourceId;
+    ResourceType type;
+  };
+
+  struct Lock{
+    shared_mutex mutex;
+
     LockType type;
-
-  bool operator==(const TableLockKey &other) const;
-    virtual ~TableLockKey() = default;
-  };
-
-  struct PageLockKey : TableLockKey{
-    Constants::page_id_t pageId;
-
-    bool operator==(const PageLockKey& other) const;
-  };
-
-  struct RowLockKey final : PageLockKey{
-    uint16_t rowId;
-
-    bool operator==(const RowLockKey& other) const;
+    Resource resource;
   };
 
   class LockManager {
     LockManager() = default;
-    ~LockManager() = default;
+    ~LockManager();
 
-    // Dictionary<TableLockKey, shared_mutex> locks;
+    Dictionary<string, Lock*> resources;
     std::shared_mutex locksMutex;
 
-    void AddKeyToDictionary(const TableLockKey& lockKey);
+    static void LockResourceByType(Lock* lock);
+    std::shared_ptr<Pages::Page> GetPagePointer(const string& key, Pages::Page *page);
 
   public:
     LockManager(const LockManager&) = delete;
@@ -53,15 +53,11 @@ struct TableLockKey {
       return instance;
     }
 
-    void Lock(const TableLockKey& lockKey);
-    void Unlock(const TableLockKey& lockKey);
+    void Release(const std::string& key);
+
+    std::shared_ptr<Pages::Page> GetPage(const string& filename, const page_id_t & pageId, const ResourceType& resourceType, const LockType& lockType);
+//    std::shared_ptr<Pages::Page> GetLargeObjectPage(const string& filename, const page_id_t & pageId);
+//    std::shared_ptr<Pages::Page> GetIndexPage(const string& filename, const page_id_t & pageId);
+//    std::shared_ptr<Pages::Page> GetHeaderPage(const string& filename, const page_id_t & pageId);
   };
 }
-
-
-template<>
-  struct std::hash<DatabaseEngine::Lock::TableLockKey> {
-    std::size_t operator()(const DatabaseEngine::Lock::TableLockKey& k) const noexcept {
-      return hash<std::string>()(k.databaseName) ^ (hash<std::string>()(k.tableName) << 1);
-    }
-  };

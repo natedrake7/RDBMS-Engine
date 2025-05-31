@@ -3,6 +3,7 @@
   "db_path": "./masterDb.db",
   "tables": [
     {
+      "id": 1,
       "name": "sys_databases",
       "columns": [
         { "name": "database_id", "type": "Int" },
@@ -19,6 +20,7 @@
       "primaryKey": ["database_id"]
     },
     {
+      "id": 2,
       "name": "sys_schemas",
       "columns": [
         { "name": "schema_id", "type": "Int" },
@@ -34,6 +36,7 @@
       "primaryKey": ["schema_id"]
     },
     {
+      "id": 3,
       "name": "sys_tables",
       "columns": [
         { "name": "table_id", "type": "Int" },
@@ -52,6 +55,7 @@
       "primaryKey": ["table_id"]
     },
     {
+      "id": 4,
       "name": "sys_columns",
       "columns": [
         { "name": "column_id", "type": "Int" },
@@ -72,6 +76,7 @@
       "primaryKey": ["column_id"]
     },
     {
+      "id": 5,
       "name": "sys_indexes",
       "columns": [
         { "name": "index_id", "type": "Int" },
@@ -89,6 +94,7 @@
       "primaryKey": ["index_id"]
     },
     {
+      "id": 6,
       "name": "sys_identity_columns",
       "columns": [
         { "name": "table_id", "type": "Int" },
@@ -105,6 +111,7 @@
       "primaryKey": ["table_id", "column_id"]
     },
     {
+      "id": 7,
       "name": "sys_index_columns",
       "columns": [
         { "name": "index_id", "type": "Int" },
@@ -118,6 +125,7 @@
       "primaryKey": ["index_id", "column_id"]
     },
     {
+      "id": 8,
       "name": "sys_constraints",
       "columns": [
         { "name": "constraint_id", "type": "Int" },
@@ -136,6 +144,7 @@
       "primaryKey": ["constraint_id"]
     },
     {
+      "id": 9,
       "name": "sys_constraint_columns",
       "columns": [
         { "name": "constraint_id", "type": "Int" },

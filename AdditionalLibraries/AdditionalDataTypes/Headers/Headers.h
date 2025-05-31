@@ -121,6 +121,7 @@ namespace Headers {
   struct sysColumn {
     string name;
     string type;
+    int32_t id;
     int size = 0;
     int _default = 0;
     bool nullable = false;
@@ -128,6 +129,7 @@ namespace Headers {
 
   struct sysTable {
     string name;
+    int32_t id;
     std::vector<sysColumn> columns;
     std::vector<string> primaryKey;
   };
@@ -137,15 +139,16 @@ namespace Headers {
     int32_t seed;
     int32_t incrementFactor;
     int64_t lastValue;
+    int64_t cacheBlock;
 
     Index(vector<uint8_t>& columns, const int32_t& seed, const int32_t& incrementFactor)
       : columns(std::move(columns)), seed(seed), incrementFactor(incrementFactor), lastValue(seed) {}
 
     Index(){
-      this->seed = 0;
-      this->incrementFactor = 0;
-      this->columns.emplace_back(0);
-      this->lastValue = 0;
+      this->seed = -1;
+      this->incrementFactor = -1;
+//      this->columns.emplace_back(0);
+      this->lastValue = -1;
     }
   };
 }

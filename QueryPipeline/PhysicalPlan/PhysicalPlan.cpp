@@ -6,6 +6,7 @@
 #include "../../Database/Table/Table.h"
 #include "../../Server/Server.h"
 #include "../Statements/Statements.h"
+#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
 
 namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
@@ -20,17 +21,17 @@ namespace QueryPipeline::PhysicalPlan {
     return new PhysicalPlanResult();
   }
 
-PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::string &schemaName)
-  : PhysicalOperator(dbName), schemaName(std::move(schemaName)) {}
+PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::string &schemaName)
+  : PhysicalOperator(databaseId), schemaName(std::move(schemaName)) {}
 
   PhysicalPlanResult * PhysicalSchemaCreate::Execute(){
-//    Server::ServerInstance::Get().InsertSchemaToMasterDb(this->dbName, this->schemaName);
+    Server::ServerInstance::Get().InsertSchemaToMasterDb(this->databaseId, this->schemaName);
 
     return new PhysicalPlanResult();
   }
 
-  PhysicalProject::PhysicalProject(const std::string& dbName, PhysicalOperator *child, const std::vector<column_index_t>& columns)
-    : PhysicalOperator(dbName), columns(columns), child(child) {}
+  PhysicalProject::PhysicalProject(const int32_t & databaseId, PhysicalOperator *child, const std::vector<column_index_t>& columns)
+    : PhysicalOperator(databaseId), columns(columns), child(child) {}
 
   PhysicalProject::~PhysicalProject(){ delete this->child; }
 
@@ -57,8 +58,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalFilter::PhysicalFilter(const std::string& dbName, PhysicalOperator *child, Expressions::Expression* filter)
-        : PhysicalOperator(dbName), filter(filter) , child(child) {}
+  PhysicalFilter::PhysicalFilter(const int32_t & databaseId, PhysicalOperator *child, Expressions::Expression* filter)
+        : PhysicalOperator(databaseId), filter(filter) , child(child) {}
 
   PhysicalFilter::~PhysicalFilter(){
     delete this->child;
@@ -84,13 +85,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalTableScan::PhysicalTableScan(const std::string& dbName, Statements::TableName* table): PhysicalOperator(dbName), table(table) {}
+  PhysicalTableScan::PhysicalTableScan(const int32_t & databaseId, Statements::TableName* table): PhysicalOperator(databaseId), table(table) {}
 
   PhysicalPlanResult* PhysicalTableScan::Execute(){
       using namespace DatabaseEngine::StorageTypes;
-      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-      Table* tablePtr = db->OpenTable(0);
+      Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
       auto* result = new PhysicalPlanResult();
 
@@ -99,20 +100,20 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
       return result;
     }
 
-  PhysicalIndexScan::PhysicalIndexScan(const std::string &dbName, Statements::TableName* table, const bool& isClustered)
-    : PhysicalOperator(dbName), table(table), isClustered(isClustered), expression(nullptr) {}
+  PhysicalIndexScan::PhysicalIndexScan(const int32_t & databaseId, Statements::TableName* table, const bool& isClustered)
+    : PhysicalOperator(databaseId), table(table), isClustered(isClustered), expression(nullptr) {}
 
-  PhysicalIndexScan::PhysicalIndexScan(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
-    : PhysicalOperator(dbName), table(table), expression(expression), isClustered(isClustered) {}
+  PhysicalIndexScan::PhysicalIndexScan(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
+    : PhysicalOperator(databaseId), table(table), expression(expression), isClustered(isClustered) {}
 
   PhysicalPlanResult * PhysicalIndexScan::Execute(){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    Table* tablePtr = db->OpenTable(0);
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     if (isClustered) {
       tablePtr->ClusteredIndexScan(&result->rows, this->expression);
@@ -122,17 +123,17 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalIndexSeek::PhysicalIndexSeek(const std::string &dbName, Statements::TableName* table, const Field& minValue, const Field& maxValue)
-    : PhysicalOperator(dbName), table(table), minValue(minValue), maxValue(maxValue) {}
+  PhysicalIndexSeek::PhysicalIndexSeek(const int32_t & databaseId, Statements::TableName* table, const Field& minValue, const Field& maxValue)
+    : PhysicalOperator(databaseId), table(table), minValue(minValue), maxValue(maxValue) {}
 
   PhysicalPlanResult* PhysicalIndexSeek::Execute(){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    Table* tablePtr = db->OpenTable(0);
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const Indexing::Key minKey(minValue);
     const Indexing::Key maxKey(maxValue);
@@ -144,38 +145,37 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalInsert::PhysicalInsert(const std::string& dbName, Statements::TableName* table, const std::vector<Field> &fields)
-    : PhysicalOperator(dbName), table(table), fields(fields) {}
+  PhysicalInsert::PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Field> &fields)
+    : PhysicalOperator(databaseId), table(table), fields(fields) {}
 
   PhysicalPlanResult* PhysicalInsert::Execute(){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
     
-    Table* tablePtr = db->OpenTable(0);
-
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     //i mean this is really bad
-    for(int i = 0;i < 1000; i++){
-      this->fields[0].SetData(i);
-
-      const auto smallStr = std::string(800, 'w');
-      this->fields[1].SetData(smallStr);
-
-      const auto midStr = std::string(3500, 'a');
-      this->fields[2].SetData(midStr);
-
-      const auto medStr = std::string(5000, 'u');
-      this->fields[3].SetData(medStr);
-
-      const auto str = std::string(10000, 'a');
-      this->fields[4].SetData(str);
+//    for(int i = 0;i < 1000; i++){
+//      this->fields[0].SetData(i);
+//
+//      const auto smallStr = std::string(800, 'w');
+//      this->fields[1].SetData(smallStr);
+//
+//      const auto midStr = std::string(3500, 'a');
+//      this->fields[2].SetData(midStr);
+//
+//      const auto medStr = std::string(5000, 'u');
+//      this->fields[3].SetData(medStr);
+//
+//      const auto str = std::string(10000, 'a');
+//      this->fields[4].SetData(str);
+//
+//    }
 
       const auto insertResult = tablePtr->InsertRow(fields);
-    }
-
 
 
     // const auto insertResult = tablePtr->InsertRow(fields);
@@ -186,8 +186,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
     return result;
   }
 
-  PhysicalHeapDelete::PhysicalHeapDelete(const std::string &dbName, Statements::TableName *table, Expressions::Expression *expression)
-    : PhysicalOperator(dbName), table(table), expression(expression) {}
+  PhysicalHeapDelete::PhysicalHeapDelete(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression)
+    : PhysicalOperator(databaseId), table(table), expression(expression) {}
 
   PhysicalHeapDelete::~PhysicalHeapDelete(){
     delete this->expression;
@@ -197,17 +197,17 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   PhysicalPlanResult * PhysicalHeapDelete::Execute(){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(0);
+    const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->HeapDelete(this->expression);
 
     return result;
   }
 
-  PhysicalIndexScanDelete::PhysicalIndexScanDelete(const std::string &dbName, Statements::TableName *table, Expressions::Expression *expression)
-    : PhysicalOperator(dbName), table(table), expression(expression) {}
+  PhysicalIndexScanDelete::PhysicalIndexScanDelete(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression)
+    : PhysicalOperator(databaseId), table(table), expression(expression) {}
 
   PhysicalIndexScanDelete::~PhysicalIndexScanDelete(){
       delete this->expression;
@@ -217,17 +217,17 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   PhysicalPlanResult * PhysicalIndexScanDelete::Execute(){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(0);
+    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->ClusteredIndexScanDelete(this->expression);
 
     return result;
   }
 
-  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(const std::string &dbName, Statements::TableName *table, Expressions::Expression *expression)
-    : PhysicalOperator(dbName), table(table), expression(expression) {}
+  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression)
+    : PhysicalOperator(databaseId), table(table), expression(expression) {}
 
   PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete(){
     delete this->expression;
@@ -237,9 +237,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   PhysicalPlanResult * PhysicalIndexSeekDelete::Execute(){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(0);
+    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->ClusteredIndexSeekDelete(expression);
 
@@ -247,16 +247,16 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
   }
 
   PhysicalTableCreate::PhysicalTableCreate(
-      const std::string& dbName,
+      const int32_t & databaseId,
       Statements::TableName*  table,
       std::vector<Statements::AddColumn> &columns,
       Headers::Index& primaryKey,
       std::string& constraintName)
-    : PhysicalOperator(dbName), table(table), constraintName(std::move(constraintName)),
+    : PhysicalOperator(databaseId), table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
   PhysicalPlanResult* PhysicalTableCreate::Execute(){
-    DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
     vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
     columnsPtrs.reserve(columns.size());
@@ -270,52 +270,92 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
         column.isNullable
         ));
 
-    const auto& tables = Server::ServerInstance::Get().SelectTables(this->dbName);
+    const auto& tables = Server::ServerInstance::Get().SelectTables(this->databaseId);
+
+    const auto schemas = Server::ServerInstance::Get().SelectSchemas(this->databaseId);
 
     const auto& index = tables.empty() ? 0 : tables[tables.size() - 1].id + 1;
 
     db->CreateTable(this->table->name, this->table->schema, index, columnsPtrs, &this->primaryKey);
 
-//    Server::ServerInstance::Get().InsertTableToMasterDb(dbName, this->table->name, index, this->table->schema);
-//
-//    std::string indexColumns;
-//    for (const auto& column: this->columns) {
-//      Server::ServerInstance::Get().InsertColumnToMasterDb(
-//        dbName,
-//        this->table->name,
-//        column.name,
-//        column.type.name,
-//        column.type.size,
-//        column.isNullable,
-//        column.index
-//        );
-//    }
-//
-//    const bool isConstraintEmpty = this->constraintName.empty();
-//
-//    for (const auto& column: this->primaryKey) {
-//      indexColumns += indexColumns.empty() ? to_string(column) : "," + to_string(column);
-//
-//      if (isConstraintEmpty)
-//        this->constraintName += this->constraintName.empty() ? "PK_" + this->columns[column].name :"_" + this->columns[column].name;
-//    }
-//
-//    if (!indexColumns.empty())
-//      Server::ServerInstance::Get().InsertIndexToMasterDb(
-//        dbName,
-//        this->table->schema,
-//        this->table->name,
-//        this->constraintName,
-//        indexColumns,
-//        true,
-//        seed,
-//        incrementFactor);
+    const auto tableResult = Server::ServerInstance::Get().InsertTableToMasterDb(
+            this->databaseId,
+            this->table->schemaId,
+   this->table->name,
+  index);
+
+    Dictionary<int, int32_t> columnIdsDict;
+
+    for (const auto& column: this->columns) {
+      const auto columnResult =
+          Server::ServerInstance::Get().InsertColumnToMasterDb(
+            tableResult.primaryKeyVal,
+            column.name,
+            ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(column.type.name)),
+            column.type.size,
+            column.isNullable,
+            column.index
+            );
+
+      columnIdsDict.Add(column.index, columnResult.primaryKeyVal);
+    }
+    const bool isConstraintEmpty = this->constraintName.empty();
+
+    std::vector<int32_t> primaryKeyColumnIds;
+
+    for (const auto& column: this->primaryKey.columns) {
+      if (isConstraintEmpty)
+        this->constraintName += this->constraintName.empty() ? "PK_" + this->columns[column].name :"_" + this->columns[column].name;
+
+      primaryKeyColumnIds.push_back(columnIdsDict.Get(column));
+    }
+
+    const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
+      tableResult.primaryKeyVal,
+      this->constraintName,
+      true,
+      false);
+
+    const auto indexId = static_cast<int32_t>(indexResult.primaryKeyVal);
+
+    const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(
+      tableResult.primaryKeyVal,
+      this->constraintName,
+      Headers::ConstraintType::PrimaryKey,
+      false,
+      &indexId);
+
+    for(int i = 0;i < primaryKeyColumnIds.size(); i++){
+      Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
+        indexResult.primaryKeyVal,
+        primaryKeyColumnIds[i],
+        this->primaryKey.columns[i],
+        true);
+
+      Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
+      constraintResult.primaryKeyVal,
+      primaryKeyColumnIds[i],
+  this->primaryKey.columns[i]);
+
+      if(this->primaryKey.seed != -1){
+        const auto column = this->primaryKey.columns.begin();
+
+        Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
+          tableResult.primaryKeyVal,
+          primaryKeyColumnIds[i],
+          this->primaryKey.seed,
+          this->primaryKey.incrementFactor,
+          this->primaryKey.lastValue,
+          true,
+          this->primaryKey.cacheBlock);
+      }
+    }
 
     return nullptr;
   }
 
-  PhysicalHeapUpdate::PhysicalHeapUpdate(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
-  : PhysicalOperator(dbName), table(table), expression(expression), fields(std::move(fields)) {}
+  PhysicalHeapUpdate::PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+  : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
 
   PhysicalHeapUpdate::~PhysicalHeapUpdate(){
     delete this->expression;
@@ -327,17 +367,17 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    Table* tablePtr = db->OpenTable(0);
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->HeapUpdate(this->expression, this->fields);
 
     return result;
   }
 
-  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
-  : PhysicalOperator(dbName), table(table), expression(expression), fields(std::move(fields)) {}
+  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+  : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
 
   PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
     delete this->expression;
@@ -349,17 +389,17 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    Table* tablePtr = db->OpenTable(0);
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
 
     return result;
   }
 
-  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const string & dbName, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
-    : PhysicalOperator(dbName), table(table), expression(expression), fields(std::move(fields)) {}
+  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+    : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){
     delete this->expression;
@@ -371,9 +411,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const std::string &dbName, std::strin
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->dbName);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    Table* tablePtr = db->OpenTable(0);
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
 

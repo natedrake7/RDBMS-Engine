@@ -25,8 +25,8 @@ namespace QueryPipeline::PhysicalPlan{
 
     class PhysicalOperator {
       public:
-        std::string dbName;
-        explicit PhysicalOperator(std::string  dbName) : dbName(std::move(dbName)) {}
+        int32_t databaseId;
+        explicit PhysicalOperator(const int32_t& databaseId) : databaseId(databaseId) {}
         PhysicalOperator() = default;
         virtual ~PhysicalOperator() = default;
         virtual PhysicalPlanResult* Execute() = 0;
@@ -43,7 +43,7 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalSchemaCreate final : public PhysicalOperator{
     std::string schemaName;
     public:
-      explicit PhysicalSchemaCreate(const std::string& dbName, std::string& schemaName);
+      explicit PhysicalSchemaCreate(const int32_t & databaseId, std::string& schemaName);
       ~PhysicalSchemaCreate() override = default;
       PhysicalPlanResult* Execute() override;
   };
@@ -53,7 +53,7 @@ namespace QueryPipeline::PhysicalPlan{
     Statements::TableName* table;
 
     public:
-      explicit PhysicalTableScan(const std::string& dbName, Statements::TableName* table);
+      explicit PhysicalTableScan(const int32_t & databaseId, Statements::TableName* table);
       ~PhysicalTableScan()override = default;
       PhysicalPlanResult* Execute() override;
   };
@@ -64,8 +64,8 @@ namespace QueryPipeline::PhysicalPlan{
     bool isClustered;
 
   public:
-    explicit PhysicalIndexScan(const std::string& dbName, Statements::TableName* table, const bool& isClustered = false);
-    explicit PhysicalIndexScan(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression, const bool& isClustered = false);
+    explicit PhysicalIndexScan(const int32_t & databaseId, Statements::TableName* table, const bool& isClustered = false);
+    explicit PhysicalIndexScan(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, const bool& isClustered = false);
     ~PhysicalIndexScan()override = default;
     PhysicalPlanResult* Execute() override;
   };
@@ -76,7 +76,7 @@ namespace QueryPipeline::PhysicalPlan{
     Field maxValue;
 
     public:
-      explicit PhysicalIndexSeek(const std::string& dbName, Statements::TableName* table, const Field& minValue, const Field& maxValue);
+      explicit PhysicalIndexSeek(const int32_t & databaseId, Statements::TableName* table, const Field& minValue, const Field& maxValue);
       ~PhysicalIndexSeek()override = default;
       PhysicalPlanResult* Execute() override;
   };
@@ -86,7 +86,7 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalOperator* child;
 
     public:
-      PhysicalProject(const std::string& dbName, PhysicalOperator* child, const std::vector<column_index_t>& columns);
+      PhysicalProject(const int32_t & databaseId, PhysicalOperator* child, const std::vector<column_index_t>& columns);
       ~PhysicalProject() override;
       PhysicalPlanResult* Execute() override;
   };
@@ -96,7 +96,7 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalOperator* child;
 
     public:
-      PhysicalFilter(const std::string& dbName, PhysicalOperator* child, Expressions::Expression* filter);
+      PhysicalFilter(const int32_t & databaseId, PhysicalOperator* child, Expressions::Expression* filter);
       ~PhysicalFilter() override;
       PhysicalPlanResult* Execute() override;
   };
@@ -106,7 +106,7 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<Field> fields;
 
   public:
-    PhysicalInsert(const std::string& dbName, Statements::TableName* table, const std::vector<Field>& fields);
+    PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Field>& fields);
     ~PhysicalInsert()override = default;
     PhysicalPlanResult* Execute() override;
   };
@@ -116,7 +116,7 @@ namespace QueryPipeline::PhysicalPlan{
     Expressions::Expression* expression;
 
   public:
-    PhysicalHeapDelete(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalHeapDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalHeapDelete()override;
     PhysicalPlanResult* Execute() override;
   };
@@ -126,7 +126,7 @@ namespace QueryPipeline::PhysicalPlan{
     Expressions::Expression* expression;
 
   public:
-    PhysicalIndexScanDelete(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalIndexScanDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalIndexScanDelete()override;
     PhysicalPlanResult* Execute() override;
   };
@@ -136,7 +136,7 @@ namespace QueryPipeline::PhysicalPlan{
     Expressions::Expression* expression;
 
   public:
-    PhysicalIndexSeekDelete(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalIndexSeekDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalIndexSeekDelete()override;
     PhysicalPlanResult* Execute() override;
   };
@@ -147,7 +147,7 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<Field> fields;
 
   public:
-    PhysicalHeapUpdate(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
     ~PhysicalHeapUpdate()override;
     PhysicalPlanResult* Execute() override;
   };
@@ -158,7 +158,7 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<Field> fields;
 
   public:
-    PhysicalIndexScanUpdate(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
     ~PhysicalIndexScanUpdate()override;
     PhysicalPlanResult* Execute() override;
   };
@@ -169,7 +169,7 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<Field> fields;
 
   public:
-    PhysicalIndexSeekUpdate(const std::string& dbName, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
     ~PhysicalIndexSeekUpdate()override;
     PhysicalPlanResult* Execute() override;
   };
@@ -182,7 +182,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     public:
       PhysicalTableCreate(
-        const std::string& dbName,
+        const int32_t & databaseId,
         Statements::TableName*  table,
         std::vector<Statements::AddColumn>& columns,
         Headers::Index& primaryKey,

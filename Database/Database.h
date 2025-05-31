@@ -162,10 +162,14 @@ public:
                                                                 , const int& nonClusteredIndexId = -1
                                                                 , const bool& findPageDifferentFromCurrent = false);
 
+    void GetIdentityColumns();
+
     static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 
     static void JoinTables(vector<StorageTypes::Row>& firstTableRows, StorageTypes::Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions);
-  };
+
+    void UpdateMasterDatabase();
+};
 
 void CreateDatabase(const string &dbName);
 

@@ -158,7 +158,7 @@ namespace DatabaseEngine
                 index.columns.push_back(j);
           }
 
-            this->CreateTable(tables[i], headerPageTables[i], index);
+          this->CreateTable(tables[i], headerPageTables[i], index);
         }
     }
 

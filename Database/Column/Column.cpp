@@ -18,6 +18,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table)
     {
+        this->header.id = masterDbHeader.id;
         this->name = masterDbHeader.name;
         this->allowNulls = masterDbHeader.isNullable;
         this->header.columnType = static_cast<Constants::ColumnType>(masterDbHeader.dataType);
@@ -29,7 +30,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table)
     {
-      const auto normalizedType = AdditionalLibraries::NormalizeString(header.type);
+        const auto normalizedType = AdditionalLibraries::NormalizeString(header.type);
 
         this->name = header.name;
         this->allowNulls = false;
@@ -66,4 +67,6 @@ namespace DatabaseEngine::StorageTypes {
     bool Column::isColumnOverflowed() const{ return this->isOverflowed; }
 
     void Column::SetIsOverflowed(const bool & isOverflowed){ this->isOverflowed = isOverflowed; }
+
+    const int32_t& Column::GetColumnId() const{ return this->header.id; }
 }

@@ -14,21 +14,21 @@ namespace QueryPipeline
 {
     Parser::Parser() = default;
 
-    Statements::Statement* Parser::CreateStatement(const std::any &ast, const std::string& dbName){
+    Statements::Statement* Parser::CreateStatement(const std::any &ast, const int32_t & databaseId){
         function<Statements::Statement *(const any &)> handler;
 
         if (!handlers.TryGetValue(ast.type(), handler))
             return nullptr;
 
         Statements::Statement* statement = handler(ast);
-        statement->dbName = dbName;
+        statement->databaseId = databaseId;
         
         return statement;
     }
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(const string& query, const std::string& dbName){
+    void Parser::Parse(const string& query, const int32_t & databaseId){
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
 
@@ -48,7 +48,7 @@ namespace QueryPipeline
 
         const auto response = visitor.visit(tree);
 
-        Statements::Statement* statement = Parser::CreateStatement(response, dbName);
+        Statements::Statement* statement = Parser::CreateStatement(response, databaseId);
 
         if (statement == nullptr) {
             cerr << "Failed to parse query" << endl;

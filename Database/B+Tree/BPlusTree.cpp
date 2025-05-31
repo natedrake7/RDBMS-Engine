@@ -33,6 +33,7 @@ namespace Indexing
         this->t = BPlusTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
         this->root = nullptr;
         this->tableId = tableHeader.tableId;
+        this->tablePosition = tableHeader.ordinalPosition;
         this->firstIndexPageId = indexPageId;
         this->type = treeType;
         this->database = table->GetDatabase();
@@ -1021,7 +1022,7 @@ namespace Indexing
     }
 
     Pages::IndexPage * BPlusTree::AllocateNewPage(const page_id_t& parentPageId)const{
-        return this->database->FindOrAllocateNextIndexPage(this->tableId, parentPageId, this->nonClusteredIndexId);
+        return this->database->FindOrAllocateNextIndexPage(this->tablePosition, parentPageId, this->nonClusteredIndexId);
     }
 
     Pages::IndexPage * BPlusTree::GetNode(const page_id_t& pageId) const

@@ -51,13 +51,16 @@ namespace QueryPipeline::Statements {
   struct TableName {
     std::string name;
     std::string schema;
+
     int32_t tableId;
+    int32_t schemaId;
+    int16_t ordinalPosition;
 
     TableName() { this->schema = "dbo"; }
   };
 
   struct Statement {
-    std::string dbName;
+    int32_t databaseId;
     Statement() = default;
     virtual ~Statement() = default;
     virtual bool Validate() = 0;

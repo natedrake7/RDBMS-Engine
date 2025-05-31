@@ -72,14 +72,15 @@ namespace DatabaseEngine::StorageTypes {
         this->database = database;
         this->header.numberOfColumns = columns.size();
         this->header.tableId = tableId;
+        this->header.ordinalPosition = tableId;
 
         this->clusteredIndexedTree = nullptr;
 
         if(clusteredIndex)
-          this->header.clusteredIndex = std::move(*clusteredIndex);
+          this->header.clusteredIndex = *clusteredIndex;
 
         if(nonClusteredIndexes)
-          this->header.nonClusteredIndexes = std::move(*nonClusteredIndexes);
+          this->header.nonClusteredIndexes = *nonClusteredIndexes;
 
       }
 
@@ -87,8 +88,8 @@ namespace DatabaseEngine::StorageTypes {
       {
         this->header = tableHeader;
         this->header.tableId = masterDbHeader.id;
+        this->header.ordinalPosition = masterDbHeader.ordinalPosition;
         this->database = database;
-        this->schemaId = masterDbHeader.schemaId;
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -96,7 +97,6 @@ namespace DatabaseEngine::StorageTypes {
       {
         this->header = tableHeader;
         this->database = database;
-//        this->schemaId = tableHeader.;
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -104,7 +104,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header = tableHeader;
         this->header.clusteredIndex = primaryKey;
         this->database = database;
-//        this->schema = "dbo";
+        this->header.tableId = systemHeader.id;
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -632,7 +632,7 @@ namespace DatabaseEngine::StorageTypes {
 
       if (tableMapPage == nullptr)
       {
-          Page *newPage = this->database->CreateDataPage(this->header.tableId);;
+          Page *newPage = this->database->CreateDataPage(this->header.ordinalPosition);
           newPage->InsertRow(row, rowIndex);
           *rowPageId = newPage->GetPageId();
           return {};
@@ -678,7 +678,7 @@ namespace DatabaseEngine::StorageTypes {
           }
       }
 
-      Page *newPage = this->database->CreateDataPage(this->header.tableId);
+      Page *newPage = this->database->CreateDataPage(this->header.ordinalPosition);
       newPage->InsertRow(row, rowIndex);
       *rowPageId = newPage->GetPageId();
 
@@ -797,7 +797,7 @@ namespace DatabaseEngine::StorageTypes {
       if(largestBlock == nullptr)
         return -1;
 
-      auto* overflowPage = this->database->GetLastOverflowPage(this->header.tableId, largestBlock->GetBlockSize());
+      auto* overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->GetBlockSize());
 
       int indexPos = 0;
       overflowPage->InsertObject(largestBlock->GetBlockData(), largestBlock->GetBlockSize(), indexPos);
@@ -933,7 +933,7 @@ namespace DatabaseEngine::StorageTypes {
 
         auto* largestBlock = row->GetData().at(column->GetColumnIndex());
 
-        auto* overflowPage = this->database->GetLastOverflowPage(this->header.tableId, largestBlock->GetBlockSize());
+        auto* overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->GetBlockSize());
 
         int indexPos = 0;
         overflowPage->InsertObject(largestBlock->GetBlockData(), largestBlock->GetBlockSize(), indexPos);
@@ -964,13 +964,13 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& columnSize = column->GetColumnSize();
 
-        this->header.clusteredIndex.lastValue += this->header.clusteredIndex.incrementFactor;
-
         auto* block = new Block(&this->header.clusteredIndex.lastValue, columnSize ,column);
 
-        row->InsertColumnData(block, columnIndex);
-
         primaryKeyValue = this->header.clusteredIndex.lastValue;
+
+        this->header.clusteredIndex.lastValue += this->header.clusteredIndex.incrementFactor;
+
+        row->InsertColumnData(block, columnIndex);
       }
 
       for(auto& nonClusteredIndexes: this->header.nonClusteredIndexes){
@@ -983,12 +983,35 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& columnSize = this->columns.at(columnIndex)->GetColumnSize();
 
-        nonClusteredIndexes.lastValue += nonClusteredIndexes.incrementFactor;
-
         block->SetData(&nonClusteredIndexes.lastValue, columnSize);
+
+        nonClusteredIndexes.lastValue += nonClusteredIndexes.incrementFactor;
       }
 
       return primaryKeyValue;
+    }
+
+    void Table::GetIdentityColumns(){
+      const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+
+      if(identityHeaders.empty())
+        return;
+
+      for(const auto& column: this->columns){
+          if(column->GetColumnId() == identityHeaders.begin()->columnId){
+            this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
+            break;
+          }
+      }
+
+      this->header.clusteredIndex.seed = identityHeaders.begin()->seedValue;
+      this->header.clusteredIndex.incrementFactor = identityHeaders.begin()->increment;
+      this->header.clusteredIndex.lastValue = identityHeaders.begin()->lastValue;
+      this->header.clusteredIndex.cacheBlock = identityHeaders.begin()->cacheBlock;
+    }
+
+    void Table::UpdateMasterDatabase() const{
+      Server::ServerInstance::Get().UpdateIdentityByTableId(this->header.tableId, static_cast<int32_t>(this->header.clusteredIndex.lastValue));
     }
 
 }

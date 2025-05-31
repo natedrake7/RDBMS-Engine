@@ -85,6 +85,7 @@ namespace Indexing
     class BPlusTree final
     {
         table_id_t tableId;
+        int16_t tablePosition;
         page_id_t firstIndexPageId;
 
         int t;
