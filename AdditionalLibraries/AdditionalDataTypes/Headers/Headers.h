@@ -22,23 +22,6 @@ namespace Headers {
     DataTypes::DateTime deletedAt;
   };
 
-  struct ConstraintsColumnsHeader{
-    int32_t constraintId = -1;
-    int32_t columnId;
-    int32_t ordinalPosition;
-    AdditionalInformation additionalInfo;
-  };
-
-  struct ConstraintsHeader{
-    int32_t constraintId = -1;
-    int32_t tableId;
-    std::string name;
-    ConstraintType type;
-    bool isDisabled;
-    int32_t indexId = -1;
-    AdditionalInformation additionalInfo;
-  };
-
   struct IndexColumnsHeader{
     int32_t indexId = -1;
     int32_t columnId;
@@ -66,7 +49,28 @@ namespace Headers {
     bool isDisabled;
     AdditionalInformation additionalInfo;
 
+    std::vector<IndexColumnsHeader> columns;
     IdentityColumnsHeader identity;
+  };
+
+  struct ConstraintsColumnsHeader{
+    int32_t constraintId = -1;
+    int32_t columnId;
+    int32_t ordinalPosition;
+    AdditionalInformation additionalInfo;
+  };
+
+  struct ConstraintsHeader{
+    int32_t constraintId = -1;
+    int32_t tableId;
+    std::string name;
+    ConstraintType type;
+    bool isDisabled;
+    int32_t indexId = -1;
+    IndexHeader index;
+    vector<ConstraintsColumnsHeader> columns;
+
+    AdditionalInformation additionalInfo;
   };
 
   struct ColumnHeader {
@@ -91,8 +95,9 @@ namespace Headers {
     AdditionalInformation additionalInfo;
     
     vector<ColumnHeader> columns;
-    vector<IndexHeader> indexes;
+    vector<ConstraintsHeader> constraints;
 
+    vector<IdentityColumnsHeader> identity;
   };
 
   struct SchemaHeader {

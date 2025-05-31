@@ -29,10 +29,15 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table)
     {
+      const auto normalizedType = AdditionalLibraries::NormalizeString(header.type);
+
         this->name = header.name;
         this->allowNulls = false;
-        this->header.columnType = ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(header.type));
-        this->header.recordSize = header.size;
+        this->header.columnType = ColumnTypesDictionary.Get(normalizedType);
+
+        const auto size = ColumnTypeSizes.Get(normalizedType);
+
+        this->header.recordSize = size == 0 ? header.size : size;
         this->header.columnIndex = tablePos;
         this->table = table;
         this->isOverflowed = false;

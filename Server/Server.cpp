@@ -8,6 +8,7 @@
 #include "../Database/Storage/StorageManager/StorageManager.h"
 #include "../AdditionalLibraries/StringFunctions/StringFunctions.h"
 #include "../Database/AdditionalFunctions/SortingFunctions.h"
+#include "../AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
 
 #include <iostream>
 
@@ -513,7 +514,8 @@ namespace Server {
 
       for (auto& table : dbTables) {
           table.columns = this->SelectColumns(table.id);
-          table.indexes = this->SelectIndexes(table.id);
+          table.constraints = this->SelectConstraints(table.id);
+          table.identity = this->SelectIdentityColumnsByTableId(table.id);
       }
 
       databasesHeaders.emplace_back(Headers::DatabaseHeader{
@@ -759,6 +761,112 @@ namespace Server {
      return selectedColumnHeaders;
   }
 
+  vector<Headers::ConstraintsHeader> ServerInstance::SelectConstraints(const int32_t & tableId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    vector<Row> selectedConstraints;
+    Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
+
+    auto expression = Expressions::Expression::Predicate(1, "=", Field(tableId, 1));
+
+    constraintsTable->ClusteredIndexScan(&selectedConstraints, &expression);
+
+    if (selectedConstraints.empty())
+      return {};
+
+    vector<Headers::ConstraintsHeader> selectedConstraintsHeader;
+    selectedConstraintsHeader.reserve(selectedConstraints.size());
+
+    for (const auto& column : selectedConstraints) {
+      const auto& data = column.GetData();
+
+      auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0]->GetInt());
+
+      const auto indexId =(data[5]->GetBlockData() == nullptr)
+              ? -1
+              : data[5]->GetInt();
+
+      Headers::IndexHeader index;
+      if(indexId != -1)
+        index = this->SelectIndexById(indexId);
+
+      selectedConstraintsHeader.emplace_back(
+        Headers::ConstraintsHeader{
+          .constraintId = data[0]->GetInt(),
+          .tableId = data[1]->GetInt(),
+          .name = data[2]->GetString(),
+          .type = static_cast<Headers::ConstraintType>(data[3]->GetTinyInt()),
+          .isDisabled = data[4]->GetBool(),
+          .indexId = indexId,
+          .index = std::move(index),
+          .columns = std::move(constraintColumns),
+          .additionalInfo{
+              .createdAt = data[6]->GetDateTime(),
+              .lastModified = data[7]->GetDateTime(),
+              .lastModifiedBy = data[8]->GetString(),
+              .version = data[9]->GetInt(),
+              .isDeleted = data[10]->GetBool(),
+              .deletedAt = data[11]->GetBlockData() == nullptr
+                    ? DataTypes::DateTime()
+                    : data[11]->GetDateTime() //might crash, is nullable
+          },
+        }
+      );
+    }
+
+    ranges::sort(selectedConstraintsHeader,
+    [](const Headers::ConstraintsHeader& a, const Headers::ConstraintsHeader& b) {
+        return a.constraintId < b.constraintId;
+    }
+    );
+
+    return selectedConstraintsHeader;
+  }
+
+  vector<Headers::ConstraintsColumnsHeader> ServerInstance::SelectConstraintColumnsByConstraintId(const int32_t & constraintId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTCOLUMNS);
+    vector<Row> rows;
+
+    Indexing::Key key;
+    key.InsertKey(Indexing::Key(&constraintId, sizeof(constraintId), ColumnType::Int));
+
+    sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
+
+    if(rows.empty())
+      return {};
+
+    vector<Headers::ConstraintsColumnsHeader> constraintColumns;
+
+    for(const auto& row : rows){
+      const auto& data = row.GetData();
+
+      constraintColumns.emplace_back(
+          Headers::ConstraintsColumnsHeader{
+            .constraintId = data[0]->GetInt(),
+            .columnId = data[1]->GetInt(),
+            .ordinalPosition = data[2]->GetInt(),
+            .additionalInfo{
+              .version = data[3]->GetInt(),
+              .isDeleted = data[4]->GetBool(),
+              .deletedAt = data[5]->GetBlockData() == nullptr
+                    ? DataTypes::DateTime()
+                    : data[5]->GetDateTime()
+            },
+          }
+      );
+    }
+
+    ranges::sort(constraintColumns,
+      [](const Headers::ConstraintsColumnsHeader& a, const Headers::ConstraintsColumnsHeader& b) {
+          return a.ordinalPosition < b.ordinalPosition;
+      }
+    );
+
+    return constraintColumns;
+  }
+
   Dictionary<string, Headers::ColumnHeader> ServerInstance::SelectColumnsToDictionary(const int32_t& tableId) const{
       const auto columns = this->SelectColumns(tableId);
 
@@ -787,11 +895,21 @@ namespace Server {
 
         selectedIndexHeaders.emplace_back(
         Headers::IndexHeader{
-          data[0]->GetInt(),
-          data[1]->GetInt(),
-          data[2]->GetString(),
-          data[4]->GetBool(),
-          data[5]->GetBool()
+          .id = data[0]->GetInt(),
+          .tableId = data[1]->GetInt(),
+          .name = data[2]->GetString(),
+          .isClustered = data[4]->GetBool(),
+          .isDisabled = data[5]->GetBool(),
+            .additionalInfo{
+            .createdAt = data[6]->GetDateTime(),
+            .lastModified = data[7]->GetDateTime(),
+            .lastModifiedBy = data[8]->GetString(),
+            .version = data[9]->GetInt(),
+            .isDeleted = data[10]->GetBool(),
+            .deletedAt = data[11]->GetBlockData() == nullptr
+                  ? DataTypes::DateTime()
+                  : data[11]->GetDateTime()
+            },
         });
       }
 
@@ -802,6 +920,138 @@ namespace Server {
       });
 
       return selectedIndexHeaders;
+  }
+
+  Headers::IndexHeader ServerInstance::SelectIndexById(const int32_t & indexId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
+    vector<Row> selectedIndexes;
+
+    Indexing::Key key;
+    key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), ColumnType::Int));
+
+    sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key);
+
+    if(selectedIndexes.empty())
+      return {};
+
+    auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
+
+    vector<Headers::IndexHeader> selectedIndexHeaders;
+
+    const auto& data = selectedIndexes[0].GetData();
+
+    return Headers::IndexHeader{
+      .id = data[0]->GetInt(),
+      .tableId = data[1]->GetInt(),
+      .name = data[2]->GetString(),
+      .isClustered = data[3]->GetBool(),
+      .isDisabled = data[4]->GetBool(),
+      .additionalInfo{
+        .createdAt = data[5]->GetDateTime(),
+        .lastModified = data[6]->GetDateTime(),
+        .lastModifiedBy = data[7]->GetString(),
+        .version = data[8]->GetInt(),
+        .isDeleted = data[9]->GetBool(),
+        .deletedAt = data[10]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[10]->GetDateTime()
+      },
+      .columns = std::move(indexColumns),
+      };
+  }
+
+  vector<Headers::IndexColumnsHeader> ServerInstance::SelectIndexColumnsByIndexId(const int32_t & indexId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXCOLUMNS);
+    vector<Row> rows;
+
+    Indexing::Key key;
+    key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), ColumnType::Int));
+
+    sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
+
+    if(rows.empty())
+      return {};
+
+    vector<Headers::IndexColumnsHeader> indexColumns;
+
+    for (const auto& indexColumn : rows) {
+      const auto& data = indexColumn.GetData();
+
+      indexColumns.emplace_back(
+        Headers::IndexColumnsHeader{
+          .indexId = data[0]->GetInt(),
+          .columnId = data[1]->GetInt(),
+          .ordinalPosition = data[2]->GetSmallInt(),
+          .isIncluded = data[3]->GetBool(),
+          .additionalInfo{
+            .version = data[4]->GetInt(),
+            .isDeleted = data[5]->GetBool(),
+            .deletedAt = data[6]->GetBlockData() == nullptr
+                  ? DataTypes::DateTime()
+                  : data[6]->GetDateTime()
+          }
+        });
+    }
+
+    //get them sorted by ordinal position
+    ranges::sort(indexColumns,
+    [](const Headers::IndexColumnsHeader& a, const Headers::IndexColumnsHeader& b) {
+      return a.ordinalPosition > b.ordinalPosition;
+    });
+
+    return indexColumns;
+
+  }
+
+  vector<Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableId(const int32_t & tableId) const{
+      using namespace DatabaseEngine::StorageTypes;
+
+      Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
+      vector<Row> rows;
+
+      Indexing::Key key;
+      key.InsertKey(Indexing::Key(&tableId, sizeof(tableId), ColumnType::Int));
+
+      table->ClusteredIndexSeek(&rows, &key, &key);
+
+      if(rows.empty())
+        return {};
+
+      vector<Headers::IdentityColumnsHeader> columns;
+
+      for (const auto& row : rows) {
+        const auto& data = row.GetData();
+
+        columns.emplace_back(
+          Headers::IdentityColumnsHeader{
+            .tableId = data[0]->GetInt(),
+            .columnId = data[1]->GetInt(),
+            .seedValue = data[2]->GetInt(),
+            .increment = data[3]->GetInt(),
+            .lastValue = data[4]->GetInt(),
+            .isCached = data[5]->GetBool(),
+            .cacheBlock = data[6]->GetInt(),
+            .additionalInfo{
+              .version = data[7]->GetInt(),
+              .isDeleted = data[8]->GetBool(),
+              .deletedAt = data[9]->GetBlockData() == nullptr
+                    ? DataTypes::DateTime()
+                    : data[9]->GetDateTime()
+            }
+          });
+      }
+
+      //get them sorted by ordinal position
+      ranges::sort(columns,
+      [](const Headers::IdentityColumnsHeader& a, const Headers::IdentityColumnsHeader& b) {
+        return a.columnId > b.columnId;
+      });
+
+      return columns;
   }
 
   void ServerInstance::CreateSystemDatabase(){

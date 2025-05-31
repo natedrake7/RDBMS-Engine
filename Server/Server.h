@@ -141,9 +141,14 @@ namespace Server {
     [[nodiscard]] vector<Headers::TableHeader> SelectTables(const string& dbName) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const string &dbName, const string &tableName, const std::string& schema) const;
+    [[nodiscard]] vector<Headers::ConstraintsHeader> SelectConstraints(const int32_t& tableId) const;
     [[nodiscard]] vector<Headers::ColumnHeader> SelectColumns(const int32_t& tableId) const;
     [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const int32_t& tableId) const;
     [[nodiscard]] vector<Headers::IndexHeader> SelectIndexes(const int32_t& tableId) const;
+    [[nodiscard]] Headers::IndexHeader SelectIndexById(const int32_t& indexId) const;
+    [[nodiscard]] vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const int32_t& indexId) const;
+    [[nodiscard]] vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const int32_t& tableId) const;
+    [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     void Shutdown()const;
