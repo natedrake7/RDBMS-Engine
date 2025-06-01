@@ -60,6 +60,9 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (const auto& whereClause = ctx->whereClause();whereClause != nullptr)
       statement->where = std::any_cast<Statements::WhereClause>(visit(whereClause));
 
+    if(ctx->orderByStatement())
+      statement->orderBy = std::any_cast<Statements::OrderByStatement*>(visit(ctx->orderByStatement()));
+
     return statement;
   }
 
@@ -297,4 +300,15 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     return statement;
   }
 
+  antlrcpp::Any SQLVisitorImplementation::visitOrderByStatement(SQLParser::OrderByStatementContext *context){
+    auto* statement = new Statements::OrderByStatement();
+
+    auto colCtx = context->columnList();
+    for (const auto col : colCtx->columnName())
+      statement->columns.push_back(col->getText());
+
+    statement->order = context->order ? context->order->getText() : "ASC";
+
+    return statement;
+  }
 }

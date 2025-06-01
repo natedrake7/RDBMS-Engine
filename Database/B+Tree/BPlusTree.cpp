@@ -432,7 +432,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexSeekUpdate(const Key* minKey, const Key* maxKey, const vector<Field> & updates){
+    void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -454,7 +454,10 @@ namespace Indexing
             if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
                 auto* previousRows = previousNode->GetDataRowsUnsafe();
 
-                this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+                auto* row = previousRows->at(previousRows->size() - 1);
+
+                if(row->Evaluate(expression))
+                  this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
             }
           }
           else if(maxKey < keys->at(0))
@@ -466,7 +469,7 @@ namespace Indexing
           {
             const auto &key = keys->at(i);
 
-            if (minKey <= key && maxKey >= key)
+            if (minKey <= key && maxKey >= key && rows->at(i)->Evaluate(expression))
             {
                 this->table->HandleRowUpdate(previousNode, rows->at(i), updates, updatedColumns, false);
                 continue;

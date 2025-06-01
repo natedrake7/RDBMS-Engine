@@ -118,14 +118,14 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
     }
 }
 
-bool SortingFunctions::CompareRows(const Row *firstRow, const Row *secondRow, const vector<SortCondition> &sortConditions)
+bool SortingFunctions::CompareRows(const Row& firstRow, const Row& secondRow, const vector<SortCondition> &sortConditions)
 {
     for (const auto& condition : sortConditions)
     {
         const column_index_t& columnIndex = condition.GetColumnIndex();
 
-        const Block* firstRowData = firstRow->GetData()[columnIndex];
-        const Block* secondRowData = secondRow->GetData()[columnIndex];
+        const Block* firstRowData = firstRow.GetData()[columnIndex];
+        const Block* secondRowData = secondRow.GetData()[columnIndex];
 
         //if column is indexed(and it is the first condition, it is already sorted by it so set the result accordingly result is positive)
         const int result = SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);
@@ -133,7 +133,7 @@ bool SortingFunctions::CompareRows(const Row *firstRow, const Row *secondRow, co
         if(result == 0)
             continue;
         
-        return (condition.GetSortType() == SortType::DESCENDING)
+        return (condition.GetSortType() == OrderType::DESCENDING)
                         ? (result < 0)
                         : (result > 0);
     }
@@ -141,7 +141,7 @@ bool SortingFunctions::CompareRows(const Row *firstRow, const Row *secondRow, co
     return false;
 }
 
-void SortingFunctions::OrderBy(vector<Row*> &rows, const vector<SortCondition> &sortConditions)
+void SortingFunctions::OrderBy(vector<Row> &rows, const vector<SortCondition> &sortConditions)
 {
     if(rows.empty())
         return;
@@ -151,11 +151,11 @@ void SortingFunctions::OrderBy(vector<Row*> &rows, const vector<SortCondition> &
     //order by the 2nd condition. do it for the rest etc.
     const auto& condition = sortConditions.front();
     const bool& isColumnIndexed = condition.GetIsColumnIndexed();
-    const SortType sortType = condition.GetSortType();
+    const OrderType sortType = condition.GetSortType();
     
-    if(isColumnIndexed && sortType == SortType::ASCENDING)
+    if(isColumnIndexed && sortType == OrderType::ASCENDING)
         return;
-    if(isColumnIndexed && sortType == SortType::DESCENDING)
+    if(isColumnIndexed && sortType == OrderType::DESCENDING)
     {
         ranges::reverse(rows);
         return;

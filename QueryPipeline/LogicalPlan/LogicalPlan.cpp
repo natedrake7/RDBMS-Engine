@@ -11,15 +11,15 @@ namespace QueryPipeline {
 
   LogicalPlan::~LogicalPlan() = default;
 
-  LogicalProject::LogicalProject(const int32_t & databaseId, LogicalPlan *child, const std::vector<column_index_t> &columns)
-: LogicalPlan(), child(child), columns(columns) {}
+  LogicalProject::LogicalProject(const int32_t & databaseId, LogicalPlan *child, const std::vector<column_index_t> &columns, std::vector<std::string>& columnLiterals)
+: LogicalPlan(), child(child), columns(columns), columnLiterals(std::move(columnLiterals)) {}
 
   LogicalProject::~LogicalProject(){
       delete child;
   }
 
   PhysicalPlan::PhysicalProject * LogicalProject::ToPhysical(){
-     return new PhysicalPlan::PhysicalProject(this->databaseId, this->child->ToPhysical(), this->columns);
+     return new PhysicalPlan::PhysicalProject(this->databaseId, this->child->ToPhysical(), this->columns, this->columnLiterals);
   }
 
   LogicalTableScan::LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression)
@@ -170,13 +170,13 @@ namespace QueryPipeline {
           const auto indexHeader = Server::ServerInstance::Get().SelectIndexById(index.id);
 
             if (canIndexSeek) {
-              for (const auto& column: index.columns) {
+              for (const auto& column: indexHeader.columns) {
                   //if columns is first prefer it, else break because index scan will occur
                   //index seek
-      //              if (!expressionColumns.Contains(column))
-      //return new PhysicalPlan::PhysicalIndexSeekUpdate(dbName, this->table, this->expression, this->fields);
-                    break;
+                    if (expressionColumns.Contains(column.ordinalPosition))
+                      return new PhysicalPlan::PhysicalIndexSeekUpdate(this->databaseId, this->table, this->expression, this->fields);
 
+                    break;
               }
             }
 
@@ -185,6 +185,13 @@ namespace QueryPipeline {
       }
 
       return new PhysicalPlan::PhysicalHeapUpdate(this->databaseId, this->table, this->expression, this->fields);
+  }
+
+  LogicalOrder::LogicalOrder(const int32_t & databaseId, LogicalPlan *child, vector<column_index_t> & columns, const OrderType & orderType)
+    : LogicalPlan(databaseId), child(child), columns(std::move(columns)), orderType(orderType) {}
+
+  PhysicalPlan::PhysicalOperator* LogicalOrder::ToPhysical(){
+    return new PhysicalPlan::PhysicalOrderBy(this->databaseId, this->child->ToPhysical(), this->columns, this->orderType);
   }
 }
 

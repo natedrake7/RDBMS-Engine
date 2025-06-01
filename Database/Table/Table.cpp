@@ -784,10 +784,14 @@ namespace DatabaseEngine::StorageTypes {
       tree->IndexScanUpdate(expression, updates);
     }
 
-    void Table::ClusteredIndexSeekUpdate(const Indexing::Key *minimumValue, const Indexing::Key *maximumValue, const vector<Field> & updates){
+    void Table::ClusteredIndexSeekUpdate(
+        Expressions::Expression* expression,
+        const Indexing::Key *minimumValue,
+        const Indexing::Key *maximumValue,
+        const vector<Field> & updates){
       auto* tree = this->GetClusteredIndexedTree();
 
-      tree->IndexSeekUpdate(minimumValue, maximumValue, updates);
+      tree->IndexSeekUpdate(expression, minimumValue, maximumValue, updates);
     }
     string Table::GetFileName() const{ return this->database->GetFileName(); }
 

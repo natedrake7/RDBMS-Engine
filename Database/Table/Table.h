@@ -186,6 +186,7 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexScanUpdate(Expressions::Expression* expression, const vector<Field> &updates);
 
             void ClusteredIndexSeekUpdate(
+                Expressions::Expression* expression,
                 const Indexing::Key* minimumValue,
                 const Indexing::Key* maximumValue,
                 const vector<Field> &updates);

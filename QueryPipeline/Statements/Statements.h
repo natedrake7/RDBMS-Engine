@@ -48,6 +48,15 @@ namespace QueryPipeline::Statements {
     WhereClause() { this->expression = nullptr; }
   };
 
+  struct OrderByStatement{
+    std::vector<column_index_t> columnIndices;
+
+    std::vector<std::string> columns;
+    std::string order;
+
+    bool Validate(const std::vector<std::string>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict);
+  };
+
   struct TableName {
     std::string name;
     std::string schema;
@@ -61,7 +70,11 @@ namespace QueryPipeline::Statements {
 
   struct Statement {
     int32_t databaseId;
-    Statement() = default;
+
+    Statement(){
+      this->databaseId = -1;
+    }
+
     virtual ~Statement() = default;
     virtual bool Validate() = 0;
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
@@ -95,8 +108,12 @@ namespace QueryPipeline::Statements {
     std::vector<std::string> columns;
     std::vector<Constants::column_index_t> columnIndices;
     WhereClause where;
+    OrderByStatement* orderBy;
 
-    ~SelectStatement() override { delete this->table; };
+    ~SelectStatement() override {
+      delete this->table;
+      delete this->orderBy;
+    };
     
     bool Validate() override;
     LogicalPlan* ToLogical() override;

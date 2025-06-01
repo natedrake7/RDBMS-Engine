@@ -6,7 +6,9 @@ namespace QueryPipeline {
   public:
     int32_t databaseId;
     explicit LogicalPlan(const int32_t & databaseId);
-    LogicalPlan() = default;
+    LogicalPlan(){
+      this->databaseId = -1;
+    }
     virtual ~LogicalPlan();
     virtual PhysicalPlan::PhysicalOperator* ToPhysical() = 0;
   };
@@ -22,7 +24,9 @@ namespace QueryPipeline {
     public:
       LogicalPlan* child;
       std::vector<column_index_t> columns;
-      LogicalProject(const int32_t & databaseId, LogicalPlan* child, const std::vector<column_index_t>& columns);
+      std::vector<std::string> columnLiterals;
+
+      LogicalProject(const int32_t & databaseId, LogicalPlan* child, const std::vector<column_index_t>& columns, std::vector<std::string>& columnLiterals);
       ~LogicalProject() override;
       PhysicalPlan::PhysicalProject* ToPhysical()override;
   };
@@ -41,6 +45,16 @@ namespace QueryPipeline {
       Expressions::Expression* filter;
       explicit LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
+  };
+
+  class LogicalOrder final : public LogicalPlan {
+    public:
+      LogicalPlan* child;
+      std::vector<column_index_t> columns;
+      Constants::OrderType orderType;
+
+      explicit LogicalOrder(const int32_t & databaseId, LogicalPlan* child, std::vector<column_index_t>& columns, const Constants::OrderType& orderType);
+      PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
   class LogicalInsert final : public LogicalPlan {

@@ -854,7 +854,7 @@ namespace Server {
 
     ranges::sort(selectedColumnHeaders,
         [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
-            return a.ordinalPosition < b.ordinalPosition;
+            return a.ordinalPosition > b.ordinalPosition;
         }
     );
 

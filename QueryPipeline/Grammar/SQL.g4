@@ -15,7 +15,11 @@ sqlStatement
     | updateStatement;
 
 //select statement
-selectStatement : 'SELECT' (columnList | WILDCARD) 'FROM' tableName whereClause?;
+selectStatement
+            : 'SELECT' (columnList | WILDCARD)
+              'FROM' tableName whereClause?
+               orderByStatement?
+            ;
 
 whereClause
     : 'WHERE' expression
@@ -36,6 +40,10 @@ andExpression
 predicate
     : '(' expression ')'
     | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
+    ;
+
+orderByStatement
+    : 'ORDER' 'BY' columnList order=(DESC | ASC)?
     ;
 
 //insert statement
@@ -156,6 +164,9 @@ MAX             : 'MAX';
 
 NOT             : 'NOT';
 NULL            : 'NULL';
+
+DESC            : 'DESC';
+ASC             : 'ASC';
 
 
 WILDCARD        : '*';

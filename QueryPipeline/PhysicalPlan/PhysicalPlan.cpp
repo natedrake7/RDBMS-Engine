@@ -1,12 +1,9 @@
 #include "PhysicalPlan.h"
-
 #include <utility>
 #include "../../Database/Database.h"
-#include "../../Database/Block/Block.h"
-#include "../../Database/Table/Table.h"
-#include "../../Server/Server.h"
-#include "../Statements/Statements.h"
 #include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../../Database/AdditionalFunctions/SortingFunctions.h"
+#include "../../Database/Block/Block.h"
 
 namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
@@ -30,8 +27,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return new PhysicalPlanResult();
   }
 
-  PhysicalProject::PhysicalProject(const int32_t & databaseId, PhysicalOperator *child, const std::vector<column_index_t>& columns)
-    : PhysicalOperator(databaseId), columns(columns), child(child) {}
+  PhysicalProject::PhysicalProject(const int32_t & databaseId, PhysicalOperator *child, const std::vector<column_index_t>& columns, std::vector<std::string>& columnLiterals)
+    : PhysicalOperator(databaseId), columns(columns), child(child), columnLiterals(std::move(columnLiterals)) {}
 
   PhysicalProject::~PhysicalProject(){ delete this->child; }
 
@@ -54,6 +51,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
         data = std::move(newData);
       }
+
+    result->columns = std::move(this->columnLiterals);
 
     return result;
   }
@@ -415,9 +414,40 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
+    Indexing::Key key;
+
+    tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
 
     return result;
   }
 
+  PhysicalOrderBy::PhysicalOrderBy(
+      const int32_t & databaseId,
+      PhysicalOperator *child,
+      vector<column_index_t> & columns,
+      const OrderType & orderType)
+    : PhysicalOperator(databaseId), child(child), columns(std::move(columns)), orderType(orderType){}
+
+  PhysicalOrderBy::~PhysicalOrderBy(){
+    delete this->child;
+  }
+
+  PhysicalPlanResult* PhysicalOrderBy::Execute(){
+    auto* result = this->child->Execute();
+
+    std::vector<DatabaseEngine::StorageTypes::Row*> rowsPtrs;
+
+    std::vector<SortCondition> conditions;
+    for(const auto& column : this->columns){
+      conditions.emplace_back(
+      column,
+    this->orderType,
+    false
+      );
+    }
+
+    SortingFunctions::OrderBy(result->rows, conditions);
+
+    return result;
+  }
 }

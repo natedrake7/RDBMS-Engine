@@ -75,7 +75,7 @@ int main()
     const int32_t databaseId = 2;
 
     //select statement
-    const string selectActors = "SELECT * FROM dbo.Actors";
+    const string selectActors = "SELECT * FROM dbo.Actors ORDER BY ActorName, ActorAge DESC";
 
     const string selectMasterDb = "SELECT * FROM dbo.sys_tables";
 
@@ -83,7 +83,7 @@ int main()
     const string selectMovies = "SELECT * FROM dbo.Movies WHERE ID = 3";
 
     //insert statement
-    const string insertActors = "INSERT INTO dbo.Actors(ActorName, ActorDesc, ActorAge) VALUES('Robert Kirkman', 'kalispera', 42)";
+    const string insertActors = "INSERT INTO dbo.Actors(ActorName, ActorDesc, ActorAge) VALUES('Robert Kirkman', 'kalispera', 43)";
 
     const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName, MovieTemp, MovieDesc, MovieNewValue) VALUES(5, 'Batman: The Dark Knight', 'oulala', 'hello its me', 'hello madafaka')";
 
@@ -116,8 +116,8 @@ int main()
 //
 //    QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 
-    QueryPipeline::Parser::Parse(insertActors, databaseId);
-
+//    QueryPipeline::Parser::Parse(insertActors, databaseId);
+//
     QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     const auto& databases = server.GetCatalog();

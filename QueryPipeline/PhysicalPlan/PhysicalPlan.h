@@ -18,6 +18,7 @@ namespace DatabaseEngine::StorageTypes {
 namespace QueryPipeline::PhysicalPlan{
 
     struct PhysicalPlanResult {
+        std::vector<string> columns;
         std::vector<DatabaseEngine::StorageTypes::Row> rows;
         std::string message;
         AdditionalDataTypes::ResultCode code;
@@ -27,7 +28,9 @@ namespace QueryPipeline::PhysicalPlan{
       public:
         int32_t databaseId;
         explicit PhysicalOperator(const int32_t& databaseId) : databaseId(databaseId) {}
-        PhysicalOperator() = default;
+        PhysicalOperator(){
+          this->databaseId = -1;
+        }
         virtual ~PhysicalOperator() = default;
         virtual PhysicalPlanResult* Execute() = 0;
     };
@@ -47,7 +50,6 @@ namespace QueryPipeline::PhysicalPlan{
       ~PhysicalSchemaCreate() override = default;
       PhysicalPlanResult* Execute() override;
   };
-
 
   class PhysicalTableScan final : public PhysicalOperator{
     Statements::TableName* table;
@@ -83,10 +85,11 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalProject final : public PhysicalOperator{
     HashSet<column_index_t> columns;
+    std::vector<std::string> columnLiterals;
     PhysicalOperator* child;
 
     public:
-      PhysicalProject(const int32_t & databaseId, PhysicalOperator* child, const std::vector<column_index_t>& columns);
+      PhysicalProject(const int32_t & databaseId, PhysicalOperator* child, const std::vector<column_index_t>& columns, std::vector<std::string>& columnLiterals);
       ~PhysicalProject() override;
       PhysicalPlanResult* Execute() override;
   };
@@ -189,5 +192,16 @@ namespace QueryPipeline::PhysicalPlan{
         std::string& constraintName);
       ~PhysicalTableCreate()override = default;
       PhysicalPlanResult* Execute() override;
+  };
+
+  class PhysicalOrderBy final : public PhysicalOperator{
+    PhysicalOperator* child;
+    std::vector<column_index_t> columns;
+    Constants::OrderType orderType;
+
+  public:
+    PhysicalOrderBy(const int32_t & databaseId, PhysicalOperator* child, std::vector<column_index_t>& columns, const Constants::OrderType& orderType);
+    ~PhysicalOrderBy()override;
+    PhysicalPlanResult* Execute() override;
   };
 }

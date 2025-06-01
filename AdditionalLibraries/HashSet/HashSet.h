@@ -25,7 +25,7 @@ class HashSet : public unordered_set<T>
 
             return false;
         }
-        
+
         bool Contains(const T& key) const
         {
             return this->find(key) != this->end();

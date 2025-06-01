@@ -146,8 +146,12 @@ namespace QueryPipeline::Statements {
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
 
     if (!this->columns.empty() && this->columns[0] == "*") {
-      for (const auto& [key, header] : columnsDict)
+      this->columns.clear();
+
+      for (const auto& [key, header] : columnsDict){
         this->columnIndices.emplace_back(header.ordinalPosition);
+        this->columns.emplace_back(header.name);
+       }
     }
     else {
       for (const auto& selectColumn : this->columns) {
@@ -160,10 +164,32 @@ namespace QueryPipeline::Statements {
       }
     }
 
-    if (this->where.expression == nullptr)
+    if (this->where.expression != nullptr && !this->where.expression->Validate(columnsDict))
+      return false;
+
+    if(!this->orderBy)
       return true;
 
-    return this->where.expression->Validate(columnsDict);
+    return this->orderBy->Validate(this->columns, columnsDict);
+
+  }
+
+  bool OrderByStatement::Validate(const std::vector<std::string>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
+    HashSet<std::string> selectColumnMap(selectColumns);
+
+    for(const auto& column : this->columns){
+      if(!selectColumnMap.Contains(column)){
+        cerr << "Column " << column << " does not exist on the statement." << endl;
+        return false;
+      }
+
+      Headers::ColumnHeader header;
+      columnsDict.TryGetValue(column, header);
+
+      this->columnIndices.emplace_back(header.ordinalPosition);
+    }
+
+    return true;
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
@@ -173,10 +199,15 @@ namespace QueryPipeline::Statements {
 
     if (this->where.expression != nullptr)
       current = new LogicalFilter(this->databaseId, current, this->where.expression);
-    
 
     if (!this->columns.empty())
-      current = new LogicalProject(this->databaseId, current, this->columnIndices);
+      current = new LogicalProject(this->databaseId, current, this->columnIndices, this->columns);
+
+    if(this->orderBy != nullptr){
+      const auto orderType = this->orderBy->order == "DESC" ? OrderType::DESCENDING : OrderType::ASCENDING;
+
+      current = new LogicalOrder(this->databaseId, current, this->orderBy->columnIndices, orderType);
+    }
 
     return current;
   }
@@ -335,4 +366,5 @@ namespace QueryPipeline::Statements {
 
     return new QueryPipeline::LogicalUpdate(this->databaseId, this->table, columnsUpdates, this->where.expression);
   }
+
 }

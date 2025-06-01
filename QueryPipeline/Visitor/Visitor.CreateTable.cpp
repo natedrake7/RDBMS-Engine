@@ -53,6 +53,4 @@ namespace QueryPipeline{
       .isNullable = isNullable,
     };
   }
-
-
 }

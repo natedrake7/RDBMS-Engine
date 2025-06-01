@@ -87,8 +87,11 @@ namespace QueryPipeline
                 return;
             }
 
-            cout << result->rows.size() << endl;
-            
+            for(const auto & column : result->columns)
+              cout << column << " || ";
+
+            cout << endl;
+
             for (const auto& row: result->rows)
                 row.PrintRow();
 
