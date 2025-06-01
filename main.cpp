@@ -46,7 +46,8 @@ void InsertRowsToMoviesTable(Table* table);
 //update sys_indexes periodically by identity and on shutdown for sure.
 //add reset identity
 //start documenting implementation and optimize wherever possible
-
+//add order by statements full support (minor just add ASC, DESC on each column or on all)
+//and check if index index is available in the results to speed by sorting
 
 std::atomic<bool> serverRunning{true};
 
