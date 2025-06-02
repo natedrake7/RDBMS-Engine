@@ -98,4 +98,5 @@ namespace DatabaseEngine
         table->UpdateMasterDatabase();
     }
 
+    string Database::GetSystemFilename() const{ return this->systemFilename;}
 }

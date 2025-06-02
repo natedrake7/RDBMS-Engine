@@ -117,7 +117,7 @@ namespace DatabaseEngine::StorageTypes {
             delete nonClusteredIndexedTree;
         }
 
-        HeaderPage* headerPage = StorageManager::Get().GetHeaderPage(this->database->GetFileName());
+        HeaderPage* headerPage = StorageManager::Get().GetHeaderPage(this->database->GetSystemFilename());
 
         headerPage->SetTableHeader(this);
 
@@ -398,9 +398,7 @@ namespace DatabaseEngine::StorageTypes {
         {
           const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-          const page_id_t pfsPageId = Database::GetPfsAssociatedPage(extentFirstPageId);
-
-          PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
+          auto* pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
           const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                        ? extentFirstPageId
@@ -565,9 +563,7 @@ namespace DatabaseEngine::StorageTypes {
         for (const auto& extentId : tableExtentIds){
           const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-          const page_id_t pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(extentFirstPageId);
-
-          const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
+          const auto* pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
           const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                       ? extentFirstPageId
@@ -605,7 +601,7 @@ namespace DatabaseEngine::StorageTypes {
 
        *rowIndex = indexPosition;
 
-       PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetFileName(), node->GetPageId());
+       PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
 
        // should never fail
        this->InsertRowToClusteredPage(pageFreeSpacePage, node, row, indexPosition);
@@ -653,8 +649,8 @@ namespace DatabaseEngine::StorageTypes {
 
           for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
           {
-              const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
-              PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pageFreeSpacePageId);
+
+              auto* pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pageId);
 
               if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
                   break;
@@ -703,9 +699,7 @@ namespace DatabaseEngine::StorageTypes {
         for (const auto& extentId : tableExtentIds){
           const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-          const page_id_t pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(extentFirstPageId);
-
-          const PageFreeSpacePage *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(filename, pfsPageId);
+          const PageFreeSpacePage *pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
           const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                       ? extentFirstPageId
@@ -756,7 +750,7 @@ namespace DatabaseEngine::StorageTypes {
 
         auto* objectPtr = largeObjectPage->DeleteObject();
 
-        auto* pfsPage = StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
+        auto* pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
 
         pfsPage->SetPageMetaData(largeObjectPage);
         pfsPage->SetPageFreed(largeObjectPage->GetPageId());
@@ -769,7 +763,7 @@ namespace DatabaseEngine::StorageTypes {
             DataObject* prevObject = objectPtr;
             objectPtr = nextLargeObjectPage->DeleteObject();
 
-            pfsPage = StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
+            pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
 
             pfsPage->SetPageMetaData(nextLargeObjectPage);
             pfsPage->SetPageFreed(nextLargeObjectPage->GetPageId());
@@ -808,9 +802,7 @@ namespace DatabaseEngine::StorageTypes {
 
       row->SetOverflowBitMapValue(largestBlock->GetColumnIndex(), true);
 
-      const auto pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(overflowPage->GetPageId());
-
-      auto* pfsPage = StorageManager::Get().GetPageFreeSpacePage(this->database->GetFileName(), pfsPageId);
+      auto* pfsPage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), overflowPage->GetPageId());
 
       pfsPage->SetPageMetaData(overflowPage);
 

@@ -114,11 +114,11 @@ int main()
     const auto start = std::chrono::high_resolution_clock::now();
 
 //    QueryPipeline::Parser::Parse(createDb, databaseId);
-//
+////
 //    QueryPipeline::Parser::Parse(createActorsTable, databaseId);
-
-//    QueryPipeline::Parser::Parse(insertActors, databaseId);
 //
+    QueryPipeline::Parser::Parse(insertActors, databaseId);
+////
     QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     const auto& databases = server.GetCatalog();

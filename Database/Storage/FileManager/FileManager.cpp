@@ -1,4 +1,6 @@
 ﻿#include "FileManager.h"
+#include <filesystem>
+namespace fs = std::filesystem;
 
 namespace Storage{
 
@@ -37,6 +39,13 @@ namespace Storage{
             throw runtime_error("Database with name: " + fileName +" already exists");
 
         fileExists.close();
+
+        fs::path fullPath = fs::path(fileName + extension);
+
+        fs::path parentDir = fullPath.parent_path();
+
+        if(!parentDir.empty() && !fs::exists(parentDir))
+          fs::create_directories(parentDir);
 
         ofstream file(fileName + extension);
 

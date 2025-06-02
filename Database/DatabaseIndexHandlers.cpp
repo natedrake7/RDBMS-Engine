@@ -91,7 +91,7 @@ namespace DatabaseEngine {
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
             {
-                const PageFreeSpacePage * pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, nextIndexPageId);
+                const PageFreeSpacePage * pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextIndexPageId);
 
                 if (pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
                     continue;

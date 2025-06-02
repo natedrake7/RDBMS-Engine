@@ -1,6 +1,6 @@
 {
   "db_name": "masterDb",
-  "db_path": "./masterDb.db",
+  "db_path": "masterDb/masterDb.db",
   "tables": [
     {
       "id": 1,

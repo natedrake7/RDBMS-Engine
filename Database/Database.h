@@ -67,9 +67,13 @@ class Database {
   std::string name;
   string filename;
   string fileExtension;
+  string systemFilename;
   vector<StorageTypes::Table *> tables;
 
 protected:
+
+    void PopulateFilenames(const std::string& dbName);
+
     static void MergeRows(StorageTypes::Row& row, const vector<StorageTypes::Row>& selectedRows, const vector<column_index_t>& selectedColumnIndices, const StorageTypes::Table *secondTable);
 
     void WriteHeaderToFile() const;
@@ -93,6 +97,8 @@ public:
     explicit Database(const std::string& dbName, const vector<Headers::sysTable>& tables);
 
     ~Database();
+
+    static string CreateDatabasePath(const std::string& dbName);
 
     [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
@@ -145,6 +151,8 @@ public:
     void SetPageMetaDataToPfs(const Pages::Page *page)const;
 
     [[nodiscard]] string GetFileName() const;
+
+    [[nodiscard]] string GetSystemFilename() const;
 
     static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId);
 

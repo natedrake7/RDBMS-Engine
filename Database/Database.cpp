@@ -15,9 +15,6 @@
 #include "Storage/StorageManager/StorageManager.h"
 #include "Block/Block.h"
 #include "../AdditionalLibraries/BitMap/BitMap.h"
-#include "../Server/Server.h"
-#include "B+Tree/BPlusTree.h"
-
 #include <iostream>
 
 using namespace Pages;
@@ -31,7 +28,7 @@ namespace DatabaseEngine
 {
     void Database::WriteHeaderToFile() const
     {
-        HeaderPage *metaDataPage = StorageManager::Get().GetHeaderPage(this->filename);
+        HeaderPage *metaDataPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
 
         metaDataPage->SetDbHeader(this->header);
     }
@@ -39,22 +36,20 @@ namespace DatabaseEngine
     bool Database::IsSystemPage(const page_id_t &pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % PAGE_FREE_SPACE_SIZE == 1 || pageId % GAM_NUMBER_OF_PAGES == 2; }
 
     page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) {
-        //first pfs page is always at 1
-        constexpr page_id_t FIRST_PFS_PAGE = 1;
+        const auto numOfGamPages = (pageId / GAM_NUMBER_OF_PAGES);
 
-        //calculate all the gam pages allocated after the 1st one (pageId 2)
-        const page_id_t gamPagesAfterFirst = (pageId / GAM_NUMBER_OF_PAGES);
+        const auto numOfPfsPages = (pageId / PAGE_FREE_SPACE_SIZE) + 1;
 
-        //find the system pages preceding the current pageId
-        const page_id_t SYSTEM_PAGES = (gamPagesAfterFirst + 1) + ((pageId / PAGE_FREE_SPACE_SIZE) + 1); //get all gam pages and pfs pages and header page before the current page
-
-        // Calculate the logical PageId and find how many pfs precede it excluding the first
-        page_id_t pfsCount = (pageId - SYSTEM_PAGES) / PAGE_FREE_SPACE_SIZE;
-
-        return pfsCount == 0 ? FIRST_PFS_PAGE : FIRST_PFS_PAGE + pfsCount * (PAGE_FREE_SPACE_SIZE + 1) + gamPagesAfterFirst + 1;
+        return numOfPfsPages > 1 ? numOfPfsPages + numOfGamPages + 1 : numOfPfsPages + numOfGamPages;
     }
 
-    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) { return (pageId / GAM_NUMBER_OF_PAGES) * GAM_NUMBER_OF_PAGES + 2; }
+    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) {
+        const auto numOfGamPages = (pageId / GAM_NUMBER_OF_PAGES) + 2;
+
+        const auto numOfPfsPages = (pageId / PAGE_FREE_SPACE_SIZE);
+
+        return numOfGamPages > 2 ? numOfPfsPages + numOfGamPages + 1 : numOfPfsPages + numOfGamPages;
+    }
 
 //    page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) {
 //
@@ -105,7 +100,7 @@ namespace DatabaseEngine
 //        if (gamPages == 0)
 //            gamPages = 1;
 
-        return pageId + pfsPages + gamPages + 1;
+        return pageId ;//+ pfsPages + gamPages + 1;
     }
 
     Constants::byte Database::GetObjectSizeToCategory(const row_size_t &size)
@@ -124,7 +119,7 @@ namespace DatabaseEngine
 
         const page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
 
-        return pageId + pfsPages + gamPages + 1;
+        return pageId; //+ pfsPages + gamPages + 1;
     }
 
     extent_id_t Database::CalculateExtentIdByPageId(const page_id_t &pageId)
@@ -133,15 +128,24 @@ namespace DatabaseEngine
 
         const page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
 
-        return (pageId - ( pfsPages + gamPages + 1 )) / 8 ;
+        return pageId / 8;//(pageId - ( pfsPages + gamPages + 1 )) / 8 ;
+    }
+
+    string Database::CreateDatabasePath(const string & dbName){ return dbName + "/" + dbName; }
+
+    void Database::PopulateFilenames(const std::string& dbName){
+        const auto& path = Database::CreateDatabasePath(dbName);
+
+        this->filename = path + ".db";
+        this->fileExtension = ".db";
+        this->name = dbName;
+        this->systemFilename = path + "_sys" + ".db";
     }
 
     Database::Database(const string &dbName, const vector<Headers::sysTable>& tables) {
-        this->filename = dbName + ".db";
-        this->fileExtension = ".db";
-        this->name = dbName;
+        this->PopulateFilenames(dbName);
 
-        const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->filename);
+        const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
 
         this->header = *headerPage->GetDatabaseHeader();
 
@@ -164,11 +168,9 @@ namespace DatabaseEngine
 
     Database::Database(const string &dbName, const bool& isServerInitialization)
     {
-        this->filename = dbName + ".db";
-        this->fileExtension = ".db";
-        this->name = dbName;
+        this->PopulateFilenames(dbName);
 
-        const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->filename);
+        const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
 
         this->header = *headerPage->GetDatabaseHeader();
 
@@ -300,15 +302,21 @@ namespace DatabaseEngine
 
     void CreateDatabase(const string &dbName)
     {
-        StorageManager::Get().CreateFile(dbName, ".db");
+        const auto& path = Database::CreateDatabasePath(dbName);
+
+        StorageManager::Get().CreateFile(path, ".db");
+
+        const auto sysDbName = path + "_sys";
+
+        StorageManager::Get().CreateFile(sysDbName, ".db");
 
         constexpr page_id_t firstGamePageId = 2;
         constexpr page_id_t firstPfsPageId = 1;
         
-        StorageManager::Get().CreateGlobalAllocationMapPage(dbName + ".db", firstGamePageId);
-        StorageManager::Get().CreatePageFreeSpacePage(dbName + ".db", firstPfsPageId);
+        StorageManager::Get().CreateGlobalAllocationMapPage(sysDbName + ".db", firstGamePageId);
+        StorageManager::Get().CreatePageFreeSpacePage(sysDbName + ".db", firstPfsPageId);
 
-        HeaderPage *headerPage = StorageManager::Get().CreateHeaderPage(dbName + ".db");
+        HeaderPage *headerPage = StorageManager::Get().CreateHeaderPage(sysDbName + ".db");
 
         headerPage->SetDbHeader(DatabaseHeader(0, firstPfsPageId, firstGamePageId));
     }
@@ -338,7 +346,7 @@ namespace DatabaseEngine
     }
 
     Database* UseSystemDatabase(const string & dbName, const vector<Headers::sysTable> & tables){
-    return nullptr;
+      return nullptr;
     }
 
     void Database::DeleteDatabase() const
@@ -412,7 +420,7 @@ namespace DatabaseEngine
                 {
                     const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
                 
-                    PageFreeSpacePage* pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(this->filename, pageFreeSpacePageId);
+                    PageFreeSpacePage* pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(this->systemFilename, pageFreeSpacePageId);
 
                     pageFreeSpacePage->SetPageFreed(pageId);
                 }
@@ -434,7 +442,7 @@ namespace DatabaseEngine
             return nullptr;
 
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
-            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateOverflowPage(this->filename, pageId));
         }
 
@@ -452,7 +460,7 @@ namespace DatabaseEngine
 
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
 
-            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreatePage(this->filename, pageId));
         }
 
@@ -469,7 +477,7 @@ namespace DatabaseEngine
             return nullptr;
 
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
-          pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
+          pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
           pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateLargeDataPage(this->filename, pageId));
         }
@@ -491,7 +499,7 @@ namespace DatabaseEngine
             IndexPage* indexPage = StorageManager::Get().CreateIndexPage(this->filename, pageId);
             indexPage->SetTreeId(treeId);
 
-            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, pageId);
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
             pageFreeSpacePage->SetPageMetaData(indexPage);
         }
 
@@ -500,7 +508,7 @@ namespace DatabaseEngine
 
     bool Database::AllocateNewExtent(PageFreeSpacePage **pageFreeSpacePage, page_id_t *lowerLimit, page_id_t *newPageId, extent_id_t *newExtentId, const table_id_t &tableId)
     {
-        GlobalAllocationMapPage *gamPage = StorageManager::Get().GetGlobalAllocationMapPage(this->filename, this->header.lastGamPageId);
+        GlobalAllocationMapPage *gamPage = StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
 
         IndexAllocationMapPage *tableMapPage = nullptr;
 
@@ -509,11 +517,11 @@ namespace DatabaseEngine
 
         const page_id_t &indexAllocationMapPageId = this->tables[tableId]->GetTableHeader().indexAllocationMapPageId;
 
-        *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(this->filename, this->header.lastPageFreeSpacePageId);
+        *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(this->systemFilename, this->header.lastPageFreeSpacePageId);
 
         if (gamPage->IsFull())
         {
-            gamPage = StorageManager::Get().CreateGlobalAllocationMapPage(this->filename, gamPage->GetPageId() + GAM_NUMBER_OF_PAGES);
+            gamPage = StorageManager::Get().CreateGlobalAllocationMapPage(this->systemFilename, gamPage->GetPageId() + GAM_NUMBER_OF_PAGES);
 
             // get the last iam page always
             IndexAllocationMapPage *previousTableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId);
@@ -553,15 +561,10 @@ namespace DatabaseEngine
                           ? *newPageId + 1
                           : *newPageId;
 
-        if(*lowerLimit == 8171)
-        {
-          cout << "hello";
-        }
-
         const auto pfsPageId = Database::GetPfsAssociatedPage(*lowerLimit);
 
         if(pfsPageId > (*pageFreeSpacePage)->GetPageId()){
-            *pageFreeSpacePage = StorageManager::Get().CreatePageFreeSpacePage(this->filename, pfsPageId);
+            *pageFreeSpacePage = StorageManager::Get().CreatePageFreeSpacePage(this->systemFilename, pfsPageId);
             this->header.lastPageFreeSpacePageId = pfsPageId;
         }
 
