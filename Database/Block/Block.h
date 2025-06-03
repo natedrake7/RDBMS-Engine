@@ -59,6 +59,8 @@ namespace DatabaseEngine::StorageTypes {
 
         [[nodiscard]] DataTypes::DateTime GetDateTime() const;
 
+        [[nodiscard]] DataTypes::Guid GetGuid() const;
+
         [[nodiscard]] Pages::DataObjectPointer GeObjectPointer() const;
 
         [[nodiscard]] Pages::OverflowPointer GetOverflowPointer() const;

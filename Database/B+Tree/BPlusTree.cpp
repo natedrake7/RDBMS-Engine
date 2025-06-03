@@ -399,7 +399,7 @@ namespace Indexing
       }
     }
 
-    void BPlusTree::IndexScanUpdate(Expressions::Expression *expression, const vector<Field> & updates){
+    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -414,10 +414,6 @@ namespace Indexing
 
         while (currentNode)
         {
-          auto* keys = currentNode->GetKeysUnsafe();
-
-          auto* rows = currentNode->GetDataRowsUnsafe();
-
           for(auto* row: *currentNode->GetDataRowsUnsafe()){
             if(!row->Evaluate(expression))
               continue;
@@ -1123,6 +1119,7 @@ namespace Indexing
                 return *reinterpret_cast<const int32_t*>(this->value.data()) > *reinterpret_cast<const int32_t*>(otherKey.value.data());
             case Constants::ColumnType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) > *reinterpret_cast<const int64_t*>(otherKey.value.data());
+            case Constants::ColumnType::Guid:
             case Constants::ColumnType::String:
             case Constants::ColumnType::UnicodeString:
             {
@@ -1144,8 +1141,6 @@ namespace Indexing
             default:
                 throw invalid_argument("> Invalid DataType for Key");
         }
-
-        throw invalid_argument(" > Invalid DataType for Key");
     }
 
     bool Key::operator<(const Key& otherKey) const
@@ -1173,6 +1168,7 @@ namespace Indexing
                 return *reinterpret_cast<const int32_t*>(this->value.data()) >= *reinterpret_cast<const int32_t*>(otherKey.value.data());
             case Constants::ColumnType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) >= *reinterpret_cast<const int64_t*>(otherKey.value.data());
+            case Constants::ColumnType::Guid:
             case Constants::ColumnType::String:
             case Constants::ColumnType::UnicodeString:
             {
@@ -1267,6 +1263,7 @@ namespace Indexing
             case Constants::ColumnType::BigInt:
                 os << *reinterpret_cast<const int64_t*>(key.value.data());
                 break;
+            case Constants::ColumnType::Guid:
             case Constants::ColumnType::String:
             case Constants::ColumnType::UnicodeString:
                 os << reinterpret_cast<const char*>(key.value.data());
@@ -1303,6 +1300,7 @@ namespace Indexing
                 return *reinterpret_cast<const int32_t*>(this->value.data()) == *reinterpret_cast<const int32_t*>(otherKey.value.data());
             case Constants::ColumnType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) == *reinterpret_cast<const int64_t*>(otherKey.value.data());
+            case Constants::ColumnType::Guid:
             case Constants::ColumnType::String:
             case Constants::ColumnType::UnicodeString:
                 return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
@@ -1312,7 +1310,7 @@ namespace Indexing
                 return *reinterpret_cast<const bool*>(this->value.data()) == *reinterpret_cast<const bool*>(otherKey.value.data());
             case Constants::ColumnType::DateTime:
                 return *reinterpret_cast<const time_t*>(this->value.data()) == *reinterpret_cast<const time_t*>(otherKey.value.data());
-            case Constants::ColumnType::ColumnTypeCount: 
+            case Constants::ColumnType::ColumnTypeCount:
             default:
                 throw invalid_argument("== Invalid DataType for Key");
         }

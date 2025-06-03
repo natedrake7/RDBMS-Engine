@@ -149,7 +149,8 @@ namespace Constants
         UnicodeString = 6,
         Bool = 7,
         DateTime = 8,
-        ColumnTypeCount = 9
+        Guid = 9,
+        ColumnTypeCount = 10
     };
 
     static Dictionary<string, block_size_t> ColumnTypeSizes = {
@@ -161,7 +162,8 @@ namespace Constants
         {"bool", sizeof(bool)},
         {"string", 0},
         {"decimal", 0},
-        {"unicodestring", 0}
+        {"unicodestring", 0},
+        {"guid", 16}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 
@@ -174,7 +176,8 @@ namespace Constants
         {"bool", ColumnType::Bool},
         {"string", ColumnType::String},
         {"decimal", ColumnType::Decimal},
-        {"unicodestring", ColumnType::UnicodeString}
+        {"unicodestring", ColumnType::UnicodeString},
+        {"guid", ColumnType::Guid}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 }

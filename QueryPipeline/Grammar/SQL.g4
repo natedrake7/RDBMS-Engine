@@ -72,6 +72,7 @@ dataType
     | nvarcharType
     | decimalType
     | DATETIME
+    | GUID
     ;
 
 varcharType
@@ -123,10 +124,16 @@ literalValueList
 literalValue
         : STRING 
         | NUMBER
-        | getDate;
+        | getDate
+        | newGuid
+        | NULL;
         
 getDate
     : 'GETDATE()'
+    ;
+
+newGuid
+    : 'NEWID()'
     ;
     
 columnList : columnName (',' columnName)*;
@@ -150,6 +157,7 @@ LESSTHAN        : '<';
 GREATERTHAN     : '>';
 EQUAL           : '=';
 
+GUID            : 'GUID';
 BOOL            : 'BOOL';
 DATETIME        : 'DATETIME';
 DECIMAL         : 'DECIMAL';

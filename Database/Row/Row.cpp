@@ -193,6 +193,7 @@ namespace DatabaseEngine::StorageTypes {
                     cout << Decimal(blockData, blockSize).ToString();
                     break;
                 }
+                case ColumnType::Guid:
                 case ColumnType::String:
                 {
                     cout.write(reinterpret_cast<const char*>(blockData), blockSize);

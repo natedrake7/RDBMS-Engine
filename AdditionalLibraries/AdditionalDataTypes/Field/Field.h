@@ -3,6 +3,7 @@
 #include <vector>
 #include "../../../Database/Constants.h"
 #include "../Decimal/Decimal.h"
+#include "../Guid/Guid.h"
 #include "../Headers/Headers.h"
 
 using namespace std;
@@ -13,11 +14,6 @@ class Field {
     block_size_t size;
     ColumnType type;
   
-    bool isNotConstant;
-    vector<Field> children;
-    Operator operatorType;
-    ConditionType conditionType;
-
     public:
         Field();
         ~Field();
@@ -41,19 +37,12 @@ class Field {
         explicit Field(const DataTypes::DateTime& data, const column_index_t& columnIndex);
         
         explicit Field(const DataTypes::Decimal& data, const column_index_t& columnIndex);
-  
-        
+
+        explicit Field(const DataTypes::Guid& data, const column_index_t& columnIndex);
+
         [[nodiscard]] bool GetIsNull() const;
         
-        [[nodiscard]] const bool& GetIsNotConstant() const;
-        
         [[nodiscard]] const column_index_t& GetColumnIndex() const;
-        
-        [[nodiscard]] const ConditionType& GetConditionType() const;
-        
-        [[nodiscard]] const Operator& GetOperatorType() const;
-        
-        [[nodiscard]] const vector<Field>& GetChildren() const;
 
         [[nodiscard]] const ColumnType& GetType() const;
       
@@ -74,6 +63,8 @@ class Field {
         void SetData(const DataTypes::Decimal& data);
       
         void SetData(const DataTypes::DateTime& data);
+
+        void SetData(const DataTypes::Guid& data);
 
         [[nodiscard]] const block_size_t& GetSize() const;
 
@@ -98,8 +89,9 @@ class Field {
         [[nodiscard]] DataTypes::DateTime GetDateTime()const;
         
         [[nodiscard]] time_t GetUnixTimeStamp() const;
-  
-  
+
+        [[nodiscard]] DataTypes::Guid GetGuid()const;
+
         void SetColumnIndex(const Constants::column_index_t &columnIndex);
 
         void Validate(const Headers::ColumnHeader &header);

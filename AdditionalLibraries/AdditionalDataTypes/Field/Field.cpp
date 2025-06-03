@@ -82,6 +82,15 @@ Field::Field(const DataTypes::Decimal &data, const column_index_t &columnIndex){
     this->type = ColumnType::Decimal;
 }
 
+Field::Field(const DataTypes::Guid &data, const column_index_t &columnIndex){
+    this->size = data.Size();
+    this->data = new object_t[this->size];
+    memcpy(this->data, data.GetData().data(), this->size);
+
+    this->columnIndex = columnIndex;
+    this->type = ColumnType::Guid;
+}
+
 Field::Field(const string &data, const Constants::column_index_t& columnIndex)
 {
     this->size = data.size();
@@ -89,7 +98,6 @@ Field::Field(const string &data, const Constants::column_index_t& columnIndex)
     memcpy(this->data, data.data(), this->size);
     
     this->columnIndex = columnIndex;
-    this->conditionType = Constants::ConditionNone;
     this->type = ColumnType::String;
 }
 
@@ -100,15 +108,12 @@ Field::Field(const u16string &data, const Constants::column_index_t &columnIndex
     memcpy(this->data, data.data(), this->size);
     
     this->columnIndex = columnIndex;
-    this->conditionType = Constants::ConditionNone;
     this->type = ColumnType::UnicodeString;
 }
 
 Field::~Field() = default;
 
 bool Field::GetIsNull() const { return this->data == nullptr; }
-
-const bool & Field::GetIsNotConstant() const { return this->isNotConstant; }
 
 const Constants::column_index_t & Field::GetColumnIndex() const { return this->columnIndex;}
 
@@ -188,6 +193,16 @@ void Field::SetData(const DataTypes::DateTime &data) {
     this->type = ColumnType::DateTime;
 }
 
+void Field::SetData(const DataTypes::Guid &data){
+    delete this->data;
+
+    this->size = data.Size();
+    this->data = new object_t[this->size];
+    memcpy(this->data, data.GetData().data(), this->size);
+
+    this->type = ColumnType::Guid;
+}
+
 void Field::SetData(const DataTypes::Decimal &data) { 
     delete this->data;
     
@@ -220,13 +235,9 @@ DataTypes::DateTime Field::GetDateTime() const{ return DataTypes::DateTime(*rein
 
 time_t Field::GetUnixTimeStamp() const{ return *reinterpret_cast<time_t *>(this->data); }
 
+DataTypes::Guid Field::GetGuid() const{ return {this->data, this->size}; }
+
 void Field::SetColumnIndex(const Constants::column_index_t &columnIndex) { this->columnIndex = columnIndex; }
-
-const Constants::ConditionType& Field::GetConditionType() const { return this->conditionType; }
-
-const Constants::Operator& Field::GetOperatorType() const { return this->operatorType; }
-
-const vector<Field>& Field::GetChildren() const { return this->children; }
 
 const ColumnType & Field::GetType() const{ return this->type; }
 
@@ -274,6 +285,8 @@ void Field::Validate(const Headers::ColumnHeader &header){
       case ColumnType::Decimal:
 
           break;
+    case ColumnType::Guid:
+
       default:
       case ColumnType::ColumnTypeCount:
           throw invalid_argument("Invalid column type");

@@ -73,11 +73,13 @@ namespace DatabaseEngine::StorageTypes {
 
     int64_t Block::GetBigInt() const { return *reinterpret_cast<int64_t*>(this->data); }
 
-    string Block::GetString() const { return std::string(reinterpret_cast<char*>(this->data), this->size);}
+    string Block::GetString() const { return { reinterpret_cast<char*>(this->data), static_cast<size_t>(this->size / 2) };}
 
-    u16string Block::GetUnicodeString() const { return std::u16string(reinterpret_cast<char16_t*>(this->data), this->size / 2); }
+    u16string Block::GetUnicodeString() const { return { reinterpret_cast<char16_t*>(this->data), static_cast<size_t>(this->size / 2) }; }
 
     DataTypes::DateTime Block::GetDateTime() const { return DataTypes::DateTime(*reinterpret_cast<time_t*>(this->data)); }
+
+    DataTypes::Guid Block::GetGuid() const{  return { this->data, this->size }; }
 
     Pages::DataObjectPointer Block::GeObjectPointer() const { return *reinterpret_cast<Pages::DataObjectPointer*>(this->data); }
 
@@ -144,6 +146,8 @@ bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Field &f
             return block.GetBool() == field.GetBool();
         case ColumnType::DateTime:
             return block.GetDateTime() == field.GetDateTime();
+        case ColumnType::Guid:
+            return block.GetGuid() == field.GetGuid();
         case ColumnType::ColumnTypeCount:
         default:
             throw invalid_argument("invalid column type");
@@ -178,6 +182,8 @@ bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Field &fi
             return block.GetBool() > field.GetBool();
         case ColumnType::DateTime:
             return block.GetDateTime() >  field.GetDateTime();
+        case ColumnType::Guid:
+            return block.GetGuid() > field.GetGuid();
         case ColumnType::ColumnTypeCount:
         default:
             throw invalid_argument("invalid column type");

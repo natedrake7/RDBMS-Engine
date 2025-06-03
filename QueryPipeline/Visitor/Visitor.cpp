@@ -92,6 +92,12 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->getDate())
       return Field(DataTypes::DateTime::Now(), 0);
 
+    if (context->newGuid())
+      return Field(DataTypes::Guid(), 0);
+
+    if (context->NULL_())
+      return Field(nullptr, 0);
+
     throw invalid_argument("Invalid value specified");
   }
 
@@ -310,5 +316,9 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     statement->order = context->order ? context->order->getText() : "ASC";
 
     return statement;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitNewGuid(SQLParser::NewGuidContext *context){
+    return DataTypes::Guid::NewGuid();
   }
 }

@@ -92,16 +92,17 @@ int main()
 
     //create table
     const string createMoviesTable = "CREATE TABLE dbo.Movies ( "
-                                        "ID INT NOT NULL, "
+                                        "ID GUID NOT NULL, "
                                         "MovieName VARCHAR(800) NOT NULL, "
-                                        "MovieTemp VARCHAR(3500) NOT NULL, "
-                                        "MovieDesc VARCHAR(5000) NOT NULL, "
-                                        "MovieNewValue VARCHAR(MAX) NULL, "
-                                        "CONSTRAINT PK_Shows PRIMARY KEY (ID, MovieName)"
                                      ")";
 
     //create table
-    const string createActorsTable = "CREATE TABLE Actors ( ID INT PRIMARY KEY IDENTITY(1, 1) , ActorName VARCHAR(255) NULL, ActorDesc VARCHAR(MAX), ActorAge INT NOT NULL)";
+    const string createActorsTable = "CREATE TABLE Actors ( "
+                                     "ID INT PRIMARY KEY IDENTITY(1, 1) ,"
+                                     "ActorName VARCHAR(255) NULL, "
+                                     "ActorDesc VARCHAR(MAX),"
+                                     " ActorAge INT NOT NULL"
+                                     ")";
 
     const string createDb = "CREATE DATABASE MoviesDb";
 
@@ -113,13 +114,13 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-//    QueryPipeline::Parser::Parse(createDb, databaseId);
-////
-//    QueryPipeline::Parser::Parse(createActorsTable, databaseId);
+//     QueryPipeline::Parser::Parse(createDb, databaseId);
+// //
+//     QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 //
-    QueryPipeline::Parser::Parse(insertActors, databaseId);
-////
-    QueryPipeline::Parser::Parse(selectActors, databaseId);
+//     QueryPipeline::Parser::Parse(insertActors, databaseId);
+// ////
+//     QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     const auto& databases = server.GetCatalog();
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);

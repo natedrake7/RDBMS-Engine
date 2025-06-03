@@ -143,7 +143,7 @@ namespace Indexing
 
         void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result, Expressions::Expression* expression);
 
-        void IndexScanUpdate(Expressions::Expression* expression, const vector<Field> & updates);
+        void IndexScanUpdate(const Expressions::Expression* expression, const vector<Field> & updates);
 
         void IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates);
 
