@@ -40,7 +40,6 @@ namespace QueryPipeline {
       if (expression != nullptr)
         expression->GetColumns(expressionColumns);
 
-
     for (const auto& index: indexes) {
         const auto indexHeader = Server::ServerInstance::Get().SelectIndexById(index.id);
 

@@ -95,7 +95,7 @@ public:
   Pages::GlobalAllocationMapPage *CreateGlobalAllocationMapPage(const string &filename, const Constants::page_id_t &pageId);
   Pages::GlobalAllocationMapPage *GetGlobalAllocationMapPage(const string& filename, const Constants::page_id_t &pageId);
   Pages::IndexAllocationMapPage *CreateIndexAllocationMapPage(const string& filename, const Constants::table_id_t &tableId, const Constants::page_id_t &pageId,const Constants::extent_id_t &startingExtentId);
-  Pages::IndexAllocationMapPage *GetIndexAllocationMapPage(const string& filename, const Constants::page_id_t &pageId);
+  Pages::IndexAllocationMapPage *GetIndexAllocationMapPage(const string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::PageFreeSpacePage *CreatePageFreeSpacePage(const string &filename, const Constants::page_id_t &pageId);
   Pages::PageFreeSpacePage * GetPageFreeSpacePage(const string& filename, const Constants::page_id_t &pageId);
   Pages::IndexPage *CreateIndexPage(const string& filename, const Constants::page_id_t &pageId);

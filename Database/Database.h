@@ -122,7 +122,7 @@ public:
 
     void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
 
-    void CreateTable(const Headers::sysTable& sysHeader, const StorageTypes::TableHeader &tableHeader, const Headers::Index& primaryKey);
+    void CreateTable(const Headers::sysTable& sysHeader, const StorageTypes::TableHeader &tableHeader, const Headers::Index& primaryKey, const int& ordinalPosition);
 
 //    [[nodiscard]] StorageTypes::Table *OpenTable(const string& schemaName, const string &tableName) const;
 
@@ -140,7 +140,7 @@ public:
 
     Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
 
-    Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId);
+    Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId)const;
 
     Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId);
 

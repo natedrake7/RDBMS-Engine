@@ -73,7 +73,7 @@ namespace DatabaseEngine::StorageTypes {
 
     int64_t Block::GetBigInt() const { return *reinterpret_cast<int64_t*>(this->data); }
 
-    string Block::GetString() const { return { reinterpret_cast<char*>(this->data), static_cast<size_t>(this->size / 2) };}
+    string Block::GetString() const { return { reinterpret_cast<char*>(this->data), static_cast<size_t>(this->size) };}
 
     u16string Block::GetUnicodeString() const { return { reinterpret_cast<char16_t*>(this->data), static_cast<size_t>(this->size / 2) }; }
 

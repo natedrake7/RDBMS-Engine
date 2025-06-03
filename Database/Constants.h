@@ -5,6 +5,8 @@
 #include "../AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
 #include "../AdditionalLibraries/Dictionary/Dictionary.h"
 
+#include <limits>
+
 namespace Constants
 {
     constexpr size_t PAGE_SIZE = 8 * 1024;
@@ -31,6 +33,8 @@ namespace Constants
     typedef int16_t page_size_t;
     typedef uint16_t page_offset_t;
     typedef uint16_t large_page_index_t;
+
+    constexpr page_id_t INVALID_PAGE_ID = std::numeric_limits<page_id_t>::max();
 
     enum OrderType : uint8_t {
         ASCENDING = 0,

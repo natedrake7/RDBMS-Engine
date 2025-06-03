@@ -196,21 +196,12 @@ void StorageManager::OpenExtent(const string& filename, const extent_id_t &exten
 
     page->GetPageDataFromFile(buffer, table, offSet, file);
 
-    if(pageHeader.pageType == PageType::IAM)
-    {
-      this->systemPageList.push_front(page);
+    this->pageList.push_front(page);
 
-      const auto key = filename + to_string(pageHeader.pageId);
-      this->systemCache[key] = this->systemPageList.begin();
-    }
-    else 
-    {
-      this->pageList.push_front(page);
+    const auto key = filename + to_string(page->GetPageId());
 
-      const auto key = filename + to_string(page->GetPageId());
+    this->cache[key] = this->pageList.begin();
 
-      this->cache[key] = this->pageList.begin();
-    }
     page->SetFileName(filename);
 
   }
@@ -251,7 +242,7 @@ IndexAllocationMapPage *StorageManager::CreateIndexAllocationMapPage(
   IndexAllocationMapPage *page = new IndexAllocationMapPage(tableId, pageId, startingExtentId);
   page->SetDirty();
   
-  this->MovePageToFrontOfSystemList(page, pageId, filename);
+  this->MovePageToFrontOfList(page, pageId, filename);
 
   return page;
 }
@@ -299,9 +290,9 @@ bool StorageManager::IsCacheFull() const
   return this->pageList.size() == MAX_NUMBER_OF_PAGES;
 }
 
-IndexAllocationMapPage *StorageManager::GetIndexAllocationMapPage(const string& filename, const page_id_t &pageId)
+IndexAllocationMapPage *StorageManager::GetIndexAllocationMapPage(const string& filename, const page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table)
 {
-  return dynamic_cast<IndexAllocationMapPage *>(this->GetSystemPage(filename, pageId));
+  return dynamic_cast<IndexAllocationMapPage *>(this->GetPage(filename, pageId, extentId, table));
 }
 
 GlobalAllocationMapPage *StorageManager::GetGlobalAllocationMapPage(const string& filename, const page_id_t &pageId)

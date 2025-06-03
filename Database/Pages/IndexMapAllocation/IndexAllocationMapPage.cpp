@@ -115,7 +115,7 @@ namespace Pages {
     {
         this->tableId = 0;
         this->startingExtentId = 0;
-        this->nextPageId = 0;
+        this->nextPageId = INVALID_PAGE_ID;
     }
 
     IndexAllocationPageAdditionalHeader::IndexAllocationPageAdditionalHeader(const table_id_t &tableId, const extent_id_t &extentId, const page_id_t& nextPageId)

@@ -69,7 +69,7 @@ namespace DatabaseEngine {
                                 ? table->GetNonClusteredIndexId(nonClusteredIndexId)
                                 : 0;
 
-        if(indexPageId == 0)
+        if(indexPageId == INVALID_PAGE_ID)
         {
             IndexPage* newIndexPage = this->CreateIndexPage(tableId, indexId);
             
@@ -80,7 +80,9 @@ namespace DatabaseEngine {
             return newIndexPage;
         }
 
-        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId);
+        const auto extentId = Database::CalculateExtentIdByPageId(tableHeader.indexAllocationMapPageId);
+
+        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId, extentId, table);
         
         vector<extent_id_t> allocatedExtents;
         indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);

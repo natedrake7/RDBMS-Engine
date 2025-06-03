@@ -162,7 +162,7 @@ namespace DatabaseEngine
                 index.columns.push_back(j);
           }
 
-          this->CreateTable(tables[i], headerPageTables[i], index);
+          this->CreateTable(tables[i], headerPageTables[i], index, i);
         }
     }
 
@@ -230,9 +230,9 @@ namespace DatabaseEngine
         this->tables.push_back(table);
     }
 
-    void Database::CreateTable(const Headers::sysTable &sysHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey)
+    void Database::CreateTable(const Headers::sysTable &sysHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey, const int& ordinalPosition)
     {
-        auto *table = new Table(sysHeader, tableHeader, primaryKey, this);
+        auto *table = new Table(sysHeader, tableHeader, primaryKey, this, ordinalPosition);
 
         for (int i = 0;i < sysHeader.columns.size(); i++)
             table->AddColumn(new Column(sysHeader.columns[i], i,  table));
@@ -275,7 +275,9 @@ namespace DatabaseEngine
 
         const auto& tableHeader = table->GetTableHeader();
 
-        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId);
+        const auto extentId = Database::CalculateExtentIdByPageId(tableHeader.indexAllocationMapPageId);
+
+        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId, extentId, table);
 
         if (indexAllocationMapPage == nullptr)
         {
@@ -397,11 +399,13 @@ namespace DatabaseEngine
     {
         Table *table = this->tables.at(tableId);
 
-        page_id_t indexAllocationMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+        auto indexAllocationMapPageId = table->GetTableHeader().indexAllocationMapPageId;
 
-        while (indexAllocationMapPageId != 0)
+        while (indexAllocationMapPageId != INVALID_PAGE_ID)
         {
-            const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId);
+            const auto iamExtentId = Database::CalculateExtentIdByPageId(indexAllocationMapPageId);
+
+            const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, iamExtentId, table);
 
             vector<extent_id_t> allocatedExtents;
             tableMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -429,7 +433,7 @@ namespace DatabaseEngine
             }
         }
 
-        table->SetIndexAllocationMapPageId(0);
+        table->UpdateIndexAllocationMapPageId(INVALID_PAGE_ID);
     }
 
     OverflowPage *Database::CreateOverflowPage(const table_id_t &tableId)
@@ -515,7 +519,11 @@ namespace DatabaseEngine
         if (tableId >= this->tables.size())
             return false;
 
-        const page_id_t &indexAllocationMapPageId = this->tables[tableId]->GetTableHeader().indexAllocationMapPageId;
+        auto* table = this->tables[tableId];
+
+        const page_id_t& indexAllocationMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+
+        const auto extentId = Database::CalculateExtentIdByPageId(indexAllocationMapPageId);
 
         *pageFreeSpacePage = StorageManager::Get().GetPageFreeSpacePage(this->systemFilename, this->header.lastPageFreeSpacePageId);
 
@@ -523,8 +531,9 @@ namespace DatabaseEngine
         {
             gamPage = StorageManager::Get().CreateGlobalAllocationMapPage(this->systemFilename, gamPage->GetPageId() + GAM_NUMBER_OF_PAGES);
 
+
             // get the last iam page always
-            IndexAllocationMapPage *previousTableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId);
+            IndexAllocationMapPage *previousTableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, extentId, table);
 
             *newExtentId = gamPage->AllocateExtent();
 
@@ -543,7 +552,7 @@ namespace DatabaseEngine
             *newPageId = Database::CalculateSystemPageOffsetByExtentId(*newExtentId);
         }
 
-        const bool isFirstExtent = indexAllocationMapPageId == 0;
+        const bool isFirstExtent = indexAllocationMapPageId == INVALID_PAGE_ID;
         if (isFirstExtent && tableMapPage == nullptr)
         {
             tableMapPage = StorageManager::Get().CreateIndexAllocationMapPage(this->filename, tableId, *newPageId, *newExtentId);
@@ -553,7 +562,7 @@ namespace DatabaseEngine
             this->tables[tableId]->UpdateIndexAllocationMapPageId(*newPageId);
         }
         else
-            tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId);
+            tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, extentId, table);
 
         tableMapPage->SetAllocatedExtent(*newExtentId, gamPage);
 
@@ -586,17 +595,21 @@ namespace DatabaseEngine
         return this->tables[tableId];
     }
 
-    LargeDataPage *Database::GetTableLastLargeDataPage(const table_id_t &tableId)
+    LargeDataPage *Database::GetTableLastLargeDataPage(const table_id_t &tableId)const
     {
         if (tableId >= this->tables.size())
             return nullptr;
 
-        const auto& tableMapPageId = this->tables[tableId]->GetTableHeader().indexAllocationMapPageId;
+        const auto* table = this->tables[tableId];
 
-        if(tableMapPageId == 0)
+        const auto& tableMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+
+        if(tableMapPageId == INVALID_PAGE_ID)
             return nullptr;
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId);
+        const auto iamExtentId = Database::CalculateExtentIdByPageId(tableMapPageId);
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, iamExtentId, table);
         LargeDataPage *lastLargeDataPage = nullptr;
 
         vector<extent_id_t> allocatedExtents;
@@ -633,10 +646,12 @@ namespace DatabaseEngine
 
         const auto& tableMapPageId = table->GetTableHeader().indexAllocationMapPageId;
 
-        if(tableMapPageId == 0)
+        if(tableMapPageId == INVALID_PAGE_ID)
             return nullptr;
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId);
+        const auto iamExtentId = Database::CalculateExtentIdByPageId(tableMapPageId);
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, iamExtentId, table);
         OverflowPage *lastOverflowPage = nullptr;
 
         vector<extent_id_t> allocatedExtents;

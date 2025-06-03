@@ -24,8 +24,8 @@ namespace DatabaseEngine::StorageTypes{
     Database * Table::GetDatabase() const { return this->database; }
 
     void Table::SetClusteredIndexPageId(const page_id_t &indexPageId) 
-    { 
-        this->header.clusteredIndexPageId = indexPageId; 
+    {
+        this->header.clusteredIndexPageId = indexPageId;
     }
 
     const page_id_t & Table::GetClusteredIndexPageId() const { return this->header.clusteredIndexPageId; }
@@ -36,9 +36,7 @@ namespace DatabaseEngine::StorageTypes{
 
     const uint8_t & Table::GetNonClusteredIndexId(const int & indexPosition) const { return this->header.nonClusteredIndexesIds.at(indexPosition); }
 
-    void Table::SetIndexAllocationMapPageId(const page_id_t & pageId) { this->header.indexAllocationMapPageId = pageId; }
-
-    void Table::CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex)  
+    void Table::CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex)
     {
         block->SetData(nullptr, 0);
         row->SetNullBitMapValue(associatedColumnIndex, true);

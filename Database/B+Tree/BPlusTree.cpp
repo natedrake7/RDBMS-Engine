@@ -168,7 +168,7 @@ namespace Indexing
         if (this->root == nullptr)
         {
             //maybe root page is removed and need to be reopened
-            this->root = this->AllocateNewPage(0);
+            this->root = this->AllocateNewPage(INVALID_PAGE_ID);
 
             this->root->SetIsRoot(true);
             this->root->SetIsLeaf(true);

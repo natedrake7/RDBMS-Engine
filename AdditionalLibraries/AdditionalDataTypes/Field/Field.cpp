@@ -286,7 +286,7 @@ void Field::Validate(const Headers::ColumnHeader &header){
 
           break;
     case ColumnType::Guid:
-
+        break;
       default:
       case ColumnType::ColumnTypeCount:
           throw invalid_argument("Invalid column type");

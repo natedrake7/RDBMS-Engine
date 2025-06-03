@@ -278,10 +278,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     db->CreateTable(this->table->name, this->table->schema, index, columnsPtrs, &this->primaryKey);
 
     const auto tableResult = Server::ServerInstance::Get().InsertTableToMasterDb(
-            this->databaseId,
-            this->table->schemaId,
-   this->table->name,
-  index);
+        this->databaseId,
+        this->table->schemaId,
+        this->table->name,
+        index);
 
     Dictionary<int, int32_t> columnIdsDict;
 
@@ -308,6 +308,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
       primaryKeyColumnIds.push_back(columnIdsDict.Get(column));
     }
+
+    if (primaryKeyColumnIds.empty())
+        return nullptr;
 
     const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
       tableResult.primaryKeyVal,

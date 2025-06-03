@@ -71,4 +71,8 @@
     "unordered_set": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
+  "vcpkg.target.useManifest": false,
+  "cmake.configureArgs": [
+    "-DVCPKG_MANIFEST_MODE=OFF"
+  ],
 }

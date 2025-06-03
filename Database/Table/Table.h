@@ -124,7 +124,12 @@ namespace DatabaseEngine::StorageTypes
 
             Table(const std::string& tableName, const TableHeader &tableHeader, DatabaseEngine::Database *database);
 
-            Table(const Headers::sysTable& systemHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey, DatabaseEngine::Database *database);
+            Table(
+                const Headers::sysTable& systemHeader,
+                const TableHeader &tableHeader,
+                const Headers::Index& primaryKey,
+                DatabaseEngine::Database *database,
+                const int& ordinalPosition);
 
             ~Table();
 
@@ -195,6 +200,8 @@ namespace DatabaseEngine::StorageTypes
 
             void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
 
+            void SetIndexAllocationMapPageIdNull();
+
             [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;
 
             void AddColumn(Column *column);
@@ -222,8 +229,6 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] const page_id_t& GetNonClusteredIndexPageId( const int& indexPosition) const;
 
             [[nodiscard]] const uint8_t& GetNonClusteredIndexId( const int& indexPosition) const;
-
-            void SetIndexAllocationMapPageId(const page_id_t& pageId);
 
             Indexing::BPlusTree* GetClusteredIndexedTree();
 

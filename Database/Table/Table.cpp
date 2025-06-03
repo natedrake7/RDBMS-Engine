@@ -30,10 +30,11 @@ using namespace Constants;
 namespace DatabaseEngine::StorageTypes {
       TableHeader::TableHeader() 
       {
-        this->indexAllocationMapPageId = 0;
+        this->indexAllocationMapPageId = INVALID_PAGE_ID;
         this->tableId = 0;
         this->numberOfColumns = 0;
-        this->clusteredIndexPageId = 0;
+        this->clusteredIndexPageId = INVALID_PAGE_ID;
+        this->ordinalPosition = 0;
       }
 
       TableHeader::~TableHeader() = default;
@@ -43,9 +44,11 @@ namespace DatabaseEngine::StorageTypes {
         if (this == &tableHeader)
           return *this;
 
-        this->indexAllocationMapPageId = tableHeader.indexAllocationMapPageId;
         this->numberOfColumns = tableHeader.numberOfColumns;
         this->tableId = tableHeader.tableId;
+
+
+        this->indexAllocationMapPageId = tableHeader.indexAllocationMapPageId;
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
         this->nonClusteredIndexPageIds = tableHeader.nonClusteredIndexPageIds;
         this->nonClusteredIndexesIds = tableHeader.nonClusteredIndexesIds;
@@ -100,11 +103,18 @@ namespace DatabaseEngine::StorageTypes {
         this->clusteredIndexedTree = nullptr;
       }
 
-      Table::Table(const Headers::sysTable &systemHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey, DatabaseEngine::Database *database){
+      Table::Table(
+        const Headers::sysTable &systemHeader,
+        const TableHeader &tableHeader,
+        const Headers::Index& primaryKey,
+        DatabaseEngine::Database *database,
+        const int& ordinalPosition){
+
         this->header = tableHeader;
         this->header.clusteredIndex = primaryKey;
         this->database = database;
         this->header.tableId = systemHeader.id;
+        this->header.ordinalPosition = ordinalPosition;
         this->clusteredIndexedTree = nullptr;
       }
 
@@ -385,9 +395,14 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::HeapDelete(const Expressions::Expression* expression) const
     {
+        if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return;
+
         const auto& filename = this->database->GetFileName();
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
+        const auto extentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, extentId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -550,12 +565,14 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const
     {
-        if(this->header.indexAllocationMapPageId == 0)
+        if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
             return;
 
         const auto& filename = this->database->GetFileName();
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
+        const auto extentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, extentId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -621,18 +638,23 @@ namespace DatabaseEngine::StorageTypes {
     AdditionalDataTypes::ResultStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, page_id_t *rowPageId, int *rowIndex){
       const auto& filename = this->database->GetFileName();
 
-      const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
-
       while(row->GetTotalRowSize() > PAGE_SIZE - PageHeader::GetPageHeaderSize())
         this->HandleRowOverflow(row);
 
-      if (tableMapPage == nullptr)
+      if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
       {
           Page *newPage = this->database->CreateDataPage(this->header.ordinalPosition);
+
           newPage->InsertRow(row, rowIndex);
+
           *rowPageId = newPage->GetPageId();
+
           return {};
       }
+
+      const auto extentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+
+      const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, extentId, this);
 
       tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
       lastExtentIndex = allocatedExtents.size() - 1;
@@ -682,12 +704,14 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
-        if(this->header.indexAllocationMapPageId == 0)
+        if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
         const auto& filename = this->database->GetFileName();
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId);
+        const auto extentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, extentId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
