@@ -524,6 +524,16 @@ namespace Server {
         .name = dbName,
         .filepath = data[2]->GetString(),
         .isSystem = data[3]->GetBool(),
+        .additionalInfo = {
+          .createdAt = data[4]->GetDateTime(),
+          .lastModified = data[5]->GetDateTime(),
+          .lastModifiedBy = data[6]->GetString(),
+          .version = data[7]->GetInt(),
+          .isDeleted = data[8]->GetBool(),
+          .deletedAt = data[9]->GetBlockData() == nullptr
+                    ? DataTypes::DateTime()
+                    : data[9]->GetDateTime(),
+        },
         .tables = std::move(dbTables),
         .schemas = std::move(schemas)
       });

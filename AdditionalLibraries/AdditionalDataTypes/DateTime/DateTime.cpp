@@ -169,6 +169,12 @@ namespace DataTypes
 		if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 || hour < 0 || hour >= 24 || minute < 0 || minute >= 60 || second < 0 || second >= 60)
 			throw invalid_argument("Invalid date/time components.");
 	}
+
+	ostream & operator<<(ostream &os, const DateTime &datetime){
+		os << datetime.ToString();
+		return os;
+	}
+
 }
 
 bool operator!=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {

@@ -113,18 +113,16 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
-    auto guid = DataTypes::Guid::Parse("3664b595-e9e6-468f-bff5-cd188929a77a");
-
-    const bool isGuidValid = guid.ToString() == "3664b595-e9e6-468f-bff5-cd188929a77a";
-
-    cout << isGuidValid << endl;
-
      // QueryPipeline::Parser::Parse(createDb, databaseId);
      // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
     // QueryPipeline::Parser::Parse(insertActors, databaseId);
     // QueryPipeline::Parser::Parse(selectActors, databaseId);
 
+    auto decimal = DataTypes::Decimal("12.2250");
+    auto anotherDecimal = DataTypes::Decimal("125.22570");
+
+    cout << decimal + anotherDecimal << endl;
 
     // QueryPipeline::Parser::Parse(insertMovies, databaseId);
     // QueryPipeline::Parser::Parse(selectMovies, databaseId);
@@ -137,7 +135,6 @@ int main()
 // ////
 //     QueryPipeline::Parser::Parse(selectActors, databaseId);
 
-    const auto& databases = server.GetCatalog();
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);
     const auto end = std::chrono::high_resolution_clock::now();
 
@@ -145,6 +142,9 @@ int main()
 
     cout << "Time: " << elapsed.count() << " ms" << endl;
 
+    const auto& databases = server.GetCatalog();
+
+    cout << databases[0].additionalInfo.createdAt << endl;
     ServerInstance::Get().Shutdown();
 
     return 0;

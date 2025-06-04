@@ -12,6 +12,7 @@ namespace DataTypes {
 
     protected:
         static fraction_index_t GetFractionIndex(const string& value);
+
     
     public:
         Decimal();
@@ -30,6 +31,33 @@ namespace DataTypes {
         [[nodiscard]] int GetRawDataSize() const;
 
         [[nodiscard]] const vector<Constants::byte>& GetData() const;
+
+        [[nodiscard]] static Constants::byte CreateSignAndFractionByte(const bool& isPositive, const fraction_index_t& fractionIndex) ;
+
+        static Decimal Add(
+            const std::vector<Constants::byte>& left,
+            const std::vector<Constants::byte>& right,
+            const fraction_index_t& leftFractionIndex,
+            const fraction_index_t& rightFractionIndex,
+            const fraction_index_t& fractionIndex,
+            const bool& isPositive);
+
+        static int FractionalAdd(
+                const std::vector<Constants::byte>& left,
+                const std::vector<Constants::byte>& right,
+                const fraction_index_t& leftFractionIndex,
+                const fraction_index_t& rightFractionIndex,
+                std::vector<Constants::byte>& result);
+
+        static Decimal Subtract(
+            const std::vector<Constants::byte>& left,
+            const std::vector<Constants::byte>& right,
+            const fraction_index_t& fractionIndex,
+            const bool& isPositive);
+
+        [[nodiscard]] static bool IsGreaterMagnitude(const std::vector<Constants::byte>& left, const std::vector<Constants::byte>& right);
+
+        friend ostream& operator<<(ostream& os, const Decimal& decimal);
     };
 
     static int CompareDecimals(const vector<Constants::byte>& largerData, const int& startingIndex);

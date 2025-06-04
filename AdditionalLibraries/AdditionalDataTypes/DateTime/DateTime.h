@@ -40,6 +40,8 @@ namespace DataTypes {
 		[[nodiscard]] const time_t& GetUnixTimeStamp()const;
 
 		static bool ValidateDate(const DateTime& datetime);
+
+		friend ostream& operator<<(ostream& os, const DateTime& datetime);
 	};
 }
 
