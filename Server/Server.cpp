@@ -1210,7 +1210,7 @@ namespace Server {
       if (primaryKey.empty())
         throw runtime_error("All tables in masterDb must have a primary key");
 
-      Headers::Index index(primaryKey, 1, 1);
+      Headers::Index index(primaryKey, 1, 1, 10000);
 
       if(index.columns.size() > 1){
         index.seed = -1;

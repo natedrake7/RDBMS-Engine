@@ -273,7 +273,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     const auto schemas = Server::ServerInstance::Get().SelectSchemas(this->databaseId);
 
-    const auto& index = tables.empty() ? 0 : tables[tables.size() - 1].id + 1;
+    const int16_t& index = tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1;
 
     db->CreateTable(this->table->name, this->table->schema, index, columnsPtrs, &this->primaryKey);
 

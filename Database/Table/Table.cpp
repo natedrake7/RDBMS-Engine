@@ -920,6 +920,10 @@ namespace DatabaseEngine::StorageTypes {
       pageFreeSpacePage->SetPageMetaData(page);
     }
 
+    void Table::UpdateClusteredIndexIdentityColumn()const{
+        Server::ServerInstance::Get().UpdateIdentityByTableId(this->header.tableId, static_cast<int32_t>(this->header.clusteredIndex.lastValue));
+    }
+
 
     AdditionalDataTypes::ResultStatus Table::NonClusteredIndexInsert(const StorageTypes::Row *row, const int & nonClusteredIndexId, const vector<column_index_t> & indexedColumns, const BPlusTreeNonClusteredData & data){
 
@@ -991,6 +995,9 @@ namespace DatabaseEngine::StorageTypes {
         this->header.clusteredIndex.lastValue += this->header.clusteredIndex.incrementFactor;
 
         row->InsertColumnData(block, columnIndex);
+
+        if (this->header.clusteredIndex.startingValue + this->header.clusteredIndex.cacheBlock < primaryKeyValue )
+          this->UpdateClusteredIndexIdentityColumn();
       }
 
       for(auto& nonClusteredIndexes: this->header.nonClusteredIndexes){
@@ -1028,10 +1035,11 @@ namespace DatabaseEngine::StorageTypes {
       this->header.clusteredIndex.incrementFactor = identityHeaders.begin()->increment;
       this->header.clusteredIndex.lastValue = identityHeaders.begin()->lastValue;
       this->header.clusteredIndex.cacheBlock = identityHeaders.begin()->cacheBlock;
+      this->header.clusteredIndex.startingValue = identityHeaders.begin()->lastValue;
     }
 
     void Table::UpdateMasterDatabase() const{
-      Server::ServerInstance::Get().UpdateIdentityByTableId(this->header.tableId, static_cast<int32_t>(this->header.clusteredIndex.lastValue));
+      this->UpdateClusteredIndexIdentityColumn();
     }
 
 }

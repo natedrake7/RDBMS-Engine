@@ -4,7 +4,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
 #include "Database/Column/Column.h"
 #include "Database/Constants.h"
 #include "Database/Storage/StorageManager/StorageManager.h"
@@ -84,7 +83,7 @@ int main()
     const string selectMovies = "SELECT * FROM dbo.Movies";
 
     //insert statement
-    const string insertActors = "INSERT INTO dbo.Actors(ActorName, ActorDesc, ActorAge) VALUES('Robert Kirkman', 'kalispera', 43)";
+    const string insertActors = "INSERT INTO dbo.Actors(ActorName, ActorDesc, ActorAge) VALUES('Henry Cavill', 'kalispera', 43)";
 
     const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName) VALUES(NEWID(), 'Batman: The Dark Knight')";
 
@@ -114,10 +113,21 @@ int main()
 
     const auto start = std::chrono::high_resolution_clock::now();
 
+    auto guid = DataTypes::Guid::Parse("3664b595-e9e6-468f-bff5-cd188929a77a");
+
+    const bool isGuidValid = guid.ToString() == "3664b595-e9e6-468f-bff5-cd188929a77a";
+
+    cout << isGuidValid << endl;
+
      // QueryPipeline::Parser::Parse(createDb, databaseId);
      // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
-     QueryPipeline::Parser::Parse(insertMovies, databaseId);
-        QueryPipeline::Parser::Parse(selectMovies, databaseId);
+    // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
+    // QueryPipeline::Parser::Parse(insertActors, databaseId);
+    // QueryPipeline::Parser::Parse(selectActors, databaseId);
+
+
+    // QueryPipeline::Parser::Parse(insertMovies, databaseId);
+    // QueryPipeline::Parser::Parse(selectMovies, databaseId);
 
 // //
 

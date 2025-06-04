@@ -142,6 +142,7 @@ namespace QueryPipeline {
       index.seed = this->autoIncrementKey->seed;
       index.incrementFactor = this->autoIncrementKey->incrementFactor;
       index.lastValue = this->autoIncrementKey->seed;
+      index.cacheBlock = 10000;
     }
 
     return new PhysicalPlan::PhysicalTableCreate(this->databaseId, this->table, this->columns, index, this->constraintName);

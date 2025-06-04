@@ -93,7 +93,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
       return Field(DataTypes::DateTime::Now(), 0);
 
     if (context->newGuid())
-      return Field(DataTypes::Guid(), 0);
+      return Field(DataTypes::Guid::NewGuid(), 0);
 
     if (context->NULL_())
       return Field(nullptr, 0);

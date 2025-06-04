@@ -63,14 +63,9 @@ namespace DatabaseEngine::StorageTypes
         vector<page_id_t> nonClusteredIndexPageIds;
         vector<uint8_t> nonClusteredIndexesIds;
 
-        // ByteMaps::BitMap *columnsNullBitMap;
-
         // bitmaps to store the composite key
         Headers::Index clusteredIndex;
         vector<Headers::Index> nonClusteredIndexes;
-        // ByteMaps::BitMap *clusteredIndexesBitMap;
-        // vector<ByteMaps::BitMap*> nonClusteredIndexesBitMap;
-        //
 
         TableHeader();
         ~TableHeader();
@@ -109,6 +104,8 @@ namespace DatabaseEngine::StorageTypes
 
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
+
+            void UpdateClusteredIndexIdentityColumn()const;
 
         public:
             Table(
@@ -199,8 +196,6 @@ namespace DatabaseEngine::StorageTypes
             void Truncate();
 
             void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
-
-            void SetIndexAllocationMapPageIdNull();
 
             [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;
 

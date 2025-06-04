@@ -138,17 +138,20 @@ namespace Headers {
     vector<uint8_t> columns;
     int32_t seed;
     int32_t incrementFactor;
+    int64_t startingValue;
     int64_t lastValue;
     int64_t cacheBlock;
 
-    Index(vector<uint8_t>& columns, const int32_t& seed, const int32_t& incrementFactor)
-      : columns(std::move(columns)), seed(seed), incrementFactor(incrementFactor), lastValue(seed) {}
+    Index(vector<uint8_t>& columns, const int32_t& seed, const int32_t& incrementFactor, const int64_t& cacheBlock)
+      : columns(std::move(columns)), seed(seed), incrementFactor(incrementFactor), lastValue(seed), cacheBlock(cacheBlock), startingValue(seed) {}
 
     Index(){
       this->seed = -1;
       this->incrementFactor = -1;
 //      this->columns.emplace_back(0);
       this->lastValue = -1;
+      this->cacheBlock = -1;
+      this->startingValue = -1;
     }
   };
 }
