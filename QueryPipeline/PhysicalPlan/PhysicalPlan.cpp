@@ -278,7 +278,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     const int16_t& index = tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1;
 
-    db->CreateTable(index, columnsPtrs, &this->primaryKey);
+    auto* tablePtr = db->CreateTable(index, columnsPtrs, &this->primaryKey);
 
     const auto tableResult = Server::ServerInstance::Get().InsertTableToMasterDb(
         this->databaseId,
@@ -356,6 +356,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         primaryKeyColumnIds[i],
     this->primaryKey.columns[i]);
     }
+
+    tablePtr->GetColumnsHeaders();
+    tablePtr->GetIdentityColumns();
 
     return nullptr;
   }

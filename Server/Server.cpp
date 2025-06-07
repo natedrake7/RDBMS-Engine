@@ -1228,18 +1228,24 @@ namespace Server {
 
         const auto columnType = ColumnTypesDictionary.Get(normalizedColumnType);
 
-        columns.push_back(new Column(column.name, columnType, columnSize, j, column.nullable));
-
         for (const auto& key: table.primaryKey) {
           if (column.name != key)
             continue;
 
           primaryKey.push_back(j);
         }
+
+        columns.push_back(new Column(column.name, columnType, columnSize, j, column.nullable));
       }
 
       if (primaryKey.empty())
         throw runtime_error("All tables in masterDb must have a primary key");
+
+      if (primaryKey.size() == 1) {
+        auto* columnPtr = columns.at(primaryKey[0]);
+
+        columnPtr->SetIdentity(Headers::IdentityColumnsHeader(-1, columnPtr->GetColumnIndex(), 1, 1, 1, true, 10000));
+      }
 
       Headers::Index index(primaryKey);
       this->masterDb->CreateTable(i, columns, &index);

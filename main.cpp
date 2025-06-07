@@ -43,6 +43,7 @@ void InsertRowsToMoviesTable(Table* table);
 //add order by statements full support (minor just add ASC, DESC on each column or on all)
 //and check if index index is available in the results to speed by sorting
 //check why master db doesnt detect the constraints correctly.
+//add tables to retrieve non clustered indexes
 
 std::atomic<bool> serverRunning{true};
 
@@ -115,7 +116,6 @@ int main()
      // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
     // QueryPipeline::Parser::Parse(updateActors, databaseId);
-    // QueryPipeline::Parser::Parse(actorsIndex, databaseId);
 
     // QueryPipeline::Parser::Parse(insertMovies, databaseId);
     // QueryPipeline::Parser::Parse(selectMovies, databaseId);
@@ -124,8 +124,9 @@ int main()
 
 //     QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 //
-//     QueryPipeline::Parser::Parse(insertActors, databaseId);
+     // QueryPipeline::Parser::Parse(insertActors, databaseId);
 // ////
+    // QueryPipeline::Parser::Parse(actorsIndex, databaseId);
      QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);

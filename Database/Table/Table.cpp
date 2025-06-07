@@ -664,7 +664,7 @@ namespace DatabaseEngine::StorageTypes {
       {
           Page *newPage = this->database->CreateDataPage(this->header.ordinalPosition);
 
-          newPage->InsertRow(row, rowId->indexId);
+          newPage->InsertRow(row, &rowId->indexId);
           rowId->pageId = newPage->GetPageId();
 
           return {};
@@ -1038,10 +1038,10 @@ namespace DatabaseEngine::StorageTypes {
         int64_t primaryKeyValue = 0;
 
         for (const auto& column: this->columns) {
-            auto& identity = column->GetIdentity();
+          auto& identity = column->GetIdentity();
 
-            if (identity.columnId == -1)
-              continue;
+          if (identity.columnId == -1)
+            continue;
 
           const auto& columnSize = column->GetColumnSize();
 

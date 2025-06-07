@@ -152,15 +152,6 @@ namespace Pages
                 offSet += sizeof(page_id_t);
             }
 
-            for (int j = 0; j < numberOfNonClusteredIndexes; j++)
-            {
-                // uint8_t indexId = 0;
-                // memcpy(&indexId, data.data() + offSet, sizeof(uint8_t));
-                //
-                // tableHeader.nonClusteredIndexesIds.push_back(indexId);
-                offSet += sizeof(uint8_t);
-            }
-
             this->tablesHeaders.push_back(tableHeader);
         }
     }
