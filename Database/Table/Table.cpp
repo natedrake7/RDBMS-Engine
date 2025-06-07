@@ -62,13 +62,11 @@ namespace DatabaseEngine::StorageTypes {
       }
 
       Table::Table(
-        const string &tableName,
-        const std::string& schema,
         const table_id_t &tableId,
         const vector<Column *> &columns,
         DatabaseEngine::Database *database,
-        Headers::Index* clusteredIndex,
-        vector<Headers::Index> *nonClusteredIndexes)
+        const Headers::Index* clusteredIndex,
+        const vector<Headers::Index> *nonClusteredIndexes)
       {
 //        this->schema = schema;
         this->columns = columns;
@@ -84,7 +82,6 @@ namespace DatabaseEngine::StorageTypes {
 
         if(nonClusteredIndexes)
           this->header.nonClusteredIndexes = *nonClusteredIndexes;
-
       }
 
       Table::Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database)
@@ -909,7 +906,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int & indexPosition){
-      for(auto& column: this->columns){
+      for(const auto& column: this->columns){
         if(!column->isColumnOverflowed())
           continue;
 
@@ -920,8 +917,8 @@ namespace DatabaseEngine::StorageTypes {
       pageFreeSpacePage->SetPageMetaData(page);
     }
 
-    void Table::UpdateClusteredIndexIdentityColumn()const{
-        Server::ServerInstance::Get().UpdateIdentityByTableId(this->header.tableId, static_cast<int32_t>(this->header.clusteredIndex.lastValue));
+    void Table::UpdateColumnIdentity(const int32_t& columnId, const int32_t& lastValue)const{
+        Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, columnId, lastValue);
     }
 
 
@@ -978,42 +975,28 @@ namespace DatabaseEngine::StorageTypes {
         return largestBlock->GetBlockSize();
     }
 
-    int64_t Table::PopulateAutoComputedColumns(Row *row){
-      int64_t primaryKeyValue = 0;
+    int64_t Table::PopulateAutoComputedColumns(Row *row)const{
+        int64_t primaryKeyValue = 0;
 
-      if(this->header.clusteredIndex.seed != -1){
-        const auto& columnIndex = this->header.clusteredIndex.columns[0];
+        for (const auto& column: this->columns) {
+            auto& identity = column->GetIdentity();
 
-        const auto& column = this->columns.at(columnIndex);
+            if (identity.columnId == -1)
+              continue;
 
-        const auto& columnSize = column->GetColumnSize();
+          const auto& columnSize = column->GetColumnSize();
 
-        auto* block = new Block(&this->header.clusteredIndex.lastValue, columnSize ,column);
+          auto* block = new Block(&identity.lastValue, columnSize ,column);
 
-        primaryKeyValue = this->header.clusteredIndex.lastValue;
+          primaryKeyValue = identity.lastValue;
 
-        this->header.clusteredIndex.lastValue += this->header.clusteredIndex.incrementFactor;
+          identity.lastValue += identity.increment;
 
-        row->InsertColumnData(block, columnIndex);
+          row->InsertColumnData(block, column->GetColumnIndex());
 
-        if (this->header.clusteredIndex.startingValue + this->header.clusteredIndex.cacheBlock < primaryKeyValue )
-          this->UpdateClusteredIndexIdentityColumn();
-      }
-
-      for(auto& nonClusteredIndexes: this->header.nonClusteredIndexes){
-        if(nonClusteredIndexes.seed == -1)
-          continue;
-
-        const auto& columnIndex = nonClusteredIndexes.columns[0];
-
-        auto* block = row->GetData()[columnIndex];
-
-        const auto& columnSize = this->columns.at(columnIndex)->GetColumnSize();
-
-        block->SetData(&nonClusteredIndexes.lastValue, columnSize);
-
-        nonClusteredIndexes.lastValue += nonClusteredIndexes.incrementFactor;
-      }
+          if (column->GetIdentityStartingValue() + identity.cacheBlock < primaryKeyValue )
+            this->UpdateColumnIdentity(column->GetColumnId(), primaryKeyValue);
+        }
 
       return primaryKeyValue;
     }
@@ -1025,21 +1008,36 @@ namespace DatabaseEngine::StorageTypes {
         return;
 
       for(const auto& column: this->columns){
-          if(column->GetColumnId() == identityHeaders.begin()->columnId){
-            this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
-            break;
-          }
-      }
+        for (const auto& identity: identityHeaders) {
 
-      this->header.clusteredIndex.seed = identityHeaders.begin()->seedValue;
-      this->header.clusteredIndex.incrementFactor = identityHeaders.begin()->increment;
-      this->header.clusteredIndex.lastValue = identityHeaders.begin()->lastValue;
-      this->header.clusteredIndex.cacheBlock = identityHeaders.begin()->cacheBlock;
-      this->header.clusteredIndex.startingValue = identityHeaders.begin()->lastValue;
+          if(column->GetColumnId() != identity.columnId)
+            continue;
+
+          column->SetIdentity(identity);
+          column->SetIdentityStartingValue(identity.lastValue);
+
+          this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
+          break;
+        }
+      }
+      //
+      // this->header.clusteredIndex.seed = identityHeaders.begin()->seedValue;
+      // this->header.clusteredIndex.incrementFactor = identityHeaders.begin()->increment;
+      // this->header.clusteredIndex.lastValue = identityHeaders.begin()->lastValue;
+      // this->header.clusteredIndex.cacheBlock = identityHeaders.begin()->cacheBlock;
+      // this->header.clusteredIndex.startingValue = identityHeaders.begin()->lastValue;
     }
 
     void Table::UpdateMasterDatabase() const{
-      this->UpdateClusteredIndexIdentityColumn();
+      for (const auto& column: this->columns) {
+        const auto& identity = column->GetIdentity();
+
+        if (identity.columnId == -1)
+          continue;
+
+        this->UpdateColumnIdentity(column->GetColumnId(), identity.lastValue);
+      }
+
     }
 
 }

@@ -199,14 +199,12 @@ namespace DatabaseEngine
     }
 
     Table *Database::CreateTable(
-        const string &tableName,
-        const string &schemaName,
         const table_id_t &tableId,
         const vector<StorageTypes::Column *> &columns,
-        Headers::Index *clusteredKeyIndexes,
-        vector<Headers::Index> *nonClusteredIndexes)
+        const Headers::Index *clusteredKeyIndexes,
+        const vector<Headers::Index> *nonClusteredIndexes)
     {
-        auto *table = new Table(tableName, schemaName, tableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
+        auto *table = new Table(tableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
 
         this->tables.push_back(table);
         this->header.numberOfTables = this->tables.size();

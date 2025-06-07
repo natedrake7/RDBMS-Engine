@@ -275,7 +275,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     const int16_t& index = tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1;
 
-    db->CreateTable(this->table->name, this->table->schema, index, columnsPtrs, &this->primaryKey);
+    db->CreateTable(index, columnsPtrs, &this->primaryKey);
 
     const auto tableResult = Server::ServerInstance::Get().InsertTableToMasterDb(
         this->databaseId,
@@ -297,7 +297,21 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
             );
 
       columnIdsDict.Add(column.index, columnResult.primaryKeyVal);
+
+      //insert identity columns
+      if (column.autoIncrementKey) {
+
+        Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
+            tableResult.primaryKeyVal,
+            columnResult.primaryKeyVal,
+            column.autoIncrementKey->seed,
+            column.autoIncrementKey->incrementFactor,
+            column.autoIncrementKey->seed,
+            true,
+            column.autoIncrementKey->cacheBlock);
+        }
     }
+
     const bool isConstraintEmpty = this->constraintName.empty();
 
     std::vector<int32_t> primaryKeyColumnIds;
@@ -313,10 +327,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         return nullptr;
 
     const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
-      tableResult.primaryKeyVal,
-      this->constraintName,
-      true,
-      false);
+        tableResult.primaryKeyVal,
+        this->constraintName,
+        true,
+        false);
 
     const auto indexId = static_cast<int32_t>(indexResult.primaryKeyVal);
 
@@ -335,22 +349,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         true);
 
       Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
-      constraintResult.primaryKeyVal,
-      primaryKeyColumnIds[i],
-  this->primaryKey.columns[i]);
-
-      if(this->primaryKey.seed != -1){
-        const auto column = this->primaryKey.columns.begin();
-
-        Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
-          tableResult.primaryKeyVal,
-          primaryKeyColumnIds[i],
-          this->primaryKey.seed,
-          this->primaryKey.incrementFactor,
-          this->primaryKey.lastValue,
-          true,
-          this->primaryKey.cacheBlock);
-      }
+        constraintResult.primaryKeyVal,
+        primaryKeyColumnIds[i],
+    this->primaryKey.columns[i]);
     }
 
     return nullptr;

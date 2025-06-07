@@ -152,7 +152,7 @@ namespace Server {
     [[nodiscard]] vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const int32_t& tableId) const;
     [[nodiscard]] Dictionary<int32_t , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const int32_t& tableId) const;
     [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
-    void UpdateIdentityByTableId(const int32_t & tableId, const int32_t& lastValue);
+    void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     void Shutdown();

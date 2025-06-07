@@ -88,12 +88,12 @@ namespace DatabaseEngine
 
     }
 
-    void Database::GetIdentityColumns(){
-      for(auto& table: this->tables)
+    void Database::GetIdentityColumns()const{
+      for(const auto& table: this->tables)
         table->GetIdentityColumns();
     }
 
-    void Database::UpdateMasterDatabase(){
+    void Database::UpdateMasterDatabase()const{
       for(const auto& table: this->tables)
         table->UpdateMasterDatabase();
     }

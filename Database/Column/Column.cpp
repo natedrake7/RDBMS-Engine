@@ -69,4 +69,14 @@ namespace DatabaseEngine::StorageTypes {
     void Column::SetIsOverflowed(const bool & isOverflowed){ this->isOverflowed = isOverflowed; }
 
     const int32_t& Column::GetColumnId() const{ return this->header.id; }
+
+    Headers::IdentityColumnsHeader & Column::GetIdentity() { return this->header.identity; }
+
+    const int32_t & Column::GetIdentityStartingValue() const{ return this->header.identityStartingValue; }
+
+    void Column::SetIdentityStartingValue(const int32_t &identityStartingValue){
+        this->header.identityStartingValue = identityStartingValue;
+    }
+
+    void Column::SetIdentity(const Headers::IdentityColumnsHeader  &identity){ this->header.identity = identity; }
 }

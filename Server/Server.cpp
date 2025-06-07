@@ -176,11 +176,11 @@ namespace Server {
             true,
             10000
           );
-
         }
-
       }
     }
+
+    this->masterDb->GetIdentityColumns();
 
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
@@ -1164,7 +1164,7 @@ namespace Server {
       return columns;
   }
 
-  void ServerInstance::UpdateIdentityByTableId(const int32_t & tableId, const int32_t & lastValue){
+  void ServerInstance::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const{
     using namespace DatabaseEngine::StorageTypes;
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
@@ -1173,9 +1173,29 @@ namespace Server {
       Field(lastValue, 4)
     };
 
-    auto expression = Expressions::Expression::Predicate(0, "=", Field(tableId, 0));
+    auto *leftExpr =
+            new Expressions::Expression{
+              .type = Expressions::ExpressionType::Predicate,
+              .left = nullptr,
+              .right = nullptr,
+              .operation = "=",
+              .value = Field(tableId, 0),
+              .columnIndex = 0
+          };
 
-    table->ClusteredIndexScanUpdate(&expression, updates);
+    auto *rightExpr =
+              new Expressions::Expression{
+                .type = Expressions::ExpressionType::Predicate,
+                .left = nullptr,
+                .right = nullptr,
+                .operation = "=",
+                .value = Field(columnId, 1),
+                .columnIndex = 1
+            };
+
+    auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
+
+    table->ClusteredIndexScanUpdate(&expr, updates);
   }
 
   void ServerInstance::CreateSystemDatabase(){
@@ -1220,15 +1240,8 @@ namespace Server {
       if (primaryKey.empty())
         throw runtime_error("All tables in masterDb must have a primary key");
 
-      Headers::Index index(primaryKey, 1, 1, 10000);
-
-      if(index.columns.size() > 1){
-        index.seed = -1;
-        index.incrementFactor = -1;
-        index.lastValue = -1;
-      }
-
-      this->masterDb->CreateTable(table.name, "dbo", i, columns, &index);
+      Headers::Index index(primaryKey);
+      this->masterDb->CreateTable(i, columns, &index);
     }
   }
 

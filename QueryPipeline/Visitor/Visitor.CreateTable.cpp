@@ -28,7 +28,7 @@ namespace QueryPipeline{
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAutoIncrementKey(SQLParser::AutoIncrementKeyContext *context){
-    auto* incrementStatement = new Statements::AutoIncrementKey();
+    auto* incrementStatement = new Statements::Identity();
 
     incrementStatement->seed = SafeConverter<uint8_t>::SafeStoi(context->seed->getText());
     incrementStatement->incrementFactor = SafeConverter<uint8_t>::SafeStoi(context->increment->getText());
@@ -39,8 +39,8 @@ namespace QueryPipeline{
   antlrcpp::Any SQLVisitorImplementation::visitAddColumn(SQLParser::AddColumnContext *context){
     const bool isPrimaryKey = (context->primaryKey()) != nullptr;
 
-    Statements::AutoIncrementKey* key = (isPrimaryKey)
-                    ? std::any_cast<Statements::AutoIncrementKey*>(visit(context->primaryKey()))
+    Statements::Identity* key = (isPrimaryKey)
+                    ? std::any_cast<Statements::Identity*>(visit(context->primaryKey()))
                     : nullptr;
 
     const bool isNullable = ((context->NULL_() && !context->NOT()) && !isPrimaryKey);

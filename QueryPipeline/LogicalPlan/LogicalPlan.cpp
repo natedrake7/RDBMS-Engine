@@ -128,22 +128,14 @@ namespace QueryPipeline {
         Statements::TableName*  table,
         std::vector<Statements::AddColumn>& columns,
         std::vector<column_index_t> primaryKey,
-        Statements::AutoIncrementKey* autoIncrementKey,
         std::string  constraintName)
     : LogicalPlan(databaseId), table(table), columns(std::move(columns)),
-      primaryKey(std::move(primaryKey)), constraintName(std::move(constraintName)),
-      autoIncrementKey(autoIncrementKey) {}
+      primaryKey(std::move(primaryKey)), constraintName(std::move(constraintName)) {}
 
   PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(){
     Headers::Index index;
 
     index.columns = std::move(primaryKey);
-    if(this->autoIncrementKey){
-      index.seed = this->autoIncrementKey->seed;
-      index.incrementFactor = this->autoIncrementKey->incrementFactor;
-      index.lastValue = this->autoIncrementKey->seed;
-      index.cacheBlock = 10000;
-    }
 
     return new PhysicalPlan::PhysicalTableCreate(this->databaseId, this->table, this->columns, index, this->constraintName);
   }

@@ -113,12 +113,10 @@ public:
     static Constants::byte GetObjectSizeToCategory(const row_size_t &size);
 
     StorageTypes::Table *CreateTable(
-      const string &tableName,
-      const string &schemaName,
       const table_id_t &tableId,
       const vector<StorageTypes::Column *> &columns,
-      Headers::Index *clusteredKeyIndexes = nullptr,
-      vector<Headers::Index> *nonClusteredIndexes = nullptr);
+      const Headers::Index *clusteredKeyIndexes = nullptr,
+      const vector<Headers::Index> *nonClusteredIndexes = nullptr);
 
     void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
 
@@ -170,13 +168,13 @@ public:
                                                                 , const int& nonClusteredIndexId = -1
                                                                 , const bool& findPageDifferentFromCurrent = false);
 
-    void GetIdentityColumns();
+    void GetIdentityColumns()const;
 
     static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 
     static void JoinTables(vector<StorageTypes::Row>& firstTableRows, StorageTypes::Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions);
 
-    void UpdateMasterDatabase();
+    void UpdateMasterDatabase()const;
 };
 
 void CreateDatabase(const string &dbName);

@@ -37,7 +37,6 @@ void InsertRowsToMoviesTable(Table* table);
 //add server db to return the rest of the fields
 //Add Guid Support (set is as a different datatype)
 //Add Decimal full support
-//Fix date retrieval issues
 //Add Alter table (add drop columns)
 //Add joins
 //check index deletes work
@@ -116,13 +115,8 @@ int main()
      // QueryPipeline::Parser::Parse(createDb, databaseId);
      // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
-    // QueryPipeline::Parser::Parse(insertActors, databaseId);
-    // QueryPipeline::Parser::Parse(selectActors, databaseId);
-
-    auto decimal = DataTypes::Decimal("12.2250");
-    auto anotherDecimal = DataTypes::Decimal("125.22570");
-
-    cout << decimal + anotherDecimal << endl;
+    QueryPipeline::Parser::Parse(insertActors, databaseId);
+    QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     // QueryPipeline::Parser::Parse(insertMovies, databaseId);
     // QueryPipeline::Parser::Parse(selectMovies, databaseId);
@@ -144,7 +138,6 @@ int main()
 
     const auto& databases = server.GetCatalog();
 
-    cout << databases[0].additionalInfo.createdAt << endl;
     ServerInstance::Get().Shutdown();
 
     return 0;

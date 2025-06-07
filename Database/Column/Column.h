@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <string>
 #include "../Constants.h"
+#include "../../QueryPipeline/Statements/Statements.h"
 
 namespace Headers {
     struct ColumnHeader;
@@ -21,6 +22,9 @@ namespace DatabaseEngine::StorageTypes
         ColumnType columnType;
         column_index_t columnIndex;
         row_size_t recordSize;
+
+        Headers::IdentityColumnsHeader identity;
+        int32_t identityStartingValue;
     } ColumnHeader;
 
     class Column
@@ -64,6 +68,14 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] bool isColumnOverflowed() const;
 
         [[nodiscard]] const int32_t& GetColumnId() const;
+
+        [[nodiscard]] Headers::IdentityColumnsHeader&  GetIdentity();
+
+        [[nodiscard]] const int32_t& GetIdentityStartingValue() const;
+
+        void SetIdentityStartingValue(const int32_t& identityStartingValue);
+
+        void SetIdentity(const Headers::IdentityColumnsHeader &identity);
 
         void SetIsOverflowed(const bool &isOverflowed);
     };

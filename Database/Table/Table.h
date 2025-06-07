@@ -84,7 +84,7 @@ namespace DatabaseEngine::StorageTypes
 
         protected:
 
-            [[nodiscard]] int64_t PopulateAutoComputedColumns(Row* row);
+            [[nodiscard]] int64_t PopulateAutoComputedColumns(Row* row)const;
 
             [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
 
@@ -105,17 +105,15 @@ namespace DatabaseEngine::StorageTypes
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
 
-            void UpdateClusteredIndexIdentityColumn()const;
+            void UpdateColumnIdentity(const int32_t& columnId, const int32_t& lastValue)const;
 
         public:
             Table(
-              const string &tableName,
-              const std::string& schema,
               const table_id_t &tableId,
               const vector<Column *> &columns,
               DatabaseEngine::Database *database,
-              Headers::Index* clusteredIndex = nullptr,
-              vector<Headers::Index> *nonClusteredIndexes = nullptr);
+              const Headers::Index* clusteredIndex = nullptr,
+              const vector<Headers::Index> *nonClusteredIndexes = nullptr);
 
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
 

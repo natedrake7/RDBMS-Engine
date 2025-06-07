@@ -31,7 +31,6 @@ namespace QueryPipeline::Statements {
   CreateTableStatement::~CreateTableStatement() {
       delete this->constraint;
       delete this->table;
-      delete this->autoIncrementKey;
 
       for(const auto& column : this->columns)
         delete column.autoIncrementKey;
@@ -40,7 +39,6 @@ namespace QueryPipeline::Statements {
   CreateTableStatement::CreateTableStatement(){
     this->table = nullptr;
     this->constraint = nullptr;
-    this->autoIncrementKey = nullptr;
   }
 
   bool CreateTableStatement::Validate(){
@@ -99,13 +97,9 @@ namespace QueryPipeline::Statements {
         primaryKeyFound = true;
 
         //store the pointer if found, else let it be null
-        if(column.autoIncrementKey){
-          if(column.autoIncrementKey->incrementFactor <= 0){
+        if(column.autoIncrementKey && column.autoIncrementKey->incrementFactor <= 0){
             cerr << "increment factor cannot be less or equal to 0" << endl;
             return false;
-          }
-
-          this->autoIncrementKey = column.autoIncrementKey;
         }
       }
     }
@@ -128,7 +122,7 @@ namespace QueryPipeline::Statements {
   LogicalPlan * CreateTableStatement::ToLogical(){
     const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
 
-    return new LogicalTableCreate(this->databaseId, this->table, this->columns, this->primaryKey, this->autoIncrementKey, constraintName);
+    return new LogicalTableCreate(this->databaseId, this->table, this->columns, this->primaryKey, constraintName);
   }
 
   bool SelectStatement::Validate(){
