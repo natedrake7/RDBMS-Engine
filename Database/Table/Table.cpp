@@ -810,7 +810,7 @@ namespace DatabaseEngine::StorageTypes {
     }
     string Table::GetFileName() const{ return this->database->GetFileName(); }
 
-    int Table::HandleRowOverflow(Row *row){
+    int Table::HandleRowOverflow(const Row *row)const{
       auto* largestBlock = row->FindLargestVariableLengthColumn();
 
       if(largestBlock == nullptr)
@@ -833,10 +833,10 @@ namespace DatabaseEngine::StorageTypes {
       return largestBlock->GetBlockSize();
     }
 
-    void Table::DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t> & updatedColumns){
+    void Table::DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t> & updatedColumns)const{
       const auto& filename = this->database->GetFileName();
 
-      RowHeader* rowHeader = row->GetHeader();
+      const RowHeader* rowHeader = row->GetHeader();
 
       for(const auto& block : row->GetData()){
         if(!updatedColumns.Contains(block->GetColumnIndex())
@@ -896,7 +896,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int & indexPosition){
+    void Table::InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int & indexPosition)const{
 
       while (row->GetTotalRowSize() > page->GetBytesLeft())
         this->HandleRowOverflow(row);

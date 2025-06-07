@@ -420,7 +420,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     Indexing::Key key;
 
-    tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
+    tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
+
+    // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
 
     return result;
   }

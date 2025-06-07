@@ -108,14 +108,14 @@ int main()
 
     const string updateMovies = "UPDATE dbo.Movies SET MovieDesc = 'Batman Fights Bane' WHERE ID = 5";
 
-    const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID = 1001";
+    const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID = 20";
 
     const auto start = std::chrono::high_resolution_clock::now();
 
      // QueryPipeline::Parser::Parse(createDb, databaseId);
      // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
-    QueryPipeline::Parser::Parse(insertActors, databaseId);
+    QueryPipeline::Parser::Parse(updateActors, databaseId);
     QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     // QueryPipeline::Parser::Parse(insertMovies, databaseId);

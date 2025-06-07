@@ -102,7 +102,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Row* CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal);
 
-            void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
+            void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
 
             void UpdateColumnIdentity(const int32_t& columnId, const int32_t& lastValue)const;
@@ -134,7 +134,7 @@ namespace DatabaseEngine::StorageTypes
 
             void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
 
-            void DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
+            void DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const;
 
             string GetSchema();
 
@@ -233,7 +233,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] vector<ColumnType> GetColumnTypeByTreeId(const uint8_t& treeId) const;
 
-            int HandleRowOverflow(Row *row);
+            int HandleRowOverflow(const Row *row)const;
 
             int HandleRowOverflow(Row *row, Column* column);
 
