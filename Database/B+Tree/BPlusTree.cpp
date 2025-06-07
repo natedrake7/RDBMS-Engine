@@ -29,7 +29,7 @@ namespace Indexing
         const auto &tableHeader = table->GetTableHeader();
 
         //handle degree here correctly based on indexed columns
-        this->keySize = table->CalculateIndexKeySize();
+        this->keySize = table->CalculateIndexKeySize(nonClusteredIndexId);
         this->t = BPlusTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
         this->root = nullptr;
         this->tableId = tableHeader.tableId;
@@ -71,24 +71,26 @@ namespace Indexing
           return degree;
         }
 
-//        const vector<Column*>& columns = table->GetColumns();
-//
-//        vector<vector<column_index_t>> nonClusteredIndexes;
-//        table->GetNonClusteredIndexedColumnKeys(&nonClusteredIndexes);
-//
-//        int keySize = 0;
-//        for(const auto& key: nonClusteredIndexes[nonClusteredIndexId])
-//        {
-//            const Column* column = columns[key];
-//
-//            keySize += column->GetColumnSize();
-//        }
-//
-//        return (PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize())
-//                    / (keySize + BPlusTreeNonClusteredData::GetNonClusteredDataSize());
+        const vector<Column*>& columns = table->GetColumns();
+
+        const auto& index = table->GetNonClusteredIndexes(nonClusteredIndexId);
+
+        int keySize = 0;
+        for(const auto& columnPos: index.columns)
+        {
+            const Column* column = columns.at(columnPos);
+
+            keySize += column->GetColumnSize();
+        }
+
+        const auto pageSize = (PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize());
+
+        const auto degree = static_cast<int>(pageSize / ((this->keySize + Constants::ROW_ID_SIZE) * 2));
+
+        return degree;
     }
 
-    void BPlusTree::SplitChild(IndexPage *parent, const int &index, IndexPage *child)
+    void BPlusTree::SplitChild(IndexPage *parent, const int &index, IndexPage *child)const
     {
         auto* newChild = this->AllocateNewPage(parent->GetPageId());
 
@@ -273,53 +275,6 @@ namespace Indexing
         return returnedNode;
     }
 
-    void BPlusTree::IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result)
-    {
-        // if (!root)
-        //     return;
-
-        // auto *currentNode = this->SearchLeftMostLeafNode();
-        // IndexPage *previousNode = nullptr;
-
-        // while (currentNode)
-        // {
-        //     auto* keys = currentNode->GetKeysUnsafe();
-
-        //     if (previousNode && maxKey >= *keys->at(0))
-        //     {
-        //         auto* previousKeys = previousNode->GetKeysUnsafe();
-
-        //         if (maxKey >= *previousKeys->at(previousKeys->size() - 1)){
-
-        //             previousNode->GetNonClusteredDataUnsafe()
-
-        //             result.emplace_back(previousNode->dataPageId, previousNode->keys.size());
-
-        //         }
-        //     }
-
-        //     for (int i = 0; i < currentNode->keys.size(); i++)
-        //     {
-        //         const auto &key = currentNode->keys[i];
-
-        //         if (minKey <= key && maxKey >= key)
-        //         {
-        //             result.emplace_back(currentNode->dataPageId, i);
-        //             continue;
-        //         }
-
-        //         // if (maxKey < key)
-        //         //     return;
-        //     }
-
-        //     if(currentNode->nextNodeHeader.pageId == 0)
-        //         return;
-
-        //     previousNode = currentNode;
-        //     currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
-        // }
-    }
-
     void BPlusTree::IndexScan(vector<QueryData> &result)
     {
         if (!root)
@@ -399,6 +354,63 @@ namespace Indexing
       }
     }
 
+    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result){
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+            return;
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+
+            // for(auto* row: *currentNode->GetDataRowsUnsafe()){
+            //     if(!row->Evaluate(expression))
+            //         continue;
+            //
+            //     const RowHeader *rowHeader = row->GetHeader();
+            //
+            //     vector<Block *> copyBlocks = row->GetBlockCopies();
+            //
+            //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
+            // }
+
+            if(currentNode->GetNextPage() == 0)
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression){
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+            return;
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+            // for(auto* row: *currentNode->GetDataRowsUnsafe()){
+            //     if(!row->Evaluate(expression))
+            //         continue;
+            //
+            //     const RowHeader *rowHeader = row->GetHeader();
+            //
+            //     vector<Block *> copyBlocks = row->GetBlockCopies();
+            //
+            //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
+            // }
+
+            if(currentNode->GetNextPage() == 0)
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
     void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
@@ -427,6 +439,32 @@ namespace Indexing
           currentNode = this->GetNode(currentNode->GetNextPage());
         }
     }
+
+    void BPlusTree::InsertRowsToOtherTree(const int& indexPos){
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+            return;
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+            const auto* rows = currentNode->GetDataRowsUnsafe();
+
+            for (int i = 0;i < rows->size(); i++) {
+                const auto* row = rows->at(i);
+
+                this->table->NonClusteredIndexInsert(row, indexPos, Headers::RowIdentifier(currentNode->GetPageId(), i));
+            }
+
+            if(currentNode->GetNextPage() == 0)
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
 
     void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
@@ -937,39 +975,6 @@ namespace Indexing
     const int &BPlusTree::GetBranchingFactor() const { return this->t; }
 
     void BPlusTree::SetTreeType(const TreeType & treeType) { this->type = treeType; }
-
-    void BPlusTree::UpdateRowData(const Key& key, const Headers::RowIdentifier& data) const
-    {
-        // auto* currentNode = this->SearchKey(key);
-
-        // if(currentNode == nullptr)
-        //     return;
-
-        // IndexPage *previousNode = nullptr;
-        // while (currentNode)
-        // {
-
-        //     auto* keys = currentNode->GetKeysUnsafe();
-
-        //     if (previousNode && key <= currentNode->keys[0])
-        //     {
-        //         previousNode->nonClusteredData[previousNode->keys.size()] = data;
-        //         return;
-        //     }
-
-        //     for (int i = 0; i < currentNode->keys.size(); i++)
-        //     {
-        //         if (key == currentNode->keys[i])
-        //         {
-        //             currentNode->nonClusteredData[i] = data;
-        //             return;
-        //         }
-        //     }
-
-        //     previousNode = currentNode;
-        //     currentNode = this->GetNodeFromPage(currentNode->nextNodeHeader);
-        // }
-    }
 
     const page_id_t & BPlusTree::GetFirstIndexPageId() const { return this->firstIndexPageId; }
 

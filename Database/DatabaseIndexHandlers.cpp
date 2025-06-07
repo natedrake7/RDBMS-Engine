@@ -32,28 +32,41 @@ namespace DatabaseEngine {
         return key;
     }
 
+    Indexing::Key Database::CreateKey(const vector<column_index_t> &indexedColumns, const StorageTypes::Row *row, const Headers::RowIdentifier &rowId){
+        Key key;
+        for (const auto &columnId : indexedColumns)
+        {
+            const auto &keyBlock = row->GetData()[columnId];
+            key.InsertKey(Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
+        }
+
+        key.InsertKey(Key(&rowId.pageId, sizeof(page_id_t), ColumnType::Int));
+        key.InsertKey(Key(&rowId.indexId, sizeof(int32_t), ColumnType::Int));
+        return key;
+    }
+
     void Database::UpdateNonClusteredData(const Table& table, Page* nextLeafPage, const page_id_t& nextLeafPageId) const
     {
-       if(!table.HasNonClusteredIndexes())
-            return;
-
-        Table* tablePtr = this->tables.at(table.GetTableId());
-
-        const auto& nonClusteredIndexes = tablePtr->GetNonClusteredIndexes();
-
-        for (int i = 0; i < nonClusteredIndexes.size(); i++)
-        {
-            const BPlusTree* nonClusteredTree = tablePtr->GetNonClusteredIndexTree(i);
-
-            const auto& rows = nextLeafPage->GetDataRowsUnsafe();
-
-            for (page_offset_t index = 0; index < rows->size(); index++)
-            {
-                const auto key = Database::CreateKey(nonClusteredIndexes[i], (*rows)[index]);
-
-                nonClusteredTree->UpdateRowData(key, Headers::RowIdentifier(nextLeafPageId, index));
-            }
-        }
+       // if(!table.HasNonClusteredIndexes())
+       //      return;
+       //
+       //  Table* tablePtr = this->tables.at(table.GetTableId());
+       //
+       //  const auto& nonClusteredIndexes = tablePtr->GetNonClusteredIndexes();
+       //
+       //  for (int i = 0; i < nonClusteredIndexes.size(); i++)
+       //  {
+       //      const BPlusTree* nonClusteredTree = tablePtr->GetNonClusteredIndexTree(i);
+       //
+       //      const auto& rows = nextLeafPage->GetDataRowsUnsafe();
+       //
+       //      for (page_offset_t index = 0; index < rows->size(); index++)
+       //      {
+       //          const auto key = Database::CreateKey(nonClusteredIndexes[i], (*rows)[index]);
+       //
+       //          // nonClusteredTree->UpdateRowData(key, Headers::RowIdentifier(nextLeafPageId, index));
+       //      }
+       //  }
     }
 
 	IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nonClusteredIndexId, const bool& findPageDifferentFromCurrent)
@@ -65,7 +78,7 @@ namespace DatabaseEngine {
         const bool isNonClusteredIndex = nonClusteredIndexId != -1;
 
         const uint8_t indexId = isNonClusteredIndex
-                                ? table->GetNonClusteredIndexId(nonClusteredIndexId)
+                                ? nonClusteredIndexId
                                 : 0;
 
         if(indexPageId == INVALID_PAGE_ID)

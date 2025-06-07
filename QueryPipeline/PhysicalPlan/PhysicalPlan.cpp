@@ -114,10 +114,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    if (isClustered) {
-      tablePtr->ClusteredIndexScan(&result->rows, this->expression);
-      return result;
-    }
+    // if (isClustered) {
+    //   tablePtr->ClusteredIndexScan(&result->rows, this->expression);
+    //   return result;
+    // }
+
+    tablePtr->NonClusteredIndexScan(&result->rows, 0);
+
 
     return result;
   }
@@ -447,7 +450,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     for(const auto& column : this->columns){
       conditions.emplace_back(
       column,
-    this->orderType,
+      this->orderType,
     false
       );
     }
@@ -467,6 +470,49 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalPlanResult * PhysicalIndexCreate::Execute(){
     auto* result = new PhysicalPlanResult();
 
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    const auto columnsHeaders = Server::ServerInstance::Get().SelectColumns(this->table->tableId);
+
+    const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
+        this->table->tableId,
+        this->constraintName,
+        true,
+        false);
+
+    const auto indexId = static_cast<int32_t>(indexResult.primaryKeyVal);
+
+    const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(
+      this->table->tableId,
+      this->constraintName,
+      Headers::ConstraintType::IndexKey,
+      false,
+      &indexId);
+
+    for (const auto& columnPos : this->columns) {
+      const auto& header = columnsHeaders.at(columnPos);
+
+      const auto indexColumnResult =
+        Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
+            indexResult.primaryKeyVal,
+            header.id,
+            columnPos,
+            true);
+
+      const auto constraintColumnResult =
+        Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
+            constraintResult.primaryKeyVal,
+            header.id,
+        columnPos);
+    }
+
+    const auto indexPos = tablePtr->CreateNonClusteredIndex(this->columns);
+
+    tablePtr->NonClusteredIndexInsertExistingRows(indexPos);
+
+    //if there are rows in the table update the index
     //do stuff here
 
     return result;

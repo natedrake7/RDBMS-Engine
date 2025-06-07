@@ -88,7 +88,7 @@ namespace Indexing
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
-        void SplitChild(Pages::IndexPage *parent, const int &index, Pages::IndexPage *child);
+        void SplitChild(Pages::IndexPage *parent, const int &index, Pages::IndexPage *child)const;
         Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
         [[nodiscard]] Pages::IndexPage *SearchKey(const Key &key) const;
         [[nodiscard]] Pages::IndexPage *SearchKeyWithAncestors(const Key &key, std::vector<Pages::IndexPage*>& ancestors) const;
@@ -124,13 +124,15 @@ namespace Indexing
 
         void IndexSeek(const Key &minKey, const Key &maxKey, vector<DatabaseEngine::StorageTypes::Row>* result);
 
-        void IndexScan(const Key &minKey, const Key &maxKey, vector<QueryData> &result);
-
         void IndexScan(vector<QueryData> &result);
 
         void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result);
 
         void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result, Expressions::Expression* expression);
+
+        void IndexScan(vector<Headers::RowIdentifier>* result);
+
+        void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression);
 
         void IndexScanUpdate(const Expressions::Expression* expression, const vector<Field> & updates);
 
@@ -150,8 +152,8 @@ namespace Indexing
 
         void SetTreeType(const TreeType& treeType);
 
-        void UpdateRowData(const Key& key, const Headers::RowIdentifier& data) const;
-
         [[nodiscard]] const page_id_t& GetFirstIndexPageId() const;
+
+        void InsertRowsToOtherTree(const int& indexPos);
     };
 }

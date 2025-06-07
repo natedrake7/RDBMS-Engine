@@ -158,6 +158,11 @@ namespace Headers {
       this->indexId = indexId;
     }
 
+    RowIdentifier(const RowIdentifier& rowId) {
+      this->pageId = rowId.pageId;
+      this->indexId = rowId.indexId;
+    }
+
     ~RowIdentifier() = default;
   };
 }

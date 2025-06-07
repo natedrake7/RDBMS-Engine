@@ -93,6 +93,11 @@ namespace DatabaseEngine
         table->GetIdentityColumns();
     }
 
+    void Database::GetColumnsHeaders() const{
+        for (const auto& table : this->tables)
+            table->GetColumnsHeaders();
+    }
+
     void Database::UpdateMasterDatabase()const{
       for(const auto& table: this->tables)
         table->UpdateMasterDatabase();

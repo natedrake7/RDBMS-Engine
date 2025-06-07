@@ -30,17 +30,24 @@ namespace DatabaseEngine::StorageTypes {
 
     BPlusTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId)
     {
-        if(this->header.nonClusteredIndexes.empty())
-            return nullptr;
+        const auto numOfIndexes = this->header.nonClusteredIndexes.size();
 
         if(this->nonClusteredIndexedTrees.empty())
-            this->nonClusteredIndexedTrees.resize(this->header.nonClusteredIndexes.size());
+            this->nonClusteredIndexedTrees.resize(numOfIndexes);
+
+        if (this->header.nonClusteredIndexPageIds.size() < numOfIndexes)
+            this->header.nonClusteredIndexPageIds.resize(numOfIndexes, INVALID_PAGE_ID);
 
         BPlusTree*& nonClusteredTree = this->nonClusteredIndexedTrees.at(nonClusteredIndexId);
 
         if (nonClusteredTree == nullptr)
         {
-            nonClusteredTree = new BPlusTree(this, this->header.nonClusteredIndexPageIds[nonClusteredIndexId], TreeType::NonClustered, nonClusteredIndexId);
+            const auto& indexPageId = this->header.nonClusteredIndexPageIds.at(nonClusteredIndexId);
+
+            nonClusteredTree = new BPlusTree(this, indexPageId, TreeType::NonClustered, nonClusteredIndexId);
+
+            if (indexPageId == INVALID_PAGE_ID)
+                return nonClusteredTree;
 
             this->GetNonClusteredIndexFromDisk(nonClusteredIndexId);
         }
@@ -59,9 +66,6 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::GetNonClusteredIndexFromDisk(const int& indexId) const
     {
-        if(this->header.nonClusteredIndexPageIds[indexId] == 0)
-            return;
-
         auto* root =  Table::GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
 
         this->nonClusteredIndexedTrees[indexId]->SetRoot(root);

@@ -74,7 +74,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] const uint32_t &GetRowSize() const;
 
-        vector<column_index_t> GetLargeBlocks();
+        vector<column_index_t> GetLargeBlocks()const;
 
         void UpdateRowSize();
 

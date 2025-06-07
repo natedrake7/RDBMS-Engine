@@ -42,6 +42,7 @@ void InsertRowsToMoviesTable(Table* table);
 //start documenting implementation and optimize wherever possible
 //add order by statements full support (minor just add ASC, DESC on each column or on all)
 //and check if index index is available in the results to speed by sorting
+//check why master db doesnt detect the constraints correctly.
 
 std::atomic<bool> serverRunning{true};
 
@@ -106,7 +107,7 @@ int main()
 
     const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID <> 20";
 
-    const string moviesIndex = "CREATE INDEX idx_movieDesc ON dbo.Movies (MovieName)";
+    const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
     const auto start = std::chrono::high_resolution_clock::now();
 
@@ -114,7 +115,7 @@ int main()
      // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
     // QueryPipeline::Parser::Parse(updateActors, databaseId);
-    QueryPipeline::Parser::Parse(moviesIndex, databaseId);
+    // QueryPipeline::Parser::Parse(actorsIndex, databaseId);
 
     // QueryPipeline::Parser::Parse(insertMovies, databaseId);
     // QueryPipeline::Parser::Parse(selectMovies, databaseId);
@@ -125,7 +126,7 @@ int main()
 //
 //     QueryPipeline::Parser::Parse(insertActors, databaseId);
 // ////
-//     QueryPipeline::Parser::Parse(selectActors, databaseId);
+     QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);
     const auto end = std::chrono::high_resolution_clock::now();

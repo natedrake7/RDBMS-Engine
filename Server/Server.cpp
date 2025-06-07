@@ -219,6 +219,7 @@ namespace Server {
 
   void ServerInstance::UseMasterDb(){
     this->masterDb = new DatabaseEngine::Database(this->sysDbName, this->sysTables);
+    this->masterDb->GetColumnsHeaders();
     this->masterDb->GetIdentityColumns();
   }
 

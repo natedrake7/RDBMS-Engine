@@ -70,6 +70,10 @@ namespace DatabaseEngine::StorageTypes {
 
     const int32_t& Column::GetColumnId() const{ return this->header.id; }
 
+    void Column::SetColumnId(const int32_t &columnId){
+        this->header.id = columnId;
+    }
+
     Headers::IdentityColumnsHeader & Column::GetIdentity() { return this->header.identity; }
 
     const int32_t & Column::GetIdentityStartingValue() const{ return this->header.identityStartingValue; }

@@ -69,6 +69,8 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] const int32_t& GetColumnId() const;
 
+        void SetColumnId(const int32_t &columnId);
+
         [[nodiscard]] Headers::IdentityColumnsHeader&  GetIdentity();
 
         [[nodiscard]] const int32_t& GetIdentityStartingValue() const;

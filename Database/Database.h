@@ -102,6 +102,8 @@ public:
 
     [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
+    [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row, const Headers::RowIdentifier& rowId);
+
     [[nodiscard]] static Pages::PageFreeSpacePage* GetAssociatedPfsPage(const string& filename, const page_id_t& pageId);
 
     static page_id_t GetGamAssociatedPage(const page_id_t &pageId);
@@ -138,7 +140,7 @@ public:
 
     Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
 
-    Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId)const;
+    [[nodiscard]] Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId)const;
 
     Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId);
 
@@ -169,6 +171,8 @@ public:
                                                                 , const bool& findPageDifferentFromCurrent = false);
 
     void GetIdentityColumns()const;
+
+    void GetColumnsHeaders()const;
 
     static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 

@@ -61,7 +61,6 @@ namespace DatabaseEngine::StorageTypes
 
         page_id_t clusteredIndexPageId;
         vector<page_id_t> nonClusteredIndexPageIds;
-        vector<uint8_t> nonClusteredIndexesIds;
 
         // bitmaps to store the composite key
         Headers::Index clusteredIndex;
@@ -100,12 +99,14 @@ namespace DatabaseEngine::StorageTypes
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
 
-            [[nodiscard]] Row* CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal);
+            [[nodiscard]] Row* CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal)const;
 
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
 
             void UpdateColumnIdentity(const int32_t& columnId, const int32_t& lastValue)const;
+
+            void InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t& indexPos);
 
         public:
             Table(
@@ -150,7 +151,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Pages::OverflowPage *GetOverflowPage(const page_id_t &pageId) const;
 
-            [[nodiscard]] const vector<vector<column_index_t>>& GetNonClusteredIndexes() const;
+            [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(const int& indexPos) const;
 
             [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
 
@@ -160,6 +161,8 @@ namespace DatabaseEngine::StorageTypes
                 const Indexing::Key* maximumValue);
 
             void ClusteredIndexScan(vector<Row> *selectedRows, Expressions::Expression* expression = nullptr);
+
+            void NonClusteredIndexScan(vector<Row> *selectedRows, const int& indexPos, Expressions::Expression* expression = nullptr);
 
             void HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const;
 
@@ -178,8 +181,11 @@ namespace DatabaseEngine::StorageTypes
             AdditionalDataTypes::ResultStatus NonClusteredIndexInsert(
                 const StorageTypes::Row *row,
                 const int& nonClusteredIndexId,
-                const vector<column_index_t>& indexedColumns,
                 const Headers::RowIdentifier& data);
+
+            AdditionalDataTypes::ResultStatus NonClusteredIndexInsertExistingRows(const int& indexPos);
+
+            int CreateNonClusteredIndex(vector<Constants::column_index_t>& columnIndices);
 
             void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
 
@@ -207,7 +213,9 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] row_size_t ReduceMaximumRowSize() const;
 
-            [[nodiscard]] key_size_t CalculateIndexKeySize() const;
+            [[nodiscard]] key_size_t CalculateIndexKeySize(const int& indexPos = -1) const;
+
+            [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(const int& indexPos) const;
 
 //            void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
 
@@ -221,8 +229,6 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] const page_id_t& GetNonClusteredIndexPageId( const int& indexPosition) const;
 
-            [[nodiscard]] const uint8_t& GetNonClusteredIndexId( const int& indexPosition) const;
-
             Indexing::BPlusTree* GetClusteredIndexedTree();
 
             Indexing::BPlusTree* GetNonClusteredIndexTree(const int& nonClusteredIndexId);
@@ -235,11 +241,13 @@ namespace DatabaseEngine::StorageTypes
 
             int HandleRowOverflow(const Row *row)const;
 
-            int HandleRowOverflow(Row *row, Column* column);
+            int HandleRowOverflow(Row *row, const Column* column)const;
 
             void InsertLargeObjectToPage(Row *row);
 
             void HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Field> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap = true);
+
+            void GetColumnsHeaders()const;
 
             void GetIdentityColumns();
 

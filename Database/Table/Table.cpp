@@ -51,7 +51,6 @@ namespace DatabaseEngine::StorageTypes {
         this->indexAllocationMapPageId = tableHeader.indexAllocationMapPageId;
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
         this->nonClusteredIndexPageIds = tableHeader.nonClusteredIndexPageIds;
-        this->nonClusteredIndexesIds = tableHeader.nonClusteredIndexesIds;
 
         this->clusteredIndex = tableHeader.clusteredIndex;
 
@@ -221,10 +220,8 @@ namespace DatabaseEngine::StorageTypes {
         if(!this->HasNonClusteredIndexes())
            return status;
 
-        const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
-
-        for (int i = 0; i < nonClusteredIndexes.size(); i++) {
-            status = this->NonClusteredIndexInsert(row, i, nonClusteredIndexes[i], rowId);
+        for (int i = 0; i < this->header.nonClusteredIndexes.size(); i++) {
+            status = this->NonClusteredIndexInsert(row, i, rowId);
 
             if (status.code != AdditionalDataTypes::ResultCode::Ok)
                 return status;
@@ -233,7 +230,7 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-      Row* Table::CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal)
+      Row* Table::CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal)const
       {
         auto *row = new Row(*this);
 
@@ -289,103 +286,103 @@ namespace DatabaseEngine::StorageTypes {
 
       void Table::SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions, const size_t &count)
       {
-        const size_t rowsToSelect =  (count == -1) 
-                                    ? numeric_limits<size_t>::max() 
-                                    : count;
-
-          const auto tableType = this->GetTableType();
-
-          const auto& clusteredIndexes = this->GetClusteredIndex();
-          const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
-
-          Key minimumValue;
-          Key maximumValue;
-
-          bool useClusteredIndex = false;
-          bool useNonClusteredIndex = false;
-          bool useHeap = false;
-
-          bool clusteredIndexSeek = false;
-          bool nonClusteredIndexSeek = false;
-
-          if(conditions != nullptr)
-          {
-            for(const auto& block: *conditions)
-            {
-                const auto& columnIndex = block.GetColumnIndex();
-
-                const ColumnType columnType = columns[columnIndex]->GetColumnType();
-      
-                if (columnType > Constants::ColumnType::ColumnTypeCount)
-                  throw invalid_argument("Table::Select: Unsupported Column Type");
-
-                int indexPosition = 0;
-                if(Table::VectorContainsIndex(clusteredIndexes, columnIndex, indexPosition))
-                {
-                  useClusteredIndex = true;
-                  
-                  //figure out how to perform index seek and index scan
-                  clusteredIndexSeek = clusteredIndexes[0] == columnIndex;
-
-                  if(!clusteredIndexSeek)
-                  {
-                    minimumValue.indexKeyPosition = indexPosition;
-                    minimumValue.currentSearchKeyPosition = minimumValue.subKeys.size();
-                  
-                    maximumValue.indexKeyPosition = indexPosition;
-                    maximumValue.currentSearchKeyPosition = maximumValue.subKeys.size();
-                  }
-                }
-
-                int nonClusteredIndexPosition = 0;
-
-                for(int i = 0;i < nonClusteredIndexes.size(); i++)
-                {
-                  if(Table::VectorContainsIndex(nonClusteredIndexes[i], columnIndex, indexPosition) && !clusteredIndexSeek)
-                  {
-                      useNonClusteredIndex = true;
-                      nonClusteredIndexPosition = i;
-
-                      nonClusteredIndexSeek = nonClusteredIndexes[i][0] == columnIndex;
-
-                      //prioritize clustered index seek over nonclustered index seek or scan
-                      if(!nonClusteredIndexSeek)
-                      {
-                        minimumValue.indexKeyPosition = indexPosition;
-                        minimumValue.currentSearchKeyPosition = minimumValue.subKeys.size();
-                      
-                        maximumValue.indexKeyPosition = indexPosition;
-                        maximumValue.currentSearchKeyPosition = maximumValue.subKeys.size();
-                      }
-                  }
-                }
-
-                useHeap = !useNonClusteredIndex && !useClusteredIndex;
-
-                minimumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
-                maximumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
-            }
-          }
-        //handle more complex queries like prefer index seek over index scan
-//        if(useClusteredIndex)
-//        {
-//            this->SelectRowsFromClusteredIndex(
-//              &selectedRows,
-//              rowsToSelect,
-//              conditions != nullptr ? &minimumValue : nullptr,
-//              conditions != nullptr ? &maximumValue : nullptr,
-//              clusteredIndexSeek,
-//              selectedColumnIndices
-//            );
-//            return;
-//        }
-//        else if (useNonClusteredIndex)
-//        {
-//            this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, nullptr, selectedColumnIndices);
-//            return;
-//        }
+//         const size_t rowsToSelect =  (count == -1)
+//                                     ? numeric_limits<size_t>::max()
+//                                     : count;
 //
-//        this->HeapScan(&selectedRows, rowsToSelect);
+//           const auto tableType = this->GetTableType();
+//
+//           const auto& clusteredIndexes = this->GetClusteredIndex();
+//           const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
+//
+//           Key minimumValue;
+//           Key maximumValue;
+//
+//           bool useClusteredIndex = false;
+//           bool useNonClusteredIndex = false;
+//           bool useHeap = false;
+//
+//           bool clusteredIndexSeek = false;
+//           bool nonClusteredIndexSeek = false;
+//
+//           if(conditions != nullptr)
+//           {
+//             for(const auto& block: *conditions)
+//             {
+//                 const auto& columnIndex = block.GetColumnIndex();
+//
+//                 const ColumnType columnType = columns[columnIndex]->GetColumnType();
+//
+//                 if (columnType > Constants::ColumnType::ColumnTypeCount)
+//                   throw invalid_argument("Table::Select: Unsupported Column Type");
+//
+//                 int indexPosition = 0;
+//                 if(Table::VectorContainsIndex(clusteredIndexes, columnIndex, indexPosition))
+//                 {
+//                   useClusteredIndex = true;
+//
+//                   //figure out how to perform index seek and index scan
+//                   clusteredIndexSeek = clusteredIndexes[0] == columnIndex;
+//
+//                   if(!clusteredIndexSeek)
+//                   {
+//                     minimumValue.indexKeyPosition = indexPosition;
+//                     minimumValue.currentSearchKeyPosition = minimumValue.subKeys.size();
+//
+//                     maximumValue.indexKeyPosition = indexPosition;
+//                     maximumValue.currentSearchKeyPosition = maximumValue.subKeys.size();
+//                   }
+//                 }
+//
+//                 int nonClusteredIndexPosition = 0;
+//
+//                 for(int i = 0;i < nonClusteredIndexes.size(); i++)
+//                 {
+//                   if(Table::VectorContainsIndex(nonClusteredIndexes[i], columnIndex, indexPosition) && !clusteredIndexSeek)
+//                   {
+//                       useNonClusteredIndex = true;
+//                       nonClusteredIndexPosition = i;
+//
+//                       nonClusteredIndexSeek = nonClusteredIndexes[i][0] == columnIndex;
+//
+//                       //prioritize clustered index seek over nonclustered index seek or scan
+//                       if(!nonClusteredIndexSeek)
+//                       {
+//                         minimumValue.indexKeyPosition = indexPosition;
+//                         minimumValue.currentSearchKeyPosition = minimumValue.subKeys.size();
+//
+//                         maximumValue.indexKeyPosition = indexPosition;
+//                         maximumValue.currentSearchKeyPosition = maximumValue.subKeys.size();
+//                       }
+//                   }
+//                 }
+//
+//                 useHeap = !useNonClusteredIndex && !useClusteredIndex;
+//
+//                 minimumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
+//                 maximumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
+//             }
+//           }
+//         //handle more complex queries like prefer index seek over index scan
+// //        if(useClusteredIndex)
+// //        {
+// //            this->SelectRowsFromClusteredIndex(
+// //              &selectedRows,
+// //              rowsToSelect,
+// //              conditions != nullptr ? &minimumValue : nullptr,
+// //              conditions != nullptr ? &maximumValue : nullptr,
+// //              clusteredIndexSeek,
+// //              selectedColumnIndices
+// //            );
+// //            return;
+// //        }
+// //        else if (useNonClusteredIndex)
+// //        {
+// //            this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, nullptr, selectedColumnIndices);
+// //            return;
+// //        }
+// //
+// //        this->HeapScan(&selectedRows, rowsToSelect);
       }
 
     void Table::HeapDelete(const Expressions::Expression* expression) const
@@ -490,8 +487,11 @@ namespace DatabaseEngine::StorageTypes {
         return maximumRowSize;
     }
 
-    key_size_t Table::CalculateIndexKeySize() const {
+    key_size_t Table::CalculateIndexKeySize(const int& indexPos) const {
       HashSet<column_index_t> clusteredColumns;
+
+      if (indexPos != -1)
+        return this->CalculateNonClusteredIndexKeySize(indexPos);
 
       key_size_t keySize = 0;
       for(const auto& column : this->header.clusteredIndex.columns)
@@ -500,6 +500,20 @@ namespace DatabaseEngine::StorageTypes {
       for (const auto &column : this->columns)
         if(clusteredColumns.Contains(column->GetColumnIndex()))
           keySize += column->GetColumnSize();
+
+        return keySize;
+    }
+
+    key_size_t Table::CalculateNonClusteredIndexKeySize(const int &indexPos) const{
+        HashSet<column_index_t> clusteredColumns;
+
+        key_size_t keySize = 0;
+        for(const auto& column : this->header.nonClusteredIndexes.at(indexPos).columns)
+          clusteredColumns.Add(column);
+
+        for (const auto &column : this->columns)
+          if(clusteredColumns.Contains(column->GetColumnIndex()))
+            keySize += column->GetColumnSize();
 
         return keySize;
     }
@@ -553,6 +567,17 @@ namespace DatabaseEngine::StorageTypes {
         if(expression != nullptr){
           tree->IndexScan(selectedRows, expression);
           return;
+        }
+
+        tree->IndexScan(selectedRows);
+    }
+
+    void Table::NonClusteredIndexScan(vector<Row> *selectedRows, const int &indexPos, Expressions::Expression *expression){
+
+        auto* tree = this->GetNonClusteredIndexTree(indexPos);
+
+        if (expression != nullptr) {
+          tree->IndexScan(selectedRows, expression);
         }
 
         tree->IndexScan(selectedRows);
@@ -696,7 +721,16 @@ namespace DatabaseEngine::StorageTypes {
       return {};
     }
 
-    void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
+    int Table::CreateNonClusteredIndex(vector<Constants::column_index_t> &columnIndices){
+        Headers::Index index;
+        index.columns = std::move(columnIndices);
+
+        this->header.nonClusteredIndexes.push_back(std::move(index));
+
+        return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
+    }
+
+  void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -917,31 +951,60 @@ namespace DatabaseEngine::StorageTypes {
         Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, columnId, lastValue);
     }
 
+    void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t &indexPos){
 
-    AdditionalDataTypes::ResultStatus Table::NonClusteredIndexInsert(const StorageTypes::Row *row, const int & nonClusteredIndexId, const vector<column_index_t> & indexedColumns, const Headers::RowIdentifier & data){
+        auto* clusteredTree = this->GetClusteredIndexedTree();
+
+        clusteredTree->InsertRowsToOtherTree(indexPos);
+    }
+
+    AdditionalDataTypes::ResultStatus Table::NonClusteredIndexInsert(
+      const StorageTypes::Row *row,
+      const int & nonClusteredIndexId,
+      const Headers::RowIdentifier & data){
+
+      const auto& indexedColumns = this->header.nonClusteredIndexes.at(nonClusteredIndexId).columns;
 
       BPlusTree* tree = this->GetNonClusteredIndexTree(nonClusteredIndexId);
-      const auto key = Database::CreateKey(indexedColumns, row);
+
+      const auto key = Database::CreateKey(indexedColumns, row, data);
 
       int indexPosition = 0;
       AdditionalDataTypes::ResultStatus status;
 
-      // Node *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+      auto *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
 
-      // if (status.code != AdditionalDataTypes::ResultCode::Ok)
-      //     return status;
+      if (status.code != AdditionalDataTypes::ResultCode::Ok)
+          return status;
 
-      // node->keys.insert(node->keys.begin() + indexPosition, key);
-      // node->nonClusteredData.insert(node->nonClusteredData.begin() + indexPosition, data);
-      // node->prevNodeSize = node->currentNodeSize;
-      // node->currentNodeSize = node->GetNodeSize();
+      auto* keys = node->GetKeysUnsafe();
 
-      // this->SplitNodeFromIndexPage(tableId, node, nonClusteredIndexId);
+      keys->insert(keys->begin() + indexPosition, new Key(key));
+
+      auto* rows = node->GetNonClusteredDataUnsafe();
+
+      rows->insert(rows->begin() + indexPosition, new Headers::RowIdentifier(data));
+
+      node->UpdateBytesLeft();
+
+      PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
+      pageFreeSpacePage->SetPageMetaData(node);
 
       return status;
     }
 
-    int Table::HandleRowOverflow(Row *row, Column *column){
+    AdditionalDataTypes::ResultStatus Table::NonClusteredIndexInsertExistingRows(const int &indexPos){
+        const auto tableType = this->GetTableType();
+
+        if (tableType == TableType::CLUSTERED) {
+          this->InsertExistingRowsToNonClusteredIndexByClusteredIndex(indexPos);
+          return {};
+        }
+
+        return {};
+    }
+
+    int Table::HandleRowOverflow(Row *row, const Column *column)const{
 
         auto& data = row->GetData();
 
@@ -963,7 +1026,7 @@ namespace DatabaseEngine::StorageTypes {
 
         pfsPage->SetPageMetaData(overflowPage);
 
-        OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
+        const OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
         largestBlock->SetData(&ptr, sizeof(OverflowPointer));
 
         row->UpdateRowSize();
@@ -997,6 +1060,19 @@ namespace DatabaseEngine::StorageTypes {
       return primaryKeyValue;
     }
 
+    void Table::GetColumnsHeaders()const{
+      const auto columnsHeaders = Server::ServerInstance::Get().SelectColumns(this->header.tableId);
+
+      if (columnsHeaders.empty())
+        return;
+
+      for (int i = 0;i < this->columns.size(); i++) {
+        auto& column = columns[i];
+        column->SetColumnId(columnsHeaders[i].id);
+      }
+    }
+
+
     void Table::GetIdentityColumns(){
       const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
 
@@ -1016,12 +1092,6 @@ namespace DatabaseEngine::StorageTypes {
           break;
         }
       }
-      //
-      // this->header.clusteredIndex.seed = identityHeaders.begin()->seedValue;
-      // this->header.clusteredIndex.incrementFactor = identityHeaders.begin()->increment;
-      // this->header.clusteredIndex.lastValue = identityHeaders.begin()->lastValue;
-      // this->header.clusteredIndex.cacheBlock = identityHeaders.begin()->cacheBlock;
-      // this->header.clusteredIndex.startingValue = identityHeaders.begin()->lastValue;
     }
 
     void Table::UpdateMasterDatabase() const{

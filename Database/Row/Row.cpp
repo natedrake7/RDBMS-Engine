@@ -231,7 +231,7 @@ namespace DatabaseEngine::StorageTypes {
 
     const row_size_t& Row::GetRowSize() const { return this->header.rowSize; }
 
-    vector<column_index_t> Row::GetLargeBlocks()
+    vector<column_index_t> Row::GetLargeBlocks()const
     {
         vector<column_index_t> largeBlocksIndexes;
         for(const auto& block : this->data)
