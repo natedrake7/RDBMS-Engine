@@ -43,7 +43,7 @@ namespace Pages {
 		std::vector<Indexing::Key*> keys;
 
 		//leaf
-		std::vector<Indexing::BPlusTreeNonClusteredData*> nonClusteredData;
+		std::vector<Headers::RowIdentifier*> nonClusteredData;
 
 		//internal node
 		std::vector<page_id_t> children;
@@ -75,7 +75,7 @@ namespace Pages {
 
 			[[nodiscard]] vector<Indexing::Key*>* GetKeysUnsafe();
 
-			[[nodiscard]] vector<Indexing::BPlusTreeNonClusteredData*>* GetNonClusteredDataUnsafe();
+			[[nodiscard]] vector<Headers::RowIdentifier*>* GetNonClusteredDataUnsafe();
 
 			[[nodiscard]] vector<page_id_t>* GetChildren();
 

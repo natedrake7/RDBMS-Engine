@@ -47,6 +47,11 @@ namespace QueryPipeline{
                 typeid(Statements::UpdateStatement*),
                 [](const auto& r) { return std::any_cast<Statements::UpdateStatement*>(r); }
             },
+
+            {
+                typeid(Statements::CreateIndexStatement*),
+                [](const auto& r) { return std::any_cast<Statements::CreateIndexStatement*>(r); }
+            },
         };
 
     class Parser{

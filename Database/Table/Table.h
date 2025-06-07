@@ -171,15 +171,15 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexSeekDelete(const Expressions::Expression* expression);
 
-            AdditionalDataTypes::ResultStatus HeapInsert(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, page_id_t* rowPageId, int* rowIndex);
+            AdditionalDataTypes::ResultStatus HeapInsert(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const;
 
-            AdditionalDataTypes::ResultStatus ClusteredIndexInsert(Row *row, page_id_t* rowPageId, int* rowIndex);
+            AdditionalDataTypes::ResultStatus ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId);
 
             AdditionalDataTypes::ResultStatus NonClusteredIndexInsert(
                 const StorageTypes::Row *row,
                 const int& nonClusteredIndexId,
                 const vector<column_index_t>& indexedColumns,
-                const Indexing::BPlusTreeNonClusteredData& data);
+                const Headers::RowIdentifier& data);
 
             void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
 

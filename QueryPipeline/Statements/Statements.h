@@ -162,4 +162,15 @@ namespace QueryPipeline::Statements {
     QueryPipeline::LogicalPlan * ToLogical() override;
   };
 
+  struct CreateIndexStatement final : Statement {
+    TableName* table;
+    std::string name;
+    vector<std::string> columns;
+    vector<column_index_t> columnIndices;
+    bool isUnique;
+
+    bool Validate() override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
+  };
+
 }

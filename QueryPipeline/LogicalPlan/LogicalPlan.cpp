@@ -185,5 +185,16 @@ namespace QueryPipeline {
   PhysicalPlan::PhysicalOperator* LogicalOrder::ToPhysical(){
     return new PhysicalPlan::PhysicalOrderBy(this->databaseId, this->child->ToPhysical(), this->columns, this->orderType);
   }
+
+  LogicalIndexCreate::LogicalIndexCreate(
+    const int32_t &databaseId,
+    Statements::TableName *table,
+    std::string &constraintName,
+    std::vector<column_index_t> &columns)
+      : LogicalPlan(databaseId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+
+  PhysicalPlan::PhysicalOperator * LogicalIndexCreate::ToPhysical(){
+    return new PhysicalPlan::PhysicalIndexCreate(this->databaseId, this->table, this->constraintName, this->columns);
+  }
 }
 

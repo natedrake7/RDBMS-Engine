@@ -105,5 +105,15 @@ namespace QueryPipeline {
         std::string  constraintName);
       PhysicalPlan::PhysicalTableCreate* ToPhysical()override;
   };
+
+  class LogicalIndexCreate final : public LogicalPlan {
+    public:
+    Statements::TableName* table;
+    std::string constraintName;
+    std::vector<column_index_t> columns;
+    explicit LogicalIndexCreate(const int32_t & databaseId, Statements::TableName* table, std::string& constraintName, std::vector<column_index_t>& columns);
+    PhysicalPlan::PhysicalOperator * ToPhysical() override;
+
+  };
 }
 

@@ -299,17 +299,17 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       columnIdsDict.Add(column.index, columnResult.primaryKeyVal);
 
       //insert identity columns
-      if (column.autoIncrementKey) {
+      if (column.autoIncrementKey == nullptr)
+        continue;
 
-        Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
-            tableResult.primaryKeyVal,
-            columnResult.primaryKeyVal,
-            column.autoIncrementKey->seed,
-            column.autoIncrementKey->incrementFactor,
-            column.autoIncrementKey->seed,
-            true,
-            column.autoIncrementKey->cacheBlock);
-        }
+      Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
+          tableResult.primaryKeyVal,
+          columnResult.primaryKeyVal,
+          column.autoIncrementKey->seed,
+          column.autoIncrementKey->incrementFactor,
+          column.autoIncrementKey->seed,
+          true,
+          column.autoIncrementKey->cacheBlock);
     }
 
     const bool isConstraintEmpty = this->constraintName.empty();
@@ -453,6 +453,21 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     }
 
     SortingFunctions::OrderBy(result->rows, conditions);
+
+    return result;
+  }
+
+  PhysicalIndexCreate::PhysicalIndexCreate(
+    const int32_t &databaseId,
+    Statements::TableName *table,
+    std::string &constraintName,
+    vector<Constants::column_index_t> &columns)
+    : PhysicalOperator(databaseId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+
+  PhysicalPlanResult * PhysicalIndexCreate::Execute(){
+    auto* result = new PhysicalPlanResult();
+
+    //do stuff here
 
     return result;
   }

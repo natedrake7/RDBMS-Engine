@@ -143,4 +143,21 @@ namespace Headers {
 
     Index() = default;
   };
+
+  struct RowIdentifier {
+    uint32_t pageId = -1;
+    int32_t indexId = -1;
+
+    RowIdentifier() {
+      this->pageId = -1;
+      this->indexId = -1;
+    }
+
+    RowIdentifier(const uint32_t& pageId, const int32_t& indexId) {
+      this->pageId = pageId;
+      this->indexId = indexId;
+    }
+
+    ~RowIdentifier() = default;
+  };
 }

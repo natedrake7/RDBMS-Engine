@@ -72,5 +72,7 @@ namespace QueryPipeline {
       antlrcpp::Any visitOrderByStatement(SQLParser::OrderByStatementContext *context) override;
 
       antlrcpp::Any visitNewGuid(SQLParser::NewGuidContext *context) override;
+
+      antlrcpp::Any visitCreateIndexStatement(SQLParser::CreateIndexStatementContext *context) override;
   };
 }

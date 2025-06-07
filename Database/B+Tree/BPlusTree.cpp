@@ -938,7 +938,7 @@ namespace Indexing
 
     void BPlusTree::SetTreeType(const TreeType & treeType) { this->type = treeType; }
 
-    void BPlusTree::UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data) const
+    void BPlusTree::UpdateRowData(const Key& key, const Headers::RowIdentifier& data) const
     {
         // auto* currentNode = this->SearchKey(key);
 
@@ -1330,20 +1330,4 @@ namespace Indexing
     }
 
     QueryData::~QueryData() = default;
-
-    BPlusTreeNonClusteredData::BPlusTreeNonClusteredData()
-    {
-        this->index = 0;
-        this->pageId = 0;
-    }
-
-    BPlusTreeNonClusteredData::BPlusTreeNonClusteredData(const page_id_t & pageId, const page_offset_t & index)
-    {
-        this->pageId = pageId;
-        this->index = index;
-    }
-
-    BPlusTreeNonClusteredData::~BPlusTreeNonClusteredData() = default;
-
-    page_size_t BPlusTreeNonClusteredData::GetNonClusteredDataSize() { return sizeof(page_id_t) + sizeof(page_offset_t); }
 }

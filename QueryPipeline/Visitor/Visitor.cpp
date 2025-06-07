@@ -21,7 +21,9 @@ namespace QueryPipeline {
       return visit(context->deleteStatement());
     if(context->updateStatement())
       return visit(context->updateStatement());
-    
+    if (context->createIndexStatement())
+      return visit(context->createIndexStatement());
+
     return nullptr;
   }
 
@@ -320,5 +322,20 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
   antlrcpp::Any SQLVisitorImplementation::visitNewGuid(SQLParser::NewGuidContext *context){
     return DataTypes::Guid::NewGuid();
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitCreateIndexStatement(SQLParser::CreateIndexStatementContext *context){
+    auto* statement = new Statements::CreateIndexStatement();
+
+    statement->isUnique = context->UNIQUE() != nullptr;
+    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+
+    statement->name = context->IDENTIFIER()->getText();
+
+    auto colCtx = context->columnList();
+    for (const auto col : colCtx->columnName())
+      statement->columns.push_back(col->getText());
+
+    return statement;
   }
 }

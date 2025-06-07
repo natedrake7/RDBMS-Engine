@@ -203,30 +203,28 @@ namespace DatabaseEngine::StorageTypes {
       {
         this->InsertLargeObjectToPage(row);
 
-        page_id_t rowPageId;
-        int rowIndexPosition;
+        //row_id
+        Headers::RowIdentifier rowId;
 
         AdditionalDataTypes::ResultStatus status;
 
         if (this->GetTableType() == TableType::CLUSTERED) {
-            status = this->ClusteredIndexInsert(row, &rowPageId, &rowIndexPosition);
+            status = this->ClusteredIndexInsert(row, &rowId);
 
             if (status.code != AdditionalDataTypes::ResultCode::Ok)
                 return status;
         }
         else
-            this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowPageId, &rowIndexPosition);
+            this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
 
         //insert to Non Clustered Indexes
         if(!this->HasNonClusteredIndexes())
            return status;
 
-        const BPlusTreeNonClusteredData nonClusteredData(rowPageId, rowIndexPosition);
-
         const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
 
         for (int i = 0; i < nonClusteredIndexes.size(); i++) {
-            status = this->NonClusteredIndexInsert(row, i, nonClusteredIndexes[i], nonClusteredData);
+            status = this->NonClusteredIndexInsert(row, i, nonClusteredIndexes[i], rowId);
 
             if (status.code != AdditionalDataTypes::ResultCode::Ok)
                 return status;
@@ -598,7 +596,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    AdditionalDataTypes::ResultStatus Table::ClusteredIndexInsert(Row *row, page_id_t *rowPageId, int *rowIndex){
+    AdditionalDataTypes::ResultStatus Table::ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId){
 
        BPlusTree* tree = this->GetClusteredIndexedTree();
 
@@ -613,8 +611,6 @@ namespace DatabaseEngine::StorageTypes {
        if (status.code != AdditionalDataTypes::ResultCode::Ok)
            return status;
 
-       *rowIndex = indexPosition;
-
        PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
 
        // should never fail
@@ -626,13 +622,14 @@ namespace DatabaseEngine::StorageTypes {
 
        node->UpdateBytesLeft();
 
-       *rowPageId = node->GetPageId();
+       rowId->indexId = indexPosition;
+       rowId->pageId = node->GetPageId();
 
        // this->SplitNodeFromIndexPage(tableId, node);
        return {};
      }
 
-    AdditionalDataTypes::ResultStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, page_id_t *rowPageId, int *rowIndex){
+    AdditionalDataTypes::ResultStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const{
       const auto& filename = this->database->GetFileName();
 
       while(row->GetTotalRowSize() > PAGE_SIZE - PageHeader::GetPageHeaderSize())
@@ -642,16 +639,15 @@ namespace DatabaseEngine::StorageTypes {
       {
           Page *newPage = this->database->CreateDataPage(this->header.ordinalPosition);
 
-          newPage->InsertRow(row, rowIndex);
-
-          *rowPageId = newPage->GetPageId();
+          newPage->InsertRow(row, rowId->indexId);
+          rowId->pageId = newPage->GetPageId();
 
           return {};
       }
 
-      const auto extentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+      const auto indexPageExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
 
-      const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, extentId, this);
+      const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, indexPageExtentId, this);
 
       tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
       lastExtentIndex = allocatedExtents.size() - 1;
@@ -684,18 +680,18 @@ namespace DatabaseEngine::StorageTypes {
                   if (row->GetTotalRowSize() > page->GetBytesLeft())
                       continue;
 
-                  page->InsertRow(row, rowIndex);
+                  page->InsertRow(row, rowId->indexId);
                   pageFreeSpacePage->SetPageMetaData(page);
 
-                  *rowPageId = pageId;
+                  rowId->pageId = pageId;
                   return {};
               }
           }
       }
 
       Page *newPage = this->database->CreateDataPage(this->header.ordinalPosition);
-      newPage->InsertRow(row, rowIndex);
-      *rowPageId = newPage->GetPageId();
+      newPage->InsertRow(row, rowId->indexId);
+      rowId->pageId = newPage->GetPageId();
 
       return {};
     }
@@ -922,7 +918,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
 
-    AdditionalDataTypes::ResultStatus Table::NonClusteredIndexInsert(const StorageTypes::Row *row, const int & nonClusteredIndexId, const vector<column_index_t> & indexedColumns, const BPlusTreeNonClusteredData & data){
+    AdditionalDataTypes::ResultStatus Table::NonClusteredIndexInsert(const StorageTypes::Row *row, const int & nonClusteredIndexId, const vector<column_index_t> & indexedColumns, const Headers::RowIdentifier & data){
 
       BPlusTree* tree = this->GetNonClusteredIndexTree(nonClusteredIndexId);
       const auto key = Database::CreateKey(indexedColumns, row);

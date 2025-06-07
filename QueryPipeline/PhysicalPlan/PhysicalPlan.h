@@ -204,4 +204,19 @@ namespace QueryPipeline::PhysicalPlan{
     ~PhysicalOrderBy()override;
     PhysicalPlanResult* Execute() override;
   };
+
+  class PhysicalIndexCreate final : public PhysicalOperator {
+    Statements::TableName* table;
+    std::string constraintName;
+    std::vector<Constants::column_index_t> columns;
+
+    public:
+    PhysicalIndexCreate(
+        const int32_t & databaseId,
+        Statements::TableName*  table,
+        std::string& constraintName,
+        vector<Constants::column_index_t>& columns);
+
+    PhysicalPlanResult * Execute() override;
+  };
 }

@@ -12,7 +12,8 @@ sqlStatement
     | createTableStatement
     | createSchemaStatement
     | deleteStatement
-    | updateStatement;
+    | updateStatement
+    | createIndexStatement;
 
 //select statement
 selectStatement
@@ -127,6 +128,10 @@ literalValue
         | getDate
         | newGuid
         | NULL;
+
+createIndexStatement
+        : 'CREATE' (UNIQUE)? 'INDEX' IDENTIFIER 'ON' tableName '(' columnList ')'
+        ;
         
 getDate
     : 'GETDATE()'
@@ -157,6 +162,7 @@ LESSTHAN        : '<';
 GREATERTHAN     : '>';
 EQUAL           : '=';
 
+//DataTypes
 GUID            : 'GUID';
 BOOL            : 'BOOL';
 DATETIME        : 'DATETIME';
@@ -166,17 +172,23 @@ SMALLINT        : 'SMALLINT';
 INT             : 'INT';
 BIGINT          : 'BIGINT';
 
+//VARCHAR Types
 VARCHAR         : 'VARCHAR';
 NVARCHAR        : 'NVARCHAR';
 MAX             : 'MAX';
 
+//Nullable
 NOT             : 'NOT';
 NULL            : 'NULL';
 
+//Ordering
 DESC            : 'DESC';
 ASC             : 'ASC';
 
+//Constraints
+UNIQUE          : 'UNIQUE';
 
+//More Datatypes and identifiers
 WILDCARD        : '*';
 IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
 STRING          : '\'' ( ~['\\] | '\\' . )* '\''; 

@@ -40,7 +40,6 @@ namespace DatabaseEngine {
         Table* tablePtr = this->tables.at(table.GetTableId());
 
         const auto& nonClusteredIndexes = tablePtr->GetNonClusteredIndexes();
-            
 
         for (int i = 0; i < nonClusteredIndexes.size(); i++)
         {
@@ -52,7 +51,7 @@ namespace DatabaseEngine {
             {
                 const auto key = Database::CreateKey(nonClusteredIndexes[i], (*rows)[index]);
 
-                nonClusteredTree->UpdateRowData(key, BPlusTreeNonClusteredData(nextLeafPageId, index));
+                nonClusteredTree->UpdateRowData(key, Headers::RowIdentifier(nextLeafPageId, index));
             }
         }
     }

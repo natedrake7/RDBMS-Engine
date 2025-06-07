@@ -27,17 +27,6 @@ namespace Pages
 
 namespace Indexing
 {
-    typedef struct BPlusTreeNonClusteredData
-    {
-        page_id_t pageId;
-        page_offset_t index;
-        BPlusTreeNonClusteredData();
-        BPlusTreeNonClusteredData(const page_id_t& pageId, const page_offset_t& index);
-        ~BPlusTreeNonClusteredData();
-
-        static page_size_t GetNonClusteredDataSize();
-    }BPlusTreeNonClusteredData;
-
     typedef struct QueryData
     {
         page_id_t pageId;
@@ -161,7 +150,7 @@ namespace Indexing
 
         void SetTreeType(const TreeType& treeType);
 
-        void UpdateRowData(const Key& key, const BPlusTreeNonClusteredData& data) const;
+        void UpdateRowData(const Key& key, const Headers::RowIdentifier& data) const;
 
         [[nodiscard]] const page_id_t& GetFirstIndexPageId() const;
     };

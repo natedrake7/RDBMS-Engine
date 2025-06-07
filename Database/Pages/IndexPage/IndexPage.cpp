@@ -125,7 +125,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             continue;
         }
 
-        auto* item = new BPlusTreeNonClusteredData();
+        auto* item = new Headers::RowIdentifier();
 
         memcpy(&item, data.data() + offSet, sizeof(page_id_t) + sizeof(page_offset_t));
         offSet += sizeof(page_id_t) + sizeof(page_offset_t);
@@ -210,7 +210,7 @@ void IndexPage::UpdateBytesLeft()
 
 vector<Indexing::Key *>* IndexPage::GetKeysUnsafe(){ return &this->keys; }
 
-vector<Indexing::BPlusTreeNonClusteredData *> * IndexPage::GetNonClusteredDataUnsafe(){ return &this->nonClusteredData; }
+vector<Headers::RowIdentifier *> * IndexPage::GetNonClusteredDataUnsafe(){ return &this->nonClusteredData; }
 
 vector<page_id_t> * IndexPage::GetChildren(){ return &this->children; }
 

@@ -33,15 +33,11 @@ void InsertRowsToMoviesTable(Table* table);
 //advanced functions
 
 //TODO
-//Verify Identity works correctly and use cache blocks(extend for multiple columns)
-//add server db to return the rest of the fields
-//Add Guid Support (set is as a different datatype)
 //Add Decimal full support
 //Add Alter table (add drop columns)
 //Add joins
 //check index deletes work
 //add identity
-//update sys_indexes periodically by identity and on shutdown for sure.
 //add reset identity
 //start documenting implementation and optimize wherever possible
 //add order by statements full support (minor just add ASC, DESC on each column or on all)
@@ -108,15 +104,17 @@ int main()
 
     const string updateMovies = "UPDATE dbo.Movies SET MovieDesc = 'Batman Fights Bane' WHERE ID = 5";
 
-    const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID = 20";
+    const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID <> 20";
+
+    const string moviesIndex = "CREATE INDEX idx_movieDesc ON dbo.Movies (MovieName)";
 
     const auto start = std::chrono::high_resolution_clock::now();
 
      // QueryPipeline::Parser::Parse(createDb, databaseId);
      // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
-    QueryPipeline::Parser::Parse(updateActors, databaseId);
-    QueryPipeline::Parser::Parse(selectActors, databaseId);
+    // QueryPipeline::Parser::Parse(updateActors, databaseId);
+    QueryPipeline::Parser::Parse(moviesIndex, databaseId);
 
     // QueryPipeline::Parser::Parse(insertMovies, databaseId);
     // QueryPipeline::Parser::Parse(selectMovies, databaseId);

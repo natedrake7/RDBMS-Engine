@@ -351,7 +351,6 @@ namespace QueryPipeline::Statements {
     return this->where.expression->Validate(columnsDict);
   }
 
-
   QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
     vector<Field> columnsUpdates;
 
@@ -359,6 +358,38 @@ namespace QueryPipeline::Statements {
       columnsUpdates.emplace_back(column.value);
 
     return new QueryPipeline::LogicalUpdate(this->databaseId, this->table, columnsUpdates, this->where.expression);
+  }
+
+  bool CreateIndexStatement::Validate(){
+    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
+
+    if (tableHeader.id == -1){
+      cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+      return false;
+    }
+
+    this->table->tableId = tableHeader.id;
+    this->table->ordinalPosition = tableHeader.ordinalPosition;
+
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
+
+    for(auto& column: this->columns) {
+      Headers::ColumnHeader header;
+
+      if (columnsDict.TryGetValue(column, header)) {
+        this->columnIndices.push_back(header.ordinalPosition);
+        continue;
+      }
+
+      cerr << "Column " << column << " does not exist on table: " << this->table->schema << "." << this->table->name << endl;
+      return false;
+    }
+
+    return true;
+  }
+
+  QueryPipeline::LogicalPlan * CreateIndexStatement::ToLogical(){
+    return new QueryPipeline::LogicalIndexCreate(this->databaseId, this->table, this->name, this->columnIndices);
   }
 
 }
