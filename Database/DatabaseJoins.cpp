@@ -98,6 +98,9 @@ namespace DatabaseEngine
             table->GetColumnsHeaders();
     }
 
+    void Database::GetIndexes() const{
+    }
+
     void Database::UpdateMasterDatabase()const{
       for(const auto& table: this->tables)
         table->UpdateMasterDatabase();

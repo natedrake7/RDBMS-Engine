@@ -683,7 +683,7 @@ namespace DatabaseEngine
         return this->CreateOverflowPage(tableId);
     }
 
-    LargeDataPage *Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)
+    LargeDataPage *Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const
     {
         const auto extentId = Database::CalculateExtentIdByPageId(pageId);
 

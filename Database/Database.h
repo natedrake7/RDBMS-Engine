@@ -142,7 +142,7 @@ public:
 
     [[nodiscard]] Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId)const;
 
-    Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId);
+    Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
 
     Pages::OverflowPage* GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
 
@@ -173,6 +173,8 @@ public:
     void GetIdentityColumns()const;
 
     void GetColumnsHeaders()const;
+
+    void GetIndexes() const;
 
     static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 

@@ -1094,6 +1094,10 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
+    void Table::GetIndexes(){
+        const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->header.tableId);
+    }
+
     void Table::UpdateMasterDatabase() const{
       for (const auto& column: this->columns) {
         const auto& identity = column->GetIdentity();

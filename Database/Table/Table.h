@@ -251,6 +251,8 @@ namespace DatabaseEngine::StorageTypes
 
             void GetIdentityColumns();
 
+            void GetIndexes();
+
             void UpdateMasterDatabase() const;
     };
 }
