@@ -62,6 +62,7 @@ namespace DatabaseEngine::StorageTypes {
 
       Table::Table(
         const table_id_t &tableId,
+        const int& ordinalPosition,
         const vector<Column *> &columns,
         DatabaseEngine::Database *database,
         const Headers::Index* clusteredIndex,
@@ -72,7 +73,7 @@ namespace DatabaseEngine::StorageTypes {
         this->database = database;
         this->header.numberOfColumns = columns.size();
         this->header.tableId = tableId;
-        this->header.ordinalPosition = tableId;
+        this->header.ordinalPosition = ordinalPosition;
 
         this->clusteredIndexedTree = nullptr;
 
@@ -189,8 +190,6 @@ namespace DatabaseEngine::StorageTypes {
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
-
-
 
         result.message = "Rows affected: 1";
         result.primaryKeyVal = primaryKeyVal;
@@ -1072,7 +1071,6 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-
     void Table::GetIdentityColumns(){
       const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
 
@@ -1088,14 +1086,37 @@ namespace DatabaseEngine::StorageTypes {
           column->SetIdentity(identity);
           column->SetIdentityStartingValue(identity.lastValue);
 
-          this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
+          // this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
           break;
         }
       }
     }
 
     void Table::GetIndexes(){
+        Dictionary<int32_t, Column*> columnsDict;
+
+        for (auto& column: this->columns)
+          columnsDict.Add(column->GetColumnId(), column);
+
         const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->header.tableId);
+
+        for (const auto& index: indexes) {
+          const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexId(index.id);
+
+          std::vector<column_index_t> indexColumnsIndices;
+          for (const auto& indexedColumn : indexedColumns)
+            indexColumnsIndices.emplace_back(columnsDict.Get(indexedColumn.columnId)->GetColumnIndex());
+
+
+          if (index.isClustered) {
+            this->header.clusteredIndex.columns = std::move(indexColumnsIndices);
+            continue;
+          }
+
+          Headers::Index tableIndex(indexColumnsIndices);
+
+          this->header.nonClusteredIndexes.push_back(std::move(tableIndex));
+        }
     }
 
     void Table::UpdateMasterDatabase() const{

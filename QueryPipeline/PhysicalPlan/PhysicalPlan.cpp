@@ -159,26 +159,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    //i mean this is really bad
-//    for(int i = 0;i < 1000; i++){
-//      this->fields[0].SetData(i);
-//
-//      const auto smallStr = std::string(800, 'w');
-//      this->fields[1].SetData(smallStr);
-//
-//      const auto midStr = std::string(3500, 'a');
-//      this->fields[2].SetData(midStr);
-//
-//      const auto medStr = std::string(5000, 'u');
-//      this->fields[3].SetData(medStr);
-//
-//      const auto str = std::string(10000, 'a');
-//      this->fields[4].SetData(str);
-//
-//    }
-
-      const auto insertResult = tablePtr->InsertRow(fields);
-
+    const auto insertResult = tablePtr->InsertRow(fields);
 
     // const auto insertResult = tablePtr->InsertRow(fields);
     //
@@ -278,13 +259,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     const int16_t& index = tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1;
 
-    auto* tablePtr = db->CreateTable(index, columnsPtrs, &this->primaryKey);
 
     const auto tableResult = Server::ServerInstance::Get().InsertTableToMasterDb(
         this->databaseId,
         this->table->schemaId,
         this->table->name,
         index);
+
+    auto* tablePtr = db->CreateTable(tableResult.primaryKeyVal, index, columnsPtrs, &this->primaryKey);
 
     Dictionary<int, int32_t> columnIdsDict;
 
@@ -356,6 +338,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         primaryKeyColumnIds[i],
     this->primaryKey.columns[i]);
     }
+
 
     tablePtr->GetColumnsHeaders();
     tablePtr->GetIdentityColumns();
@@ -482,7 +465,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
         this->table->tableId,
         this->constraintName,
-        true,
+        false,
         false);
 
     const auto indexId = static_cast<int32_t>(indexResult.primaryKeyVal);

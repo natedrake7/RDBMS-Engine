@@ -200,11 +200,12 @@ namespace DatabaseEngine
 
     Table *Database::CreateTable(
         const table_id_t &tableId,
+        const int& ordinalPosition,
         const vector<StorageTypes::Column *> &columns,
         const Headers::Index *clusteredKeyIndexes,
         const vector<Headers::Index> *nonClusteredIndexes)
     {
-        auto *table = new Table(tableId, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
+        auto *table = new Table(tableId, ordinalPosition, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
 
         this->tables.push_back(table);
         this->header.numberOfTables = this->tables.size();
@@ -221,9 +222,13 @@ namespace DatabaseEngine
         for (const auto & masterDbColumn : masterDbColumns) {
             if (masterDbColumn.isSystem)
                 continue;
-            
+
             table->AddColumn(new Column(masterDbColumn, table));
         }
+
+        table->GetColumnsHeaders();
+        table->GetIdentityColumns();
+        table->GetIndexes();
 
         this->tables.push_back(table);
     }

@@ -207,7 +207,7 @@ namespace Server {
 
     db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
 
-    db->GetIdentityColumns();
+    // db->GetIdentityColumns();
 
     //master db id
     if (databaseId != 1)
@@ -1248,7 +1248,7 @@ namespace Server {
       }
 
       Headers::Index index(primaryKey);
-      this->masterDb->CreateTable(i, columns, &index);
+      this->masterDb->CreateTable(table.id, i, columns, &index);
     }
   }
 

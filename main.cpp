@@ -33,6 +33,8 @@ void InsertRowsToMoviesTable(Table* table);
 //advanced functions
 
 //TODO
+//IndexPage::GetPageDataFromFile
+//Fix case for non clustered index where rowId is used as part of the index
 //Add Decimal full support
 //Add Alter table (add drop columns)
 //Add joins
@@ -111,23 +113,24 @@ int main()
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
     const auto start = std::chrono::high_resolution_clock::now();
-
-     QueryPipeline::Parser::Parse(createDb, databaseId);
-     QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
+    //
+    QueryPipeline::Parser::Parse(createDb, databaseId);
     QueryPipeline::Parser::Parse(createActorsTable, databaseId);
-    QueryPipeline::Parser::Parse(updateActors, databaseId);
 
-    QueryPipeline::Parser::Parse(insertMovies, databaseId);
-    QueryPipeline::Parser::Parse(selectMovies, databaseId);
+    //  // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
+    // QueryPipeline::Parser::Parse(updateActors, databaseId);
+    //
+    // QueryPipeline::Parser::Parse(insertMovies, databaseId);
+    // QueryPipeline::Parser::Parse(selectMovies, databaseId);
 
 //
 
-    QueryPipeline::Parser::Parse(createActorsTable, databaseId);
+    // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 
      QueryPipeline::Parser::Parse(insertActors, databaseId);
 ////
-    QueryPipeline::Parser::Parse(actorsIndex, databaseId);
-     QueryPipeline::Parser::Parse(selectActors, databaseId);
+    // QueryPipeline::Parser::Parse(actorsIndex, databaseId);
+    //  QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);
     const auto end = std::chrono::high_resolution_clock::now();

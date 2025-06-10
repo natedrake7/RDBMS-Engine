@@ -111,6 +111,7 @@ namespace DatabaseEngine::StorageTypes
         public:
             Table(
               const table_id_t &tableId,
+              const int& ordinalPosition,
               const vector<Column *> &columns,
               DatabaseEngine::Database *database,
               const Headers::Index* clusteredIndex = nullptr,

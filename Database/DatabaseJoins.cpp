@@ -99,6 +99,11 @@ namespace DatabaseEngine
     }
 
     void Database::GetIndexes() const{
+        for (const auto& table : this->tables)
+            table->GetIndexes();
+    }
+
+    void Database::GetTableHeaders() const{
     }
 
     void Database::UpdateMasterDatabase()const{

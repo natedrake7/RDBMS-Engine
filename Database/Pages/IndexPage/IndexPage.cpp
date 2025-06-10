@@ -77,7 +77,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
     for (int i = 0;i < numOfKeys; i++) {
         auto* key = new Key();
 
-        for (int k = 0; k < this->additionalHeader.numberOfSubKeys; k++)
+        for (int j = 0; j < this->additionalHeader.numberOfSubKeys; j++)
         {
             key_size_t keySize;
             memcpy(&keySize, data.data() + offSet, sizeof(key_size_t));
@@ -87,7 +87,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             memcpy(keyValue.data(), data.data() + offSet, keySize);
             offSet += keySize;
 
-            key->InsertKey(Key(keyValue.data(), keySize, indexedColumnTypes[k]));
+            key->InsertKey(Key(keyValue.data(), keySize, indexedColumnTypes[j]));
         }
 
         this->keys.push_back(key);

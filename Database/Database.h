@@ -116,6 +116,7 @@ public:
 
     StorageTypes::Table *CreateTable(
       const table_id_t &tableId,
+      const int& ordinalPosition,
       const vector<StorageTypes::Column *> &columns,
       const Headers::Index *clusteredKeyIndexes = nullptr,
       const vector<Headers::Index> *nonClusteredIndexes = nullptr);
@@ -142,7 +143,7 @@ public:
 
     [[nodiscard]] Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId)const;
 
-    Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
+    [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
 
     Pages::OverflowPage* GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
 
@@ -175,6 +176,8 @@ public:
     void GetColumnsHeaders()const;
 
     void GetIndexes() const;
+
+    void GetTableHeaders()const;
 
     static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
 
