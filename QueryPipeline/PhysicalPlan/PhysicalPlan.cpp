@@ -339,7 +339,6 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     this->primaryKey.columns[i]);
     }
 
-
     tablePtr->GetColumnsHeaders();
     tablePtr->GetIdentityColumns();
 

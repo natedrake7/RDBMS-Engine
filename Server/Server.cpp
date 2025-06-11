@@ -245,8 +245,12 @@ namespace Server {
         Field(isDeleted, 8),
         Field(nullptr, 9),
     };
+
+    const auto result = table->InsertRow(fields);
+
+    cout << "Inserted database: "<< dbName << " to master db" << endl;
     
-    return table->InsertRow(fields);
+    return result;
   }
 
   AdditionalDataTypes::ResultStatus  ServerInstance::InsertSchemaToMasterDb(
@@ -269,7 +273,11 @@ namespace Server {
         Field(nullptr, 8),
      };
 
-     return table->InsertRow(fields);
+    const auto result = table->InsertRow(fields);
+
+    cout << "Inserted schema: "<< schemaName << " to master db" << endl;
+    
+    return result;
   }
 
   AdditionalDataTypes::ResultStatus  ServerInstance::InsertTableToMasterDb(
@@ -299,7 +307,11 @@ namespace Server {
         Field(nullptr, 11),
       };
 
-    return table->InsertRow(fields);
+      const auto result = table->InsertRow(fields);
+
+      cout << "Inserted table: "<< tableName << " to master db" << endl;
+      
+      return result;
   }
 
   AdditionalDataTypes::ResultStatus  ServerInstance::InsertColumnToMasterDb(
@@ -332,7 +344,11 @@ namespace Server {
         Field(nullptr, 13),
       };
 
-    return table->InsertRow(fields);
+      const auto result = table->InsertRow(fields);
+
+      cout << "Inserted column: "<< columnName << " to master db" << endl;
+        
+      return result;
   }
 
   AdditionalDataTypes::ResultStatus  ServerInstance::InsertIndexToMasterDb(
@@ -359,7 +375,11 @@ namespace Server {
       Field(nullptr, 10),
      };
 
-     return table->InsertRow(fields);
+      const auto result = table->InsertRow(fields);
+
+      cout << "Inserted index: "<< indexName << " to master db" << endl;
+          
+      return result;
   }
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertIndexColumnToMasterDb(
@@ -382,7 +402,11 @@ namespace Server {
       Field(nullptr, 6),
     };
 
-    return table->InsertRow(fields);
+    const auto result = table->InsertRow(fields);
+
+    cout << "Inserted index column to master db" << endl;
+          
+    return result;
   }
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertIdentityColumnToMasterDb(
@@ -412,8 +436,11 @@ namespace Server {
         Field(nullptr, 9),
       };
 
-      return table->InsertRow(fields);
+    const auto result = table->InsertRow(fields);
 
+    cout << "Inserted identity column to master db" << endl;
+          
+    return result;
   }
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintToMasterDb(
@@ -446,7 +473,11 @@ namespace Server {
       if(constraintIndexId != nullptr)
           fields.at(4).SetData(*constraintIndexId);
 
-      return table->InsertRow(fields);
+      const auto result = table->InsertRow(fields);
+
+      cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
+            
+      return result;
   }
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintColumnToMasterDb(
@@ -459,7 +490,7 @@ namespace Server {
     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTCOLUMNS);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    vector<Field> fields = {
+    const vector<Field> fields = {
         Field(constraintId, 0),
         Field(columnId, 1),
         Field(ordinalPosition, 2),
@@ -468,8 +499,11 @@ namespace Server {
         Field(nullptr, 5),
     };
 
-    return table->InsertRow(fields);
+    const auto result = table->InsertRow(fields);
 
+    cout << "Inserted constraint column to master db" << endl;
+            
+    return result;
   }
 
   bool ServerInstance::DatabaseExists(const string &dbName) const{
