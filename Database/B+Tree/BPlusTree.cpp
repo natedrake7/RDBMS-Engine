@@ -225,7 +225,7 @@ namespace Indexing
 
         if (node->IsLeaf())
         {
-            const auto iterator = std::upper_bound(keys->begin(), keys->end(), &key);
+            const auto iterator = ranges::upper_bound(*keys, &key);
 
             const int indexPos = iterator - keys->begin();
 
@@ -275,7 +275,7 @@ namespace Indexing
         return returnedNode;
     }
 
-    void BPlusTree::IndexScan(vector<QueryData> &result)
+    void BPlusTree::IndexScan(vector<QueryData> &result)const
     {
         if (!root)
             return;
@@ -441,6 +441,9 @@ namespace Indexing
     }
 
     void BPlusTree::InsertRowsToOtherTree(const int& indexPos){
+        if (this->firstIndexPageId == INVALID_PAGE_ID)
+            return;
+
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)

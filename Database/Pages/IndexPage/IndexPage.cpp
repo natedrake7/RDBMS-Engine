@@ -87,7 +87,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             memcpy(keyValue.data(), data.data() + offSet, keySize);
             offSet += keySize;
 
-            key->InsertKey(Key(keyValue.data(), keySize, indexedColumnTypes[j]));
+            key->InsertKey(Key(keyValue.data(), keySize, j < indexedColumnTypes.size() ? indexedColumnTypes[j] : ColumnType::Int));
         }
 
         this->keys.push_back(key);

@@ -113,8 +113,7 @@ int main()
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
     const auto start = std::chrono::high_resolution_clock::now();
-    //
-    QueryPipeline::Parser::Parse(createDb, databaseId);
+    // QueryPipeline::Parser::Parse(createDb, databaseId);
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 
     //  // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
@@ -127,10 +126,10 @@ int main()
 
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 
-     // QueryPipeline::Parser::Parse(insertActors, databaseId);
+     QueryPipeline::Parser::Parse(insertActors, databaseId);
 ////
     // QueryPipeline::Parser::Parse(actorsIndex, databaseId);
-    //  QueryPipeline::Parser::Parse(selectActors, databaseId);
+    QueryPipeline::Parser::Parse(selectActors, databaseId);
 
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);
     const auto end = std::chrono::high_resolution_clock::now();

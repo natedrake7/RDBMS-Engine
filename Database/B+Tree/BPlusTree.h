@@ -124,7 +124,7 @@ namespace Indexing
 
         void IndexSeek(const Key &minKey, const Key &maxKey, vector<DatabaseEngine::StorageTypes::Row>* result);
 
-        void IndexScan(vector<QueryData> &result);
+        void IndexScan(vector<QueryData> &result)const;
 
         void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result);
 

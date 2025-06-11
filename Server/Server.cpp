@@ -180,7 +180,8 @@ namespace Server {
       }
     }
 
-    this->masterDb->GetIdentityColumns();
+    this->masterDb->GetColumnsHeaders();
+    // this->masterDb->GetIdentityColumns();
 
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
@@ -188,7 +189,7 @@ namespace Server {
   DatabaseEngine::Database * ServerInstance::GetMasterDb()const{ return this->masterDb; }
 
   void ServerInstance::Shutdown(){
-    for (auto& [name, database]: this->databases){
+    for (const auto &database: this->databases | views::values){
       database->UpdateMasterDatabase();
       delete database;
     }
