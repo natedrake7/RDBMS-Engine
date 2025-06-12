@@ -105,6 +105,7 @@ namespace QueryPipeline::Statements {
   struct SelectStatement final : Statement{
     TableName* table;
     std::vector<std::string> columns;
+    std::vector<Headers::ColumnHeader> columnHeaders;
     std::vector<Constants::column_index_t> columnIndices;
     WhereClause where;
     OrderByStatement* orderBy;

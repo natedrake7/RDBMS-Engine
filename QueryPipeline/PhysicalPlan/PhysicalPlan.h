@@ -18,7 +18,7 @@ namespace DatabaseEngine::StorageTypes {
 namespace QueryPipeline::PhysicalPlan{
 
     struct PhysicalPlanResult {
-        std::vector<string> columns;
+        std::vector<Headers::ColumnHeader> columns;
         std::vector<DatabaseEngine::StorageTypes::Row> rows;
         std::string message;
         AdditionalDataTypes::ResultCode code;
@@ -85,11 +85,11 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalProject final : public PhysicalOperator{
     HashSet<column_index_t> columns;
-    std::vector<std::string> columnLiterals;
+    std::vector<Headers::ColumnHeader> columnHeaders;
     PhysicalOperator* child;
 
     public:
-      PhysicalProject(const int32_t & databaseId, PhysicalOperator* child, const std::vector<column_index_t>& columns, std::vector<std::string>& columnLiterals);
+      PhysicalProject(const int32_t & databaseId, PhysicalOperator* child, const std::vector<column_index_t>& columns, std::vector<Headers::ColumnHeader>& columnHeaders);
       ~PhysicalProject() override;
       PhysicalPlanResult* Execute() override;
   };

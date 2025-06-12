@@ -88,7 +88,7 @@ namespace QueryPipeline
             }
 
             for(const auto & column : result->columns)
-              cout << column << " || ";
+              cout << column.name << " || ";
 
             cout << endl;
 

@@ -3,6 +3,7 @@
 #include "../LogicalPlan/LogicalPlan.h"
 
 #include <iostream>
+#include <ranges>
 
 namespace QueryPipeline::Statements {
   bool DeleteStatement::Validate(){
@@ -142,14 +143,16 @@ namespace QueryPipeline::Statements {
     if (!this->columns.empty() && this->columns[0] == "*") {
       this->columns.clear();
 
-      for (const auto& [key, header] : columnsDict){
-        this->columnIndices.emplace_back(header.ordinalPosition);
+      for (const auto &header : columnsDict | views::values){
+        this->columnHeaders.emplace_back(header);
         this->columns.emplace_back(header.name);
+        this->columnIndices.emplace_back(header.ordinalPosition);
        }
     }
     else {
       for (const auto& selectColumn : this->columns) {
         if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
+          this->columnHeaders.emplace_back(header);
           this->columnIndices.emplace_back(header.ordinalPosition);
           continue;
         }
@@ -195,7 +198,7 @@ namespace QueryPipeline::Statements {
       current = new LogicalFilter(this->databaseId, current, this->where.expression);
 
     if (!this->columns.empty())
-      current = new LogicalProject(this->databaseId, current, this->columnIndices, this->columns);
+      current = new LogicalProject(this->databaseId, current, this->columnIndices, this->columnHeaders);
 
     if(this->orderBy != nullptr){
       const auto orderType = this->orderBy->order == "DESC" ? OrderType::DESCENDING : OrderType::ASCENDING;

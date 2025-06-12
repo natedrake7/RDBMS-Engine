@@ -27,8 +27,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return new PhysicalPlanResult();
   }
 
-  PhysicalProject::PhysicalProject(const int32_t & databaseId, PhysicalOperator *child, const std::vector<column_index_t>& columns, std::vector<std::string>& columnLiterals)
-    : PhysicalOperator(databaseId), columns(columns), child(child), columnLiterals(std::move(columnLiterals)) {}
+  PhysicalProject:: PhysicalProject(const int32_t & databaseId, PhysicalOperator *child, const std::vector<column_index_t>& columns, std::vector<Headers::ColumnHeader>& columnHeaders)
+    : PhysicalOperator(databaseId), columns(columns), child(child), columnHeaders(std::move(columnHeaders)) {}
 
   PhysicalProject::~PhysicalProject(){ delete this->child; }
 
@@ -52,7 +52,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         data = std::move(newData);
       }
 
-    result->columns = std::move(this->columnLiterals);
+    ranges::sort(this->columnHeaders,
+      [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
+          return a.ordinalPosition < b.ordinalPosition;
+      }
+    );
+
+    result->columns = std::move(this->columnHeaders);
 
     return result;
   }
