@@ -241,6 +241,10 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto& column = this->columns.at(associatedColumnIndex);
 
+          //ignore auto-computed columns even if specified
+          if (column->GetIdentity().columnId != -1)
+            continue;
+
           auto *block = new Block(column);
 
           const ColumnType columnType = column->GetColumnType();
