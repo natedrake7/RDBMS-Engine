@@ -35,6 +35,8 @@ void InsertRowsToMoviesTable(Table* table);
 //TODO
 //Add Decimal full support
 //Add Alter table (add drop columns)
+//add further validations
+//allow [] on IDENTIFIERS
 //Add joins
 //check index deletes work
 //add identity
@@ -42,6 +44,11 @@ void InsertRowsToMoviesTable(Table* table);
 //start documenting implementation and optimize wherever possible
 //add order by statements full support (minor just add ASC, DESC on each column or on all)
 //and check if index index is available in the results to speed by sorting
+//Futher improve select, insert, update statements to allow nested select in them (complex validation will be required)
+//allow ctes and tempporary tables.
+//WAL
+//tempdb
+//transactions(usage of tempDb maybe).
 
 std::atomic<bool> serverRunning{true};
 
