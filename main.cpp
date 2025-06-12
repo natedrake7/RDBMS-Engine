@@ -74,7 +74,7 @@ int main()
     const int32_t databaseId = 2;
 
     //select statement
-    const string selectActors = "SELECT * FROM dbo.Actors ORDER BY ActorName, ActorAge DESC";
+    const string selectActors = "SELECT * FROM dbo.Actors WHERE ID = 2 ORDER BY ActorName, ActorAge DESC";
 
     const string selectMasterDb = "SELECT * FROM dbo.sys_tables";
 

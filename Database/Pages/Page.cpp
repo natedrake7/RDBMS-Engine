@@ -284,5 +284,19 @@ namespace Pages
         rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
     }
 
+    void Page::GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row> *rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const Expressions::Expression *expression) const{
+
+        const auto &row = this->rows[indexPosition];
+
+        if (!row->Evaluate(expression))
+            return;
+
+        const RowHeader *rowHeader = row->GetHeader();
+
+        vector<Block *> copyBlocks = row->GetBlockCopies();
+
+        rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
+    }
+
     vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsUnsafe() { return &this->rows; }
 }

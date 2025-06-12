@@ -102,11 +102,13 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Row* CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal)const;
 
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
-            void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition);
+            void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
 
             void UpdateColumnIdentity(const int32_t& columnId, const int32_t& lastValue)const;
 
             void InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t& indexPos);
+
+            void InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos);
 
         public:
             Table(
@@ -163,7 +165,7 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexScan(vector<Row> *selectedRows, Expressions::Expression* expression = nullptr);
 
-            void NonClusteredIndexScan(vector<Row> *selectedRows, const int& indexPos, Expressions::Expression* expression = nullptr);
+            void NonClusteredIndexScan(vector<Row> *selectedRows, const int& indexPos, const Expressions::Expression* expression = nullptr);
 
             void HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const;
 
@@ -250,7 +252,7 @@ namespace DatabaseEngine::StorageTypes
 
             void GetColumnsHeaders()const;
 
-            void GetIdentityColumns();
+            void GetIdentityColumns()const;
 
             void GetIndexes();
 
