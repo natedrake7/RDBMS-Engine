@@ -10,6 +10,25 @@ namespace Expressions{
     Predicate = 2
   };
 
+  enum class ExpressionOperator {
+    Equal = 0,
+    NotEqual = 1,
+    Greater = 2,
+    GreaterEqual = 3,
+    Less = 4,
+    LessEqual = 5,
+  };
+
+  static Dictionary<std::string, ExpressionOperator> ExpressionOperatorsDictionary{
+  { "=", ExpressionOperator::Equal },
+  { "!=", ExpressionOperator::NotEqual },
+  { "<>", ExpressionOperator::NotEqual },
+  { ">", ExpressionOperator::Greater },
+  { ">=", ExpressionOperator::GreaterEqual },
+  { "<", ExpressionOperator::Less },
+  { "<=", ExpressionOperator::LessEqual },
+  };
+
   struct Expression {
     ExpressionType type;
 
@@ -17,19 +36,19 @@ namespace Expressions{
     Expression* right;
 
     std::string column;
-    std::string operation;
+    ExpressionOperator operation;
     Field value;
 
     Constants::column_index_t columnIndex;
 
     static Expression Predicate(
       const std::string& column,
-      const std::string& operation,
+      const ExpressionOperator& operation,
       const Field& value);
 
     static Expression Predicate(
       const column_index_t & column,
-      const std::string& operation,
+      const ExpressionOperator& operation,
       const Field& value);
 
     static Expression Logical(

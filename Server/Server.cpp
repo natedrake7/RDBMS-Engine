@@ -516,7 +516,7 @@ namespace Server {
       Indexing::Key key;
       key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
 
-      auto expression = Expressions::Expression::Predicate(1, "=", Field(dbName, 1));
+      auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(dbName, 1));
 
       sysDatabases->ClusteredIndexScan(&selectedDatabases, &expression);
 
@@ -581,7 +581,7 @@ namespace Server {
   Headers::DatabaseHeader ServerInstance::SelectDatabase(const std::string &name) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    auto expression = Expressions::Expression::Predicate(1, "=", Field(name, 1));
+    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(name, 1));
 
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
     vector<Row> selectedDatabases;
@@ -631,7 +631,7 @@ namespace Server {
      Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
      vector<Row> selectedSchemas;
 
-    auto expression = Expressions::Expression::Predicate(1, "=", Field(databaseId, 1));
+    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseId, 1));
 
     sysSchemas->ClusteredIndexScan(&selectedSchemas, &expression);
 
@@ -664,7 +664,7 @@ namespace Server {
                     .type = Expressions::ExpressionType::Predicate,
                     .left = nullptr,
                     .right = nullptr,
-                    .operation = "=",
+                    .operation = Expressions::ExpressionOperator::Equal,
                     .value = Field(databaseId, 1),
                     .columnIndex = 1
                 };
@@ -674,7 +674,7 @@ namespace Server {
                     .type = Expressions::ExpressionType::Predicate,
                     .left = nullptr,
                     .right = nullptr,
-                    .operation = "=",
+                    .operation = Expressions::ExpressionOperator::Equal,
                     .value = Field(schema, 2),
                     .columnIndex = 2
                 };
@@ -694,7 +694,7 @@ namespace Server {
 
     auto databaseHeader = this->SelectDatabase(dbName);
 
-    auto expression = Expressions::Expression::Predicate(1, "=", Field(databaseHeader.id, 1));
+    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseHeader.id, 1));
 
     vector<Row> selectedTables;
 
@@ -738,7 +738,7 @@ namespace Server {
   vector<Headers::TableHeader> ServerInstance::SelectTables(const int32_t & databaseId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    auto expression = Expressions::Expression::Predicate(1, "=", Field(databaseId, 1));
+    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseId, 1));
 
     vector<Row> selectedTables;
 
@@ -824,7 +824,7 @@ namespace Server {
                     .type = Expressions::ExpressionType::Predicate,
                     .left = nullptr,
                     .right = nullptr,
-                    .operation = "=",
+                    .operation = Expressions::ExpressionOperator::Equal,
                     .value = Field(databaseId, 1),
                     .columnIndex = 1
                 };
@@ -834,7 +834,7 @@ namespace Server {
                     .type = Expressions::ExpressionType::Predicate,
                     .left = nullptr,
                     .right = nullptr,
-                    .operation = "=",
+                    .operation = Expressions::ExpressionOperator::Equal,
                     .value = Field(tableName, 3),
                     .columnIndex = 3
                 };
@@ -868,7 +868,7 @@ namespace Server {
     Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
 
-    auto expression = Expressions::Expression::Predicate(1, "=", Field(tableId, 1));
+    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
 
     sysColumns->ClusteredIndexScan(&selectedColumns, &expression);
 
@@ -913,7 +913,7 @@ namespace Server {
     vector<Row> selectedConstraints;
     Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
 
-    auto expression = Expressions::Expression::Predicate(1, "=", Field(tableId, 1));
+    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
 
     constraintsTable->ClusteredIndexScan(&selectedConstraints, &expression);
 
@@ -1030,7 +1030,7 @@ namespace Server {
       Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
       vector<Row> selectedIndexes;
 
-      auto expression = Expressions::Expression::Predicate(1, "=", Field(tableId, 1));
+      auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
 
       sysIndexes->ClusteredIndexScan(&selectedIndexes, &expression);
 
@@ -1150,7 +1150,17 @@ namespace Server {
     });
 
     return indexColumns;
+  }
 
+  Dictionary<int32_t, Headers::IndexColumnsHeader> ServerInstance::SelectIndexColumnsByIndexIdToDictionary(const int32_t &indexId) const{
+    const auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
+
+    Dictionary<int32_t, Headers::IndexColumnsHeader> indexColumnsDict;
+
+    for (const auto& indexColumn : indexColumns)
+      indexColumnsDict.Add(indexColumn.columnId, indexColumn);
+
+    return indexColumnsDict;
   }
 
   vector<Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableId(const int32_t & tableId) const{
@@ -1214,7 +1224,7 @@ namespace Server {
               .type = Expressions::ExpressionType::Predicate,
               .left = nullptr,
               .right = nullptr,
-              .operation = "=",
+              .operation = Expressions::ExpressionOperator::Equal,
               .value = Field(tableId, 0),
               .columnIndex = 0
           };
@@ -1224,7 +1234,7 @@ namespace Server {
                 .type = Expressions::ExpressionType::Predicate,
                 .left = nullptr,
                 .right = nullptr,
-                .operation = "=",
+                .operation = Expressions::ExpressionOperator::Equal,
                 .value = Field(columnId, 1),
                 .columnIndex = 1
             };

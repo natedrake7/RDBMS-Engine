@@ -2,7 +2,7 @@
 #include "../../HashSet/HashSet.h"
 
 namespace Expressions{
-  Expression Expression::Predicate(const std::string &column, const std::string &operation, const Field &value) {
+  Expression Expression::Predicate(const std::string &column, const ExpressionOperator &operation, const Field &value) {
     return Expression{
       ExpressionType::Predicate,
       nullptr,
@@ -13,7 +13,7 @@ namespace Expressions{
     };
   }
 
-  Expression Expression::Predicate(const column_index_t & column, const string & operation, const Field & value){
+  Expression Expression::Predicate(const column_index_t & column, const ExpressionOperator & operation, const Field & value){
    return Expression{
    ExpressionType::Predicate,
    nullptr,

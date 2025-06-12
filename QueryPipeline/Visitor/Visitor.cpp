@@ -130,12 +130,18 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
     if (context->expression())
       return visit(context->expression());
 
+    const auto operation = context->op->getText();
+
+    Expressions::ExpressionOperator expressionOperator;
+    if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(context->op->getText(), expressionOperator))
+        throw invalid_argument("Invalid operation specified");
+
     return new Expressions::Expression{
       Expressions::ExpressionType::Predicate,
       nullptr,
       nullptr,
       context->columnName()->getText(),
-      context->op->getText(),
+      expressionOperator,
       std::any_cast<Field>(visit(context->literalValue()))
     };
   }

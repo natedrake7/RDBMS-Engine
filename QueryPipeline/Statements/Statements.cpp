@@ -378,12 +378,27 @@ namespace QueryPipeline::Statements {
 
       if (columnsDict.TryGetValue(column, header)) {
         this->columnIndices.push_back(header.ordinalPosition);
+
         continue;
       }
 
       cerr << "Column " << column << " does not exist on table: " << this->table->schema << "." << this->table->name << endl;
       return false;
     }
+
+    const auto indexes = Server::ServerInstance::Get().SelectIndexes(tableHeader.id);
+
+    for (const auto& index: indexes) {
+      const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexIdToDictionary(index.id);
+
+      if (index.name == this->name) {
+        cerr << "Index with name: " << index.name << " already exists" << endl;
+        return false;
+      }
+
+      //check if identical index exists (no need for a duplicate).
+    }
+
 
     return true;
   }

@@ -149,6 +149,7 @@ namespace Server {
     [[nodiscard]] vector<Headers::IndexHeader> SelectIndexes(const int32_t& tableId) const;
     [[nodiscard]] Headers::IndexHeader SelectIndexById(const int32_t& indexId) const;
     [[nodiscard]] vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const int32_t& indexId) const;
+    [[nodiscard]] Dictionary<int32_t, Headers::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const int32_t& indexId) const;
     [[nodiscard]] vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const int32_t& tableId) const;
     [[nodiscard]] Dictionary<int32_t , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const int32_t& tableId) const;
     [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;

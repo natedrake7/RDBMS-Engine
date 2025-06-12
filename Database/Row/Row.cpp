@@ -325,16 +325,22 @@ namespace DatabaseEngine::StorageTypes {
                 const auto& actualData = this->GetData()[expression->columnIndex];
 
                 const auto& expected = expression->value;
-                const std::string& op = expression->operation;
-
-                if (op == "=") return *actualData == expected;
-                if (op == "!=" || op == "<>") return *actualData != expected;
-                if (op == "<") return *actualData < expected;
-                if (op == ">") return *actualData > expected;
-                if (op == "<=") return *actualData <= expected;
-                if (op == ">=") return *actualData >= expected;
-
-                throw std::runtime_error("Unknown operator: " + op);
+                switch (expression->operation) {
+                    case Expressions::ExpressionOperator::Equal:
+                        return *actualData == expected;
+                    case Expressions::ExpressionOperator::NotEqual:
+                        return *actualData != expected;
+                    case Expressions::ExpressionOperator::Greater:
+                        return *actualData > expected;
+                    case Expressions::ExpressionOperator::GreaterEqual:
+                        return *actualData >= expected;
+                    case Expressions::ExpressionOperator::Less:
+                        return *actualData < expected;
+                    case Expressions::ExpressionOperator::LessEqual:
+                        return *actualData <= expected;
+                    default:
+                        throw std::runtime_error("Unknown operator specified");
+                }
             }
             case Expressions::ExpressionType::And:
                 return this->Evaluate(expression->left) && this->Evaluate(expression->right);
