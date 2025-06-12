@@ -70,7 +70,7 @@ int main()
     const int32_t databaseId = 2;
 
     //select statement
-    const string selectActors = "SELECT * FROM dbo.Actors WHERE ID = 2 ORDER BY ActorName, ActorAge DESC";
+    const string selectActors = "SELECT * FROM dbo.Actors";
 
     const string selectMasterDb = "SELECT * FROM dbo.sys_tables";
 
@@ -108,7 +108,6 @@ int main()
 
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
-    const auto start = std::chrono::high_resolution_clock::now();
     // QueryPipeline::Parser::Parse(createDb, databaseId);
     // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
 
@@ -125,15 +124,31 @@ int main()
 //       QueryPipeline::Parser::Parse(insertActors, databaseId);
 // // ////
 // //
-      QueryPipeline::Parser::Parse(selectActors, databaseId);
+      // QueryPipeline::Parser::Parse(selectActors, databaseId);
+
+
+    std::cout << "Please enter a query: "<< endl;
+    while (true) {
+        std::string input;
+
+        std::getline(std::cin, input);
+
+        if (input == "exit")
+            break;
+
+        const auto start = std::chrono::high_resolution_clock::now();
+
+        QueryPipeline::Parser::Parse(input, databaseId);
+
+        const auto end = std::chrono::high_resolution_clock::now();
+
+        const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+
+        cout << "Time: " << elapsed.count() << " ms" << endl;
+    }
 
      // QueryPipeline::Parser::Parse(actorsIndex, databaseId);
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);
-    const auto end = std::chrono::high_resolution_clock::now();
-
-    const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
-
-    cout << "Time: " << elapsed.count() << " ms" << endl;
 
     const auto& databases = server.GetCatalog();
 

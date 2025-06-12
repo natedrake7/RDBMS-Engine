@@ -931,9 +931,6 @@ namespace DatabaseEngine::StorageTypes {
           return;
         }
 
-        if(!isHeap)
-
-
         while(page->GetBytesLeft() - diff < 0){
           const int result = this->HandleRowOverflow(row);
           if(result == -1)
