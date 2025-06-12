@@ -2,6 +2,7 @@
 #include <string>
 #include "../DateTime/DateTime.h"
 #include <vector>
+#include <ostream>
 
 namespace Headers {
   enum ConstraintType: uint8_t {
@@ -164,5 +165,42 @@ namespace Headers {
     }
 
     ~RowIdentifier() = default;
+
   };
+
+  inline std::ostream& operator<<(std::ostream& os, const RowIdentifier& rowId) {
+      os << "(" << rowId.pageId << "," << rowId.indexId << ")";
+      return os;
+  }
+
+  inline bool operator==(const RowIdentifier& lhs, const RowIdentifier& rhs) {
+    return lhs.pageId == rhs.pageId && lhs.indexId == rhs.indexId;
+  }
+
+  inline bool operator!=(const RowIdentifier& lhs, const RowIdentifier& rhs) {
+    return !(lhs == rhs);
+  }
+
+  inline bool operator>(const RowIdentifier& lhs, const RowIdentifier& rhs) {
+    if (lhs.pageId > rhs.pageId)
+      return true;
+
+    return lhs.pageId == rhs.pageId && lhs.indexId > rhs.indexId;
+  }
+
+  inline bool operator<(const RowIdentifier& lhs, const RowIdentifier& rhs) {
+    if (lhs.pageId < rhs.pageId)
+      return true;
+
+    return lhs.pageId == rhs.pageId && lhs.indexId < rhs.indexId;
+  }
+
+  inline bool operator>=(const RowIdentifier& lhs, const RowIdentifier& rhs) {
+    return !(lhs < rhs);
+  }
+
+  inline bool operator<=(const RowIdentifier& lhs, const RowIdentifier& rhs) {
+    return !(rhs > lhs);
+  }
+
 }

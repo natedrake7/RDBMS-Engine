@@ -156,7 +156,8 @@ namespace Constants
         Bool = 7,
         DateTime = 8,
         Guid = 9,
-        ColumnTypeCount = 10
+        RowIdentifier = 10,
+        ColumnTypeCount = 11
     };
 
     static Dictionary<string, block_size_t> ColumnTypeSizes = {

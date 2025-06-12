@@ -325,7 +325,7 @@ namespace Indexing
 
     }
 
-    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, Expressions::Expression *expression){
+    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, const Expressions::Expression *expression){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -364,7 +364,9 @@ namespace Indexing
 
         while (currentNode)
         {
-
+            for (auto* rowId: *currentNode->GetNonClusteredDataUnsafe()) {
+                result->emplace_back(rowId->pageId, rowId->indexId);
+            }
             // for(auto* row: *currentNode->GetDataRowsUnsafe()){
             //     if(!row->Evaluate(expression))
             //         continue;
@@ -1145,7 +1147,9 @@ namespace Indexing
                 return *reinterpret_cast<const bool*>(this->value.data()) > *reinterpret_cast<const bool*>(otherKey.value.data());
             case Constants::ColumnType::DateTime:
                 return *reinterpret_cast<const time_t*>(this->value.data()) > *reinterpret_cast<const time_t*>(otherKey.value.data());
-            case Constants::ColumnType::ColumnTypeCount: 
+            case Constants::ColumnType::RowIdentifier:
+                return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) > *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
+            case Constants::ColumnType::ColumnTypeCount:
             default:
                 throw invalid_argument("> Invalid DataType for Key");
         }
@@ -1194,6 +1198,8 @@ namespace Indexing
                 return *reinterpret_cast<const bool*>(this->value.data()) >= *reinterpret_cast<const bool*>(otherKey.value.data());
             case Constants::ColumnType::DateTime:
                 return *reinterpret_cast<const time_t*>(this->value.data()) >= *reinterpret_cast<const time_t*>(otherKey.value.data());
+        case Constants::ColumnType::RowIdentifier:
+            return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) >= *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
             case Constants::ColumnType::ColumnTypeCount: 
             default:
                 throw invalid_argument(">= Invalid DataType for Key");
@@ -1285,6 +1291,9 @@ namespace Indexing
             case Constants::ColumnType::DateTime:
                 os << DateTime(*reinterpret_cast<const time_t*>(key.value.data())).ToString();
                 break;
+        case Constants::ColumnType::RowIdentifier:
+            os << *reinterpret_cast<const Headers::RowIdentifier*>(key.value.data());
+            break;
             case Constants::ColumnType::ColumnTypeCount: 
             default:
                 throw invalid_argument("Invalid DataType for Key");
@@ -1318,6 +1327,8 @@ namespace Indexing
                 return *reinterpret_cast<const bool*>(this->value.data()) == *reinterpret_cast<const bool*>(otherKey.value.data());
             case Constants::ColumnType::DateTime:
                 return *reinterpret_cast<const time_t*>(this->value.data()) == *reinterpret_cast<const time_t*>(otherKey.value.data());
+        case Constants::ColumnType::RowIdentifier:
+            return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) == *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
             case Constants::ColumnType::ColumnTypeCount:
             default:
                 throw invalid_argument("== Invalid DataType for Key");

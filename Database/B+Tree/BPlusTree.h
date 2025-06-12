@@ -128,7 +128,7 @@ namespace Indexing
 
         void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result);
 
-        void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result, Expressions::Expression* expression);
+        void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result, const Expressions::Expression* expression);
 
         void IndexScan(vector<Headers::RowIdentifier>* result);
 

@@ -87,7 +87,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             memcpy(keyValue.data(), data.data() + offSet, keySize);
             offSet += keySize;
 
-            key->InsertKey(Key(keyValue.data(), keySize, j < indexedColumnTypes.size() ? indexedColumnTypes[j] : ColumnType::Int));
+            key->InsertKey(Key(keyValue.data(), keySize, j < indexedColumnTypes.size() ? indexedColumnTypes[j] : ColumnType::RowIdentifier));
         }
 
         this->keys.push_back(key);
@@ -117,19 +117,21 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
 
     const auto& columns = table->GetColumns();
 
-    for (int i = 0;i < this->header.pageSize; i++) {
-        if (this->additionalHeader.treeType == TreeType::Clustered) {
+    if (this->additionalHeader.treeType == TreeType::Clustered) {
+        for (int i = 0;i < this->header.pageSize; i++) {
             auto* row = Page::ReadRowFromFile(data, table, offSet, columns);
 
             this->rows.push_back(row);
-            continue;
         }
 
+        return;
+    }
+
+    for (int i = 0;i < this->header.pageSize; i++) {
         auto* item = new Headers::RowIdentifier();
 
-        memcpy(&item, data.data() + offSet, sizeof(page_id_t) + sizeof(page_offset_t));
-        offSet += sizeof(page_id_t) + sizeof(page_offset_t);
-
+        memcpy(item, data.data() + offSet, sizeof(Headers::RowIdentifier));
+        offSet += sizeof(Headers::RowIdentifier);
 
         this->nonClusteredData.push_back(item);
     }
@@ -169,11 +171,12 @@ void IndexPage::WritePageToFile(fstream *filePtr)
     if (this->additionalHeader.treeType == TreeType::Clustered) {
         for (const auto& row : this->rows)
             Page::WriteRowToFile(filePtr, row);
+
+        return;
     }
-    else {
-        for (const auto& data : this->nonClusteredData)
-            filePtr->write(reinterpret_cast<const char*>(data), sizeof(page_id_t) + sizeof(page_offset_t));
-    }
+
+    for (const auto& data : this->nonClusteredData)
+        filePtr->write(reinterpret_cast<const char*>(data), sizeof(Headers::RowIdentifier));
 }
 
 void IndexPage::SetTreeType(const TreeType & treeType) { this->additionalHeader.treeType = treeType; }

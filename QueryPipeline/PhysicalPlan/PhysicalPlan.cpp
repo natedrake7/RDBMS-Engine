@@ -114,12 +114,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    if (isClustered) {
-      tablePtr->ClusteredIndexScan(&result->rows, this->expression);
-      return result;
-    }
+    // if (isClustered) {
+    //   tablePtr->ClusteredIndexScan(&result->rows, this->expression);
+    //   return result;
+    // }
 
-    // tablePtr->NonClusteredIndexScan(&result->rows, 0);
+    tablePtr->NonClusteredIndexScan(&result->rows, 0);
 
 
     return result;

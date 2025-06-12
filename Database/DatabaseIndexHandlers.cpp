@@ -40,8 +40,8 @@ namespace DatabaseEngine {
             key.InsertKey(Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
         }
 
-        key.InsertKey(Key(&rowId.pageId, sizeof(page_id_t), ColumnType::Int));
-        key.InsertKey(Key(&rowId.indexId, sizeof(int32_t), ColumnType::Int));
+        key.InsertKey(Key(&rowId, sizeof(rowId), ColumnType::RowIdentifier));
+
         return key;
     }
 

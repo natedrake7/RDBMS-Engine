@@ -575,11 +575,19 @@ namespace DatabaseEngine::StorageTypes {
 
         auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
-        if (expression != nullptr) {
-          tree->IndexScan(selectedRows, expression);
-        }
+        std::vector<Headers::RowIdentifier> rowIds;
+        if (expression != nullptr)
+          tree->IndexScan(&rowIds, expression);
+        else
+          tree->IndexScan(&rowIds);
 
-        tree->IndexScan(selectedRows);
+        for (const auto& rowId : rowIds) {
+          const auto extentId = Database::CalculateExtentIdByPageId(rowId.pageId);
+
+          const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, extentId, this);
+
+          page->GetRowByIndex(selectedRows, *this, rowId.indexId);
+        }
     }
 
     void Table::HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const
@@ -984,6 +992,7 @@ namespace DatabaseEngine::StorageTypes {
 
       rows->insert(rows->begin() + indexPosition, new Headers::RowIdentifier(data));
 
+      node->UpdatePageSize();
       node->UpdateBytesLeft();
 
       PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
