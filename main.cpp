@@ -49,6 +49,7 @@ void InsertRowsToMoviesTable(Table* table);
 //WAL
 //tempdb
 //transactions(usage of tempDb maybe).
+//used aliases in logical and physical table scans and joins.
 
 std::atomic<bool> serverRunning{true};
 

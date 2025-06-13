@@ -10,7 +10,7 @@ namespace QueryPipeline::Statements {
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
     if (tableHeader.id == -1){
-          cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+          cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
           return false;
     }
 
@@ -135,7 +135,7 @@ namespace QueryPipeline::Statements {
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
     if (tableHeader.id == -1){
-          cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+          cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
           return false;
     }
 
@@ -266,7 +266,7 @@ namespace QueryPipeline::Statements {
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
     if (tableHeader.id == -1){
-          cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+          cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
           return false;
     }
 
@@ -347,7 +347,7 @@ namespace QueryPipeline::Statements {
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
     if (tableHeader.id == -1){
-          cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+          cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
           return false;
     }
 
@@ -357,11 +357,10 @@ namespace QueryPipeline::Statements {
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
     for(auto& column: this->columns) {
-
       Headers::ColumnHeader header;
 
       if (!columnsDict.TryGetValue(column.name, header)) {
-        cerr << "Column " << column.name << " does not exist on table: " << this->table->schema << "." << this->table->name << endl;
+        cerr << "Column " << column.name << " does not exist on table: " << this->table->GetFullName() << endl;
         return false;
       }
 
@@ -387,7 +386,7 @@ namespace QueryPipeline::Statements {
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
     if (tableHeader.id == -1){
-      cerr << "Table " + this->table->schema + "." + this->table->name + " does not exist" << endl;
+      cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
       return false;
     }
 
@@ -422,7 +421,6 @@ namespace QueryPipeline::Statements {
       //check if identical index exists (no need for a duplicate).
     }
 
-
     return true;
   }
 
@@ -431,9 +429,7 @@ namespace QueryPipeline::Statements {
   }
 
   bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement){
-
     tableAliasesDictionary.Add(statement->table->alias.empty() ? statement->table->GetFullName() : statement->table->alias, statement->table->tableId);
-
 
     HashSet<int32_t> invalidColumnIds;
     Dictionary<std::string, Headers::ColumnHeader> invalidColumns;
@@ -444,7 +440,6 @@ namespace QueryPipeline::Statements {
     for (const auto& join: statement->joins) {
       tableAliasesDictionary.Add(join->table->alias.empty() ? join->table->GetFullName() : join->table->alias, join->table->tableId);
       tablesColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
-      // join->expression
     }
 
     for (auto& column: statement->columns)
