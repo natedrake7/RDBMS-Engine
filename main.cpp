@@ -50,6 +50,7 @@ void InsertRowsToMoviesTable(Table* table);
 //tempdb
 //transactions(usage of tempDb maybe).
 //used aliases in logical and physical table scans and joins.
+//fix aliases not working on projection
 
 std::atomic<bool> serverRunning{true};
 

@@ -209,7 +209,7 @@ namespace QueryPipeline::Statements {
     SelectStatement *statement);
 
   static bool ResolveWildCardAlias(
-    ColumnName& column,
+    const ColumnName& column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement);

@@ -442,12 +442,26 @@ namespace QueryPipeline::Statements {
       tablesColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
     }
 
-    for (auto& column: statement->columns)
+    for (int i = 0;i < statement->columns.size(); i++) {
+      auto& column = statement->columns[i];
+
+      if (column.name == "*") {
+        if (!ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement))
+          return false;
+
+
+        //no reason to check the column as they are valid and their aliases are set
+        statement->columns.erase(statement->columns.begin() + i);
+        continue;
+      }
+
       if (!ResolveColumnAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement))
         return false;
+    }
 
     //validate all expressions are valid
-    if (!ResolveExpressionAliases(statement->where.expression, tableAliasesDictionary, tablesColumnsDictionary, statement))
+    if (statement->where.expression != nullptr
+      && !ResolveExpressionAliases(statement->where.expression, tableAliasesDictionary, tablesColumnsDictionary, statement))
       return false;
 
     //validate join expressions
@@ -465,7 +479,8 @@ namespace QueryPipeline::Statements {
       Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
       SelectStatement *statement){
 
-        if (!ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement))
+        if (column.name == "*"
+          && !ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement))
           return false;
 
         if (!column.alias.empty()) {
@@ -510,7 +525,7 @@ namespace QueryPipeline::Statements {
   }
 
   bool ResolveWildCardAlias(
-    ColumnName &column,
+    const ColumnName &column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
     SelectStatement *statement){
@@ -520,15 +535,15 @@ namespace QueryPipeline::Statements {
 
     if (column.alias.empty()) {
       auto& columnHeaders = tablesColumnsDictionary.Get(statement->table->tableId);
-      for (const auto& header: columnHeaders) {
+      for (const auto& [key, header]: columnHeaders) {
 
         ColumnName columnName{
-          .name = column.name,
+          .name = header.name,
           .alias = statement->table->alias.empty() ? statement->table->GetFullName() : statement->table->alias,
           .tableId = statement->table->tableId,
         };
 
-        statement->columns.push_back(std::move(column));
+        statement->columns.push_back(std::move(columnName));
       }
 
       return true;
@@ -539,7 +554,6 @@ namespace QueryPipeline::Statements {
       std::cerr << "Alias " << column.alias << " does on exist on statement" << std::endl;
       return false;
     }
-
 
     return true;
   }
