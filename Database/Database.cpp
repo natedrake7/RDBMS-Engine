@@ -209,7 +209,9 @@ namespace DatabaseEngine
 
         this->tables.push_back(table);
         this->header.numberOfTables = this->tables.size();
-        
+
+        this->tableIdsDictionary.Add(tableId, ordinalPosition);
+
         return table;
     }
 
@@ -257,6 +259,10 @@ namespace DatabaseEngine
 
     StorageTypes::Table * Database::OpenTable(const table_id_t &tableId) const{
         return this->tables.at(tableId);
+    }
+
+    StorageTypes::Table * Database::OpenTableById(const table_id_t &tableId) const{
+        return this->tables.at(this->tableIdsDictionary.Get(tableId));
     }
 
     void Database::DeleteTable(const string& tableName)

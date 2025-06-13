@@ -68,6 +68,9 @@ class Database {
   string filename;
   string fileExtension;
   string systemFilename;
+
+  Dictionary<int32_t, table_id_t> tableIdsDictionary;
+
   vector<StorageTypes::Table *> tables;
 
 protected:
@@ -123,11 +126,17 @@ public:
 
     void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
 
-    void CreateTable(const Headers::sysTable& sysHeader, const StorageTypes::TableHeader &tableHeader, const Headers::Index& primaryKey, const int& ordinalPosition);
+    void CreateTable(
+      const Headers::sysTable& sysHeader,
+      const StorageTypes::TableHeader &tableHeader,
+      const Headers::Index& primaryKey,
+      const int& ordinalPosition);
 
 //    [[nodiscard]] StorageTypes::Table *OpenTable(const string& schemaName, const string &tableName) const;
 
     [[nodiscard]] StorageTypes::Table *OpenTable(const table_id_t& tableId) const;
+
+    [[nodiscard]] StorageTypes::Table *OpenTableById(const table_id_t& tableId) const;
 
     void DeleteTable(const string& tableName);
 

@@ -4,7 +4,6 @@
 #include "../../Database/Constants.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
-#include "../../AdditionalLibraries/HashSet/HashSet.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
 
 namespace QueryPipeline {
@@ -12,10 +11,6 @@ namespace QueryPipeline {
 }
 
 namespace QueryPipeline::Statements {
-  struct PrimaryKeyConstraint {
-    std::string name;
-    vector<std::string> columns;
-  };
 
   struct ColumnType {
     std::string name;
@@ -43,6 +38,11 @@ namespace QueryPipeline::Statements {
     column_index_t index;
   };
 
+  struct PrimaryKeyConstraint {
+    std::string name;
+    vector<ColumnName> columns;
+  };
+
   struct WhereClause{
     Expressions::Expression* expression;
 
@@ -52,21 +52,42 @@ namespace QueryPipeline::Statements {
   struct OrderByStatement{
     std::vector<column_index_t> columnIndices;
 
-    std::vector<std::string> columns;
+    std::vector<ColumnName> columns;
     std::string order;
 
-    bool Validate(const std::vector<std::string>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict);
+    bool Validate(const std::vector<ColumnName>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict);
   };
 
   struct TableName {
     std::string name;
     std::string schema;
+    std::string alias;
 
     int32_t tableId;
     int32_t schemaId;
     int16_t ordinalPosition;
 
     TableName() { this->schema = "dbo"; }
+
+    [[nodiscard]] std::string GetFullName()const {
+      return this->schema + "." + this->name;
+    }
+  };
+
+  struct JoinStatement {
+    TableName* table;
+    Expressions::Expression* expression;
+    Constants::JoinType type;
+
+    JoinStatement() {
+      this->type = Constants::JoinType::Inner;
+      this->table = nullptr;
+      this->expression = nullptr;
+    }
+
+    ~JoinStatement() {
+      delete this->table;
+    }
   };
 
   struct Statement {
@@ -104,9 +125,14 @@ namespace QueryPipeline::Statements {
 
   struct SelectStatement final : Statement{
     TableName* table;
-    std::vector<std::string> columns;
+    std::vector<ColumnName> columns;
+
     std::vector<Headers::ColumnHeader> columnHeaders;
+
     std::vector<Constants::column_index_t> columnIndices;
+
+    std::vector<JoinStatement*> joins;
+
     WhereClause where;
     OrderByStatement* orderBy;
 
@@ -133,7 +159,7 @@ namespace QueryPipeline::Statements {
 
   struct InsertStatement final : Statement{
     TableName* table;
-    std::vector<std::string> columns;
+    std::vector<ColumnName> columns;
     std::vector<Field> values;
 
     ~InsertStatement() override { delete this->table; };
@@ -173,5 +199,25 @@ namespace QueryPipeline::Statements {
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
   };
+
+  static bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement);
+
+  static bool ResolveColumnAlias(
+    ColumnName& column,
+    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    SelectStatement *statement);
+
+  static bool ResolveWildCardAlias(
+    ColumnName& column,
+    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    SelectStatement *statement);
+
+  static bool ResolveExpressionAliases(
+    Expressions::Expression* expression,
+    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    SelectStatement *statement);
 
 }

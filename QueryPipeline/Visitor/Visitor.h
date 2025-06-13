@@ -1,4 +1,7 @@
 #pragma once
+#include "../Statements/Statements.h"
+
+
 #include <SQLVisitor.h>
 
 namespace QueryPipeline {
@@ -74,5 +77,15 @@ namespace QueryPipeline {
       antlrcpp::Any visitNewGuid(SQLParser::NewGuidContext *context) override;
 
       antlrcpp::Any visitCreateIndexStatement(SQLParser::CreateIndexStatementContext *context) override;
+
+      antlrcpp::Any visitJoinStatement(SQLParser::JoinStatementContext *context) override;
+
+      antlrcpp::Any visitJoinType(SQLParser::JoinTypeContext *context) override;
+
+      antlrcpp::Any visitAlias(SQLParser::AliasContext *context) override;
+
+      antlrcpp::Any visitColumnAlias(SQLParser::ColumnAliasContext *context) override;
+
+      std::vector<Statements::ColumnName> GetColumnsList(SQLParser::ColumnListContext *context);
   };
 }

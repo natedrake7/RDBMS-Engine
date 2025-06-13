@@ -11,12 +11,14 @@ Field::Field()
 {
     this->data = nullptr;
     this->columnIndex = 0;
+    this->isIdentifier = false;
 }
 
 Field::Field(const void *data, const Constants::column_index_t &columnIndex){
     this->data = nullptr;
     this->columnIndex = columnIndex;
     this->type = ColumnType::ColumnTypeCount;
+    this->isIdentifier = false;
 }
 
 Field::Field(const bool &data, const column_index_t &columnIndex){
@@ -26,6 +28,7 @@ Field::Field(const bool &data, const column_index_t &columnIndex){
     this->size = sizeof(bool);
     this->columnIndex = columnIndex;
     this->type = ColumnType::Bool;
+    this->isIdentifier = false;
 }
 
 Field::Field(const int8_t &data, const column_index_t &columnIndex){
@@ -35,6 +38,7 @@ Field::Field(const int8_t &data, const column_index_t &columnIndex){
     this->size = sizeof(int8_t);
     this->columnIndex = columnIndex;
     this->type = ColumnType::TinyInt;
+    this->isIdentifier = false;
 }
 
 Field::Field(const int16_t &data, const column_index_t &columnIndex){
@@ -44,6 +48,7 @@ Field::Field(const int16_t &data, const column_index_t &columnIndex){
     this->size = sizeof(int16_t);
     this->columnIndex = columnIndex;
     this->type = ColumnType::SmallInt;
+    this->isIdentifier = false;
 }
 
 Field::Field(const int32_t &data, const column_index_t &columnIndex){
@@ -53,6 +58,7 @@ Field::Field(const int32_t &data, const column_index_t &columnIndex){
     this->size = sizeof(int32_t);
     this->columnIndex = columnIndex;
     this->type = ColumnType::Int;
+    this->isIdentifier = false;
 }
 
 Field::Field(const int64_t &data, const column_index_t &columnIndex){
@@ -62,6 +68,7 @@ Field::Field(const int64_t &data, const column_index_t &columnIndex){
     this->size = sizeof(int64_t);
     this->columnIndex = columnIndex;
     this->type = ColumnType::BigInt;
+    this->isIdentifier = false;
 }
 
 Field::Field(const DataTypes::DateTime &data, const column_index_t &columnIndex){
@@ -71,6 +78,7 @@ Field::Field(const DataTypes::DateTime &data, const column_index_t &columnIndex)
     this->size = DataTypes::DateTime::DateTimeSize();
     this->columnIndex = columnIndex;
     this->type = ColumnType::DateTime;
+    this->isIdentifier = false;
 }
 
 Field::Field(const DataTypes::Decimal &data, const column_index_t &columnIndex){
@@ -80,6 +88,7 @@ Field::Field(const DataTypes::Decimal &data, const column_index_t &columnIndex){
     memcpy(this->data, data.GetRawData(), this->size);
     this->columnIndex = columnIndex;
     this->type = ColumnType::Decimal;
+    this->isIdentifier = false;
 }
 
 Field::Field(const DataTypes::Guid &data, const column_index_t &columnIndex){
@@ -89,9 +98,10 @@ Field::Field(const DataTypes::Guid &data, const column_index_t &columnIndex){
 
     this->columnIndex = columnIndex;
     this->type = ColumnType::Guid;
+    this->isIdentifier = false;
 }
 
-Field::Field(const string &data, const Constants::column_index_t& columnIndex)
+Field::Field(const string &data, const Constants::column_index_t& columnIndex, const bool& isIdentifier)
 {
     this->size = data.size();
     this->data = new object_t[this->size];
@@ -99,6 +109,7 @@ Field::Field(const string &data, const Constants::column_index_t& columnIndex)
     
     this->columnIndex = columnIndex;
     this->type = ColumnType::String;
+    this->isIdentifier = isIdentifier;
 }
 
 Field::Field(const u16string &data, const Constants::column_index_t &columnIndex)

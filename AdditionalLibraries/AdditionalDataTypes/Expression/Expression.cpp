@@ -2,14 +2,17 @@
 #include "../../HashSet/HashSet.h"
 
 namespace Expressions{
-  Expression Expression::Predicate(const std::string &column, const ExpressionOperator &operation, const Field &value) {
+  Expression Expression::Predicate(const std::string& alias, const std::string &column, const ExpressionOperator &operation, const Field &value) {
     return Expression{
-      ExpressionType::Predicate,
-      nullptr,
-      nullptr,
-      column,
-      operation,
-      value
+      .type = ExpressionType::Predicate,
+      .left = nullptr,
+      .right  = nullptr,
+      .column{
+        .name =  column,
+        .alias = alias,
+      },
+      .operation = operation,
+      .value = value
     };
   }
 
@@ -18,7 +21,7 @@ namespace Expressions{
    ExpressionType::Predicate,
    nullptr,
    nullptr,
-       {},
+    {},
        operation,
        value,
       column
@@ -46,8 +49,8 @@ namespace Expressions{
               this->right->Validate(columnsDictionary);
 
     Headers::ColumnHeader header;
-    if (!columnsDictionary.TryGetValue(this->column, header))
-      return false;
+    // if (!columnsDictionary.TryGetValue(this->column, header))
+    //   return false;
 
     this->columnIndex = header.ordinalPosition;
     this->value.Validate(header);

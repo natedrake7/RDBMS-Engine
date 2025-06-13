@@ -13,6 +13,7 @@ class Field {
     object_t* data;
     block_size_t size;
     ColumnType type;
+    bool isIdentifier;
   
     public:
         Field();
@@ -30,7 +31,7 @@ class Field {
         
         explicit Field(const int64_t& data, const column_index_t& columnIndex);
         
-        explicit Field(const string& data, const column_index_t& columnIndex);
+        explicit Field(const string& data, const column_index_t& columnIndex, const bool& isIdentifier = false);
         
         explicit Field(const u16string& data, const column_index_t& columnIndex);
         

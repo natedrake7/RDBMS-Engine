@@ -45,8 +45,10 @@ namespace QueryPipeline::Statements {
   bool CreateTableStatement::Validate(){
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id != -1)
+    if (tableHeader.id != -1) {
+      std::cerr << "Table with name: " << this->table->schema << "." << this->table->name << " already exists." << std::endl;
       return false;
+    }
 
     const auto schemas = Server::ServerInstance::Get().SelectSchemas(this->databaseId);
 
@@ -115,7 +117,7 @@ namespace QueryPipeline::Statements {
 
     //primary key will be clear for sure here
     for (const auto& column: this->constraint->columns)
-      this->primaryKey.push_back(columnNamesToIndexes[column]);
+      this->primaryKey.push_back(columnNamesToIndexes[column.name]);
 
     return true;
   }
@@ -127,6 +129,8 @@ namespace QueryPipeline::Statements {
   }
 
   bool SelectStatement::Validate(){
+    Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
+    Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tablesColumnsDictionary;
 
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
@@ -138,50 +142,66 @@ namespace QueryPipeline::Statements {
     this->table->tableId = tableHeader.id;
     this->table->ordinalPosition = tableHeader.ordinalPosition;
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
+    for (auto& join: this->joins) {
+      const auto joinHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, join->table->name, join->table->schema);
 
-    if (!this->columns.empty() && this->columns[0] == "*") {
-      this->columns.clear();
-
-      for (const auto &header : columnsDict | views::values){
-        this->columnHeaders.emplace_back(header);
-        this->columns.emplace_back(header.name);
-        this->columnIndices.emplace_back(header.ordinalPosition);
-       }
-    }
-    else {
-      for (const auto& selectColumn : this->columns) {
-        if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn, header)) {
-          this->columnHeaders.emplace_back(header);
-          this->columnIndices.emplace_back(header.ordinalPosition);
-          continue;
-        }
-
-        cerr << "Column " + selectColumn + " does not exist" << endl;
+      if (joinHeader.id == -1) {
+        cerr << "Table " + join->table->schema + "." + join->table->name + " does not exist" << endl;
+        return false;
       }
+
+      join->table->tableId = joinHeader.id;
+      join->table->ordinalPosition = joinHeader.ordinalPosition;
     }
 
-    if (this->where.expression != nullptr && !this->where.expression->Validate(columnsDict))
-      return false;
+    return ResolveAliases(aliasesDictionary, this);
+    //
+    // if (!this->columns.empty() && this->columns[0].name == "*") {
+    //   this->columns.clear();
+    //
+    //   for (const auto &header : columnsDict | views::values){
+    //     this->columnHeaders.emplace_back(header);
+    //     this->columns.emplace_back(header.name);
+    //     this->columnIndices.emplace_back(header.ordinalPosition);
+    //    }
+    // }
+    // else {
+    //   for (const auto& selectColumn : this->columns) {
+    //     if (Headers::ColumnHeader header ;columnsDict.TryGetValue(selectColumn.name, header)) {
+    //       this->columnHeaders.emplace_back(header);
+    //       this->columnIndices.emplace_back(header.ordinalPosition);
+    //       continue;
+    //     }
+    //
+    //     cerr << "Column " + selectColumn.name + " does not exist" << endl;
+    //   }
+    // }
 
-    if(!this->orderBy)
-      return true;
-
-    return this->orderBy->Validate(this->columns, columnsDict);
+    // if (this->where.expression != nullptr && !this->where.expression->Validate(columnsDict))
+    //   return false;
+    //
+    // if(!this->orderBy)
+    //   return true;
+    //
+    // return this->orderBy->Validate(this->columns, columnsDict);
 
   }
 
-  bool OrderByStatement::Validate(const std::vector<std::string>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
-    HashSet<std::string> selectColumnMap(selectColumns);
+  bool OrderByStatement::Validate(const std::vector<ColumnName>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
+
+    HashSet<std::string> selectColumnMap;
+    for (const auto& selectColumn : selectColumns) {
+      selectColumnMap.Add(selectColumn.name);
+    }
 
     for(const auto& column : this->columns){
-      if(!selectColumnMap.Contains(column)){
-        cerr << "Column " << column << " does not exist on the statement." << endl;
+      if(!selectColumnMap.Contains(column.name)){
+        cerr << "Column " << column.name << " does not exist on the statement." << endl;
         return false;
       }
 
       Headers::ColumnHeader header;
-      columnsDict.TryGetValue(column, header);
+      columnsDict.TryGetValue(column.name, header);
 
       this->columnIndices.emplace_back(header.ordinalPosition);
     }
@@ -267,8 +287,8 @@ namespace QueryPipeline::Statements {
 
       Headers::ColumnHeader header;
 
-      if (!columnsDict.TryGetValue(column, header)) {
-        cerr << "Column " << column << " does not exist on table: " << this->table->name << endl;
+      if (!columnsDict.TryGetValue(column.name, header)) {
+        cerr << "Column " << column.name << " does not exist on table: " << this->table->name << endl;
         return false;
       }
 
@@ -282,7 +302,7 @@ namespace QueryPipeline::Statements {
       bool columnExistsInStatement = false;
       
       for (const auto& statementColumn: this->columns) {
-        if (columnName != statementColumn)
+        if (columnName != statementColumn.name)
           continue;
           
         columnExistsInStatement = true;
@@ -334,7 +354,7 @@ namespace QueryPipeline::Statements {
     this->table->tableId = tableHeader.id;
     this->table->ordinalPosition = tableHeader.ordinalPosition;
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
     for(auto& column: this->columns) {
 
@@ -408,6 +428,143 @@ namespace QueryPipeline::Statements {
 
   QueryPipeline::LogicalPlan * CreateIndexStatement::ToLogical(){
     return new QueryPipeline::LogicalIndexCreate(this->databaseId, this->table, this->name, this->columnIndices);
+  }
+
+  bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement){
+
+    tableAliasesDictionary.Add(statement->table->alias.empty() ? statement->table->GetFullName() : statement->table->alias, statement->table->tableId);
+
+
+    HashSet<int32_t> invalidColumnIds;
+    Dictionary<std::string, Headers::ColumnHeader> invalidColumns;
+    Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tablesColumnsDictionary;
+
+    tablesColumnsDictionary.Add(statement->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(statement->table->tableId));
+
+    for (const auto& join: statement->joins) {
+      tableAliasesDictionary.Add(join->table->alias.empty() ? join->table->GetFullName() : join->table->alias, join->table->tableId);
+      tablesColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
+      // join->expression
+    }
+
+    for (auto& column: statement->columns)
+      if (!ResolveColumnAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement))
+        return false;
+
+    //validate all expressions are valid
+    if (!ResolveExpressionAliases(statement->where.expression, tableAliasesDictionary, tablesColumnsDictionary, statement))
+      return false;
+
+    //validate join expressions
+    for (const auto& join: statement->joins) {
+      if (!ResolveExpressionAliases(join->expression, tableAliasesDictionary, tablesColumnsDictionary, statement))
+        return false;
+    }
+
+    return true;
+  }
+
+  bool ResolveColumnAlias(
+      ColumnName& column,
+      const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+      Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+      SelectStatement *statement){
+
+        if (!ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement))
+          return false;
+
+        if (!column.alias.empty()) {
+          table_id_t tableId;
+
+          if (!tableAliasesDictionary.TryGetValue(column.alias, tableId)) {
+            cerr << "Alias: " << column.alias << " does not exist in the statement" << endl;
+            return false;
+          }
+
+          column.tableId = tableId;
+          return true;
+        }
+
+        bool columnExistsOnTable = false;
+        bool ambigiousColumn = false;
+        for (const auto& [key, columns]: tablesColumnsDictionary) {
+          if (!columns.Contains(column.name))
+            continue;
+
+          if (!columnExistsOnTable) {
+            columnExistsOnTable = true;
+            column.tableId = key;
+            continue;
+          }
+
+          ambigiousColumn = true;
+          break;
+        }
+
+        if (ambigiousColumn) {
+          cerr << "Ambigious Column: " << column.name << std::endl;
+          return false;
+        }
+
+      if (!columnExistsOnTable) {
+        std::cerr << "Column: " << column.name << " does not exist on Table" << std::endl;
+        return false;
+      }
+
+      return true;
+  }
+
+  bool ResolveWildCardAlias(
+    ColumnName &column,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
+    SelectStatement *statement){
+
+    if (column.name != "*")
+      return true;
+
+    if (column.alias.empty()) {
+      auto& columnHeaders = tablesColumnsDictionary.Get(statement->table->tableId);
+      for (const auto& header: columnHeaders) {
+
+        ColumnName columnName{
+          .name = column.name,
+          .alias = statement->table->alias.empty() ? statement->table->GetFullName() : statement->table->alias,
+          .tableId = statement->table->tableId,
+        };
+
+        statement->columns.push_back(std::move(column));
+      }
+
+      return true;
+    }
+
+    table_id_t tableId;
+    if (!tableAliasesDictionary.TryGetValue(column.alias, tableId)) {
+      std::cerr << "Alias " << column.alias << " does on exist on statement" << std::endl;
+      return false;
+    }
+
+
+    return true;
+  }
+
+  bool ResolveExpressionAliases(
+    Expressions::Expression *expression,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
+    SelectStatement *statement){
+
+    if (expression->type == Expressions::ExpressionType::Predicate)
+      return ResolveColumnAlias(expression->column, tableAliasesDictionary, tablesColumnsDictionary, statement);
+
+    if (expression->left == nullptr || expression->right == nullptr) {
+      std::cerr << "Invalid expression specified" << std::endl;
+      return false;
+    }
+
+    return ResolveExpressionAliases(expression->left, tableAliasesDictionary, tablesColumnsDictionary, statement)
+        && ResolveExpressionAliases(expression->right, tableAliasesDictionary, tablesColumnsDictionary, statement);
   }
 
 }

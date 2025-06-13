@@ -144,6 +144,13 @@ namespace Constants
     constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;
     constexpr page_id_t HEADER_PAGE_ID = 1;
 
+    enum class JoinType : uint8_t {
+        Inner = 0,
+        Left = 1,
+        Right = 2,
+        Full = 3
+    };
+
     enum class ColumnType : uint8_t
     {
         TinyInt = 0,

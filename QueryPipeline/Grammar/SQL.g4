@@ -17,9 +17,11 @@ sqlStatement
 
 //select statement
 selectStatement
-            : 'SELECT' (columnList | WILDCARD)
-              'FROM' tableName whereClause?
-               orderByStatement?
+            :   'SELECT' (columnList | WILDCARD)
+                'FROM' tableName
+                ((joinStatement)*)?
+                whereClause?
+                orderByStatement?
             ;
 
 whereClause
@@ -127,16 +129,32 @@ literalValue
         | NUMBER
         | getDate
         | newGuid
-        | NULL;
+        | NULL
+        | IDENTIFIER;
 
+//Create Index
 createIndexStatement
         : 'CREATE' (UNIQUE)? 'INDEX' IDENTIFIER 'ON' tableName '(' columnList ')'
         ;
-        
+
+//Join
+joinStatement
+    : joinType? JOIN tableName 'ON' expression
+    ;
+
+joinType
+    : INNER
+    | LEFT (OUTER)?
+    | RIGHT (OUTER)?
+    | FULL (OUTER)?
+    ;
+
+//Get Date
 getDate
     : 'GETDATE()'
     ;
 
+//New Guid
 newGuid
     : 'NEWID()'
     ;
@@ -145,8 +163,16 @@ columnList : columnName (',' columnName)*;
 
 //declarations for clarification
 dbName: IDENTIFIER;
-columnName : IDENTIFIER;
-tableName : (schemaName=IDENTIFIER '.')? name=IDENTIFIER;
+columnName : (columnAlias)? name=IDENTIFIER;
+
+columnAlias
+    : IDENTIFIER '.'
+    ;
+
+tableName : (schemaName=IDENTIFIER '.')? name=IDENTIFIER (alias)?;
+
+alias
+    : (AS)? IDENTIFIER;
 
 //create database statement
 createDbStatement: 'CREATE' 'DATABASE' IDENTIFIER;
@@ -185,8 +211,19 @@ NULL            : 'NULL';
 DESC            : 'DESC';
 ASC             : 'ASC';
 
+//Joins
+LEFT            : 'LEFT';
+RIGHT           : 'RIGHT';
+FULL            : 'FULL';
+INNER           : 'INNER';
+OUTER           : 'OUTER';
+JOIN            : 'JOIN';
+
 //Constraints
 UNIQUE          : 'UNIQUE';
+
+//Alias
+AS              : 'AS';
 
 //More Datatypes and identifiers
 WILDCARD        : '*';

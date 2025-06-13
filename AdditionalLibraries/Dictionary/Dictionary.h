@@ -44,4 +44,9 @@ class Dictionary : public std::unordered_map<Key, Value>
         {
             return this->at(key);
         }
+
+        Value Get(const Key& key) const
+        {
+            return this->at(key);
+        }
 };

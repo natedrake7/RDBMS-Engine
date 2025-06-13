@@ -49,15 +49,15 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     auto* statement = new Statements::SelectStatement();
 
     if (!ctx->WILDCARD()) {
-      // Visit columnList and get column names
-      auto colCtx = ctx->columnList();
-      for (const auto col : colCtx->columnName())
-        statement->columns.push_back(col->getText());
+      statement->columns = std::move(this->GetColumnsList(ctx->columnList()));
     }
     else
-      statement->columns = {"*"};
+      statement->columns = { {.name = "*", .alias = ""}};
 
     statement->table = std::any_cast<Statements::TableName*>(visit(ctx->tableName()));
+
+    for (const auto join : ctx->joinStatement())
+      statement->joins.push_back(std::any_cast<Statements::JoinStatement*>(visit(join)));
 
     if (const auto& whereClause = ctx->whereClause();whereClause != nullptr)
       statement->where = std::any_cast<Statements::WhereClause>(visit(whereClause));
@@ -100,6 +100,9 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->NULL_())
       return Field(nullptr, 0);
 
+    if (context->IDENTIFIER())
+      return Field(context->IDENTIFIER()->getText(), 0, true);
+
     throw invalid_argument("Invalid value specified");
   }
 
@@ -130,19 +133,25 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
     if (context->expression())
       return visit(context->expression());
 
-    const auto operation = context->op->getText();
+    if (context->op == nullptr)
+      throw invalid_argument("Invalid operation specified");
 
     Expressions::ExpressionOperator expressionOperator;
     if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(context->op->getText(), expressionOperator))
         throw invalid_argument("Invalid operation specified");
 
+    const auto columnName = std::any_cast<Statements::ColumnName>(visit(context->columnName()));
+
     return new Expressions::Expression{
-      Expressions::ExpressionType::Predicate,
-      nullptr,
-      nullptr,
-      context->columnName()->getText(),
-      expressionOperator,
-      std::any_cast<Field>(visit(context->literalValue()))
+      .type = Expressions::ExpressionType::Predicate,
+      .left = nullptr,
+      .right = nullptr,
+      .column{
+        .name = columnName.name,
+        .alias = columnName.alias,
+      },
+      .operation = expressionOperator,
+      .value = std::any_cast<Field>(visit(context->literalValue()))
     };
   }
 
@@ -150,11 +159,9 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
     auto* statement = new Statements::InsertStatement();
 
     statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+
+    statement->columns = std::move(this->GetColumnsList(context->columnList()));
     
-    const auto columns = visit(context->columnList());
-
-    statement->columns = std::any_cast<std::vector<string>>(columns);
-
     const auto values = visit(context->literalValueList());
 
     statement->values = std::any_cast<std::vector<Field>>(values);
@@ -231,9 +238,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (context->constraintName)
       statement->name = context->constraintName->getText();
 
-    auto colCtx = context->columnList();
-    for (const auto col : colCtx->columnName())
-      statement->columns.push_back(col->getText());
+    statement->columns = std::move(this->GetColumnsList(context->columnList()));
 
     return statement;
   }
@@ -260,7 +265,14 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
 
   antlrcpp::Any SQLVisitorImplementation::visitColumnName(SQLParser::ColumnNameContext *context){
-    return context == nullptr ? "" : context->getText();
+    Statements::ColumnName columnName;
+
+    if (context->columnAlias())
+      columnName.alias = std::any_cast<std::string>(visit(context->columnAlias()));
+
+    columnName.name = context->name->getText();
+
+    return columnName;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitTableName(SQLParser::TableNameContext *context) {
@@ -270,8 +282,28 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       statement->schema = context->schemaName->getText();
 
     statement->name = context->name->getText();
-    
+
+    if (context->alias())
+      statement->alias = std::any_cast<std::string>(visit(context->alias()));
+
     return statement;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAlias(SQLParser::AliasContext *context) {
+    return context->IDENTIFIER()->getText();
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitColumnAlias(SQLParser::ColumnAliasContext *context){
+    return context->IDENTIFIER()->getText();
+  }
+
+  std::vector<Statements::ColumnName> SQLVisitorImplementation::GetColumnsList(SQLParser::ColumnListContext *context){
+    std::vector<Statements::ColumnName> columns;
+
+    for (const auto& columnName : context->columnName())
+      columns.push_back(std::move(std::any_cast<Statements::ColumnName>(visit(columnName))));
+
+    return columns;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitDbName(SQLParser::DbNameContext *context){
@@ -317,10 +349,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitOrderByStatement(SQLParser::OrderByStatementContext *context){
     auto* statement = new Statements::OrderByStatement();
 
-    auto colCtx = context->columnList();
-    for (const auto col : colCtx->columnName())
-      statement->columns.push_back(col->getText());
-
+    statement->columns = std::move(this->GetColumnsList(context->columnList()));
     statement->order = context->order ? context->order->getText() : "ASC";
 
     return statement;

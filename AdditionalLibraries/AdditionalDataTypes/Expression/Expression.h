@@ -1,7 +1,17 @@
 #pragma once
 #include <string>
-#include "../Field/Field.h"
+#include "../../Dictionary/Dictionary.h"
 #include "../../HashSet/HashSet.h"
+#include "../Field/Field.h"
+
+namespace QueryPipeline::Statements {
+  struct ColumnName {
+    std::string name;
+    std::string alias;
+
+    int32_t tableId;
+  };
+}
 
 namespace Expressions{
   enum class ExpressionType {
@@ -20,13 +30,13 @@ namespace Expressions{
   };
 
   static Dictionary<std::string, ExpressionOperator> ExpressionOperatorsDictionary{
-  { "=", ExpressionOperator::Equal },
-  { "!=", ExpressionOperator::NotEqual },
-  { "<>", ExpressionOperator::NotEqual },
-  { ">", ExpressionOperator::Greater },
-  { ">=", ExpressionOperator::GreaterEqual },
-  { "<", ExpressionOperator::Less },
-  { "<=", ExpressionOperator::LessEqual },
+    { "=", ExpressionOperator::Equal },
+    { "!=", ExpressionOperator::NotEqual },
+    { "<>", ExpressionOperator::NotEqual },
+    { ">", ExpressionOperator::Greater },
+    { ">=", ExpressionOperator::GreaterEqual },
+    { "<", ExpressionOperator::Less },
+    { "<=", ExpressionOperator::LessEqual },
   };
 
   struct Expression {
@@ -35,13 +45,15 @@ namespace Expressions{
     Expression* left;
     Expression* right;
 
-    std::string column;
+    QueryPipeline::Statements::ColumnName column;
+
     ExpressionOperator operation;
     Field value;
 
     Constants::column_index_t columnIndex;
 
     static Expression Predicate(
+      const std::string& alias,
       const std::string& column,
       const ExpressionOperator& operation,
       const Field& value);
