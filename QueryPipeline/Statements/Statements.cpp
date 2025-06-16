@@ -130,8 +130,6 @@ namespace QueryPipeline::Statements {
 
   bool SelectStatement::Validate(){
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
-    Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tablesColumnsDictionary;
-
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
     if (tableHeader.id == -1){
@@ -210,12 +208,34 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
-    const auto scanTable = new LogicalTableScan(this->databaseId, this->table, this->where.expression);
+    const auto scanTable = new LogicalTableScan(this->databaseId, this->table, this->joins.empty() ? this->where.expression : nullptr);
 
     LogicalPlan* current = scanTable;
 
-    if (this->where.expression != nullptr)
+    //join re orders take place here
+
+
+    Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
+    Constants::column_index_t columnIndex = 0;
+
+    for (const auto& [key, columns] : this->tableColumnsDictionary) {
+      for (const auto& [alias, column]: columns) {
+          if (columnIndicesDictionary.Contains(column.id))
+            continue;
+
+          columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
+      }
+
+      columnIndex += columns.size();
+    }
+
+    AssignColumnsToIndices(this, columnIndicesDictionary);
+
+    if (this->where.expression != nullptr) {
+      //do the same for joins
+      MapExpressionColumnsToIndices(this->where.expression, columnIndicesDictionary);
       current = new LogicalFilter(this->databaseId, current, this->where.expression);
+    }
 
     if (!this->columns.empty())
       current = new LogicalProject(this->databaseId, current, this->columnIndices, this->columnHeaders);
@@ -431,42 +451,39 @@ namespace QueryPipeline::Statements {
   bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement){
     tableAliasesDictionary.Add(statement->table->alias.empty() ? statement->table->GetFullName() : statement->table->alias, statement->table->tableId);
 
-    HashSet<int32_t> invalidColumnIds;
-    Dictionary<std::string, Headers::ColumnHeader> invalidColumns;
-    Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tablesColumnsDictionary;
+    Dictionary<int32_t, Constants::column_index_t> computedColumnIndexes;
 
-    tablesColumnsDictionary.Add(statement->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(statement->table->tableId));
+    statement->tableColumnsDictionary.Add(statement->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(statement->table->tableId));
 
     for (const auto& join: statement->joins) {
       tableAliasesDictionary.Add(join->table->alias.empty() ? join->table->GetFullName() : join->table->alias, join->table->tableId);
-      tablesColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
+      statement->tableColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
     }
 
     for (int i = 0;i < statement->columns.size(); i++) {
       auto& column = statement->columns[i];
 
       if (column.name == "*") {
-        if (!ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement))
+        if (!ResolveWildCardAlias(column, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
           return false;
-
 
         //no reason to check the column as they are valid and their aliases are set
         statement->columns.erase(statement->columns.begin() + i);
         continue;
       }
 
-      if (!ResolveColumnAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement))
+      if (!ResolveColumnAlias(column, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
         return false;
     }
 
     //validate all expressions are valid
     if (statement->where.expression != nullptr
-      && !ResolveExpressionAliases(statement->where.expression, tableAliasesDictionary, tablesColumnsDictionary, statement))
+      && !ResolveExpressionAliases(statement->where.expression, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
       return false;
 
     //validate join expressions
     for (const auto& join: statement->joins) {
-      if (!ResolveExpressionAliases(join->expression, tableAliasesDictionary, tablesColumnsDictionary, statement))
+      if (!ResolveExpressionAliases(join->expression, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
         return false;
     }
 
@@ -492,18 +509,19 @@ namespace QueryPipeline::Statements {
           }
 
           column.tableId = tableId;
-          return true;
         }
 
         bool columnExistsOnTable = false;
         bool ambigiousColumn = false;
         for (const auto& [key, columns]: tablesColumnsDictionary) {
-          if (!columns.Contains(column.name))
+          Headers::ColumnHeader columnHeader;
+          if (!columns.TryGetValue(column.name, columnHeader))
             continue;
 
           if (!columnExistsOnTable) {
             columnExistsOnTable = true;
             column.tableId = key;
+            column.columnId = columnHeader.id;
             continue;
           }
 
@@ -541,6 +559,7 @@ namespace QueryPipeline::Statements {
           .name = header.name,
           .alias = statement->table->alias.empty() ? statement->table->GetFullName() : statement->table->alias,
           .tableId = statement->table->tableId,
+          .columnId = header.id
         };
 
         statement->columns.push_back(std::move(columnName));
@@ -574,6 +593,21 @@ namespace QueryPipeline::Statements {
 
     return ResolveExpressionAliases(expression->left, tableAliasesDictionary, tablesColumnsDictionary, statement)
         && ResolveExpressionAliases(expression->right, tableAliasesDictionary, tablesColumnsDictionary, statement);
+  }
+
+  void MapExpressionColumnsToIndices(Expressions::Expression *expression, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary){
+      if (expression->type == Expressions::ExpressionType::Predicate) {
+          expression->columnIndex = columnIndicesDictionary.Get(expression->column.columnId);
+          return;
+      }
+
+      MapExpressionColumnsToIndices(expression->left, columnIndicesDictionary);
+      MapExpressionColumnsToIndices(expression->right, columnIndicesDictionary);
+  }
+
+  void AssignColumnsToIndices(SelectStatement *statement, Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary){
+    for (auto& column : statement->columns)
+      statement->columnIndices.emplace_back(columnIndicesDictionary.Get(column.columnId));
   }
 
 }

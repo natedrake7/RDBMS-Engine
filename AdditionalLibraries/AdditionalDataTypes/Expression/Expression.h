@@ -10,6 +10,7 @@ namespace QueryPipeline::Statements {
     std::string alias;
 
     int32_t tableId;
+    int32_t columnId;
   };
 }
 

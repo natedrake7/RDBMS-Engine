@@ -126,6 +126,7 @@ namespace QueryPipeline::Statements {
   struct SelectStatement final : Statement{
     TableName* table;
     std::vector<ColumnName> columns;
+    Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
 
     std::vector<Headers::ColumnHeader> columnHeaders;
 
@@ -143,6 +144,7 @@ namespace QueryPipeline::Statements {
     
     bool Validate() override;
     LogicalPlan* ToLogical() override;
+
   };
 
   struct CreateDbStatement final : Statement{
@@ -219,5 +221,9 @@ namespace QueryPipeline::Statements {
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement);
+
+  static void MapExpressionColumnsToIndices(Expressions::Expression* expression, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);
+
+  static void AssignColumnsToIndices(SelectStatement* statement, Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary);
 
 }

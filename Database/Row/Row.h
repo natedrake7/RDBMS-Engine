@@ -57,8 +57,6 @@ namespace DatabaseEngine::StorageTypes
 
         ~Row();
 
-        void PopulateAutoComputedColumns(Table* tablePtr);
-
         void InsertColumnData(Block *block, const column_index_t &columnIndex);
 
         //primarily used by the join operation
@@ -74,7 +72,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] const uint32_t &GetRowSize() const;
 
-        vector<column_index_t> GetLargeBlocks()const;
+        [[nodiscard]] vector<column_index_t> GetLargeBlocks()const;
 
         void UpdateRowSize();
 
@@ -99,8 +97,6 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] bool Evaluate(const Expressions::Expression* expression) const;
 
         [[nodiscard]] int Update(const vector<Field> & updates);
-
-        void DeleteLargeObjectFromPage(const HashSet<column_index_t>& updatedColumns);
 
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
 
