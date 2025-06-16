@@ -49,10 +49,16 @@ namespace Expressions{
               this->right->Validate(columnsDictionary);
 
     Headers::ColumnHeader header;
-    // if (!columnsDictionary.TryGetValue(this->column, header))
-    //   return false;
+    if (!columnsDictionary.TryGetValue(this->column.name, header))
+      return false;
 
     this->columnIndex = header.ordinalPosition;
+
+    if (this->value.GetIsNull()
+      && ( this->operation != ExpressionOperator::Equal
+          || this->operation != ExpressionOperator::NotEqual))
+      return false;
+
     this->value.Validate(header);
 
     return true;

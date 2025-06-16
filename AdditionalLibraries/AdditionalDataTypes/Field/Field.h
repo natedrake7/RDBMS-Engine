@@ -95,5 +95,7 @@ class Field {
 
         void SetColumnIndex(const Constants::column_index_t &columnIndex);
 
+        void SetType(const ColumnType &type);
+
         void Validate(const Headers::ColumnHeader &header);
 };

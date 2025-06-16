@@ -46,7 +46,7 @@ namespace QueryPipeline{
     const bool isNullable = ((context->NULL_() && !context->NOT()) && !isPrimaryKey);
 
     return Statements::AddColumn{
-      .name = std::any_cast<string>(visit(context->columnName())),
+      .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
       .type = std::any_cast<Statements::ColumnType>(visit(context->dataType())),
       .autoIncrementKey = key,
       .isPrimaryKey = isPrimaryKey,

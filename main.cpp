@@ -51,6 +51,7 @@ void InsertRowsToMoviesTable(Table* table);
 //transactions(usage of tempDb maybe).
 //used aliases in logical and physical table scans and joins.
 //fix aliases not working on projection
+//add on columns checking to be case insensitive and all names to be normalized to lower string
 
 std::atomic<bool> serverRunning{true};
 

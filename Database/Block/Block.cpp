@@ -127,6 +127,10 @@ bool operator!=(const DatabaseEngine::StorageTypes::Block &block, const Field &f
 }
 
 bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Field &field){
+    if (field.GetIsNull()
+        || block.GetBlockData() == nullptr)
+        return block.GetBlockData() == nullptr;
+
     switch (block.GetColumnType()){
         case ColumnType::TinyInt:
             return block.GetTinyInt() == field.GetTinyInt();
@@ -163,6 +167,10 @@ bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Field &f
 }
 
 bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Field &field){
+    if (field.GetIsNull()
+        || block.GetBlockData() == nullptr)
+        return block.GetBlockData() != nullptr;
+
     switch (block.GetColumnType()){
         case ColumnType::TinyInt:
             return block.GetTinyInt() > field.GetTinyInt();
@@ -171,7 +179,7 @@ bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Field &fi
         case ColumnType::Int:
             return block.GetInt() > field.GetInt();
         case ColumnType::BigInt:
-            return block.GetInt() > field.GetInt();
+            return block.GetBigInt() > field.GetBigInt();
         case ColumnType::Decimal:
             return block.GetDecimal() > field.GetDecimal();
         case ColumnType::String:

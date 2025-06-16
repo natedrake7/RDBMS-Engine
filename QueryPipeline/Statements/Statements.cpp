@@ -88,7 +88,7 @@ namespace QueryPipeline::Statements {
 
       column.index = tablePosition++;
 
-      columnNamesToIndexes.Add(column.name, column.index);
+      columnNamesToIndexes.Add(column.name.name, column.index);
 
       if(column.isPrimaryKey && primaryKeyFound){
         cerr << "Cannot have multiple primary keys defined. Consider declaring a composite key" << endl;
@@ -152,7 +152,12 @@ namespace QueryPipeline::Statements {
       join->table->ordinalPosition = joinHeader.ordinalPosition;
     }
 
-    return ResolveAliases(aliasesDictionary, this);
+    if (!ResolveAliases(aliasesDictionary, this))
+      return false;
+
+    // if (this->where.expression != nullptr && !this->where.expression->Validate())
+
+    return true;
     //
     // if (!this->columns.empty() && this->columns[0].name == "*") {
     //   this->columns.clear();
@@ -593,7 +598,8 @@ namespace QueryPipeline::Statements {
     if (expression->type == Expressions::ExpressionType::Predicate)
       return ResolveColumnAlias(expression->column, tableAliasesDictionary, tablesColumnsDictionary, statement);
 
-    if (expression->left == nullptr || expression->right == nullptr) {
+    if (expression->left == nullptr
+      || expression->right == nullptr) {
       std::cerr << "Invalid expression specified" << std::endl;
       return false;
     }

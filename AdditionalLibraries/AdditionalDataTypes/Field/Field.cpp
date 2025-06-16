@@ -250,12 +250,24 @@ DataTypes::Guid Field::GetGuid() const{ return {this->data, this->size}; }
 
 void Field::SetColumnIndex(const Constants::column_index_t &columnIndex) { this->columnIndex = columnIndex; }
 
+void Field::SetType(const ColumnType &type){
+    this->type = type;
+}
+
 const ColumnType & Field::GetType() const{ return this->type; }
 
 const block_size_t& Field::GetSize() const{ return this->size; }
 
 void Field::Validate(const Headers::ColumnHeader &header){
     const auto columnType = static_cast<ColumnType>(header.dataType);
+
+    if (this->GetIsNull()) {
+
+        this->SetType(columnType);
+        this->SetColumnIndex(header.ordinalPosition);
+
+        return;
+    }
 
     switch (columnType) {
       case ColumnType::TinyInt: {
@@ -290,7 +302,6 @@ void Field::Validate(const Headers::ColumnHeader &header){
           const auto datetime = this->GetDateTime();
           if (!DataTypes::DateTime::ValidateDate(datetime))
               throw invalid_argument("failed to validate date");
-
           break;
       }
       case ColumnType::Decimal:

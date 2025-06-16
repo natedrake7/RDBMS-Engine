@@ -252,7 +252,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     
     for (const auto& column: this->columns)
       columnsPtrs.push_back(new DatabaseEngine::StorageTypes::Column(
-        column.name,
+        column.name.name,
         ColumnTypesDictionary.Get(column.type.name),
         column.type.size,
         column.index,
@@ -280,7 +280,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       const auto columnResult =
           Server::ServerInstance::Get().InsertColumnToMasterDb(
             tableResult.primaryKeyVal,
-            column.name,
+            column.name.name,
             ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(column.type.name)),
             column.type.size,
             column.isNullable,
@@ -309,7 +309,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     for (const auto& column: this->primaryKey.columns) {
       if (isConstraintEmpty)
-        this->constraintName += this->constraintName.empty() ? "PK_" + this->columns[column].name :"_" + this->columns[column].name;
+        this->constraintName += this->constraintName.empty() ? "PK_" + this->columns[column].name.name :"_" + this->columns[column].name.name;
 
       primaryKeyColumnIds.push_back(columnIdsDict.Get(column));
     }

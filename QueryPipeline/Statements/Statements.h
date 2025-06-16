@@ -29,7 +29,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct AddColumn {
-    std::string name;
+    Statements::ColumnName name;
     ColumnType type;
     Identity* autoIncrementKey;
     bool isPrimaryKey;
