@@ -45,6 +45,7 @@ predicate
     | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
     ;
 
+//order by
 orderByStatement
     : 'ORDER' 'BY' columnList order=(DESC | ASC)?
     ;
@@ -99,12 +100,12 @@ autoIncrementKey
     ;
     
 primaryKeyConstraint
-    : ('CONSTRAINT' constraintName=IDENTIFIER)? 'PRIMARY' 'KEY' '(' columnList ')'
+    : ('CONSTRAINT' constraintName=identifier)? 'PRIMARY' 'KEY' '(' columnList ')'
     ;
 
 //Create Schema
 createSchemaStatement
-    : 'CREATE' 'SCHEMA' IDENTIFIER
+    : 'CREATE' 'SCHEMA' identifier
     ;
 
 //Update statement
@@ -130,11 +131,11 @@ literalValue
         | getDate
         | newGuid
         | NULL
-        | IDENTIFIER;
+        | identifier;
 
 //Create Index
 createIndexStatement
-        : 'CREATE' (UNIQUE)? 'INDEX' IDENTIFIER 'ON' tableName '(' columnList ')'
+        : 'CREATE' (UNIQUE)? 'INDEX' identifier 'ON' tableName '(' columnList ')'
         ;
 
 //Join
@@ -162,23 +163,27 @@ newGuid
 columnList : columnName (',' columnName)*;
 
 //declarations for clarification
-dbName: IDENTIFIER;
-columnName : (columnAlias)? name=IDENTIFIER;
+dbName: identifier;
+columnName : (columnAlias)? name=identifier;
 
 columnAlias
-    : IDENTIFIER '.'
+    : identifier '.'
     ;
 
-tableName : (schemaName=IDENTIFIER '.')? name=IDENTIFIER (alias)?;
+tableName : (schemaName=identifier '.')? name=identifier (alias)?;
 
 alias
-    : (AS)? IDENTIFIER;
+    : (AS)? identifier;
 
 //create database statement
-createDbStatement: 'CREATE' 'DATABASE' IDENTIFIER;
+createDbStatement: 'CREATE' 'DATABASE' identifier;
 
 //drop database statement
-dropDbStatement: 'DROP' 'DATABASE' IDENTIFIER;
+dropDbStatement: 'DROP' 'DATABASE' identifier;
+
+identifier
+    : ('[')? IDENTIFIER (']')?
+    ;
 
 //Comparison Operators
 NOTEQUAL        : '!=' | '<>';

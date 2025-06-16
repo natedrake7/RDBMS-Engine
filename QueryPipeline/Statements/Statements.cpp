@@ -214,7 +214,6 @@ namespace QueryPipeline::Statements {
 
     //join re orders take place here
 
-
     Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
     Constants::column_index_t columnIndex = 0;
 
@@ -487,6 +486,14 @@ namespace QueryPipeline::Statements {
         return false;
     }
 
+    if (statement->orderBy == nullptr)
+      return true;
+
+    for (auto& column: statement->orderBy->columns) {
+      if (!ResolveColumnAlias(column, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
+        return false;
+    }
+
     return true;
   }
 
@@ -608,6 +615,13 @@ namespace QueryPipeline::Statements {
   void AssignColumnsToIndices(SelectStatement *statement, Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary){
     for (auto& column : statement->columns)
       statement->columnIndices.emplace_back(columnIndicesDictionary.Get(column.columnId));
+
+    if (statement->orderBy != nullptr) {
+      for (auto& column : statement->orderBy->columns)
+        statement->orderBy->columnIndices.emplace_back(columnIndicesDictionary.Get(column.columnId));
+    }
+
+    //group by here later
   }
 
 }

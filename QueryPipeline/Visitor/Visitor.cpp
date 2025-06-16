@@ -30,8 +30,8 @@ namespace QueryPipeline {
   antlrcpp::Any SQLVisitorImplementation::visitCreateDbStatement(SQLParser::CreateDbStatementContext *context) {
     auto* statement = new Statements::CreateDbStatement();
 
-    if (context->IDENTIFIER())
-      statement->name = context->IDENTIFIER()->getText();
+    if (context->identifier())
+      statement->name = std::any_cast<std::string>(visit(context->identifier()));
 
     return statement;
   }
@@ -39,8 +39,8 @@ namespace QueryPipeline {
   antlrcpp::Any SQLVisitorImplementation::visitDropDbStatement(SQLParser::DropDbStatementContext *context) {
     auto* statement = new Statements::DropDbStatement();
 
-    if (context->IDENTIFIER())
-      statement->name = context->IDENTIFIER()->getText();
+    if (context->identifier())
+      statement->name = std::any_cast<std::string>(visit(context->identifier()));
 
     return statement;
   }
@@ -100,8 +100,8 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->NULL_())
       return Field(nullptr, 0);
 
-    if (context->IDENTIFIER())
-      return Field(context->IDENTIFIER()->getText(), 0, true);
+    if (context->identifier())
+      return Field(std::any_cast<std::string>(visit(context->identifier())), 0, true);
 
     throw invalid_argument("Invalid value specified");
   }
@@ -247,7 +247,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     auto* statement = new Statements::CreateSchemaStatement();
 
-    statement->name = context->IDENTIFIER()->getText();
+    statement->name = std::any_cast<std::string>(visit(context->identifier()));
     
     return statement;
   }
@@ -270,7 +270,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (context->columnAlias())
       columnName.alias = std::any_cast<std::string>(visit(context->columnAlias()));
 
-    columnName.name = context->name->getText();
+    columnName.name = std::any_cast<std::string>(visit(context->name));
 
     return columnName;
   }
@@ -279,9 +279,9 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     auto* statement = new Statements::TableName();
     
     if (context->schemaName)
-      statement->schema = context->schemaName->getText();
+      statement->schema = std::any_cast<std::string>(visit(context->schemaName));
 
-    statement->name = context->name->getText();
+    statement->name = std::any_cast<std::string>(visit(context->name));
 
     if (context->alias())
       statement->alias = std::any_cast<std::string>(visit(context->alias()));
@@ -290,10 +290,14 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAlias(SQLParser::AliasContext *context) {
-    return context->IDENTIFIER()->getText();
+    return visit(context->identifier());
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitColumnAlias(SQLParser::ColumnAliasContext *context){
+    return visit(context->identifier());
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitIdentifier(SQLParser::IdentifierContext *context){
     return context->IDENTIFIER()->getText();
   }
 
@@ -365,7 +369,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     statement->isUnique = context->UNIQUE() != nullptr;
     statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
 
-    statement->name = context->IDENTIFIER()->getText();
+    statement->name = std::any_cast<std::string>(visit(context->identifier()));
 
     auto colCtx = context->columnList();
     for (const auto col : colCtx->columnName())

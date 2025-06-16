@@ -86,6 +86,8 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitColumnAlias(SQLParser::ColumnAliasContext *context) override;
 
+      antlrcpp::Any visitIdentifier(SQLParser::IdentifierContext *context) override;
+
       std::vector<Statements::ColumnName> GetColumnsList(SQLParser::ColumnListContext *context);
   };
 }
