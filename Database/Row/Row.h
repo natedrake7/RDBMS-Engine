@@ -60,7 +60,7 @@ namespace DatabaseEngine::StorageTypes
         void InsertColumnData(Block *block, const column_index_t &columnIndex);
 
         //primarily used by the join operation
-        void InsertNewColumn(Block* block);
+        [[nodiscard]] int InsertNewColumn(Block* block);
 
         void UpdateColumnData(Block *block);
 

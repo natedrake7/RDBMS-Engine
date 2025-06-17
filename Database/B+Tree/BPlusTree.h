@@ -155,5 +155,7 @@ namespace Indexing
         [[nodiscard]] const page_id_t& GetFirstIndexPageId() const;
 
         void InsertRowsToOtherTree(const int& indexPos);
+
+        void InsertColumnToRow(const Constants::column_index_t& index, const Field& defaultValue);
     };
 }

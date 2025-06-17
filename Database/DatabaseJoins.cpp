@@ -74,16 +74,16 @@ namespace DatabaseEngine
     {
         if(selectedRows.empty())
         {
-            const auto& columns = secondTable->GetColumns();
-            for(const auto& columnIndex: selectedColumnIndices)
-                row.InsertNewColumn(new Block(nullptr, 0, columns[columnIndex]));
+            // const auto& columns = secondTable->GetColumns();
+            // for(const auto& columnIndex: selectedColumnIndices)
+            //     row.InsertNewColumn(new Block(nullptr, 0, columns[columnIndex]));
 
             return;    
         }
 
-        for(const auto& selectedRow: selectedRows)
-            for(const auto& block: selectedRow.GetData())
-                row.InsertNewColumn(new Block(block));
+        // for(const auto& selectedRow: selectedRows)
+        //     for(const auto& block: selectedRow.GetData())
+        //         row.InsertNewColumn(new Block(block));
 
 
     }

@@ -43,12 +43,16 @@ namespace QueryPipeline{
                     ? std::any_cast<Statements::Identity*>(visit(context->primaryKey()))
                     : nullptr;
 
-    const bool isNullable = ((context->NULL_() && !context->NOT()) && !isPrimaryKey);
+    const bool isNullable = ((!context->NULL_() && ! context->NOT() && !isPrimaryKey)
+                              || (context->NULL_() && !context->NOT()) && !isPrimaryKey);
 
     return new Statements::AddColumn{
       .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
       .type = std::any_cast<Statements::ColumnType>(visit(context->dataType())),
       .autoIncrementKey = key,
+      .defaultValue =  context->defaultValue()
+              ? std::any_cast<Field>(visit(context->defaultValue()))
+              : Field(nullptr),
       .isPrimaryKey = isPrimaryKey,
       .isNullable = isNullable,
     };

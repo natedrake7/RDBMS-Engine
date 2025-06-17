@@ -32,6 +32,8 @@ namespace QueryPipeline::Statements {
     Statements::ColumnName name;
     ColumnType type;
     Identity* autoIncrementKey;
+    Field defaultValue;
+
     bool isPrimaryKey;
     bool isNullable;
 
@@ -230,7 +232,7 @@ namespace QueryPipeline::Statements {
     DropColumn* dropColumn;
     RenameColumn* renameColumn;
 
-    [[nodiscard]] bool ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
+    [[nodiscard]] bool ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] bool ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
     [[nodiscard]] bool ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
     [[nodiscard]] bool ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;

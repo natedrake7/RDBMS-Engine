@@ -452,7 +452,13 @@ namespace QueryPipeline::Statements {
     return new QueryPipeline::LogicalIndexCreate(this->databaseId, this->table, this->name, this->columnIndices);
   }
 
-  bool AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers){
+  bool AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+    if (headers.Contains(this->addColumn->name.name)) {
+      std::cerr << "Column " << this->addColumn->name.name << " already exists on table: "<< this->table->GetFullName() << std::endl;
+      return false;
+    }
+
+    this->addColumn->index = headers.size();
     return true;
   }
 

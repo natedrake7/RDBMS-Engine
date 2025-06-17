@@ -14,7 +14,7 @@ namespace Pages
     PageHeader::PageHeader()
     {
         this->pageType = PageType::Error;
-        this->pageId = 0;
+        this->pageId = INVALID_PAGE_ID;
         this->pageSize = 0;
         this->bytesLeft = PAGE_SIZE - GetPageHeaderSize();
     }

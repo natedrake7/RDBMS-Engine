@@ -64,7 +64,11 @@ deleteStatement
 createTableStatement: 'CREATE' 'TABLE' tableName '(' addColumn (',' addColumn)* ( ',' primaryKeyConstraint)? ')';
 
 addColumn
-    : columnName dataType (NOT NULL | NULL)? primaryKey?
+    : columnName dataType (NOT NULL | NULL)? defaultValue? primaryKey?
+    ;
+
+defaultValue
+    : 'DEFAULT' literalValue
     ;
 
 dataType

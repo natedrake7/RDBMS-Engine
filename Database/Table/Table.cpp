@@ -913,7 +913,12 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     //create differrent one to handle clustered updates
-    void Table::HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Field> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap){
+    void Table::HandleRowUpdate(
+      Pages::Page *page,
+      Row *row, const
+      std::vector<Field> &updates,
+      const HashSet<column_index_t>& updatedColumns,
+      const bool &isHeap){
         this->DeleteLargeObjectFromPage(row, updatedColumns);
         this->DeleteOverflowedRowsFromPage(row, updatedColumns);
 
@@ -1165,6 +1170,30 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
+    void Table::GetIdentityColumnById(const int32_t &columnId)const{
+        const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+
+        if (identityHeaders.empty())
+          return;
+
+        for(const auto& column: this->columns){
+
+          if (columnId != column->GetColumnId())
+            continue;
+
+          for (const auto& identity: identityHeaders) {
+            if(column->GetColumnId() != identity.columnId)
+              continue;
+
+            column->SetIdentity(identity);
+            column->SetIdentityStartingValue(identity.lastValue);
+
+            // this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
+            break;
+          }
+        }
+    }
+
     void Table::GetIndexes(){
         Dictionary<int32_t, Column*> columnsDict;
 
@@ -1201,13 +1230,66 @@ namespace DatabaseEngine::StorageTypes {
 
         this->UpdateColumnIdentity(column->GetColumnId(), identity.lastValue);
       }
-
     }
 
   void Table::UpdateColumnName(const Constants::column_index_t &index, const std::string &name)const{
       auto* column = this->columns.at(index);
 
       column->SetColumnName(name);
+  }
+
+  void Table::PopulateColumn(const Constants::column_index_t &index, const Field &defaultValue){
+      if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+        return;
+
+      if (this->GetTableType() == TableType::CLUSTERED) {
+        this->PopulateColumnByClusteredIndex(index, defaultValue);
+        return;
+      }
+
+      this->PopulateColumnByHeap(index, defaultValue);
+  }
+
+  void Table::PopulateColumnByClusteredIndex(const Constants::column_index_t &index, const Field &defaultValue){
+        auto* tree = this->GetClusteredIndexedTree();
+
+        tree->InsertColumnToRow(index, defaultValue);
+  }
+
+  void Table::HandleAddColumn(Pages::Page* page, Row *row, const Constants::column_index_t& index, const Field &defaultValue){
+        const auto& column = this->columns.at(index);
+
+        auto* block = new Block(defaultValue.GetRawData(), defaultValue.GetSize(), column);
+
+        int diff = row->InsertNewColumn(block);
+
+        if(page->GetBytesLeft() - diff > 0){
+          page->UpdateBytesLeft();
+          return;
+        }
+
+        this->InsertLargeObjectToPage(row);
+
+        // if(isHeap && (PAGE_SIZE - PageHeader::GetPageHeaderSize() - row->GetRowSize()) > 0){
+        //   vector<extent_id_t> allocatedExtents;
+        //   extent_id_t startingExtentIndex = 0;
+        //
+        //   this->InsertRow(row, allocatedExtents, startingExtentIndex);
+        //
+        //   return;
+        // }
+
+        while(page->GetBytesLeft() - diff < 0){
+          const int result = this->HandleRowOverflow(row);
+
+          if(result == -1)
+            break;
+
+          diff -= result;
+        }
+  }
+
+  void Table::PopulateColumnByHeap(const Constants::column_index_t &index, const Field &defaultValue){
   }
 
 }

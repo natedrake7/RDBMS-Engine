@@ -118,7 +118,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header.rowSize += block->GetBlockSize();
     }
 
-    void Row::InsertNewColumn(Block* block)
+    int Row::InsertNewColumn(Block* block)
     {
         this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
         this->header.largeObjectBitMap->Set(this->data.size(), false);
@@ -127,6 +127,8 @@ namespace DatabaseEngine::StorageTypes {
         this->data.push_back(block);
 
         this->header.rowSize += block->GetBlockSize();
+
+        return block->GetBlockSize();
     }
 
     void Row::UpdateColumnData(Block *block)

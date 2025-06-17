@@ -327,8 +327,8 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
   antlrcpp::Any SQLVisitorImplementation::visitUpdateColumn(SQLParser::UpdateColumnContext *context){
     return Statements::UpdateColumnStatement{
-  std::any_cast<Statements::ColumnName>(visit(context->columnName())),
-      std::any_cast<Field>(visit(context->literalValue()))
+      .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
+      .value = std::any_cast<Field>(visit(context->literalValue()))
     };
 }
   antlrcpp::Any SQLVisitorImplementation::visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context){
@@ -419,7 +419,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAlterTableAddColumn(SQLParser::AlterTableAddColumnContext *context){
-    return visitAddColumn(context->addColumn());
+    return visit(context->addColumn());
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAlterTableDropColumn(SQLParser::AlterTableDropColumnContext *context){
@@ -440,5 +440,9 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       .oldName = std::any_cast<Statements::ColumnName>(visit(context->oldName)),
       .newName = std::any_cast<Statements::ColumnName>(visit(context->newName)),
     };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitDefaultValue(SQLParser::DefaultValueContext *context){
+    return visit(context->literalValue());
   }
 }

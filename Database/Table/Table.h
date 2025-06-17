@@ -254,10 +254,20 @@ namespace DatabaseEngine::StorageTypes
 
             void GetIdentityColumns()const;
 
+            void GetIdentityColumnById(const int32_t& columnId)const;
+
             void GetIndexes();
 
             void UpdateMasterDatabase() const;
 
             void UpdateColumnName(const Constants::column_index_t& index, const std::string& name)const;
+
+            void PopulateColumn(const Constants::column_index_t& index, const Field& defaultValue);
+
+            void PopulateColumnByClusteredIndex(const Constants::column_index_t& index, const Field& defaultValue);
+
+            void PopulateColumnByHeap(const Constants::column_index_t& index, const Field& defaultValue);
+
+            void HandleAddColumn(Pages::Page* page, Row* row, const Constants::column_index_t& index, const Field& defaultValue);
     };
 }

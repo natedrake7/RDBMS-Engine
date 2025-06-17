@@ -470,6 +470,26 @@ namespace Indexing
         }
     }
 
+    void BPlusTree::InsertColumnToRow(const Constants::column_index_t& index, const Field &defaultValue){
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+            return;
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+            for(auto* row: *currentNode->GetDataRowsUnsafe())
+                this->table->HandleAddColumn(currentNode, row, index, defaultValue);
+
+            if(currentNode->GetNextPage() == 0
+                || currentNode->GetNextPage() == INVALID_PAGE_ID)
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
 
     void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);

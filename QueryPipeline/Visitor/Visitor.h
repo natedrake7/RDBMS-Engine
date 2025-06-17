@@ -101,5 +101,7 @@ namespace QueryPipeline {
       antlrcpp::Any visitAlterTableModifyColumn(SQLParser::AlterTableModifyColumnContext *context) override;
 
       antlrcpp::Any visitAlterTableRenameColumn(SQLParser::AlterTableRenameColumnContext *context) override;
+
+      antlrcpp::Any visitDefaultValue(SQLParser::DefaultValueContext *context) override;
   };
 }
