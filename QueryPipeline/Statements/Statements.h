@@ -197,7 +197,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct UpdateColumnStatement{
-    std::string name;
+    ColumnName name;
     Field value;
   };
 

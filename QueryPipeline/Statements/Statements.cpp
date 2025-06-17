@@ -383,8 +383,8 @@ namespace QueryPipeline::Statements {
     for(auto& column: this->columns) {
       Headers::ColumnHeader header;
 
-      if (!columnsDict.TryGetValue(column.name, header)) {
-        cerr << "Column " << column.name << " does not exist on table: " << this->table->GetFullName() << endl;
+      if (!columnsDict.TryGetValue(column.name.name, header)) {
+        cerr << "Column " << column.name.name << " does not exist on table: " << this->table->GetFullName() << endl;
         return false;
       }
 

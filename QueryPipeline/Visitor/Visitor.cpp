@@ -327,7 +327,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
   antlrcpp::Any SQLVisitorImplementation::visitUpdateColumn(SQLParser::UpdateColumnContext *context){
     return Statements::UpdateColumnStatement{
-  std::any_cast<string>(visit(context->columnName())),
+  std::any_cast<Statements::ColumnName>(visit(context->columnName())),
       std::any_cast<Field>(visit(context->literalValue()))
     };
 }
