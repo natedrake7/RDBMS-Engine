@@ -1,5 +1,6 @@
 #pragma once
 #include "../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
+#include "../AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h"
 #include "../Database/Database.h"
 #include <string>
 #include <vector>
@@ -154,6 +155,7 @@ namespace Server {
     [[nodiscard]] Dictionary<int32_t , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const int32_t& tableId) const;
     [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
+    void UpdateColumnById(const int32_t& columnId, const std::vector<Field>& updates)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     void Shutdown();

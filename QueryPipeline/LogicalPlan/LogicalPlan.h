@@ -94,13 +94,13 @@ namespace QueryPipeline {
     public:
       Statements::TableName* table;
       std::string constraintName;
-      std::vector<Statements::AddColumn> columns;
+      std::vector<Statements::AddColumn*> columns;
       vector<column_index_t> primaryKey;
 
       explicit LogicalTableCreate(
         const int32_t & databaseId,
         Statements::TableName* table,
-        std::vector<Statements::AddColumn>& columns,
+        std::vector<Statements::AddColumn*>& columns,
         std::vector<column_index_t> primaryKey,
         std::string  constraintName);
       PhysicalPlan::PhysicalTableCreate* ToPhysical()override;
@@ -113,7 +113,28 @@ namespace QueryPipeline {
     std::vector<column_index_t> columns;
     explicit LogicalIndexCreate(const int32_t & databaseId, Statements::TableName* table, std::string& constraintName, std::vector<column_index_t>& columns);
     PhysicalPlan::PhysicalOperator * ToPhysical() override;
+  };
 
+  class LogicalAlterTable final : public LogicalPlan {
+    public:
+      Statements::TableName* table;
+      Constants::AlterTableType type;
+
+      Statements::AlterColumn* alterColumn;
+      Statements::DropColumn* dropColumn;
+      Statements::RenameColumn* renameColumn;
+      Statements::AddColumn* addColumn;
+
+      explicit LogicalAlterTable(
+        const int32_t & databaseId,
+        Statements::TableName* table,
+        const AlterTableType& type,
+        Statements::AlterColumn* alterColumn,
+        Statements::AddColumn* addColumn,
+        Statements::DropColumn* dropColumn,
+        Statements::RenameColumn* renameColumn);
+
+      PhysicalPlan::PhysicalOperator * ToPhysical() override;
   };
 }
 

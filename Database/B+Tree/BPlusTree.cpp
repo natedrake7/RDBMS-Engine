@@ -502,17 +502,22 @@ namespace Indexing
           else if(maxKey < keys->at(0))
                return;
 
-          auto* rows = currentNode->GetDataRowsUnsafe();
+          const auto* rows = currentNode->GetDataRowsUnsafe();
 
           for (int i = 0; i < keys->size(); i++)
           {
             const auto &key = keys->at(i);
 
-            if (minKey <= key && maxKey >= key && rows->at(i)->Evaluate(expression))
-            {
-                this->table->HandleRowUpdate(previousNode, rows->at(i), updates, updatedColumns, false);
+            if (*minKey > *key)
                 continue;
-            }
+
+            if (*maxKey < *key)
+                break;
+
+            if (!rows->at(i)->Evaluate(expression))
+                continue;
+
+            this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);
 
 //            if (maxKey < *key && !previousNode)
 //                return;

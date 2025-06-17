@@ -49,6 +49,8 @@ namespace DatabaseEngine::StorageTypes
 
         string &GetColumnName();
 
+        void SetColumnName(const std::string& name);
+
         [[nodiscard]] const ColumnType &GetColumnType() const;
 
         [[nodiscard]] const row_size_t &GetColumnSize() const;

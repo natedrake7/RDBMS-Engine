@@ -89,7 +89,8 @@ add_library(QueryPipeline  SHARED
                 QueryPipeline/Statements/Statements.h
                 QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
                 QueryPipeline/Constants.h
-                ${ANTLR_SRC})
+                ${ANTLR_SRC}
+        QueryPipeline/PhysicalPlan/PhysicalPlan.AlterTable.cpp)
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 

@@ -1204,6 +1204,12 @@ namespace DatabaseEngine::StorageTypes {
 
     }
 
+  void Table::UpdateColumnName(const Constants::column_index_t &index, const std::string &name)const{
+      auto* column = this->columns.at(index);
+
+      column->SetColumnName(name);
+  }
+
 }
 
  // namespace DatabaseEngine::StorageTypes

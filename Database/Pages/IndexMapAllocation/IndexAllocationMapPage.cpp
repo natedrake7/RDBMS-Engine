@@ -133,7 +133,7 @@ namespace Pages {
         offSet += sizeof(IndexAllocationPageAdditionalHeader);
     }
 
-    void IndexAllocationMapPage::WriteAdditionalHeaderToFile(fstream* filePtr)
+    void IndexAllocationMapPage::WriteAdditionalHeaderToFile(fstream* filePtr)const
     {
         filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader), sizeof(IndexAllocationPageAdditionalHeader));
     }

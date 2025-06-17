@@ -34,7 +34,7 @@ namespace QueryPipeline::Statements {
       delete this->table;
 
       for(const auto& column : this->columns)
-        delete column.autoIncrementKey;
+          delete column;
   }
 
   CreateTableStatement::CreateTableStatement(){
@@ -46,7 +46,7 @@ namespace QueryPipeline::Statements {
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
     if (tableHeader.id != -1) {
-      std::cerr << "Table with name: " << this->table->schema << "." << this->table->name << " already exists." << std::endl;
+      std::cerr << "Table with name: " << this->table->GetFullName() << " already exists." << std::endl;
       return false;
     }
 
@@ -74,33 +74,33 @@ namespace QueryPipeline::Statements {
     for (auto& column: this->columns) {
       uint16_t columnSize;
 
-      if (!ColumnTypeSizes.TryGetValue(column.type.name, columnSize)) {
-        std::cerr << "Column Type: " + column.type.name + " does not exist" << endl;
+      if (!ColumnTypeSizes.TryGetValue(column->type.name, columnSize)) {
+        std::cerr << "Column Type: " + column->type.name + " does not exist" << endl;
         return false;
       }
 
       if (columnSize != 0)
-        column.type.size = columnSize;
+        column->type.size = columnSize;
 
-      if (column.type.beforeFraction != 0 || column.type.afterFraction != 0) {
+      if (column->type.beforeFraction != 0 || column->type.afterFraction != 0) {
         //decimal handle
       }
 
-      column.index = tablePosition++;
+      column->index = tablePosition++;
 
-      columnNamesToIndexes.Add(column.name.name, column.index);
+      columnNamesToIndexes.Add(column->name.name, column->index);
 
-      if(column.isPrimaryKey && primaryKeyFound){
+      if(column->isPrimaryKey && primaryKeyFound){
         cerr << "Cannot have multiple primary keys defined. Consider declaring a composite key" << endl;
         return false;
       }
 
-      if (column.isPrimaryKey) {
-        this->primaryKey.push_back(column.index);
+      if (column->isPrimaryKey) {
+        this->primaryKey.push_back(column->index);
         primaryKeyFound = true;
 
         //store the pointer if found, else let it be null
-        if(column.autoIncrementKey && column.autoIncrementKey->incrementFactor <= 0){
+        if(column->autoIncrementKey && column->autoIncrementKey->incrementFactor <= 0){
             cerr << "increment factor cannot be less or equal to 0" << endl;
             return false;
         }
@@ -450,6 +450,64 @@ namespace QueryPipeline::Statements {
 
   QueryPipeline::LogicalPlan * CreateIndexStatement::ToLogical(){
     return new QueryPipeline::LogicalIndexCreate(this->databaseId, this->table, this->name, this->columnIndices);
+  }
+
+  bool AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers){
+    return true;
+  }
+
+  bool AlterTableStatement::ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers){
+    return true;
+  }
+
+  bool AlterTableStatement::ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers){
+    return true;
+  }
+
+  bool AlterTableStatement::ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+    Headers::ColumnHeader header;
+    if (!headers.TryGetValue(this->renameColumn->oldName.name, header)) {
+      std::cerr << "Column " << this->renameColumn->oldName.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
+      return false;
+    }
+
+    this->renameColumn->columnId = header.id;
+    this->renameColumn->ordinalPosition = header.ordinalPosition;
+
+    return true;
+  }
+
+  bool AlterTableStatement::Validate(){
+    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
+
+    if (tableHeader.id == -1){
+      cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
+      return false;
+    }
+
+    this->table->tableId = tableHeader.id;
+    this->table->ordinalPosition = tableHeader.ordinalPosition;
+
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
+
+    //validate by type
+    switch (this->type) {
+      case AlterTableType::AddColumn:
+        return this->ValidateAddColumn(columnsDict);
+      case AlterTableType::AlterColumn:
+        return this->ValidateAlterColumn(columnsDict);
+      case AlterTableType::DropColumn:
+        return this->ValidateDropColumn(columnsDict);
+      case AlterTableType::RenameColumn:
+        return this->ValidateRenameColumn(columnsDict);
+      default:
+        std::cerr << "Unknown table type" << std::endl;
+        return false;
+    }
+  }
+
+  QueryPipeline::LogicalPlan * AlterTableStatement::ToLogical(){
+    return new LogicalAlterTable(this->databaseId, this->table, this->type, this->alterColumn, this->addColumn, this->dropColumn, this->renameColumn);
   }
 
   bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement){

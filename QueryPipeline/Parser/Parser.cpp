@@ -76,27 +76,34 @@ namespace QueryPipeline
 
         const auto* result = physicalPlan->Execute();
 
-        if (result != nullptr) {
-            if (result->code != AdditionalDataTypes::ResultCode::Ok) {
-                cerr << result->message << endl;
+        if (result == nullptr) {
+            delete result;
+            delete statement;
+            delete logicalPlan;
+            delete physicalPlan;
 
-                delete result;
-                delete statement;
-                delete logicalPlan;
-                delete physicalPlan;
-                return;
-            }
-
-            for(const auto & column : result->columns)
-              cout << column.name << " || ";
-
-            cout << endl;
-
-            for (const auto& row: result->rows)
-                row.PrintRow();
-
-            cout << result->message << endl;
+            return;
         }
+
+        if (result->code != AdditionalDataTypes::ResultCode::Ok) {
+            cerr << result->message << endl;
+
+            delete result;
+            delete statement;
+            delete logicalPlan;
+            delete physicalPlan;
+            return;
+        }
+
+        for(const auto & column : result->columns)
+          cout << column.name << " || ";
+
+        cout << endl;
+
+        for (const auto& row: result->rows)
+            row.PrintRow();
+
+        cout << result->message << endl;
 
         delete result;
         delete statement;

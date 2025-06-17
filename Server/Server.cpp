@@ -1244,6 +1244,18 @@ namespace Server {
     table->ClusteredIndexScanUpdate(&expr, updates);
   }
 
+  void ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Field> &updates) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
+    vector<Row> rows;
+
+    Indexing::Key key;
+    key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), ColumnType::Int));
+
+    table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
+  }
+
   void ServerInstance::CreateSystemDatabase(){
     using namespace DatabaseEngine;
     using namespace DatabaseEngine::StorageTypes;
@@ -1310,4 +1322,3 @@ namespace Server {
     return dict;
   }
 }
-

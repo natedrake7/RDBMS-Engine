@@ -180,17 +180,17 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalTableCreate final : public PhysicalOperator{
       Statements::TableName*  table;
       std::string constraintName;
-      std::vector<Statements::AddColumn> columns;
+      std::vector<Statements::AddColumn*> columns;
       Headers::Index primaryKey;
 
     public:
       PhysicalTableCreate(
         const int32_t & databaseId,
         Statements::TableName*  table,
-        std::vector<Statements::AddColumn>& columns,
+        std::vector<Statements::AddColumn*>& columns,
         Headers::Index& primaryKey,
         std::string& constraintName);
-      ~PhysicalTableCreate()override = default;
+      ~PhysicalTableCreate()override;
       PhysicalPlanResult* Execute() override;
   };
 
@@ -216,7 +216,44 @@ namespace QueryPipeline::PhysicalPlan{
         Statements::TableName*  table,
         std::string& constraintName,
         vector<Constants::column_index_t>& columns);
-
     PhysicalPlanResult * Execute() override;
   };
+
+  class PhysicalAddColumn final : public PhysicalOperator {
+    Statements::TableName* table;
+    Statements::AddColumn* column;
+
+    public:
+    PhysicalAddColumn(const int32_t & databaseId, Statements::TableName* table, Statements::AddColumn* column);
+    ~PhysicalAddColumn()override;
+    PhysicalPlanResult* Execute() override;
+  };
+
+  class PhysicalDropColumn final : public PhysicalOperator {
+    Statements::TableName* table;
+    Statements::DropColumn* column;
+    public:
+    PhysicalDropColumn(const int32_t & databaseId, Statements::TableName* table, Statements::DropColumn* column);
+    ~PhysicalDropColumn()override;
+    PhysicalPlanResult* Execute() override;
+  };
+
+  class PhysicalRenameColumn final : public PhysicalOperator {
+    Statements::TableName* table;
+    Statements::RenameColumn* column;
+    public:
+    PhysicalRenameColumn(const int32_t & databaseId, Statements::TableName* table, Statements::RenameColumn* column);
+    ~PhysicalRenameColumn()override;
+    PhysicalPlanResult* Execute() override;
+  };
+
+  class PhysicalAlterColumn final : public PhysicalOperator {
+    Statements::TableName* table;
+    Statements::AlterColumn* column;
+    public:
+    PhysicalAlterColumn(const int32_t & databaseId, Statements::TableName* table, Statements::AlterColumn* column);
+    ~PhysicalAlterColumn()override;
+    PhysicalPlanResult* Execute() override;
+  };
+
 }

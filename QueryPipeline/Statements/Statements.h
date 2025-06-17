@@ -38,6 +38,25 @@ namespace QueryPipeline::Statements {
     column_index_t index;
   };
 
+  struct AlterColumn {
+    Statements::ColumnName name;
+    ColumnType type;
+
+    column_index_t index;
+  };
+
+  struct DropColumn {
+    Statements::ColumnName name;
+  };
+
+  struct RenameColumn {
+    Statements::ColumnName oldName;
+    Statements::ColumnName newName;
+
+    column_index_t ordinalPosition;
+    int32_t columnId;
+  };
+
   struct PrimaryKeyConstraint {
     std::string name;
     vector<ColumnName> columns;
@@ -112,7 +131,7 @@ namespace QueryPipeline::Statements {
 
   struct CreateTableStatement final: Statement {
     TableName* table;
-    std::vector<AddColumn> columns;
+    std::vector<AddColumn*> columns;
     PrimaryKeyConstraint* constraint;
     vector<column_index_t> primaryKey;
 
@@ -198,6 +217,23 @@ namespace QueryPipeline::Statements {
     vector<column_index_t> columnIndices;
     bool isUnique;
 
+    bool Validate() override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
+  };
+
+  struct AlterTableStatement final : Statement {
+    TableName* table;
+    Constants::AlterTableType type;
+
+    AddColumn* addColumn;
+    AlterColumn* alterColumn;
+    DropColumn* dropColumn;
+    RenameColumn* renameColumn;
+
+    [[nodiscard]] bool ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
+    [[nodiscard]] bool ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
+    [[nodiscard]] bool ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
+    [[nodiscard]] bool ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
   };

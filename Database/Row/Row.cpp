@@ -320,6 +320,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     bool Row::Evaluate(const Expressions::Expression *expression) const{
+        if (expression == nullptr)
+            return true;
+
         switch (expression->type) {
             case Expressions::ExpressionType::Predicate: {
                 const auto& actualData = this->GetData()[expression->columnIndex];

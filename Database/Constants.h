@@ -38,6 +38,13 @@ namespace Constants
 
     constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(int32_t);
 
+    enum class AlterTableType: uint8_t {
+        AddColumn = 0,
+        AlterColumn = 1,
+        DropColumn = 2,
+        RenameColumn = 3,
+    };
+
     enum OrderType : uint8_t {
         ASCENDING = 0,
         DESCENDING = 1,

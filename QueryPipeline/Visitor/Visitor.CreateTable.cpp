@@ -10,7 +10,7 @@ namespace QueryPipeline{
     statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
 
     for (const auto columnContext: context->addColumn()) {
-      const auto column = std::any_cast<Statements::AddColumn>(visit(columnContext));
+      const auto column = std::any_cast<Statements::AddColumn*>(visit(columnContext));
       statement->columns.push_back(column);
     }
 
@@ -45,7 +45,7 @@ namespace QueryPipeline{
 
     const bool isNullable = ((context->NULL_() && !context->NOT()) && !isPrimaryKey);
 
-    return Statements::AddColumn{
+    return new Statements::AddColumn{
       .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
       .type = std::any_cast<Statements::ColumnType>(visit(context->dataType())),
       .autoIncrementKey = key,

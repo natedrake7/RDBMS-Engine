@@ -23,6 +23,8 @@ namespace QueryPipeline {
       return visit(context->updateStatement());
     if (context->createIndexStatement())
       return visit(context->createIndexStatement());
+    if (context->alterTableStatement())
+      return visit(context->alterTableStatement());
 
     return nullptr;
   }
@@ -376,5 +378,67 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       statement->columns.push_back(col->getText());
 
     return statement;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAlterTableStatement(SQLParser::AlterTableStatementContext *context){
+    auto* statement = new Statements::AlterTableStatement();
+
+    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+
+    const auto& action = context->alterTableAction();
+
+    if (action->alterTableAddColumn()) {
+      statement->addColumn = std::any_cast<Statements::AddColumn*>(visit(action->alterTableAddColumn()));
+      statement->type = AlterTableType::AddColumn;
+      return statement;
+    }
+
+    if (action->alterTableModifyColumn()) {
+      statement->alterColumn = std::any_cast<Statements::AlterColumn*>(visit(action->alterTableModifyColumn()));
+      statement->type = AlterTableType::AlterColumn;
+      return statement;
+    }
+
+    if (action->alterTableDropColumn()) {
+      statement->dropColumn = std::any_cast<Statements::DropColumn*>(visit(action->alterTableDropColumn()));
+      statement->type = AlterTableType::DropColumn;
+      return statement;
+    }
+
+    if (action->alterTableRenameColumn()) {
+      statement->renameColumn = std::any_cast<Statements::RenameColumn*>(visit(action->alterTableRenameColumn()));
+      statement->type = AlterTableType::RenameColumn;
+      return statement;
+    }
+
+    throw runtime_error("Unsupported action");
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAlterTableAction(SQLParser::AlterTableActionContext *context){
+    return context;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAlterTableAddColumn(SQLParser::AlterTableAddColumnContext *context){
+    return visitAddColumn(context->addColumn());
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAlterTableDropColumn(SQLParser::AlterTableDropColumnContext *context){
+    return new Statements::DropColumn{
+      .name = std::any_cast<Statements::ColumnName>(visit(context->columnName()))
+    };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAlterTableModifyColumn(SQLParser::AlterTableModifyColumnContext *context){
+    return new Statements::AlterColumn{
+      .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
+      .type = std::any_cast<Statements::ColumnType>(visit(context->dataType()))
+    };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAlterTableRenameColumn(SQLParser::AlterTableRenameColumnContext *context){
+    return new Statements::RenameColumn{
+      .oldName = std::any_cast<Statements::ColumnName>(visit(context->oldName)),
+      .newName = std::any_cast<Statements::ColumnName>(visit(context->newName)),
+    };
   }
 }

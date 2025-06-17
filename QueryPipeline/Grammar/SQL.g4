@@ -13,7 +13,8 @@ sqlStatement
     | createSchemaStatement
     | deleteStatement
     | updateStatement
-    | createIndexStatement;
+    | createIndexStatement
+    | alterTableStatement;
 
 //select statement
 selectStatement
@@ -180,6 +181,32 @@ createDbStatement: 'CREATE' 'DATABASE' identifier;
 
 //drop database statement
 dropDbStatement: 'DROP' 'DATABASE' identifier;
+
+alterTableStatement
+    : 'ALTER' 'TABLE' tableName alterTableAction;
+
+alterTableAction
+    : alterTableAddColumn
+    | alterTableDropColumn
+    | alterTableModifyColumn
+    | alterTableRenameColumn
+    ;
+
+alterTableAddColumn
+    : 'ADD' 'COLUMN' addColumn
+    ;
+
+alterTableDropColumn
+    : 'DROP' 'COLUMN' columnName
+    ;
+
+alterTableModifyColumn
+    : 'ALTER' 'COLUMN' columnName dataType
+    ;
+
+alterTableRenameColumn
+    : 'RENAME' 'COLUMN' oldName=columnName 'TO' newName=columnName
+    ;
 
 identifier
     : ('[')? IDENTIFIER (']')?

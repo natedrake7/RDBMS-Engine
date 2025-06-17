@@ -126,7 +126,7 @@ namespace QueryPipeline {
   LogicalTableCreate::LogicalTableCreate(
         const int32_t & databaseId,
         Statements::TableName*  table,
-        std::vector<Statements::AddColumn>& columns,
+        std::vector<Statements::AddColumn*>& columns,
         std::vector<column_index_t> primaryKey,
         std::string  constraintName)
     : LogicalPlan(databaseId), table(table), columns(std::move(columns)),
@@ -196,5 +196,30 @@ namespace QueryPipeline {
   PhysicalPlan::PhysicalOperator * LogicalIndexCreate::ToPhysical(){
     return new PhysicalPlan::PhysicalIndexCreate(this->databaseId, this->table, this->constraintName, this->columns);
   }
+
+  LogicalAlterTable::LogicalAlterTable(
+    const int32_t &databaseId,
+    Statements::TableName *table,
+    const AlterTableType& type,
+    Statements::AlterColumn *alterColumn,
+    Statements::AddColumn *addColumn,
+    Statements::DropColumn *dropColumn,
+    Statements::RenameColumn *renameColumn)
+    : LogicalPlan(databaseId), table(table), type(type) , alterColumn(alterColumn), dropColumn(dropColumn), renameColumn(renameColumn), addColumn(addColumn) {}
+
+    PhysicalPlan::PhysicalOperator * LogicalAlterTable::ToPhysical(){
+      switch (this->type) {
+        case AlterTableType::AlterColumn:
+          return new PhysicalPlan::PhysicalAlterColumn(this->databaseId, this->table, this->alterColumn);
+        case AlterTableType::AddColumn:
+          return new PhysicalPlan::PhysicalAddColumn(this->databaseId, this->table, this->addColumn);
+        case AlterTableType::DropColumn:
+          return new PhysicalPlan::PhysicalDropColumn(this->databaseId, this->table, this->dropColumn);
+        case AlterTableType::RenameColumn:
+          return new PhysicalPlan::PhysicalRenameColumn(this->databaseId, this->table, this->renameColumn);
+        default:
+          return nullptr;
+      }
+    }
 }
 

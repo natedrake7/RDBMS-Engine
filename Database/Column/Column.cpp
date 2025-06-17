@@ -48,6 +48,10 @@ namespace DatabaseEngine::StorageTypes {
 
     string& Column::GetColumnName() { return this->name; }
 
+    void Column::SetColumnName(const std::string &name){
+        this->name = name;
+    }
+
     const ColumnType& Column::GetColumnType() const { return this->header.columnType; }
 
     const row_size_t& Column::GetColumnSize() const { return this->header.recordSize; }

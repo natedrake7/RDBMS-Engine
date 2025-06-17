@@ -257,5 +257,7 @@ namespace DatabaseEngine::StorageTypes
             void GetIndexes();
 
             void UpdateMasterDatabase() const;
+
+            void UpdateColumnName(const Constants::column_index_t& index, const std::string& name)const;
     };
 }
