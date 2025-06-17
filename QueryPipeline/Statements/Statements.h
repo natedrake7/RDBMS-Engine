@@ -49,6 +49,9 @@ namespace QueryPipeline::Statements {
 
   struct DropColumn {
     Statements::ColumnName name;
+
+    int32_t columnId;
+    Constants::column_index_t index;
   };
 
   struct RenameColumn {
@@ -234,7 +237,7 @@ namespace QueryPipeline::Statements {
 
     [[nodiscard]] bool ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] bool ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
-    [[nodiscard]] bool ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
+    [[nodiscard]] bool ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] bool ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;

@@ -53,7 +53,18 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalPlanResult * PhysicalDropColumn::Execute(){
-    return nullptr;
+    auto* result = new PhysicalPlanResult();
+
+    const std::vector<Field> updates = {
+      Field(true, 12)
+    };
+
+    Server::ServerInstance::Get().UpdateColumnById(this->column->columnId, updates);
+    
+    //update master db set isDeleted to 1
+    //remove it from table, remove it from rows. Adjust column indexes if need be.
+
+    return result;
   }
 
   PhysicalRenameColumn::PhysicalRenameColumn(const int32_t &databaseId, Statements::TableName *table, Statements::RenameColumn *column)

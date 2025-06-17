@@ -53,6 +53,7 @@ void InsertRowsToMoviesTable(Table* table);
 //fix aliases not working on projection
 //add on columns checking to be case insensitive and all names to be normalized to lower string
 //add default values on master db
+//change select columns to return only non deleted and order by version DESC
 
 std::atomic<bool> serverRunning{true};
 

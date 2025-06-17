@@ -867,7 +867,6 @@ namespace Server {
     vector<Row> selectedColumns;
     Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
-
     auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
 
     sysColumns->ClusteredIndexScan(&selectedColumns, &expression);
@@ -1009,6 +1008,17 @@ namespace Server {
           return a.ordinalPosition < b.ordinalPosition;
       }
     );
+
+    return constraintColumns;
+  }
+
+  Dictionary<int32_t, Headers::ConstraintsColumnsHeader> ServerInstance::SelectConstraintColumnsByConstraintIdToDictionary(const int32_t &constraintId) const{
+    const auto columns = this->SelectConstraintColumnsByConstraintId(constraintId);
+
+    Dictionary<int32_t, Headers::ConstraintsColumnsHeader> constraintColumns;
+
+    for (const auto& constraint: columns)
+      constraintColumns.Add(constraint.columnId, constraint);
 
     return constraintColumns;
   }

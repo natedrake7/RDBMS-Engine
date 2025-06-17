@@ -466,7 +466,27 @@ namespace QueryPipeline::Statements {
     return true;
   }
 
-  bool AlterTableStatement::ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers){
+  bool AlterTableStatement::ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+    Headers::ColumnHeader header;
+    if (!headers.TryGetValue(this->dropColumn->name.name, header)) {
+      std::cerr << "Column " << this->dropColumn->name.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
+      return false;
+    }
+
+    //validate no index or constraint uses it
+    const auto constraints = Server::ServerInstance::Get().SelectConstraints(this->table->tableId);
+
+    for (const auto& constraint: constraints) {
+      const auto columns = Server::ServerInstance::Get().SelectConstraintColumnsByConstraintIdToDictionary(constraint.constraintId);
+
+      if (columns.Contains(header.id)) {
+        std::cerr << "Cannot drop column: " << header.name << " as it is referenced by constraint: " << constraint.name << std::endl;
+        return false;
+      }
+    }
+
+    this->dropColumn->index = header.ordinalPosition;
+
     return true;
   }
 
