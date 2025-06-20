@@ -228,9 +228,12 @@ namespace DatabaseEngine
             table->AddColumn(new Column(masterDbColumn, table));
         }
 
+        //TODO
+        //maybe add in a single function
         table->GetColumnsHeaders();
         table->GetIdentityColumns();
         table->GetIndexes();
+        table->GetDefaultValuesHeaders();
 
         this->tables.push_back(table);
     }

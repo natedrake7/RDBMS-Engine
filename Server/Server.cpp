@@ -444,6 +444,30 @@ namespace Server {
     return result;
   }
 
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertDefaultValuesToMasterDb(
+    const int32_t &columnId,
+    const std::string &value,
+    const int &version,
+    const bool &isDeleted) const{
+
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSDEFAULTVALUES);
+      const auto currentDate = DataTypes::DateTime::Now();
+
+      const vector<Field> fields = {
+        Field(columnId, 1),
+        Field(value, 2),
+        Field(version, 3),
+        Field(isDeleted, 4),
+        Field(nullptr, 5),
+      };
+
+      const auto result = table->InsertRow(fields);
+
+      std::cout << "Inserted default value " << value << " to master db" << std::endl;
+
+      return result;
+  }
+
   AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintToMasterDb(
       const int32_t & tableId,
       const string & constraintName,
@@ -1021,6 +1045,36 @@ namespace Server {
       constraintColumns.Add(constraint.columnId, constraint);
 
     return constraintColumns;
+  }
+
+  Headers::DefaultValuesHeader ServerInstance::SelectDefaultValueByColumnId(const int32_t &columnId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* sysValues = this->masterDb->OpenTable(MasterDbTables::SYSDEFAULTVALUES);
+    vector<Row> rows;
+
+    Indexing::Key key;
+    key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), ColumnType::Int));
+
+    sysValues->ClusteredIndexSeek(&rows, &key, &key);
+
+    if(rows.empty())
+      return {};
+
+    const auto& data = rows.begin()->GetData();
+
+    return Headers::DefaultValuesHeader{
+      .defaultValueId = data[0]->GetInt(),
+      .columnId = data[1]->GetInt(),
+      .value = data[2]->GetString(),
+      .additionalInfo{
+        .version = data[3]->GetInt(),
+        .isDeleted = data[4]->GetBool(),
+        .deletedAt = data[5]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[5]->GetDateTime()
+      },
+    };
   }
 
   Dictionary<string, Headers::ColumnHeader> ServerInstance::SelectColumnsToDictionary(const int32_t& tableId) const{

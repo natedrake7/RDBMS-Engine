@@ -23,6 +23,8 @@ namespace DatabaseEngine::StorageTypes
         column_index_t columnIndex;
         row_size_t recordSize;
 
+        Headers::DefaultValuesHeader defaultValue;
+
         Headers::IdentityColumnsHeader identity;
         int32_t identityStartingValue;
     } ColumnHeader;
@@ -80,6 +82,10 @@ namespace DatabaseEngine::StorageTypes
         void SetIdentityStartingValue(const int32_t& identityStartingValue);
 
         void SetIdentity(const Headers::IdentityColumnsHeader &identity);
+
+        void SetDefaultValue(const Headers::DefaultValuesHeader &defaultValue);
+
+        [[nodiscard]] const Headers::DefaultValuesHeader &GetDefaultValue() const;
 
         void SetIsOverflowed(const bool &isOverflowed);
     };

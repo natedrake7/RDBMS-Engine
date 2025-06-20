@@ -235,6 +235,9 @@ namespace DatabaseEngine::StorageTypes {
 
         *primaryKeyVal = this->PopulateAutoComputedColumns(row);
 
+        //TODO
+        //handle default values if no value is selected
+
         for(const auto& input : inputData){
 
           const auto& associatedColumnIndex = input.GetColumnIndex();
@@ -1193,6 +1196,17 @@ namespace DatabaseEngine::StorageTypes {
             // this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
             break;
           }
+        }
+    }
+
+    void Table::GetDefaultValuesHeaders() const{
+        for(const auto& column: this->columns) {
+          const auto header = Server::ServerInstance::Get().SelectDefaultValueByColumnId(column->GetColumnId());
+
+          if (header.columnId == -1)
+            continue;
+
+          column->SetDefaultValue(header);
         }
     }
 

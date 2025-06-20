@@ -36,6 +36,7 @@ void InsertRowsToMoviesTable(Table* table);
 //Add Decimal full support
 //Add Alter table (add drop columns)
 //Alter table alter column allow with force to smaller datatype and cause truncation if need be.
+//on add column check default value is inserted correctlty in master db.
 //add further validations
 //allow [] on IDENTIFIERS
 //Add joins

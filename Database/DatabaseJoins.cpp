@@ -98,6 +98,11 @@ namespace DatabaseEngine
             table->GetColumnsHeaders();
     }
 
+    void Database::GetDefaultValues() const{
+        for (const auto& table : this->tables)
+            table->GetDefaultValuesHeaders();
+    }
+
     void Database::GetIndexes() const{
         for (const auto& table : this->tables)
             table->GetIndexes();

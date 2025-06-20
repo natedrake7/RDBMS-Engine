@@ -87,4 +87,8 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Column::SetIdentity(const Headers::IdentityColumnsHeader  &identity){ this->header.identity = identity; }
+
+    void Column::SetDefaultValue(const Headers::DefaultValuesHeader &defaultValue){ this->header.defaultValue = defaultValue; }
+
+    const Headers::DefaultValuesHeader & Column::GetDefaultValue() const{ return this->header.defaultValue; }
 }

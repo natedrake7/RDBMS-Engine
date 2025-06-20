@@ -182,6 +182,8 @@ public:
 
     void GetColumnsHeaders()const;
 
+    void GetDefaultValues()const;
+
     void GetIndexes() const;
 
     void GetTableHeaders()const;

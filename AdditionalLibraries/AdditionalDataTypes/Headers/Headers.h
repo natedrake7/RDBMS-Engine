@@ -75,6 +75,14 @@ namespace Headers {
     AdditionalInformation additionalInfo;
   };
 
+  struct DefaultValuesHeader {
+    int32_t defaultValueId = -1;
+    int32_t columnId = -1;
+    std::string value;
+
+    AdditionalInformation additionalInfo;
+  };
+
   struct ColumnHeader {
     int32_t id = -1;
     int32_t tableId;

@@ -27,6 +27,8 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->index
           );
 
+    const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKeyVal, this->column->defaultValue.GetString());
+
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
@@ -38,6 +40,8 @@ namespace QueryPipeline::PhysicalPlan{
     tablePtr->GetIdentityColumnById(columnResult.primaryKeyVal);
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
+
+    tablePtr->GetDefaultValuesHeaders();
 
     return nullptr;
   }

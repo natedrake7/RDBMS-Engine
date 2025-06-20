@@ -25,7 +25,8 @@ namespace Server {
     SYSIDENTITYCOLUMNS = 5,
     SYSINDEXCOLUMNS = 6,
     SYSCONSTRAINTS = 7,
-    SYSCONSTRAINTCOLUMNS = 8
+    SYSCONSTRAINTCOLUMNS = 8,
+    SYSDEFAULTVALUES = 9
   };
 
   class ServerInstance {
@@ -134,6 +135,12 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
+    AdditionalDataTypes::ResultStatus InsertDefaultValuesToMasterDb(
+        const int32_t& columnId,
+        const std::string& value,
+        const int& version = 0,
+        const bool& isDeleted = false) const;
+
     [[nodiscard]] vector<Headers::DatabaseHeader> GetCatalog()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
@@ -155,6 +162,7 @@ namespace Server {
     [[nodiscard]] Dictionary<int32_t , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const int32_t& tableId) const;
     [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
     [[nodiscard]] Dictionary<int32_t, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const int32_t& constraintId) const;
+    [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const int32_t& columnId) const;
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
     void UpdateColumnById(const int32_t& columnId, const std::vector<Field>& updates)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;

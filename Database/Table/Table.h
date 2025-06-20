@@ -250,6 +250,8 @@ namespace DatabaseEngine::StorageTypes
 
             void HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Field> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap = true);
 
+            void GetDefaultValuesHeaders()const;
+
             void GetColumnsHeaders()const;
 
             void GetIdentityColumns()const;
