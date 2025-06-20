@@ -44,6 +44,7 @@ namespace QueryPipeline::Statements {
     Statements::ColumnName name;
     ColumnType type;
 
+    int32_t columnId;
     column_index_t index;
   };
 

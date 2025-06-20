@@ -1,6 +1,7 @@
 #include "Visitor.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
 #include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../ErrorListener/ErrorListener.h"
 #include "../Statements/Statements.h"
 
 namespace QueryPipeline {
@@ -50,19 +51,25 @@ namespace QueryPipeline {
 antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
     auto* statement = new Statements::SelectStatement();
 
+    if (!ctx->WILDCARD() && !ctx->columnList())
+      throw SyntaxError("No arguments specified");
+
     if (!ctx->WILDCARD()) {
       statement->columns = std::move(this->GetColumnsList(ctx->columnList()));
     }
     else
       statement->columns = { {.name = "*", .alias = ""}};
 
+    if (!ctx->tableName())
+      throw SyntaxError("No table specified");
+
     statement->table = std::any_cast<Statements::TableName*>(visit(ctx->tableName()));
 
     for (const auto join : ctx->joinStatement())
       statement->joins.push_back(std::any_cast<Statements::JoinStatement*>(visit(join)));
 
-    if (const auto& whereClause = ctx->whereClause();whereClause != nullptr)
-      statement->where = std::any_cast<Statements::WhereClause>(visit(whereClause));
+    if (ctx->whereClause() != nullptr)
+      statement->where = std::any_cast<Statements::WhereClause>(visit(ctx->whereClause()));
 
     if(ctx->orderByStatement())
       statement->orderBy = std::any_cast<Statements::OrderByStatement*>(visit(ctx->orderByStatement()));
@@ -105,7 +112,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->identifier())
       return Field(std::any_cast<std::string>(visit(context->identifier())), 0, true);
 
-    throw invalid_argument("Invalid value specified");
+    throw SyntaxError("Invalid value specified");
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
@@ -272,14 +279,21 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (context->columnAlias())
       columnName.alias = std::any_cast<std::string>(visit(context->columnAlias()));
 
+    if (!context->name)
+      throw SyntaxError("Column name was not specified");
+
     columnName.name = std::any_cast<std::string>(visit(context->name));
 
     return columnName;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitTableName(SQLParser::TableNameContext *context) {
+
+    if (!context->name)
+      throw SyntaxError("No table was specified");
+
     auto* statement = new Statements::TableName();
-    
+
     if (context->schemaName)
       statement->schema = std::any_cast<std::string>(visit(context->schemaName));
 
@@ -347,7 +361,8 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     statement->columns = std::any_cast<std::vector<Statements::UpdateColumnStatement>>(visit(context->updateColumnsList()));
 
-    statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));
+    if (context->whereClause() != nullptr)
+      statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));
 
     return statement;
   }
@@ -411,7 +426,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       return statement;
     }
 
-    throw runtime_error("Unsupported action");
+    throw SyntaxError("Unsupported action");
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAlterTableAction(SQLParser::AlterTableActionContext *context){

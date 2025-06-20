@@ -1,4 +1,7 @@
 #include "Statements.h"
+
+#include "../Constants.h"
+#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
 
@@ -458,11 +461,50 @@ namespace QueryPipeline::Statements {
       return false;
     }
 
+    if (!this->addColumn->isNullable && this->addColumn->defaultValue.GetIsNull()) {
+      std::cerr << "Cannot insert default Value NULL when NOT NULL is specified" << std::endl;
+      return false;
+    }
+
     this->addColumn->index = headers.size();
     return true;
   }
 
   bool AlterTableStatement::ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers){
+    Headers::ColumnHeader header;
+
+    if (!headers.TryGetValue(this->alterColumn->name.name, header)) {
+      std::cerr << "Column " << this->alterColumn->name.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
+      return false;
+    }
+
+    Constants::ColumnType type;
+    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::NormalizeString(this->alterColumn->type.name), type)) {
+      std::cerr << "Invalid Column Type " << this->alterColumn->type.name << std::endl;
+      return false;
+    }
+
+    if ((PipelineConstants::ValidStringConversions.Contains(type)
+      && !PipelineConstants::ValidStringConversions.Contains(static_cast<Constants::ColumnType>(header.dataType)))
+      || (PipelineConstants::ValidIntegerConversions.Contains(type)
+        && !PipelineConstants::ValidIntegerConversions.Contains(static_cast<Constants::ColumnType>(header.dataType)))){
+          std::cerr << "Cannot alter column " << this->alterColumn->name.name << " from type: "
+                    << ColumnTypesToStringDictionary.Get(static_cast<Constants::ColumnType>(header.dataType))
+                    << "to type: " << this->alterColumn->type.name << std::endl;
+
+        return false;
+    }
+
+    if (header.recordSize > this->alterColumn->type.size) {
+      std::cerr << "Cannot alter column " << this->alterColumn->type.name
+                << " with size " <<  header.recordSize << " to size: " << this->alterColumn->type.size
+                << std::endl
+                << "Use FORCE if potential data corruption is acceptable" << std::endl;
+      return false;
+    }
+
+    this->alterColumn->columnId = header.id;
+
     return true;
   }
 
@@ -714,4 +756,4 @@ namespace QueryPipeline::Statements {
     //group by here later
   }
 
-}
+};

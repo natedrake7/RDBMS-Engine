@@ -201,4 +201,18 @@ namespace Constants
         {"guid", ColumnType::Guid}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
+
+    static Dictionary<ColumnType, string> ColumnTypesToStringDictionary = {
+        {ColumnType::TinyInt, "TinyInt"},
+        {ColumnType::SmallInt, "SmallInt"},
+        {ColumnType::Int, "Int"},
+        {ColumnType::BigInt, "BigInt"},
+        {ColumnType::DateTime, "DateTime"},
+        {ColumnType::Bool, "Bool"},
+        {ColumnType::String, "String"},
+        {ColumnType::Decimal, "Decimal"},
+        {ColumnType::UnicodeString, "Unicodestring"},
+        {ColumnType::Guid, "Guid"}
+        //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
+    };
 }

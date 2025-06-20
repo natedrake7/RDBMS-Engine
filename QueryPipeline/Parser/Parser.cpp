@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "SQLParser.h"
+#include "../ErrorListener/ErrorListener.h"
 #include "../Visitor/Visitor.h"
 #include "../LogicalPlan/LogicalPlan.h"
 #include "../PhysicalPlan/PhysicalPlan.h"
@@ -41,20 +42,27 @@ namespace QueryPipeline
         // Create the parser, passing the token stream
         SQLParser parser(&tokens);
 
+        parser.removeErrorListeners();
+        parser.addErrorListener(new ErrorListener()); // Add custom
+
         // Start parsing, typically using the start rule of the grammar
-        SQLParser::SqlStatementContext *tree = parser.sqlStatement();
+        Statements::Statement* statement = nullptr;
 
-        SQLVisitorImplementation visitor;
+        try {
+            SQLParser::SqlStatementContext *tree = parser.sqlStatement();
 
-        const auto response = visitor.visit(tree);
+            SQLVisitorImplementation visitor;
 
-        Statements::Statement* statement = Parser::CreateStatement(response, databaseId);
+            const auto response = visitor.visit(tree);
 
-        if (statement == nullptr) {
-            cerr << "Failed to parse query" << endl;
+            statement = CreateStatement(response, databaseId);
+        }
+        catch (const exception& e) {
+            std::cerr << "Parser exception: " << e.what() << std::endl;
+            delete statement;
             return;
         }
-        
+
         if (!statement->Validate()) {
             delete statement;
             return;

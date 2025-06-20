@@ -39,8 +39,6 @@ namespace QueryPipeline::PhysicalPlan{
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
 
-    //should be by id (to not disrupt the other column identities etc)
-
     return nullptr;
   }
 
@@ -80,7 +78,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-    const auto* table = db->OpenTable(this->table->ordinalPosition);
+    const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const std::vector<Field> updates = {
       Field(this->column->newName.name, 2),
@@ -88,7 +86,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     Server::ServerInstance::Get().UpdateColumnById(this->column->columnId, updates);
 
-    table->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
+    tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
 
     return result;
   }
@@ -102,7 +100,15 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalPlanResult * PhysicalAlterColumn::Execute(){
-    return nullptr;
+    auto* result = new PhysicalPlanResult();
+
+    const std::vector<Field> updates = {
+      Field(this->column->type.size, 4)
+    };
+
+    Server::ServerInstance::Get().UpdateColumnById(this->column->columnId, updates);
+
+    return result;
   }
 
 };

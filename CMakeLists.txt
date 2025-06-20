@@ -13,7 +13,7 @@ find_package(antlr4-runtime CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 # === ANTLR Setup ===
-set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.0-complete.jar")
+set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.1-complete.jar")
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/antlr)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
@@ -84,13 +84,15 @@ add_library(QueryPipeline  SHARED
                 QueryPipeline/LogicalPlan/LogicalPlan.cpp
                 QueryPipeline/LogicalPlan/LogicalPlan.h
                 QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
+                QueryPipeline/PhysicalPlan/PhysicalPlan.AlterTable.cpp
                 QueryPipeline/PhysicalPlan/PhysicalPlan.h
                 QueryPipeline/Statements/Statements.cpp
                 QueryPipeline/Statements/Statements.h
                 QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
+                QueryPipeline/ErrorListener/ErrorListener.cpp
+                QueryPipeline/ErrorListener/ErrorListener.h
                 QueryPipeline/Constants.h
-                ${ANTLR_SRC}
-        QueryPipeline/PhysicalPlan/PhysicalPlan.AlterTable.cpp)
+                ${ANTLR_SRC})
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 

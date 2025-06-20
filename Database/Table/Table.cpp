@@ -564,6 +564,8 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScan(vector<Row> *selectedRows, Expressions::Expression* expression){
+        if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return;
 
         auto* tree = this->GetClusteredIndexedTree();
 
