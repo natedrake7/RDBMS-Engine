@@ -2,6 +2,9 @@
 #include "../../Server/Server.h"
 #include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
 
+#include <cstring>
+#include <iostream>
+
 namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAddColumn::PhysicalAddColumn(const int32_t &databaseId, Statements::TableName *table, Statements::AddColumn *column)
@@ -27,20 +30,21 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->index
           );
 
-    const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKeyVal, this->column->defaultValue.GetString());
+    const auto value = this->column->defaultValue.GetString();
+
+    const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKeyVal, this->column->defaultValue);
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     auto* columnPtr = new DatabaseEngine::StorageTypes::Column(this->column->name.name, columnType, this->column->type.size, this->column->index, this->column->isNullable);
-    columnPtr->SetColumnId(columnResult.primaryKeyVal);
+    columnPtr->SetColumnId(static_cast<int32_t>(columnResult.primaryKeyVal));
 
     tablePtr->AddColumn(columnPtr);
-    tablePtr->GetIdentityColumnById(columnResult.primaryKeyVal);
+    tablePtr->GetIdentityColumnById(static_cast<int32_t>(columnResult.primaryKeyVal));
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
-
     tablePtr->GetDefaultValuesHeaders();
 
     return nullptr;

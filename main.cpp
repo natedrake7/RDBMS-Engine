@@ -56,6 +56,7 @@ void InsertRowsToMoviesTable(Table* table);
 //add on columns checking to be case insensitive and all names to be normalized to lower string
 //add default values on master db
 //change select columns to return only non deleted and order by version DESC
+//check why alter table add column breaks second column (it corrupts its data)
 
 std::atomic<bool> serverRunning{true};
 

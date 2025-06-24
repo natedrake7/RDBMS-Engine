@@ -316,3 +316,107 @@ void Field::Validate(const Headers::ColumnHeader &header){
 
     this->SetColumnIndex(header.ordinalPosition);
 }
+
+void Field::Validate(const ColumnType &columnType, const int &ordinalPosition){
+    if (this->GetIsNull()) {
+
+        this->SetType(columnType);
+        this->SetColumnIndex(ordinalPosition);
+
+        return;
+    }
+
+    switch (columnType) {
+    case ColumnType::TinyInt: {
+        const auto value = SafeConverter<int8_t>::SafeStoi(this->GetBigInt());
+        this->SetData(value);
+        break;
+    }
+    case ColumnType::SmallInt: {
+        const auto value = SafeConverter<int16_t>::SafeStoi(this->GetBigInt());
+        this->SetData(value);
+        break;
+    }
+    case ColumnType::Int:{
+        const auto value = SafeConverter<int32_t>::SafeStoi(this->GetBigInt());
+        this->SetData(value);
+        break;
+    }
+    case ColumnType::BigInt:
+        SafeConverter<int64_t>::SafeStoi(this->GetBigInt());
+        break;
+    case ColumnType::String:
+    case ColumnType::UnicodeString:
+        // if (columnType != this->GetType())
+        //     throw runtime_error("Column " + header.name + " has different data type than specified");
+        break;
+    case ColumnType::Bool: {
+        const auto value = SafeConverter<bool>::SafeStoi(this->GetBigInt());
+        this->SetData(value);
+        break;
+    }
+    case ColumnType::DateTime: {
+        const auto datetime = this->GetDateTime();
+        if (!DataTypes::DateTime::ValidateDate(datetime))
+            throw invalid_argument("failed to validate date");
+        break;
+    }
+    case ColumnType::Decimal:
+
+        break;
+    case ColumnType::Guid:
+        break;
+    default:
+    case ColumnType::ColumnTypeCount:
+        throw invalid_argument("Invalid column type");
+    }
+
+    this->SetColumnIndex(ordinalPosition);
+}
+
+ostream & operator<<(ostream& os, const Field &field){
+    if (field.GetIsNull()) {
+        os << "NULL";
+        return os;
+    }
+
+    switch (field.type){
+        case ColumnType::TinyInt:
+            os << field.GetTinyInt();
+            break;
+        case ColumnType::SmallInt:
+            os << field.GetSmallInt();
+            break;
+        case ColumnType::Int:
+            os << field.GetInt();
+            break;
+        case ColumnType::BigInt:
+            os << field.GetBigInt();
+            break;
+        case ColumnType::Decimal:
+            os << field.GetDecimal();
+            break;
+        case ColumnType::String:
+            os << field.GetString();
+            break;
+        case ColumnType::UnicodeString:
+            //TODO
+            os << field.GetString();
+            break;
+        case ColumnType::Bool:
+            os << field.GetBool();
+            break;
+        case ColumnType::DateTime:
+            os << field.GetDateTime();
+            break;
+        case ColumnType::Guid:
+            os << field.GetGuid();
+            break;
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+        break;
+    }
+
+    return os;
+}

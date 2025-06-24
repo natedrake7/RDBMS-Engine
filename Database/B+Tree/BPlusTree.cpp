@@ -235,7 +235,7 @@ namespace Indexing
             {
                 const ostringstream oss;
 
-                cerr << "BPlusTree::GetNonFullNode: Key " << key << " already exists";
+                std::cerr << "BPlusTree::GetNonFullNode: Key " << key << " already exists" << std::endl;
 
                 status.code = AdditionalDataTypes::ResultCode::DuplicateKey;
                 status.message = oss.str();
@@ -573,7 +573,7 @@ namespace Indexing
                 //     result.emplace_back(previousNode->dataPageId, previousNode->keys.size());
             }
 
-            for (auto key : *keys)
+            for (const auto* key : *keys)
             {
                 if (minKey <= *key && maxKey >= *key)
                 {
@@ -594,6 +594,9 @@ namespace Indexing
     }
 
     void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, vector<DatabaseEngine::StorageTypes::Row> *result){
+        if (this->firstIndexPageId == INVALID_PAGE_ID)
+            return;
+
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)

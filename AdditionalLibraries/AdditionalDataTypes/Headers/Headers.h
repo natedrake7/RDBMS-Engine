@@ -78,6 +78,7 @@ namespace Headers {
   struct DefaultValuesHeader {
     int32_t columnId = -1;
     std::string value;
+    //add size here
 
     AdditionalInformation additionalInfo;
   };

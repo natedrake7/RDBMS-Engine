@@ -447,7 +447,7 @@ namespace Server {
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertDefaultValuesToMasterDb(
     const int32_t &columnId,
-    const std::string &value,
+    const Field &value,
     const int &version,
     const bool &isDeleted) const{
 
@@ -456,7 +456,7 @@ namespace Server {
 
       const vector<Field> fields = {
         Field(columnId, 0),
-        Field(value, 1),
+        Field(std::string(reinterpret_cast<const char*>(value.GetRawData()), value.GetSize()), 1),
         Field(version, 2),
         Field(isDeleted, 3),
         Field(nullptr, 4),

@@ -137,7 +137,7 @@ namespace Server {
 
     AdditionalDataTypes::ResultStatus InsertDefaultValuesToMasterDb(
         const int32_t& columnId,
-        const std::string& value,
+        const Field& value,
         const int& version = 0,
         const bool& isDeleted = false) const;
 

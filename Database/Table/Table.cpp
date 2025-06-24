@@ -1120,7 +1120,12 @@ namespace DatabaseEngine::StorageTypes {
         int64_t primaryKeyValue = 0;
 
         for (auto* column: this->columns) {
-          primaryKeyValue = this->PopulateColumnIdentity(row, column);
+          const auto pkVal = this->PopulateColumnIdentity(row, column);
+
+          if (pkVal > 0) {
+            primaryKeyValue = pkVal;
+            continue;
+          }
 
           Table::PopulateDefaultValues(row, column);
         }
@@ -1311,7 +1316,7 @@ namespace DatabaseEngine::StorageTypes {
         //   vector<extent_id_t> allocatedExtents;
         //   extent_id_t startingExtentIndex = 0;
         //
-        //   this->InsertRow(row, allocatedExtents, startingExtentIndex);
+        //   this->InsertRInsertRow(row, allocatedExtents, startingExtentIndex);
         //
         //   return;
         // }

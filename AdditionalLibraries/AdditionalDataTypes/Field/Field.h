@@ -98,4 +98,8 @@ class Field {
         void SetType(const ColumnType &type);
 
         void Validate(const Headers::ColumnHeader &header);
+
+        void Validate(const ColumnType& columnType, const int& ordinalPosition);
+
+        friend ostream& operator<<(ostream& os, const Field& field);
 };

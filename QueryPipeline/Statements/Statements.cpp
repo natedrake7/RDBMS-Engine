@@ -344,11 +344,13 @@ namespace QueryPipeline::Statements {
           && !header.isNullable
           && !identityColumns.Contains(header.id)
           && defaultValue.columnId == -1) {
-        cerr << "Column " << columnName << " does not allow NULLS. Insert fails";
+        std::cerr << "Column " << columnName << " does not allow NULLS. Insert fails";
         return false;
       }
 
-      if (columnExistsInStatement || identityColumns.Contains(header.id))
+      if (columnExistsInStatement
+        || identityColumns.Contains(header.id)
+        || defaultValue.columnId != -1)
         continue;
 
       this->values.emplace_back(nullptr, header.ordinalPosition);
@@ -466,12 +468,22 @@ namespace QueryPipeline::Statements {
       return false;
     }
 
-    if (!this->addColumn->isNullable && this->addColumn->defaultValue.GetIsNull()) {
+    if (!this->addColumn->isNullable
+      && this->addColumn->defaultValue.GetIsNull()) {
       std::cerr << "Cannot insert default Value NULL when NOT NULL is specified" << std::endl;
       return false;
     }
 
     this->addColumn->index = headers.size();
+
+    Constants::ColumnType type;
+    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::NormalizeString(this->addColumn->type.name), type)) {
+      std::cerr << "Invalid Column Type " << this->addColumn->type.name << std::endl;
+      return false;
+    }
+
+    this->addColumn->defaultValue.Validate(type, this->addColumn->index);
+
     return true;
   }
 
@@ -509,7 +521,6 @@ namespace QueryPipeline::Statements {
     }
 
     this->alterColumn->columnId = header.id;
-
     return true;
   }
 
