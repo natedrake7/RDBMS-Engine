@@ -29,6 +29,7 @@ namespace Headers {
   void from_json(const json& j, sysTable& t) {
     j.at("name").get_to(t.name);
     j.at("id").get_to(t.id);
+    j.at("hasIdentity").get_to(t.hasIdentity);
     j.at("columns").get_to(t.columns);
     j.at("primaryKey").get_to(t.primaryKey);
   }
@@ -454,11 +455,11 @@ namespace Server {
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Field> fields = {
-        Field(columnId, 1),
-        Field(value, 2),
-        Field(version, 3),
-        Field(isDeleted, 4),
-        Field(nullptr, 5),
+        Field(columnId, 0),
+        Field(value, 1),
+        Field(version, 2),
+        Field(isDeleted, 3),
+        Field(nullptr, 4),
       };
 
       const auto result = table->InsertRow(fields);
@@ -575,8 +576,18 @@ namespace Server {
 
       for (auto& table : dbTables) {
           table.columns = this->SelectColumns(table.id);
-          table.constraints = this->SelectConstraints(table.id);
-          table.identity = this->SelectIdentityColumnsByTableId(table.id);
+
+        const auto identityColumns = this->SelectIdentityColumnsByTableIdToDictionary(table.id);
+        for (auto& column : table.columns) {
+          Headers::IdentityColumnsHeader identityHeader;
+          identityColumns.TryGetValue(column.id, identityHeader);
+
+          column.identity = std::move(identityHeader);
+          column.defaultValue = this->SelectDefaultValueByColumnId(column.id);
+        }
+
+        table.constraints = this->SelectConstraints(table.id);
+        // table.identity = this->SelectIdentityColumnsByTableId(table.id);
       }
 
       databasesHeaders.emplace_back(Headers::DatabaseHeader{
@@ -906,17 +917,19 @@ namespace Server {
 
       selectedColumnHeaders.emplace_back(
         Headers::ColumnHeader{
-          data[0]->GetInt(),
-          data[1]->GetInt(),
-          data[2]->GetString(),
-          static_cast<uint8_t>(data[3]->GetTinyInt()),
-          data[4]->GetSmallInt(),
-          data[5]->GetBool(),
-          data[6]->GetSmallInt(),
-          data[7]->GetBool(),
-          data[8]->GetDateTime(),
-          data[9]->GetDateTime(),
-          data[10]->GetString()
+          .id = data[0]->GetInt(),
+          .tableId = data[1]->GetInt(),
+          .name = data[2]->GetString(),
+          .dataType = static_cast<uint8_t>(data[3]->GetTinyInt()),
+          .recordSize = data[4]->GetSmallInt(),
+          .isNullable = data[5]->GetBool(),
+          .ordinalPosition = data[6]->GetSmallInt(),
+          .isSystem = data[7]->GetBool(),
+          .additionalInfo{
+            .createdAt = data[8]->GetDateTime(),
+            .lastModified = data[9]->GetDateTime(),
+            .lastModifiedBy = data[10]->GetString()
+            }
         }
       );
     }
@@ -1064,15 +1077,14 @@ namespace Server {
     const auto& data = rows.begin()->GetData();
 
     return Headers::DefaultValuesHeader{
-      .defaultValueId = data[0]->GetInt(),
-      .columnId = data[1]->GetInt(),
-      .value = data[2]->GetString(),
+      .columnId = data[0]->GetInt(),
+      .value = data[1]->GetString(),
       .additionalInfo{
-        .version = data[3]->GetInt(),
-        .isDeleted = data[4]->GetBool(),
-        .deletedAt = data[5]->GetBlockData() == nullptr
+        .version = data[2]->GetInt(),
+        .isDeleted = data[3]->GetBool(),
+        .deletedAt = data[4]->GetBlockData() == nullptr
               ? DataTypes::DateTime()
-              : data[5]->GetDateTime()
+              : data[4]->GetDateTime()
       },
     };
   }
@@ -1362,7 +1374,7 @@ namespace Server {
       if (primaryKey.empty())
         throw runtime_error("All tables in masterDb must have a primary key");
 
-      if (primaryKey.size() == 1) {
+      if (table.hasIdentity) {
         auto* columnPtr = columns.at(primaryKey[0]);
 
         columnPtr->SetIdentity(Headers::IdentityColumnsHeader(-1, columnPtr->GetColumnIndex(), 1, 1, 1, true, 10000));

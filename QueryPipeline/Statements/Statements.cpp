@@ -336,9 +336,14 @@ namespace QueryPipeline::Statements {
         break;
       }
 
+      //check for default Values
+
+      const auto defaultValue = Server::ServerInstance::Get().SelectDefaultValueByColumnId(header.id);
+
       if (!columnExistsInStatement
           && !header.isNullable
-          && !identityColumns.Contains(header.id)) {
+          && !identityColumns.Contains(header.id)
+          && defaultValue.columnId == -1) {
         cerr << "Column " << columnName << " does not allow NULLS. Insert fails";
         return false;
       }

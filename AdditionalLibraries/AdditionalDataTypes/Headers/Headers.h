@@ -76,7 +76,6 @@ namespace Headers {
   };
 
   struct DefaultValuesHeader {
-    int32_t defaultValueId = -1;
     int32_t columnId = -1;
     std::string value;
 
@@ -92,6 +91,9 @@ namespace Headers {
     bool isNullable;
     int16_t ordinalPosition;
     bool isSystem;
+
+    IdentityColumnsHeader identity;
+    DefaultValuesHeader defaultValue;
     AdditionalInformation additionalInfo;
   };
 
@@ -102,6 +104,7 @@ namespace Headers {
     std::string name;
     int16_t ordinalPosition;
     bool isSystem;
+
     AdditionalInformation additionalInfo;
     
     vector<ColumnHeader> columns;
@@ -140,6 +143,7 @@ namespace Headers {
   struct sysTable {
     string name;
     int32_t id;
+    bool hasIdentity;
     std::vector<sysColumn> columns;
     std::vector<string> primaryKey;
   };

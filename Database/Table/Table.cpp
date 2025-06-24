@@ -1119,28 +1119,49 @@ namespace DatabaseEngine::StorageTypes {
     int64_t Table::PopulateAutoComputedColumns(Row *row)const{
         int64_t primaryKeyValue = 0;
 
-        for (const auto& column: this->columns) {
-          auto& identity = column->GetIdentity();
+        for (auto* column: this->columns) {
+          primaryKeyValue = this->PopulateColumnIdentity(row, column);
 
-          if (identity.columnId == -1)
-            continue;
-
-          const auto& columnSize = column->GetColumnSize();
-
-          auto* block = new Block(&identity.lastValue, columnSize ,column);
-
-          primaryKeyValue = identity.lastValue;
-
-          identity.lastValue += identity.increment;
-
-          row->InsertColumnData(block, column->GetColumnIndex());
-
-          if (column->GetIdentityStartingValue() + identity.cacheBlock < primaryKeyValue )
-            this->UpdateColumnIdentity(column->GetColumnId(), primaryKeyValue);
+          Table::PopulateDefaultValues(row, column);
         }
 
       return primaryKeyValue;
     }
+
+    int64_t Table::PopulateColumnIdentity(Row *row, Column*& column) const{
+        int64_t primaryKeyValue = 0;
+
+        auto& identity = column->GetIdentity();
+
+        if (identity.columnId == -1)
+          return primaryKeyValue;
+
+        const auto& columnSize = column->GetColumnSize();
+
+        auto* block = new Block(&identity.lastValue, columnSize ,column);
+
+        primaryKeyValue = identity.lastValue;
+
+        identity.lastValue += identity.increment;
+
+        row->InsertColumnData(block, column->GetColumnIndex());
+
+        if (column->GetIdentityStartingValue() + identity.cacheBlock < primaryKeyValue )
+          this->UpdateColumnIdentity(column->GetColumnId(), primaryKeyValue);
+
+        return primaryKeyValue;
+      }
+
+      void Table::PopulateDefaultValues(Row *row, Column*& column) {
+        const auto& defaultValue = column->GetDefaultValue();
+
+        if (defaultValue.columnId == -1)
+          return;
+
+        auto* block = new Block(defaultValue.value.data(), defaultValue.value.size(), column);
+
+        row->InsertColumnData(block, column->GetColumnIndex());
+      }
 
     void Table::GetColumnsHeaders()const{
       const auto columnsHeaders = Server::ServerInstance::Get().SelectColumns(this->header.tableId);

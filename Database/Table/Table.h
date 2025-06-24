@@ -106,6 +106,10 @@ namespace DatabaseEngine::StorageTypes
 
             void UpdateColumnIdentity(const int32_t& columnId, const int32_t& lastValue)const;
 
+            int64_t PopulateColumnIdentity(Row* row, Column*& column)const;
+
+            static void PopulateDefaultValues(Row* row, Column*& column);
+
             void InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t& indexPos);
 
             void InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos);
