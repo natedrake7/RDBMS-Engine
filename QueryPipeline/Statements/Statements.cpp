@@ -344,7 +344,7 @@ namespace QueryPipeline::Statements {
           && !header.isNullable
           && !identityColumns.Contains(header.id)
           && defaultValue.columnId == -1) {
-        std::cerr << "Column " << columnName << " does not allow NULLS. Insert fails";
+        std::cerr << "Column " << columnName << " does not allow NULLS. Insert fails" << std::endl;
         return false;
       }
 

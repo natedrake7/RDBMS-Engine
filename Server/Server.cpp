@@ -167,7 +167,7 @@ namespace Server {
           static_cast<int16_t>(j)
         );
 
-        if(table.primaryKey.size() == 1){
+        if(table.hasIdentity){
           this->InsertIdentityColumnToMasterDb(
             static_cast<int32_t>(tableResult.primaryKeyVal),
             columnIdsDict.Get(table.primaryKey[j]),
