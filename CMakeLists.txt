@@ -161,7 +161,8 @@ add_library(Server SHARED
         Server/Threadpool/ThreadPool.cpp
         Server/Threadpool/ThreadPool.h
         Server/Server.cpp
-        Server/Server.h)
+        Server/Server.h
+        Server/MasterDbColumns.h)
 
 target_link_libraries(Server PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(Server PRIVATE AdditionalLibraries)

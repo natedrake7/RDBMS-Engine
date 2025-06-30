@@ -46,7 +46,7 @@ namespace Indexing
 
         Key();
         Key(const void *keyValue, const key_size_t &keySize, const Constants::ColumnType& keyType);
-        Key(const Field& field);
+        explicit Key(const Field& field);
 
         explicit Key(const vector<Key>& subKeys);
         ~Key();
@@ -157,5 +157,7 @@ namespace Indexing
         void InsertRowsToOtherTree(const int& indexPos);
 
         void InsertColumnToRow(const Constants::column_index_t& index, const Field& defaultValue);
+
+        void RemoveColumnFromRow(const Constants::column_index_t& index);
     };
 }

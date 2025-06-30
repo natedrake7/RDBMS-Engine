@@ -1,5 +1,6 @@
 #include "Server.h"
 
+#include "MasterDbColumns.h"
 #include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
 
 #include <fstream>
@@ -903,6 +904,28 @@ namespace Server {
     Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
     auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
+
+    auto *leftExpr =
+            new Expressions::Expression{
+              .type = Expressions::ExpressionType::Predicate,
+              .left = nullptr,
+              .right = nullptr,
+              .operation = Expressions::ExpressionOperator::Equal,
+              .value = Field(tableId, static_cast<column_index_t>(SysColumns::TableId)),
+              .columnIndex = static_cast<column_index_t>(SysColumns::TableId)
+          };
+
+    auto *rightExpr =
+              new Expressions::Expression{
+                .type = Expressions::ExpressionType::Predicate,
+                .left = nullptr,
+                .right = nullptr,
+                .operation = Expressions::ExpressionOperator::Equal,
+                .value = Field(false, static_cast<column_index_t>(SysColumns::IsDeleted)),
+                .columnIndex = static_cast<column_index_t>(SysColumns::IsDeleted)
+            };
+
+    auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
 
     sysColumns->ClusteredIndexScan(&selectedColumns, &expression);
 

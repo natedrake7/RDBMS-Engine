@@ -6,6 +6,7 @@
 #include "../Constants.h"
 #include "../Database.h"
 #include "../../QueryPipeline/Statements/Statements.h"
+#include "../../Server/MasterDbColumns.h"
 #include "../Pages/LargeObject/LargeDataPage.h"
 #include "../Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "../Pages/Header/HeaderPage.h"
@@ -1297,7 +1298,7 @@ namespace DatabaseEngine::StorageTypes {
 
         tree->InsertColumnToRow(index, defaultValue);
   }
-
+//TODO add heap insert if row still cant remain in page if heap
   void Table::HandleAddColumn(Pages::Page* page, Row *row, const Constants::column_index_t& index, const Field &defaultValue){
         const auto& column = this->columns.at(index);
 
@@ -1331,7 +1332,134 @@ namespace DatabaseEngine::StorageTypes {
         }
   }
 
+  void Table::HandleRemoveColumn(Pages::Page *page, Row *row, const Constants::column_index_t &index){
+        auto& data = row->GetData();
+
+        data.erase(data.begin() + index);
+
+        page->UpdateBytesLeft();
+  }
+
   void Table::PopulateColumnByHeap(const Constants::column_index_t &index, const Field &defaultValue){
+    const auto& filename = this->GetFileName();
+
+    const auto tableMapExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+
+    const auto* tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, tableMapExtentId, this);
+
+    std::vector<extent_id_t> allocatedExtents;
+    tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
+
+    for (const auto& extentId: allocatedExtents) {
+      const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+      const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                            ? extentFirstPageId
+                                            : extentFirstPageId + 1;
+
+      for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+      {
+          auto* pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pageId);
+
+          if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
+            break;
+
+          auto* page = StorageManager::Get().GetPage(filename, pageId, extentId, this);
+
+          for (auto* row: *page->GetDataRowsUnsafe())
+            this->HandleAddColumn(page, row, index, defaultValue);
+
+          pageFreeSpacePage->SetPageMetaData(page);
+        }
+    }
+  }
+
+  void Table::RemoveColumn(const Constants::column_index_t &index){
+
+    //add also last updated at deleted at etc...
+    const auto* removedColumn = this->columns.at(index);
+
+    //schema adjustments in master db change this as well
+    const std::vector<Field> removedColumnUpdates = {
+      Field(true, static_cast<column_index_t>(Server::SysColumns::IsDeleted)),
+      Field(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::LastModifiedAt)),
+      Field(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::DeletedAt)),
+    };
+
+    Server::ServerInstance::Get().UpdateColumnById(removedColumn->GetColumnId(), removedColumnUpdates);
+
+    this->columns.erase(this->columns.begin() + index);
+
+    for (int i = index; i < this->columns.size(); i++) {
+      const auto& column = this->columns[i];
+
+      column->SetColumnIndex(i);
+
+      const vector<Field> updates = {
+        Field(i, static_cast<column_index_t>(Server::SysColumns::OrdinalPosition))
+      };
+
+      //adjust in master db
+      Server::ServerInstance::Get().UpdateColumnById(column->GetColumnId(), updates);
+    }
+
+    //adjust rows by heap or clustered
+    this->HandleRemoveColumn(removedColumn->GetColumnIndex());
+
+    delete removedColumn;
+  }
+
+  void Table::HandleRemoveColumn(const Constants::column_index_t &index){
+    if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+      return;
+
+    if (this->GetTableType() == TableType::CLUSTERED) {
+      this->RemoveColumnByClusteredIndex(index);
+      return;
+    }
+
+    this->RemoveColumnByHeap(index);
+  }
+
+  void Table::RemoveColumnByClusteredIndex(const column_index_t &index){
+
+    auto* tree = this->GetClusteredIndexedTree();
+
+    tree->RemoveColumnFromRow(index);
+  }
+
+  void Table::RemoveColumnByHeap(const column_index_t &index)const{
+    const auto& filename = this->GetFileName();
+
+    const auto tableMapExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+
+    const auto* tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, tableMapExtentId, this);
+
+    std::vector<extent_id_t> allocatedExtents;
+    tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
+
+    for (const auto& extentId: allocatedExtents) {
+      const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+      const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                            ? extentFirstPageId
+                                            : extentFirstPageId + 1;
+
+      for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+      {
+        auto* pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pageId);
+
+        if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
+          break;
+
+        auto* page = StorageManager::Get().GetPage(filename, pageId, extentId, this);
+
+        for (auto* row: *page->GetDataRowsUnsafe())
+          Table::HandleRemoveColumn(page, row, index);
+
+        pageFreeSpacePage->SetPageMetaData(page);
+      }
+    }
   }
 
 }

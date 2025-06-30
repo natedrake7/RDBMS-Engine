@@ -114,6 +114,10 @@ namespace DatabaseEngine::StorageTypes
 
             void InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos);
 
+            void RemoveColumnByClusteredIndex(const column_index_t& index);
+
+            void RemoveColumnByHeap(const column_index_t& index)const;
+
         public:
             Table(
               const table_id_t &tableId,
@@ -275,5 +279,11 @@ namespace DatabaseEngine::StorageTypes
             void PopulateColumnByHeap(const Constants::column_index_t& index, const Field& defaultValue);
 
             void HandleAddColumn(Pages::Page* page, Row* row, const Constants::column_index_t& index, const Field& defaultValue);
+
+            static void HandleRemoveColumn(Pages::Page* page, Row* row, const Constants::column_index_t& index);
+
+            void RemoveColumn(const Constants::column_index_t& index);
+
+            void HandleRemoveColumn(const Constants::column_index_t& index);
     };
 }
