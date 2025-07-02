@@ -58,6 +58,7 @@ void InsertRowsToMoviesTable(Table* table);
 //change select columns to return only non deleted and order by version DESC
 //validation add default values and identity cannot be together (negates the point of the other)
 //Parsing fix , allow default without null or not null (and directly set to not null)
+//add versioning on delete and recreate with same name
 
 std::atomic<bool> serverRunning{true};
 
@@ -141,7 +142,6 @@ int main()
 // // ////
 // //
       // QueryPipeline::Parser::Parse(selectActors, databaseId);
-
 
     std::cout << "Please enter a query: "<< endl;
     while (true) {

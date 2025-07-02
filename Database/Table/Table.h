@@ -171,7 +171,7 @@ namespace DatabaseEngine::StorageTypes
                 const Indexing::Key* minimumValue,
                 const Indexing::Key* maximumValue);
 
-            void ClusteredIndexScan(vector<Row> *selectedRows, Expressions::Expression* expression = nullptr);
+            void ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression* expression = nullptr);
 
             void NonClusteredIndexScan(vector<Row> *selectedRows, const int& indexPos, const Expressions::Expression* expression = nullptr);
 

@@ -61,14 +61,13 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalPlanResult * PhysicalDropColumn::Execute(){
     auto* result = new PhysicalPlanResult();
 
-    const std::vector<Field> updates = {
-      Field(true, 12)
-    };
-
-    Server::ServerInstance::Get().UpdateColumnById(this->column->columnId, updates);
-    
     //update master db set isDeleted to 1
     //remove it from table, remove it from rows. Adjust column indexes if need be.
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    tablePtr->RemoveColumn(this->column->index);
 
     return result;
   }

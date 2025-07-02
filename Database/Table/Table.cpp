@@ -567,7 +567,7 @@ namespace DatabaseEngine::StorageTypes {
         tree->IndexSeek(*minimumValue, *maximumValue, selectedRows);
     }
 
-    void Table::ClusteredIndexScan(vector<Row> *selectedRows, Expressions::Expression* expression){
+    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression* expression){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -1388,6 +1388,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Server::ServerInstance::Get().UpdateColumnById(removedColumn->GetColumnId(), removedColumnUpdates);
 
+    this->HandleRemoveColumn(removedColumn->GetColumnIndex());
     this->columns.erase(this->columns.begin() + index);
 
     for (int i = index; i < this->columns.size(); i++) {
@@ -1404,8 +1405,6 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     //adjust rows by heap or clustered
-    this->HandleRemoveColumn(removedColumn->GetColumnIndex());
-
     delete removedColumn;
   }
 

@@ -73,7 +73,7 @@ namespace Pages
         const auto &columns = table->GetColumns();
 
         for (int i = 0; i < this->header.pageSize; i++) {
-            auto* row = this->ReadRowFromFile(data, table, offSet, columns);
+            auto* row = Page::ReadRowFromFile(data, table, offSet, columns);
             this->rows.push_back(row);
         }
     }

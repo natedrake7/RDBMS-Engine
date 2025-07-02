@@ -903,8 +903,6 @@ namespace Server {
     vector<Row> selectedColumns;
     Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
-    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
-
     auto *leftExpr =
             new Expressions::Expression{
               .type = Expressions::ExpressionType::Predicate,
@@ -925,9 +923,9 @@ namespace Server {
                 .columnIndex = static_cast<column_index_t>(SysColumns::IsDeleted)
             };
 
-    auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
+    const auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
 
-    sysColumns->ClusteredIndexScan(&selectedColumns, &expression);
+    sysColumns->ClusteredIndexScan(&selectedColumns, &expr);
 
     if (selectedColumns.empty())
       return {};
@@ -951,7 +949,12 @@ namespace Server {
           .additionalInfo{
             .createdAt = data[8]->GetDateTime(),
             .lastModified = data[9]->GetDateTime(),
-            .lastModifiedBy = data[10]->GetString()
+            .lastModifiedBy = data[10]->GetString(),
+            .version = data[11]->GetInt(),
+            .isDeleted = data[12]->GetBool(),
+            .deletedAt = data[13]->GetBlockData() == nullptr
+                      ? DataTypes::DateTime::Now()
+                      : data[13]->GetDateTime(),
             }
         }
       );
