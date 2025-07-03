@@ -225,18 +225,23 @@ namespace QueryPipeline::Statements {
     Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
     Constants::column_index_t columnIndex = 0;
 
-    for (const auto& [key, columns] : this->tableColumnsDictionary) {
-      for (const auto& [alias, column]: columns) {
+    for (const auto &columnsDict : this->tableColumnsDictionary | views::values) {
+      for (const auto &column: columnsDict | views::values) {
           if (columnIndicesDictionary.Contains(column.id))
             continue;
 
           columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
       }
 
-      columnIndex += columns.size();
+      columnIndex += columnsDict.size();
     }
 
     AssignColumnsToIndices(this, columnIndicesDictionary);
+
+    //here create logical joins with the expressions
+    for (const auto& join : this->joins) {
+      //build logicalJoin
+    }
 
     if (this->where.expression != nullptr) {
       //do the same for joins
@@ -679,14 +684,14 @@ namespace QueryPipeline::Statements {
             continue;
           }
 
-          ambigiousColumn = true;
-          break;
+          // ambigiousColumn = true;
+          // break;
         }
 
-        if (ambigiousColumn) {
-          cerr << "Ambigious Column: " << column.name << std::endl;
-          return false;
-        }
+        // if (ambigiousColumn) {
+        //   cerr << "Ambigious Column: " << column.name << std::endl;
+        //   return false;
+        // }
 
       if (!columnExistsOnTable) {
         std::cerr << "Column: " << column.name << " does not exist on Table" << std::endl;

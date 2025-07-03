@@ -52,6 +52,7 @@ namespace Server {
       return instance;
     }
 
+    //MasterDB Insert Functions
     void Initialize(const string& configPath);
     AdditionalDataTypes::ResultStatus  InsertDbToMasterDb(
       const string& dbName,
@@ -141,6 +142,7 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
+    //MasterDB Select Functions
     [[nodiscard]] vector<Headers::DatabaseHeader> GetCatalog()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
@@ -166,6 +168,11 @@ namespace Server {
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
     void UpdateColumnById(const int32_t& columnId, const std::vector<Field>& updates)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
+
+    //Cursor Functions
+    // QueryPipeline::Cursor* CreateCursor(QueryPipeline::PhysicalPlan::PhysicalOperator* plan);
+    // QueryPipeline::Cursor* GetCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
+    // void DeleteCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
 
     void Shutdown();
     [[nodiscard]] DatabaseEngine::Database* UseDatabase(const int32_t & databaseId, const bool& isServerInitialization = false);

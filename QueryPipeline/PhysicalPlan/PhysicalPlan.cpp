@@ -8,7 +8,7 @@
 namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
 
-  PhysicalPlanResult* PhysicalCreateDatabase::Execute(){
+  PhysicalPlanResult* PhysicalCreateDatabase::Execute(const int& batchSize){
     auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
 
     Server::ServerInstance::Get().InsertSchemaToMasterDb(result.primaryKeyVal, "dbo");
@@ -21,19 +21,19 @@ namespace QueryPipeline::PhysicalPlan {
 PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::string &schemaName)
   : PhysicalOperator(databaseId), schemaName(std::move(schemaName)) {}
 
-  PhysicalPlanResult * PhysicalSchemaCreate::Execute(){
+  PhysicalPlanResult * PhysicalSchemaCreate::Execute(const int& batchSize){
     Server::ServerInstance::Get().InsertSchemaToMasterDb(this->databaseId, this->schemaName);
 
     return new PhysicalPlanResult();
   }
 
   PhysicalProject:: PhysicalProject(const int32_t & databaseId, PhysicalOperator *child, const std::vector<column_index_t>& columns, std::vector<Headers::ColumnHeader>& columnHeaders)
-    : PhysicalOperator(databaseId), columns(columns), child(child), columnHeaders(std::move(columnHeaders)) {}
+    : PhysicalOperator(databaseId), columns(columns), columnHeaders(std::move(columnHeaders)), child(child) {}
 
   PhysicalProject::~PhysicalProject(){ delete this->child; }
 
-  PhysicalPlanResult* PhysicalProject::Execute(){
-      auto* result = this->child->Execute();
+  PhysicalPlanResult* PhysicalProject::Execute(const int& batchSize){
+      auto* result = this->child->Execute(batchSize);
 
       for (auto& row: result->rows) {
           auto& data = row.GetData();
@@ -72,8 +72,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   }
 
 
-  PhysicalPlanResult* PhysicalFilter::Execute(){
-    auto* result = child->Execute();
+  PhysicalPlanResult* PhysicalFilter::Execute(const int& batchSize){
+    auto* result = child->Execute(batchSize);
 
     if(dynamic_cast<PhysicalIndexScan*>(child) != nullptr
       || dynamic_cast<PhysicalIndexSeek*>(child) != nullptr)
@@ -92,26 +92,26 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
   PhysicalTableScan::PhysicalTableScan(const int32_t & databaseId, Statements::TableName* table): PhysicalOperator(databaseId), table(table) {}
 
-  PhysicalPlanResult* PhysicalTableScan::Execute(){
+  PhysicalPlanResult* PhysicalTableScan::Execute(const int& batchSize){
       using namespace DatabaseEngine::StorageTypes;
       const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
-      Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
       auto* result = new PhysicalPlanResult();
 
-      tablePtr->HeapScan(&result->rows, -1);
+      tablePtr->HeapScan(&result->rows, this->state, batchSize);
 
       return result;
     }
 
   PhysicalIndexScan::PhysicalIndexScan(const int32_t & databaseId, Statements::TableName* table, const bool& isClustered)
-    : PhysicalOperator(databaseId), table(table), isClustered(isClustered), expression(nullptr) {}
+    : PhysicalOperator(databaseId), table(table), expression(nullptr), isClustered(isClustered) {}
 
   PhysicalIndexScan::PhysicalIndexScan(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
     : PhysicalOperator(databaseId), table(table), expression(expression), isClustered(isClustered) {}
 
-  PhysicalPlanResult * PhysicalIndexScan::Execute(){
+  PhysicalPlanResult * PhysicalIndexScan::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
@@ -127,14 +127,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     tablePtr->NonClusteredIndexScan(&result->rows, 0, this->expression);
 
-
     return result;
   }
 
   PhysicalIndexSeek::PhysicalIndexSeek(const int32_t & databaseId, Statements::TableName* table, const Field& minValue, const Field& maxValue)
     : PhysicalOperator(databaseId), table(table), minValue(minValue), maxValue(maxValue) {}
 
-  PhysicalPlanResult* PhysicalIndexSeek::Execute(){
+  PhysicalPlanResult* PhysicalIndexSeek::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
@@ -156,7 +155,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalInsert::PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Field> &fields)
     : PhysicalOperator(databaseId), table(table), fields(fields) {}
 
-  PhysicalPlanResult* PhysicalInsert::Execute(){
+  PhysicalPlanResult* PhysicalInsert::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
@@ -183,7 +182,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     delete this->table;
   }
 
-  PhysicalPlanResult * PhysicalHeapDelete::Execute(){
+  PhysicalPlanResult * PhysicalHeapDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
@@ -203,7 +202,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       delete this->table;
   }
 
-  PhysicalPlanResult * PhysicalIndexScanDelete::Execute(){
+  PhysicalPlanResult * PhysicalIndexScanDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
@@ -223,7 +222,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     delete this->table;
   }
 
-  PhysicalPlanResult * PhysicalIndexSeekDelete::Execute(){
+  PhysicalPlanResult * PhysicalIndexSeekDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
@@ -249,7 +248,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       delete column;
   }
 
-  PhysicalPlanResult* PhysicalTableCreate::Execute(){
+  PhysicalPlanResult* PhysicalTableCreate::Execute(const int& batchSize){
     DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 
     vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
@@ -363,7 +362,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     delete this->table;
   }
 
-  PhysicalPlanResult* PhysicalHeapUpdate::Execute(){
+  PhysicalPlanResult* PhysicalHeapUpdate::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
@@ -385,7 +384,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     delete this->table;
   }
 
-  PhysicalPlanResult* PhysicalIndexScanUpdate::Execute(){
+  PhysicalPlanResult* PhysicalIndexScanUpdate::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
@@ -407,7 +406,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     delete this->table;
   }
 
-  PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(){
+  PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
@@ -436,8 +435,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     delete this->child;
   }
 
-  PhysicalPlanResult* PhysicalOrderBy::Execute(){
-    auto* result = this->child->Execute();
+  PhysicalPlanResult* PhysicalOrderBy::Execute(const int& batchSize){
+    auto* result = this->child->Execute(batchSize);
 
     std::vector<DatabaseEngine::StorageTypes::Row*> rowsPtrs;
 
@@ -462,7 +461,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     vector<Constants::column_index_t> &columns)
     : PhysicalOperator(databaseId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
-  PhysicalPlanResult * PhysicalIndexCreate::Execute(){
+  PhysicalPlanResult * PhysicalIndexCreate::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);

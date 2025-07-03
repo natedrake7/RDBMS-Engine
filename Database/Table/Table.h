@@ -4,6 +4,7 @@
 #include <vector>
 #include "../Constants.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
+#include "../../QueryPipeline/Cursor/Cursor.h"
 #include "../B+Tree/BPlusTree.h"
 
 namespace QueryPipeline::Statements {
@@ -118,6 +119,8 @@ namespace DatabaseEngine::StorageTypes
 
             void RemoveColumnByHeap(const column_index_t& index)const;
 
+            static page_id_t GetPageIdByState(const page_id_t& extentFirstPageId, const QueryPipeline::PhysicalPlan::TableScanState& state);
+
         public:
             Table(
               const table_id_t &tableId,
@@ -175,7 +178,7 @@ namespace DatabaseEngine::StorageTypes
 
             void NonClusteredIndexScan(vector<Row> *selectedRows, const int& indexPos, const Expressions::Expression* expression = nullptr);
 
-            void HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const;
+            void HeapScan(vector<Row> *selectedRows, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const;
 
             void SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
 

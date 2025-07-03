@@ -36,12 +36,9 @@ void InsertRowsToMoviesTable(Table* table);
 //Add Decimal full support
 //Add Alter table (add drop columns)
 //Alter table alter column allow with force to smaller datatype and cause truncation if need be.
-//on add column check default value is inserted correctlty in master db.
 //add further validations
-//allow [] on IDENTIFIERS
 //Add joins
 //check index deletes work
-//add identity
 //add reset identity
 //start documenting implementation and optimize wherever possible
 //add order by statements full support (minor just add ASC, DESC on each column or on all)
@@ -59,6 +56,7 @@ void InsertRowsToMoviesTable(Table* table);
 //validation add default values and identity cannot be together (negates the point of the other)
 //Parsing fix , allow default without null or not null (and directly set to not null)
 //add versioning on delete and recreate with same name
+//add pagination and cursors to stream batches of rows when they cant fit in memory
 
 std::atomic<bool> serverRunning{true};
 
@@ -84,7 +82,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const int32_t databaseId = 2;
+    constexpr int32_t databaseId = 2;
 
     //select statement
     const string selectActors = "SELECT * FROM dbo.Actors";

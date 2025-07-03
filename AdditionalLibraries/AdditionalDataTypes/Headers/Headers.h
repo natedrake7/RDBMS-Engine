@@ -1,4 +1,7 @@
 #pragma once
+#include "../../../Database/Constants.h"
+
+
 #include <string>
 #include "../DateTime/DateTime.h"
 #include <vector>
@@ -159,11 +162,11 @@ namespace Headers {
   };
 
   struct RowIdentifier {
-    uint32_t pageId = -1;
+    uint32_t pageId = Constants::INVALID_PAGE_ID;
     int32_t indexId = -1;
 
     RowIdentifier() {
-      this->pageId = -1;
+      this->pageId = Constants::INVALID_PAGE_ID;
       this->indexId = -1;
     }
 

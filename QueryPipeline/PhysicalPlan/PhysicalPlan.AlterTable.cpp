@@ -15,7 +15,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalAddColumn::Execute(){
+  PhysicalPlanResult * PhysicalAddColumn::Execute(const int& batchSize){
 
     const auto columnType = ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(this->column->type.name));
 
@@ -58,7 +58,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalDropColumn::Execute(){
+  PhysicalPlanResult * PhysicalDropColumn::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
     //update master db set isDeleted to 1
@@ -80,7 +80,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalRenameColumn::Execute(){
+  PhysicalPlanResult * PhysicalRenameColumn::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
@@ -106,7 +106,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalAlterColumn::Execute(){
+  PhysicalPlanResult * PhysicalAlterColumn::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
     const std::vector<Field> updates = {

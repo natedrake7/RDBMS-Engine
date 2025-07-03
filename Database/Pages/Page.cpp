@@ -258,19 +258,25 @@ namespace Pages
 
     const PageType &Page::GetPageType() const { return this->header.pageType; }
 
-    void Page::GetRows(vector<Row> *copiedRows, const Table &table, const size_t &rowsToSelect) const
+    int Page::GetRows(vector<Row> *copiedRows, const Table &table, const size_t &rowsToSelect, const int32_t& startingPosition) const
     {
-        for (const auto &row : this->rows)
-        {
-            if (copiedRows->size() >= rowsToSelect)
-                return;
+        if (startingPosition >= this->rows.size())
+            return -1;
+
+        for (int i = startingPosition; i < this->rows.size(); i++) {
+            const auto& row = this->rows[i];
 
             RowHeader *rowHeader = row->GetHeader();
 
             vector<Block *> copyBlocks = row->GetBlockCopies();
 
             copiedRows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
+
+            if (copiedRows->size() == rowsToSelect)
+                return i;
         }
+
+        return static_cast<int>(this->rows.size() - 1);
     }
 
     void Page::GetRowByIndex(vector<Row>* rows, const Table &table, const int &indexPosition) const

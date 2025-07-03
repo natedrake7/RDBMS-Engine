@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "SQLParser.h"
+#include "../Cursor/Cursor.h"
 #include "../ErrorListener/ErrorListener.h"
 #include "../Visitor/Visitor.h"
 #include "../LogicalPlan/LogicalPlan.h"
@@ -82,40 +83,35 @@ namespace QueryPipeline
           return;
         }
 
-        const auto* result = physicalPlan->Execute();
+        Cursor cursor(0, physicalPlan, 100);
 
-        if (result == nullptr) {
-            delete result;
-            delete statement;
-            delete logicalPlan;
-            delete physicalPlan;
+        PhysicalPlan::PhysicalPlanResult* result = nullptr;
 
-            return;
+        while (cursor.hasMore()) {
+            result = cursor.fetchNextBatch();
+
+            if (result == nullptr) {
+                delete result;
+                delete statement;
+                delete logicalPlan;
+                return;
+            }
+
+            if (result->code != AdditionalDataTypes::ResultCode::Ok) {
+                cerr << result->message << endl;
+
+                delete result;
+                delete statement;
+                delete logicalPlan;
+                return;
+            }
+
+            for (const auto& row: result->rows)
+                row.PrintRow();
         }
-
-        if (result->code != AdditionalDataTypes::ResultCode::Ok) {
-            cerr << result->message << endl;
-
-            delete result;
-            delete statement;
-            delete logicalPlan;
-            delete physicalPlan;
-            return;
-        }
-
-        for(const auto & column : result->columns)
-          cout << column.name << " || ";
-
-        cout << endl;
-
-        for (const auto& row: result->rows)
-            row.PrintRow();
-
-        cout << result->message << endl;
 
         delete result;
         delete statement;
         delete logicalPlan;
-        delete physicalPlan;
     }
 }

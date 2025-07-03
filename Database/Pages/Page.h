@@ -75,7 +75,11 @@ namespace Pages
         [[nodiscard]] const page_size_t &GetBytesLeft() const;
         void SetDirty();
 
-        void GetRows(vector<DatabaseEngine::StorageTypes::Row> *copiedRows, const DatabaseEngine::StorageTypes::Table &table, const size_t &rowsToSelect) const;
+        int GetRows(
+            vector<DatabaseEngine::StorageTypes::Row> *copiedRows,
+            const DatabaseEngine::StorageTypes::Table &table,
+            const size_t &rowsToSelect,
+            const int32_t& startingPosition = 0) const;
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const PageType &GetPageType() const;

@@ -20,6 +20,12 @@ namespace QueryPipeline {
       PhysicalPlan::PhysicalCreateDatabase* ToPhysical()override;
   };
 
+  class LogicalJoin final : public LogicalPlan {
+    public:
+    LogicalJoin(LogicalPlan* left, LogicalPlan* right);
+    PhysicalPlan::PhysicalOperator* ToPhysical()override;
+  };
+
   class LogicalProject final: public LogicalPlan {
     public:
       LogicalPlan* child;

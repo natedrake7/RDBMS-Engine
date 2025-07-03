@@ -81,6 +81,8 @@ add_library(QueryPipeline  SHARED
                 QueryPipeline/Visitor/Visitor.CreateTable.cpp
                 QueryPipeline/Visitor/Visitor.Joins.cpp
                 QueryPipeline/Visitor/Visitor.h
+                QueryPipeline/Cursor/Cursor.cpp
+                QueryPipeline/Cursor/Cursor.h
                 QueryPipeline/LogicalPlan/LogicalPlan.cpp
                 QueryPipeline/LogicalPlan/LogicalPlan.h
                 QueryPipeline/PhysicalPlan/PhysicalPlan.cpp

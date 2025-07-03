@@ -610,29 +610,31 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::HeapScan(vector<Row> *selectedRows, const size_t &rowsToSelect)const
+    void Table::HeapScan(vector<Row> *selectedRows, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const
     {
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
             return;
 
         const auto& filename = this->database->GetFileName();
 
-        const auto extentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+        const auto indexAllocationPageExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, extentId, this);
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, indexAllocationPageExtentId, this);
 
         vector<extent_id_t> tableExtentIds;
-        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, state.extentId);
 
         for (const auto& extentId : tableExtentIds){
           const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
           const auto* pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
-          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+          const auto extentStartingPageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
-          
+
+          const auto pageId = Table::GetPageIdByState(extentStartingPageId, state);
+
           for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
           {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
@@ -643,7 +645,13 @@ namespace DatabaseEngine::StorageTypes {
             if (page->GetPageSize() == 0)
               continue;
 
-            page->GetRows(selectedRows, *this, rowsToSelect);
+            //update state to know where to start
+            state.extentId = extentId;
+            state.lastFetchedRowId.pageId = extentPageId;
+            state.lastFetchedRowId.indexId = page->GetRows(selectedRows, *this, rowsToSelect, state.lastFetchedRowId.indexId == -1 ? 0 : state.lastFetchedRowId.indexId + 1);
+
+            if (selectedRows->size() == rowsToSelect)
+              return;
           }
         }
     }
@@ -732,7 +740,7 @@ namespace DatabaseEngine::StorageTypes {
                   if (row->GetTotalRowSize() > page->GetBytesLeft())
                       continue;
 
-                  page->InsertRow(row, rowId->indexId);
+                  page->InsertRow(row, &rowId->indexId);
                   pageFreeSpacePage->SetPageMetaData(page);
 
                   rowId->pageId = pageId;
@@ -1459,6 +1467,10 @@ namespace DatabaseEngine::StorageTypes {
         pageFreeSpacePage->SetPageMetaData(page);
       }
     }
+  }
+
+  page_id_t Table::GetPageIdByState(const page_id_t &extentFirstPageId, const QueryPipeline::PhysicalPlan::TableScanState &state){
+        return state.lastFetchedRowId.pageId == INVALID_PAGE_ID ? extentFirstPageId : state.lastFetchedRowId.pageId;
   }
 
 }
