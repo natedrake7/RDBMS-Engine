@@ -113,6 +113,17 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             if (result < 0) return -1;
             return 0;
         }
+        case ColumnType::Guid:
+        {
+            //both guids are 16 bytes in memory
+            const auto& dataSize = firstBlock->GetBlockSize();
+
+            const int result = memcmp(firstBlock->GetBlockData(), secondBlock->GetBlockData(), dataSize);
+
+            if (result > 0) return 1;
+            if (result < 0) return -1;
+            return 0;
+        }
         default:
             throw invalid_argument("AggregateFunctions::CompareMaxWithRow(): Unsupported column type");
     }
