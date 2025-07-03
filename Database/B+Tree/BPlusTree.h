@@ -3,6 +3,8 @@
 
 #include <vector>
 #include "../../Database/Constants.h"
+#include "../../QueryPipeline/PhysicalPlan/PhysicalPlan.h"
+
 #include <fstream>
 
 #include "../Column/Column.h"
@@ -126,11 +128,27 @@ namespace Indexing
 
         void IndexScan(vector<QueryData> &result)const;
 
+        void IndexScan(
+            vector<DatabaseEngine::StorageTypes::Row>* result,
+            QueryPipeline::PhysicalPlan::IndexState& state,
+            const int& rowsToSelect);
+
+        void IndexScan(
+            vector<DatabaseEngine::StorageTypes::Row>* result,
+            QueryPipeline::PhysicalPlan::IndexState& state,
+            const int& rowsToSelect,
+            const Expressions::Expression* expression);
+
+        void IndexScan(
+            vector<DatabaseEngine::StorageTypes::Row>* result,
+            const Expressions::Expression* expression);
+
         void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result);
 
-        void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result, const Expressions::Expression* expression);
-
-        void IndexScan(vector<Headers::RowIdentifier>* result);
+        void IndexScan(
+            vector<Headers::RowIdentifier>* result,
+            QueryPipeline::PhysicalPlan::IndexState& state,
+            const int& rowsToSelect);
 
         void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression);
 

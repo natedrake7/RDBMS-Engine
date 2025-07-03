@@ -1132,7 +1132,7 @@ namespace Server {
       Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
       vector<Row> selectedIndexes;
 
-      auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
+      const auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
 
       sysIndexes->ClusteredIndexScan(&selectedIndexes, &expression);
 

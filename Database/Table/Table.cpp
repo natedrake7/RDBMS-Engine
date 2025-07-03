@@ -435,11 +435,14 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::ClusteredIndexScanDelete(const Expressions::Expression *expression){
+    void Table::ClusteredIndexScanDelete(
+      const Expressions::Expression *expression,
+      QueryPipeline::PhysicalPlan::IndexState& state,
+      const int& batchSize){
         auto* tree = this->GetClusteredIndexedTree();
 
         vector<Row> results;
-        tree->IndexScan(&results);
+        tree->IndexScan(&results, state, batchSize);
 
         if(results.empty())
           return;
@@ -451,9 +454,13 @@ namespace DatabaseEngine::StorageTypes {
             tree->Remove(key);
           }
         }
-  }
+   }
 
-  void Table::ClusteredIndexSeekDelete(const Expressions::Expression *expression){
+  void Table::ClusteredIndexSeekDelete(
+    const Expressions::Expression *expression,
+    QueryPipeline::PhysicalPlan::IndexState &state,
+    const int &batchSize){
+
   }
 
     void Table::Truncate()
@@ -559,15 +566,31 @@ namespace DatabaseEngine::StorageTypes {
       return maximumRowSize;
     }
 
-
-
     void Table::ClusteredIndexSeek(vector<Row> *selectedRows, const Indexing::Key *minimumValue, const Indexing::Key *maximumValue){
         auto* tree = this->GetClusteredIndexedTree();
 
         tree->IndexSeek(*minimumValue, *maximumValue, selectedRows);
     }
 
-    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression* expression){
+    void Table::ClusteredIndexScan(
+      vector<Row> *selectedRows,
+      QueryPipeline::PhysicalPlan::IndexState& state,
+      const int& rowsToSelect,
+      const Expressions::Expression* expression){
+        if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return;
+
+        auto* tree = this->GetClusteredIndexedTree();
+
+        if(expression != nullptr){
+          tree->IndexScan(selectedRows, state, rowsToSelect, expression);
+          return;
+        }
+
+        tree->IndexScan(selectedRows, state, rowsToSelect);
+    }
+
+    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression *expression){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -581,12 +604,17 @@ namespace DatabaseEngine::StorageTypes {
         tree->IndexScan(selectedRows);
     }
 
-    void Table::NonClusteredIndexScan(vector<Row> *selectedRows, const int &indexPos, const Expressions::Expression *expression){
+    void Table::NonClusteredIndexScan(
+      vector<Row> *selectedRows,
+      const int &indexPos,
+      QueryPipeline::PhysicalPlan::IndexState& state,
+      const int& rowsToSelect,
+      const Expressions::Expression *expression){
 
         auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
         std::vector<Headers::RowIdentifier> rowIds;
-        tree->IndexScan(&rowIds);
+        tree->IndexScan(&rowIds, state, rowsToSelect);
 
         if (expression != nullptr) {
 

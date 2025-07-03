@@ -35,6 +35,11 @@ namespace QueryPipeline::PhysicalPlan{
     struct IndexState {
       page_id_t pageId;
       int32_t lastFetchedKeyIndex;
+
+      IndexState() {
+        this->pageId = INVALID_PAGE_ID;
+        this->lastFetchedKeyIndex = -1;
+      }
     };
 
     class PhysicalOperator {
@@ -77,6 +82,7 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalIndexScan final : public PhysicalOperator{
     Statements::TableName* table;
     Expressions::Expression* expression;
+    IndexState state;
     bool isClustered;
 
   public:
@@ -141,6 +147,7 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalIndexScanDelete final : public PhysicalOperator{
     Statements::TableName* table;
     Expressions::Expression* expression;
+    IndexState state;
 
   public:
     PhysicalIndexScanDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
@@ -151,6 +158,7 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalIndexSeekDelete final : public PhysicalOperator{
     Statements::TableName* table;
     Expressions::Expression* expression;
+    IndexState state;
 
   public:
     PhysicalIndexSeekDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);

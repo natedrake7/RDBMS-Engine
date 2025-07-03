@@ -121,11 +121,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     if (this->isClustered) {
-      tablePtr->ClusteredIndexScan(&result->rows, this->expression);
+      tablePtr->ClusteredIndexScan(&result->rows, state, batchSize, this->expression);
       return result;
     }
 
-    tablePtr->NonClusteredIndexScan(&result->rows, 0, this->expression);
+    tablePtr->NonClusteredIndexScan(&result->rows, 0, state, batchSize, this->expression);
 
     return result;
   }
@@ -209,7 +209,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexScanDelete(this->expression);
+    tablePtr->ClusteredIndexScanDelete(this->expression, state, batchSize);
 
     return result;
   }
@@ -229,7 +229,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexSeekDelete(expression);
+    tablePtr->ClusteredIndexSeekDelete(expression, state, batchSize);
 
     return result;
   }

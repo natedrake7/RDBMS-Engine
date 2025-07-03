@@ -83,7 +83,7 @@ namespace QueryPipeline
           return;
         }
 
-        Cursor cursor(0, physicalPlan, 100);
+        Cursor cursor(0, physicalPlan, 1);
 
         PhysicalPlan::PhysicalPlanResult* result = nullptr;
 
@@ -108,6 +108,8 @@ namespace QueryPipeline
 
             for (const auto& row: result->rows)
                 row.PrintRow();
+
+            std::cout << "Printing next batch" << std::endl;
         }
 
         delete result;

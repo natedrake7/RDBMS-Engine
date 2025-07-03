@@ -298,63 +298,98 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScan(vector<Row>* result){
+    void BPlusTree::IndexScan(
+        vector<Row>* result,
+        QueryPipeline::PhysicalPlan::IndexState& state,
+        const int& rowsToSelect){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
-          return;
+            return;
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        auto *currentNode = state.pageId == INVALID_PAGE_ID
+                                ? this->SearchLeftMostLeafNode()
+                                : this->GetNode(state.pageId);
 
-        int count = 0;
+        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex + 1;
+
         while (currentNode)
         {
-          for(auto* row: *currentNode->GetDataRowsUnsafe()){
-            const RowHeader *rowHeader = row->GetHeader();
+            const auto* rows = currentNode->GetDataRowsUnsafe();
 
-            vector<Block *> copyBlocks = row->GetBlockCopies();
+            for (int i = startingPosition; i < rows->size(); i++) {
+                auto* row = rows->at(i);
 
-            result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
-          }
+                const RowHeader *rowHeader = row->GetHeader();
 
-          if(currentNode->GetNextPage() == 0)
-              return;
+                vector<Block *> copyBlocks = row->GetBlockCopies();
 
-          currentNode = this->GetNode(currentNode->GetNextPage());
+                result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
+
+                state.pageId = currentNode->GetPageId();
+                state.lastFetchedKeyIndex = i;
+
+                if (result->size() == rowsToSelect)
+                    return;
+            }
+
+            if(currentNode->GetNextPage() == 0) {
+                return;
+            }
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
         }
-
     }
 
-    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, const Expressions::Expression *expression){
+    void BPlusTree::IndexScan(
+        vector<DatabaseEngine::StorageTypes::Row> *result,
+        QueryPipeline::PhysicalPlan::IndexState& state,
+        const int& rowsToSelect,
+        const Expressions::Expression *expression){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
           return;
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        auto *currentNode = state.pageId == INVALID_PAGE_ID
+                                ? this->SearchLeftMostLeafNode()
+                                : this->GetNode(state.pageId);
+
+        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex;
 
         while (currentNode)
         {
+            const auto* rows = currentNode->GetDataRowsUnsafe();
 
-          for(auto* row: *currentNode->GetDataRowsUnsafe()){
-            if(!row->Evaluate(expression))
-              continue;
+            for (int i = startingPosition; i < rows->size(); i++) {
+                auto* row = rows->at(i);
 
-            const RowHeader *rowHeader = row->GetHeader();
+                if(!row->Evaluate(expression))
+                    continue;
 
-            vector<Block *> copyBlocks = row->GetBlockCopies();
+                const RowHeader *rowHeader = row->GetHeader();
 
-            result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
-          }
+                vector<Block *> copyBlocks = row->GetBlockCopies();
 
-          if(currentNode->GetNextPage() == 0)
+                result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
+
+                state.pageId = currentNode->GetPageId();
+                state.lastFetchedKeyIndex = i;
+
+                if (result->size() == rowsToSelect)
+                    return;
+            }
+
+            if(currentNode->GetNextPage() == 0) {
               return;
+            }
 
-          currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode->GetNextPage());
       }
     }
 
-    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result){
+    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, const Expressions::Expression *expression){
+
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -364,9 +399,93 @@ namespace Indexing
 
         while (currentNode)
         {
-            for (auto* rowId: *currentNode->GetNonClusteredDataUnsafe()) {
-                result->emplace_back(rowId->pageId, rowId->indexId);
+            const auto* rows = currentNode->GetDataRowsUnsafe();
+
+            for (int i = 0; i < rows->size(); i++) {
+                auto* row = rows->at(i);
+
+                if(!row->Evaluate(expression))
+                    continue;
+
+                const RowHeader *rowHeader = row->GetHeader();
+
+                vector<Block *> copyBlocks = row->GetBlockCopies();
+
+                result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
             }
+
+            if(currentNode->GetNextPage() == 0) {
+                return;
+            }
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result){
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+            return;
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+            const auto* rows = currentNode->GetDataRowsUnsafe();
+
+            for (int i = 0; i < rows->size(); i++) {
+                auto* row = rows->at(i);
+
+                const RowHeader *rowHeader = row->GetHeader();
+
+                vector<Block *> copyBlocks = row->GetBlockCopies();
+
+                result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
+            }
+
+            if(currentNode->GetNextPage() == 0) {
+                return;
+            }
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BPlusTree::IndexScan(
+        vector<Headers::RowIdentifier> *result,
+        QueryPipeline::PhysicalPlan::IndexState& state,
+        const int& rowsToSelect){
+
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+            return;
+
+        auto *currentNode = state.pageId == INVALID_PAGE_ID
+                        ? this->SearchLeftMostLeafNode()
+                        : this->GetNode(state.pageId);
+
+        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex;
+
+        while (currentNode)
+        {
+            const auto* rowIds = currentNode->GetNonClusteredDataUnsafe();
+
+            for (int i = startingPosition; i < rowIds->size(); i++) {
+                const auto* rowId = rowIds->at(i);
+
+                result->emplace_back(rowId->pageId, rowId->indexId);
+
+                state.pageId = rowId->pageId;
+                state.lastFetchedKeyIndex = i;
+
+                if (result->size() == rowsToSelect)
+                    return;
+            }
+
+
+
             // for(auto* row: *currentNode->GetDataRowsUnsafe()){
             //     if(!row->Evaluate(expression))
             //         continue;

@@ -174,9 +174,22 @@ namespace DatabaseEngine::StorageTypes
                 const Indexing::Key* minimumValue,
                 const Indexing::Key* maximumValue);
 
-            void ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression* expression = nullptr);
+            void ClusteredIndexScan(
+                vector<Row> *selectedRows,
+                QueryPipeline::PhysicalPlan::IndexState& state,
+                const int& rowsToSelect = -1,
+                const Expressions::Expression* expression = nullptr);
 
-            void NonClusteredIndexScan(vector<Row> *selectedRows, const int& indexPos, const Expressions::Expression* expression = nullptr);
+            void ClusteredIndexScan(
+                vector<Row> *selectedRows,
+                const Expressions::Expression* expression = nullptr);
+
+            void NonClusteredIndexScan(
+                vector<Row> *selectedRows,
+                const int& indexPos,
+                QueryPipeline::PhysicalPlan::IndexState& state,
+                const int& rowsToSelect = -1,
+                const Expressions::Expression* expression = nullptr);
 
             void HeapScan(vector<Row> *selectedRows, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const;
 
@@ -184,9 +197,15 @@ namespace DatabaseEngine::StorageTypes
 
             void HeapDelete(const Expressions::Expression* expression) const;
 
-            void ClusteredIndexScanDelete(const Expressions::Expression* expression);
+            void ClusteredIndexScanDelete(
+                const Expressions::Expression* expression,
+                QueryPipeline::PhysicalPlan::IndexState& state,
+                const int& batchSize);
 
-            void ClusteredIndexSeekDelete(const Expressions::Expression* expression);
+            void ClusteredIndexSeekDelete(
+                const Expressions::Expression* expression,
+                QueryPipeline::PhysicalPlan::IndexState& state,
+                const int& batchSize);
 
             AdditionalDataTypes::ResultStatus HeapInsert(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const;
 
