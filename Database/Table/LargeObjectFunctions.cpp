@@ -1,8 +1,6 @@
 #include "Table.h"
-#include "../RowCondition/RowCondition.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Block/Block.h"
-#include "../Column/Column.h"
 #include "../Constants.h"
 #include "../Database.h"
 #include "../Pages/LargeObject/LargeDataPage.h"

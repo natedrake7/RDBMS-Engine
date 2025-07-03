@@ -51,12 +51,12 @@ void InsertRowsToMoviesTable(Table* table);
 //used aliases in logical and physical table scans and joins.
 //fix aliases not working on projection
 //add on columns checking to be case insensitive and all names to be normalized to lower string
-//add default values on master db
 //change select columns to return only non deleted and order by version DESC
 //validation add default values and identity cannot be together (negates the point of the other)
 //Parsing fix , allow default without null or not null (and directly set to not null)
 //add versioning on delete and recreate with same name
 //add pagination and cursors to stream batches of rows when they cant fit in memory
+//add defragmentation thread (check Overflow pages and possibly Data Pages to defragment)
 
 std::atomic<bool> serverRunning{true};
 

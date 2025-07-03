@@ -47,8 +47,6 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
-        Database/RowCondition/RowCondition.cpp
-        Database/RowCondition/RowCondition.h
         AdditionalLibraries/SafeConverter/SafeConverter.h
         AdditionalLibraries/HashSet/HashSet.h
         AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
