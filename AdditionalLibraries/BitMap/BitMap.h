@@ -30,8 +30,10 @@ namespace ByteMaps
         [[nodiscard]] const bit_map_size_t &GetSize() const;
         [[nodiscard]] bit_map_size_t GetSizeInBytes() const;
 
-        void GetDataFromFile(const vector<char> &data, page_offset_t &offset);
+        void GetDataFromFile(const vector<char> &buffer, page_offset_t &offset);
+        void GetDataFromFile(const vector<char> &buffer, uint32_t &offset);
         void WriteDataToFile(fstream *filePtr);
+        void WriteDataToFile(std::vector<char>* buffer, uint32_t& pos)const;
         void WriteDataToProtocol(char*& data)const;
         void Print() const;
 

@@ -85,6 +85,7 @@ add_library(QueryPipeline  SHARED
                 QueryPipeline/LogicalPlan/LogicalPlan.h
                 QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
                 QueryPipeline/PhysicalPlan/PhysicalPlan.AlterTable.cpp
+                QueryPipeline/PhysicalPlan/PhysicalPlan.Joins.cpp
                 QueryPipeline/PhysicalPlan/PhysicalPlan.h
                 QueryPipeline/Statements/Statements.cpp
                 QueryPipeline/Statements/Statements.h
@@ -153,7 +154,9 @@ add_library(Database SHARED
         Database/LockManager/LockManager.cpp
         Database/LockManager/LockManager.h
         Database/Pages/OverflowPage/OverflowPage.cpp
-        Database/Pages/OverflowPage/OverflowPage.h)
+        Database/Pages/OverflowPage/OverflowPage.h
+        Database/Logger/Logger.cpp
+        Database/Logger/Logger.h)
 
 add_library(Server SHARED
         Server/ConnectionManager/ConnectionManager.cpp

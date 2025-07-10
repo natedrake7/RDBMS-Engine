@@ -141,6 +141,20 @@ int main()
 // //
       // QueryPipeline::Parser::Parse(selectActors, databaseId);
 
+    Logging::Logger logger("testLog");
+
+    logger.RecoverLogs({});
+
+    auto transactionId = logger.StartTransaction();
+
+    auto transaction = logger.CreateTransaction(transactionId, Logging::OperationType::Insert, 10, 10, 0);
+
+    auto checkpoint = logger.Log(transaction);
+
+    logger.LogCheckPoint(checkpoint);
+
+    return 0;
+
     std::cout << "Please enter a query: "<< endl;
     while (true) {
         std::string input;

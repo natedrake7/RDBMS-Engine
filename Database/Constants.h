@@ -34,6 +34,11 @@ namespace Constants
     typedef uint16_t page_offset_t;
     typedef uint16_t large_page_index_t;
 
+    typedef uint32_t log_sequence_number_t;
+    typedef uint64_t transaction_id_t;
+
+    constexpr transaction_id_t INVALID_TRANSACTION_ID = std::numeric_limits<transaction_id_t>::max();
+
     constexpr page_id_t INVALID_PAGE_ID = std::numeric_limits<page_id_t>::max();
 
     constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(int32_t);

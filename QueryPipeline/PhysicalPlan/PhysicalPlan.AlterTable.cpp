@@ -117,5 +117,4 @@ namespace QueryPipeline::PhysicalPlan{
 
     return result;
   }
-
 };

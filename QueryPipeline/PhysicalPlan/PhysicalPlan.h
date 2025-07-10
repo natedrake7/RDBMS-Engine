@@ -16,42 +16,42 @@ namespace DatabaseEngine::StorageTypes {
 
 namespace QueryPipeline::PhysicalPlan{
 
-    struct PhysicalPlanResult {
-        std::vector<Headers::ColumnHeader> columns;
-        std::vector<DatabaseEngine::StorageTypes::Row> rows;
-        std::string message;
-        AdditionalDataTypes::ResultCode code;
-    };
+  struct PhysicalPlanResult {
+      std::vector<Headers::ColumnHeader> columns;
+      std::vector<DatabaseEngine::StorageTypes::Row> rows;
+      std::string message;
+      AdditionalDataTypes::ResultCode code;
+  };
 
-    struct TableScanState {
-      extent_id_t extentId;
-      Headers::RowIdentifier lastFetchedRowId;
+  struct TableScanState {
+    extent_id_t extentId;
+    Headers::RowIdentifier lastFetchedRowId;
 
-      TableScanState(){
-        this->extentId = 0;
+    TableScanState(){
+      this->extentId = 0;
+    }
+  };
+
+  struct IndexState {
+    page_id_t pageId;
+    int32_t lastFetchedKeyIndex;
+
+    IndexState() {
+      this->pageId = INVALID_PAGE_ID;
+      this->lastFetchedKeyIndex = -1;
+    }
+  };
+
+  class PhysicalOperator {
+    public:
+      int32_t databaseId;
+      explicit PhysicalOperator(const int32_t& databaseId) : databaseId(databaseId) {}
+      PhysicalOperator(){
+        this->databaseId = -1;
       }
-    };
-
-    struct IndexState {
-      page_id_t pageId;
-      int32_t lastFetchedKeyIndex;
-
-      IndexState() {
-        this->pageId = INVALID_PAGE_ID;
-        this->lastFetchedKeyIndex = -1;
-      }
-    };
-
-    class PhysicalOperator {
-      public:
-        int32_t databaseId;
-        explicit PhysicalOperator(const int32_t& databaseId) : databaseId(databaseId) {}
-        PhysicalOperator(){
-          this->databaseId = -1;
-        }
-        virtual ~PhysicalOperator() = default;
-        virtual PhysicalPlanResult* Execute(const int& batchSize) = 0;
-    };
+      virtual ~PhysicalOperator() = default;
+      virtual PhysicalPlanResult* Execute(const int& batchSize) = 0;
+  };
 
   class PhysicalCreateDatabase final : public PhysicalOperator{
       std::string dbName;
@@ -276,6 +276,20 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalAlterColumn(const int32_t & databaseId, Statements::TableName* table, Statements::AlterColumn* column);
     ~PhysicalAlterColumn()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
+  };
+
+  class PhysicalNestedLoopJoin final : public PhysicalOperator {
+    table_id_t leftTablePos;
+    table_id_t rightTablePos;
+    Expressions::Expression* joinCondition;
+
+    public:
+      PhysicalNestedLoopJoin(
+        const int32_t& databaseId,
+        const table_id_t& leftTablePos,
+        const table_id_t& rightTablePos,
+        Expressions::Expression* joinCondition);
+      PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
 }

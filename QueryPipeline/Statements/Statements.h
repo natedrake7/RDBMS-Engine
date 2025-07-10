@@ -99,21 +99,7 @@ namespace QueryPipeline::Statements {
     }
   };
 
-  struct JoinStatement {
-    TableName* table;
-    Expressions::Expression* expression;
-    Constants::JoinType type;
 
-    JoinStatement() {
-      this->type = Constants::JoinType::Inner;
-      this->table = nullptr;
-      this->expression = nullptr;
-    }
-
-    ~JoinStatement() {
-      delete this->table;
-    }
-  };
 
   struct Statement {
     int32_t databaseId;
@@ -133,6 +119,26 @@ namespace QueryPipeline::Statements {
     ~DeleteStatement() override = default;
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
+  };
+
+  struct JoinStatement final : public Statement{
+    TableName* table;
+    Expressions::Expression* expression;
+    Constants::JoinType type;
+
+    JoinStatement() {
+      this->type = Constants::JoinType::Inner;
+      this->table = nullptr;
+      this->expression = nullptr;
+    }
+
+    ~JoinStatement()override {
+      delete this->table;
+    }
+
+    bool Validate() override;
+
+    QueryPipeline::LogicalPlan* ToLogical()override;
   };
 
   struct CreateTableStatement final: Statement {

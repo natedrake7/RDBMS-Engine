@@ -79,7 +79,7 @@ namespace Pages
     }
 
     Row* Page::ReadRowFromFile(const vector<char>& data, const Table *table, page_offset_t &offSet, const vector<Column*>& columns){
-        Row *row = new Row(*table);
+        auto*  row = new Row(*table);
         RowHeader *rowHeader = row->GetHeader();
 
         memcpy(&rowHeader->rowSize, data.data() + offSet, sizeof(row_size_t));
@@ -124,7 +124,7 @@ namespace Pages
     }
 
     void Page::WriteRowToFile(fstream* filePtr, Row* row){
-        RowHeader *rowHeader = row->GetHeader();
+        const RowHeader *rowHeader = row->GetHeader();
 
         filePtr->write(reinterpret_cast<const char *>(&rowHeader->rowSize), sizeof(row_size_t));
         filePtr->write(reinterpret_cast<const char *>(&rowHeader->maxRowSize), sizeof(size_t));
@@ -253,6 +253,12 @@ namespace Pages
     const page_size_t &Page::GetBytesLeft() const { return this->header.bytesLeft; }
 
     void Page::SetDirty(){ this->isDirty = true; }
+
+    void Page::SetLogSequenceNumber(const log_sequence_number_t &logSequenceNumber){
+        this->logSequenceNumber = logSequenceNumber;
+    }
+
+    const log_sequence_number_t & Page::GetLogSequenceNumber() const{ return this->logSequenceNumber; }
 
     page_size_t Page::GetPageSize() const { return this->header.pageSize; }
 

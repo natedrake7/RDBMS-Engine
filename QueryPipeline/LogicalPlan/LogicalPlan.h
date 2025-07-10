@@ -20,11 +20,6 @@ namespace QueryPipeline {
       PhysicalPlan::PhysicalCreateDatabase* ToPhysical()override;
   };
 
-  class LogicalJoin final : public LogicalPlan {
-    public:
-    LogicalJoin(LogicalPlan* left, LogicalPlan* right);
-    PhysicalPlan::PhysicalOperator* ToPhysical()override;
-  };
 
   class LogicalProject final: public LogicalPlan {
     public:
@@ -43,6 +38,21 @@ namespace QueryPipeline {
       Expressions::Expression* expression;
       explicit LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical() override;
+  };
+
+  class LogicalJoin final : public LogicalPlan {
+    public:
+    LogicalTableScan* left;
+    LogicalTableScan* right;
+    Expressions::Expression* condition;
+    JoinType type;
+    LogicalJoin(
+      const int32_t& databaseId,
+      LogicalTableScan* left,
+      LogicalTableScan* right,
+      Expressions::Expression* condition,
+      const JoinType& type);
+    PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
   class LogicalFilter final : public LogicalPlan {

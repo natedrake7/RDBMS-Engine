@@ -35,6 +35,8 @@ namespace Pages
     {
     protected:
         bool isDirty;
+        Constants::log_sequence_number_t logSequenceNumber;
+
         string filename;
         PageHeader header;
 
@@ -74,6 +76,9 @@ namespace Pages
         [[nodiscard]] const bool &GetPageDirtyStatus() const;
         [[nodiscard]] const page_size_t &GetBytesLeft() const;
         void SetDirty();
+
+        void SetLogSequenceNumber(const log_sequence_number_t &logSequenceNumber);
+        [[nodiscard]] const log_sequence_number_t &GetLogSequenceNumber() const;
 
         int GetRows(
             vector<DatabaseEngine::StorageTypes::Row> *copiedRows,

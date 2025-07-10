@@ -51,9 +51,9 @@ namespace ByteMaps
             data[position] = value;
     }
 
-    void BitMap::GetDataFromFile(const vector<char> &data, Constants::page_offset_t &offset)
+    void BitMap::GetDataFromFile(const vector<char> &buffer, Constants::page_offset_t &offset)
     {
-        memcpy(&this->size, data.data() + offset, sizeof(Constants::bit_map_size_t));
+        memcpy(&this->size, buffer.data() + offset, sizeof(Constants::bit_map_size_t));
         offset += sizeof(Constants::bit_map_size_t);
 
         const Constants::bit_map_size_t &bytesToRead = (this->size + 7) / 8;
@@ -64,7 +64,26 @@ namespace ByteMaps
         for (Constants::bit_map_size_t i = 0; i < bytesToRead; i++)
         {
             Constants::byte value;
-            memcpy(&value, data.data() + offset, sizeof(Constants::byte));
+            memcpy(&value, buffer.data() + offset, sizeof(Constants::byte));
+            this->SetByte(i, value);
+
+            offset += sizeof(Constants::byte);
+        }
+    }
+
+    void BitMap::GetDataFromFile(const vector<char> &buffer, uint32_t &offset){
+        memcpy(&this->size, buffer.data() + offset, sizeof(Constants::bit_map_size_t));
+        offset += sizeof(Constants::bit_map_size_t);
+
+        const Constants::bit_map_size_t &bytesToRead = (this->size + 7) / 8;
+
+        if (this->data.empty())
+            this->data.resize(bytesToRead);
+
+        for (Constants::bit_map_size_t i = 0; i < bytesToRead; i++)
+        {
+            Constants::byte value;
+            memcpy(&value, buffer.data() + offset, sizeof(Constants::byte));
             this->SetByte(i, value);
 
             offset += sizeof(Constants::byte);
@@ -75,6 +94,15 @@ namespace ByteMaps
     {
         filePtr->write(reinterpret_cast<char *>(&this->size), sizeof(Constants::bit_map_size_t));
         filePtr->write(reinterpret_cast<char *>(this->data.data()), this->data.size() * sizeof(Constants::byte));
+    }
+
+    void BitMap::WriteDataToFile(std::vector<char>* buffer, uint32_t& pos)const
+    {
+        memcpy(buffer->data(), &this->size, sizeof(Constants::bit_map_size_t));
+        pos += sizeof(Constants::bit_map_size_t);
+
+        memcpy(buffer->data() + pos, this->data.data(), this->data.size() * sizeof(Constants::byte));
+        pos += this->data.size() * sizeof(Constants::byte);
     }
 
     void BitMap::WriteDataToProtocol(char *&data) const{

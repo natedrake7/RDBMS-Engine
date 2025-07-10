@@ -66,7 +66,21 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalCreateDatabase(this->dbName);
   }
 
-  LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::Expression* filter): LogicalPlan(databaseId), child(child), filter(filter) {}
+ LogicalJoin::LogicalJoin(
+   const int32_t& databaseId,
+   LogicalTableScan *left,
+   LogicalTableScan *right,
+   Expressions::Expression *condition,
+   const JoinType &type)
+   : LogicalPlan(databaseId), left(left), right(right), condition(condition), type(type) {}
+
+  PhysicalPlan::PhysicalOperator * LogicalJoin::ToPhysical(){
+
+    return new PhysicalPlan::PhysicalNestedLoopJoin(this->databaseId, 0, 0, this->condition);
+  }
+
+LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::Expression* filter)
+  : LogicalPlan(databaseId), child(child), filter(filter) {}
 
   PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(){
     return new PhysicalPlan::PhysicalFilter(this->databaseId, this->child->ToPhysical(), this->filter);

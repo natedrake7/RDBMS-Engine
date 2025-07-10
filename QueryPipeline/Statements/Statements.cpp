@@ -32,6 +32,22 @@ namespace QueryPipeline::Statements {
     return new LogicalDelete(this->databaseId, this->table, this->where.expression);
   }
 
+  bool JoinStatement::Validate(){
+    return true;
+  }
+
+  QueryPipeline::LogicalPlan * JoinStatement::ToLogical(){
+
+      return nullptr;
+    // return new LogicalJoin(
+    //     this->databaseId,
+    //     // new LogicalTableScan(),
+    //     // this->joinType,
+    //     // this->table2,
+    //     // this->on.expression
+    // );
+  }
+
   CreateTableStatement::~CreateTableStatement() {
       delete this->constraint;
       delete this->table;
@@ -39,6 +55,10 @@ namespace QueryPipeline::Statements {
       for(const auto& column : this->columns)
           delete column;
   }
+
+  // QueryPipeline::LogicalPlan * JoinStatement::ToLogical(){
+  //   return new LogicalJoin(this->databaseId, this->table, this->joinType, this->table2, this->on.expression);
+  // }
 
   CreateTableStatement::CreateTableStatement(){
     this->table = nullptr;

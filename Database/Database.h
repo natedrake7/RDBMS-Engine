@@ -6,6 +6,7 @@
 #include "../Server/Server.h"
 #include "B+Tree/BPlusTree.h"
 #include "Column/Column.h"
+#include "Logger/Logger.h"
 #include "Table/Table.h"
 #include "Pages/OverflowPage/OverflowPage.h"
 
@@ -70,6 +71,8 @@ class Database {
   Dictionary<int32_t, table_id_t> tableIdsDictionary;
 
   vector<StorageTypes::Table *> tables;
+
+  Logging::Logger logger;
 
 protected:
 

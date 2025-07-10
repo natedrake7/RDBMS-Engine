@@ -142,7 +142,7 @@ namespace DatabaseEngine
         this->systemFilename = path + "_sys" + ".db";
     }
 
-    Database::Database(const string &dbName, const vector<Headers::sysTable>& tables) {
+    Database::Database(const string &dbName, const vector<Headers::sysTable>& tables): logger(dbName) {
         this->PopulateFilenames(dbName);
 
         const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
@@ -166,8 +166,7 @@ namespace DatabaseEngine
         }
     }
 
-    Database::Database(const string &dbName, const bool& isServerInitialization)
-    {
+    Database::Database(const string &dbName, const bool& isServerInitialization): logger(dbName) {
         this->PopulateFilenames(dbName);
 
         const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);

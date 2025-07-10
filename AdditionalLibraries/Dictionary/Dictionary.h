@@ -40,6 +40,14 @@ class Dictionary : public std::unordered_map<Key, Value>
             this->insert(std::make_pair(key, value));
         }
 
+        void Update(const Key& key, const Value& value)
+        {
+            if (!this->Contains(key))
+                return;
+
+            this->at(key) = value;
+        }
+
         Value& Get(const Key& key)
         {
             return this->at(key);
