@@ -19,6 +19,7 @@ namespace DatabaseEngine::Logging {
     off_t logFileOffset; // Offset in the log file where the checkpoint is written
     uint32_t checkSum;
 
+    static constexpr uint32_t Size();
     [[nodiscard]] uint32_t static CalculateCheckSum(const CheckPoint& checkpoint);
   };
 

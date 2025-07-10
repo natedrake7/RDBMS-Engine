@@ -17,9 +17,9 @@ namespace DatabaseEngine::Logging {
     const std::string logFileName = logFilePath + ".wal";
     const std::string logCheckPointFileName = logFilePath + ".meta";
 
-    this->logFileDescriptor = ::open(logFileName.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+    this->logFileDescriptor = ::open(logFileName.c_str(), O_RDWR | O_CREAT | O_APPEND, 0644);
 
-    this->checkPointFileDescriptor = ::open(logCheckPointFileName.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+    this->checkPointFileDescriptor = ::open(logCheckPointFileName.c_str(), O_RDWR | O_CREAT | O_APPEND, 0644);
 
     if (this->logFileDescriptor < 0) {
       throw std::runtime_error("Failed to open or create log file: " + logFilePath);
@@ -46,7 +46,7 @@ namespace DatabaseEngine::Logging {
   uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     const auto* data = reinterpret_cast<const uint8_t*>(&checkpoint);
 
-    constexpr size_t size = sizeof(CheckPoint) - sizeof(checkpoint.checkSum);
+    const size_t size = CheckPoint::Size() - sizeof(checkpoint.checkSum);
     uint32_t sum = 0;
 
     for (size_t i = 0; i < size; ++i)
@@ -292,9 +292,9 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
   void Logger::LogCheckPoint(CheckPoint& checkPoint)const{
     checkPoint.checkSum = CheckPoint::CalculateCheckSum(checkPoint);
 
-    const auto result = ::write(this->checkPointFileDescriptor, &checkPoint, sizeof(CheckPoint));
+    const auto result = ::write(this->checkPointFileDescriptor, &checkPoint, CheckPoint::Size());
 
-    if (result < 0 || result != sizeof(CheckPoint)) {
+    if (result < 0 || result != CheckPoint::Size()) {
       std::cerr << "Failed to write checkpoint to checkpoint file" << std::endl;
     }
   }
@@ -347,14 +347,18 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
 
   }
 
+//TODO check how to read last checkpoint
   CheckPoint Logger::RecoverLastCheckPoint() const{
     CheckPoint checkPoint{};
-    ::lseek(this->checkPointFileDescriptor, sizeof(CheckPoint), SEEK_END);
+    ::lseek(this->checkPointFileDescriptor, -CheckPoint::Size(), SEEK_END);
 
-    const auto result = ::read(this->checkPointFileDescriptor, &checkPoint, sizeof(CheckPoint));
+    // ::lseek(this->checkPointFileDescriptor, 0, SEEK_SET);
+    const auto result = ::read(this->checkPointFileDescriptor, &checkPoint, CheckPoint::Size());
 
-    if (result < 0 || result != sizeof(CheckPoint)) {
+    if (result < 0 || result != CheckPoint::Size()) {
       std::cerr << "Failed to read checkpoint from checkpoint file" << std::endl;
+      perror("Failed to read from checkpoint file");
+
       throw std::runtime_error("Failed to recover last checkpoint");
     }
 
@@ -366,5 +370,12 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
     }
 
     return checkPoint;
+  }
+
+ constexpr uint32_t CheckPoint::Size() {
+    return sizeof(transaction_id_t) +
+           sizeof(log_sequence_number_t) +
+           sizeof(off_t) +
+           sizeof(uint32_t);
   }
 }
