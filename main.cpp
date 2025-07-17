@@ -147,13 +147,13 @@ int main()
 
     auto transactionId = logger.StartTransaction();
 
-    auto transaction = logger.CreateTransaction(transactionId, Logging::OperationType::Insert, 10, 10, 0);
+    auto transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::Insert, 10, 10, 0);
 
     auto checkpoint = logger.Log(transaction);
 
     logger.LogCheckPoint(checkpoint);
 
-    auto new_transaction = logger.CreateTransaction(transactionId, Logging::OperationType::Insert, 10, 10, 0);
+    auto new_transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::Insert, 10, 10, 0);
 
     auto new_checkpoint = logger.Log(new_transaction);
 

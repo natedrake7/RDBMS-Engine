@@ -72,7 +72,7 @@ namespace DatabaseEngine::Logging {
     this->checkSum = 0;
   }
 
- Transaction::Transaction() {
+  LogEntry::LogEntry() {
     this->transactionId = INVALID_TRANSACTION_ID;
     this->logSequenceNumber = 0;
     this->operation = OperationType::InvalidOperation;
@@ -88,7 +88,7 @@ namespace DatabaseEngine::Logging {
   }
 
 
-  Transaction::Transaction(
+  LogEntry::LogEntry(
     const Constants::transaction_id_t &transactionId,
     const Constants::log_sequence_number_t& logSequenceNumber,
     const OperationType &operation,
@@ -112,7 +112,7 @@ namespace DatabaseEngine::Logging {
     this->newRow = newRow;
   }
 
-int Transaction::GetSize()const{
+int LogEntry::GetSize()const{
     int size = this->GetStaticDataSize();
 
     size += sizeof(bool) * 2; // hasOldRow and hasNewRow
@@ -122,7 +122,7 @@ int Transaction::GetSize()const{
     return size;
   }
 
-  int Transaction::GetStaticDataSize()const {
+  int LogEntry::GetStaticDataSize()const {
     return
         sizeof(this->transactionId) +
         sizeof(this->logSequenceNumber) +
@@ -140,7 +140,7 @@ int Transaction::GetSize()const{
     fsync(this->checkPointFileDescriptor);
   }
 
-void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &transaction) {
+void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &transaction) {
     uint32_t pos = 0;
 
     const auto transactionSize = transaction.GetSize();
@@ -168,7 +168,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
 
   }
 
-  void Logger::DeserializeTransactionHeader(const std::vector<char> &buffer, Transaction &transaction, uint32_t &pos){
+  void Logger::DeserializeLogEntryHeader(const std::vector<char> &buffer, LogEntry &transaction, uint32_t &pos){
     memcpy(&transaction.transactionId, buffer.data() + pos, sizeof(transaction.transactionId));
     pos += sizeof(transaction.transactionId);
 
@@ -189,9 +189,9 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
   }
 
   //TODO implement to allow row-splitting between batches
-  void Logger::DeserializeTransactionBody(
+  void Logger::DeserializeLogEntryBody(
     const std::vector<char> &buffer,
-    Transaction &transaction,
+    LogEntry &transaction,
     const std::vector<StorageTypes::Table*> &tables,
     uint32_t& pos){
     // const auto* table = tables.at(transaction.tableOrdinalPosition);
@@ -300,7 +300,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
     return row;
   }
 
-  CheckPoint Logger::Log(const Transaction &transaction)const{
+  CheckPoint Logger::Log(const LogEntry &transaction)const{
     std::vector<char> buffer;
     Logger::SerializeTransaction(&buffer, transaction);
 
@@ -317,7 +317,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
     return { transaction.transactionId, transaction.logSequenceNumber, fileOffset };
   }
 
-  Transaction Logger::CreateTransaction(
+  LogEntry Logger::CreateLogEntry(
     const Constants::transaction_id_t& transactionId,
     const OperationType &operation,
     const Constants::table_id_t& tableOrdinalPosition,
@@ -356,6 +356,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
 
     if (result < 0 || result != CheckPoint::Size()) {
       std::cerr << "Failed to write checkpoint to checkpoint file" << std::endl;
+      //exception or not?
     }
   }
 
@@ -377,9 +378,9 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
     std::vector<char> buffer(BATCH_SIZE);
     std::vector<char> leftovers;
 
-    std::vector<Transaction> transactions;
+    std::vector<LogEntry> logEntries;
 
-    int transactionSize = 0;
+    int entrySize = 0;
 
     while (true) {
       const auto bytesRead = read(this->logFileDescriptor, buffer.data(), BATCH_SIZE);
@@ -399,38 +400,38 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const Transaction &
 
       while (pos < bytesRead) {
 
-        Transaction transaction;
-        if (pos + transaction.GetStaticDataSize() + sizeof(int) > buffer.size()) {
+        LogEntry logEntry;
+        if (pos + logEntry.GetStaticDataSize() + sizeof(int) > buffer.size()) {
           leftovers.assign(buffer.begin() + pos, buffer.end());
           break;
         }
 
         // ReSharper disable once CppDFAConstantConditions
-        if (transaction.transactionId == INVALID_TRANSACTION_ID) {
-            memcpy(&transactionSize, buffer.data() + pos, sizeof(transactionSize));
-            pos += sizeof(transactionSize);
+        if (logEntry.transactionId == INVALID_TRANSACTION_ID) {
+            memcpy(&entrySize, buffer.data() + pos, sizeof(entrySize));
+            pos += sizeof(entrySize);
 
-            Logger::DeserializeTransactionHeader(buffer, transaction, pos);
+            Logger::DeserializeLogEntryHeader(buffer, logEntry, pos);
         }
 
-        if (pos + transactionSize - transaction.GetStaticDataSize() > buffer.size()) {
+        if (pos + entrySize - logEntry.GetStaticDataSize() > buffer.size()) {
           leftovers.assign(buffer.begin() + pos, buffer.end());
           break;
         }
 
-        Logger::DeserializeTransactionBody(buffer, transaction, tables, pos);
+        Logger::DeserializeLogEntryBody(buffer, logEntry, tables, pos);
 
         // ReSharper disable once CppDFAConstantConditions
-        if (transaction.transactionId == INVALID_TRANSACTION_ID) {
+        if (logEntry.transactionId == INVALID_TRANSACTION_ID) {
           std::cerr << "Invalid transaction ID encountered during recovery" << std::endl;
           continue;
         }
 
-        if (transaction.transactionId == lastValidCheckPoint.transactionId
-          && transaction.logSequenceNumber == lastValidCheckPoint.logSequenceNumber)
+        if (logEntry.transactionId == lastValidCheckPoint.transactionId
+          && logEntry.logSequenceNumber == lastValidCheckPoint.logSequenceNumber)
           continue;
 
-        transactions.push_back(transaction);
+        logEntries.push_back(logEntry);
 
         leftovers.clear();
         buffer.clear();

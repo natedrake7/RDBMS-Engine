@@ -29,7 +29,7 @@ namespace DatabaseEngine::Logging {
                const off_t& logFileOffset);
   };
 
-  struct Transaction {
+  struct LogEntry  {
     Constants::transaction_id_t transactionId = INVALID_TRANSACTION_ID;
     OperationType operation;
     Constants::table_id_t tableOrdinalPosition; //in master db
@@ -44,8 +44,8 @@ namespace DatabaseEngine::Logging {
 
     Constants::log_sequence_number_t logSequenceNumber; // Sequence number for the log entry
 
-    Transaction();
-    Transaction(const Constants::transaction_id_t& transactionId,
+    LogEntry();
+    LogEntry(const Constants::transaction_id_t& transactionId,
                 const Constants::log_sequence_number_t& logSequenceNumber,
                 const OperationType& operation,
                 const Constants::table_id_t& tableOrdinalPosition,
@@ -70,16 +70,16 @@ namespace DatabaseEngine::Logging {
 
     void FlushCheckPointDescriptor()const;
 
-    static void SerializeTransaction(std::vector<char>* buffer, const Transaction& transaction);
+    static void SerializeTransaction(std::vector<char>* buffer, const LogEntry& transaction);
 
-    static void DeserializeTransactionHeader(
+    static void DeserializeLogEntryHeader(
       const std::vector<char>& buffer,
-      Transaction& transaction,
+      LogEntry& transaction,
       uint32_t& pos);
 
-    static void DeserializeTransactionBody(
+    static void DeserializeLogEntryBody(
       const std::vector<char>& buffer,
-      Transaction& transaction,
+      LogEntry& transaction,
       const std::vector<StorageTypes::Table*> &tables,
       uint32_t& pos);
 
@@ -100,9 +100,9 @@ namespace DatabaseEngine::Logging {
       Logger& operator=(const Logger&) = delete;
       Logger& operator=(Logger&&) = delete;
 
-      [[nodiscard]]CheckPoint Log(const Transaction& transaction)const;
+      [[nodiscard]]CheckPoint Log(const LogEntry& transaction)const;
 
-      [[nodiscard]] Transaction CreateTransaction(
+      [[nodiscard]] LogEntry CreateLogEntry(
             const Constants::transaction_id_t& transactionId,
             const OperationType& operation,
             const Constants::table_id_t& tableOrdinalPosition,
