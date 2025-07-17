@@ -45,7 +45,7 @@ void InsertRowsToMoviesTable(Table* table);
 //and check if index index is available in the results to speed by sorting
 //Futher improve select, insert, update statements to allow nested select in them (complex validation will be required)
 //allow ctes and tempporary tables.
-//WAL
+//WAL (check row serialization/ deserialization works)
 //tempdb
 //transactions(usage of tempDb maybe).
 //used aliases in logical and physical table scans and joins.
@@ -141,27 +141,27 @@ int main()
 // //
       // QueryPipeline::Parser::Parse(selectActors, databaseId);
 
-    Logging::Logger logger("testLog");
-
-    logger.RecoverLogs({});
-
-    auto transactionId = logger.StartTransaction();
-
-    auto* logBody = new LoggingStructures::TableCreateBody(createMoviesTable);
-
-    auto transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::CreateTable, 10, 10, 0, logBody);
-
-    auto checkpoint = logger.Log(transaction);
+    // Logging::Logger logger("testLog");
     //
-    logger.LogCheckPoint(checkpoint);
+    // logger.RecoverLogs({});
     //
-    // auto new_transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::Insert, 10, 10, 0, nullptr);
+    // auto transactionId = logger.StartTransaction();
     //
-    // auto new_checkpoint = logger.Log(new_transaction);
-
-    // logger.LogCheckPoint(new_checkpoint);
-
-    return 0;
+    // auto* logBody = new LoggingStructures::TableCreateBody(createMoviesTable);
+    //
+    // auto transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::CreateTable, 10, 10, 0, logBody);
+    //
+    // auto checkpoint = logger.Log(transaction);
+    // //
+    // logger.LogCheckPoint(checkpoint);
+    // //
+    // // auto new_transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::Insert, 10, 10, 0, nullptr);
+    // //
+    // // auto new_checkpoint = logger.Log(new_transaction);
+    //
+    // // logger.LogCheckPoint(new_checkpoint);
+    //
+    // return 0;
 
     std::cout << "Please enter a query: "<< endl;
     while (true) {

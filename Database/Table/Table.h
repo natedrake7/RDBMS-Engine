@@ -1,11 +1,10 @@
 ﻿#pragma once
 #include <string>
-#include <unordered_set>
 #include <vector>
 #include "../Constants.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
-#include "../../QueryPipeline/Cursor/Cursor.h"
 #include "../B+Tree/BPlusTree.h"
+#include "../Logger/Logger.h"
 
 namespace QueryPipeline::Statements {
     struct Expression;
@@ -100,7 +99,11 @@ namespace DatabaseEngine::StorageTypes
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
 
-            [[nodiscard]] Row* CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal)const;
+            [[nodiscard]] Row* CreateRow(
+                const Constants::transaction_id_t& transactionId,
+                const vector<Field>& inputData,
+                int64_t* primaryKeyVal,
+                Logging::CheckPoint* checkPoint)const;
 
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
@@ -143,9 +146,9 @@ namespace DatabaseEngine::StorageTypes
 
             ~Table();
 
-            AdditionalDataTypes::ResultStatus InsertRows(const vector<vector<Field>> &inputData);
+            AdditionalDataTypes::ResultStatus InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Field>> &inputData);
 
-            AdditionalDataTypes::ResultStatus InsertRow(const vector<Field> &inputData);
+            AdditionalDataTypes::ResultStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Field> &inputData);
 
             void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
 

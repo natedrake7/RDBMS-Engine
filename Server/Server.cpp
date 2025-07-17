@@ -249,7 +249,9 @@ namespace Server {
         Field(nullptr, 9),
     };
 
-    const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted database: "<< dbName << " to master db" << endl;
     
@@ -276,7 +278,9 @@ namespace Server {
         Field(nullptr, 8),
      };
 
-    const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted schema: "<< schemaName << " to master db" << endl;
     
@@ -310,7 +314,9 @@ namespace Server {
         Field(nullptr, 11),
       };
 
-      const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+      const auto result = table->InsertRow(transactionId, fields);
 
       cout << "Inserted table: "<< tableName << " to master db" << endl;
       
@@ -347,7 +353,9 @@ namespace Server {
         Field(nullptr, 13),
       };
 
-      const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+      const auto result = table->InsertRow(transactionId, fields);
 
       cout << "Inserted column: "<< columnName << " to master db" << endl;
         
@@ -378,7 +386,9 @@ namespace Server {
       Field(nullptr, 10),
      };
 
-      const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+      const auto result = table->InsertRow(transactionId, fields);
 
       cout << "Inserted index: "<< indexName << " to master db" << endl;
           
@@ -405,7 +415,9 @@ namespace Server {
       Field(nullptr, 6),
     };
 
-    const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted index column to master db" << endl;
           
@@ -439,7 +451,9 @@ namespace Server {
         Field(nullptr, 9),
       };
 
-    const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted identity column to master db" << endl;
           
@@ -463,7 +477,9 @@ namespace Server {
         Field(nullptr, 4),
       };
 
-      const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+      const auto result = table->InsertRow(transactionId, fields);
 
       std::cout << "Inserted default value " << value << " to master db" << std::endl;
 
@@ -500,7 +516,9 @@ namespace Server {
       if(constraintIndexId != nullptr)
           fields.at(4).SetData(*constraintIndexId);
 
-      const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+      const auto result = table->InsertRow(transactionId, fields);
 
       cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
             
@@ -526,7 +544,9 @@ namespace Server {
         Field(nullptr, 5),
     };
 
-    const auto result = table->InsertRow(fields);
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted constraint column to master db" << endl;
             

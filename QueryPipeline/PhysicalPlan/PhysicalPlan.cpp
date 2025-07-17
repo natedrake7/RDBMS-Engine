@@ -164,7 +164,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto insertResult = tablePtr->InsertRow(fields);
+    const auto transactionId = db->StartLogTransaction();
+
+    const auto insertResult = tablePtr->InsertRow(transactionId, this->fields);
 
     // const auto insertResult = tablePtr->InsertRow(fields);
     //

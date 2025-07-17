@@ -103,5 +103,7 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] vector<Block*> GetBlockCopies() const;
 
         void Serialize(std::vector<char>* buffer, uint32_t& pos)const;
+
+        void Deserialize(const std::vector<char>* buffer, uint32_t& pos);
     };
 }

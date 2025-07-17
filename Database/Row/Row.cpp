@@ -448,7 +448,6 @@ namespace DatabaseEngine::StorageTypes {
 
   Pages::OverflowRow* Row::GetOverflowValue(const Pages::OverflowPointer & objectPointer) const{
     OverflowPage* page = this->table->GetOverflowPage(objectPointer.pageId);
-
     return page->GetObject(objectPointer.index);
   }
 
@@ -480,8 +479,52 @@ namespace DatabaseEngine::StorageTypes {
             const auto &blockData = block->GetBlockData();
 
             memcpy(buffer->data() + pos, blockData, dataSize);
+            pos += dataSize;
 
             columnIndex++;
+        }
+    }
+
+    void Row::Deserialize(const std::vector<char> *buffer, uint32_t &pos){
+        auto *rowHeader = this->GetHeader();
+
+        memcpy(&rowHeader->rowSize, buffer->data() + pos, sizeof(row_size_t));
+        pos += sizeof(row_size_t);
+
+        memcpy(&rowHeader->maxRowSize, buffer->data() + pos, sizeof(size_t));
+        pos += sizeof(size_t);
+
+        rowHeader->nullBitMap->GetDataFromFile(*buffer, pos);
+        rowHeader->largeObjectBitMap->GetDataFromFile(*buffer, pos);
+        rowHeader->overflowBitMap->GetDataFromFile(*buffer, pos);
+
+        const auto& columns = this->table->GetColumns();
+
+        for (int j = 0; j < columns.size(); j++)
+        {
+            if (rowHeader->nullBitMap->Get(j))
+            {
+                auto *block = new StorageTypes::Block(nullptr, 0, columns[j]);
+
+                this->InsertColumnData(block, j);
+
+                continue;
+            }
+
+            block_size_t bytesToRead;
+
+            memcpy(&bytesToRead, buffer->data() + pos, sizeof(block_size_t));
+            pos += sizeof(block_size_t);
+
+            auto *bytes = new unsigned char[bytesToRead];
+            memcpy(bytes, buffer->data() + pos, bytesToRead);
+            pos += bytesToRead;
+
+            auto *block = new StorageTypes::Block(bytes, bytesToRead, columns[j]);
+
+            this->InsertColumnData(block, j);
+
+            delete[] bytes;
         }
     }
 }

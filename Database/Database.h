@@ -72,7 +72,7 @@ class Database {
 
   vector<StorageTypes::Table *> tables;
 
-  Logging::Logger logger;
+  Logging::Logger* logger;
 
 protected:
 
@@ -95,6 +95,8 @@ protected:
 
     void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId) const;
 
+    void InitializeLogger(const std::string& dbName);
+
 public:
     explicit Database(const string &dbName, const bool& isServerInitialization = false);
 
@@ -102,11 +104,23 @@ public:
 
     ~Database();
 
+  void LogCheckPoint(Logging::CheckPoint& checkPoint) const;
+
+  [[nodiscard]] Constants::transaction_id_t StartLogTransaction()const;
+
+  [[nodiscard]] Logging::CheckPoint LogRowInsert(
+      StorageTypes::Row* row,
+      const Constants::transaction_id_t& transactionId,
+      const Constants::table_id_t& tableOrdinal)const;
+
     static string CreateDatabasePath(const std::string& dbName);
 
     [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
-    [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row, const Headers::RowIdentifier& rowId);
+    [[nodiscard]] static Indexing::Key CreateKey(
+        const vector<column_index_t>& indexedColumns,
+        const StorageTypes::Row* row,
+        const Headers::RowIdentifier& rowId);
 
     [[nodiscard]] static Pages::PageFreeSpacePage* GetAssociatedPfsPage(const string& filename, const page_id_t& pageId);
 

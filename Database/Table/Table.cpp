@@ -151,7 +151,7 @@ namespace DatabaseEngine::StorageTypes {
           return columns;
       }
 
-      AdditionalDataTypes::ResultStatus Table::InsertRows(const vector<vector<Field>> &inputData) 
+      AdditionalDataTypes::ResultStatus Table::InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Field>> &inputData)
       {
         uint32_t rowsInserted = 0;
         extent_id_t startingExtentIndex = 0;
@@ -160,12 +160,15 @@ namespace DatabaseEngine::StorageTypes {
         int64_t primaryKeyVal = 0;
         for (const auto &rowData : inputData) 
         {
-            Row* row = this->CreateRow(rowData, &primaryKeyVal);
+            Logging::CheckPoint checkPoint;
+            auto* row = this->CreateRow(transactionId, rowData, &primaryKeyVal, &checkPoint);
 
             const auto result = this->InsertRow(row, extents, startingExtentIndex);
 
             if (result.code != AdditionalDataTypes::ResultCode::Ok)
               return result;
+
+            this->database->LogCheckPoint(checkPoint);
           
             rowsInserted++;
 
@@ -179,18 +182,22 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-    AdditionalDataTypes::ResultStatus Table::InsertRow(const vector<Field> &inputData){
+    AdditionalDataTypes::ResultStatus Table::InsertRow(const Constants::transaction_id_t& transactionId, const vector<Field> &inputData){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
         int64_t primaryKeyVal = 0;
+        Logging::CheckPoint checkPoint;
 
-        Row* row = this->CreateRow(inputData, &primaryKeyVal);
+        Row* row = this->CreateRow(transactionId, inputData, &primaryKeyVal, &checkPoint);
 
         auto result =  this->InsertRow(row, extents, startingExtentIndex);
 
+
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
+
+        this->database->LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
         result.primaryKeyVal = primaryKeyVal;
@@ -230,7 +237,11 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-      Row* Table::CreateRow(const vector<Field>& inputData, int64_t* primaryKeyVal)const
+      Row* Table::CreateRow(
+        const Constants::transaction_id_t& transactionId,
+        const vector<Field>& inputData,
+        int64_t* primaryKeyVal,
+        Logging::CheckPoint* checkPoint)const
       {
         auto *row = new Row(*this);
 
@@ -266,6 +277,8 @@ namespace DatabaseEngine::StorageTypes {
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
+
+        *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
         return row;
       }

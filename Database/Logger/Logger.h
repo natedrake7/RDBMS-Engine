@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <mutex>
 
-
 namespace DatabaseEngine::Logging {
 
   enum OperationType : uint8_t{
@@ -14,6 +13,14 @@ namespace DatabaseEngine::Logging {
     UpdateRow = 2,
     DeleteRow = 3,
     CreateTable = 4,
+  };
+
+  static Dictionary<OperationType, std::string> OperationTypeToString = {
+    {InvalidOperation, "Invalid Operation"},
+    {InsertRow, "Insert Row"},
+    {UpdateRow, "Update Row"},
+    {DeleteRow, "Delete Row"},
+    {CreateTable, "Create Table"}
   };
 
   struct CheckPoint {
@@ -84,10 +91,6 @@ namespace DatabaseEngine::Logging {
       const LogEntry& transaction,
       const std::vector<StorageTypes::Table*> &tables,
       uint32_t& pos);
-
-    static StorageTypes::Row* DeserializeRow(const std::vector<char>& buffer, uint32_t& pos, const StorageTypes::Table* table);
-
-    static void SerializeRow(std::vector<char> *buffer, uint32_t& pos, StorageTypes::Row *row);
 
     [[nodiscard]] CheckPoint RecoverLastCheckPoint() const;
 

@@ -142,7 +142,7 @@ namespace DatabaseEngine
         this->systemFilename = path + "_sys" + ".db";
     }
 
-    Database::Database(const string &dbName, const vector<Headers::sysTable>& tables): logger(dbName) {
+    Database::Database(const string &dbName, const vector<Headers::sysTable>& tables){
         this->PopulateFilenames(dbName);
 
         const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
@@ -164,9 +164,11 @@ namespace DatabaseEngine
 
           this->CreateTable(tables[i], headerPageTables[i], index, i);
         }
+
+        this->InitializeLogger(dbName);
     }
 
-    Database::Database(const string &dbName, const bool& isServerInitialization): logger(dbName) {
+    Database::Database(const string &dbName, const bool& isServerInitialization) {
         this->PopulateFilenames(dbName);
 
         const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
@@ -186,6 +188,8 @@ namespace DatabaseEngine
 
         for (int i = 0;i < masterDbData.size(); i++)
             this->CreateTable(masterDbData[i], headerPageTables[i]);
+
+        this->InitializeLogger(dbName);
     }
 
     Database::~Database()
@@ -195,6 +199,35 @@ namespace DatabaseEngine
 
         for (const auto &dbTable : this->tables)
             delete dbTable;
+
+        delete this->logger;
+    }
+
+    void Database::LogCheckPoint(Logging::CheckPoint &checkPoint) const{
+        this->logger->LogCheckPoint(checkPoint);
+    }
+
+    void Database::InitializeLogger(const std::string& dbName){
+        this->logger = new Logging::Logger(Database::CreateDatabasePath(dbName) + "_log");
+        this->logger->RecoverLogs(this->tables);
+    }
+
+    Constants::transaction_id_t Database::StartLogTransaction()const{ return this->logger->StartTransaction(); }
+
+    Logging::CheckPoint Database::LogRowInsert(
+        StorageTypes::Row *row,
+        const Constants::transaction_id_t& transactionId,
+        const Constants::table_id_t& tableOrdinal) const{
+
+        const auto logEntry = this->logger->CreateLogEntry(
+            transactionId,
+            Logging::OperationType::InsertRow,
+            tableOrdinal,
+            0,
+            0,
+            new LoggingStructures::RowInsertBody(row));
+
+        return this->logger->Log(logEntry);
     }
 
     Table *Database::CreateTable(

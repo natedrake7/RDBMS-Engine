@@ -1,7 +1,3 @@
-//
-// Created by kolampropoulos on 7/10/25.
-//
-
 #include "Logger.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Table/Table.h"
@@ -43,7 +39,7 @@ namespace DatabaseEngine::Logging {
     }
   }
 
-  uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
+uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     const auto* data = reinterpret_cast<const uint8_t*>(&checkpoint);
 
     const size_t size = CheckPoint::Size() - sizeof(checkpoint.checkSum);
@@ -124,10 +120,13 @@ namespace DatabaseEngine::Logging {
   void LogEntry::AllocateBody(){
     switch (this->operation) {
       case InsertRow:
+        this->body = new LoggingStructures::RowInsertBody();
         break;
       case UpdateRow:
+        this->body = new LoggingStructures::RowUpdateBody();
         break;
       case DeleteRow:
+        this->body = new LoggingStructures::RowDeleteBody();
         break;
       case CreateTable:
         this->body = new LoggingStructures::TableCreateBody();
@@ -135,7 +134,7 @@ namespace DatabaseEngine::Logging {
       case InvalidOperation:
       default:
         this->body = nullptr;
-        std::cerr << "Unknown operation type: " << static_cast<int>(this->operation) << std::endl;
+        std::cerr << "Unknown operation type: " << OperationTypeToString.Get(this->operation) << std::endl;
         break;
     }
   }
@@ -202,97 +201,6 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
     // const auto* table = tables.at(transaction.tableOrdinalPosition);
 
     transaction.body->Deserialize(&buffer, pos);
-  }
-
- void Logger::SerializeRow(std::vector<char> *buffer, uint32_t& pos, StorageTypes::Row *row){
-    const bool hasRow = row != nullptr;
-
-    memcpy(buffer->data() + pos, &hasRow, sizeof(bool));
-    pos += sizeof(bool);
-
-    if (!hasRow)
-      return;
-
-    const StorageTypes::RowHeader *rowHeader = row->GetHeader();
-
-    memcpy(buffer->data() + pos, &rowHeader->rowSize, sizeof(row_size_t));
-    pos += sizeof(row_size_t);
-    memcpy(buffer->data() + pos, &rowHeader->maxRowSize, sizeof(size_t));
-    pos += sizeof(size_t);
-
-    rowHeader->nullBitMap->WriteDataToFile(buffer, pos);
-    rowHeader->largeObjectBitMap->WriteDataToFile(buffer, pos);
-    rowHeader->overflowBitMap->WriteDataToFile(buffer, pos);
-
-    column_index_t columnIndex = 0;
-    for (const auto &block : row->GetData())
-    {
-      if (rowHeader->nullBitMap->Get(columnIndex))
-      {
-        columnIndex++;
-        continue;
-      }
-
-      block_size_t dataSize = block->GetBlockSize();
-
-      memcpy(buffer->data() + pos, &dataSize, sizeof(block_size_t));
-      pos += sizeof(block_size_t);
-
-
-      const auto &blockData = block->GetBlockData();
-
-      memcpy(buffer->data() + pos, blockData, dataSize);
-
-      columnIndex++;
-    }
-  }
-
-  StorageTypes::Row* Logger::DeserializeRow(const std::vector<char> &buffer, uint32_t &pos, const StorageTypes::Table* table){
-    auto* row = new StorageTypes::Row(*table);
-
-    auto *rowHeader = row->GetHeader();
-
-    memcpy(&rowHeader->rowSize, buffer.data() + pos, sizeof(row_size_t));
-    pos += sizeof(row_size_t);
-
-    memcpy(&rowHeader->maxRowSize, buffer.data() + pos, sizeof(size_t));
-    pos += sizeof(size_t);
-
-    rowHeader->nullBitMap->GetDataFromFile(buffer, pos);
-    rowHeader->largeObjectBitMap->GetDataFromFile(buffer, pos);
-    rowHeader->overflowBitMap->GetDataFromFile(buffer, pos);
-
-    const auto& columns = table->GetColumns();
-
-    for (int j = 0; j < columns.size(); j++)
-    {
-      if (rowHeader->nullBitMap->Get(j))
-      {
-        auto *block = new StorageTypes::Block(nullptr, 0, columns[j]);
-
-        row->InsertColumnData(block, j);
-
-        continue;
-      }
-
-      block_size_t bytesToRead;
-
-      memcpy(&bytesToRead, buffer.data() + pos, sizeof(block_size_t));
-      pos += sizeof(block_size_t);
-
-      auto *bytes = new unsigned char[bytesToRead];
-      memcpy(bytes, buffer.data() + pos, bytesToRead);
-
-      pos += bytesToRead;
-
-      auto *block = new StorageTypes::Block(bytes, bytesToRead, columns[j]);
-
-      row->InsertColumnData(block, j);
-
-      delete[] bytes;
-    }
-
-    return row;
   }
 
   CheckPoint Logger::Log(const LogEntry &transaction)const{
@@ -417,7 +325,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
         if (logEntry.body == nullptr)
           continue;
 
-        logEntry.body->Deserialize(&buffer, pos);
+        logEntry.body->Deserialize(&buffer, pos, tables.at(logEntry.tableOrdinalPosition));
 
         // ReSharper disable once CppDFAConstantConditions
         if (logEntry.transactionId == INVALID_TRANSACTION_ID) {

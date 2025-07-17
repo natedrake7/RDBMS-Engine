@@ -1,9 +1,15 @@
 #include "Logger.Structures.h"
+#include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../Table/Table.h"
 
 #include <cstring>
 
 
 namespace DatabaseEngine::LoggingStructures {
+
+   RowInsertBody::RowInsertBody(){
+     this->row = nullptr;
+  }
 
   RowInsertBody::RowInsertBody(StorageTypes::Row *row){
    this->row = row;
@@ -13,12 +19,25 @@ namespace DatabaseEngine::LoggingStructures {
    this->row->Serialize(buffer, pos);
   }
 
-  void RowInsertBody::Deserialize(const std::vector<char> *buffer, uint32_t &pos){
+  void RowInsertBody::Deserialize(
+    const std::vector<char> *buffer,
+    uint32_t &pos,
+    const StorageTypes::Table* table){
+    this->row = new StorageTypes::Row(*table);
+
+    this->row->Deserialize(buffer, pos);
+
+    this->row->PrintRow();
   }
 
   int RowInsertBody::GetSize() const{ return this->row->GetRowSize(); }
 
- RowUpdateBody::RowUpdateBody(StorageTypes::Row* oldRow, StorageTypes::Row* newRow){
+  RowUpdateBody::RowUpdateBody(){
+    this->oldRow = nullptr;
+    this->newRow = nullptr;
+  }
+
+  RowUpdateBody::RowUpdateBody(StorageTypes::Row* oldRow, StorageTypes::Row* newRow){
   this->oldRow = oldRow;
   this->newRow = newRow;
  }
@@ -28,12 +47,26 @@ namespace DatabaseEngine::LoggingStructures {
    this->newRow->Serialize(buffer, pos);
  }
 
- void RowUpdateBody::Deserialize(const std::vector<char> *buffer, uint32_t& pos){
+ void RowUpdateBody::Deserialize(
+   const std::vector<char> *buffer,
+   uint32_t& pos,
+   const StorageTypes::Table* table){
+    this->oldRow = new StorageTypes::Row(*table);
+
+    this->oldRow->Deserialize(buffer, pos);
+
+    this->newRow = new StorageTypes::Row(*table);
+
+    this->newRow->Deserialize(buffer, pos);
  }
 
  int RowUpdateBody::GetSize() const{ return this->oldRow->GetRowSize() + this->newRow->GetRowSize(); }
 
- RowDeleteBody::RowDeleteBody(StorageTypes::Row *row){
+  RowDeleteBody::RowDeleteBody(){
+     this->row = nullptr;
+  }
+
+  RowDeleteBody::RowDeleteBody(StorageTypes::Row *row){
    this->row = row;
  }
 
@@ -41,7 +74,13 @@ namespace DatabaseEngine::LoggingStructures {
    this->row->Serialize(buffer, pos);
   }
 
-  void RowDeleteBody::Deserialize(const std::vector<char> *buffer, uint32_t& pos){
+  void RowDeleteBody::Deserialize(
+    const std::vector<char> *buffer,
+    uint32_t& pos,
+    const StorageTypes::Table* table){
+    this->row = new StorageTypes::Row(*table);
+
+    this->row->Deserialize(buffer, pos);
   }
 
  int RowDeleteBody::GetSize() const{ return this->row->GetRowSize(); }
@@ -61,7 +100,7 @@ namespace DatabaseEngine::LoggingStructures {
    pos += querySize;
  }
 
-void TableCreateBody::Deserialize(const std::vector<char> *buffer, uint32_t& pos){
+void TableCreateBody::Deserialize(const std::vector<char> *buffer, uint32_t& pos, const StorageTypes::Table* table){
    uint32_t querySize = 0;
 
    memcpy(&querySize, buffer->data() + pos, sizeof(uint32_t));
