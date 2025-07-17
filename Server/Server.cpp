@@ -210,6 +210,9 @@ namespace Server {
 
     db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
 
+    for (const auto& log : db->RecoverLogs()) {
+      std::cout << log << std::endl;
+    }
     // db->GetIdentityColumns();
 
     //master db id
@@ -1430,7 +1433,7 @@ namespace Server {
       this->masterDb->CreateTable(table.id, i, columns, &index);
     }
 
-    this->masterDb->InitializeLogger(this->sysDbName, false);
+    this->masterDb->InitializeLogger(this->sysDbName);
   }
 
   bool ServerInstance::CheckIfMasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }

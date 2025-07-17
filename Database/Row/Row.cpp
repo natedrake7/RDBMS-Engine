@@ -317,6 +317,7 @@ namespace DatabaseEngine::StorageTypes {
         rowHeaderSize += sizeof(size_t);
         rowHeaderSize += this->header.nullBitMap->GetSizeInBytes();
         rowHeaderSize += this->header.largeObjectBitMap->GetSizeInBytes();
+        rowHeaderSize += this->header.overflowBitMap->GetSizeInBytes();
 
         return rowHeaderSize;
     }
@@ -527,4 +528,90 @@ namespace DatabaseEngine::StorageTypes {
             delete[] bytes;
         }
     }
+
+    std::ostream & operator<<(std::ostream &os, const Row &row){
+
+        for(size_t i = 0; i < row.data.size(); i++)
+        {
+            const ColumnType columnType = row.data[i]->GetColumnType();
+            const object_t* blockData = row.data[i]->GetBlockData();
+            const block_size_t& blockSize = row.data[i]->GetBlockSize();
+
+            if(blockData == nullptr)
+            {
+                cout << "NULL";
+
+                if(i == row.data.size() - 1)
+                    cout << '\n';
+                else
+                    cout << " || ";
+
+                continue;
+            }
+
+            switch (columnType)
+            {
+                case ColumnType::TinyInt:
+                {
+                    cout << *reinterpret_cast<const int8_t*>(blockData);
+                    break;
+                }
+                case ColumnType::SmallInt:
+                {
+                    cout << *reinterpret_cast<const int16_t*>(blockData);
+                    break;
+                }
+                case ColumnType::Int:
+                {
+                    cout << *reinterpret_cast<const int32_t*>(blockData);
+                    break;
+                }
+                case ColumnType::BigInt:
+                {
+                    cout << *reinterpret_cast<const int64_t*>(blockData);
+                    break;
+                }
+                case ColumnType::Decimal:
+                {
+                    cout << Decimal(blockData, blockSize).ToString();
+                    break;
+                }
+                case ColumnType::Guid: {
+                    cout << row.data[i]->GetGuid();
+                    break;
+                }
+                case ColumnType::String:
+                {
+                    cout.write(reinterpret_cast<const char*>(blockData), blockSize);
+                    break;
+                }
+                case ColumnType::UnicodeString:
+                {
+                    wcout.write(reinterpret_cast<const wchar_t*>(blockData), blockSize / sizeof(char16_t));
+                    break;
+                }
+                case ColumnType::Bool:
+                {
+                    cout << (*reinterpret_cast<const bool*>(blockData) ? "true" : "false");
+                    break;
+                }
+                case ColumnType::DateTime:
+                {
+                    cout << DateTime(reinterpret_cast<time_t>(blockData)).ToString();
+                    break;
+                }
+                case ColumnType::ColumnTypeCount:
+                default:
+                    throw invalid_argument("Row::PrintRow Invalid Column specified");
+            }
+
+            if(i == row.data.size() - 1)
+                cout << '\n';
+            else
+                cout << " || ";
+        }
+
+        return os;
+    }
+
 }

@@ -105,5 +105,7 @@ namespace DatabaseEngine::StorageTypes
         void Serialize(std::vector<char>* buffer, uint32_t& pos)const;
 
         void Deserialize(const std::vector<char>* buffer, uint32_t& pos);
+
+        friend std::ostream& operator<<(std::ostream& os, const Row& row);
     };
 }

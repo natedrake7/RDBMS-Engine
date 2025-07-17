@@ -148,6 +148,7 @@ namespace DatabaseEngine
         const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
 
         this->header = *headerPage->GetDatabaseHeader();
+        this->logger = nullptr;
 
         const auto& headerPageTables = headerPage->GetTablesFullHeaders();
 
@@ -174,6 +175,7 @@ namespace DatabaseEngine
         const HeaderPage *headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
 
         this->header = *headerPage->GetDatabaseHeader();
+        this->logger = nullptr;
 
         if (isServerInitialization)
             return;
@@ -203,15 +205,22 @@ namespace DatabaseEngine
         delete this->logger;
     }
 
+    std::vector<Logging::LogEntry> Database::RecoverLogs()const{
+        if (this->logger == nullptr)
+            return {};
+
+        return this->logger->RecoverLogs(this->tables);
+    }
+
     void Database::LogCheckPoint(Logging::CheckPoint &checkPoint) const{
         this->logger->LogCheckPoint(checkPoint);
     }
 
-    void Database::InitializeLogger(const std::string& dbName, const bool& isRecovery){
-        this->logger = new Logging::Logger(Database::CreateDatabasePath(dbName) + "_log");
+    void Database::InitializeLogger(const std::string& dbName){
+        if (this->logger != nullptr)
+            return;
 
-        if (isRecovery)
-            this->logger->RecoverLogs(this->tables);
+        this->logger = new Logging::Logger(Database::CreateDatabasePath(dbName) + "_log");
     }
 
     Constants::transaction_id_t Database::StartLogTransaction()const{ return this->logger->StartTransaction(); }

@@ -7,6 +7,10 @@
 
 namespace DatabaseEngine::LoggingStructures {
 
+  std::ostream& operator<<(std::ostream& os, const LogEntryBody& logEntry){
+    return logEntry.Print(os);
+  }
+
    RowInsertBody::RowInsertBody(){
      this->row = nullptr;
   }
@@ -26,11 +30,14 @@ namespace DatabaseEngine::LoggingStructures {
     this->row = new StorageTypes::Row(*table);
 
     this->row->Deserialize(buffer, pos);
-
-    this->row->PrintRow();
   }
 
-  int RowInsertBody::GetSize() const{ return this->row->GetRowSize(); }
+  int RowInsertBody::GetSize() const{ return static_cast<int>(this->row->GetTotalRowSize()); }
+
+  std::ostream& RowInsertBody::Print(std::ostream& os)const{
+    os << *this->row << std::endl;
+    return os;
+  }
 
   RowUpdateBody::RowUpdateBody(){
     this->oldRow = nullptr;
@@ -62,6 +69,13 @@ namespace DatabaseEngine::LoggingStructures {
 
  int RowUpdateBody::GetSize() const{ return this->oldRow->GetRowSize() + this->newRow->GetRowSize(); }
 
+  std::ostream & RowUpdateBody::Print(std::ostream &os) const{
+      os << *this->oldRow << std::endl;
+      os << *this->newRow << std::endl;
+
+      return os;
+  }
+
   RowDeleteBody::RowDeleteBody(){
      this->row = nullptr;
   }
@@ -84,6 +98,11 @@ namespace DatabaseEngine::LoggingStructures {
   }
 
  int RowDeleteBody::GetSize() const{ return this->row->GetRowSize(); }
+
+  std::ostream & RowDeleteBody::Print(std::ostream &os) const{
+    os << *this->row << std::endl;
+    return os;
+  }
 
  TableCreateBody::TableCreateBody() {}
 
@@ -112,4 +131,9 @@ void TableCreateBody::Deserialize(const std::vector<char> *buffer, uint32_t& pos
 }
 
 int TableCreateBody::GetSize() const{ return sizeof(uint32_t) + this->query.size(); }
+
+std::ostream & TableCreateBody::Print(std::ostream &os) const{
+    os << this->query << std::endl;
+    return os;
+}
 }

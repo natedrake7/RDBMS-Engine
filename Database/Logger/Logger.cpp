@@ -117,6 +117,31 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
         sizeof(this->rowIndex);
   }
 
+  void LogEntry::Serialize(std::vector<char> *buffer) const{
+    uint32_t pos = 0;
+
+    const auto transactionSize = this->GetSize();
+
+    buffer->resize(transactionSize + sizeof(transactionSize));
+
+    memcpy(buffer->data() + pos, &transactionSize, sizeof(transactionSize));
+    pos += sizeof(transactionSize);
+    memcpy(buffer->data() + pos, &this->transactionId, sizeof(this->transactionId));
+    pos += sizeof(this->transactionId);
+    memcpy(buffer->data() + pos, &this->logSequenceNumber, sizeof(this->logSequenceNumber));
+    pos += sizeof(this->logSequenceNumber);
+    memcpy(buffer->data() + pos, &this->operation, sizeof(this->operation));
+    pos += sizeof(this->operation);
+    memcpy(buffer->data() + pos, &this->tableOrdinalPosition, sizeof(this->tableOrdinalPosition));
+    pos += sizeof(this->tableOrdinalPosition);
+    memcpy(buffer->data() + pos, &this->pageId, sizeof(this->pageId));
+    pos += sizeof(this->pageId);
+    memcpy(buffer->data() + pos, &this->rowIndex, sizeof(this->rowIndex));
+    pos += sizeof(this->rowIndex);
+
+    this->body->Serialize(buffer, pos);
+  }
+
   void LogEntry::AllocateBody(){
     switch (this->operation) {
       case InsertRow:
@@ -147,31 +172,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     fsync(this->checkPointFileDescriptor);
   }
 
-void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &transaction) {
-    uint32_t pos = 0;
-
-    const auto transactionSize = transaction.GetSize();
-
-    buffer->resize(transactionSize + sizeof(transactionSize));
-
-    memcpy(buffer->data() + pos, &transactionSize, sizeof(transactionSize));
-    pos += sizeof(transactionSize);
-    memcpy(buffer->data() + pos, &transaction.transactionId, sizeof(transaction.transactionId));
-    pos += sizeof(transaction.transactionId);
-    memcpy(buffer->data() + pos, &transaction.logSequenceNumber, sizeof(transaction.logSequenceNumber));
-    pos += sizeof(transaction.logSequenceNumber);
-    memcpy(buffer->data() + pos, &transaction.operation, sizeof(transaction.operation));
-    pos += sizeof(transaction.operation);
-    memcpy(buffer->data() + pos, &transaction.tableOrdinalPosition, sizeof(transaction.tableOrdinalPosition));
-    pos += sizeof(transaction.tableOrdinalPosition);
-    memcpy(buffer->data() + pos, &transaction.pageId, sizeof(transaction.pageId));
-    pos += sizeof(transaction.pageId);
-    memcpy(buffer->data() + pos, &transaction.rowIndex, sizeof(transaction.rowIndex));
-    pos += sizeof(transaction.rowIndex);
-
-    transaction.body->Serialize(buffer, pos);
-  }
-
   void Logger::DeserializeLogEntryHeader(const std::vector<char> &buffer, LogEntry &transaction, uint32_t &pos){
     memcpy(&transaction.transactionId, buffer.data() + pos, sizeof(transaction.transactionId));
     pos += sizeof(transaction.transactionId);
@@ -192,32 +192,21 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
     pos += sizeof(transaction.rowIndex);
   }
 
-  //TODO implement to allow row-splitting between batches
-  void Logger::DeserializeLogEntryBody(
-    const std::vector<char> &buffer,
-    const LogEntry &transaction,
-    const std::vector<StorageTypes::Table*> &tables,
-    uint32_t& pos){
-    // const auto* table = tables.at(transaction.tableOrdinalPosition);
-
-    transaction.body->Deserialize(&buffer, pos);
-  }
-
-  CheckPoint Logger::Log(const LogEntry &transaction)const{
+  CheckPoint Logger::Log(const LogEntry &logEntry)const{
     std::vector<char> buffer;
-    Logger::SerializeTransaction(&buffer, transaction);
+    logEntry.Serialize(&buffer);
 
     const __off_t fileOffset = lseek(this->logFileDescriptor, 0, SEEK_END);
 
     const auto result = ::write(this->logFileDescriptor, buffer.data(), buffer.size());
 
-    this->FlushLogDescriptor();
+    // this->FlushLogDescriptor();
 
     if (result < 0 || result != buffer.size()) {
       std::cerr << "Failed to write transaction to log file" << std::endl;
     }
 
-    return { transaction.transactionId, transaction.logSequenceNumber, fileOffset };
+    return { logEntry.transactionId, logEntry.logSequenceNumber, fileOffset };
   }
 
   LogEntry Logger::CreateLogEntry(
@@ -261,7 +250,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
     }
   }
 
-  void Logger::RecoverLogs(const std::vector<StorageTypes::Table*>& tables){
+  std::vector<LogEntry>  Logger::RecoverLogs(const std::vector<StorageTypes::Table*>& tables){
 
     constexpr size_t BATCH_SIZE = 1024 * 1024; // 1 MB
 
@@ -271,7 +260,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
 
     if (lastValidCheckPoint.transactionId == INVALID_TRANSACTION_ID) {
       std::cerr << "No valid checkpoint found, recovery cannot proceed." << std::endl;
-      return;
+      return {};
     }
 
     ::lseek(this->logFileDescriptor, lastValidCheckPoint.logFileOffset, SEEK_SET);
@@ -293,7 +282,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
 
       if (bytesRead == 0) {
         //TODO check if leftovers are available and process them
-        return;
+        return logEntries;
       }
 
       uint32_t pos = 0;
@@ -333,6 +322,8 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
           continue;
         }
 
+        std::cout << logEntry << std::endl;
+
         if (logEntry.transactionId == lastValidCheckPoint.transactionId
           && logEntry.logSequenceNumber == lastValidCheckPoint.logSequenceNumber)
           continue;
@@ -341,12 +332,6 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
 
         leftovers.clear();
         buffer.clear();
-
-        // Process the transaction
-        // This is where you would apply the transaction to the database state
-        // For example:
-        // this->ApplyTransaction(transaction);
-        // this->currentTransactionId = transaction.transactionId++;
       }
     }
   }
@@ -366,8 +351,11 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
     // ::lseek(this->checkPointFileDescriptor, 0, SEEK_SET);
     const auto result = ::read(this->checkPointFileDescriptor, &checkPoint, CheckPoint::Size());
 
-    if (result == 0)
+    if (result == 0) {
+      //first insert failed no bytes were read
+      checkPoint.transactionId = 0;
       return checkPoint;
+    }
 
     if (result < 0 || result != CheckPoint::Size()) {
       std::cerr << "Failed to read checkpoint from checkpoint file" << std::endl;
@@ -396,4 +384,14 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
            sizeof(off_t) +
            sizeof(uint32_t);
   }
+
+  ostream & operator<<(ostream &stream, const LogEntry &logEntry){
+    stream << "Log Entry:" << std::endl;
+    stream << "Transaction ID: " << logEntry.transactionId << " "
+          << " Log Sequence Number: " << logEntry.logSequenceNumber << std::endl;
+
+    return logEntry.body->Print(stream);
+  }
+
+
 }

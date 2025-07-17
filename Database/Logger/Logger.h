@@ -63,7 +63,10 @@ namespace DatabaseEngine::Logging {
 
     [[nodiscard]] int GetSize()const;
     [[nodiscard]] int GetStaticDataSize()const;
+    void Serialize(std::vector<char>* buffer)const;
     void AllocateBody();
+
+    friend ostream& operator<<(ostream& stream, const LogEntry& logEntry);
   };
 
 
@@ -79,17 +82,9 @@ namespace DatabaseEngine::Logging {
 
     void FlushCheckPointDescriptor()const;
 
-    static void SerializeTransaction(std::vector<char>* buffer, const LogEntry& transaction);
-
     static void DeserializeLogEntryHeader(
       const std::vector<char>& buffer,
       LogEntry& transaction,
-      uint32_t& pos);
-
-    static void DeserializeLogEntryBody(
-      const std::vector<char>& buffer,
-      const LogEntry& transaction,
-      const std::vector<StorageTypes::Table*> &tables,
       uint32_t& pos);
 
     [[nodiscard]] CheckPoint RecoverLastCheckPoint() const;
@@ -105,7 +100,7 @@ namespace DatabaseEngine::Logging {
       Logger& operator=(const Logger&) = delete;
       Logger& operator=(Logger&&) = delete;
 
-      [[nodiscard]]CheckPoint Log(const LogEntry& transaction)const;
+      [[nodiscard]]CheckPoint Log(const LogEntry& logEntry)const;
 
       [[nodiscard]] LogEntry CreateLogEntry(
             const Constants::transaction_id_t& transactionId,
@@ -119,7 +114,7 @@ namespace DatabaseEngine::Logging {
 
     void LogCheckPoint(CheckPoint& checkPoint)const;
 
-    void RecoverLogs(const std::vector<StorageTypes::Table*>& tables);
+    std::vector<LogEntry>  RecoverLogs(const std::vector<StorageTypes::Table*>& tables);
   };
 
 

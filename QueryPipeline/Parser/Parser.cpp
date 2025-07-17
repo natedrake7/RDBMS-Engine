@@ -64,6 +64,9 @@ namespace QueryPipeline
             return;
         }
 
+        if (statement == nullptr)
+            return;
+
         if (!statement->Validate()) {
             delete statement;
             return;

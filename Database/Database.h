@@ -102,16 +102,18 @@ public:
 
     ~Database();
 
-  void InitializeLogger(const std::string& dbName, const bool& isRecovery = false);
+    std::vector<Logging::LogEntry> RecoverLogs()const;
 
-  void LogCheckPoint(Logging::CheckPoint& checkPoint) const;
+    void InitializeLogger(const std::string& dbName);
 
-  [[nodiscard]] Constants::transaction_id_t StartLogTransaction()const;
+    void LogCheckPoint(Logging::CheckPoint& checkPoint) const;
 
-  [[nodiscard]] Logging::CheckPoint LogRowInsert(
-      StorageTypes::Row* row,
-      const Constants::transaction_id_t& transactionId,
-      const Constants::table_id_t& tableOrdinal)const;
+    [[nodiscard]] Constants::transaction_id_t StartLogTransaction()const;
+
+    [[nodiscard]] Logging::CheckPoint LogRowInsert(
+        StorageTypes::Row* row,
+        const Constants::transaction_id_t& transactionId,
+        const Constants::table_id_t& tableOrdinal)const;
 
     static string CreateDatabasePath(const std::string& dbName);
 

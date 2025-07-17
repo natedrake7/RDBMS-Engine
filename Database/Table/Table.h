@@ -150,7 +150,7 @@ namespace DatabaseEngine::StorageTypes
 
             AdditionalDataTypes::ResultStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Field> &inputData);
 
-            void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns);
+            void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const;
 
             void DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const;
 

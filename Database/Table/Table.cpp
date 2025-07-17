@@ -196,7 +196,7 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
 
-        // this->database->LogCheckPoint(checkPoint);
+        this->database->LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
         result.primaryKeyVal = primaryKeyVal;
@@ -277,7 +277,7 @@ namespace DatabaseEngine::StorageTypes {
           row->InsertColumnData(block, associatedColumnIndex);
         }
 
-        // *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
         return row;
       }
@@ -856,7 +856,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns){
+    void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const{
       const auto& filename = this->database->GetFileName();
 
       const RowHeader* rowHeader = row->GetHeader();
