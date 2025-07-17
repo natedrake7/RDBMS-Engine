@@ -1429,6 +1429,8 @@ namespace Server {
       Headers::Index index(primaryKey);
       this->masterDb->CreateTable(table.id, i, columns, &index);
     }
+
+    this->masterDb->InitializeLogger(this->sysDbName, false);
   }
 
   bool ServerInstance::CheckIfMasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }

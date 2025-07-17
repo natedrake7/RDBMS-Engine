@@ -45,7 +45,7 @@ void InsertRowsToMoviesTable(Table* table);
 //and check if index index is available in the results to speed by sorting
 //Futher improve select, insert, update statements to allow nested select in them (complex validation will be required)
 //allow ctes and tempporary tables.
-//WAL (check row serialization/ deserialization works)
+//WAL (check row serialization/ deserialization works) figure out why wal creates heap corruption.
 //tempdb
 //transactions(usage of tempDb maybe).
 //used aliases in logical and physical table scans and joins.

@@ -95,14 +95,14 @@ protected:
 
     void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId) const;
 
-    void InitializeLogger(const std::string& dbName);
-
 public:
     explicit Database(const string &dbName, const bool& isServerInitialization = false);
 
     explicit Database(const std::string& dbName, const vector<Headers::sysTable>& tables);
 
     ~Database();
+
+  void InitializeLogger(const std::string& dbName, const bool& isRecovery = false);
 
   void LogCheckPoint(Logging::CheckPoint& checkPoint) const;
 

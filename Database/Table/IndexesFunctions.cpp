@@ -15,17 +15,17 @@ namespace DatabaseEngine::StorageTypes {
     
     BPlusTree* Table::GetClusteredIndexedTree() 
     {
-        if(this->clusteredIndexedTree == nullptr)
-        {
-            this->clusteredIndexedTree = new BPlusTree(this, this->header.clusteredIndexPageId, TreeType::Clustered);
+        if(this->clusteredIndexedTree != nullptr)
+            return this->clusteredIndexedTree;
 
-            if (this->header.clusteredIndexPageId == INVALID_PAGE_ID)
-                return this->clusteredIndexedTree;
-            
-            this->GetClusteredIndexFromDisk();
-        }
+        this->clusteredIndexedTree = new BPlusTree(this, this->header.clusteredIndexPageId, TreeType::Clustered);
 
-        return this->clusteredIndexedTree; 
+        if (this->header.clusteredIndexPageId == INVALID_PAGE_ID)
+            return this->clusteredIndexedTree;
+
+        this->GetClusteredIndexFromDisk();
+
+        return this->clusteredIndexedTree;
     }
 
     BPlusTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId)

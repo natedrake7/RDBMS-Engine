@@ -207,9 +207,11 @@ namespace DatabaseEngine
         this->logger->LogCheckPoint(checkPoint);
     }
 
-    void Database::InitializeLogger(const std::string& dbName){
+    void Database::InitializeLogger(const std::string& dbName, const bool& isRecovery){
         this->logger = new Logging::Logger(Database::CreateDatabasePath(dbName) + "_log");
-        this->logger->RecoverLogs(this->tables);
+
+        if (isRecovery)
+            this->logger->RecoverLogs(this->tables);
     }
 
     Constants::transaction_id_t Database::StartLogTransaction()const{ return this->logger->StartTransaction(); }

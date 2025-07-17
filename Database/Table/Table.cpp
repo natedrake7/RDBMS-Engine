@@ -193,11 +193,10 @@ namespace DatabaseEngine::StorageTypes {
 
         auto result =  this->InsertRow(row, extents, startingExtentIndex);
 
-
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
 
-        this->database->LogCheckPoint(checkPoint);
+        // this->database->LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
         result.primaryKeyVal = primaryKeyVal;
@@ -278,7 +277,7 @@ namespace DatabaseEngine::StorageTypes {
           row->InsertColumnData(block, associatedColumnIndex);
         }
 
-        *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        // *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
         return row;
       }
