@@ -1,6 +1,7 @@
 #pragma once
 #include "../Constants.h"
 #include "../Row/Row.h"
+#include "./Logger.Structures.h"
 #include <cstdint>
 #include <mutex>
 
@@ -9,9 +10,10 @@ namespace DatabaseEngine::Logging {
 
   enum OperationType : uint8_t{
     InvalidOperation = 0,
-    Insert = 1,
-    Update = 2,
-    Delete = 3,
+    InsertRow = 1,
+    UpdateRow = 2,
+    DeleteRow = 3,
+    CreateTable = 4,
   };
 
   struct CheckPoint {
@@ -29,18 +31,15 @@ namespace DatabaseEngine::Logging {
                const off_t& logFileOffset);
   };
 
+
   struct LogEntry  {
-    Constants::transaction_id_t transactionId = INVALID_TRANSACTION_ID;
+    Constants::transaction_id_t transactionId;
     OperationType operation;
     Constants::table_id_t tableOrdinalPosition; //in master db
     Constants::page_id_t pageId;
     int rowIndex;
 
-    bool hasOldRow; // Indicates if the old row exists
-    StorageTypes::Row* oldRow;
-
-    bool hasNewRow; // Indicates if the new row exists
-    StorageTypes::Row* newRow;
+    LoggingStructures::LogEntryBody* body;
 
     Constants::log_sequence_number_t logSequenceNumber; // Sequence number for the log entry
 
@@ -51,12 +50,15 @@ namespace DatabaseEngine::Logging {
                 const Constants::table_id_t& tableOrdinalPosition,
                 const Constants::page_id_t& pageId,
                 const int& rowIndex,
-                StorageTypes::Row* oldRow = nullptr,
-                StorageTypes::Row* newRow = nullptr);
+                LoggingStructures::LogEntryBody* body);
+
+    ~LogEntry();
 
     [[nodiscard]] int GetSize()const;
     [[nodiscard]] int GetStaticDataSize()const;
+    void AllocateBody();
   };
+
 
   class Logger final {
     int logFileDescriptor;
@@ -79,7 +81,7 @@ namespace DatabaseEngine::Logging {
 
     static void DeserializeLogEntryBody(
       const std::vector<char>& buffer,
-      LogEntry& transaction,
+      const LogEntry& transaction,
       const std::vector<StorageTypes::Table*> &tables,
       uint32_t& pos);
 
@@ -108,8 +110,7 @@ namespace DatabaseEngine::Logging {
             const Constants::table_id_t& tableOrdinalPosition,
             const Constants::page_id_t& pageId,
             const int& rowIndex,
-            StorageTypes::Row* oldRow = nullptr,
-            StorageTypes::Row* newRow = nullptr);
+            LoggingStructures::LogEntryBody* body);
 
      [[nodiscard]] Constants::transaction_id_t StartTransaction();
 

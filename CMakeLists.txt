@@ -156,7 +156,9 @@ add_library(Database SHARED
         Database/Pages/OverflowPage/OverflowPage.cpp
         Database/Pages/OverflowPage/OverflowPage.h
         Database/Logger/Logger.cpp
-        Database/Logger/Logger.h)
+        Database/Logger/Logger.h
+        Database/Logger/Logger.Structures.h
+        Database/Logger/Logger.Structures.cpp)
 
 add_library(Server SHARED
         Server/ConnectionManager/ConnectionManager.cpp

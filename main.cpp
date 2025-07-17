@@ -147,15 +147,17 @@ int main()
 
     auto transactionId = logger.StartTransaction();
 
-    auto transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::Insert, 10, 10, 0);
+    auto* logBody = new LoggingStructures::TableCreateBody(createMoviesTable);
+
+    auto transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::CreateTable, 10, 10, 0, logBody);
 
     auto checkpoint = logger.Log(transaction);
-
+    //
     logger.LogCheckPoint(checkpoint);
-
-    auto new_transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::Insert, 10, 10, 0);
-
-    auto new_checkpoint = logger.Log(new_transaction);
+    //
+    // auto new_transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::Insert, 10, 10, 0, nullptr);
+    //
+    // auto new_checkpoint = logger.Log(new_transaction);
 
     // logger.LogCheckPoint(new_checkpoint);
 

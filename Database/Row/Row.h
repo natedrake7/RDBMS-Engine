@@ -101,5 +101,7 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
 
         [[nodiscard]] vector<Block*> GetBlockCopies() const;
+
+        void Serialize(std::vector<char>* buffer, uint32_t& pos)const;
     };
 }

@@ -451,4 +451,37 @@ namespace DatabaseEngine::StorageTypes {
 
     return page->GetObject(objectPointer.index);
   }
+
+    void Row::Serialize(std::vector<char>* buffer, uint32_t& pos)const{
+        memcpy(buffer->data() + pos, &this->header.rowSize, sizeof(row_size_t));
+        pos += sizeof(row_size_t);
+        memcpy(buffer->data() + pos, &this->header.maxRowSize, sizeof(size_t));
+        pos += sizeof(size_t);
+
+        this->header.nullBitMap->WriteDataToFile(buffer, pos);
+        this->header.largeObjectBitMap->WriteDataToFile(buffer, pos);
+        this->header.overflowBitMap->WriteDataToFile(buffer, pos);
+
+        column_index_t columnIndex = 0;
+        for (const auto &block : this->data)
+        {
+            if (this->header.nullBitMap->Get(columnIndex))
+            {
+                columnIndex++;
+                continue;
+            }
+
+            block_size_t dataSize = block->GetBlockSize();
+
+            memcpy(buffer->data() + pos, &dataSize, sizeof(block_size_t));
+            pos += sizeof(block_size_t);
+
+
+            const auto &blockData = block->GetBlockData();
+
+            memcpy(buffer->data() + pos, blockData, dataSize);
+
+            columnIndex++;
+        }
+    }
 }

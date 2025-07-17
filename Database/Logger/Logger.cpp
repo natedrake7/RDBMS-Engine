@@ -80,13 +80,9 @@ namespace DatabaseEngine::Logging {
     this->rowIndex = 0;
     this->tableOrdinalPosition = 0;
 
-    this->hasNewRow = false;
-    this->oldRow = nullptr;
+    this->body = nullptr;
 
-    this->hasOldRow = false;
-    this->newRow = nullptr;
   }
-
 
   LogEntry::LogEntry(
     const Constants::transaction_id_t &transactionId,
@@ -95,8 +91,7 @@ namespace DatabaseEngine::Logging {
     const Constants::table_id_t &tableOrdinalPosition,
     const Constants::page_id_t &pageId,
     const int &rowIndex,
-    StorageTypes::Row *oldRow,
-    StorageTypes::Row *newRow){
+    LoggingStructures::LogEntryBody* body){
 
     this->transactionId = transactionId;
     this->logSequenceNumber = logSequenceNumber;
@@ -105,21 +100,15 @@ namespace DatabaseEngine::Logging {
     this->rowIndex = rowIndex;
     this->tableOrdinalPosition = tableOrdinalPosition;
 
-    this->hasNewRow = oldRow == nullptr;
-    this->oldRow = oldRow;
-
-    this->hasOldRow = newRow == nullptr;
-    this->newRow = newRow;
+    this->body = body;
   }
 
-int LogEntry::GetSize()const{
-    int size = this->GetStaticDataSize();
+  LogEntry::~LogEntry(){
+    delete this->body;
+  }
 
-    size += sizeof(bool) * 2; // hasOldRow and hasNewRow
-    size += this->oldRow == nullptr ? 0 : static_cast<int>(this->oldRow->GetRowSize());
-    size += this->newRow == nullptr ? 0 : static_cast<int>(this->newRow->GetRowSize());
-
-    return size;
+  int LogEntry::GetSize()const{
+    return this->GetStaticDataSize() + ((this->body != nullptr) ? this->body->GetSize() : 0);
   }
 
   int LogEntry::GetStaticDataSize()const {
@@ -130,6 +119,25 @@ int LogEntry::GetSize()const{
         sizeof(this->tableOrdinalPosition) +
         sizeof(this->pageId) +
         sizeof(this->rowIndex);
+  }
+
+  void LogEntry::AllocateBody(){
+    switch (this->operation) {
+      case InsertRow:
+        break;
+      case UpdateRow:
+        break;
+      case DeleteRow:
+        break;
+      case CreateTable:
+        this->body = new LoggingStructures::TableCreateBody();
+        break;
+      case InvalidOperation:
+      default:
+        this->body = nullptr;
+        std::cerr << "Unknown operation type: " << static_cast<int>(this->operation) << std::endl;
+        break;
+    }
   }
 
   void Logger::FlushLogDescriptor()const{
@@ -162,10 +170,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
     memcpy(buffer->data() + pos, &transaction.rowIndex, sizeof(transaction.rowIndex));
     pos += sizeof(transaction.rowIndex);
 
-    Logger::SerializeRow(buffer, pos, transaction.oldRow);
-
-    Logger::SerializeRow(buffer, pos, transaction.newRow);
-
+    transaction.body->Serialize(buffer, pos);
   }
 
   void Logger::DeserializeLogEntryHeader(const std::vector<char> &buffer, LogEntry &transaction, uint32_t &pos){
@@ -191,22 +196,12 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
   //TODO implement to allow row-splitting between batches
   void Logger::DeserializeLogEntryBody(
     const std::vector<char> &buffer,
-    LogEntry &transaction,
+    const LogEntry &transaction,
     const std::vector<StorageTypes::Table*> &tables,
     uint32_t& pos){
     // const auto* table = tables.at(transaction.tableOrdinalPosition);
 
-    memcpy(&transaction.hasOldRow, buffer.data() + pos, sizeof(bool));
-    pos += sizeof(bool);
-
-    if (transaction.hasOldRow)
-      Logger::DeserializeRow(buffer, pos, nullptr);
-
-    memcpy(&transaction.hasNewRow, buffer.data() + pos, sizeof(bool));
-    pos += sizeof(bool);
-
-    if (transaction.hasNewRow)
-      Logger::DeserializeRow(buffer, pos, nullptr);
+    transaction.body->Deserialize(&buffer, pos);
   }
 
  void Logger::SerializeRow(std::vector<char> *buffer, uint32_t& pos, StorageTypes::Row *row){
@@ -318,13 +313,12 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
   }
 
   LogEntry Logger::CreateLogEntry(
-    const Constants::transaction_id_t& transactionId,
-    const OperationType &operation,
-    const Constants::table_id_t& tableOrdinalPosition,
-    const Constants::page_id_t& pageId,
-    const int& rowIndex,
-    StorageTypes::Row *oldRow,
-    StorageTypes::Row *newRow) {
+      const Constants::transaction_id_t& transactionId,
+      const OperationType &operation,
+      const Constants::table_id_t& tableOrdinalPosition,
+      const Constants::page_id_t& pageId,
+      const int& rowIndex,
+      LoggingStructures::LogEntryBody* body) {
 
     const auto logSequenceNumber = this->transactionLogSequenceNumbers.Get(transactionId);
     this->transactionLogSequenceNumbers.Update(transactionId, logSequenceNumber + 1);
@@ -336,8 +330,7 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
       tableOrdinalPosition,
       pageId,
       rowIndex,
-      oldRow,
-      newRow,
+      body
     };
   }
 
@@ -419,7 +412,12 @@ void Logger::SerializeTransaction(std::vector<char> *buffer, const LogEntry &tra
           break;
         }
 
-        Logger::DeserializeLogEntryBody(buffer, logEntry, tables, pos);
+        logEntry.AllocateBody();
+
+        if (logEntry.body == nullptr)
+          continue;
+
+        logEntry.body->Deserialize(&buffer, pos);
 
         // ReSharper disable once CppDFAConstantConditions
         if (logEntry.transactionId == INVALID_TRANSACTION_ID) {
