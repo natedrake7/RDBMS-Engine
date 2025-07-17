@@ -7,10 +7,11 @@
 
 namespace DatabaseEngine::Logging {
 
-  enum OperationType {
-    Insert = 0,
-    Update = 1,
-    Delete = 2,
+  enum OperationType : uint8_t{
+    InvalidOperation = 0,
+    Insert = 1,
+    Update = 2,
+    Delete = 3,
   };
 
   struct CheckPoint {
@@ -21,6 +22,11 @@ namespace DatabaseEngine::Logging {
 
     static constexpr uint32_t Size();
     [[nodiscard]] uint32_t static CalculateCheckSum(const CheckPoint& checkpoint);
+
+    CheckPoint();
+    CheckPoint(const Constants::transaction_id_t& transactionId,
+               const Constants::log_sequence_number_t& logSequenceNumber,
+               const off_t& logFileOffset);
   };
 
   struct Transaction {
@@ -37,6 +43,16 @@ namespace DatabaseEngine::Logging {
     StorageTypes::Row* newRow;
 
     Constants::log_sequence_number_t logSequenceNumber; // Sequence number for the log entry
+
+    Transaction();
+    Transaction(const Constants::transaction_id_t& transactionId,
+                const Constants::log_sequence_number_t& logSequenceNumber,
+                const OperationType& operation,
+                const Constants::table_id_t& tableOrdinalPosition,
+                const Constants::page_id_t& pageId,
+                const int& rowIndex,
+                StorageTypes::Row* oldRow = nullptr,
+                StorageTypes::Row* newRow = nullptr);
 
     [[nodiscard]] int GetSize()const;
     [[nodiscard]] int GetStaticDataSize()const;
@@ -72,6 +88,8 @@ namespace DatabaseEngine::Logging {
     static void SerializeRow(std::vector<char> *buffer, uint32_t& pos, StorageTypes::Row *row);
 
     [[nodiscard]] CheckPoint RecoverLastCheckPoint() const;
+
+    void SetCurrentTransactionId(const Constants::transaction_id_t& transactionId);
 
   public:
       explicit Logger(const std::string& logFilePath);

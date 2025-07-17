@@ -153,6 +153,12 @@ int main()
 
     logger.LogCheckPoint(checkpoint);
 
+    auto new_transaction = logger.CreateTransaction(transactionId, Logging::OperationType::Insert, 10, 10, 0);
+
+    auto new_checkpoint = logger.Log(new_transaction);
+
+    // logger.LogCheckPoint(new_checkpoint);
+
     return 0;
 
     std::cout << "Please enter a query: "<< endl;
