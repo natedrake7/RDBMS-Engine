@@ -95,6 +95,10 @@ protected:
 
     void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId) const;
 
+    [[nodiscard]] bool ValidateLogIntegrity(const Logging::LogEntry& logEntry) const;
+
+    void ApplyRecoveryLog(const Logging::LogEntry& logEntry);
+
 public:
     explicit Database(const string &dbName, const bool& isServerInitialization = false);
 
@@ -103,6 +107,8 @@ public:
     ~Database();
 
     std::vector<Logging::LogEntry> RecoverLogs()const;
+
+    void EnterRecoveryMode();
 
     void InitializeLogger(const std::string& dbName);
 

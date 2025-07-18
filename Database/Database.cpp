@@ -212,6 +212,26 @@ namespace DatabaseEngine
         return this->logger->RecoverLogs(this->tables);
     }
 
+    void Database::EnterRecoveryMode(){
+        const auto logs = this->RecoverLogs();
+
+        if (logs.empty()) {
+            std::cout << "No logs to recover." << std::endl;
+            return;
+        }
+
+        for (const auto& log : logs) {
+            this->ApplyRecoveryLog(log);
+        }
+    }
+
+    void Database::ApplyRecoveryLog(const Logging::LogEntry &logEntry){
+        if (!logEntry.ValidateIntegrity())
+            return;
+
+        auto* table = this->tables.at(logEntry.tableOrdinalPosition);
+    }
+
     void Database::LogCheckPoint(Logging::CheckPoint &checkPoint) const{
         this->logger->LogCheckPoint(checkPoint);
     }
@@ -234,8 +254,6 @@ namespace DatabaseEngine
             transactionId,
             Logging::OperationType::InsertRow,
             tableOrdinal,
-            0,
-            0,
             new LoggingStructures::RowInsertBody(row));
 
         return this->logger->Log(logEntry);

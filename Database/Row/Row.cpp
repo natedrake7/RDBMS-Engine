@@ -471,15 +471,12 @@ namespace DatabaseEngine::StorageTypes {
                 continue;
             }
 
-            block_size_t dataSize = block->GetBlockSize();
+            const auto& dataSize = block->GetBlockSize();
 
             memcpy(buffer->data() + pos, &dataSize, sizeof(block_size_t));
             pos += sizeof(block_size_t);
 
-
-            const auto &blockData = block->GetBlockData();
-
-            memcpy(buffer->data() + pos, blockData, dataSize);
+            memcpy(buffer->data() + pos, block->GetBlockData(), dataSize);
             pos += dataSize;
 
             columnIndex++;

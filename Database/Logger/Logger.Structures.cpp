@@ -4,7 +4,6 @@
 
 #include <cstring>
 
-
 namespace DatabaseEngine::LoggingStructures {
 
   std::ostream& operator<<(std::ostream& os, const LogEntryBody& logEntry){
@@ -67,7 +66,7 @@ namespace DatabaseEngine::LoggingStructures {
     this->newRow->Deserialize(buffer, pos);
  }
 
- int RowUpdateBody::GetSize() const{ return this->oldRow->GetRowSize() + this->newRow->GetRowSize(); }
+ int RowUpdateBody::GetSize() const{ return static_cast<int>(this->oldRow->GetTotalRowSize() + this->newRow->GetTotalRowSize()); }
 
   std::ostream & RowUpdateBody::Print(std::ostream &os) const{
       os << *this->oldRow << std::endl;
@@ -97,14 +96,14 @@ namespace DatabaseEngine::LoggingStructures {
     this->row->Deserialize(buffer, pos);
   }
 
- int RowDeleteBody::GetSize() const{ return this->row->GetRowSize(); }
+ int RowDeleteBody::GetSize() const{ return static_cast<int>(this->row->GetTotalRowSize()); }
 
   std::ostream & RowDeleteBody::Print(std::ostream &os) const{
     os << *this->row << std::endl;
     return os;
   }
 
- TableCreateBody::TableCreateBody() {}
+ TableCreateBody::TableCreateBody() = default;
 
  TableCreateBody::TableCreateBody(const std::string &query){
    this->query = query;
@@ -130,7 +129,7 @@ void TableCreateBody::Deserialize(const std::vector<char> *buffer, uint32_t& pos
    pos += querySize;
 }
 
-int TableCreateBody::GetSize() const{ return sizeof(uint32_t) + this->query.size(); }
+int TableCreateBody::GetSize() const{ return static_cast<int>(sizeof(uint32_t) + this->query.size()); }
 
 std::ostream & TableCreateBody::Print(std::ostream &os) const{
     os << this->query << std::endl;

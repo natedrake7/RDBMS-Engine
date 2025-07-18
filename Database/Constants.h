@@ -17,6 +17,8 @@ namespace Constants
     constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
     constexpr size_t LARGE_DATA_OBJECT_SIZE = 8060;
     constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
+    constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
+
 
     // table types
     typedef uint16_t table_id_t;
@@ -36,6 +38,10 @@ namespace Constants
 
     typedef uint32_t log_sequence_number_t;
     typedef uint64_t transaction_id_t;
+
+    constexpr transaction_id_t INVALID_LOG_SEQUENCE_NUMBER = std::numeric_limits<log_sequence_number_t>::max();
+
+    constexpr table_id_t INVALID_TABLE_ID = std::numeric_limits<table_id_t>::max();
 
     constexpr transaction_id_t INVALID_TRANSACTION_ID = std::numeric_limits<transaction_id_t>::max();
 

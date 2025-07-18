@@ -69,12 +69,10 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
   }
 
   LogEntry::LogEntry() {
-    this->transactionId = INVALID_TRANSACTION_ID;
-    this->logSequenceNumber = 0;
+    this->transactionId = Constants::INVALID_TRANSACTION_ID;
+    this->logSequenceNumber = Constants::INVALID_LOG_SEQUENCE_NUMBER;
     this->operation = OperationType::InvalidOperation;
-    this->pageId = INVALID_PAGE_ID;
-    this->rowIndex = 0;
-    this->tableOrdinalPosition = 0;
+    this->tableOrdinalPosition = Constants::INVALID_TABLE_ID;
 
     this->body = nullptr;
 
@@ -85,15 +83,11 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     const Constants::log_sequence_number_t& logSequenceNumber,
     const OperationType &operation,
     const Constants::table_id_t &tableOrdinalPosition,
-    const Constants::page_id_t &pageId,
-    const int &rowIndex,
     LoggingStructures::LogEntryBody* body){
 
     this->transactionId = transactionId;
     this->logSequenceNumber = logSequenceNumber;
     this->operation = operation;
-    this->pageId = pageId;
-    this->rowIndex = rowIndex;
     this->tableOrdinalPosition = tableOrdinalPosition;
 
     this->body = body;
@@ -107,14 +101,25 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     return this->GetStaticDataSize() + ((this->body != nullptr) ? this->body->GetSize() : 0);
   }
 
-  int LogEntry::GetStaticDataSize()const {
-    return
-        sizeof(this->transactionId) +
-        sizeof(this->logSequenceNumber) +
-        sizeof(this->operation) +
-        sizeof(this->tableOrdinalPosition) +
-        sizeof(this->pageId) +
-        sizeof(this->rowIndex);
+  constexpr int LogEntry::GetStaticDataSize()const {
+    return  sizeof(this->transactionId) +
+            sizeof(this->logSequenceNumber) +
+            sizeof(this->operation) +
+            sizeof(this->tableOrdinalPosition);
+  }
+
+  void LogEntry::DeserializeHeader(const std::vector<char> &buffer, uint32_t &pos){
+      memcpy(&this->transactionId, buffer.data() + pos, sizeof(this->transactionId));
+      pos += sizeof(this->transactionId);
+
+      memcpy(&this->logSequenceNumber, buffer.data() + pos, sizeof(this->logSequenceNumber));
+      pos += sizeof(this->logSequenceNumber);
+
+      memcpy(&this->operation, buffer.data() + pos, sizeof(this->operation));
+      pos += sizeof(this->operation);
+
+      memcpy(&this->tableOrdinalPosition, buffer.data() + pos, sizeof(this->tableOrdinalPosition));
+      pos += sizeof(this->tableOrdinalPosition);
   }
 
   void LogEntry::Serialize(std::vector<char> *buffer) const{
@@ -134,10 +139,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     pos += sizeof(this->operation);
     memcpy(buffer->data() + pos, &this->tableOrdinalPosition, sizeof(this->tableOrdinalPosition));
     pos += sizeof(this->tableOrdinalPosition);
-    memcpy(buffer->data() + pos, &this->pageId, sizeof(this->pageId));
-    pos += sizeof(this->pageId);
-    memcpy(buffer->data() + pos, &this->rowIndex, sizeof(this->rowIndex));
-    pos += sizeof(this->rowIndex);
 
     this->body->Serialize(buffer, pos);
   }
@@ -159,9 +160,43 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
       case InvalidOperation:
       default:
         this->body = nullptr;
-        std::cerr << "Unknown operation type: " << OperationTypeToString.Get(this->operation) << std::endl;
+        std::cerr << "Unknown operation type: " << OperationTypeToString.Get(this->operation)
+                  << " . Log recovery cannot proceed." << std::endl;
         break;
     }
+  }
+
+  bool LogEntry::ValidateIntegrity() const{
+    if (this->transactionId == INVALID_TRANSACTION_ID) {
+      std::cerr << "Invalid Transaction ID on recovery log."
+                  << " The current log will be skipped"<< std::endl;
+      return false;
+    }
+
+    if (this->logSequenceNumber == INVALID_LOG_SEQUENCE_NUMBER) {
+      std::cerr << "Invalid Log Sequence Number on recovery log with Transaction ID: "
+                  << this->transactionId << std::endl;
+
+      return false;
+    }
+
+    if (this->tableOrdinalPosition == Constants::INVALID_TABLE_ID) {
+      std::cerr << "Invalid table ordinal position on recovery log with Transaction ID: "
+                  << this->transactionId << " and Log Sequence Number: "
+                  << this->logSequenceNumber << std::endl;
+
+      return false;
+    }
+
+    if (this->operation == Logging::OperationType::InvalidOperation) {
+      std::cerr << "Invalid operation on recovery log with Transaction ID: "
+                  << this->transactionId << " and Log Sequence Number: "
+                  << this->logSequenceNumber << std::endl;
+
+      return false;
+    }
+
+    return true;
   }
 
   void Logger::FlushLogDescriptor()const{
@@ -172,26 +207,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     fsync(this->checkPointFileDescriptor);
   }
 
-  void Logger::DeserializeLogEntryHeader(const std::vector<char> &buffer, LogEntry &transaction, uint32_t &pos){
-    memcpy(&transaction.transactionId, buffer.data() + pos, sizeof(transaction.transactionId));
-    pos += sizeof(transaction.transactionId);
-
-    memcpy(&transaction.logSequenceNumber, buffer.data() + pos, sizeof(transaction.logSequenceNumber));
-    pos += sizeof(transaction.logSequenceNumber);
-
-    memcpy(&transaction.operation, buffer.data() + pos, sizeof(transaction.operation));
-    pos += sizeof(transaction.operation);
-
-    memcpy(&transaction.tableOrdinalPosition, buffer.data() + pos, sizeof(transaction.tableOrdinalPosition));
-    pos += sizeof(transaction.tableOrdinalPosition);
-
-    memcpy(&transaction.pageId, buffer.data() + pos, sizeof(transaction.pageId));
-    pos += sizeof(transaction.pageId);
-
-    memcpy(&transaction.rowIndex, buffer.data() + pos, sizeof(transaction.rowIndex));
-    pos += sizeof(transaction.rowIndex);
-  }
-
   CheckPoint Logger::Log(const LogEntry &logEntry)const{
     std::vector<char> buffer;
     logEntry.Serialize(&buffer);
@@ -200,7 +215,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
 
     const auto result = ::write(this->logFileDescriptor, buffer.data(), buffer.size());
 
-    // this->FlushLogDescriptor();
+    this->FlushLogDescriptor();
 
     if (result < 0 || result != buffer.size()) {
       std::cerr << "Failed to write transaction to log file" << std::endl;
@@ -213,8 +228,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
       const Constants::transaction_id_t& transactionId,
       const OperationType &operation,
       const Constants::table_id_t& tableOrdinalPosition,
-      const Constants::page_id_t& pageId,
-      const int& rowIndex,
       LoggingStructures::LogEntryBody* body) {
 
     const auto logSequenceNumber = this->transactionLogSequenceNumbers.Get(transactionId);
@@ -225,8 +238,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
       logSequenceNumber,
       operation,
       tableOrdinalPosition,
-      pageId,
-      rowIndex,
       body
     };
   }
@@ -251,9 +262,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
   }
 
   std::vector<LogEntry>  Logger::RecoverLogs(const std::vector<StorageTypes::Table*>& tables){
-
-    constexpr size_t BATCH_SIZE = 1024 * 1024; // 1 MB
-
     const auto lastValidCheckPoint = this->RecoverLastCheckPoint();
 
     this->SetCurrentTransactionId(lastValidCheckPoint.transactionId + 1);
@@ -265,7 +273,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
 
     ::lseek(this->logFileDescriptor, lastValidCheckPoint.logFileOffset, SEEK_SET);
 
-    std::vector<char> buffer(BATCH_SIZE);
+    std::vector<char> buffer(Constants::LOG_BATCH_SIZE);
     std::vector<char> leftovers;
 
     std::vector<LogEntry> logEntries;
@@ -273,7 +281,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     int entrySize = 0;
 
     while (true) {
-      const auto bytesRead = read(this->logFileDescriptor, buffer.data(), BATCH_SIZE);
+      const auto bytesRead = read(this->logFileDescriptor, buffer.data(), Constants::LOG_BATCH_SIZE);
 
       if (bytesRead < 0) {
         perror("Failed to read from log file");
@@ -301,7 +309,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
             memcpy(&entrySize, buffer.data() + pos, sizeof(entrySize));
             pos += sizeof(entrySize);
 
-            Logger::DeserializeLogEntryHeader(buffer, logEntry, pos);
+          logEntry.DeserializeHeader(buffer, pos);
         }
 
         if (pos + entrySize - logEntry.GetStaticDataSize() > buffer.size()) {

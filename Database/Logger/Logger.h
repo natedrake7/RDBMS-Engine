@@ -43,8 +43,6 @@ namespace DatabaseEngine::Logging {
     Constants::transaction_id_t transactionId;
     OperationType operation;
     Constants::table_id_t tableOrdinalPosition; //in master db
-    Constants::page_id_t pageId;
-    int rowIndex;
 
     LoggingStructures::LogEntryBody* body;
 
@@ -55,16 +53,17 @@ namespace DatabaseEngine::Logging {
                 const Constants::log_sequence_number_t& logSequenceNumber,
                 const OperationType& operation,
                 const Constants::table_id_t& tableOrdinalPosition,
-                const Constants::page_id_t& pageId,
-                const int& rowIndex,
                 LoggingStructures::LogEntryBody* body);
 
     ~LogEntry();
 
     [[nodiscard]] int GetSize()const;
-    [[nodiscard]] int GetStaticDataSize()const;
+    [[nodiscard]] constexpr int GetStaticDataSize()const;
+    void DeserializeHeader(const std::vector<char>& buffer, uint32_t& pos);
     void Serialize(std::vector<char>* buffer)const;
     void AllocateBody();
+
+    [[nodiscard]] bool ValidateIntegrity()const;
 
     friend ostream& operator<<(ostream& stream, const LogEntry& logEntry);
   };
@@ -81,11 +80,6 @@ namespace DatabaseEngine::Logging {
     void FlushLogDescriptor()const;
 
     void FlushCheckPointDescriptor()const;
-
-    static void DeserializeLogEntryHeader(
-      const std::vector<char>& buffer,
-      LogEntry& transaction,
-      uint32_t& pos);
 
     [[nodiscard]] CheckPoint RecoverLastCheckPoint() const;
 
@@ -106,8 +100,6 @@ namespace DatabaseEngine::Logging {
             const Constants::transaction_id_t& transactionId,
             const OperationType& operation,
             const Constants::table_id_t& tableOrdinalPosition,
-            const Constants::page_id_t& pageId,
-            const int& rowIndex,
             LoggingStructures::LogEntryBody* body);
 
      [[nodiscard]] Constants::transaction_id_t StartTransaction();
@@ -116,6 +108,4 @@ namespace DatabaseEngine::Logging {
 
     std::vector<LogEntry>  RecoverLogs(const std::vector<StorageTypes::Table*>& tables);
   };
-
-
 }

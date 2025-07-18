@@ -98,7 +98,7 @@ namespace ByteMaps
 
     void BitMap::WriteDataToFile(std::vector<char>* buffer, uint32_t& pos)const
     {
-        memcpy(buffer->data(), &this->size, sizeof(Constants::bit_map_size_t));
+        memcpy(buffer->data() + pos, &this->size, sizeof(Constants::bit_map_size_t));
         pos += sizeof(Constants::bit_map_size_t);
 
         memcpy(buffer->data() + pos, this->data.data(), this->data.size() * sizeof(Constants::byte));
