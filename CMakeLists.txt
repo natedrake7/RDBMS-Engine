@@ -110,9 +110,9 @@ add_library(Database SHARED
         Database/DatabaseJoins.cpp
         Database/Database.h
         Database/Table/Table.cpp
-        Database/Table/ComplementaryFunctions.cpp
-        Database/Table/IndexesFunctions.cpp
-        Database/Table/LargeObjectFunctions.cpp
+        Database/Table/Table.AdditionalFunctions.cpp
+        Database/Table/Table.Indexes.cpp
+        Database/Table/Table.LargeOjects.cpp
         Database/Table/Table.h
         Database/Row/Row.cpp
         Database/Row/Row.h

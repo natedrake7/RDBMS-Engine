@@ -9,6 +9,7 @@ namespace DatabaseEngine::LoggingStructures {
     virtual void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) = 0;
     [[nodiscard]] virtual int GetSize() const = 0;
     [[nodiscard]] virtual std::ostream& Print(std::ostream& os) const = 0;
+    [[nodiscard]] virtual StorageTypes::Row* GetLastRowStatus() const = 0;
 
     friend std::ostream& operator<<(std::ostream& os, const LogEntryBody& logEntry);
   };
@@ -21,6 +22,7 @@ namespace DatabaseEngine::LoggingStructures {
     void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
+    [[nodiscard]] StorageTypes::Row* GetLastRowStatus() const override;
   };
 
   struct RowUpdateBody final: public LogEntryBody {
@@ -32,6 +34,7 @@ namespace DatabaseEngine::LoggingStructures {
     void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
+    [[nodiscard]] StorageTypes::Row* GetLastRowStatus() const override;
   };
 
   struct RowDeleteBody final: public LogEntryBody {
@@ -42,6 +45,7 @@ namespace DatabaseEngine::LoggingStructures {
     void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
+    [[nodiscard]] StorageTypes::Row* GetLastRowStatus() const override;
   };
 
   struct TableCreateBody final: public LogEntryBody {
@@ -53,5 +57,6 @@ namespace DatabaseEngine::LoggingStructures {
     void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
+    [[nodiscard]] StorageTypes::Row* GetLastRowStatus() const override;
   };
 }

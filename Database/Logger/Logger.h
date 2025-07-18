@@ -13,14 +13,23 @@ namespace DatabaseEngine::Logging {
     UpdateRow = 2,
     DeleteRow = 3,
     CreateTable = 4,
+    AlterTable = 5,
+    DropTable = 6,
+    //etc...
   };
 
-  static Dictionary<OperationType, std::string> OperationTypeToString = {
-    {InvalidOperation, "Invalid Operation"},
-    {InsertRow, "Insert Row"},
-    {UpdateRow, "Update Row"},
-    {DeleteRow, "Delete Row"},
-    {CreateTable, "Create Table"}
+  static const Dictionary<OperationType, std::string> OperationTypeToString = {
+    { OperationType::InvalidOperation, "Invalid Operation"},
+    { OperationType::InsertRow, "Insert Row"},
+    { OperationType::UpdateRow, "Update Row"},
+    { OperationType::DeleteRow, "Delete Row"},
+    { OperationType::CreateTable, "Create Table"}
+  };
+
+  static const HashSet<OperationType> RowAffectedOperationTypes = {
+    OperationType::InsertRow,
+    OperationType::UpdateRow,
+    OperationType::DeleteRow
   };
 
   struct CheckPoint {
@@ -64,6 +73,8 @@ namespace DatabaseEngine::Logging {
     void AllocateBody();
 
     [[nodiscard]] bool ValidateIntegrity()const;
+
+    [[nodiscard]] StorageTypes::Row* GetRow()const;
 
     friend ostream& operator<<(ostream& stream, const LogEntry& logEntry);
   };

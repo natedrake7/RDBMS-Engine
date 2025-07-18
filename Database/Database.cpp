@@ -212,24 +212,42 @@ namespace DatabaseEngine
         return this->logger->RecoverLogs(this->tables);
     }
 
-    void Database::EnterRecoveryMode(){
+    void Database::EnterRecoveryMode()const{
         const auto logs = this->RecoverLogs();
 
         if (logs.empty()) {
             std::cout << "No logs to recover." << std::endl;
             return;
         }
+        std::vector<extent_id_t> allocatedExtents; //since multiple rows might be inserted should be
+        extent_id_t startingExtentIndex = 0;
 
-        for (const auto& log : logs) {
-            this->ApplyRecoveryLog(log);
-        }
+        for (const auto& log : logs)
+            this->ApplyRecoveryLog(log, allocatedExtents, startingExtentIndex);
     }
 
-    void Database::ApplyRecoveryLog(const Logging::LogEntry &logEntry){
+    void Database::ApplyRecoveryLog(
+        const Logging::LogEntry &logEntry,
+        std::vector<extent_id_t>& allocatedExtents,
+        extent_id_t& startingExtentIndex)const{
         if (!logEntry.ValidateIntegrity())
             return;
 
-        auto* table = this->tables.at(logEntry.tableOrdinalPosition);
+        if (Logging::RowAffectedOperationTypes.Contains(logEntry.operation)) {
+            auto* table = this->tables.at(logEntry.tableOrdinalPosition);
+
+            auto* row = logEntry.GetRow();
+
+            if (logEntry.operation == Logging::OperationType::DeleteRow) {
+                //handle row delete trickier, need to identify whether to use pk or not (heap delete)
+                return;
+            }
+
+            table->InsertRow(row, allocatedExtents, startingExtentIndex);
+        }
+
+        //Data structure affected changes from here down.
+
     }
 
     void Database::LogCheckPoint(Logging::CheckPoint &checkPoint) const{

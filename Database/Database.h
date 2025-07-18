@@ -97,7 +97,7 @@ protected:
 
     [[nodiscard]] bool ValidateLogIntegrity(const Logging::LogEntry& logEntry) const;
 
-    void ApplyRecoveryLog(const Logging::LogEntry& logEntry);
+    void ApplyRecoveryLog(const Logging::LogEntry& logEntry, std::vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex)const;
 
 public:
     explicit Database(const string &dbName, const bool& isServerInitialization = false);
@@ -108,7 +108,7 @@ public:
 
     std::vector<Logging::LogEntry> RecoverLogs()const;
 
-    void EnterRecoveryMode();
+    void EnterRecoveryMode()const;
 
     void InitializeLogger(const std::string& dbName);
 
