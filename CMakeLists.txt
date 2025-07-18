@@ -160,7 +160,9 @@ add_library(Database SHARED
         Database/Logger/Logger.Structures.h
         Database/Logger/Logger.Structures.cpp
         Database/Logger/WriteAheadLogger/WriteAheadLogger.cpp
-        Database/Logger/WriteAheadLogger/WriteAheadLogger.h)
+        Database/Logger/WriteAheadLogger/WriteAheadLogger.h
+        Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.cpp
+        Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.h)
 
 add_library(Server SHARED
         Server/ConnectionManager/ConnectionManager.cpp
