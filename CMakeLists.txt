@@ -158,7 +158,9 @@ add_library(Database SHARED
         Database/Logger/Logger.cpp
         Database/Logger/Logger.h
         Database/Logger/Logger.Structures.h
-        Database/Logger/Logger.Structures.cpp)
+        Database/Logger/Logger.Structures.cpp
+        Database/Logger/WriteAheadLogger/WriteAheadLogger.cpp
+        Database/Logger/WriteAheadLogger/WriteAheadLogger.h)
 
 add_library(Server SHARED
         Server/ConnectionManager/ConnectionManager.cpp

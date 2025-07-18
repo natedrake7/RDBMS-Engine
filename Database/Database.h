@@ -7,6 +7,7 @@
 #include "B+Tree/BPlusTree.h"
 #include "Column/Column.h"
 #include "Logger/Logger.h"
+#include "Logger/WriteAheadLogger/WriteAheadLogger.h"
 #include "Table/Table.h"
 #include "Pages/OverflowPage/OverflowPage.h"
 
@@ -72,7 +73,7 @@ class Database {
 
   vector<StorageTypes::Table *> tables;
 
-  Logging::Logger* logger;
+  Logging::WriteAheadLogger* writeAheadLogger;
 
 protected:
 

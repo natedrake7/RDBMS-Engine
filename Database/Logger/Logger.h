@@ -80,25 +80,21 @@ namespace DatabaseEngine::Logging {
   };
 
 
-  class Logger final {
-    int logFileDescriptor;
-    int checkPointFileDescriptor;
+  class Logger {
+    protected:
+      int logFileDescriptor;
 
-    Constants::transaction_id_t currentTransactionId;
-    Dictionary<Constants::transaction_id_t, Constants::log_sequence_number_t> transactionLogSequenceNumbers;
-    std::mutex transactionLogMutex;
+      Constants::transaction_id_t currentTransactionId;
+      Dictionary<Constants::transaction_id_t, Constants::log_sequence_number_t> transactionLogSequenceNumbers;
+      std::mutex transactionLogMutex;
 
-    void FlushLogDescriptor()const;
+      void FlushLogDescriptor()const;
 
-    void FlushCheckPointDescriptor()const;
-
-    [[nodiscard]] CheckPoint RecoverLastCheckPoint() const;
-
-    void SetCurrentTransactionId(const Constants::transaction_id_t& transactionId);
+      void SetCurrentTransactionId(const Constants::transaction_id_t& transactionId);
 
   public:
       explicit Logger(const std::string& logFilePath);
-      ~Logger();
+      virtual ~Logger();
 
       Logger(const Logger&) = delete;
       Logger(Logger&&) = delete;
@@ -115,8 +111,6 @@ namespace DatabaseEngine::Logging {
 
      [[nodiscard]] Constants::transaction_id_t StartTransaction();
 
-    void LogCheckPoint(CheckPoint& checkPoint)const;
-
-    std::vector<LogEntry>  RecoverLogs(const std::vector<StorageTypes::Table*>& tables);
+    virtual std::vector<LogEntry>  RecoverLogs(const std::vector<StorageTypes::Table*>& tables);
   };
 }

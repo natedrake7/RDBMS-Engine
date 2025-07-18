@@ -45,6 +45,7 @@ void InsertRowsToMoviesTable(Table* table);
 //and check if index index is available in the results to speed by sorting
 //Futher improve select, insert, update statements to allow nested select in them (complex validation will be required)
 //allow ctes and tempporary tables.
+//create base Logger class and derive it for more specific Logging.
 //WAL create logs for each method and verify validity, create recovery mechanism in Database Object
 //tempdb
 //transactions(usage of tempDb maybe).
