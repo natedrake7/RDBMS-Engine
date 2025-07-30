@@ -26,6 +26,11 @@ namespace QueryPipeline {
       return visit(context->createIndexStatement());
     if (context->alterTableStatement())
       return visit(context->alterTableStatement());
+    if (context->declareVariableStatement())
+      return visit(context->declareVariableStatement());
+    if (context->setVariableStatement())
+      return visit(context->setVariableStatement());
+
 
     return nullptr;
   }
@@ -109,10 +114,16 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->NULL_())
       return Field(nullptr, 0);
 
+    if (context->TRUE())
+      return Field(true, 0);
+
+    if (context->FALSE())
+      return Field(false, 0);
+
     if (context->identifier())
       return Field(std::any_cast<std::string>(visit(context->identifier())), 0, true);
 
-    throw SyntaxError("Invalid value specified");
+    throw SyntaxError("Invalid value specified" + context->getText());
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
@@ -459,5 +470,45 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
   antlrcpp::Any SQLVisitorImplementation::visitDefaultValue(SQLParser::DefaultValueContext *context){
     return visit(context->literalValue());
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitDeclareVariableStatement(SQLParser::DeclareVariableStatementContext *context){
+    auto variableName = std::any_cast<std::string>(visit(context->variableName()));
+
+    auto value = context->literalValue()
+        ? std::any_cast<Field>(visit(context->literalValue()))
+        : Field(nullptr, 0);
+
+    value.SetName(variableName);
+
+    value.InferType();
+
+    std::cout << "Variable declared: " << variableName << " with value: " << value << std::endl;
+
+    return value;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitVariableName(SQLParser::VariableNameContext *context){
+    return context->IDENTIFIER()->getText();
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitVariableType(SQLParser::VariableTypeContext *context){
+    //optional type inference is recommended
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitSetVariableStatement(SQLParser::SetVariableStatementContext *context){
+    auto variableName = std::any_cast<std::string>(visit(context->variableName()));
+
+    auto value = context->literalValue()
+        ? std::any_cast<Field>(visit(context->literalValue()))
+        : Field(nullptr, 0);
+
+    value.SetName(variableName);
+
+    value.InferType();
+
+    std::cout << "Variable set: " << variableName << " with value: " << value << std::endl;
+
+    return value;
   }
 }

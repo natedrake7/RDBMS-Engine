@@ -104,12 +104,14 @@ namespace DataTypes
 
 	time_t DateTime::ToUnixTimeStamp(const string &date, const string &format)
 	{
-		const DateTime dateTime = DateTime::FromString(date, format);
+		DateTime dateTime;
+
+		auto result = DateTime::FromString(dateTime, date, format);
 
 		return DateTime::ToUnixTimeStamp(dateTime.GetYears(), dateTime.GetMonths(), dateTime.GetDays(), dateTime.GetHours(), dateTime.GetMinutes(), dateTime.GetSeconds());
 	}
 
-	DateTime DateTime::FromString(const string &date, const string &format)
+	bool DateTime::FromString(DateTime& outVal, const string &date, const string &format)
 	{
 		tm time = {};
 		
@@ -117,7 +119,12 @@ namespace DataTypes
 
 		 ss >> get_time(&time, format.c_str());
 
-		return {time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec};
+		if (ss.fail())
+			return false;
+
+		outVal = {time.tm_year + 1900, time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec};
+
+		return true;
 	}
 
 	string DateTime::ToString(const string &format) const

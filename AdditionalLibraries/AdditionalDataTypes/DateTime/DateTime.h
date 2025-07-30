@@ -33,7 +33,7 @@ namespace DataTypes {
 
 		static DateTime Now();
 		static time_t ToUnixTimeStamp(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
-		static DateTime FromString(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
+		static bool FromString(DateTime& outVal, const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
 		static int DateTimeSize();
 
 		[[nodiscard]] string ToString(const string& format = "%Y-%m-%d %H:%M:%S") const;

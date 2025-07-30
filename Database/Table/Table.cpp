@@ -158,9 +158,9 @@ namespace DatabaseEngine::StorageTypes {
         vector<extent_id_t> extents;
 
         int64_t primaryKeyVal = 0;
-        for (const auto &rowData : inputData) 
+        Logging::CheckPoint checkPoint;
+        for (const auto &rowData : inputData)
         {
-            Logging::CheckPoint checkPoint;
             auto* row = this->CreateRow(transactionId, rowData, &primaryKeyVal, &checkPoint);
 
             const auto result = this->InsertRow(row, extents, startingExtentIndex);
@@ -168,13 +168,14 @@ namespace DatabaseEngine::StorageTypes {
             if (result.code != AdditionalDataTypes::ResultCode::Ok)
               return result;
 
-            this->database->LogCheckPoint(checkPoint);
-          
+
             rowsInserted++;
 
             if (rowsInserted % 1000 == 0)
                 cout << rowsInserted << endl;
         }
+
+        this->database->LogCheckPoint(checkPoint);
 
         AdditionalDataTypes::ResultStatus status;
         status.message = "Rows affected: " + to_string(rowsInserted);
@@ -211,16 +212,10 @@ namespace DatabaseEngine::StorageTypes {
         //row_id
         Headers::RowIdentifier rowId;
 
-        AdditionalDataTypes::ResultStatus status;
+        auto status = (this->GetTableType() == TableType::CLUSTERED) ? this->ClusteredIndexInsert(row, &rowId) : this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
 
-        if (this->GetTableType() == TableType::CLUSTERED) {
-            status = this->ClusteredIndexInsert(row, &rowId);
-
-            if (status.code != AdditionalDataTypes::ResultCode::Ok)
-                return status;
-        }
-        else
-            this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
+        if (status.code != AdditionalDataTypes::ResultCode::Ok)
+            return status;
 
         //insert to Non Clustered Indexes
         if(!this->HasNonClusteredIndexes())
@@ -261,9 +256,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto *block = new Block(column);
 
-          const ColumnType columnType = column->GetColumnType();
-
-          if (columnType > Constants::ColumnType::ColumnTypeCount)
+          if (column->GetColumnType() >= Constants::ColumnType::ColumnTypeCount)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
           if (input.GetIsNull())
@@ -282,10 +275,7 @@ namespace DatabaseEngine::StorageTypes {
         return row;
       }
 
-      column_number_t Table::GetNumberOfColumns() const 
-      {
-        return this->columns.size();
-      }
+      column_number_t Table::GetNumberOfColumns() const { return this->columns.size(); }
 
       const TableHeader &Table::GetTableHeader() const { return this->header; }
 
@@ -411,9 +401,14 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto extentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+        const auto indexAllocationExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
 
-        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, extentId, this);
+        const IndexAllocationMapPage *tableMapPage =
+            StorageManager::Get().GetIndexAllocationMapPage(
+              filename,
+              this->header.indexAllocationMapPageId,
+              indexAllocationExtentId,
+              this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);

@@ -14,7 +14,9 @@ sqlStatement
     | deleteStatement
     | updateStatement
     | createIndexStatement
-    | alterTableStatement;
+    | alterTableStatement
+    | declareVariableStatement
+    | setVariableStatement;
 
 //select statement
 selectStatement
@@ -133,6 +135,8 @@ literalValueList
 literalValue
         : STRING 
         | NUMBER
+        | TRUE
+        | FALSE
         | getDate
         | newGuid
         | NULL
@@ -163,6 +167,34 @@ getDate
 //New Guid
 newGuid
     : 'NEWID()'
+    ;
+
+
+
+//DECALRE VARIABLE
+declareVariableStatement
+    : 'DECLARE' variableName (variableType)? (EQUAL literalValue)?;
+
+
+setVariableStatement
+    : 'SET' variableName EQUAL literalValue
+    ;
+
+variableName
+    : '@' IDENTIFIER
+    ;
+
+variableType
+    : BOOL
+    | TINYINT
+    | SMALLINT
+    | INT
+    | BIGINT
+    | varcharType
+    | nvarcharType
+    | decimalType
+    | DATETIME
+    | GUID
     ;
     
 columnList : columnName (',' columnName)*;
@@ -262,6 +294,8 @@ UNIQUE          : 'UNIQUE';
 AS              : 'AS';
 
 //More Datatypes and identifiers
+TRUE            : 'TRUE';
+FALSE           : 'FALSE';
 WILDCARD        : '*';
 IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
 STRING          : '\'' ( ~['\\] | '\\' . )* '\''; 

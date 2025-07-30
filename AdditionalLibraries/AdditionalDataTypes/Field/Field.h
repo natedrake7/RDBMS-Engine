@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include <vector>
 #include "../../../Database/Constants.h"
 #include "../Decimal/Decimal.h"
 #include "../Guid/Guid.h"
@@ -13,8 +12,13 @@ class Field {
     object_t* data;
     block_size_t size;
     ColumnType type;
+
     bool isIdentifier;
-  
+    std::string name;
+
+    [[nodiscard]] bool TryParseAsBool();
+    [[nodiscard]] bool TryParseDate();
+
     public:
         Field();
         ~Field();
@@ -66,6 +70,10 @@ class Field {
         void SetData(const DataTypes::DateTime& data);
 
         void SetData(const DataTypes::Guid& data);
+
+        void SetName(std::string& data);
+
+        void InferType();
 
         [[nodiscard]] const block_size_t& GetSize() const;
 

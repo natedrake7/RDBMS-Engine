@@ -2,7 +2,7 @@
 #include "../Logger.h"
 
 namespace DatabaseEngine::Logging {
-  class WriteAheadLogger : public Logger{
+  class WriteAheadLogger final : public Logger{
     int checkPointFileDescriptor;
 
     void FlushCheckPointDescriptor()const;

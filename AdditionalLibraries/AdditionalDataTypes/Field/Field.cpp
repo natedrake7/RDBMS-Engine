@@ -1,6 +1,7 @@
 #include "Field.h"
 
 #include "../../SafeConverter/SafeConverter.h"
+#include "../../StringFunctions/StringFunctions.h"
 
 #include <cstring>
 #include <stdexcept>
@@ -214,6 +215,64 @@ void Field::SetData(const DataTypes::Guid &data){
     this->type = ColumnType::Guid;
 }
 
+void Field::SetName(std::string &data){
+    this->name = std::move(data);
+}
+
+bool Field::TryParseAsBool(){
+    const auto strData = AdditionalLibraries::Lower(this->GetString());
+
+    if (strData == "true" || strData == "1") {
+        this->SetData(true);
+        return true;
+    }
+    if (strData == "false" || strData == "0") {
+        this->SetData(false);
+        return true;
+    }
+
+    return false;
+}
+
+bool Field::TryParseDate(){
+    const auto strData = AdditionalLibraries::Lower(this->GetString());
+
+    DataTypes::DateTime parsedDate;
+
+    auto result = DataTypes::DateTime::FromString(parsedDate, strData);
+
+    if (!result)
+        return false;
+
+    this->SetData(parsedDate);
+    return true;
+}
+
+void Field::InferType(){
+
+    switch (this->type){
+        case ColumnType::BigInt:
+
+            break;
+        case ColumnType::Decimal:
+            break;
+        case ColumnType::String:
+            if (this->TryParseAsBool())
+                return;
+
+            if (this->TryParseDate())
+                return;
+
+            break;
+        case ColumnType::UnicodeString:
+            break;
+        case ColumnType::Bool:
+            break;
+        default:
+            break;
+    }
+}
+
 void Field::SetData(const DataTypes::Decimal &data) { 
     delete this->data;
     
@@ -236,7 +295,7 @@ int32_t Field::GetInt() const { return *reinterpret_cast<int32_t *>(this->data);
 
 int64_t Field::GetBigInt() const { return *reinterpret_cast<int64_t *>(this->data); }
 
-string Field::GetString() const { return { reinterpret_cast<char *>(this->data)}; }
+string Field::GetString() const { return {reinterpret_cast<char*>(this->data), this->size}; }
 
 u16string Field::GetUnicodeString() const { return {reinterpret_cast<char16_t *>(this->data)}; }
 
@@ -375,6 +434,10 @@ void Field::Validate(const ColumnType &columnType, const int &ordinalPosition){
 }
 
 ostream & operator<<(ostream& os, const Field &field){
+
+    if (!field.name.empty())
+        os << field.name << ": ";
+
     if (field.GetIsNull()) {
         os << "NULL";
         return os;

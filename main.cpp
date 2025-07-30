@@ -184,6 +184,8 @@ int main()
         cout << "Time: " << elapsed.count() << " ms" << endl;
     }
 
+    //SELECT * FROM dbo.Actors AS a INNER JOIN dbo.Movies AS m ON m.ActorID = a.ID
+
      // QueryPipeline::Parser::Parse(actorsIndex, databaseId);
     // QueryPipeline::Parser::Parse(deleteMovies, dbName);
 
