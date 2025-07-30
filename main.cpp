@@ -124,46 +124,6 @@ int main()
 
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
-    // QueryPipeline::Parser::Parse(createDb, databaseId);
-    // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
-
-    //  // QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
-    // QueryPipeline::Parser::Parse(updateActors, databaseId);
-    //
-    // QueryPipeline::Parser::Parse(insertMovies, databaseId);
-    // QueryPipeline::Parser::Parse(selectMovies, databaseId);
-
-//
-
-    // QueryPipeline::Parser::Parse(createActorsTable, databaseId);
-//
-//       QueryPipeline::Parser::Parse(insertActors, databaseId);
-// // ////
-// //
-      // QueryPipeline::Parser::Parse(selectActors, databaseId);
-
-    // Logging::Logger logger("testLog");
-    //
-    // logger.RecoverLogs({});
-    //
-    // auto transactionId = logger.StartTransaction();
-    //
-    // auto* logBody = new LoggingStructures::TableCreateBody(createMoviesTable);
-    //
-    // auto transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::CreateTable, 10, 10, 0, logBody);
-    //
-    // auto checkpoint = logger.Log(transaction);
-    // //
-    // logger.LogCheckPoint(checkpoint);
-    // //
-    // // auto new_transaction = logger.CreateLogEntry(transactionId, Logging::OperationType::Insert, 10, 10, 0, nullptr);
-    // //
-    // // auto new_checkpoint = logger.Log(new_transaction);
-    //
-    // // logger.LogCheckPoint(new_checkpoint);
-    //
-    // return 0;
-
     std::cout << "Please enter a query: "<< endl;
     while (true) {
         std::string input;
@@ -185,9 +145,6 @@ int main()
     }
 
     //SELECT * FROM dbo.Actors AS a INNER JOIN dbo.Movies AS m ON m.ActorID = a.ID
-
-     // QueryPipeline::Parser::Parse(actorsIndex, databaseId);
-    // QueryPipeline::Parser::Parse(deleteMovies, dbName);
 
     const auto& databases = server.GetCatalog();
 

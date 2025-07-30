@@ -762,8 +762,9 @@ namespace QueryPipeline::Statements {
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
     SelectStatement *statement){
 
-    if (expression->type == Expressions::ExpressionType::Predicate)
+    if (expression->type == Expressions::ExpressionType::Predicate) {
       return ResolveColumnAlias(expression->column, tableAliasesDictionary, tablesColumnsDictionary, statement);
+    }
 
     if (expression->left == nullptr
       || expression->right == nullptr) {

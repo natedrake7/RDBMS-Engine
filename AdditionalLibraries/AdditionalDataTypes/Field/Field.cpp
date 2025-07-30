@@ -219,17 +219,42 @@ void Field::SetName(std::string &data){
     this->name = std::move(data);
 }
 
-bool Field::TryParseAsBool(){
+bool Field::TryParseAsBool(bool& result)const{
+    if (this->type == ColumnType::String || this->type == ColumnType::UnicodeString) {
+        return this->TryParseAsBoolFromString(result);
+    }
+
+    if (this->type == ColumnType::BigInt
+        || this->type == ColumnType::TinyInt
+        || this->type == ColumnType::SmallInt
+        || this->type == ColumnType::Int) {
+        return this->TryParseAsBoolFromInt(result);
+    }
+
+    return false;
+
+}
+
+bool Field::TryParseAsBoolFromString(bool& result)const{
     const auto strData = AdditionalLibraries::Lower(this->GetString());
 
-    if (strData == "true" || strData == "1") {
-        this->SetData(true);
+    if (strData == "true" || strData == "1")
         return true;
-    }
-    if (strData == "false" || strData == "0") {
-        this->SetData(false);
+
+    if (strData == "false" || strData == "0")
         return true;
-    }
+
+    return false;
+}
+
+bool Field::TryParseAsBoolFromInt(bool& result)const{
+    const auto intData = this->GetBigInt();
+
+    if (intData == 1)
+        return true;
+
+    if (intData == 0)
+        return true;
 
     return false;
 }
@@ -257,9 +282,6 @@ void Field::InferType(){
         case ColumnType::Decimal:
             break;
         case ColumnType::String:
-            if (this->TryParseAsBool())
-                return;
-
             if (this->TryParseDate())
                 return;
 
@@ -353,8 +375,12 @@ void Field::Validate(const Headers::ColumnHeader &header){
               throw runtime_error("Column " + header.name + " has different data type than specified");
           break;
       case ColumnType::Bool: {
-          const auto value = SafeConverter<bool>::SafeStoi(this->GetBigInt());
+          bool value;
+          if (this->TryParseAsBool(value) && this->IsVariable())
+              break;
+
           this->SetData(value);
+          this->SetType(columnType);
           break;
       }
       case ColumnType::DateTime: {
@@ -369,8 +395,10 @@ void Field::Validate(const Headers::ColumnHeader &header){
     case ColumnType::Guid:
         break;
       default:
-      case ColumnType::ColumnTypeCount:
-          throw invalid_argument("Invalid column type");
+    case ColumnType::ColumnTypeCount:
+        throw runtime_error(
+                "Type mismatch: expected " + Constants::ColumnTypesToStringDictionary.Get(columnType) +
+                  " but got " + Constants::ColumnTypesToStringDictionary.Get(this->type));
     }
 
     this->SetColumnIndex(header.ordinalPosition);
@@ -410,8 +438,12 @@ void Field::Validate(const ColumnType &columnType, const int &ordinalPosition){
         //     throw runtime_error("Column " + header.name + " has different data type than specified");
         break;
     case ColumnType::Bool: {
-        const auto value = SafeConverter<bool>::SafeStoi(this->GetBigInt());
+        bool value;
+        if (this->TryParseAsBool(value) && this->IsVariable())
+            break;
+
         this->SetData(value);
+        this->SetType(columnType);
         break;
     }
     case ColumnType::DateTime: {
@@ -432,6 +464,8 @@ void Field::Validate(const ColumnType &columnType, const int &ordinalPosition){
 
     this->SetColumnIndex(ordinalPosition);
 }
+
+bool Field::IsVariable()const{ return !this->name.empty(); }
 
 ostream & operator<<(ostream& os, const Field &field){
 

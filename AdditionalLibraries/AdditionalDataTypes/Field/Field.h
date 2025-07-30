@@ -16,7 +16,9 @@ class Field {
     bool isIdentifier;
     std::string name;
 
-    [[nodiscard]] bool TryParseAsBool();
+    [[nodiscard]] bool TryParseAsBool(bool& result)const;
+    [[nodiscard]] bool TryParseAsBoolFromString(bool& result)const;
+    [[nodiscard]] bool TryParseAsBoolFromInt(bool& result)const;
     [[nodiscard]] bool TryParseDate();
 
     public:
@@ -110,4 +112,6 @@ class Field {
         void Validate(const ColumnType& columnType, const int& ordinalPosition);
 
         friend ostream& operator<<(ostream& os, const Field& field);
+
+        [[nodiscard]] bool IsVariable()const;
 };
