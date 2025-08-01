@@ -1,5 +1,7 @@
 ﻿#include "Block.h"
 #include "../Database.h"
+#include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+
 #include <cstring>
 #include <iostream>
 
@@ -126,6 +128,8 @@ bool operator!=(const DatabaseEngine::StorageTypes::Block &block, const Field &f
     return !(block == field);
 }
 
+//Tiny Int Comparison -> string, bool, unicodeString, decimal
+
 bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Field &field){
     if (field.GetIsNull()
         || block.GetBlockData() == nullptr)
@@ -136,8 +140,18 @@ bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Field &f
             return block.GetTinyInt() == field.GetTinyInt();
         case ColumnType::SmallInt:
             return block.GetSmallInt() == field.GetSmallInt();
-        case ColumnType::Int:
-            return block.GetInt() == field.GetInt();
+        case ColumnType::Int: {
+            int value = 0;
+
+            //TODO create algorithm to infer field type if possible
+            if (field.GetType() == ColumnType::String) {
+                value = SafeConverter<int>::SafeStoi(field.GetString());
+            }
+            else
+                value = field.GetInt();
+
+            return block.GetInt() == value;//field.GetInt();
+        }
         case ColumnType::BigInt:
             return block.GetBigInt() == field.GetBigInt();
         case ColumnType::Decimal:
