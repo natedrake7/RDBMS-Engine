@@ -355,7 +355,7 @@ namespace Indexing
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
-        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex;
+        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex + 1;
 
         while (currentNode)
         {
@@ -466,7 +466,7 @@ namespace Indexing
                         ? this->SearchLeftMostLeafNode()
                         : this->GetNode(state.pageId);
 
-        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex;
+        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex + 1;
 
         while (currentNode)
         {
