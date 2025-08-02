@@ -133,7 +133,8 @@ literalValueList
     : literalValue (',' literalValue)*;
 
 literalValue
-        : STRING 
+        : STRING
+        | UNICODESTRING
         | NUMBER
         | TRUE
         | FALSE
@@ -298,6 +299,7 @@ TRUE            : 'TRUE';
 FALSE           : 'FALSE';
 WILDCARD        : '*';
 IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
-STRING          : '\'' ( ~['\\] | '\\' . )* '\''; 
+UNICODESTRING   : 'N''\'' ( ~['\\] | '\\' . )* '\'';
+STRING          : '\'' ( ~['\\] | '\\' . )* '\'';
 NUMBER          : [0-9]+;
 WS              : [ \t\r\n]+ -> skip;

@@ -247,6 +247,18 @@ bool Field::TryParseAsBoolFromString(bool& result)const{
     return false;
 }
 
+bool Field::ParseAsBoolFromString() const{
+    const auto strData = AdditionalLibraries::Lower(this->GetString());
+
+    if (strData == "true" || strData == "1")
+        return true;
+
+    if (strData == "false" || strData == "0")
+        return false;
+
+    return false;
+}
+
 bool Field::TryParseAsBoolFromInt(bool& result)const{
     const auto intData = this->GetBigInt();
 
@@ -307,9 +319,59 @@ void Field::SetData(const DataTypes::Decimal &data) {
 
 const object_t * Field::GetRawData() const{ return this->data; }
 
-bool Field::GetBool() const { return *reinterpret_cast<bool*>(this->data); }
+bool Field::GetBool() const {
+    switch (this->type) {
+        case ColumnType::TinyInt:
+            return SafeConverter<bool>::SafeStoi(this->GetTinyInt());
+        case ColumnType::SmallInt:
+            return SafeConverter<bool>::SafeStoi(this->GetSmallInt());
+        case ColumnType::Int:
+            return SafeConverter<bool>::SafeStoi(this->GetInt());
+        case ColumnType::BigInt:
+            return SafeConverter<bool>::SafeStoi(this->GetBigInt());
+        case ColumnType::Decimal:
+            return false;
+        case ColumnType::String:
+            return this->ParseAsBoolFromString();
+        case ColumnType::UnicodeString:
+            return SafeConverter<int8_t>::SafeStoi(this->GetUnicodeString());
+        case ColumnType::Bool:
+            return *reinterpret_cast<bool*>(this->data);
+        case ColumnType::DateTime:
+        case ColumnType::Guid:
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Small Int");
+    }
+}
 
-int8_t Field::GetTinyInt() const { return *reinterpret_cast<int8_t *>(this->data); }
+int8_t Field::GetTinyInt() const {
+    switch (this->type) {
+        case ColumnType::TinyInt:
+            return *reinterpret_cast<int8_t *>(this->data);
+        case ColumnType::SmallInt:
+            return SafeConverter<int8_t>::SafeStoi(this->GetSmallInt());
+        case ColumnType::Int:
+            return SafeConverter<int8_t>::SafeStoi(this->GetInt());
+        case ColumnType::BigInt:
+            return SafeConverter<int8_t>::SafeStoi(this->GetBigInt());
+        case ColumnType::Decimal:
+            return 0;
+        case ColumnType::String:
+            return SafeConverter<int8_t>::SafeStoi(this->GetString());
+        case ColumnType::UnicodeString:
+            return SafeConverter<int8_t>::SafeStoi(this->GetUnicodeString());
+        case ColumnType::Bool:
+            return this->GetBool() ? 1 : 0;
+        case ColumnType::DateTime:
+        case ColumnType::Guid:
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Small Int");
+    }
+}
 
 int16_t Field::GetSmallInt() const {
     switch (this->type) {
@@ -325,8 +387,7 @@ int16_t Field::GetSmallInt() const {
         case ColumnType::String:
             return SafeConverter<int16_t>::SafeStoi(this->GetString());
         case ColumnType::UnicodeString:
-            return 0;
-            // return SafeConverter<int32_t>::SafeStoi(this->GetUnicodeString());
+            return SafeConverter<int16_t>::SafeStoi(this->GetUnicodeString());
         case ColumnType::Bool:
             return this->GetBool() ? 1 : 0;
         case ColumnType::DateTime:
@@ -334,9 +395,8 @@ int16_t Field::GetSmallInt() const {
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + "cannot be coerced to Small Int");
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Small Int");
     }
-
 }
 
 int32_t Field::GetInt() const {
@@ -352,8 +412,7 @@ int32_t Field::GetInt() const {
         case ColumnType::String:
             return SafeConverter<int32_t>::SafeStoi(this->GetString());
         case ColumnType::UnicodeString:
-            return 0;
-            // return SafeConverter<int32_t>::SafeStoi(this->GetUnicodeString());
+            return SafeConverter<int32_t>::SafeStoi(this->GetUnicodeString());
         case ColumnType::Bool:
             return this->GetBool() ? 1 : 0;
         case ColumnType::DateTime:
@@ -361,7 +420,7 @@ int32_t Field::GetInt() const {
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + "cannot be coerced to int32_t");
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Int");
     }
 }
 
@@ -377,8 +436,7 @@ int64_t Field::GetBigInt() const {
         case ColumnType::String:
             return SafeConverter<int64_t>::SafeStoi(this->GetString());
         case ColumnType::UnicodeString:
-            return 0;
-            // return SafeConverter<int32_t>::SafeStoi(this->GetUnicodeString());
+            return SafeConverter<int64_t>::SafeStoi(this->GetUnicodeString());
         case ColumnType::Bool:
             return this->GetBool() ? 1 : 0;
         case ColumnType::DateTime:
@@ -386,13 +444,13 @@ int64_t Field::GetBigInt() const {
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + "cannot be coerced to int32_t");
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Big Int");
     }
 }
 
 string Field::GetString() const { return {reinterpret_cast<char*>(this->data), this->size}; }
 
-u16string Field::GetUnicodeString() const { return {reinterpret_cast<char16_t *>(this->data)}; }
+u16string Field::GetUnicodeString() const { return {reinterpret_cast<char16_t *>(this->data), this->size}; }
 
 DataTypes::Decimal Field::GetDecimal() const{ return DataTypes::Decimal(this->data, this->size); }
 

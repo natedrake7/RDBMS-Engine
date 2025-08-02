@@ -18,6 +18,7 @@ class Field {
 
     [[nodiscard]] bool TryParseAsBool(bool& result)const;
     [[nodiscard]] bool TryParseAsBoolFromString(bool& result)const;
+    [[nodiscard]] bool ParseAsBoolFromString()const;
     [[nodiscard]] bool TryParseAsBoolFromInt(bool& result)const;
     [[nodiscard]] bool TryParseDate();
 

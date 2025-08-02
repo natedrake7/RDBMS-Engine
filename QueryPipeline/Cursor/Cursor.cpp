@@ -9,9 +9,7 @@ namespace QueryPipeline {
    PhysicalPlan::PhysicalPlanResult* Cursor::fetchNextBatch(){
     auto* result = this->plan->Execute(this->batchSize);
 
-    if (result == nullptr
-      || result->rows.size() == 0)
-      this->hasMoreRows = false;
+    this->hasMoreRows = result != nullptr && result->rows.size() == batchSize;
 
     return result;
   }

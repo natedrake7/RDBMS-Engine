@@ -99,6 +99,14 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
       return Field(AdditionalLibraries::RemoveQuotesFromString(str), 0);
     }
 
+    if (context->UNICODESTRING()) {
+      const auto& str = context->UNICODESTRING()->getText();
+
+      const auto parsedStr = AdditionalLibraries::RemoveQuotesFromUnicodeString(str);
+
+      return Field(AdditionalLibraries::ToUnicode(parsedStr), 0);
+    }
+
     if (context->NUMBER()) {
       const auto number = SafeConverter<int64_t>::SafeStoi(context->NUMBER()->getText());
 

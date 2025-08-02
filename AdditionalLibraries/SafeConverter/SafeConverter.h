@@ -31,6 +31,30 @@ public:
 
         return static_cast<T>(value);
     }
+
+    static T SafeStoi(const u16string& input)
+    {
+        static_assert(is_integral<T>::value, "T must be integral type");
+
+        wstring converted(input.begin(), input.end());
+
+        if (sizeof(T) > sizeof(int))
+        {
+            long long value = stoll(converted);
+
+            if (value < numeric_limits<T>::min() || value > numeric_limits<T>::max())
+                throw out_of_range("SafeStoi: Value is out of range of the target type.");
+
+            return static_cast<T>(value);
+        }
+
+        int value = stoi(converted);
+
+        if (value < numeric_limits<T>::min() || value > numeric_limits<T>::max())
+            throw out_of_range("SafeStoi: Value is out of range of the target type.");
+
+        return static_cast<T>(value);
+    }
     
     static T SafeStoi(const int64_t &input){
         static_assert(is_integral<T>::value, "T must be integral type");
