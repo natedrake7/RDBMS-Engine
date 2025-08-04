@@ -43,7 +43,7 @@ namespace Server {
 
   ServerInstance::~ServerInstance() = default;
 
-  void ServerInstance::ReadConfiguration(const string &configPath){
+  void ServerInstance::ReadConfiguration(const std::string &configPath){
     std::ifstream file(configPath);
 
     if (!file.is_open())

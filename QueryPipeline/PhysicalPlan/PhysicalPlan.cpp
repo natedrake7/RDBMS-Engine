@@ -284,28 +284,36 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     for (const auto& column: this->columns) {
       const auto columnResult =
           Server::ServerInstance::Get().InsertColumnToMasterDb(
-            tableResult.primaryKeyVal,
+            static_cast<int32_t>(tableResult.primaryKeyVal),
             column->name.name,
             ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(column->type.name)),
-            column->type.size,
+            static_cast<int32_t>(column->type.size),
             column->isNullable,
             column->index
             );
 
-      columnIdsDict.Add(column->index, columnResult.primaryKeyVal);
+      columnIdsDict.Add(column->index, static_cast<int32_t>(columnResult.primaryKeyVal));
+
+      if (!column->defaultValue.GetIsNull() || column->defaultValue.GetSize() != 0) {
+        Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(
+          static_cast<int32_t>(columnResult.primaryKeyVal),
+          column->defaultValue
+        );
+      }
 
       //insert identity columns
       if (column->autoIncrementKey == nullptr)
         continue;
 
       Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
-          tableResult.primaryKeyVal,
-          columnResult.primaryKeyVal,
+          static_cast<int32_t>(tableResult.primaryKeyVal),
+          static_cast<int32_t>(columnResult.primaryKeyVal),
           column->autoIncrementKey->seed,
           column->autoIncrementKey->incrementFactor,
           column->autoIncrementKey->seed,
           true,
-          column->autoIncrementKey->cacheBlock);
+          static_cast<int32_t>(column->autoIncrementKey->cacheBlock)
+          );
     }
 
     const bool isConstraintEmpty = this->constraintName.empty();
@@ -323,7 +331,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         return nullptr;
 
     const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
-        tableResult.primaryKeyVal,
+        static_cast<int32_t>(tableResult.primaryKeyVal),
         this->constraintName,
         true,
         false);
@@ -331,7 +339,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     const auto indexId = static_cast<int32_t>(indexResult.primaryKeyVal);
 
     const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(
-      tableResult.primaryKeyVal,
+      static_cast<int32_t>(tableResult.primaryKeyVal),
       this->constraintName,
       Headers::ConstraintType::PrimaryKey,
       false,
@@ -339,13 +347,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     for(int i = 0;i < primaryKeyColumnIds.size(); i++){
       Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
-        indexResult.primaryKeyVal,
+        static_cast<int32_t>(indexResult.primaryKeyVal),
         primaryKeyColumnIds[i],
         this->primaryKey.columns[i],
         true);
 
       Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
-        constraintResult.primaryKeyVal,
+        static_cast<int32_t>(constraintResult.primaryKeyVal),
         primaryKeyColumnIds[i],
     this->primaryKey.columns[i]);
     }

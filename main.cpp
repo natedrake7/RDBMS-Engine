@@ -69,15 +69,16 @@ void shutdownServer(int signal) {
     exit(0);
 }
 
-void InitializeServer(const string& filePath) {
-    //create sys tables(read from file).
-}
-
-int main()
+void RegisterSignalHandlers()
 {
     signal(SIGINT, shutdownServer);   // Ctrl+C
     signal(SIGTERM, shutdownServer);  // kill command
     signal(SIGABRT, shutdownServer);  // abort()
+}
+
+int main()
+{
+    RegisterSignalHandlers();
 
     auto& server = ServerInstance::Get();
 
@@ -141,35 +142,17 @@ int main()
 
         const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
-        cout << "Time: " << elapsed.count() << " ms" << endl;
+        std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
     }
 
     //SELECT * FROM dbo.Actors AS a INNER JOIN dbo.Movies AS m ON m.ActorID = a.ID
 
     const auto& databases = server.GetCatalog();
 
-    ServerInstance::Get().Shutdown();
-
-    return 0;
-
-    QueryPipeline::Parser::Parse(createDb, databaseId);
-
-    QueryPipeline::Parser::Parse(createActorsTable, databaseId);
-
-    QueryPipeline::Parser::Parse(schemaCreate, databaseId);
-
-    QueryPipeline::Parser::Parse(createMoviesTable, databaseId);
-
-    QueryPipeline::Parser::Parse(insertMovies, databaseId);
-
-    QueryPipeline::Parser::Parse(insertActors, databaseId);
-
-    QueryPipeline::Parser::Parse(selectActors, databaseId);
     server.Shutdown();
-    
+
     return 0;
 
-    
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
     std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
@@ -306,124 +289,4 @@ int main()
 //     cout << "Time elapsed : " << elapsed.count() << "ms" << endl;
 //     cout<< "Order By Time: "<< orderElapsed.count() << "ms" << endl;
 //     cout<< "Group By Time: "<< groupByElapsed.count() << "ms" << endl;
-// }
-//
-// void CreateActorsTable(Database *db)
-// {
-//     vector<Column *> columns;
-//     columns.push_back(new Column("ActorId", "Int", sizeof(int32_t), false));
-//     columns.push_back(new Column("ActorName", "String", 100, true));
-//     columns.push_back(new Column("ActorAge", "TinyInt", sizeof(int8_t), true));
-//     columns.push_back(new Column("ActorBirthDay", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
-//     columns.push_back(new Column("ActorHeight", "Decimal", 10, true));
-//
-//     const vector<column_index_t> clusteredIndexes = { 0 };
-//     const vector<vector<column_index_t>> nonClusteredIndexes = { { 1 } };
-//
-//     Table* table = db->CreateTable("Actors", columns, &clusteredIndexes, nullptr);
-//     vector<vector<Field>> inputData;
-//
-//     for (int i = 0; i < 100000; i++)
-//     {
-//         vector<Field> fields = {
-//              Field("1", 0)
-//             ,Field("Johnny Depp", 1)
-//             ,Field("65", 2)
-//             ,Field("1962-04-12 12:12:12", 3)
-//             ,Field("1.77", 4)
-//         };
-//
-//         fields[0].SetData(to_string(i));
-//
-//         // table->InsertRow(fields);
-//         inputData.push_back(fields);
-//     }
-//
-//     table->InsertRows(inputData);
-// }
-//
-// void CreateMoviesTables(Database *db)
-// {
-//     vector<Column *> columns;
-//     columns.push_back(new Column("MovieID", "Int", sizeof(int32_t), false));
-//     columns.push_back(new Column("MovieYear", "Int", sizeof(int32_t), false));
-//     columns.push_back(new Column("MovieType", "UnicodeString", 100, true));
-//     columns.push_back(new Column("MovieReleaseDate", "DateTime", DataTypes::DateTime::DateTimeSize(), true));
-//     columns.push_back(new Column("IsMovieLicensed", "Bool", sizeof(bool), true));
-//     columns.push_back(new Column("MovieLength", "Decimal", 10, true));
-//
-//     const vector<column_index_t> clusteredIndexes = {0, 4};
-//     const vector<vector<column_index_t>> nonClusteredIndexes = { { 1, 0 } };
-//
-//     Table* table = db->CreateTable("Movies", columns, &clusteredIndexes, &nonClusteredIndexes);
-//
-//     vector<vector<Field>> inputData;
-//
-//     for (int i = 0; i < 10000; i++)
-//     {
-//         vector<Field> fields = {
-//             Field("1", 0),
-//             Field("1", 1),
-//             Field(u"Η Σιγή των αμνών", 2),
-//             Field("2024-04-12 12:12:12", 3),
-//             Field("1", 4),
-//             Field("1233232.12434343", 5),
-//         };
-//
-//         fields[0].SetData(to_string(i));
-//         fields[1].SetData(to_string(i));
-//
-//         // table->InsertRow(fields);
-//         inputData.push_back(fields);
-//     }
-//
-//     table->InsertRows(inputData);
-// }
-//
-// void InsertRowsToActorsTable(Table* table)
-// {
-//     vector<vector<Field>> inputData;
-//
-//     for (int i = 0; i < 100; i++)
-//     {
-//         vector<Field> fields = {
-//              Field("1", 0)
-//             ,Field("Johhny Depp", 1)
-//             ,Field("65", 2)
-//             ,Field("1962-04-12 12:12:12", 3)
-//             ,Field("1.77", 4)
-//         };
-//
-//         fields[0].SetData(to_string(i));
-//
-//         // table->InsertRow(fields);
-//         inputData.push_back(fields);
-//     }
-//
-//     table->InsertRows(inputData);
-// }
-//
-// void InsertRowsToMoviesTable(Table* table)
-// {
-//     vector<vector<Field>> inputData;
-//
-//     for (int i = 200000; i < 200200; i++)
-//     {
-//         vector<Field> fields = {
-//             Field("1", 0),
-//             Field("1", 1),
-//             Field("Thriller", 2),
-//             Field("2024-04-12 12:12:12", 3),
-//             Field("1", 4),
-//             Field("1233232.12434343", 5),
-//         };
-//
-//         fields[0].SetData(to_string(i));
-//         fields[1].SetData(to_string(i));
-//
-//         // table->InsertRow(fields);
-//         inputData.push_back(fields);
-//     }
-//
-//     table->InsertRows(inputData);
 // }

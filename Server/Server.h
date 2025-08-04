@@ -40,7 +40,7 @@ namespace Server {
     ServerInstance();
     ~ServerInstance();
 
-    void ReadConfiguration(const string& configPath);
+    void ReadConfiguration(const std::string& configPath);
     void CreateSystemDatabase();
     [[nodiscard]] bool CheckIfMasterDbExists()const;
     

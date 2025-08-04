@@ -12,7 +12,6 @@
 
 #include <SQLBaseListener.h>
 #include <SQLLexer.h>
-#include <variant>
 
 namespace QueryPipeline
 {
@@ -122,8 +121,6 @@ namespace QueryPipeline
 
             for (const auto& row: result->rows)
                 row.PrintRow();
-
-            std::cout << "Printing next batch" << std::endl;
         }
 
         delete result;

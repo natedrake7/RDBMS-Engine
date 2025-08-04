@@ -1,6 +1,7 @@
 #include "Visitor.h"
 #include "../Statements/Statements.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../ErrorListener/ErrorListener.h"
 
 namespace QueryPipeline{
 
@@ -45,6 +46,13 @@ namespace QueryPipeline{
 
     const bool isNullable = ((!context->NULL_() && ! context->NOT() && !isPrimaryKey)
                               || (context->NULL_() && !context->NOT()) && !isPrimaryKey);
+
+    if (context->primaryKey() && context->defaultValue())
+      throw SyntaxError("Cannot set a primary key with a default value.");
+
+    if (context->primaryKey() && context->NULL_())
+      throw SyntaxError("Cannot set a primary key with default value NULL.");
+
 
     return new Statements::AddColumn{
       .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
