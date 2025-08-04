@@ -456,13 +456,12 @@ DataTypes::Decimal Field::GetDecimal() const{ return DataTypes::Decimal(this->da
 
 DataTypes::DateTime Field::GetDateTime() const {
     switch (this->type) {
+        case ColumnType::UnicodeString:
         case ColumnType::String: {
             DataTypes::DateTime date;
             DataTypes::DateTime::FromString(date, this->GetString());
             return date;
         }
-        case ColumnType::UnicodeString:
-            return {};
         case ColumnType::Guid:
         case ColumnType::TinyInt:
         case ColumnType::SmallInt:
@@ -486,9 +485,8 @@ DataTypes::Guid Field::GetGuid() const {
         case ColumnType::Guid:
             return {this->data, this->size};
         case ColumnType::String:
-            return DataTypes::Guid::FromString(this->GetString());
         case ColumnType::UnicodeString:
-            return {};
+            return DataTypes::Guid::FromString(this->GetString());
         case ColumnType::TinyInt:
         case ColumnType::SmallInt:
         case ColumnType::Int:
