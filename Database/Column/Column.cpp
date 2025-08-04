@@ -16,18 +16,6 @@ namespace DatabaseEngine::StorageTypes {
         this->isOverflowed = false;
     }
 
-    Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table)
-    {
-        this->header.id = masterDbHeader.id;
-        this->name = masterDbHeader.name;
-        this->allowNulls = masterDbHeader.isNullable;
-        this->header.columnType = static_cast<Constants::ColumnType>(masterDbHeader.dataType);
-        this->header.recordSize = masterDbHeader.recordSize;
-        this->header.columnIndex = masterDbHeader.ordinalPosition;
-        this->table = table;
-        this->isOverflowed = false;
-    }
-
     Column::Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table)
     {
         const auto normalizedType = AdditionalLibraries::NormalizeString(header.type);
@@ -44,9 +32,21 @@ namespace DatabaseEngine::StorageTypes {
         this->isOverflowed = false;
     }
 
+    Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table)
+    {
+        this->header.id = masterDbHeader.id;
+        this->name = masterDbHeader.name;
+        this->allowNulls = masterDbHeader.isNullable;
+        this->header.columnType = static_cast<Constants::ColumnType>(masterDbHeader.dataType);
+        this->header.recordSize = masterDbHeader.recordSize;
+        this->header.columnIndex = masterDbHeader.ordinalPosition;
+        this->table = table;
+        this->isOverflowed = false;
+    }
+
     Column::~Column() = default;
 
-    string& Column::GetColumnName() { return this->name; }
+    const string& Column::GetColumnName() const{ return this->name; }
 
     void Column::SetColumnName(const std::string &name){
         this->name = name;
@@ -60,17 +60,15 @@ namespace DatabaseEngine::StorageTypes {
 
     const bool& Column::GetAllowNulls() const { return this->allowNulls; }
 
+    void Column::SetColumnIndex(const column_index_t& columnIndex) { this->header.columnIndex = columnIndex; }
+
     const column_index_t& Column::GetColumnIndex() const { return this->header.columnIndex; }
 
     const ColumnHeader& Column::GetColumnHeader() const { return this->header; }
 
     bool Column::isColumnLOB() const { return this->header.recordSize >= LARGE_DATA_OBJECT_SIZE; }
 
-    void Column::SetColumnIndex(const column_index_t& columnIndex) { this->header.columnIndex = columnIndex; }
-
     bool Column::isColumnOverflowed() const{ return this->isOverflowed; }
-
-    void Column::SetIsOverflowed(const bool & isOverflowed){ this->isOverflowed = isOverflowed; }
 
     const int32_t& Column::GetColumnId() const{ return this->header.id; }
 
@@ -91,4 +89,6 @@ namespace DatabaseEngine::StorageTypes {
     void Column::SetDefaultValue(const Headers::DefaultValuesHeader &defaultValue){ this->header.defaultValue = defaultValue; }
 
     const Headers::DefaultValuesHeader & Column::GetDefaultValue() const{ return this->header.defaultValue; }
+
+    void Column::SetIsOverflowed(const bool & isOverflowed){ this->isOverflowed = isOverflowed; }
 }

@@ -49,7 +49,7 @@ namespace DatabaseEngine::StorageTypes
 
         ~Column();
 
-        string &GetColumnName();
+        [[nodiscard]] const string& GetColumnName() const;
 
         void SetColumnName(const std::string& name);
 

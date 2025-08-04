@@ -113,4 +113,23 @@ namespace DataTypes {
     return Guid(data);
   }
 
+  Guid Guid::FromString(const std::string &str){
+    std::string hex_str;
+    hex_str.reserve(32);
+    for (const char& c : str) {
+        if (!std::isxdigit(c))
+          continue;
+
+        hex_str += c;
+    }
+
+    std::array<uint8_t, GUID_SIZE> data{};
+    for (size_t i = 0; i < GUID_SIZE; ++i) {
+      std::string byte_str = hex_str.substr(i * 2, 2);
+      data[i] = static_cast<uint8_t>(std::stoul(byte_str, nullptr, 16));
+    }
+
+    return Guid(data);
+  }
+
 }

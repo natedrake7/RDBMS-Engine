@@ -95,6 +95,9 @@ namespace DatabaseEngine::StorageTypes {
 
     const ColumnType & Block::GetColumnType() const { return this->column->GetColumnType(); }
 
+
+    const Column * Block::GetColumn() const{ return this->column; }
+
     void Block::SetColumn(const Column* column) { this->column = column; };
 
     void Block::PrintBlockData() const

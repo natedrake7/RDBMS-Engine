@@ -30,9 +30,10 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->index
           );
 
-    const auto value = this->column->defaultValue.GetString();
-
-    const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKeyVal, this->column->defaultValue);
+    if (!this->column->defaultValue.GetIsNull()) {
+      const auto value = this->column->defaultValue.GetString();
+      const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKeyVal, this->column->defaultValue);
+    }
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
 

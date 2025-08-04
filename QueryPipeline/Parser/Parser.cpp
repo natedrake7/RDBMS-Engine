@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include "SQLParser.h"
+#include "../../Database/Block/Block.h"
+#include "../../Database/Column/Column.h"
 #include "../Cursor/Cursor.h"
 #include "../ErrorListener/ErrorListener.h"
 #include "../Visitor/Visitor.h"
@@ -64,10 +66,8 @@ namespace QueryPipeline
             return;
         }
 
-        if (statement == nullptr)
-            return;
-
-        if (!statement->Validate()) {
+        if (statement == nullptr
+            || !statement->Validate()) {
             delete statement;
             return;
         }
@@ -101,13 +101,24 @@ namespace QueryPipeline
             }
 
             if (result->code != AdditionalDataTypes::ResultCode::Ok) {
-                cerr << result->message << endl;
+                std::cerr << result->message << std::endl;
 
                 delete result;
                 delete statement;
                 delete logicalPlan;
                 return;
             }
+
+            if (!result->rows.empty()) {
+                for (const auto& block : result->rows.begin()->GetData()) {
+                    const auto* column = block->GetColumn();
+
+                    std::cout << column->GetColumnName() << " || ";
+                }
+
+                std::cout << std::endl;
+            }
+
 
             for (const auto& row: result->rows)
                 row.PrintRow();

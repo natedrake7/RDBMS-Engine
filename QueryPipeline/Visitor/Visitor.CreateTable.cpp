@@ -39,7 +39,7 @@ namespace QueryPipeline{
   antlrcpp::Any SQLVisitorImplementation::visitAddColumn(SQLParser::AddColumnContext *context){
     const bool isPrimaryKey = (context->primaryKey()) != nullptr;
 
-    Statements::Identity* key = (isPrimaryKey)
+    Statements::Identity* key = (isPrimaryKey && context->primaryKey()->autoIncrementKey())
                     ? std::any_cast<Statements::Identity*>(visit(context->primaryKey()))
                     : nullptr;
 

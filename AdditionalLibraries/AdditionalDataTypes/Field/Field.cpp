@@ -342,7 +342,7 @@ bool Field::GetBool() const {
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Small Int");
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Bool");
     }
 }
 
@@ -369,7 +369,7 @@ int8_t Field::GetTinyInt() const {
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Small Int");
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Tiny Int");
     }
 }
 
@@ -454,17 +454,58 @@ u16string Field::GetUnicodeString() const { return {reinterpret_cast<char16_t *>
 
 DataTypes::Decimal Field::GetDecimal() const{ return DataTypes::Decimal(this->data, this->size); }
 
-DataTypes::DateTime Field::GetDateTime() const{ return DataTypes::DateTime(*reinterpret_cast<time_t *>(this->data));}
+DataTypes::DateTime Field::GetDateTime() const {
+    switch (this->type) {
+        case ColumnType::String: {
+            DataTypes::DateTime date;
+            DataTypes::DateTime::FromString(date, this->GetString());
+            return date;
+        }
+        case ColumnType::UnicodeString:
+            return {};
+        case ColumnType::Guid:
+        case ColumnType::TinyInt:
+        case ColumnType::SmallInt:
+        case ColumnType::Int:
+        case ColumnType::BigInt:
+        case ColumnType::Decimal:
+        case ColumnType::Bool:
+        case ColumnType::DateTime:
+            return DataTypes::DateTime(*reinterpret_cast<time_t *>(this->data));
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Guid");
+    }
+}
 
 time_t Field::GetUnixTimeStamp() const{ return *reinterpret_cast<time_t *>(this->data); }
 
-DataTypes::Guid Field::GetGuid() const{ return {this->data, this->size}; }
+DataTypes::Guid Field::GetGuid() const {
+    switch (this->type) {
+        case ColumnType::Guid:
+            return {this->data, this->size};
+        case ColumnType::String:
+            return DataTypes::Guid::FromString(this->GetString());
+        case ColumnType::UnicodeString:
+            return {};
+        case ColumnType::TinyInt:
+        case ColumnType::SmallInt:
+        case ColumnType::Int:
+        case ColumnType::BigInt:
+        case ColumnType::Decimal:
+        case ColumnType::Bool:
+        case ColumnType::DateTime:
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Guid");
+    }
+}
 
 void Field::SetColumnIndex(const Constants::column_index_t &columnIndex) { this->columnIndex = columnIndex; }
 
-void Field::SetType(const ColumnType &type){
-    this->type = type;
-}
+void Field::SetType(const ColumnType &type){ this->type = type; }
 
 const ColumnType & Field::GetType() const{ return this->type; }
 

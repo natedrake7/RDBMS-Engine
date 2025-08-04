@@ -156,7 +156,8 @@ namespace DatabaseEngine::StorageTypes {
             const object_t* blockData = this->data[i]->GetBlockData();
             const block_size_t& blockSize = this->data[i]->GetBlockSize();
 
-            if(blockData == nullptr)
+            if(blockData == nullptr
+                || blockSize == 0)
             {
                 cout << "NULL";
                 
@@ -172,51 +173,52 @@ namespace DatabaseEngine::StorageTypes {
             {
                 case ColumnType::TinyInt:
                 {
-                    cout << *reinterpret_cast<const int8_t*>(blockData);
+                    std::cout << *reinterpret_cast<const int8_t*>(blockData);
                     break;
                 }
                 case ColumnType::SmallInt:
                 {
-                    cout << *reinterpret_cast<const int16_t*>(blockData);
+                    std::cout << *reinterpret_cast<const int16_t*>(blockData);
                     break;
                 }
                 case ColumnType::Int:
                 {
-                    cout << *reinterpret_cast<const int32_t*>(blockData);
+                    std::cout << *reinterpret_cast<const int32_t*>(blockData);
                     break;
                 }
                 case ColumnType::BigInt:
                 {
-                    cout << *reinterpret_cast<const int64_t*>(blockData);
+                    std::cout << *reinterpret_cast<const int64_t*>(blockData);
                     break;
                 }
                 case ColumnType::Decimal:
                 {
-                    cout << Decimal(blockData, blockSize).ToString();
+                    std::cout << Decimal(blockData, blockSize).ToString();
                     break;
                 }
                 case ColumnType::Guid: {
-                    cout << this->data[i]->GetGuid();
+                    std::cout << this->data[i]->GetGuid();
                     break;
                 }
                 case ColumnType::String:
                 {
-                    cout.write(reinterpret_cast<const char*>(blockData), blockSize);
+                    std::cout.write(reinterpret_cast<const char*>(blockData), blockSize);
                     break;
                 }
                 case ColumnType::UnicodeString:
                 {
-                    wcout.write(reinterpret_cast<const wchar_t*>(blockData), blockSize / sizeof(char16_t));
+                    std::wcout.write(reinterpret_cast<const wchar_t*>(blockData), blockSize / sizeof(char16_t));
                     break;
                 }
                 case ColumnType::Bool:
                 {
-                    cout << (*reinterpret_cast<const bool*>(blockData) ? "true" : "false");
+                    std::cout << (*reinterpret_cast<const bool*>(blockData) ? "true" : "false");
                     break;
                 }
                 case ColumnType::DateTime:
                 {
-                    cout << DateTime(reinterpret_cast<time_t>(blockData)).ToString();
+                    auto time = *reinterpret_cast<const time_t*>(blockData);
+                    std::cout << DateTime(time);
                     break;
                 }
                 case ColumnType::ColumnTypeCount:
@@ -293,9 +295,18 @@ namespace DatabaseEngine::StorageTypes {
         return buffer;
     }
 
+    Pages::OverflowRow* Row::GetOverflowValue(const Pages::OverflowPointer & objectPointer) const{
+        OverflowPage* page = this->table->GetOverflowPage(objectPointer.pageId);
+        return page->GetObject(objectPointer.index);
+    }
+
     void Row::SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) const { this->header.nullBitMap->Set(position, value); }
 
+    void Row::SetOverflowBitMapValue(const bit_map_pos_t & position, const bool & value) const{ this->header.overflowBitMap->Set(position, value); }
+
     bool Row::GetNullBitMapValue(const bit_map_pos_t &position) const { return this->header.nullBitMap->Get(position); }
+
+    bool Row::GetOverflowBitMapValue(const bit_map_pos_t & position) const{ return this->header.overflowBitMap->Get(position); }
 
     RowHeader* Row::GetHeader() { return &this->header; }
 
@@ -307,7 +318,7 @@ namespace DatabaseEngine::StorageTypes {
         for(const auto& block: this->data)
             currentRowSize += block->GetBlockSize();
         //currentRowSize += this->header.rowSize;
-        
+
         return currentRowSize;
     }
 
@@ -412,11 +423,7 @@ namespace DatabaseEngine::StorageTypes {
       return largestColumn;
     }
 
-    void Row::SetOverflowBitMapValue(const bit_map_pos_t & position, const bool & value) const{ this->header.overflowBitMap->Set(position, value); }
-
-    bool Row::GetOverflowBitMapValue(const bit_map_pos_t & position) const{ return this->header.overflowBitMap->Get(position); }
-
-    vector<Block*> Row::GetBlockCopies() const{
+  vector<Block*> Row::GetBlockCopies() const{
 
       vector<Block*> copyBlocks;
       for (const auto &block : this->data)
@@ -445,11 +452,6 @@ namespace DatabaseEngine::StorageTypes {
       }
 
     return copyBlocks;
-  }
-
-  Pages::OverflowRow* Row::GetOverflowValue(const Pages::OverflowPointer & objectPointer) const{
-    OverflowPage* page = this->table->GetOverflowPage(objectPointer.pageId);
-    return page->GetObject(objectPointer.index);
   }
 
     void Row::Serialize(std::vector<char>* buffer, uint32_t& pos)const{
