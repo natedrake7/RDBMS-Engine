@@ -337,10 +337,6 @@ bool Field::GetBool() const {
             return SafeConverter<int8_t>::SafeStoi(this->GetUnicodeString());
         case ColumnType::Bool:
             return *reinterpret_cast<bool*>(this->data);
-        case ColumnType::DateTime:
-        case ColumnType::Guid:
-        case ColumnType::RowIdentifier:
-        case ColumnType::ColumnTypeCount:
         default:
             throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Bool");
     }
@@ -364,10 +360,6 @@ int8_t Field::GetTinyInt() const {
             return SafeConverter<int8_t>::SafeStoi(this->GetUnicodeString());
         case ColumnType::Bool:
             return this->GetBool() ? 1 : 0;
-        case ColumnType::DateTime:
-        case ColumnType::Guid:
-        case ColumnType::RowIdentifier:
-        case ColumnType::ColumnTypeCount:
         default:
             throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Tiny Int");
     }
@@ -390,10 +382,6 @@ int16_t Field::GetSmallInt() const {
             return SafeConverter<int16_t>::SafeStoi(this->GetUnicodeString());
         case ColumnType::Bool:
             return this->GetBool() ? 1 : 0;
-        case ColumnType::DateTime:
-        case ColumnType::Guid:
-        case ColumnType::RowIdentifier:
-        case ColumnType::ColumnTypeCount:
         default:
             throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Small Int");
     }
@@ -415,10 +403,6 @@ int32_t Field::GetInt() const {
             return SafeConverter<int32_t>::SafeStoi(this->GetUnicodeString());
         case ColumnType::Bool:
             return this->GetBool() ? 1 : 0;
-        case ColumnType::DateTime:
-        case ColumnType::Guid:
-        case ColumnType::RowIdentifier:
-        case ColumnType::ColumnTypeCount:
         default:
             throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Int");
     }
@@ -439,10 +423,6 @@ int64_t Field::GetBigInt() const {
             return SafeConverter<int64_t>::SafeStoi(this->GetUnicodeString());
         case ColumnType::Bool:
             return this->GetBool() ? 1 : 0;
-        case ColumnType::DateTime:
-        case ColumnType::Guid:
-        case ColumnType::RowIdentifier:
-        case ColumnType::ColumnTypeCount:
         default:
             throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Big Int");
     }
@@ -462,17 +442,8 @@ DataTypes::DateTime Field::GetDateTime() const {
             DataTypes::DateTime::FromString(date, this->GetString());
             return date;
         }
-        case ColumnType::Guid:
-        case ColumnType::TinyInt:
-        case ColumnType::SmallInt:
-        case ColumnType::Int:
-        case ColumnType::BigInt:
-        case ColumnType::Decimal:
-        case ColumnType::Bool:
         case ColumnType::DateTime:
             return DataTypes::DateTime(*reinterpret_cast<time_t *>(this->data));
-        case ColumnType::RowIdentifier:
-        case ColumnType::ColumnTypeCount:
         default:
             throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Guid");
     }
@@ -487,15 +458,6 @@ DataTypes::Guid Field::GetGuid() const {
         case ColumnType::String:
         case ColumnType::UnicodeString:
             return DataTypes::Guid::FromString(this->GetString());
-        case ColumnType::TinyInt:
-        case ColumnType::SmallInt:
-        case ColumnType::Int:
-        case ColumnType::BigInt:
-        case ColumnType::Decimal:
-        case ColumnType::Bool:
-        case ColumnType::DateTime:
-        case ColumnType::RowIdentifier:
-        case ColumnType::ColumnTypeCount:
         default:
             throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Guid");
     }
@@ -564,7 +526,7 @@ void Field::Validate(const Headers::ColumnHeader &header){
           break;
     case ColumnType::Guid:
         break;
-      default:
+    default:
     case ColumnType::ColumnTypeCount:
         throw runtime_error(
                 "Type mismatch: expected " + Constants::ColumnTypesToStringDictionary.Get(columnType) +
@@ -679,10 +641,8 @@ ostream & operator<<(ostream& os, const Field &field){
         case ColumnType::Guid:
             os << field.GetGuid();
             break;
-        case ColumnType::RowIdentifier:
-        case ColumnType::ColumnTypeCount:
         default:
-        break;
+            break;
     }
 
     return os;
