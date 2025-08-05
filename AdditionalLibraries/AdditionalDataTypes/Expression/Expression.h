@@ -5,7 +5,10 @@
 #include "../Field/Field.h"
 
 namespace DatabaseEngine::StorageTypes {
-class Row;}namespace QueryPipeline::Statements {
+  class Row;
+}
+
+namespace QueryPipeline::Statements {
   struct ColumnName {
     std::string name;
     std::string alias;
