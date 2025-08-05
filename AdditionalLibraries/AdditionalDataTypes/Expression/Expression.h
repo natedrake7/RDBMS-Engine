@@ -49,13 +49,6 @@ namespace Expressions{
       virtual ~Expression() = default;
       Expression() = default;
 
-      enum class Type {
-        Column = 0,
-        Literal = 1,
-        Binary = 2,
-        Function = 3
-      };
-
       virtual Field Evaluate(const DatabaseEngine::StorageTypes::Row& row) const = 0;
   };
 
