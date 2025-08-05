@@ -757,7 +757,7 @@ namespace QueryPipeline::Statements {
   }
 
   bool ResolveExpressionAliases(
-    Expressions::Expression *expression,
+    Expressions::LogicalExpression *expression,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
     SelectStatement *statement){
@@ -766,23 +766,23 @@ namespace QueryPipeline::Statements {
       return ResolveColumnAlias(expression->column, tableAliasesDictionary, tablesColumnsDictionary, statement);
     }
 
-    if (expression->left == nullptr
+    if (expression->GetLeft() == nullptr
       || expression->right == nullptr) {
       std::cerr << "Invalid expression specified" << std::endl;
       return false;
     }
 
-    return ResolveExpressionAliases(expression->left, tableAliasesDictionary, tablesColumnsDictionary, statement)
+    return ResolveExpressionAliases(expression->GetLeft(), tableAliasesDictionary, tablesColumnsDictionary, statement)
         && ResolveExpressionAliases(expression->right, tableAliasesDictionary, tablesColumnsDictionary, statement);
   }
 
-  void MapExpressionColumnsToIndices(Expressions::Expression *expression, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary){
+  void MapExpressionColumnsToIndices(Expressions::LogicalExpression *expression, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary){
       if (expression->type == Expressions::ExpressionType::Predicate) {
           expression->columnIndex = columnIndicesDictionary.Get(expression->column.columnId);
           return;
       }
 
-      MapExpressionColumnsToIndices(expression->left, columnIndicesDictionary);
+      MapExpressionColumnsToIndices(expression->GetLeft(), columnIndicesDictionary);
       MapExpressionColumnsToIndices(expression->right, columnIndicesDictionary);
   }
 

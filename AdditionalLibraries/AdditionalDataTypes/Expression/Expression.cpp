@@ -2,46 +2,73 @@
 #include "../../HashSet/HashSet.h"
 
 namespace Expressions{
-  Expression Expression::Predicate(const std::string& alias, const std::string &column, const ExpressionOperator &operation, const Field &value) {
-    return Expression{
-      .type = ExpressionType::Predicate,
-      .left = nullptr,
-      .right  = nullptr,
-      .column{
-        .name =  column,
-        .alias = alias,
-      },
-      .operation = operation,
-      .value = value
-    };
+  LogicalExpression::LogicalExpression(
+    const std::string &alias,
+    const std::string &column,
+    const ExpressionOperator &operation,
+    const Field &value) {
+    this->type = ExpressionType::Predicate;
+    this->column.alias = alias;
+    this->column.name = column;
+    this->operation = operation;
+    this->value = value;
+
+    this->left = nullptr;
+    this->right = nullptr;
+    this->columnIndex = 0;
   }
 
-  Expression Expression::Predicate(const column_index_t & column, const ExpressionOperator & operation, const Field & value){
-   return Expression{
-   ExpressionType::Predicate,
-   nullptr,
-   nullptr,
-    {},
-       operation,
-       value,
-      column
-  };
+  LogicalExpression::LogicalExpression(
+    const column_index_t &column,
+    const ExpressionOperator &operation,
+    const Field &value){
+    this->columnIndex = column;
+    this->operation = operation;
+    this->value = value;
+    this->type = ExpressionType::Predicate;
+
+    this->left = nullptr;
+    this->right = nullptr;
   }
 
-  Expression Expression::Logical(const ExpressionType &type, Expression *leftExpression, Expression *RightExpression){
-    return Expression{
-      type,
-      leftExpression,
-      RightExpression
-    };
+  LogicalExpression::LogicalExpression(
+    const ExpressionType &type,
+    LogicalExpression *leftExpression,
+    LogicalExpression *RightExpression){
+    this->type = type;
+    this->left = leftExpression;
+    this->right = RightExpression;
   }
 
-  Expression::~Expression(){
+
+  LogicalExpression* LogicalExpression::Predicate(
+    const std::string& alias,
+    const std::string &column,
+    const ExpressionOperator &operation,
+    const Field &value) {
+    return new LogicalExpression(alias, column, operation, value);
+  }
+
+  LogicalExpression* LogicalExpression::Predicate(
+    const column_index_t & column,
+    const ExpressionOperator & operation,
+    const Field & value){
+    return new LogicalExpression(column, operation, value);
+  }
+
+  LogicalExpression* LogicalExpression::Logical(
+    const ExpressionType &type,
+    LogicalExpression *leftExpression,
+    LogicalExpression *RightExpression){
+    return new LogicalExpression(type, leftExpression, RightExpression);
+  }
+
+  LogicalExpression::~LogicalExpression(){
     delete left;
     delete right;
   }
 
-  bool Expression::Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary){
+  bool LogicalExpression::Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary){
     if (this->type != ExpressionType::Predicate
       && this->left != nullptr
       && this->right != nullptr)
@@ -64,7 +91,7 @@ namespace Expressions{
     return true;
   }
 
-  bool Expression::IsComplex()const{
+  bool LogicalExpression::IsComplex()const{
     if (this->left != nullptr && this->right != nullptr)
       return this->left->IsComplex() || this->right->IsComplex();
 
@@ -74,7 +101,7 @@ namespace Expressions{
     return false;
   }
 
-  void Expression::GetColumns(HashSet<column_index_t>& columnsSet) const{
+  void LogicalExpression::GetColumns(HashSet<column_index_t>& columnsSet) const{
     if (this->left != nullptr && this->right != nullptr) {
         this->left->GetColumns(columnsSet);
         this->right->GetColumns(columnsSet);
@@ -83,4 +110,8 @@ namespace Expressions{
     if (!columnsSet.contains(this->columnIndex))
       columnsSet.Add(this->columnIndex);
   }
+
+  LogicalExpression * LogicalExpression::GetLeft()const{ return this->left; }
+
+  LogicalExpression * LogicalExpression::GetRight() const{ return this->right; }
 }

@@ -22,7 +22,7 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalProject(this->databaseId, this->child->ToPhysical(), this->columns, this->columnsHeaders);
   }
 
-  LogicalTableScan::LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression)
+  LogicalTableScan::LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression)
   : LogicalPlan(databaseId), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalTableScan::ToPhysical(){
@@ -70,7 +70,7 @@ namespace QueryPipeline {
    const int32_t& databaseId,
    LogicalTableScan *left,
    LogicalTableScan *right,
-   Expressions::Expression *condition,
+   Expressions::LogicalExpression *condition,
    const JoinType &type)
    : LogicalPlan(databaseId), left(left), right(right), condition(condition), type(type) {}
 
@@ -79,7 +79,7 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalNestedLoopJoin(this->databaseId, 0, 0, this->condition);
   }
 
-LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::Expression* filter)
+LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::LogicalExpression* filter)
   : LogicalPlan(databaseId), child(child), filter(filter) {}
 
   PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(){
@@ -99,7 +99,7 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     return new PhysicalPlan::PhysicalSchemaCreate(this->databaseId, this->schemaName);
   }
 
-  LogicalDelete::LogicalDelete(const int32_t &databaseId, Statements::TableName *table, Expressions::Expression *expression)
+  LogicalDelete::LogicalDelete(const int32_t &databaseId, Statements::TableName *table, Expressions::LogicalExpression *expression)
     : LogicalPlan(databaseId), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalDelete::ToPhysical(){
@@ -154,7 +154,7 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     return new PhysicalPlan::PhysicalTableCreate(this->databaseId, this->table, this->columns, index, this->constraintName);
   }
 
-  LogicalUpdate::LogicalUpdate(const int32_t& databaseId, Statements::TableName *table, vector<Field> & fields, Expressions::Expression *expression)
+  LogicalUpdate::LogicalUpdate(const int32_t& databaseId, Statements::TableName *table, vector<Field> & fields, Expressions::LogicalExpression *expression)
   : LogicalPlan(databaseId), table(table), fields(std::move(fields)), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator* LogicalUpdate::ToPhysical(){

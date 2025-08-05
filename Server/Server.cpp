@@ -565,9 +565,11 @@ namespace Server {
       Indexing::Key key;
       key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
 
-      auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(dbName, 1));
+      auto* expression = Expressions::LogicalExpression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(dbName, 1));
 
-      sysDatabases->ClusteredIndexScan(&selectedDatabases, &expression);
+      sysDatabases->ClusteredIndexScan(&selectedDatabases, expression);
+
+      delete expression;
 
       return !selectedDatabases.empty();
   }
@@ -640,12 +642,14 @@ namespace Server {
   Headers::DatabaseHeader ServerInstance::SelectDatabase(const std::string &name) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(name, 1));
+    auto expression = Expressions::LogicalExpression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(name, 1));
 
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
     vector<Row> selectedDatabases;
 
-    sysDatabases->ClusteredIndexScan(&selectedDatabases, &expression);
+    sysDatabases->ClusteredIndexScan(&selectedDatabases, expression);
+
+    delete expression;
 
     if (selectedDatabases.empty())
       return {};
@@ -690,9 +694,11 @@ namespace Server {
      Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
      vector<Row> selectedSchemas;
 
-    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseId, 1));
+    auto expression = Expressions::LogicalExpression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseId, 1));
 
-    sysSchemas->ClusteredIndexScan(&selectedSchemas, &expression);
+    sysSchemas->ClusteredIndexScan(&selectedSchemas, expression);
+
+    delete expression;
 
     if (selectedSchemas.empty())
       return {};
@@ -719,31 +725,27 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     auto *leftExpr =
-                new Expressions::Expression{
-                    .type = Expressions::ExpressionType::Predicate,
-                    .left = nullptr,
-                    .right = nullptr,
-                    .operation = Expressions::ExpressionOperator::Equal,
-                    .value = Field(databaseId, 1),
-                    .columnIndex = 1
-                };
+        Expressions::LogicalExpression::Predicate(
+        1,
+        Expressions::ExpressionOperator::Equal,
+        Field(databaseId, 1)
+        );
 
     auto *rightExpr =
-              new Expressions::Expression{
-                    .type = Expressions::ExpressionType::Predicate,
-                    .left = nullptr,
-                    .right = nullptr,
-                    .operation = Expressions::ExpressionOperator::Equal,
-                    .value = Field(schema, 2),
-                    .columnIndex = 2
-                };
+          Expressions::LogicalExpression::Predicate(
+      2,
+      Expressions::ExpressionOperator::Equal,
+      Field(schema, 2)
+      );
 
-    auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
+    auto expr = Expressions::LogicalExpression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
 
     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
     vector<Row> selectedSchemas;
 
-    sysSchemas->ClusteredIndexScan(&selectedSchemas, &expr);
+    sysSchemas->ClusteredIndexScan(&selectedSchemas, expr);
+
+    delete expr;
 
     return !selectedSchemas.empty();
   }
@@ -753,13 +755,15 @@ namespace Server {
 
     auto databaseHeader = this->SelectDatabase(dbName);
 
-    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseHeader.id, 1));
+    auto expression = Expressions::LogicalExpression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseHeader.id, 1));
 
     vector<Row> selectedTables;
 
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
-    sysTablesPtr->ClusteredIndexScan(&selectedTables, &expression);
+    sysTablesPtr->ClusteredIndexScan(&selectedTables, expression);
+
+    delete expression;
 
     if (selectedTables.empty())
       return {};
@@ -797,13 +801,15 @@ namespace Server {
   vector<Headers::TableHeader> ServerInstance::SelectTables(const int32_t & databaseId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseId, 1));
+    auto expression = Expressions::LogicalExpression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(databaseId, 1));
 
     vector<Row> selectedTables;
 
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
-    sysTablesPtr->ClusteredIndexScan(&selectedTables, &expression);
+    sysTablesPtr->ClusteredIndexScan(&selectedTables, expression);
+
+    delete expression;
 
     if (selectedTables.empty())
       return {};
@@ -879,28 +885,24 @@ namespace Server {
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
     auto *leftExpr =
-                new Expressions::Expression{
-                    .type = Expressions::ExpressionType::Predicate,
-                    .left = nullptr,
-                    .right = nullptr,
-                    .operation = Expressions::ExpressionOperator::Equal,
-                    .value = Field(databaseId, 1),
-                    .columnIndex = 1
-                };
+          Expressions::LogicalExpression::Predicate(
+          1,
+          Expressions::ExpressionOperator::Equal,
+          Field(databaseId, 1)
+          );
 
     auto *rightExpr =
-              new Expressions::Expression{
-                    .type = Expressions::ExpressionType::Predicate,
-                    .left = nullptr,
-                    .right = nullptr,
-                    .operation = Expressions::ExpressionOperator::Equal,
-                    .value = Field(tableName, 3),
-                    .columnIndex = 3
-                };
+        Expressions::LogicalExpression::Predicate(
+          3,
+          Expressions::ExpressionOperator::Equal,
+          Field(tableName, 3)
+          );
 
-    auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
+    auto* expr = Expressions::LogicalExpression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
 
-    sysTablesPtr->ClusteredIndexScan(&selectedTables, &expr);
+    sysTablesPtr->ClusteredIndexScan(&selectedTables, expr);
+
+    delete expr;
 
     if (selectedTables.empty())
       return {};
@@ -927,28 +929,24 @@ namespace Server {
     Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
     auto *leftExpr =
-            new Expressions::Expression{
-              .type = Expressions::ExpressionType::Predicate,
-              .left = nullptr,
-              .right = nullptr,
-              .operation = Expressions::ExpressionOperator::Equal,
-              .value = Field(tableId, static_cast<column_index_t>(SysColumns::TableId)),
-              .columnIndex = static_cast<column_index_t>(SysColumns::TableId)
-          };
+          Expressions::LogicalExpression::Predicate(
+          static_cast<column_index_t>(SysColumns::TableId),
+          Expressions::ExpressionOperator::Equal,
+          Field(tableId, static_cast<column_index_t>(SysColumns::TableId))
+          );
 
     auto *rightExpr =
-              new Expressions::Expression{
-                .type = Expressions::ExpressionType::Predicate,
-                .left = nullptr,
-                .right = nullptr,
-                .operation = Expressions::ExpressionOperator::Equal,
-                .value = Field(false, static_cast<column_index_t>(SysColumns::IsDeleted)),
-                .columnIndex = static_cast<column_index_t>(SysColumns::IsDeleted)
-            };
+      Expressions::LogicalExpression::Predicate(
+        static_cast<column_index_t>(SysColumns::IsDeleted),
+        Expressions::ExpressionOperator::Equal,
+        Field(false, static_cast<column_index_t>(SysColumns::IsDeleted))
+        );
 
-    const auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
+    const auto* expr = Expressions::LogicalExpression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
 
-    sysColumns->ClusteredIndexScan(&selectedColumns, &expr);
+    sysColumns->ClusteredIndexScan(&selectedColumns, expr);
+
+    delete expr;
 
     if (selectedColumns.empty())
       return {};
@@ -998,9 +996,11 @@ namespace Server {
     vector<Row> selectedConstraints;
     Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
 
-    auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
+    auto* expression = Expressions::LogicalExpression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
 
-    constraintsTable->ClusteredIndexScan(&selectedConstraints, &expression);
+    constraintsTable->ClusteredIndexScan(&selectedConstraints, expression);
+
+    delete expression;
 
     if (selectedConstraints.empty())
       return {};
@@ -1155,9 +1155,11 @@ namespace Server {
       Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
       vector<Row> selectedIndexes;
 
-      const auto expression = Expressions::Expression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
+      const auto* expression = Expressions::LogicalExpression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(tableId, 1));
 
-      sysIndexes->ClusteredIndexScan(&selectedIndexes, &expression);
+      sysIndexes->ClusteredIndexScan(&selectedIndexes, expression);
+
+      delete expression;
 
       vector<Headers::IndexHeader> selectedIndexHeaders;
 
@@ -1344,29 +1346,16 @@ namespace Server {
       Field(lastValue, 4)
     };
 
-    auto *leftExpr =
-            new Expressions::Expression{
-              .type = Expressions::ExpressionType::Predicate,
-              .left = nullptr,
-              .right = nullptr,
-              .operation = Expressions::ExpressionOperator::Equal,
-              .value = Field(tableId, 0),
-              .columnIndex = 0
-          };
+    auto* leftExpr = Expressions::LogicalExpression::Predicate(0, Expressions::ExpressionOperator::Equal, Field(tableId, 0));
 
-    auto *rightExpr =
-              new Expressions::Expression{
-                .type = Expressions::ExpressionType::Predicate,
-                .left = nullptr,
-                .right = nullptr,
-                .operation = Expressions::ExpressionOperator::Equal,
-                .value = Field(columnId, 1),
-                .columnIndex = 1
-            };
+    auto *rightExpr = Expressions::LogicalExpression::Predicate(1, Expressions::ExpressionOperator::Equal, Field(columnId, 1));
 
-    auto expr = Expressions::Expression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
 
-    table->ClusteredIndexScanUpdate(&expr, updates);
+    auto* expr = Expressions::LogicalExpression::Logical(Expressions::ExpressionType::And, leftExpr, rightExpr);
+
+    table->ClusteredIndexScanUpdate(expr, updates);
+
+    delete expr;
   }
 
   void ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Field> &updates) const{

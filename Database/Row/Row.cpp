@@ -333,7 +333,7 @@ namespace DatabaseEngine::StorageTypes {
         return rowHeaderSize;
     }
 
-    bool Row::Evaluate(const Expressions::Expression *expression) const{
+    bool Row::Evaluate(const Expressions::LogicalExpression *expression) const{
         if (expression == nullptr)
             return true;
 

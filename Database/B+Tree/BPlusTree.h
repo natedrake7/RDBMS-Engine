@@ -137,11 +137,11 @@ namespace Indexing
             vector<DatabaseEngine::StorageTypes::Row>* result,
             QueryPipeline::PhysicalPlan::IndexState& state,
             const int& rowsToSelect,
-            const Expressions::Expression* expression);
+            const Expressions::LogicalExpression* expression);
 
         void IndexScan(
             vector<DatabaseEngine::StorageTypes::Row>* result,
-            const Expressions::Expression* expression);
+            const Expressions::LogicalExpression* expression);
 
         void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result);
 
@@ -150,11 +150,11 @@ namespace Indexing
             QueryPipeline::PhysicalPlan::IndexState& state,
             const int& rowsToSelect);
 
-        void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression);
+        void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::LogicalExpression* expression);
 
-        void IndexScanUpdate(const Expressions::Expression* expression, const vector<Field> & updates);
+        void IndexScanUpdate(const Expressions::LogicalExpression* expression, const vector<Field> & updates);
 
-        void IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates);
+        void IndexSeekUpdate(Expressions::LogicalExpression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates);
 
         void SearchKey(const Key &key, QueryData &result) const;
 

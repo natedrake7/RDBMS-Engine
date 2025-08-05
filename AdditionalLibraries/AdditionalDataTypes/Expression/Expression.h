@@ -40,11 +40,19 @@ namespace Expressions{
     { "<=", ExpressionOperator::LessEqual },
   };
 
-  struct Expression {
+  class Expression {
+    public:
+      virtual ~Expression() = default;
+      Expression() = default;
+  };
+
+  class LogicalExpression : public Expression {
+    public:
+
     ExpressionType type;
 
-    Expression* left;
-    Expression* right;
+    LogicalExpression* left;
+    LogicalExpression* right;
 
     QueryPipeline::Statements::ColumnName column;
 
@@ -53,25 +61,63 @@ namespace Expressions{
 
     Constants::column_index_t columnIndex;
 
-    static Expression Predicate(
-      const std::string& alias,
-      const std::string& column,
-      const ExpressionOperator& operation,
-      const Field& value);
+      LogicalExpression(
+        const std::string& alias,
+        const std::string& column,
+        const ExpressionOperator& operation,
+        const Field& value
+        );
 
-    static Expression Predicate(
-      const column_index_t & column,
-      const ExpressionOperator& operation,
-      const Field& value);
+      LogicalExpression(
+        const column_index_t & column,
+        const ExpressionOperator& operation,
+        const Field& value
+        );
 
-    static Expression Logical(
-      const ExpressionType& type,
-      Expression* leftExpression,
-      Expression* RightExpression);
+      LogicalExpression(
+        const ExpressionType& type,
+        LogicalExpression* leftExpression,
+        LogicalExpression* RightExpression
+      );
 
-    ~Expression();
-    bool Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
-    [[nodiscard]] bool IsComplex() const;
-    void GetColumns(HashSet<column_index_t>& columnsSet)const;
-  };
+      static LogicalExpression* Predicate(
+        const std::string& alias,
+        const std::string& column,
+        const ExpressionOperator& operation,
+        const Field& value
+      );
+
+      static LogicalExpression* Predicate(
+        const column_index_t & column,
+        const ExpressionOperator& operation,
+        const Field& value
+        );
+
+      static LogicalExpression* Logical(
+        const ExpressionType& type,
+        LogicalExpression* leftExpression,
+        LogicalExpression* RightExpression
+        );
+
+      LogicalExpression() = default;
+      ~LogicalExpression()override;
+
+      bool Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
+      [[nodiscard]] bool IsComplex() const;
+      void GetColumns(HashSet<column_index_t>& columnsSet)const;
+
+    [[nodiscard]] LogicalExpression* GetLeft()const;
+
+    [[nodiscard]] LogicalExpression* GetRight() const;
+
+    // [[nodiscard]] ExpressionType GetType() const;
+    //
+    // [[nodiscard]] QueryPipeline::Statements::ColumnName GetColumn() const;
+    //
+    // [[nodiscard]] ExpressionOperator GetOperation() const;
+    //
+    // [[nodiscard]] Field GetValue() const;
+    //
+    // [[nodiscard]] Constants::column_index_t GetColumnIndex() const;
+};
 }

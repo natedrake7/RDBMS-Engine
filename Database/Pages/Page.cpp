@@ -170,7 +170,7 @@ namespace Pages
             Page::WriteRowToFile(filePtr, row);
     }
 
-    void Page::Delete(vector<Row*> &deletedRows, const Expressions::Expression *expression){
+    void Page::Delete(vector<Row*> &deletedRows, const Expressions::LogicalExpression *expression){
         for (int i = 0; i < this->rows.size(); i++) {
             auto* row = this->rows[i];
 
@@ -190,7 +190,7 @@ namespace Pages
         this->header.pageSize = this->rows.size();
     }
 
-    void Page::Delete(const Expressions::Expression *expression){
+    void Page::Delete(const Expressions::LogicalExpression *expression){
         for (int i = 0; i < this->rows.size(); i++) {
             auto* row = this->rows[i];
 
@@ -296,7 +296,7 @@ namespace Pages
         rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
     }
 
-    void Page::GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row> *rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const Expressions::Expression *expression) const{
+    void Page::GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row> *rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const Expressions::LogicalExpression *expression) const{
 
         const auto &row = this->rows[indexPosition];
 

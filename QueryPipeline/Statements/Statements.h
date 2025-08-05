@@ -69,7 +69,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct WhereClause{
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
 
     WhereClause() { this->expression = nullptr; }
   };
@@ -123,7 +123,7 @@ namespace QueryPipeline::Statements {
 
   struct JoinStatement final : public Statement{
     TableName* table;
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
     Constants::JoinType type;
 
     JoinStatement() {
@@ -265,12 +265,12 @@ namespace QueryPipeline::Statements {
     SelectStatement *statement);
 
   static bool ResolveExpressionAliases(
-    Expressions::Expression* expression,
+    Expressions::LogicalExpression* expression,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement);
 
-  static void MapExpressionColumnsToIndices(Expressions::Expression* expression, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);
+  static void MapExpressionColumnsToIndices(Expressions::LogicalExpression* expression, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);
 
   static void AssignColumnsToIndices(SelectStatement* statement, Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary);
 

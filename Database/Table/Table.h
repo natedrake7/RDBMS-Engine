@@ -182,32 +182,32 @@ namespace DatabaseEngine::StorageTypes
                 vector<Row> *selectedRows,
                 QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& rowsToSelect = -1,
-                const Expressions::Expression* expression = nullptr);
+                const Expressions::LogicalExpression* expression = nullptr);
 
             void ClusteredIndexScan(
                 vector<Row> *selectedRows,
-                const Expressions::Expression* expression = nullptr);
+                const Expressions::LogicalExpression* expression = nullptr);
 
             void NonClusteredIndexScan(
                 vector<Row> *selectedRows,
                 const int& indexPos,
                 QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& rowsToSelect = -1,
-                const Expressions::Expression* expression = nullptr);
+                const Expressions::LogicalExpression* expression = nullptr);
 
             void HeapScan(vector<Row> *selectedRows, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const;
 
             void SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
 
-            void HeapDelete(const Expressions::Expression* expression) const;
+            void HeapDelete(const Expressions::LogicalExpression* expression) const;
 
             void ClusteredIndexScanDelete(
-                const Expressions::Expression* expression,
+                const Expressions::LogicalExpression* expression,
                 QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& batchSize);
 
             void ClusteredIndexSeekDelete(
-                const Expressions::Expression* expression,
+                const Expressions::LogicalExpression* expression,
                 QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& batchSize);
 
@@ -224,12 +224,12 @@ namespace DatabaseEngine::StorageTypes
 
             int CreateNonClusteredIndex(vector<Constants::column_index_t>& columnIndices);
 
-            void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
+            void HeapUpdate(const Expressions::LogicalExpression* expression, const vector<Field> &updates);
 
-            void ClusteredIndexScanUpdate(Expressions::Expression* expression, const vector<Field> &updates);
+            void ClusteredIndexScanUpdate(Expressions::LogicalExpression* expression, const vector<Field> &updates);
 
             void ClusteredIndexSeekUpdate(
-                Expressions::Expression* expression,
+                Expressions::LogicalExpression* expression,
                 const Indexing::Key* minimumValue,
                 const Indexing::Key* maximumValue,
                 const vector<Field> &updates);

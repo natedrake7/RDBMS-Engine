@@ -81,13 +81,13 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalIndexScan final : public PhysicalOperator{
     Statements::TableName* table;
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
     IndexState state;
     bool isClustered;
 
   public:
     explicit PhysicalIndexScan(const int32_t & databaseId, Statements::TableName* table, const bool& isClustered = false);
-    explicit PhysicalIndexScan(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, const bool& isClustered = false);
+    explicit PhysicalIndexScan(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression, const bool& isClustered = false);
     ~PhysicalIndexScan()override = default;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -115,11 +115,11 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalFilter final : public PhysicalOperator{
-    Expressions::Expression* filter;
+    Expressions::LogicalExpression* filter;
     PhysicalOperator* child;
 
     public:
-      PhysicalFilter(const int32_t & databaseId, PhysicalOperator* child, Expressions::Expression* filter);
+      PhysicalFilter(const int32_t & databaseId, PhysicalOperator* child, Expressions::LogicalExpression* filter);
       ~PhysicalFilter() override;
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -136,65 +136,65 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalHeapDelete final : public PhysicalOperator{
     Statements::TableName* table;
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
 
   public:
-    PhysicalHeapDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalHeapDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression);
     ~PhysicalHeapDelete()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalIndexScanDelete final : public PhysicalOperator{
     Statements::TableName* table;
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
     IndexState state;
 
   public:
-    PhysicalIndexScanDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalIndexScanDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression);
     ~PhysicalIndexScanDelete()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalIndexSeekDelete final : public PhysicalOperator{
     Statements::TableName* table;
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
     IndexState state;
 
   public:
-    PhysicalIndexSeekDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalIndexSeekDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression);
     ~PhysicalIndexSeekDelete()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalHeapUpdate final : public PhysicalOperator{
     Statements::TableName* table;
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
     std::vector<Field> fields;
 
   public:
-    PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression, std::vector<Field>& fields);
     ~PhysicalHeapUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalIndexScanUpdate final : public PhysicalOperator{
     Statements::TableName* table;
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
     std::vector<Field> fields;
 
   public:
-    PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression, std::vector<Field>& fields);
     ~PhysicalIndexScanUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalIndexSeekUpdate final : public PhysicalOperator{
     Statements::TableName* table;
-    Expressions::Expression* expression;
+    Expressions::LogicalExpression* expression;
     std::vector<Field> fields;
 
   public:
-    PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression, std::vector<Field>& fields);
     ~PhysicalIndexSeekUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -281,14 +281,14 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalNestedLoopJoin final : public PhysicalOperator {
     table_id_t leftTablePos;
     table_id_t rightTablePos;
-    Expressions::Expression* joinCondition;
+    Expressions::LogicalExpression* joinCondition;
 
     public:
       PhysicalNestedLoopJoin(
         const int32_t& databaseId,
         const table_id_t& leftTablePos,
         const table_id_t& rightTablePos,
-        Expressions::Expression* joinCondition);
+        Expressions::LogicalExpression* joinCondition);
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 

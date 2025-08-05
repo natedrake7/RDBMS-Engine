@@ -30,6 +30,17 @@ selectStatement
                 orderByStatement?
             ;
 
+resultList
+    : resultValue (COMMA resultValue)*
+    ;
+
+resultValue
+        : columnName
+        | functionCall
+        | literalValue
+        | variableName
+        ;
+
 whereClause
     : WHERE expression
     ;
@@ -127,15 +138,15 @@ dataType
     ;
 
 varcharType
-    : 'VARCHAR' '(' (num=NUMBER | max=MAX) ')'
+    : VARCHAR LEFTPARENT (num=NUMBER | max=MAX) RIGHTPARENT
     ;
 
 nvarcharType
-    : NVARCHAR '(' (num=NUMBER | max=MAX) ')'
+    : NVARCHAR LEFTPARENT (num=NUMBER | max=MAX) RIGHTPARENT
     ;
 
 decimalType
-    : DECIMAL '(' (beforePoint=NUMBER) ',' (afterPoint=NUMBER) ')'
+    : DECIMAL LEFTPARENT (beforePoint=NUMBER) ',' (afterPoint=NUMBER) RIGHTPARENT
     ;
 
 primaryKey
@@ -143,11 +154,11 @@ primaryKey
     ;
 
 autoIncrementKey
-    : IDENTITY '('(seed=NUMBER) ',' (increment=NUMBER)')'
+    : IDENTITY '('(seed=NUMBER) ',' (increment=NUMBER)RIGHTPARENT
     ;
     
 primaryKeyConstraint
-    : (CONSTRAINT constraintName=identifier)? PRIMARY KEY '(' columnList ')'
+    : (CONSTRAINT constraintName=identifier)? PRIMARY KEY '(' columnList RIGHTPARENT
     ;
 
 ////////////////////////////////////////////////////////////
@@ -238,6 +249,14 @@ joinType
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
+functionCall
+    : functionName LAPRENT (expression (COMMA expression)*)? RAPRENT
+    ;
+
+functionName
+    : IDENTIFIER
+    ;
+
 //Get Date
 getDate
     : 'GETDATE()'
@@ -277,7 +296,7 @@ variableType
     | GUID
     ;
     
-columnList : columnName (',' columnName)*;
+columnList : columnName (COMMA columnName)*;
 
 //create database statement
 ////////////////////////////////////////////////////////////
@@ -530,6 +549,9 @@ OR              : 'OR';
 TRUE            : 'TRUE';
 FALSE           : 'FALSE';
 WILDCARD        : '*';
+LAPRENT         : '(';
+RAPRENT         : ')';
+COMMA           : ',';
 IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
 UNICODESTRING   : 'N''\'' ( ~['\\] | '\\' . )* '\'';
 STRING          : '\'' ( ~['\\] | '\\' . )* '\'';

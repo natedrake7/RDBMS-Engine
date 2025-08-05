@@ -345,7 +345,7 @@ namespace Indexing
         vector<DatabaseEngine::StorageTypes::Row> *result,
         QueryPipeline::PhysicalPlan::IndexState& state,
         const int& rowsToSelect,
-        const Expressions::Expression *expression){
+        const Expressions::LogicalExpression *expression){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -388,7 +388,7 @@ namespace Indexing
       }
     }
 
-    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, const Expressions::Expression *expression){
+    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, const Expressions::LogicalExpression *expression){
 
         this->root = this->GetNode(this->firstIndexPageId);
 
@@ -504,7 +504,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression){
+    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::LogicalExpression *expression){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -532,7 +532,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
+    void BPlusTree::IndexScanUpdate(const Expressions::LogicalExpression *expression, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -632,7 +632,7 @@ namespace Indexing
 
     }
 
-    void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates){
+    void BPlusTree::IndexSeekUpdate(Expressions::LogicalExpression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)

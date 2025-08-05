@@ -16,8 +16,6 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitTableName(SQLParser::TableNameContext *context) override;
 
-      antlrcpp::Any visitDbName(SQLParser::DbNameContext *context) override;
-
       antlrcpp::Any visitColumnList(SQLParser::ColumnListContext *context) override;
 
       antlrcpp::Any visitSqlStatement(SQLParser::SqlStatementContext *context) override;
@@ -111,5 +109,13 @@ namespace QueryPipeline {
        antlrcpp::Any visitVariableType(SQLParser::VariableTypeContext *context) override;
 
        antlrcpp::Any visitSetVariableStatement(SQLParser::SetVariableStatementContext *context) override;
+
+      antlrcpp::Any visitResultList(SQLParser::ResultListContext *context) override;
+
+      antlrcpp::Any visitResultValue(SQLParser::ResultValueContext *context) override;
+
+      antlrcpp::Any visitFunctionCall(SQLParser::FunctionCallContext *context) override;
+
+      antlrcpp::Any visitFunctionName(SQLParser::FunctionNameContext *context) override;
   };
 }

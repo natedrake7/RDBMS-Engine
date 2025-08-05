@@ -94,7 +94,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
 
-        [[nodiscard]] bool Evaluate(const Expressions::Expression* expression) const;
+        [[nodiscard]] bool Evaluate(const Expressions::LogicalExpression* expression) const;
 
         [[nodiscard]] int Update(const vector<Field> & updates);
 

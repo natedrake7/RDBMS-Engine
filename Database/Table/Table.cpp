@@ -394,7 +394,7 @@ namespace DatabaseEngine::StorageTypes {
 // //        this->HeapScan(&selectedRows, rowsToSelect);
       }
 
-    void Table::HeapDelete(const Expressions::Expression* expression) const
+    void Table::HeapDelete(const Expressions::LogicalExpression* expression) const
     {
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
@@ -443,7 +443,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanDelete(
-      const Expressions::Expression *expression,
+      const Expressions::LogicalExpression *expression,
       QueryPipeline::PhysicalPlan::IndexState& state,
       const int& batchSize){
         auto* tree = this->GetClusteredIndexedTree();
@@ -464,7 +464,7 @@ namespace DatabaseEngine::StorageTypes {
    }
 
   void Table::ClusteredIndexSeekDelete(
-    const Expressions::Expression *expression,
+    const Expressions::LogicalExpression *expression,
     QueryPipeline::PhysicalPlan::IndexState &state,
     const int &batchSize){
 
@@ -583,7 +583,7 @@ namespace DatabaseEngine::StorageTypes {
       vector<Row> *selectedRows,
       QueryPipeline::PhysicalPlan::IndexState& state,
       const int& rowsToSelect,
-      const Expressions::Expression* expression){
+      const Expressions::LogicalExpression* expression){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -597,7 +597,7 @@ namespace DatabaseEngine::StorageTypes {
         tree->IndexScan(selectedRows, state, rowsToSelect);
     }
 
-    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression *expression){
+    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::LogicalExpression *expression){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -616,7 +616,7 @@ namespace DatabaseEngine::StorageTypes {
       const int &indexPos,
       QueryPipeline::PhysicalPlan::IndexState& state,
       const int& rowsToSelect,
-      const Expressions::Expression *expression){
+      const Expressions::LogicalExpression *expression){
 
         auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
@@ -800,7 +800,7 @@ namespace DatabaseEngine::StorageTypes {
         return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
     }
 
-  void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
+  void Table::HeapUpdate(const Expressions::LogicalExpression *expression, const vector<Field> & updates){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -893,14 +893,14 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-    void Table::ClusteredIndexScanUpdate(Expressions::Expression *expression, const vector<Field> & updates){
+    void Table::ClusteredIndexScanUpdate(Expressions::LogicalExpression *expression, const vector<Field> & updates){
       auto* tree = this->GetClusteredIndexedTree();
 
       tree->IndexScanUpdate(expression, updates);
     }
 
     void Table::ClusteredIndexSeekUpdate(
-        Expressions::Expression* expression,
+        Expressions::LogicalExpression* expression,
         const Indexing::Key *minimumValue,
         const Indexing::Key *maximumValue,
         const vector<Field> & updates){
