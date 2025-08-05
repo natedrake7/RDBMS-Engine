@@ -34,6 +34,14 @@ namespace Expressions{
     LessEqual = 5,
   };
 
+  enum class BinaryExpressionOperator {
+    Add = 0,
+    Subtract = 1,
+    Multiply = 2,
+    Divide = 3,
+    Modulo = 4,
+  };
+
   static Dictionary<std::string, ExpressionOperator> ExpressionOperatorsDictionary{
     { "=", ExpressionOperator::Equal },
     { "!=", ExpressionOperator::NotEqual },
@@ -75,6 +83,20 @@ namespace Expressions{
       LiteralExpression(const Field& value);
       ~LiteralExpression()override = default;
 
+      Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
+  };
+
+  class BinaryExpression final : public Expression {
+    public:
+      Expression* left;
+      Expression* right;
+
+      BinaryExpressionOperator operation;
+
+      BinaryExpression(Expression* left, Expression* right, const ExpressionOperator& operation);
+      ~BinaryExpression()override;
+
+    //TODO : Implement Evaluate for BinaryExpression where left and right are evaluated and Field Addition is implemented with data type coercion.
       Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
   };
 

@@ -116,5 +116,11 @@ class Field {
 
         friend ostream& operator<<(ostream& os, const Field& field);
 
+        friend Field operator+(const Field& lhs, const Field& rhs);
+        friend Field operator-(const Field& lhs, const Field& rhs);
+        friend Field operator/(const Field& lhs, const Field& rhs);
+        friend Field operator%(const Field& lhs, const Field& rhs);
+        friend Field operator*(const Field& lhs, const Field& rhs);
+
         [[nodiscard]] bool IsVariable()const;
 };

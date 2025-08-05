@@ -656,3 +656,25 @@ ostream & operator<<(ostream& os, const Field &field){
 
     return os;
 }
+
+//TODO implement operations by dataType
+Field operator+(const Field &lhs, const Field &rhs){
+    return Field(nullptr, 0);
+}
+
+Field operator-(const Field &lhs, const Field &rhs){
+    return Field(nullptr, 0);
+}
+
+Field operator/(const Field &lhs, const Field &rhs){
+    return Field(nullptr, 0);
+}
+
+Field operator*(const Field &lhs, const Field &rhs){
+    return Field(nullptr, 0);
+}
+
+Field operator%(const Field &lhs, const Field &rhs){
+    return Field(nullptr, 0);
+}
+
