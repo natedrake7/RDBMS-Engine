@@ -104,12 +104,16 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalProject final : public PhysicalOperator{
-    HashSet<column_index_t> columns;
+    std::vector<Expressions::Expression*> resultExpressions;
     std::vector<Headers::ColumnHeader> columnHeaders;
     PhysicalOperator* child;
 
     public:
-      PhysicalProject(const int32_t & databaseId, PhysicalOperator* child, const std::vector<column_index_t>& columns, std::vector<Headers::ColumnHeader>& columnHeaders);
+      PhysicalProject(
+        const int32_t & databaseId,
+        PhysicalOperator* child,
+        std::vector<Expressions::Expression*>& resultExpressions,
+        std::vector<Headers::ColumnHeader>& columnHeaders);
       ~PhysicalProject() override;
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };

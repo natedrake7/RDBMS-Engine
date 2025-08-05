@@ -118,4 +118,8 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitFunctionName(SQLParser::FunctionNameContext *context) override;
   };
+
+  struct ExpressionWrapper {
+    Expressions::Expression* expression;
+  };
 }

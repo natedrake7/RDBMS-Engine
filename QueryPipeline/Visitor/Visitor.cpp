@@ -56,12 +56,11 @@ namespace QueryPipeline {
 antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
     auto* statement = new Statements::SelectStatement();
 
-    if (!ctx->WILDCARD() && !ctx->columnList())
+    if (!ctx->WILDCARD() && !ctx->resultList())
       throw SyntaxError("No arguments specified");
 
-    if (!ctx->WILDCARD()) {
-      // statement->columns = std::move(this->GetColumnsList(ctx->resultList()));
-    }
+    if (!ctx->WILDCARD())
+      statement->results = std::any_cast<std::vector<Expressions::Expression*>>(this->visitResultList(ctx->resultList()));
     else
       statement->columns = { {.name = "*", .alias = ""}};
 
@@ -512,26 +511,35 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitResultList(SQLParser::ResultListContext *context){
-    // std::vector<Statements::ColumnName> columns;
-    //
-    // for (const auto& resultValue : context->resultValue()) {
-    //   Statements::ColumnName column;
-    //
-    //   if (resultValue->columnAlias())
-    //     column.alias = std::any_cast<std::string>(visit(resultValue->columnAlias()));
-    //
-    //   if (resultValue->identifier())
-    //     column.name = std::any_cast<std::string>(visit(resultValue->identifier()));
-    //   else
-    //     column.name = "*"; // wildcard
-    //
-    //   columns.push_back(std::move(column));
-    // }
-    //
-    // return columns;
+    std::vector<Expressions::Expression*> columns;
+
+    for (const auto& resultValue : context->resultValue()) {
+      const auto result = std::any_cast<ExpressionWrapper>(visit(resultValue));
+
+      columns.push_back(result.expression);
+    }
+
+    return columns;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitResultValue(SQLParser::ResultValueContext *context){
+      if (context->columnName()) {
+        const auto columnName = std::any_cast<Statements::ColumnName>(visit(context->columnName()));
+
+        return ExpressionWrapper{ new Expressions::ColumnExpression(columnName.name, columnName.alias)};
+      }
+
+    if (context->literalValue())
+      return ExpressionWrapper{new Expressions::LiteralExpression(std::any_cast<Field>(visit(context->literalValue())))};
+
+    if (context->functionCall())
+      return ExpressionWrapper{ std::any_cast<Expressions::Expression*>(visit(context->functionCall())) };
+
+    if (context->variableName()) {
+
+    }
+
+    throw SyntaxError("Failed to parse result value: " + context->getText());
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitFunctionCall(SQLParser::FunctionCallContext *context){

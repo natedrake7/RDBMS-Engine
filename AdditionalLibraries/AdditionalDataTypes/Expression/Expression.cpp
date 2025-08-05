@@ -2,7 +2,20 @@
 #include "../../HashSet/HashSet.h"
 
 namespace Expressions{
-  LogicalExpression::LogicalExpression(
+
+ColumnExpression::ColumnExpression(const std::string &name, const std::string &alias){
+  this->name = name;
+  this->alias = alias;
+
+  this->tableId = -1;
+  this->columnId = -1;
+}
+
+LiteralExpression::LiteralExpression(const Field &value){
+  this->value = value;
+}
+
+LogicalExpression::LogicalExpression(
     const std::string &alias,
     const std::string &column,
     const ExpressionOperator &operation,

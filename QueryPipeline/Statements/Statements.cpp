@@ -269,8 +269,8 @@ namespace QueryPipeline::Statements {
       current = new LogicalFilter(this->databaseId, current, this->where.expression);
     }
 
-    if (!this->columns.empty())
-      current = new LogicalProject(this->databaseId, current, this->columnIndices, this->columnHeaders);
+    if (!this->results.empty())
+      current = new LogicalProject(this->databaseId, current, this->results, this->columnHeaders);
 
     if(this->orderBy != nullptr){
       const auto orderType = this->orderBy->order == "DESC" ? OrderType::DESCENDING : OrderType::ASCENDING;

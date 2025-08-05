@@ -11,15 +11,24 @@ namespace QueryPipeline {
 
   LogicalPlan::~LogicalPlan() = default;
 
-  LogicalProject::LogicalProject(const int32_t & databaseId, LogicalPlan *child, const std::vector<Constants::column_index_t> &columns, std::vector<Headers::ColumnHeader>& columnsHeaders)
-: LogicalPlan(), child(child), columns(columns), columnsHeaders(std::move(columnsHeaders)) {}
+  LogicalProject::LogicalProject(
+    const int32_t & databaseId,
+    LogicalPlan *child,
+    std::vector<Expressions::Expression*> &resultExpressions,
+    std::vector<Headers::ColumnHeader>& columnsHeaders)
+: LogicalPlan(), child(child), resultExpressions(resultExpressions), columnsHeaders(std::move(columnsHeaders)) {}
 
   LogicalProject::~LogicalProject(){
       delete child;
   }
 
   PhysicalPlan::PhysicalProject * LogicalProject::ToPhysical(){
-     return new PhysicalPlan::PhysicalProject(this->databaseId, this->child->ToPhysical(), this->columns, this->columnsHeaders);
+     return new PhysicalPlan::PhysicalProject(
+       this->databaseId,
+       this->child->ToPhysical(),
+       this->resultExpressions,
+       this->columnsHeaders
+       );
   }
 
   LogicalTableScan::LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression)

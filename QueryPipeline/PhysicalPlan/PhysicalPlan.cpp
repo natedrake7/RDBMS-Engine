@@ -27,24 +27,41 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return new PhysicalPlanResult();
   }
 
-  PhysicalProject:: PhysicalProject(const int32_t & databaseId, PhysicalOperator *child, const std::vector<column_index_t>& columns, std::vector<Headers::ColumnHeader>& columnHeaders)
-    : PhysicalOperator(databaseId), columns(columns), columnHeaders(std::move(columnHeaders)), child(child) {}
+  PhysicalProject:: PhysicalProject(
+    const int32_t & databaseId,
+    PhysicalOperator *child,
+    std::vector<Expressions::Expression*>& resultExpressions,
+    std::vector<Headers::ColumnHeader>& columnHeaders)
+    : PhysicalOperator(databaseId), resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
 
-  PhysicalProject::~PhysicalProject(){ delete this->child; }
+  PhysicalProject::~PhysicalProject() {
+    for (auto& expression : this->resultExpressions)
+      delete expression;
+
+    delete this->child;
+  }
 
   PhysicalPlanResult* PhysicalProject::Execute(const int& batchSize){
       auto* result = this->child->Execute(batchSize);
 
       for (auto& row: result->rows) {
+
+          //build evaluation Function
+          std::vector<DatabaseEngine::StorageTypes::Block*> newData;
           auto& data = row.GetData();
 
-        vector<DatabaseEngine::StorageTypes::Block*> newData;
+          for (const auto& expression : this->resultExpressions) {
+
+            // //evaluate the expression and add it to the row
+            // auto* evaluated = row.Evaluate(expression);
+            // expressions.push_back(evaluated);
+          }
 
         for (int i = 0;i < data.size(); i++) {
-          if (!columns.Contains(i)) {
-            delete data[i];
-            continue;
-          }
+          // if (!columns.Contains(i)) {
+          //   delete data[i];
+          //   continue;
+          // }
 
           newData.push_back(data[i]);
         }

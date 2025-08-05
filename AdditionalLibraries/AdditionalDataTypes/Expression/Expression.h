@@ -44,9 +44,36 @@ namespace Expressions{
     public:
       virtual ~Expression() = default;
       Expression() = default;
+
+      enum class Type {
+        Column = 0,
+        Literal = 1,
+        Binary = 2,
+        Function = 3
+      };
   };
 
-  class LogicalExpression : public Expression {
+  class ColumnExpression final : public Expression {
+    public:
+      std::string name;
+      std::string alias;
+
+      int32_t tableId;
+      int32_t columnId;
+
+      ColumnExpression(const std::string& name, const std::string& alias);
+      ~ColumnExpression()override = default;
+  };
+
+  class LiteralExpression final : public Expression {
+    public:
+      Field value;
+
+      LiteralExpression(const Field& value);
+      ~LiteralExpression()override = default;
+  };
+
+  class LogicalExpression final : public Expression {
     public:
 
     ExpressionType type;

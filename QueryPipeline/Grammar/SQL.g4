@@ -23,7 +23,7 @@ sqlStatement
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 selectStatement
-            :   SELECT (columnList | WILDCARD)
+            :   SELECT (resultList | WILDCARD)
                 FROM tableName
                 ((joinStatement)*)?
                 whereClause?

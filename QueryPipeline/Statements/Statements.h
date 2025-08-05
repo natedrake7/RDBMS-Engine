@@ -156,6 +156,9 @@ namespace QueryPipeline::Statements {
 
   struct SelectStatement final : Statement{
     TableName* table;
+
+    std::vector<Expressions::Expression*> results;
+
     std::vector<ColumnName> columns;
     Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
 

@@ -24,10 +24,14 @@ namespace QueryPipeline {
   class LogicalProject final: public LogicalPlan {
     public:
       LogicalPlan* child;
-      std::vector<Constants::column_index_t> columns;
+      std::vector<Expressions::Expression*> resultExpressions;
       std::vector<Headers::ColumnHeader> columnsHeaders;
 
-      LogicalProject(const int32_t & databaseId, LogicalPlan* child, const std::vector<Constants::column_index_t>& columns, std::vector<Headers::ColumnHeader>& columnsHeaders);
+      LogicalProject(
+        const int32_t & databaseId,
+        LogicalPlan* child,
+        std::vector<Expressions::Expression*>& resultExpressions,
+        std::vector<Headers::ColumnHeader>& columnsHeaders);
       ~LogicalProject() override;
       PhysicalPlan::PhysicalProject* ToPhysical()override;
   };
