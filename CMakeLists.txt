@@ -95,7 +95,9 @@ add_library(QueryPipeline  SHARED
                 QueryPipeline/ErrorListener/ErrorListener.cpp
                 QueryPipeline/ErrorListener/ErrorListener.h
                 QueryPipeline/Constants.h
-                ${ANTLR_SRC})
+                ${ANTLR_SRC}
+        QueryPipeline/QueryResult/QueryResult.cpp
+        QueryPipeline/QueryResult/QueryResult.h)
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
@@ -164,7 +166,8 @@ add_library(Database SHARED
         Database/Logger/WriteAheadLogger/WriteAheadLogger.cpp
         Database/Logger/WriteAheadLogger/WriteAheadLogger.h
         Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.cpp
-        Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.h)
+        Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.h
+        Database/ExpressionExtensions/ExpressionExtensions.cpp)
 
 add_library(Server SHARED
         Server/ConnectionManager/ConnectionManager.cpp

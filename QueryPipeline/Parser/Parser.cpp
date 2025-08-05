@@ -108,19 +108,19 @@ namespace QueryPipeline
                 return;
             }
 
-            if (!result->rows.empty()) {
-                for (const auto& block : result->rows.begin()->GetData()) {
-                    const auto* column = block->GetColumn();
+            // if (!result->rows.empty()) {
+            //     for (const auto& block : result->rows.begin()->GetData()) {
+            //         const auto* column = block->GetColumn();
+            //
+            //         std::cout << column->GetColumnName() << " || ";
+            //     }
+            //
+            //     std::cout << std::endl;
+            // }
 
-                    std::cout << column->GetColumnName() << " || ";
-                }
 
-                std::cout << std::endl;
-            }
-
-
-            for (const auto& row: result->rows)
-                row.PrintRow();
+            for (const auto& row: result->results)
+                row.Print();
         }
 
         delete result;

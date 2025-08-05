@@ -9,6 +9,7 @@ ColumnExpression::ColumnExpression(const std::string &name, const std::string &a
 
   this->tableId = -1;
   this->columnId = -1;
+  this->columnIndex = 0;
 }
 
 LiteralExpression::LiteralExpression(const Field &value){

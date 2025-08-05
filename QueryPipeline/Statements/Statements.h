@@ -256,13 +256,19 @@ namespace QueryPipeline::Statements {
   static bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement);
 
   static bool ResolveColumnAlias(
+    Expressions::ColumnExpression* column,
+    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    SelectStatement *statement);
+
+  static bool ResolveColumnAlias(
     ColumnName& column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement);
 
   static bool ResolveWildCardAlias(
-    const ColumnName& column,
+    const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement);

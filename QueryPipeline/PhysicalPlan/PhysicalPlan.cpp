@@ -47,26 +47,22 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       for (auto& row: result->rows) {
 
           //build evaluation Function
-          std::vector<DatabaseEngine::StorageTypes::Block*> newData;
           auto& data = row.GetData();
+          QueryResult resultRow;
 
           for (const auto& expression : this->resultExpressions) {
-
-            // //evaluate the expression and add it to the row
-            // auto* evaluated = row.Evaluate(expression);
-            // expressions.push_back(evaluated);
+            auto field = expression->Evaluate(row);
+            resultRow.AddColumn(field);
           }
+
+          result->results.push_back(std::move(resultRow));
 
         for (int i = 0;i < data.size(); i++) {
           // if (!columns.Contains(i)) {
           //   delete data[i];
           //   continue;
           // }
-
-          newData.push_back(data[i]);
         }
-
-        data = std::move(newData);
       }
 
     ranges::sort(this->columnHeaders,

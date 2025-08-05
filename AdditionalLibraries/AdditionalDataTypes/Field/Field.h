@@ -27,6 +27,8 @@ class Field {
         ~Field();
         
         explicit Field(const void* data, const column_index_t& columnIndex = 0);
+
+        explicit Field(const unsigned char* data, const int& size, const ColumnType& type);
         
         explicit Field(const bool& data, const column_index_t& columnIndex);
         

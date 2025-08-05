@@ -4,7 +4,8 @@
 #include "../../HashSet/HashSet.h"
 #include "../Field/Field.h"
 
-namespace QueryPipeline::Statements {
+namespace DatabaseEngine::StorageTypes {
+class Row;}namespace QueryPipeline::Statements {
   struct ColumnName {
     std::string name;
     std::string alias;
@@ -51,6 +52,8 @@ namespace Expressions{
         Binary = 2,
         Function = 3
       };
+
+      virtual Field Evaluate(const DatabaseEngine::StorageTypes::Row& row) const = 0;
   };
 
   class ColumnExpression final : public Expression {
@@ -61,8 +64,12 @@ namespace Expressions{
       int32_t tableId;
       int32_t columnId;
 
+      column_index_t columnIndex;
+
       ColumnExpression(const std::string& name, const std::string& alias);
       ~ColumnExpression()override = default;
+
+      Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
   };
 
   class LiteralExpression final : public Expression {
@@ -71,9 +78,11 @@ namespace Expressions{
 
       LiteralExpression(const Field& value);
       ~LiteralExpression()override = default;
+
+      Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
   };
 
-  class LogicalExpression final : public Expression {
+  class LogicalExpression final{
     public:
 
     ExpressionType type;
@@ -127,7 +136,7 @@ namespace Expressions{
         );
 
       LogicalExpression() = default;
-      ~LogicalExpression()override;
+      ~LogicalExpression();
 
       bool Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
       [[nodiscard]] bool IsComplex() const;

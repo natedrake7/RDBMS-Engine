@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "../../Database/Row/Row.h"
+#include "../QueryResult/QueryResult.h"
 #include "../Statements/Statements.h"
 
 namespace QueryPipeline {
@@ -19,6 +20,9 @@ namespace QueryPipeline::PhysicalPlan{
   struct PhysicalPlanResult {
       std::vector<Headers::ColumnHeader> columns;
       std::vector<DatabaseEngine::StorageTypes::Row> rows;
+
+      std::vector<QueryResult> results;
+
       std::string message;
       AdditionalDataTypes::ResultCode code;
   };

@@ -59,10 +59,9 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (!ctx->WILDCARD() && !ctx->resultList())
       throw SyntaxError("No arguments specified");
 
-    if (!ctx->WILDCARD())
-      statement->results = std::any_cast<std::vector<Expressions::Expression*>>(this->visitResultList(ctx->resultList()));
-    else
-      statement->columns = { {.name = "*", .alias = ""}};
+    statement->results = ctx->WILDCARD()
+        ? std::vector<Expressions::Expression*>{ new Expressions::ColumnExpression("*", "") }
+        : std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(ctx->resultList()));
 
     if (!ctx->tableName())
       throw SyntaxError("No table specified");

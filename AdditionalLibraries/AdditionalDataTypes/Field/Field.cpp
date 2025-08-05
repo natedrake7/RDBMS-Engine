@@ -22,6 +22,15 @@ Field::Field(const void *data, const Constants::column_index_t &columnIndex){
     this->isIdentifier = false;
 }
 
+Field::Field(const unsigned char *data, const int &size, const ColumnType &type){
+    this->data = new object_t[size];
+
+    memcpy(this->data, data, size);
+
+    this->size = size;
+    this->type = type;
+}
+
 Field::Field(const bool &data, const column_index_t &columnIndex){
     this->data = new object_t[sizeof(bool)];
     memcpy(this->data, &data, sizeof(bool));
