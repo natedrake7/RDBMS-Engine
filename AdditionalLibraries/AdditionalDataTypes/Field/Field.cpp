@@ -377,7 +377,7 @@ int8_t Field::GetTinyInt() const {
 int16_t Field::GetSmallInt() const {
     switch (this->type) {
         case ColumnType::TinyInt:
-            return this->GetTinyInt();
+            return *reinterpret_cast<int8_t *>(this->data);
         case ColumnType::SmallInt:
             return *reinterpret_cast<int16_t *>(this->data);
         case ColumnType::Int:
@@ -400,13 +400,13 @@ int16_t Field::GetSmallInt() const {
 int32_t Field::GetInt() const {
     switch (this->type) {
         case ColumnType::TinyInt:
-            return this->GetTinyInt();
+            return *reinterpret_cast<int8_t *>(this->data);
         case ColumnType::SmallInt:
-            return this->GetSmallInt();
+            return *reinterpret_cast<int16_t *>(this->data);
         case ColumnType::Int:
             return *reinterpret_cast<int32_t *>(this->data);
         case ColumnType::BigInt:
-            return this->GetBigInt();
+            return SafeConverter<int32_t>::SafeStoi(this->GetBigInt());
         case ColumnType::Decimal:
             return 0;
         case ColumnType::String:
@@ -423,11 +423,11 @@ int32_t Field::GetInt() const {
 int64_t Field::GetBigInt() const {
     switch (this->type) {
         case ColumnType::TinyInt:
-            return this->GetTinyInt();
+            return *reinterpret_cast<int8_t *>(this->data);
         case ColumnType::SmallInt:
-            return this->GetSmallInt();
+            return *reinterpret_cast<int16_t *>(this->data);
         case ColumnType::Int:
-            return this->GetInt();
+            return *reinterpret_cast<int32_t *>(this->data);
         case ColumnType::BigInt:
            return *reinterpret_cast<int64_t *>(this->data);
         case ColumnType::Decimal:
