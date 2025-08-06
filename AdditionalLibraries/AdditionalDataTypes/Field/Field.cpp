@@ -377,6 +377,7 @@ int8_t Field::GetTinyInt() const {
 int16_t Field::GetSmallInt() const {
     switch (this->type) {
         case ColumnType::TinyInt:
+            return this->GetTinyInt();
         case ColumnType::SmallInt:
             return *reinterpret_cast<int16_t *>(this->data);
         case ColumnType::Int:
@@ -399,11 +400,13 @@ int16_t Field::GetSmallInt() const {
 int32_t Field::GetInt() const {
     switch (this->type) {
         case ColumnType::TinyInt:
+            return this->GetTinyInt();
         case ColumnType::SmallInt:
+            return this->GetSmallInt();
         case ColumnType::Int:
             return *reinterpret_cast<int32_t *>(this->data);
         case ColumnType::BigInt:
-            return SafeConverter<int32_t>::SafeStoi(this->GetBigInt());
+            return this->GetBigInt();
         case ColumnType::Decimal:
             return 0;
         case ColumnType::String:
@@ -420,8 +423,11 @@ int32_t Field::GetInt() const {
 int64_t Field::GetBigInt() const {
     switch (this->type) {
         case ColumnType::TinyInt:
+            return this->GetTinyInt();
         case ColumnType::SmallInt:
+            return this->GetSmallInt();
         case ColumnType::Int:
+            return this->GetInt();
         case ColumnType::BigInt:
            return *reinterpret_cast<int64_t *>(this->data);
         case ColumnType::Decimal:
@@ -606,6 +612,10 @@ void Field::Validate(const ColumnType &columnType, const int &ordinalPosition){
     this->SetColumnIndex(ordinalPosition);
 }
 
+ColumnType Field::PromoteType(const ColumnType &lhs, const ColumnType &rhs){
+    return  ColumnTypeRank.Get(lhs) > ColumnTypeRank.Get(rhs) ? lhs : rhs;
+}
+
 bool Field::IsVariable()const{ return !this->name.empty(); }
 
 ostream & operator<<(ostream& os, const Field &field){
@@ -657,9 +667,92 @@ ostream & operator<<(ostream& os, const Field &field){
     return os;
 }
 
+Field Field::PerformTinyIntAddition(const int8_t &lhs, const int8_t &rhs){
+        return
+        (SafeConverter<int8_t>::AssertOverflow(lhs, rhs))
+        ?
+            Field(
+                static_cast<int16_t>(lhs) +  static_cast<int16_t>(rhs),
+                0
+            )
+        :
+            Field(
+                lhs + rhs,
+                0
+            ) ;
+}
+
+Field Field::PerformSmallIntAddition(const int16_t &lhs, const int16_t &rhs){
+    return
+    (SafeConverter<int16_t>::AssertOverflow(lhs, rhs))
+    ?
+        Field(
+            static_cast<int32_t>(lhs) +  static_cast<int32_t>(rhs),
+            0
+        )
+    :
+        Field(
+            lhs + rhs,
+            0
+        ) ;
+}
+
+Field Field::PerformIntAddition(const int32_t &lhs, const int32_t &rhs){
+    return
+    (SafeConverter<int32_t>::AssertOverflow(lhs, rhs))
+    ?
+        Field(
+            static_cast<int64_t>(lhs) +  static_cast<int64_t>(rhs),
+            0
+        )
+    :
+        Field(
+            lhs + rhs,
+            0
+        ) ;
+}
+
+Field Field::PerformBigIntAddition(const int64_t &lhs, const int64_t &rhs){
+    return Field(
+        lhs +  rhs,
+        0
+    );
+}
+
+Field Field::PerformStringAddition(const string &lhs, const string &rhs){
+    return Field(
+        lhs + rhs,
+        0
+    );
+}
+
 //TODO implement operations by dataType
 Field operator+(const Field &lhs, const Field &rhs){
-    return Field(nullptr, 0);
+    switch (Field::PromoteType(lhs.type, rhs.type)) {
+        case ColumnType::TinyInt:
+            return Field::PerformTinyIntAddition(lhs.GetTinyInt(), rhs.GetTinyInt());
+        case ColumnType::SmallInt:
+            return Field::PerformSmallIntAddition(lhs.GetSmallInt(), rhs.GetSmallInt());
+        case ColumnType::Int:
+            return Field::PerformIntAddition(lhs.GetInt(), rhs.GetInt());
+        case ColumnType::BigInt:
+            return Field::PerformBigIntAddition(lhs.GetBigInt(), rhs.GetBigInt());
+        case ColumnType::Decimal:
+            return Field(nullptr, 0);
+        case ColumnType::String:
+        case ColumnType::UnicodeString:
+                return Field::PerformStringAddition(lhs.GetString(), rhs.GetString());
+        case ColumnType::Bool:
+        case ColumnType::DateTime:
+        case ColumnType::Guid:
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type));
+    }
 }
 
 Field operator-(const Field &lhs, const Field &rhs){

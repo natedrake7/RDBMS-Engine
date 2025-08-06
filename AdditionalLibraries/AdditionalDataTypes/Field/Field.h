@@ -7,6 +7,17 @@
 
 using namespace std;
 
+static Dictionary<ColumnType, int> ColumnTypeRank{
+  {ColumnType::String, 1},
+  {ColumnType::UnicodeString, 2},
+  {ColumnType::Bool, 3},
+  {ColumnType::TinyInt, 4},
+  {ColumnType::SmallInt, 5},
+  {ColumnType::Int, 6},
+  {ColumnType::BigInt, 7},
+  {ColumnType::Decimal, 8},
+};
+
 class Field {
     column_index_t columnIndex;
     object_t* data;
@@ -21,6 +32,12 @@ class Field {
     [[nodiscard]] bool ParseAsBoolFromString()const;
     [[nodiscard]] bool TryParseAsBoolFromInt(bool& result)const;
     [[nodiscard]] bool TryParseDate();
+
+    static Field PerformTinyIntAddition(const int8_t& lhs, const int8_t& rhs);
+    static Field PerformSmallIntAddition(const int16_t& lhs, const int16_t& rhs);
+    static Field PerformIntAddition(const int32_t& lhs, const int32_t& rhs);
+    static Field PerformBigIntAddition(const int64_t& lhs, const int64_t &rhs);
+    static Field PerformStringAddition(const string& lhs, const string& rhs);
 
     public:
         Field();
@@ -113,6 +130,8 @@ class Field {
         void Validate(const Headers::ColumnHeader &header);
 
         void Validate(const ColumnType& columnType, const int& ordinalPosition);
+
+        static ColumnType PromoteType(const ColumnType& lhs, const ColumnType& rhs);
 
         friend ostream& operator<<(ostream& os, const Field& field);
 

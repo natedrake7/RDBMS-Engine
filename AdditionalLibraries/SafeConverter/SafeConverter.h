@@ -64,4 +64,12 @@ public:
 
         return static_cast<T>(input);
     }
+
+    static bool AssertOverflow(const T& leftValue, const T& rightValue)
+    {
+        static_assert(is_integral<T>::value, "T must be integral type");
+
+        return ((rightValue > 0 && leftValue > numeric_limits<T>::max() - rightValue) ||
+            (rightValue < 0 && leftValue < numeric_limits<T>::min() - rightValue));
+    }
 };

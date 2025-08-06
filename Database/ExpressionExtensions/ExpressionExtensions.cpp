@@ -27,7 +27,7 @@ namespace Expressions {
         return this->left->Evaluate(row) / this->right->Evaluate(row);
       case BinaryExpressionOperator::Modulo:
         return this->left->Evaluate(row) % this->right->Evaluate(row);
-    default:
+      default:
           throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
     }
   }
