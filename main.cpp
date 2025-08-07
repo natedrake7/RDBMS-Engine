@@ -125,6 +125,18 @@ int main()
 
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
+    const int8_t temp = -100;
+    const int8_t temp2 = -125;
+
+    const auto leftField = Field(temp, 0);
+    const auto rightField = Field(temp2, 0);
+
+    const auto res = leftField + rightField;
+
+    std::cout << res << std::endl;
+
+    return 0;
+
     std::cout << "Please enter a query: "<< endl;
     while (true) {
         std::string input;

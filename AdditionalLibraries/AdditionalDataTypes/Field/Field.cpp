@@ -672,12 +672,12 @@ Field Field::PerformTinyIntAddition(const int8_t &lhs, const int8_t &rhs){
         (SafeConverter<int8_t>::AssertOverflow(lhs, rhs))
         ?
             Field(
-                static_cast<int16_t>(lhs) +  static_cast<int16_t>(rhs),
+                static_cast<int16_t>(lhs +  rhs),
                 0
             )
         :
             Field(
-                lhs + rhs,
+                static_cast<int8_t>(lhs + rhs),
                 0
             ) ;
 }
@@ -687,12 +687,12 @@ Field Field::PerformSmallIntAddition(const int16_t &lhs, const int16_t &rhs){
     (SafeConverter<int16_t>::AssertOverflow(lhs, rhs))
     ?
         Field(
-            static_cast<int32_t>(lhs) +  static_cast<int32_t>(rhs),
+            static_cast<int32_t>(lhs +  rhs),
             0
         )
     :
         Field(
-            lhs + rhs,
+            static_cast<int16_t>(lhs + rhs),
             0
         ) ;
 }
@@ -702,12 +702,12 @@ Field Field::PerformIntAddition(const int32_t &lhs, const int32_t &rhs){
     (SafeConverter<int32_t>::AssertOverflow(lhs, rhs))
     ?
         Field(
-            static_cast<int64_t>(lhs) +  static_cast<int64_t>(rhs),
+            static_cast<int64_t>(lhs +  rhs),
             0
         )
     :
         Field(
-            lhs + rhs,
+            static_cast<int32_t>(lhs + rhs),
             0
         ) ;
 }
