@@ -15,6 +15,7 @@ namespace Expressions {
     return this->value;
   }
 
+//TODO Implement field logical operations.
   Field BinaryExpression::Evaluate(const DatabaseEngine::StorageTypes::Row &row) const{
     switch (this->operation) {
       case ExpressionOperator::Add:
@@ -27,9 +28,25 @@ namespace Expressions {
         return this->left->Evaluate(row) / this->right->Evaluate(row);
       case ExpressionOperator::Modulo:
         return this->left->Evaluate(row) % this->right->Evaluate(row);
+      // case ExpressionOperator::Equal:
+      //   return this->left->Evaluate(row) >= this->right->Evaluate(row);
+      // case ExpressionOperator::NotEqual:
+      //   return this->left->Evaluate(row) != this->right->Evaluate(row);
+      // case ExpressionOperator::Greater:
+      //   return this->left->Evaluate(row) > this->right->Evaluate(row);
+      // case ExpressionOperator::GreaterEqual:
+      //   return this->left->Evaluate(row) >= this->right->Evaluate(row);
+      // case ExpressionOperator::Less:
+      //   return this->left->Evaluate(row) < this->right->Evaluate(row);
+      // case ExpressionOperator::LessEqual:
+      //   return this->left->Evaluate(row) <= this->right->Evaluate(row);
       default:
           throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
     }
+  }
+
+  Field LogicalExpression::Evaluate(const DatabaseEngine::StorageTypes::Row &row) const {
+    return Field(nullptr, 0);
   }
 
 }

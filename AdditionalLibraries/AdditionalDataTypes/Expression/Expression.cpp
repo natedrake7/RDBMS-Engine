@@ -65,7 +65,6 @@ LogicalExpression::LogicalExpression(
     this->right = RightExpression;
   }
 
-
   LogicalExpression* LogicalExpression::Predicate(
     const std::string& alias,
     const std::string &column,

@@ -642,7 +642,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     return ExpressionWrapper{ expression };
   }
 
-  antlrcpp::Any QueryPipeline::SQLVisitorImplementation::visitMultiplicativeOperator(SQLParser::MultiplicativeOperatorContext *context){
+  antlrcpp::Any SQLVisitorImplementation::visitMultiplicativeOperator(SQLParser::MultiplicativeOperatorContext *context){
       return (context->MULTIPLICATION())
           ? context->MULTIPLICATION()->getText()
           : context->DIVISION()->getText();

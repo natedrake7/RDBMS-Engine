@@ -102,7 +102,7 @@ namespace Expressions{
       Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
   };
 
-  class LogicalExpression final{
+  class LogicalExpression final : public Expression{
     public:
 
     ExpressionType type;
@@ -165,6 +165,8 @@ namespace Expressions{
     [[nodiscard]] LogicalExpression* GetLeft()const;
 
     [[nodiscard]] LogicalExpression* GetRight() const;
+
+    Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
 
     // [[nodiscard]] ExpressionType GetType() const;
     //
