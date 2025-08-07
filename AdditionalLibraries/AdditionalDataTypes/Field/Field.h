@@ -146,6 +146,12 @@ class Field {
         friend Field operator/(const Field& lhs, const Field& rhs);
         friend Field operator%(const Field& lhs, const Field& rhs);
         friend Field operator*(const Field& lhs, const Field& rhs);
+        friend Field operator<(const Field& lhs, const Field& rhs);
+        friend Field operator>(const Field& lhs, const Field& rhs);
+        friend Field operator<=(const Field& lhs, const Field& rhs);
+        friend Field operator>=(const Field& lhs, const Field& rhs);
+        friend Field operator==(const Field& lhs, const Field& rhs);
+        friend Field operator!=(const Field& lhs, const Field& rhs);
 
         [[nodiscard]] bool IsVariable()const;
 };

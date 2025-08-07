@@ -35,7 +35,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     : PhysicalOperator(databaseId), resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
 
   PhysicalProject::~PhysicalProject() {
-    for (auto& expression : this->resultExpressions)
+    for (const auto& expression : this->resultExpressions)
       delete expression;
 
     delete this->child;
