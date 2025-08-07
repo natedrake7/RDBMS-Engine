@@ -185,6 +185,10 @@ namespace Constants
         ColumnTypeCount = 11
     };
 
+    enum class BinaryOperators : uint8_t {
+
+    };
+
     static Dictionary<string, block_size_t> ColumnTypeSizes = {
         {"tinyint", sizeof(int8_t)},
         {"smallint", sizeof(int16_t)},

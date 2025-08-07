@@ -31,7 +31,51 @@ selectStatement
             ;
 
 resultList
-    : resultValue (COMMA resultValue)*
+    : resultExpression (COMMA resultExpression)*
+    ;
+
+resultExpression
+    : relationalExpr (atomicOperator relationalExpr)*
+    ;
+
+atomicOperator
+    : EQUAL
+    | NOTEQUAL
+    ;
+
+relationalExpr
+    : additiveExpr (relationalOperator   additiveExpr)*
+    ;
+
+relationalOperator
+    : LESSTHAN
+    | LESS
+    | GREATER
+    | GREATERTHAN
+    ;
+
+
+additiveExpr
+    : multiplicativeExpr (additiveOperator multiplicativeExpr)*
+    ;
+
+additiveOperator
+    : ADDITION
+    | SUBTRACTION
+    ;
+
+multiplicativeExpr
+    : primaryExpr (multiplicativeOperator primaryExpr)*
+    ;
+
+multiplicativeOperator
+    : MULTIPLICATION
+    | DIVISION
+    ;
+
+primaryExpr
+    : LAPRENT resultExpression RAPRENT
+    | resultValue
     ;
 
 resultValue
@@ -66,7 +110,7 @@ andExpression
     ;
 
 predicate
-    : '(' expression ')'
+    : LAPRENT expression ')'
     | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
     ;
 
@@ -91,7 +135,7 @@ orderByStatement
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 insertStatement
-        : INSERT INTO tableName '(' columnList ')' VALUES '(' literalValueList ')'
+        : INSERT INTO tableName LAPRENT columnList ')' VALUES LAPRENT literalValueList ')'
         ;
 
 ////////////////////////////////////////////////////////////
@@ -113,7 +157,7 @@ deleteStatement
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
-createTableStatement: CREATE TABLE tableName '(' addColumn (',' addColumn)* ( ',' primaryKeyConstraint)? ')';
+createTableStatement: CREATE TABLE tableName LAPRENT addColumn (',' addColumn)* ( ',' primaryKeyConstraint)? ')';
 
 addColumn
     : columnName dataType primaryKey? (NOT NULL | NULL)? defaultValue?
@@ -138,15 +182,15 @@ dataType
     ;
 
 varcharType
-    : VARCHAR LEFTPARENT (num=NUMBER | max=MAX) RIGHTPARENT
+    : VARCHAR LAPRENT (num=NUMBER | max=MAX) RAPRENT
     ;
 
 nvarcharType
-    : NVARCHAR LEFTPARENT (num=NUMBER | max=MAX) RIGHTPARENT
+    : NVARCHAR LAPRENT (num=NUMBER | max=MAX) RAPRENT
     ;
 
 decimalType
-    : DECIMAL LEFTPARENT (beforePoint=NUMBER) ',' (afterPoint=NUMBER) RIGHTPARENT
+    : DECIMAL LAPRENT (beforePoint=NUMBER) ',' (afterPoint=NUMBER) RAPRENT
     ;
 
 primaryKey
@@ -154,11 +198,11 @@ primaryKey
     ;
 
 autoIncrementKey
-    : IDENTITY '('(seed=NUMBER) ',' (increment=NUMBER)RIGHTPARENT
+    : IDENTITY '('(seed=NUMBER) ',' (increment=NUMBER) RAPRENT
     ;
     
 primaryKeyConstraint
-    : (CONSTRAINT constraintName=identifier)? PRIMARY KEY '(' columnList RIGHTPARENT
+    : (CONSTRAINT constraintName=identifier)? PRIMARY KEY LAPRENT columnList RAPRENT
     ;
 
 ////////////////////////////////////////////////////////////
@@ -382,6 +426,22 @@ GREATER         : '>=';
 LESSTHAN        : '<';
 GREATERTHAN     : '>';
 EQUAL           : '=';
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+//Comparison Operators
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+ADDITION        : '+';
+SUBTRACTION     : '-';
+MULTIPLICATION  : '*';
+DIVISION        : '/';
+REMAINDER       : '%';
+
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////

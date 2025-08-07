@@ -32,14 +32,11 @@ namespace Expressions{
     GreaterEqual = 3,
     Less = 4,
     LessEqual = 5,
-  };
-
-  enum class BinaryExpressionOperator {
-    Add = 0,
-    Subtract = 1,
-    Multiply = 2,
-    Divide = 3,
-    Modulo = 4,
+    Add = 6,
+    Subtract = 7,
+    Multiply = 8,
+    Divide = 9,
+    Modulo = 10,
   };
 
   static Dictionary<std::string, ExpressionOperator> ExpressionOperatorsDictionary{
@@ -50,6 +47,11 @@ namespace Expressions{
     { ">=", ExpressionOperator::GreaterEqual },
     { "<", ExpressionOperator::Less },
     { "<=", ExpressionOperator::LessEqual },
+    { "+", ExpressionOperator::Add },
+    { "-", ExpressionOperator::Subtract },
+    { "*", ExpressionOperator::Multiply },
+    { "/", ExpressionOperator::Divide },
+    { "/", ExpressionOperator::Modulo },
   };
 
   class Expression {
@@ -91,7 +93,7 @@ namespace Expressions{
       Expression* left;
       Expression* right;
 
-      BinaryExpressionOperator operation;
+      ExpressionOperator operation;
 
       BinaryExpression(Expression* left, Expression* right, const ExpressionOperator& operation);
       ~BinaryExpression()override;

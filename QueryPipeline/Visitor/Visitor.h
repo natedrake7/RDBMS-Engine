@@ -114,9 +114,27 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitResultValue(SQLParser::ResultValueContext *context) override;
 
+      antlrcpp::Any visitAtomicOperator(SQLParser::AtomicOperatorContext *context) override;
+
       antlrcpp::Any visitFunctionCall(SQLParser::FunctionCallContext *context) override;
 
       antlrcpp::Any visitFunctionName(SQLParser::FunctionNameContext *context) override;
+
+      antlrcpp::Any visitRelationalExpr(SQLParser::RelationalExprContext *context) override;
+
+      antlrcpp::Any visitRelationalOperator(SQLParser::RelationalOperatorContext *context) override;
+
+      antlrcpp::Any visitAdditiveExpr(SQLParser::AdditiveExprContext *context) override;
+
+      antlrcpp::Any visitAdditiveOperator(SQLParser::AdditiveOperatorContext *context) override;
+
+      antlrcpp::Any visitMultiplicativeExpr(SQLParser::MultiplicativeExprContext *context) override;
+
+      antlrcpp::Any visitMultiplicativeOperator(SQLParser::MultiplicativeOperatorContext *context) override;
+
+      antlrcpp::Any visitPrimaryExpr(SQLParser::PrimaryExprContext *context) override;
+
+      antlrcpp::Any visitResultExpression(SQLParser::ResultExpressionContext *context) override;
   };
 
   struct ExpressionWrapper {

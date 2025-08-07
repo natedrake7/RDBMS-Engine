@@ -724,6 +724,57 @@ Field Field::PerformStringAddition(const string &lhs, const string &rhs){
         lhs + rhs,
         0
     );
+
+}Field Field::PerformTinyIntSubtraction(const int8_t &lhs, const int8_t &rhs){
+    return
+        (SafeConverter<int8_t>::AssertOverflow(lhs, rhs))
+        ?
+            Field(
+                static_cast<int16_t>(lhs -  rhs),
+                0
+            )
+        :
+            Field(
+                static_cast<int8_t>(lhs - rhs),
+                0
+            ) ;
+}
+
+Field Field::PerformSmallIntSubtraction(const int16_t &lhs, const int16_t &rhs){
+    return
+        (SafeConverter<int16_t>::AssertOverflow(lhs, rhs))
+        ?
+            Field(
+                static_cast<int32_t>(lhs -  rhs),
+                0
+            )
+        :
+            Field(
+                static_cast<int16_t>(lhs - rhs),
+                0
+            ) ;
+}
+
+Field Field::PerformIntSubtraction(const int32_t &lhs, const int32_t &rhs){
+    return
+        (SafeConverter<int32_t>::AssertOverflow(lhs, rhs))
+        ?
+            Field(
+                static_cast<int64_t>(lhs -  rhs),
+                0
+            )
+        :
+            Field(
+                static_cast<int32_t>(lhs - rhs),
+                0
+            ) ;
+}
+
+Field Field::PerformBigIntSubtraction(const int64_t &lhs, const int64_t &rhs){
+        return Field(
+            lhs -  rhs,
+            0
+        );
 }
 
 //TODO implement operations by dataType
@@ -756,7 +807,30 @@ Field operator+(const Field &lhs, const Field &rhs){
 }
 
 Field operator-(const Field &lhs, const Field &rhs){
-    return Field(nullptr, 0);
+    switch (Field::PromoteType(lhs.type, rhs.type)) {
+        case ColumnType::TinyInt:
+            return Field::PerformTinyIntSubtraction(lhs.GetTinyInt(), rhs.GetTinyInt());
+        case ColumnType::SmallInt:
+            return Field::PerformSmallIntSubtraction(lhs.GetSmallInt(), rhs.GetSmallInt());
+        case ColumnType::Int:
+            return Field::PerformIntSubtraction(lhs.GetInt(), rhs.GetInt());
+        case ColumnType::BigInt:
+            return Field::PerformBigIntSubtraction(lhs.GetBigInt(), rhs.GetBigInt());
+        case ColumnType::Decimal:
+            return Field(nullptr, 0);
+        case ColumnType::String:
+        case ColumnType::UnicodeString:
+        case ColumnType::Bool:
+        case ColumnType::DateTime:
+        case ColumnType::Guid:
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type));
+    }
 }
 
 Field operator/(const Field &lhs, const Field &rhs){

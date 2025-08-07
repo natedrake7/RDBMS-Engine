@@ -512,10 +512,10 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitResultList(SQLParser::ResultListContext *context){
     std::vector<Expressions::Expression*> columns;
 
-    for (const auto& resultValue : context->resultValue()) {
-      const auto result = std::any_cast<ExpressionWrapper>(visit(resultValue));
+    for (const auto& resultExpression : context->resultExpression()) {
+      const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(resultExpression));
 
-      columns.push_back(result.expression);
+      columns.push_back(expression);
     }
 
     return columns;
@@ -541,9 +541,116 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     throw SyntaxError("Failed to parse result value: " + context->getText());
   }
 
+
+
   antlrcpp::Any SQLVisitorImplementation::visitFunctionCall(SQLParser::FunctionCallContext *context){
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitFunctionName(SQLParser::FunctionNameContext *context){
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitResultExpression(SQLParser::ResultExpressionContext *context){
+    const auto& [leftExpression] = std::any_cast<ExpressionWrapper>(visit(context->relationalExpr(0)));
+
+    auto* expression = leftExpression;
+
+    for (int i = 1;i < context->relationalExpr().size(); i++) {
+      const auto& [right] = std::any_cast<ExpressionWrapper>(visit(context->relationalExpr(i)));
+
+      const auto operation = std::any_cast<std::string>(visit(context->atomicOperator().at(i - 1)));
+
+      expression = new Expressions::BinaryExpression(leftExpression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+    }
+
+    return ExpressionWrapper{ expression };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAtomicOperator(SQLParser::AtomicOperatorContext *context){
+      return context->EQUAL()
+          ? context->EQUAL()->getText()
+          : context->NOTEQUAL()->getText();
+    }
+
+  antlrcpp::Any SQLVisitorImplementation::visitRelationalExpr(SQLParser::RelationalExprContext *context){
+    const auto& [leftExpression] = std::any_cast<ExpressionWrapper>(visit(context->additiveExpr(0)));
+
+    auto* expression = leftExpression;
+
+    for (int i = 1;i < context->additiveExpr().size(); i++) {
+      const auto& [right] = std::any_cast<ExpressionWrapper>(visit(context->additiveExpr(i)));
+
+      const auto operation = std::any_cast<std::string>(visit(context->relationalOperator().at(i - 1)));
+
+      expression = new Expressions::BinaryExpression(leftExpression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+    }
+
+    return ExpressionWrapper{ expression };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitRelationalOperator(SQLParser::RelationalOperatorContext *context){
+      if (context->LESSTHAN())
+        return context->LESSTHAN()->getText();
+
+      if (context->LESS())
+        return context->LESS()->getText();
+
+      if (context->GREATERTHAN())
+        return context->GREATERTHAN()->getText();
+
+      if (context->GREATER())
+        return context->GREATER()->getText();
+
+    throw SyntaxError("");
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAdditiveExpr(SQLParser::AdditiveExprContext *context){
+    const auto& [leftExpression] = std::any_cast<ExpressionWrapper>(visit(context->multiplicativeExpr(0)));
+
+    auto* expression = leftExpression;
+
+    for (int i = 1;i < context->multiplicativeExpr().size(); i++) {
+      const auto& [right] = std::any_cast<ExpressionWrapper>(visit(context->multiplicativeExpr(i)));
+
+      const auto operation = std::any_cast<std::string>(visit(context->additiveOperator().at(i - 1)));
+
+      expression = new Expressions::BinaryExpression(leftExpression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+    }
+
+    return ExpressionWrapper{ expression };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAdditiveOperator(SQLParser::AdditiveOperatorContext *context){
+    return (context->ADDITION())
+         ? context->ADDITION()->getText()
+         : context->SUBTRACTION()->getText();
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitMultiplicativeExpr(SQLParser::MultiplicativeExprContext *context){
+    // Step 1: Get the first/left operand
+    const auto& [leftExpression] = std::any_cast<ExpressionWrapper>(visit(context->primaryExpr(0)));
+
+    auto* expression = leftExpression;
+
+    for (int i = 1;i < context->primaryExpr().size(); i++) {
+      const auto& [right] = std::any_cast<ExpressionWrapper>(visit(context->primaryExpr(i)));
+
+      const auto operation = std::any_cast<std::string>(visit(context->multiplicativeOperator().at(i - 1)));
+
+      expression = new Expressions::BinaryExpression(leftExpression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+    }
+
+    return ExpressionWrapper{ expression };
+  }
+
+  antlrcpp::Any QueryPipeline::SQLVisitorImplementation::visitMultiplicativeOperator(SQLParser::MultiplicativeOperatorContext *context){
+      return (context->MULTIPLICATION())
+          ? context->MULTIPLICATION()->getText()
+          : context->DIVISION()->getText();
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitPrimaryExpr(SQLParser::PrimaryExprContext *context){
+    return context->resultExpression()
+        ? std::any_cast<ExpressionWrapper>(visit(context->resultExpression()))
+        : std::any_cast<ExpressionWrapper>(visit(context->resultValue()));
   }
 }

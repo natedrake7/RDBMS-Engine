@@ -39,6 +39,12 @@ class Field {
     static Field PerformBigIntAddition(const int64_t& lhs, const int64_t &rhs);
     static Field PerformStringAddition(const string& lhs, const string& rhs);
 
+
+    static Field PerformTinyIntSubtraction(const int8_t& lhs, const int8_t& rhs);
+    static Field PerformSmallIntSubtraction(const int16_t& lhs, const int16_t& rhs);
+    static Field PerformIntSubtraction(const int32_t& lhs, const int32_t& rhs);
+    static Field PerformBigIntSubtraction(const int64_t& lhs, const int64_t &rhs);
+
     public:
         Field();
         ~Field();

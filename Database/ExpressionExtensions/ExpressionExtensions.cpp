@@ -17,15 +17,15 @@ namespace Expressions {
 
   Field BinaryExpression::Evaluate(const DatabaseEngine::StorageTypes::Row &row) const{
     switch (this->operation) {
-      case BinaryExpressionOperator::Add:
+      case ExpressionOperator::Add:
         return this->left->Evaluate(row) + this->right->Evaluate(row);
-      case BinaryExpressionOperator::Subtract:
+      case ExpressionOperator::Subtract:
         return this->left->Evaluate(row) - this->right->Evaluate(row);
-      case BinaryExpressionOperator::Multiply:
+      case ExpressionOperator::Multiply:
         return this->left->Evaluate(row) * this->right->Evaluate(row);
-      case BinaryExpressionOperator::Divide:
+      case ExpressionOperator::Divide:
         return this->left->Evaluate(row) / this->right->Evaluate(row);
-      case BinaryExpressionOperator::Modulo:
+      case ExpressionOperator::Modulo:
         return this->left->Evaluate(row) % this->right->Evaluate(row);
       default:
           throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));

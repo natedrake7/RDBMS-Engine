@@ -16,6 +16,17 @@ LiteralExpression::LiteralExpression(const Field &value){
   this->value = value;
 }
 
+BinaryExpression::BinaryExpression(Expression *left, Expression *right, const ExpressionOperator &operation){
+  this->left = left;
+  this->right = right;
+  this->operation = operation;
+}
+
+BinaryExpression::~BinaryExpression(){
+  delete this->left;
+  delete this->right;
+}
+
 LogicalExpression::LogicalExpression(
     const std::string &alias,
     const std::string &column,
