@@ -42,7 +42,7 @@ void QueryResult::Print() const{
           std::cout << column.GetString();
           break;
         case ColumnType::Bool:
-          std::cout << column.GetBool();
+          std::cout << (column.GetBool() ? "TRUE" : "FALSE");
           break;
         case ColumnType::DateTime:
           std::cout << column.GetDateTime();

@@ -51,7 +51,7 @@ namespace Expressions{
     { "-", ExpressionOperator::Subtract },
     { "*", ExpressionOperator::Multiply },
     { "/", ExpressionOperator::Divide },
-    { "/", ExpressionOperator::Modulo },
+    { "%", ExpressionOperator::Modulo },
   };
 
   class Expression {
@@ -59,7 +59,7 @@ namespace Expressions{
       virtual ~Expression() = default;
       Expression() = default;
 
-      virtual Field Evaluate(const DatabaseEngine::StorageTypes::Row& row) const = 0;
+      [[nodiscard]] virtual Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const = 0;
   };
 
   class ColumnExpression final : public Expression {
@@ -75,17 +75,17 @@ namespace Expressions{
       ColumnExpression(const std::string& name, const std::string& alias);
       ~ColumnExpression()override = default;
 
-      Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
+      [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
   };
 
   class LiteralExpression final : public Expression {
     public:
       Field value;
 
-      LiteralExpression(const Field& value);
+      explicit LiteralExpression(const Field& value);
       ~LiteralExpression()override = default;
 
-      Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
+      [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
   };
 
   class BinaryExpression final : public Expression {
@@ -98,8 +98,8 @@ namespace Expressions{
       BinaryExpression(Expression* left, Expression* right, const ExpressionOperator& operation);
       ~BinaryExpression()override;
 
-    //TODO : Implement Evaluate for BinaryExpression where left and right are evaluated and Field Addition is implemented with data type coercion.
-      Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
+    //TODO : Implement Evaluate for BinaryExpression where left and rig*  are evaluated and Field Addition is implemented with data type coercion.
+      [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
   };
 
   class LogicalExpression final : public Expression{
@@ -156,7 +156,7 @@ namespace Expressions{
         );
 
       LogicalExpression() = default;
-      ~LogicalExpression();
+      ~LogicalExpression()override;
 
       bool Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
       [[nodiscard]] bool IsComplex() const;
@@ -166,7 +166,7 @@ namespace Expressions{
 
     [[nodiscard]] LogicalExpression* GetRight() const;
 
-    Field Evaluate(const DatabaseEngine::StorageTypes::Row &row) const override;
+    [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
 
     // [[nodiscard]] ExpressionType GetType() const;
     //

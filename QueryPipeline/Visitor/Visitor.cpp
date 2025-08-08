@@ -63,10 +63,9 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
         ? std::vector<Expressions::Expression*>{ new Expressions::ColumnExpression("*", "") }
         : std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(ctx->resultList()));
 
-    if (!ctx->tableName())
-      throw SyntaxError("No table specified");
-
-    statement->table = std::any_cast<Statements::TableName*>(visit(ctx->tableName()));
+    statement->table = (ctx->tableName() != nullptr)
+              ? std::any_cast<Statements::TableName*>(visit(ctx->tableName()))
+              : nullptr;
 
     for (const auto join : ctx->joinStatement())
       statement->joins.push_back(std::any_cast<Statements::JoinStatement*>(visit(join)));
@@ -643,9 +642,16 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitMultiplicativeOperator(SQLParser::MultiplicativeOperatorContext *context){
-      return (context->MULTIPLICATION())
-          ? context->MULTIPLICATION()->getText()
-          : context->DIVISION()->getText();
+    if (context->MULTIPLICATION())
+      return context->MULTIPLICATION()->getText();
+
+    if (context->DIVISION())
+      return context->DIVISION()->getText();
+
+    if (context->MODULO())
+      return context->MODULO()->getText();
+
+    throw SyntaxError("");
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitPrimaryExpr(SQLParser::PrimaryExprContext *context){

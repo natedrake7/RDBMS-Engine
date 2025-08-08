@@ -838,7 +838,32 @@ Field operator/(const Field &lhs, const Field &rhs){
 }
 
 Field operator*(const Field &lhs, const Field &rhs){
-    return Field(nullptr, 0);
+    switch (Field::PromoteType(rhs.type, rhs.type)) {
+        case ColumnType::TinyInt:
+            return Field(lhs.GetTinyInt() * rhs.GetTinyInt(), 0);
+        case ColumnType::SmallInt:
+            return Field(lhs.GetSmallInt() * rhs.GetSmallInt(), 0);
+        case ColumnType::Int:
+            return Field(lhs.GetInt() * rhs.GetInt(), 0);
+        case ColumnType::BigInt:
+            return Field(lhs.GetBigInt() * rhs.GetBigInt(), 0);
+        case ColumnType::Bool:
+            return Field(lhs.GetBool() * rhs.GetBool(), 0);
+        case ColumnType::Decimal:
+            // return Field(lhs.GetDecimal() * rhs.GetDecimal(), 0);
+        case ColumnType::String:
+        case ColumnType::UnicodeString:
+        case ColumnType::DateTime:
+        case ColumnType::Guid:
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type)
+                );
+    }
 }
 
 Field operator<(const Field &lhs, const Field &rhs){
@@ -866,7 +891,11 @@ Field operator<(const Field &lhs, const Field &rhs){
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Left Operand has type: ");
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type)
+                );
     }
 }
 
@@ -900,7 +929,11 @@ Field operator<=(const Field &lhs, const Field &rhs){
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Left Operand has type: ");
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type)
+                );
     }
 }
 
@@ -929,7 +962,11 @@ Field operator>=(const Field &lhs, const Field &rhs){
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Left Operand has type: ");
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type)
+                );
     }
 }
 
@@ -958,7 +995,11 @@ Field operator==(const Field &lhs, const Field &rhs){
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Left Operand has type: ");
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type)
+                );
     }
 }
 
@@ -987,11 +1028,39 @@ Field operator!=(const Field &lhs, const Field &rhs){
         case ColumnType::RowIdentifier:
         case ColumnType::ColumnTypeCount:
         default:
-            throw std::invalid_argument("Left Operand has type: ");
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type)
+                );
     }
 }
 
 Field operator%(const Field &lhs, const Field &rhs){
-    return Field(nullptr, 0);
+    switch (Field::PromoteType(rhs.type, rhs.type)) {
+        case ColumnType::TinyInt:
+            return Field(lhs.GetTinyInt() % rhs.GetTinyInt(), 0);
+        case ColumnType::SmallInt:
+            return Field(lhs.GetSmallInt() % rhs.GetSmallInt(), 0);
+        case ColumnType::Int:
+            return Field(lhs.GetInt() % rhs.GetInt(), 0);
+        case ColumnType::BigInt:
+            return Field(lhs.GetBigInt() % rhs.GetBigInt(), 0);
+        case ColumnType::Bool:
+            return Field(lhs.GetBool() % rhs.GetBool(), 0);
+        case ColumnType::Decimal:
+            // return Field(lhs.GetDecimal() % rhs.GetDecimal(), 0);
+        case ColumnType::String:
+        case ColumnType::UnicodeString:
+        case ColumnType::DateTime:
+        case ColumnType::Guid:
+        case ColumnType::RowIdentifier:
+        case ColumnType::ColumnTypeCount:
+        default:
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type)
+                );
+    }
 }
-

@@ -153,15 +153,34 @@ namespace QueryPipeline::Statements {
 
   bool SelectStatement::Validate(){
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
-    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id == -1){
-          cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
-          return false;
+    if (this->table != nullptr) {
+      const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
+
+      if (tableHeader.id == -1){
+            cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
+            return false;
+      }
+
+      this->table->tableId = tableHeader.id;
+      this->table->ordinalPosition = tableHeader.ordinalPosition;
     }
 
-    this->table->tableId = tableHeader.id;
-    this->table->ordinalPosition = tableHeader.ordinalPosition;
+    if (!this->joins.empty() && this->table == nullptr) {
+      std::cerr << "Table was not specified" << std::endl;
+      return false;
+    }
+
+    //resolve expressions here since no column is to be used
+    if (this->table == nullptr) {
+      for (const auto& resultExpr : this->results){
+        if (!ResolveExpressionAliases(this, resultExpr))
+          return false;
+      }
+
+      return true;
+    }
+
 
     for (auto& join: this->joins) {
       const auto joinHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, join->table->name, join->table->schema);
@@ -236,27 +255,29 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
-    const auto scanTable = new LogicalTableScan(this->databaseId, this->table, this->joins.empty() ? this->where.expression : nullptr);
-
-    LogicalPlan* current = scanTable;
+    LogicalPlan* current = (this->table != nullptr)
+            ? new LogicalTableScan(this->databaseId, this->table, this->joins.empty() ? this->where.expression : nullptr)
+            : nullptr;
 
     //join re orders take place here
-
     Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
-    Constants::column_index_t columnIndex = 0;
+    if (this->table != nullptr) {
+      Constants::column_index_t columnIndex = 0;
 
-    for (const auto &columnsDict : this->tableColumnsDictionary | views::values) {
-      for (const auto &column: columnsDict | views::values) {
-          if (columnIndicesDictionary.Contains(column.id))
-            continue;
+      for (const auto &columnsDict : this->tableColumnsDictionary | views::values) {
+        for (const auto &column: columnsDict | views::values) {
+            if (columnIndicesDictionary.Contains(column.id))
+              continue;
 
-          columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
+            columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
+        }
+
+        columnIndex += columnsDict.size();
       }
 
-      columnIndex += columnsDict.size();
+      AssignColumnsToIndices(this, columnIndicesDictionary);
     }
 
-    AssignColumnsToIndices(this, columnIndicesDictionary);
 
     //here create logical joins with the expressions
     for (const auto& join : this->joins) {
@@ -733,8 +754,30 @@ namespace QueryPipeline::Statements {
       return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left) &&
               ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right);
 
-    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr))
+    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
+
+      if (statement->table == nullptr) {
+        std::cerr << "No table was specified but column with name: " << columnExpr->name << " was specified." << std::endl;
+        return false;
+      }
+
       return ResolveColumnAlias(columnExpr, tableAliasesDictionary, statement->tableColumnsDictionary, statement);
+    }
+
+    return true;
+  }
+
+  bool ResolveExpressionAliases(SelectStatement *statement, Expressions::Expression *expr){
+    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
+      return  ResolveExpressionAliases(statement, binaryExpr->left) &&
+              ResolveExpressionAliases(statement, binaryExpr->right);
+
+    if (const auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
+        std::cerr << "No table was specified but column with name: " << columnExpr->name << " was specified." << std::endl;
+        return false;
+    }
+
+    //TODO Validate Literals and functions
 
     return true;
   }

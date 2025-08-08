@@ -42,6 +42,22 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   }
 
   PhysicalPlanResult* PhysicalProject::Execute(const int& batchSize){
+      if (this->child == nullptr) {
+        auto* result = new PhysicalPlanResult();
+
+        QueryResult resultRow;
+
+        for (const auto& expression : this->resultExpressions) {
+          auto field = expression->Evaluate(nullptr);
+          resultRow.AddColumn(field);
+        }
+
+        result->results.push_back(std::move(resultRow));
+
+        return result;
+      }
+
+
       auto* result = this->child->Execute(batchSize);
 
       for (auto& row: result->rows) {
@@ -51,7 +67,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
           QueryResult resultRow;
 
           for (const auto& expression : this->resultExpressions) {
-            auto field = expression->Evaluate(row);
+            auto field = expression->Evaluate(&row);
             resultRow.AddColumn(field);
           }
 

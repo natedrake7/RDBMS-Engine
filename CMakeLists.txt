@@ -70,9 +70,7 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/AdditionalDataTypes/Guid/Guid.cpp
         AdditionalLibraries/AdditionalDataTypes/Guid/Guid.h
         AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h
-        AdditionalLibraries/AdditionalDataTypes/Expression/Expression.cpp
-        AdditionalLibraries/AdditionalDataTypes/Variable/Variable.cpp
-        AdditionalLibraries/AdditionalDataTypes/Variable/Variable.h)
+        AdditionalLibraries/AdditionalDataTypes/Expression/Expression.cpp)
 
 add_library(QueryPipeline  SHARED
                 QueryPipeline/Parser/Parser.cpp

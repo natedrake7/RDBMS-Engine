@@ -268,6 +268,11 @@ namespace QueryPipeline::Statements {
     Expressions::Expression *expr
     );
 
+  static bool ResolveExpressionAliases(
+    SelectStatement *statement,
+    Expressions::Expression *expr
+    );
+
   static bool ResolveColumnAlias(
     ColumnName& column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,

@@ -88,8 +88,8 @@ LogicalExpression::LogicalExpression(
   }
 
   LogicalExpression::~LogicalExpression(){
-    delete left;
-    delete right;
+    delete this->left;
+    delete this->right;
   }
 
   bool LogicalExpression::Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary){

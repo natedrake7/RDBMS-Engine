@@ -25,7 +25,7 @@ namespace QueryPipeline {
   PhysicalPlan::PhysicalProject * LogicalProject::ToPhysical(){
      return new PhysicalPlan::PhysicalProject(
        this->databaseId,
-       this->child->ToPhysical(),
+       (this->child != nullptr) ? this->child->ToPhysical() : nullptr,
        this->resultExpressions,
        this->columnsHeaders
        );

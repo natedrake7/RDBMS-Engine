@@ -24,7 +24,7 @@ sqlStatement
 ////////////////////////////////////////////////////////////
 selectStatement
             :   SELECT (resultList | WILDCARD)
-                FROM tableName
+                (FROM tableName)?
                 ((joinStatement)*)?
                 whereClause?
                 orderByStatement?
@@ -71,6 +71,7 @@ multiplicativeExpr
 multiplicativeOperator
     : MULTIPLICATION
     | DIVISION
+    | MODULO
     ;
 
 primaryExpr
@@ -440,7 +441,7 @@ ADDITION        : '+';
 SUBTRACTION     : '-';
 MULTIPLICATION  : '*';
 DIVISION        : '/';
-REMAINDER       : '%';
+MODULO          : '%';
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
