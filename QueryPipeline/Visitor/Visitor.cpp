@@ -559,7 +559,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->atomicOperator().at(i - 1)));
 
-      expression = new Expressions::BinaryExpression(leftExpression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+      expression = new Expressions::BinaryExpression(expression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
     }
 
     return ExpressionWrapper{ expression };
@@ -581,7 +581,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->relationalOperator().at(i - 1)));
 
-      expression = new Expressions::BinaryExpression(leftExpression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+      expression = new Expressions::BinaryExpression(expression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
     }
 
     return ExpressionWrapper{ expression };
@@ -613,7 +613,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->additiveOperator().at(i - 1)));
 
-      expression = new Expressions::BinaryExpression(leftExpression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+      expression = new Expressions::BinaryExpression(expression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
     }
 
     return ExpressionWrapper{ expression };
@@ -636,7 +636,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->multiplicativeOperator().at(i - 1)));
 
-      expression = new Expressions::BinaryExpression(leftExpression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+      expression = new Expressions::BinaryExpression(expression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
     }
 
     return ExpressionWrapper{ expression };

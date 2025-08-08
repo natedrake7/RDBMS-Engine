@@ -261,6 +261,13 @@ namespace QueryPipeline::Statements {
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement);
 
+  static bool ResolveExpressionAliases(
+    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    SelectStatement *statement,
+    Expressions::Expression *expr
+    );
+
   static bool ResolveColumnAlias(
     ColumnName& column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
@@ -282,5 +289,10 @@ namespace QueryPipeline::Statements {
   static void MapExpressionColumnsToIndices(Expressions::LogicalExpression* expression, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);
 
   static void AssignColumnsToIndices(SelectStatement* statement, Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary);
+
+  static void AssignColumnIndicesToResultExpression(
+    SelectStatement* statement,
+    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    Expressions::Expression* expr);
 
 }

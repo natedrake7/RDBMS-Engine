@@ -631,14 +631,9 @@ namespace QueryPipeline::Statements {
       statement->tableColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
     }
 
-    for (const auto& expressionResult: statement->results) {
-      if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expressionResult)) {
-        if (!ResolveColumnAlias(columnExpr, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
+    for (const auto& expressionResult: statement->results)
+        if (!ResolveExpressionAliases(tableAliasesDictionary, statement->tableColumnsDictionary, statement, expressionResult))
           return false;
-
-        computedColumnIndexes.Add(columnExpr->columnId, columnExpr->columnIndex);
-      }
-    }
 
     // for (int i = 0;i < statement->columns.size(); i++) {
     //   auto& column = statement->columns[i];
@@ -727,6 +722,21 @@ namespace QueryPipeline::Statements {
       }
 
       return true;
+  }
+
+  bool ResolveExpressionAliases(
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    SelectStatement *statement,
+    Expressions::Expression *expr){
+    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
+      return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left) &&
+              ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right);
+
+    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr))
+      return ResolveColumnAlias(columnExpr, tableAliasesDictionary, statement->tableColumnsDictionary, statement);
+
+    return true;
   }
 
   bool ResolveColumnAlias(
@@ -852,15 +862,8 @@ namespace QueryPipeline::Statements {
     for (auto& column : statement->columns)
       statement->columnIndices.emplace_back(columnIndicesDictionary.Get(column.columnId));
 
-    for (const auto& resultExpr : statement->results) {
-
-      auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(resultExpr);
-
-      if (columnExpr == nullptr)
-        continue;
-
-      columnExpr->columnIndex = columnIndicesDictionary.Get(columnExpr->columnId);
-    }
+    for (const auto& resultExpr : statement->results)
+      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, resultExpr);
 
     if (statement->orderBy != nullptr) {
       for (auto& column : statement->orderBy->columns)
@@ -868,6 +871,23 @@ namespace QueryPipeline::Statements {
     }
 
     //group by here later
+  }
+
+  void AssignColumnIndicesToResultExpression(
+    SelectStatement *statement,
+    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    Expressions::Expression *expr){
+
+    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
+      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, binaryExpr->left);
+      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, binaryExpr->right);
+    }
+
+    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
+
+      columnExpr->columnIndex = columnIndicesDictionary.Get(columnExpr->columnId);
+      return;
+    }
   }
 
 };
