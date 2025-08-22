@@ -56,12 +56,10 @@ namespace QueryPipeline {
 antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
     auto* statement = new Statements::SelectStatement();
 
-    if (!ctx->WILDCARD() && !ctx->resultList())
+    if (!ctx->resultList())
       throw SyntaxError("No arguments specified");
 
-    statement->results = ctx->WILDCARD()
-        ? std::vector<Expressions::Expression*>{ new Expressions::ColumnExpression("*", "") }
-        : std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(ctx->resultList()));
+    statement->results = std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(ctx->resultList()));
 
     statement->table = (ctx->tableName() != nullptr)
               ? std::any_cast<Statements::TableName*>(visit(ctx->tableName()))
@@ -290,12 +288,17 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (context->columnAlias())
       columnName.alias = std::any_cast<std::string>(visit(context->columnAlias()));
 
-    if (!context->name)
-      throw SyntaxError("Column name was not specified");
+    if (context->identifier()) {
+      columnName.name = std::any_cast<std::string>(visit(context->identifier()));
+      return columnName;
+    }
 
-    columnName.name = std::any_cast<std::string>(visit(context->name));
+    if (context->MULTIPLICATION()) {
+      columnName.name = context->MULTIPLICATION()->getText();
+      return columnName;
+    }
 
-    return columnName;
+    throw SyntaxError("Column name was not specified");
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitTableName(SQLParser::TableNameContext *context) {

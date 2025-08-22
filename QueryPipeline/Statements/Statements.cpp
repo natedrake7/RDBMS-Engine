@@ -652,8 +652,8 @@ namespace QueryPipeline::Statements {
       statement->tableColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
     }
 
-    for (const auto& expressionResult: statement->results)
-        if (!ResolveExpressionAliases(tableAliasesDictionary, statement->tableColumnsDictionary, statement, expressionResult))
+    for (int i = 0; i < statement->results.size(); i++)
+        if (!ResolveExpressionAliases(tableAliasesDictionary, statement->tableColumnsDictionary, statement, statement->results[i], i))
           return false;
 
     // for (int i = 0;i < statement->columns.size(); i++) {
@@ -698,10 +698,11 @@ namespace QueryPipeline::Statements {
       Expressions::ColumnExpression* column,
       const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
       Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-      SelectStatement *statement){
+      SelectStatement *statement,
+      const int& indexPos){
 
         if (column->name == "*")
-          return ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement);
+          return ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement, indexPos);
 
         if (!column->alias.empty()) {
           table_id_t tableId;
@@ -749,10 +750,11 @@ namespace QueryPipeline::Statements {
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement,
-    Expressions::Expression *expr){
+    Expressions::Expression *expr,
+    const int& indexPos){
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
-      return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left) &&
-              ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right);
+      return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos) &&
+              ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos);
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
 
@@ -761,7 +763,7 @@ namespace QueryPipeline::Statements {
         return false;
       }
 
-      return ResolveColumnAlias(columnExpr, tableAliasesDictionary, statement->tableColumnsDictionary, statement);
+      return ResolveColumnAlias(columnExpr, tableAliasesDictionary, statement->tableColumnsDictionary, statement, indexPos);
     }
 
     return true;
@@ -786,7 +788,8 @@ namespace QueryPipeline::Statements {
     ColumnName &column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
-    SelectStatement *statement){
+    SelectStatement *statement
+    ){
       if (!column.alias.empty()) {
         table_id_t tableId;
 
@@ -833,37 +836,43 @@ namespace QueryPipeline::Statements {
     const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
-    SelectStatement *statement){
+    SelectStatement *statement,
+    const int& indexPos){
 
     if (column->name != "*")
       return true;
 
-    if (column->alias.empty()) {
-      auto& columnHeaders = tablesColumnsDictionary.Get(statement->table->tableId);
-      for (const auto& [key, header]: columnHeaders) {
-        auto* columnExpression = new Expressions::ColumnExpression(
-          header.name,
-          statement->table->alias.empty()
-          ? statement->table->GetFullName()
-              : statement->table->alias);
-
-        columnExpression->columnId = header.id;
-        columnExpression->tableId = statement->table->tableId;
-
-        statement->results.push_back(columnExpression);
-      }
-
-      statement->results.erase(statement->results.begin());
-      delete column;
-
-      return true;
-    }
-
-    table_id_t tableId;
-    if (!tableAliasesDictionary.TryGetValue(column->alias, tableId)) {
+    table_id_t tableId = 0;
+    if (!column->alias.empty()
+      && !tableAliasesDictionary.TryGetValue(column->alias, tableId)) {
       std::cerr << "Alias " << column->alias << " does on exist on statement" << std::endl;
       return false;
     }
+
+    if (column->alias.empty())
+      tableId = statement->table->tableId;
+
+    //remove the wildcard
+    statement->results.erase(statement->results.begin() + indexPos);
+
+    int counter = 0; //insert after IndexPos, the position of the
+    for (const auto &header: tablesColumnsDictionary.Get(tableId) | views::values) {
+
+      auto* columnExpression = new Expressions::ColumnExpression(
+            header.name,
+        statement->table->alias.empty()
+        ? statement->table->GetFullName()
+            : statement->table->alias
+        );
+
+      columnExpression->columnId = header.id;
+      columnExpression->tableId = statement->table->tableId;
+
+      statement->results.insert(statement->results.begin() + indexPos + counter, columnExpression);
+      counter++;
+    }
+
+    delete column;
 
     return true;
   }

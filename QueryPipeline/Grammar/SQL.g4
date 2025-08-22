@@ -23,7 +23,7 @@ sqlStatement
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 selectStatement
-            :   SELECT (resultList | WILDCARD)
+            :   SELECT resultList
                 (FROM tableName)?
                 ((joinStatement)*)?
                 whereClause?
@@ -398,7 +398,9 @@ alterTableRenameColumn
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
-columnName : (columnAlias)? name=identifier;
+columnName
+    : (columnAlias)? (identifier | MULTIPLICATION)
+    ;
 
 columnAlias
     : identifier '.'
@@ -609,7 +611,6 @@ OR              : 'OR';
 ////////////////////////////////////////////////////////////
 TRUE            : 'TRUE';
 FALSE           : 'FALSE';
-WILDCARD        : '*';
 LAPRENT         : '(';
 RAPRENT         : ')';
 COMMA           : ',';

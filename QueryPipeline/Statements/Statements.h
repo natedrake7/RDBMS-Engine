@@ -259,13 +259,16 @@ namespace QueryPipeline::Statements {
     Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    SelectStatement *statement);
+    SelectStatement *statement,
+    const int& indexPos
+    );
 
   static bool ResolveExpressionAliases(
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement,
-    Expressions::Expression *expr
+    Expressions::Expression *expr,
+    const int& indexPos
     );
 
   static bool ResolveExpressionAliases(
@@ -277,13 +280,16 @@ namespace QueryPipeline::Statements {
     ColumnName& column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    SelectStatement *statement);
+    SelectStatement *statement
+    );
 
   static bool ResolveWildCardAlias(
     const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    SelectStatement *statement);
+    SelectStatement *statement,
+    const int& indexPos
+    );
 
   static bool ResolveExpressionAliases(
     Expressions::LogicalExpression* expression,
