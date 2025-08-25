@@ -523,7 +523,7 @@ namespace QueryPipeline::Statements {
     this->addColumn->index = headers.size();
 
     Constants::ColumnType type;
-    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::NormalizeString(this->addColumn->type.name), type)) {
+    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(this->addColumn->type.name), type)) {
       std::cerr << "Invalid Column Type " << this->addColumn->type.name << std::endl;
       return false;
     }
@@ -542,7 +542,7 @@ namespace QueryPipeline::Statements {
     }
 
     Constants::ColumnType type;
-    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::NormalizeString(this->alterColumn->type.name), type)) {
+    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(this->alterColumn->type.name), type)) {
       std::cerr << "Invalid Column Type " << this->alterColumn->type.name << std::endl;
       return false;
     }

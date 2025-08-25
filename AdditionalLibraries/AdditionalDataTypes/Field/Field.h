@@ -142,6 +142,7 @@ class Field {
         friend ostream& operator<<(ostream& os, const Field& field);
 
         friend Field operator+(const Field& lhs, const Field& rhs);
+        Field& operator+=(const Field& rhs);
         friend Field operator-(const Field& lhs, const Field& rhs);
         friend Field operator/(const Field& lhs, const Field& rhs);
         friend Field operator%(const Field& lhs, const Field& rhs);

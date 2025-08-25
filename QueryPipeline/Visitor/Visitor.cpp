@@ -91,15 +91,15 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->STRING()) {
       const auto& str = context->STRING()->getText();
 
-      return Field(AdditionalLibraries::RemoveQuotesFromString(str), 0);
+      return Field(AdditionalLibraries::StringFunctions::RemoveQuotesFromString(str), 0);
     }
 
     if (context->UNICODESTRING()) {
       const auto& str = context->UNICODESTRING()->getText();
 
-      const auto parsedStr = AdditionalLibraries::RemoveQuotesFromUnicodeString(str);
+      const auto parsedStr = AdditionalLibraries::StringFunctions::RemoveQuotesFromUnicodeString(str);
 
-      return Field(AdditionalLibraries::ToUnicode(parsedStr), 0);
+      return Field(AdditionalLibraries::StringFunctions::ToUnicode(parsedStr), 0);
     }
 
     if (context->NUMBER()) {
@@ -197,7 +197,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     const auto& text = context->getText();
 
     return Statements::ColumnType{
-      .name = AdditionalLibraries::NormalizeString(text),
+      .name = AdditionalLibraries::StringFunctions::NormalizeString(text),
     };
   }
 
@@ -532,7 +532,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     const auto name = std::any_cast<std::string>(visit(context->functionName()));
 
     Constants::FunctionType type;
-    if (!Expressions::FunctionTypeDictionary.TryGetValue(AdditionalLibraries::NormalizeString(name), type))
+    if (!Expressions::FunctionTypeDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(name), type))
         throw SyntaxError("Failed to parse function name: " + name);
 
     std::vector<Expressions::Expression*> arguments;

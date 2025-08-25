@@ -1,10 +1,10 @@
 #include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
+#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
 #include "../Block/Block.h"
 #include "../Row/Row.h"
 
 namespace Expressions {
-
   Field ColumnExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const{
     const auto& data = row->GetData().at(this->columnIndex);
 
@@ -49,23 +49,72 @@ namespace Expressions {
     return Field(nullptr, 0);
   }
 
+  Field FunctionExpression::Concat(const DatabaseEngine::StorageTypes::Row* row)const{
+    Field value(string(""), 0);
+
+    for (const auto* expression : this->arguments)
+      value += expression->Evaluate(row);
+
+    return value;
+  }
+
+  Field FunctionExpression::Length(const DatabaseEngine::StorageTypes::Row *row) const{
+    const auto& field = this->arguments.front()->Evaluate(row);
+
+    return Field(AdditionalLibraries::StringFunctions::Length(field.GetString()), 0);
+  }
+
+  Field FunctionExpression::TrimLeft(const DatabaseEngine::StorageTypes::Row *row) const{
+    const auto& field = this->arguments.front()->Evaluate(row);
+
+    return Field(AdditionalLibraries::StringFunctions::TrimLeft(field.GetString()), 0);
+  }
+
+  Field FunctionExpression::TrimRight(const DatabaseEngine::StorageTypes::Row *row) const{
+    const auto& field = this->arguments.front()->Evaluate(row);
+
+    return Field(AdditionalLibraries::StringFunctions::TrimRight(field.GetString()), 0);
+  }
+
   Field FunctionExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const {
     switch (this->type) {
       case FunctionType::GetDate:
           return Field(DataTypes::DateTime::Now(), 0);
       case FunctionType::NewGuid:
           return Field(DataTypes::Guid::NewGuid(), 0);
-      case FunctionType::Concat: {
-        Field value(string(""), 0);
-
-        for (const auto* expression : this->arguments)
-          value = value + expression->Evaluate(row);
-
-        return value;
-      }
+      case FunctionType::Concat:
+        return this->Concat(row);
+      case FunctionType::Length:
+        return this->Length(row);
+      case FunctionType::AsciiValue:
+        break;
+      case FunctionType::Char:
+        break;
+      case FunctionType::CharIndex:
+        break;
+      case FunctionType::Lower:
+        break;
+      case FunctionType::Upper:
+        break;
+      case FunctionType::Trim:
+        break;
+      case FunctionType::TrimLeft:
+        return this->TrimLeft(row);
+      case FunctionType::TrimRight:
+        return this->TrimRight(row);
+      case FunctionType::Replace:
+        break;
+      case FunctionType::Substr:
+        break;
+      case FunctionType::Left:
+        break;
+      case FunctionType::Right:
+        break;
       default:
         throw std::runtime_error("Unknown function type");
     }
+
+    return Field(nullptr, 0);
   }
 
 }

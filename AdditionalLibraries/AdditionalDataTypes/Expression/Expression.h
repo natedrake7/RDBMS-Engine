@@ -54,11 +54,24 @@ namespace Expressions{
     { "%", ExpressionOperator::Modulo },
   };
 
-  static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
-      {"getdate", FunctionType::GetDate},
-      {"newid", FunctionType::NewGuid},
-      {"concat", FunctionType::Concat}
-  };
+static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
+      {"getdate",   FunctionType::GetDate},
+      {"newid",     FunctionType::NewGuid},
+      {"concat",    FunctionType::Concat},
+      {"length",    FunctionType::Length},
+      {"ascii",     FunctionType::AsciiValue},
+      {"char",      FunctionType::Char},
+      {"charindex", FunctionType::CharIndex},
+      {"lower",     FunctionType::Lower},
+      {"upper",     FunctionType::Upper},
+      {"trim",      FunctionType::Trim},
+      {"trimleft",     FunctionType::TrimLeft},
+      {"trimright",     FunctionType::TrimRight},
+      {"replace",   FunctionType::Replace},
+      {"substr",    FunctionType::Substr},
+      {"left",      FunctionType::Left},
+      {"right",     FunctionType::Right}
+};
 
   class Expression {
     public:
@@ -109,6 +122,7 @@ namespace Expressions{
   };
 
   class FunctionExpression final : public Expression {
+
     public:
       std::vector<Expression*> arguments;
 
@@ -118,6 +132,11 @@ namespace Expressions{
       ~FunctionExpression()override;
 
       [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+
+      [[nodiscard]] Field Concat(const DatabaseEngine::StorageTypes::Row* row)const;
+      [[nodiscard]] Field Length(const DatabaseEngine::StorageTypes::Row* row)const;
+      [[nodiscard]] Field TrimLeft(const DatabaseEngine::StorageTypes::Row* row)const;
+      [[nodiscard]] Field TrimRight(const DatabaseEngine::StorageTypes::Row* row)const;
   };
 
   class LogicalExpression final : public Expression{

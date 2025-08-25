@@ -102,13 +102,13 @@ namespace Server {
       for (auto& column: table.columns) {
 
         block_size_t columnSize;
-        ColumnTypeSizes.TryGetValue(AdditionalLibraries::NormalizeString(column.type), columnSize);
+        ColumnTypeSizes.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(column.type), columnSize);
 
         if (columnSize == 0)
           columnSize = column.size;
 
         ColumnType type;
-        ColumnTypesDictionary.TryGetValue(AdditionalLibraries::NormalizeString(column.type), type);
+        ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(column.type), type);
 
         const auto columnResult =
           this->InsertColumnToMasterDb(
@@ -1389,7 +1389,7 @@ namespace Server {
 
         block_size_t columnSize = 0;
 
-        const auto normalizedColumnType = AdditionalLibraries::NormalizeString(column.type);
+        const auto normalizedColumnType = AdditionalLibraries::StringFunctions::NormalizeString(column.type);
         
         if (!ColumnTypeSizes.TryGetValue(normalizedColumnType, columnSize))
           throw runtime_error("Column type " + column.type + " does not exist");

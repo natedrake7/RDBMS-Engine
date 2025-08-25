@@ -193,6 +193,19 @@ namespace Constants
         GetDate = 0,
         NewGuid = 1,
         Concat = 2,
+        Length = 3,
+        AsciiValue = 4,
+        Char = 5,
+        CharIndex = 6,
+        Lower = 7,
+        Upper = 8,
+        Trim = 9,
+        TrimLeft = 10,
+        TrimRight = 11,
+        Replace = 12,
+        Substr = 13,
+        Left = 14,
+        Right = 15,
     };
 
     static Dictionary<string, block_size_t> ColumnTypeSizes = {

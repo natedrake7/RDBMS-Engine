@@ -18,7 +18,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table)
     {
-        const auto normalizedType = AdditionalLibraries::NormalizeString(header.type);
+        const auto normalizedType = AdditionalLibraries::StringFunctions::NormalizeString(header.type);
 
         this->name = header.name;
         this->allowNulls = false;

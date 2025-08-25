@@ -245,7 +245,7 @@ bool Field::TryParseAsBool(bool& result)const{
 }
 
 bool Field::TryParseAsBoolFromString(bool& result)const{
-    const auto strData = AdditionalLibraries::Lower(this->GetString());
+    const auto strData = AdditionalLibraries::StringFunctions::Lower(this->GetString());
 
     if (strData == "true" || strData == "1")
         return true;
@@ -257,7 +257,7 @@ bool Field::TryParseAsBoolFromString(bool& result)const{
 }
 
 bool Field::ParseAsBoolFromString() const{
-    const auto strData = AdditionalLibraries::Lower(this->GetString());
+    const auto strData = AdditionalLibraries::StringFunctions::Lower(this->GetString());
 
     if (strData == "true" || strData == "1")
         return true;
@@ -281,7 +281,7 @@ bool Field::TryParseAsBoolFromInt(bool& result)const{
 }
 
 bool Field::TryParseDate(){
-    const auto strData = AdditionalLibraries::Lower(this->GetString());
+    const auto strData = AdditionalLibraries::StringFunctions::Lower(this->GetString());
 
     DataTypes::DateTime parsedDate;
 
@@ -804,6 +804,12 @@ Field operator+(const Field &lhs, const Field &rhs){
                 + " and right operand has type: "
                 + ColumnTypesToStringDictionary.Get(rhs.type));
     }
+}
+
+Field& Field::operator+=(const Field &rhs){
+    *this = *this + rhs;
+
+    return *this;
 }
 
 Field operator-(const Field &lhs, const Field &rhs){

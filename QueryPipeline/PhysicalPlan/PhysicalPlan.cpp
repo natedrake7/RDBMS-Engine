@@ -315,7 +315,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
           Server::ServerInstance::Get().InsertColumnToMasterDb(
             static_cast<int32_t>(tableResult.primaryKeyVal),
             column->name.name,
-            ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(column->type.name)),
+            ColumnTypesDictionary.Get(AdditionalLibraries::StringFunctions::NormalizeString(column->type.name)),
             static_cast<int32_t>(column->type.size),
             column->isNullable,
             column->index

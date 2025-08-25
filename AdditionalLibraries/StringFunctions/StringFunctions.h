@@ -3,8 +3,9 @@
 #include <codecvt>
 #include <locale>
 #include <string>
+#include <vector>
 
-namespace AdditionalLibraries {
+namespace AdditionalLibraries::StringFunctions {
   inline std::string NormalizeString(const std::string &str) {
     auto temp = str;
     std::ranges::transform(temp, temp.begin(), ::tolower);
@@ -18,24 +19,195 @@ namespace AdditionalLibraries {
   inline std::string RemoveQuotesFromUnicodeString(const std::string &str) {
     return str.substr(2, str.size() - 3);
   }
-
-  inline std::string Lower(const std::string &str) {
-      if(str.empty())
-        return str;
-
-      std::string result;
-
-      for(const auto& character : str)
-        result += static_cast<char>(tolower(character));
-
-      return result;
-  }
+  //
+  // inline std::string Lower(const std::string &str) {
+  //     if(str.empty())
+  //       return str;
+  //
+  //     std::string result;
+  //
+  //     for(const auto& character : str)
+  //       result += static_cast<char>(tolower(character));
+  //
+  //     return result;
+  // }
 
   inline std::u16string ToUnicode(const std::string &str) {
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
 
     return convert.from_bytes(str);
   }
+
+    inline std::string Concat(const std::vector<std::string>& strings)
+    {
+        std::string result;
+        for(const auto& string : strings)
+            result.append(string);
+
+        return result;
+    }
+
+    inline int Ascii(const std::string &str)
+    {
+        if(str.empty())
+            return 0;
+
+        return str.front();
+    }
+
+    inline std::string Char(const int &asciiCode) { return {0, static_cast<char>(asciiCode)}; }
+
+    inline int CharIndex(const std::string &subStr, const std::string &str, const int &startIndex)
+    {
+        if(subStr.empty()
+            || str.empty()
+            || startIndex < 0
+            || startIndex > str.size()
+            || subStr.size() > str.size())
+            return 0;
+
+        return static_cast<int>(str.find(subStr, startIndex));
+    }
+
+    inline int DataLength(const std::string &str) { return static_cast<int>(str.size()); }
+
+    inline std::string Left(const std::string &str, const int &numberOfCharacters)
+    {
+        if(str.empty() || numberOfCharacters <= 0)
+            return str;
+
+        return str.substr(0, numberOfCharacters);
+    }
+
+    inline std::string Right(const std::string &str, const int &numberOfCharacters)
+    {
+        if(str.empty() || numberOfCharacters <= 0)
+            return str;
+
+        return str.substr(str.size() - numberOfCharacters, numberOfCharacters);
+    }
+
+    inline std::string Lower(const std::string &str)
+    {
+        if(str.empty())
+            return str;
+
+        std::string result;
+
+        for(const auto& character : str)
+            result += static_cast<char>(tolower(character));
+
+        return result;
+    }
+
+    inline std::string Upper(const std::string &str)
+    {
+        if(str.empty())
+            return str;
+
+        std::string result;
+
+        for(const auto& character : str)
+            result += static_cast<char>(toupper(character));
+
+        return result;
+    }
+
+    inline std::string Trim(const std::string &str)
+    {
+        if(str.empty())
+            return str;
+
+        int firstIndex = 0;
+        int lastIndex = str.size() - 1;
+
+        for(int i = 0;i < str.size(); i++)
+            if(!isspace(str[i]))
+            {
+                firstIndex = i;
+                break;
+            }
+
+        for(int i = str.size() - 1; i >= 0; i--)
+            if(!isspace(str[i]))
+            {
+                lastIndex = i;
+                break;
+            }
+
+        return str.substr(firstIndex, lastIndex - firstIndex + 1);
+    }
+
+    inline int Length(const std::string &str)
+    {
+      if(str.empty())
+          return 0;
+
+      return static_cast<int>(str.size());
+    }
+
+    inline std::string TrimLeft(const std::string &str)
+    {
+        if(str.empty())
+            return str;
+
+        int firstIndex = 0;
+
+        for(int i = 0;i < str.size(); i++)
+            if(!isspace(str[i]))
+            {
+                firstIndex = i;
+                break;
+            }
+
+        return str.substr(firstIndex);
+    }
+
+    inline std::string TrimRight(const std::string &str)
+    {
+        if(str.empty())
+            return str;
+
+        int lastIndex = str.size() - 1;
+
+        for(int i = str.size() - 1; i >= 0; i--)
+            if(!isspace(str[i]))
+            {
+                lastIndex = i;
+                break;
+            }
+
+        return str.substr(0, lastIndex + 1);
+    }
+
+    inline std::string Replace(const std::string &str, const std::string &subStr, const std::string &replaceStr)
+    {
+        if(str.empty() || subStr.empty())
+            return str;
+
+        std::string result(str);
+        int subStrIndex = 0;
+
+        while (true)
+        {
+            subStrIndex = static_cast<int>(result.find(subStr));
+
+            if(subStrIndex == std::string::npos)
+                break;
+
+            result.replace(subStrIndex, subStr.size(), replaceStr);
+        }
+
+        return result;
+    }
+
+    inline std::string SubString(const std::string &str, const int &startIndex, const int &endIndex)
+    {
+        if(startIndex > str.size() -1 || endIndex > str.size() - 1)
+            return str;
+
+        return str.substr(startIndex, endIndex - startIndex + 1);
+    }
 }
 
 

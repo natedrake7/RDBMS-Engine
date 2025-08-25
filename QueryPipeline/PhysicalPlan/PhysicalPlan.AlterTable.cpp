@@ -17,7 +17,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalPlanResult * PhysicalAddColumn::Execute(const int& batchSize){
 
-    const auto columnType = ColumnTypesDictionary.Get(AdditionalLibraries::NormalizeString(this->column->type.name));
+    const auto columnType = ColumnTypesDictionary.Get(AdditionalLibraries::StringFunctions::NormalizeString(this->column->type.name));
 
     //if add occurs in a different index pos chaos ensues
     const auto columnResult =

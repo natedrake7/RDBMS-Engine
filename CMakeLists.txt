@@ -70,7 +70,8 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/AdditionalDataTypes/Guid/Guid.cpp
         AdditionalLibraries/AdditionalDataTypes/Guid/Guid.h
         AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h
-        AdditionalLibraries/AdditionalDataTypes/Expression/Expression.cpp)
+        AdditionalLibraries/AdditionalDataTypes/Expression/Expression.cpp
+        AdditionalLibraries/StringFunctions/StringFunctions.cpp)
 
 add_library(QueryPipeline  SHARED
                 QueryPipeline/Parser/Parser.cpp
@@ -151,8 +152,6 @@ add_library(Database SHARED
         Database/AdditionalFunctions/SortingAlgorithms/QuickSort/QuickSort.h
         Database/AdditionalFunctions/SortingAlgorithms/MergeSort/MergeSort.cpp
         Database/AdditionalFunctions/SortingAlgorithms/MergeSort/MergeSort.h
-        Database/AdditionalFunctions/StringFunctions/StringFunctions.cpp
-        Database/AdditionalFunctions/StringFunctions/StringFunctions.h
         Database/LockManager/LockManager.cpp
         Database/LockManager/LockManager.h
         Database/Pages/OverflowPage/OverflowPage.cpp
