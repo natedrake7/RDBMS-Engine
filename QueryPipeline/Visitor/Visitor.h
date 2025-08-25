@@ -40,8 +40,6 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitLiteralValueList(SQLParser::LiteralValueListContext *context) override;
 
-      antlrcpp::Any visitGetDate(SQLParser::GetDateContext *context) override;
-
       antlrcpp::Any visitCreateTableStatement(SQLParser::CreateTableStatementContext *context) override;
 
       antlrcpp::Any visitDataType(SQLParser::DataTypeContext *context) override;
@@ -71,8 +69,6 @@ namespace QueryPipeline {
       antlrcpp::Any visitAutoIncrementKey(SQLParser::AutoIncrementKeyContext *context) override;
 
       antlrcpp::Any visitOrderByStatement(SQLParser::OrderByStatementContext *context) override;
-
-      antlrcpp::Any visitNewGuid(SQLParser::NewGuidContext *context) override;
 
       antlrcpp::Any visitCreateIndexStatement(SQLParser::CreateIndexStatementContext *context) override;
 

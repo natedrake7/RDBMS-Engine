@@ -107,12 +107,6 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
 
       return Field(number, 0);
     }
-    //datetime obj
-    if (context->getDate())
-      return Field(DataTypes::DateTime::Now(), 0);
-
-    if (context->newGuid())
-      return Field(DataTypes::Guid::NewGuid(), 0);
 
     if (context->NULL_())
       return Field(nullptr, 0);
@@ -122,9 +116,6 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
 
     if (context->FALSE())
       return Field(false, 0);
-
-    if (context->identifier())
-      return Field(std::any_cast<std::string>(visit(context->identifier())), 0, true);
 
     throw SyntaxError("Invalid value specified" + context->getText());
   }
@@ -194,10 +185,6 @@ antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpress
        values.emplace_back(std::any_cast<Field>(visit(literalValue)));
 
     return values;
-  }
-
-  antlrcpp::Any SQLVisitorImplementation::visitGetDate(SQLParser::GetDateContext *context){
-      return {};
   }
 
 
@@ -386,10 +373,6 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     return statement;
   }
 
-  antlrcpp::Any SQLVisitorImplementation::visitNewGuid(SQLParser::NewGuidContext *context){
-    return DataTypes::Guid::NewGuid();
-  }
-
   antlrcpp::Any SQLVisitorImplementation::visitCreateIndexStatement(SQLParser::CreateIndexStatementContext *context){
     auto* statement = new Statements::CreateIndexStatement();
 
@@ -534,7 +517,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       return ExpressionWrapper{new Expressions::LiteralExpression(std::any_cast<Field>(visit(context->literalValue())))};
 
     if (context->functionCall())
-      return ExpressionWrapper{ std::any_cast<Expressions::Expression*>(visit(context->functionCall())) };
+      return ExpressionWrapper{ std::any_cast<Expressions::FunctionExpression*>(visit(context->functionCall())) };
 
     if (context->variableName()) {
 
@@ -546,9 +529,25 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
 
   antlrcpp::Any SQLVisitorImplementation::visitFunctionCall(SQLParser::FunctionCallContext *context){
+    const auto name = std::any_cast<std::string>(visit(context->functionName()));
+
+    Constants::FunctionType type;
+    if (!Expressions::FunctionTypeDictionary.TryGetValue(AdditionalLibraries::NormalizeString(name), type))
+        throw SyntaxError("Failed to parse function name: " + name);
+
+    std::vector<Expressions::Expression*> arguments;
+
+    for (const auto& resultExpression : context->resultExpression()) {
+      const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(resultExpression));
+
+      arguments.push_back(expression);
+    }
+
+    return new Expressions::FunctionExpression(type, arguments);
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitFunctionName(SQLParser::FunctionNameContext *context){
+    return context->IDENTIFIER()->getText();
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitResultExpression(SQLParser::ResultExpressionContext *context){
@@ -561,7 +560,11 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->atomicOperator().at(i - 1)));
 
-      expression = new Expressions::BinaryExpression(expression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+      Expressions::ExpressionOperator operationType;
+      if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
+        throw SyntaxError("Invalid Operation Type specified: " + operation);
+
+      expression = new Expressions::BinaryExpression(expression, right, operationType);
     }
 
     return ExpressionWrapper{ expression };
@@ -583,7 +586,11 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->relationalOperator().at(i - 1)));
 
-      expression = new Expressions::BinaryExpression(expression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+      Expressions::ExpressionOperator operationType;
+      if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
+        throw SyntaxError("Invalid Operation Type specified: " + operation);
+
+      expression = new Expressions::BinaryExpression(expression, right, operationType);
     }
 
     return ExpressionWrapper{ expression };
@@ -615,7 +622,11 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->additiveOperator().at(i - 1)));
 
-      expression = new Expressions::BinaryExpression(expression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+      Expressions::ExpressionOperator operationType;
+      if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
+        throw SyntaxError("Invalid Operation Type specified: " + operation);
+
+      expression = new Expressions::BinaryExpression(expression, right, operationType);
     }
 
     return ExpressionWrapper{ expression };
@@ -638,7 +649,11 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->multiplicativeOperator().at(i - 1)));
 
-      expression = new Expressions::BinaryExpression(expression, right, Expressions::ExpressionOperatorsDictionary.Get(operation));
+      Expressions::ExpressionOperator operationType;
+      if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
+        throw SyntaxError("Invalid Operation Type specified: " + operation);
+
+      expression = new Expressions::BinaryExpression(expression, right, operationType);
     }
 
     return ExpressionWrapper{ expression };

@@ -54,6 +54,12 @@ namespace Expressions{
     { "%", ExpressionOperator::Modulo },
   };
 
+  static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
+      {"getdate", FunctionType::GetDate},
+      {"newid", FunctionType::NewGuid},
+      {"concat", FunctionType::Concat}
+  };
+
   class Expression {
     public:
       virtual ~Expression() = default;
@@ -99,6 +105,18 @@ namespace Expressions{
       ~BinaryExpression()override;
 
     //TODO : Implement Evaluate for BinaryExpression where left and rig*  are evaluated and Field Addition is implemented with data type coercion.
+      [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+  };
+
+  class FunctionExpression final : public Expression {
+    public:
+      std::vector<Expression*> arguments;
+
+      Constants::FunctionType type;
+
+      FunctionExpression(const Constants::FunctionType& type, std::vector<Expression*>& arguments);
+      ~FunctionExpression()override;
+
       [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
   };
 

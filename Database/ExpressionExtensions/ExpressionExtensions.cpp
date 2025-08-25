@@ -49,4 +49,23 @@ namespace Expressions {
     return Field(nullptr, 0);
   }
 
+  Field FunctionExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const {
+    switch (this->type) {
+      case FunctionType::GetDate:
+          return Field(DataTypes::DateTime::Now(), 0);
+      case FunctionType::NewGuid:
+          return Field(DataTypes::Guid::NewGuid(), 0);
+      case FunctionType::Concat: {
+        Field value(string(""), 0);
+
+        for (const auto* expression : this->arguments)
+          value = value + expression->Evaluate(row);
+
+        return value;
+      }
+      default:
+        throw std::runtime_error("Unknown function type");
+    }
+  }
+
 }

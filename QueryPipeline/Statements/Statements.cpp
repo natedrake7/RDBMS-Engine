@@ -766,6 +766,16 @@ namespace QueryPipeline::Statements {
       return ResolveColumnAlias(columnExpr, tableAliasesDictionary, statement->tableColumnsDictionary, statement, indexPos);
     }
 
+    if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
+      //validate functionExpression
+
+      for (auto* childExpr : functionExpr->arguments) {
+        if (!ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos))
+          return false;
+      }
+
+    }
+
     return true;
   }
 
@@ -933,11 +943,20 @@ namespace QueryPipeline::Statements {
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, binaryExpr->left);
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, binaryExpr->right);
+
+      return;
     }
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
 
       columnExpr->columnIndex = columnIndicesDictionary.Get(columnExpr->columnId);
+      return;
+    }
+
+    if (const auto* funcExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
+      for (auto* childExpr : funcExpr->arguments)
+        AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, childExpr);
+
       return;
     }
   }

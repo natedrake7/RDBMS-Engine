@@ -252,10 +252,8 @@ literalValue
         | NUMBER
         | TRUE
         | FALSE
-        | getDate
-        | newGuid
         | NULL
-        | identifier;
+        ;
 
 //Create Index
 ////////////////////////////////////////////////////////////
@@ -295,21 +293,11 @@ joinType
 ////////////////////////////////////////////////////////////
 
 functionCall
-    : functionName LAPRENT (expression (COMMA expression)*)? RAPRENT
+    : functionName LAPRENT (resultExpression (COMMA resultExpression)*)? RAPRENT
     ;
 
 functionName
     : IDENTIFIER
-    ;
-
-//Get Date
-getDate
-    : 'GETDATE()'
-    ;
-
-//New Guid
-newGuid
-    : 'NEWID()'
     ;
 
 //Variable Declaration

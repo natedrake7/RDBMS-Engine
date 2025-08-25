@@ -189,6 +189,12 @@ namespace Constants
 
     };
 
+    enum class FunctionType : uint8_t {
+        GetDate = 0,
+        NewGuid = 1,
+        Concat = 2,
+    };
+
     static Dictionary<string, block_size_t> ColumnTypeSizes = {
         {"tinyint", sizeof(int8_t)},
         {"smallint", sizeof(int16_t)},

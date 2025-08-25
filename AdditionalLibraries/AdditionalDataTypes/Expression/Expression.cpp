@@ -27,6 +27,16 @@ BinaryExpression::~BinaryExpression(){
   delete this->right;
 }
 
+FunctionExpression::FunctionExpression(const Constants::FunctionType& type, std::vector<Expression*>& arguments) {
+  this->type = type;
+  this->arguments = std::move(arguments);
+}
+
+FunctionExpression::~FunctionExpression() {
+  for (const auto* expression: this->arguments)
+    delete expression;
+}
+
 LogicalExpression::LogicalExpression(
     const std::string &alias,
     const std::string &column,
