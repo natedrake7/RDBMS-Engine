@@ -513,11 +513,11 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
         return ExpressionWrapper{ new Expressions::ColumnExpression(columnName.name, columnName.alias)};
       }
 
-    if (context->literalValue())
-      return ExpressionWrapper{new Expressions::LiteralExpression(std::any_cast<Field>(visit(context->literalValue())))};
-
     if (context->functionCall())
       return ExpressionWrapper{ std::any_cast<Expressions::FunctionExpression*>(visit(context->functionCall())) };
+
+    if (context->literalValue())
+      return ExpressionWrapper{new Expressions::LiteralExpression(std::any_cast<Field>(visit(context->literalValue())))};
 
     if (context->variableName()) {
 
@@ -547,7 +547,16 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitFunctionName(SQLParser::FunctionNameContext *context){
-    return context->IDENTIFIER()->getText();
+    if (context->IDENTIFIER())
+      return context->IDENTIFIER()->getText();
+
+    if (context->LEFT())
+      return context->LEFT()->getText();
+
+    if (context->RIGHT())
+      return context->RIGHT()->getText();
+
+    throw SyntaxError("Failed to parse function name: " + context->getText());
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitResultExpression(SQLParser::ResultExpressionContext *context){

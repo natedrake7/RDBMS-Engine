@@ -80,11 +80,11 @@ primaryExpr
     ;
 
 resultValue
-        : columnName
-        | functionCall
-        | literalValue
-        | variableName
-        ;
+    : functionCall
+    | columnName
+    | literalValue
+    | variableName
+    ;
 
 whereClause
     : WHERE expression
@@ -298,6 +298,8 @@ functionCall
 
 functionName
     : IDENTIFIER
+    | LEFT  { _input->LA(1) == LAPRENT }?
+    | RIGHT { _input->LA(1) == LAPRENT }?
     ;
 
 //Variable Declaration

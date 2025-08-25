@@ -3,8 +3,30 @@
 #include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
 #include "../Block/Block.h"
 #include "../Row/Row.h"
+#include <functional>
 
 namespace Expressions {
+
+  static Dictionary<Constants::FunctionType, std::function<Field(const Expressions::FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row*)>> FunctionDictionary{
+        { Constants::FunctionType::GetDate,    &FunctionExpression::GetDate },
+        { Constants::FunctionType::NewGuid,    &FunctionExpression::NewGuid },
+        { Constants::FunctionType::Concat,     &FunctionExpression::Concat },
+        { Constants::FunctionType::Length,     &FunctionExpression::Length },
+        { Constants::FunctionType::AsciiValue, &FunctionExpression::AsciiValue },
+        { Constants::FunctionType::Char,       &FunctionExpression::Char },
+        { Constants::FunctionType::CharIndex,  &FunctionExpression::CharIndex },
+        { Constants::FunctionType::Lower,      &FunctionExpression::Lower },
+        { Constants::FunctionType::Upper,      &FunctionExpression::Upper },
+        { Constants::FunctionType::Trim,       &FunctionExpression::Trim },
+        { Constants::FunctionType::TrimLeft,   &FunctionExpression::TrimLeft },
+        { Constants::FunctionType::TrimRight,  &FunctionExpression::TrimRight },
+        { Constants::FunctionType::Replace,    &FunctionExpression::Replace },
+        { Constants::FunctionType::Substr,     &FunctionExpression::Substr },
+        { Constants::FunctionType::Left,       &FunctionExpression::Left },
+        { Constants::FunctionType::Right,      &FunctionExpression::Right }
+  };
+
+
   Field ColumnExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const{
     const auto& data = row->GetData().at(this->columnIndex);
 
@@ -49,72 +71,121 @@ namespace Expressions {
     return Field(nullptr, 0);
   }
 
-  Field FunctionExpression::Concat(const DatabaseEngine::StorageTypes::Row* row)const{
+  Field FunctionExpression::Concat(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row){
     Field value(string(""), 0);
 
-    for (const auto* expression : this->arguments)
-      value += expression->Evaluate(row);
+    for (const auto* argument : expression->arguments)
+      value += argument->Evaluate(row);
 
     return value;
   }
 
-  Field FunctionExpression::Length(const DatabaseEngine::StorageTypes::Row *row) const{
-    const auto& field = this->arguments.front()->Evaluate(row);
+  Field FunctionExpression::Length(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row);
 
     return Field(AdditionalLibraries::StringFunctions::Length(field.GetString()), 0);
   }
 
-  Field FunctionExpression::TrimLeft(const DatabaseEngine::StorageTypes::Row *row) const{
-    const auto& field = this->arguments.front()->Evaluate(row);
+  Field FunctionExpression::TrimLeft(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row);
 
     return Field(AdditionalLibraries::StringFunctions::TrimLeft(field.GetString()), 0);
   }
 
-  Field FunctionExpression::TrimRight(const DatabaseEngine::StorageTypes::Row *row) const{
-    const auto& field = this->arguments.front()->Evaluate(row);
+  Field FunctionExpression::TrimRight(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row);
 
     return Field(AdditionalLibraries::StringFunctions::TrimRight(field.GetString()), 0);
   }
 
-  Field FunctionExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const {
-    switch (this->type) {
-      case FunctionType::GetDate:
-          return Field(DataTypes::DateTime::Now(), 0);
-      case FunctionType::NewGuid:
-          return Field(DataTypes::Guid::NewGuid(), 0);
-      case FunctionType::Concat:
-        return this->Concat(row);
-      case FunctionType::Length:
-        return this->Length(row);
-      case FunctionType::AsciiValue:
-        break;
-      case FunctionType::Char:
-        break;
-      case FunctionType::CharIndex:
-        break;
-      case FunctionType::Lower:
-        break;
-      case FunctionType::Upper:
-        break;
-      case FunctionType::Trim:
-        break;
-      case FunctionType::TrimLeft:
-        return this->TrimLeft(row);
-      case FunctionType::TrimRight:
-        return this->TrimRight(row);
-      case FunctionType::Replace:
-        break;
-      case FunctionType::Substr:
-        break;
-      case FunctionType::Left:
-        break;
-      case FunctionType::Right:
-        break;
-      default:
-        throw std::runtime_error("Unknown function type");
-    }
+  Field FunctionExpression::Trim(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row);
 
-    return Field(nullptr, 0);
+    return Field(AdditionalLibraries::StringFunctions::Trim(field.GetString()), 0);
+  }
+
+  Field FunctionExpression::AsciiValue(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row);
+
+    return Field(AdditionalLibraries::StringFunctions::Ascii(field.GetString()), 0);
+  }
+
+  Field FunctionExpression::Char(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row);
+
+    return Field(AdditionalLibraries::StringFunctions::Char(field.GetInt()), 0);
+  }
+
+  Field FunctionExpression::CharIndex(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& subStr = expression->arguments.front()->Evaluate(row).GetString();
+
+    const auto& str = expression->arguments[1]->Evaluate(row).GetString();
+
+    const int pos = (expression->arguments.size() > 2)
+        ? expression->arguments[2]->Evaluate(row).GetInt()
+        : 0;
+
+    return Field(AdditionalLibraries::StringFunctions::CharIndex(subStr, str, pos), 0);
+  }
+
+  Field FunctionExpression::Lower(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row);
+
+    return Field(AdditionalLibraries::StringFunctions::Lower(field.GetString()), 0);
+  }
+
+  Field FunctionExpression::Upper(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row);
+
+    return Field(AdditionalLibraries::StringFunctions::Upper(field.GetString()), 0);
+  }
+
+  Field FunctionExpression::Replace(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& str = expression->arguments.front()->Evaluate(row).GetString();
+
+    const auto& subStr = expression->arguments[1]->Evaluate(row).GetString();
+
+    const auto& replaceStr = expression->arguments[2]->Evaluate(row).GetString();
+
+    return Field(AdditionalLibraries::StringFunctions::Replace(str, subStr, replaceStr), 0);
+  }
+
+  Field FunctionExpression::Substr(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row).GetString();
+
+    const auto& startPos = expression->arguments[1]->Evaluate(row).GetInt();
+
+    const auto& endPos = expression->arguments[2]->Evaluate(row).GetInt();
+
+    return Field(AdditionalLibraries::StringFunctions::SubString(field, startPos, endPos), 0);
+  }
+
+  Field FunctionExpression::Left(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row).GetString();
+
+    const auto& startPos = expression->arguments[1]->Evaluate(row).GetInt();
+
+    return Field(AdditionalLibraries::StringFunctions::Left(field, startPos), 0);
+  }
+
+  Field FunctionExpression::Right(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& field = expression->arguments.front()->Evaluate(row).GetString();
+
+    const auto& startPos = expression->arguments[1]->Evaluate(row).GetInt();
+
+    return Field(AdditionalLibraries::StringFunctions::Right(field, startPos), 0);
+  }
+
+  Field FunctionExpression::GetDate(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    return Field(DataTypes::DateTime::Now(), 0);
+  }
+
+  Field FunctionExpression::NewGuid(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+    return Field(DataTypes::Guid::NewGuid(), 0);
+  }
+
+  Field FunctionExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const {
+    return FunctionDictionary.Get(this->type)(this, row);
   }
 
 }

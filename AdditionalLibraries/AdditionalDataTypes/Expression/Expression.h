@@ -133,10 +133,29 @@ static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
 
       [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
 
-      [[nodiscard]] Field Concat(const DatabaseEngine::StorageTypes::Row* row)const;
-      [[nodiscard]] Field Length(const DatabaseEngine::StorageTypes::Row* row)const;
-      [[nodiscard]] Field TrimLeft(const DatabaseEngine::StorageTypes::Row* row)const;
-      [[nodiscard]] Field TrimRight(const DatabaseEngine::StorageTypes::Row* row)const;
+      //String Function
+
+      [[nodiscard]] static Field Concat(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Length(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field TrimLeft(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field TrimRight(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Trim(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field AsciiValue(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Char(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field CharIndex(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Lower(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Upper(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Replace(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Substr(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Left(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Right(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+
+
+      //DateTime Functions
+      [[nodiscard]] static Field GetDate(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row);
+
+      //Guid Functions
+      [[nodiscard]] static Field NewGuid(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row);
   };
 
   class LogicalExpression final : public Expression{
