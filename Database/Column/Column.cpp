@@ -1,5 +1,5 @@
 ﻿#include "Column.h"
-#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../Table/Table.h"
 
 namespace DatabaseEngine::StorageTypes {

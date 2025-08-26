@@ -9,7 +9,7 @@ namespace DataTypes
 		this->timeStamp = time(nullptr);
 	}
 
-	DateTime::DateTime(const int year, const int month, const int day, const int hour, const int minute, const int second)
+	DateTime::DateTime(const int& year, const int& month, const int& day, const int& hour, const int& minute, const int& second)
 	{
 		this->timeStamp = DateTime::ToUnixTimeStamp(year, month, day, hour, minute, second);
 	}
@@ -94,9 +94,31 @@ namespace DataTypes
 		return time.tm_sec;
 	}
 
-	void DateTime::AddSeconds(const int seconds) { this->timeStamp += seconds; }
+	void DateTime::AddSeconds(const int& seconds) { this->timeStamp += seconds; }
 
-	void DateTime::AddDays(const int days) { this->timeStamp += days * SECONDS_OF_DAY; }
+	void DateTime::AddDays(const int& days) { this->timeStamp += days * SECONDS_PER_DAY; }
+
+	void DateTime::AddHours(const int& hours){ this->timeStamp += hours * SECONDS_PER_HOUR; }
+
+	void DateTime::AddMinutes(const int& minutes){ this->timeStamp += minutes * SECONDS_PER_MINUTE; }
+
+	void DateTime::AddWeeks(const int& weeks){ this->timeStamp += weeks * SECONDS_PER_WEEK; }
+
+	void DateTime::AddMonths(const int &months){
+		auto* localTime = std::localtime(&this->timeStamp);
+
+		localTime->tm_mon += months;
+
+		this->timeStamp = mktime(localTime);
+	}
+
+	void DateTime::AddYears(const int& years) {
+		auto* localTime = std::localtime(&this->timeStamp);
+
+		localTime->tm_year += years;
+
+		this->timeStamp = mktime(localTime);
+	}
 
 	DateTime DateTime::Now() { return {}; }
 
@@ -157,7 +179,7 @@ namespace DataTypes
 		return localtime(&timestamp) != nullptr;
 	}
 
-	time_t DateTime::ToUnixTimeStamp(const int year, const int month, const int day, const int hour, const int minute, const int second)
+	time_t DateTime::ToUnixTimeStamp(const int& year, const int& month, const int& day, const int& hour, const int& minute, const int& second)
 	{
 		tm time = {};
 

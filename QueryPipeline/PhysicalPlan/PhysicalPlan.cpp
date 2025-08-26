@@ -1,7 +1,7 @@
 #include "PhysicalPlan.h"
 #include <utility>
 #include "../../Database/Database.h"
-#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../../Database/AdditionalFunctions/SortingFunctions.h"
 #include "../../Database/Block/Block.h"
 

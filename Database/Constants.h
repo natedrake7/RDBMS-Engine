@@ -194,15 +194,12 @@ enum class FunctionType : uint8_t {
     // Date/Time Functions
     // -----------------------
     GetDate = 0,         // SQL Server style
-    Now = 1,             // MySQL/Postgres style
-    CurrentDate = 2,     // ANSI SQL
-    CurrentTimestamp = 3,
-    DateAdd = 4,
-    DateDiff = 5,
-    DatePart = 6,
-    Year = 7,
-    Month = 8,
-    Day = 9,
+    DateAdd = 1,
+    DateDiff = 2,
+    DatePart = 3,
+    Year = 4,
+    Month = 5,
+    Day = 6,
 
     // -----------------------
     // GUID/Identifier Functions

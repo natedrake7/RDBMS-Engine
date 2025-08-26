@@ -1,7 +1,7 @@
 #include "Statements.h"
 
 #include "../Constants.h"
-#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
 

@@ -64,14 +64,14 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
         AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h
-        AdditionalLibraries/StringFunctions/StringFunctions.h
-        AdditionalLibraries/StringFunctions/StringFunctions.cpp
+        AdditionalLibraries/Functions/StringFunctions.h
         AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h
         AdditionalLibraries/AdditionalDataTypes/Guid/Guid.cpp
         AdditionalLibraries/AdditionalDataTypes/Guid/Guid.h
         AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h
         AdditionalLibraries/AdditionalDataTypes/Expression/Expression.cpp
-        AdditionalLibraries/StringFunctions/StringFunctions.cpp)
+        AdditionalLibraries/Functions/DateFunctions.h
+)
 
 add_library(QueryPipeline  SHARED
                 QueryPipeline/Parser/Parser.cpp

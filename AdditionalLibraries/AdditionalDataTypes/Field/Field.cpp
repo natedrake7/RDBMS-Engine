@@ -1,7 +1,7 @@
 #include "Field.h"
 
 #include "../../SafeConverter/SafeConverter.h"
-#include "../../StringFunctions/StringFunctions.h"
+#include "../../Functions/StringFunctions.h"
 
 #include <cstring>
 #include <stdexcept>

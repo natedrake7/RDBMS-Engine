@@ -7,7 +7,7 @@
 #include <nlohmann/json.hpp>
 #include "../Database/Block/Block.h"
 #include "../Database/Storage/StorageManager/StorageManager.h"
-#include "../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../Database/AdditionalFunctions/SortingFunctions.h"
 
 #include <iostream>

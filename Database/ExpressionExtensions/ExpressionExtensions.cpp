@@ -1,6 +1,6 @@
 #include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
-#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../Block/Block.h"
 #include "../Row/Row.h"
 #include <functional>
@@ -11,6 +11,12 @@ namespace Expressions {
           //Date Functions
 
         { Constants::FunctionType::GetDate,    &FunctionExpression::GetDate },
+        { Constants::FunctionType::DateAdd,    &FunctionExpression::GetDate },
+        { Constants::FunctionType::DateDiff,   &FunctionExpression::GetDate },
+        { Constants::FunctionType::DatePart,   &FunctionExpression::GetDate },
+        { Constants::FunctionType::Year,       &FunctionExpression::GetDate },
+        { Constants::FunctionType::Month,      &FunctionExpression::GetDate },
+        { Constants::FunctionType::Day,        &FunctionExpression::GetDate },
 
           //Guid Functions
 

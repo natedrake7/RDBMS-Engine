@@ -1,23 +1,27 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <ctime>
 #include <string>
 using namespace std;
 
 namespace DataTypes {
-	constexpr uint32_t SECONDS_OF_DAY = 86400;
+	constexpr uint32_t SECONDS_PER_MINUTE = 60;
+	constexpr uint32_t SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
+	constexpr uint32_t SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
+	constexpr uint32_t SECONDS_PER_WEEK = SECONDS_PER_DAY * 7;
+	constexpr uint32_t SECONDS_PER_YEAR = SECONDS_PER_DAY * 365;
 
 	class DateTime {
 		time_t timeStamp;
-
 	protected:
 		static void ValidateDate(int year, int month, int day, int hour, int minute, int second);
-		static time_t ToUnixTimeStamp(int year, int month, int day, int hour, int minute, int second);
+		static time_t ToUnixTimeStamp(const int& year, const int& month, const int& day, const int& hour, const int& minute, const int& second);
 
 	public:
 		DateTime();
-		DateTime(int year, int month, int day, int hour = 0, int minute = 0, int second = 0);
+		DateTime(const int& year, const int& month, const int& day, const int& hour = 0, const int& minute = 0, const int& second = 0);
 		explicit DateTime(const time_t& timestamp);
 		~DateTime();
 
@@ -28,8 +32,13 @@ namespace DataTypes {
 		[[nodiscard]] int GetMinutes() const;
 		[[nodiscard]] int GetSeconds() const;
 
-		void AddSeconds(int seconds);
-		void AddDays(int days);
+		void AddSeconds(const int& seconds);
+		void AddMinutes(const int& minutes);
+		void AddHours(const int& hours);
+		void AddDays(const int& days);
+		void AddWeeks(const int& weeks);
+		void AddMonths(const int& months);
+		void AddYears(const int& years);
 
 		static DateTime Now();
 		static time_t ToUnixTimeStamp(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");

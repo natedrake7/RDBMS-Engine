@@ -126,6 +126,7 @@ int main()
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
     std::cout << "Please enter a query: "<< endl;
+
     while (true) {
         std::string input;
 

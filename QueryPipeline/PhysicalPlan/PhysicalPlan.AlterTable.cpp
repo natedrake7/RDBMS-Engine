@@ -1,6 +1,6 @@
 #include "PhysicalPlan.h"
 #include "../../Server/Server.h"
-#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../../AdditionalLibraries/Functions/StringFunctions.h"
 
 #include <cstring>
 #include <iostream>

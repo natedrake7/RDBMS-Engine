@@ -1,6 +1,6 @@
 #include "Visitor.h"
 #include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
-#include "../../AdditionalLibraries/StringFunctions/StringFunctions.h"
+#include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../ErrorListener/ErrorListener.h"
 #include "../Statements/Statements.h"
 
