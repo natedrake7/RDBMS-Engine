@@ -189,24 +189,78 @@ namespace Constants
 
     };
 
-    enum class FunctionType : uint8_t {
-        GetDate = 0,
-        NewGuid = 1,
-        Concat = 2,
-        Length = 3,
-        AsciiValue = 4,
-        Char = 5,
-        CharIndex = 6,
-        Lower = 7,
-        Upper = 8,
-        Trim = 9,
-        TrimLeft = 10,
-        TrimRight = 11,
-        Replace = 12,
-        Substr = 13,
-        Left = 14,
-        Right = 15,
-    };
+enum class FunctionType : uint8_t {
+    // -----------------------
+    // Date/Time Functions
+    // -----------------------
+    GetDate = 0,         // SQL Server style
+    Now = 1,             // MySQL/Postgres style
+    CurrentDate = 2,     // ANSI SQL
+    CurrentTimestamp = 3,
+    DateAdd = 4,
+    DateDiff = 5,
+    DatePart = 6,
+    Year = 7,
+    Month = 8,
+    Day = 9,
+
+    // -----------------------
+    // GUID/Identifier Functions
+    // -----------------------
+    NewGuid = 20,
+
+    // -----------------------
+    // String Functions
+    // -----------------------
+    Concat = 40,
+    Length = 41,
+    AsciiValue = 42,
+    Char = 43,
+    CharIndex = 44,
+    Instr = 45,          // alias for CharIndex
+    Lower = 46,
+    Upper = 47,
+    Trim = 48,
+    TrimLeft = 49,
+    TrimRight = 50,
+    Replace = 51,
+    Substr = 52,
+    Left = 53,
+    Right = 54,
+    Reverse = 55,
+    Repeat = 56,
+    Space = 57,
+    Soundex = 58,
+
+    // -----------------------
+    // Mathematical Functions
+    // -----------------------
+    Abs = 80,
+    Ceil = 81,
+    Floor = 82,
+    Round = 83,
+    Power = 84,
+    Sqrt = 85,
+    Exp = 86,
+    Log = 87,
+    Log10 = 88,
+    Rand = 89,
+
+    // -----------------------
+    // Conversion Functions
+    // -----------------------
+    Cast = 100,
+    Convert = 101,
+
+    // -----------------------
+    // Aggregate Functions
+    // -----------------------
+    Count = 120,
+    Sum = 121,
+    Avg = 122,
+    Min = 123,
+    Max = 124
+};
 
     static Dictionary<string, block_size_t> ColumnTypeSizes = {
         {"tinyint", sizeof(int8_t)},

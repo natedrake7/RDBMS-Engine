@@ -133,6 +133,12 @@ namespace QueryPipeline {
       antlrcpp::Any visitResultExpression(SQLParser::ResultExpressionContext *context) override;
   };
 
+  static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {
+    const auto* token = context->getStart();
+
+    return ". Error at line: " + std::to_string(token->getLine()) + ", at position: " + std::to_string(token->getStartIndex());
+  }
+
   struct ExpressionWrapper {
     Expressions::Expression* expression;
   };

@@ -8,8 +8,16 @@
 namespace Expressions {
 
   static Dictionary<Constants::FunctionType, std::function<Field(const Expressions::FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row*)>> FunctionDictionary{
+          //Date Functions
+
         { Constants::FunctionType::GetDate,    &FunctionExpression::GetDate },
+
+          //Guid Functions
+
         { Constants::FunctionType::NewGuid,    &FunctionExpression::NewGuid },
+
+          //String Functions
+
         { Constants::FunctionType::Concat,     &FunctionExpression::Concat },
         { Constants::FunctionType::Length,     &FunctionExpression::Length },
         { Constants::FunctionType::AsciiValue, &FunctionExpression::AsciiValue },
@@ -23,7 +31,9 @@ namespace Expressions {
         { Constants::FunctionType::Replace,    &FunctionExpression::Replace },
         { Constants::FunctionType::Substr,     &FunctionExpression::Substr },
         { Constants::FunctionType::Left,       &FunctionExpression::Left },
-        { Constants::FunctionType::Right,      &FunctionExpression::Right }
+        { Constants::FunctionType::Right,      &FunctionExpression::Right },
+        { Constants::FunctionType::Reverse,    &FunctionExpression::Reverse },
+        { Constants::FunctionType::Space,      &FunctionExpression::Space }
   };
 
 
@@ -174,6 +184,18 @@ namespace Expressions {
     const auto& startPos = expression->arguments[1]->Evaluate(row).GetInt();
 
     return Field(AdditionalLibraries::StringFunctions::Right(field, startPos), 0);
+  }
+
+  Field FunctionExpression::Reverse(const FunctionExpression *expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& str = expression->arguments.front()->Evaluate(row).GetString();
+
+    return Field(AdditionalLibraries::StringFunctions::Reverse(str), 0);
+  }
+
+  Field FunctionExpression::Space(const FunctionExpression *expression, const DatabaseEngine::StorageTypes::Row *row){
+    const auto& size = expression->arguments.front()->Evaluate(row).GetInt();
+
+    return Field(AdditionalLibraries::StringFunctions::Space(size), 0);
   }
 
   Field FunctionExpression::GetDate(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){

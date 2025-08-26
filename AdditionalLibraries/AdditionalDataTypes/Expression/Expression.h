@@ -65,12 +65,14 @@ static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
       {"lower",     FunctionType::Lower},
       {"upper",     FunctionType::Upper},
       {"trim",      FunctionType::Trim},
-      {"trimleft",     FunctionType::TrimLeft},
-      {"trimright",     FunctionType::TrimRight},
+      {"trimleft",  FunctionType::TrimLeft},
+      {"trimright", FunctionType::TrimRight},
       {"replace",   FunctionType::Replace},
       {"substr",    FunctionType::Substr},
       {"left",      FunctionType::Left},
-      {"right",     FunctionType::Right}
+      {"right",     FunctionType::Right},
+      {"reverse",   FunctionType::Reverse},
+      {"space",     FunctionType::Space}
 };
 
   class Expression {
@@ -149,6 +151,8 @@ static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
       [[nodiscard]] static Field Substr(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
       [[nodiscard]] static Field Left(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
       [[nodiscard]] static Field Right(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Reverse(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
+      [[nodiscard]] static Field Space(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
 
 
       //DateTime Functions

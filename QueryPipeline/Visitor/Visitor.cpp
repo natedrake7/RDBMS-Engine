@@ -57,7 +57,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     auto* statement = new Statements::SelectStatement();
 
     if (!ctx->resultList())
-      throw SyntaxError("No arguments specified");
+      throw SyntaxError("No arguments specified", CreatePositionErrorMessage(ctx));
 
     statement->results = std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(ctx->resultList()));
 
@@ -117,7 +117,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->FALSE())
       return Field(false, 0);
 
-    throw SyntaxError("Invalid value specified" + context->getText());
+    throw SyntaxError("Invalid value specified" + context->getText(), CreatePositionErrorMessage(context));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
@@ -285,13 +285,13 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       return columnName;
     }
 
-    throw SyntaxError("Column name was not specified");
+    throw SyntaxError("Column name was not specified", CreatePositionErrorMessage(context));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitTableName(SQLParser::TableNameContext *context) {
 
     if (!context->name)
-      throw SyntaxError("No table was specified");
+      throw SyntaxError("No table was specified", CreatePositionErrorMessage(context));
 
     auto* statement = new Statements::TableName();
 
@@ -419,7 +419,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       return statement;
     }
 
-    throw SyntaxError("Unsupported action");
+    throw SyntaxError("Unsupported action", CreatePositionErrorMessage(context));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAlterTableAction(SQLParser::AlterTableActionContext *context){
@@ -523,7 +523,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     }
 
-    throw SyntaxError("Failed to parse result value: " + context->getText());
+    throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
   }
 
 
@@ -533,7 +533,10 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     Constants::FunctionType type;
     if (!Expressions::FunctionTypeDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(name), type))
-        throw SyntaxError("Failed to parse function name: " + name);
+        throw SyntaxError("Failed to parse function name: " + name, CreatePositionErrorMessage(context));
+
+    if (!context->LAPRENT() || !context->RAPRENT())
+      throw SyntaxError("Missing Closing Identetations on function: " + name, CreatePositionErrorMessage(context));
 
     std::vector<Expressions::Expression*> arguments;
 
@@ -556,7 +559,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (context->RIGHT())
       return context->RIGHT()->getText();
 
-    throw SyntaxError("Failed to parse function name: " + context->getText());
+    throw SyntaxError("Failed to parse function name: " + context->getText(), CreatePositionErrorMessage(context));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitResultExpression(SQLParser::ResultExpressionContext *context){
@@ -571,7 +574,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       Expressions::ExpressionOperator operationType;
       if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
-        throw SyntaxError("Invalid Operation Type specified: " + operation);
+        throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
       expression = new Expressions::BinaryExpression(expression, right, operationType);
     }
@@ -597,7 +600,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       Expressions::ExpressionOperator operationType;
       if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
-        throw SyntaxError("Invalid Operation Type specified: " + operation);
+        throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
       expression = new Expressions::BinaryExpression(expression, right, operationType);
     }
@@ -618,7 +621,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       if (context->GREATER())
         return context->GREATER()->getText();
 
-    throw SyntaxError("");
+    throw SyntaxError("", CreatePositionErrorMessage(context));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitAdditiveExpr(SQLParser::AdditiveExprContext *context){
@@ -633,7 +636,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       Expressions::ExpressionOperator operationType;
       if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
-        throw SyntaxError("Invalid Operation Type specified: " + operation);
+        throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
       expression = new Expressions::BinaryExpression(expression, right, operationType);
     }
@@ -660,7 +663,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       Expressions::ExpressionOperator operationType;
       if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
-        throw SyntaxError("Invalid Operation Type specified: " + operation);
+        throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
       expression = new Expressions::BinaryExpression(expression, right, operationType);
     }
@@ -678,7 +681,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (context->MODULO())
       return context->MODULO()->getText();
 
-    throw SyntaxError("");
+    throw SyntaxError("", CreatePositionErrorMessage(context));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitPrimaryExpr(SQLParser::PrimaryExprContext *context){

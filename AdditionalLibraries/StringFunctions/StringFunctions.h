@@ -19,6 +19,10 @@ namespace AdditionalLibraries::StringFunctions {
   inline std::string RemoveQuotesFromUnicodeString(const std::string &str) {
     return str.substr(2, str.size() - 3);
   }
+
+  inline std::string Space(const int& size) {
+      return std::string(size, ' ');
+  }
   //
   // inline std::string Lower(const std::string &str) {
   //     if(str.empty())
@@ -208,6 +212,10 @@ namespace AdditionalLibraries::StringFunctions {
 
         return str.substr(startIndex, endIndex - startIndex + 1);
     }
+
+    inline std::string Reverse (const std::string &str) {
+      return {str.rbegin(), str.rend()};
+  }
 }
 
 

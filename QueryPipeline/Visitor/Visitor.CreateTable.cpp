@@ -48,10 +48,10 @@ namespace QueryPipeline{
                               || (context->NULL_() && !context->NOT()) && !isPrimaryKey);
 
     if (context->primaryKey() && context->defaultValue())
-      throw SyntaxError("Cannot set a primary key with a default value.");
+      throw SyntaxError("Cannot set a primary key with a default value.", CreatePositionErrorMessage(context));
 
     if (context->primaryKey() && context->NULL_())
-      throw SyntaxError("Cannot set a primary key with default value NULL.");
+      throw SyntaxError("Cannot set a primary key with default value NULL.", CreatePositionErrorMessage(context));
 
 
     return new Statements::AddColumn{
