@@ -223,7 +223,7 @@ namespace DataTypes
 		}
 		else {
 			bool parsedDate = false;
-			for (const auto& validFormat: validFormats) {
+			for (const auto& validFormat: DateTimeFormats) {
 				istringstream ss(date);
 
 				ss >> std::chrono::parse(validFormat, tp);
