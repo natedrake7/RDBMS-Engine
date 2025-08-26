@@ -14,23 +14,23 @@ namespace DataTypes {
 	constexpr uint32_t SECONDS_PER_YEAR = SECONDS_PER_DAY * 365;
 
 	class DateTime {
-		time_t timeStamp;
+		int64_t timeStamp;
+
 	protected:
 		static void ValidateDate(int year, int month, int day, int hour, int minute, int second);
-		static time_t ToUnixTimeStamp(const int& year, const int& month, const int& day, const int& hour, const int& minute, const int& second);
 
 	public:
 		DateTime();
-		DateTime(const int& year, const int& month, const int& day, const int& hour = 0, const int& minute = 0, const int& second = 0);
-		explicit DateTime(const time_t& timestamp);
+		explicit DateTime(const int64_t& timestamp);
 		~DateTime();
 
 		[[nodiscard]] int GetYears() const;
-		[[nodiscard]] int GetMonths() const;
-		[[nodiscard]] int GetDays() const;
-		[[nodiscard]] int GetHours() const;
-		[[nodiscard]] int GetMinutes() const;
-		[[nodiscard]] int GetSeconds() const;
+		[[nodiscard]] unsigned int GetMonths() const;
+		[[nodiscard]] unsigned int  GetDays() const;
+		[[nodiscard]] long GetHours() const;
+		[[nodiscard]] long GetMinutes() const;
+		[[nodiscard]] long GetSeconds() const;
+		[[nodiscard]] long GetMilliseconds() const;
 
 		void AddSeconds(const int& seconds);
 		void AddMinutes(const int& minutes);
@@ -41,12 +41,11 @@ namespace DataTypes {
 		void AddYears(const int& years);
 
 		static DateTime Now();
-		static time_t ToUnixTimeStamp(const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
-		static bool FromString(DateTime& outVal, const string& date, const string& format = "%Y-%m-%d %H:%M:%S");
+		static bool FromString(DateTime& outVal, const string& date, const string& format = "");
 		static int DateTimeSize();
 
-		[[nodiscard]] string ToString(const string& format = "%Y-%m-%d %H:%M:%S") const;
-		[[nodiscard]] const time_t& GetUnixTimeStamp()const;
+		[[nodiscard]] string ToString(const string& format = "%Y-%m-%d %H:%M:%S%OS") const;
+		[[nodiscard]] const int64_t& GetUnixTimeStamp()const;
 
 		static bool ValidateDate(const DateTime& datetime);
 
