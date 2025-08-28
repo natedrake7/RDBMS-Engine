@@ -67,7 +67,7 @@ namespace Expressions {
       case ExpressionOperator::Modulo:
         return this->left->Evaluate(row) % this->right->Evaluate(row);
       case ExpressionOperator::Equal:
-        return this->left->Evaluate(row) >= this->right->Evaluate(row);
+        return this->left->Evaluate(row) == this->right->Evaluate(row);
       case ExpressionOperator::NotEqual:
         return this->left->Evaluate(row) != this->right->Evaluate(row);
       case ExpressionOperator::Greater:
@@ -84,7 +84,23 @@ namespace Expressions {
   }
 
   Field LogicalExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const {
-    return Field(nullptr, 0);
+    switch (this->type) {
+      case ExpressionType::And:{
+        const auto left = this->left->Evaluate(row);
+        const auto right = this->right->Evaluate(row);
+
+        return Field(left.GetBool() && right.GetBool(), 0);
+      }
+      case ExpressionType::Or:{
+        const auto left = this->left->Evaluate(row);
+        const auto right = this->right->Evaluate(row);
+
+        return Field(left.GetBool() || right.GetBool(), 0);
+      }
+      case ExpressionType::Invalid:
+      default:
+      throw std::runtime_error("Unknown predicate" + std::to_string(static_cast<int>(this->type)));
+    }
   }
 
   Field FunctionExpression::Concat(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row){

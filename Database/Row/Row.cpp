@@ -333,41 +333,6 @@ namespace DatabaseEngine::StorageTypes {
         return rowHeaderSize;
     }
 
-    bool Row::Evaluate(const Expressions::LogicalExpression *expression) const{
-        if (expression == nullptr)
-            return true;
-
-        switch (expression->type) {
-            case Expressions::ExpressionType::Predicate: {
-                const auto& actualData = this->GetData()[expression->columnIndex];
-
-                const auto& expected = expression->value;
-                switch (expression->operation) {
-                    case Expressions::ExpressionOperator::Equal:
-                        return *actualData == expected;
-                    case Expressions::ExpressionOperator::NotEqual:
-                        return *actualData != expected;
-                    case Expressions::ExpressionOperator::Greater:
-                        return *actualData > expected;
-                    case Expressions::ExpressionOperator::GreaterEqual:
-                        return *actualData >= expected;
-                    case Expressions::ExpressionOperator::Less:
-                        return *actualData < expected;
-                    case Expressions::ExpressionOperator::LessEqual:
-                        return *actualData <= expected;
-                    default:
-                        throw std::runtime_error("Unknown operator specified");
-                }
-            }
-            case Expressions::ExpressionType::And:
-                return this->Evaluate(expression->left) && this->Evaluate(expression->right);
-            case Expressions::ExpressionType::Or:
-                return this->Evaluate(expression->left) || this->Evaluate(expression->right);
-            default:
-                throw std::runtime_error("Invalid expression type");
-        }
-    }
-
     int Row::Update( const vector<Field> & updates){
       const auto prevRowSize = this->GetRowSize();
 

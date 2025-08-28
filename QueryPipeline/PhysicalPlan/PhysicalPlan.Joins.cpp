@@ -6,7 +6,7 @@ namespace QueryPipeline::PhysicalPlan {
     const int32_t &databaseId,
     const table_id_t &leftTablePos,
     const table_id_t &rightTablePos,
-    Expressions::LogicalExpression *joinCondition)
+    Expressions::Expression *joinCondition)
     : PhysicalOperator(databaseId), leftTablePos(leftTablePos), rightTablePos(rightTablePos), joinCondition(joinCondition){}
 
 

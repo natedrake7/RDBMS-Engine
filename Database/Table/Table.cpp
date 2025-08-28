@@ -394,7 +394,7 @@ namespace DatabaseEngine::StorageTypes {
 // //        this->HeapScan(&selectedRows, rowsToSelect);
       }
 
-    void Table::HeapDelete(const Expressions::LogicalExpression* expression) const
+    void Table::HeapDelete(const Expressions::Expression* expression) const
     {
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
@@ -443,7 +443,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanDelete(
-      const Expressions::LogicalExpression *expression,
+      const Expressions::Expression *expression,
       QueryPipeline::PhysicalPlan::IndexState& state,
       const int& batchSize){
         auto* tree = this->GetClusteredIndexedTree();
@@ -455,7 +455,9 @@ namespace DatabaseEngine::StorageTypes {
           return;
 
         for(const auto& row : results){
-          if(row.Evaluate(expression))
+
+          const auto value = expression->Evaluate(&row);
+          if(value.GetBool())
           {
             const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, &row);
             tree->Remove(key);
@@ -464,7 +466,7 @@ namespace DatabaseEngine::StorageTypes {
    }
 
   void Table::ClusteredIndexSeekDelete(
-    const Expressions::LogicalExpression *expression,
+    const Expressions::Expression *expression,
     QueryPipeline::PhysicalPlan::IndexState &state,
     const int &batchSize){
 
@@ -583,7 +585,7 @@ namespace DatabaseEngine::StorageTypes {
       vector<Row> *selectedRows,
       QueryPipeline::PhysicalPlan::IndexState& state,
       const int& rowsToSelect,
-      const Expressions::LogicalExpression* expression){
+      const Expressions::Expression* expression){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -597,7 +599,7 @@ namespace DatabaseEngine::StorageTypes {
         tree->IndexScan(selectedRows, state, rowsToSelect);
     }
 
-    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::LogicalExpression *expression){
+    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression *expression){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -616,7 +618,7 @@ namespace DatabaseEngine::StorageTypes {
       const int &indexPos,
       QueryPipeline::PhysicalPlan::IndexState& state,
       const int& rowsToSelect,
-      const Expressions::LogicalExpression *expression){
+      const Expressions::Expression *expression){
 
         auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
@@ -800,7 +802,7 @@ namespace DatabaseEngine::StorageTypes {
         return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
     }
 
-  void Table::HeapUpdate(const Expressions::LogicalExpression *expression, const vector<Field> & updates){
+  void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -842,7 +844,8 @@ namespace DatabaseEngine::StorageTypes {
             extent_id_t startingExtentIndex = 0;
 
             for(auto* row : *rows){
-                if(!row->Evaluate(expression))
+              const auto value = expression->Evaluate(row);
+              if(!value.GetBool())
                   continue;
 
                 this->HandleRowUpdate(page, row, updates, updatedColumns);
@@ -893,14 +896,14 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-    void Table::ClusteredIndexScanUpdate(Expressions::LogicalExpression *expression, const vector<Field> & updates){
+    void Table::ClusteredIndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
       auto* tree = this->GetClusteredIndexedTree();
 
       tree->IndexScanUpdate(expression, updates);
     }
 
     void Table::ClusteredIndexSeekUpdate(
-        Expressions::LogicalExpression* expression,
+        Expressions::Expression* expression,
         const Indexing::Key *minimumValue,
         const Indexing::Key *maximumValue,
         const vector<Field> & updates){

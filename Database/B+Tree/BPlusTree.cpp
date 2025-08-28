@@ -345,7 +345,7 @@ namespace Indexing
         vector<DatabaseEngine::StorageTypes::Row> *result,
         QueryPipeline::PhysicalPlan::IndexState& state,
         const int& rowsToSelect,
-        const Expressions::LogicalExpression *expression){
+        const Expressions::Expression *expression){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -364,7 +364,8 @@ namespace Indexing
             for (int i = startingPosition; i < rows->size(); i++) {
                 auto* row = rows->at(i);
 
-                if(!row->Evaluate(expression))
+                const auto value = expression->Evaluate(row);
+                if(!value.GetBool())
                     continue;
 
                 const RowHeader *rowHeader = row->GetHeader();
@@ -388,7 +389,7 @@ namespace Indexing
       }
     }
 
-    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, const Expressions::LogicalExpression *expression){
+    void BPlusTree::IndexScan(vector<DatabaseEngine::StorageTypes::Row> *result, const Expressions::Expression *expression){
 
         this->root = this->GetNode(this->firstIndexPageId);
 
@@ -401,10 +402,9 @@ namespace Indexing
         {
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
-            for (int i = 0; i < rows->size(); i++) {
-                auto* row = rows->at(i);
-
-                if(!row->Evaluate(expression))
+            for (auto* row : *rows) {
+                const auto value = expression->Evaluate(row);
+                if(!value.GetBool())
                     continue;
 
                 const RowHeader *rowHeader = row->GetHeader();
@@ -504,7 +504,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::LogicalExpression *expression){
+    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -532,7 +532,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScanUpdate(const Expressions::LogicalExpression *expression, const vector<Field> & updates){
+    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -548,8 +548,9 @@ namespace Indexing
         while (currentNode)
         {
           for(auto* row: *currentNode->GetDataRowsUnsafe()){
-            if(!row->Evaluate(expression))
-              continue;
+              const auto value = expression->Evaluate(row);
+              if(!value.GetBool())
+                  continue;
 
             this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
           }
@@ -632,7 +633,7 @@ namespace Indexing
 
     }
 
-    void BPlusTree::IndexSeekUpdate(Expressions::LogicalExpression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates){
+    void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -652,11 +653,12 @@ namespace Indexing
 
             // Check if the last key in the previous node is within the range
             if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
-                auto* previousRows = previousNode->GetDataRowsUnsafe();
+                const auto* previousRows = previousNode->GetDataRowsUnsafe();
 
-                auto* row = previousRows->at(previousRows->size() - 1);
+                const auto* row = previousRows->at(previousRows->size() - 1);
 
-                if(row->Evaluate(expression))
+                const auto value = expression->Evaluate(row);
+                if(value.GetBool())
                   this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
             }
           }
@@ -675,7 +677,8 @@ namespace Indexing
             if (*maxKey < *key)
                 break;
 
-            if (!rows->at(i)->Evaluate(expression))
+              const auto value = expression->Evaluate(rows->at(i));
+              if(!value.GetBool())
                 continue;
 
             this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);

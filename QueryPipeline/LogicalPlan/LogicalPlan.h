@@ -39,8 +39,8 @@ namespace QueryPipeline {
   class LogicalTableScan final : public LogicalPlan {
     public:
       Statements::TableName* table;
-      Expressions::LogicalExpression* expression;
-      explicit LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression);
+      Expressions::Expression* expression;
+      explicit LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical() override;
   };
 
@@ -48,13 +48,13 @@ namespace QueryPipeline {
     public:
     LogicalTableScan* left;
     LogicalTableScan* right;
-    Expressions::LogicalExpression* condition;
+    Expressions::Expression* condition;
     JoinType type;
     LogicalJoin(
       const int32_t& databaseId,
       LogicalTableScan* left,
       LogicalTableScan* right,
-      Expressions::LogicalExpression* condition,
+      Expressions::Expression* condition,
       const JoinType& type);
     PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
@@ -62,8 +62,8 @@ namespace QueryPipeline {
   class LogicalFilter final : public LogicalPlan {
     public:
       LogicalPlan* child;
-      Expressions::LogicalExpression* filter;
-      explicit LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::LogicalExpression* filter);
+      Expressions::Expression* filter;
+      explicit LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
   };
 
@@ -95,8 +95,8 @@ namespace QueryPipeline {
   class LogicalDelete final : public LogicalPlan {
   public:
     Statements::TableName* table;
-    Expressions::LogicalExpression* expression;
-    explicit LogicalDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression);
+    Expressions::Expression* expression;
+    explicit LogicalDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
     PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
@@ -104,9 +104,9 @@ namespace QueryPipeline {
     public:
       Statements::TableName* table;
       std::vector<Field> fields;
-      Expressions::LogicalExpression* expression;
+      Expressions::Expression* expression;
 
-      explicit LogicalUpdate(const int32_t & databaseId, Statements::TableName* table, std::vector<Field>& fields, Expressions::LogicalExpression* expression);
+      explicit LogicalUpdate(const int32_t & databaseId, Statements::TableName* table, std::vector<Field>& fields, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 

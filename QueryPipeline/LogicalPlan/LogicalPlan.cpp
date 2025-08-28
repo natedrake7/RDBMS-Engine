@@ -31,7 +31,7 @@ namespace QueryPipeline {
        );
   }
 
-  LogicalTableScan::LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::LogicalExpression* expression)
+  LogicalTableScan::LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression)
   : LogicalPlan(databaseId), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalTableScan::ToPhysical(){
@@ -42,12 +42,12 @@ namespace QueryPipeline {
         return new PhysicalPlan::PhysicalTableScan(this->databaseId, this->table);
 
       //if expression is complex defer from index seek
-      const bool canIndexSeek = expression != nullptr && !expression->IsComplex();
+      const bool canIndexSeek = expression != nullptr;
 
       HashSet<column_index_t> expressionColumns;
 
-      if (expression != nullptr)
-        expression->GetColumns(expressionColumns);
+      // if (expression != nullptr)
+      //   expression->GetColumns(expressionColumns);
 
     for (const auto& index: indexes) {
         const auto indexHeader = Server::ServerInstance::Get().SelectIndexById(index.id);
@@ -79,7 +79,7 @@ namespace QueryPipeline {
    const int32_t& databaseId,
    LogicalTableScan *left,
    LogicalTableScan *right,
-   Expressions::LogicalExpression *condition,
+   Expressions::Expression *condition,
    const JoinType &type)
    : LogicalPlan(databaseId), left(left), right(right), condition(condition), type(type) {}
 
@@ -88,7 +88,7 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalNestedLoopJoin(this->databaseId, 0, 0, this->condition);
   }
 
-LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::LogicalExpression* filter)
+LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::Expression* filter)
   : LogicalPlan(databaseId), child(child), filter(filter) {}
 
   PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(){
@@ -108,7 +108,7 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     return new PhysicalPlan::PhysicalSchemaCreate(this->databaseId, this->schemaName);
   }
 
-  LogicalDelete::LogicalDelete(const int32_t &databaseId, Statements::TableName *table, Expressions::LogicalExpression *expression)
+  LogicalDelete::LogicalDelete(const int32_t &databaseId, Statements::TableName *table, Expressions::Expression *expression)
     : LogicalPlan(databaseId), table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalDelete::ToPhysical(){
@@ -119,12 +119,12 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
       return new PhysicalPlan::PhysicalHeapDelete(this->databaseId, this->table, this->expression);
 
     //if expression is complex defer from index seek
-    const bool canIndexSeek = expression != nullptr && !expression->IsComplex();
+    const bool canIndexSeek = expression != nullptr;// && !expression->IsComplex();
 
-    HashSet<column_index_t> expressionColumns;
-
-    if (expression != nullptr)
-      expression->GetColumns(expressionColumns);
+    // HashSet<column_index_t> expressionColumns;
+    //
+    // if (expression != nullptr)
+    //   expression->GetColumns(expressionColumns);
 
     for (const auto& index: indexes) {
         const auto indexHeader = Server::ServerInstance::Get().SelectIndexById(index.id);
@@ -163,7 +163,7 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     return new PhysicalPlan::PhysicalTableCreate(this->databaseId, this->table, this->columns, index, this->constraintName);
   }
 
-  LogicalUpdate::LogicalUpdate(const int32_t& databaseId, Statements::TableName *table, vector<Field> & fields, Expressions::LogicalExpression *expression)
+  LogicalUpdate::LogicalUpdate(const int32_t& databaseId, Statements::TableName *table, vector<Field> & fields, Expressions::Expression *expression)
   : LogicalPlan(databaseId), table(table), fields(std::move(fields)), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator* LogicalUpdate::ToPhysical(){
@@ -174,12 +174,12 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
         return new PhysicalPlan::PhysicalHeapUpdate(this->databaseId, this->table, this->expression, this->fields);
 
       //if expression is complex defer from index seek
-      const bool canIndexSeek = expression != nullptr && !expression->IsComplex();
+      const bool canIndexSeek = expression != nullptr; //&& !expression->IsComplex();
       
       HashSet<column_index_t> expressionColumns;
-
-      if (expression != nullptr)
-        expression->GetColumns(expressionColumns);
+      //
+      // if (expression != nullptr)
+      //   expression->GetColumns(expressionColumns);
 
       for (const auto& index: indexes) {
           const auto indexHeader = Server::ServerInstance::Get().SelectIndexById(index.id);

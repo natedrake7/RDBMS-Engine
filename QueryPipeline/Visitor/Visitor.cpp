@@ -65,7 +65,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
               ? std::any_cast<Statements::TableName*>(visit(ctx->tableName()))
               : nullptr;
 
-    for (const auto join : ctx->joinStatement())
+    for (auto* join : ctx->joinStatement())
       statement->joins.push_back(std::any_cast<Statements::JoinStatement*>(visit(join)));
 
     if (ctx->whereClause() != nullptr)
@@ -79,12 +79,11 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
 
   antlrcpp::Any SQLVisitorImplementation::visitWhereClause(SQLParser::WhereClauseContext *context){
     Statements::WhereClause where;
-    where.expression = std::any_cast<Expressions::LogicalExpression*>(visitExpression(context->expression()));
-    return where;
-  }
+    const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(context->resultExpression()));
 
-  antlrcpp::Any SQLVisitorImplementation::visitExpression(SQLParser::ExpressionContext *context){
-    return visit(context->orExpression());
+    where.expression = expression;
+
+    return where;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitLiteralValue(SQLParser::LiteralValueContext *context){
@@ -118,50 +117,6 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
       return Field(false, 0);
 
     throw SyntaxError("Invalid value specified" + context->getText(), CreatePositionErrorMessage(context));
-  }
-
-  antlrcpp::Any SQLVisitorImplementation::visitOrExpression(SQLParser::OrExpressionContext *context){
-    auto* expression = std::any_cast<Expressions::LogicalExpression*>(visit(context->andExpression(0)));
-
-    for (size_t i = 1; i < context->andExpression().size(); i++) {
-      auto* right = std::any_cast<Expressions::LogicalExpression*>(visit(context->andExpression(i)));
-
-      expression = Expressions::LogicalExpression::Logical(Expressions::ExpressionType::Or, expression, right);
-    }
-
-    return expression;
-  }
-
-antlrcpp::Any SQLVisitorImplementation::visitAndExpression(SQLParser::AndExpressionContext *context) {
-    auto* expression = std::any_cast<Expressions::LogicalExpression*>(visit(context->predicate(0)));
-
-    for (size_t i = 1; i < context->predicate().size(); i++) {
-      auto* right = std::any_cast<Expressions::LogicalExpression*>(visit(context->predicate(i)));
-
-      expression = Expressions::LogicalExpression::Logical(Expressions::ExpressionType::And, expression, right);
-    }
-
-    return expression;
-  }
-  antlrcpp::Any SQLVisitorImplementation::visitPredicate(SQLParser::PredicateContext *context){
-    if (context->expression())
-      return visit(context->expression());
-
-    if (context->op == nullptr)
-      throw invalid_argument("Invalid operation specified");
-
-    Expressions::ExpressionOperator expressionOperator;
-    if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(context->op->getText(), expressionOperator))
-        throw invalid_argument("Invalid operation specified");
-
-    const auto columnName = std::any_cast<Statements::ColumnName>(visit(context->columnName()));
-
-    return  Expressions::LogicalExpression::Predicate(
-      columnName.alias,
-      columnName.name,
-      expressionOperator,
-      std::any_cast<Field>(visit(context->literalValue()))
-    );
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitInsertStatement(SQLParser::InsertStatementContext *context){
@@ -563,6 +518,34 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitResultExpression(SQLParser::ResultExpressionContext *context){
+    const auto& [leftExpression] = std::any_cast<ExpressionWrapper>(visit(context->andExpr(0)));
+
+    auto* expression = leftExpression;
+
+    for (int i = 1;i < context->andExpr().size(); i++) {
+      const auto& [right] = std::any_cast<ExpressionWrapper>(visit(context->andExpr(i)));
+
+      expression = new Expressions::LogicalExpression(expression, right, Expressions::ExpressionType::Or);
+    }
+
+    return ExpressionWrapper{ expression };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitAndExpr(SQLParser::AndExprContext *context){
+    const auto& [leftExpression] = std::any_cast<ExpressionWrapper>(visit(context->equalityExpr(0)));
+
+    auto* expression = leftExpression;
+
+    for (int i = 1;i < context->equalityExpr().size(); i++) {
+      const auto& [right] = std::any_cast<ExpressionWrapper>(visit(context->equalityExpr(i)));
+
+      expression = new Expressions::LogicalExpression(expression, right, Expressions::ExpressionType::And);
+    }
+
+    return ExpressionWrapper{ expression };
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitEqualityExpr(SQLParser::EqualityExprContext *context){
     const auto& [leftExpression] = std::any_cast<ExpressionWrapper>(visit(context->relationalExpr(0)));
 
     auto* expression = leftExpression;

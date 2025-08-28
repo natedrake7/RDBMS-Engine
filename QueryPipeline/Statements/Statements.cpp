@@ -25,7 +25,9 @@ namespace QueryPipeline::Statements {
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
 
-    return this->where.expression->Validate(columnsDict);
+
+    return true;
+    // return this->where.expression->Validate(columnsDict);
   }
 
   LogicalPlan * DeleteStatement::ToLogical(){
@@ -286,8 +288,7 @@ namespace QueryPipeline::Statements {
 
     if (this->where.expression != nullptr) {
       //do the same for joins
-      MapExpressionColumnsToIndices(this->where.expression, columnIndicesDictionary);
-      current = new LogicalFilter(this->databaseId, current, this->where.expression);
+      AssignColumnIndicesToResultExpression(this, columnIndicesDictionary, this->where.expression);
     }
 
     if (!this->results.empty())
@@ -450,7 +451,8 @@ namespace QueryPipeline::Statements {
     if(this->where.expression == nullptr)
       return true;
 
-    return this->where.expression->Validate(columnsDict);
+    return true;
+    // return this->where.expression->Validate(columnsDict);
   }
 
   QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
@@ -674,12 +676,12 @@ namespace QueryPipeline::Statements {
 
     //validate all expressions are valid
     if (statement->where.expression != nullptr
-      && !ResolveExpressionAliases(statement->where.expression, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
+      && !ResolveExpressionAliases(tableAliasesDictionary,statement->tableColumnsDictionary, statement, statement->where.expression, 0))
       return false;
 
     //validate join expressions
     for (const auto& join: statement->joins) {
-      if (!ResolveExpressionAliases(join->expression, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
+      if (!ResolveExpressionAliases(tableAliasesDictionary,statement->tableColumnsDictionary, statement, join->expression, 0))
         return false;
     }
 
@@ -774,6 +776,13 @@ namespace QueryPipeline::Statements {
           return false;
       }
 
+    }
+
+    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
+      //validate type
+
+      return ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->left, indexPos)
+        && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos);
     }
 
     return true;
@@ -887,45 +896,16 @@ namespace QueryPipeline::Statements {
     return true;
   }
 
-  bool ResolveExpressionAliases(
-    Expressions::LogicalExpression *expression,
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
-    SelectStatement *statement){
-
-    if (expression->type == Expressions::ExpressionType::Predicate) {
-      return ResolveColumnAlias(expression->column, tableAliasesDictionary, tablesColumnsDictionary, statement);
-    }
-
-    if (expression->GetLeft() == nullptr
-      || expression->right == nullptr) {
-      std::cerr << "Invalid expression specified" << std::endl;
-      return false;
-    }
-
-    return ResolveExpressionAliases(expression->GetLeft(), tableAliasesDictionary, tablesColumnsDictionary, statement)
-        && ResolveExpressionAliases(expression->right, tableAliasesDictionary, tablesColumnsDictionary, statement);
-  }
-
-  void MapExpressionColumnsToIndices(
-    Expressions::LogicalExpression *expression,
-    const Dictionary<int32_t,
-    Constants::column_index_t> &columnIndicesDictionary){
-      if (expression->type == Expressions::ExpressionType::Predicate) {
-          expression->columnIndex = columnIndicesDictionary.Get(expression->column.columnId);
-          return;
-      }
-
-      MapExpressionColumnsToIndices(expression->GetLeft(), columnIndicesDictionary);
-      MapExpressionColumnsToIndices(expression->right, columnIndicesDictionary);
-  }
-
   void AssignColumnsToIndices(SelectStatement *statement, Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary){
     for (auto& column : statement->columns)
       statement->columnIndices.emplace_back(columnIndicesDictionary.Get(column.columnId));
 
     for (const auto& resultExpr : statement->results)
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, resultExpr);
+
+    if (statement->where.expression != nullptr) {
+      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, statement->where.expression);
+    }
 
     if (statement->orderBy != nullptr) {
       for (auto& column : statement->orderBy->columns)
@@ -956,6 +936,13 @@ namespace QueryPipeline::Statements {
     if (const auto* funcExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
       for (auto* childExpr : funcExpr->arguments)
         AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, childExpr);
+
+      return;
+    }
+
+    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
+      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, logicalExpr->left);
+      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, logicalExpr->right);
 
       return;
     }

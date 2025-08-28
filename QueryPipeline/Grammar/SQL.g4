@@ -35,6 +35,14 @@ resultList
     ;
 
 resultExpression
+    : andExpr (OR andExpr)*
+    ;
+
+andExpr
+    : equalityExpr (AND equalityExpr)*
+    ;
+
+equalityExpr
     : relationalExpr (atomicOperator relationalExpr)*
     ;
 
@@ -87,32 +95,7 @@ resultValue
     ;
 
 whereClause
-    : WHERE expression
-    ;
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-//Expressions
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-expression
-    : orExpression
-    ;
-
-orExpression
-    : andExpression (OR andExpression)*
-    ;
-
-andExpression
-    : predicate (AND predicate)*
-    ;
-
-predicate
-    : LAPRENT expression ')'
-    | columnName op=(EQUAL | NOTEQUAL | LESSTHAN | GREATERTHAN | LESS | GREATER) literalValue
+    : WHERE resultExpression
     ;
 
 ////////////////////////////////////////////////////////////
@@ -271,7 +254,7 @@ createIndexStatement
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 joinStatement
-    : joinType? JOIN tableName ON expression
+    : joinType? JOIN tableName ON resultExpression
     ;
 
 joinType

@@ -62,8 +62,8 @@ namespace Pages
         virtual void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
         virtual void WritePageToFile(fstream *filePtr);
 
-        void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::LogicalExpression* expression);
-        void Delete(const Expressions::LogicalExpression* expression);
+        void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
+        void Delete(const Expressions::Expression* expression);
 
         void SetFileName(const string &filename);
         void SetPageId(const page_id_t &pageId);
@@ -89,7 +89,7 @@ namespace Pages
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const PageType &GetPageType() const;
         void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
-        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const Expressions::LogicalExpression* expression) const;
+        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const Expressions::Expression* expression) const;
         [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
     };
 }

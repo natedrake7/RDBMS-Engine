@@ -26,16 +26,8 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitWhereClause(SQLParser::WhereClauseContext *context) override;
   
-      antlrcpp::Any visitExpression(SQLParser::ExpressionContext *context) override;
-  
       antlrcpp::Any visitLiteralValue(SQLParser::LiteralValueContext *context) override;
     
-      antlrcpp::Any visitOrExpression(SQLParser::OrExpressionContext *context) override;
-    
-      antlrcpp::Any visitAndExpression(SQLParser::AndExpressionContext *context) override;
-    
-      antlrcpp::Any visitPredicate(SQLParser::PredicateContext *context) override;
-
       antlrcpp::Any visitInsertStatement(SQLParser::InsertStatementContext *context) override;
 
       antlrcpp::Any visitLiteralValueList(SQLParser::LiteralValueListContext *context) override;
@@ -131,6 +123,10 @@ namespace QueryPipeline {
       antlrcpp::Any visitPrimaryExpr(SQLParser::PrimaryExprContext *context) override;
 
       antlrcpp::Any visitResultExpression(SQLParser::ResultExpressionContext *context) override;
+
+      antlrcpp::Any visitAndExpr(SQLParser::AndExprContext *context) override;
+
+      antlrcpp::Any visitEqualityExpr(SQLParser::EqualityExprContext *context) override;
   };
 
   static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {

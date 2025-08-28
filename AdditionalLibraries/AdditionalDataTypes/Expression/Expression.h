@@ -22,7 +22,7 @@ namespace Expressions{
   enum class ExpressionType {
     And = 0,
     Or = 1,
-    Predicate = 2
+    Invalid = 2
   };
 
   enum class ExpressionOperator {
@@ -94,6 +94,7 @@ static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
       column_index_t columnIndex;
 
       ColumnExpression(const std::string& name, const std::string& alias);
+      ColumnExpression(const column_index_t& index);
       ~ColumnExpression()override = default;
 
       [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
@@ -163,68 +164,24 @@ static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
   };
 
   class LogicalExpression final : public Expression{
-    public:
+      public:
 
-    ExpressionType type;
+      ExpressionType type;
 
-    LogicalExpression* left;
-    LogicalExpression* right;
-
-    QueryPipeline::Statements::ColumnName column;
-
-    ExpressionOperator operation;
-    Field value;
-
-    Constants::column_index_t columnIndex;
+      Expression* left;
+      Expression* right;
 
       LogicalExpression(
-        const std::string& alias,
-        const std::string& column,
-        const ExpressionOperator& operation,
-        const Field& value
-        );
-
-      LogicalExpression(
-        const column_index_t & column,
-        const ExpressionOperator& operation,
-        const Field& value
-        );
-
-      LogicalExpression(
-        const ExpressionType& type,
-        LogicalExpression* leftExpression,
-        LogicalExpression* RightExpression
+        Expression *leftExpression,
+        Expression *RightExpression,
+        const ExpressionType &type
       );
-
-      static LogicalExpression* Predicate(
-        const std::string& alias,
-        const std::string& column,
-        const ExpressionOperator& operation,
-        const Field& value
-      );
-
-      static LogicalExpression* Predicate(
-        const column_index_t & column,
-        const ExpressionOperator& operation,
-        const Field& value
-        );
-
-      static LogicalExpression* Logical(
-        const ExpressionType& type,
-        LogicalExpression* leftExpression,
-        LogicalExpression* RightExpression
-        );
-
-      LogicalExpression() = default;
+      LogicalExpression();
       ~LogicalExpression()override;
 
       bool Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
       [[nodiscard]] bool IsComplex() const;
       void GetColumns(HashSet<column_index_t>& columnsSet)const;
-
-    [[nodiscard]] LogicalExpression* GetLeft()const;
-
-    [[nodiscard]] LogicalExpression* GetRight() const;
 
     [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
 
