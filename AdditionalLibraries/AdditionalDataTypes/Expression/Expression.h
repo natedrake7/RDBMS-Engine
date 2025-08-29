@@ -165,7 +165,6 @@ static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
 
   class LogicalExpression final : public Expression{
       public:
-
       ExpressionType type;
 
       Expression* left;
@@ -178,10 +177,6 @@ static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
       );
       LogicalExpression();
       ~LogicalExpression()override;
-
-      bool Validate(const Dictionary<string, Headers::ColumnHeader>& columnsDictionary);
-      [[nodiscard]] bool IsComplex() const;
-      void GetColumns(HashSet<column_index_t>& columnsSet)const;
 
     [[nodiscard]] Field Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
 

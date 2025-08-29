@@ -42,7 +42,6 @@ namespace Expressions {
         { Constants::FunctionType::Space,      &FunctionExpression::Space }
   };
 
-
   Field ColumnExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const{
     const auto& data = row->GetData().at(this->columnIndex);
 

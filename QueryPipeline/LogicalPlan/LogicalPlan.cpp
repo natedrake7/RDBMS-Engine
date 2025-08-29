@@ -16,7 +16,7 @@ namespace QueryPipeline {
     LogicalPlan *child,
     std::vector<Expressions::Expression*> &resultExpressions,
     std::vector<Headers::ColumnHeader>& columnsHeaders)
-: LogicalPlan(), child(child), resultExpressions(resultExpressions), columnsHeaders(std::move(columnsHeaders)) {}
+  : child(child), resultExpressions(std::move(resultExpressions)), columnsHeaders(std::move(columnsHeaders)) {}
 
   LogicalProject::~LogicalProject(){
       delete child;

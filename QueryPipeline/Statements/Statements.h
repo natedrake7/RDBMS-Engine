@@ -71,7 +71,8 @@ namespace QueryPipeline::Statements {
   struct WhereClause{
     Expressions::Expression* expression;
 
-    WhereClause() { this->expression = nullptr; }
+    WhereClause();
+    [[nodiscard]] bool IsValid() const;
   };
 
   struct OrderByStatement{
@@ -92,14 +93,9 @@ namespace QueryPipeline::Statements {
     int32_t schemaId;
     int16_t ordinalPosition;
 
-    TableName() { this->schema = "dbo"; }
-
-    [[nodiscard]] std::string GetFullName()const {
-      return this->schema + "." + this->name;
-    }
+    TableName();
+    [[nodiscard]] std::string GetFullName()const;
   };
-
-
 
   struct Statement {
     int32_t databaseId;
@@ -159,23 +155,16 @@ namespace QueryPipeline::Statements {
 
     std::vector<Expressions::Expression*> results;
 
-    std::vector<ColumnName> columns;
     Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
 
     std::vector<Headers::ColumnHeader> columnHeaders;
-
-    std::vector<Constants::column_index_t> columnIndices;
 
     std::vector<JoinStatement*> joins;
 
     WhereClause where;
     OrderByStatement* orderBy;
 
-    ~SelectStatement() override {
-      delete this->table;
-      delete this->orderBy;
-    };
-    
+    ~SelectStatement() override;
     bool Validate() override;
     LogicalPlan* ToLogical() override;
 
@@ -246,7 +235,7 @@ namespace QueryPipeline::Statements {
     RenameColumn* renameColumn;
 
     [[nodiscard]] bool ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] bool ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers);
+    [[nodiscard]] bool ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] bool ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] bool ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     bool Validate() override;

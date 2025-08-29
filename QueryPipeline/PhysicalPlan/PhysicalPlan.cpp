@@ -9,7 +9,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
 
   PhysicalPlanResult* PhysicalCreateDatabase::Execute(const int& batchSize){
-    auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
+    const auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
 
     Server::ServerInstance::Get().InsertSchemaToMasterDb(result.primaryKeyVal, "dbo");
     
@@ -57,13 +57,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         return result;
       }
 
-
       auto* result = this->child->Execute(batchSize);
 
       for (auto& row: result->rows) {
-
-          //build evaluation Function
-          auto& data = row.GetData();
           QueryResult resultRow;
 
           for (const auto& expression : this->resultExpressions) {
@@ -72,24 +68,17 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
           }
 
           result->results.push_back(std::move(resultRow));
+      }
 
-        for (int i = 0;i < data.size(); i++) {
-          // if (!columns.Contains(i)) {
-          //   delete data[i];
-          //   continue;
-          // }
+      ranges::sort(this->columnHeaders,
+        [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
+            return a.ordinalPosition < b.ordinalPosition;
         }
-      }
+      );
 
-    ranges::sort(this->columnHeaders,
-      [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
-          return a.ordinalPosition < b.ordinalPosition;
-      }
-    );
+      result->columns = std::move(this->columnHeaders);
 
-    result->columns = std::move(this->columnHeaders);
-
-    return result;
+      return result;
   }
 
   PhysicalFilter::PhysicalFilter(const int32_t & databaseId, PhysicalOperator *child, Expressions::Expression* filter)
