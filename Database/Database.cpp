@@ -13,8 +13,7 @@
 #include "Row/Row.h"
 #include "Pages/LargeObject/LargeDataPage.h"
 #include "Storage/StorageManager/StorageManager.h"
-#include "Block/Block.h"
-#include "../AdditionalLibraries/BitMap/BitMap.h"
+#include "../Server/Server.h"
 #include <iostream>
 
 using namespace Pages;

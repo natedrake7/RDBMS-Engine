@@ -1,16 +1,16 @@
 #pragma once
-#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Value/Value.h"
 
 
 #include <vector>
 
 class QueryResult {
-  std::vector<Field> data;
+  std::vector<Value> data;
 
 public:
   QueryResult() = default;
   ~QueryResult() = default;
 
-  void AddColumn(Field& field);
+  void AddColumn(Value& field);
   void Print()const;
 };

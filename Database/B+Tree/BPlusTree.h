@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Value/Value.h"
 
 #include <vector>
 #include "../../Database/Constants.h"
@@ -43,12 +43,12 @@ namespace Indexing
     {
         vector<object_t> value;
         key_size_t size;
-        Constants::ColumnType type;
+        Constants::DataType type;
         vector<Key> subKeys;
 
         Key();
-        Key(const void *keyValue, const key_size_t &keySize, const Constants::ColumnType& keyType);
-        explicit Key(const Field& field);
+        Key(const void *keyValue, const key_size_t &keySize, const Constants::DataType& keyType);
+        explicit Key(const Value& field);
 
         explicit Key(const vector<Key>& subKeys);
         ~Key();
@@ -152,9 +152,9 @@ namespace Indexing
 
         void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression);
 
-        void IndexScanUpdate(const Expressions::Expression* expression, const vector<Field> & updates);
+        void IndexScanUpdate(const Expressions::Expression* expression, const vector<Value> & updates);
 
-        void IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates);
+        void IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Value> & updates);
 
         void SearchKey(const Key &key, QueryData &result) const;
 
@@ -174,7 +174,7 @@ namespace Indexing
 
         void InsertRowsToOtherTree(const int& indexPos);
 
-        void InsertColumnToRow(const Constants::column_index_t& index, const Field& defaultValue);
+        void InsertColumnToRow(const Constants::column_index_t& index, const Value& defaultValue);
 
         void RemoveColumnFromRow(const Constants::column_index_t& index);
     };

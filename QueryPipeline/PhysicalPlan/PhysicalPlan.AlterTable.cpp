@@ -88,8 +88,8 @@ namespace QueryPipeline::PhysicalPlan{
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const std::vector<Field> updates = {
-      Field(this->column->newName.name, 2),
+    const std::vector<Value> updates = {
+      Value(this->column->newName.name, 2),
     };
 
     Server::ServerInstance::Get().UpdateColumnById(this->column->columnId, updates);
@@ -110,8 +110,8 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalPlanResult * PhysicalAlterColumn::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const std::vector<Field> updates = {
-      Field(this->column->type.size, 4)
+    const std::vector<Value> updates = {
+      Value(this->column->type.size, 4)
     };
 
     Server::ServerInstance::Get().UpdateColumnById(this->column->columnId, updates);

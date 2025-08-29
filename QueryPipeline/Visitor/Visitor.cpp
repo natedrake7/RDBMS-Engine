@@ -90,7 +90,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->STRING()) {
       const auto& str = context->STRING()->getText();
 
-      return Field(AdditionalLibraries::StringFunctions::RemoveQuotesFromString(str), 0);
+      return Value(AdditionalLibraries::StringFunctions::RemoveQuotesFromString(str), 0);
     }
 
     if (context->UNICODESTRING()) {
@@ -98,23 +98,23 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
 
       const auto parsedStr = AdditionalLibraries::StringFunctions::RemoveQuotesFromUnicodeString(str);
 
-      return Field(AdditionalLibraries::StringFunctions::ToUnicode(parsedStr), 0);
+      return Value(AdditionalLibraries::StringFunctions::ToUnicode(parsedStr), 0);
     }
 
     if (context->NUMBER()) {
       const auto number = SafeConverter<int64_t>::SafeStoi(context->NUMBER()->getText());
 
-      return Field(number, 0);
+      return Value(number, 0);
     }
 
     if (context->NULL_())
-      return Field(nullptr, 0);
+      return Value(nullptr, 0);
 
     if (context->TRUE())
-      return Field(true, 0);
+      return Value(true, 0);
 
     if (context->FALSE())
-      return Field(false, 0);
+      return Value(false, 0);
 
     throw SyntaxError("Invalid value specified" + context->getText(), CreatePositionErrorMessage(context));
   }
@@ -128,16 +128,16 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     
     const auto values = visit(context->literalValueList());
 
-    statement->values = std::any_cast<std::vector<Field>>(values);
+    statement->values = std::any_cast<std::vector<Value>>(values);
 
     return statement;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitLiteralValueList(SQLParser::LiteralValueListContext *context){
-    vector<Field> values;
+    vector<Value> values;
     
     for (const auto& literalValue : context->literalValue())
-       values.emplace_back(std::any_cast<Field>(visit(literalValue)));
+       values.emplace_back(std::any_cast<Value>(visit(literalValue)));
 
     return values;
   }
@@ -294,7 +294,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitUpdateColumn(SQLParser::UpdateColumnContext *context){
     return Statements::UpdateColumnStatement{
       .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
-      .value = std::any_cast<Field>(visit(context->literalValue()))
+      .value = std::any_cast<Value>(visit(context->literalValue()))
     };
 }
   antlrcpp::Any SQLVisitorImplementation::visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context){
@@ -413,8 +413,8 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     auto variableName = std::any_cast<std::string>(visit(context->variableName()));
 
     auto value = context->literalValue()
-        ? std::any_cast<Field>(visit(context->literalValue()))
-        : Field(nullptr, 0);
+        ? std::any_cast<Value>(visit(context->literalValue()))
+        : Value(nullptr, 0);
 
     value.SetName(variableName);
 
@@ -437,8 +437,8 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     auto variableName = std::any_cast<std::string>(visit(context->variableName()));
 
     auto value = context->literalValue()
-        ? std::any_cast<Field>(visit(context->literalValue()))
-        : Field(nullptr, 0);
+        ? std::any_cast<Value>(visit(context->literalValue()))
+        : Value(nullptr, 0);
 
     value.SetName(variableName);
 
@@ -472,7 +472,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       return ExpressionWrapper{ std::any_cast<Expressions::FunctionExpression*>(visit(context->functionCall())) };
 
     if (context->literalValue())
-      return ExpressionWrapper{new Expressions::LiteralExpression(std::any_cast<Field>(visit(context->literalValue())))};
+      return ExpressionWrapper{new Expressions::LiteralExpression(std::any_cast<Value>(visit(context->literalValue())))};
 
     if (context->variableName()) {
 

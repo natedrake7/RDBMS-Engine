@@ -152,7 +152,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         for(size_t i = 0; i < this->data.size(); i++)
         {
-            const ColumnType columnType = this->data[i]->GetColumnType();
+            const DataType columnType = this->data[i]->GetColumnType();
             const object_t* blockData = this->data[i]->GetBlockData();
             const block_size_t& blockSize = this->data[i]->GetBlockSize();
 
@@ -171,57 +171,57 @@ namespace DatabaseEngine::StorageTypes {
 
             switch (columnType) 
             {
-                case ColumnType::TinyInt:
+                case DataType::TinyInt:
                 {
                     std::cout << *reinterpret_cast<const int8_t*>(blockData);
                     break;
                 }
-                case ColumnType::SmallInt:
+                case DataType::SmallInt:
                 {
                     std::cout << *reinterpret_cast<const int16_t*>(blockData);
                     break;
                 }
-                case ColumnType::Int:
+                case DataType::Int:
                 {
                     std::cout << *reinterpret_cast<const int32_t*>(blockData);
                     break;
                 }
-                case ColumnType::BigInt:
+                case DataType::BigInt:
                 {
                     std::cout << *reinterpret_cast<const int64_t*>(blockData);
                     break;
                 }
-                case ColumnType::Decimal:
+                case DataType::Decimal:
                 {
                     std::cout << Decimal(blockData, blockSize).ToString();
                     break;
                 }
-                case ColumnType::Guid: {
+                case DataType::Guid: {
                     std::cout << this->data[i]->GetGuid();
                     break;
                 }
-                case ColumnType::String:
+                case DataType::String:
                 {
                     std::cout.write(reinterpret_cast<const char*>(blockData), blockSize);
                     break;
                 }
-                case ColumnType::UnicodeString:
+                case DataType::UnicodeString:
                 {
                     std::wcout.write(reinterpret_cast<const wchar_t*>(blockData), blockSize / sizeof(char16_t));
                     break;
                 }
-                case ColumnType::Bool:
+                case DataType::Bool:
                 {
                     std::cout << (*reinterpret_cast<const bool*>(blockData) ? "true" : "false");
                     break;
                 }
-                case ColumnType::DateTime:
+                case DataType::DateTime:
                 {
                     auto time = *reinterpret_cast<const time_t*>(blockData);
                     std::cout << DateTime(time);
                     break;
                 }
-                case ColumnType::ColumnTypeCount:
+                case DataType::ColumnTypeCount:
                 default:
                     throw invalid_argument("Row::PrintRow Invalid Column specified");
             }
@@ -333,7 +333,7 @@ namespace DatabaseEngine::StorageTypes {
         return rowHeaderSize;
     }
 
-    int Row::Update( const vector<Field> & updates){
+    int Row::Update( const vector<Value> & updates){
       const auto prevRowSize = this->GetRowSize();
 
       for (const auto & i : updates)
@@ -342,9 +342,9 @@ namespace DatabaseEngine::StorageTypes {
 
         auto *block = this->data.at(associatedColumnIndex);
 
-        const ColumnType columnType = block->GetColumnType();
+        const DataType columnType = block->GetColumnType();
 
-        if (columnType > Constants::ColumnType::ColumnTypeCount)
+        if (columnType > Constants::DataType::ColumnTypeCount)
           throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
         if (i.GetIsNull())
@@ -373,8 +373,8 @@ namespace DatabaseEngine::StorageTypes {
             const auto& columnType = block->GetColumnType();
             const auto& columnIndex = block->GetColumnIndex();
 
-            if(columnType != ColumnType::String
-              && columnType != ColumnType::UnicodeString
+            if(columnType != DataType::String
+              && columnType != DataType::UnicodeString
               && this->header.largeObjectBitMap->Get(columnIndex))
               continue;
 
@@ -497,7 +497,7 @@ namespace DatabaseEngine::StorageTypes {
 
         for(size_t i = 0; i < row.data.size(); i++)
         {
-            const ColumnType columnType = row.data[i]->GetColumnType();
+            const DataType columnType = row.data[i]->GetColumnType();
             const object_t* blockData = row.data[i]->GetBlockData();
             const block_size_t& blockSize = row.data[i]->GetBlockSize();
 
@@ -515,56 +515,56 @@ namespace DatabaseEngine::StorageTypes {
 
             switch (columnType)
             {
-                case ColumnType::TinyInt:
+                case DataType::TinyInt:
                 {
                     cout << *reinterpret_cast<const int8_t*>(blockData);
                     break;
                 }
-                case ColumnType::SmallInt:
+                case DataType::SmallInt:
                 {
                     cout << *reinterpret_cast<const int16_t*>(blockData);
                     break;
                 }
-                case ColumnType::Int:
+                case DataType::Int:
                 {
                     cout << *reinterpret_cast<const int32_t*>(blockData);
                     break;
                 }
-                case ColumnType::BigInt:
+                case DataType::BigInt:
                 {
                     cout << *reinterpret_cast<const int64_t*>(blockData);
                     break;
                 }
-                case ColumnType::Decimal:
+                case DataType::Decimal:
                 {
                     cout << Decimal(blockData, blockSize).ToString();
                     break;
                 }
-                case ColumnType::Guid: {
+                case DataType::Guid: {
                     cout << row.data[i]->GetGuid();
                     break;
                 }
-                case ColumnType::String:
+                case DataType::String:
                 {
                     cout.write(reinterpret_cast<const char*>(blockData), blockSize);
                     break;
                 }
-                case ColumnType::UnicodeString:
+                case DataType::UnicodeString:
                 {
                     wcout.write(reinterpret_cast<const wchar_t*>(blockData), blockSize / sizeof(char16_t));
                     break;
                 }
-                case ColumnType::Bool:
+                case DataType::Bool:
                 {
                     cout << (*reinterpret_cast<const bool*>(blockData) ? "true" : "false");
                     break;
                 }
-                case ColumnType::DateTime:
+                case DataType::DateTime:
                 {
                     cout << DateTime(reinterpret_cast<time_t>(blockData)).ToString();
                     break;
                 }
-                case ColumnType::ColumnTypeCount:
+                case DataType::ColumnTypeCount:
                 default:
                     throw invalid_argument("Row::PrintRow Invalid Column specified");
             }

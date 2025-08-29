@@ -59,8 +59,8 @@ namespace QueryPipeline{
       .type = std::any_cast<Statements::ColumnType>(visit(context->dataType())),
       .autoIncrementKey = key,
       .defaultValue =  context->defaultValue()
-              ? std::any_cast<Field>(visit(context->defaultValue()))
-              : Field(nullptr),
+              ? std::any_cast<Value>(visit(context->defaultValue()))
+              : Value(nullptr),
       .isPrimaryKey = isPrimaryKey,
       .isNullable = isNullable,
     };

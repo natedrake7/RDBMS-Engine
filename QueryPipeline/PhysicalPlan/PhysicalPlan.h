@@ -98,11 +98,11 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalIndexSeek final : public PhysicalOperator{
     Statements::TableName* table;
-    Field minValue;
-    Field maxValue;
+    Value minValue;
+    Value maxValue;
 
     public:
-      explicit PhysicalIndexSeek(const int32_t & databaseId, Statements::TableName* table, const Field& minValue, const Field& maxValue);
+      explicit PhysicalIndexSeek(const int32_t & databaseId, Statements::TableName* table, const Value& minValue, const Value& maxValue);
       ~PhysicalIndexSeek()override = default;
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -134,10 +134,10 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalInsert final : public PhysicalOperator{
     Statements::TableName* table;
-    std::vector<Field> fields;
+    std::vector<Value> fields;
 
   public:
-    PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Field>& fields);
+    PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Value>& fields);
     ~PhysicalInsert()override = default;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -177,10 +177,10 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalHeapUpdate final : public PhysicalOperator{
     Statements::TableName* table;
     Expressions::Expression* expression;
-    std::vector<Field> fields;
+    std::vector<Value> fields;
 
   public:
-    PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Value>& fields);
     ~PhysicalHeapUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -188,10 +188,10 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalIndexScanUpdate final : public PhysicalOperator{
     Statements::TableName* table;
     Expressions::Expression* expression;
-    std::vector<Field> fields;
+    std::vector<Value> fields;
 
   public:
-    PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Value>& fields);
     ~PhysicalIndexScanUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -199,10 +199,10 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalIndexSeekUpdate final : public PhysicalOperator{
     Statements::TableName* table;
     Expressions::Expression* expression;
-    std::vector<Field> fields;
+    std::vector<Value> fields;
 
   public:
-    PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Field>& fields);
+    PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Value>& fields);
     ~PhysicalIndexSeekUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };

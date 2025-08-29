@@ -68,7 +68,7 @@ IndexPage::~IndexPage()
 void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) 
 {
     this->ReadAdditionalHeaderFromFile(data, offSet);
-    const vector<ColumnType> indexedColumnTypes = table->GetColumnTypeByTreeId(this->additionalHeader.treeId);
+    const vector<DataType> indexedColumnTypes = table->GetColumnTypeByTreeId(this->additionalHeader.treeId);
 
     uint16_t numOfKeys = 0;
     memcpy(&numOfKeys, data.data() + offSet, sizeof(uint16_t));
@@ -87,7 +87,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             memcpy(keyValue.data(), data.data() + offSet, keySize);
             offSet += keySize;
 
-            key->InsertKey(Key(keyValue.data(), keySize, j < indexedColumnTypes.size() ? indexedColumnTypes[j] : ColumnType::RowIdentifier));
+            key->InsertKey(Key(keyValue.data(), keySize, j < indexedColumnTypes.size() ? indexedColumnTypes[j] : DataType::RowIdentifier));
         }
 
         this->keys.push_back(key);

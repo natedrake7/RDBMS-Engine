@@ -80,8 +80,8 @@ namespace QueryPipeline {
   class LogicalInsert final : public LogicalPlan {
     public:
       Statements::TableName* table;
-      std::vector<Field> fields;
-      explicit LogicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Field>& fields);
+      std::vector<Value> fields;
+      explicit LogicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Value>& fields);
       PhysicalPlan::PhysicalInsert* ToPhysical()override;
   };
 
@@ -103,10 +103,10 @@ namespace QueryPipeline {
   class LogicalUpdate final : public LogicalPlan {
     public:
       Statements::TableName* table;
-      std::vector<Field> fields;
+      std::vector<Value> fields;
       Expressions::Expression* expression;
 
-      explicit LogicalUpdate(const int32_t & databaseId, Statements::TableName* table, std::vector<Field>& fields, Expressions::Expression* expression);
+      explicit LogicalUpdate(const int32_t & databaseId, Statements::TableName* table, std::vector<Value>& fields, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 

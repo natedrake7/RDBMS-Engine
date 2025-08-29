@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include "../../Database/Constants.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Value/Value.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
 #include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
 
@@ -32,7 +32,7 @@ namespace QueryPipeline::Statements {
     Statements::ColumnName name;
     ColumnType type;
     Identity* autoIncrementKey;
-    Field defaultValue;
+    Value defaultValue;
 
     bool isPrimaryKey;
     bool isNullable;
@@ -185,7 +185,7 @@ namespace QueryPipeline::Statements {
   struct InsertStatement final : Statement{
     TableName* table;
     std::vector<ColumnName> columns;
-    std::vector<Field> values;
+    std::vector<Value> values;
 
     ~InsertStatement() override { delete this->table; };
     
@@ -202,7 +202,7 @@ namespace QueryPipeline::Statements {
 
   struct UpdateColumnStatement{
     ColumnName name;
-    Field value;
+    Value value;
   };
 
   struct UpdateStatement final : Statement {

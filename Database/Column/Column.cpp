@@ -5,7 +5,7 @@
 namespace DatabaseEngine::StorageTypes {
     
 
-     Column::Column(const std::string& columnName, const ColumnType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls)
+     Column::Column(const std::string& columnName, const DataType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls)
     {
         this->name = columnName;
         this->header.recordSize = recordSize;
@@ -37,7 +37,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header.id = masterDbHeader.id;
         this->name = masterDbHeader.name;
         this->allowNulls = masterDbHeader.isNullable;
-        this->header.columnType = static_cast<Constants::ColumnType>(masterDbHeader.dataType);
+        this->header.columnType = static_cast<Constants::DataType>(masterDbHeader.dataType);
         this->header.recordSize = masterDbHeader.recordSize;
         this->header.columnIndex = masterDbHeader.ordinalPosition;
         this->table = table;
@@ -52,7 +52,7 @@ namespace DatabaseEngine::StorageTypes {
         this->name = name;
     }
 
-    const ColumnType& Column::GetColumnType() const { return this->header.columnType; }
+    const DataType& Column::GetColumnType() const { return this->header.columnType; }
 
     const row_size_t& Column::GetColumnSize() const { return this->header.recordSize; }
 

@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "../Constants.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Value/Value.h"
 
 using namespace std;
 using namespace Constants;
@@ -69,7 +69,7 @@ namespace DatabaseEngine::StorageTypes {
 
         [[nodiscard]] const row_size_t& GetColumnSize() const;
 
-        [[nodiscard]] const ColumnType& GetColumnType() const;
+        [[nodiscard]] const DataType& GetColumnType() const;
 
         [[nodiscard]] const Column* GetColumn() const;
 
@@ -79,9 +79,9 @@ namespace DatabaseEngine::StorageTypes {
     };
 }
 
-bool operator==(const DatabaseEngine::StorageTypes::Block& block, const Field& field);
-bool operator!=(const DatabaseEngine::StorageTypes::Block& block, const Field& field);
-bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Field &field);
-bool operator<(const DatabaseEngine::StorageTypes::Block &block, const Field &field);
-bool operator>=(const DatabaseEngine::StorageTypes::Block &block, const Field &field);
-bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Field &field);
+bool operator==(const DatabaseEngine::StorageTypes::Block& block, const Value& field);
+bool operator!=(const DatabaseEngine::StorageTypes::Block& block, const Value& field);
+bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
+bool operator<(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
+bool operator>=(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
+bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Value &field);

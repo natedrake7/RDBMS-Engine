@@ -2,6 +2,7 @@
 #include "../Constants.h"
 #include "../Row/Row.h"
 #include "./Logger.Structures.h"
+#include "../../AdditionalLibraries/HashSet/HashSet.h"
 #include <cstdint>
 #include <mutex>
 

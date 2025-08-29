@@ -14,7 +14,7 @@ using namespace std;
 using namespace Constants;
 
 class RowCondition;
-class Field;
+class Value;
 
 namespace Indexing{
     class BPlusTree;
@@ -100,7 +100,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Row* CreateRow(
                 const Constants::transaction_id_t& transactionId,
-                const vector<Field>& inputData,
+                const vector<Value>& inputData,
                 int64_t* primaryKeyVal,
                 Logging::CheckPoint* checkPoint)const;
 
@@ -145,9 +145,9 @@ namespace DatabaseEngine::StorageTypes
 
             ~Table();
 
-            AdditionalDataTypes::ResultStatus InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Field>> &inputData);
+            AdditionalDataTypes::ResultStatus InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Value>> &inputData);
 
-            AdditionalDataTypes::ResultStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Field> &inputData);
+            AdditionalDataTypes::ResultStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData);
 
             AdditionalDataTypes::ResultStatus InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
 
@@ -224,15 +224,15 @@ namespace DatabaseEngine::StorageTypes
 
             int CreateNonClusteredIndex(vector<Constants::column_index_t>& columnIndices);
 
-            void HeapUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
+            void HeapUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
 
-            void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Field> &updates);
+            void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
 
             void ClusteredIndexSeekUpdate(
                 Expressions::Expression* expression,
                 const Indexing::Key* minimumValue,
                 const Indexing::Key* maximumValue,
-                const vector<Field> &updates);
+                const vector<Value> &updates);
 
             void Truncate();
 
@@ -274,7 +274,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Database* GetDatabase() const;
 
-            [[nodiscard]] vector<ColumnType> GetColumnTypeByTreeId(const uint8_t& treeId) const;
+            [[nodiscard]] vector<DataType> GetColumnTypeByTreeId(const uint8_t& treeId) const;
 
             int HandleRowOverflow(const Row *row)const;
 
@@ -282,7 +282,7 @@ namespace DatabaseEngine::StorageTypes
 
             void InsertLargeObjectToPage(Row *row);
 
-            void HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Field> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap = true);
+            void HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Value> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap = true);
 
             void GetDefaultValuesHeaders()const;
 
@@ -298,13 +298,13 @@ namespace DatabaseEngine::StorageTypes
 
             void UpdateColumnName(const Constants::column_index_t& index, const std::string& name)const;
 
-            void PopulateColumn(const Constants::column_index_t& index, const Field& defaultValue);
+            void PopulateColumn(const Constants::column_index_t& index, const Value& defaultValue);
 
-            void PopulateColumnByClusteredIndex(const Constants::column_index_t& index, const Field& defaultValue);
+            void PopulateColumnByClusteredIndex(const Constants::column_index_t& index, const Value& defaultValue);
 
-            void PopulateColumnByHeap(const Constants::column_index_t& index, const Field& defaultValue);
+            void PopulateColumnByHeap(const Constants::column_index_t& index, const Value& defaultValue);
 
-            void HandleAddColumn(Pages::Page* page, Row* row, const Constants::column_index_t& index, const Field& defaultValue);
+            void HandleAddColumn(Pages::Page* page, Row* row, const Constants::column_index_t& index, const Value& defaultValue);
 
             static void HandleRemoveColumn(Pages::Page* page, Row* row, const Constants::column_index_t& index);
 

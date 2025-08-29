@@ -1,6 +1,6 @@
 #include "GroupCondition.h"
 
-GroupCondition::GroupCondition(const column_index_t &columnIndex, const ColumnType &columnType, const AggregateFunction& aggregateFunction, const bool &isColumnIndexed, const long double* constantValue )
+GroupCondition::GroupCondition(const column_index_t &columnIndex, const DataType &columnType, const AggregateFunction& aggregateFunction, const bool &isColumnIndexed, const long double* constantValue )
 {
     this->columnIndex = columnIndex;
     this->columnType = columnType;
@@ -16,7 +16,7 @@ GroupCondition::~GroupCondition()
     delete this->constantValue;
 }
 
-const ColumnType & GroupCondition::GetColumnType() const { return this->columnType; }
+const DataType & GroupCondition::GetColumnType() const { return this->columnType; }
 
 const column_index_t & GroupCondition::GetColumnIndex() const { return this->columnIndex; }
 

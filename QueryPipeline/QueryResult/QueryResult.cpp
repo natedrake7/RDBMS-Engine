@@ -1,7 +1,7 @@
 #include "QueryResult.h"
 #include <iostream>
 
-void QueryResult::AddColumn(Field &field){
+void QueryResult::AddColumn(Value &field){
   this->data.push_back(std::move(field));
 }
 
@@ -19,35 +19,35 @@ void QueryResult::Print() const{
     }
 
       switch (column.GetType()){
-        case ColumnType::TinyInt:
+        case DataType::TinyInt:
           std::cout << column.GetTinyInt();
           break;
-        case ColumnType::SmallInt:
+        case DataType::SmallInt:
           std::cout << column.GetSmallInt();
           break;
-        case ColumnType::Int:
+        case DataType::Int:
           std::cout << column.GetInt();
           break;
-        case ColumnType::BigInt:
+        case DataType::BigInt:
           std::cout << column.GetBigInt();
           break;
-        case ColumnType::Decimal:
+        case DataType::Decimal:
           std::cout << column.GetDecimal();
           break;
-        case ColumnType::String:
+        case DataType::String:
           std::cout << column.GetString();
           break;
-        case ColumnType::UnicodeString:
+        case DataType::UnicodeString:
           //TODO
           std::cout << column.GetString();
           break;
-        case ColumnType::Bool:
+        case DataType::Bool:
           std::cout << (column.GetBool() ? "TRUE" : "FALSE");
           break;
-        case ColumnType::DateTime:
+        case DataType::DateTime:
           std::cout << column.GetDateTime();
           break;
-        case ColumnType::Guid:
+        case DataType::Guid:
           std::cout << column.GetGuid();
           break;
         default:

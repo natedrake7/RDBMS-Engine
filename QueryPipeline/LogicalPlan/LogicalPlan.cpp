@@ -95,7 +95,7 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     return new PhysicalPlan::PhysicalFilter(this->databaseId, this->child->ToPhysical(), this->filter);
   }
 
-  LogicalInsert::LogicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Field> &fields): LogicalPlan(databaseId), table(table), fields(fields) {}
+  LogicalInsert::LogicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Value> &fields): LogicalPlan(databaseId), table(table), fields(fields) {}
 
   PhysicalPlan::PhysicalInsert * LogicalInsert::ToPhysical(){
     return new PhysicalPlan::PhysicalInsert(this->databaseId, this->table, this->fields);
@@ -163,7 +163,7 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     return new PhysicalPlan::PhysicalTableCreate(this->databaseId, this->table, this->columns, index, this->constraintName);
   }
 
-  LogicalUpdate::LogicalUpdate(const int32_t& databaseId, Statements::TableName *table, vector<Field> & fields, Expressions::Expression *expression)
+  LogicalUpdate::LogicalUpdate(const int32_t& databaseId, Statements::TableName *table, vector<Value> & fields, Expressions::Expression *expression)
   : LogicalPlan(databaseId), table(table), fields(std::move(fields)), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator* LogicalUpdate::ToPhysical(){

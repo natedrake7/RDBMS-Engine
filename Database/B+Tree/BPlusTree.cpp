@@ -532,7 +532,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
+    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -590,7 +590,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::InsertColumnToRow(const Constants::column_index_t& index, const Field &defaultValue){
+    void BPlusTree::InsertColumnToRow(const Constants::column_index_t& index, const Value &defaultValue){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -633,7 +633,7 @@ namespace Indexing
 
     }
 
-    void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Field> & updates){
+    void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Value> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -1216,12 +1216,12 @@ namespace Indexing
     Key::Key()
     {
         this->size = 0;
-        this->type = Constants::ColumnType::Int;
+        this->type = Constants::DataType::Int;
         this->indexKeyPosition = -1;
         this->currentSearchKeyPosition = -1;
     }
 
-    Key::Key(const void *keyValue, const key_size_t &keySize, const Constants::ColumnType& keyType)
+    Key::Key(const void *keyValue, const key_size_t &keySize, const Constants::DataType& keyType)
     {
         this->value.resize(keySize);
         memcpy(this->value.data(), keyValue, keySize);
@@ -1232,7 +1232,7 @@ namespace Indexing
         this->currentSearchKeyPosition = -1;
     }
 
-    Key::Key(const Field &field){
+    Key::Key(const Value &field){
         const auto& keySize = field.GetSize();
 
         this->value.resize(keySize);
@@ -1252,7 +1252,7 @@ namespace Indexing
             this->subKeys.push_back(key);
             this->size += key.size;
         }
-        this->type = Constants::ColumnType::Int;
+        this->type = Constants::DataType::Int;
         this->indexKeyPosition = -1;
         this->currentSearchKeyPosition = -1;
     }
@@ -1293,17 +1293,17 @@ namespace Indexing
         
         switch (this->type) 
         {
-            case Constants::ColumnType::TinyInt:
+            case Constants::DataType::TinyInt:
                 return *reinterpret_cast<const int8_t*>(this->value.data()) > *reinterpret_cast<const int8_t*>(otherKey.value.data());
-            case Constants::ColumnType::SmallInt:
+            case Constants::DataType::SmallInt:
                 return *reinterpret_cast<const int16_t*>(this->value.data()) > *reinterpret_cast<const int16_t*>(otherKey.value.data());
-            case Constants::ColumnType::Int:
+            case Constants::DataType::Int:
                 return *reinterpret_cast<const int32_t*>(this->value.data()) > *reinterpret_cast<const int32_t*>(otherKey.value.data());
-            case Constants::ColumnType::BigInt:
+            case Constants::DataType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) > *reinterpret_cast<const int64_t*>(otherKey.value.data());
-            case Constants::ColumnType::Guid:
-            case Constants::ColumnType::String:
-            case Constants::ColumnType::UnicodeString:
+            case Constants::DataType::Guid:
+            case Constants::DataType::String:
+            case Constants::DataType::UnicodeString:
             {
                 if (otherKey.size > this->size)
                     return true;
@@ -1313,15 +1313,15 @@ namespace Indexing
 
                 return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) > 0;
             }
-            case Constants::ColumnType::Decimal:
+            case Constants::DataType::Decimal:
                 return Decimal(this->value.data(), this->size) > Decimal(otherKey.value.data(), otherKey.size);
-            case Constants::ColumnType::Bool:
+            case Constants::DataType::Bool:
                 return *reinterpret_cast<const bool*>(this->value.data()) > *reinterpret_cast<const bool*>(otherKey.value.data());
-            case Constants::ColumnType::DateTime:
+            case Constants::DataType::DateTime:
                 return *reinterpret_cast<const time_t*>(this->value.data()) > *reinterpret_cast<const time_t*>(otherKey.value.data());
-            case Constants::ColumnType::RowIdentifier:
+            case Constants::DataType::RowIdentifier:
                 return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) > *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::ColumnType::ColumnTypeCount:
+            case Constants::DataType::ColumnTypeCount:
             default:
                 throw invalid_argument("> Invalid DataType for Key");
         }
@@ -1344,17 +1344,17 @@ namespace Indexing
         
         switch (this->type) 
         {
-            case Constants::ColumnType::TinyInt:
+            case Constants::DataType::TinyInt:
                 return *reinterpret_cast<const int8_t*>(this->value.data()) >= *reinterpret_cast<const int8_t*>(otherKey.value.data());
-            case Constants::ColumnType::SmallInt:
+            case Constants::DataType::SmallInt:
                 return *reinterpret_cast<const int16_t*>(this->value.data()) >= *reinterpret_cast<const int16_t*>(otherKey.value.data());
-            case Constants::ColumnType::Int:
+            case Constants::DataType::Int:
                 return *reinterpret_cast<const int32_t*>(this->value.data()) >= *reinterpret_cast<const int32_t*>(otherKey.value.data());
-            case Constants::ColumnType::BigInt:
+            case Constants::DataType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) >= *reinterpret_cast<const int64_t*>(otherKey.value.data());
-            case Constants::ColumnType::Guid:
-            case Constants::ColumnType::String:
-            case Constants::ColumnType::UnicodeString:
+            case Constants::DataType::Guid:
+            case Constants::DataType::String:
+            case Constants::DataType::UnicodeString:
             {
                 if (otherKey.size > this->size)
                     return true;
@@ -1364,15 +1364,15 @@ namespace Indexing
 
                 return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) >= 0;
             }
-            case Constants::ColumnType::Decimal:
+            case Constants::DataType::Decimal:
                 return Decimal(this->value.data(), this->size) >= Decimal(otherKey.value.data(), otherKey.size);
-            case Constants::ColumnType::Bool:
+            case Constants::DataType::Bool:
                 return *reinterpret_cast<const bool*>(this->value.data()) >= *reinterpret_cast<const bool*>(otherKey.value.data());
-            case Constants::ColumnType::DateTime:
+            case Constants::DataType::DateTime:
                 return *reinterpret_cast<const time_t*>(this->value.data()) >= *reinterpret_cast<const time_t*>(otherKey.value.data());
-        case Constants::ColumnType::RowIdentifier:
+        case Constants::DataType::RowIdentifier:
             return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) >= *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::ColumnType::ColumnTypeCount: 
+            case Constants::DataType::ColumnTypeCount: 
             default:
                 throw invalid_argument(">= Invalid DataType for Key");
         }
@@ -1437,36 +1437,36 @@ namespace Indexing
 
         switch (key.type) 
         {
-            case Constants::ColumnType::TinyInt:
+            case Constants::DataType::TinyInt:
                 os << *reinterpret_cast<const int8_t*>(key.value.data());
                 break;
-            case Constants::ColumnType::SmallInt:
+            case Constants::DataType::SmallInt:
                 os << *reinterpret_cast<const int16_t*>(key.value.data());
                 break;
-            case Constants::ColumnType::Int:
+            case Constants::DataType::Int:
                 os << *reinterpret_cast<const int32_t*>(key.value.data());
                 break;
-            case Constants::ColumnType::BigInt:
+            case Constants::DataType::BigInt:
                 os << *reinterpret_cast<const int64_t*>(key.value.data());
                 break;
-            case Constants::ColumnType::Guid:
-            case Constants::ColumnType::String:
-            case Constants::ColumnType::UnicodeString:
+            case Constants::DataType::Guid:
+            case Constants::DataType::String:
+            case Constants::DataType::UnicodeString:
                 os << reinterpret_cast<const char*>(key.value.data());
                 break;
-            case Constants::ColumnType::Decimal:
+            case Constants::DataType::Decimal:
                 os << Decimal(key.value.data(), key.size).ToString();
                 break;
-            case Constants::ColumnType::Bool:
+            case Constants::DataType::Bool:
                 os << *reinterpret_cast<const bool*>(key.value.data());
                 break;
-            case Constants::ColumnType::DateTime:
+            case Constants::DataType::DateTime:
                 os << DateTime(*reinterpret_cast<const time_t*>(key.value.data())).ToString();
                 break;
-        case Constants::ColumnType::RowIdentifier:
+        case Constants::DataType::RowIdentifier:
             os << *reinterpret_cast<const Headers::RowIdentifier*>(key.value.data());
             break;
-            case Constants::ColumnType::ColumnTypeCount: 
+            case Constants::DataType::ColumnTypeCount: 
             default:
                 throw invalid_argument("Invalid DataType for Key");
         }
@@ -1481,27 +1481,27 @@ namespace Indexing
         
         switch (this->type) 
         {
-            case Constants::ColumnType::TinyInt:
+            case Constants::DataType::TinyInt:
                 return *reinterpret_cast<const int8_t*>(this->value.data()) == *reinterpret_cast<const int8_t*>(otherKey.value.data());
-            case Constants::ColumnType::SmallInt:
+            case Constants::DataType::SmallInt:
                 return *reinterpret_cast<const int16_t*>(this->value.data()) == *reinterpret_cast<const int16_t*>(otherKey.value.data());
-            case Constants::ColumnType::Int:
+            case Constants::DataType::Int:
                 return *reinterpret_cast<const int32_t*>(this->value.data()) == *reinterpret_cast<const int32_t*>(otherKey.value.data());
-            case Constants::ColumnType::BigInt:
+            case Constants::DataType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) == *reinterpret_cast<const int64_t*>(otherKey.value.data());
-            case Constants::ColumnType::Guid:
-            case Constants::ColumnType::String:
-            case Constants::ColumnType::UnicodeString:
+            case Constants::DataType::Guid:
+            case Constants::DataType::String:
+            case Constants::DataType::UnicodeString:
                 return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
-            case Constants::ColumnType::Decimal:
+            case Constants::DataType::Decimal:
                 return Decimal(this->value.data(), this->size) == Decimal(otherKey.value.data(), otherKey.size);
-            case Constants::ColumnType::Bool:
+            case Constants::DataType::Bool:
                 return *reinterpret_cast<const bool*>(this->value.data()) == *reinterpret_cast<const bool*>(otherKey.value.data());
-            case Constants::ColumnType::DateTime:
+            case Constants::DataType::DateTime:
                 return *reinterpret_cast<const time_t*>(this->value.data()) == *reinterpret_cast<const time_t*>(otherKey.value.data());
-        case Constants::ColumnType::RowIdentifier:
+        case Constants::DataType::RowIdentifier:
             return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) == *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::ColumnType::ColumnTypeCount:
+            case Constants::DataType::ColumnTypeCount:
             default:
                 throw invalid_argument("== Invalid DataType for Key");
         }

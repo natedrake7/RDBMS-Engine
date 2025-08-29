@@ -2,8 +2,6 @@
 #include "Constants.h"
 #include <string>
 #include <vector>
-#include "../AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h"
-#include "../Server/Server.h"
 #include "B+Tree/BPlusTree.h"
 #include "Column/Column.h"
 #include "Logger/Logger.h"
@@ -213,10 +211,6 @@ public:
     void GetIndexes() const;
 
     void GetTableHeaders()const;
-
-    static void JoinTables(vector<StorageTypes::Row>& selectedRows, StorageTypes::Table* firstTable, StorageTypes::Table*, const vector<column_index_t>& secondTableSelectedColumnIndices, const vector<JoinField>& conditions);
-
-    static void JoinTables(vector<StorageTypes::Row>& firstTableRows, StorageTypes::Table* secondTable, const vector<column_index_t>& selectedColumnIndices, const vector<JoinField>& conditions);
 
     void UpdateMasterDatabase()const;
 };

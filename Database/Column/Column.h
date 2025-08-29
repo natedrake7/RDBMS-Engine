@@ -19,7 +19,7 @@ namespace DatabaseEngine::StorageTypes
     typedef struct ColumnHeader
     {
         int32_t id;
-        ColumnType columnType;
+        DataType columnType;
         column_index_t columnIndex;
         row_size_t recordSize;
 
@@ -38,10 +38,10 @@ namespace DatabaseEngine::StorageTypes
         bool isOverflowed;
 
     protected:
-        [[nodiscard]] ColumnType SetColumnType() const;
+        [[nodiscard]] DataType SetColumnType() const;
 
     public:
-        Column(const std::string& columnName, const ColumnType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls);
+        Column(const std::string& columnName, const DataType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls);
 
         Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table);
 
@@ -53,7 +53,7 @@ namespace DatabaseEngine::StorageTypes
 
         void SetColumnName(const std::string& name);
 
-        [[nodiscard]] const ColumnType &GetColumnType() const;
+        [[nodiscard]] const DataType &GetColumnType() const;
 
         [[nodiscard]] const row_size_t &GetColumnSize() const;
 

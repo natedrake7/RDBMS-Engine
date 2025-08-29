@@ -8,16 +8,16 @@ using namespace DatabaseEngine::StorageTypes;
 
 class GroupCondition {
     column_index_t columnIndex;
-    ColumnType columnType;
+    DataType columnType;
     bool isColumnIndexed;
     AggregateFunction aggregateFunction;
     long double* constantValue;
     
 
     public:
-        GroupCondition(const column_index_t& columnIndex, const ColumnType& columnType, const AggregateFunction& aggregateFunction = NONE, const bool& isColumnIndexed = false, const long double* constantValue = nullptr);
+        GroupCondition(const column_index_t& columnIndex, const DataType& columnType, const AggregateFunction& aggregateFunction = NONE, const bool& isColumnIndexed = false, const long double* constantValue = nullptr);
         ~GroupCondition();
-        [[nodiscard]] const ColumnType& GetColumnType() const;
+        [[nodiscard]] const DataType& GetColumnType() const;
         [[nodiscard]] const column_index_t& GetColumnIndex() const;
         [[nodiscard]] const bool& GetIsColumnIndexed() const;
         [[nodiscard]] const AggregateFunction& GetAggregateFunction() const;

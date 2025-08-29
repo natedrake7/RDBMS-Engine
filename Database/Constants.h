@@ -169,7 +169,7 @@ namespace Constants
         Full = 3
     };
 
-    enum class ColumnType : uint8_t
+    enum class DataType : uint8_t
     {
         TinyInt = 0,
         SmallInt = 1,
@@ -273,31 +273,31 @@ enum class FunctionType : uint8_t {
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 
-    static Dictionary<string, ColumnType> ColumnTypesDictionary = {
-        {"tinyint", ColumnType::TinyInt},
-        {"smallint", ColumnType::SmallInt},
-        {"int", ColumnType::Int},
-        {"bigint", ColumnType::BigInt},
-        {"datetime", ColumnType::DateTime},
-        {"bool", ColumnType::Bool},
-        {"string", ColumnType::String},
-        {"decimal", ColumnType::Decimal},
-        {"unicodestring", ColumnType::UnicodeString},
-        {"guid", ColumnType::Guid}
+    static Dictionary<string, DataType> ColumnTypesDictionary = {
+        {"tinyint", DataType::TinyInt},
+        {"smallint", DataType::SmallInt},
+        {"int", DataType::Int},
+        {"bigint", DataType::BigInt},
+        {"datetime", DataType::DateTime},
+        {"bool", DataType::Bool},
+        {"string", DataType::String},
+        {"decimal", DataType::Decimal},
+        {"unicodestring", DataType::UnicodeString},
+        {"guid", DataType::Guid}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 
-    static Dictionary<ColumnType, string> ColumnTypesToStringDictionary = {
-        {ColumnType::TinyInt, "TinyInt"},
-        {ColumnType::SmallInt, "SmallInt"},
-        {ColumnType::Int, "Int"},
-        {ColumnType::BigInt, "BigInt"},
-        {ColumnType::DateTime, "DateTime"},
-        {ColumnType::Bool, "Bool"},
-        {ColumnType::String, "String"},
-        {ColumnType::Decimal, "Decimal"},
-        {ColumnType::UnicodeString, "Unicodestring"},
-        {ColumnType::Guid, "Guid"}
+    static Dictionary<DataType, string> ColumnTypesToStringDictionary = {
+        {DataType::TinyInt, "TinyInt"},
+        {DataType::SmallInt, "SmallInt"},
+        {DataType::Int, "Int"},
+        {DataType::BigInt, "BigInt"},
+        {DataType::DateTime, "DateTime"},
+        {DataType::Bool, "Bool"},
+        {DataType::String, "String"},
+        {DataType::Decimal, "Decimal"},
+        {DataType::UnicodeString, "Unicodestring"},
+        {DataType::Guid, "Guid"}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 }

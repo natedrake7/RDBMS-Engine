@@ -4,7 +4,6 @@
 #include "./Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "./Pages/IndexPage/IndexPage.h"
 #include "Constants.h"
-#include "../AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h"
 #include "B+Tree/BPlusTree.h"
 #include "Pages/Page.h"
 #include "Table/Table.h"
@@ -40,7 +39,7 @@ namespace DatabaseEngine {
             key.InsertKey(Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
         }
 
-        key.InsertKey(Key(&rowId, sizeof(rowId), ColumnType::RowIdentifier));
+        key.InsertKey(Key(&rowId, sizeof(rowId), DataType::RowIdentifier));
 
         return key;
     }

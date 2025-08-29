@@ -107,7 +107,7 @@ namespace Server {
         if (columnSize == 0)
           columnSize = column.size;
 
-        ColumnType type;
+        DataType type;
         ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(column.type), type);
 
         const auto columnResult =
@@ -240,16 +240,16 @@ namespace Server {
 
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Field> fields = {
-        Field(dbName, 1),
-        Field(dbPath, 2),
-        Field(isSystem, 3),
-        Field(currentDate, 4),
-        Field(currentDate, 5),
-        Field(user, 6),
-        Field(version, 7),
-        Field(isDeleted, 8),
-        Field(nullptr, 9),
+      const vector<Value> fields = {
+        Value(dbName, 1),
+        Value(dbPath, 2),
+        Value(isSystem, 3),
+        Value(currentDate, 4),
+        Value(currentDate, 5),
+        Value(user, 6),
+        Value(version, 7),
+        Value(isDeleted, 8),
+        Value(nullptr, 9),
     };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -270,15 +270,15 @@ namespace Server {
      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const vector<Field> fields = {
-        Field(databaseId, 1),
-        Field(schemaName, 2),
-        Field(currentDate, 3),
-        Field(currentDate, 4),
-        Field(user, 5),
-        Field(version, 6),
-        Field(isDeleted, 7),
-        Field(nullptr, 8),
+     const vector<Value> fields = {
+        Value(databaseId, 1),
+        Value(schemaName, 2),
+        Value(currentDate, 3),
+        Value(currentDate, 4),
+        Value(user, 5),
+        Value(version, 6),
+        Value(isDeleted, 7),
+        Value(nullptr, 8),
      };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -303,18 +303,18 @@ namespace Server {
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Field> fields = {
-        Field(databaseId, 1),
-        Field(schemaId, 2),
-        Field(tableName, 3),
-        Field(ordinalPosition, 4),
-        Field(isSystem, 5),
-        Field(currentDate, 6),
-        Field(currentDate, 7),
-        Field(user, 8),
-        Field(version, 9),
-        Field(isDeleted, 10),
-        Field(nullptr, 11),
+      const vector<Value> fields = {
+        Value(databaseId, 1),
+        Value(schemaId, 2),
+        Value(tableName, 3),
+        Value(ordinalPosition, 4),
+        Value(isSystem, 5),
+        Value(currentDate, 6),
+        Value(currentDate, 7),
+        Value(user, 8),
+        Value(version, 9),
+        Value(isDeleted, 10),
+        Value(nullptr, 11),
       };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -329,7 +329,7 @@ namespace Server {
   AdditionalDataTypes::ResultStatus  ServerInstance::InsertColumnToMasterDb(
     const int32_t & tableId,
     const string &columnName,
-    const ColumnType &columnType,
+    const DataType &columnType,
     const int &columnSize,
     const bool& isNullable,
     const int &ordinalPosition,
@@ -340,20 +340,20 @@ namespace Server {
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Field> fields = {
-        Field(tableId, 1),
-        Field(columnName, 2),
-        Field(static_cast<int8_t>(columnType), 3),
-        Field(columnSize, 4),
-        Field(isNullable, 5),
-        Field(ordinalPosition, 6),
-        Field(isSystem, 7),
-        Field(currentDate, 8),
-        Field(currentDate, 9),
-        Field(user, 10),
-        Field(version, 11),
-        Field(isDeleted, 12),
-        Field(nullptr, 13),
+      const vector<Value> fields = {
+        Value(tableId, 1),
+        Value(columnName, 2),
+        Value(static_cast<int8_t>(columnType), 3),
+        Value(columnSize, 4),
+        Value(isNullable, 5),
+        Value(ordinalPosition, 6),
+        Value(isSystem, 7),
+        Value(currentDate, 8),
+        Value(currentDate, 9),
+        Value(user, 10),
+        Value(version, 11),
+        Value(isDeleted, 12),
+        Value(nullptr, 13),
       };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -376,17 +376,17 @@ namespace Server {
      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const vector<Field> fields = {
-       Field(tableId, 1),
-       Field(indexName, 2),
-       Field(isClustered, 3),
-       Field(isDisabled, 4),
-       Field(currentDate, 5),
-       Field(currentDate, 6),
-       Field(user, 7),
-       Field(version, 8),
-       Field(isDeleted, 9),
-      Field(nullptr, 10),
+     const vector<Value> fields = {
+       Value(tableId, 1),
+       Value(indexName, 2),
+       Value(isClustered, 3),
+       Value(isDisabled, 4),
+       Value(currentDate, 5),
+       Value(currentDate, 6),
+       Value(user, 7),
+       Value(version, 8),
+       Value(isDeleted, 9),
+      Value(nullptr, 10),
      };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -408,14 +408,14 @@ namespace Server {
     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSINDEXCOLUMNS);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const vector<Field> fields = {
-      Field(indexId, 0),
-      Field(columnId, 1),
-      Field(ordinalPosition, 2),
-      Field(isIncluded, 3),
-      Field(version, 4),
-      Field(isDeleted, 5),
-      Field(nullptr, 6),
+    const vector<Value> fields = {
+      Value(indexId, 0),
+      Value(columnId, 1),
+      Value(ordinalPosition, 2),
+      Value(isIncluded, 3),
+      Value(version, 4),
+      Value(isDeleted, 5),
+      Value(nullptr, 6),
     };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -441,17 +441,17 @@ namespace Server {
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Field> fields = {
-        Field(tableId, 0),
-        Field(columnId, 1),
-        Field(seedValue, 2),
-        Field(increment, 3),
-        Field(lastValue, 4),
-        Field(isCached, 5),
-        Field(cacheBlock, 6),
-        Field(version, 7),
-        Field(isDeleted, 8),
-        Field(nullptr, 9),
+      const vector<Value> fields = {
+        Value(tableId, 0),
+        Value(columnId, 1),
+        Value(seedValue, 2),
+        Value(increment, 3),
+        Value(lastValue, 4),
+        Value(isCached, 5),
+        Value(cacheBlock, 6),
+        Value(version, 7),
+        Value(isDeleted, 8),
+        Value(nullptr, 9),
       };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -465,19 +465,19 @@ namespace Server {
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertDefaultValuesToMasterDb(
     const int32_t &columnId,
-    const Field &value,
+    const Value &value,
     const int &version,
     const bool &isDeleted) const{
 
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSDEFAULTVALUES);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Field> fields = {
-        Field(columnId, 0),
-        Field(std::string(reinterpret_cast<const char*>(value.GetRawData()), value.GetSize()), 1),
-        Field(version, 2),
-        Field(isDeleted, 3),
-        Field(nullptr, 4),
+      const vector<Value> fields = {
+        Value(columnId, 0),
+        Value(std::string(reinterpret_cast<const char*>(value.GetRawData()), value.GetSize()), 1),
+        Value(version, 2),
+        Value(isDeleted, 3),
+        Value(nullptr, 4),
       };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -502,18 +502,18 @@ namespace Server {
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      vector<Field> fields = {
-          Field(tableId, 1),
-          Field(constraintName, 2),
-          Field(static_cast<int8_t>(constraintType), 3),
-          Field(isDisabled, 4),
-          Field(nullptr, 5),
-          Field(currentDate, 6),
-          Field(currentDate, 7),
-          Field(user, 8),
-          Field(version, 9),
-          Field(isDeleted, 10),
-          Field(nullptr, 11),
+      vector<Value> fields = {
+          Value(tableId, 1),
+          Value(constraintName, 2),
+          Value(static_cast<int8_t>(constraintType), 3),
+          Value(isDisabled, 4),
+          Value(nullptr, 5),
+          Value(currentDate, 6),
+          Value(currentDate, 7),
+          Value(user, 8),
+          Value(version, 9),
+          Value(isDeleted, 10),
+          Value(nullptr, 11),
       };
 
       if(constraintIndexId != nullptr)
@@ -538,13 +538,13 @@ namespace Server {
     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTCOLUMNS);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const vector<Field> fields = {
-        Field(constraintId, 0),
-        Field(columnId, 1),
-        Field(ordinalPosition, 2),
-        Field(version, 3),
-        Field(isDeleted, 4),
-        Field(nullptr, 5),
+    const vector<Value> fields = {
+        Value(constraintId, 0),
+        Value(columnId, 1),
+        Value(ordinalPosition, 2),
+        Value(version, 3),
+        Value(isDeleted, 4),
+        Value(nullptr, 5),
     };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -563,10 +563,10 @@ namespace Server {
       vector<Row> selectedDatabases;
 
       Indexing::Key key;
-      key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
+      key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), DataType::String));
 
       auto* columnOperation = new Expressions::ColumnExpression(1);
-      auto* literaValue = new Expressions::LiteralExpression(Field(dbName, 1));
+      auto* literaValue = new Expressions::LiteralExpression(Value(dbName, 1));
 
       const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -644,7 +644,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::LiteralExpression(Field(name, 1));
+    auto* literaValue = new Expressions::LiteralExpression(Value(name, 1));
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -673,7 +673,7 @@ namespace Server {
     vector<Row> selectedDatabases;
 
     Indexing::Key key;
-    key.InsertKey(Indexing::Key(&databaseId, sizeof(databaseId), ColumnType::Int));
+    key.InsertKey(Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
     sysDatabases->ClusteredIndexSeek(&selectedDatabases, &key, &key);
 
@@ -697,7 +697,7 @@ namespace Server {
      vector<Row> selectedSchemas;
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::LiteralExpression(Field(databaseId, 1));
+    auto* literaValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -728,12 +728,12 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     auto* leftColumnOperation = new Expressions::ColumnExpression(1);
-    auto* leftLiteraValue = new Expressions::LiteralExpression(Field(databaseId, 1));
+    auto* leftLiteraValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
     auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::Equal);
 
     auto* rightColumnOperation = new Expressions::ColumnExpression(2);
-    auto* rightLiteraValue = new Expressions::LiteralExpression(Field(schema, 2));
+    auto* rightLiteraValue = new Expressions::LiteralExpression(Value(schema, 2));
 
     auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
 
@@ -753,7 +753,7 @@ namespace Server {
     const auto databaseHeader = this->SelectDatabase(dbName);
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::LiteralExpression(Field(databaseHeader.id, 1));
+    auto* literaValue = new Expressions::LiteralExpression(Value(databaseHeader.id, 1));
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -800,7 +800,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::LiteralExpression(Field(databaseId, 1));
+    auto* literaValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -846,16 +846,16 @@ namespace Server {
   Headers::TableHeader ServerInstance::SelectTable(const string &dbName, const string &tableName) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    const vector<Field> conditions = {
-      Field(dbName, 0)
+    const vector<Value> conditions = {
+      Value(dbName, 0)
     };
 
     vector<Row> selectedTables;
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
     Indexing::Key key;
-    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), ColumnType::String));
-    key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), ColumnType::String));
+    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), DataType::String));
+    key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), DataType::String));
 
     table->ClusteredIndexSeek(&selectedTables, &key, &key);
 
@@ -884,12 +884,12 @@ namespace Server {
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
     auto* leftColumnOperation = new Expressions::ColumnExpression(1);
-    auto* leftLiteraValue = new Expressions::LiteralExpression(Field(databaseId, 1));
+    auto* leftLiteraValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
     auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::Equal);
 
     auto* rightColumnOperation = new Expressions::ColumnExpression(3);
-    auto* rightLiteraValue = new Expressions::LiteralExpression(Field(tableName, 3));
+    auto* rightLiteraValue = new Expressions::LiteralExpression(Value(tableName, 3));
 
     auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
 
@@ -922,12 +922,12 @@ namespace Server {
     Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
     auto* leftColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumns::TableId));
-    auto* leftLiteraValue = new Expressions::LiteralExpression(Field(tableId, static_cast<column_index_t>(SysColumns::TableId)));
+    auto* leftLiteraValue = new Expressions::LiteralExpression(Value(tableId, static_cast<column_index_t>(SysColumns::TableId)));
 
     auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::Equal);
 
     auto* rightColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumns::IsDeleted));
-    auto* rightLiteraValue = new Expressions::LiteralExpression(Field(false, static_cast<column_index_t>(SysColumns::IsDeleted)));
+    auto* rightLiteraValue = new Expressions::LiteralExpression(Value(false, static_cast<column_index_t>(SysColumns::IsDeleted)));
 
     auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
 
@@ -984,7 +984,7 @@ namespace Server {
     Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::LiteralExpression(Field(tableId, 1));
+    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -1049,7 +1049,7 @@ namespace Server {
     vector<Row> rows;
 
     Indexing::Key key;
-    key.InsertKey(Indexing::Key(&constraintId, sizeof(constraintId), ColumnType::Int));
+    key.InsertKey(Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
 
@@ -1104,7 +1104,7 @@ namespace Server {
     vector<Row> rows;
 
     Indexing::Key key;
-    key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), ColumnType::Int));
+    key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
     sysValues->ClusteredIndexSeek(&rows, &key, &key);
 
@@ -1144,7 +1144,7 @@ namespace Server {
       vector<Row> selectedIndexes;
 
       auto* columnOperation = new Expressions::ColumnExpression(1);
-      auto* literaValue = new Expressions::LiteralExpression(Field(tableId, 1));
+      auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
 
       const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -1191,7 +1191,7 @@ namespace Server {
     vector<Row> selectedIndexes;
 
     Indexing::Key key;
-    key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), ColumnType::Int));
+    key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key);
 
@@ -1231,7 +1231,7 @@ namespace Server {
     vector<Row> rows;
 
     Indexing::Key key;
-    key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), ColumnType::Int));
+    key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
 
@@ -1286,7 +1286,7 @@ namespace Server {
       vector<Row> rows;
 
       Indexing::Key key;
-      key.InsertKey(Indexing::Key(&tableId, sizeof(tableId), ColumnType::Int));
+      key.InsertKey(Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
       table->ClusteredIndexSeek(&rows, &key, &key);
 
@@ -1331,17 +1331,17 @@ namespace Server {
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
 
-    const vector<Field> updates{
-      Field(lastValue, 4)
+    const vector<Value> updates{
+      Value(lastValue, 4)
     };
 
     auto* leftColumnOperation = new Expressions::ColumnExpression(0);
-    auto* leftLiteraValue = new Expressions::LiteralExpression(Field(tableId, 0));
+    auto* leftLiteraValue = new Expressions::LiteralExpression(Value(tableId, 0));
 
     auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::Equal);
 
     auto* rightColumnOperation = new Expressions::ColumnExpression(1);
-    auto* rightLiteraValue = new Expressions::LiteralExpression(Field(columnId, 1));
+    auto* rightLiteraValue = new Expressions::LiteralExpression(Value(columnId, 1));
 
     auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
 
@@ -1350,14 +1350,14 @@ namespace Server {
     table->ClusteredIndexScanUpdate(&logicalExpr, updates);
   }
 
-  void ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Field> &updates) const{
+  void ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
     using namespace DatabaseEngine::StorageTypes;
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
     vector<Row> rows;
 
     Indexing::Key key;
-    key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), ColumnType::Int));
+    key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
     table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
   }

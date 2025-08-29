@@ -13,19 +13,19 @@ void AggregateFunctions::SumByColumnType(long double& sum, const Block* block)
 {
     switch (block->GetColumnType())
     {
-        case ColumnType::TinyInt:
+        case DataType::TinyInt:
             sum += block->GetTinyInt();
             break;
-        case ColumnType::SmallInt:
+        case DataType::SmallInt:
             sum += block->GetSmallInt();
             break;
-        case ColumnType::Int:
+        case DataType::Int:
             sum += block->GetInt();
             break;
-        case ColumnType::BigInt:
+        case DataType::BigInt:
             sum += block->GetBigInt();
             break;
-        case ColumnType::Decimal:
+        case DataType::Decimal:
             //implement support for decimal class operations
             break;
         default:
@@ -37,7 +37,7 @@ void AggregateFunctions::CompareMaxWithRow(long double &max, const Block *block)
 {
     switch (block->GetColumnType())
     {
-        case ColumnType::TinyInt:
+        case DataType::TinyInt:
         {
             const auto& castData = block->GetTinyInt();
             if (max < castData)
@@ -45,28 +45,28 @@ void AggregateFunctions::CompareMaxWithRow(long double &max, const Block *block)
             break;
         }
 
-        case ColumnType::SmallInt:
+        case DataType::SmallInt:
         {
             const auto& castData = block->GetSmallInt();
             if (max < castData)
                 max = castData;
             break;
         }
-        case ColumnType::Int:
+        case DataType::Int:
         {
             const auto& castData = block->GetInt();
             if (max < castData)
                 max = castData;
             break;
         }
-        case ColumnType::BigInt:
+        case DataType::BigInt:
         {
             const auto& castData = block->GetBigInt();
             if (max < castData)
                 max = castData;
             break;
         }
-        case ColumnType::Decimal:
+        case DataType::Decimal:
                 break;
         default:
             throw invalid_argument("AggregateFunctions::CompareMaxWithRow(): Unsupported column type");
@@ -77,7 +77,7 @@ void AggregateFunctions::CompareMinWithRow(long double &max, const DatabaseEngin
 {
     switch (block->GetColumnType())
     {
-        case ColumnType::TinyInt:
+        case DataType::TinyInt:
         {
             const auto& castData = block->GetTinyInt();
             if (max > castData)
@@ -85,28 +85,28 @@ void AggregateFunctions::CompareMinWithRow(long double &max, const DatabaseEngin
             break;
         }
 
-        case ColumnType::SmallInt:
+        case DataType::SmallInt:
         {
             const auto& castData = block->GetSmallInt();
             if (max > castData)
                 max = castData;
             break;
         }
-        case ColumnType::Int:
+        case DataType::Int:
         {
             const auto& castData = block->GetInt();
             if (max > castData)
                 max = castData;
             break;
         }
-        case ColumnType::BigInt:
+        case DataType::BigInt:
         {
             const auto& castData = block->GetBigInt();
             if (max > castData)
                 max = castData;
             break;
         }
-        case ColumnType::Decimal:
+        case DataType::Decimal:
             //implement support for decimal class operations
                 break;
         default:

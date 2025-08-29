@@ -82,7 +82,7 @@ namespace Server {
     AdditionalDataTypes::ResultStatus  InsertColumnToMasterDb(
       const int32_t & tableId,
       const string& columnName,
-      const ColumnType& columnType,
+      const DataType& columnType,
       const int& columnSize,
       const bool& isNullable,
       const int& ordinalPosition,
@@ -138,7 +138,7 @@ namespace Server {
 
     AdditionalDataTypes::ResultStatus InsertDefaultValuesToMasterDb(
         const int32_t& columnId,
-        const Field& value,
+        const Value& value,
         const int& version = 0,
         const bool& isDeleted = false) const;
 
@@ -166,7 +166,7 @@ namespace Server {
     [[nodiscard]] Dictionary<int32_t, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const int32_t& constraintId) const;
     [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const int32_t& columnId) const;
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
-    void UpdateColumnById(const int32_t& columnId, const std::vector<Field>& updates)const;
+    void UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     //Cursor Functions

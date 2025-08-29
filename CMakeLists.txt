@@ -39,10 +39,8 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/BitMap/BitMap.h
         AdditionalLibraries/ByteMap/ByteMap.cpp
         AdditionalLibraries/ByteMap/ByteMap.h
-        AdditionalLibraries/AdditionalDataTypes/Field/Field.cpp
-        AdditionalLibraries/AdditionalDataTypes/Field/Field.h
-        AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.cpp
-        AdditionalLibraries/AdditionalDataTypes/JoinField/JoinField.h
+        AdditionalLibraries/AdditionalDataTypes/Value/Value.cpp
+        AdditionalLibraries/AdditionalDataTypes/Value/Value.h
         AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
         AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
         AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
@@ -71,6 +69,7 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h
         AdditionalLibraries/AdditionalDataTypes/Expression/Expression.cpp
         AdditionalLibraries/Functions/DateFunctions.h
+        AdditionalLibraries/AdditionalDataTypes/Expression/Expressions.Additional.h
 )
 
 add_library(QueryPipeline  SHARED

@@ -1,5 +1,5 @@
 ﻿#include "Table.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Field/Field.h"
+#include "../../AdditionalLibraries/AdditionalDataTypes/Value/Value.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Block/Block.h"
 #include "../Column/Column.h"
@@ -16,10 +16,10 @@
 #include "../Row/Row.h"
 #include "../B+Tree/BPlusTree.h"
 #include "../Pages/IndexPage/IndexPage.h"
+#include "../../Server/Server.h"
 
 #include <iostream>
 #include <stdexcept>
-#include <unordered_set>
 
 
 using namespace Pages;
@@ -133,9 +133,9 @@ namespace DatabaseEngine::StorageTypes {
             delete column;
       }
 
-      vector<ColumnType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const
+      vector<DataType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const
       {
-          vector<ColumnType> columns;
+          vector<DataType> columns;
 
           if(treeId == 0)
           {
@@ -151,7 +151,7 @@ namespace DatabaseEngine::StorageTypes {
           return columns;
       }
 
-      AdditionalDataTypes::ResultStatus Table::InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Field>> &inputData)
+      AdditionalDataTypes::ResultStatus Table::InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Value>> &inputData)
       {
         uint32_t rowsInserted = 0;
         extent_id_t startingExtentIndex = 0;
@@ -183,7 +183,7 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-    AdditionalDataTypes::ResultStatus Table::InsertRow(const Constants::transaction_id_t& transactionId, const vector<Field> &inputData){
+    AdditionalDataTypes::ResultStatus Table::InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
@@ -233,7 +233,7 @@ namespace DatabaseEngine::StorageTypes {
 
       Row* Table::CreateRow(
         const Constants::transaction_id_t& transactionId,
-        const vector<Field>& inputData,
+        const vector<Value>& inputData,
         int64_t* primaryKeyVal,
         Logging::CheckPoint* checkPoint)const
       {
@@ -256,7 +256,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto *block = new Block(column);
 
-          if (column->GetColumnType() >= Constants::ColumnType::ColumnTypeCount)
+          if (column->GetColumnType() >= Constants::DataType::ColumnTypeCount)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
           if (input.GetIsNull())
@@ -802,7 +802,7 @@ namespace DatabaseEngine::StorageTypes {
         return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
     }
 
-  void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
+  void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -896,7 +896,7 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-    void Table::ClusteredIndexScanUpdate(const Expressions::Expression *expression, const vector<Field> & updates){
+    void Table::ClusteredIndexScanUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
       auto* tree = this->GetClusteredIndexedTree();
 
       tree->IndexScanUpdate(expression, updates);
@@ -906,7 +906,7 @@ namespace DatabaseEngine::StorageTypes {
         Expressions::Expression* expression,
         const Indexing::Key *minimumValue,
         const Indexing::Key *maximumValue,
-        const vector<Field> & updates){
+        const vector<Value> & updates){
       auto* tree = this->GetClusteredIndexedTree();
 
       tree->IndexSeekUpdate(expression, minimumValue, maximumValue, updates);
@@ -968,7 +968,7 @@ namespace DatabaseEngine::StorageTypes {
     void Table::HandleRowUpdate(
       Pages::Page *page,
       Row *row, const
-      std::vector<Field> &updates,
+      std::vector<Value> &updates,
       const HashSet<column_index_t>& updatedColumns,
       const bool &isHeap){
         this->DeleteLargeObjectFromPage(row, updatedColumns);
@@ -1327,7 +1327,7 @@ namespace DatabaseEngine::StorageTypes {
       column->SetColumnName(name);
   }
 
-  void Table::PopulateColumn(const Constants::column_index_t &index, const Field &defaultValue){
+  void Table::PopulateColumn(const Constants::column_index_t &index, const Value &defaultValue){
       if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
         return;
 
@@ -1339,13 +1339,13 @@ namespace DatabaseEngine::StorageTypes {
       this->PopulateColumnByHeap(index, defaultValue);
   }
 
-  void Table::PopulateColumnByClusteredIndex(const Constants::column_index_t &index, const Field &defaultValue){
+  void Table::PopulateColumnByClusteredIndex(const Constants::column_index_t &index, const Value &defaultValue){
         auto* tree = this->GetClusteredIndexedTree();
 
         tree->InsertColumnToRow(index, defaultValue);
   }
 //TODO add heap insert if row still cant remain in page if heap
-  void Table::HandleAddColumn(Pages::Page* page, Row *row, const Constants::column_index_t& index, const Field &defaultValue){
+  void Table::HandleAddColumn(Pages::Page* page, Row *row, const Constants::column_index_t& index, const Value &defaultValue){
         const auto& column = this->columns.at(index);
 
         auto* block = new Block(defaultValue.GetRawData(), defaultValue.GetSize(), column);
@@ -1386,7 +1386,7 @@ namespace DatabaseEngine::StorageTypes {
         page->UpdateBytesLeft();
   }
 
-  void Table::PopulateColumnByHeap(const Constants::column_index_t &index, const Field &defaultValue){
+  void Table::PopulateColumnByHeap(const Constants::column_index_t &index, const Value &defaultValue){
     const auto& filename = this->GetFileName();
 
     const auto tableMapExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
@@ -1426,10 +1426,10 @@ namespace DatabaseEngine::StorageTypes {
     const auto* removedColumn = this->columns.at(index);
 
     //schema adjustments in master db change this as well
-    const std::vector<Field> removedColumnUpdates = {
-      Field(true, static_cast<column_index_t>(Server::SysColumns::IsDeleted)),
-      Field(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::LastModifiedAt)),
-      Field(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::DeletedAt)),
+    const std::vector<Value> removedColumnUpdates = {
+      Value(true, static_cast<column_index_t>(Server::SysColumns::IsDeleted)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::LastModifiedAt)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::DeletedAt)),
     };
 
     Server::ServerInstance::Get().UpdateColumnById(removedColumn->GetColumnId(), removedColumnUpdates);
@@ -1442,8 +1442,8 @@ namespace DatabaseEngine::StorageTypes {
 
       column->SetColumnIndex(i);
 
-      const vector<Field> updates = {
-        Field(i, static_cast<column_index_t>(Server::SysColumns::OrdinalPosition))
+      const vector<Value> updates = {
+        Value(i, static_cast<column_index_t>(Server::SysColumns::OrdinalPosition))
       };
 
       //adjust in master db

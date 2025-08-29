@@ -40,7 +40,7 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
 {
     switch (firstBlock->GetColumnType())
     {
-        case ColumnType::TinyInt:
+        case DataType::TinyInt:
         {
             const auto& firstBlockData = *reinterpret_cast<const int8_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const int8_t*>(secondBlock->GetBlockData());
@@ -49,7 +49,7 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             if (firstBlockData > secondBlockData) return -1;
             return 0;
         }
-        case ColumnType::SmallInt:
+        case DataType::SmallInt:
         {
             const auto& firstBlockData = *reinterpret_cast<const int16_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const int16_t*>(secondBlock->GetBlockData());
@@ -58,7 +58,7 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             if (firstBlockData > secondBlockData) return -1;
             return 0;
         }
-        case ColumnType::Int:
+        case DataType::Int:
         {
             const auto& firstBlockData = *reinterpret_cast<const int32_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const int32_t*>(secondBlock->GetBlockData());
@@ -67,7 +67,7 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             if (firstBlockData > secondBlockData) return -1;
             return 0;
         }
-        case ColumnType::BigInt:
+        case DataType::BigInt:
         {
             const auto& firstBlockData = *reinterpret_cast<const int64_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const int64_t*>(secondBlock->GetBlockData());
@@ -76,12 +76,12 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             if (firstBlockData > secondBlockData) return -1;
             return 0;
         }
-        case ColumnType::Decimal:
+        case DataType::Decimal:
         {
             //implement support for decimal class operations
             return true;
         }
-        case ColumnType::DateTime:
+        case DataType::DateTime:
         {
             const auto& firstBlockData = *reinterpret_cast<const time_t*>(firstBlock->GetBlockData());
             const auto& secondBlockData = *reinterpret_cast<const time_t*>(secondBlock->GetBlockData());
@@ -90,7 +90,7 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             if (firstBlockData > secondBlockData) return -1;
             return 0;
         }
-        case ColumnType::Bool:
+        case DataType::Bool:
         {
             const auto& firstBlockData = firstBlock->GetBool();
             const auto& secondBlockData = secondBlock->GetBool();
@@ -99,7 +99,7 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             if (firstBlockData > secondBlockData) return -1;
             return 0;
         }
-        case ColumnType::String:
+        case DataType::String:
         {
             const auto& firstBlockDataSize = firstBlock->GetBlockSize();
             const auto& secondBlockDataSize = secondBlock->GetBlockSize();
@@ -113,7 +113,7 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
             if (result < 0) return -1;
             return 0;
         }
-        case ColumnType::Guid:
+        case DataType::Guid:
         {
             //both guids are 16 bytes in memory
             const auto& dataSize = firstBlock->GetBlockSize();

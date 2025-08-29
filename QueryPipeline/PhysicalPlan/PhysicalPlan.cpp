@@ -1,6 +1,7 @@
 #include "PhysicalPlan.h"
 #include <utility>
 #include "../../Database/Database.h"
+#include "../../Server/Server.h"
 #include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../../Database/AdditionalFunctions/SortingFunctions.h"
 #include "../../Database/Block/Block.h"
@@ -150,7 +151,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return result;
   }
 
-  PhysicalIndexSeek::PhysicalIndexSeek(const int32_t & databaseId, Statements::TableName* table, const Field& minValue, const Field& maxValue)
+  PhysicalIndexSeek::PhysicalIndexSeek(const int32_t & databaseId, Statements::TableName* table, const Value& minValue, const Value& maxValue)
     : PhysicalOperator(databaseId), table(table), minValue(minValue), maxValue(maxValue) {}
 
   PhysicalPlanResult* PhysicalIndexSeek::Execute(const int& batchSize){
@@ -172,7 +173,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return result;
   }
 
-  PhysicalInsert::PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Field> &fields)
+  PhysicalInsert::PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Value> &fields)
     : PhysicalOperator(databaseId), table(table), fields(fields) {}
 
   PhysicalPlanResult* PhysicalInsert::Execute(const int& batchSize){
@@ -384,7 +385,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return nullptr;
   }
 
-  PhysicalHeapUpdate::PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+  PhysicalHeapUpdate::PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Value> & fields)
   : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
 
   PhysicalHeapUpdate::~PhysicalHeapUpdate(){
@@ -406,7 +407,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return result;
   }
 
-  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Value> & fields)
   : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
 
   PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
@@ -428,7 +429,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return result;
   }
 
-  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Field> & fields)
+  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Value> & fields)
     : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){

@@ -424,7 +424,8 @@ namespace QueryPipeline::Statements {
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
-    for(auto&[name, value]: this->columns) {
+    for(auto&
+      [name, value]: this->columns) {
       Headers::ColumnHeader header;
 
       if (!columnsDict.TryGetValue(name.name, header)) {
@@ -443,7 +444,7 @@ namespace QueryPipeline::Statements {
   }
 
   QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
-    vector<Field> columnsUpdates;
+    vector<Value> columnsUpdates;
 
     for(const auto& column: this->columns)
       columnsUpdates.emplace_back(column.value);
@@ -511,7 +512,7 @@ namespace QueryPipeline::Statements {
 
     this->addColumn->index = headers.size();
 
-    Constants::ColumnType columnType;
+    Constants::DataType columnType;
     if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(this->addColumn->type.name), columnType)) {
       std::cerr << "Invalid Column Type " << this->addColumn->type.name << std::endl;
       return false;
@@ -530,18 +531,18 @@ namespace QueryPipeline::Statements {
       return false;
     }
 
-    Constants::ColumnType columnType;
+    Constants::DataType columnType;
     if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(this->alterColumn->type.name), columnType)) {
       std::cerr << "Invalid Column Type " << this->alterColumn->type.name << std::endl;
       return false;
     }
 
     if ((PipelineConstants::ValidStringConversions.Contains(columnType)
-      && !PipelineConstants::ValidStringConversions.Contains(static_cast<Constants::ColumnType>(header.dataType)))
+      && !PipelineConstants::ValidStringConversions.Contains(static_cast<Constants::DataType>(header.dataType)))
       || (PipelineConstants::ValidIntegerConversions.Contains(columnType)
-        && !PipelineConstants::ValidIntegerConversions.Contains(static_cast<Constants::ColumnType>(header.dataType)))){
+        && !PipelineConstants::ValidIntegerConversions.Contains(static_cast<Constants::DataType>(header.dataType)))){
           std::cerr << "Cannot alter column " << this->alterColumn->name.name << " from type: "
-                    << ColumnTypesToStringDictionary.Get(static_cast<Constants::ColumnType>(header.dataType))
+                    << ColumnTypesToStringDictionary.Get(static_cast<Constants::DataType>(header.dataType))
                     << "to type: " << this->alterColumn->type.name << std::endl;
 
         return false;
@@ -630,17 +631,17 @@ namespace QueryPipeline::Statements {
   }
 
   bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement){
+    //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(statement->table->alias.empty() ? statement->table->GetFullName() : statement->table->alias, statement->table->tableId);
-
-    Dictionary<int32_t, Constants::column_index_t> computedColumnIndexes;
-
     statement->tableColumnsDictionary.Add(statement->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(statement->table->tableId));
 
+    //Add all the join tables to the dictionaries
     for (const auto& join: statement->joins) {
       tableAliasesDictionary.Add(join->table->alias.empty() ? join->table->GetFullName() : join->table->alias, join->table->tableId);
       statement->tableColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
     }
 
+    //start resolving aliases
     for (int i = 0; i < statement->results.size(); i++)
         if (!ResolveExpressionAliases(tableAliasesDictionary, statement->tableColumnsDictionary, statement, statement->results[i], i))
           return false;
@@ -743,7 +744,14 @@ namespace QueryPipeline::Statements {
     }
 
     if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
-      //validate functionExpression
+      //validate number of arguments
+      std::string errorMessage;
+      if (!functionExpr->ValidateNumberOfArguments(errorMessage)) {
+        std::cerr << errorMessage << std::endl;
+        return false;
+      }
+
+      //validate return type is correct
 
       for (auto* childExpr : functionExpr->arguments) {
         if (!ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos))
@@ -770,6 +778,28 @@ namespace QueryPipeline::Statements {
     if (const auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
         std::cerr << "No table was specified but column with name: " << columnExpr->name << " was specified." << std::endl;
         return false;
+    }
+
+    if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
+      //validate functionExpression
+      std::string errorMessage;
+      if (!functionExpr->ValidateNumberOfArguments(errorMessage)) {
+        std::cerr << errorMessage << std::endl;
+        return false;
+      }
+
+      for (auto* childExpr : functionExpr->arguments) {
+        if (!ResolveExpressionAliases(statement, childExpr))
+          return false;
+      }
+
+    }
+
+    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
+      //validate type
+
+      return ResolveExpressionAliases(statement, logicalExpr->left)
+        && ResolveExpressionAliases(statement, logicalExpr->right);
     }
 
     //TODO Validate Literals and functions
