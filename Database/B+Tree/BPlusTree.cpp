@@ -1321,7 +1321,7 @@ namespace Indexing
                 return *reinterpret_cast<const time_t*>(this->value.data()) > *reinterpret_cast<const time_t*>(otherKey.value.data());
             case Constants::DataType::RowIdentifier:
                 return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) > *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::DataType::ColumnTypeCount:
+            case Constants::DataType::Invalid:
             default:
                 throw invalid_argument("> Invalid DataType for Key");
         }
@@ -1372,7 +1372,7 @@ namespace Indexing
                 return *reinterpret_cast<const time_t*>(this->value.data()) >= *reinterpret_cast<const time_t*>(otherKey.value.data());
         case Constants::DataType::RowIdentifier:
             return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) >= *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::DataType::ColumnTypeCount: 
+            case Constants::DataType::Invalid: 
             default:
                 throw invalid_argument(">= Invalid DataType for Key");
         }
@@ -1466,7 +1466,7 @@ namespace Indexing
         case Constants::DataType::RowIdentifier:
             os << *reinterpret_cast<const Headers::RowIdentifier*>(key.value.data());
             break;
-            case Constants::DataType::ColumnTypeCount: 
+            case Constants::DataType::Invalid: 
             default:
                 throw invalid_argument("Invalid DataType for Key");
         }
@@ -1501,7 +1501,7 @@ namespace Indexing
                 return *reinterpret_cast<const time_t*>(this->value.data()) == *reinterpret_cast<const time_t*>(otherKey.value.data());
         case Constants::DataType::RowIdentifier:
             return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) == *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::DataType::ColumnTypeCount:
+            case Constants::DataType::Invalid:
             default:
                 throw invalid_argument("== Invalid DataType for Key");
         }

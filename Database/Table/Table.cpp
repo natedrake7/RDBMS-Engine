@@ -256,7 +256,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto *block = new Block(column);
 
-          if (column->GetColumnType() >= Constants::DataType::ColumnTypeCount)
+          if (column->GetColumnType() >= Constants::DataType::Invalid)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
           if (input.GetIsNull())

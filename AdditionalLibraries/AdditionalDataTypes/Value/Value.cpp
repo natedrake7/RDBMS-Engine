@@ -18,7 +18,7 @@ Value::Value()
 Value::Value(const void *data, const Constants::column_index_t &columnIndex){
     this->data = nullptr;
     this->columnIndex = columnIndex;
-    this->type = DataType::ColumnTypeCount;
+    this->type = DataType::Invalid;
     this->isIdentifier = false;
 }
 
@@ -542,7 +542,7 @@ void Value::Validate(const Headers::ColumnHeader &header){
     case DataType::Guid:
         break;
     default:
-    case DataType::ColumnTypeCount:
+    case DataType::Invalid:
         throw runtime_error(
                 "Type mismatch: expected " + Constants::ColumnTypesToStringDictionary.Get(columnType) +
                   " but got " + Constants::ColumnTypesToStringDictionary.Get(this->type));
@@ -605,7 +605,7 @@ void Value::Validate(const DataType &columnType, const int &ordinalPosition){
     case DataType::Guid:
         break;
     default:
-    case DataType::ColumnTypeCount:
+    case DataType::Invalid:
         throw invalid_argument("Invalid column type");
     }
 
@@ -797,7 +797,7 @@ Value operator+(const Value &lhs, const Value &rhs){
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -830,7 +830,7 @@ Value operator-(const Value &lhs, const Value &rhs){
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -862,7 +862,7 @@ Value operator*(const Value &lhs, const Value &rhs){
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -895,7 +895,7 @@ Value operator<(const Value &lhs, const Value &rhs){
         case DataType::Guid:
             return Value(lhs.GetGuid() < rhs.GetGuid(), 0);
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -933,7 +933,7 @@ Value operator<=(const Value &lhs, const Value &rhs){
         case DataType::Guid:
             return Value(lhs.GetGuid() <= rhs.GetGuid(), 0);
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -966,7 +966,7 @@ Value operator>=(const Value &lhs, const Value &rhs){
         case DataType::Guid:
             return Value(lhs.GetGuid() >= rhs.GetGuid(), 0);
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -999,7 +999,7 @@ Value operator==(const Value &lhs, const Value &rhs){
         case DataType::Guid:
             return Value(lhs.GetGuid() == rhs.GetGuid(), 0);
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -1032,7 +1032,7 @@ Value operator!=(const Value &lhs, const Value &rhs){
         case DataType::Guid:
             return Value(lhs.GetGuid() != rhs.GetGuid(), 0);
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -1061,7 +1061,7 @@ Value operator%(const Value &lhs, const Value &rhs){
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::RowIdentifier:
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)

@@ -182,7 +182,7 @@ namespace Constants
         DateTime = 8,
         Guid = 9,
         RowIdentifier = 10,
-        ColumnTypeCount = 11
+        Invalid = 11
     };
 
     enum class BinaryOperators : uint8_t {

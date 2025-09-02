@@ -221,7 +221,7 @@ namespace DatabaseEngine::StorageTypes {
                     std::cout << DateTime(time);
                     break;
                 }
-                case DataType::ColumnTypeCount:
+                case DataType::Invalid:
                 default:
                     throw invalid_argument("Row::PrintRow Invalid Column specified");
             }
@@ -344,7 +344,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const DataType columnType = block->GetColumnType();
 
-        if (columnType > Constants::DataType::ColumnTypeCount)
+        if (columnType > Constants::DataType::Invalid)
           throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
         if (i.GetIsNull())
@@ -564,7 +564,7 @@ namespace DatabaseEngine::StorageTypes {
                     cout << DateTime(reinterpret_cast<time_t>(blockData)).ToString();
                     break;
                 }
-                case DataType::ColumnTypeCount:
+                case DataType::Invalid:
                 default:
                     throw invalid_argument("Row::PrintRow Invalid Column specified");
             }

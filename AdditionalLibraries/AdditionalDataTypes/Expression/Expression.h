@@ -24,6 +24,7 @@ namespace Expressions{
       Expression() = default;
 
       [[nodiscard]] virtual Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const = 0;
+      [[nodiscard]] virtual DataType GetReturnType() const = 0;
   };
 
   class ColumnExpression final : public Expression {
@@ -35,12 +36,14 @@ namespace Expressions{
       int32_t columnId;
 
       column_index_t columnIndex;
+      DataType returnType;
 
       ColumnExpression(const std::string& name, const std::string& alias);
       explicit ColumnExpression(const column_index_t& index);
       ~ColumnExpression()override = default;
 
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+      [[nodiscard]] DataType GetReturnType() const override;
   };
 
   class LiteralExpression final : public Expression {
@@ -51,6 +54,7 @@ namespace Expressions{
       ~LiteralExpression()override = default;
 
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+      [[nodiscard]] DataType GetReturnType() const override;
   };
 
   class BinaryExpression final : public Expression {
@@ -65,6 +69,7 @@ namespace Expressions{
 
     //TODO : Implement Evaluate for BinaryExpression where left and rig*  are evaluated and Field Addition is implemented with data type coercion.
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+      [[nodiscard]]DataType GetReturnType() const override;
   };
 
   class FunctionExpression final : public Expression {
@@ -106,7 +111,7 @@ namespace Expressions{
       [[nodiscard]] static Value NewGuid(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row);
 
       [[nodiscard]] bool ValidateNumberOfArguments(std::string& errorMessage)const;
-      [[nodiscard]] Constants::DataType GetReturnType()const;
+      [[nodiscard]]DataType GetReturnType() const override;
   };
 
   class LogicalExpression final : public Expression{
@@ -126,14 +131,6 @@ namespace Expressions{
 
     [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
 
-    // [[nodiscard]] ExpressionType GetType() const;
-    //
-    // [[nodiscard]] QueryPipeline::Statements::ColumnName GetColumn() const;
-    //
-    // [[nodiscard]] ExpressionOperator GetOperation() const;
-    //
-    // [[nodiscard]] Field GetValue() const;
-    //
-    // [[nodiscard]] Constants::column_index_t GetColumnIndex() const;
+    [[nodiscard]] DataType GetReturnType() const override;
 };
 }

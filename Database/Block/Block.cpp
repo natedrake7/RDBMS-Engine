@@ -159,7 +159,7 @@ bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Value &f
             return block.GetDateTime() == field.GetDateTime();
         case DataType::Guid:
             return block.GetGuid() == field.GetGuid();
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw invalid_argument("invalid column type");
     }
@@ -199,7 +199,7 @@ bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Value &fi
             return block.GetDateTime() >  field.GetDateTime();
         case DataType::Guid:
             return block.GetGuid() > field.GetGuid();
-        case DataType::ColumnTypeCount:
+        case DataType::Invalid:
         default:
             throw invalid_argument("invalid column type");
     }
