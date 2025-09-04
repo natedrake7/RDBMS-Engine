@@ -31,13 +31,6 @@ namespace DatabaseEngine::StorageTypes {
         this->SetData(block->data, block->size);
     }
 
-    // Block::Block(Column* column)
-    // {
-    //     this->data = nullptr;
-    //     this->size = new size_t(0);
-    //     this->column = column;
-    // }
-
     Block::~Block()
     {
         delete this->data;

@@ -336,25 +336,25 @@ namespace DatabaseEngine::StorageTypes {
     int Row::Update( const vector<Value> & updates){
       const auto prevRowSize = this->GetRowSize();
 
-      for (const auto & i : updates)
+      for (const auto & value : updates)
       {
-        const column_index_t &associatedColumnIndex = i.GetColumnIndex();
+        const column_index_t &associatedColumnIndex = value.GetColumnIndex();
 
         auto *block = this->data.at(associatedColumnIndex);
 
         const DataType columnType = block->GetColumnType();
 
-        if (columnType > Constants::DataType::Invalid)
+        if (columnType >= Constants::DataType::Invalid)
           throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
-        if (i.GetIsNull())
+        if (value.GetIsNull())
         {
           block->SetData(nullptr, 0);
           this->SetNullBitMapValue(associatedColumnIndex, true);
           continue;
         }
 
-        block->SetData(i.GetRawData(), i.GetSize());
+        block->SetData(value);
       }
 
       this->UpdateRowSize();
