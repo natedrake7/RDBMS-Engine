@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "../../../Constants.h"
-#include "../../../../AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.h"
+#include "../../../../AdditionalLibraries/DataTypes/SortCondition/SortCondition.h"
 
 namespace DatabaseEngine::StorageTypes {
     class Row;

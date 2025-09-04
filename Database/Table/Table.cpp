@@ -1,5 +1,5 @@
 ﻿#include "Table.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Value/Value.h"
+#include "../../AdditionalLibraries/DataTypes/Value/Value.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Block/Block.h"
 #include "../Column/Column.h"

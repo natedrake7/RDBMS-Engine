@@ -7,7 +7,7 @@
 #include <sstream>
 #include <signal.h>
 
-#include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../AdditionalLibraries/Converter/Converter.h"
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
 #include "../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
@@ -240,7 +240,7 @@ void ValidateConnectionString(ConnectionParameters& parameters, const vector<str
       throw invalid_argument("invalid argument specified in connection string!");
     
     if (parameter == "-P") {
-      parameters.port = SafeConverter<int32_t>::SafeStoi(connectionString[++i]);
+      parameters.port = Converter<int32_t>::Stoi(connectionString[++i]);
       continue;
     }
     if (parameter == "-h") {

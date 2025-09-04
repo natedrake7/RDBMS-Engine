@@ -16,6 +16,7 @@ static Dictionary<DataType, int> ColumnTypeRank{
   {DataType::Int, 6},
   {DataType::BigInt, 7},
   {DataType::Decimal, 8},
+  {DataType::DateTime, 9},
 };
 
 class Value {

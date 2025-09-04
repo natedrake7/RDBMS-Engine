@@ -1,6 +1,6 @@
 #include "Visitor.h"
 #include "../Statements/Statements.h"
-#include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../../AdditionalLibraries/Converter/Converter.h"
 #include "../ErrorListener/ErrorListener.h"
 
 namespace QueryPipeline{
@@ -31,8 +31,8 @@ namespace QueryPipeline{
   antlrcpp::Any SQLVisitorImplementation::visitAutoIncrementKey(SQLParser::AutoIncrementKeyContext *context){
     auto* incrementStatement = new Statements::Identity();
 
-    incrementStatement->seed = SafeConverter<uint8_t>::SafeStoi(context->seed->getText());
-    incrementStatement->incrementFactor = SafeConverter<uint8_t>::SafeStoi(context->increment->getText());
+    incrementStatement->seed = Converter<uint8_t>::Stoi(context->seed->getText());
+    incrementStatement->incrementFactor = Converter<uint8_t>::Stoi(context->increment->getText());
 
     return incrementStatement;
   }

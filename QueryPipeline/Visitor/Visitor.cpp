@@ -1,5 +1,5 @@
 #include "Visitor.h"
-#include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../../AdditionalLibraries/Converter/Converter.h"
 #include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../ErrorListener/ErrorListener.h"
 #include "../Statements/Statements.h"
@@ -102,7 +102,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     }
 
     if (context->NUMBER()) {
-      const auto number = SafeConverter<int64_t>::SafeStoi(context->NUMBER()->getText());
+      const auto number = Converter<int64_t>::Stoi(context->NUMBER()->getText());
 
       return Value(number, 0);
     }
@@ -167,7 +167,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     return Statements::ColumnType{
       .name = QueryPipeline::String,
-      .size = number ? SafeConverter<int64_t>::SafeStoi(number->getText()) : -1,
+      .size = number ? Converter<int64_t>::Stoi(number->getText()) : -1,
       .beforeFraction =  -1,
       .afterFraction = -1
     };
@@ -178,7 +178,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     return Statements::ColumnType{
         .name = QueryPipeline::UnicodeString,
-        .size = number ? SafeConverter<int64_t>::SafeStoi(number->getText()) : -1,
+        .size = number ? Converter<int64_t>::Stoi(number->getText()) : -1,
         .beforeFraction =  -1,
         .afterFraction = -1
       };
@@ -187,8 +187,8 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
     return Statements::ColumnType{
       .size = 0,
-      .beforeFraction = SafeConverter<int64_t>::SafeStoi(context->beforePoint->getText()),
-      .afterFraction = SafeConverter<int64_t>::SafeStoi(context->afterPoint->getText()),
+      .beforeFraction = Converter<int64_t>::Stoi(context->beforePoint->getText()),
+      .afterFraction = Converter<int64_t>::Stoi(context->afterPoint->getText()),
     };
   }
 

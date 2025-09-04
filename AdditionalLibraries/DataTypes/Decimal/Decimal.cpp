@@ -1,6 +1,6 @@
 ﻿#include "Decimal.h"
 
-#include "../../SafeConverter/SafeConverter.h"
+#include "../../Converter/Converter.h"
 
 #include <algorithm>
 #include <iostream>

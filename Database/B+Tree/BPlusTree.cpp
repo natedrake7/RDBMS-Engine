@@ -10,7 +10,7 @@
 #include "../../Database/Pages/IndexPage/IndexPage.h"
 #include "../../Database/Storage/StorageManager/StorageManager.h"
 #include "../../Database/Column/Column.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
+#include "../../AdditionalLibraries/DataTypes/Decimal/Decimal.h"
 #include "../Database.h"
 #include "../Row/Row.h"
 #include "../Block/Block.h"

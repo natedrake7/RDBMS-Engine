@@ -1,6 +1,6 @@
 #include "Value.h"
 
-#include "../../SafeConverter/SafeConverter.h"
+#include "../../Converter/Converter.h"
 #include "../../Functions/StringFunctions.h"
 
 #include <cstring>
@@ -331,19 +331,19 @@ const object_t * Value::GetRawData() const{ return this->data; }
 bool Value::GetBool() const {
     switch (this->type) {
         case DataType::TinyInt:
-            return SafeConverter<bool>::SafeStoi(this->GetTinyInt());
+            return Converter<bool>::Stoi(this->GetTinyInt());
         case DataType::SmallInt:
-            return SafeConverter<bool>::SafeStoi(this->GetSmallInt());
+            return Converter<bool>::Stoi(this->GetSmallInt());
         case DataType::Int:
-            return SafeConverter<bool>::SafeStoi(this->GetInt());
+            return Converter<bool>::Stoi(this->GetInt());
         case DataType::BigInt:
-            return SafeConverter<bool>::SafeStoi(this->GetBigInt());
+            return Converter<bool>::Stoi(this->GetBigInt());
         case DataType::Decimal:
             return false;
         case DataType::String:
             return this->ParseAsBoolFromString();
         case DataType::UnicodeString:
-            return SafeConverter<int8_t>::SafeStoi(this->GetUnicodeString());
+            return Converter<int8_t>::Stoi(this->GetUnicodeString());
         case DataType::Bool:
             return *reinterpret_cast<bool*>(this->data);
         default:
@@ -356,17 +356,17 @@ int8_t Value::GetTinyInt() const {
         case DataType::TinyInt:
             return *reinterpret_cast<int8_t *>(this->data);
         case DataType::SmallInt:
-            return SafeConverter<int8_t>::SafeStoi(this->GetSmallInt());
+            return Converter<int8_t>::Stoi(this->GetSmallInt());
         case DataType::Int:
-            return SafeConverter<int8_t>::SafeStoi(this->GetInt());
+            return Converter<int8_t>::Stoi(this->GetInt());
         case DataType::BigInt:
-            return SafeConverter<int8_t>::SafeStoi(this->GetBigInt());
+            return Converter<int8_t>::Stoi(this->GetBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:
-            return SafeConverter<int8_t>::SafeStoi(this->GetString());
+            return Converter<int8_t>::Stoi(this->GetString());
         case DataType::UnicodeString:
-            return SafeConverter<int8_t>::SafeStoi(this->GetUnicodeString());
+            return Converter<int8_t>::Stoi(this->GetUnicodeString());
         case DataType::Bool:
             return this->GetBool() ? 1 : 0;
         default:
@@ -381,15 +381,15 @@ int16_t Value::GetSmallInt() const {
         case DataType::SmallInt:
             return *reinterpret_cast<int16_t *>(this->data);
         case DataType::Int:
-            return SafeConverter<int16_t>::SafeStoi(this->GetInt());
+            return Converter<int16_t>::Stoi(this->GetInt());
         case DataType::BigInt:
-            return SafeConverter<int16_t>::SafeStoi(this->GetBigInt());
+            return Converter<int16_t>::Stoi(this->GetBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:
-            return SafeConverter<int16_t>::SafeStoi(this->GetString());
+            return Converter<int16_t>::Stoi(this->GetString());
         case DataType::UnicodeString:
-            return SafeConverter<int16_t>::SafeStoi(this->GetUnicodeString());
+            return Converter<int16_t>::Stoi(this->GetUnicodeString());
         case DataType::Bool:
             return this->GetBool() ? 1 : 0;
         default:
@@ -406,13 +406,13 @@ int32_t Value::GetInt() const {
         case DataType::Int:
             return *reinterpret_cast<int32_t *>(this->data);
         case DataType::BigInt:
-            return SafeConverter<int32_t>::SafeStoi(this->GetBigInt());
+            return Converter<int32_t>::Stoi(this->GetBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:
-            return SafeConverter<int32_t>::SafeStoi(this->GetString());
+            return Converter<int32_t>::Stoi(this->GetString());
         case DataType::UnicodeString:
-            return SafeConverter<int32_t>::SafeStoi(this->GetUnicodeString());
+            return Converter<int32_t>::Stoi(this->GetUnicodeString());
         case DataType::Bool:
             return this->GetBool() ? 1 : 0;
         default:
@@ -433,9 +433,9 @@ int64_t Value::GetBigInt() const {
         case DataType::Decimal:
             return 0;
         case DataType::String:
-            return SafeConverter<int64_t>::SafeStoi(this->GetString());
+            return Converter<int64_t>::Stoi(this->GetString());
         case DataType::UnicodeString:
-            return SafeConverter<int64_t>::SafeStoi(this->GetUnicodeString());
+            return Converter<int64_t>::Stoi(this->GetUnicodeString());
         case DataType::Bool:
             return this->GetBool() ? 1 : 0;
         default:
@@ -499,22 +499,22 @@ void Value::Validate(const Headers::ColumnHeader &header){
 
     switch (columnType) {
       case DataType::TinyInt: {
-          const auto value = SafeConverter<int8_t>::SafeStoi(this->GetBigInt());
+          const auto value = Converter<int8_t>::Stoi(this->GetBigInt());
           this->SetData(value);
           break;
       }
       case DataType::SmallInt: {
-          const auto value = SafeConverter<int16_t>::SafeStoi(this->GetBigInt());
+          const auto value = Converter<int16_t>::Stoi(this->GetBigInt());
           this->SetData(value);
           break;
       }
       case DataType::Int:{
-          const auto value = SafeConverter<int32_t>::SafeStoi(this->GetBigInt());
+          const auto value = Converter<int32_t>::Stoi(this->GetBigInt());
           this->SetData(value);
           break;
       }
       case DataType::BigInt:
-          SafeConverter<int64_t>::SafeStoi(this->GetBigInt());
+          Converter<int64_t>::Stoi(this->GetBigInt());
           break;
       case DataType::String:
       case DataType::UnicodeString:
@@ -562,22 +562,22 @@ void Value::Validate(const DataType &columnType, const int &ordinalPosition){
 
     switch (columnType) {
     case DataType::TinyInt: {
-        const auto value = SafeConverter<int8_t>::SafeStoi(this->GetBigInt());
+        const auto value = Converter<int8_t>::Stoi(this->GetBigInt());
         this->SetData(value);
         break;
     }
     case DataType::SmallInt: {
-        const auto value = SafeConverter<int16_t>::SafeStoi(this->GetBigInt());
+        const auto value = Converter<int16_t>::Stoi(this->GetBigInt());
         this->SetData(value);
         break;
     }
     case DataType::Int:{
-        const auto value = SafeConverter<int32_t>::SafeStoi(this->GetBigInt());
+        const auto value = Converter<int32_t>::Stoi(this->GetBigInt());
         this->SetData(value);
         break;
     }
     case DataType::BigInt:
-        SafeConverter<int64_t>::SafeStoi(this->GetBigInt());
+        Converter<int64_t>::Stoi(this->GetBigInt());
         break;
     case DataType::String:
     case DataType::UnicodeString:
@@ -669,7 +669,7 @@ ostream & operator<<(ostream& os, const Value &field){
 
 Value Value::PerformTinyIntAddition(const int8_t &lhs, const int8_t &rhs){
         return
-        (SafeConverter<int8_t>::AssertOverflow(lhs, rhs))
+        (Converter<int8_t>::AssertOverflow(lhs, rhs))
         ?
             Value(
                 static_cast<int16_t>(lhs +  rhs),
@@ -684,7 +684,7 @@ Value Value::PerformTinyIntAddition(const int8_t &lhs, const int8_t &rhs){
 
 Value Value::PerformSmallIntAddition(const int16_t &lhs, const int16_t &rhs){
     return
-    (SafeConverter<int16_t>::AssertOverflow(lhs, rhs))
+    (Converter<int16_t>::AssertOverflow(lhs, rhs))
     ?
         Value(
             static_cast<int32_t>(lhs +  rhs),
@@ -699,7 +699,7 @@ Value Value::PerformSmallIntAddition(const int16_t &lhs, const int16_t &rhs){
 
 Value Value::PerformIntAddition(const int32_t &lhs, const int32_t &rhs){
     return
-    (SafeConverter<int32_t>::AssertOverflow(lhs, rhs))
+    (Converter<int32_t>::AssertOverflow(lhs, rhs))
     ?
         Value(
             static_cast<int64_t>(lhs +  rhs),
@@ -727,7 +727,7 @@ Value Value::PerformStringAddition(const string &lhs, const string &rhs){
 
 }Value Value::PerformTinyIntSubtraction(const int8_t &lhs, const int8_t &rhs){
     return
-        (SafeConverter<int8_t>::AssertOverflow(lhs, rhs))
+        (Converter<int8_t>::AssertOverflow(lhs, rhs))
         ?
             Value(
                 static_cast<int16_t>(lhs -  rhs),
@@ -742,7 +742,7 @@ Value Value::PerformStringAddition(const string &lhs, const string &rhs){
 
 Value Value::PerformSmallIntSubtraction(const int16_t &lhs, const int16_t &rhs){
     return
-        (SafeConverter<int16_t>::AssertOverflow(lhs, rhs))
+        (Converter<int16_t>::AssertOverflow(lhs, rhs))
         ?
             Value(
                 static_cast<int32_t>(lhs -  rhs),
@@ -757,7 +757,7 @@ Value Value::PerformSmallIntSubtraction(const int16_t &lhs, const int16_t &rhs){
 
 Value Value::PerformIntSubtraction(const int32_t &lhs, const int32_t &rhs){
     return
-        (SafeConverter<int32_t>::AssertOverflow(lhs, rhs))
+        (Converter<int32_t>::AssertOverflow(lhs, rhs))
         ?
             Value(
                 static_cast<int64_t>(lhs -  rhs),

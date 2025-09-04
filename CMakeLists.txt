@@ -39,17 +39,17 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/BitMap/BitMap.h
         AdditionalLibraries/ByteMap/ByteMap.cpp
         AdditionalLibraries/ByteMap/ByteMap.h
-        AdditionalLibraries/AdditionalDataTypes/Value/Value.cpp
-        AdditionalLibraries/AdditionalDataTypes/Value/Value.h
-        AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.cpp
-        AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h
-        AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.cpp
-        AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h
-        AdditionalLibraries/SafeConverter/SafeConverter.h
+        AdditionalLibraries/DataTypes/Value/Value.cpp
+        AdditionalLibraries/DataTypes/Value/Value.h
+        AdditionalLibraries/DataTypes/DateTime/DateTime.cpp
+        AdditionalLibraries/DataTypes/DateTime/DateTime.h
+        AdditionalLibraries/DataTypes/Decimal/Decimal.cpp
+        AdditionalLibraries/DataTypes/Decimal/Decimal.h
+        AdditionalLibraries/Converter/Converter.h
         AdditionalLibraries/HashSet/HashSet.h
-        AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.cpp
-        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.cpp
-        AdditionalLibraries/AdditionalDataTypes/GroupCondition/GroupCondition.h
+        AdditionalLibraries/DataTypes/SortCondition/SortCondition.cpp
+        AdditionalLibraries/DataTypes/GroupCondition/GroupCondition.cpp
+        AdditionalLibraries/DataTypes/GroupCondition/GroupCondition.h
         AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
         AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
@@ -61,15 +61,15 @@ add_library(AdditionalLibraries SHARED
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
         AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
-        AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h
+        AdditionalLibraries/DataTypes/Headers/Headers.h
         AdditionalLibraries/Functions/StringFunctions.h
-        AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h
-        AdditionalLibraries/AdditionalDataTypes/Guid/Guid.cpp
-        AdditionalLibraries/AdditionalDataTypes/Guid/Guid.h
-        AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h
-        AdditionalLibraries/AdditionalDataTypes/Expression/Expression.cpp
+        AdditionalLibraries/DataTypes/ErrorHandling.h
+        AdditionalLibraries/DataTypes/Guid/Guid.cpp
+        AdditionalLibraries/DataTypes/Guid/Guid.h
+        AdditionalLibraries/DataTypes/Expression/Expression.h
+        AdditionalLibraries/DataTypes/Expression/Expression.cpp
         AdditionalLibraries/Functions/DateFunctions.h
-        AdditionalLibraries/AdditionalDataTypes/Expression/Expressions.Additional.h
+        AdditionalLibraries/DataTypes/Expression/Expressions.Additional.h
 )
 
 add_library(QueryPipeline  SHARED

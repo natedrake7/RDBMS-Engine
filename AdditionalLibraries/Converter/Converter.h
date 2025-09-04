@@ -3,14 +3,13 @@
 #include <string>
 #include <limits>
 #include <stdexcept>
-#include <cstdint>
 
 using namespace std;
 
 template<typename T>
-class SafeConverter {
+class Converter {
 public:
-    static T SafeStoi(const string& input)
+    static T Stoi(const string& input)
     {
         static_assert(is_integral<T>::value, "T must be integral type");
 
@@ -32,7 +31,7 @@ public:
         return static_cast<T>(value);
     }
 
-    static T SafeStoi(const u16string& input)
+    static T Stoi(const u16string& input)
     {
         static_assert(is_integral<T>::value, "T must be integral type");
 
@@ -56,7 +55,7 @@ public:
         return static_cast<T>(value);
     }
     
-    static T SafeStoi(const int64_t &input){
+    static T Stoi(const int64_t &input){
         static_assert(is_integral<T>::value, "T must be integral type");
 
         if (input < numeric_limits<T>::min() || input > numeric_limits<T>::max())

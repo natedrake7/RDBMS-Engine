@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <unordered_map>
 #include <vector>
-#include "../../AdditionalLibraries/AdditionalDataTypes/SortCondition/SortCondition.h"
+#include "../../AdditionalLibraries/DataTypes/SortCondition/SortCondition.h"
 #include "../Column/Column.h"
 
 class GroupCondition;

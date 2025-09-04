@@ -1,5 +1,5 @@
 #pragma once
-#include "../../AdditionalLibraries/AdditionalDataTypes/ErrorHandling.h"
+#include "../../AdditionalLibraries/DataTypes/ErrorHandling.h"
 #include "../../AdditionalLibraries/HashSet/HashSet.h"
 #include <string>
 #include <vector>

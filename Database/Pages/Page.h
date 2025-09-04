@@ -2,7 +2,7 @@
 #include <vector>
 #include <string>
 #include "../Constants.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Value/Value.h"
+#include "../../AdditionalLibraries/DataTypes/Value/Value.h"
 #include "../../QueryPipeline/Statements/Statements.h"
 
 class RowCondition;

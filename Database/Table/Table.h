@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include "../Constants.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
+#include "../../AdditionalLibraries/DataTypes/Headers/Headers.h"
 #include "../B+Tree/BPlusTree.h"
 #include "../Logger/Logger.h"
 

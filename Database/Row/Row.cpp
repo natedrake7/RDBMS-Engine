@@ -2,8 +2,8 @@
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Table/Table.h"
 #include "../Block/Block.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/DateTime/DateTime.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Decimal/Decimal.h"
+#include "../../AdditionalLibraries/DataTypes/DateTime/DateTime.h"
+#include "../../AdditionalLibraries/DataTypes/Decimal/Decimal.h"
 #include "../Column/Column.h"
 #include "../Pages/LargeObject/LargeDataPage.h"
 #include <cstdint>
@@ -11,7 +11,7 @@
 #include <ctime>
 #include <iostream>
 #include <stdexcept>
-#include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
+#include "../../AdditionalLibraries/DataTypes/Expression/Expression.h"
 #include "../Pages/OverflowPage/OverflowPage.h"
 
 using namespace Pages;

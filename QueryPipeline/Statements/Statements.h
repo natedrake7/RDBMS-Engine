@@ -2,9 +2,9 @@
 #include <string>
 #include <vector>
 #include "../../Database/Constants.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Value/Value.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Headers/Headers.h"
-#include "../../AdditionalLibraries/AdditionalDataTypes/Expression/Expression.h"
+#include "../../AdditionalLibraries/DataTypes/Value/Value.h"
+#include "../../AdditionalLibraries/DataTypes/Headers/Headers.h"
+#include "../../AdditionalLibraries/DataTypes/Expression/Expression.h"
 
 namespace QueryPipeline {
   class LogicalPlan;

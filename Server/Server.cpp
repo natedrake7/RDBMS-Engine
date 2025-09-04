@@ -1,7 +1,7 @@
 #include "Server.h"
 
 #include "MasterDbColumns.h"
-#include "../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../AdditionalLibraries/Converter/Converter.h"
 
 #include <fstream>
 #include <nlohmann/json.hpp>

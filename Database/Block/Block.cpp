@@ -1,6 +1,6 @@
 ﻿#include "Block.h"
 #include "../Database.h"
-#include "../../AdditionalLibraries/SafeConverter/SafeConverter.h"
+#include "../../AdditionalLibraries/Converter/Converter.h"
 
 #include <cstring>
 #include <iostream>
