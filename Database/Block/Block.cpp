@@ -61,6 +61,56 @@ namespace DatabaseEngine::StorageTypes {
         this->size = inputSize;
     }
 
+    void Block::SetData(const Value &value){
+        delete this->data;
+        this->data = nullptr;
+
+        if (value.GetIsNull()) {
+            this->size = 0;
+            return;
+        }
+        this->SetDataByType(value);
+    }
+
+    void Block::SetDataByType(const Value &value){
+        switch (this->GetColumnType()) {
+            case DataType::TinyInt:
+                this->CopyToBuffer(value.GetTinyInt());
+                return;
+            case DataType::SmallInt:
+                this->CopyToBuffer(value.GetSmallInt());
+                return;
+            case DataType::Int:
+                this->CopyToBuffer(value.GetInt());
+                return;
+            case DataType::BigInt:
+                this->CopyToBuffer(value.GetBigInt());
+                return;
+            case DataType::Decimal:
+                this->CopyToBuffer(value.GetDecimal());
+                return;
+            case DataType::String:
+                this->CopyToBuffer(value.GetString());
+                return;
+            case DataType::UnicodeString:
+                this->CopyToBuffer(value.GetUnicodeString());
+                return;
+            case DataType::Bool:
+                this->CopyToBuffer(value.GetBool());
+                return;
+            case DataType::DateTime:
+                this->CopyToBuffer(value.GetDateTime());
+                return;
+            case DataType::Guid:
+                this->CopyToBuffer(value.GetGuid());
+                return;
+            case DataType::RowIdentifier:
+            case DataType::Invalid:
+            default:
+                throw std::runtime_error("Invalid Datatype for column");
+        }
+    }
+
     object_t* Block::GetBlockData() const { return this->data; }
 
     block_size_t Block::GetBlockSize() const { return this->size; }

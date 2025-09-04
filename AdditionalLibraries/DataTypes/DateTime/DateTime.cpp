@@ -268,7 +268,7 @@ namespace DataTypes
 #endif
 	}
 
-	const time_t & DateTime::GetUnixTimeStamp() const { return this->timeStamp; }
+	const int64_t & DateTime::GetUnixTimeStamp() const { return this->timeStamp; }
 
 	bool DateTime::ValidateDate(const DateTime &datetime){
 		const auto& timestamp = datetime.GetUnixTimeStamp();

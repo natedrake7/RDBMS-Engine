@@ -443,7 +443,33 @@ int64_t Value::GetBigInt() const {
     }
 }
 
-string Value::GetString() const { return {reinterpret_cast<char*>(this->data), this->size}; }
+string Value::GetString() const {
+    switch (this->type) {
+        case DataType::TinyInt:
+            return std::to_string(this->GetTinyInt());
+        case DataType::SmallInt:
+            return std::to_string(this->GetSmallInt());
+        case DataType::Int:
+            return std::to_string(this->GetInt());
+        case DataType::BigInt:
+            return std::to_string(this->GetBigInt());
+        case DataType::Decimal:
+            return this->GetDecimal().ToString();
+        case DataType::String:
+        case DataType::UnicodeString:
+            return{reinterpret_cast<char*>(this->data), this->size};
+        case DataType::Bool:
+            return this->GetBool() ? "true" : "false";
+        case DataType::DateTime:
+            return this->GetDateTime().ToString();
+        case DataType::Guid:
+            return this->GetGuid().ToString();
+        case DataType::RowIdentifier:
+        case DataType::Invalid:
+            default:
+            throw runtime_error("Invalid Column type");
+    }
+}
 
 u16string Value::GetUnicodeString() const { return {reinterpret_cast<char16_t *>(this->data), this->size}; }
 
@@ -500,17 +526,14 @@ void Value::Validate(const Headers::ColumnHeader &header){
     switch (columnType) {
       case DataType::TinyInt: {
           const auto value = Converter<int8_t>::Stoi(this->GetBigInt());
-          this->SetData(value);
           break;
       }
       case DataType::SmallInt: {
           const auto value = Converter<int16_t>::Stoi(this->GetBigInt());
-          this->SetData(value);
           break;
       }
       case DataType::Int:{
           const auto value = Converter<int32_t>::Stoi(this->GetBigInt());
-          this->SetData(value);
           break;
       }
       case DataType::BigInt:
@@ -518,16 +541,11 @@ void Value::Validate(const Headers::ColumnHeader &header){
           break;
       case DataType::String:
       case DataType::UnicodeString:
-          if (columnType != this->GetType())
-              throw runtime_error("Column " + header.name + " has different data type than specified");
           break;
       case DataType::Bool: {
           bool value;
           if (this->TryParseAsBool(value) && this->IsVariable())
               break;
-
-          this->SetData(value);
-          this->SetType(columnType);
           break;
       }
       case DataType::DateTime: {

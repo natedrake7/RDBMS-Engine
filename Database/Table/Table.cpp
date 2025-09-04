@@ -265,7 +265,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          block->SetData(input.GetRawData(), input.GetSize());
+          block->SetData(input);
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
@@ -1407,7 +1407,6 @@ namespace DatabaseEngine::StorageTypes {
   page_id_t Table::GetPageIdByState(const page_id_t &extentFirstPageId, const QueryPipeline::PhysicalPlan::TableScanState &state){
         return state.lastFetchedRowId.pageId == INVALID_PAGE_ID ? extentFirstPageId : state.lastFetchedRowId.pageId;
   }
-
 }
 
  // namespace DatabaseEngine::StorageTypes
