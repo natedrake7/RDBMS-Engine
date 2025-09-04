@@ -821,6 +821,36 @@ namespace DatabaseEngine
 
     string Database::GetFileName() const { return this->filename; }
 
+    void Database::GetIdentityColumns()const{
+            for(const auto& table: this->tables)
+                table->GetIdentityColumns();
+    }
+
+    void Database::GetColumnsHeaders() const{
+            for (const auto& table : this->tables)
+                table->GetColumnsHeaders();
+    }
+
+    void Database::GetDefaultValues() const{
+            for (const auto& table : this->tables)
+                table->GetDefaultValuesHeaders();
+    }
+
+    void Database::GetIndexes() const{
+            for (const auto& table : this->tables)
+                table->GetIndexes();
+    }
+
+    void Database::GetTableHeaders() const{
+    }
+
+    void Database::UpdateMasterDatabase()const{
+            for(const auto& table: this->tables)
+                table->UpdateMasterDatabase();
+    }
+
+    string Database::GetSystemFilename() const{ return this->systemFilename;}
+
     DatabaseHeader::DatabaseHeader()
     {
         this->numberOfTables = 0;

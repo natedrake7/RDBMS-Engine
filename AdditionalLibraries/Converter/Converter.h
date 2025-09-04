@@ -11,11 +11,11 @@ class Converter {
 public:
     static T Stoi(const string& input)
     {
-        static_assert(is_integral<T>::value, "T must be integral type");
+        static_assert(is_integral_v<T>, "T must be integral type");
 
         if (sizeof(T) > sizeof(int))
         {
-            long long value = stoll(input);
+            auto value = stoll(input);
 
             if (value < numeric_limits<T>::min() || value > numeric_limits<T>::max())
                 throw out_of_range("SafeStoi: Value is out of range of the target type.");
@@ -33,9 +33,9 @@ public:
 
     static T Stoi(const u16string& input)
     {
-        static_assert(is_integral<T>::value, "T must be integral type");
+        static_assert(is_integral_v<T>, "T must be integral type");
 
-        wstring converted(input.begin(), input.end());
+        const wstring converted(input.begin(), input.end());
 
         if (sizeof(T) > sizeof(int))
         {
@@ -56,7 +56,7 @@ public:
     }
     
     static T Stoi(const int64_t &input){
-        static_assert(is_integral<T>::value, "T must be integral type");
+        static_assert(is_integral_v<T>, "T must be integral type");
 
         if (input < numeric_limits<T>::min() || input > numeric_limits<T>::max())
             throw out_of_range("SafeStoi: Value is out of range of the target type.");
@@ -66,7 +66,7 @@ public:
 
     static bool AssertOverflow(const T& leftValue, const T& rightValue)
     {
-        static_assert(is_integral<T>::value, "T must be integral type");
+        static_assert(is_integral_v<T>, "T must be integral type");
 
         return ((rightValue > 0 && leftValue > numeric_limits<T>::max() - rightValue) ||
             (rightValue < 0 && leftValue < numeric_limits<T>::min() - rightValue));

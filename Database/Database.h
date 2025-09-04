@@ -92,8 +92,6 @@ protected:
 
     [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
 
-    void UpdateNonClusteredData(const StorageTypes::Table& table, Pages::Page* nextLeafPage, const page_id_t& nextLeafPageId) const;
-
     [[nodiscard]] bool ValidateLogIntegrity(const Logging::LogEntry& logEntry) const;
 
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry, std::vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex)const;
@@ -199,8 +197,7 @@ public:
 
     [[nodiscard]] Pages::IndexPage* FindOrAllocateNextIndexPage(  const table_id_t& tableId
                                                                 , const page_id_t &indexPageId
-                                                                , const int& nonClusteredIndexId = -1
-                                                                , const bool& findPageDifferentFromCurrent = false);
+                                                                , const int& nonClusteredIndexId = -1);
 
     void GetIdentityColumns()const;
 

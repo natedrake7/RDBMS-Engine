@@ -108,8 +108,7 @@ target_include_directories(QueryPipeline PRIVATE
 
 add_library(Database SHARED  
         Database/Database.cpp
-        Database/DatabaseIndexHandlers.cpp
-        Database/DatabaseJoins.cpp
+        Database/Database.IndexHandlers.cpp
         Database/Database.h
         Database/Table/Table.cpp
         Database/Table/Table.AdditionalFunctions.cpp

@@ -1,5 +1,4 @@
 #include "Table.h"
-#include "../Column/Column.h"
 #include "../Constants.h"
 #include "../Database.h"
 #include "../Pages/IndexPage/IndexPage.h"
@@ -12,7 +11,109 @@ using namespace Indexing;
 using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes {
-    
+    void Table::ClusteredIndexSeek(vector<Row> *selectedRows, const Indexing::Key *minimumValue, const Indexing::Key *maximumValue){
+        auto* tree = this->GetClusteredIndexedTree();
+
+        tree->IndexSeek(*minimumValue, *maximumValue, selectedRows);
+    }
+
+    void Table::ClusteredIndexScan(
+      vector<Row> *selectedRows,
+      QueryPipeline::PhysicalPlan::IndexState& state,
+      const int& rowsToSelect,
+      const Expressions::Expression* expression){
+        if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return;
+
+        auto* tree = this->GetClusteredIndexedTree();
+
+        if(expression != nullptr){
+          tree->IndexScan(selectedRows, state, rowsToSelect, expression);
+          return;
+        }
+
+        tree->IndexScan(selectedRows, state, rowsToSelect);
+    }
+
+    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression *expression){
+        if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return;
+
+        auto* tree = this->GetClusteredIndexedTree();
+
+        if(expression != nullptr){
+          tree->IndexScan(selectedRows, expression);
+          return;
+        }
+
+        tree->IndexScan(selectedRows);
+    }
+
+    void Table::NonClusteredIndexScan(
+      vector<Row> *selectedRows,
+      const int &indexPos,
+      QueryPipeline::PhysicalPlan::IndexState& state,
+      const int& rowsToSelect,
+      const Expressions::Expression *expression){
+
+        auto* tree = this->GetNonClusteredIndexTree(indexPos);
+
+        std::vector<Headers::RowIdentifier> rowIds;
+        tree->IndexScan(&rowIds, state, rowsToSelect);
+
+        if (expression != nullptr) {
+
+          for (const auto& rowId : rowIds) {
+            const auto extentId = Database::CalculateExtentIdByPageId(rowId.pageId);
+
+            const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, extentId, this);
+
+            page->GetRowByIndex(selectedRows, *this, rowId.indexId, expression);
+          }
+
+          return;
+        }
+
+        for (const auto& rowId : rowIds) {
+          const auto extentId = Database::CalculateExtentIdByPageId(rowId.pageId);
+
+          const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, extentId, this);
+
+          page->GetRowByIndex(selectedRows, *this, rowId.indexId);
+        }
+    }
+
+    key_size_t Table::CalculateIndexKeySize(const int& indexPos) const {
+            HashSet<column_index_t> clusteredColumns;
+
+            if (indexPos != -1)
+                return this->CalculateNonClusteredIndexKeySize(indexPos);
+
+            key_size_t keySize = 0;
+            for(const auto& column : this->header.clusteredIndex.columns)
+                clusteredColumns.Add(column);
+
+            for (const auto &column : this->columns)
+                if(clusteredColumns.Contains(column->GetColumnIndex()))
+                    keySize += column->GetColumnSize();
+
+            return keySize;
+    }
+
+    key_size_t Table::CalculateNonClusteredIndexKeySize(const int &indexPos) const{
+            HashSet<column_index_t> clusteredColumns;
+
+            key_size_t keySize = 0;
+            for(const auto& column : this->header.nonClusteredIndexes.at(indexPos).columns)
+                clusteredColumns.Add(column);
+
+            for (const auto &column : this->columns)
+                if(clusteredColumns.Contains(column->GetColumnIndex()))
+                    keySize += column->GetColumnSize();
+
+            return keySize;
+    }
+
     BPlusTree* Table::GetClusteredIndexedTree() 
     {
         if(this->clusteredIndexedTree != nullptr)

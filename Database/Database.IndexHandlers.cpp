@@ -44,31 +44,7 @@ namespace DatabaseEngine {
         return key;
     }
 
-    void Database::UpdateNonClusteredData(const Table& table, Page* nextLeafPage, const page_id_t& nextLeafPageId) const
-    {
-       // if(!table.HasNonClusteredIndexes())
-       //      return;
-       //
-       //  Table* tablePtr = this->tables.at(table.GetTableId());
-       //
-       //  const auto& nonClusteredIndexes = tablePtr->GetNonClusteredIndexes();
-       //
-       //  for (int i = 0; i < nonClusteredIndexes.size(); i++)
-       //  {
-       //      const BPlusTree* nonClusteredTree = tablePtr->GetNonClusteredIndexTree(i);
-       //
-       //      const auto& rows = nextLeafPage->GetDataRowsUnsafe();
-       //
-       //      for (page_offset_t index = 0; index < rows->size(); index++)
-       //      {
-       //          const auto key = Database::CreateKey(nonClusteredIndexes[i], (*rows)[index]);
-       //
-       //          // nonClusteredTree->UpdateRowData(key, Headers::RowIdentifier(nextLeafPageId, index));
-       //      }
-       //  }
-    }
-
-	IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nonClusteredIndexId, const bool& findPageDifferentFromCurrent)
+	IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nonClusteredIndexId)
     {
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
@@ -91,9 +67,14 @@ namespace DatabaseEngine {
             return newIndexPage;
         }
 
-        const auto extentId = Database::CalculateExtentIdByPageId(tableHeader.indexAllocationMapPageId);
+        const auto indexAllocationPageExtentId = Database::CalculateExtentIdByPageId(tableHeader.indexAllocationMapPageId);
 
-        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId, extentId, table);
+        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(
+            this->filename,
+            tableHeader.indexAllocationMapPageId,
+            indexAllocationPageExtentId,
+            table
+        );
         
         vector<extent_id_t> allocatedExtents;
         indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
