@@ -4,7 +4,7 @@
 #include "../../Database/Constants.h"
 #include "../../AdditionalLibraries/DataTypes/Value/Value.h"
 #include "../../AdditionalLibraries/DataTypes/Headers/Headers.h"
-#include "../../AdditionalLibraries/DataTypes/Expression/Expression.h"
+#include "../../AdditionalLibraries/Expressions/Expression.h"
 
 namespace QueryPipeline {
   class LogicalPlan;

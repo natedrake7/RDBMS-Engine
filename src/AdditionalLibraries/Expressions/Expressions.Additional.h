@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
-#include "../../Dictionary/Dictionary.h"
-#include "../../../Database/Constants.h"
+#include "../Dictionary/Dictionary.h"
+#include "../../Database/Constants.h"
 #define UNLIMITED_ARGS (-1)
 
 namespace Expressions {

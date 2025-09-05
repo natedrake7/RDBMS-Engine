@@ -1,5 +1,5 @@
 #include "Expression.h"
-#include "../../HashSet/HashSet.h"
+#include "../HashSet/HashSet.h"
 
 namespace Expressions{
 

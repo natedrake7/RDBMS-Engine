@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include "Expressions.Additional.h"
-#include "../Value/Value.h"
+#include "../DataTypes/Value/Value.h"
 
 namespace DatabaseEngine::StorageTypes {
   class Row;

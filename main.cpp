@@ -1,16 +1,15 @@
-﻿#include <chrono>
+﻿#include "src/Database/Table/Table.h"
+#include "src/QueryPipeline/Parser/Parser.h"
+#include "src/Server/Server.h"
+#include "src/Server/ConnectionManager/ConnectionManager.h"
+
+
+#include <atomic>
+#include <chrono>
 #include <csignal>
-#include <exception>
 #include <iostream>
 #include <string>
 #include <vector>
-#include "Database/Column/Column.h"
-#include "Database/Constants.h"
-#include "Database/Storage/StorageManager/StorageManager.h"
-#include "QueryPipeline/Parser/Parser.h"
-#include "Server/ConnectionManager/ConnectionManager.h"
-#include "Server/Threadpool/ThreadPool.h"
-#include "Server/Server.h"
 
 using namespace DatabaseEngine;
 using namespace DatabaseEngine::StorageTypes;
@@ -125,6 +124,8 @@ int main()
 
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
+    const auto& databases = server.GetCatalog();
+
     std::cout << "Please enter a query: "<< endl;
 
     while (true) {
@@ -147,8 +148,6 @@ int main()
     }
 
     //SELECT * FROM dbo.Actors AS a INNER JOIN dbo.Movies AS m ON m.ActorID = a.ID
-
-    const auto& databases = server.GetCatalog();
 
     server.Shutdown();
 
