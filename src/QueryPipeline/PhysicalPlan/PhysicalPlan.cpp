@@ -49,6 +49,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         QueryResult resultRow;
 
         for (const auto& expression : this->resultExpressions) {
+          result->columns.emplace_back(expression->alias);
+
           auto field = expression->Evaluate(nullptr);
           resultRow.AddColumn(field);
         }
@@ -59,6 +61,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       }
 
       auto* result = this->child->Execute(batchSize);
+
+      for (const auto& expression : this->resultExpressions)
+        result->columns.emplace_back(expression->alias);
 
       for (auto& row: result->rows) {
           QueryResult resultRow;
@@ -76,8 +81,6 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
             return a.ordinalPosition < b.ordinalPosition;
         }
       );
-
-      result->columns = std::move(this->columnHeaders);
 
       return result;
   }

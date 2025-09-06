@@ -643,7 +643,7 @@ namespace QueryPipeline::Statements {
 
     //start resolving aliases
     for (int i = 0; i < statement->results.size(); i++)
-        if (!ResolveExpressionAliases(tableAliasesDictionary, statement->tableColumnsDictionary, statement, statement->results[i], i))
+      if (!ResolveExpressionAliases(tableAliasesDictionary, statement->tableColumnsDictionary, statement, statement->results[i], i))
           return false;
 
     //validate all expressions are valid
@@ -683,11 +683,11 @@ namespace QueryPipeline::Statements {
         if (column->name == "*")
           return ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement, indexPos);
 
-        if (!column->alias.empty()) {
+        if (!column->tableAlias.empty()) {
           table_id_t tableId;
 
-          if (!tableAliasesDictionary.TryGetValue(column->alias, tableId)) {
-            cerr << "Alias: " << column->alias << " does not exist in the statement" << endl;
+          if (!tableAliasesDictionary.TryGetValue(column->tableAlias, tableId)) {
+            cerr << "Alias: " << column->tableAlias << " does not exist in the statement" << endl;
             return false;
           }
 
@@ -695,8 +695,8 @@ namespace QueryPipeline::Statements {
         }
 
         bool columnExistsOnTable = false;
+        Headers::ColumnHeader columnHeader;
         for (const auto& [key, columns]: tablesColumnsDictionary) {
-          Headers::ColumnHeader columnHeader;
           if (!columns.TryGetValue(column->name, columnHeader))
             continue;
 
@@ -720,6 +720,9 @@ namespace QueryPipeline::Statements {
         std::cerr << "Column: " << column->name << " does not exist on Table" << std::endl;
         return false;
       }
+
+      if (column->alias.empty())
+        column->alias = columnHeader.name;
 
       return true;
   }
@@ -887,6 +890,7 @@ namespace QueryPipeline::Statements {
             : statement->table->alias
         );
 
+      columnExpression->alias = header.name;
       columnExpression->columnId = header.id;
       columnExpression->tableId = statement->table->tableId;
 

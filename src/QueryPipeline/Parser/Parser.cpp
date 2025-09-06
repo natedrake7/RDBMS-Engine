@@ -118,6 +118,10 @@ namespace QueryPipeline
             //     std::cout << std::endl;
             // }
 
+            for (const auto& column : result->columns)
+                std::cout << column << " || ";
+
+            std::cout << std::endl;
 
             for (const auto& row: result->results)
                 row.Print();

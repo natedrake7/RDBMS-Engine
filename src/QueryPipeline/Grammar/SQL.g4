@@ -35,7 +35,7 @@ resultList
     ;
 
 resultExpression
-    : andExpr (OR andExpr)*
+    : andExpr (OR andExpr)* alias?
     ;
 
 andExpr

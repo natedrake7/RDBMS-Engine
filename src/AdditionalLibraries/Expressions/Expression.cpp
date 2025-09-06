@@ -3,9 +3,9 @@
 
 namespace Expressions{
 
-  ColumnExpression::ColumnExpression(const std::string &name, const std::string &alias){
+  ColumnExpression::ColumnExpression(const std::string &name, const std::string &tableAlias){
     this->name = name;
-    this->alias = alias;
+    this->tableAlias = tableAlias;
 
     this->tableId = -1;
     this->columnId = -1;

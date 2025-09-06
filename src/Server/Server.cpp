@@ -203,6 +203,9 @@ namespace Server {
   DatabaseEngine::Database* ServerInstance::UseDatabase(const int32_t & databaseId, const bool& isServerInitialization){
     DatabaseEngine::Database *db = nullptr;
 
+    if (databaseId == 1)
+      return this->masterDb;
+
     if (this->databases.TryGetValue(databaseId, db))
       return db;
 

@@ -20,6 +20,7 @@ namespace QueryPipeline::Statements {
 namespace Expressions{
   class Expression {
     public:
+      std::string alias;
       virtual ~Expression() = default;
       Expression() = default;
 
@@ -30,7 +31,7 @@ namespace Expressions{
   class ColumnExpression final : public Expression {
     public:
       std::string name;
-      std::string alias;
+      std::string tableAlias;
 
       int32_t tableId;
       int32_t columnId;
@@ -38,7 +39,7 @@ namespace Expressions{
       column_index_t columnIndex;
       DataType returnType;
 
-      ColumnExpression(const std::string& name, const std::string& alias);
+      ColumnExpression(const std::string& name, const std::string& tableAlias);
       explicit ColumnExpression(const column_index_t& index);
       ~ColumnExpression()override = default;
 
