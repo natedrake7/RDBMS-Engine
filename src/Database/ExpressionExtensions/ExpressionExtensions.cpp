@@ -105,9 +105,12 @@ namespace Expressions {
   Value FunctionExpression::Concat(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row){
     Value value(string(""), 0);
 
-    for (const auto* argument : expression->arguments)
-      value += argument->Evaluate(row);
+    for (const auto* argument : expression->arguments) {
+      auto returnValue = argument->Evaluate(row);
+      returnValue.SetData(returnValue.GetString());
 
+      value += returnValue;
+    }
     return value;
   }
 

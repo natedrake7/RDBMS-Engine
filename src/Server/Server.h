@@ -148,6 +148,7 @@ namespace Server {
     [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const int32_t& databaseId) const;
     [[nodiscard]] vector<Headers::SchemaHeader>  SelectSchemas(const int32_t& databaseId) const;
+    [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const int32_t& databaseId) const;
     [[nodiscard]] bool SchemaExists(const int32_t &databaseId, const std::string& schema) const;
     [[nodiscard]] vector<Headers::TableHeader> SelectTables(const string& dbName) const;
     [[nodiscard]] vector<Headers::TableHeader> SelectTables(const int32_t & databaseId) const;

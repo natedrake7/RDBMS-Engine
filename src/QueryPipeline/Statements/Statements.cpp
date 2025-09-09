@@ -75,28 +75,21 @@ namespace QueryPipeline::Statements {
       return false;
     }
 
-    const auto schemas = Server::ServerInstance::Get().SelectSchemas(this->databaseId);
+    const auto& schemasDict = Server::ServerInstance::Get().SelectSchemasToDictionary(this->databaseId);
 
-    int32_t schemaId = -1;
-    for(const auto& schema: schemas){
-      if(schema.name == this->table->schema){
-        schemaId = schema.id;
-        break;
-      }
-    }
-
-    if(schemaId == -1){
-      cerr << "Schema: " << this->table->schema << "does not exist." << endl;
+    Headers::SchemaHeader schemaHeader;
+    if (!schemasDict.TryGetValue(this->table->schema, schemaHeader)) {
+      std::cerr << "Schema: " << this->table->schema << "does not exist." << std::endl;
       return false;
     }
 
-    this->table->schemaId = schemaId;
+    this->table->schemaId = schemaHeader.id;
 
     column_index_t tablePosition = 0;
     bool primaryKeyFound = false;
     Dictionary<string, column_index_t> columnNamesToIndexes;
 
-    for (auto& column: this->columns) {
+    for (const auto& column: this->columns) {
       uint16_t columnSize;
 
       if (!ColumnTypeSizes.TryGetValue(column->type.name, columnSize)) {
@@ -136,7 +129,7 @@ namespace QueryPipeline::Statements {
       return true;
 
     if (primaryKeyFound) {
-      cerr << "Cannot have a primary key and a constraint declared" << endl;
+      std::cerr << "Cannot have a primary key and a constraint declared" << std::endl;
       return false;
     }
 

@@ -158,19 +158,19 @@ dataType
     | SMALLINT
     | INT
     | BIGINT
-    | varcharType
-    | nvarcharType
+    | stringType
+    | uStringType
     | decimalType
     | DATETIME
     | GUID
     ;
 
-varcharType
-    : VARCHAR LAPRENT (num=NUMBER | max=MAX) RAPRENT
+stringType
+    : STRING_LITERAL LAPRENT (num=NUMBER | max=MAX) RAPRENT
     ;
 
-nvarcharType
-    : NVARCHAR LAPRENT (num=NUMBER | max=MAX) RAPRENT
+uStringType
+    : USTRING_LITERAL LAPRENT (num=NUMBER | max=MAX) RAPRENT
     ;
 
 decimalType
@@ -307,8 +307,8 @@ variableType
     | SMALLINT
     | INT
     | BIGINT
-    | varcharType
-    | nvarcharType
+    | stringType
+    | uStringType
     | decimalType
     | DATETIME
     | GUID
@@ -426,14 +426,16 @@ MODULO          : '%';
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
-GUID            : 'GUID';
-BOOL            : 'BOOL';
-DATETIME        : 'DATETIME';
-DECIMAL         : 'DECIMAL';
-TINYINT         : 'TINYINT';
-SMALLINT        : 'SMALLINT';
-INT             : 'INT';
-BIGINT          : 'BIGINT';
+GUID                    : 'GUID';
+BOOL                    : 'BOOL';
+DATETIME                : 'DATETIME';
+DECIMAL                 : 'DECIMAL';
+TINYINT                 : 'TINYINT';
+SMALLINT                : 'SMALLINT';
+INT                     : 'INT';
+BIGINT                  : 'BIGINT';
+STRING_LITERAL          : 'STRING';
+USTRING_LITERAL         : 'USTRING';
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -510,16 +512,6 @@ SUM            : 'SUM';
 AVG            : 'AVG';
 MIN            : 'MIN';
 MAX            : 'MAX';
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-//VARCHAR Types
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-VARCHAR         : 'VARCHAR';
-NVARCHAR        : 'NVARCHAR';
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////

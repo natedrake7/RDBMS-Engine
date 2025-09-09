@@ -75,6 +75,15 @@ namespace Expressions{
 
   class FunctionExpression final : public Expression {
 
+    [[nodiscard]] bool ValidateUnlimitedArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const;
+    [[nodiscard]] bool ValidateArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const;
+    [[nodiscard]] static bool ValidateReturnType(
+      const FunctionInfo& info,
+      std::string& errorMessage,
+      const DataType& expectedType,
+      const DataType& returnType,
+      const int& index);
+
     public:
       std::vector<Expression*> arguments;
 

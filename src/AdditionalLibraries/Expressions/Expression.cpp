@@ -73,34 +73,53 @@ namespace Expressions{
       return false;
     }
 
-    //validate types and validate return type?
+    return (info.maxArgs == UNLIMITED_ARGS)
+      ? this->ValidateUnlimitedArgumentTypes(info, errorMessage)
+      : this->ValidateArgumentTypes(info, errorMessage);
+  }
 
-    for (int i = 0;i < this->arguments.size(); i++) {
-      const auto* argument = this->arguments[i];
+  bool FunctionExpression::ValidateUnlimitedArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const{
+    const auto& expectedType = info.expectedTypes.front();
 
-      const auto& returnType = argument->GetReturnType();
-      const auto& expectedType = info.maxArgs == UNLIMITED_ARGS
-            ? info.expectedTypes.front()
-            : info.expectedTypes[i];
-
-      if (returnType == DataType::Invalid) {
-        errorMessage = "Function: " + info.name +
-                          " has an argument at position " + std::to_string(i + 1) +
-                          " with invalid type";
+    for (int i = 0;i < this->arguments.size(); i++)
+      if (!FunctionExpression::ValidateReturnType(info, errorMessage, expectedType, this->arguments[i]->GetReturnType(), i))
         return false;
-      }
 
-      if (returnType != expectedType) {
-        errorMessage = "Function: " + info.name +
-                       " expects argument " + std::to_string(i + 1) +
-                       " to be of type: " + Constants::ColumnTypesToStringDictionary.Get(expectedType) +
-                       ", but got type: " + Constants::ColumnTypesToStringDictionary.Get(returnType);
+    return true;
+  }
+
+  bool FunctionExpression::ValidateArgumentTypes(const FunctionInfo &info, std::string &errorMessage) const{
+    for (int i = 0;i < this->arguments.size(); i++)
+      if (!FunctionExpression::ValidateReturnType(info, errorMessage, info.expectedTypes[i], this->arguments[i]->GetReturnType(), i))
         return false;
-      }
+
+    return true;
+  }
+
+bool FunctionExpression::ValidateReturnType(
+    const FunctionInfo &info,
+    std::string &errorMessage,
+    const DataType& expectedType,
+    const DataType& returnType,
+    const int& index) {
+    if (returnType == DataType::Invalid) {
+      errorMessage = "Function: " + info.name +
+                        " has an argument at position " + std::to_string(index + 1) +
+                        " with invalid type";
+      return false;
+    }
+
+    if (returnType != expectedType && !info.allowImplicitCast) {
+      errorMessage = "Function: " + info.name +
+                     " expects argument " + std::to_string(index + 1) +
+                     " to be of type: " + Constants::ColumnTypesToStringDictionary.Get(expectedType) +
+                     ", but got type: " + Constants::ColumnTypesToStringDictionary.Get(returnType);
+      return false;
     }
 
     return true;
   }
+
 
   Constants::DataType FunctionExpression::GetReturnType() const{
     return FunctionInfoDictionary.Get(this->type).returnType;

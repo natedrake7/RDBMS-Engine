@@ -144,10 +144,10 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
 
 
 antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext *context) {
-    if (context->varcharType())
-      return visit(context->varcharType());
-    if (context->nvarcharType())
-      return visit(context->varcharType());
+    if (context->stringType())
+      return visit(context->stringType());
+    if (context->uStringType())
+      return visit(context->uStringType());
 
     const auto& text = context->getText();
 
@@ -156,24 +156,18 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     };
   }
 
-  antlrcpp::Any SQLVisitorImplementation::visitVarcharType(SQLParser::VarcharTypeContext *context){
+  antlrcpp::Any SQLVisitorImplementation::visitStringType(SQLParser::StringTypeContext *context){
     const auto& number = context->NUMBER();
-
-    //TODO handle VARCHAR(MAX) types
-    if(!number)
-    {
-
-    }
 
     return Statements::ColumnType{
       .name = QueryPipeline::String,
       .size = number ? Converter<int64_t>::Stoi(number->getText()) : -1,
-      .beforeFraction =  -1,
+      .beforeFraction = -1,
       .afterFraction = -1
     };
   }
 
-  antlrcpp::Any SQLVisitorImplementation::visitNvarcharType(SQLParser::NvarcharTypeContext *context){
+  antlrcpp::Any SQLVisitorImplementation::visitUStringType(SQLParser::UStringTypeContext *context){
     const auto& number = context->NUMBER();
 
     return Statements::ColumnType{

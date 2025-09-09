@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "../../../Database/Constants.h"
+#include "../../HashSet/HashSet.h"
 #include "../Decimal/Decimal.h"
 #include "../Guid/Guid.h"
 #include "../Headers/Headers.h"
@@ -17,6 +18,10 @@ static Dictionary<DataType, int> ColumnTypeRank{
   {DataType::BigInt, 7},
   {DataType::Decimal, 8},
   {DataType::DateTime, 9},
+};
+
+static Dictionary<DataType, HashSet<DataType>> CoercionMapping{
+
 };
 
 class Value {

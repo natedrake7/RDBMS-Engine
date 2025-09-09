@@ -62,77 +62,79 @@ static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
 };
 
 struct FunctionInfo {
-  std::string name;
-  int minArgs;
-  int maxArgs;
-  std::vector<Constants::DataType> expectedTypes;
-  Constants::DataType returnType;
+    std::string name;
+    int minArgs;
+    int maxArgs;
+    std::vector<Constants::DataType> expectedTypes;
+    Constants::DataType returnType;
+    bool allowImplicitCast;
 };
 
 static Dictionary<Constants::FunctionType, FunctionInfo> FunctionInfoDictionary{
     { Constants::FunctionType::GetDate,
-        {"GETDATE", 0, 0, {}, Constants::DataType::DateTime } },
+        {"GETDATE", 0, 0, {}, Constants::DataType::DateTime, false } },
 
     { Constants::FunctionType::NewGuid,
-        {"NEWID", 0, 0, {}, Constants::DataType::Guid } },
+        {"NEWID", 0, 0, {}, Constants::DataType::Guid, false } },
 
     { Constants::FunctionType::Concat,
-        {"CONCAT", 2, UNLIMITED_ARGS, {Constants::DataType::String}, Constants::DataType::String } },
+        {"CONCAT", 2, UNLIMITED_ARGS, {Constants::DataType::String}, Constants::DataType::String, true } },
 
     { Constants::FunctionType::Length,
-        {"LENGTH", 1, 1, {Constants::DataType::String}, Constants::DataType::Int } },
+        {"LENGTH", 1, 1, {Constants::DataType::String}, Constants::DataType::Int, false } },
 
     { Constants::FunctionType::AsciiValue,
-        {"ASCII", 1, 1, {Constants::DataType::String}, Constants::DataType::Int } },
+        {"ASCII", 1, 1, {Constants::DataType::String}, Constants::DataType::Int, false } },
 
     { Constants::FunctionType::Char,
-        {"CHAR", 1, 1, {Constants::DataType::Int}, Constants::DataType::String } },
+        {"CHAR", 1, 1, {Constants::DataType::Int}, Constants::DataType::String, false } },
 
     { Constants::FunctionType::CharIndex,
         {"CHARINDEX", 2, 3,
             {Constants::DataType::String, Constants::DataType::String, Constants::DataType::Int},
-            Constants::DataType::Int } },
+            Constants::DataType::Int, false } },
 
     { Constants::FunctionType::Lower,
-        {"LOWER", 1, 1, {Constants::DataType::String}, Constants::DataType::String } },
+        {"LOWER", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false } },
 
     { Constants::FunctionType::Upper,
-        {"UPPER", 1, 1, {Constants::DataType::String}, Constants::DataType::String } },
+        {"UPPER", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false } },
 
     { Constants::FunctionType::Trim,
-        {"TRIM", 1, 1, {Constants::DataType::String}, Constants::DataType::String } },
+        {"TRIM", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false } },
 
     { Constants::FunctionType::TrimLeft,
-        {"TRIMLEFT", 1, 1, {Constants::DataType::String}, Constants::DataType::String } },
+        {"TRIMLEFT", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false } },
 
     { Constants::FunctionType::TrimRight,
-        {"TRIMRIGHT", 1, 1, {Constants::DataType::String}, Constants::DataType::String } },
+        {"TRIMRIGHT", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false } },
 
     { Constants::FunctionType::Replace,
         {"REPLACE", 3, 3,
             {Constants::DataType::String, Constants::DataType::String, Constants::DataType::String},
-            Constants::DataType::String } },
+            Constants::DataType::String, false } },
 
     { Constants::FunctionType::Substr,
         {"SUBSTR", 2, 3,
             {Constants::DataType::String, Constants::DataType::Int, Constants::DataType::Int},
-            Constants::DataType::String } },
+            Constants::DataType::String, false } },
 
     { Constants::FunctionType::Left,
         {"LEFT", 2, 2,
             {Constants::DataType::String, Constants::DataType::Int},
-            Constants::DataType::String } },
+            Constants::DataType::String, false } },
 
     { Constants::FunctionType::Right,
         {"RIGHT", 2, 2,
             {Constants::DataType::String, Constants::DataType::Int},
-            Constants::DataType::String } },
+            Constants::DataType::String, false } },
 
     { Constants::FunctionType::Reverse,
-        {"REVERSE", 1, 1, {Constants::DataType::String}, Constants::DataType::String } },
+        {"REVERSE", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false } },
 
     { Constants::FunctionType::Space,
-        {"SPACE", 1, 1, {Constants::DataType::Int}, Constants::DataType::String } },
+        {"SPACE", 1, 1, {Constants::DataType::Int}, Constants::DataType::String, false } },
 };
+
 
 }

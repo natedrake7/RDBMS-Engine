@@ -727,6 +727,17 @@ namespace Server {
      return schemas;
   }
 
+  Dictionary<std::string, Headers::SchemaHeader> ServerInstance::SelectSchemasToDictionary(const int32_t &databaseId) const{
+    const auto& schemas = this->SelectSchemas(databaseId);
+
+    Dictionary<string, Headers::SchemaHeader> selectedSchemas;
+
+    for (const auto& schema : schemas)
+      selectedSchemas.Add(schema.name, schema);
+
+    return selectedSchemas;
+  }
+
   bool ServerInstance::SchemaExists(const int32_t &databaseId, const std::string &schema) const{
     using namespace DatabaseEngine::StorageTypes;
 

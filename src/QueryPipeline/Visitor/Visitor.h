@@ -10,7 +10,24 @@ namespace QueryPipeline {
 
   class SQLVisitorImplementation final : public SQLVisitor {
     public:
+
+      //Statements
       antlrcpp::Any visitSelectStatement(SQLParser::SelectStatementContext *ctx) override;
+
+      antlrcpp::Any visitCreateDbStatement(SQLParser::CreateDbStatementContext *context) override;
+
+      antlrcpp::Any visitDropDbStatement(SQLParser::DropDbStatementContext *context) override;
+
+      antlrcpp::Any visitDeleteStatement(SQLParser::DeleteStatementContext *context) override;
+
+      antlrcpp::Any visitUpdateStatement(SQLParser::UpdateStatementContext *context) override;
+
+      antlrcpp::Any visitOrderByStatement(SQLParser::OrderByStatementContext *context) override;
+
+      antlrcpp::Any visitCreateIndexStatement(SQLParser::CreateIndexStatementContext *context) override;
+
+      antlrcpp::Any visitJoinStatement(SQLParser::JoinStatementContext *context) override;
+
 
       antlrcpp::Any visitColumnName(SQLParser::ColumnNameContext *context) override;
 
@@ -20,14 +37,10 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitSqlStatement(SQLParser::SqlStatementContext *context) override;
 
-      antlrcpp::Any visitCreateDbStatement(SQLParser::CreateDbStatementContext *context) override;
-
-      antlrcpp::Any visitDropDbStatement(SQLParser::DropDbStatementContext *context) override;
-
       antlrcpp::Any visitWhereClause(SQLParser::WhereClauseContext *context) override;
-  
+
       antlrcpp::Any visitLiteralValue(SQLParser::LiteralValueContext *context) override;
-    
+
       antlrcpp::Any visitInsertStatement(SQLParser::InsertStatementContext *context) override;
 
       antlrcpp::Any visitLiteralValueList(SQLParser::LiteralValueListContext *context) override;
@@ -40,31 +53,17 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitAddColumn(SQLParser::AddColumnContext *context) override;
 
-      antlrcpp::Any visitVarcharType(SQLParser::VarcharTypeContext *context) override;
-
-      antlrcpp::Any visitNvarcharType(SQLParser::NvarcharTypeContext *context) override;
-
       antlrcpp::Any visitDecimalType(SQLParser::DecimalTypeContext *context) override;
 
       antlrcpp::Any visitPrimaryKeyConstraint(SQLParser::PrimaryKeyConstraintContext *context) override;
 
       antlrcpp::Any visitCreateSchemaStatement(SQLParser::CreateSchemaStatementContext *context) override;
 
-      antlrcpp::Any visitDeleteStatement(SQLParser::DeleteStatementContext *context) override;
-
-      antlrcpp::Any visitUpdateStatement(SQLParser::UpdateStatementContext *context) override;
-
       antlrcpp::Any visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context) override;
 
       antlrcpp::Any visitUpdateColumn(SQLParser::UpdateColumnContext *context) override;
 
       antlrcpp::Any visitAutoIncrementKey(SQLParser::AutoIncrementKeyContext *context) override;
-
-      antlrcpp::Any visitOrderByStatement(SQLParser::OrderByStatementContext *context) override;
-
-      antlrcpp::Any visitCreateIndexStatement(SQLParser::CreateIndexStatementContext *context) override;
-
-      antlrcpp::Any visitJoinStatement(SQLParser::JoinStatementContext *context) override;
 
       antlrcpp::Any visitJoinType(SQLParser::JoinTypeContext *context) override;
 
@@ -127,6 +126,10 @@ namespace QueryPipeline {
       antlrcpp::Any visitAndExpr(SQLParser::AndExprContext *context) override;
 
       antlrcpp::Any visitEqualityExpr(SQLParser::EqualityExprContext *context) override;
+
+      antlrcpp::Any visitStringType(SQLParser::StringTypeContext *context) override;
+
+      antlrcpp::Any visitUStringType(SQLParser::UStringTypeContext *context) override;
   };
 
   static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {
