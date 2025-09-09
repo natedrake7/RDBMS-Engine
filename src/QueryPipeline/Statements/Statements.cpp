@@ -12,7 +12,7 @@ namespace QueryPipeline::Statements {
   bool DeleteStatement::Validate(){
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id == -1){
+    if (tableHeader.id == Constants::INVALID_TABLE_ID){
           cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
           return false;
     }
@@ -90,7 +90,7 @@ namespace QueryPipeline::Statements {
   bool CreateTableStatement::Validate(){
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id != -1) {
+    if (tableHeader.id != Constants::INVALID_TABLE_ID) {
       std::cerr << "Table with name: " << this->table->GetFullName() << " already exists." << std::endl;
       return false;
     }
@@ -245,7 +245,7 @@ namespace QueryPipeline::Statements {
         ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
         : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
 
-    if (tableHeader.id == -1){
+    if (tableHeader.id == Constants::INVALID_TABLE_ID){
       std::cerr << "Table " + this->GetFullName() + " does not exist" << std::endl;
       return false;
     }
@@ -341,7 +341,7 @@ namespace QueryPipeline::Statements {
 
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id == -1){
+    if (tableHeader.id == Constants::INVALID_TABLE_ID){
           cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
           return false;
     }
@@ -429,7 +429,7 @@ namespace QueryPipeline::Statements {
   bool UpdateStatement::Validate(){
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id == -1){
+    if (tableHeader.id == Constants::INVALID_TABLE_ID){
           cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
           return false;
     }
@@ -470,7 +470,7 @@ namespace QueryPipeline::Statements {
   bool CreateIndexStatement::Validate(){
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id == -1){
+    if (tableHeader.id == Constants::INVALID_TABLE_ID){
       cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
       return false;
     }
@@ -615,7 +615,7 @@ namespace QueryPipeline::Statements {
   bool AlterTableStatement::Validate(){
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id == -1){
+    if (tableHeader.id == Constants::INVALID_TABLE_ID){
       cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
       return false;
     }
