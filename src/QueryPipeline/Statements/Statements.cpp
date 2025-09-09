@@ -315,6 +315,7 @@ namespace QueryPipeline::Statements {
     return nullptr;
   }
 
+  //TODO validate length of columns to match max record_size from master DB
   bool InsertStatement::Validate(){
 
     const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
