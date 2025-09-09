@@ -379,7 +379,7 @@ columnAlias
     : identifier '.'
     ;
 
-tableName : (schemaName=identifier '.')? name=identifier (alias)?;
+tableName : (databaseName=identifier '.')?(schemaName=identifier '.')? name=identifier (alias)?;
 
 alias
     : (AS)? identifier;

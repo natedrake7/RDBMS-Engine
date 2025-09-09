@@ -19,6 +19,7 @@ namespace Constants
     constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
     constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
 
+    constexpr int32_t INVALID_DATABASE_ID = -1;
 
     // table types
     typedef uint16_t table_id_t;

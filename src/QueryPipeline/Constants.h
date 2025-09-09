@@ -6,6 +6,7 @@
 namespace QueryPipeline::PipelineConstants {
   typedef uint16_t cursor_id_t;
 
+
   static Dictionary<std::string, Constants::JoinType> JoinTypeDictionary{
     {"inner", Constants::JoinType::Inner},
     {"left", Constants::JoinType::Left},

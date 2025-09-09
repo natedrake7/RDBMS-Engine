@@ -85,23 +85,26 @@ namespace QueryPipeline::Statements {
   };
 
   struct TableName {
-    std::string name;
+    std::string database;
     std::string schema;
+    std::string name;
     std::string alias;
 
+    int32_t databaseId;
     int32_t tableId;
     int32_t schemaId;
     int16_t ordinalPosition;
 
     TableName();
     [[nodiscard]] std::string GetFullName()const;
+    [[nodiscard]] bool Validate(int32_t& selectedDatabaseId);
   };
 
   struct Statement {
     int32_t databaseId;
 
     Statement(){
-      this->databaseId = -1;
+      this->databaseId = Constants::INVALID_DATABASE_ID;
     }
 
     virtual ~Statement() = default;

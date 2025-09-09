@@ -154,17 +154,9 @@ namespace QueryPipeline::Statements {
   bool SelectStatement::Validate(){
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
 
-    if (this->table != nullptr) {
-      const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
-
-      if (tableHeader.id == -1){
-            cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
-            return false;
-      }
-
-      this->table->tableId = tableHeader.id;
-      this->table->ordinalPosition = tableHeader.ordinalPosition;
-    }
+    if (this->table != nullptr
+      && !this->table->Validate(this->databaseId))
+      return false;
 
     if (!this->joins.empty() && this->table == nullptr) {
       std::cerr << "Table was not specified" << std::endl;
@@ -233,7 +225,24 @@ namespace QueryPipeline::Statements {
    TableName::TableName(){ this->schema = "dbo"; }
 
   std::string TableName::GetFullName() const {
-    return this->schema + "." + this->name;
+    return this->database + "." + this->schema + "." + this->name;
+  }
+
+  bool TableName::Validate(int32_t& selectedDatabaseId) {
+    const auto tableHeader = (!this->database.empty())
+        ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
+        : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
+
+    if (tableHeader.id == -1){
+      std::cerr << "Table " + this->GetFullName() + " does not exist" << std::endl;
+      return false;
+    }
+
+    this->tableId = tableHeader.id;
+    this->ordinalPosition = tableHeader.ordinalPosition;
+    this->databaseId = tableHeader.databaseId;
+
+    return true;
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
@@ -743,7 +752,7 @@ namespace QueryPipeline::Statements {
 
     if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
 
-      //validate return type is correct
+      //validate children expressions and assign return types and ids to column expressions
       for (auto* childExpr : functionExpr->arguments) {
         if (!ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos))
           return false;

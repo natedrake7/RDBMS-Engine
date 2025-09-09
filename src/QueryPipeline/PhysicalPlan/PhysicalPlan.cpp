@@ -118,7 +118,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
   PhysicalPlanResult* PhysicalTableScan::Execute(const int& batchSize){
       using namespace DatabaseEngine::StorageTypes;
-      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
       const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -140,7 +140,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -162,7 +162,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -184,7 +184,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
     
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -211,7 +211,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalPlanResult * PhysicalHeapDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -231,7 +231,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalPlanResult * PhysicalIndexScanDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -251,7 +251,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalPlanResult * PhysicalIndexSeekDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -275,7 +275,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   }
 
   PhysicalPlanResult* PhysicalTableCreate::Execute(const int& batchSize){
-    DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
     columnsPtrs.reserve(columns.size());
@@ -401,7 +401,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -423,7 +423,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -445,7 +445,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -498,7 +498,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalPlanResult * PhysicalIndexCreate::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 

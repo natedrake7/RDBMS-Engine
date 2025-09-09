@@ -244,7 +244,13 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     auto* statement = new Statements::TableName();
 
-    if (context->schemaName)
+    if (context->databaseName && context->schemaName) {
+      statement->database = std::any_cast<std::string>(visit(context->databaseName));
+      statement->schema = std::any_cast<std::string>(visit(context->schemaName));
+    }
+    else if (context->databaseName)
+      statement->schema = std::any_cast<std::string>(visit(context->databaseName));
+    else if (context->schemaName)
       statement->schema = std::any_cast<std::string>(visit(context->schemaName));
 
     statement->name = std::any_cast<std::string>(visit(context->name));

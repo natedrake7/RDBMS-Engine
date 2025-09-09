@@ -860,35 +860,9 @@ namespace Server {
   Headers::TableHeader ServerInstance::SelectTable(const string &dbName, const string &tableName) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    const vector<Value> conditions = {
-      Value(dbName, 0)
-    };
+    const auto databaseHeader = this->SelectDatabase(dbName);
 
-    vector<Row> selectedTables;
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
-
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), DataType::String));
-    key.InsertKey(Indexing::Key(tableName.data(), tableName.size(), DataType::String));
-
-    table->ClusteredIndexSeek(&selectedTables, &key, &key);
-
-    if (selectedTables.empty())
-      return {};
-
-    const auto& data = selectedTables[0].GetData();
-
-    return  Headers::TableHeader{
-          data[0]->GetInt(),
-          data[1]->GetInt(),
-          data[2]->GetInt(),
-          data[3]->GetString(),
-          data[4]->GetSmallInt(),
-            data[5]->GetBool(),
-          data[6]->GetDateTime(),
-          data[7]->GetDateTime(),
-          data[8]->GetString()
-    };
+    return this->SelectTable(databaseHeader.id, tableName, "");
   }
 
   Headers::TableHeader ServerInstance::SelectTable(const int32_t &databaseId, const string &tableName, const std::string& schema) const{
