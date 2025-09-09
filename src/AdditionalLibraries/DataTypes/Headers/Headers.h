@@ -102,7 +102,7 @@ namespace Headers {
   };
 
   struct TableHeader {
-    int32_t id = -1;
+    int32_t id = Constants::INVALID_TABLE_ID;
     int32_t databaseId;
     int32_t schemaId;
     std::string name;

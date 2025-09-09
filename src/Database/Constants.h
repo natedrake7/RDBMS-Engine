@@ -20,6 +20,7 @@ namespace Constants
     constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
 
     constexpr int32_t INVALID_DATABASE_ID = -1;
+    constexpr int32_t INVALID_TABLE_ID = -1;
 
     // table types
     typedef uint16_t table_id_t;
@@ -41,13 +42,9 @@ namespace Constants
     typedef uint64_t transaction_id_t;
 
     constexpr transaction_id_t INVALID_LOG_SEQUENCE_NUMBER = std::numeric_limits<log_sequence_number_t>::max();
-
-    constexpr table_id_t INVALID_TABLE_ID = std::numeric_limits<table_id_t>::max();
-
+    constexpr table_id_t INVALID_TABLE_ORDINAL_POS = std::numeric_limits<table_id_t>::max();
     constexpr transaction_id_t INVALID_TRANSACTION_ID = std::numeric_limits<transaction_id_t>::max();
-
     constexpr page_id_t INVALID_PAGE_ID = std::numeric_limits<page_id_t>::max();
-
     constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(int32_t);
 
     enum class AlterTableType: uint8_t {

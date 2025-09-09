@@ -34,7 +34,27 @@ namespace QueryPipeline::Statements {
     return new LogicalDelete(this->databaseId, this->table, this->where.expression);
   }
 
+  JoinStatement::JoinStatement() {
+    this->type = Constants::JoinType::Inner;
+    this->table = nullptr;
+    this->expression = nullptr;
+  }
+
+  JoinStatement::~JoinStatement(){
+      delete this->table;
+  }
+
   bool JoinStatement::Validate(){
+    const auto header = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
+
+    if (header.id == Constants::INVALID_TABLE_ID) {
+      cerr << "Table " +this->table->schema + "." +this->table->name + " does not exist" << endl;
+      return false;
+    }
+
+    this->table->tableId = header.id;
+    this->table->ordinalPosition = header.ordinalPosition;
+
     return true;
   }
 
@@ -173,17 +193,9 @@ namespace QueryPipeline::Statements {
       return true;
     }
 
-
-    for (auto& join: this->joins) {
-      const auto joinHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, join->table->name, join->table->schema);
-
-      if (joinHeader.id == -1) {
-        cerr << "Table " + join->table->schema + "." + join->table->name + " does not exist" << endl;
+    for (const auto& join: this->joins) {
+      if (!join->Validate())
         return false;
-      }
-
-      join->table->tableId = joinHeader.id;
-      join->table->ordinalPosition = joinHeader.ordinalPosition;
     }
 
     if (!ResolveAliases(aliasesDictionary, this))

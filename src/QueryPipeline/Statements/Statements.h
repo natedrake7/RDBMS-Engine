@@ -125,16 +125,8 @@ namespace QueryPipeline::Statements {
     Expressions::LogicalExpression* expression;
     Constants::JoinType type;
 
-    JoinStatement() {
-      this->type = Constants::JoinType::Inner;
-      this->table = nullptr;
-      this->expression = nullptr;
-    }
-
-    ~JoinStatement()override {
-      delete this->table;
-    }
-
+    JoinStatement();
+    ~JoinStatement()override;
     bool Validate() override;
 
     QueryPipeline::LogicalPlan* ToLogical()override;
