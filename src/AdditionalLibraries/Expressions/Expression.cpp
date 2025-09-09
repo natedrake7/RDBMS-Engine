@@ -18,7 +18,7 @@ namespace Expressions{
     this->returnType = DataType::Invalid;
   }
 
-  DataType ColumnExpression::GetReturnType() const{ return returnType; }
+  DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
 
   LiteralExpression::LiteralExpression(const Value &value){
     this->value = value;

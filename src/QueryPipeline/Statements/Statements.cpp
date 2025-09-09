@@ -698,6 +698,7 @@ namespace QueryPipeline::Statements {
             columnExistsOnTable = true;
             column->tableId = key;
             column->columnId = columnHeader.id;
+            column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
             continue;
           }
 
@@ -741,20 +742,19 @@ namespace QueryPipeline::Statements {
     }
 
     if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
+
+      //validate return type is correct
+      for (auto* childExpr : functionExpr->arguments) {
+        if (!ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos))
+          return false;
+      }
+
       //validate number of arguments
       std::string errorMessage;
       if (!functionExpr->ValidateNumberOfArguments(errorMessage)) {
         std::cerr << errorMessage << std::endl;
         return false;
       }
-
-      //validate return type is correct
-
-      for (auto* childExpr : functionExpr->arguments) {
-        if (!ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos))
-          return false;
-      }
-
     }
 
     if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
