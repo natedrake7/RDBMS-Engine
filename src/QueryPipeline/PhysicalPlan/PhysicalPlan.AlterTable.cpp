@@ -7,7 +7,7 @@
 
 namespace QueryPipeline::PhysicalPlan{
 
-  PhysicalAddColumn::PhysicalAddColumn(const int32_t &databaseId, Statements::TableName *table, Statements::AddColumn *column)
+  PhysicalAddColumn::PhysicalAddColumn(const int32_t &databaseId, Statements::TableName *table, Statements::NewColumn *column)
     : PhysicalOperator(databaseId), table(table), column(column){}
 
   PhysicalAddColumn::~PhysicalAddColumn(){

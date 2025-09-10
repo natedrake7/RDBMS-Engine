@@ -13,4 +13,5 @@ public:
 
   void AddColumn(Value& field);
   void Print()const;
+  [[nodiscard]] const std::vector<Value>& GetData()const;
 };

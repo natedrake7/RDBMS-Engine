@@ -204,7 +204,16 @@ namespace QueryPipeline::Statements {
     return true;
   }
 
-   WhereClause::WhereClause() { this->expression = nullptr; }
+  OrderColumn::OrderColumn(){
+    this->expression = nullptr;
+    this->type = OrderType::ASCENDING;
+  }
+
+  OrderColumn::~OrderColumn(){
+    delete this->expression;
+  }
+
+  WhereClause::WhereClause() { this->expression = nullptr; }
 
   bool WhereClause::IsValid() const{
     return this->expression != nullptr
@@ -212,26 +221,31 @@ namespace QueryPipeline::Statements {
           || dynamic_cast<Expressions::LogicalExpression*>(this->expression) != nullptr);
   }
 
-  bool OrderByStatement::Validate(const std::vector<ColumnName>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
+  bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
 
     HashSet<std::string> selectColumnMap;
-    for (const auto& selectColumn : selectColumns) {
-      selectColumnMap.Add(selectColumn.name);
-    }
-
-    for(const auto& column : this->columns){
-      if(!selectColumnMap.Contains(column.name)){
-        cerr << "Column " << column.name << " does not exist on the statement." << endl;
-        return false;
-      }
-
-      Headers::ColumnHeader header;
-      columnsDict.TryGetValue(column.name, header);
-
-      this->columnIndices.emplace_back(header.ordinalPosition);
-    }
+    // for (const auto& selectColumn : selectColumns) {
+    //   selectColumnMap.Add(selectColumn->name.name);
+    // }
+    //
+    // for(const auto& column : this->columns){
+    //   if(!selectColumnMap.Contains(column->name.name)){
+    //     cerr << "Column " << column->name.name << " does not exist on the statement." << endl;
+    //     return false;
+    //   }
+    //
+    //   Headers::ColumnHeader header;
+    //   columnsDict.TryGetValue(column->name.name, header);
+    //
+    //   this->columnIndices.emplace_back(header.ordinalPosition);
+    // }
 
     return true;
+  }
+
+  OrderByStatement::~OrderByStatement(){
+    for (const auto* column: this->columns)
+      delete column;
   }
 
    TableName::TableName(){ this->schema = "dbo"; }
@@ -296,9 +310,7 @@ namespace QueryPipeline::Statements {
       current = new LogicalProject(this->databaseId, current, this->results, this->columnHeaders);
 
     if(this->orderBy != nullptr){
-      const auto orderType = this->orderBy->order == "DESC" ? OrderType::DESCENDING : OrderType::ASCENDING;
-
-      current = new LogicalOrder(this->databaseId, current, this->orderBy->columnIndices, orderType);
+      current = new LogicalOrder(this->databaseId, current, this->orderBy->columnIndices, this->orderBy->order);
     }
 
     return current;
@@ -680,8 +692,8 @@ namespace QueryPipeline::Statements {
     if (statement->orderBy == nullptr)
       return true;
 
-    for (auto& column: statement->orderBy->columns) {
-      if (!ResolveColumnAlias(column, tableAliasesDictionary, statement->tableColumnsDictionary, statement))
+    for (const auto& column: statement->orderBy->columns) {
+      if (!ResolveExpressionAliases(tableAliasesDictionary, statement->tableColumnsDictionary, statement, column->expression, 0))
         return false;
     }
 
@@ -825,53 +837,6 @@ namespace QueryPipeline::Statements {
     return true;
   }
 
-  bool ResolveColumnAlias(
-    ColumnName &column,
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
-    SelectStatement *statement
-    ){
-      if (!column.alias.empty()) {
-        table_id_t tableId;
-
-        if (!tableAliasesDictionary.TryGetValue(column.alias, tableId)) {
-          cerr << "Alias: " << column.alias << " does not exist in the statement" << endl;
-          return false;
-        }
-
-        column.tableId = tableId;
-      }
-
-      bool columnExistsOnTable = false;
-      for (const auto& [key, columns]: tablesColumnsDictionary) {
-        Headers::ColumnHeader columnHeader;
-        if (!columns.TryGetValue(column.name, columnHeader))
-          continue;
-
-        if (!columnExistsOnTable) {
-          columnExistsOnTable = true;
-          column.tableId = key;
-          column.columnId = columnHeader.id;
-          continue;
-        }
-
-        // ambigiousColumn = true;
-        // break;
-      }
-
-      // if (ambigiousColumn) {
-      //   cerr << "Ambigious Column: " << column.name << std::endl;
-      //   return false;
-      // }
-
-      if (!columnExistsOnTable) {
-        std::cerr << "Column: " << column.name << " does not exist on Table" << std::endl;
-        return false;
-      }
-
-      return true;
-  }
-
   bool ResolveWildCardAlias(
     const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
@@ -927,8 +892,10 @@ namespace QueryPipeline::Statements {
     }
 
     if (statement->orderBy != nullptr) {
-      for (auto& column : statement->orderBy->columns)
-        statement->orderBy->columnIndices.emplace_back(columnIndicesDictionary.Get(column.columnId));
+      for (const auto& column : statement->orderBy->columns) {
+        // statement->orderBy->columnIndices.emplace_back(columnIndicesDictionary.Get(column->name.columnId));
+
+      }
     }
 
     //group by here later

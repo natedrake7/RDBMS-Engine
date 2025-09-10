@@ -11,7 +11,7 @@ namespace QueryPipeline{
     statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
 
     for (const auto columnContext: context->addColumn()) {
-      const auto column = std::any_cast<Statements::AddColumn*>(visit(columnContext));
+      const auto column = std::any_cast<Statements::NewColumn*>(visit(columnContext));
       statement->columns.push_back(column);
     }
 
@@ -54,7 +54,7 @@ namespace QueryPipeline{
       throw SyntaxError("Cannot set a primary key with default value NULL.", CreatePositionErrorMessage(context));
 
 
-    return new Statements::AddColumn{
+    return new Statements::NewColumn{
       .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
       .type = std::any_cast<Statements::ColumnType>(visit(context->dataType())),
       .autoIncrementKey = key,

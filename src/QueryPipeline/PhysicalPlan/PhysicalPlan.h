@@ -210,14 +210,14 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalTableCreate final : public PhysicalOperator{
       Statements::TableName*  table;
       std::string constraintName;
-      std::vector<Statements::AddColumn*> columns;
+      std::vector<Statements::NewColumn*> columns;
       Headers::Index primaryKey;
 
     public:
       PhysicalTableCreate(
         const int32_t & databaseId,
         Statements::TableName*  table,
-        std::vector<Statements::AddColumn*>& columns,
+        std::vector<Statements::NewColumn*>& columns,
         Headers::Index& primaryKey,
         std::string& constraintName);
       ~PhysicalTableCreate()override;
@@ -251,10 +251,10 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalAddColumn final : public PhysicalOperator {
     Statements::TableName* table;
-    Statements::AddColumn* column;
+    Statements::NewColumn* column;
 
     public:
-    PhysicalAddColumn(const int32_t & databaseId, Statements::TableName* table, Statements::AddColumn* column);
+    PhysicalAddColumn(const int32_t & databaseId, Statements::TableName* table, Statements::NewColumn* column);
     ~PhysicalAddColumn()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };

@@ -57,3 +57,5 @@ void QueryResult::Print() const{
       std::cout << ((i == this->data.size() - 1) ? "\n" : " || ");
   }
 }
+
+const std::vector<Value> & QueryResult::GetData()const{ return this->data; }

@@ -5,7 +5,7 @@
 
 using namespace DatabaseEngine::StorageTypes;
 
-void QuickSort::Sort(vector<Row> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions)
+void QuickSort::Sort(vector<QueryResult> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions)
 {
     if (low >= high)
         return;
@@ -16,7 +16,7 @@ void QuickSort::Sort(vector<Row> &rows, const int &low, const int &high, const v
     QuickSort::Sort(rows, pi + 1, high, sortConditions);
 }
 
-int QuickSort::Partition(vector<Row> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions)
+int QuickSort::Partition(vector<QueryResult> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions)
 {
     const auto& pivot = rows[high];
   

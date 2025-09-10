@@ -129,21 +129,27 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
     }
 }
 
-bool SortingFunctions::CompareRows(const Row& firstRow, const Row& secondRow, const vector<SortCondition> &sortConditions)
+bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResult& secondRow, const vector<SortCondition> &sortConditions)
 {
     for (const auto& condition : sortConditions)
     {
         const column_index_t& columnIndex = condition.GetColumnIndex();
 
-        const Block* firstRowData = firstRow.GetData()[columnIndex];
-        const Block* secondRowData = secondRow.GetData()[columnIndex];
+        const auto& firstValue = firstRow.GetData()[columnIndex];
+        const auto& secondValue = secondRow.GetData()[columnIndex];
 
         //if column is indexed(and it is the first condition, it is already sorted by it so set the result accordingly result is positive)
-        const int result = SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);
-    
+        // const int result = SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);
+        int result = 0;
+
+        if ((firstValue < secondValue).GetBool())
+            result = 1;
+        if ((firstValue > secondValue).GetBool())
+            result = -1;
+
         if(result == 0)
             continue;
-        
+
         return (condition.GetSortType() == OrderType::DESCENDING)
                         ? (result < 0)
                         : (result > 0);
@@ -152,7 +158,7 @@ bool SortingFunctions::CompareRows(const Row& firstRow, const Row& secondRow, co
     return false;
 }
 
-void SortingFunctions::OrderBy(vector<Row> &rows, const vector<SortCondition> &sortConditions)
+void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<SortCondition> &sortConditions)
 {
     if(rows.empty())
         return;

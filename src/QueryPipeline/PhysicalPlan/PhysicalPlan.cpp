@@ -263,7 +263,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalTableCreate::PhysicalTableCreate(
       const int32_t & databaseId,
       Statements::TableName*  table,
-      std::vector<Statements::AddColumn*> &columns,
+      std::vector<Statements::NewColumn*> &columns,
       Headers::Index& primaryKey,
       std::string& constraintName)
     : PhysicalOperator(databaseId), table(table), constraintName(std::move(constraintName)),
@@ -483,7 +483,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       );
     }
 
-    SortingFunctions::OrderBy(result->rows, conditions);
+    SortingFunctions::OrderBy(result->results, conditions);
 
     return result;
   }

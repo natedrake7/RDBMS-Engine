@@ -4,13 +4,13 @@
 
 using namespace DatabaseEngine::StorageTypes;
 
-void MergeSort::Merge(vector<Row> &rows, const int &left, const int &mid, const int &right, const vector<SortCondition>& sortConditions)
+void MergeSort::Merge(vector<QueryResult> &rows, const int &left, const int &mid, const int &right, const vector<SortCondition>& sortConditions)
 {
     int i, j;
     const int n1 = mid - left + 1;
     const int n2 = right - mid;
 
-    vector<Row> leftVec, rightVec;
+    std::vector<QueryResult> leftVec, rightVec;
 
     for (i = 0; i < n1; i++)
         leftVec.push_back(std::move(rows[left + i]));
@@ -52,7 +52,7 @@ void MergeSort::Merge(vector<Row> &rows, const int &left, const int &mid, const 
     }
 }
 
-void MergeSort::Sort(vector<Row> &rows, const int &left, const int &right, const vector<SortCondition>& sortConditions)
+void MergeSort::Sort(vector<QueryResult> &rows, const int &left, const int &right, const vector<SortCondition>& sortConditions)
 {
     if(left >= right)
         return;

@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <vector>
 #include "../../AdditionalLibraries/DataTypes/SortCondition/SortCondition.h"
+#include "../../QueryPipeline/QueryResult/QueryResult.h"
 #include "../Column/Column.h"
 
 class GroupCondition;
@@ -28,9 +29,9 @@ class SortingFunctions{
          static long double ApplyAggregateFunctionToGroup(const vector<DatabaseEngine::StorageTypes::Row*>& rowGroup, const GroupCondition& condition);
 
     public:
-         [[nodiscard]] static bool CompareRows(const DatabaseEngine::StorageTypes::Row& firstRow, const DatabaseEngine::StorageTypes::Row& secondRow, const vector<SortCondition>& sortConditions);
+         [[nodiscard]] static bool CompareRows(const QueryResult& firstRow, const QueryResult& secondRow, const vector<SortCondition>& sortConditions);
          [[nodiscard]] static bool CompareRowsAscending(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const column_index_t& columnIndex);
          [[nodiscard]] static bool CompareRowsDescending(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const column_index_t& columnIndex);
-         static void OrderBy(vector<DatabaseEngine::StorageTypes::Row>& rows, const vector<SortCondition>& sortConditions);
+         static void OrderBy(vector<QueryResult>& rows, const vector<SortCondition>& sortConditions);
          [[nodiscard]] static unordered_map<string, AggregateResults> GroupBy(const vector<DatabaseEngine::StorageTypes::Row*>& rows, const vector<GroupCondition>& sortConditions);
 };

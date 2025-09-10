@@ -3,15 +3,17 @@
 #include <string>
 #include "../Constants.h"
 #include "../../AdditionalLibraries/DataTypes/Value/Value.h"
-#include "../../QueryPipeline/Statements/Statements.h"
 
-class RowCondition;
+namespace Expressions {
+    class Expression;
+}
 
 using namespace std;
 using namespace Constants;
 
 namespace DatabaseEngine::StorageTypes
-{class Column;
+{
+    class Column;
     class Block;
     class Row;
     class Table;

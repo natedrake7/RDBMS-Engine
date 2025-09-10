@@ -73,7 +73,12 @@ namespace QueryPipeline {
       std::vector<column_index_t> columns;
       Constants::OrderType orderType;
 
-      explicit LogicalOrder(const int32_t & databaseId, LogicalPlan* child, std::vector<column_index_t>& columns, const Constants::OrderType& orderType);
+      explicit LogicalOrder(
+        const int32_t & databaseId,
+        LogicalPlan* child,
+        std::vector<column_index_t>& columns,
+        const Constants::OrderType& orderType
+        );
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
@@ -114,13 +119,13 @@ namespace QueryPipeline {
     public:
       Statements::TableName* table;
       std::string constraintName;
-      std::vector<Statements::AddColumn*> columns;
+      std::vector<Statements::NewColumn*> columns;
       vector<column_index_t> primaryKey;
 
       explicit LogicalTableCreate(
         const int32_t & databaseId,
         Statements::TableName* table,
-        std::vector<Statements::AddColumn*>& columns,
+        std::vector<Statements::NewColumn*>& columns,
         std::vector<column_index_t> primaryKey,
         std::string  constraintName);
       PhysicalPlan::PhysicalTableCreate* ToPhysical()override;
@@ -143,14 +148,14 @@ namespace QueryPipeline {
       Statements::AlterColumn* alterColumn;
       Statements::DropColumn* dropColumn;
       Statements::RenameColumn* renameColumn;
-      Statements::AddColumn* addColumn;
+      Statements::NewColumn* addColumn;
 
       explicit LogicalAlterTable(
         const int32_t & databaseId,
         Statements::TableName* table,
         const AlterTableType& type,
         Statements::AlterColumn* alterColumn,
-        Statements::AddColumn* addColumn,
+        Statements::NewColumn* addColumn,
         Statements::DropColumn* dropColumn,
         Statements::RenameColumn* renameColumn);
 

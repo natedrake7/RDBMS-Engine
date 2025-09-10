@@ -107,7 +107,20 @@ whereClause
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 orderByStatement
-    : ORDER BY columnList order=(DESC | ASC)?
+    : ORDER BY orderColumnList order?
+    ;
+
+orderColumnList
+    : orderColumn (COMMA orderColumn)*
+    ;
+
+orderColumn
+    :  resultExpression order?
+    ;
+
+order
+    : DESC
+    | ASC
     ;
 
 ////////////////////////////////////////////////////////////

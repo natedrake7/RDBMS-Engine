@@ -178,6 +178,40 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       };
   }
 
+  antlrcpp::Any SQLVisitorImplementation::visitOrderColumnList(SQLParser::OrderColumnListContext *context){
+    std::vector<Statements::OrderColumn*> orderColumns;
+
+    for (const auto& orderColumn : context->orderColumn())
+      orderColumns.push_back(std::any_cast<Statements::OrderColumn*>(visit(orderColumn)));
+
+    return orderColumns;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitOrderColumn(SQLParser::OrderColumnContext *context){
+    auto* orderColumn = new Statements::OrderColumn();
+
+    const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(context->resultExpression()));
+
+    orderColumn->expression = expression;
+
+    if (!context->order())
+      return orderColumn;
+
+    const auto orderStr = std::any_cast<std::string>(visit(context->order()));
+
+    orderColumn->type = AdditionalLibraries::StringFunctions::NormalizeString(orderStr) == "desc"
+          ? OrderType::DESCENDING
+          : OrderType::ASCENDING;
+
+    return orderColumn;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitOrder(SQLParser::OrderContext *context){
+    return context->ASC()
+        ? context->ASC()->getText()
+        : context->DESC()->getText();
+  }
+
   antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
     return Statements::ColumnType{
       .size = 0,
@@ -322,8 +356,18 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitOrderByStatement(SQLParser::OrderByStatementContext *context){
     auto* statement = new Statements::OrderByStatement();
 
-    statement->columns = std::move(this->GetColumnsList(context->columnList()));
-    statement->order = context->order ? context->order->getText() : "ASC";
+    statement->columns = std::move(std::any_cast<std::vector<Statements::OrderColumn*>>(visit(context->orderColumnList())));
+
+    if (statement->columns.empty())
+      throw SyntaxError("No columns were specified in the order by statement", CreatePositionErrorMessage(context));
+
+    if (context->order()) {
+      const auto orderStr = std::any_cast<std::string>(visit(context->order()));
+
+      statement->order = AdditionalLibraries::StringFunctions::NormalizeString(orderStr) == "desc"
+          ? OrderType::DESCENDING
+          : OrderType::ASCENDING;
+    }
 
     return statement;
   }
@@ -351,7 +395,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     const auto& action = context->alterTableAction();
 
     if (action->alterTableAddColumn()) {
-      statement->addColumn = std::any_cast<Statements::AddColumn*>(visit(action->alterTableAddColumn()));
+      statement->addColumn = std::any_cast<Statements::NewColumn*>(visit(action->alterTableAddColumn()));
       statement->type = AlterTableType::AddColumn;
       return statement;
     }

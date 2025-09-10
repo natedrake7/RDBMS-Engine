@@ -28,7 +28,7 @@ namespace QueryPipeline::Statements {
     ~Identity() = default;
   };
 
-  struct AddColumn {
+  struct NewColumn {
     Statements::ColumnName name;
     ColumnType type;
     Identity* autoIncrementKey;
@@ -38,6 +38,14 @@ namespace QueryPipeline::Statements {
     bool isNullable;
 
     column_index_t index;
+  };
+
+  struct OrderColumn {
+    Expressions::Expression* expression;
+    OrderType type;
+
+    OrderColumn();
+    ~OrderColumn();
   };
 
   struct AlterColumn {
@@ -78,10 +86,11 @@ namespace QueryPipeline::Statements {
   struct OrderByStatement{
     std::vector<column_index_t> columnIndices;
 
-    std::vector<ColumnName> columns;
-    std::string order;
+    std::vector<OrderColumn*> columns;
+    OrderType order;
 
-    bool Validate(const std::vector<ColumnName>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict);
+    ~OrderByStatement();
+    bool Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict);
   };
 
   struct TableName {
@@ -134,7 +143,7 @@ namespace QueryPipeline::Statements {
 
   struct CreateTableStatement final: Statement {
     TableName* table;
-    std::vector<AddColumn*> columns;
+    std::vector<NewColumn*> columns;
     PrimaryKeyConstraint* constraint;
     vector<column_index_t> primaryKey;
 
@@ -224,7 +233,7 @@ namespace QueryPipeline::Statements {
     TableName* table;
     Constants::AlterTableType type;
 
-    AddColumn* addColumn;
+    NewColumn* addColumn;
     AlterColumn* alterColumn;
     DropColumn* dropColumn;
     RenameColumn* renameColumn;
@@ -258,13 +267,6 @@ namespace QueryPipeline::Statements {
   static bool ResolveExpressionAliases(
     SelectStatement *statement,
     Expressions::Expression *expr
-    );
-
-  static bool ResolveColumnAlias(
-    ColumnName& column,
-    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    SelectStatement *statement
     );
 
   static bool ResolveWildCardAlias(

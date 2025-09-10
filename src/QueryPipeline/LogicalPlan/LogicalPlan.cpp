@@ -149,7 +149,7 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
   LogicalTableCreate::LogicalTableCreate(
         const int32_t & databaseId,
         Statements::TableName*  table,
-        std::vector<Statements::AddColumn*>& columns,
+        std::vector<Statements::NewColumn*>& columns,
         std::vector<column_index_t> primaryKey,
         std::string  constraintName)
     : LogicalPlan(databaseId), table(table), columns(std::move(columns)),
@@ -225,7 +225,7 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     Statements::TableName *table,
     const AlterTableType& type,
     Statements::AlterColumn *alterColumn,
-    Statements::AddColumn *addColumn,
+    Statements::NewColumn *addColumn,
     Statements::DropColumn *dropColumn,
     Statements::RenameColumn *renameColumn)
     : LogicalPlan(databaseId), table(table), type(type) , alterColumn(alterColumn), dropColumn(dropColumn), renameColumn(renameColumn), addColumn(addColumn) {}
