@@ -461,29 +461,21 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalOrderBy::PhysicalOrderBy(
       const int32_t & databaseId,
       PhysicalOperator *child,
-      vector<column_index_t> & columns,
-      const OrderType & orderType)
-    : PhysicalOperator(databaseId), child(child), columns(std::move(columns)), orderType(orderType){}
+      std::vector<Statements::OrderColumn*>& expressions)
+    : PhysicalOperator(databaseId), child(child), expressions(std::move(expressions)){}
 
   PhysicalOrderBy::~PhysicalOrderBy(){
+    for (const auto* column : this->expressions) {
+      delete column;
+    }
+
     delete this->child;
   }
 
   PhysicalPlanResult* PhysicalOrderBy::Execute(const int& batchSize){
     auto* result = this->child->Execute(batchSize);
 
-    std::vector<DatabaseEngine::StorageTypes::Row*> rowsPtrs;
-
-    std::vector<SortCondition> conditions;
-    for(const auto& column : this->columns){
-      conditions.emplace_back(
-      column,
-      this->orderType,
-    false
-      );
-    }
-
-    SortingFunctions::OrderBy(result->results, conditions);
+    SortingFunctions::OrderBy(result->results, this->expressions);
 
     return result;
   }

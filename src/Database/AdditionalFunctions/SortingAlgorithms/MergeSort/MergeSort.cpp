@@ -4,7 +4,7 @@
 
 using namespace DatabaseEngine::StorageTypes;
 
-void MergeSort::Merge(vector<QueryResult> &rows, const int &left, const int &mid, const int &right, const vector<SortCondition>& sortConditions)
+void MergeSort::Merge(vector<QueryResult> &rows, const int &left, const int &mid, const int &right, const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions)
 {
     int i, j;
     const int n1 = mid - left + 1;
@@ -52,7 +52,7 @@ void MergeSort::Merge(vector<QueryResult> &rows, const int &left, const int &mid
     }
 }
 
-void MergeSort::Sort(vector<QueryResult> &rows, const int &left, const int &right, const vector<SortCondition>& sortConditions)
+void MergeSort::Sort(vector<QueryResult> &rows, const int &left, const int &right, const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions)
 {
     if(left >= right)
         return;

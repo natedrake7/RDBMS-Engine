@@ -24,8 +24,8 @@ int QuickSort::Partition(vector<QueryResult> &rows, const int &low, const int &h
 
     for (int j = low; j <= high - 1; j++)
     {
-        if(!SortingFunctions::CompareRows(rows[j], pivot, sortConditions))
-            continue;
+        // if(!SortingFunctions::CompareRows(rows[j], pivot, sortConditions))
+        //     continue;
         
         i++;
 

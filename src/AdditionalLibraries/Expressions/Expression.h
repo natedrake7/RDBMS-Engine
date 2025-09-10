@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "Expressions.Additional.h"
+#include "../../QueryPipeline/QueryResult/QueryResult.h"
 #include "../DataTypes/Value/Value.h"
 
 namespace DatabaseEngine::StorageTypes {
@@ -25,6 +26,7 @@ namespace Expressions{
       Expression() = default;
 
       [[nodiscard]] virtual Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const = 0;
+      [[nodiscard]] virtual Value Evaluate(const QueryResult& row) const = 0;
       [[nodiscard]] virtual DataType GetReturnType() const = 0;
   };
 
@@ -44,6 +46,7 @@ namespace Expressions{
       ~ColumnExpression()override = default;
 
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+      [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
       [[nodiscard]] DataType GetReturnType() const override;
   };
 
@@ -55,6 +58,7 @@ namespace Expressions{
       ~LiteralExpression()override = default;
 
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+      [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
       [[nodiscard]] DataType GetReturnType() const override;
   };
 
@@ -70,6 +74,7 @@ namespace Expressions{
 
     //TODO : Implement Evaluate for BinaryExpression where left and rig*  are evaluated and Field Addition is implemented with data type coercion.
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+      [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
       [[nodiscard]]DataType GetReturnType() const override;
   };
 
@@ -93,6 +98,7 @@ namespace Expressions{
       ~FunctionExpression()override;
 
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+      [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
 
       //String Function
 
@@ -140,6 +146,7 @@ namespace Expressions{
       ~LogicalExpression()override;
 
     [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
+    [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
 
     [[nodiscard]] DataType GetReturnType() const override;
 };

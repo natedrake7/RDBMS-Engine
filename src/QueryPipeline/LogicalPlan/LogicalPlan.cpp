@@ -202,11 +202,11 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
       return new PhysicalPlan::PhysicalHeapUpdate(this->databaseId, this->table, this->expression, this->fields);
   }
 
-  LogicalOrder::LogicalOrder(const int32_t & databaseId, LogicalPlan *child, vector<column_index_t> & columns, const OrderType & orderType)
-    : LogicalPlan(databaseId), child(child), columns(std::move(columns)), orderType(orderType) {}
+  LogicalOrder::LogicalOrder(const int32_t & databaseId, LogicalPlan *child, std::vector<Statements::OrderColumn*>& expressions)
+    : LogicalPlan(databaseId), child(child), expressions(std::move(expressions)) {}
 
   PhysicalPlan::PhysicalOperator* LogicalOrder::ToPhysical(){
-    return new PhysicalPlan::PhysicalOrderBy(this->databaseId, this->child->ToPhysical(), this->columns, this->orderType);
+    return new PhysicalPlan::PhysicalOrderBy(this->databaseId, this->child->ToPhysical(), this->expressions);
   }
 
   LogicalIndexCreate::LogicalIndexCreate(

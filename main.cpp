@@ -59,6 +59,7 @@ void InsertRowsToMoviesTable(Table* table);
 //add defragmentation thread (check Overflow pages and possibly Data Pages to defragment)
 //validate length of columns to match max record_size from master DB on inserts and updates
 //validate order by accepts expressions and evaluates them and then orders
+//also add function expression evaluation for query results.
 
 std::atomic<bool> serverRunning{true};
 

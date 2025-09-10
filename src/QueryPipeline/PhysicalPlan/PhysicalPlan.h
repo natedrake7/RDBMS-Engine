@@ -226,11 +226,9 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalOrderBy final : public PhysicalOperator{
     PhysicalOperator* child;
-    std::vector<column_index_t> columns;
-    Constants::OrderType orderType;
-
+    std::vector<Statements::OrderColumn*> expressions;
   public:
-    PhysicalOrderBy(const int32_t & databaseId, PhysicalOperator* child, std::vector<column_index_t>& columns, const Constants::OrderType& orderType);
+    PhysicalOrderBy(const int32_t & databaseId, PhysicalOperator* child, std::vector<Statements::OrderColumn*>& expressions);
     ~PhysicalOrderBy()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };

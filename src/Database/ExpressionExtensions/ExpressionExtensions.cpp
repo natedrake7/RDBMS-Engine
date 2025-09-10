@@ -48,7 +48,15 @@ namespace Expressions {
     return Value(data->GetBlockData(), data->GetBlockSize(), data->GetColumnType());
   }
 
+  Value ColumnExpression::Evaluate(const QueryResult &row) const{
+    return row.GetData().at(this->columnIndex);
+  }
+
   Value LiteralExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const{
+    return this->value;
+  }
+
+  Value LiteralExpression::Evaluate(const QueryResult &row) const{
     return this->value;
   }
 
@@ -82,6 +90,35 @@ namespace Expressions {
     }
   }
 
+  Value BinaryExpression::Evaluate(const QueryResult &row) const{
+    switch (this->operation) {
+    case ExpressionOperator::Add:
+      return this->left->Evaluate(row) + this->right->Evaluate(row);
+    case ExpressionOperator::Subtract:
+      return this->left->Evaluate(row) - this->right->Evaluate(row);
+    case ExpressionOperator::Multiply:
+      return this->left->Evaluate(row) * this->right->Evaluate(row);
+    case ExpressionOperator::Divide:
+      return this->left->Evaluate(row) / this->right->Evaluate(row);
+    case ExpressionOperator::Modulo:
+      return this->left->Evaluate(row) % this->right->Evaluate(row);
+    case ExpressionOperator::Equal:
+      return this->left->Evaluate(row) == this->right->Evaluate(row);
+    case ExpressionOperator::NotEqual:
+      return this->left->Evaluate(row) != this->right->Evaluate(row);
+    case ExpressionOperator::Greater:
+      return this->left->Evaluate(row) > this->right->Evaluate(row);
+    case ExpressionOperator::GreaterEqual:
+      return this->left->Evaluate(row) >= this->right->Evaluate(row);
+    case ExpressionOperator::Less:
+      return this->left->Evaluate(row) < this->right->Evaluate(row);
+    case ExpressionOperator::LessEqual:
+      return this->left->Evaluate(row) <= this->right->Evaluate(row);
+    default:
+      throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
+    }
+  }
+
   Value LogicalExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const {
     switch (this->type) {
       case ExpressionType::And:{
@@ -99,6 +136,26 @@ namespace Expressions {
       case ExpressionType::Invalid:
       default:
       throw std::runtime_error("Unknown predicate" + std::to_string(static_cast<int>(this->type)));
+    }
+  }
+
+  Value LogicalExpression::Evaluate(const QueryResult &row) const{
+    switch (this->type) {
+      case ExpressionType::And:{
+        const auto leftValue = this->left->Evaluate(row);
+        const auto rightValue = this->right->Evaluate(row);
+
+        return Value(leftValue.GetBool() && rightValue.GetBool(), 0);
+      }
+      case ExpressionType::Or:{
+        const auto leftValue = this->left->Evaluate(row);
+        const auto rightValue = this->right->Evaluate(row);
+
+        return Value(leftValue.GetBool() || rightValue.GetBool(), 0);
+      }
+      case ExpressionType::Invalid:
+      default:
+        throw std::runtime_error("Unknown predicate" + std::to_string(static_cast<int>(this->type)));
     }
   }
 
@@ -232,5 +289,10 @@ namespace Expressions {
 
   Value FunctionExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const {
     return FunctionDictionary.Get(this->type)(this, row);
+  }
+
+  Value FunctionExpression::Evaluate(const QueryResult &row) const{
+    return Value("");
+    // return FunctionDictionary.Get(this->type)(this, row);
   }
 }

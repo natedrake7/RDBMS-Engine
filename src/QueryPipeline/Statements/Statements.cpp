@@ -310,7 +310,7 @@ namespace QueryPipeline::Statements {
       current = new LogicalProject(this->databaseId, current, this->results, this->columnHeaders);
 
     if(this->orderBy != nullptr){
-      current = new LogicalOrder(this->databaseId, current, this->orderBy->columnIndices, this->orderBy->order);
+      current = new LogicalOrder(this->databaseId, current, this->orderBy->columns);
     }
 
     return current;
@@ -883,7 +883,7 @@ namespace QueryPipeline::Statements {
     return true;
   }
 
-  void AssignColumnsToIndices(SelectStatement *statement, Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary){
+  void AssignColumnsToIndices(SelectStatement *statement, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary){
     for (const auto& resultExpr : statement->results)
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, resultExpr);
 
@@ -893,8 +893,7 @@ namespace QueryPipeline::Statements {
 
     if (statement->orderBy != nullptr) {
       for (const auto& column : statement->orderBy->columns) {
-        // statement->orderBy->columnIndices.emplace_back(columnIndicesDictionary.Get(column->name.columnId));
-
+        AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, column->expression);
       }
     }
 

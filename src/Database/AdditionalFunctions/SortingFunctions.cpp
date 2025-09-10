@@ -129,14 +129,12 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
     }
 }
 
-bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResult& secondRow, const vector<SortCondition> &sortConditions)
+bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResult& secondRow, const vector<QueryPipeline::Statements::OrderColumn*> &sortConditions)
 {
     for (const auto& condition : sortConditions)
     {
-        const column_index_t& columnIndex = condition.GetColumnIndex();
-
-        const auto& firstValue = firstRow.GetData()[columnIndex];
-        const auto& secondValue = secondRow.GetData()[columnIndex];
+        const auto& firstValue = condition->expression->Evaluate(firstRow);
+        const auto& secondValue = condition->expression->Evaluate(secondRow);
 
         //if column is indexed(and it is the first condition, it is already sorted by it so set the result accordingly result is positive)
         // const int result = SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);
@@ -150,7 +148,7 @@ bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResul
         if(result == 0)
             continue;
 
-        return (condition.GetSortType() == OrderType::DESCENDING)
+        return (condition->type == OrderType::DESCENDING)
                         ? (result < 0)
                         : (result > 0);
     }
@@ -158,7 +156,7 @@ bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResul
     return false;
 }
 
-void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<SortCondition> &sortConditions)
+void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<QueryPipeline::Statements::OrderColumn*> &conditions)
 {
     if(rows.empty())
         return;
@@ -166,17 +164,17 @@ void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<SortCondi
     //handle multiple conditions priority
     //after first condition break into multiple arrays where the first condition is satisfied
     //order by the 2nd condition. do it for the rest etc.
-    const auto& condition = sortConditions.front();
-    const bool& isColumnIndexed = condition.GetIsColumnIndexed();
-    const OrderType sortType = condition.GetSortType();
-    
-    if(isColumnIndexed && sortType == OrderType::ASCENDING)
-        return;
-    if(isColumnIndexed && sortType == OrderType::DESCENDING)
-    {
-        ranges::reverse(rows);
-        return;
-    }
+    // const auto& condition = conditions.front();
+    // const bool& isColumnIndexed = condition.GetIsColumnIndexed();
+    // const OrderType sortType = condition->type;
+    //
+    // if(isColumnIndexed && sortType == OrderType::ASCENDING)
+    //     return;
+    // if(isColumnIndexed && sortType == OrderType::DESCENDING)
+    // {
+    //     ranges::reverse(rows);
+    //     return;
+    // }
 
     //if dataset is small use quicksort (is it needed?)
     // if(rows.size() <= 1000)
@@ -186,7 +184,7 @@ void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<SortCondi
     // }
     //else mergesort
     
-    MergeSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), sortConditions);
+    MergeSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), conditions);
 }
 
 unordered_map<string, AggregateResults> SortingFunctions::GroupBy(const vector<Row*> &rows, const vector<GroupCondition> &sortConditions)

@@ -171,7 +171,6 @@ namespace QueryPipeline::Statements {
     ~SelectStatement() override;
     bool Validate() override;
     LogicalPlan* ToLogical() override;
-
   };
 
   struct CreateDbStatement final : Statement{
@@ -277,7 +276,7 @@ namespace QueryPipeline::Statements {
     const int& indexPos
     );
 
-  static void AssignColumnsToIndices(SelectStatement* statement, Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary);
+  static void AssignColumnsToIndices(SelectStatement* statement, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);
 
   static void AssignColumnIndicesToResultExpression(
     SelectStatement* statement,

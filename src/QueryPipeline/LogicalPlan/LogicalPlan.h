@@ -70,14 +70,12 @@ namespace QueryPipeline {
   class LogicalOrder final : public LogicalPlan {
     public:
       LogicalPlan* child;
-      std::vector<column_index_t> columns;
-      Constants::OrderType orderType;
+      std::vector<Statements::OrderColumn*> expressions;
 
       explicit LogicalOrder(
         const int32_t & databaseId,
         LogicalPlan* child,
-        std::vector<column_index_t>& columns,
-        const Constants::OrderType& orderType
+        std::vector<Statements::OrderColumn*>& expressions
         );
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
