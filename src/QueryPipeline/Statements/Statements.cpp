@@ -781,7 +781,7 @@ namespace QueryPipeline::Statements {
   }
 
   bool ResolvePostProjectionColumnAlias(
-    const Expressions::ColumnExpression *column,
+    Expressions::ColumnExpression *column,
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
     ){
 
@@ -791,6 +791,7 @@ namespace QueryPipeline::Statements {
       return false;
     }
 
+    column->returnType = expression->GetReturnType();
     return true;
   }
 

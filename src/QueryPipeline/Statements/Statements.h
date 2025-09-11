@@ -256,7 +256,7 @@ namespace QueryPipeline::Statements {
     );
 
   static bool ResolvePostProjectionColumnAlias(
-    const Expressions::ColumnExpression* column,
+    Expressions::ColumnExpression* column,
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
     );
 
