@@ -84,10 +84,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct OrderByStatement{
-    std::vector<column_index_t> columnIndices;
-
     std::vector<OrderColumn*> columns;
-    OrderType order;
 
     ~OrderByStatement();
     bool Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict);

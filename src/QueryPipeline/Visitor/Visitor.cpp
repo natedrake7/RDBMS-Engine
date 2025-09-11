@@ -361,14 +361,6 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (statement->columns.empty())
       throw SyntaxError("No columns were specified in the order by statement", CreatePositionErrorMessage(context));
 
-    if (context->order()) {
-      const auto orderStr = std::any_cast<std::string>(visit(context->order()));
-
-      statement->order = AdditionalLibraries::StringFunctions::NormalizeString(orderStr) == "desc"
-          ? OrderType::DESCENDING
-          : OrderType::ASCENDING;
-    }
-
     return statement;
   }
 
