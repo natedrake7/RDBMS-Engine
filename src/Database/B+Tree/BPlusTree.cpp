@@ -54,7 +54,7 @@ namespace Indexing
     //    this->DeleteNode(root);
     //}
 
-    int BPlusTree::CalculateTreeDegree(const Table* table, const TreeType& treeType, const int& nonClusteredIndexId)
+    int BPlusTree::CalculateTreeDegree(const Table* table, const TreeType& treeType, const int& nonClusteredIndexId)const
     {
         if(treeType == TreeType::Clustered){
           const uint32_t pageSize = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
@@ -249,7 +249,7 @@ namespace Indexing
             return node;
         }
         
-        const auto iterator = std::lower_bound(keys->begin(), keys->end(), &key);
+        const auto iterator = ranges::lower_bound(*keys, &key);
 
         int childIndex = iterator - keys->begin();
 
@@ -432,11 +432,7 @@ namespace Indexing
 
         while (currentNode)
         {
-            const auto* rows = currentNode->GetDataRowsUnsafe();
-
-            for (int i = 0; i < rows->size(); i++) {
-                auto* row = rows->at(i);
-
+            for (auto* row : *currentNode->GetDataRowsUnsafe()) {
                 const RowHeader *rowHeader = row->GetHeader();
 
                 vector<Block *> copyBlocks = row->GetBlockCopies();
@@ -751,11 +747,11 @@ namespace Indexing
 
         while (currentNode)
         {
-            auto* keys = currentNode->GetKeysUnsafe();
+            const auto* keys = currentNode->GetKeysUnsafe();
 
             if (previousNode && maxKey >= *keys->at(0))
             {
-                auto* previousKeys = previousNode->GetKeysUnsafe();
+                const auto* previousKeys = previousNode->GetKeysUnsafe();
 
                 // Check if the last key in the previous node is within the range
                 if (maxKey >= *previousKeys->at(previousKeys->size() - 1)) {
@@ -796,7 +792,7 @@ namespace Indexing
         {
             auto* keys = currentNode->GetKeysUnsafe();
 
-            const auto iterator = std::lower_bound(keys->begin(), keys->end(), &key);
+            const auto iterator = ranges::lower_bound(*keys, &key);
 
             const int index = iterator - keys->begin();
 
@@ -864,7 +860,7 @@ namespace Indexing
       }
       else{
             auto* rows = currentNode->GetDataRowsUnsafe();
-            Row* row = rows->at(keyIndex);
+            const auto* row = rows->at(keyIndex);
 
             rows->erase(rows->begin() + keyIndex);
 
@@ -920,7 +916,7 @@ namespace Indexing
   }
 
     void BPlusTree::HandleRootUnderflow() {
-        auto* keys = this->root->GetKeysUnsafe();
+        const auto* keys = this->root->GetKeysUnsafe();
         auto* children = this->root->GetChildren();
 
         //root only has one child, delete current root and make child root
@@ -1163,7 +1159,7 @@ namespace Indexing
         {
             auto* keys = currentNode->GetKeysUnsafe();
 
-            const auto iterator = std::lower_bound(keys->begin(), keys->end(), &key);
+            const auto iterator = ranges::lower_bound(*keys, &key);
 
             const int index = iterator - keys->begin();
 
@@ -1180,7 +1176,7 @@ namespace Indexing
       {
         auto* keys = currentNode->GetKeysUnsafe();
 
-        const auto iterator = std::lower_bound(keys->begin(), keys->end(), &key);
+        const auto iterator = ranges::lower_bound(*keys, &key);
 
         const int index = iterator - keys->begin();
 

@@ -97,7 +97,7 @@ namespace Indexing
         [[nodiscard]] Pages::IndexPage *SearchLeftMostLeafNode() const;
 
         [[nodiscard]] Pages::IndexPage * GetNode(const page_id_t& pageId) const;
-        [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId);
+        [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId)const;
 
         [[nodiscard]] Pages::IndexPage* AllocateNewPage(const page_id_t& parentPageId)const;
 
