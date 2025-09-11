@@ -49,7 +49,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
         QueryResult resultRow;
 
         for (const auto& expression : this->resultExpressions) {
-          result->columns.emplace_back(expression->alias);
+          result->columns.emplace_back(expression->name);
 
           auto field = expression->Evaluate(nullptr);
           resultRow.AddColumn(field);
@@ -63,7 +63,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       auto* result = this->child->Execute(batchSize);
 
       for (const auto& expression : this->resultExpressions)
-        result->columns.emplace_back(expression->alias);
+        result->columns.emplace_back(expression->name);
 
       for (auto& row: result->rows) {
           QueryResult resultRow;

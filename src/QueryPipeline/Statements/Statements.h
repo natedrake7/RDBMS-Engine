@@ -255,6 +255,11 @@ namespace QueryPipeline::Statements {
     const int& indexPos
     );
 
+  static bool ResolvePostProjectionColumnAlias(
+    const Expressions::ColumnExpression* column,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    );
+
   static bool ResolveExpressionAliases(
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
@@ -262,6 +267,11 @@ namespace QueryPipeline::Statements {
     Expressions::Expression *expr,
     const int& indexPos
     );
+
+  static bool ResolvePostProjectionAliases(
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases,
+    Expressions::Expression *expr
+  );
 
   static bool ResolveExpressionAliases(
     SelectStatement *statement,
@@ -281,6 +291,10 @@ namespace QueryPipeline::Statements {
   static void AssignColumnIndicesToResultExpression(
     SelectStatement* statement,
     const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    Expressions::Expression* expr);
+
+  static void AssignPostProjectionIndicesToExpression(
+    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
     Expressions::Expression* expr);
 
 }

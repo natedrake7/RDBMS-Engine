@@ -572,7 +572,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       expression = new Expressions::LogicalExpression(expression, right, Expressions::ExpressionType::Or);
     }
 
-    expression->alias = (context->alias()) ? std::any_cast<std::string>(visit(context->alias())) : "";
+    expression->name = (context->alias()) ? std::any_cast<std::string>(visit(context->alias())) : "";
 
     return ExpressionWrapper{ expression };
   }

@@ -21,7 +21,7 @@ namespace QueryPipeline::Statements {
 namespace Expressions{
   class Expression {
     public:
-      std::string alias;
+      std::string name;
       virtual ~Expression() = default;
       Expression() = default;
 
@@ -32,7 +32,7 @@ namespace Expressions{
 
   class ColumnExpression final : public Expression {
     public:
-      std::string name;
+      std::string alias;
       std::string tableAlias;
 
       int32_t tableId;

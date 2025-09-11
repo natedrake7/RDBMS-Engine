@@ -4,7 +4,7 @@
 namespace Expressions{
 
   ColumnExpression::ColumnExpression(const std::string &name, const std::string &tableAlias){
-    this->name = name;
+    this->alias = name;
     this->tableAlias = tableAlias;
 
     this->tableId = -1;

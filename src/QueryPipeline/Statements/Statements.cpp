@@ -277,8 +277,9 @@ namespace QueryPipeline::Statements {
             : nullptr;
 
     //join re orders take place here
-    Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
+
     if (this->table != nullptr) {
+      Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
       Constants::column_index_t columnIndex = 0;
 
       for (const auto &columnsDict : this->tableColumnsDictionary | views::values) {
@@ -301,15 +302,25 @@ namespace QueryPipeline::Statements {
       //build logicalJoin
     }
 
-    if (this->where.expression != nullptr) {
-      //do the same for joins
-      AssignColumnIndicesToResultExpression(this, columnIndicesDictionary, this->where.expression);
+    Dictionary<std::string, Constants::column_index_t> postProjectionIndicesDictionary;
+
+    for (int i = 0;i < this->results.size(); i++) {
+      const auto& resultExpr = this->results[i];
+
+      if (resultExpr->name.empty())
+        continue;
+
+      postProjectionIndicesDictionary.Add(resultExpr->name, i);
     }
 
     if (!this->results.empty())
       current = new LogicalProject(this->databaseId, current, this->results, this->columnHeaders);
 
-    if(this->orderBy != nullptr){
+    if(this->orderBy != nullptr) {
+      for (const auto& column : this->orderBy->columns) {
+        AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
+      }
+
       current = new LogicalOrder(this->databaseId, current, this->orderBy->columns);
     }
 
@@ -692,8 +703,22 @@ namespace QueryPipeline::Statements {
     if (statement->orderBy == nullptr)
       return true;
 
+    Dictionary<std::string, const Expressions::Expression*> postProjectionAliases;
+
+    for (const auto* resultExpr : statement->results) {
+      if (resultExpr->name.empty())
+        continue;
+
+      if (postProjectionAliases.Contains(resultExpr->name)) {
+        std::cerr << resultExpr->name << " already exists on result set"<< std::endl;
+        return false;
+      }
+
+      postProjectionAliases.Add(resultExpr->name, resultExpr);
+    }
+
     for (const auto& column: statement->orderBy->columns) {
-      if (!ResolveExpressionAliases(tableAliasesDictionary, statement->tableColumnsDictionary, statement, column->expression, 0))
+      if (!ResolvePostProjectionAliases(postProjectionAliases, column->expression))
         return false;
     }
 
@@ -707,7 +732,7 @@ namespace QueryPipeline::Statements {
       SelectStatement *statement,
       const int& indexPos){
 
-        if (column->name == "*")
+        if (column->alias == "*")
           return ResolveWildCardAlias(column, tableAliasesDictionary, tablesColumnsDictionary, statement, indexPos);
 
         if (!column->tableAlias.empty()) {
@@ -724,7 +749,7 @@ namespace QueryPipeline::Statements {
         bool columnExistsOnTable = false;
         Headers::ColumnHeader columnHeader;
         for (const auto& [key, columns]: tablesColumnsDictionary) {
-          if (!columns.TryGetValue(column->name, columnHeader))
+          if (!columns.TryGetValue(column->alias, columnHeader))
             continue;
 
           if (!columnExistsOnTable) {
@@ -745,14 +770,28 @@ namespace QueryPipeline::Statements {
         // }
 
       if (!columnExistsOnTable) {
-        std::cerr << "Column: " << column->name << " does not exist on Table" << std::endl;
+        std::cerr << "Column: " << column->alias << " does not exist on Table" << std::endl;
         return false;
       }
 
-      if (column->alias.empty())
-        column->alias = columnHeader.name;
+      if (column->name.empty())
+        column->name = columnHeader.name;
 
       return true;
+  }
+
+  bool ResolvePostProjectionColumnAlias(
+    const Expressions::ColumnExpression *column,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    ){
+
+    const Expressions::Expression* expression;
+    if (!postProjectionAliases.TryGetValue(column->alias, expression)) {
+      std::cerr << "Column: " << column->alias << " does not exist in the statement" << std::endl;
+      return false;
+    }
+
+    return true;
   }
 
   bool ResolveExpressionAliases(
@@ -767,7 +806,7 @@ namespace QueryPipeline::Statements {
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
       if (statement->table == nullptr) {
-        std::cerr << "No table was specified but column with name: " << columnExpr->name << " was specified." << std::endl;
+        std::cerr << "No table was specified but column with name: " << columnExpr->alias << " was specified." << std::endl;
         return false;
       }
 
@@ -800,13 +839,48 @@ namespace QueryPipeline::Statements {
     return true;
   }
 
+  bool ResolvePostProjectionAliases(
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases,
+    Expressions::Expression *expr){
+    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
+      return  ResolvePostProjectionAliases(postProjectionAliases, binaryExpr->left)
+          && ResolvePostProjectionAliases(postProjectionAliases, binaryExpr->right);
+
+    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr))
+      return ResolvePostProjectionColumnAlias(columnExpr, postProjectionAliases);
+
+    if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
+      //validate children expressions and assign return types and ids to column expressions
+      for (auto* childExpr : functionExpr->arguments) {
+        if (!ResolvePostProjectionAliases(postProjectionAliases, childExpr))
+          return false;
+      }
+
+      //validate number of arguments
+      std::string errorMessage;
+      if (!functionExpr->ValidateNumberOfArguments(errorMessage)) {
+        std::cerr << errorMessage << std::endl;
+        return false;
+      }
+    }
+
+    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
+      //validate type
+
+      return ResolvePostProjectionAliases(postProjectionAliases, logicalExpr->left)
+        && ResolvePostProjectionAliases(postProjectionAliases, logicalExpr->right);
+    }
+
+    return true;
+  }
+
   bool ResolveExpressionAliases(SelectStatement *statement, Expressions::Expression *expr){
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
       return  ResolveExpressionAliases(statement, binaryExpr->left) &&
               ResolveExpressionAliases(statement, binaryExpr->right);
 
     if (const auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
-        std::cerr << "No table was specified but column with name: " << columnExpr->name << " was specified." << std::endl;
+        std::cerr << "No table was specified but column with name: " << columnExpr->alias << " was specified." << std::endl;
         return false;
     }
 
@@ -844,7 +918,7 @@ namespace QueryPipeline::Statements {
     SelectStatement *statement,
     const int& indexPos){
 
-    if (column->name != "*")
+    if (column->alias != "*")
       return true;
 
     table_id_t tableId = 0;
@@ -870,7 +944,7 @@ namespace QueryPipeline::Statements {
             : statement->table->alias
         );
 
-      columnExpression->alias = header.name;
+      columnExpression->name = header.name;
       columnExpression->columnId = header.id;
       columnExpression->tableId = statement->table->tableId;
 
@@ -887,16 +961,8 @@ namespace QueryPipeline::Statements {
     for (const auto& resultExpr : statement->results)
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, resultExpr);
 
-    if (statement->where.expression != nullptr) {
+    if (statement->where.expression != nullptr)
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, statement->where.expression);
-    }
-
-    if (statement->orderBy != nullptr) {
-      for (const auto& column : statement->orderBy->columns) {
-        AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, column->expression);
-      }
-    }
-
     //group by here later
   }
 
@@ -908,12 +974,10 @@ namespace QueryPipeline::Statements {
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, binaryExpr->left);
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, binaryExpr->right);
-
       return;
     }
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
-
       columnExpr->columnIndex = columnIndicesDictionary.Get(columnExpr->columnId);
       return;
     }
@@ -921,15 +985,38 @@ namespace QueryPipeline::Statements {
     if (const auto* funcExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
       for (auto* childExpr : funcExpr->arguments)
         AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, childExpr);
-
       return;
     }
 
     if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, logicalExpr->left);
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, logicalExpr->right);
+    }
+  }
 
+  void AssignPostProjectionIndicesToExpression(
+    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    Expressions::Expression *expr){
+    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, binaryExpr->left);
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, binaryExpr->right);
       return;
+    }
+
+    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
+      columnExpr->columnIndex = columnIndicesDictionary.Get(columnExpr->alias);
+      return;
+    }
+
+    if (const auto* funcExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
+      for (auto* childExpr : funcExpr->arguments)
+        AssignPostProjectionIndicesToExpression(columnIndicesDictionary, childExpr);
+      return;
+    }
+
+    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, logicalExpr->left);
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, logicalExpr->right);
     }
   }
 
