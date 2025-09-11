@@ -11,24 +11,38 @@ using namespace Constants;
 Value::Value()
 {
     this->data = nullptr;
+    this->size = 0;
+    this->type = DataType::Invalid;
     this->columnIndex = 0;
     this->isIdentifier = false;
+}
+
+Value::Value(const Value &copyVal){
+    this->size = copyVal.size;
+    this->type = copyVal.type;
+    this->columnIndex = copyVal.columnIndex;
+    this->isIdentifier = copyVal.isIdentifier;
+
+    this->data = new object_t[this->size];
+    memcpy(this->data, copyVal.data, this->size);
 }
 
 Value::Value(const void *data, const Constants::column_index_t &columnIndex){
     this->data = nullptr;
     this->columnIndex = columnIndex;
+    this->size = 0;
     this->type = DataType::Invalid;
     this->isIdentifier = false;
 }
 
 Value::Value(const unsigned char *data, const int &size, const DataType &type){
     this->data = new object_t[size];
-
     memcpy(this->data, data, size);
 
     this->size = size;
     this->type = type;
+    this->columnIndex = 0;
+    this->isIdentifier = false;
 }
 
 Value::Value(const bool &data, const column_index_t &columnIndex){
@@ -130,6 +144,7 @@ Value::Value(const u16string &data, const Constants::column_index_t &columnIndex
     
     this->columnIndex = columnIndex;
     this->type = DataType::UnicodeString;
+    this->isIdentifier = false;
 }
 
 Value::~Value() = default;
@@ -683,6 +698,19 @@ ostream & operator<<(ostream& os, const Value &field){
     }
 
     return os;
+}
+
+Value& Value::operator=(const Value &rhs){
+    if (this == &rhs)
+        return *this;
+
+    this->size = rhs.size;
+    this->type = rhs.type;
+
+    this->data = new object_t[this->size];
+    memcpy(this->data, rhs.data, this->size);
+
+    return *this;
 }
 
 Value Value::PerformTinyIntAddition(const int8_t &lhs, const int8_t &rhs){

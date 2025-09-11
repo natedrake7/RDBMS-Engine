@@ -32,6 +32,6 @@ class SortingFunctions{
          [[nodiscard]] static bool CompareRows(const QueryResult& firstRow, const QueryResult& secondRow, const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions);
          [[nodiscard]] static bool CompareRowsAscending(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const column_index_t& columnIndex);
          [[nodiscard]] static bool CompareRowsDescending(const DatabaseEngine::StorageTypes::Row* firstRow, const DatabaseEngine::StorageTypes::Row* secondRow, const column_index_t& columnIndex);
-         static void OrderBy(vector<QueryResult>& rows, const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions);
+         static void OrderBy(vector<QueryResult>& rows, const vector<QueryPipeline::Statements::OrderColumn*>& conditions);
          [[nodiscard]] static unordered_map<string, AggregateResults> GroupBy(const vector<DatabaseEngine::StorageTypes::Row*>& rows, const vector<GroupCondition>& sortConditions);
 };

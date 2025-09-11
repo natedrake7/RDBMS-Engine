@@ -7,7 +7,7 @@
 
 namespace Expressions {
 
-  static Dictionary<Constants::FunctionType, std::function<Value(const Expressions::FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row*)>> FunctionDictionary{
+  static Dictionary<Constants::FunctionType, std::function<Value(const std::vector<Value>& args)>> FunctionDictionary{
           //Date Functions
 
         { Constants::FunctionType::GetDate,    &FunctionExpression::GetDate },
@@ -159,140 +159,148 @@ namespace Expressions {
     }
   }
 
-  Value FunctionExpression::Concat(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row){
+  Value FunctionExpression::Concat(const std::vector<Value>& arguments){
     Value value(string(""), 0);
 
-    for (const auto* argument : expression->arguments) {
-      auto returnValue = argument->Evaluate(row);
-      returnValue.SetData(returnValue.GetString());
+    for (const auto& argument : arguments)
+      value += Value(argument.GetString(), 0);
 
-      value += returnValue;
-    }
     return value;
   }
 
-  Value FunctionExpression::Length(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row);
+  Value FunctionExpression::Length(const std::vector<Value>& arguments){
+    const auto& field = arguments.front();
 
     return Value(AdditionalLibraries::StringFunctions::Length(field.GetString()), 0);
   }
 
-  Value FunctionExpression::TrimLeft(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row);
+  Value FunctionExpression::TrimLeft(const std::vector<Value>& arguments){
+    const auto& field = arguments.front();
 
     return Value(AdditionalLibraries::StringFunctions::TrimLeft(field.GetString()), 0);
   }
 
-  Value FunctionExpression::TrimRight(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row);
+  Value FunctionExpression::TrimRight(const std::vector<Value>& arguments){
+    const auto& field = arguments.front();
 
     return Value(AdditionalLibraries::StringFunctions::TrimRight(field.GetString()), 0);
   }
 
-  Value FunctionExpression::Trim(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row);
+  Value FunctionExpression::Trim(const std::vector<Value>& arguments){
+    const auto& field = arguments.front();
 
     return Value(AdditionalLibraries::StringFunctions::Trim(field.GetString()), 0);
   }
 
-  Value FunctionExpression::AsciiValue(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row);
+  Value FunctionExpression::AsciiValue(const std::vector<Value>& arguments){
+    const auto& field = arguments.front();
 
     return Value(AdditionalLibraries::StringFunctions::Ascii(field.GetString()), 0);
   }
 
-  Value FunctionExpression::Char(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row);
+  Value FunctionExpression::Char(const std::vector<Value>& arguments){
+    const auto& field = arguments.front();
 
     return Value(AdditionalLibraries::StringFunctions::Char(field.GetInt()), 0);
   }
 
-  Value FunctionExpression::CharIndex(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& subStr = expression->arguments.front()->Evaluate(row).GetString();
+  Value FunctionExpression::CharIndex(const std::vector<Value>& arguments){
+    const auto& subStr = arguments.front().GetString();
 
-    const auto& str = expression->arguments[1]->Evaluate(row).GetString();
+    const auto& str = arguments.at(1).GetString();
 
-    const int pos = (expression->arguments.size() > 2)
-        ? expression->arguments[2]->Evaluate(row).GetInt()
+    const int pos = (arguments.size() > 2)
+        ? arguments.at(2).GetInt()
         : 0;
 
     return Value(AdditionalLibraries::StringFunctions::CharIndex(subStr, str, pos), 0);
   }
 
-  Value FunctionExpression::Lower(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row);
+  Value FunctionExpression::Lower(const std::vector<Value>& arguments){
+    const auto& field = arguments.front();
 
     return Value(AdditionalLibraries::StringFunctions::Lower(field.GetString()), 0);
   }
 
-  Value FunctionExpression::Upper(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row);
+  Value FunctionExpression::Upper(const std::vector<Value>& arguments){
+    const auto& field = arguments.front();
 
     return Value(AdditionalLibraries::StringFunctions::Upper(field.GetString()), 0);
   }
 
-  Value FunctionExpression::Replace(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& str = expression->arguments.front()->Evaluate(row).GetString();
+  Value FunctionExpression::Replace(const std::vector<Value>& arguments){
+    const auto& str = arguments.at(0).GetString();
 
-    const auto& subStr = expression->arguments[1]->Evaluate(row).GetString();
+    const auto& subStr = arguments.at(1).GetString();
 
-    const auto& replaceStr = expression->arguments[2]->Evaluate(row).GetString();
+    const auto& replaceStr = arguments.at(2).GetString();
 
     return Value(AdditionalLibraries::StringFunctions::Replace(str, subStr, replaceStr), 0);
   }
 
-  Value FunctionExpression::Substr(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row).GetString();
+  Value FunctionExpression::Substr(const std::vector<Value>& arguments){
+    const auto& field = arguments.at(0).GetString();
 
-    const auto& startPos = expression->arguments[1]->Evaluate(row).GetInt();
+    const auto& startPos = arguments.at(1).GetInt();
 
-    const auto& endPos = expression->arguments[2]->Evaluate(row).GetInt();
+    const auto& endPos = arguments.at(2).GetInt();
 
     return Value(AdditionalLibraries::StringFunctions::SubString(field, startPos, endPos), 0);
   }
 
-  Value FunctionExpression::Left(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row).GetString();
+  Value FunctionExpression::Left(const std::vector<Value>& arguments){
+    const auto& field = arguments.at(0).GetString();
 
-    const auto& startPos = expression->arguments[1]->Evaluate(row).GetInt();
+    const auto& startPos = arguments.at(1).GetInt();
 
     return Value(AdditionalLibraries::StringFunctions::Left(field, startPos), 0);
   }
 
-  Value FunctionExpression::Right(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& field = expression->arguments.front()->Evaluate(row).GetString();
+  Value FunctionExpression::Right(const std::vector<Value>& arguments){
+    const auto& field = arguments.at(0).GetString();
 
-    const auto& startPos = expression->arguments[1]->Evaluate(row).GetInt();
+    const auto& startPos = arguments.at(1).GetInt();
 
     return Value(AdditionalLibraries::StringFunctions::Right(field, startPos), 0);
   }
 
-  Value FunctionExpression::Reverse(const FunctionExpression *expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& str = expression->arguments.front()->Evaluate(row).GetString();
+  Value FunctionExpression::Reverse(const std::vector<Value>& arguments){
+    const auto& str = arguments.at(0).GetString();
 
     return Value(AdditionalLibraries::StringFunctions::Reverse(str), 0);
   }
 
-  Value FunctionExpression::Space(const FunctionExpression *expression, const DatabaseEngine::StorageTypes::Row *row){
-    const auto& size = expression->arguments.front()->Evaluate(row).GetInt();
+  Value FunctionExpression::Space(const std::vector<Value>& arguments){
+    const auto& size = arguments.at(0).GetInt();
 
     return Value(AdditionalLibraries::StringFunctions::Space(size), 0);
   }
 
-  Value FunctionExpression::GetDate(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+  Value FunctionExpression::GetDate(const std::vector<Value>& arguments){
     return Value(DataTypes::DateTime::Now(), 0);
   }
 
-  Value FunctionExpression::NewGuid(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row){
+  Value FunctionExpression::NewGuid(const std::vector<Value>& arguments){
     return Value(DataTypes::Guid::NewGuid(), 0);
   }
 
   Value FunctionExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const {
-    return FunctionDictionary.Get(this->type)(this, row);
+    std::vector<Value> argVals;
+    argVals.reserve(this->arguments.size());
+
+    for (const auto& arg : this->arguments)
+      argVals.emplace_back(arg->Evaluate(row));
+
+    return FunctionDictionary.Get(this->type)(argVals);
   }
 
   Value FunctionExpression::Evaluate(const QueryResult &row) const{
-    return Value("");
-    // return FunctionDictionary.Get(this->type)(this, row);
+    std::vector<Value> argVals;
+    argVals.reserve(this->arguments.size());
+
+    for (const auto& arg : this->arguments)
+      argVals.emplace_back(arg->Evaluate(row));
+
+    return FunctionDictionary.Get(this->type)(argVals);
   }
 }

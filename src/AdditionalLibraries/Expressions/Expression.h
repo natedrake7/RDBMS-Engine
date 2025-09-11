@@ -102,29 +102,28 @@ namespace Expressions{
 
       //String Function
 
-      [[nodiscard]] static Value Concat(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Length(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value TrimLeft(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value TrimRight(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Trim(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value AsciiValue(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Char(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value CharIndex(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Lower(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Upper(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Replace(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Substr(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Left(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Right(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Reverse(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-      [[nodiscard]] static Value Space(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row* row);
-
+      [[nodiscard]] static Value Concat(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Length(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value TrimLeft(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value TrimRight(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Trim(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value AsciiValue(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Char(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value CharIndex(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Lower(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Upper(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Replace(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Substr(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Left(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Right(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Reverse(const std::vector<Value>& arguments);
+      [[nodiscard]] static Value Space(const std::vector<Value>& arguments);
 
       //DateTime Functions
-      [[nodiscard]] static Value GetDate(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row);
+      [[nodiscard]] static Value GetDate(const std::vector<Value>& arguments);
 
       //Guid Functions
-      [[nodiscard]] static Value NewGuid(const FunctionExpression* expression, const DatabaseEngine::StorageTypes::Row *row);
+      [[nodiscard]] static Value NewGuid(const std::vector<Value>& arguments);
 
       [[nodiscard]] bool ValidateNumberOfArguments(std::string& errorMessage)const;
       [[nodiscard]]DataType GetReturnType() const override;

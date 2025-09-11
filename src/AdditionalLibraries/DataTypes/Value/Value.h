@@ -53,8 +53,9 @@ class Value {
 
     public:
         Value();
+        Value(const Value& copyVal);
         ~Value();
-        
+
         explicit Value(const void* data, const column_index_t& columnIndex = 0);
 
         explicit Value(const unsigned char* data, const int& size, const DataType& type);
@@ -147,6 +148,7 @@ class Value {
 
         friend ostream& operator<<(ostream& os, const Value& field);
 
+        Value& operator=(const Value& rhs);
         friend Value operator+(const Value& lhs, const Value& rhs);
         Value& operator+=(const Value& rhs);
         friend Value operator-(const Value& lhs, const Value& rhs);
