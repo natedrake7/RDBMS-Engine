@@ -250,6 +250,12 @@ namespace QueryPipeline::Statements {
 
    TableName::TableName(){ this->schema = "dbo"; }
 
+  std::string TableName::GetAlias() const{
+    return this->alias.empty()
+        ? this->GetFullName()
+          : this->alias;
+  }
+
   std::string TableName::GetFullName() const {
     return this->database + "." + this->schema + "." + this->name;
   }
@@ -670,12 +676,12 @@ namespace QueryPipeline::Statements {
 
   bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement){
     //Add Base Table to the dictionaries
-    tableAliasesDictionary.Add(statement->table->alias.empty() ? statement->table->GetFullName() : statement->table->alias, statement->table->tableId);
+    tableAliasesDictionary.Add(statement->table->GetAlias(), statement->table->tableId);
     statement->tableColumnsDictionary.Add(statement->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(statement->table->tableId));
 
     //Add all the join tables to the dictionaries
     for (const auto& join: statement->joins) {
-      tableAliasesDictionary.Add(join->table->alias.empty() ? join->table->GetFullName() : join->table->alias, join->table->tableId);
+      tableAliasesDictionary.Add(join->table->GetAlias(), join->table->tableId);
       statement->tableColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
     }
 
@@ -923,13 +929,13 @@ namespace QueryPipeline::Statements {
       return true;
 
     table_id_t tableId = 0;
-    if (!column->alias.empty()
-      && !tableAliasesDictionary.TryGetValue(column->alias, tableId)) {
-      std::cerr << "Alias " << column->alias << " does on exist on statement" << std::endl;
+    if (!column->tableAlias.empty()
+      && !tableAliasesDictionary.TryGetValue(column->tableAlias, tableId)) {
+      std::cerr << "Alias " << column->tableAlias << " does on exist on statement" << std::endl;
       return false;
     }
 
-    if (column->alias.empty())
+    if (column->tableAlias.empty())
       tableId = statement->table->tableId;
 
     //remove the wildcard
@@ -940,10 +946,7 @@ namespace QueryPipeline::Statements {
 
       auto* columnExpression = new Expressions::ColumnExpression(
             header.name,
-        statement->table->alias.empty()
-        ? statement->table->GetFullName()
-            : statement->table->alias
-        );
+            statement->table->GetAlias());
 
       columnExpression->name = header.name;
       columnExpression->columnId = header.id;

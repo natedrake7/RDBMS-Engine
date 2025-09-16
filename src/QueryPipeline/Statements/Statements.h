@@ -102,6 +102,7 @@ namespace QueryPipeline::Statements {
     int16_t ordinalPosition;
 
     TableName();
+    [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
     [[nodiscard]] bool Validate(int32_t& selectedDatabaseId);
   };
