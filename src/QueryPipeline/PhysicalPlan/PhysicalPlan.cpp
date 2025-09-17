@@ -388,12 +388,15 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return nullptr;
   }
 
-  PhysicalHeapUpdate::PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Value> & fields)
-  : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
+  PhysicalHeapUpdate::PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  : PhysicalOperator(databaseId), table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalHeapUpdate::~PhysicalHeapUpdate(){
     delete this->expression;
     delete this->table;
+
+    for (const auto* update : this->updates)
+      delete update;
   }
 
   PhysicalPlanResult* PhysicalHeapUpdate::Execute(const int& batchSize){
@@ -405,17 +408,20 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->HeapUpdate(this->expression, this->fields);
+    tablePtr->HeapUpdate(this->expression, this->updates);
 
     return result;
   }
 
-  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Value> & fields)
-  : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
+  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  : PhysicalOperator(databaseId), table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
     delete this->expression;
     delete this->table;
+
+    for (const auto* update : this->updates)
+      delete update;
   }
 
   PhysicalPlanResult* PhysicalIndexScanUpdate::Execute(const int& batchSize){
@@ -427,17 +433,20 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
+    tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
 
     return result;
   }
 
-  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, vector<Value> & fields)
-    : PhysicalOperator(databaseId), table(table), expression(expression), fields(std::move(fields)) {}
+  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+    : PhysicalOperator(databaseId), table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){
     delete this->expression;
     delete this->table;
+
+    for (const auto* update : this->updates)
+      delete update;
   }
 
   PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(const int& batchSize){
@@ -451,7 +460,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     Indexing::Key key;
 
-    tablePtr->ClusteredIndexScanUpdate(this->expression, this->fields);
+    tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
 
     // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
 

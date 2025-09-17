@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <vector>
 #include "../Constants.h"
+#include "../../QueryPipeline/Statements/Statements.h"
 #include "../Pages/OverflowPage/OverflowPage.h"
 
 namespace DatabaseEngine
@@ -94,6 +95,8 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
 
         [[nodiscard]] int Update(const vector<Value> & updates);
+
+        [[nodiscard]] int Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates);
 
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
 

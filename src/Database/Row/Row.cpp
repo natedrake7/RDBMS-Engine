@@ -363,6 +363,37 @@ namespace DatabaseEngine::StorageTypes {
       return static_cast<int>(rowSize - prevRowSize);
     }
 
+    int Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates){
+        const auto prevRowSize = this->GetRowSize();
+
+        for (const auto & update : updates)
+        {
+            const auto result = update->value->Evaluate(this);
+
+            const column_index_t &associatedColumnIndex = update->name.index;
+
+            auto *block = this->data.at(associatedColumnIndex);
+
+            if (block->GetColumnType() >= Constants::DataType::Invalid)
+                throw invalid_argument("Table::InsertRow: Unsupported Column Type");
+
+            if (result.GetIsNull())
+            {
+                block->SetData(nullptr, 0);
+                this->SetNullBitMapValue(associatedColumnIndex, true);
+                continue;
+            }
+
+            block->SetData(result);
+        }
+
+        this->UpdateRowSize();
+
+        const auto rowSize = this->GetRowSize();
+
+        return static_cast<int>(rowSize - prevRowSize);
+    }
+
     Block* Row::FindLargestVariableLengthColumn() const{
         Block* largestColumn = nullptr;
         int size = 0;

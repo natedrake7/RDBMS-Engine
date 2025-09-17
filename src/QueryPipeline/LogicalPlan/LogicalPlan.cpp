@@ -163,15 +163,15 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     return new PhysicalPlan::PhysicalTableCreate(this->databaseId, this->table, this->columns, index, this->constraintName);
   }
 
-  LogicalUpdate::LogicalUpdate(const int32_t& databaseId, Statements::TableName *table, vector<Value> & fields, Expressions::Expression *expression)
-  : LogicalPlan(databaseId), table(table), fields(std::move(fields)), expression(expression) {}
+  LogicalUpdate::LogicalUpdate(const int32_t& databaseId, Statements::TableName *table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression *expression)
+  : LogicalPlan(databaseId), table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator* LogicalUpdate::ToPhysical(){
       const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
       //if no indexes are available heap scan
       if (indexes.empty())
-        return new PhysicalPlan::PhysicalHeapUpdate(this->databaseId, this->table, this->expression, this->fields);
+        return new PhysicalPlan::PhysicalHeapUpdate(this->databaseId, this->table, this->expression, this->updates);
 
       //if expression is complex defer from index seek
       const bool canIndexSeek = expression != nullptr; //&& !expression->IsComplex();
@@ -189,17 +189,17 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
                   //if columns is first prefer it, else break because index scan will occur
                   //index seek
                     if (expressionColumns.Contains(column.ordinalPosition))
-                      return new PhysicalPlan::PhysicalIndexSeekUpdate(this->databaseId, this->table, this->expression, this->fields);
+                      return new PhysicalPlan::PhysicalIndexSeekUpdate(this->databaseId, this->table, this->expression, this->updates);
 
                     break;
               }
             }
 
           //find the first non clustered and use it
-          return new PhysicalPlan::PhysicalIndexScanUpdate(this->databaseId, this->table, this->expression, this->fields);
+          return new PhysicalPlan::PhysicalIndexScanUpdate(this->databaseId, this->table, this->expression, this->updates);
       }
 
-      return new PhysicalPlan::PhysicalHeapUpdate(this->databaseId, this->table, this->expression, this->fields);
+      return new PhysicalPlan::PhysicalHeapUpdate(this->databaseId, this->table, this->expression, this->updates);
   }
 
   LogicalOrder::LogicalOrder(const int32_t & databaseId, LogicalPlan *child, std::vector<Statements::OrderColumn*>& expressions)

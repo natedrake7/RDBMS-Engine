@@ -231,7 +231,7 @@ updateColumnsList
     ;
 
 updateColumn
-    : columnName EQUAL literalValue
+    : columnName EQUAL resultExpression
     ;
 
 ////////////////////////////////////////////////////////////

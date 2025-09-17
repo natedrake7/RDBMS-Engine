@@ -47,6 +47,8 @@ namespace Constants
     constexpr page_id_t INVALID_PAGE_ID = std::numeric_limits<page_id_t>::max();
     constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(int32_t);
 
+    constexpr std::string_view WILDCARD = "*";
+
     enum class AlterTableType: uint8_t {
         AddColumn = 0,
         AlterColumn = 1,

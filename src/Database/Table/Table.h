@@ -226,7 +226,11 @@ namespace DatabaseEngine::StorageTypes
 
             void HeapUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
 
+            void HeapUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> &updates);
+
             void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
+
+            void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> &updates);
 
             void ClusteredIndexSeekUpdate(
                 Expressions::Expression* expression,
@@ -282,7 +286,21 @@ namespace DatabaseEngine::StorageTypes
 
             void InsertLargeObjectToPage(Row *row);
 
-            void HandleRowUpdate(Pages::Page *page, Row *row, const std::vector<Value> &updates, const HashSet<column_index_t>& updatedColumns, const bool &isHeap = true);
+            void HandleRowUpdate(
+                Pages::Page *page,
+                Row *row,
+                const std::vector<Value> &updates,
+                const HashSet<column_index_t>& updatedColumns,
+                const bool &isHeap = true
+            );
+
+            void HandleRowUpdate(
+                Pages::Page *page,
+                Row *row,
+                const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates,
+                const HashSet<column_index_t>& updatedColumns,
+                const bool &isHeap = true
+            );
 
             void GetDefaultValuesHeaders()const;
 

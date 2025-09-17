@@ -751,6 +751,58 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
+    void Table::HeapUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+                if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return;
+
+        const auto& filename = this->database->GetFileName();
+
+        const auto indexAllocationExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
+
+        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, indexAllocationExtentId, this);
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
+
+        HashSet<column_index_t> updatedColumns;
+        for(const auto& update : updates)
+              updatedColumns.Add(update->name.index);
+
+        for (const auto& extentId : tableExtentIds){
+          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+          const PageFreeSpacePage *pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+
+          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                      ? extentFirstPageId
+                                      : extentFirstPageId + 1;
+
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
+            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+              break;
+
+            Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
+
+            if (page->GetPageSize() == 0)
+              continue;
+
+            const auto* rows = page->GetDataRowsUnsafe();
+
+            std::vector<extent_id_t> allocatedExtents;
+            extent_id_t startingExtentIndex = 0;
+
+            for(auto* row : *rows){
+              const auto value = expression->Evaluate(row);
+              if(!value.GetBool())
+                  continue;
+
+                this->HandleRowUpdate(page, row, updates, updatedColumns);
+            }
+          }
+        }
+    }
+
     void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const{
       const auto& filename = this->database->GetFileName();
 
@@ -797,6 +849,14 @@ namespace DatabaseEngine::StorageTypes {
       auto* tree = this->GetClusteredIndexedTree();
 
       tree->IndexScanUpdate(expression, updates);
+    }
+
+    void Table::ClusteredIndexScanUpdate(
+      const Expressions::Expression *expression,
+      const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+        auto* tree = this->GetClusteredIndexedTree();
+
+        tree->IndexScanUpdate(expression, updates);
     }
 
     void Table::ClusteredIndexSeekUpdate(
@@ -897,6 +957,42 @@ namespace DatabaseEngine::StorageTypes {
           diff -= result;
         }
     }
+
+  void Table::HandleRowUpdate(
+    Pages::Page *page,
+    Row *row,
+    const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
+    const HashSet<column_index_t> &updatedColumns,
+    const bool &isHeap){
+        this->DeleteLargeObjectFromPage(row, updatedColumns);
+        this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+
+        int diff = row->Update(updates);
+
+        if(page->GetBytesLeft() - diff > 0){
+          page->UpdateBytesLeft();
+          return;
+        }
+
+        this->InsertLargeObjectToPage(row);
+
+        if(isHeap && (PAGE_SIZE - PageHeader::GetPageHeaderSize() - row->GetRowSize()) > 0){
+          vector<extent_id_t> allocatedExtents;
+          extent_id_t startingExtentIndex = 0;
+
+          this->InsertRow(row, allocatedExtents, startingExtentIndex);
+
+          return;
+        }
+
+        while(page->GetBytesLeft() - diff < 0){
+          const int result = this->HandleRowOverflow(row);
+          if(result == -1)
+            break;
+
+          diff -= result;
+        }
+  }
 
     void Table::InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int & indexPosition)const{
 

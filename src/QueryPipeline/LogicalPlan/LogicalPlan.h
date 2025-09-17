@@ -106,10 +106,10 @@ namespace QueryPipeline {
   class LogicalUpdate final : public LogicalPlan {
     public:
       Statements::TableName* table;
-      std::vector<Value> fields;
+      std::vector<Statements::UpdateColumn*> updates;
       Expressions::Expression* expression;
 
-      explicit LogicalUpdate(const int32_t & databaseId, Statements::TableName* table, std::vector<Value>& fields, Expressions::Expression* expression);
+      explicit LogicalUpdate(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 

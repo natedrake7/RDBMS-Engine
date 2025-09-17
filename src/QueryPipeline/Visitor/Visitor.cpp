@@ -326,16 +326,21 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitUpdateColumn(SQLParser::UpdateColumnContext *context){
-    return Statements::UpdateColumnStatement{
-      .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
-      .value = std::any_cast<Value>(visit(context->literalValue()))
-    };
+    auto* update = new Statements::UpdateColumn();
+
+    update->name = std::any_cast<Statements::ColumnName>(visit(context->columnName()));
+
+    const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(context->resultExpression()));
+
+    update->value = expression;
+
+    return update;
 }
   antlrcpp::Any SQLVisitorImplementation::visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context){
-    vector<Statements::UpdateColumnStatement> columns;
+    vector<Statements::UpdateColumn*> columns;
 
     for(const auto& updateColumn : context->updateColumn())
-      columns.push_back(std::any_cast<Statements::UpdateColumnStatement>(visit(updateColumn)));
+      columns.push_back(std::any_cast<Statements::UpdateColumn*>(visit(updateColumn)));
 
     return columns;
   }
@@ -345,7 +350,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
 
-    statement->columns = std::any_cast<std::vector<Statements::UpdateColumnStatement>>(visit(context->updateColumnsList()));
+    statement->updates = std::any_cast<std::vector<Statements::UpdateColumn*>>(visit(context->updateColumnsList()));
 
     if (context->whereClause() != nullptr)
       statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));

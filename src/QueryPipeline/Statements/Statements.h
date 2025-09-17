@@ -104,23 +104,21 @@ namespace QueryPipeline::Statements {
     TableName();
     [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
-    [[nodiscard]] bool Validate(int32_t& selectedDatabaseId);
+    [[nodiscard]] bool Validate(const int32_t& selectedDatabaseId);
   };
 
   struct Statement {
     int32_t databaseId;
+    TableName* table;
+    Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
 
-    Statement(){
-      this->databaseId = Constants::INVALID_DATABASE_ID;
-    }
-
+    Statement();
     virtual ~Statement() = default;
     virtual bool Validate() = 0;
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
   };
 
   struct DeleteStatement final : Statement {
-    TableName* table;
     WhereClause where;
     ~DeleteStatement() override = default;
     bool Validate() override;
@@ -128,7 +126,6 @@ namespace QueryPipeline::Statements {
   };
 
   struct JoinStatement final : public Statement{
-    TableName* table;
     Expressions::LogicalExpression* expression;
     Constants::JoinType type;
 
@@ -140,7 +137,6 @@ namespace QueryPipeline::Statements {
   };
 
   struct CreateTableStatement final: Statement {
-    TableName* table;
     std::vector<NewColumn*> columns;
     PrimaryKeyConstraint* constraint;
     vector<column_index_t> primaryKey;
@@ -153,12 +149,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct SelectStatement final : Statement{
-    TableName* table;
-
     std::vector<Expressions::Expression*> results;
-
-    Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
-
     std::vector<Headers::ColumnHeader> columnHeaders;
 
     std::vector<JoinStatement*> joins;
@@ -168,6 +159,7 @@ namespace QueryPipeline::Statements {
 
     ~SelectStatement() override;
     bool Validate() override;
+    bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     LogicalPlan* ToLogical() override;
   };
 
@@ -184,12 +176,12 @@ namespace QueryPipeline::Statements {
   };
 
   struct InsertStatement final : Statement{
-    TableName* table;
     std::vector<ColumnName> columns;
     std::vector<Value> values;
 
     ~InsertStatement() override { delete this->table; };
-    
+
+    bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     bool Validate() override;
     LogicalPlan* ToLogical() override;
   };
@@ -201,16 +193,19 @@ namespace QueryPipeline::Statements {
     QueryPipeline::LogicalPlan * ToLogical() override;
   };
 
-  struct UpdateColumnStatement{
+  struct UpdateColumn{
     ColumnName name;
-    Value value;
+    Expressions::Expression* value;
+
+    UpdateColumn();
+    ~UpdateColumn();
   };
 
   struct UpdateStatement final : Statement {
-    TableName* table;
-    std::vector<UpdateColumnStatement> columns;
+    std::vector<UpdateColumn*> updates;
     WhereClause where;
 
+    bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
   };
@@ -246,10 +241,15 @@ namespace QueryPipeline::Statements {
   static bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement);
 
   static bool ResolveColumnAlias(
+    ColumnName& column,
+    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary);
+
+  static bool ResolveColumnAlias(
     Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    SelectStatement *statement,
+    Statement *statement,
     const int& indexPos
     );
 
@@ -261,7 +261,7 @@ namespace QueryPipeline::Statements {
   static bool ResolveExpressionAliases(
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    SelectStatement *statement,
+    Statement *statement,
     Expressions::Expression *expr,
     const int& indexPos
     );
@@ -272,14 +272,13 @@ namespace QueryPipeline::Statements {
   );
 
   static bool ResolveExpressionAliases(
-    SelectStatement *statement,
+    Statement *statement,
     Expressions::Expression *expr
     );
 
   static bool ResolveWildCardAlias(
     const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     SelectStatement *statement,
     const int& indexPos
     );

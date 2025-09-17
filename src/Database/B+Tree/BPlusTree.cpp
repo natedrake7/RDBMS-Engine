@@ -400,11 +400,8 @@ namespace Indexing
 
         while (currentNode)
         {
-            const auto* rows = currentNode->GetDataRowsUnsafe();
-
-            for (auto* row : *rows) {
-                const auto value = expression->Evaluate(row);
-                if(!value.GetBool())
+            for (auto* row : *currentNode->GetDataRowsUnsafe()) {
+                if(!expression->Evaluate(row).GetBool())
                     continue;
 
                 const RowHeader *rowHeader = row->GetHeader();
@@ -555,6 +552,36 @@ namespace Indexing
             return;
 
           currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+            return;
+
+        HashSet<column_index_t> updatedColumns;
+
+        for(const auto& update : updates)
+            updatedColumns.Add(update->name.index);
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+            for(auto* row: *currentNode->GetDataRowsUnsafe()){
+                const auto value = expression->Evaluate(row);
+                if(!value.GetBool())
+                    continue;
+
+                this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+            }
+
+            if(currentNode->GetNextPage() == 0)
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
         }
     }
 

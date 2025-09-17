@@ -176,33 +176,33 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalHeapUpdate final : public PhysicalOperator{
     Statements::TableName* table;
+    std::vector<Statements::UpdateColumn*>  updates;
     Expressions::Expression* expression;
-    std::vector<Value> fields;
 
   public:
-    PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Value>& fields);
+    PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalHeapUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalIndexScanUpdate final : public PhysicalOperator{
     Statements::TableName* table;
+    std::vector<Statements::UpdateColumn*>  updates;
     Expressions::Expression* expression;
-    std::vector<Value> fields;
 
   public:
-    PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Value>& fields);
+    PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalIndexScanUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalIndexSeekUpdate final : public PhysicalOperator{
     Statements::TableName* table;
+    std::vector<Statements::UpdateColumn*>  updates;
     Expressions::Expression* expression;
-    std::vector<Value> fields;
 
   public:
-    PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Value>& fields);
+    PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalIndexSeekUpdate()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };

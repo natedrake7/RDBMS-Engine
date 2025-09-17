@@ -60,6 +60,8 @@ void InsertRowsToMoviesTable(Table* table);
 //validate length of columns to match max record_size from master DB on inserts and updates
 //validate order by accepts expressions and evaluates them and then orders
 //also add function expression evaluation for query results.
+//Add coercion check functionality on statements
+//FIx insert like update.
 
 std::atomic<bool> serverRunning{true};
 
@@ -128,6 +130,8 @@ int main()
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
     const auto& databases = server.GetCatalog();
+
+    //UPDATE dbo.Actors SET Name = CONCAT('Kalimera', 'HEllo')
 
     std::cout << "Please enter a query: "<< endl;
 

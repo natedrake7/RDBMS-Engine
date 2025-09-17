@@ -15,6 +15,8 @@ namespace QueryPipeline::Statements {
 
     int32_t tableId;
     int32_t columnId;
+    Constants::column_index_t index;
+    Constants::DataType returnType;
   };
 }
 
