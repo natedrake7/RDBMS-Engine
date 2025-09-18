@@ -62,6 +62,7 @@ void InsertRowsToMoviesTable(Table* table);
 //also add function expression evaluation for query results.
 //Add coercion check functionality on statements
 //FIx insert like update.
+//TODO use coercion matrix instead of switch cases on datatype coercions
 
 std::atomic<bool> serverRunning{true};
 
