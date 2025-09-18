@@ -263,7 +263,7 @@ namespace QueryPipeline::Statements {
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     Statement *statement,
     Expressions::Expression *expr,
-    const int& indexPos
+    const int& indexPos = 0
     );
 
   static bool ResolvePostProjectionAliases(

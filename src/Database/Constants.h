@@ -21,6 +21,8 @@ namespace Constants
 
     constexpr int32_t INVALID_DATABASE_ID = -1;
     constexpr int32_t INVALID_TABLE_ID = -1;
+    constexpr int32_t INVALID_SCHEMA_ID = -1;
+    constexpr int16_t INVALID_ORDINAL_POS = -1;
 
     // table types
     typedef uint16_t table_id_t;
@@ -87,16 +89,6 @@ namespace Constants
     {
         HEAP = 0,
         CLUSTERED = 1,
-    };
-
-    enum class KeyType: uint8_t
-    {
-        Int = 0,
-        Decimal = 1,
-        String = 2,
-        Bool = 3,
-        DateTime = 4,
-        Composite = 5
     };
 
     enum Operator: uint8_t{
@@ -185,79 +177,76 @@ namespace Constants
         Invalid = 11
     };
 
-    enum class BinaryOperators : uint8_t {
 
+    enum class FunctionType : uint8_t {
+        // -----------------------
+        // Date/Time Functions
+        // -----------------------
+        GetDate = 0,         // SQL Server style
+        DateAdd = 1,
+        DateDiff = 2,
+        DatePart = 3,
+        Year = 4,
+        Month = 5,
+        Day = 6,
+
+        // -----------------------
+        // GUID/Identifier Functions
+        // -----------------------
+        NewGuid = 20,
+
+        // -----------------------
+        // String Functions
+        // -----------------------
+        Concat = 40,
+        Length = 41,
+        AsciiValue = 42,
+        Char = 43,
+        CharIndex = 44,
+        Instr = 45,          // alias for CharIndex
+        Lower = 46,
+        Upper = 47,
+        Trim = 48,
+        TrimLeft = 49,
+        TrimRight = 50,
+        Replace = 51,
+        Substr = 52,
+        Left = 53,
+        Right = 54,
+        Reverse = 55,
+        Repeat = 56,
+        Space = 57,
+        Soundex = 58,
+
+        // -----------------------
+        // Mathematical Functions
+        // -----------------------
+        Abs = 80,
+        Ceil = 81,
+        Floor = 82,
+        Round = 83,
+        Power = 84,
+        Sqrt = 85,
+        Exp = 86,
+        Log = 87,
+        Log10 = 88,
+        Rand = 89,
+
+        // -----------------------
+        // Conversion Functions
+        // -----------------------
+        Cast = 100,
+        Convert = 101,
+
+        // -----------------------
+        // Aggregate Functions
+        // -----------------------
+        Count = 120,
+        Sum = 121,
+        Avg = 122,
+        Min = 123,
+        Max = 124
     };
-
-enum class FunctionType : uint8_t {
-    // -----------------------
-    // Date/Time Functions
-    // -----------------------
-    GetDate = 0,         // SQL Server style
-    DateAdd = 1,
-    DateDiff = 2,
-    DatePart = 3,
-    Year = 4,
-    Month = 5,
-    Day = 6,
-
-    // -----------------------
-    // GUID/Identifier Functions
-    // -----------------------
-    NewGuid = 20,
-
-    // -----------------------
-    // String Functions
-    // -----------------------
-    Concat = 40,
-    Length = 41,
-    AsciiValue = 42,
-    Char = 43,
-    CharIndex = 44,
-    Instr = 45,          // alias for CharIndex
-    Lower = 46,
-    Upper = 47,
-    Trim = 48,
-    TrimLeft = 49,
-    TrimRight = 50,
-    Replace = 51,
-    Substr = 52,
-    Left = 53,
-    Right = 54,
-    Reverse = 55,
-    Repeat = 56,
-    Space = 57,
-    Soundex = 58,
-
-    // -----------------------
-    // Mathematical Functions
-    // -----------------------
-    Abs = 80,
-    Ceil = 81,
-    Floor = 82,
-    Round = 83,
-    Power = 84,
-    Sqrt = 85,
-    Exp = 86,
-    Log = 87,
-    Log10 = 88,
-    Rand = 89,
-
-    // -----------------------
-    // Conversion Functions
-    // -----------------------
-    Cast = 100,
-    Convert = 101,
-
-    // -----------------------
-    // Aggregate Functions
-    // -----------------------
-    Count = 120,
-    Sum = 121,
-    Avg = 122,
-    Min = 123,
-    Max = 124
-};
 
     static Dictionary<string, block_size_t> ColumnTypeSizes = {
         {"tinyint", sizeof(int8_t)},

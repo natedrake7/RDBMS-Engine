@@ -1,6 +1,7 @@
 #include "Statements.h"
 
 #include "../Constants.h"
+#include "../../AdditionalLibraries/DataTypes/Coercions.h"
 #include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
@@ -310,7 +311,13 @@ namespace QueryPipeline::Statements {
       delete column;
   }
 
-   TableName::TableName(){ this->schema = "dbo"; }
+   TableName::TableName() {
+    this->databaseId = Constants::INVALID_DATABASE_ID;
+    this->tableId = Constants::INVALID_TABLE_ID;
+    this->schemaId = Constants::INVALID_SCHEMA_ID;
+    this->ordinalPosition = Constants::INVALID_ORDINAL_POS;
+    this->schema = "dbo";
+  }
 
   std::string TableName::GetAlias() const{
     return this->alias.empty()
@@ -319,7 +326,7 @@ namespace QueryPipeline::Statements {
   }
 
   std::string TableName::GetFullName() const {
-    return this->database + "." + this->schema + "." + this->name;
+    return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
   }
 
   bool TableName::Validate(const int32_t& selectedDatabaseId) {
@@ -542,6 +549,17 @@ namespace QueryPipeline::Statements {
           return false;
 
       //Add coercion check functionality
+      if (!DataTypes::Coercions::IsCoercionAllowed(
+        update->value->GetReturnType(),
+          update->name.returnType))
+      {
+        std::cerr << "Cannot update column " << update->name.name << " of type "
+                  << ColumnTypesToStringDictionary.Get(update->name.returnType)
+                  << " with value of type "
+                  << ColumnTypesToStringDictionary.Get(update->value->GetReturnType()) << std::endl;
+
+        return false;
+      }
     }
 
     //validate all expressions are valid
@@ -551,7 +569,7 @@ namespace QueryPipeline::Statements {
         return false;
       }
 
-      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression, 0))
+      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression))
         return false;
     }
 
