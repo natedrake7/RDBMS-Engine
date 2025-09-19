@@ -264,7 +264,12 @@ namespace QueryPipeline::Statements {
     Statement *statement,
     Expressions::Expression *expr,
     const int& indexPos = 0
-    );
+  );
+
+  static bool ValidateExpressionCoercionTypes(
+    const Expressions::Expression* left,
+    const Expressions::Expression* right
+  );
 
   static bool ResolvePostProjectionAliases(
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases,

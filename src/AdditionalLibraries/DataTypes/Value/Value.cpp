@@ -1,5 +1,6 @@
 #include "Value.h"
 
+#include "../../Coercions/Coercions.h"
 #include "../../Converter/Converter.h"
 #include "../../Functions/StringFunctions.h"
 
@@ -344,180 +345,46 @@ void Value::SetData(const DataTypes::Decimal &data) {
 const object_t * Value::GetRawData() const{ return this->data; }
 
 bool Value::GetBool() const {
-    switch (this->type) {
-        case DataType::TinyInt:
-            return Converter<bool>::Stoi(this->GetTinyInt());
-        case DataType::SmallInt:
-            return Converter<bool>::Stoi(this->GetSmallInt());
-        case DataType::Int:
-            return Converter<bool>::Stoi(this->GetInt());
-        case DataType::BigInt:
-            return Converter<bool>::Stoi(this->GetBigInt());
-        case DataType::Decimal:
-            return false;
-        case DataType::String:
-            return this->ParseAsBoolFromString();
-        case DataType::UnicodeString:
-            return Converter<int8_t>::Stoi(this->GetUnicodeString());
-        case DataType::Bool:
-            return *reinterpret_cast<bool*>(this->data);
-        default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Bool");
-    }
+    return DataTypes::Coercions::ToBool(*this);
 }
 
 int8_t Value::GetTinyInt() const {
-    switch (this->type) {
-        case DataType::TinyInt:
-            return *reinterpret_cast<int8_t *>(this->data);
-        case DataType::SmallInt:
-            return Converter<int8_t>::Stoi(this->GetSmallInt());
-        case DataType::Int:
-            return Converter<int8_t>::Stoi(this->GetInt());
-        case DataType::BigInt:
-            return Converter<int8_t>::Stoi(this->GetBigInt());
-        case DataType::Decimal:
-            return 0;
-        case DataType::String:
-            return Converter<int8_t>::Stoi(this->GetString());
-        case DataType::UnicodeString:
-            return Converter<int8_t>::Stoi(this->GetUnicodeString());
-        case DataType::Bool:
-            return this->GetBool() ? 1 : 0;
-        default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Tiny Int");
-    }
+    return DataTypes::Coercions::ToTinyInt(*this);
 }
 
 int16_t Value::GetSmallInt() const {
-    switch (this->type) {
-        case DataType::TinyInt:
-            return *reinterpret_cast<int8_t *>(this->data);
-        case DataType::SmallInt:
-            return *reinterpret_cast<int16_t *>(this->data);
-        case DataType::Int:
-            return Converter<int16_t>::Stoi(this->GetInt());
-        case DataType::BigInt:
-            return Converter<int16_t>::Stoi(this->GetBigInt());
-        case DataType::Decimal:
-            return 0;
-        case DataType::String:
-            return Converter<int16_t>::Stoi(this->GetString());
-        case DataType::UnicodeString:
-            return Converter<int16_t>::Stoi(this->GetUnicodeString());
-        case DataType::Bool:
-            return this->GetBool() ? 1 : 0;
-        default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Small Int");
-    }
+    return DataTypes::Coercions::ToSmallInt(*this);
 }
 
 int32_t Value::GetInt() const {
-    switch (this->type) {
-        case DataType::TinyInt:
-            return *reinterpret_cast<int8_t *>(this->data);
-        case DataType::SmallInt:
-            return *reinterpret_cast<int16_t *>(this->data);
-        case DataType::Int:
-            return *reinterpret_cast<int32_t *>(this->data);
-        case DataType::BigInt:
-            return Converter<int32_t>::Stoi(this->GetBigInt());
-        case DataType::Decimal:
-            return 0;
-        case DataType::String:
-            return Converter<int32_t>::Stoi(this->GetString());
-        case DataType::UnicodeString:
-            return Converter<int32_t>::Stoi(this->GetUnicodeString());
-        case DataType::Bool:
-            return this->GetBool() ? 1 : 0;
-        default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Int");
-    }
+    return DataTypes::Coercions::ToInt(*this);
 }
 
 int64_t Value::GetBigInt() const {
-    switch (this->type) {
-        case DataType::TinyInt:
-            return *reinterpret_cast<int8_t *>(this->data);
-        case DataType::SmallInt:
-            return *reinterpret_cast<int16_t *>(this->data);
-        case DataType::Int:
-            return *reinterpret_cast<int32_t *>(this->data);
-        case DataType::BigInt:
-           return *reinterpret_cast<int64_t *>(this->data);
-        case DataType::Decimal:
-            return 0;
-        case DataType::String:
-            return Converter<int64_t>::Stoi(this->GetString());
-        case DataType::UnicodeString:
-            return Converter<int64_t>::Stoi(this->GetUnicodeString());
-        case DataType::Bool:
-            return this->GetBool() ? 1 : 0;
-        default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Big Int");
-    }
+    return DataTypes::Coercions::ToBigInt(*this);
 }
 
 string Value::GetString() const {
-    switch (this->type) {
-        case DataType::TinyInt:
-            return std::to_string(this->GetTinyInt());
-        case DataType::SmallInt:
-            return std::to_string(this->GetSmallInt());
-        case DataType::Int:
-            return std::to_string(this->GetInt());
-        case DataType::BigInt:
-            return std::to_string(this->GetBigInt());
-        case DataType::Decimal:
-            return this->GetDecimal().ToString();
-        case DataType::String:
-        case DataType::UnicodeString:
-            return{reinterpret_cast<char*>(this->data), this->size};
-        case DataType::Bool:
-            return this->GetBool() ? "true" : "false";
-        case DataType::DateTime:
-            return this->GetDateTime().ToString();
-        case DataType::Guid:
-            return this->GetGuid().ToString();
-        case DataType::RowIdentifier:
-        case DataType::Invalid:
-            default:
-            throw runtime_error("Invalid Column type");
-    }
+    return DataTypes::Coercions::ToString(*this);
 }
 
-u16string Value::GetUnicodeString() const { return {reinterpret_cast<char16_t *>(this->data), this->size}; }
+u16string Value::GetUnicodeString() const {
+    return DataTypes::Coercions::ToUnicodeString(*this);
+}
 
-DataTypes::Decimal Value::GetDecimal() const{ return DataTypes::Decimal(this->data, this->size); }
+DataTypes::Decimal Value::GetDecimal() const {
+    return DataTypes::Coercions::ToDecimal(*this);
+}
 
 DataTypes::DateTime Value::GetDateTime() const {
-    switch (this->type) {
-        case DataType::UnicodeString:
-        case DataType::String: {
-            DataTypes::DateTime date;
-            DataTypes::DateTime::FromString(date, this->GetString());
-            return date;
-        }
-        case DataType::DateTime:
-            return DataTypes::DateTime(*reinterpret_cast<time_t *>(this->data));
-        default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Guid");
-    }
+    return DataTypes::Coercions::ToDateTime(*this);
+}
+
+DataTypes::Guid Value::GetGuid() const {
+    return DataTypes::Coercions::ToGuid(*this);
 }
 
 time_t Value::GetUnixTimeStamp() const{ return *reinterpret_cast<time_t *>(this->data); }
-
-DataTypes::Guid Value::GetGuid() const {
-    switch (this->type) {
-        case DataType::Guid:
-            return {this->data, this->size};
-        case DataType::String:
-        case DataType::UnicodeString:
-            return DataTypes::Guid::FromString(this->GetString());
-        default:
-            throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(this->type) + " cannot be coerced to Guid");
-    }
-}
 
 void Value::SetColumnIndex(const Constants::column_index_t &columnIndex) { this->columnIndex = columnIndex; }
 
@@ -526,124 +393,6 @@ void Value::SetType(const DataType &type){ this->type = type; }
 const DataType & Value::GetType() const{ return this->type; }
 
 const block_size_t& Value::GetSize() const{ return this->size; }
-
-void Value::Validate(const Headers::ColumnHeader &header){
-    const auto columnType = static_cast<DataType>(header.dataType);
-
-    if (this->GetIsNull()) {
-
-        this->SetType(columnType);
-        this->SetColumnIndex(header.ordinalPosition);
-
-        return;
-    }
-
-    switch (columnType) {
-      case DataType::TinyInt: {
-          const auto value = Converter<int8_t>::Stoi(this->GetBigInt());
-          break;
-      }
-      case DataType::SmallInt: {
-          const auto value = Converter<int16_t>::Stoi(this->GetBigInt());
-          break;
-      }
-      case DataType::Int:{
-          const auto value = Converter<int32_t>::Stoi(this->GetBigInt());
-          break;
-      }
-      case DataType::BigInt:
-          Converter<int64_t>::Stoi(this->GetBigInt());
-          break;
-      case DataType::String:
-      case DataType::UnicodeString:
-          break;
-      case DataType::Bool: {
-          bool value;
-          if (this->TryParseAsBool(value) && this->IsVariable())
-              break;
-          break;
-      }
-      case DataType::DateTime: {
-          const auto datetime = this->GetDateTime();
-          if (!DataTypes::DateTime::ValidateDate(datetime))
-              throw invalid_argument("failed to validate date");
-          break;
-      }
-      case DataType::Decimal:
-
-          break;
-    case DataType::Guid:
-        break;
-    default:
-    case DataType::Invalid:
-        throw runtime_error(
-                "Type mismatch: expected " + Constants::ColumnTypesToStringDictionary.Get(columnType) +
-                  " but got " + Constants::ColumnTypesToStringDictionary.Get(this->type));
-    }
-
-    this->SetColumnIndex(header.ordinalPosition);
-}
-
-void Value::Validate(const DataType &columnType, const int &ordinalPosition){
-    if (this->GetIsNull()) {
-
-        this->SetType(columnType);
-        this->SetColumnIndex(ordinalPosition);
-
-        return;
-    }
-
-    switch (columnType) {
-    case DataType::TinyInt: {
-        const auto value = Converter<int8_t>::Stoi(this->GetBigInt());
-        this->SetData(value);
-        break;
-    }
-    case DataType::SmallInt: {
-        const auto value = Converter<int16_t>::Stoi(this->GetBigInt());
-        this->SetData(value);
-        break;
-    }
-    case DataType::Int:{
-        const auto value = Converter<int32_t>::Stoi(this->GetBigInt());
-        this->SetData(value);
-        break;
-    }
-    case DataType::BigInt:
-        Converter<int64_t>::Stoi(this->GetBigInt());
-        break;
-    case DataType::String:
-    case DataType::UnicodeString:
-        // if (columnType != this->GetType())
-        //     throw runtime_error("Column " + header.name + " has different data type than specified");
-        break;
-    case DataType::Bool: {
-        bool value;
-        if (this->TryParseAsBool(value) && this->IsVariable())
-            break;
-
-        this->SetData(value);
-        this->SetType(columnType);
-        break;
-    }
-    case DataType::DateTime: {
-        const auto datetime = this->GetDateTime();
-        if (!DataTypes::DateTime::ValidateDate(datetime))
-            throw invalid_argument("failed to validate date");
-        break;
-    }
-    case DataType::Decimal:
-
-        break;
-    case DataType::Guid:
-        break;
-    default:
-    case DataType::Invalid:
-        throw invalid_argument("Invalid column type");
-    }
-
-    this->SetColumnIndex(ordinalPosition);
-}
 
 DataType Value::PromoteType(const DataType &lhs, const DataType &rhs){
     return  ColumnTypeRank.Get(lhs) > ColumnTypeRank.Get(rhs) ? lhs : rhs;

@@ -16,6 +16,33 @@ namespace DataTypes {
 	class DateTime {
 		int64_t timeStamp;
 
+		static inline const std::array<std::string, 15> DateTimeFormats = {
+			// ISO 8601 with fractional seconds and timezone
+			"%Y-%m-%dT%H:%M:%S.%OS%z",   // e.g., 2025-08-26T19:30:20.123+0200
+			"%Y-%m-%dT%H:%M:%S.%OSZ",    // e.g., 2025-08-26T19:30:20.123Z
+			"%Y-%m-%dT%H:%M:%S.%OS",     // e.g., 2025-08-26T19:30:20.123
+			"%Y-%m-%dT%H:%M:%SZ",        // e.g., 2025-08-26T19:30:20Z
+			"%Y-%m-%dT%H:%M:%S",         // e.g., 2025-08-26T19:30:20
+
+			// Full date + time with fractional seconds
+			"%Y-%m-%d %H:%M:%S.%OS",     // e.g., 2025-08-26 19:30:20.123
+
+			// Full date + time (seconds precision)
+			"%Y-%m-%d %H:%M:%S",         // e.g., 2025-08-26 19:30:20
+			"%d/%m/%Y %H:%M:%S",         // e.g., 26/08/2025 19:30:20
+			"%m/%d/%Y %H:%M:%S",         // e.g., 08/26/2025 19:30:20
+
+			// Date only
+			"%Y-%m-%d",                   // e.g., 2025-08-26
+			"%d/%m/%Y",                   // e.g., 26/08/2025
+			"%m/%d/%Y",                   // e.g., 08/26/2025
+			"%Y%m%d",                     // e.g., 20250826
+
+			// Time only
+			"%H:%M:%S",                   // e.g., 19:30:20
+			"%H:%M"                       // e.g., 19:30
+		    };
+
 	protected:
 		static void ValidateDate(int year, int month, int day, int hour, int minute, int second);
 
@@ -42,6 +69,7 @@ namespace DataTypes {
 
 		static DateTime Now();
 		static bool FromString(DateTime& outVal, const string& date, const string& format = "");
+		static bool FromString(const string& date);
 		static int DateTimeSize();
 
 		[[nodiscard]] string ToString(const string& format = "%Y-%m-%d %H:%M:%S%OS") const;

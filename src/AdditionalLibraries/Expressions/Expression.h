@@ -148,7 +148,6 @@ namespace Expressions{
 
     [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
     [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
-
     [[nodiscard]] DataType GetReturnType() const override;
 };
 }

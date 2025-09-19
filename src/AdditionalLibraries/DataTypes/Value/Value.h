@@ -35,7 +35,6 @@ class Value {
 
     [[nodiscard]] bool TryParseAsBool(bool& result)const;
     [[nodiscard]] bool TryParseAsBoolFromString(bool& result)const;
-    [[nodiscard]] bool ParseAsBoolFromString()const;
     [[nodiscard]] bool TryParseAsBoolFromInt(bool& result)const;
     [[nodiscard]] bool TryParseDate();
 
@@ -140,10 +139,6 @@ class Value {
 
         void SetType(const DataType &type);
 
-        void Validate(const Headers::ColumnHeader &header);
-
-        void Validate(const DataType& columnType, const int& ordinalPosition);
-
         static DataType PromoteType(const DataType& lhs, const DataType& rhs);
 
         friend ostream& operator<<(ostream& os, const Value& field);
@@ -163,4 +158,5 @@ class Value {
         friend Value operator!=(const Value& lhs, const Value& rhs);
 
         [[nodiscard]] bool IsVariable()const;
+        [[nodiscard]] bool ParseAsBoolFromString()const;
 };

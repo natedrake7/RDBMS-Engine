@@ -1,7 +1,7 @@
 #include "Statements.h"
 
 #include "../Constants.h"
-#include "../../AdditionalLibraries/DataTypes/Coercions.h"
+#include "../../AdditionalLibraries/Coercions/Coercions.h"
 #include "../../AdditionalLibraries/Functions/StringFunctions.h"
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
@@ -279,9 +279,9 @@ namespace QueryPipeline::Statements {
   WhereClause::WhereClause() { this->expression = nullptr; }
 
   bool WhereClause::IsValid() const{
-    return this->expression != nullptr
-      && (dynamic_cast<Expressions::BinaryExpression*>(this->expression) != nullptr
-          || dynamic_cast<Expressions::LogicalExpression*>(this->expression) != nullptr);
+    return (this->expression == nullptr)
+        || dynamic_cast<Expressions::LogicalExpression*>(this->expression)
+        || dynamic_cast<Expressions::BinaryExpression*>(this->expression);
   }
 
   bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
@@ -468,7 +468,7 @@ namespace QueryPipeline::Statements {
         return false;
       }
 
-      this->values.at(i).Validate(header);
+      // this->values.at(i).Validate(header);
     }
 
     for (const auto&[columnName, header]:  columnsDict) {
@@ -661,7 +661,8 @@ bool UpdateStatement::Validate(){
       return false;
     }
 
-    this->addColumn->defaultValue.Validate(columnType, this->addColumn->index);
+    //TODO Check this
+    // this->addColumn->defaultValue.Validate(columnType, this->addColumn->index);
 
     return true;
   }
@@ -899,9 +900,11 @@ bool UpdateStatement::Validate(){
     Statement *statement,
     Expressions::Expression *expr,
     const int& indexPos){
-    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
-      return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos) &&
-              ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos);
+    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
+      return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos)
+          && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos)
+          && ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right);
+    }
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
       if (statement->table == nullptr) {
@@ -932,8 +935,43 @@ bool UpdateStatement::Validate(){
       //validate type
 
       return ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->left, indexPos)
-        && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos);
+        && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos)
+        && ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right);
     }
+
+    return true;
+  }
+
+  bool ValidateExpressionCoercionTypes(const Expressions::Expression *left, const Expressions::Expression *right){
+    // If one side is a column expression, its type takes precedence
+    const auto* leftColumn = dynamic_cast<const Expressions::ColumnExpression*>(left);
+    const auto* rightColumn = dynamic_cast<const Expressions::ColumnExpression*>(right);
+
+    if (leftColumn == nullptr && rightColumn == nullptr)
+      return DataTypes::Coercions::IsCoercionAllowed(left->GetReturnType(), right->GetReturnType()) ||
+           DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), left->GetReturnType());
+
+    if (leftColumn != nullptr && rightColumn == nullptr) {
+      const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(right);
+
+      if (literalExpr != nullptr
+        && DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), literalExpr->value))
+          return true;
+
+      return DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), leftColumn->GetReturnType());
+    }
+    if (leftColumn == nullptr && rightColumn != nullptr) {
+      const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(left);
+
+      if (literalExpr != nullptr
+        && DataTypes::Coercions::CanBeParsedToType(rightColumn->GetReturnType(), literalExpr->value))
+        return true;
+
+      return DataTypes::Coercions::IsCoercionAllowed(left->GetReturnType(), rightColumn->GetReturnType());
+    }
+    if (leftColumn != nullptr && rightColumn != nullptr)
+      return DataTypes::Coercions::IsCoercionAllowed(leftColumn->GetReturnType(), rightColumn->GetReturnType()) ||
+             DataTypes::Coercions::IsCoercionAllowed(rightColumn->GetReturnType(), leftColumn->GetReturnType());
 
     return true;
   }

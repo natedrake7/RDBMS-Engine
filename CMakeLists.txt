@@ -70,7 +70,8 @@ add_library(AdditionalLibraries SHARED
         src/AdditionalLibraries/Expressions/Expression.cpp
         src/AdditionalLibraries/Functions/DateFunctions.h
         src/AdditionalLibraries/Expressions/Expressions.Additional.h
-        src/AdditionalLibraries/DataTypes/Coercions.h
+        src/AdditionalLibraries/Coercions/Coercions.h
+        src/AdditionalLibraries/Coercions/Coercions.cpp
 )
 
 add_library(QueryPipeline  SHARED

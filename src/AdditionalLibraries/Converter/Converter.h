@@ -31,6 +31,23 @@ public:
         return static_cast<T>(value);
     }
 
+    static bool TryStoi(const string& input) {
+        static_assert(is_integral_v<T>, "T must be integral type");
+
+        const char* str = input.c_str();
+        char* endptr = nullptr;
+        errno = 0;  // Reset errno before the conversion
+
+        long long value = strtoll(str, &endptr, 10);
+
+        // Check for conversion errors
+        if (endptr == str || *endptr != '\0' || errno == ERANGE)
+            return false;
+
+        // Check if the value is within the target type's range
+        return !(value < numeric_limits<T>::min() || value > numeric_limits<T>::max());
+    }
+
     static T Stoi(const u16string& input)
     {
         static_assert(is_integral_v<T>, "T must be integral type");
@@ -54,7 +71,33 @@ public:
 
         return static_cast<T>(value);
     }
+
+    static bool TryStoi(const u16string& input) {
+        static_assert(is_integral_v<T>, "T must be integral type");
+
+        const wstring converted(input.begin(), input.end());
+
+        char* endPtr = nullptr;
+        errno = 0;
+
+        if (sizeof(T) > sizeof(int))
+        {
+            // strtoll(input.c_str(), &endPtr, 10);
+
+            return errno != ERANGE;
+        }
+
+        // strtol(input.c_str(), &endPtr, 10);
+
+        return errno != ERANGE;
+    }
     
+    static bool TryStoi(const int64_t &input){
+        static_assert(is_integral_v<T>, "T must be integral type");
+
+        return !(input < numeric_limits<T>::min() || input > numeric_limits<T>::max());
+    }
+
     static T Stoi(const int64_t &input){
         static_assert(is_integral_v<T>, "T must be integral type");
 

@@ -1,4 +1,6 @@
 #include "Expression.h"
+
+#include "../Coercions/Coercions.h"
 #include "../HashSet/HashSet.h"
 
 namespace Expressions{
