@@ -514,4 +514,65 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
         return false;
       }
   }
+
+  void Coercions::DownCastFromSmallInt(Value &value){
+    const auto smallInt = value.GetSmallInt();
+    if (!Converter<int8_t>::TryStoi(smallInt))
+      return;
+
+    const auto tinyInt = Converter<int8_t>::Stoi(smallInt);
+    value.SetData(tinyInt);
+  }
+
+  void Coercions::DownCastFromInt(Value &value){
+    const auto integer = value.GetInt();
+
+    if (Converter<int8_t>::TryStoi(integer)) {
+      const auto tinyInt = Converter<int8_t>::Stoi(integer);
+      value.SetData(tinyInt);
+      return;
+    }
+
+    if (!Converter<int16_t>::TryStoi(integer))
+      return;
+
+    const auto smallInt = Converter<int16_t>::Stoi(integer);
+    value.SetData(smallInt);
+  }
+
+  void Coercions::DownCastFromBigInt(Value &value){
+    const auto bigInt = value.GetBigInt();
+
+    if (Converter<int8_t>::TryStoi(bigInt)) {
+      const auto tinyInt = Converter<int8_t>::Stoi(bigInt);
+      value.SetData(tinyInt);
+      return;
+    }
+
+    if (Converter<int16_t>::TryStoi(bigInt)) {
+      const auto smallInt = Converter<int16_t>::Stoi(bigInt);
+      value.SetData(smallInt);
+      return;
+    }
+
+    if (!Converter<int32_t>::TryStoi(bigInt))
+      return;
+
+    const auto integer = Converter<int32_t>::Stoi(bigInt);
+    value.SetData(integer);
+  }
+
+  void Coercions::DeduceIntegerType(Value &value){
+    switch (value.GetType()) {
+      case DataType::SmallInt:
+        return Coercions::DownCastFromSmallInt(value);
+      case DataType::Int:
+        return Coercions::DownCastFromInt(value);
+      case DataType::BigInt:
+        return Coercions::DownCastFromBigInt(value);
+      case DataType::TinyInt:
+      default:
+        return;
+    }
+  }
 }

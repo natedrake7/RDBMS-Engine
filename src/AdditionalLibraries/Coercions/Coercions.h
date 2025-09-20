@@ -89,8 +89,8 @@ namespace DataTypes{
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value, bool& outVal);
 
-    [[nodiscard]] static bool CanGetBool(const Value& value);
     [[nodiscard]] static bool CanGetTinyInt(const Value& value);
+    [[nodiscard]] static bool CanGetBool(const Value& value);
     [[nodiscard]] static bool CanGetSmallInt(const Value& value);
     [[nodiscard]] static bool CanGetInt(const Value& value);
     [[nodiscard]] static bool CanGetBigInt(const Value& value);
@@ -99,6 +99,10 @@ namespace DataTypes{
     [[nodiscard]] static bool CanGetGuid(const Value& value);
     [[nodiscard]] static bool CanGetDateTime(const Value& value);
     [[nodiscard]] static bool CanGetDecimal(const Value& value);
+
+    static void DownCastFromSmallInt(Value& value);
+    static void DownCastFromInt(Value& value);
+    static void DownCastFromBigInt(Value& value);
 
 
     public:
@@ -116,6 +120,7 @@ namespace DataTypes{
         [[nodiscard]] static Decimal ToDecimal(const Value& value, const bool& explicitCast = false);
 
         [[nodiscard]] static bool CanBeParsedToType(const Constants::DataType& toType, const Value& value);
+        static void DeduceIntegerType(Value& value);
 
     };
 }

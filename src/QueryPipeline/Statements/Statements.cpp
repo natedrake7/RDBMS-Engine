@@ -548,15 +548,17 @@ namespace QueryPipeline::Statements {
       if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, update->value, i))
           return false;
 
+      const auto valueType = update->value->GetReturnType();
       //Add coercion check functionality
       if (!DataTypes::Coercions::IsCoercionAllowed(
-        update->value->GetReturnType(),
-          update->name.returnType))
+        valueType,
+          update->name.returnType)
+        )
       {
         std::cerr << "Cannot update column " << update->name.name << " of type "
                   << ColumnTypesToStringDictionary.Get(update->name.returnType)
                   << " with value of type "
-                  << ColumnTypesToStringDictionary.Get(update->value->GetReturnType()) << std::endl;
+                  << ColumnTypesToStringDictionary.Get(valueType) << std::endl;
 
         return false;
       }
@@ -929,6 +931,11 @@ bool UpdateStatement::Validate(){
         std::cerr << errorMessage << std::endl;
         return false;
       }
+    }
+
+    if (auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(expr)) {
+      DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
+      return true;
     }
 
     if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {

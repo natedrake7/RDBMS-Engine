@@ -639,7 +639,7 @@ Value operator/(const Value &lhs, const Value &rhs){
 }
 
 Value operator*(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(rhs.type, rhs.type)) {
+    switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() * rhs.GetTinyInt(), 0);
         case DataType::SmallInt:
@@ -668,7 +668,7 @@ Value operator*(const Value &lhs, const Value &rhs){
 }
 
 Value operator<(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(rhs.type, rhs.type)) {
+    switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() < rhs.GetTinyInt(), 0);
         case DataType::SmallInt:
@@ -706,7 +706,7 @@ Value operator>(const Value &lhs, const Value &rhs){
 }
 
 Value operator<=(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(rhs.type, rhs.type)) {
+    switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() <= rhs.GetTinyInt(), 0);
         case DataType::SmallInt:
@@ -739,7 +739,7 @@ Value operator<=(const Value &lhs, const Value &rhs){
 }
 
 Value operator>=(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(rhs.type, rhs.type)) {
+    switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() >= rhs.GetTinyInt(), 0);
         case DataType::SmallInt:
@@ -772,7 +772,7 @@ Value operator>=(const Value &lhs, const Value &rhs){
 }
 
 Value operator==(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(rhs.type, rhs.type)) {
+    switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() == rhs.GetTinyInt(), 0);
         case DataType::SmallInt:
@@ -805,7 +805,7 @@ Value operator==(const Value &lhs, const Value &rhs){
 }
 
 Value operator!=(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(rhs.type, rhs.type)) {
+    switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() != rhs.GetTinyInt(), 0);
         case DataType::SmallInt:
@@ -838,7 +838,7 @@ Value operator!=(const Value &lhs, const Value &rhs){
 }
 
 Value operator%(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(rhs.type, rhs.type)) {
+    switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() % rhs.GetTinyInt(), 0);
         case DataType::SmallInt:
