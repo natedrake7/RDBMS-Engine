@@ -176,8 +176,19 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return result;
   }
 
-  PhysicalInsert::PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Value> &fields)
-    : PhysicalOperator(databaseId), table(table), fields(fields) {}
+  PhysicalInsert::PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::InsertColumns> &fields)
+    : PhysicalOperator(databaseId), table(table), fields(std::move(fields)) {}
+
+  PhysicalInsert::~PhysicalInsert(){
+    for (auto&[columns] : this->fields) {
+
+      for (auto&[value, index] : columns)
+        delete value;
+
+    }
+
+    delete this->table;
+  }
 
   PhysicalPlanResult* PhysicalInsert::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
@@ -190,7 +201,21 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     const auto transactionId = db->StartLogTransaction();
 
-    const auto insertResult = tablePtr->InsertRow(transactionId, this->fields);
+    for (const auto& valuesList : this->fields) {
+
+      std::vector<Value> values;
+
+      for (const auto&[value, index] : valuesList.columns) {
+        auto resultValue = value->Evaluate(nullptr);
+
+        resultValue.SetColumnIndex(index);
+
+        values.emplace_back(std::move(resultValue));
+      }
+
+      const auto insertResult = tablePtr->InsertRow(transactionId, values);
+    }
+
 
     // const auto insertResult = tablePtr->InsertRow(fields);
     //

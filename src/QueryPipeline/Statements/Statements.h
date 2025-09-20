@@ -107,6 +107,15 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool Validate(const int32_t& selectedDatabaseId);
   };
 
+  struct InsertColumn {
+    Expressions::Expression* value;
+    Constants::column_index_t index;
+  };
+
+  struct InsertColumns {
+    std::vector<InsertColumn> columns;
+  };
+
   struct Statement {
     int32_t databaseId;
     TableName* table;
@@ -177,10 +186,11 @@ namespace QueryPipeline::Statements {
 
   struct InsertStatement final : Statement{
     std::vector<ColumnName> columns;
-    std::vector<Value> values;
+    std::vector<InsertColumns> values;
 
-    ~InsertStatement() override { delete this->table; };
+    SelectStatement* selectStatement;
 
+    ~InsertStatement() override;
     bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     bool Validate() override;
     LogicalPlan* ToLogical() override;

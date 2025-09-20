@@ -134,11 +134,11 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalInsert final : public PhysicalOperator{
     Statements::TableName* table;
-    std::vector<Value> fields;
+    std::vector<Statements::InsertColumns> fields;
 
   public:
-    PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Value>& fields);
-    ~PhysicalInsert()override = default;
+    PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::InsertColumns>& fields);
+    ~PhysicalInsert()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 

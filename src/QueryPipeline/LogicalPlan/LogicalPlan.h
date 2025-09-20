@@ -83,8 +83,8 @@ namespace QueryPipeline {
   class LogicalInsert final : public LogicalPlan {
     public:
       Statements::TableName* table;
-      std::vector<Value> fields;
-      explicit LogicalInsert(const int32_t & databaseId, Statements::TableName* table, const std::vector<Value>& fields);
+      std::vector<Statements::InsertColumns> fields;
+      explicit LogicalInsert(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::InsertColumns>& fields);
       PhysicalPlan::PhysicalInsert* ToPhysical()override;
   };
 

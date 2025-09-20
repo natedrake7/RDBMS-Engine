@@ -136,6 +136,10 @@ namespace QueryPipeline {
       antlrcpp::Any visitOrderColumn(SQLParser::OrderColumnContext *context) override;
 
       antlrcpp::Any visitOrder(SQLParser::OrderContext *context) override;
+
+      std::any visitValuesStatement(SQLParser::ValuesStatementContext *context) override;
+
+      std::any visitValuesList(SQLParser::ValuesListContext *context) override;
   };
 
   static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {

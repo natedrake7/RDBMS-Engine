@@ -132,8 +132,16 @@ order
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 insertStatement
-        : INSERT INTO tableName LAPRENT columnList ')' VALUES LAPRENT literalValueList ')'
+        : INSERT INTO tableName LAPRENT columnList RAPRENT valuesStatement? selectStatement?
         ;
+
+valuesStatement
+        : VALUES valuesList
+        ;
+
+valuesList
+    : LAPRENT resultList RAPRENT COMMA (LAPRENT resultList RAPRENT)*
+    ;
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////

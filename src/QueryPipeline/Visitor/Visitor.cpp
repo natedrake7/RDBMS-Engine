@@ -125,10 +125,16 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
 
     statement->columns = std::move(this->GetColumnsList(context->columnList()));
-    
-    const auto values = visit(context->literalValueList());
 
-    statement->values = std::any_cast<std::vector<Value>>(values);
+    if (context->valuesStatement()) {
+      statement->values = std::any_cast<std::vector<Statements::InsertColumns>>(visit(context->valuesStatement()));
+    }
+
+    if (context->selectStatement())
+      statement->selectStatement = std::any_cast<Statements::SelectStatement*>(visit(context->selectStatement()));
+
+    if (!context->selectStatement() && !context->valuesStatement())
+      throw SyntaxError("Invalid syntax at insert", CreatePositionErrorMessage(context));
 
     return statement;
   }
@@ -210,6 +216,38 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     return context->ASC()
         ? context->ASC()->getText()
         : context->DESC()->getText();
+  }
+
+  std::any SQLVisitorImplementation::visitValuesStatement(SQLParser::ValuesStatementContext *context){
+    return std::any_cast<std::vector<Statements::InsertColumns>>(visit(context->valuesList()));
+  }
+
+  std::any SQLVisitorImplementation::visitValuesList(SQLParser::ValuesListContext *context){
+    std::vector<Statements::InsertColumns> values;
+
+    values.reserve(context->resultList().size());
+
+    for (const auto& value : context->resultList()) {
+
+      std::vector<Statements::InsertColumn> insertColumns;
+
+      auto resultList = std::any_cast<std::vector<Expressions::Expression*>>(visit(value));
+
+      for (auto* column : resultList) {
+        auto insert = Statements::InsertColumn{
+          .value = column,
+          .index = 0
+        };
+
+        insertColumns.push_back(std::move(insert));
+      }
+
+      values.emplace_back(Statements::InsertColumns{
+        .columns = std::move(insertColumns),
+      });
+    }
+
+    return values;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){

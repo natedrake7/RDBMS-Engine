@@ -434,25 +434,22 @@ namespace QueryPipeline::Statements {
     return nullptr;
   }
 
+   InsertStatement::~InsertStatement(){
+    delete this->selectStatement;
+  }
+
   bool InsertStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     return true;
   }
   //TODO validate length of columns to match max record_size from master DB
   bool InsertStatement::Validate(){
+    if (this->table == nullptr
+      || !this->table->Validate(this->databaseId))
+      return false;
 
-    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
-    if (tableHeader.id == Constants::INVALID_TABLE_ID){
-          cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
-          return false;
-    }
-
-    this->table->tableId = tableHeader.id;
-    this->table->ordinalPosition = tableHeader.ordinalPosition;
-    
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
-
-    const auto identityColumns = Server::ServerInstance::Get().SelectIdentityColumnsByTableIdToDictionary(tableHeader.id);
+    const auto identityColumns = Server::ServerInstance::Get().SelectIdentityColumnsByTableIdToDictionary(this->table->tableId);
 
 //    if (this->columns.size() <= this->values.size() + identityColumns.size()) {
 //      cerr << "Invalid number of arguments supplied" << endl;
@@ -460,7 +457,7 @@ namespace QueryPipeline::Statements {
 //    }
 
     for (int i = 0;i < this->columns.size(); i++) {
-      const auto& column = this->columns[i];
+      auto& column = this->columns[i];
 
       Headers::ColumnHeader header;
 
@@ -468,6 +465,8 @@ namespace QueryPipeline::Statements {
         cerr << "Column " << column.name << " does not exist on table: " << this->table->name << endl;
         return false;
       }
+
+      column.index = header.ordinalPosition;
 
       // this->values.at(i).Validate(header);
     }
@@ -484,6 +483,14 @@ namespace QueryPipeline::Statements {
           
         columnExistsInStatement = true;
         break;
+      }
+
+      for (auto& [insertColumns] : this->values) {
+
+        for (int i = 0;i < insertColumns.size(); i++) {
+          auto&[value, index] = insertColumns[i];
+          index = this->columns[i].index;
+        }
       }
 
       //check for default Values
@@ -503,7 +510,7 @@ namespace QueryPipeline::Statements {
         || defaultValue.columnId != -1)
         continue;
 
-      this->values.emplace_back(nullptr, header.ordinalPosition);
+      // this->values.emplace_back(nullptr, header.ordinalPosition);
     }
 
     return true;
