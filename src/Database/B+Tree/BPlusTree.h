@@ -156,6 +156,8 @@ namespace Indexing
 
         void IndexScanUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
 
+        void IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
+
         void IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Value> & updates);
 
         void SearchKey(const Key &key, QueryData &result) const;

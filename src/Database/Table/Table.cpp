@@ -856,6 +856,11 @@ namespace DatabaseEngine::StorageTypes {
       const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
         auto* tree = this->GetClusteredIndexedTree();
 
+        if (expression == nullptr) {
+          tree->IndexScanUpdate(updates);
+          return;
+        }
+
         tree->IndexScanUpdate(expression, updates);
     }
 

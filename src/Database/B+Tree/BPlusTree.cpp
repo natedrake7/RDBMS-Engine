@@ -585,6 +585,31 @@ namespace Indexing
         }
     }
 
+    void BPlusTree::IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        if (!this->root)
+            return;
+
+        HashSet<column_index_t> updatedColumns;
+
+        for(const auto& update : updates)
+            updatedColumns.Add(update->name.index);
+
+        auto *currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode)
+        {
+            for(auto* row: *currentNode->GetDataRowsUnsafe())
+                this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+
+            if(currentNode->GetNextPage() == 0)
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
     void BPlusTree::InsertRowsToOtherTree(const int& indexPos){
         if (this->firstIndexPageId == INVALID_PAGE_ID)
             return;

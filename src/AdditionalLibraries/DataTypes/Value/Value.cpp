@@ -24,6 +24,11 @@ Value::Value(const Value &copyVal){
     this->columnIndex = copyVal.columnIndex;
     this->isIdentifier = copyVal.isIdentifier;
 
+    if (copyVal.data == nullptr) {
+        this->data = nullptr;
+        return;
+    }
+
     this->data = new object_t[this->size];
     memcpy(this->data, copyVal.data, this->size);
 }
@@ -455,6 +460,11 @@ Value& Value::operator=(const Value &rhs){
 
     this->size = rhs.size;
     this->type = rhs.type;
+
+    if (rhs.data == nullptr) {
+        this->data = nullptr;
+        return *this;
+    }
 
     this->data = new object_t[this->size];
     memcpy(this->data, rhs.data, this->size);

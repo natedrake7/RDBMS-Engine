@@ -141,6 +141,8 @@ namespace DatabaseEngine::StorageTypes {
 
     const Column * Block::GetColumn() const{ return this->column; }
 
+    bool Block::GetIsNull() const{ return this->data == nullptr; }
+
     void Block::SetColumn(const Column* column) { this->column = column; };
 
     void Block::PrintBlockData() const

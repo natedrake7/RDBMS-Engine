@@ -341,17 +341,15 @@ namespace DatabaseEngine::StorageTypes {
 
         auto *block = this->data.at(associatedColumnIndex);
 
-        const DataType columnType = block->GetColumnType();
-
-        if (columnType >= Constants::DataType::Invalid)
-          throw invalid_argument("Table::InsertRow: Unsupported Column Type");
-
         if (value.GetIsNull())
         {
           block->SetData(nullptr, 0);
           this->SetNullBitMapValue(associatedColumnIndex, true);
           continue;
         }
+
+        if (block->GetIsNull())
+            this->SetNullBitMapValue(associatedColumnIndex, false);
 
         block->SetData(value);
       }
@@ -374,15 +372,15 @@ namespace DatabaseEngine::StorageTypes {
 
             auto *block = this->data.at(associatedColumnIndex);
 
-            if (block->GetColumnType() >= Constants::DataType::Invalid)
-                throw invalid_argument("Table::InsertRow: Unsupported Column Type");
-
             if (result.GetIsNull())
             {
                 block->SetData(nullptr, 0);
                 this->SetNullBitMapValue(associatedColumnIndex, true);
                 continue;
             }
+
+            if (block->GetIsNull())
+                this->SetNullBitMapValue(associatedColumnIndex, false);
 
             block->SetData(result);
         }

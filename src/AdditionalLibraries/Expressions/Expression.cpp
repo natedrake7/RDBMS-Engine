@@ -3,6 +3,8 @@
 #include "../Coercions/Coercions.h"
 #include "../HashSet/HashSet.h"
 
+#include <iostream>
+
 namespace Expressions{
 
   ColumnExpression::ColumnExpression(const std::string &name, const std::string &tableAlias){

@@ -3,6 +3,7 @@
 #include "../Constants.h"
 #include "../../AdditionalLibraries/Coercions/Coercions.h"
 #include "../../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../../Database/Database.h"
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
 
@@ -549,12 +550,23 @@ namespace QueryPipeline::Statements {
           return false;
 
       const auto valueType = update->value->GetReturnType();
-      //Add coercion check functionality
       if (!DataTypes::Coercions::IsCoercionAllowed(
         valueType,
           update->name.returnType)
         )
       {
+        const auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(update->value);
+
+        if (literalExpr != nullptr && literalExpr->value.GetIsNull()) {
+          const auto& columns = this->tableColumnsDictionary.Get(this->table->tableId);
+
+          if (columns.Get(update->name.name).isNullable)
+            continue;
+
+            std::cerr << "Column " << update->name.name << " does not allow NULL" << std::endl;
+            return false;
+        }
+
         std::cerr << "Cannot update column " << update->name.name << " of type "
                   << ColumnTypesToStringDictionary.Get(update->name.returnType)
                   << " with value of type "
