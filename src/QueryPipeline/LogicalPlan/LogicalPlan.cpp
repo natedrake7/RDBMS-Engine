@@ -95,11 +95,25 @@ LogicalFilter::LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Exp
     return new PhysicalPlan::PhysicalFilter(this->databaseId, this->child->ToPhysical(), this->filter);
   }
 
-  LogicalInsert::LogicalInsert(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::InsertColumns> &fields)
-    : LogicalPlan(databaseId), table(table), fields(std::move(fields)) {}
+  LogicalInsert::LogicalInsert(
+    const int32_t & databaseId,
+    Statements::TableName* table,
+    std::vector<Statements::InsertColumns> &fields,
+    LogicalPlan* child,
+    std::vector<column_index_t>& selectColumnsIndices
+  )
+    : LogicalPlan(databaseId), table(table), fields(std::move(fields)), child(child), selectColumnsIndices(std::move(selectColumnsIndices)) {}
+
+  LogicalInsert::~LogicalInsert(){
+    delete this->child;
+  }
 
   PhysicalPlan::PhysicalInsert * LogicalInsert::ToPhysical(){
-    return new PhysicalPlan::PhysicalInsert(this->databaseId, this->table, this->fields);
+    auto* physicalSelect = this->child != nullptr
+        ? this->child->ToPhysical()
+        : nullptr;
+
+    return new PhysicalPlan::PhysicalInsert(this->databaseId, this->table, this->fields, physicalSelect, this->selectColumnsIndices);
   }
 
   LogicalSchemaCreate::LogicalSchemaCreate(const int32_t &databaseId, std::string &schemaName)

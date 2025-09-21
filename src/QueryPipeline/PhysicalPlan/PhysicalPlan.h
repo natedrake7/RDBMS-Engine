@@ -136,8 +136,20 @@ namespace QueryPipeline::PhysicalPlan{
     Statements::TableName* table;
     std::vector<Statements::InsertColumns> fields;
 
+    PhysicalOperator* child;
+    std::vector<column_index_t> selectColumnsIndices;
+
+
+    void InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId, const int& batchSize)const;
+    void InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId);
   public:
-    PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::InsertColumns>& fields);
+    PhysicalInsert(
+      const int32_t & databaseId,
+      Statements::TableName* table,
+      std::vector<Statements::InsertColumns>& fields,
+      PhysicalOperator* child,
+      std::vector<column_index_t>& selectColumnsIndices
+    );
     ~PhysicalInsert()override;
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };

@@ -478,6 +478,33 @@ namespace QueryPipeline::Statements {
 
   bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
+  bool InsertStatement::ValidateSelectStatement(){
+
+    if (this->selectStatement == nullptr)
+      return true;
+
+    if (this->selectStatement->results.size() !=  this->columns.size()) {
+      std::cerr << "Invalid number of arguments specified on select statement" << std::endl;
+      return false;
+    }
+
+    this->selectStatement->databaseId = this->databaseId;
+
+    if (!this->selectStatement->Validate())
+      return false;
+
+    for (int i = 0;i < this->selectStatement->results.size();i++) {
+      const auto& resultExpression = this->selectStatement->results[i];
+
+      if (!this->ValidateReturnType(resultExpression, this->columns[i].name))
+        return false;
+
+      this->selectColumnIndices.emplace_back(this->columns[i].index);
+    }
+
+    return true;
+  }
+
   bool InsertStatement::ResolveAliases(){
     Dictionary<std::string, table_id_t> tableAliasesDictionary{
       {this->table->GetAlias(), this->table->tableId}
@@ -607,7 +634,7 @@ namespace QueryPipeline::Statements {
     }
 
     if (this->HasSelectStatement())
-      return this->selectStatement->Validate();
+      return this->ValidateSelectStatement();
 
     if (!this->ResolveAliases())
       return false;
@@ -616,7 +643,12 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan* InsertStatement::ToLogical() {
-    return new QueryPipeline::LogicalInsert(this->databaseId, this->table, this->values);
+
+    auto* logicalSelect = this->HasSelectStatement()
+        ? this->selectStatement->ToLogical()
+        : nullptr;
+
+    return new QueryPipeline::LogicalInsert(this->databaseId, this->table, this->values, logicalSelect, selectColumnIndices);
   }
 
   bool CreateSchemaStatement::Validate(){

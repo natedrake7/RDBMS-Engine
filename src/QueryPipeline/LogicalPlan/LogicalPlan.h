@@ -84,7 +84,18 @@ namespace QueryPipeline {
     public:
       Statements::TableName* table;
       std::vector<Statements::InsertColumns> fields;
-      explicit LogicalInsert(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::InsertColumns>& fields);
+
+      LogicalPlan* child;
+      std::vector<column_index_t> selectColumnsIndices;
+
+      explicit LogicalInsert(
+        const int32_t & databaseId,
+        Statements::TableName* table,
+        std::vector<Statements::InsertColumns>& fields,
+        LogicalPlan* child,
+        std::vector<column_index_t>& selectColumnsIndices
+      );
+      ~LogicalInsert()override;
       PhysicalPlan::PhysicalInsert* ToPhysical()override;
   };
 

@@ -189,12 +189,14 @@ namespace QueryPipeline::Statements {
     std::vector<ColumnName> columns;
     std::vector<InsertColumns> values;
 
+    std::vector<column_index_t> selectColumnIndices;
     SelectStatement* selectStatement;
 
     ~InsertStatement() override;
 
     [[nodiscard]] bool ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName)const;
     [[nodiscard]] bool HasSelectStatement() const;
+    [[nodiscard]] bool ValidateSelectStatement();
     [[nodiscard]] bool ResolveAliases();
     [[nodiscard]] bool Validate() override;
     [[nodiscard]] LogicalPlan* ToLogical() override;

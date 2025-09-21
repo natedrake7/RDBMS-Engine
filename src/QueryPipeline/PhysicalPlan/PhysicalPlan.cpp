@@ -176,17 +176,52 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return result;
   }
 
-  PhysicalInsert::PhysicalInsert(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::InsertColumns> &fields)
-    : PhysicalOperator(databaseId), table(table), fields(std::move(fields)) {}
+  void PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId, const int& batchSize)const{
+    auto* result = this->child->Execute(batchSize);
+
+    for (auto& row : result->results) {
+      for (int i = 0; i < this->selectColumnsIndices.size(); i++) {
+        row.SetColumnIndex(i, this->selectColumnsIndices[i]);
+      }
+
+      const auto insertResult = tablePtr->InsertRow(transactionId, row.GetData());
+    }
+  }
+
+  void PhysicalInsert::InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId){
+    for (const auto&[columns] : this->fields) {
+
+      std::vector<Value> values;
+
+      for (const auto&[value, index, columnId] : columns) {
+        auto resultValue = value->Evaluate(nullptr);
+
+        resultValue.SetColumnIndex(index);
+
+        values.emplace_back(std::move(resultValue));
+      }
+
+      const auto insertResult = tablePtr->InsertRow(transactionId, values);
+    }
+  }
+
+PhysicalInsert::PhysicalInsert(
+  const int32_t & databaseId,
+  Statements::TableName* table,
+  std::vector<Statements::InsertColumns> &fields,
+  PhysicalOperator* child,
+  std::vector<column_index_t>& selectColumnsIndices)
+    : PhysicalOperator(databaseId), table(table), fields(std::move(fields)), child(child), selectColumnsIndices(std::move(selectColumnsIndices)) {}
 
   PhysicalInsert::~PhysicalInsert(){
     for (auto&[columns] : this->fields) {
 
-      for (auto& column: columns)
+      for (const auto& column: columns)
         delete column.value;
     }
 
     delete this->table;
+    delete this->child;
   }
 
   PhysicalPlanResult* PhysicalInsert::Execute(const int& batchSize){
@@ -200,28 +235,18 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
     const auto transactionId = db->StartLogTransaction();
 
-    for (const auto& valuesList : this->fields) {
-
-      std::vector<Value> values;
-
-      for (const auto&[value, index, columnId] : valuesList.columns) {
-        auto resultValue = value->Evaluate(nullptr);
-
-        resultValue.SetColumnIndex(index);
-
-        values.emplace_back(std::move(resultValue));
-      }
-
-      const auto insertResult = tablePtr->InsertRow(transactionId, values);
+    if (this->child != nullptr) {
+      this->InsertFromChild(tablePtr, transactionId, batchSize);
+      return result;
     }
 
+    this->InsertFromFields(tablePtr, transactionId);
+    return result;
 
     // const auto insertResult = tablePtr->InsertRow(fields);
     //
     // result->code = insertResult.code;
     // result->message = insertResult.message;
-
-    return result;
   }
 
   PhysicalHeapDelete::PhysicalHeapDelete(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression)
