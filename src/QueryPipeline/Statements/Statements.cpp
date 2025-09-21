@@ -438,7 +438,64 @@ namespace QueryPipeline::Statements {
     delete this->selectStatement;
   }
 
-  bool InsertStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+  bool InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName) const{
+    const auto valueType = expression->GetReturnType();
+
+    const auto& columnsDictionary = this->tableColumnsDictionary.Get(this->table->tableId);
+
+    const auto& columnHeader = columnsDictionary.Get(columnName);
+
+    const auto columnType = static_cast<Constants::DataType>(columnHeader.dataType);
+
+    if (DataTypes::Coercions::IsCoercionAllowed(
+      valueType,
+        columnType
+      ))
+      return true;
+
+    const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(expression);
+
+    if (literalExpr != nullptr) {
+      if (literalExpr->value.GetIsNull()) {
+        if (columnHeader.isNullable)
+          return true;
+
+        std::cerr << "Column " << columnHeader.name << " does not allow NULL. Insert fails." << std::endl;
+        return false;
+      }
+
+      if (DataTypes::Coercions::CanBeParsedToType(columnType, literalExpr->value))
+        return true;
+    }
+
+    std::cerr << "Cannot update column " << columnHeader.name << " of type "
+              << ColumnTypesToStringDictionary.Get(columnType)
+              << " with value of type "
+              << ColumnTypesToStringDictionary.Get(valueType) << std::endl;
+
+    return false;
+  }
+
+  bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
+
+  bool InsertStatement::ResolveAliases(){
+    Dictionary<std::string, table_id_t> tableAliasesDictionary{
+      {this->table->GetAlias(), this->table->tableId}
+    };
+
+    for (auto& [insertColumns] : this->values) {
+
+      for (int i = 0;i < insertColumns.size(); i++) {
+        auto& column = insertColumns[i];
+
+        if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, column.value))
+          return false;
+
+        if (!this->ValidateReturnType(column.value, this->columns[i].name))
+          return false;
+      }
+    }
+
     return true;
   }
   //TODO validate length of columns to match max record_size from master DB
@@ -449,69 +506,111 @@ namespace QueryPipeline::Statements {
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
+    this->tableColumnsDictionary.Add(this->table->tableId, columnsDict);
+
     const auto identityColumns = Server::ServerInstance::Get().SelectIdentityColumnsByTableIdToDictionary(this->table->tableId);
 
-//    if (this->columns.size() <= this->values.size() + identityColumns.size()) {
-//      cerr << "Invalid number of arguments supplied" << endl;
-//      return false;
-//    }
+    //validate insert columns existance
+    HashSet<int32_t> statementColumns;
 
-    for (int i = 0;i < this->columns.size(); i++) {
-      auto& column = this->columns[i];
-
+    for (auto & column : this->columns) {
       Headers::ColumnHeader header;
 
+      //check if columns exist on the table
       if (!columnsDict.TryGetValue(column.name, header)) {
-        cerr << "Column " << column.name << " does not exist on table: " << this->table->name << endl;
+        std::cerr << "Column " << column.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
+        return false;
+      }
+
+      //check if the specified column is an identity column
+      if (identityColumns.Contains(header.id)) {
+        std::cerr << "Cannot specify an identity column for insert" << std::endl;
         return false;
       }
 
       column.index = header.ordinalPosition;
-
-      // this->values.at(i).Validate(header);
+      column.columnId = header.id;
+      statementColumns.Add(header.id);
     }
 
     for (const auto&[columnName, header]:  columnsDict) {
       if (header.isSystem)
         continue;
-      
-      bool columnExistsInStatement = false;
-      
-      for (const auto& statementColumn: this->columns) {
-        if (columnName != statementColumn.name)
-          continue;
-          
-        columnExistsInStatement = true;
-        break;
-      }
 
-      for (auto& [insertColumns] : this->values) {
+      if (identityColumns.Contains(header.id))
+        continue;
 
-        for (int i = 0;i < insertColumns.size(); i++) {
-          auto&[value, index] = insertColumns[i];
-          index = this->columns[i].index;
+      if (statementColumns.Contains(header.id)) {
+        for (auto& [insertColumns] : this->values) {
+
+          for (int i = 0;i < insertColumns.size(); i++) {
+            auto&[value, index, columnId] = insertColumns[i];
+            index = this->columns[i].index;
+            columnId = this->columns[i].columnId;
+          }
         }
+        continue;
       }
 
-      //check for default Values
+      //Insert the null value
+      if (header.isNullable) {
+        this->columns.emplace_back(ColumnName{
+          .name = header.name,
+          .alias = header.name,
+          .tableId = this->table->tableId,
+          .columnId = header.id,
+          .index = static_cast<Constants::column_index_t>(header.ordinalPosition),
+          .returnType = static_cast<Constants::DataType>(header.dataType),
+        });
+
+        for (auto& [insertColumns] : this->values) {
+          insertColumns.emplace_back(
+            InsertColumn{
+              .value = new Expressions::LiteralExpression(Value(nullptr, header.ordinalPosition)),
+              .index = static_cast<column_index_t>(header.ordinalPosition)
+          });
+        }
+
+        continue;
+      }
 
       const auto defaultValue = Server::ServerInstance::Get().SelectDefaultValueByColumnId(header.id);
 
-      if (!columnExistsInStatement
-          && !header.isNullable
-          && !identityColumns.Contains(header.id)
-          && defaultValue.columnId == -1) {
+      if (defaultValue.columnId == Constants::INVALID_COLUMN_ID) {
         std::cerr << "Column " << columnName << " does not allow NULLS. Insert fails" << std::endl;
         return false;
       }
 
-      if (columnExistsInStatement
-        || identityColumns.Contains(header.id)
-        || defaultValue.columnId != -1)
-        continue;
+      this->columns.emplace_back(ColumnName{
+        .name = header.name,
+        .alias = header.name,
+        .tableId = this->table->tableId,
+        .columnId = header.id,
+        .index = static_cast<Constants::column_index_t>(header.ordinalPosition),
+        .returnType = static_cast<Constants::DataType>(header.dataType),
+      });
 
-      // this->values.emplace_back(nullptr, header.ordinalPosition);
+      //Insert the default value
+      for (auto& [insertColumns] : this->values) {
+        const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
+
+        insertColumns.emplace_back(
+          InsertColumn{
+            .value = new Expressions::LiteralExpression(Value(
+              data,
+              static_cast<int>(defaultValue.value.size()),
+              static_cast<DataType>(header.dataType)
+            )),
+            .index = static_cast<column_index_t>(header.ordinalPosition)
+        });
+      }
     }
+
+    if (this->HasSelectStatement())
+      return this->selectStatement->Validate();
+
+    if (!this->ResolveAliases())
+      return false;
 
     return true;
   }
@@ -541,6 +640,39 @@ namespace QueryPipeline::Statements {
     delete this->value;
   }
 
+  bool UpdateStatement::ValidateReturnType(const UpdateColumn* update) const{
+    const auto valueType = update->value->GetReturnType();
+    if (DataTypes::Coercions::IsCoercionAllowed(
+      valueType,
+        update->name.returnType)
+        )
+      return true;
+
+    const auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(update->value);
+
+    if (literalExpr != nullptr) {
+      if (literalExpr->value.GetIsNull()) {
+        const auto& columns = this->tableColumnsDictionary.Get(this->table->tableId);
+
+        if (columns.Get(update->name.name).isNullable)
+          return true;
+
+        std::cerr << "Column " << update->name.name << " does not allow NULL. Update fails." << std::endl;
+        return false;
+      }
+
+      if (DataTypes::Coercions::CanBeParsedToType(update->name.returnType, literalExpr->value))
+        return true;
+    }
+
+    std::cerr << "Cannot update column " << update->name.name << " of type "
+              << ColumnTypesToStringDictionary.Get(update->name.returnType)
+              << " with value of type "
+              << ColumnTypesToStringDictionary.Get(valueType) << std::endl;
+
+    return false;
+  }
+
   bool UpdateStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
@@ -556,31 +688,8 @@ namespace QueryPipeline::Statements {
       if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, update->value, i))
           return false;
 
-      const auto valueType = update->value->GetReturnType();
-      if (!DataTypes::Coercions::IsCoercionAllowed(
-        valueType,
-          update->name.returnType)
-        )
-      {
-        const auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(update->value);
-
-        if (literalExpr != nullptr && literalExpr->value.GetIsNull()) {
-          const auto& columns = this->tableColumnsDictionary.Get(this->table->tableId);
-
-          if (columns.Get(update->name.name).isNullable)
-            continue;
-
-            std::cerr << "Column " << update->name.name << " does not allow NULL" << std::endl;
-            return false;
-        }
-
-        std::cerr << "Cannot update column " << update->name.name << " of type "
-                  << ColumnTypesToStringDictionary.Get(update->name.returnType)
-                  << " with value of type "
-                  << ColumnTypesToStringDictionary.Get(valueType) << std::endl;
-
+      if (!this->ValidateReturnType(update))
         return false;
-      }
     }
 
     //validate all expressions are valid

@@ -133,6 +133,9 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->selectStatement())
       statement->selectStatement = std::any_cast<Statements::SelectStatement*>(visit(context->selectStatement()));
 
+    if (context->valuesStatement() && context->selectStatement())
+      throw SyntaxError("Cannot have both Values Statement and Select Statement in insert", CreatePositionErrorMessage(context));
+
     if (!context->selectStatement() && !context->valuesStatement())
       throw SyntaxError("Invalid syntax at insert", CreatePositionErrorMessage(context));
 
@@ -234,12 +237,11 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       auto resultList = std::any_cast<std::vector<Expressions::Expression*>>(visit(value));
 
       for (auto* column : resultList) {
-        auto insert = Statements::InsertColumn{
-          .value = column,
-          .index = 0
-        };
-
-        insertColumns.push_back(std::move(insert));
+        insertColumns.emplace_back(
+          Statements::InsertColumn{
+            .value = column,
+            .index = 0
+          });
       }
 
       values.emplace_back(Statements::InsertColumns{

@@ -79,7 +79,7 @@ namespace Headers {
   };
 
   struct DefaultValuesHeader {
-    int32_t columnId = -1;
+    int32_t columnId = Constants::INVALID_COLUMN_ID;
     std::string value;
     //add size here
 
@@ -87,7 +87,7 @@ namespace Headers {
   };
 
   struct ColumnHeader {
-    int32_t id = -1;
+    int32_t id = Constants::INVALID_COLUMN_ID;
     int32_t tableId;
     std::string name;
     uint8_t dataType;

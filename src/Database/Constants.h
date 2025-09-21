@@ -21,6 +21,7 @@ namespace Constants
 
     constexpr int32_t INVALID_DATABASE_ID = -1;
     constexpr int32_t INVALID_TABLE_ID = -1;
+    constexpr int32_t INVALID_COLUMN_ID = -1;
     constexpr int32_t INVALID_SCHEMA_ID = -1;
     constexpr int16_t INVALID_ORDINAL_POS = -1;
 

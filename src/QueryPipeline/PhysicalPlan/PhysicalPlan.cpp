@@ -182,9 +182,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   PhysicalInsert::~PhysicalInsert(){
     for (auto&[columns] : this->fields) {
 
-      for (auto&[value, index] : columns)
-        delete value;
-
+      for (auto& column: columns)
+        delete column.value;
     }
 
     delete this->table;
@@ -205,7 +204,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
 
       std::vector<Value> values;
 
-      for (const auto&[value, index] : valuesList.columns) {
+      for (const auto&[value, index, columnId] : valuesList.columns) {
         auto resultValue = value->Evaluate(nullptr);
 
         resultValue.SetColumnIndex(index);

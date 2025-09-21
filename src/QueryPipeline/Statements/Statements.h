@@ -110,6 +110,7 @@ namespace QueryPipeline::Statements {
   struct InsertColumn {
     Expressions::Expression* value;
     Constants::column_index_t index;
+    int32_t columnId;
   };
 
   struct InsertColumns {
@@ -191,9 +192,12 @@ namespace QueryPipeline::Statements {
     SelectStatement* selectStatement;
 
     ~InsertStatement() override;
-    bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
-    bool Validate() override;
-    LogicalPlan* ToLogical() override;
+
+    [[nodiscard]] bool ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName)const;
+    [[nodiscard]] bool HasSelectStatement() const;
+    [[nodiscard]] bool ResolveAliases();
+    [[nodiscard]] bool Validate() override;
+    [[nodiscard]] LogicalPlan* ToLogical() override;
   };
 
   struct CreateSchemaStatement final : Statement {
@@ -215,6 +219,7 @@ namespace QueryPipeline::Statements {
     std::vector<UpdateColumn*> updates;
     WhereClause where;
 
+    [[nodiscard]] bool ValidateReturnType(const UpdateColumn* update)const;
     bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;

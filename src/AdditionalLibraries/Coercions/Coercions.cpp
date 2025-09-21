@@ -188,20 +188,6 @@ namespace DataTypes{
 
   bool Coercions::ToBool(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
-
-    const auto coercionType = GetCoercionType(valueType, DataType::TinyInt);
-
-    if (coercionType == CoercionType::None)
-      return false;
-
-    if (coercionType == CoercionType::Explicit) {
-      if (!explicitCast)
-        return false;
-
-      //try cast to int if can possible else 0
-      return false;
-    }
-
     switch (valueType) {
       case DataType::TinyInt:
         return Converter<bool>::Stoi(value.GetTinyInt());
@@ -226,20 +212,6 @@ namespace DataTypes{
 
   int8_t Coercions::ToTinyInt(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
-
-    const auto coercionType = GetCoercionType(valueType, DataType::TinyInt);
-
-    if (coercionType == CoercionType::None)
-      return 0;
-
-    if (coercionType == CoercionType::Explicit) {
-      if (!explicitCast)
-        return 0;
-
-      //try cast to int if can possible else 0
-      return 0;
-    }
-
     switch (valueType) {
       case DataType::TinyInt:
         return *reinterpret_cast<const int8_t *>(value.GetRawData());
@@ -264,20 +236,6 @@ namespace DataTypes{
 
   int16_t Coercions::ToSmallInt(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
-
-    const auto coercionType = GetCoercionType(valueType, DataType::SmallInt);
-
-    if (coercionType == CoercionType::None)
-      return 0;
-
-    if (coercionType == CoercionType::Explicit) {
-      if (!explicitCast)
-        return 0;
-
-      //try cast to int if can possible else 0
-      return 0;
-    }
-
     switch (valueType) {
       case DataType::TinyInt:
         return *reinterpret_cast<const int8_t *>(value.GetRawData());
@@ -302,19 +260,6 @@ namespace DataTypes{
 
   int32_t Coercions::ToInt(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
-    const auto coercionType = GetCoercionType(valueType, DataType::Int);
-
-    if (coercionType == CoercionType::None)
-      return 0;
-
-    if (coercionType == CoercionType::Explicit) {
-      if (!explicitCast)
-        return 0;
-
-      //try cast to int if can possible else 0
-      return 0;
-    }
-
     switch (valueType) {
       case DataType::TinyInt:
         return *reinterpret_cast<const int8_t *>(value.GetRawData());
@@ -339,19 +284,6 @@ namespace DataTypes{
 
 int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
-    const auto coercionType = GetCoercionType(valueType, DataType::BigInt);
-
-    if (coercionType == CoercionType::None)
-      return 0;
-
-    if (coercionType == CoercionType::Explicit) {
-      if (!explicitCast)
-        return 0;
-
-      //try cast to int if can possible else 0
-      return 0;
-    }
-
     switch (valueType) {
       case DataType::TinyInt:
         return *reinterpret_cast<const int8_t *>(value.GetRawData());
@@ -376,19 +308,6 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
 
   std::string Coercions::ToString(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
-    const auto coercionType = GetCoercionType(valueType, DataType::String);
-
-    if (coercionType == CoercionType::None)
-      return {};
-
-    if (coercionType == CoercionType::Explicit) {
-      if (!explicitCast)
-        return {};
-
-      //try cast to int if can possible else 0
-      return {};
-    }
-
     switch (valueType) {
       case DataType::TinyInt:
         return std::to_string(value.GetTinyInt());
@@ -422,19 +341,6 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
 
   Guid Coercions::ToGuid(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
-    const auto coercionType = GetCoercionType(valueType, DataType::String);
-
-    if (coercionType == CoercionType::None)
-      return {};
-
-    if (coercionType == CoercionType::Explicit) {
-      if (!explicitCast)
-        return {};
-
-      //try cast to int if can possible else 0
-      return {};
-    }
-
     switch (valueType) {
       case DataType::Guid:
         return {value.GetRawData(), value.GetSize()};
@@ -448,19 +354,6 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
 
   DateTime Coercions::ToDateTime(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
-    const auto coercionType = GetCoercionType(valueType, DataType::String);
-
-    if (coercionType == CoercionType::None)
-      return {};
-
-    if (coercionType == CoercionType::Explicit) {
-      if (!explicitCast)
-        return {};
-
-      //try cast to int if can possible else 0
-      return {};
-    }
-
     switch (valueType) {
     case DataType::UnicodeString:
     case DataType::String: {
@@ -490,28 +383,28 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
       return true;
 
     switch (toType) {
-    case DataType::TinyInt:
-        return Coercions::CanGetTinyInt(value);
-      case DataType::SmallInt:
-        return Coercions::CanGetSmallInt(value);
-      case DataType::Int:
-        return Coercions::CanGetInt(value);
-      case DataType::BigInt:
-        return Coercions::CanGetBigInt(value);
-      case DataType::Decimal:
-        return Coercions::CanGetDecimal(value);
-      case DataType::String:
-        return Coercions::CanGetString(value);
-      case DataType::UnicodeString:
-        return Coercions::CanGetUnicodeString(value);
-      case DataType::Bool:
-        return Coercions::CanGetBool(value);
-      case DataType::DateTime:
-        return Coercions::CanGetDateTime(value);
-      case DataType::Guid:
-        return Coercions::CanGetGuid(value);
-      default:
-        return false;
+      case DataType::TinyInt:
+          return Coercions::CanGetTinyInt(value);
+        case DataType::SmallInt:
+          return Coercions::CanGetSmallInt(value);
+        case DataType::Int:
+          return Coercions::CanGetInt(value);
+        case DataType::BigInt:
+          return Coercions::CanGetBigInt(value);
+        case DataType::Decimal:
+          return Coercions::CanGetDecimal(value);
+        case DataType::String:
+          return Coercions::CanGetString(value);
+        case DataType::UnicodeString:
+          return Coercions::CanGetUnicodeString(value);
+        case DataType::Bool:
+          return Coercions::CanGetBool(value);
+        case DataType::DateTime:
+          return Coercions::CanGetDateTime(value);
+        case DataType::Guid:
+          return Coercions::CanGetGuid(value);
+        default:
+          return false;
       }
   }
 
