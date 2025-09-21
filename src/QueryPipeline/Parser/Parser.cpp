@@ -85,7 +85,7 @@ namespace QueryPipeline
           return;
         }
 
-        Cursor cursor(0, physicalPlan, 100);
+        Cursor cursor(0, physicalPlan, 1000);
 
         PhysicalPlan::PhysicalPlanResult* result = nullptr;
 
