@@ -153,7 +153,7 @@ int main()
         std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
     }
 
-    //SELECT * FROM dbo.Actors AS a INNER JOIN dbo.Movies AS m ON m.ActorID = a.ID
+    //CREATE TABLE dbo.NewActors(ActorID INT PRIMARY KEY, ActorName STRING(200), MovieID INT)
 
     server.Shutdown();
 

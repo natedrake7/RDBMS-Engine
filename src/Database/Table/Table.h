@@ -73,7 +73,6 @@ namespace DatabaseEngine::StorageTypes
 
     class Table final
     {
-
         TableHeader header;
         vector<Column *> columns;
         DatabaseEngine::Database *database;

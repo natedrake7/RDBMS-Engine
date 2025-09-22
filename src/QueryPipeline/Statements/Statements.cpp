@@ -18,20 +18,14 @@ namespace QueryPipeline::Statements {
   }
 
   bool DeleteStatement::Validate(){
-    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
 
-    if (tableHeader.id == Constants::INVALID_TABLE_ID){
-          cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
-          return false;
-    }
-
-    this->table->tableId = tableHeader.id;
-    this->table->ordinalPosition = tableHeader.ordinalPosition;
+    if (!this->table->Validate(this->databaseId))
+      return false;
 
     if (this->where.expression == nullptr)
       return true;
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
 
     return true;
@@ -39,7 +33,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * DeleteStatement::ToLogical(){
-    return new LogicalDelete(this->databaseId, this->table, this->where.expression);
+    return new LogicalDelete(this->table, this->where.expression);
   }
 
   JoinStatement::JoinStatement() {
@@ -53,7 +47,7 @@ namespace QueryPipeline::Statements {
   }
 
   bool JoinStatement::Validate(){
-    const auto header = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
+    const auto header = Server::ServerInstance::Get().SelectTable(this->table->name, this->table->schema);
 
     if (header.id == Constants::INVALID_TABLE_ID) {
       cerr << "Table " +this->table->schema + "." +this->table->name + " does not exist" << endl;
@@ -87,7 +81,7 @@ namespace QueryPipeline::Statements {
   }
 
   // QueryPipeline::LogicalPlan * JoinStatement::ToLogical(){
-  //   return new LogicalJoin(this->databaseId, this->table, this->joinType, this->table2, this->on.expression);
+  //   return new LogicalJoin(this->table, this->joinType, this->table2, this->on.expression);
   // }
 
   CreateTableStatement::CreateTableStatement(){
@@ -96,12 +90,8 @@ namespace QueryPipeline::Statements {
   }
 
   bool CreateTableStatement::Validate(){
-    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
-
-    if (tableHeader.id != Constants::INVALID_TABLE_ID) {
-      std::cerr << "Table with name: " << this->table->GetFullName() << " already exists." << std::endl;
+    if (!this->table->ValidateTableCreate(this->databaseId))
       return false;
-    }
 
     const auto& schemasDict = Server::ServerInstance::Get().SelectSchemasToDictionary(this->databaseId);
 
@@ -171,7 +161,7 @@ namespace QueryPipeline::Statements {
   LogicalPlan * CreateTableStatement::ToLogical(){
     const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
 
-    return new LogicalTableCreate(this->databaseId, this->table, this->columns, this->primaryKey, constraintName);
+    return new LogicalTableCreate(this->table, this->columns, this->primaryKey, constraintName);
   }
 
    SelectStatement::~SelectStatement(){
@@ -347,9 +337,25 @@ namespace QueryPipeline::Statements {
     return true;
   }
 
+  bool TableName::ValidateTableCreate(const int32_t &selectedDatabaseId){
+    const auto tableHeader = (!this->database.empty())
+      ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
+      : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
+
+    if (tableHeader.id != Constants::INVALID_TABLE_ID){
+      std::cerr << "Table " + this->GetFullName() + " does not exist" << std::endl;
+      return false;
+    }
+
+    if (this->databaseId == Constants::INVALID_DATABASE_ID)
+      this->databaseId = selectedDatabaseId;
+
+    return true;
+  }
+
   LogicalPlan * SelectStatement::ToLogical(){
     LogicalPlan* current = (this->table != nullptr)
-            ? new LogicalTableScan(this->databaseId, this->table, this->joins.empty() ? this->where.expression : nullptr)
+            ? new LogicalTableScan(this->table, this->joins.empty() ? this->where.expression : nullptr)
             : nullptr;
 
     //join re orders take place here
@@ -389,14 +395,14 @@ namespace QueryPipeline::Statements {
     }
 
     if (!this->results.empty())
-      current = new LogicalProject(this->databaseId, current, this->results, this->columnHeaders);
+      current = new LogicalProject(current, this->results, this->columnHeaders);
 
     if(this->orderBy != nullptr) {
       for (const auto& column : this->orderBy->columns) {
         AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
       }
 
-      current = new LogicalOrder(this->databaseId, current, this->orderBy->columns);
+      current = new LogicalOrder(current, this->orderBy->columns);
     }
 
     return current;
@@ -648,7 +654,7 @@ namespace QueryPipeline::Statements {
         ? this->selectStatement->ToLogical()
         : nullptr;
 
-    return new QueryPipeline::LogicalInsert(this->databaseId, this->table, this->values, logicalSelect, selectColumnIndices);
+    return new QueryPipeline::LogicalInsert(this->table, this->values, logicalSelect, selectColumnIndices);
   }
 
   bool CreateSchemaStatement::Validate(){
@@ -754,21 +760,14 @@ bool UpdateStatement::Validate(){
   }
 
   QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
-    return new QueryPipeline::LogicalUpdate(this->databaseId, this->table, this->updates, this->where.expression);
+    return new QueryPipeline::LogicalUpdate(this->table, this->updates, this->where.expression);
   }
 
   bool CreateIndexStatement::Validate(){
-    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
-
-    if (tableHeader.id == Constants::INVALID_TABLE_ID){
-      cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
+    if (!this->table->Validate(this->databaseId))
       return false;
-    }
 
-    this->table->tableId = tableHeader.id;
-    this->table->ordinalPosition = tableHeader.ordinalPosition;
-
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
     for(auto& column: this->columns) {
       Headers::ColumnHeader header;
@@ -783,7 +782,7 @@ bool UpdateStatement::Validate(){
       return false;
     }
 
-    const auto indexes = Server::ServerInstance::Get().SelectIndexes(tableHeader.id);
+    const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
     for (const auto& index: indexes) {
       const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexIdToDictionary(index.id);
@@ -800,7 +799,7 @@ bool UpdateStatement::Validate(){
   }
 
   QueryPipeline::LogicalPlan * CreateIndexStatement::ToLogical(){
-    return new QueryPipeline::LogicalIndexCreate(this->databaseId, this->table, this->name, this->columnIndices);
+    return new QueryPipeline::LogicalIndexCreate(this->table, this->name, this->columnIndices);
   }
 
   bool AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
@@ -904,17 +903,10 @@ bool UpdateStatement::Validate(){
   }
 
   bool AlterTableStatement::Validate(){
-    const auto tableHeader = Server::ServerInstance::Get().SelectTable(this->databaseId, this->table->name, this->table->schema);
-
-    if (tableHeader.id == Constants::INVALID_TABLE_ID){
-      cerr << "Table " + this->table->GetFullName() + " does not exist" << endl;
+    if (!this->table->Validate(this->databaseId))
       return false;
-    }
 
-    this->table->tableId = tableHeader.id;
-    this->table->ordinalPosition = tableHeader.ordinalPosition;
-
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(tableHeader.id);
+    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
     //validate by type
     switch (this->type) {
@@ -933,7 +925,7 @@ bool UpdateStatement::Validate(){
   }
 
   QueryPipeline::LogicalPlan * AlterTableStatement::ToLogical(){
-    return new LogicalAlterTable(this->databaseId, this->table, this->type, this->alterColumn, this->addColumn, this->dropColumn, this->renameColumn);
+    return new LogicalAlterTable(this->table, this->type, this->alterColumn, this->addColumn, this->dropColumn, this->renameColumn);
   }
 
   bool ResolveColumnAlias(

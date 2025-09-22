@@ -7,8 +7,8 @@
 
 namespace QueryPipeline::PhysicalPlan{
 
-  PhysicalAddColumn::PhysicalAddColumn(const int32_t &databaseId, Statements::TableName *table, Statements::NewColumn *column)
-    : PhysicalOperator(databaseId), table(table), column(column){}
+  PhysicalAddColumn::PhysicalAddColumn(Statements::TableName *table, Statements::NewColumn *column)
+    : table(table), column(column){}
 
   PhysicalAddColumn::~PhysicalAddColumn(){
     delete this->table;
@@ -35,7 +35,7 @@ namespace QueryPipeline::PhysicalPlan{
       const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKeyVal, this->column->defaultValue);
     }
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -51,8 +51,8 @@ namespace QueryPipeline::PhysicalPlan{
     return nullptr;
   }
 
-  PhysicalDropColumn::PhysicalDropColumn(const int32_t &databaseId, Statements::TableName *table, Statements::DropColumn *column)
-    : PhysicalOperator(databaseId), table(table), column(column){}
+  PhysicalDropColumn::PhysicalDropColumn(Statements::TableName *table, Statements::DropColumn *column)
+    : table(table), column(column){}
 
   PhysicalDropColumn::~PhysicalDropColumn(){
     delete this->table;
@@ -64,7 +64,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     //update master db set isDeleted to 1
     //remove it from table, remove it from rows. Adjust column indexes if need be.
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -73,8 +73,8 @@ namespace QueryPipeline::PhysicalPlan{
     return result;
   }
 
-  PhysicalRenameColumn::PhysicalRenameColumn(const int32_t &databaseId, Statements::TableName *table, Statements::RenameColumn *column)
-  : PhysicalOperator(databaseId), table(table), column(column){}
+  PhysicalRenameColumn::PhysicalRenameColumn(Statements::TableName *table, Statements::RenameColumn *column)
+  : table(table), column(column){}
 
   PhysicalRenameColumn::~PhysicalRenameColumn(){
     delete this->table;
@@ -84,7 +84,7 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalPlanResult * PhysicalRenameColumn::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -99,8 +99,8 @@ namespace QueryPipeline::PhysicalPlan{
     return result;
   }
 
-  PhysicalAlterColumn::PhysicalAlterColumn(const int32_t &databaseId, Statements::TableName *table, Statements::AlterColumn *column)
-    : PhysicalOperator(databaseId), table(table), column(column){}
+  PhysicalAlterColumn::PhysicalAlterColumn(Statements::TableName *table, Statements::AlterColumn *column)
+    : table(table), column(column){}
 
   PhysicalAlterColumn::~PhysicalAlterColumn(){
     delete this->table;

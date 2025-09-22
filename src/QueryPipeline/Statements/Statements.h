@@ -105,6 +105,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
     [[nodiscard]] bool Validate(const int32_t& selectedDatabaseId);
+    [[nodiscard]] bool ValidateTableCreate(const int32_t& selectedDatabaseId);
   };
 
   struct InsertColumn {

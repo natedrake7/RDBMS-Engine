@@ -19,8 +19,8 @@ namespace QueryPipeline::PhysicalPlan {
     return new PhysicalPlanResult();
   }
 
-PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::string &schemaName)
-  : PhysicalOperator(databaseId), schemaName(std::move(schemaName)) {}
+PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::string &schemaName)
+  : schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   PhysicalPlanResult * PhysicalSchemaCreate::Execute(const int& batchSize){
     Server::ServerInstance::Get().InsertSchemaToMasterDb(this->databaseId, this->schemaName);
@@ -33,7 +33,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     PhysicalOperator *child,
     std::vector<Expressions::Expression*>& resultExpressions,
     std::vector<Headers::ColumnHeader>& columnHeaders)
-    : PhysicalOperator(databaseId), resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
+    : resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
 
   PhysicalProject::~PhysicalProject() {
     for (const auto& expression : this->resultExpressions)
@@ -85,8 +85,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       return result;
   }
 
-  PhysicalFilter::PhysicalFilter(const int32_t & databaseId, PhysicalOperator *child, Expressions::Expression* filter)
-        : PhysicalOperator(databaseId), filter(filter) , child(child) {}
+  PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Expressions::Expression* filter)
+        : filter(filter) , child(child) {}
 
   PhysicalFilter::~PhysicalFilter(){
     delete this->child;
@@ -114,7 +114,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return result;
   }
 
-  PhysicalTableScan::PhysicalTableScan(const int32_t & databaseId, Statements::TableName* table): PhysicalOperator(databaseId), table(table) {}
+  PhysicalTableScan::PhysicalTableScan(Statements::TableName* table): table(table) {}
 
   PhysicalPlanResult* PhysicalTableScan::Execute(const int& batchSize){
       using namespace DatabaseEngine::StorageTypes;
@@ -129,11 +129,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
       return result;
     }
 
-  PhysicalIndexScan::PhysicalIndexScan(const int32_t & databaseId, Statements::TableName* table, const bool& isClustered)
-    : PhysicalOperator(databaseId), table(table), expression(nullptr), isClustered(isClustered) {}
+  PhysicalIndexScan::PhysicalIndexScan(Statements::TableName* table, const bool& isClustered)
+    : table(table), expression(nullptr), isClustered(isClustered) {}
 
-  PhysicalIndexScan::PhysicalIndexScan(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
-    : PhysicalOperator(databaseId), table(table), expression(expression), isClustered(isClustered) {}
+  PhysicalIndexScan::PhysicalIndexScan(Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
+    : table(table), expression(expression), isClustered(isClustered) {}
 
   PhysicalPlanResult * PhysicalIndexScan::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
@@ -154,8 +154,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
     return result;
   }
 
-  PhysicalIndexSeek::PhysicalIndexSeek(const int32_t & databaseId, Statements::TableName* table, const Value& minValue, const Value& maxValue)
-    : PhysicalOperator(databaseId), table(table), minValue(minValue), maxValue(maxValue) {}
+  PhysicalIndexSeek::PhysicalIndexSeek(Statements::TableName* table, const Value& minValue, const Value& maxValue)
+    : table(table), minValue(minValue), maxValue(maxValue) {}
 
   PhysicalPlanResult* PhysicalIndexSeek::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
@@ -206,12 +206,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t & databaseId, std::stri
   }
 
 PhysicalInsert::PhysicalInsert(
-  const int32_t & databaseId,
   Statements::TableName* table,
   std::vector<Statements::InsertColumns> &fields,
   PhysicalOperator* child,
   std::vector<column_index_t>& selectColumnsIndices)
-    : PhysicalOperator(databaseId), table(table), fields(std::move(fields)), child(child), selectColumnsIndices(std::move(selectColumnsIndices)) {}
+    : table(table), fields(std::move(fields)), child(child), selectColumnsIndices(std::move(selectColumnsIndices)) {}
 
   PhysicalInsert::~PhysicalInsert(){
     for (auto&[columns] : this->fields) {
@@ -249,8 +248,8 @@ PhysicalInsert::PhysicalInsert(
     // result->message = insertResult.message;
   }
 
-  PhysicalHeapDelete::PhysicalHeapDelete(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression)
-    : PhysicalOperator(databaseId), table(table), expression(expression) {}
+  PhysicalHeapDelete::PhysicalHeapDelete(Statements::TableName *table, Expressions::Expression *expression)
+    : table(table), expression(expression) {}
 
   PhysicalHeapDelete::~PhysicalHeapDelete(){
     delete this->expression;
@@ -269,8 +268,8 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalIndexScanDelete::PhysicalIndexScanDelete(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression)
-    : PhysicalOperator(databaseId), table(table), expression(expression) {}
+  PhysicalIndexScanDelete::PhysicalIndexScanDelete(Statements::TableName *table, Expressions::Expression *expression)
+    : table(table), expression(expression) {}
 
   PhysicalIndexScanDelete::~PhysicalIndexScanDelete(){
       delete this->expression;
@@ -289,8 +288,8 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression)
-    : PhysicalOperator(databaseId), table(table), expression(expression) {}
+  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(Statements::TableName *table, Expressions::Expression *expression)
+    : table(table), expression(expression) {}
 
   PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete(){
     delete this->expression;
@@ -315,7 +314,7 @@ PhysicalInsert::PhysicalInsert(
       std::vector<Statements::NewColumn*> &columns,
       Headers::Index& primaryKey,
       std::string& constraintName)
-    : PhysicalOperator(databaseId), table(table), constraintName(std::move(constraintName)),
+    : table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
   PhysicalTableCreate::~PhysicalTableCreate(){
@@ -338,14 +337,14 @@ PhysicalInsert::PhysicalInsert(
         column->isNullable
         ));
 
-    const auto& tables = Server::ServerInstance::Get().SelectTables(this->databaseId);
+    const auto& tables = Server::ServerInstance::Get().SelectTables(this->table->databaseId);
 
-    const auto schemas = Server::ServerInstance::Get().SelectSchemas(this->databaseId);
+    const auto schemas = Server::ServerInstance::Get().SelectSchemas(this->table->databaseId);
 
     const int16_t& index = tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1;
 
     const auto tableResult = Server::ServerInstance::Get().InsertTableToMasterDb(
-        this->databaseId,
+        this->table->databaseId,
         this->table->schemaId,
         this->table->name,
         index);
@@ -437,8 +436,8 @@ PhysicalInsert::PhysicalInsert(
     return nullptr;
   }
 
-  PhysicalHeapUpdate::PhysicalHeapUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-  : PhysicalOperator(databaseId), table(table), updates(std::move(updates)), expression(expression) {}
+  PhysicalHeapUpdate::PhysicalHeapUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  : table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalHeapUpdate::~PhysicalHeapUpdate(){
     delete this->expression;
@@ -462,8 +461,8 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-  : PhysicalOperator(databaseId), table(table), updates(std::move(updates)), expression(expression) {}
+  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  : table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
     delete this->expression;
@@ -487,8 +486,8 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(const int32_t & databaseId, Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-    : PhysicalOperator(databaseId), table(table), updates(std::move(updates)), expression(expression) {}
+  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+    : table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){
     delete this->expression;
@@ -517,10 +516,9 @@ PhysicalInsert::PhysicalInsert(
   }
 
   PhysicalOrderBy::PhysicalOrderBy(
-      const int32_t & databaseId,
       PhysicalOperator *child,
       std::vector<Statements::OrderColumn*>& expressions)
-    : PhysicalOperator(databaseId), child(child), expressions(std::move(expressions)){}
+    : child(child), expressions(std::move(expressions)){}
 
   PhysicalOrderBy::~PhysicalOrderBy(){
     for (const auto* column : this->expressions) {
@@ -543,7 +541,7 @@ PhysicalInsert::PhysicalInsert(
     Statements::TableName *table,
     std::string &constraintName,
     vector<Constants::column_index_t> &columns)
-    : PhysicalOperator(databaseId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+    : table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
   PhysicalPlanResult * PhysicalIndexCreate::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();

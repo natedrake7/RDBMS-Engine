@@ -28,7 +28,6 @@ namespace QueryPipeline {
       std::vector<Headers::ColumnHeader> columnsHeaders;
 
       LogicalProject(
-        const int32_t & databaseId,
         LogicalPlan* child,
         std::vector<Expressions::Expression*>& resultExpressions,
         std::vector<Headers::ColumnHeader>& columnsHeaders);
@@ -40,7 +39,7 @@ namespace QueryPipeline {
     public:
       Statements::TableName* table;
       Expressions::Expression* expression;
-      explicit LogicalTableScan(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
+      explicit LogicalTableScan(  Statements::TableName* table, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical() override;
   };
 
@@ -51,7 +50,6 @@ namespace QueryPipeline {
     Expressions::Expression* condition;
     JoinType type;
     LogicalJoin(
-      const int32_t& databaseId,
       LogicalTableScan* left,
       LogicalTableScan* right,
       Expressions::Expression* condition,
@@ -63,7 +61,7 @@ namespace QueryPipeline {
     public:
       LogicalPlan* child;
       Expressions::Expression* filter;
-      explicit LogicalFilter(const int32_t & databaseId, LogicalPlan* child, Expressions::Expression* filter);
+      explicit LogicalFilter( LogicalPlan* child, Expressions::Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
   };
 
@@ -73,7 +71,6 @@ namespace QueryPipeline {
       std::vector<Statements::OrderColumn*> expressions;
 
       explicit LogicalOrder(
-        const int32_t & databaseId,
         LogicalPlan* child,
         std::vector<Statements::OrderColumn*>& expressions
         );
@@ -89,7 +86,6 @@ namespace QueryPipeline {
       std::vector<column_index_t> selectColumnsIndices;
 
       explicit LogicalInsert(
-        const int32_t & databaseId,
         Statements::TableName* table,
         std::vector<Statements::InsertColumns>& fields,
         LogicalPlan* child,
@@ -102,7 +98,8 @@ namespace QueryPipeline {
   class LogicalSchemaCreate final : public LogicalPlan {
     public:
       std::string schemaName;
-      explicit LogicalSchemaCreate(const int32_t & databaseId, std::string& schemaName);
+      int32_t databaseId;
+      explicit LogicalSchemaCreate(const int32_t& databaseId, std::string& schemaName);
       PhysicalPlan::PhysicalSchemaCreate* ToPhysical()override;
   };
 
@@ -110,7 +107,7 @@ namespace QueryPipeline {
   public:
     Statements::TableName* table;
     Expressions::Expression* expression;
-    explicit LogicalDelete(const int32_t & databaseId, Statements::TableName* table, Expressions::Expression* expression);
+    explicit LogicalDelete(Statements::TableName* table, Expressions::Expression* expression);
     PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
@@ -120,7 +117,7 @@ namespace QueryPipeline {
       std::vector<Statements::UpdateColumn*> updates;
       Expressions::Expression* expression;
 
-      explicit LogicalUpdate(const int32_t & databaseId, Statements::TableName* table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression* expression);
+      explicit LogicalUpdate(Statements::TableName* table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
@@ -132,7 +129,6 @@ namespace QueryPipeline {
       vector<column_index_t> primaryKey;
 
       explicit LogicalTableCreate(
-        const int32_t & databaseId,
         Statements::TableName* table,
         std::vector<Statements::NewColumn*>& columns,
         std::vector<column_index_t> primaryKey,
@@ -145,7 +141,7 @@ namespace QueryPipeline {
     Statements::TableName* table;
     std::string constraintName;
     std::vector<column_index_t> columns;
-    explicit LogicalIndexCreate(const int32_t & databaseId, Statements::TableName* table, std::string& constraintName, std::vector<column_index_t>& columns);
+    explicit LogicalIndexCreate(Statements::TableName* table, std::string& constraintName, std::vector<column_index_t>& columns);
     PhysicalPlan::PhysicalOperator * ToPhysical() override;
   };
 
@@ -160,7 +156,6 @@ namespace QueryPipeline {
       Statements::NewColumn* addColumn;
 
       explicit LogicalAlterTable(
-        const int32_t & databaseId,
         Statements::TableName* table,
         const AlterTableType& type,
         Statements::AlterColumn* alterColumn,
