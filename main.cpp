@@ -59,7 +59,7 @@ void InsertRowsToMoviesTable(Table* table);
 //add defragmentation thread (check Overflow pages and possibly Data Pages to defragment)
 //validate length of columns to match max record_size from master DB on inserts and updates
 //Add case insensitive on identifiers
-//Add like comparison
+//Add like comparison (add a caseInsensitive comparison expression for strings)
 //Check batching, fix batching on insert with select.
 
 std::atomic<bool> serverRunning{true};
