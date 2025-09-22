@@ -16,10 +16,10 @@ The Engine is still under development.
 
 ## Currently Supported Statements
 
-1. **SELECT**
-2. **UPDATE**
-3. **INSERT**
-4. **DELETE**
+1. **[SELECT](#select-query)**
+2. **[UPDATE](#update-query)**
+3. **[INSERT](#insert-query)**
+4. **[DELETE](#delete-query)**
 5. **CREATE TABLE**
 6. **ALTER TABLE**
 7. **CREATE INDEX**
@@ -28,7 +28,7 @@ The Engine is still under development.
 
 The syntax for select is as follows:
 
-  SELECT columns 
+  SELECT [expressions](#expressions) 
   
   FROM [table](#table)
 
@@ -78,13 +78,44 @@ conditions like the select statement.
 
 ## INSERT Query
 
-INSERT INTO 
-  table (listOfColumns) 
-VALUES (listOfValues)
+The insert statement syntax has 2 forms:
+INSERT INTO [table](#table) (listOfColumns)
+VALUES ([expressions](#expressions))
+
+On this insert syntax the table represents the table to insert into,
+listOfColumns is a list of columns to insert into,
+and expressions is a list of expressions to insert into the columns.
+
+Identity Columns (Auto-Incrementing Columns) should not be included in the list of columns
+and a validation error will occur if they are. Additionally Nullable columns or columns with default values
+can be omitted from the list of columns and they will be set to NULL or their default value respectively.
+Finally the order the columns are listed in the list of columns does not matter.
+
+INSERT INTO [table](#table)  (listOfColumns)
+[Select Query](#select-query)
+
+On this insert syntax the table represents the table to insert into,
+
+- Table represents the table to insert into,
+- ListOfColumns represents the list of columns to insert into,
+- [Select Query](#select-query) is provided and the results of the query are inserted into the table.
+The select query must return the same number of columns as the number of columns in the list of columns
+and the types of the columns must be compatible. Looser typing is allowed, e.g inserting a value of type '123' on an INT Column is valid.
+This form of insert is useful for copying data from one table to another or for inserting data from a complex query but it is slower in terms of performance
+and should be avoided if possible.
 
 ## DELETE Query
   DELETE FROM table 
   WHERE conditions
+
+## Create Index Query
+  CREATE INDEX indexName 
+  ON [table](#table) (columns)
+
+Creates an Non-Clustered index on the given table for the given columns.
+Be careful when creating indexes as they can slow down insert and update operations.
+Non-Clustered indexes store references to the actual rows in the table so they take up additional space and 
+when an insert occurs, all indexes on the table need to be updated as well.
 
 ## Table
 
@@ -192,6 +223,8 @@ Their precedence is as follows (from highest to lowest):
 
 Each Logical Expression is depicted as a binary tree where each node has two children (left and right).
 Each child can be of either expression type so nesting can be done.
+
+
 
 # Engine Architecture
 
