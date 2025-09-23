@@ -189,6 +189,9 @@ namespace QueryPipeline::Statements {
 
     ~InsertStatement() override;
 
+    void InsertDefaultValuesForMissingColumns(const Headers::ColumnHeader& header, const Headers::DefaultValuesHeader& defaultValue);
+    void InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header);
+
     [[nodiscard]] bool ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName)const;
     [[nodiscard]] bool HasSelectStatement() const;
     [[nodiscard]] bool ValidateSelectStatement()const;

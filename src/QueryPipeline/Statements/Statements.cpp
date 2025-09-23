@@ -444,6 +444,43 @@ namespace QueryPipeline::Statements {
     delete this->selectStatement;
   }
 
+  void InsertStatement::InsertDefaultValuesForMissingColumns(const Headers::ColumnHeader &header, const Headers::DefaultValuesHeader& defaultValue){
+    this->columns.emplace_back(ColumnName{
+      .name = header.name,
+      .alias = header.name,
+      .tableId = this->table->tableId,
+      .columnId = header.id,
+      .index = static_cast<Constants::column_index_t>(header.ordinalPosition),
+      .returnType = static_cast<Constants::DataType>(header.dataType),
+    });
+
+    //Insert the default value
+    for (auto& [insertColumns] : this->values) {
+      const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
+
+      insertColumns.emplace_back(
+          new Expressions::LiteralExpression(Value(
+            data,
+            static_cast<int>(defaultValue.value.size()),
+            static_cast<DataType>(header.dataType)
+          )));
+    }
+  }
+
+  void InsertStatement::InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header){
+    this->columns.emplace_back(ColumnName{
+      .name = header.name,
+      .alias = header.name,
+      .tableId = this->table->tableId,
+      .columnId = header.id,
+      .index = static_cast<Constants::column_index_t>(header.ordinalPosition),
+      .returnType = static_cast<Constants::DataType>(header.dataType),
+    });
+
+    for (auto& [insertColumns] : this->values)
+      insertColumns.emplace_back(new Expressions::LiteralExpression(Value(nullptr, header.ordinalPosition)));
+  }
+
   bool InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName) const{
     const auto valueType = expression->GetReturnType();
 
@@ -567,31 +604,16 @@ namespace QueryPipeline::Statements {
     }
 
     for (const auto&[columnName, header]:  columnsDict) {
-      if (header.isSystem)
-        continue;
-
-      if (identityColumns.Contains(header.id))
-        continue;
-
-      if (statementColumns.Contains(header.id))
+      if (header.isSystem
+        || identityColumns.Contains(header.id)
+        || statementColumns.Contains(header.id))
         continue;
 
       this->columnIndices.emplace_back(static_cast<Constants::column_index_t>(header.ordinalPosition));
 
       //Insert the null value
       if (header.isNullable) {
-        this->columns.emplace_back(ColumnName{
-          .name = header.name,
-          .alias = header.name,
-          .tableId = this->table->tableId,
-          .columnId = header.id,
-          .index = static_cast<Constants::column_index_t>(header.ordinalPosition),
-          .returnType = static_cast<Constants::DataType>(header.dataType),
-        });
-
-        for (auto& [insertColumns] : this->values)
-          insertColumns.emplace_back(new Expressions::LiteralExpression(Value(nullptr, header.ordinalPosition)));
-
+        this->InsertNullValuesForMissingColumns(header);
         continue;
       }
 
@@ -602,26 +624,7 @@ namespace QueryPipeline::Statements {
         return false;
       }
 
-      this->columns.emplace_back(ColumnName{
-        .name = header.name,
-        .alias = header.name,
-        .tableId = this->table->tableId,
-        .columnId = header.id,
-        .index = static_cast<Constants::column_index_t>(header.ordinalPosition),
-        .returnType = static_cast<Constants::DataType>(header.dataType),
-      });
-
-      //Insert the default value
-      for (auto& [insertColumns] : this->values) {
-        const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
-
-        insertColumns.emplace_back(
-            new Expressions::LiteralExpression(Value(
-              data,
-              static_cast<int>(defaultValue.value.size()),
-              static_cast<DataType>(header.dataType)
-            )));
-      }
+      this->InsertDefaultValuesForMissingColumns(header, defaultValue);
     }
 
     if (this->HasSelectStatement())
