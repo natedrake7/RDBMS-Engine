@@ -96,8 +96,8 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     Statements::TableName* table,
     std::vector<Statements::InsertColumns> &fields,
     LogicalPlan* child,
-    std::vector<column_index_t>& selectColumnsIndices
-  ) : table(table), fields(std::move(fields)), child(child), selectColumnsIndices(std::move(selectColumnsIndices)) {}
+    std::vector<column_index_t>& columnIndices
+  ) : table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnIndices)) {}
 
   LogicalInsert::~LogicalInsert(){
     delete this->child;
@@ -108,7 +108,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
         ? this->child->ToPhysical()
         : nullptr;
 
-    return new PhysicalPlan::PhysicalInsert(this->table, this->fields, physicalSelect, this->selectColumnsIndices);
+    return new PhysicalPlan::PhysicalInsert(this->table, this->fields, physicalSelect, this->columnsIndices);
   }
 
   LogicalSchemaCreate::LogicalSchemaCreate(const int32_t& databaseId, std::string &schemaName)

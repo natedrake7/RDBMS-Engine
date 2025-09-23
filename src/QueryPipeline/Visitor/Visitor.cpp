@@ -232,20 +232,12 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     for (const auto& value : context->resultList()) {
 
-      std::vector<Statements::InsertColumn> insertColumns;
+      std::vector<Expressions::Expression*> insertColumns;
 
       auto resultList = std::any_cast<std::vector<Expressions::Expression*>>(visit(value));
 
-      for (auto* column : resultList) {
-        insertColumns.emplace_back(
-          Statements::InsertColumn{
-            .value = column,
-            .index = 0
-          });
-      }
-
       values.emplace_back(Statements::InsertColumns{
-        .columns = std::move(insertColumns),
+        .values = std::move(insertColumns),
       });
     }
 

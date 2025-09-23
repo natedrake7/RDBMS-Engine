@@ -205,6 +205,60 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
+    AdditionalDataTypes::ResultStatus Table::InsertRow(
+      const Constants::transaction_id_t &transactionId,
+      const vector<Value> &inputData,
+      const std::vector<Constants::column_index_t> &columnIndices
+    ){
+        extent_id_t startingExtentIndex = 0;
+        vector<extent_id_t> extents;
+
+        int64_t primaryKeyVal = 0;
+        Logging::CheckPoint checkPoint;
+
+        auto* row = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
+
+        auto result =  this->InsertRow(row, extents, startingExtentIndex);
+
+        if (result.code != AdditionalDataTypes::ResultCode::Ok)
+          return result;
+
+        this->database->LogCheckPoint(checkPoint);
+
+        result.message = "Rows affected: 1";
+        result.primaryKeyVal = primaryKeyVal;
+
+        return result;
+
+    }
+
+    AdditionalDataTypes::ResultStatus Table::InsertRow(
+      const Constants::transaction_id_t &transactionId,
+      const vector<Expressions::Expression *> &inputData,
+      const std::vector<Constants::column_index_t> &columnIndices
+    ){
+        extent_id_t startingExtentIndex = 0;
+        vector<extent_id_t> extents;
+
+        int64_t primaryKeyVal = 0;
+        Logging::CheckPoint checkPoint;
+
+        auto* row = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
+
+        auto result =  this->InsertRow(row, extents, startingExtentIndex);
+
+        if (result.code != AdditionalDataTypes::ResultCode::Ok)
+          return result;
+
+        this->database->LogCheckPoint(checkPoint);
+
+        result.message = "Rows affected: 1";
+        result.primaryKeyVal = primaryKeyVal;
+
+        return result;
+
+    }
+
       AdditionalDataTypes::ResultStatus Table::InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex)
       {
         this->InsertLargeObjectToPage(row);
@@ -247,6 +301,97 @@ namespace DatabaseEngine::StorageTypes {
         for(const auto& input : inputData){
 
           const auto& associatedColumnIndex = input.GetColumnIndex();
+
+          const auto& column = this->columns.at(associatedColumnIndex);
+
+          //ignore auto-computed columns even if specified
+          if (column->GetIdentity().columnId != -1)
+            continue;
+
+          auto *block = new Block(column);
+
+          if (column->GetColumnType() >= Constants::DataType::Invalid)
+            throw invalid_argument("Table::InsertRow: Unsupported Column Type");
+
+          if (input.GetIsNull())
+          {
+            Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
+            continue;
+          }
+
+          block->SetData(input);
+
+          row->InsertColumnData(block, associatedColumnIndex);
+        }
+
+        *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
+
+        return row;
+      }
+
+      Row * Table::CreateRow(
+        const Constants::transaction_id_t &transactionId,
+        const std::vector<Value> &inputData,
+        const std::vector<Constants::column_index_t> &columnIndices,
+        int64_t *primaryKeyVal,
+        Logging::CheckPoint *checkPoint) const{
+        auto *row = new Row(*this);
+
+        *primaryKeyVal = this->PopulateAutoComputedColumns(row);
+
+        //TODO
+        //handle default values if no value is selected
+
+        for (int i = 0;i < inputData.size(); i++) {
+          const auto& input = inputData[i];
+
+          const auto& associatedColumnIndex = columnIndices.at(i);
+
+          const auto& column = this->columns.at(associatedColumnIndex);
+
+          //ignore auto-computed columns even if specified
+          if (column->GetIdentity().columnId != -1)
+            continue;
+
+          auto *block = new Block(column);
+
+          if (column->GetColumnType() >= Constants::DataType::Invalid)
+            throw invalid_argument("Table::InsertRow: Unsupported Column Type");
+
+          if (input.GetIsNull())
+          {
+            Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
+            continue;
+          }
+
+          block->SetData(input);
+
+          row->InsertColumnData(block, associatedColumnIndex);
+        }
+
+        *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
+
+        return row;
+      }
+
+      Row * Table::CreateRow(
+        const Constants::transaction_id_t &transactionId,
+        const std::vector<Expressions::Expression *> &inputData,
+        const std::vector<Constants::column_index_t> &columnIndices,
+        int64_t *primaryKeyVal,
+        Logging::CheckPoint *checkPoint
+      ) const{
+        auto *row = new Row(*this);
+
+        *primaryKeyVal = this->PopulateAutoComputedColumns(row);
+
+        //TODO
+        //handle default values if no value is selected
+
+        for (int i = 0;i < inputData.size(); i++) {
+          const auto& input = inputData[i]->Evaluate(nullptr);
+
+          const auto& associatedColumnIndex = columnIndices.at(i);
 
           const auto& column = this->columns.at(associatedColumnIndex);
 

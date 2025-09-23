@@ -108,14 +108,8 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool ValidateTableCreate(const int32_t& selectedDatabaseId);
   };
 
-  struct InsertColumn {
-    Expressions::Expression* value;
-    Constants::column_index_t index;
-    int32_t columnId;
-  };
-
   struct InsertColumns {
-    std::vector<InsertColumn> columns;
+    std::vector<Expressions::Expression*> values;
   };
 
   struct Statement {
@@ -190,14 +184,14 @@ namespace QueryPipeline::Statements {
     std::vector<ColumnName> columns;
     std::vector<InsertColumns> values;
 
-    std::vector<column_index_t> selectColumnIndices;
+    std::vector<column_index_t> columnIndices;
     SelectStatement* selectStatement;
 
     ~InsertStatement() override;
 
     [[nodiscard]] bool ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName)const;
     [[nodiscard]] bool HasSelectStatement() const;
-    [[nodiscard]] bool ValidateSelectStatement();
+    [[nodiscard]] bool ValidateSelectStatement()const;
     [[nodiscard]] bool ResolveAliases();
     [[nodiscard]] bool Validate() override;
     [[nodiscard]] LogicalPlan* ToLogical() override;

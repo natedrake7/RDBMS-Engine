@@ -179,44 +179,26 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
   void PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId, const int& batchSize)const{
     auto* result = this->child->Execute(batchSize);
 
-    for (auto& row : result->results) {
-      for (int i = 0; i < this->selectColumnsIndices.size(); i++) {
-        row.SetColumnIndex(i, this->selectColumnsIndices[i]);
-      }
-
-      const auto insertResult = tablePtr->InsertRow(transactionId, row.GetData());
-    }
+    for (auto& row : result->results)
+      const auto insertResult = tablePtr->InsertRow(transactionId, row.GetData(), this->columnsIndices);
   }
 
   void PhysicalInsert::InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId){
-    for (const auto&[columns] : this->fields) {
-
-      std::vector<Value> values;
-
-      for (const auto&[value, index, columnId] : columns) {
-        auto resultValue = value->Evaluate(nullptr);
-
-        resultValue.SetColumnIndex(index);
-
-        values.emplace_back(std::move(resultValue));
-      }
-
-      const auto insertResult = tablePtr->InsertRow(transactionId, values);
-    }
+    for (const auto&[columns] : this->fields)
+      const auto insertResult = tablePtr->InsertRow(transactionId, columns, this->columnsIndices);
   }
 
 PhysicalInsert::PhysicalInsert(
   Statements::TableName* table,
   std::vector<Statements::InsertColumns> &fields,
   PhysicalOperator* child,
-  std::vector<column_index_t>& selectColumnsIndices)
-    : table(table), fields(std::move(fields)), child(child), selectColumnsIndices(std::move(selectColumnsIndices)) {}
+  std::vector<column_index_t>& columnsIndices)
+    : table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnsIndices)) {}
 
   PhysicalInsert::~PhysicalInsert(){
     for (auto&[columns] : this->fields) {
-
-      for (const auto& column: columns)
-        delete column.value;
+      for (const auto& value: columns)
+        delete value;
     }
 
     delete this->table;

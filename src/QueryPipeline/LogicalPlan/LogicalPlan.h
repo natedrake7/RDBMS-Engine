@@ -83,13 +83,13 @@ namespace QueryPipeline {
       std::vector<Statements::InsertColumns> fields;
 
       LogicalPlan* child;
-      std::vector<column_index_t> selectColumnsIndices;
+      std::vector<column_index_t> columnsIndices;
 
       explicit LogicalInsert(
         Statements::TableName* table,
         std::vector<Statements::InsertColumns>& fields,
         LogicalPlan* child,
-        std::vector<column_index_t>& selectColumnsIndices
+        std::vector<column_index_t>& columnIndices
       );
       ~LogicalInsert()override;
       PhysicalPlan::PhysicalInsert* ToPhysical()override;

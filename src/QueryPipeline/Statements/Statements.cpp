@@ -484,12 +484,12 @@ namespace QueryPipeline::Statements {
 
   bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
-  bool InsertStatement::ValidateSelectStatement(){
+  bool InsertStatement::ValidateSelectStatement()const{
 
     if (this->selectStatement == nullptr)
       return true;
 
-    if (this->selectStatement->results.size() !=  this->columns.size()) {
+    if (this->selectStatement->results.size() != this->columns.size()) {
       std::cerr << "Invalid number of arguments specified on select statement" << std::endl;
       return false;
     }
@@ -504,8 +504,6 @@ namespace QueryPipeline::Statements {
 
       if (!this->ValidateReturnType(resultExpression, this->columns[i].name))
         return false;
-
-      this->selectColumnIndices.emplace_back(this->columns[i].index);
     }
 
     return true;
@@ -519,12 +517,12 @@ namespace QueryPipeline::Statements {
     for (auto& [insertColumns] : this->values) {
 
       for (int i = 0;i < insertColumns.size(); i++) {
-        auto& column = insertColumns[i];
+        const auto& value = insertColumns[i];
 
-        if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, column.value))
+        if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, value))
           return false;
 
-        if (!this->ValidateReturnType(column.value, this->columns[i].name))
+        if (!this->ValidateReturnType(value, this->columns[i].name))
           return false;
       }
     }
@@ -564,6 +562,8 @@ namespace QueryPipeline::Statements {
       column.index = header.ordinalPosition;
       column.columnId = header.id;
       statementColumns.Add(header.id);
+
+      this->columnIndices.emplace_back(header.ordinalPosition);
     }
 
     for (const auto&[columnName, header]:  columnsDict) {
@@ -573,17 +573,10 @@ namespace QueryPipeline::Statements {
       if (identityColumns.Contains(header.id))
         continue;
 
-      if (statementColumns.Contains(header.id)) {
-        for (auto& [insertColumns] : this->values) {
-
-          for (int i = 0;i < insertColumns.size(); i++) {
-            auto&[value, index, columnId] = insertColumns[i];
-            index = this->columns[i].index;
-            columnId = this->columns[i].columnId;
-          }
-        }
+      if (statementColumns.Contains(header.id))
         continue;
-      }
+
+      this->columnIndices.emplace_back(static_cast<Constants::column_index_t>(header.ordinalPosition));
 
       //Insert the null value
       if (header.isNullable) {
@@ -596,13 +589,8 @@ namespace QueryPipeline::Statements {
           .returnType = static_cast<Constants::DataType>(header.dataType),
         });
 
-        for (auto& [insertColumns] : this->values) {
-          insertColumns.emplace_back(
-            InsertColumn{
-              .value = new Expressions::LiteralExpression(Value(nullptr, header.ordinalPosition)),
-              .index = static_cast<column_index_t>(header.ordinalPosition)
-          });
-        }
+        for (auto& [insertColumns] : this->values)
+          insertColumns.emplace_back(new Expressions::LiteralExpression(Value(nullptr, header.ordinalPosition)));
 
         continue;
       }
@@ -628,14 +616,11 @@ namespace QueryPipeline::Statements {
         const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
 
         insertColumns.emplace_back(
-          InsertColumn{
-            .value = new Expressions::LiteralExpression(Value(
+            new Expressions::LiteralExpression(Value(
               data,
               static_cast<int>(defaultValue.value.size()),
               static_cast<DataType>(header.dataType)
-            )),
-            .index = static_cast<column_index_t>(header.ordinalPosition)
-        });
+            )));
       }
     }
 
@@ -654,7 +639,7 @@ namespace QueryPipeline::Statements {
         ? this->selectStatement->ToLogical()
         : nullptr;
 
-    return new QueryPipeline::LogicalInsert(this->table, this->values, logicalSelect, selectColumnIndices);
+    return new QueryPipeline::LogicalInsert(this->table, this->values, logicalSelect, this->columnIndices);
   }
 
   bool CreateSchemaStatement::Validate(){

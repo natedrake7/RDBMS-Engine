@@ -101,7 +101,24 @@ namespace DatabaseEngine::StorageTypes
                 const Constants::transaction_id_t& transactionId,
                 const vector<Value>& inputData,
                 int64_t* primaryKeyVal,
-                Logging::CheckPoint* checkPoint)const;
+                Logging::CheckPoint* checkPoint
+            )const;
+
+            [[nodiscard]] Row* CreateRow(
+                const Constants::transaction_id_t& transactionId,
+                const std::vector<Value>& inputData,
+                const std::vector<Constants::column_index_t>& columnIndices,
+                int64_t* primaryKeyVal,
+                Logging::CheckPoint* checkPoint
+            )const;
+
+            [[nodiscard]] Row* CreateRow(
+                const Constants::transaction_id_t& transactionId,
+                const std::vector<Expressions::Expression*>& inputData,
+                const std::vector<Constants::column_index_t>& columnIndices,
+                int64_t* primaryKeyVal,
+                Logging::CheckPoint* checkPoint
+            )const;
 
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
@@ -147,6 +164,18 @@ namespace DatabaseEngine::StorageTypes
             AdditionalDataTypes::ResultStatus InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Value>> &inputData);
 
             AdditionalDataTypes::ResultStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData);
+
+            AdditionalDataTypes::ResultStatus InsertRow(
+                const Constants::transaction_id_t& transactionId,
+                const vector<Value> &inputData,
+                const std::vector<Constants::column_index_t>& columnIndices
+            );
+
+            AdditionalDataTypes::ResultStatus InsertRow(
+                const Constants::transaction_id_t& transactionId,
+                const vector<Expressions::Expression*> &inputData,
+                const std::vector<Constants::column_index_t>& columnIndices
+            );
 
             AdditionalDataTypes::ResultStatus InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
 
