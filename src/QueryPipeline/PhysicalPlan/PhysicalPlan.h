@@ -138,8 +138,8 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<column_index_t> columnsIndices;
 
 
-    void InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId, const int& batchSize)const;
-    void InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId);
+    PhysicalPlanResult* InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId, const int& batchSize)const;
+    PhysicalPlanResult* InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId);
   public:
     PhysicalInsert(
       Statements::TableName* table,

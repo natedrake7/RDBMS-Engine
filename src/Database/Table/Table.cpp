@@ -229,7 +229,6 @@ namespace DatabaseEngine::StorageTypes {
         result.primaryKeyVal = primaryKeyVal;
 
         return result;
-
     }
 
     AdditionalDataTypes::ResultStatus Table::InsertRow(

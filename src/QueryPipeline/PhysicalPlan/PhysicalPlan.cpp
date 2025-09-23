@@ -176,16 +176,40 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     return result;
   }
 
-  void PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId, const int& batchSize)const{
+  PhysicalPlanResult* PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId, const int& batchSize)const{
     auto* result = this->child->Execute(batchSize);
 
-    for (auto& row : result->results)
+    for (auto& row : result->results) {
       const auto insertResult = tablePtr->InsertRow(transactionId, row.GetData(), this->columnsIndices);
+
+      if (insertResult.code != AdditionalDataTypes::ResultCode::Ok) {
+        result->message = insertResult.message;
+        result->code = insertResult.code;
+        return result;
+      }
+    }
+
+    result->message = "Rows inserted: " + std::to_string(result->results.size());
+    result->code = AdditionalDataTypes::ResultCode::Ok;
+    return result;
   }
 
-  void PhysicalInsert::InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId){
-    for (const auto&[columns] : this->fields)
+  PhysicalPlanResult* PhysicalInsert::InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId){
+    auto* result = new PhysicalPlanResult();
+
+    for (const auto&[columns] : this->fields) {
       const auto insertResult = tablePtr->InsertRow(transactionId, columns, this->columnsIndices);
+
+      if (insertResult.code != AdditionalDataTypes::ResultCode::Ok) {
+        result->message = insertResult.message;
+        result->code = insertResult.code;
+        return result;
+      }
+    }
+
+    result->message = "Rows inserted: " + std::to_string(this->fields.size());
+    result->code = AdditionalDataTypes::ResultCode::Ok;
+    return result;
   }
 
 PhysicalInsert::PhysicalInsert(
@@ -208,26 +232,15 @@ PhysicalInsert::PhysicalInsert(
   PhysicalPlanResult* PhysicalInsert::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
-    auto* result = new PhysicalPlanResult();
-
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
     
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const auto transactionId = db->StartLogTransaction();
 
-    if (this->child != nullptr) {
-      this->InsertFromChild(tablePtr, transactionId, batchSize);
-      return result;
-    }
-
-    this->InsertFromFields(tablePtr, transactionId);
-    return result;
-
-    // const auto insertResult = tablePtr->InsertRow(fields);
-    //
-    // result->code = insertResult.code;
-    // result->message = insertResult.message;
+    return (this->child != nullptr)
+        ? this->InsertFromChild(tablePtr, transactionId, batchSize)
+        : this->InsertFromFields(tablePtr, transactionId);
   }
 
   PhysicalHeapDelete::PhysicalHeapDelete(Statements::TableName *table, Expressions::Expression *expression)
