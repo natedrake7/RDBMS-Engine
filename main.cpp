@@ -117,6 +117,13 @@ int main()
 
     //UPDATE dbo.Actors SET Name = CONCAT('Kalimera', 'HEllo')
 
+
+    DataTypes::Decimal decimal("192.1120");
+    DataTypes::Decimal decimal2("192.1120");
+
+    std::cout << "Decimal: " << decimal + decimal2 << std::endl;
+
+    return 0;
     RegisterSignalHandlers();
 
     auto& server = ServerInstance::Get();

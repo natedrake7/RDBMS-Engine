@@ -8,16 +8,17 @@
 namespace DataTypes {
     Decimal::Decimal() = default;
 
-    Decimal::Decimal(const string& value)
+    Decimal::Decimal(const std::string& value)
     {
         if (value.empty())
             return;
 
         string copiedValue(value);
 
-        const bool isPositive = copiedValue[0] != '-';
+        //remove sign
+        const bool isPositive = copiedValue.front() != '-';
 
-        if (!isPositive || copiedValue[0] == '+')
+        if (!isPositive || copiedValue.front() == '+')
             copiedValue.erase(0, 1);
 
         const fraction_index_t fractionIndex = Decimal::GetFractionIndex(copiedValue);
@@ -27,8 +28,13 @@ namespace DataTypes {
         this->bytes.push_back(signAndFractionPoint);
 
         //invalid string
-        if (fractionIndex != 0)
+        if (fractionIndex != 0) {
             copiedValue.erase(fractionIndex , 1);
+            const auto fractionalDigits = copiedValue.size() - fractionIndex;
+
+            if (fractionalDigits % 2 != 0)
+                copiedValue.push_back('0');
+        }
 
         for (int i = 0; i < copiedValue.size(); i+= 2)
         {
@@ -45,7 +51,7 @@ namespace DataTypes {
 
     Decimal::Decimal(const Constants::byte* data, const int& dataSize)
     {
-        this->bytes = vector(data, data + dataSize);
+        this->bytes = std::vector(data, data + dataSize);
     }
 
     Decimal::Decimal(const vector<Constants::byte> &value)
@@ -99,8 +105,8 @@ namespace DataTypes {
     {
         vector<Constants::byte> result;
 
-        auto leftData = left.GetData();
-        auto rightData = right.GetData();
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
 
         const bool leftSign = left.IsPositive();
         const bool rightSign = right.IsPositive();
@@ -108,23 +114,11 @@ namespace DataTypes {
         const fraction_index_t leftFractionIndex = left.GetFractionIndex();
         const fraction_index_t rightFractionIndex = right.GetFractionIndex();
 
-        //erase sign and fraction point (they will be recomputed)
-        leftData.erase(leftData.begin());
-        rightData.erase(rightData.begin());
-
-        const auto leftSize = leftData.size() * 2;
-        const auto rightSize = rightData.size() * 2;
-
-        const auto leftFractionalPart = leftSize - leftFractionIndex;
-        const auto rightFractionalPart = rightSize - rightFractionIndex;
-
-        const auto leftIntegerPart = leftSize - leftFractionalPart;
-        const auto rightIntegerPart = rightSize - rightFractionalPart;
-
         const auto fractionIndex = leftFractionIndex > rightFractionIndex ? leftFractionIndex : rightFractionIndex;
 
-        // if (leftSign == rightSign)
-        //     return Decimal::Add(leftData, rightData, fractionIndex, leftSign);
+        //both same sign, add them and use sign afterwards
+        if (leftSign == rightSign)
+            return Decimal::Add(left.GetData(), right.GetData(), leftFractionIndex, rightFractionIndex, fractionIndex, leftSign);
 
         //else they have different signs
         //so subtract them
@@ -223,11 +217,17 @@ namespace DataTypes {
 
     fraction_index_t Decimal::GetFractionIndex(const string& value)
     {
-        const int decimalPos = value.find('.');
+        const int decimalPos = static_cast<int>(value.find('.'));
 
         return (decimalPos != string::npos) 
                             ? decimalPos 
                             : 0;
+    }
+
+    fraction_index_t Decimal::DetermineResultFractionIndex(
+        const fraction_index_t &leftFractionIndex,
+        const fraction_index_t &rightFractionIndex){
+        return std::max(leftFractionIndex, rightFractionIndex);
     }
 
     Decimal Decimal::Add(
@@ -241,28 +241,45 @@ namespace DataTypes {
 
         int carry = Decimal::FractionalAdd(left, right, leftFractionIndex, rightFractionIndex, result);
 
-        const auto leftSize = left.size() * 2 / leftFractionIndex; //+ ();
-        const auto rightSize = right.size();
+        // Get non-fractional sizes (in bytes)
+        const int leftNonFracSize = leftFractionIndex / 2;
+        const int rightNonFracSize = rightFractionIndex / 2;
+        const int maxNonFracSize = max(leftNonFracSize, rightNonFracSize);
 
-        const auto biggestSize = leftSize > rightSize;
+        // Create padded copies for non-fractional part
+        auto leftCopy = left;
+        auto rightCopy = right;
 
-        for (int i = static_cast<int>(left.size()) - 1; i >= 0; --i)
-        {
+        // Pad left with leading zeros if needed
+        if (leftNonFracSize < maxNonFracSize) {
+            leftCopy.insert(leftCopy.begin() + 1, maxNonFracSize - leftNonFracSize, 0x00);
+        }
+
+        // Pad right with leading zeros if needed
+        if (rightNonFracSize < maxNonFracSize) {
+            rightCopy.insert(rightCopy.begin() + 1, maxNonFracSize - rightNonFracSize, 0x00);
+        }
+
+        for (int i = static_cast<int>(left.size()) - 1; i > 0; i--) {
+            // Extract digits from packed format
             const int leftHigh = (left[i] >> 4) & 0x0F;
             const int leftLow = left[i] & 0x0F;
 
             const int rightHigh = (right[i] >> 4) & 0x0F;
             const int rightLow = right[i] & 0x0F;
 
-            // Process low digits
-            const int sumLow = leftLow + rightLow + carry;
+            // Add low digits
+            int sumLow = leftLow + rightLow + carry;
             carry = sumLow / 10;
+            sumLow %= 10;
 
-            // Process high digits
-            const int sumHigh = leftHigh + rightHigh + carry;
+            // Add high digits
+            int sumHigh = leftHigh + rightHigh + carry;
             carry = sumHigh / 10;
+            sumHigh %= 10;
 
-            auto packedByte = static_cast<Constants::byte>(((sumHigh % 10) << 4) | (sumLow % 10));
+            // Pack result back into byte
+            Constants::byte packedByte = (sumHigh << 4) | sumLow;
             result.push_back(packedByte);
         }
 
@@ -270,7 +287,6 @@ namespace DataTypes {
             result.push_back(carry);
 
         ranges::reverse(result);
-
         result.insert(result.begin(), Decimal::CreateSignAndFractionByte(isPositive, fractionIndex));
 
         return Decimal(result);
@@ -283,29 +299,50 @@ namespace DataTypes {
         const fraction_index_t &rightFractionIndex,
         vector<Constants::byte>& result){
 
-            const int leftSize = left.size() * 2 - leftFractionIndex;
-            const int rightSize = right.size() * 2 - rightFractionIndex;
+            const int leftFracDigits = left.size() * 2 - leftFractionIndex;
+            const int rightFracDigits = right.size() * 2 - rightFractionIndex;
+            const int maxFracDigits = max(leftFracDigits, rightFracDigits);
+            const int bytesToProcess = (maxFracDigits + 1) / 2;
 
-            const int biggestSize = leftSize > rightSize ? leftSize : rightSize;
+            auto leftCopy = left;
+            auto rightCopy = right;
+
+            if (leftFracDigits < maxFracDigits) {
+                const int digitsToAdd = maxFracDigits - leftFracDigits;
+                const int bytesToAdd = (digitsToAdd + 1) / 2;
+
+                leftCopy.insert(leftCopy.end(), bytesToAdd, 0);
+            }
+
+            if (rightFracDigits < maxFracDigits) {
+                const int digitsToAdd = maxFracDigits - rightFracDigits;
+                const int bytesToAdd = (digitsToAdd + 1) / 2;
+
+                rightCopy.insert(rightCopy.end(), bytesToAdd, 0);
+            }
+
+            const auto indexToStart = std::max(leftCopy.size(), rightCopy.size()) - 1;
 
             int carry = 0;
-            for (int i = biggestSize - 1; i >= 0; i--) {
-                const int leftHigh = (leftSize > i) ? (left[i] >> 4) & 0x0F : 0;
-                const int leftLow = (leftSize > i) ? left[i] & 0x0F : 0;
+            for (int i = 1; i <= maxFracDigits/2; i++) {
+                const int leftIdx = leftCopy.size() - i;
+                const int rightIdx = rightCopy.size() - i;
 
-                const int rightHigh = (rightSize > i) ? (right[i] >> 4) & 0x0F : 0;
-                const int rightLow = (rightSize > i) ? right[i] & 0x0F : 0;
+                const int leftHigh = (leftCopy[leftIdx] >> 4) & 0x0F;
+                const int leftLow = leftCopy[leftIdx] & 0x0F;
 
-                // Process low digits
-                const int sumLow = leftLow + rightLow + carry;
+                const int rightHigh = (rightCopy[rightIdx] >> 4) & 0x0F;
+                const int rightLow = rightCopy[rightIdx] & 0x0F;
+
+                int sumLow = leftLow + rightLow + carry;
                 carry = sumLow / 10;
+                sumLow %= 10;
 
-                // Process high digits
-                const int sumHigh = leftHigh + rightHigh + carry;
+                int sumHigh = leftHigh + rightHigh + carry;
                 carry = sumHigh / 10;
+                sumHigh %= 10;
 
-                auto packedByte = static_cast<Constants::byte>(((sumHigh % 10) << 4) | (sumLow % 10));
-                result.push_back(packedByte);
+                result.push_back((sumHigh << 4) | sumLow);
             }
 
         return carry;

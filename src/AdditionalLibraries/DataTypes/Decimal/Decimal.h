@@ -12,6 +12,9 @@ namespace DataTypes {
 
     protected:
         static fraction_index_t GetFractionIndex(const string& value);
+        static fraction_index_t DetermineResultFractionIndex(
+            const fraction_index_t& leftFractionIndex,
+            const fraction_index_t& rightFractionIndex);
 
     
     public:
