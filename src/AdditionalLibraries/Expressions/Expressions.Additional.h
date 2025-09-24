@@ -2,9 +2,11 @@
 #include <string>
 #include "../Dictionary/Dictionary.h"
 #include "../../Database/Constants.h"
+
+#include <functional>
 #define UNLIMITED_ARGS (-1)
 
-namespace Expressions {
+namespace Expressions {class Expression;
   enum class ExpressionType {
     And = 0,
     Or = 1,
@@ -135,6 +137,11 @@ static Dictionary<Constants::FunctionType, FunctionInfo> FunctionInfoDictionary{
     { Constants::FunctionType::Space,
         {"SPACE", 1, 1, {Constants::DataType::Int}, Constants::DataType::String, false } },
 };
+
+
+
+
+
 
 
 }

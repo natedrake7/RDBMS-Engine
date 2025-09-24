@@ -72,6 +72,8 @@ add_library(AdditionalLibraries SHARED
         src/AdditionalLibraries/Expressions/Expressions.Additional.h
         src/AdditionalLibraries/Coercions/Coercions.h
         src/AdditionalLibraries/Coercions/Coercions.cpp
+        src/AdditionalLibraries/Functions/FunctionSizeEvaluator.h
+        src/AdditionalLibraries/Functions/FunctionSizeEvaluator.cpp
 )
 
 add_library(QueryPipeline  SHARED

@@ -132,7 +132,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalInsert final : public PhysicalOperator{
     Statements::TableName* table;
-    std::vector<Statements::InsertColumns> fields;
+    std::vector<Statements::Inserts> fields;
 
     PhysicalOperator* child;
     std::vector<column_index_t> columnsIndices;
@@ -143,7 +143,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalInsert(
       Statements::TableName* table,
-      std::vector<Statements::InsertColumns>& fields,
+      std::vector<Statements::Inserts>& fields,
       PhysicalOperator* child,
       std::vector<column_index_t>& columnsIndices
     );

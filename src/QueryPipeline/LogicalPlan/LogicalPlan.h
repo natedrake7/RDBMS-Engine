@@ -80,14 +80,14 @@ namespace QueryPipeline {
   class LogicalInsert final : public LogicalPlan {
     public:
       Statements::TableName* table;
-      std::vector<Statements::InsertColumns> fields;
+      std::vector<Statements::Inserts> fields;
 
       LogicalPlan* child;
       std::vector<column_index_t> columnsIndices;
 
       explicit LogicalInsert(
         Statements::TableName* table,
-        std::vector<Statements::InsertColumns>& fields,
+        std::vector<Statements::Inserts>& fields,
         LogicalPlan* child,
         std::vector<column_index_t>& columnIndices
       );

@@ -1,6 +1,7 @@
 #include "Expression.h"
 
 #include "../Coercions/Coercions.h"
+#include "../Functions/FunctionSizeEvaluator.h"
 #include "../HashSet/HashSet.h"
 
 #include <iostream>
@@ -11,8 +12,8 @@ namespace Expressions{
     this->alias = name;
     this->tableAlias = tableAlias;
 
-    this->tableId = -1;
-    this->columnId = -1;
+    this->tableId = Constants::INVALID_TABLE_ID;
+    this->columnId = Constants::INVALID_COLUMN_ID;
     this->columnIndex = 0;
     this->returnType = DataType::Invalid;
   }
@@ -20,15 +21,21 @@ namespace Expressions{
   ColumnExpression::ColumnExpression(const column_index_t &index){
     this->columnIndex = index;
     this->returnType = DataType::Invalid;
+    this->tableId = Constants::INVALID_TABLE_ID;
+    this->columnId = Constants::INVALID_COLUMN_ID;
   }
 
   DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
+
+  size_t ColumnExpression::GetSize() const{ return this->size; }
 
   LiteralExpression::LiteralExpression(const Value &value){
     this->value = value;
   }
 
   DataType LiteralExpression::GetReturnType() const{ return this->value.GetType(); }
+
+  size_t LiteralExpression::GetSize() const{ return this->value.GetSize(); }
 
   BinaryExpression::BinaryExpression(Expression *left, Expression *right, const ExpressionOperator &operation){
     this->left = left;
@@ -47,6 +54,57 @@ namespace Expressions{
     const auto& rightType = this->right->GetReturnType();
 
     return Value::PromoteType(leftType, rightType);
+  }
+
+  size_t BinaryExpression::GetSize() const {
+
+    switch (this->operation) {
+
+    case ExpressionOperator::Equal:
+break;case ExpressionOperator::NotEqual:
+break;case ExpressionOperator::Greater:
+break;case ExpressionOperator::GreaterEqual:
+break;case ExpressionOperator::Less:
+break;case ExpressionOperator::LessEqual:
+break;case ExpressionOperator::Add:
+break;case ExpressionOperator::Subtract:
+break;case ExpressionOperator::Multiply:
+break;case ExpressionOperator::Divide:
+break;case ExpressionOperator::Modulo:
+break;
+
+    }
+
+    switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
+      case DataType::TinyInt:
+        break;
+      case DataType::SmallInt:
+        break;
+      case DataType::Int:
+        break;
+      case DataType::BigInt:
+        break;
+      case DataType::Decimal:
+        break;
+      case DataType::String:
+        break;
+      case DataType::UnicodeString:
+        break;
+      case DataType::Bool:
+        break;
+      case DataType::DateTime:
+        break;
+      case DataType::Guid:
+        break;
+      case DataType::RowIdentifier:
+        break;
+      case DataType::Invalid:
+        break;
+      default:
+        break;
+    }
+
+    return 0;
   }
 
   FunctionExpression::FunctionExpression(const Constants::FunctionType& type, std::vector<Expression*>& arguments) {
@@ -124,10 +182,11 @@ bool FunctionExpression::ValidateReturnType(
     return true;
   }
 
-
   Constants::DataType FunctionExpression::GetReturnType() const{
     return FunctionInfoDictionary.Get(this->type).returnType;
   }
+
+  size_t FunctionExpression::GetSize() const{ return Functions::FunctionSizeEvaluator::GetFunctionReturnSize(this->type, this->arguments); }
 
   LogicalExpression::LogicalExpression(
     Expression *leftExpression,
@@ -150,4 +209,6 @@ bool FunctionExpression::ValidateReturnType(
   }
 
   DataType LogicalExpression::GetReturnType() const{ return DataType::Bool; }
+
+  size_t LogicalExpression::GetSize() const{ return sizeof(bool); }
 }

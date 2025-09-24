@@ -127,7 +127,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     statement->columns = std::move(this->GetColumnsList(context->columnList()));
 
     if (context->valuesStatement()) {
-      statement->values = std::any_cast<std::vector<Statements::InsertColumns>>(visit(context->valuesStatement()));
+      statement->values = std::any_cast<std::vector<Statements::Inserts>>(visit(context->valuesStatement()));
     }
 
     if (context->selectStatement())
@@ -222,11 +222,11 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   std::any SQLVisitorImplementation::visitValuesStatement(SQLParser::ValuesStatementContext *context){
-    return std::any_cast<std::vector<Statements::InsertColumns>>(visit(context->valuesList()));
+    return std::any_cast<std::vector<Statements::Inserts>>(visit(context->valuesList()));
   }
 
   std::any SQLVisitorImplementation::visitValuesList(SQLParser::ValuesListContext *context){
-    std::vector<Statements::InsertColumns> values;
+    std::vector<Statements::Inserts> values;
 
     values.reserve(context->resultList().size());
 
@@ -236,7 +236,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       auto resultList = std::any_cast<std::vector<Expressions::Expression*>>(visit(value));
 
-      values.emplace_back(Statements::InsertColumns{
+      values.emplace_back(Statements::Inserts{
         .values = std::move(insertColumns),
       });
     }
@@ -424,7 +424,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     const auto& action = context->alterTableAction();
 
     if (action->alterTableAddColumn()) {
-      statement->addColumn = std::any_cast<Statements::NewColumn*>(visit(action->alterTableAddColumn()));
+      statement->newColumn = std::any_cast<Statements::NewColumn*>(visit(action->alterTableAddColumn()));
       statement->type = AlterTableType::AddColumn;
       return statement;
     }

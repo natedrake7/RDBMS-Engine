@@ -108,7 +108,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool ValidateTableCreate(const int32_t& selectedDatabaseId);
   };
 
-  struct InsertColumns {
+  struct Inserts {
     std::vector<Expressions::Expression*> values;
   };
 
@@ -182,7 +182,7 @@ namespace QueryPipeline::Statements {
 
   struct InsertStatement final : Statement{
     std::vector<ColumnName> columns;
-    std::vector<InsertColumns> values;
+    std::vector<Inserts> values;
 
     std::vector<column_index_t> columnIndices;
     SelectStatement* selectStatement;
@@ -240,7 +240,7 @@ namespace QueryPipeline::Statements {
     TableName* table;
     Constants::AlterTableType type;
 
-    NewColumn* addColumn;
+    NewColumn* newColumn;
     AlterColumn* alterColumn;
     DropColumn* dropColumn;
     RenameColumn* renameColumn;

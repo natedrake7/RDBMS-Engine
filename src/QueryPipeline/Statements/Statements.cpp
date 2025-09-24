@@ -602,7 +602,7 @@ namespace QueryPipeline::Statements {
 
       this->columnIndices.emplace_back(header.ordinalPosition);
     }
-
+    
     for (const auto&[columnName, header]:  columnsDict) {
       if (header.isSystem
         || identityColumns.Contains(header.id)
@@ -791,22 +791,22 @@ bool UpdateStatement::Validate(){
   }
 
   bool AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
-    if (headers.Contains(this->addColumn->name.name)) {
-      std::cerr << "Column " << this->addColumn->name.name << " already exists on table: "<< this->table->GetFullName() << std::endl;
+    if (headers.Contains(this->newColumn->name.name)) {
+      std::cerr << "Column " << this->newColumn->name.name << " already exists on table: "<< this->table->GetFullName() << std::endl;
       return false;
     }
 
-    if (!this->addColumn->isNullable
-      && this->addColumn->defaultValue.GetIsNull()) {
+    if (!this->newColumn->isNullable
+      && this->newColumn->defaultValue.GetIsNull()) {
       std::cerr << "Cannot insert default Value NULL when NOT NULL is specified" << std::endl;
       return false;
     }
 
-    this->addColumn->index = headers.size();
+    this->newColumn->index = headers.size();
 
     Constants::DataType columnType;
-    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(this->addColumn->type.name), columnType)) {
-      std::cerr << "Invalid Column Type " << this->addColumn->type.name << std::endl;
+    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(this->newColumn->type.name), columnType)) {
+      std::cerr << "Invalid Column Type " << this->newColumn->type.name << std::endl;
       return false;
     }
 
@@ -913,7 +913,7 @@ bool UpdateStatement::Validate(){
   }
 
   QueryPipeline::LogicalPlan * AlterTableStatement::ToLogical(){
-    return new LogicalAlterTable(this->table, this->type, this->alterColumn, this->addColumn, this->dropColumn, this->renameColumn);
+    return new LogicalAlterTable(this->table, this->type, this->alterColumn, this->newColumn, this->dropColumn, this->renameColumn);
   }
 
   bool ResolveColumnAlias(

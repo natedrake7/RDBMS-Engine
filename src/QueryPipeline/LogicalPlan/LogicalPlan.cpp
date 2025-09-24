@@ -94,7 +94,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
 
   LogicalInsert::LogicalInsert(
     Statements::TableName* table,
-    std::vector<Statements::InsertColumns> &fields,
+    std::vector<Statements::Inserts> &fields,
     LogicalPlan* child,
     std::vector<column_index_t>& columnIndices
   ) : table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnIndices)) {}
