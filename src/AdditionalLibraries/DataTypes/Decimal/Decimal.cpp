@@ -1,6 +1,6 @@
 ﻿#include "Decimal.h"
 
-#include "../../Converter/Converter.h"
+#include "../../Functions/StringFunctions.h"
 
 #include <algorithm>
 #include <iostream>
@@ -20,6 +20,13 @@ namespace DataTypes {
 
         if (!isPositive || copiedValue.front() == '+')
             copiedValue.erase(0, 1);
+
+        for (const auto& ch : copiedValue) {
+            if (ch != '0')
+                break;
+
+            copiedValue.erase(0, 1);
+        }
 
         const fraction_index_t fractionIndex = Decimal::GetFractionIndex(copiedValue);
 
@@ -237,36 +244,24 @@ namespace DataTypes {
         const fraction_index_t& rightFractionIndex,
         const fraction_index_t &fractionIndex,
         const bool &isPositive){
+
         std::vector<Constants::byte> result;
 
-        int carry = Decimal::FractionalAdd(left, right, leftFractionIndex, rightFractionIndex, result);
-
-        // Get non-fractional sizes (in bytes)
-        const int leftNonFracSize = leftFractionIndex / 2;
-        const int rightNonFracSize = rightFractionIndex / 2;
-        const int maxNonFracSize = max(leftNonFracSize, rightNonFracSize);
-
-        // Create padded copies for non-fractional part
         auto leftCopy = left;
         auto rightCopy = right;
 
-        // Pad left with leading zeros if needed
-        if (leftNonFracSize < maxNonFracSize) {
-            leftCopy.insert(leftCopy.begin() + 1, maxNonFracSize - leftNonFracSize, 0x00);
-        }
+        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
 
-        // Pad right with leading zeros if needed
-        if (rightNonFracSize < maxNonFracSize) {
-            rightCopy.insert(rightCopy.begin() + 1, maxNonFracSize - rightNonFracSize, 0x00);
-        }
+        int carry = 0;
 
-        for (int i = static_cast<int>(left.size()) - 1; i > 0; i--) {
+        for (int i = leftCopy.size() - 1; i > 0; i--) {
             // Extract digits from packed format
-            const int leftHigh = (left[i] >> 4) & 0x0F;
-            const int leftLow = left[i] & 0x0F;
+            const int leftHigh = (leftCopy[i] >> 4) & 0x0F;
+            const int leftLow = leftCopy[i] & 0x0F;
 
-            const int rightHigh = (right[i] >> 4) & 0x0F;
-            const int rightLow = right[i] & 0x0F;
+            const int rightHigh = (rightCopy[i] >> 4) & 0x0F;
+            const int rightLow = rightCopy[i] & 0x0F;
 
             // Add low digits
             int sumLow = leftLow + rightLow + carry;
@@ -292,60 +287,50 @@ namespace DataTypes {
         return Decimal(result);
     }
 
-     int Decimal::FractionalAdd(
-        const std::vector<Constants::byte> &left,
-        const std::vector<Constants::byte> &right,
+    void Decimal::PadFractionalParts(
+        std::vector<Constants::byte> &left,
+        std::vector<Constants::byte> &right,
         const fraction_index_t &leftFractionIndex,
-        const fraction_index_t &rightFractionIndex,
-        vector<Constants::byte>& result){
+        const fraction_index_t &rightFractionIndex
+    ){
+        const int leftFracDigits = left.size() * 2 - leftFractionIndex;
+        const int rightFracDigits = right.size() * 2 - rightFractionIndex;
+        const int maxFracDigits = max(leftFracDigits, rightFracDigits);
 
-            const int leftFracDigits = left.size() * 2 - leftFractionIndex;
-            const int rightFracDigits = right.size() * 2 - rightFractionIndex;
-            const int maxFracDigits = max(leftFracDigits, rightFracDigits);
-            const int bytesToProcess = (maxFracDigits + 1) / 2;
+        if (leftFracDigits < maxFracDigits) {
+            const int digitsToAdd = maxFracDigits - leftFracDigits;
+            const int bytesToAdd = (digitsToAdd + 1) / 2;
 
-            auto leftCopy = left;
-            auto rightCopy = right;
+            left.insert(left.end(), bytesToAdd, 0);
+        }
 
-            if (leftFracDigits < maxFracDigits) {
-                const int digitsToAdd = maxFracDigits - leftFracDigits;
-                const int bytesToAdd = (digitsToAdd + 1) / 2;
+        if (rightFracDigits < maxFracDigits) {
+            const int digitsToAdd = maxFracDigits - rightFracDigits;
+            const int bytesToAdd = (digitsToAdd + 1) / 2;
 
-                leftCopy.insert(leftCopy.end(), bytesToAdd, 0);
-            }
+            right.insert(right.end(), bytesToAdd, 0);
+        }
+    }
 
-            if (rightFracDigits < maxFracDigits) {
-                const int digitsToAdd = maxFracDigits - rightFracDigits;
-                const int bytesToAdd = (digitsToAdd + 1) / 2;
+    void Decimal::PadNonFractionalParts(
+        std::vector<Constants::byte> &left,
+        std::vector<Constants::byte> &right,
+        const fraction_index_t &leftFractionIndex,
+        const fraction_index_t &rightFractionIndex){
 
-                rightCopy.insert(rightCopy.end(), bytesToAdd, 0);
-            }
+        const int leftNonFracSize = leftFractionIndex / 2;
+        const int rightNonFracSize = rightFractionIndex / 2;
+        const int maxNonFracSize = max(leftNonFracSize, rightNonFracSize);
 
-            const auto indexToStart = std::max(leftCopy.size(), rightCopy.size()) - 1;
+        // Pad left with leading zeros if needed
+        if (leftNonFracSize < maxNonFracSize) {
+            left.insert(left.begin() + 1, maxNonFracSize - leftNonFracSize, 0x00);
+        }
 
-            int carry = 0;
-            for (int i = 1; i <= maxFracDigits/2; i++) {
-                const int leftIdx = leftCopy.size() - i;
-                const int rightIdx = rightCopy.size() - i;
-
-                const int leftHigh = (leftCopy[leftIdx] >> 4) & 0x0F;
-                const int leftLow = leftCopy[leftIdx] & 0x0F;
-
-                const int rightHigh = (rightCopy[rightIdx] >> 4) & 0x0F;
-                const int rightLow = rightCopy[rightIdx] & 0x0F;
-
-                int sumLow = leftLow + rightLow + carry;
-                carry = sumLow / 10;
-                sumLow %= 10;
-
-                int sumHigh = leftHigh + rightHigh + carry;
-                carry = sumHigh / 10;
-                sumHigh %= 10;
-
-                result.push_back((sumHigh << 4) | sumLow);
-            }
-
-        return carry;
+        // Pad right with leading zeros if needed
+        if (rightNonFracSize < maxNonFracSize) {
+            right.insert(right.begin() + 1, maxNonFracSize - rightNonFracSize, 0x00);
+        }
     }
 
     Decimal Decimal::Subtract(

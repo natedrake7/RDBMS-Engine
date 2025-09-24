@@ -45,12 +45,21 @@ namespace DataTypes {
             const fraction_index_t& fractionIndex,
             const bool& isPositive);
 
-        static int FractionalAdd(
-                const std::vector<Constants::byte>& left,
-                const std::vector<Constants::byte>& right,
+            static void PadFractionalParts(
+                std::vector<Constants::byte>& left,
+                std::vector<Constants::byte>& right,
                 const fraction_index_t& leftFractionIndex,
-                const fraction_index_t& rightFractionIndex,
-                std::vector<Constants::byte>& result);
+                const fraction_index_t& rightFractionIndex
+            );
+
+            static void PadNonFractionalParts(
+                std::vector<Constants::byte>& left,
+                std::vector<Constants::byte>& right,
+                const fraction_index_t& leftFractionIndex,
+                const fraction_index_t& rightFractionIndex
+            );
+
+        static void TrimLeadingZeros(std::vector<Constants::byte>& data);
 
         static Decimal Subtract(
             const std::vector<Constants::byte>& left,
