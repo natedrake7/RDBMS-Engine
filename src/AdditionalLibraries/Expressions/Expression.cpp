@@ -37,6 +37,129 @@ namespace Expressions{
 
   size_t LiteralExpression::GetSize() const{ return this->value.GetSize(); }
 
+  size_t BinaryExpression::GetAdditionSize() const{
+    switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
+      case DataType::TinyInt:
+        return sizeof(int8_t);
+      case DataType::SmallInt:
+        return sizeof(int16_t);
+      case DataType::Int:
+        return sizeof(int32_t);
+      case DataType::BigInt:
+        return sizeof(int64_t);
+      case DataType::Decimal:
+        return -1;
+      case DataType::String:
+      case DataType::UnicodeString:
+        return this->left->GetSize() + this->right->GetSize();
+      case DataType::Bool:
+        return sizeof(bool);
+      case DataType::DateTime:
+      case DataType::Guid:
+      case DataType::RowIdentifier:
+      case DataType::Invalid:
+      default:
+        return -1;
+    }
+  }
+
+  size_t BinaryExpression::GetSubtractionSize() const{
+    switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
+    case DataType::TinyInt:
+      return sizeof(int8_t);
+    case DataType::SmallInt:
+      return sizeof(int16_t);
+    case DataType::Int:
+      return sizeof(int32_t);
+    case DataType::BigInt:
+      return sizeof(int64_t);
+    case DataType::Decimal:
+      return -1;
+    case DataType::Bool:
+      return sizeof(bool);
+    case DataType::String:
+    case DataType::UnicodeString:
+    case DataType::DateTime:
+    case DataType::Guid:
+    case DataType::RowIdentifier:
+    case DataType::Invalid:
+    default:
+      return -1;
+    }
+  }
+  size_t BinaryExpression::GetMultiplicationSize() const{
+    switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
+    case DataType::TinyInt:
+      return sizeof(int8_t);
+    case DataType::SmallInt:
+      return sizeof(int16_t);
+    case DataType::Int:
+      return sizeof(int32_t);
+    case DataType::BigInt:
+      return sizeof(int64_t);
+    case DataType::Decimal:
+      return -1;
+    case DataType::Bool:
+      return sizeof(bool);
+    case DataType::String:
+    case DataType::UnicodeString:
+    case DataType::DateTime:
+    case DataType::Guid:
+    case DataType::RowIdentifier:
+    case DataType::Invalid:
+    default:
+      return -1;
+    }
+  }
+  size_t BinaryExpression::GetDivisionSize() const{
+    switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
+    case DataType::TinyInt:
+      return sizeof(int8_t);
+    case DataType::SmallInt:
+      return sizeof(int16_t);
+    case DataType::Int:
+      return sizeof(int32_t);
+    case DataType::BigInt:
+      return sizeof(int64_t);
+    case DataType::Decimal:
+      return -1;
+    case DataType::Bool:
+      return sizeof(bool);
+    case DataType::String:
+    case DataType::UnicodeString:
+    case DataType::DateTime:
+    case DataType::Guid:
+    case DataType::RowIdentifier:
+    case DataType::Invalid:
+    default:
+      return -1;
+    }
+  }
+  size_t BinaryExpression::GetModuloSize() const{
+    switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
+      case DataType::TinyInt:
+        return sizeof(int8_t);
+      case DataType::SmallInt:
+        return sizeof(int16_t);
+      case DataType::Int:
+        return sizeof(int32_t);
+      case DataType::BigInt:
+        return sizeof(int64_t);
+      case DataType::Decimal:
+        return -1;
+      case DataType::Bool:
+        return sizeof(bool);
+      case DataType::String:
+      case DataType::UnicodeString:
+      case DataType::DateTime:
+      case DataType::Guid:
+      case DataType::RowIdentifier:
+      case DataType::Invalid:
+      default:
+        return -1;
+    }
+  }
+
   BinaryExpression::BinaryExpression(Expression *left, Expression *right, const ExpressionOperator &operation){
     this->left = left;
     this->right = right;
@@ -57,54 +180,27 @@ namespace Expressions{
   }
 
   size_t BinaryExpression::GetSize() const {
-
     switch (this->operation) {
-
-    case ExpressionOperator::Equal:
-break;case ExpressionOperator::NotEqual:
-break;case ExpressionOperator::Greater:
-break;case ExpressionOperator::GreaterEqual:
-break;case ExpressionOperator::Less:
-break;case ExpressionOperator::LessEqual:
-break;case ExpressionOperator::Add:
-break;case ExpressionOperator::Subtract:
-break;case ExpressionOperator::Multiply:
-break;case ExpressionOperator::Divide:
-break;case ExpressionOperator::Modulo:
-break;
-
-    }
-
-    switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
-      case DataType::TinyInt:
-        break;
-      case DataType::SmallInt:
-        break;
-      case DataType::Int:
-        break;
-      case DataType::BigInt:
-        break;
-      case DataType::Decimal:
-        break;
-      case DataType::String:
-        break;
-      case DataType::UnicodeString:
-        break;
-      case DataType::Bool:
-        break;
-      case DataType::DateTime:
-        break;
-      case DataType::Guid:
-        break;
-      case DataType::RowIdentifier:
-        break;
-      case DataType::Invalid:
-        break;
+      case ExpressionOperator::Equal:
+      case ExpressionOperator::NotEqual:
+      case ExpressionOperator::Greater:
+      case ExpressionOperator::GreaterEqual:
+      case ExpressionOperator::Less:
+      case ExpressionOperator::LessEqual:
+        return sizeof(bool);
+      case ExpressionOperator::Add:
+        return this->GetAdditionSize();
+      case ExpressionOperator::Subtract:
+        return this->GetSubtractionSize();
+      case ExpressionOperator::Multiply:
+        return this->GetMultiplicationSize();
+      case ExpressionOperator::Divide:
+        return this->GetDivisionSize();
+      case ExpressionOperator::Modulo:
+        return this->GetModuloSize();
       default:
-        break;
+        return 0;
     }
-
-    return 0;
   }
 
   FunctionExpression::FunctionExpression(const Constants::FunctionType& type, std::vector<Expression*>& arguments) {

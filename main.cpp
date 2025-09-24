@@ -55,7 +55,7 @@ using namespace Server;
 //Add case insensitive on identifiers
 //Add like comparison (add a caseInsensitive comparison expression for strings)
 //Check batching, fix batching on insert with select.
-//check expression size evaluations
+//check expression size evaluations (on insert and update)
 
 std::atomic<bool> serverRunning{true};
 

@@ -132,4 +132,6 @@ namespace DataTypes {
     return Guid(data);
   }
 
+  int Guid::GuidSize(){ return GUID_SIZE;}
+
 }

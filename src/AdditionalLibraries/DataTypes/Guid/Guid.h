@@ -24,6 +24,7 @@ namespace DataTypes {
       friend std::ostream& operator<<(std::ostream& os, const Guid& guid);
       static Guid NewGuid();
       static Guid FromString(const std::string& str);
+      static int GuidSize();
   };
 
   bool operator==(const Guid& guid1, const Guid& guid2);

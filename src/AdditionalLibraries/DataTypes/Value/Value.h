@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "../../../Database/Constants.h"
+#include "../ErrorHandling.h"
 #include "../../HashSet/HashSet.h"
 #include "../Decimal/Decimal.h"
 #include "../Guid/Guid.h"
@@ -140,6 +141,8 @@ class Value {
         void SetType(const DataType &type);
 
         static DataType PromoteType(const DataType& lhs, const DataType& rhs);
+
+        [[nodiscard]] AdditionalDataTypes::ResultStatus ValidateSize(const DataType& columnType, const block_size_t& columnMaxSize) const;
 
         friend ostream& operator<<(ostream& os, const Value& field);
 

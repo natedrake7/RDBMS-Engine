@@ -97,14 +97,14 @@ namespace DatabaseEngine::StorageTypes
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
 
-            [[nodiscard]] Row* CreateRow(
+            [[nodiscard]] std::tuple<Row*, AdditionalDataTypes::ResultStatus> CreateRow(
                 const Constants::transaction_id_t& transactionId,
                 const vector<Value>& inputData,
                 int64_t* primaryKeyVal,
                 Logging::CheckPoint* checkPoint
             )const;
 
-            [[nodiscard]] Row* CreateRow(
+            [[nodiscard]] std::tuple<Row*, AdditionalDataTypes::ResultStatus> CreateRow(
                 const Constants::transaction_id_t& transactionId,
                 const std::vector<Value>& inputData,
                 const std::vector<Constants::column_index_t>& columnIndices,
@@ -112,7 +112,7 @@ namespace DatabaseEngine::StorageTypes
                 Logging::CheckPoint* checkPoint
             )const;
 
-            [[nodiscard]] Row* CreateRow(
+            [[nodiscard]] std::tuple<Row*, AdditionalDataTypes::ResultStatus> CreateRow(
                 const Constants::transaction_id_t& transactionId,
                 const std::vector<Expressions::Expression*>& inputData,
                 const std::vector<Constants::column_index_t>& columnIndices,
@@ -160,8 +160,6 @@ namespace DatabaseEngine::StorageTypes
                 const int& ordinalPosition);
 
             ~Table();
-
-            AdditionalDataTypes::ResultStatus InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Value>> &inputData);
 
             AdditionalDataTypes::ResultStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData);
 

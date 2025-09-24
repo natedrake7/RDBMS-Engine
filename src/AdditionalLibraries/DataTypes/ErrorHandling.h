@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <utility>
 
 namespace AdditionalDataTypes {
   enum ResultCode : uint8_t {
@@ -15,6 +16,7 @@ namespace AdditionalDataTypes {
     InvalidTable = 8,
     InvalidColumn = 9,
     DuplicateKey = 10,
+    ColumnSizeExceeded = 11
   };
 
   struct ResultStatus {
@@ -26,6 +28,9 @@ namespace AdditionalDataTypes {
       this->code = ResultCode::Ok;
       this->primaryKeyVal = 0;
     }
+
+    ResultStatus(const ResultCode& code, const std::string&  message)
+      : code(code), message(message), primaryKeyVal(0) {}
 
   };
 }

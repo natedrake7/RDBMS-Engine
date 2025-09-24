@@ -19,7 +19,7 @@ namespace Expressions::Functions {
     if (expressions.empty())
       return -1;
 
-    // return expressions.front()->
+    return expressions.front()->GetSize();
 
     return 0;
   }

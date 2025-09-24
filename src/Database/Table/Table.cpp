@@ -151,38 +151,6 @@ namespace DatabaseEngine::StorageTypes {
           return columns;
       }
 
-      AdditionalDataTypes::ResultStatus Table::InsertRows(const Constants::transaction_id_t& transactionId, const vector<vector<Value>> &inputData)
-      {
-        uint32_t rowsInserted = 0;
-        extent_id_t startingExtentIndex = 0;
-        vector<extent_id_t> extents;
-
-        int64_t primaryKeyVal = 0;
-        Logging::CheckPoint checkPoint;
-        for (const auto &rowData : inputData)
-        {
-            auto* row = this->CreateRow(transactionId, rowData, &primaryKeyVal, &checkPoint);
-
-            const auto result = this->InsertRow(row, extents, startingExtentIndex);
-
-            if (result.code != AdditionalDataTypes::ResultCode::Ok)
-              return result;
-
-
-            rowsInserted++;
-
-            if (rowsInserted % 1000 == 0)
-                cout << rowsInserted << endl;
-        }
-
-        this->database->LogCheckPoint(checkPoint);
-
-        AdditionalDataTypes::ResultStatus status;
-        status.message = "Rows affected: " + to_string(rowsInserted);
-
-        return status;
-      }
-
     AdditionalDataTypes::ResultStatus Table::InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
@@ -190,9 +158,12 @@ namespace DatabaseEngine::StorageTypes {
         int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
-        Row* row = this->CreateRow(transactionId, inputData, &primaryKeyVal, &checkPoint);
+        auto [row, result] = this->CreateRow(transactionId, inputData, &primaryKeyVal, &checkPoint);
 
-        auto result =  this->InsertRow(row, extents, startingExtentIndex);
+        if (result.code != AdditionalDataTypes::ResultCode::Ok)
+          return result;
+
+        result =  this->InsertRow(row, extents, startingExtentIndex);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
@@ -216,9 +187,12 @@ namespace DatabaseEngine::StorageTypes {
         int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
-        auto* row = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
+        auto [row, result] = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
 
-        auto result =  this->InsertRow(row, extents, startingExtentIndex);
+        if (result.code != AdditionalDataTypes::ResultCode::Ok)
+          return result;
+
+        result =  this->InsertRow(row, extents, startingExtentIndex);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
@@ -242,9 +216,12 @@ namespace DatabaseEngine::StorageTypes {
         int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
-        auto* row = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
+        auto[row,result] = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
 
-        auto result =  this->InsertRow(row, extents, startingExtentIndex);
+        if (result.code != AdditionalDataTypes::ResultCode::Ok)
+          return result;
+
+        result =  this->InsertRow(row, extents, startingExtentIndex);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
@@ -284,11 +261,12 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-      Row* Table::CreateRow(
+      std::tuple<Row*, AdditionalDataTypes::ResultStatus> Table::CreateRow(
         const Constants::transaction_id_t& transactionId,
         const vector<Value>& inputData,
         int64_t* primaryKeyVal,
-        Logging::CheckPoint* checkPoint)const
+        Logging::CheckPoint* checkPoint
+        )const
       {
         auto *row = new Row(*this);
 
@@ -318,6 +296,15 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
+          const AdditionalDataTypes::ResultStatus result = input.ValidateSize(column->GetColumnType(), column->GetColumnSize());
+
+          if (result.code != AdditionalDataTypes::ResultCode::Ok) {
+            delete block;
+            delete row;
+
+            return std::make_tuple(nullptr, result);
+          }
+
           block->SetData(input);
 
           row->InsertColumnData(block, associatedColumnIndex);
@@ -325,10 +312,16 @@ namespace DatabaseEngine::StorageTypes {
 
         *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
-        return row;
+        return std::make_tuple(
+      row,
+          AdditionalDataTypes::ResultStatus(
+            AdditionalDataTypes::ResultCode::Ok,
+          "Row created successfully"
+            )
+        );
       }
 
-      Row * Table::CreateRow(
+      std::tuple<Row*, AdditionalDataTypes::ResultStatus> Table::CreateRow(
         const Constants::transaction_id_t &transactionId,
         const std::vector<Value> &inputData,
         const std::vector<Constants::column_index_t> &columnIndices,
@@ -349,7 +342,7 @@ namespace DatabaseEngine::StorageTypes {
           const auto& column = this->columns.at(associatedColumnIndex);
 
           //ignore auto-computed columns even if specified
-          if (column->GetIdentity().columnId != -1)
+          if (column->GetIdentity().columnId != Constants::INVALID_COLUMN_ID)
             continue;
 
           auto *block = new Block(column);
@@ -363,6 +356,15 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
+          const AdditionalDataTypes::ResultStatus result = input.ValidateSize(column->GetColumnType(), column->GetColumnSize());
+
+          if (result.code != AdditionalDataTypes::ResultCode::Ok) {
+            delete block;
+            delete row;
+
+            return std::make_tuple(nullptr, result);
+          }
+
           block->SetData(input);
 
           row->InsertColumnData(block, associatedColumnIndex);
@@ -370,10 +372,16 @@ namespace DatabaseEngine::StorageTypes {
 
         *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
-        return row;
+        return std::make_tuple(
+        row,
+          AdditionalDataTypes::ResultStatus(
+            AdditionalDataTypes::ResultCode::Ok,
+            "Row created successfully"
+            )
+        );
       }
 
-      Row * Table::CreateRow(
+     std::tuple<Row*, AdditionalDataTypes::ResultStatus> Table::CreateRow(
         const Constants::transaction_id_t &transactionId,
         const std::vector<Expressions::Expression *> &inputData,
         const std::vector<Constants::column_index_t> &columnIndices,
@@ -409,6 +417,16 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
+          //TODO validate input here
+          const AdditionalDataTypes::ResultStatus result = input.ValidateSize(column->GetColumnType(), column->GetColumnSize());
+
+          if (result.code != AdditionalDataTypes::ResultCode::Ok) {
+            delete block;
+            delete row;
+
+            return std::make_tuple(nullptr, result);
+          }
+
           block->SetData(input);
 
           row->InsertColumnData(block, associatedColumnIndex);
@@ -416,7 +434,13 @@ namespace DatabaseEngine::StorageTypes {
 
         *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
-        return row;
+        return std::make_tuple(
+          row,
+          AdditionalDataTypes::ResultStatus(
+            AdditionalDataTypes::ResultCode::Ok,
+            "Row created successfully"
+            )
+        );
       }
 
       column_number_t Table::GetNumberOfColumns() const { return this->columns.size(); }
