@@ -118,13 +118,13 @@ int main()
     //UPDATE dbo.Actors SET Name = CONCAT('Kalimera', 'HEllo')
 
 
-    DataTypes::Decimal decimal("1192.1120");
+    DataTypes::Decimal decimal("2.0");
 
     std::cout << decimal << std::endl;
 
-    DataTypes::Decimal decimal2("192.1120");
-
-    std::cout << "Decimal: " << decimal + decimal2 << std::endl;
+    DataTypes::Decimal decimal2("003.5");
+    //
+    std::cout << "Decimal: " << decimal * decimal2 << std::endl;
 
     return 0;
     RegisterSignalHandlers();
