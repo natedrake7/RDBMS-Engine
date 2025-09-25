@@ -369,7 +369,32 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
   }
 
   Decimal Coercions::ToDecimal(const Value &value, const bool &explicitCast){
-    return {};
+    const auto valueType = value.GetType();
+
+    switch (valueType) {
+      case DataType::TinyInt:
+        break;
+      case DataType::SmallInt:
+        break;
+      case DataType::Int:
+        break;
+      case DataType::BigInt:
+        break;
+      case DataType::Decimal:
+        return Decimal(value.GetRawData(), value.GetSize());
+      case DataType::String:
+      case DataType::UnicodeString:
+        return Decimal(value.GetString());
+      case DataType::Bool:
+        break;
+      case DataType::DateTime:
+      case DataType::Guid:
+      case DataType::RowIdentifier:
+      case DataType::Invalid:
+      default:
+        throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Decimal");
+
+    }
   }
 
   bool Coercions::CanBeParsedToType(const Constants::DataType &toType, const Value &value){

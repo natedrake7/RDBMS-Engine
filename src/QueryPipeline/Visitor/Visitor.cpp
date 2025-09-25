@@ -107,6 +107,12 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
       return Value(number, 0);
     }
 
+    if (context->DECIMAL_REGEX()) {
+      const auto & str = context->DECIMAL_REGEX()->getText();
+
+      return Value(DataTypes::Decimal(str), 0);
+    }
+
     if (context->NULL_())
       return Value(nullptr, 0);
 

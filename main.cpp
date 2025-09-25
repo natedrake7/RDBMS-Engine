@@ -56,6 +56,8 @@ using namespace Server;
 //Add like comparison (add a caseInsensitive comparison expression for strings)
 //Check batching, fix batching on insert with select.
 //check expression size evaluations (on insert and update)
+//decimal add base case of 0 and addition and multiplication by 0
+//add division and implement decimal coercions and validations
 
 std::atomic<bool> serverRunning{true};
 
@@ -118,15 +120,15 @@ int main()
     //UPDATE dbo.Actors SET Name = CONCAT('Kalimera', 'HEllo')
 
 
-    DataTypes::Decimal decimal("2.0");
-
-    std::cout << decimal << std::endl;
-
-    DataTypes::Decimal decimal2("003.5");
+    // DataTypes::Decimal decimal("0");
     //
-    std::cout << "Decimal: " << decimal * decimal2 << std::endl;
-
-    return 0;
+    // std::cout << decimal << std::endl;
+    //
+    // DataTypes::Decimal decimal2("0");
+    // //
+    // std::cout << "Decimal: " << decimal + decimal2 << std::endl;
+    //
+    // return 0;
     RegisterSignalHandlers();
 
     auto& server = ServerInstance::Get();

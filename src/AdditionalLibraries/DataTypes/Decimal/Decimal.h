@@ -40,15 +40,15 @@ namespace DataTypes {
         static void PadFractionalParts(
             std::vector<Constants::byte>& left,
             std::vector<Constants::byte>& right,
-            const fraction_index_t& leftFractionIndex,
-            const fraction_index_t& rightFractionIndex
+            fraction_index_t& leftFractionIndex,
+            fraction_index_t& rightFractionIndex
         );
 
         static void PadNonFractionalParts(
             std::vector<Constants::byte>& left,
             std::vector<Constants::byte>& right,
-            const fraction_index_t& leftFractionIndex,
-            const fraction_index_t& rightFractionIndex
+            fraction_index_t& leftFractionIndex,
+            fraction_index_t& rightFractionIndex
         );
 
         static Decimal Subtract(
@@ -61,8 +61,30 @@ namespace DataTypes {
         static Decimal Multiply(
             const std::vector<Constants::byte>& left,
             const std::vector<Constants::byte>& right,
-            const fraction_index_t& fractionIndex,
+            fraction_index_t& fractionIndex,
             const bool& isPositive
+        );
+
+        static Decimal Divide(
+            const std::vector<Constants::byte>& left,
+            const std::vector<Constants::byte>& right,
+            fraction_index_t& fractionIndex,
+            const bool& isPositive
+        );
+
+        static void TrimLeadingZeros(
+            std::vector<int>& digits,
+            fraction_index_t& fractionIndex
+        );
+
+        static void TrimTrailingZeros(
+            std::vector<int>& digits,
+            const fraction_index_t& fractionIndex
+        );
+
+        static void PadDecimalParts(
+            std::vector<int>& digits,
+            fraction_index_t& fractionIndex
         );
 
     public:
@@ -70,6 +92,7 @@ namespace DataTypes {
         explicit Decimal(const string& value);
         explicit Decimal(const Constants::byte* data, const int& dataSize);
         explicit Decimal(const vector<Constants::byte>& value);
+        explicit Decimal(const bool& value);
         ~Decimal();
 
 

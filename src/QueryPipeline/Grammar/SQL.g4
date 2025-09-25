@@ -254,6 +254,7 @@ literalValue
         : STRING
         | UNICODESTRING
         | NUMBER
+        | DECIMAL_REGEX
         | TRUE
         | FALSE
         | NULL
@@ -604,6 +605,7 @@ IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
 UNICODESTRING   : 'N''\'' ( ~['\\] | '\\' . )* '\'';
 STRING          : '\'' ( ~['\\] | '\\' . )* '\'';
 NUMBER          : [0-9]+;
+DECIMAL_REGEX         : [0-9]+ '.' [0-9]+ ;
 WS              : [ \t\r\n]+ -> skip;
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
