@@ -1,7 +1,4 @@
 ﻿#include "Decimal.h"
-
-#include "../../Functions/StringFunctions.h"
-
 #include <algorithm>
 #include <iostream>
 
@@ -64,6 +61,43 @@ namespace DataTypes {
         }
     }
 
+    Decimal::Decimal(const bool &value){
+        //boolean is always positive
+        constexpr auto isPositive = true;
+
+        //fraction index is always at a fixed position
+        constexpr fraction_index_t fractionIndex = 2;
+
+        constexpr Constants::byte signAndFractionPoint = (isPositive << 7) | (fractionIndex & 0x7F);
+
+        this->bytes.push_back(signAndFractionPoint);
+
+        Constants::byte val = 0;
+
+        val |= (value ? 1 : 0);
+
+        this->bytes.push_back(val);
+
+        //add alignment byte
+        this->bytes.push_back(0x00);
+    }
+
+    Decimal::Decimal(const int8_t &value){
+        this->InitializeFromInteger<int8_t>(value);
+    }
+
+    Decimal::Decimal(const int16_t &value){
+        this->InitializeFromInteger<int16_t>(value);
+    }
+
+    Decimal::Decimal(const int32_t &value){
+        this->InitializeFromInteger<int32_t>(value);
+    }
+
+    Decimal::Decimal(const int64_t &value){
+        this->InitializeFromInteger<int64_t>(value);
+    }
+
     Decimal::Decimal(const Constants::byte* data, const int& dataSize)
     {
         this->bytes = std::vector(data, data + dataSize);
@@ -73,6 +107,7 @@ namespace DataTypes {
     {
         this->bytes = value;
     }
+
 
     Decimal::~Decimal() = default;
 
@@ -585,6 +620,39 @@ namespace DataTypes {
     ostream & operator<<(ostream &os, const Decimal &decimal){
         os << decimal.ToString();
         return os;
+    }
+
+    template <typename T>
+    void Decimal::InitializeFromInteger(const T &value){
+        static_assert(is_integral_v<T>, "Decimal::InitializeFromInteger: T must be an integer");
+
+        const auto isPositive = value >= 0;
+
+        auto absValue = std::abs(static_cast<int64_t>(value));
+
+        std::vector<int> digits;
+
+        if (absValue == 0)
+            digits.push_back(0);
+
+        while (absValue > 0) {
+            digits.push_back(absValue % 10);
+            absValue /= 10;
+        }
+
+        ranges::reverse(digits);
+
+        digits.push_back(0x00);
+        digits.push_back(0x00);
+
+        fraction_index_t fractionIndex = digits.size() - 2;
+
+        if (fractionIndex % 2 != 0) {
+            digits.insert(digits.begin(), 0);
+            fractionIndex++;
+        }
+
+        this->bytes = Decimal::Pack(digits, isPositive, fractionIndex);
     }
 }
 

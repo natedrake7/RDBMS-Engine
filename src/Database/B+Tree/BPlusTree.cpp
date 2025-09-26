@@ -1350,6 +1350,7 @@ namespace Indexing
             case Constants::DataType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) > *reinterpret_cast<const int64_t*>(otherKey.value.data());
             case Constants::DataType::Guid:
+                return DataTypes::Guid(this->value.data(), this->size) > DataTypes::Guid(otherKey.value.data(), otherKey.size);
             case Constants::DataType::String:
             case Constants::DataType::UnicodeString:
             {
@@ -1401,6 +1402,7 @@ namespace Indexing
             case Constants::DataType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) >= *reinterpret_cast<const int64_t*>(otherKey.value.data());
             case Constants::DataType::Guid:
+                return DataTypes::Guid(this->value.data(), this->size) >= DataTypes::Guid(otherKey.value.data(), otherKey.size);
             case Constants::DataType::String:
             case Constants::DataType::UnicodeString:
             {
@@ -1498,6 +1500,8 @@ namespace Indexing
                 os << *reinterpret_cast<const int64_t*>(key.value.data());
                 break;
             case Constants::DataType::Guid:
+                os << DataTypes::Guid(key.value.data(), key.size).ToString();
+                break;
             case Constants::DataType::String:
             case Constants::DataType::UnicodeString:
                 os << reinterpret_cast<const char*>(key.value.data());
@@ -1538,6 +1542,7 @@ namespace Indexing
             case Constants::DataType::BigInt:
                 return *reinterpret_cast<const int64_t*>(this->value.data()) == *reinterpret_cast<const int64_t*>(otherKey.value.data());
             case Constants::DataType::Guid:
+                return DataTypes::Guid(this->value.data(), this->size) == DataTypes::Guid(otherKey.value.data(), otherKey.size);
             case Constants::DataType::String:
             case Constants::DataType::UnicodeString:
                 return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;

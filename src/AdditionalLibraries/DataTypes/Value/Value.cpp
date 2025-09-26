@@ -584,7 +584,13 @@ Value Value::PerformStringAddition(const string &lhs, const string &rhs){
         0
     );
 
-}Value Value::PerformTinyIntSubtraction(const int8_t &lhs, const int8_t &rhs){
+}
+
+Value Value::PerformDecimalAddition(const DataTypes::Decimal &lhs, const DataTypes::Decimal &rhs){
+    return Value(lhs + rhs, 0);
+}
+
+Value Value::PerformTinyIntSubtraction(const int8_t &lhs, const int8_t &rhs){
     return
         (Converter<int8_t>::AssertOverflow(lhs, rhs))
         ?
@@ -636,6 +642,10 @@ Value Value::PerformBigIntSubtraction(const int64_t &lhs, const int64_t &rhs){
         );
 }
 
+Value Value::PerformDecimalSubtraction(const DataTypes::Decimal &lhs, const DataTypes::Decimal &rhs){
+    return Value(lhs - rhs, 0);
+}
+
 //TODO implement operations by dataType
 Value operator+(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
@@ -648,7 +658,7 @@ Value operator+(const Value &lhs, const Value &rhs){
         case DataType::BigInt:
             return Value::PerformBigIntAddition(lhs.GetBigInt(), rhs.GetBigInt());
         case DataType::Decimal:
-            return Value(nullptr, 0);
+            return Value::PerformDecimalAddition(lhs.GetDecimal(), rhs.GetDecimal());
         case DataType::String:
         case DataType::UnicodeString:
                 return Value::PerformStringAddition(lhs.GetString(), rhs.GetString());
@@ -668,7 +678,6 @@ Value operator+(const Value &lhs, const Value &rhs){
 
 Value& Value::operator+=(const Value &rhs){
     *this = *this + rhs;
-
     return *this;
 }
 
@@ -683,7 +692,7 @@ Value operator-(const Value &lhs, const Value &rhs){
         case DataType::BigInt:
             return Value::PerformBigIntSubtraction(lhs.GetBigInt(), rhs.GetBigInt());
         case DataType::Decimal:
-            return Value(nullptr, 0);
+            return Value::PerformDecimalSubtraction(lhs.GetDecimal(), rhs.GetDecimal());
         case DataType::String:
         case DataType::UnicodeString:
         case DataType::Bool:
@@ -716,7 +725,7 @@ Value operator*(const Value &lhs, const Value &rhs){
         case DataType::Bool:
             return Value(lhs.GetBool() * rhs.GetBool(), 0);
         case DataType::Decimal:
-            // return Field(lhs.GetDecimal() * rhs.GetDecimal(), 0);
+            return Value(lhs.GetDecimal() * rhs.GetDecimal(), 0);
         case DataType::String:
         case DataType::UnicodeString:
         case DataType::DateTime:

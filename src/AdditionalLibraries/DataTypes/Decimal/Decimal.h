@@ -2,6 +2,7 @@
 #include  "../../../Database/Constants.h"
 #include <string>
 #include <vector>
+#include <limits>
 
 using namespace std;
 using namespace Constants;
@@ -11,6 +12,9 @@ namespace DataTypes {
         vector<Constants::byte> bytes;
 
     protected:
+        template <typename T>
+        void InitializeFromInteger(const T& value);
+
         static std::vector<int> Unpack(const vector<Constants::byte>& bytes);
         static std::vector<int> MultiplyDigits(const std::vector<int>& leftDigits, const std::vector<int>& rightDigits);
         static std::vector<Constants::byte> Pack(
@@ -93,6 +97,10 @@ namespace DataTypes {
         explicit Decimal(const Constants::byte* data, const int& dataSize);
         explicit Decimal(const vector<Constants::byte>& value);
         explicit Decimal(const bool& value);
+        explicit Decimal(const int8_t& value);
+        explicit Decimal(const int16_t& value);
+        explicit Decimal(const int32_t& value);
+        explicit Decimal(const int64_t& value);
         ~Decimal();
 
 
@@ -117,6 +125,11 @@ namespace DataTypes {
         friend Decimal operator*(const Decimal& left, const Decimal& right);
         friend Decimal operator/(const Decimal& left, const Decimal& right);
 
+        friend Decimal operator+(const Decimal& left, const int64_t& right);
+        friend Decimal operator-(const Decimal& left, const int64_t& right);
+        friend Decimal operator*(const Decimal& left, const int64_t& right);
+        friend Decimal operator/(const Decimal& left, const int64_t& right);
+
         friend bool operator==(const Decimal& left, const Decimal& right);
         friend bool operator>=(const Decimal& left, const Decimal& right);
         friend bool operator>(const Decimal& left, const Decimal& right);
@@ -125,5 +138,24 @@ namespace DataTypes {
     };
 
 
+
+// Specialization
 }
+
+template<> struct std::numeric_limits<DataTypes::Decimal> {
+    static constexpr bool is_specialized = true;
+
+    static DataTypes::Decimal min() noexcept {
+        static DataTypes::Decimal value("-9999999999999999.9999");
+        return value;
+    }
+
+    static DataTypes::Decimal max() noexcept {
+        static DataTypes::Decimal value("9999999999999999.9999");
+        return value;
+    }
+
+    static constexpr int digits10 = 34;  // max base-10 precision
+    static constexpr int radix = 10;     // base of your decimal
+};
 

@@ -44,12 +44,14 @@ class Value {
     static Value PerformIntAddition(const int32_t& lhs, const int32_t& rhs);
     static Value PerformBigIntAddition(const int64_t& lhs, const int64_t &rhs);
     static Value PerformStringAddition(const string& lhs, const string& rhs);
+    static Value PerformDecimalAddition(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
 
 
     static Value PerformTinyIntSubtraction(const int8_t& lhs, const int8_t& rhs);
     static Value PerformSmallIntSubtraction(const int16_t& lhs, const int16_t& rhs);
     static Value PerformIntSubtraction(const int32_t& lhs, const int32_t& rhs);
     static Value PerformBigIntSubtraction(const int64_t& lhs, const int64_t &rhs);
+    static Value PerformDecimalSubtraction(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
 
     public:
         Value();

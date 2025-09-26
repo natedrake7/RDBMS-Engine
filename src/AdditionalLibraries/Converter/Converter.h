@@ -31,6 +31,10 @@ public:
         return static_cast<T>(value);
     }
 
+    static DataTypes::Decimal Stod(const std::string& input) {
+        return DataTypes::Decimal(input);
+    }
+
     static bool TryStoi(const string& input) {
         static_assert(is_integral_v<T>, "T must be integral type");
 

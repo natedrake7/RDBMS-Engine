@@ -373,27 +373,26 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
 
     switch (valueType) {
       case DataType::TinyInt:
-        break;
+        return Decimal(value.GetTinyInt());
       case DataType::SmallInt:
-        break;
+        return Decimal(value.GetSmallInt());
       case DataType::Int:
-        break;
+        return Decimal(value.GetInt());
       case DataType::BigInt:
-        break;
+        return Decimal(value.GetBigInt());
       case DataType::Decimal:
         return Decimal(value.GetRawData(), value.GetSize());
       case DataType::String:
       case DataType::UnicodeString:
         return Decimal(value.GetString());
       case DataType::Bool:
-        break;
+        return Decimal(value.GetBool());
       case DataType::DateTime:
       case DataType::Guid:
       case DataType::RowIdentifier:
       case DataType::Invalid:
       default:
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Decimal");
-
     }
   }
 
