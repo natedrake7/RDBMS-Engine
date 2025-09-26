@@ -7,6 +7,7 @@
 namespace QueryPipeline {
   static std::string String = "string";
   static std::string UnicodeString = "unicodestring";
+  static std::string Decimal = "decimal";
 
   class SQLVisitorImplementation final : public SQLVisitor {
     public:
@@ -137,9 +138,11 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitOrder(SQLParser::OrderContext *context) override;
 
-      std::any visitValuesStatement(SQLParser::ValuesStatementContext *context) override;
+      antlrcpp::Any visitValuesStatement(SQLParser::ValuesStatementContext *context) override;
 
-      std::any visitValuesList(SQLParser::ValuesListContext *context) override;
+      antlrcpp::Any visitValuesList(SQLParser::ValuesListContext *context) override;
+
+      antlrcpp::Any visitSign(SQLParser::SignContext *context) override;
   };
 
   static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {

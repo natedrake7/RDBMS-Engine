@@ -12,11 +12,24 @@ namespace QueryPipeline {
 
 namespace QueryPipeline::Statements {
 
+  struct DecimalType {
+    int precision;
+    int scale;
+
+    DecimalType();
+    DecimalType(const int& precision, const int& scale);
+    [[nodiscard]] bool Validate() const;
+  };
+
   struct ColumnType {
     std::string name;
-    int64_t size;
-    int64_t beforeFraction;
-    int64_t afterFraction;
+    int size;
+
+    DecimalType decimal;
+
+    explicit ColumnType(const std::string& name);
+    ColumnType(const std::string& name, const int& size);
+    ColumnType(const std::string& name, const DecimalType& decimal);
   };
 
   struct Identity{

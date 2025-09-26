@@ -111,6 +111,17 @@ public:
         return static_cast<T>(input);
     }
 
+    static bool TryStoi(
+        const DataTypes::Decimal &input,
+        const int& size){
+
+        // if (input > numeric_limits<DataTypes::Decimal>::max()
+        //     || input < numeric_limits<DataTypes::Decimal>::min())
+        //     return false;
+
+        return input.GetRawDataSize() <= size;
+    }
+
     static bool AssertOverflow(const T& leftValue, const T& rightValue)
     {
         static_assert(is_integral_v<T>, "T must be integral type");

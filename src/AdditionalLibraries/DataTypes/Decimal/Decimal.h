@@ -91,6 +91,10 @@ namespace DataTypes {
             fraction_index_t& fractionIndex
         );
 
+        [[nodiscard]] static Constants::byte CreateSignAndFractionByte(const bool& isPositive, const fraction_index_t& fractionIndex) ;
+
+        [[nodiscard]] static bool IsGreaterMagnitude(const std::vector<Constants::byte>& left, const std::vector<Constants::byte>& right);
+
     public:
         Decimal();
         explicit Decimal(const string& value);
@@ -114,9 +118,7 @@ namespace DataTypes {
 
         [[nodiscard]] const vector<Constants::byte>& GetData() const;
 
-        [[nodiscard]] static Constants::byte CreateSignAndFractionByte(const bool& isPositive, const fraction_index_t& fractionIndex) ;
-
-        [[nodiscard]] static bool IsGreaterMagnitude(const std::vector<Constants::byte>& left, const std::vector<Constants::byte>& right);
+        [[nodiscard]] static int Size(const int& precision);
 
         friend ostream& operator<<(ostream& os, const Decimal& decimal);
 
@@ -136,9 +138,6 @@ namespace DataTypes {
         friend bool operator<(const Decimal& left, const Decimal& right);
         friend bool operator<=(const Decimal& left, const Decimal& right);
     };
-
-
-
 // Specialization
 }
 

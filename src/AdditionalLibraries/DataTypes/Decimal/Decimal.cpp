@@ -654,6 +654,10 @@ namespace DataTypes {
 
         this->bytes = Decimal::Pack(digits, isPositive, fractionIndex);
     }
+
+    int Decimal::Size(const int &precision){
+        return precision / 2 + 1 + 1; //+1 for sign and fraction index, +1 for alignment
+    }
 }
 
 

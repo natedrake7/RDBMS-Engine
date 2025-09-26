@@ -195,7 +195,7 @@ uStringType
     ;
 
 decimalType
-    : DECIMAL LAPRENT (beforePoint=NUMBER) ',' (afterPoint=NUMBER) RAPRENT
+    : DECIMAL LAPRENT (precision=NUMBER) ',' (scale=NUMBER) RAPRENT
     ;
 
 primaryKey
@@ -253,12 +253,16 @@ literalValueList
 literalValue
         : STRING
         | UNICODESTRING
-        | NUMBER
-        | DECIMAL_REGEX
+        | (sign)? NUMBER
+        | (sign)? DECIMAL_REGEX
         | TRUE
         | FALSE
         | NULL
         ;
+sign
+    : ADDITION
+    | SUBTRACTION
+    ;
 
 //Create Index
 ////////////////////////////////////////////////////////////
@@ -605,7 +609,7 @@ IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
 UNICODESTRING   : 'N''\'' ( ~['\\] | '\\' . )* '\'';
 STRING          : '\'' ( ~['\\] | '\\' . )* '\'';
 NUMBER          : [0-9]+;
-DECIMAL_REGEX         : [0-9]+ '.' [0-9]+ ;
+DECIMAL_REGEX   : [0-9]+ '.' [0-9]+ ;
 WS              : [ \t\r\n]+ -> skip;
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////

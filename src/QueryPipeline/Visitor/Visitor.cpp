@@ -102,15 +102,23 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     }
 
     if (context->NUMBER()) {
-      const auto number = Converter<int64_t>::Stoi(context->NUMBER()->getText());
+      const auto& numberStr = (context->sign())
+            ? context->sign()->getText() + context->NUMBER()->getText()
+            : context->NUMBER()->getText();
+
+
+      const auto number = Converter<int64_t>::Stoi(numberStr);
 
       return Value(number, 0);
     }
 
     if (context->DECIMAL_REGEX()) {
-      const auto & str = context->DECIMAL_REGEX()->getText();
 
-      return Value(DataTypes::Decimal(str), 0);
+      const auto& decimalStr = (context->sign())
+            ? context->sign()->getText() + context->DECIMAL_REGEX()->getText()
+            : context->DECIMAL_REGEX()->getText();
+
+      return Value(DataTypes::Decimal(decimalStr), 0);
     }
 
     if (context->NULL_())
@@ -161,36 +169,28 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
 antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext *context) {
     if (context->stringType())
       return visit(context->stringType());
+
     if (context->uStringType())
       return visit(context->uStringType());
 
+    if (context->decimalType())
+      return visit(context->decimalType());
+
     const auto& text = context->getText();
 
-    return Statements::ColumnType{
-      .name = AdditionalLibraries::StringFunctions::NormalizeString(text),
-    };
+    return Statements::ColumnType(AdditionalLibraries::StringFunctions::NormalizeString(text));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitStringType(SQLParser::StringTypeContext *context){
     const auto& number = context->NUMBER();
 
-    return Statements::ColumnType{
-      .name = QueryPipeline::String,
-      .size = number ? Converter<int64_t>::Stoi(number->getText()) : -1,
-      .beforeFraction = -1,
-      .afterFraction = -1
-    };
+    return Statements::ColumnType(QueryPipeline::String, number ? Converter<int32_t>::Stoi(number->getText()) : -1);
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitUStringType(SQLParser::UStringTypeContext *context){
     const auto& number = context->NUMBER();
 
-    return Statements::ColumnType{
-        .name = QueryPipeline::UnicodeString,
-        .size = number ? Converter<int64_t>::Stoi(number->getText()) : -1,
-        .beforeFraction =  -1,
-        .afterFraction = -1
-      };
+    return Statements::ColumnType(QueryPipeline::UnicodeString, number ? Converter<int32_t>::Stoi(number->getText()) : -1);
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitOrderColumnList(SQLParser::OrderColumnListContext *context){
@@ -238,24 +238,28 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     for (const auto& value : context->resultList()) {
 
-      std::vector<Expressions::Expression*> insertColumns;
-
       auto resultList = std::any_cast<std::vector<Expressions::Expression*>>(visit(value));
 
       values.emplace_back(Statements::Inserts{
-        .values = std::move(insertColumns),
+        .values = std::move(resultList),
       });
     }
 
     return values;
   }
 
+  antlrcpp::Any SQLVisitorImplementation::visitSign(SQLParser::SignContext *context){
+    return context->getText();
+  }
+
   antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
-    return Statements::ColumnType{
-      .size = 0,
-      .beforeFraction = Converter<int64_t>::Stoi(context->beforePoint->getText()),
-      .afterFraction = Converter<int64_t>::Stoi(context->afterPoint->getText()),
-    };
+    return Statements::ColumnType(
+      QueryPipeline::Decimal,
+      Statements::DecimalType(
+      Converter<int32_t>::Stoi(context->precision->getText()),
+      Converter<int32_t>::Stoi(context->scale->getText())
+      )
+    );
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitPrimaryKeyConstraint(SQLParser::PrimaryKeyConstraintContext *context){

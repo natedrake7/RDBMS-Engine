@@ -422,7 +422,7 @@ AdditionalDataTypes::ResultStatus Value::ValidateSize(const DataType& columnType
             isValid = Converter<int64_t>::TryStoi(this->GetBigInt());
             break;
         case DataType::Decimal:
-            isValid = false;
+            isValid = Converter<DataTypes::Decimal>::TryStoi(this->GetDecimal(), columnMaxSize);
             break;
         case DataType::String:
             break;
@@ -449,7 +449,7 @@ AdditionalDataTypes::ResultStatus Value::ValidateSize(const DataType& columnType
         return status;
 
     std::ostringstream os;
-    os << "Value" << this << " exceeds column max size " << columnMaxSize;
+    os << "Value: " << *this << " exceeds column max size " << columnMaxSize;
 
     status.code = AdditionalDataTypes::ResultCode::ColumnSizeExceeded;
     status.message = os.str();

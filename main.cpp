@@ -57,7 +57,7 @@ using namespace Server;
 //Check batching, fix batching on insert with select.
 //check expression size evaluations (on insert and update)
 //decimal add base case of 0 and addition and multiplication by 0
-//add division and implement decimal coercions and validations
+//add division and implement decimal coercions and validations also add modulo and validations on insert for sizing
 
 std::atomic<bool> serverRunning{true};
 

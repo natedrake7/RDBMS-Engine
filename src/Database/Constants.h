@@ -52,6 +52,12 @@ namespace Constants
 
     constexpr std::string_view WILDCARD = "*";
 
+    constexpr int INVALID_DECIMAL_PRECISION = -1;
+    constexpr int INVALID_DECIMAL_SCALE = -1;
+
+    constexpr int MAX_DECIMAL_PRECISION = 38;
+    constexpr int MAX_DECIMAL_SCALE = 38;
+
     enum class AlterTableType: uint8_t {
         AddColumn = 0,
         AlterColumn = 1,

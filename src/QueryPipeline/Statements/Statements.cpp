@@ -115,11 +115,19 @@ namespace QueryPipeline::Statements {
         return false;
       }
 
+
       if (columnSize != 0)
         column->type.size = columnSize;
 
-      if (column->type.beforeFraction != 0 || column->type.afterFraction != 0) {
-        //decimal handle
+      const auto& dataType = ColumnTypesDictionary.Get(column->type.name);
+
+      if (dataType == DataType::Decimal) {
+        if (!column->type.decimal.Validate()) {
+          std::cerr << "Decimal type requires precision and scale to be set correctly" << std::endl;
+          return false;
+        }
+
+        column->type.size = DataTypes::Decimal::Size(column->type.decimal.precision);
       }
 
       column->index = tablePosition++;
@@ -256,6 +264,43 @@ namespace QueryPipeline::Statements {
     }
 
     return true;
+  }
+
+   DecimalType::DecimalType(){
+    this->precision = Constants::INVALID_DECIMAL_PRECISION;
+    this->scale = Constants::INVALID_DECIMAL_SCALE;
+  }
+
+  DecimalType::DecimalType(const int &precision, const int &scale){
+    this->precision = precision;
+    this->scale = scale;
+  }
+
+  bool DecimalType::Validate() const{
+    if (this->precision == Constants::INVALID_DECIMAL_PRECISION
+      || this->scale == Constants::INVALID_DECIMAL_SCALE)
+      return false;
+
+    return (
+      this->precision <= Constants::MAX_DECIMAL_PRECISION
+      && this->scale <= this->precision
+    );
+  }
+
+  ColumnType::ColumnType(const std::string &name){
+    this->name = name;
+    this->size = 0;
+  }
+
+  ColumnType::ColumnType(const std::string &name, const int &size){
+    this->name = name;
+    this->size = size;
+  }
+
+  ColumnType::ColumnType(const std::string &name, const DecimalType &decimal){
+    this->name = name;
+    this->decimal = decimal;
+    this->size = 0;
   }
 
   OrderColumn::OrderColumn(){
