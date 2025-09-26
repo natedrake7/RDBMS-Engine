@@ -271,7 +271,7 @@ namespace QueryPipeline::Statements {
     this->scale = Constants::INVALID_DECIMAL_SCALE;
   }
 
-  DecimalType::DecimalType(const int &precision, const int &scale){
+  DecimalType::DecimalType(const int8_t &precision, const int8_t &scale){
     this->precision = precision;
     this->scale = scale;
   }
@@ -855,6 +855,20 @@ bool UpdateStatement::Validate(){
       return false;
     }
 
+    const auto recordSize = ColumnTypeSizes.Get(this->newColumn->type.name);
+
+    if (recordSize != 0)
+      this->newColumn->type.size = recordSize;
+
+    if (columnType == DataType::Decimal) {
+      if (!this->newColumn->type.decimal.Validate()) {
+        std::cerr << "Decimal type requires precision and scale to be set correctly" << std::endl;
+        return false;
+      }
+
+      this->newColumn->type.size = DataTypes::Decimal::Size(this->newColumn->type.decimal.precision);
+    }
+
     //TODO Check this
     // this->addColumn->defaultValue.Validate(columnType, this->addColumn->index);
 
@@ -936,7 +950,8 @@ bool UpdateStatement::Validate(){
   }
 
   bool AlterTableStatement::Validate(){
-    if (!this->table->Validate(this->databaseId))
+    if (this->table == nullptr
+     || !this->table->Validate(this->databaseId))
       return false;
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);

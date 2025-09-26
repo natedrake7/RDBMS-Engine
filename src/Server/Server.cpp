@@ -116,6 +116,8 @@ namespace Server {
            column.name,
            type,
            columnSize,
+           Constants::INVALID_DECIMAL_PRECISION,
+           Constants::INVALID_DECIMAL_SCALE,
            column.nullable,
            columnPos,
            true);
@@ -329,11 +331,13 @@ namespace Server {
       return result;
   }
 
-  AdditionalDataTypes::ResultStatus  ServerInstance::InsertColumnToMasterDb(
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertColumnToMasterDb(
     const int32_t & tableId,
     const string &columnName,
     const DataType &columnType,
     const int &columnSize,
+    const int8_t& precision,
+    const int8_t& scale,
     const bool& isNullable,
     const int &ordinalPosition,
     const bool& isSystem,
@@ -343,21 +347,28 @@ namespace Server {
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Value> fields = {
+      vector<Value> fields = {
         Value(tableId, 1),
         Value(columnName, 2),
         Value(static_cast<int8_t>(columnType), 3),
         Value(columnSize, 4),
-        Value(isNullable, 5),
-        Value(ordinalPosition, 6),
-        Value(isSystem, 7),
-        Value(currentDate, 8),
-        Value(currentDate, 9),
-        Value(user, 10),
-        Value(version, 11),
-        Value(isDeleted, 12),
-        Value(nullptr, 13),
+        Value(nullptr, 5),
+        Value(nullptr, 6),
+        Value(isNullable, 7),
+        Value(ordinalPosition, 8),
+        Value(isSystem, 9),
+        Value(currentDate, 10),
+        Value(currentDate, 11),
+        Value(user, 12),
+        Value(version, 13),
+        Value(isDeleted, 14),
+        Value(nullptr, 15),
       };
+
+      if (precision != Constants::INVALID_DECIMAL_PRECISION) {
+        fields[4] = Value(precision, 5);
+        fields[5] = Value(scale, 6);
+      }
 
     const auto transactionId = this->masterDb->StartLogTransaction();
 
@@ -939,18 +950,20 @@ namespace Server {
           .name = data[2]->GetString(),
           .dataType = static_cast<uint8_t>(data[3]->GetTinyInt()),
           .recordSize = data[4]->GetSmallInt(),
-          .isNullable = data[5]->GetBool(),
-          .ordinalPosition = data[6]->GetSmallInt(),
-          .isSystem = data[7]->GetBool(),
+          .precision = data[5]->GetBlockData() == nullptr ? Constants::INVALID_DECIMAL_PRECISION : data[5]->GetTinyInt(),
+          .scale = data[6]->GetBlockData() == nullptr ? Constants::INVALID_DECIMAL_SCALE : data[6]->GetTinyInt(),
+          .isNullable = data[7]->GetBool(),
+          .ordinalPosition = data[8]->GetSmallInt(),
+          .isSystem = data[9]->GetBool(),
           .additionalInfo{
-            .createdAt = data[8]->GetDateTime(),
-            .lastModified = data[9]->GetDateTime(),
-            .lastModifiedBy = data[10]->GetString(),
-            .version = data[11]->GetInt(),
-            .isDeleted = data[12]->GetBool(),
-            .deletedAt = data[13]->GetBlockData() == nullptr
+            .createdAt = data[10]->GetDateTime(),
+            .lastModified = data[11]->GetDateTime(),
+            .lastModifiedBy = data[12]->GetString(),
+            .version = data[13]->GetInt(),
+            .isDeleted = data[14]->GetBool(),
+            .deletedAt = data[15]->GetBlockData() == nullptr
                       ? DataTypes::DateTime::Now()
-                      : data[13]->GetDateTime(),
+                      : data[15]->GetDateTime(),
             }
         }
       );

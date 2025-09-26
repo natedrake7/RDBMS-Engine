@@ -66,6 +66,8 @@
         { "name": "name", "type": "String", "size": 100 },
         { "name": "data_type", "type": "TinyInt" },
         { "name": "record_size", "type": "SmallInt" },
+        { "name": "precision", "type": "SmallInt", "nullable": true },
+        { "name": "scale", "type": "SmallInt", "nullable": true },
         { "name": "is_nullable", "type": "Bool" },
         { "name": "ordinal_position", "type": "SmallInt" },
         { "name": "is_system", "type": "Bool" },

@@ -355,9 +355,11 @@ PhysicalInsert::PhysicalInsert(
             column->name.name,
             ColumnTypesDictionary.Get(AdditionalLibraries::StringFunctions::NormalizeString(column->type.name)),
             static_cast<int32_t>(column->type.size),
+            column->type.decimal.precision,
+            column->type.decimal.scale,
             column->isNullable,
             column->index
-            );
+          );
 
       columnIdsDict.Add(column->index, static_cast<int32_t>(columnResult.primaryKeyVal));
 

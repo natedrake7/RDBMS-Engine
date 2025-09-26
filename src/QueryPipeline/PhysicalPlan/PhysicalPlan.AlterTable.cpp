@@ -26,9 +26,18 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->name.name,
           columnType,
           this->column->type.size,
+          this->column->type.decimal.precision,
+          this->column->type.decimal.scale,
           this->column->isNullable,
           this->column->index
           );
+
+      if (columnResult.code != AdditionalDataTypes::ResultCode::Ok) {
+        auto* result = new PhysicalPlanResult();
+        result->code = columnResult.code;
+        result->message = columnResult.message;
+        return result;
+      }
 
     if (!this->column->defaultValue.GetIsNull()) {
       const auto value = this->column->defaultValue.GetString();

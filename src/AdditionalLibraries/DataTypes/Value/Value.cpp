@@ -425,7 +425,6 @@ AdditionalDataTypes::ResultStatus Value::ValidateSize(const DataType& columnType
             isValid = Converter<DataTypes::Decimal>::TryStoi(this->GetDecimal(), columnMaxSize);
             break;
         case DataType::String:
-            break;
         case DataType::UnicodeString:
             isValid = this->size <= columnMaxSize;
             break;

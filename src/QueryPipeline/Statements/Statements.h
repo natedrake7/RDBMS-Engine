@@ -13,11 +13,11 @@ namespace QueryPipeline {
 namespace QueryPipeline::Statements {
 
   struct DecimalType {
-    int precision;
-    int scale;
+    int8_t precision;
+    int8_t scale;
 
     DecimalType();
-    DecimalType(const int& precision, const int& scale);
+    DecimalType(const int8_t& precision, const int8_t& scale);
     [[nodiscard]] bool Validate() const;
   };
 

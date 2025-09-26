@@ -84,6 +84,8 @@ namespace Server {
       const string& columnName,
       const DataType& columnType,
       const int& columnSize,
+      const int8_t& precision,
+      const int8_t& scale,
       const bool& isNullable,
       const int& ordinalPosition,
       const bool& isSystem = false,
