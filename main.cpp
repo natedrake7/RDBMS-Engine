@@ -58,6 +58,8 @@ using namespace Server;
 //check expression size evaluations (on insert and update)
 //decimal add base case of 0 and addition and multiplication by 0
 //add division and implement decimal coercions and validations also add modulo and validations on insert for sizing
+//update column expressions dont have indices assigned correctly and 0 is always set. (check decimal defualt insert value as well)
+
 
 std::atomic<bool> serverRunning{true};
 

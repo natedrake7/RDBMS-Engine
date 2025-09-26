@@ -432,10 +432,10 @@ AdditionalDataTypes::ResultStatus Value::ValidateSize(const DataType& columnType
             isValid = Converter<bool>::TryStoi(this->GetBigInt());
             break;
         case DataType::DateTime:
-            isValid = this->size == DataTypes::DateTime::DateTimeSize();
+            isValid = this->GetDateTime().DateTimeSize() == DataTypes::DateTime::DateTimeSize();
             break;
         case DataType::Guid:
-            isValid = this->size == DataTypes::Guid::GuidSize();
+            isValid = this->GetGuid().Size() == DataTypes::Guid::GuidSize();
             break;
         case DataType::RowIdentifier:
         case DataType::Invalid:

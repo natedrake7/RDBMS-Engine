@@ -15,6 +15,12 @@ namespace DatabaseEngine::StorageTypes {
         this->SetData(data, size);
     }
 
+    Block::Block(object_t *data, const block_size_t &size, const Column *column){
+        this->size = size;
+        this->column = column;
+        this->data = data;
+    }
+
     Block::Block(const Column* column)
     {
         this->size = 0;

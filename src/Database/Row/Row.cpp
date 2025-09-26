@@ -114,7 +114,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->data[columnIndex] = block;
 
-        this->header.rowSize += block->GetBlockSize();
+        this->header.rowSize = this->GetTotalRowSize();
     }
 
     int Row::InsertNewColumn(Block* block)
@@ -125,9 +125,13 @@ namespace DatabaseEngine::StorageTypes {
 
         this->data.push_back(block);
 
-        this->header.rowSize += block->GetBlockSize();
+        const auto newSize = this->GetTotalRowSize();
 
-        return block->GetBlockSize();
+        const auto diff = static_cast<int>(newSize) - static_cast<int>(this->header.rowSize);
+
+        this->header.rowSize = newSize;
+
+        return diff;
     }
 
     void Row::UpdateColumnData(Block *block)
@@ -312,11 +316,13 @@ namespace DatabaseEngine::StorageTypes {
     row_size_t Row::GetTotalRowSize() const
     {
         row_size_t currentRowSize = this->GetRowHeaderSize();
-        currentRowSize += this->table->GetNumberOfColumns() * sizeof(block_size_t); //decrease by the null blocks here
 
-        for(const auto& block: this->data)
-            currentRowSize += block->GetBlockSize();
-        //currentRowSize += this->header.rowSize;
+        for(const auto& block: this->data) {
+            if (block == nullptr)
+                continue;
+
+            currentRowSize += block->GetBlockSize() + sizeof(block_size_t);
+        }
 
         return currentRowSize;
     }
@@ -497,8 +503,7 @@ namespace DatabaseEngine::StorageTypes {
         {
             if (rowHeader->nullBitMap->Get(j))
             {
-                auto *block = new StorageTypes::Block(nullptr, 0, columns[j]);
-
+                auto *block = new StorageTypes::Block(columns[j]);
                 this->InsertColumnData(block, j);
 
                 continue;

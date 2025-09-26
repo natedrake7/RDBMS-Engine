@@ -12,10 +12,6 @@ namespace Pages {
 
 void IndexPage::WriteAdditionalHeaderToFile(fstream * filePtr) const
 {
-    if (this->additionalHeader.treeType == TreeType::Clustered) {
-        const auto val = 5;
-    }
-
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeType), sizeof(TreeType));
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeId), sizeof(page_id_t));
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.numberOfSubKeys), sizeof(uint8_t));

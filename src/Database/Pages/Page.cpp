@@ -96,7 +96,7 @@ namespace Pages
         {
             if (rowHeader->nullBitMap->Get(j))
             {
-                Block *block = new Block(nullptr, 0, columns[j]);
+                auto *block = new Block(columns[j]);
 
                 row->InsertColumnData(block, j);
 
@@ -108,16 +108,14 @@ namespace Pages
             memcpy(&bytesToRead, data.data() + offSet, sizeof(block_size_t));
             offSet += sizeof(block_size_t);
 
-            object_t *bytes = new unsigned char[bytesToRead];
+            auto *bytes = new unsigned char[bytesToRead];
             memcpy(bytes, data.data() + offSet, bytesToRead);
 
             offSet += bytesToRead;
 
-            Block *block = new Block(bytes, bytesToRead, columns[j]);
+            auto *block = new Block(bytes, bytesToRead, columns[j]);
 
             row->InsertColumnData(block, j);
-
-            delete[] bytes;
         }
 
         return row;

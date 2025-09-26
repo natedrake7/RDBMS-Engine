@@ -208,7 +208,8 @@ namespace DatabaseEngine
         if (this->writeAheadLogger == nullptr)
             return {};
 
-        return this->writeAheadLogger->RecoverLogs(this->tables);
+        return {};
+        // return this->writeAheadLogger->RecoverLogs(this->tables);
     }
 
     void Database::EnterRecoveryMode()const{

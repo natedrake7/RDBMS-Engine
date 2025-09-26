@@ -46,6 +46,8 @@ namespace DatabaseEngine::StorageTypes {
 
         Block(const void* data, const block_size_t& size, const Column* column);
 
+        Block(object_t* data, const block_size_t& size, const Column* column);
+
         ~Block();
 
         void SetData(const void* inputData, const block_size_t& inputSize);
