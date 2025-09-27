@@ -276,6 +276,8 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] TableType GetTableType() const;
 
+            [[nodiscard]] bool IsClustered()const;
+
             [[nodiscard]] row_size_t GetMaximumRowSize() const;
 
             [[nodiscard]] row_size_t ReduceMaximumRowSize() const;
@@ -312,7 +314,8 @@ namespace DatabaseEngine::StorageTypes
 
             void InsertLargeObjectToPage(Row *row);
 
-            void HandleRowUpdate(
+            [[nodiscard]]
+            AdditionalDataTypes::ResultStatus HandleRowUpdate(
                 Pages::Page *page,
                 Row *row,
                 const std::vector<Value> &updates,
@@ -320,7 +323,8 @@ namespace DatabaseEngine::StorageTypes
                 const bool &isHeap = true
             );
 
-            void HandleRowUpdate(
+            [[nodiscard]]
+            AdditionalDataTypes::ResultStatus  HandleRowUpdate(
                 Pages::Page *page,
                 Row *row,
                 const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates,

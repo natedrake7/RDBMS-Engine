@@ -241,16 +241,15 @@ namespace DatabaseEngine::StorageTypes {
 
         //row_id
         Headers::RowIdentifier rowId;
+        auto status = this->IsClustered()
+            ? this->ClusteredIndexInsert(row, &rowId)
+            : this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
 
-        auto status = (this->GetTableType() == TableType::CLUSTERED) ? this->ClusteredIndexInsert(row, &rowId) : this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
-
-        if (status.code != AdditionalDataTypes::ResultCode::Ok)
+        if (status.code != AdditionalDataTypes::ResultCode::Ok
+          || !this->HasNonClusteredIndexes())
             return status;
 
         //insert to Non Clustered Indexes
-        if(!this->HasNonClusteredIndexes())
-           return status;
-
         for (int i = 0; i < this->header.nonClusteredIndexes.size(); i++) {
             status = this->NonClusteredIndexInsert(row, i, rowId);
 
@@ -296,7 +295,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const AdditionalDataTypes::ResultStatus result = input.ValidateSize(column->GetColumnType(), column->GetColumnSize());
+          const AdditionalDataTypes::ResultStatus result = block->SetData(input);
 
           if (result.code != AdditionalDataTypes::ResultCode::Ok) {
             delete block;
@@ -304,8 +303,6 @@ namespace DatabaseEngine::StorageTypes {
 
             return std::make_tuple(nullptr, result);
           }
-
-          block->SetData(input);
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
@@ -356,7 +353,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const AdditionalDataTypes::ResultStatus result = input.ValidateSize(column->GetColumnType(), column->GetColumnSize());
+          const AdditionalDataTypes::ResultStatus result = block->SetData(input);
 
           if (result.code != AdditionalDataTypes::ResultCode::Ok) {
             delete block;
@@ -364,8 +361,6 @@ namespace DatabaseEngine::StorageTypes {
 
             return std::make_tuple(nullptr, result);
           }
-
-          block->SetData(input);
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
@@ -392,9 +387,6 @@ namespace DatabaseEngine::StorageTypes {
 
         *primaryKeyVal = this->PopulateAutoComputedColumns(row);
 
-        //TODO
-        //handle default values if no value is selected
-
         for (int i = 0;i < inputData.size(); i++) {
           const auto& input = inputData[i]->Evaluate(nullptr);
 
@@ -417,8 +409,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          //TODO validate input here
-          const AdditionalDataTypes::ResultStatus result = input.ValidateSize(column->GetColumnType(), column->GetColumnSize());
+          const auto result = block->SetData(input);
 
           if (result.code != AdditionalDataTypes::ResultCode::Ok) {
             delete block;
@@ -426,8 +417,6 @@ namespace DatabaseEngine::StorageTypes {
 
             return std::make_tuple(nullptr, result);
           }
-
-          block->SetData(input);
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
@@ -666,6 +655,10 @@ namespace DatabaseEngine::StorageTypes {
         return !this->header.clusteredIndex.columns.empty()
                     ? TableType::CLUSTERED
                     : TableType::HEAP;
+    }
+
+    bool Table::IsClustered() const{
+        return !this->header.clusteredIndex.columns.empty();
     }
 
     row_size_t Table::GetMaximumRowSize() const 
@@ -1095,7 +1088,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     //create differrent one to handle clustered updates
-    void Table::HandleRowUpdate(
+    AdditionalDataTypes::ResultStatus Table::HandleRowUpdate(
       Pages::Page *page,
       Row *row, const
       std::vector<Value> &updates,
@@ -1104,11 +1097,15 @@ namespace DatabaseEngine::StorageTypes {
         this->DeleteLargeObjectFromPage(row, updatedColumns);
         this->DeleteOverflowedRowsFromPage(row, updatedColumns);
 
-        int diff = row->Update(updates);
+        int diff = 0;
+        auto result = row->Update(updates, diff);
+
+        if (result.code != AdditionalDataTypes::ResultCode::Ok)
+          return result;
 
         if(page->GetBytesLeft() - diff > 0){
           page->UpdateBytesLeft();
-          return;
+          return result;
         }
 
         this->InsertLargeObjectToPage(row);
@@ -1117,9 +1114,7 @@ namespace DatabaseEngine::StorageTypes {
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 
-          this->InsertRow(row, allocatedExtents, startingExtentIndex);
-
-          return;
+          return this->InsertRow(row, allocatedExtents, startingExtentIndex);
         }
 
         while(page->GetBytesLeft() - diff < 0){
@@ -1129,9 +1124,11 @@ namespace DatabaseEngine::StorageTypes {
 
           diff -= result;
         }
+
+        return {};
     }
 
-  void Table::HandleRowUpdate(
+  AdditionalDataTypes::ResultStatus Table::HandleRowUpdate(
     Pages::Page *page,
     Row *row,
     const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
@@ -1140,11 +1137,12 @@ namespace DatabaseEngine::StorageTypes {
         this->DeleteLargeObjectFromPage(row, updatedColumns);
         this->DeleteOverflowedRowsFromPage(row, updatedColumns);
 
-        int diff = row->Update(updates);
+        int diff = 0;
+        auto result = row->Update(updates, diff);
 
         if(page->GetBytesLeft() - diff > 0){
           page->UpdateBytesLeft();
-          return;
+          return result;
         }
 
         this->InsertLargeObjectToPage(row);
@@ -1153,9 +1151,7 @@ namespace DatabaseEngine::StorageTypes {
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 
-          this->InsertRow(row, allocatedExtents, startingExtentIndex);
-
-          return;
+          return this->InsertRow(row, allocatedExtents, startingExtentIndex);
         }
 
         while(page->GetBytesLeft() - diff < 0){
@@ -1165,6 +1161,8 @@ namespace DatabaseEngine::StorageTypes {
 
           diff -= result;
         }
+
+        return {};
   }
 
     void Table::InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int & indexPosition)const{

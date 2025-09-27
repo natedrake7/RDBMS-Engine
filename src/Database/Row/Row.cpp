@@ -255,9 +255,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Row::UpdateRowSize()
     {
-        this->header.rowSize = 0;
-        for (const auto& block : this->data)
-            this->header.rowSize += block->GetBlockSize();
+        this->header.rowSize = this->GetTotalRowSize();
     }
 
     unsigned char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer, uint32_t* objectSize) const
@@ -331,54 +329,59 @@ namespace DatabaseEngine::StorageTypes {
     {
         row_header_size_t rowHeaderSize = sizeof(row_size_t);
         rowHeaderSize += sizeof(size_t);
+
         rowHeaderSize += this->header.nullBitMap->GetSizeInBytes();
-        rowHeaderSize += this->header.largeObjectBitMap->GetSizeInBytes();
-        rowHeaderSize += this->header.overflowBitMap->GetSizeInBytes();
+
+        if (this->header.largeObjectBitMap != nullptr)
+            rowHeaderSize += this->header.largeObjectBitMap->GetSizeInBytes();
+
+        if (this->header.overflowBitMap != nullptr)
+            rowHeaderSize += this->header.overflowBitMap->GetSizeInBytes();
 
         return rowHeaderSize;
     }
 
-    int Row::Update( const vector<Value> & updates){
-      const auto prevRowSize = this->GetRowSize();
+    AdditionalDataTypes::ResultStatus Row::Update( const vector<Value> & updates, int& diff){
+        const auto prevRowSize = this->GetRowSize();
 
-      for (const auto & value : updates)
-      {
-        const column_index_t &associatedColumnIndex = value.GetColumnIndex();
+        for (const auto & value : updates){
+            const column_index_t &associatedColumnIndex = value.GetColumnIndex();
 
-        auto *block = this->data.at(associatedColumnIndex);
+            auto *block = this->data.at(associatedColumnIndex);
 
-        if (value.GetIsNull())
-        {
-          block->SetData(nullptr, 0);
-          this->SetNullBitMapValue(associatedColumnIndex, true);
-          continue;
+            if (value.GetIsNull())
+            {
+              block->SetData(nullptr, 0);
+              this->SetNullBitMapValue(associatedColumnIndex, true);
+              continue;
+            }
+
+            if (block->GetIsNull())
+                this->SetNullBitMapValue(associatedColumnIndex, false);
+
+            const auto result = block->SetData(value);
+            if (result.code != AdditionalDataTypes::ResultCode::Ok)
+                return result;
         }
 
-        if (block->GetIsNull())
-            this->SetNullBitMapValue(associatedColumnIndex, false);
+        this->UpdateRowSize();
+        diff = static_cast<int>(this->header.rowSize - prevRowSize);
 
-        block->SetData(value);
-      }
-
-      this->UpdateRowSize();
-
-      const auto rowSize = this->GetRowSize();
-
-      return static_cast<int>(rowSize - prevRowSize);
+        return {};
     }
 
-    int Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates){
+    AdditionalDataTypes::ResultStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff){
         const auto prevRowSize = this->GetRowSize();
 
         for (const auto & update : updates)
         {
-            const auto result = update->value->Evaluate(this);
+            const auto value = update->value->Evaluate(this);
 
             const column_index_t &associatedColumnIndex = update->name.index;
 
             auto *block = this->data.at(associatedColumnIndex);
 
-            if (result.GetIsNull())
+            if (value.GetIsNull())
             {
                 block->SetData(nullptr, 0);
                 this->SetNullBitMapValue(associatedColumnIndex, true);
@@ -388,14 +391,15 @@ namespace DatabaseEngine::StorageTypes {
             if (block->GetIsNull())
                 this->SetNullBitMapValue(associatedColumnIndex, false);
 
-            block->SetData(result);
+            const auto result = block->SetData(value);
+            if (result.code != AdditionalDataTypes::ResultCode::Ok)
+                return result;
         }
 
         this->UpdateRowSize();
+        diff = static_cast<int>(this->header.rowSize - prevRowSize);
 
-        const auto rowSize = this->GetRowSize();
-
-        return static_cast<int>(rowSize - prevRowSize);
+        return {};
     }
 
     Block* Row::FindLargestVariableLengthColumn() const{

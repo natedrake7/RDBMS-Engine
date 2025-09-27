@@ -94,9 +94,9 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
 
-        [[nodiscard]] int Update(const vector<Value> & updates);
+        [[nodiscard]] AdditionalDataTypes::ResultStatus Update(const vector<Value> & updates, int& diff);
 
-        [[nodiscard]] int Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates);
+        [[nodiscard]] AdditionalDataTypes::ResultStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff);
 
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
 

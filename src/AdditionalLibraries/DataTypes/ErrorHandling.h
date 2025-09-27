@@ -16,7 +16,8 @@ namespace AdditionalDataTypes {
     InvalidTable = 8,
     InvalidColumn = 9,
     DuplicateKey = 10,
-    ColumnSizeExceeded = 11
+    ColumnSizeExceeded = 11,
+    Overflow = 12
   };
 
   struct ResultStatus {

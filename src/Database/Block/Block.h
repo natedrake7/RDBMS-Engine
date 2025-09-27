@@ -28,7 +28,7 @@ namespace DatabaseEngine::StorageTypes {
         block_size_t size;
         const Column* column;
 
-        void SetDataByType(const Value& value);
+        AdditionalDataTypes::ResultStatus SetDataByType(const Value& value);
 
         template <typename T>
         void CopyToBuffer(const T& value);
@@ -37,6 +37,17 @@ namespace DatabaseEngine::StorageTypes {
         inline void CopyToBuffer(const DataTypes::Decimal& src);
         inline void CopyToBuffer(const DataTypes::DateTime& src);
         inline void CopyToBuffer(const DataTypes::Guid& src);
+
+        inline AdditionalDataTypes::ResultStatus SetTinyInt(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetSmallInt(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetInt(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetBigInt(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetDecimal(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetString(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetUnicodeString(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetBool(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetDateTime(const Value& value);
+        inline AdditionalDataTypes::ResultStatus SetGuid(const Value& value);
 
 
     public:
@@ -52,7 +63,7 @@ namespace DatabaseEngine::StorageTypes {
 
         void SetData(const void* inputData, const block_size_t& inputSize);
 
-        void SetData(const Value& value);
+        [[nodiscard]] AdditionalDataTypes::ResultStatus SetData(const Value& value);
 
         [[nodiscard]] object_t* GetBlockData() const;
 

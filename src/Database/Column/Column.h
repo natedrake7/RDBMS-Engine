@@ -22,6 +22,8 @@ namespace DatabaseEngine::StorageTypes
         DataType columnType;
         column_index_t columnIndex;
         row_size_t recordSize;
+        int8_t precision;
+        int8_t scale;
 
         Headers::DefaultValuesHeader defaultValue;
 

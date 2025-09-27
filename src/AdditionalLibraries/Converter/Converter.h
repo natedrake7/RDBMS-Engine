@@ -102,6 +102,17 @@ public:
         return !(input < numeric_limits<T>::min() || input > numeric_limits<T>::max());
     }
 
+    static bool TryStoi(const int64_t &input, T& output){
+        static_assert(is_integral_v<T>, "T must be integral type");
+
+        if (!(input < numeric_limits<T>::min() || input > numeric_limits<T>::max())) {
+            output = static_cast<T>(input);
+            return true;
+        }
+
+        return false;
+    }
+
     static T Stoi(const int64_t &input){
         static_assert(is_integral_v<T>, "T must be integral type");
 
@@ -113,7 +124,7 @@ public:
 
     static bool TryStoi(
         const DataTypes::Decimal &input,
-        const int& size){
+        const unsigned int& size){
 
         // if (input > numeric_limits<DataTypes::Decimal>::max()
         //     || input < numeric_limits<DataTypes::Decimal>::min())

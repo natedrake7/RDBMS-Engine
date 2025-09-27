@@ -403,59 +403,6 @@ DataType Value::PromoteType(const DataType &lhs, const DataType &rhs){
     return  ColumnTypeRank.Get(lhs) > ColumnTypeRank.Get(rhs) ? lhs : rhs;
 }
 
-AdditionalDataTypes::ResultStatus Value::ValidateSize(const DataType& columnType, const block_size_t &columnMaxSize) const{
-    AdditionalDataTypes::ResultStatus status;
-    status.code = AdditionalDataTypes::ResultCode::Ok;
-
-    bool isValid = true;
-    switch (columnType) {
-        case DataType::TinyInt:
-            isValid = Converter<int8_t>::TryStoi(this->GetBigInt());
-            break;
-        case DataType::SmallInt:
-            isValid = Converter<int16_t>::TryStoi(this->GetBigInt());
-            break;
-        case DataType::Int:
-            isValid = Converter<int32_t>::TryStoi(this->GetBigInt());
-            break;
-        case DataType::BigInt:
-            isValid = Converter<int64_t>::TryStoi(this->GetBigInt());
-            break;
-        case DataType::Decimal:
-            isValid = Converter<DataTypes::Decimal>::TryStoi(this->GetDecimal(), columnMaxSize);
-            break;
-        case DataType::String:
-        case DataType::UnicodeString:
-            isValid = this->size <= columnMaxSize;
-            break;
-        case DataType::Bool:
-            isValid = Converter<bool>::TryStoi(this->GetBigInt());
-            break;
-        case DataType::DateTime:
-            isValid = this->GetDateTime().DateTimeSize() == DataTypes::DateTime::DateTimeSize();
-            break;
-        case DataType::Guid:
-            isValid = this->GetGuid().Size() == DataTypes::Guid::GuidSize();
-            break;
-        case DataType::RowIdentifier:
-        case DataType::Invalid:
-        default:
-            isValid = false;
-            break;
-    }
-
-    if (isValid)
-        return status;
-
-    std::ostringstream os;
-    os << "Value: " << *this << " exceeds column max size " << columnMaxSize;
-
-    status.code = AdditionalDataTypes::ResultCode::ColumnSizeExceeded;
-    status.message = os.str();
-
-    return status;
-}
-
 bool Value::IsVariable()const{ return !this->name.empty(); }
 
 ostream & operator<<(ostream& os, const Value &field){

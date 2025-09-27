@@ -144,8 +144,6 @@ class Value {
 
         static DataType PromoteType(const DataType& lhs, const DataType& rhs);
 
-        [[nodiscard]] AdditionalDataTypes::ResultStatus ValidateSize(const DataType& columnType, const block_size_t& columnMaxSize) const;
-
         friend ostream& operator<<(ostream& os, const Value& field);
 
         Value& operator=(const Value& rhs);

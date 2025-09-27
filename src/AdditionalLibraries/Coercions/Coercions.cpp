@@ -355,16 +355,16 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
   DateTime Coercions::ToDateTime(const Value &value, const bool &explicitCast){
     const auto valueType = value.GetType();
     switch (valueType) {
-    case DataType::UnicodeString:
-    case DataType::String: {
-      DateTime date;
-      DateTime::FromString(date, value.GetString());
-      return date;
-    }
-    case DataType::DateTime:
-      return DateTime(*reinterpret_cast<const time_t *>(value.GetRawData()));
-    default:
-      throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Guid");
+      case DataType::UnicodeString:
+      case DataType::String: {
+        DateTime date;
+        DateTime::FromString(date, value.GetString());
+        return date;
+      }
+      case DataType::DateTime:
+        return DateTime(*reinterpret_cast<const int64_t*>(value.GetRawData()));
+      default:
+        throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Guid");
     }
   }
 
