@@ -592,6 +592,16 @@ Value Value::PerformDecimalSubtraction(const DataTypes::Decimal &lhs, const Data
     return Value(lhs - rhs, 0);
 }
 
+std::tuple<bool, Value> Value::PerformNullEqualityComparison(const Value &lhs, const Value &rhs){
+    if (lhs.GetIsNull())
+        return std::make_tuple(true, Value(!rhs.GetIsNull(), 0));
+
+    if (rhs.GetIsNull())
+        return std::make_tuple(true, Value(!lhs.GetIsNull(), 0));
+
+    return std::make_tuple(false, Value(nullptr, 0));
+}
+
 //TODO implement operations by dataType
 Value operator+(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
@@ -688,6 +698,10 @@ Value operator*(const Value &lhs, const Value &rhs){
 }
 
 Value operator<(const Value &lhs, const Value &rhs){
+    const auto& [returnOutput, output] = Value::PerformNullEqualityComparison(lhs, rhs);
+    if (returnOutput)
+        return output;
+
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() < rhs.GetTinyInt(), 0);
@@ -726,6 +740,10 @@ Value operator>(const Value &lhs, const Value &rhs){
 }
 
 Value operator<=(const Value &lhs, const Value &rhs){
+    const auto& [returnOutput, _] = Value::PerformNullEqualityComparison(lhs, rhs);
+    if (returnOutput)
+        return Value(true, 0);
+
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() <= rhs.GetTinyInt(), 0);
@@ -759,6 +777,10 @@ Value operator<=(const Value &lhs, const Value &rhs){
 }
 
 Value operator>=(const Value &lhs, const Value &rhs){
+    const auto& [returnOutput, _] = Value::PerformNullEqualityComparison(lhs, rhs);
+    if (returnOutput)
+        return Value(true, 0);
+
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() >= rhs.GetTinyInt(), 0);
@@ -792,6 +814,10 @@ Value operator>=(const Value &lhs, const Value &rhs){
 }
 
 Value operator==(const Value &lhs, const Value &rhs){
+    const auto& [returnOutput, output] = Value::PerformNullEqualityComparison(lhs, rhs);
+    if (returnOutput)
+        return output;
+
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() == rhs.GetTinyInt(), 0);
@@ -825,6 +851,10 @@ Value operator==(const Value &lhs, const Value &rhs){
 }
 
 Value operator!=(const Value &lhs, const Value &rhs){
+    const auto& [returnOutput, output] = Value::PerformNullEqualityComparison(lhs, rhs);
+    if (returnOutput)
+        return output;
+
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
             return Value(lhs.GetTinyInt() != rhs.GetTinyInt(), 0);

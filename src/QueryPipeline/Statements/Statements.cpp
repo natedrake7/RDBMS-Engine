@@ -1148,11 +1148,13 @@ bool UpdateStatement::Validate(){
       const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(right);
 
       if (literalExpr != nullptr
-        && DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), literalExpr->value))
-          return true;
+        && (literalExpr->value.GetIsNull()
+        || DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), literalExpr->value)))
+        return true;
 
       return DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), leftColumn->GetReturnType());
     }
+
     if (leftColumn == nullptr && rightColumn != nullptr) {
       const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(left);
 
