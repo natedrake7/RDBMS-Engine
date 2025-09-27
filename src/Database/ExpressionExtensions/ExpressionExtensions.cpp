@@ -43,13 +43,13 @@ namespace Expressions {
   };
 
   Value ColumnExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const{
-    const auto& data = row->GetData().at(this->columnIndex);
+    const auto& data = row->GetData().at(this->index);
 
     return Value(data->GetBlockData(), data->GetBlockSize(), data->GetColumnType());
   }
 
   Value ColumnExpression::Evaluate(const QueryResult &row) const{
-    return row.GetData().at(this->columnIndex);
+    return row.GetData().at(this->index);
   }
 
   Value LiteralExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const{

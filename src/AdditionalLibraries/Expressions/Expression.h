@@ -41,7 +41,7 @@ namespace Expressions{
       int32_t tableId;
       int32_t columnId;
 
-      column_index_t columnIndex;
+      column_index_t index;
       DataType returnType;
       block_size_t size;
 

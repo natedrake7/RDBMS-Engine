@@ -783,13 +783,8 @@ bool UpdateStatement::Validate(){
       || !this->table->Validate(this->databaseId))
       return false;
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
-
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
-    if (!this->ResolveAliases(aliasesDictionary))
-      return false;
-
-    return true;
+    return this->ResolveAliases(aliasesDictionary);
   }
 
   QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
@@ -1024,14 +1019,14 @@ bool UpdateStatement::Validate(){
 
         //if wildcard ensure statement is of select statement type
         if (column->alias == Constants::WILDCARD) {
-          const auto* selectStatement = dynamic_cast<SelectStatement*>(statement);
+          auto* selectStatement = dynamic_cast<SelectStatement*>(statement);
 
           return selectStatement == nullptr
               ? false
               : ResolveWildCardAlias(
                   column,
                   tableAliasesDictionary,
-                  dynamic_cast<SelectStatement*>(statement),
+                  selectStatement,
                   indexPos
               );
         }
@@ -1047,33 +1042,24 @@ bool UpdateStatement::Validate(){
           column->tableId = tableId;
         }
 
-        bool columnExistsOnTable = false;
+        // bool columnExistsOnTable = false;
         Headers::ColumnHeader columnHeader;
         for (const auto& [key, columns]: tablesColumnsDictionary) {
           if (!columns.TryGetValue(column->alias, columnHeader))
             continue;
 
-          if (!columnExistsOnTable) {
-            columnExistsOnTable = true;
-            column->tableId = key;
-            column->columnId = columnHeader.id;
-            column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
-            continue;
-          }
+          column->tableId = key;
+          column->columnId = columnHeader.id;
+          column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
+          column->index = columnHeader.ordinalPosition;
 
-          // ambigiousColumn = true;
-          // break;
+          break;
         }
 
-        // if (ambigiousColumn) {
-        //   cerr << "Ambigious Column: " << column.name << std::endl;
-        //   return false;
-        // }
-
-      if (!columnExistsOnTable) {
-        std::cerr << "Column: " << column->alias << " does not exist on Table" << std::endl;
-        return false;
-      }
+      // if (!columnExistsOnTable) {
+      //   std::cerr << "Column: " << column->alias << " does not exist on Table" << std::endl;
+      //   return false;
+      // }
 
       if (column->name.empty())
         column->name = columnHeader.name;
@@ -1317,7 +1303,7 @@ bool UpdateStatement::Validate(){
     }
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
-      columnExpr->columnIndex = columnIndicesDictionary.Get(columnExpr->columnId);
+      columnExpr->index = columnIndicesDictionary.Get(columnExpr->columnId);
       return;
     }
 
@@ -1343,7 +1329,7 @@ bool UpdateStatement::Validate(){
     }
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
-      columnExpr->columnIndex = columnIndicesDictionary.Get(columnExpr->alias);
+      columnExpr->index = columnIndicesDictionary.Get(columnExpr->alias);
       return;
     }
 

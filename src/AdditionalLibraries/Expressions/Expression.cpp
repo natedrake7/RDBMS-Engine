@@ -14,12 +14,12 @@ namespace Expressions{
 
     this->tableId = Constants::INVALID_TABLE_ID;
     this->columnId = Constants::INVALID_COLUMN_ID;
-    this->columnIndex = 0;
+    this->index = 0;
     this->returnType = DataType::Invalid;
   }
 
   ColumnExpression::ColumnExpression(const column_index_t &index){
-    this->columnIndex = index;
+    this->index = index;
     this->returnType = DataType::Invalid;
     this->tableId = Constants::INVALID_TABLE_ID;
     this->columnId = Constants::INVALID_COLUMN_ID;
