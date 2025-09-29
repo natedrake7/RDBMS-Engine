@@ -3,13 +3,41 @@
 namespace QueryPipeline::PhysicalPlan {
 
   PhysicalNestedLoopJoin::PhysicalNestedLoopJoin(
-    const table_id_t &leftTablePos,
-    const table_id_t &rightTablePos,
+    PhysicalOperator* left,
+    PhysicalOperator* right,
     Expressions::Expression *joinCondition)
-    : leftTablePos(leftTablePos), rightTablePos(rightTablePos), joinCondition(joinCondition){}
+    : left(left), right(right), joinCondition(joinCondition){}
+
+  PhysicalNestedLoopJoin::~PhysicalNestedLoopJoin() {
+    delete this->left;
+    delete this->right;
+  }
 
 
   PhysicalPlanResult * PhysicalNestedLoopJoin::Execute(const int &batchSize){
+    auto* result = new PhysicalPlan::PhysicalPlanResult();
+
+    auto* leftResult = this->left->Execute(batchSize);
+    auto* rightResult = this->right->Execute(batchSize);
+
+    for (auto& outerRow: leftResult->rows) {
+      for (auto& innerRow: rightResult->rows) {
+
+        const auto condResult = this->joinCondition->Evaluate(&outerRow, &innerRow);
+
+        if (!condResult.GetBool())
+          continue;
+
+        outerRow.Join(&innerRow);
+
+        result->rows.push_back(std::move(outerRow));
+      }
+    }
+
+    delete leftResult;
+    delete rightResult;
+
+    return result;
   }
 
 }

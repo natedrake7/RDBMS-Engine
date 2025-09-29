@@ -9,7 +9,9 @@ namespace QueryPipeline {
           ? std::any_cast<Constants::JoinType>(visit(context->joinType()))
           : Constants::JoinType::Inner;
     statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
-    statement->expression = std::any_cast<Expressions::LogicalExpression*>(visit(context->resultExpression()));
+
+    auto [expression] = std::any_cast<ExpressionWrapper>(visit(context->resultExpression()));
+    statement->expression = std::any_cast<Expressions::Expression*>(expression);
 
     return statement;
   }

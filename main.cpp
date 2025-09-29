@@ -60,6 +60,9 @@ using namespace Server;
 //add division and implement decimal coercions and validations also add modulo and validations on insert for sizing
 //update column expressions dont have indices assigned correctly and 0 is always set. (check decimal defualt insert value as well)
 //fix null comparisons
+//fix schema usage on tables
+//debug joins
+//SELECT * FROM dbo.Movies  AS M INNER JOIN dbo.Actors AS A ON M.ActorID = A.ID
 
 std::atomic<bool> serverRunning{true};
 

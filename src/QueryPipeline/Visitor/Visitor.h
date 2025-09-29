@@ -29,7 +29,6 @@ namespace QueryPipeline {
 
       antlrcpp::Any visitJoinStatement(SQLParser::JoinStatementContext *context) override;
 
-
       antlrcpp::Any visitColumnName(SQLParser::ColumnNameContext *context) override;
 
       antlrcpp::Any visitTableName(SQLParser::TableNameContext *context) override;

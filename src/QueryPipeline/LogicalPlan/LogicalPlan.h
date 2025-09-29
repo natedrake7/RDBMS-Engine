@@ -39,21 +39,25 @@ namespace QueryPipeline {
     public:
       Statements::TableName* table;
       Expressions::Expression* expression;
-      explicit LogicalTableScan(  Statements::TableName* table, Expressions::Expression* expression);
+      explicit LogicalTableScan(Statements::TableName* table, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical() override;
   };
 
   class LogicalJoin final : public LogicalPlan {
     public:
-    LogicalTableScan* left;
-    LogicalTableScan* right;
+    LogicalPlan* left;
+    LogicalPlan* right;
     Expressions::Expression* condition;
     JoinType type;
     LogicalJoin(
-      LogicalTableScan* left,
-      LogicalTableScan* right,
+      LogicalPlan* left,
+      LogicalPlan* right,
       Expressions::Expression* condition,
-      const JoinType& type);
+      const JoinType& type
+    );
+
+    ~LogicalJoin() override;
+
     PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 

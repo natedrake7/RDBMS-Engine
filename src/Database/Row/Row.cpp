@@ -134,6 +134,14 @@ namespace DatabaseEngine::StorageTypes {
         return diff;
     }
 
+    void Row::InsertJoinColumn(Block *block){
+        this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
+
+        this->data.push_back(block);
+
+        this->header.rowSize = this->GetTotalRowSize();
+    }
+
     void Row::UpdateColumnData(Block *block)
     {
         const column_index_t& columnIndex = block->GetColumnIndex();
@@ -528,6 +536,11 @@ namespace DatabaseEngine::StorageTypes {
 
             delete[] bytes;
         }
+    }
+
+    void Row::Join(const Row *row){
+        for (const auto& block : row->GetData())
+            this->InsertJoinColumn(new Block(block));
     }
 
     std::ostream & operator<<(std::ostream &os, const Row &row){

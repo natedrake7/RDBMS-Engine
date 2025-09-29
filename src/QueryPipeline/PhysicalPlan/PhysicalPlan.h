@@ -293,15 +293,17 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalNestedLoopJoin final : public PhysicalOperator {
-    table_id_t leftTablePos;
-    table_id_t rightTablePos;
+    PhysicalOperator* left;
+    PhysicalOperator* right;
     Expressions::Expression* joinCondition;
 
     public:
       PhysicalNestedLoopJoin(
-        const table_id_t& leftTablePos,
-        const table_id_t& rightTablePos,
-        Expressions::Expression* joinCondition);
+        PhysicalOperator* left,
+        PhysicalOperator* right,
+        Expressions::Expression* joinCondition
+      );
+      ~PhysicalNestedLoopJoin()override;
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 

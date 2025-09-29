@@ -148,12 +148,13 @@ namespace QueryPipeline::Statements {
   };
 
   struct JoinStatement final : public Statement{
-    Expressions::LogicalExpression* expression;
+    Expressions::Expression* expression;
     Constants::JoinType type;
 
     JoinStatement();
     ~JoinStatement()override;
     bool Validate() override;
+    bool Validate(const int32_t& databaseId);
 
     QueryPipeline::LogicalPlan* ToLogical()override;
   };

@@ -47,21 +47,18 @@ namespace QueryPipeline::Statements {
   }
 
   bool JoinStatement::Validate(){
-    const auto header = Server::ServerInstance::Get().SelectTable(this->table->name, this->table->schema);
-
-    if (header.id == Constants::INVALID_TABLE_ID) {
-      cerr << "Table " +this->table->schema + "." +this->table->name + " does not exist" << endl;
-      return false;
-    }
-
-    this->table->tableId = header.id;
-    this->table->ordinalPosition = header.ordinalPosition;
-
     return true;
+  }
+
+  bool JoinStatement::Validate(const int32_t& databaseId){
+    this->databaseId = databaseId;
+
+    return this->table != nullptr && this->table->Validate(this->databaseId);
   }
 
   QueryPipeline::LogicalPlan * JoinStatement::ToLogical(){
 
+    return new LogicalTableScan(this->table, nullptr);
       return nullptr;
     // return new LogicalJoin(
     //     this->databaseId,
@@ -174,6 +171,10 @@ namespace QueryPipeline::Statements {
    SelectStatement::~SelectStatement(){
       delete this->table;
       delete this->orderBy;
+
+      for (const auto* join : this->joins) {
+        delete join;
+      }
   }
 
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
@@ -192,12 +193,13 @@ namespace QueryPipeline::Statements {
     if (this->table == nullptr)
       return this->ValidateNoTableStatement();
 
+    Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
+
     for (const auto& join: this->joins) {
-      if (!join->Validate())
+      if (!join->Validate(this->databaseId))
         return false;
     }
 
-    Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
     if (!this->ResolveAliases(aliasesDictionary))
       return false;
 
@@ -446,8 +448,9 @@ namespace QueryPipeline::Statements {
 
 
     //here create logical joins with the expressions
+    //re order here
     for (const auto& join : this->joins) {
-      //build logicalJoin
+      current = new LogicalJoin(current, join->ToLogical(), join->expression, JoinType::Inner);
     }
 
     Dictionary<std::string, Constants::column_index_t> postProjectionIndicesDictionary;
@@ -1312,6 +1315,11 @@ bool UpdateStatement::Validate(){
 
     if (statement->where.expression != nullptr)
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, statement->where.expression);
+
+    for (const auto* join : statement->joins) {
+      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, join->expression);
+    }
+
     //group by here later
   }
 

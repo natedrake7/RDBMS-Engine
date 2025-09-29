@@ -75,15 +75,23 @@ namespace QueryPipeline {
   }
 
  LogicalJoin::LogicalJoin(
-   LogicalTableScan *left,
-   LogicalTableScan *right,
+   LogicalPlan *left,
+   LogicalPlan *right,
    Expressions::Expression *condition,
    const JoinType &type)
    : left(left), right(right), condition(condition), type(type) {}
 
-  PhysicalPlan::PhysicalOperator * LogicalJoin::ToPhysical(){
+  LogicalJoin::~LogicalJoin(){
+    delete this->left;
+    delete this->right;
+  }
 
-    return new PhysicalPlan::PhysicalNestedLoopJoin(0, 0, this->condition);
+  PhysicalPlan::PhysicalOperator * LogicalJoin::ToPhysical(){
+    return new PhysicalPlan::PhysicalNestedLoopJoin(
+      left->ToPhysical(),
+      right->ToPhysical(),
+      this->condition
+    );
   }
 
 LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter)
