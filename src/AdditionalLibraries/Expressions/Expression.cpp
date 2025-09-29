@@ -37,6 +37,13 @@ namespace Expressions{
 
   size_t LiteralExpression::GetSize() const{ return this->value.GetSize(); }
 
+  Value LiteralExpression::Evaluate(
+    const DatabaseEngine::StorageTypes::Row *outerRow,
+    const DatabaseEngine::StorageTypes::Row *innerRow
+  ) const{
+    return this->value;
+  }
+
   size_t BinaryExpression::GetAdditionSize() const{
     switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
       case DataType::TinyInt:

@@ -82,6 +82,7 @@ namespace QueryPipeline {
    : left(left), right(right), condition(condition), type(type) {}
 
   PhysicalPlan::PhysicalOperator * LogicalJoin::ToPhysical(){
+
     return new PhysicalPlan::PhysicalNestedLoopJoin(0, 0, this->condition);
   }
 

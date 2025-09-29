@@ -57,7 +57,7 @@ namespace QueryPipeline{
     return new Statements::NewColumn{
       .name = std::any_cast<Statements::ColumnName>(visit(context->columnName())),
       .type = std::any_cast<Statements::ColumnType>(visit(context->dataType())),
-      .autoIncrementKey = key,
+      .identity = key,
       .defaultValue =  context->defaultValue()
               ? std::any_cast<Value>(visit(context->defaultValue()))
               : Value(nullptr),

@@ -29,6 +29,7 @@ namespace Expressions{
 
       [[nodiscard]] virtual Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const = 0;
       [[nodiscard]] virtual Value Evaluate(const QueryResult& row) const = 0;
+      [[nodiscard]] virtual Value Evaluate(const DatabaseEngine::StorageTypes::Row* outerRow, const DatabaseEngine::StorageTypes::Row* innerRow) const = 0;
       [[nodiscard]] virtual DataType GetReturnType() const = 0;
       [[nodiscard]] virtual size_t GetSize() const = 0;
   };
@@ -51,6 +52,7 @@ namespace Expressions{
 
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
       [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
+      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
       [[nodiscard]] DataType GetReturnType() const override;
       [[nodiscard]] size_t GetSize() const override;
   };
@@ -64,6 +66,7 @@ namespace Expressions{
 
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
       [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
+      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
       [[nodiscard]] DataType GetReturnType() const override;
       [[nodiscard]] size_t GetSize() const override;
   };
@@ -84,9 +87,9 @@ namespace Expressions{
       BinaryExpression(Expression* left, Expression* right, const ExpressionOperator& operation);
       ~BinaryExpression()override;
 
-    //TODO : Implement Evaluate for BinaryExpression where left and rig*  are evaluated and Field Addition is implemented with data type coercion.
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
       [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
+      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
       [[nodiscard]] DataType GetReturnType() const override;
       [[nodiscard]] size_t GetSize() const override;
   };
@@ -100,7 +103,8 @@ namespace Expressions{
       std::string& errorMessage,
       const DataType& expectedType,
       const DataType& returnType,
-      const int& index);
+      const int& index
+    );
 
     public:
       std::vector<Expression*> arguments;
@@ -112,6 +116,7 @@ namespace Expressions{
 
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
       [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
+      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
 
       //String Function
 
@@ -160,6 +165,7 @@ namespace Expressions{
 
     [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
     [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
+    [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
     [[nodiscard]] DataType GetReturnType() const override;
     [[nodiscard]] size_t GetSize() const override;
 };

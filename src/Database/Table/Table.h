@@ -250,9 +250,9 @@ namespace DatabaseEngine::StorageTypes
 
             int CreateNonClusteredIndex(vector<Constants::column_index_t>& columnIndices);
 
-            void HeapUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
+            AdditionalDataTypes::ResultStatus HeapUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
 
-            void HeapUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> &updates);
+            AdditionalDataTypes::ResultStatus HeapUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> &updates);
 
             void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
 
@@ -359,5 +359,12 @@ namespace DatabaseEngine::StorageTypes
             void RemoveColumn(const Constants::column_index_t& index);
 
             void HandleRemoveColumn(const Constants::column_index_t& index);
+
+            void NestedLoopJoin(
+                std::vector<Row> *selectedRows,
+                const Expressions::Expression* expression
+            );
+
+
     };
 }

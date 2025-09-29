@@ -144,10 +144,9 @@ namespace QueryPipeline::Statements {
         primaryKeyFound = true;
 
         //store the pointer if found, else let it be null
-        if(column->autoIncrementKey && column->autoIncrementKey->incrementFactor <= 0){
-            cerr << "increment factor cannot be less or equal to 0" << endl;
+        if(column->HasIdentity()
+          && !column->identity->Validate())
             return false;
-        }
       }
     }
 
@@ -177,6 +176,8 @@ namespace QueryPipeline::Statements {
       delete this->orderBy;
   }
 
+  bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
+
   bool SelectStatement::Validate(){
     if (this->table != nullptr
       && !this->table->Validate(this->databaseId))
@@ -188,14 +189,8 @@ namespace QueryPipeline::Statements {
     }
 
     //resolve expressions here since no column is to be used
-    if (this->table == nullptr) {
-      for (const auto& resultExpr : this->results){
-        if (!ResolveExpressionAliases(this, resultExpr))
-          return false;
-      }
-
-      return true;
-    }
+    if (this->table == nullptr)
+      return this->ValidateNoTableStatement();
 
     for (const auto& join: this->joins) {
       if (!join->Validate())
@@ -205,6 +200,20 @@ namespace QueryPipeline::Statements {
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
     if (!this->ResolveAliases(aliasesDictionary))
       return false;
+
+    return true;
+  }
+
+  bool SelectStatement::ValidateNoTableStatement(){
+    for (const auto& resultExpr : this->results){
+      if (!ResolveExpressionAliases(this, resultExpr))
+        return false;
+    }
+
+    if (this->HasJoins()) {
+      std::cerr << "Missing FROM statement but joins were given" << std::endl;
+      return false;
+    }
 
     return true;
   }
@@ -302,6 +311,19 @@ namespace QueryPipeline::Statements {
     this->decimal = decimal;
     this->size = 0;
   }
+
+  bool Identity::Validate() const{
+    if (this->incrementFactor <= 0) {
+      std::cerr << "Increment Factor must be greater than zero" << std::endl;
+      return false;
+    }
+
+
+
+    return true;
+  }
+
+  bool NewColumn::HasIdentity()const{ return this->identity != nullptr;}
 
   OrderColumn::OrderColumn(){
     this->expression = nullptr;

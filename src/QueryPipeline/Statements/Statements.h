@@ -39,18 +39,22 @@ namespace QueryPipeline::Statements {
 
     Identity() = default;
     ~Identity() = default;
+
+    [[nodiscard]] bool Validate() const;
   };
 
   struct NewColumn {
     Statements::ColumnName name;
     ColumnType type;
-    Identity* autoIncrementKey;
+    Identity* identity;
     Value defaultValue;
 
     bool isPrimaryKey;
     bool isNullable;
 
     column_index_t index;
+
+    [[nodiscard]] bool HasIdentity()const;
   };
 
   struct OrderColumn {
@@ -176,9 +180,13 @@ namespace QueryPipeline::Statements {
     OrderByStatement* orderBy;
 
     ~SelectStatement() override;
-    bool Validate() override;
-    bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
-    LogicalPlan* ToLogical() override;
+
+    [[nodiscard]] bool HasJoins()const;
+    [[nodiscard]] bool ValidateNoTableStatement();
+    [[nodiscard]] bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
+
+    [[nodiscard]] bool Validate() override;
+    [[nodiscard]] LogicalPlan* ToLogical() override;
   };
 
   struct CreateDbStatement final : Statement{

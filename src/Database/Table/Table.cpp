@@ -860,9 +860,9 @@ namespace DatabaseEngine::StorageTypes {
         return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
     }
 
-  void Table::HeapUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
+  AdditionalDataTypes::ResultStatus Table::HeapUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
-          return;
+          return {};
 
         const auto& filename = this->database->GetFileName();
 
@@ -906,15 +906,20 @@ namespace DatabaseEngine::StorageTypes {
               if(!value.GetBool())
                   continue;
 
-                this->HandleRowUpdate(page, row, updates, updatedColumns);
+                const auto result = this->HandleRowUpdate(page, row, updates, updatedColumns);
+
+                if (result.code != AdditionalDataTypes::ResultCode::Ok)
+                  return result;
             }
           }
         }
+
+        return {};
     }
 
-    void Table::HeapUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
-                if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
-          return;
+    AdditionalDataTypes::ResultStatus Table::HeapUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+        if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return {};
 
         const auto& filename = this->database->GetFileName();
 
@@ -958,10 +963,15 @@ namespace DatabaseEngine::StorageTypes {
               if(!value.GetBool())
                   continue;
 
-                this->HandleRowUpdate(page, row, updates, updatedColumns);
+                const auto result = this->HandleRowUpdate(page, row, updates, updatedColumns);
+
+                if (result.code != AdditionalDataTypes::ResultCode::Ok)
+                  return result;
             }
           }
         }
+
+        return {};
     }
 
     void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const{
@@ -1628,6 +1638,11 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     this->RemoveColumnByHeap(index);
+  }
+
+  void Table::NestedLoopJoin(std::vector<Row> *selectedRows, const Expressions::Expression *expression){
+
+
   }
 
   void Table::RemoveColumnByClusteredIndex(const column_index_t &index){

@@ -371,17 +371,17 @@ PhysicalInsert::PhysicalInsert(
       }
 
       //insert identity columns
-      if (column->autoIncrementKey == nullptr)
+      if (column->identity == nullptr)
         continue;
 
       Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
           static_cast<int32_t>(tableResult.primaryKeyVal),
           static_cast<int32_t>(columnResult.primaryKeyVal),
-          column->autoIncrementKey->seed,
-          column->autoIncrementKey->incrementFactor,
-          column->autoIncrementKey->seed,
+          column->identity->seed,
+          column->identity->incrementFactor,
+          column->identity->seed,
           true,
-          static_cast<int32_t>(column->autoIncrementKey->cacheBlock)
+          static_cast<int32_t>(column->identity->cacheBlock)
           );
     }
 
@@ -453,7 +453,10 @@ PhysicalInsert::PhysicalInsert(
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->HeapUpdate(this->expression, this->updates);
+    const auto insertResult = tablePtr->HeapUpdate(this->expression, this->updates);
+
+    result->code = insertResult.code;
+    result->message = insertResult.message;
 
     return result;
   }
