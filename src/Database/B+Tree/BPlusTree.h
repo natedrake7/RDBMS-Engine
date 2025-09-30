@@ -124,26 +124,26 @@ namespace Indexing
 
         void IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
 
-        void IndexSeek(const Key &minKey, const Key &maxKey, vector<DatabaseEngine::StorageTypes::Row>* result);
+        void IndexSeek(const Key &minKey, const Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*>* result);
 
         void IndexScan(vector<QueryData> &result)const;
 
         void IndexScan(
-            vector<DatabaseEngine::StorageTypes::Row>* result,
-            QueryPipeline::PhysicalPlan::IndexState& state,
+            std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+            const QueryPipeline::PhysicalPlan::IndexState& state,
             const int& rowsToSelect);
 
         void IndexScan(
-            vector<DatabaseEngine::StorageTypes::Row>* result,
+            std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             QueryPipeline::PhysicalPlan::IndexState& state,
             const int& rowsToSelect,
             const Expressions::Expression* expression);
 
         void IndexScan(
-            vector<DatabaseEngine::StorageTypes::Row>* result,
+            std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             const Expressions::Expression* expression);
 
-        void IndexScan(vector<DatabaseEngine::StorageTypes::Row>* result);
+        void IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result);
 
         void IndexScan(
             vector<Headers::RowIdentifier>* result,

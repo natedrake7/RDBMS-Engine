@@ -18,7 +18,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   struct PhysicalPlanResult {
       std::vector<std::string> columns;
-      std::vector<DatabaseEngine::StorageTypes::Row> rows;
+      std::vector<const DatabaseEngine::StorageTypes::Row*> rows;
 
       std::vector<QueryResult> results;
 

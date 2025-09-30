@@ -80,6 +80,8 @@ namespace DatabaseEngine::StorageTypes
 
         unsigned char *GetLargeObjectValue(const Pages::DataObjectPointer &objectPointer, uint32_t *objectSize) const;
 
+        [[nodiscard]] Block* GetLargeObject(const Pages::DataObjectPointer &objectPointer, const Column* column)const;
+
         [[nodiscard]] Pages::OverflowRow* GetOverflowValue(const Pages::OverflowPointer &objectPointer) const;
 
         void SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) const;
@@ -103,6 +105,8 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
 
         [[nodiscard]] vector<Block*> GetBlockCopies() const;
+
+        [[nodiscard]] Value GetColumnByIndex(const int& indexPos) const;
 
         void Serialize(std::vector<char>* buffer, uint32_t& pos)const;
 

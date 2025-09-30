@@ -6,12 +6,12 @@
 #include "OverflowPage.h"
 
 namespace Pages {
-  OverflowRow::OverflowRow() : DataObject(){
+  OverflowRow::OverflowRow(){
     this->index = 0;
   }
 
-  block_size_t OverflowRow::GetSize(){
-    return this->objectSize + sizeof(page_offset_t) + sizeof(page_id_t);
+  block_size_t OverflowRow::GetSize()const{
+    return this->objectSize + Constants::OVERFLOW_POINTER_SIZE;
   }
 
   OverflowPage::OverflowPage(const PageHeader & pageHeader): Page(pageHeader){}
@@ -24,7 +24,7 @@ namespace Pages {
     this->header.pageType = PageType::OVERFLOW;
   }
 
-  OverflowRow* OverflowPage::GetObject(const page_offset_t & index){ return this->data.at(index); }
+  OverflowRow* OverflowPage::GetObject(const page_offset_t & index)const{ return this->data.at(index); }
 
   OverflowRow* OverflowPage::DeleteObject(const page_offset_t& index){
     auto* object = this->data.at(index);
@@ -110,5 +110,6 @@ namespace Pages {
     this->index = 0;
     this->pageId = 0;
   }
+
   OverflowPointer::~OverflowPointer() = default;
 } // Pages

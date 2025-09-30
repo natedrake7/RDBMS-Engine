@@ -83,15 +83,15 @@ namespace Pages
         [[nodiscard]] const log_sequence_number_t &GetLogSequenceNumber() const;
 
         int GetRows(
-            vector<DatabaseEngine::StorageTypes::Row> *copiedRows,
-            const DatabaseEngine::StorageTypes::Table &table,
+            std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             const size_t &rowsToSelect,
             const int32_t& startingPosition = 0) const;
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const PageType &GetPageType() const;
         void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
-        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const Expressions::Expression* expression) const;
+        [[nodiscard]] const DatabaseEngine::StorageTypes::Row* GetRow(const int& indexPosition)const;
+
         [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
     };
 }

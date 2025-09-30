@@ -5,7 +5,7 @@
 #include "../../Pages/Header/HeaderPage.h"
 #include "../../Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "../../Pages/IndexPage/IndexPage.h"
-#include "../../Pages/LargeObject/LargeDataPage.h"
+#include "../../Pages/LargeObject/LargeObjectPage.h"
 #include "../../Pages/Page.h"
 #include "../../Pages/PageFreeSpace/PageFreeSpacePage.h"
 
@@ -82,9 +82,9 @@ Page *StorageManager::GetPage(
   return page;
 }
 
-LargeDataPage *StorageManager::GetLargeDataPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table *table)
+LargeObjectPage *StorageManager::GetLargeDataPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table *table)
 {
-  return dynamic_cast<LargeDataPage *>(this->GetPage(filename, pageId, extentId, table));
+  return dynamic_cast<LargeObjectPage *>(this->GetPage(filename, pageId, extentId, table));
 }
 
 OverflowPage *StorageManager::GetOverflowPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table *table)
@@ -102,9 +102,9 @@ Page *StorageManager::CreatePage(const string& filename, const page_id_t &pageId
   return page;
 }
 
-LargeDataPage *StorageManager::CreateLargeDataPage(const string& filename, const page_id_t &pageId)
+LargeObjectPage *StorageManager::CreateLargeDataPage(const string& filename, const page_id_t &pageId)
 {
-  LargeDataPage *page = new LargeDataPage(pageId, true);
+  LargeObjectPage *page = new LargeObjectPage(pageId, true);
   page->SetDirty();
 
   this->MovePageToFrontOfList(page, pageId, filename);
@@ -532,7 +532,7 @@ bool StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader
       *page = new Page(pageHeader);
       break;
     case PageType::LOB:
-      *page = new LargeDataPage(pageHeader);
+      *page = new LargeObjectPage(pageHeader);
       break;
     case PageType::IAM:
       *page = new IndexAllocationMapPage(pageHeader, 0, 0);

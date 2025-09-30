@@ -17,18 +17,19 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalPlanResult * PhysicalNestedLoopJoin::Execute(const int &batchSize){
     auto* result = new PhysicalPlan::PhysicalPlanResult();
 
-    auto* leftResult = this->left->Execute(batchSize);
-    auto* rightResult = this->right->Execute(batchSize);
+    const auto* leftResult = this->left->Execute(batchSize);
+    const auto* rightResult = this->right->Execute(batchSize);
 
-    for (auto& outerRow: leftResult->rows) {
-      for (auto& innerRow: rightResult->rows) {
+    //create new row
+    for (const auto* outerRow: leftResult->rows) {
+      for (const auto* innerRow: rightResult->rows) {
 
-        const auto condResult = this->joinCondition->Evaluate(&outerRow, &innerRow);
+        const auto condResult = this->joinCondition->Evaluate(outerRow, innerRow);
 
         if (!condResult.GetBool())
           continue;
 
-        outerRow.Join(&innerRow);
+        // outerRow->Join(innerRow);
 
         result->rows.push_back(std::move(outerRow));
       }

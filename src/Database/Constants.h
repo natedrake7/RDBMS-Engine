@@ -48,6 +48,7 @@ namespace Constants
     constexpr table_id_t INVALID_TABLE_ORDINAL_POS = std::numeric_limits<table_id_t>::max();
     constexpr transaction_id_t INVALID_TRANSACTION_ID = std::numeric_limits<transaction_id_t>::max();
     constexpr page_id_t INVALID_PAGE_ID = std::numeric_limits<page_id_t>::max();
+    constexpr int32_t INVALID_PAGE_INDEX_ID = -1;
     constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(int32_t);
 
     constexpr std::string_view WILDCARD = "*";
@@ -154,6 +155,7 @@ namespace Constants
 
     constexpr uint16_t OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
     constexpr uint16_t PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t) + sizeof(PageType);
+    constexpr uint16_t OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
 
     constexpr uint16_t PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - 7;
     constexpr uint16_t NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;

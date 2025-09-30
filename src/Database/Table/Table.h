@@ -33,11 +33,11 @@ namespace DatabaseEngine
 namespace Pages
 {
     class Page;
-    class LargeDataPage;
+    class LargeObjectPage;
     class PageFreeSpacePage;
     class IndexPage;
     class OverflowPage;
-    struct DataObject;
+    struct LargeDataObject;
 }
 
 namespace ByteMaps
@@ -84,11 +84,11 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] int64_t PopulateAutoComputedColumns(Row* row)const;
 
-            [[nodiscard]] Pages::LargeDataPage *GetOrCreateLargeDataPage() const;
+            [[nodiscard]] Pages::LargeObjectPage *GetOrCreateLargeDataPage() const;
 
-            static void LinkLargePageDataObjectChunks(Pages::DataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
+            static void LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
-            void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::DataObject **previousDataObject);
+            void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::LargeDataObject **previousDataObject);
 
             static void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
             static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);
@@ -191,7 +191,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] const vector<Column *> &GetColumns() const;
 
-            [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId) const;
+            [[nodiscard]] Pages::LargeObjectPage *GetLargeDataPage(const page_id_t &pageId) const;
 
             [[nodiscard]] Pages::OverflowPage *GetOverflowPage(const page_id_t &pageId) const;
 
@@ -200,28 +200,28 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
 
             void ClusteredIndexSeek(
-                vector<Row> *selectedRows,
+                std::vector<const Row*> *selectedRows,
                 const Indexing::Key* minimumValue,
                 const Indexing::Key* maximumValue);
 
             void ClusteredIndexScan(
-                vector<Row> *selectedRows,
+                std::vector<const Row*> *selectedRows,
                 QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& rowsToSelect = -1,
                 const Expressions::Expression* expression = nullptr);
 
             void ClusteredIndexScan(
-                vector<Row> *selectedRows,
+                std::vector<const Row*> *selectedRows,
                 const Expressions::Expression* expression = nullptr);
 
             void NonClusteredIndexScan(
-                vector<Row> *selectedRows,
+                std::vector<const Row*> *selectedRows,
                 const int& indexPos,
                 QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& rowsToSelect = -1,
                 const Expressions::Expression* expression = nullptr);
 
-            void HeapScan(vector<Row> *selectedRows, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const;
+            void HeapScan(std::vector<const Row*> *result, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const;
 
             void SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
 
@@ -229,7 +229,7 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexScanDelete(
                 const Expressions::Expression* expression,
-                QueryPipeline::PhysicalPlan::IndexState& state,
+                const QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& batchSize);
 
             void ClusteredIndexSeekDelete(

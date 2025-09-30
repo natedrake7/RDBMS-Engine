@@ -574,7 +574,7 @@ namespace Server {
       using namespace DatabaseEngine::StorageTypes;
 
       Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
-      vector<Row> selectedDatabases;
+      std::vector<const Row*> selectedDatabases;
 
       Indexing::Key key;
       key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), DataType::String));
@@ -594,7 +594,7 @@ namespace Server {
 
      Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
 
-     vector<Row> selectedDatabases;
+     std::vector<const Row*> selectedDatabases;
 
      sysDatabases->ClusteredIndexScan(&selectedDatabases);
 
@@ -605,7 +605,7 @@ namespace Server {
 
     for (const auto& row : selectedDatabases) {
 
-      const auto& data = row.GetData();
+      const auto& data = row->GetData();
 
       const auto databaseId = data[0]->GetInt();
 
@@ -663,14 +663,14 @@ namespace Server {
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
-    vector<Row> selectedDatabases;
+    std::vector<const Row*> selectedDatabases;
 
     sysDatabases->ClusteredIndexScan(&selectedDatabases, &binaryExpr);
 
     if (selectedDatabases.empty())
       return {};
 
-    const auto& data = selectedDatabases[0].GetData();
+    const auto& data = selectedDatabases[0]->GetData();
     
     return Headers::DatabaseHeader{
       .id = data[0]->GetInt(),
@@ -684,7 +684,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
-    vector<Row> selectedDatabases;
+    std::vector<const Row*> selectedDatabases;
 
     Indexing::Key key;
     key.InsertKey(Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
@@ -694,7 +694,7 @@ namespace Server {
     if (selectedDatabases.empty())
       return {};
 
-    const auto& data = selectedDatabases[0].GetData();
+    const auto& data = selectedDatabases[0]->GetData();
 
     return Headers::DatabaseHeader{
       .id = data[0]->GetInt(),
@@ -708,7 +708,7 @@ namespace Server {
      using namespace DatabaseEngine::StorageTypes;
 
      Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
-     vector<Row> selectedSchemas;
+     std::vector<const Row*> selectedSchemas;
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
     auto* literaValue = new Expressions::LiteralExpression(Value(databaseId, 1));
@@ -723,7 +723,7 @@ namespace Server {
     vector<Headers::SchemaHeader> schemas;
 
     for (const auto& row : selectedSchemas) {
-      const auto& data = row.GetData();
+      const auto& data = row->GetData();
 
       schemas.emplace_back(Headers::SchemaHeader{
         data[0]->GetInt(),
@@ -765,7 +765,7 @@ namespace Server {
     const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
-    vector<Row> selectedSchemas;
+    std::vector<const Row*> selectedSchemas;
 
     sysSchemas->ClusteredIndexScan(&selectedSchemas, &logicalExpr);
 
@@ -782,7 +782,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    vector<Row> selectedTables;
+    std::vector<const Row*> selectedTables;
 
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
@@ -794,8 +794,8 @@ namespace Server {
     vector<Headers::TableHeader> selectedTableHeaders;
     selectedTableHeaders.reserve(selectedTables.size());
 
-    for (const auto& table : selectedTables) {
-      const auto& data = table.GetData();
+    for (const auto& row : selectedTables) {
+      const auto& data = row->GetData();
       
       selectedTableHeaders.emplace_back(
           Headers::TableHeader{
@@ -829,7 +829,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    vector<Row> selectedTables;
+    std::vector<const Row*> selectedTables;
 
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
@@ -841,8 +841,8 @@ namespace Server {
     vector<Headers::TableHeader> selectedTableHeaders;
     selectedTableHeaders.reserve(selectedTables.size());
 
-    for (const auto& table : selectedTables) {
-      const auto& data = table.GetData();
+    for (const auto& row : selectedTables) {
+      const auto& data = row->GetData();
 
       selectedTableHeaders.emplace_back(
         Headers::TableHeader{
@@ -879,7 +879,7 @@ namespace Server {
   Headers::TableHeader ServerInstance::SelectTable(const int32_t &databaseId, const string &tableName, const std::string& schema) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    vector<Row> selectedTables;
+    std::vector<const Row*> selectedTables;
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
 
     auto* leftColumnOperation = new Expressions::ColumnExpression(1);
@@ -899,7 +899,7 @@ namespace Server {
     if (selectedTables.empty())
       return {};
 
-    const auto& data = selectedTables[0].GetData();
+    const auto& data = selectedTables[0]->GetData();
 
     return  Headers::TableHeader{
           data[0]->GetInt(),
@@ -917,7 +917,7 @@ namespace Server {
   vector<Headers::ColumnHeader> ServerInstance::SelectColumns(const int32_t& tableId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    vector<Row> selectedColumns;
+    std::vector<const Row*> selectedColumns;
     Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
     auto* leftColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumns::TableId));
@@ -940,8 +940,8 @@ namespace Server {
     vector<Headers::ColumnHeader> selectedColumnHeaders;
     selectedColumnHeaders.reserve(selectedColumns.size());
     
-    for (const auto& column : selectedColumns) {
-      const auto& data = column.GetData();
+    for (const auto& row : selectedColumns) {
+      const auto& data = row->GetData();
 
       selectedColumnHeaders.emplace_back(
         Headers::ColumnHeader{
@@ -981,7 +981,7 @@ namespace Server {
   vector<Headers::ConstraintsHeader> ServerInstance::SelectConstraints(const int32_t & tableId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    vector<Row> selectedConstraints;
+    std::vector<const Row*> selectedConstraints;
     Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
@@ -997,8 +997,8 @@ namespace Server {
     vector<Headers::ConstraintsHeader> selectedConstraintsHeader;
     selectedConstraintsHeader.reserve(selectedConstraints.size());
 
-    for (const auto& column : selectedConstraints) {
-      const auto& data = column.GetData();
+    for (const auto& row : selectedConstraints) {
+      const auto& data = row->GetData();
 
       auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0]->GetInt());
 
@@ -1047,7 +1047,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTCOLUMNS);
-    vector<Row> rows;
+    std::vector<const Row*> rows;
 
     Indexing::Key key;
     key.InsertKey(Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
@@ -1060,7 +1060,7 @@ namespace Server {
     vector<Headers::ConstraintsColumnsHeader> constraintColumns;
 
     for(const auto& row : rows){
-      const auto& data = row.GetData();
+      const auto& data = row->GetData();
 
       constraintColumns.emplace_back(
           Headers::ConstraintsColumnsHeader{
@@ -1102,7 +1102,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     Table* sysValues = this->masterDb->OpenTable(MasterDbTables::SYSDEFAULTVALUES);
-    vector<Row> rows;
+    std::vector<const Row*> rows;
 
     Indexing::Key key;
     key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
@@ -1112,7 +1112,7 @@ namespace Server {
     if(rows.empty())
       return {};
 
-    const auto& data = rows.begin()->GetData();
+    const auto& data = rows.at(0)->GetData();
 
     return Headers::DefaultValuesHeader{
       .columnId = data[0]->GetInt(),
@@ -1142,7 +1142,7 @@ namespace Server {
       using namespace DatabaseEngine::StorageTypes;
 
       Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
-      vector<Row> selectedIndexes;
+      std::vector<const Row*> selectedIndexes;
 
       auto* columnOperation = new Expressions::ColumnExpression(1);
       auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
@@ -1153,8 +1153,8 @@ namespace Server {
 
       vector<Headers::IndexHeader> selectedIndexHeaders;
 
-      for (const auto& index : selectedIndexes) {
-        const auto& data = index.GetData();
+      for (const auto& row : selectedIndexes) {
+        const auto& data = row->GetData();
 
         selectedIndexHeaders.emplace_back(
         Headers::IndexHeader{
@@ -1189,7 +1189,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
-    vector<Row> selectedIndexes;
+    std::vector<const Row*> selectedIndexes;
 
     Indexing::Key key;
     key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
@@ -1203,7 +1203,7 @@ namespace Server {
 
     vector<Headers::IndexHeader> selectedIndexHeaders;
 
-    const auto& data = selectedIndexes[0].GetData();
+    const auto& data = selectedIndexes.at(0)->GetData();
 
     return Headers::IndexHeader{
       .id = data[0]->GetInt(),
@@ -1229,7 +1229,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXCOLUMNS);
-    vector<Row> rows;
+    std::vector<const Row*> rows;
 
     Indexing::Key key;
     key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
@@ -1241,8 +1241,8 @@ namespace Server {
 
     vector<Headers::IndexColumnsHeader> indexColumns;
 
-    for (const auto& indexColumn : rows) {
-      const auto& data = indexColumn.GetData();
+    for (const auto& row : rows) {
+      const auto& data = row->GetData();
 
       indexColumns.emplace_back(
         Headers::IndexColumnsHeader{
@@ -1284,7 +1284,7 @@ namespace Server {
       using namespace DatabaseEngine::StorageTypes;
 
       Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
-      vector<Row> rows;
+      std::vector<const Row*> rows;
 
       Indexing::Key key;
       key.InsertKey(Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
@@ -1297,7 +1297,7 @@ namespace Server {
       vector<Headers::IdentityColumnsHeader> columns;
 
       for (const auto& row : rows) {
-        const auto& data = row.GetData();
+        const auto& data = row->GetData();
 
         columns.emplace_back(
           Headers::IdentityColumnsHeader{
@@ -1355,7 +1355,6 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
-    vector<Row> rows;
 
     Indexing::Key key;
     key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), DataType::Int));

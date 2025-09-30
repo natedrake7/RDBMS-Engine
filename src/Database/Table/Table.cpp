@@ -7,7 +7,7 @@
 #include "../Database.h"
 #include "../../QueryPipeline/Statements/Statements.h"
 #include "../../Server/MasterDbColumns.h"
-#include "../Pages/LargeObject/LargeDataPage.h"
+#include "../Pages/LargeObject/LargeObjectPage.h"
 #include "../Pages/IndexMapAllocation/IndexAllocationMapPage.h"
 #include "../Pages/Header/HeaderPage.h"
 #include "../Pages/PageFreeSpace/PageFreeSpacePage.h"
@@ -601,11 +601,11 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScanDelete(
       const Expressions::Expression *expression,
-      QueryPipeline::PhysicalPlan::IndexState& state,
+      const QueryPipeline::PhysicalPlan::IndexState& state,
       const int& batchSize){
         auto* tree = this->GetClusteredIndexedTree();
 
-        vector<Row> results;
+        std::vector<const Row*> results;
         tree->IndexScan(&results, state, batchSize);
 
         if(results.empty())
@@ -613,10 +613,10 @@ namespace DatabaseEngine::StorageTypes {
 
         for(const auto& row : results){
 
-          const auto value = expression->Evaluate(&row);
+          const auto value = expression->Evaluate(row);
           if(value.GetBool())
           {
-            const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, &row);
+            const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, row);
             tree->Remove(key);
           }
         }
@@ -705,7 +705,11 @@ namespace DatabaseEngine::StorageTypes {
       return maximumRowSize;
     }
 
-    void Table::HeapScan(vector<Row> *selectedRows, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const
+    void Table::HeapScan(
+      std::vector<const Row*> *result,
+      QueryPipeline::PhysicalPlan::TableScanState& state,
+      const size_t &rowsToSelect
+    )const
     {
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
             return;
@@ -743,9 +747,14 @@ namespace DatabaseEngine::StorageTypes {
             //update state to know where to start
             state.extentId = extentId;
             state.lastFetchedRowId.pageId = extentPageId;
-            state.lastFetchedRowId.indexId = page->GetRows(selectedRows, *this, rowsToSelect, state.lastFetchedRowId.indexId == -1 ? 0 : state.lastFetchedRowId.indexId + 1);
 
-            if (selectedRows->size() == rowsToSelect)
+            const auto startingPos = (state.lastFetchedRowId.indexId == Constants::INVALID_PAGE_INDEX_ID)
+                  ? 0
+                  : state.lastFetchedRowId.indexId + 1;
+
+            state.lastFetchedRowId.indexId = page->GetRows(result, rowsToSelect, startingPos);
+
+            if (result->size() == rowsToSelect)
               return;
           }
         }
@@ -986,7 +995,7 @@ namespace DatabaseEngine::StorageTypes {
 
         rowHeader->largeObjectBitMap->Set(block->GetColumnIndex(), false);
 
-        auto objectPointer = block->GeObjectPointer();
+        auto objectPointer = block->GetLargeObjectPointer();
 
         auto largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPointer.pageId);
 
@@ -1004,7 +1013,7 @@ namespace DatabaseEngine::StorageTypes {
 
             auto* nextLargeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, largeObjectExtentId, this);
 
-            DataObject* prevObject = objectPtr;
+            LargeDataObject* prevObject = objectPtr;
             objectPtr = nextLargeObjectPage->DeleteObject();
 
             pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);

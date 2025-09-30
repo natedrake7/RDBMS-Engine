@@ -165,11 +165,11 @@ namespace Headers {
 
   struct RowIdentifier {
     uint32_t pageId = Constants::INVALID_PAGE_ID;
-    int32_t indexId = -1;
+    int32_t indexId = Constants::INVALID_PAGE_INDEX_ID;
 
     RowIdentifier() {
       this->pageId = Constants::INVALID_PAGE_ID;
-      this->indexId = -1;
+      this->indexId = Constants::INVALID_PAGE_INDEX_ID;
     }
 
     RowIdentifier(const uint32_t& pageId, const int32_t& indexId) {

@@ -5,7 +5,7 @@
 #include "../../AdditionalLibraries/DataTypes/DateTime/DateTime.h"
 #include "../../AdditionalLibraries/DataTypes/Decimal/Decimal.h"
 #include "../Column/Column.h"
-#include "../Pages/LargeObject/LargeDataPage.h"
+#include "../Pages/LargeObject/LargeObjectPage.h"
 #include <cstdint>
 #include <cstring>
 #include <ctime>
@@ -268,9 +268,9 @@ namespace DatabaseEngine::StorageTypes {
 
     unsigned char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer, uint32_t* objectSize) const
     {
-        LargeDataPage* page = this->table->GetLargeDataPage(objectPointer.pageId);
+        LargeObjectPage* page = this->table->GetLargeDataPage(objectPointer.pageId);
 
-        const DataObject* object = page->GetObject();
+        const LargeDataObject* object = page->GetObject();
 
         uint32_t currentObjectSize = object->objectSize;
 
@@ -304,8 +304,43 @@ namespace DatabaseEngine::StorageTypes {
         return buffer;
     }
 
+    Block * Row::GetLargeObject(const Pages::DataObjectPointer &objectPointer, const Column *column)const{
+        auto* page = this->table->GetLargeDataPage(objectPointer.pageId);
+
+        const auto* object = page->GetObject();
+
+        uint32_t currentObjectSize = object->objectSize;
+
+        auto* buffer = new unsigned char[currentObjectSize];
+
+        memcpy(buffer, object->object, currentObjectSize);
+
+        while (object->nextPageId != 0)
+        {
+            const page_id_t nextPageId = object->nextPageId;
+
+            page = this->table->GetLargeDataPage(nextPageId);
+            object = page->GetObject();
+
+            const page_size_t nextObjectSize = object->objectSize;
+
+            unsigned char* prevValue = buffer;
+
+            buffer = new unsigned char[currentObjectSize + nextObjectSize];
+
+            memcpy(buffer, prevValue, currentObjectSize);
+            delete[] prevValue;
+
+            memcpy(buffer + currentObjectSize, object->object, nextObjectSize);
+
+            currentObjectSize += object->objectSize;
+        }
+
+        return new Block(buffer, currentObjectSize, column);
+    }
+
     Pages::OverflowRow* Row::GetOverflowValue(const Pages::OverflowPointer & objectPointer) const{
-        OverflowPage* page = this->table->GetOverflowPage(objectPointer.pageId);
+        const OverflowPage* page = this->table->GetOverflowPage(objectPointer.pageId);
         return page->GetObject(objectPointer.index);
     }
 
@@ -464,6 +499,34 @@ namespace DatabaseEngine::StorageTypes {
 
     return copyBlocks;
   }
+
+    Value Row::GetColumnByIndex(const int &indexPos) const{
+        const auto* dataBlock = this->data.at(indexPos);
+
+        if (this->header.largeObjectBitMap->Get(indexPos)) {
+
+            const auto ptr = dataBlock->GetLargeObjectPointer();
+
+            uint32_t objectSize;
+
+            const auto* rawObject = this->GetLargeObjectValue(ptr, &objectSize);
+
+            return Value(rawObject, objectSize, dataBlock->GetColumnType());
+        }
+
+        if (this->header.overflowBitMap->Get(indexPos)) {
+            const auto ptr = this->data.at(indexPos)->GetOverflowPointer();
+
+            const auto* overflowRow = this->GetOverflowValue(ptr);
+
+            auto* block = new Block(dataBlock->GetColumn());
+            block->SetData(overflowRow->object, overflowRow->objectSize);
+
+            return block;
+        }
+
+        return dataBlock;
+    }
 
     void Row::Serialize(std::vector<char>* buffer, uint32_t& pos)const{
         memcpy(buffer->data() + pos, &this->header.rowSize, sizeof(row_size_t));

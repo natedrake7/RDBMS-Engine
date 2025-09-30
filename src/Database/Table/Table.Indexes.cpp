@@ -11,14 +11,14 @@ using namespace Indexing;
 using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes {
-    void Table::ClusteredIndexSeek(vector<Row> *selectedRows, const Indexing::Key *minimumValue, const Indexing::Key *maximumValue){
+    void Table::ClusteredIndexSeek(std::vector<const Row*> *selectedRows, const Indexing::Key *minimumValue, const Indexing::Key *maximumValue){
         auto* tree = this->GetClusteredIndexedTree();
 
         tree->IndexSeek(*minimumValue, *maximumValue, selectedRows);
     }
 
     void Table::ClusteredIndexScan(
-      vector<Row> *selectedRows,
+      std::vector<const Row*> *selectedRows,
       QueryPipeline::PhysicalPlan::IndexState& state,
       const int& rowsToSelect,
       const Expressions::Expression* expression){
@@ -35,7 +35,7 @@ namespace DatabaseEngine::StorageTypes {
         tree->IndexScan(selectedRows, state, rowsToSelect);
     }
 
-    void Table::ClusteredIndexScan(vector<Row> *selectedRows, const Expressions::Expression *expression){
+    void Table::ClusteredIndexScan(std::vector<const Row*> *selectedRows, const Expressions::Expression *expression){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -50,7 +50,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::NonClusteredIndexScan(
-      vector<Row> *selectedRows,
+      std::vector<const Row*> *selectedRows,
       const int &indexPos,
       QueryPipeline::PhysicalPlan::IndexState& state,
       const int& rowsToSelect,
@@ -68,7 +68,14 @@ namespace DatabaseEngine::StorageTypes {
 
             const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, extentId, this);
 
-            page->GetRowByIndex(selectedRows, *this, rowId.indexId, expression);
+            auto* row = page->GetRow(rowId.indexId);
+
+            const auto conditionResult = expression->Evaluate(row);
+
+            if (!conditionResult.GetBool())
+              continue;
+
+            selectedRows->push_back(row);
           }
 
           return;
@@ -79,7 +86,7 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, extentId, this);
 
-          page->GetRowByIndex(selectedRows, *this, rowId.indexId);
+          selectedRows->push_back(page->GetRow(rowId.indexId));
         }
     }
 

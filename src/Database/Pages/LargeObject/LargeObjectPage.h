@@ -12,14 +12,14 @@ namespace DatabaseEngine::StorageTypes {
 }
 
 namespace Pages {
-    typedef struct DataObject {
+    typedef struct LargeDataObject {
         object_t* object;
         page_size_t objectSize;
         page_id_t nextPageId;
 
-        DataObject();
-        ~DataObject();
-    }DataObject;
+        LargeDataObject();
+        ~LargeDataObject();
+    }LargeDataObject;
 
     typedef struct DataObjectPointer
     {
@@ -31,19 +31,19 @@ namespace Pages {
 
     }DataObjectPointer;
     
-    class LargeDataPage final : public Page
+    class LargeObjectPage final : public Page
     {
-        DataObject* data;
+        LargeDataObject* data;
 
     public:
-        explicit LargeDataPage(const page_id_t& pageId, const bool& isPageCreation = false);
-        explicit LargeDataPage();
-        explicit LargeDataPage(const PageHeader& pageHeader);
-        ~LargeDataPage() override;
+        explicit LargeObjectPage(const page_id_t& pageId, const bool& isPageCreation = false);
+        explicit LargeObjectPage();
+        explicit LargeObjectPage(const PageHeader& pageHeader);
+        ~LargeObjectPage() override;
         void GetPageDataFromFile(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WritePageToFile(fstream* filePtr) override;
-        DataObject* InsertObject(const object_t* object, const page_size_t& size);
-        DataObject* GetObject();
-        DataObject* DeleteObject();
+        LargeDataObject* InsertObject(const object_t* object, const page_size_t& size);
+        LargeDataObject* GetObject();
+        LargeDataObject* DeleteObject();
     };
 }

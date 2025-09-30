@@ -315,7 +315,7 @@ namespace DatabaseEngine::StorageTypes {
 
     DataTypes::Guid Block::GetGuid() const{  return { this->data, this->size }; }
 
-    Pages::DataObjectPointer Block::GeObjectPointer() const { return *reinterpret_cast<Pages::DataObjectPointer*>(this->data); }
+    Pages::DataObjectPointer Block::GetLargeObjectPointer() const { return *reinterpret_cast<Pages::DataObjectPointer*>(this->data); }
 
     Pages::OverflowPointer Block::GetOverflowPointer() const { return *reinterpret_cast<Pages::OverflowPointer*>(this->data); }
 

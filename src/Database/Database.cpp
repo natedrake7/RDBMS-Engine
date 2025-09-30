@@ -11,7 +11,7 @@
 #include "Table/Table.h"
 #include "Column/Column.h"
 #include "Row/Row.h"
-#include "Pages/LargeObject/LargeDataPage.h"
+#include "Pages/LargeObject/LargeObjectPage.h"
 #include "Storage/StorageManager/StorageManager.h"
 #include "../Server/Server.h"
 #include <iostream>
@@ -562,7 +562,7 @@ namespace DatabaseEngine
         return StorageManager::Get().GetPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
     }
 
-    LargeDataPage *Database::CreateLargeDataPage(const table_id_t &tableId)
+    LargeObjectPage *Database::CreateLargeDataPage(const table_id_t &tableId)
     {
         PageFreeSpacePage *pageFreeSpacePage = nullptr;
         extent_id_t newExtentId = 0;
@@ -686,7 +686,7 @@ namespace DatabaseEngine
         return this->tables[tableId];
     }
 
-    LargeDataPage *Database::GetTableLastLargeDataPage(const table_id_t &tableId)const
+    LargeObjectPage *Database::GetTableLastLargeDataPage(const table_id_t &tableId)const
     {
         if (tableId >= this->tables.size())
             return nullptr;
@@ -701,7 +701,7 @@ namespace DatabaseEngine
         const auto iamExtentId = Database::CalculateExtentIdByPageId(tableMapPageId);
 
         const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, iamExtentId, table);
-        LargeDataPage *lastLargeDataPage = nullptr;
+        LargeObjectPage *lastLargeDataPage = nullptr;
 
         vector<extent_id_t> allocatedExtents;
         tableMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -776,7 +776,7 @@ namespace DatabaseEngine
         return this->CreateOverflowPage(tableId);
     }
 
-    LargeDataPage *Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const
+    LargeObjectPage *Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const
     {
         const auto extentId = Database::CalculateExtentIdByPageId(pageId);
 

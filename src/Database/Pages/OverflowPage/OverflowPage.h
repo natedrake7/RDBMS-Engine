@@ -1,13 +1,13 @@
 #pragma  once
 #include "../Page.h"
-#include "../LargeObject/LargeDataPage.h"
+#include "../LargeObject/LargeObjectPage.h"
 namespace Pages {
 
-  struct OverflowRow : DataObject{
+  struct OverflowRow : LargeDataObject{
     page_offset_t index;
 
     OverflowRow();
-    block_size_t GetSize();
+    block_size_t GetSize()const;
   };
 
   struct OverflowPointer : DataObjectPointer{
@@ -18,7 +18,7 @@ namespace Pages {
     ~OverflowPointer();
   };
 
-  class OverflowPage : public Page{
+  class OverflowPage final : public Page{
     std::vector<OverflowRow*> data;
 
   public:
@@ -29,7 +29,7 @@ namespace Pages {
     void WritePageToFile(fstream* filePtr) override;
     void UpdateBytesLeft() override;
     OverflowRow* InsertObject(const object_t* object, const page_size_t& size, int& indexPos);
-    [[nodiscard]] OverflowRow* GetObject(const page_offset_t& index);
+    [[nodiscard]] OverflowRow* GetObject(const page_offset_t& index)const;
     [[nodiscard]] OverflowRow* DeleteObject(const page_offset_t& index);
   };
 

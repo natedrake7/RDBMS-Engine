@@ -128,8 +128,8 @@ add_library(Database SHARED
         src/Database/Constants.h
         src/Database/Pages/Header/HeaderPage.cpp
         src/Database/Pages/Header/HeaderPage.h
-        src/Database/Pages/LargeObject/LargeDataPage.cpp
-        src/Database/Pages/LargeObject/LargeDataPage.h
+        src/Database/Pages/LargeObject/LargeObjectPage.cpp
+        src/Database/Pages/LargeObject/LargeObjectPage.h
         src/Database/Pages/IndexMapAllocation/IndexAllocationMapPage.cpp
         src/Database/Pages/IndexMapAllocation/IndexAllocationMapPage.h
         src/Database/Pages/PageFreeSpace/PageFreeSpacePage.cpp

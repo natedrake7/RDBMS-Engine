@@ -1,4 +1,4 @@
-﻿#include "LargeDataPage.h"
+﻿#include "LargeObjectPage.h"
 #include "../Page.h"
 
 #include <cstring>
@@ -6,14 +6,14 @@
 using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {
-    DataObject::DataObject()
+    LargeDataObject::LargeDataObject()
     {
         this->objectSize = 0;
         this->nextPageId = 0;
         this->object = nullptr;
     }
 
-    DataObject::~DataObject()
+    LargeDataObject::~LargeDataObject()
     {
         delete this->object;
     }
@@ -30,34 +30,34 @@ namespace Pages {
 
     DataObjectPointer::~DataObjectPointer() = default;
 
-    LargeDataPage::LargeDataPage(const page_id_t& pageId, const bool& isPageCreation) : Page(pageId, isPageCreation)
+    LargeObjectPage::LargeObjectPage(const page_id_t& pageId, const bool& isPageCreation) : Page(pageId, isPageCreation)
     {
         this->header.pageType = PageType::LOB;
         this->data = nullptr;
     }
 
-    LargeDataPage::LargeDataPage() : Page()
+    LargeObjectPage::LargeObjectPage() : Page()
     {
         this->isDirty = false;
         this->header.pageType = PageType::LOB;
         this->data = nullptr;
     }
 
-    LargeDataPage::LargeDataPage(const PageHeader& pageHeader) : Page(pageHeader) {
+    LargeObjectPage::LargeObjectPage(const PageHeader& pageHeader) : Page(pageHeader) {
       this->data = nullptr;
     }
 
-    LargeDataPage::~LargeDataPage()
+    LargeObjectPage::~LargeObjectPage()
     {
         delete this->data;
     }
 
-    void LargeDataPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t& offSet, fstream* filePtr)
+    void LargeObjectPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t& offSet, fstream* filePtr)
     {
       if(this->header.pageSize == 0)
         return;
 
-      this->data = new DataObject();
+      this->data = new LargeDataObject();
 
       memcpy(&this->data->objectSize, data.data() + offSet, sizeof(page_size_t));
       offSet += sizeof(page_size_t);
@@ -70,7 +70,7 @@ namespace Pages {
       offSet += this->data->objectSize;
     }
 
-    void LargeDataPage::WritePageToFile(fstream *filePtr)
+    void LargeObjectPage::WritePageToFile(fstream *filePtr)
     {
         this->WritePageHeaderToFile(filePtr);
 
@@ -82,9 +82,9 @@ namespace Pages {
         filePtr->write(reinterpret_cast<const char*>(this->data->object), this->data->objectSize);
     }
 
-    DataObject* LargeDataPage::InsertObject(const object_t *object, const page_size_t& size)
+    LargeDataObject* LargeObjectPage::InsertObject(const object_t *object, const page_size_t& size)
     {
-        this->data = new DataObject();
+        this->data = new LargeDataObject();
         this->data->objectSize = size;
 
         this->data->object = new object_t[size];
@@ -97,9 +97,9 @@ namespace Pages {
         return this->data;
     }
 
-    DataObject* LargeDataPage::GetObject() { return this->data; }
+    LargeDataObject* LargeObjectPage::GetObject() { return this->data; }
 
-    DataObject* LargeDataPage::DeleteObject(){
+    LargeDataObject* LargeObjectPage::DeleteObject(){
       this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize();
       this->header.pageSize = 0;
 

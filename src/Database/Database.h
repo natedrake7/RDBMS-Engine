@@ -37,7 +37,7 @@ namespace Storage {
 
 namespace Pages {
 class Page;
-  class LargeDataPage;
+  class LargeObjectPage;
   class PageFreeSpacePage;
   class IndexAllocationMapPage;
   class IndexPage;
@@ -168,11 +168,11 @@ public:
 
     Pages::Page *CreateDataPage(const table_id_t &tableId);
 
-    Pages::LargeDataPage *CreateLargeDataPage(const table_id_t &tableId);
+    Pages::LargeObjectPage *CreateLargeDataPage(const table_id_t &tableId);
 
-    [[nodiscard]] Pages::LargeDataPage *GetTableLastLargeDataPage(const table_id_t &tableId)const;
+    [[nodiscard]] Pages::LargeObjectPage *GetTableLastLargeDataPage(const table_id_t &tableId)const;
 
-    [[nodiscard]] Pages::LargeDataPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
+    [[nodiscard]] Pages::LargeObjectPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
 
     Pages::OverflowPage* GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
 

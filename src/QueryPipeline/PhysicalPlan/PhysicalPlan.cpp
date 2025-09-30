@@ -65,11 +65,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
       for (const auto& expression : this->resultExpressions)
         result->columns.emplace_back(expression->name);
 
-      for (auto& row: result->rows) {
+      for (const auto* row: result->rows) {
           QueryResult resultRow;
 
           for (const auto& expression : this->resultExpressions) {
-            auto field = expression->Evaluate(&row);
+            auto field = expression->Evaluate(row);
             resultRow.AddColumn(field);
           }
 
@@ -101,9 +101,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
       || dynamic_cast<PhysicalIndexSeek*>(child) != nullptr)
       return result;
 
-    for (const auto &row : result->rows) {
+    for (const auto* row : result->rows) {
 
-      const auto value = this->filter->Evaluate(&row);
+      const auto value = this->filter->Evaluate(row);
 
       if (!value.GetBool())
         continue;

@@ -1,6 +1,6 @@
 #include "Page.h"
 #include "../Database.h"
-#include "./LargeObject/LargeDataPage.h"
+#include "./LargeObject/LargeObjectPage.h"
 #include "../../AdditionalLibraries/BitMap/BitMap.h"
 #include "../Block/Block.h"
 #include "../Storage/StorageManager/StorageManager.h"
@@ -264,21 +264,19 @@ namespace Pages
 
     const PageType &Page::GetPageType() const { return this->header.pageType; }
 
-    int Page::GetRows(vector<Row> *copiedRows, const Table &table, const size_t &rowsToSelect, const int32_t& startingPosition) const
+    int Page::GetRows(
+        std::vector<const Row*> *result,
+        const size_t &rowsToSelect,
+        const int32_t& startingPosition
+    ) const
     {
         if (startingPosition >= this->rows.size())
             return -1;
 
         for (int i = startingPosition; i < this->rows.size(); i++) {
-            const auto& row = this->rows[i];
+            result->push_back(this->rows.at(i));
 
-            RowHeader *rowHeader = row->GetHeader();
-
-            vector<Block *> copyBlocks = row->GetBlockCopies();
-
-            copiedRows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
-
-            if (copiedRows->size() == rowsToSelect)
+            if (result->size() == rowsToSelect)
                 return i;
         }
 
@@ -296,20 +294,7 @@ namespace Pages
         rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
     }
 
-    void Page::GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row> *rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition, const Expressions::Expression *expression) const{
-
-        const auto &row = this->rows[indexPosition];
-
-        const auto value = expression->Evaluate(row);
-        if (!value.GetBool())
-            return;
-
-        const RowHeader *rowHeader = row->GetHeader();
-
-        vector<Block *> copyBlocks = row->GetBlockCopies();
-
-        rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
-    }
+    const Row * Page::GetRow(const int &indexPosition)const { return this->rows.at(indexPosition); }
 
     vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsUnsafe() { return &this->rows; }
 }
