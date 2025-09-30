@@ -63,6 +63,7 @@ using namespace Server;
 //fix schema usage on tables
 //debug joins
 //SELECT * FROM dbo.Movies  AS M INNER JOIN dbo.Actors AS A ON M.ActorID = A.ID
+//materialize lobs only when needed and cache them in value objects.
 
 std::atomic<bool> serverRunning{true};
 
