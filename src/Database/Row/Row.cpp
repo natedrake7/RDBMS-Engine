@@ -184,14 +184,6 @@ namespace DatabaseEngine::StorageTypes {
         return diff;
     }
 
-    void Row::InsertJoinColumn(Block *block){
-        this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
-
-        this->data.push_back(block);
-
-        this->header.rowSize = this->GetTotalRowSize();
-    }
-
     void Row::UpdateColumnData(Block *block)
     {
         const column_index_t& columnIndex = block->GetColumnIndex();
@@ -629,9 +621,21 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Row::Join(const Row *row){
-        for (const auto& block : row->GetData())
-            this->InsertJoinColumn(new Block(block));
+    void Row::Join(const Row *row)const{
+        const auto& outerRowData = row->GetData();
+        const auto originalCacheSize = this->cache.size();
+
+        this->cache.resize(this->cache.size() + outerRowData.size());
+
+        for (int i = 0;i < outerRowData.size();i++) {
+            auto&[value, isMaterialized] = this->cache[originalCacheSize + i];
+
+            const auto* block = outerRowData[i];
+
+            value = Value(block->GetBlockData(), block->GetBlockSize(), block->GetColumnType());
+            isMaterialized = true;
+        }
+
     }
 
     std::ostream & operator<<(std::ostream &os, const Row &row){

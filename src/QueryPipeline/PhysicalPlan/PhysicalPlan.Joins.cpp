@@ -24,13 +24,10 @@ namespace QueryPipeline::PhysicalPlan {
     for (const auto* outerRow: leftResult->rows) {
       for (const auto* innerRow: rightResult->rows) {
 
-        const auto condResult = this->joinCondition->Evaluate(outerRow, innerRow);
-
-        if (!condResult.GetBool())
+        if (!this->joinCondition->Evaluate(outerRow, innerRow).GetBool())
           continue;
 
-        // outerRow->Join(innerRow);
-
+        outerRow->Join(innerRow);
         result->rows.push_back(std::move(outerRow));
       }
     }

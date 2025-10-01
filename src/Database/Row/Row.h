@@ -79,8 +79,6 @@ namespace DatabaseEngine::StorageTypes
         //primarily used by the join operation
         [[nodiscard]] int InsertNewColumn(Block* block);
 
-        void InsertJoinColumn(Block* block);
-
         void UpdateColumnData(Block *block);
 
         [[nodiscard]] const std::vector<Block *> &GetData() const;
@@ -129,7 +127,7 @@ namespace DatabaseEngine::StorageTypes
 
         void Deserialize(const std::vector<char>* buffer, uint32_t& pos);
 
-        void Join(const Row* row);
+        void Join(const Row* row) const;
 
         friend std::ostream& operator<<(std::ostream& os, const Row& row);
     };
