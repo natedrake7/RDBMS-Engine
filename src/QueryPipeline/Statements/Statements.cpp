@@ -233,9 +233,10 @@ namespace QueryPipeline::Statements {
 
     //start resolving aliases
     for (int i = 0; i < this->results.size(); i++)
-      if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, this->results[i], i))
+      if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, this->results[i], &i))
           return false;
 
+      int indexPos = 0;
     //validate all expressions are valid
     if (this->where.expression != nullptr) {
       if (!this->where.IsValid()) {
@@ -243,13 +244,14 @@ namespace QueryPipeline::Statements {
         return false;
       }
 
-      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression, 0))
+      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression, &indexPos))
         return false;
     }
 
     //validate join expressions
+
     for (const auto& join: this->joins)
-      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, join->expression, 0))
+      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, join->expression))
         return false;
 
     if (this->orderBy == nullptr)
@@ -795,7 +797,7 @@ namespace QueryPipeline::Statements {
       if (!ResolveColumnAlias(update->name, tableAliasesDictionary, this->tableColumnsDictionary))
         return false;
 
-      if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, update->value, i))
+      if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, update->value))
           return false;
 
       if (!this->ValidateReturnType(update))
@@ -809,6 +811,7 @@ namespace QueryPipeline::Statements {
         return false;
       }
 
+      int indexPos = 0;
       if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression))
         return false;
     }
@@ -1054,7 +1057,7 @@ bool UpdateStatement::Validate(){
       const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
       Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
       Statement *statement,
-      const int& indexPos){
+      int* indexPos){
 
         //if wildcard ensure statement is of select statement type
         if (column->alias == Constants::WILDCARD) {
@@ -1149,7 +1152,7 @@ bool UpdateStatement::Validate(){
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     Statement *statement,
     Expressions::Expression *expr,
-    const int& indexPos){
+    int* indexPos){
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
       return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos)
           && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos)
@@ -1308,23 +1311,53 @@ bool UpdateStatement::Validate(){
     const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     SelectStatement *statement,
-    const int& indexPos){
+    int* indexPos){
 
-    if (column->alias != "*")
+    if (column->alias != Constants::WILDCARD)
       return true;
 
+    if (indexPos == nullptr)
+      return false;
+
+    //if no alias is specified get all the columns from the existing tables in the query
+    if (column->tableAlias.empty()) {
+      statement->results.erase(statement->results.begin() + *indexPos);
+
+      int counter = 0; //insert after IndexPos, the position of the
+      for (const auto &[tableId, tableColumns] : statement->tableColumnsDictionary) {
+        for (const auto &header: tableColumns | views::values) {
+
+          auto* columnExpression = new Expressions::ColumnExpression(
+            header.name,
+            statement->table->GetAlias()
+          );
+
+          columnExpression->name = header.name;
+          columnExpression->columnId = header.id;
+          columnExpression->tableId = tableId;
+
+          statement->results.insert(statement->results.begin() + *indexPos + counter, columnExpression);
+          counter++;
+        }
+      }
+
+      *indexPos += counter;
+
+      delete column;
+      return true;
+    }
+
+    //else get only from the specified
     table_id_t tableId = 0;
     if (!column->tableAlias.empty()
       && !tableAliasesDictionary.TryGetValue(column->tableAlias, tableId)) {
       std::cerr << "Alias " << column->tableAlias << " does on exist on statement" << std::endl;
       return false;
-    }
+      }
 
-    if (column->tableAlias.empty())
-      tableId = statement->table->tableId;
 
     //remove the wildcard
-    statement->results.erase(statement->results.begin() + indexPos);
+    statement->results.erase(statement->results.begin() + *indexPos);
 
     int counter = 0; //insert after IndexPos, the position of the
     for (const auto &header: statement->tableColumnsDictionary.Get(tableId) | views::values) {
@@ -1337,7 +1370,7 @@ bool UpdateStatement::Validate(){
       columnExpression->columnId = header.id;
       columnExpression->tableId = statement->table->tableId;
 
-      statement->results.insert(statement->results.begin() + indexPos + counter, columnExpression);
+      statement->results.insert(statement->results.begin() + *indexPos + counter, columnExpression);
       counter++;
     }
 

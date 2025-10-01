@@ -41,71 +41,15 @@ namespace DatabaseEngine::StorageTypes {
 
         this->rowSize = otherHeader.rowSize;
         this->maxRowSize = otherHeader.maxRowSize;
-        this->nullBitMap = new BitMap(*otherHeader.nullBitMap);
-        // this->largeObjectBitMap = new BitMap(*otherHeader.largeObjectBitMap);
+        this->nullBitMap = new ByteMaps::BitMap(otherHeader.nullBitMap);
+        this->largeObjectBitMap = new ByteMaps::BitMap(otherHeader.largeObjectBitMap);
+        this->overflowBitMap = new ByteMaps::BitMap(otherHeader.overflowBitMap);
 
         return *this;
     }
 
     CachedValue::CachedValue(){
         this->isMaterialized = false;
-    }
-
-    Row::Row(const Table& table)
-    {
-        this->table = &table;
-
-        const auto numberOfColumns = this->table->GetNumberOfColumns();
-        
-        this->data.resize(numberOfColumns);
-
-        this->header.nullBitMap = new BitMap(numberOfColumns);
-        this->header.largeObjectBitMap = new BitMap(numberOfColumns);
-        this->header.overflowBitMap = new BitMap(numberOfColumns);
-    }
-
-    Row::Row(const Table& table, const vector<Block*>& data, const BitMap* nullBitMap)
-    {
-        this->table = &table;
-
-        this->header.nullBitMap = new BitMap(*nullBitMap);
-        
-        for (const auto& block : data)
-            this->data.push_back(new Block(block));
-        
-        this->UpdateRowSize();
-        this->header.maxRowSize = 0;
-    }
-
-    Row::Row(const Row &copyRow)
-    {
-        this->table = copyRow.table;
-        this->header = copyRow.header;
-
-        for (const auto& block : copyRow.data)
-            this->data.push_back(new Block(block));
-    }
-
-    Row & Row::operator=(const Row &copyRow)
-    {
-        if (this == &copyRow)
-            return *this;
-        
-        this->header = copyRow.header;
-        this->table = copyRow.table;
-
-        this->data.clear();
-
-        for (const auto& block : copyRow.data)
-            this->data.push_back(new Block(block));
-
-        return *this;
-    }
-
-    Row::~Row()
-    {
-        for(const auto& block : this->data)
-            delete block;
     }
 
     bool Row::IsBlockMaterialized(const int &indexPos)const {
@@ -152,6 +96,81 @@ namespace DatabaseEngine::StorageTypes {
         //base scenario
         value = Value(dataBlock->GetBlockData(), dataBlock->GetBlockSize(), dataBlock->GetColumnType());
         return value;
+    }
+
+    Row::Row(const Table& table)
+    {
+        this->table = &table;
+
+        const auto numberOfColumns = this->table->GetNumberOfColumns();
+
+        this->data.resize(numberOfColumns);
+
+        this->header.nullBitMap = new BitMap(numberOfColumns);
+        this->header.largeObjectBitMap = new BitMap(numberOfColumns);
+        this->header.overflowBitMap = new BitMap(numberOfColumns);
+
+        this->isCopy = false;
+    }
+
+    Row::Row(const Table& table, const vector<Block*>& data, const BitMap* nullBitMap)
+    {
+        this->table = &table;
+
+        this->header.nullBitMap = new BitMap(*nullBitMap);
+
+        for (const auto& block : data)
+            this->data.push_back(new Block(block));
+
+        this->UpdateRowSize();
+        this->header.maxRowSize = 0;
+        this->isCopy = false;
+    }
+
+    Row::Row(const Row &copyRow)
+    {
+        this->table = copyRow.table;
+        this->header = copyRow.header;
+
+        for (const auto& block : copyRow.data)
+            this->data.push_back(new Block(block));
+
+        this->isCopy = true;
+    }
+
+    Row::Row(const Row *row){
+        this->table = row->table;
+        this->header = row->header;
+        // this->cache = row->cache;
+
+        for (const auto& block : row->data)
+            this->data.push_back(new Block(block));
+
+        this->isCopy = true;
+    }
+
+    Row & Row::operator=(const Row &copyRow)
+    {
+        if (this == &copyRow)
+            return *this;
+
+        this->header = copyRow.header;
+        this->table = copyRow.table;
+
+        this->data.clear();
+
+        for (const auto& block : copyRow.data)
+            this->data.push_back(new Block(block));
+
+        this->isCopy = true;
+
+        return *this;
+    }
+
+    Row::~Row()
+    {
+        for(const auto& block : this->data)
+            delete block;
     }
 
     void Row::InsertColumnData(Block *block, const  column_index_t& columnIndex)
@@ -621,22 +640,32 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Row::Join(const Row *row)const{
-        const auto& outerRowData = row->GetData();
+    Row* Row::Join(const Row *row)const{
+        auto* joinedRow = new Row(this);
+
+        for (const auto* block : row->GetData())
+            joinedRow->InsertNewColumn(new Block(block));
+
+        return joinedRow;
+    }
+
+    void Row::LeftJoin(const Row *row) const{
+        const auto& innerRowData = row->GetData();
         const auto originalCacheSize = this->cache.size();
 
-        this->cache.resize(this->cache.size() + outerRowData.size());
+        this->cache.resize(this->cache.size() + innerRowData.size());
 
-        for (int i = 0;i < outerRowData.size();i++) {
+        for (int i = 0;i < innerRowData.size();i++) {
             auto&[value, isMaterialized] = this->cache[originalCacheSize + i];
 
-            const auto* block = outerRowData[i];
+            const auto* block = innerRowData[i];
 
-            value = Value(block->GetBlockData(), block->GetBlockSize(), block->GetColumnType());
+            value = Value(nullptr, 0, block->GetColumnType());
             isMaterialized = true;
         }
-
     }
+
+    const bool & Row::IsCopy() const{ return this->isCopy; }
 
     std::ostream & operator<<(std::ostream &os, const Row &row){
 

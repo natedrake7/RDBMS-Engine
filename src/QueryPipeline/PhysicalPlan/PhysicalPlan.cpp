@@ -7,7 +7,13 @@
 #include "../../Database/Block/Block.h"
 
 namespace QueryPipeline::PhysicalPlan {
-  PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
+PhysicalPlanResult::~PhysicalPlanResult(){
+  for (const auto* row: this->rows)
+    if (row->IsCopy())
+      delete row;
+}
+
+PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
 
   PhysicalPlanResult* PhysicalCreateDatabase::Execute(const int& batchSize){
     const auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");

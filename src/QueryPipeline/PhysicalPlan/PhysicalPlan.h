@@ -24,6 +24,8 @@ namespace QueryPipeline::PhysicalPlan{
 
       std::string message;
       AdditionalDataTypes::ResultCode code;
+
+      ~PhysicalPlanResult();
   };
 
   struct TableScanState {
@@ -292,19 +294,48 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
-  class PhysicalNestedLoopJoin final : public PhysicalOperator {
+  class PhysicalNestedLoopInnerJoin final : public PhysicalOperator {
     PhysicalOperator* left;
     PhysicalOperator* right;
     Expressions::Expression* joinCondition;
 
     public:
-      PhysicalNestedLoopJoin(
+      PhysicalNestedLoopInnerJoin(
         PhysicalOperator* left,
         PhysicalOperator* right,
         Expressions::Expression* joinCondition
       );
-      ~PhysicalNestedLoopJoin()override;
+      ~PhysicalNestedLoopInnerJoin()override;
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
+  class PhysicalNestedLoopLeftJoin final : public PhysicalOperator {
+    PhysicalOperator* left;
+    PhysicalOperator* right;
+    Expressions::Expression* joinCondition;
+
+  public:
+    PhysicalNestedLoopLeftJoin(
+      PhysicalOperator* left,
+      PhysicalOperator* right,
+      Expressions::Expression* joinCondition
+    );
+    ~PhysicalNestedLoopLeftJoin()override;
+    PhysicalPlanResult* Execute(const int& batchSize) override;
+  };
+
+  class PhysicalNestedLoopFullJoin final : public PhysicalOperator {
+    PhysicalOperator* left;
+    PhysicalOperator* right;
+    Expressions::Expression* joinCondition;
+
+  public:
+    PhysicalNestedLoopFullJoin(
+      PhysicalOperator* left,
+      PhysicalOperator* right,
+      Expressions::Expression* joinCondition
+    );
+    ~PhysicalNestedLoopFullJoin()override;
+    PhysicalPlanResult* Execute(const int& batchSize) override;
+  };
 }

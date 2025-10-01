@@ -55,6 +55,8 @@ namespace DatabaseEngine::StorageTypes
         mutable std::vector<CachedValue> cache;
         const Table *table;
 
+        bool isCopy;
+
         [[nodiscard]] bool IsBlockMaterialized(const int& indexPos)const;
         [[nodiscard]] const Value& GetMaterializedValue(const int& indexPos)const;
         [[nodiscard]] const Value& Materialize(const int& indexPos)const;
@@ -69,6 +71,8 @@ namespace DatabaseEngine::StorageTypes
         );
 
         Row(const Row &copyRow);
+
+        explicit Row(const Row* row);
 
         Row& operator=(const Row &copyRow);
 
@@ -127,7 +131,11 @@ namespace DatabaseEngine::StorageTypes
 
         void Deserialize(const std::vector<char>* buffer, uint32_t& pos);
 
-        void Join(const Row* row) const;
+        [[nodiscard]] Row* Join(const Row* row) const;
+
+        void LeftJoin(const Row* row) const;
+
+        [[nodiscard]] const bool& IsCopy()const;
 
         friend std::ostream& operator<<(std::ostream& os, const Row& row);
     };

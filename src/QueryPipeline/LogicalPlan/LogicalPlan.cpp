@@ -87,11 +87,35 @@ namespace QueryPipeline {
   }
 
   PhysicalPlan::PhysicalOperator * LogicalJoin::ToPhysical(){
-    return new PhysicalPlan::PhysicalNestedLoopJoin(
-      left->ToPhysical(),
-      right->ToPhysical(),
-      this->condition
-    );
+
+    switch (this->type) {
+      case JoinType::Inner:
+        return new PhysicalPlan::PhysicalNestedLoopInnerJoin(
+         left->ToPhysical(),
+         right->ToPhysical(),
+         this->condition
+       );
+      case JoinType::Left:
+        return new PhysicalPlan::PhysicalNestedLoopLeftJoin(
+          left->ToPhysical(),
+       right->ToPhysical(),
+        this->condition
+        );
+      case JoinType::Right:
+        return new PhysicalPlan::PhysicalNestedLoopLeftJoin(
+          right->ToPhysical(),
+        left->ToPhysical(),
+          this->condition
+        );
+      case JoinType::Full:
+        return new PhysicalPlan::PhysicalNestedLoopFullJoin(
+          right->ToPhysical(),
+          left->ToPhysical(),
+            this->condition
+          );
+      default:
+          throw std::runtime_error("Unknown JoinType");
+    }
   }
 
 LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter)

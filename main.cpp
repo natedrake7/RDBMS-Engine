@@ -67,6 +67,8 @@ using namespace Server;
 //on updates reset row cache
 //check decimals assignments on joins
 
+//SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
+
 std::atomic<bool> serverRunning{true};
 
 void shutdownServer(int signal) {

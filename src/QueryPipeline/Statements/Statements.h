@@ -287,7 +287,7 @@ namespace QueryPipeline::Statements {
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     Statement *statement,
-    const int& indexPos
+    int* indexPos = nullptr
     );
 
   static bool ResolvePostProjectionColumnAlias(
@@ -300,7 +300,7 @@ namespace QueryPipeline::Statements {
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     Statement *statement,
     Expressions::Expression *expr,
-    const int& indexPos = 0
+    int* indexPos = nullptr
   );
 
   static bool ValidateExpressionCoercionTypes(
@@ -322,7 +322,7 @@ namespace QueryPipeline::Statements {
     const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     SelectStatement *statement,
-    const int& indexPos
+    int* indexPos = nullptr
     );
 
   static void AssignColumnsToIndices(SelectStatement* statement, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);

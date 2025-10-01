@@ -18,6 +18,12 @@ namespace ByteMaps
         this->lastTrueIndex = bitMap.lastTrueIndex;
     }
 
+    BitMap::BitMap(const BitMap *bitMap){
+        this->size = bitMap->size;
+        this->data = bitMap->data;
+        this->lastTrueIndex = bitMap->lastTrueIndex;
+    }
+
     BitMap::BitMap(const Constants::bit_map_size_t &size, const Constants::byte &defaultValue) : size(size)
     {
         this->data.resize((size + 7) / 8, defaultValue);

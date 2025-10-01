@@ -20,6 +20,7 @@ namespace ByteMaps
     public:
         BitMap();
         BitMap(const BitMap &bitMap);
+        explicit BitMap(const BitMap *bitMap);
         explicit BitMap(const bit_map_size_t &size, const Constants::byte &defaultValue = 0);
         ~BitMap();
 
