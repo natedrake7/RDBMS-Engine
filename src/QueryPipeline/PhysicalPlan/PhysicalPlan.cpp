@@ -7,6 +7,11 @@
 #include "../../Database/Block/Block.h"
 
 namespace QueryPipeline::PhysicalPlan {
+
+PhysicalPlanResult::PhysicalPlanResult(){
+  this->code = AdditionalDataTypes::ResultCode::Ok;
+}
+
 PhysicalPlanResult::~PhysicalPlanResult(){
   for (const auto* row: this->rows)
     if (row->IsCopy())
@@ -55,7 +60,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
         QueryResult resultRow;
 
         for (const auto& expression : this->resultExpressions) {
-          result->columns.emplace_back(expression->name);
+          result->displayColumnNames.emplace_back(expression->name);
 
           auto field = expression->Evaluate(nullptr);
           resultRow.AddColumn(field);
@@ -69,7 +74,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
       auto* result = this->child->Execute(batchSize);
 
       for (const auto& expression : this->resultExpressions)
-        result->columns.emplace_back(expression->name);
+        result->displayColumnNames.emplace_back(expression->name);
 
       for (const auto* row: result->rows) {
           QueryResult resultRow;
@@ -130,6 +135,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
 
       auto* result = new PhysicalPlanResult();
 
+      result->columns = tablePtr->GetConstantColumns();
+
       tablePtr->HeapScan(&result->rows, this->state, batchSize);
 
       return result;
@@ -149,6 +156,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    result->columns = tablePtr->GetConstantColumns();
 
     if (this->isClustered) {
       tablePtr->ClusteredIndexScan(&result->rows, state, batchSize, this->expression);
@@ -172,6 +181,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
+    result->columns = tablePtr->GetConstantColumns();
     const Indexing::Key minKey(minValue);
     const Indexing::Key maxKey(maxValue);
 

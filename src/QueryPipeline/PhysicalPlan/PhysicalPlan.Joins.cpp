@@ -27,8 +27,7 @@ namespace QueryPipeline::PhysicalPlan {
         if (!this->joinCondition->Evaluate(outerRow, innerRow).GetBool())
           continue;
 
-        const auto* joinedRow = outerRow->Join(innerRow);
-        result->rows.push_back(joinedRow);
+        result->rows.push_back(outerRow->Join(innerRow));
       }
     }
 
@@ -71,9 +70,8 @@ namespace QueryPipeline::PhysicalPlan {
           hasMatched = true;
         }
 
-        // //TODO if no rows are returned?
-        // if (!hasMatched)
-        //   outerRow->LeftJoin(rightResult->rows.front());
+        if (!hasMatched)
+          result->rows.push_back(outerRow->LeftJoin(rightResult->columns));
       }
 
       delete leftResult;
@@ -99,17 +97,42 @@ namespace QueryPipeline::PhysicalPlan {
       const auto* leftResult = this->left->Execute(batchSize);
       const auto* rightResult = this->right->Execute(batchSize);
 
-      //create new row
-      for (const auto* outerRow: leftResult->rows) {
-        for (const auto* innerRow: rightResult->rows) {
+
+      std::vector<bool> leftMatched(leftResult->rows.size(), false);
+      std::vector<bool> rightMatched(rightResult->rows.size(), false);
+
+      for (int i = 0;i < leftResult->rows.size();i++) {
+        for (int j = 0;j < rightResult->rows.size();j++) {
+          const auto* outerRow = leftResult->rows[i];
+          const auto* innerRow = rightResult->rows[j];
 
           if (!this->joinCondition->Evaluate(outerRow, innerRow).GetBool())
             continue;
 
-          outerRow->Join(innerRow);
-          result->rows.push_back(std::move(outerRow));
+          result->rows.push_back(outerRow->Join(innerRow));
+          leftMatched[i] = true;
+          rightMatched[j] = true;
         }
       }
+
+      for (int i = 0;i < leftResult->rows.size();i++) {
+        if (leftMatched[i])
+          continue;
+
+        const auto* outerRow = leftResult->rows[i];
+
+        result->rows.push_back(outerRow->LeftJoin(rightResult->columns));
+      }
+
+      for (int i = 0;i < rightResult->rows.size(); i++) {
+        if (rightMatched[i])
+          continue;
+
+        const auto* innerRow = rightResult->rows[i];
+
+        result->rows.push_back(innerRow->RightJoin(rightResult->columns));
+      }
+
 
       delete leftResult;
       delete rightResult;

@@ -17,7 +17,10 @@ namespace DatabaseEngine::StorageTypes {
 namespace QueryPipeline::PhysicalPlan{
 
   struct PhysicalPlanResult {
-      std::vector<std::string> columns;
+      std::vector<std::string> displayColumnNames;
+
+      std::vector<const DatabaseEngine::StorageTypes::Column*> columns;
+
       std::vector<const DatabaseEngine::StorageTypes::Row*> rows;
 
       std::vector<QueryResult> results;
@@ -25,6 +28,7 @@ namespace QueryPipeline::PhysicalPlan{
       std::string message;
       AdditionalDataTypes::ResultCode code;
 
+      PhysicalPlanResult();
       ~PhysicalPlanResult();
   };
 

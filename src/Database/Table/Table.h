@@ -191,6 +191,8 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] const vector<Column *> &GetColumns() const;
 
+            [[nodiscard]] std::vector<const Column*> GetConstantColumns() const;
+
             [[nodiscard]] Pages::LargeObjectPage *GetLargeDataPage(const page_id_t &pageId) const;
 
             [[nodiscard]] Pages::OverflowPage *GetOverflowPage(const page_id_t &pageId) const;

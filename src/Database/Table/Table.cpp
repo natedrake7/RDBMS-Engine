@@ -438,6 +438,15 @@ namespace DatabaseEngine::StorageTypes {
 
       const vector<Column *> &Table::GetColumns() const { return this->columns; }
 
+      std::vector<const Column *> Table::GetConstantColumns() const {
+        std::vector<const Column*> constColumns;
+
+        for (const auto* column : this->columns)
+          constColumns.push_back(column);
+
+        return constColumns;
+      }
+
       bool Table::VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition)
       {
         for(int i = 0;i < vector.size(); i++)

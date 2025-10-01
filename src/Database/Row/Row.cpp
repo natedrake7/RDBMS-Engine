@@ -127,6 +127,22 @@ namespace DatabaseEngine::StorageTypes {
         this->isCopy = false;
     }
 
+    Row::Row(const std::vector<const Column *> &columns){
+        const auto& size = columns.size();
+
+        this->table = nullptr;
+        this->header.nullBitMap = new BitMap(size, true);
+        this->header.overflowBitMap = new BitMap(size, false);
+        this->header.largeObjectBitMap = new BitMap(size, false);
+
+        for (const auto* column: columns)
+            this->data.push_back(new Block(column));
+
+        this->UpdateRowSize();
+        this->header.maxRowSize = 0;
+        this->isCopy = true;
+    }
+
     Row::Row(const Row &copyRow)
     {
         this->table = copyRow.table;
@@ -193,6 +209,22 @@ namespace DatabaseEngine::StorageTypes {
         this->header.overflowBitMap->Set(this->data.size(), false);
 
         this->data.push_back(block);
+
+        const auto newSize = this->GetTotalRowSize();
+
+        const auto diff = static_cast<int>(newSize) - static_cast<int>(this->header.rowSize);
+
+        this->header.rowSize = newSize;
+
+        return diff;
+    }
+
+    int Row::InsertNewColumnAtBeginning(Block *block){
+        this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
+        this->header.largeObjectBitMap->Set(this->data.size(), false);
+        this->header.overflowBitMap->Set(this->data.size(), false);
+
+        this->data.insert(this->data.begin(), block);
 
         const auto newSize = this->GetTotalRowSize();
 
@@ -649,20 +681,23 @@ namespace DatabaseEngine::StorageTypes {
         return joinedRow;
     }
 
-    void Row::LeftJoin(const Row *row) const{
-        const auto& innerRowData = row->GetData();
-        const auto originalCacheSize = this->cache.size();
+    Row* Row::LeftJoin(const std::vector<const Column*>& innerTableColumns) const{
+        auto* joinedRow = new Row(this);
 
-        this->cache.resize(this->cache.size() + innerRowData.size());
+        for (const auto& column : innerTableColumns)
+            joinedRow->InsertNewColumn(new Block(column));
 
-        for (int i = 0;i < innerRowData.size();i++) {
-            auto&[value, isMaterialized] = this->cache[originalCacheSize + i];
+        return joinedRow;
 
-            const auto* block = innerRowData[i];
+    }
 
-            value = Value(nullptr, 0, block->GetColumnType());
-            isMaterialized = true;
-        }
+    Row * Row::RightJoin(const std::vector<const Column *> &innerTableColumns) const{
+        auto* joinedRow = new Row(innerTableColumns);
+
+        for (const auto& block : this->data)
+            joinedRow->InsertNewColumn(new Block(block));
+
+        return joinedRow;
     }
 
     const bool & Row::IsCopy() const{ return this->isCopy; }

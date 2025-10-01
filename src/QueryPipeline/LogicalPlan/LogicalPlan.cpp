@@ -87,7 +87,6 @@ namespace QueryPipeline {
   }
 
   PhysicalPlan::PhysicalOperator * LogicalJoin::ToPhysical(){
-
     switch (this->type) {
       case JoinType::Inner:
         return new PhysicalPlan::PhysicalNestedLoopInnerJoin(
@@ -104,13 +103,13 @@ namespace QueryPipeline {
       case JoinType::Right:
         return new PhysicalPlan::PhysicalNestedLoopLeftJoin(
           right->ToPhysical(),
-        left->ToPhysical(),
+          left->ToPhysical(),
           this->condition
         );
       case JoinType::Full:
         return new PhysicalPlan::PhysicalNestedLoopFullJoin(
-          right->ToPhysical(),
           left->ToPhysical(),
+          right->ToPhysical(),
             this->condition
           );
       default:

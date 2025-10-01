@@ -57,9 +57,7 @@ namespace QueryPipeline::Statements {
   }
 
   QueryPipeline::LogicalPlan * JoinStatement::ToLogical(){
-
     return new LogicalTableScan(this->table, nullptr);
-      return nullptr;
     // return new LogicalJoin(
     //     this->databaseId,
     //     // new LogicalTableScan(),
@@ -435,8 +433,10 @@ namespace QueryPipeline::Statements {
       std::vector<table_id_t> joinOrder;
 
       joinOrder.reserve(this->joins.size() + 1);
-      joinOrder.push_back(this->table->tableId);
 
+
+      //needs to re adjust pointers for right join -> left join change.
+      joinOrder.push_back(this->table->tableId);
       for (const auto* join : this->joins)
          joinOrder.push_back(join->table->tableId);
 
@@ -463,7 +463,7 @@ namespace QueryPipeline::Statements {
     //here create logical joins with the expressions
     //re order here
     for (const auto& join : this->joins) {
-      current = new LogicalJoin(current, join->ToLogical(), join->expression, JoinType::Inner);
+      current = new LogicalJoin(current, join->ToLogical(), join->expression, join->type);
     }
 
     if (this->where.expression != nullptr)

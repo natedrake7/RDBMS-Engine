@@ -70,6 +70,8 @@ namespace DatabaseEngine::StorageTypes
             const ByteMaps::BitMap* nullBitMap
         );
 
+        Row(const std::vector<const Column*>& columns);
+
         Row(const Row &copyRow);
 
         explicit Row(const Row* row);
@@ -82,6 +84,8 @@ namespace DatabaseEngine::StorageTypes
 
         //primarily used by the join operation
         [[nodiscard]] int InsertNewColumn(Block* block);
+
+        [[nodiscard]] int InsertNewColumnAtBeginning(Block* block);
 
         void UpdateColumnData(Block *block);
 
@@ -133,7 +137,9 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] Row* Join(const Row* row) const;
 
-        void LeftJoin(const Row* row) const;
+        [[nodiscard]] Row* LeftJoin(const std::vector<const Column*>& innerTableColumns) const;
+
+        [[nodiscard]] Row* RightJoin(const std::vector<const Column*>& innerTableColumns) const;
 
         [[nodiscard]] const bool& IsCopy()const;
 
