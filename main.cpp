@@ -65,6 +65,7 @@ using namespace Server;
 //SELECT * FROM dbo.Movies  AS M INNER JOIN dbo.Actors AS A ON M.ActorID = A.ID
 //materialize lobs only when needed and cache them in value objects.
 //on updates reset row cache
+//check decimals assignments on joins
 
 std::atomic<bool> serverRunning{true};
 

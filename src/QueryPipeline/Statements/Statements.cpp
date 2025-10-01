@@ -429,18 +429,29 @@ namespace QueryPipeline::Statements {
 
     //join re orders take place here
     if (this->table != nullptr) {
+
+      std::vector<table_id_t> joinOrder;
+
+      joinOrder.reserve(this->joins.size() + 1);
+      joinOrder.push_back(this->table->tableId);
+
+      for (const auto* join : this->joins)
+         joinOrder.push_back(join->table->tableId);
+
       Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
       Constants::column_index_t columnIndex = 0;
 
-      for (const auto &columnsDict : this->tableColumnsDictionary | views::values) {
-        for (const auto &column: columnsDict | views::values) {
-            if (columnIndicesDictionary.Contains(column.id))
-              continue;
+      for (const auto& tableId: joinOrder) {
+        const auto& columns = Server::ServerInstance::Get().SelectColumns(tableId);
 
-            columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
+        for (const auto &column : columns) {
+          if (columnIndicesDictionary.Contains(column.id))
+            continue;
+
+          columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
         }
 
-        columnIndex += columnsDict.size();
+        columnIndex += columns.size();
       }
 
       AssignColumnsToIndices(this, columnIndicesDictionary);
@@ -453,24 +464,27 @@ namespace QueryPipeline::Statements {
       current = new LogicalJoin(current, join->ToLogical(), join->expression, JoinType::Inner);
     }
 
-    Dictionary<std::string, Constants::column_index_t> postProjectionIndicesDictionary;
+    if (this->where.expression != nullptr)
+      current = new LogicalFilter(current, this->where.expression);
 
-    for (int i = 0;i < this->results.size(); i++) {
-      const auto& resultExpr = this->results[i];
-
-      if (resultExpr->name.empty())
-        continue;
-
-      postProjectionIndicesDictionary.Add(resultExpr->name, i);
-    }
 
     if (!this->results.empty())
       current = new LogicalProject(current, this->results, this->columnHeaders);
 
     if(this->orderBy != nullptr) {
-      for (const auto& column : this->orderBy->columns) {
-        AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
+      Dictionary<std::string, Constants::column_index_t> postProjectionIndicesDictionary;
+
+      for (int i = 0;i < this->results.size(); i++) {
+        const auto& resultExpr = this->results[i];
+
+        if (resultExpr->name.empty())
+          continue;
+
+        postProjectionIndicesDictionary.Add(resultExpr->name, i);
       }
+
+      for (const auto& column : this->orderBy->columns)
+        AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
 
       current = new LogicalOrder(current, this->orderBy->columns);
     }
@@ -1056,6 +1070,8 @@ bool UpdateStatement::Validate(){
               );
         }
 
+        Headers::ColumnHeader columnHeader;
+
         if (!column->tableAlias.empty()) {
           table_id_t tableId;
 
@@ -1065,21 +1081,42 @@ bool UpdateStatement::Validate(){
           }
 
           column->tableId = tableId;
-        }
 
-        // bool columnExistsOnTable = false;
-        Headers::ColumnHeader columnHeader;
-        for (const auto& [key, columns]: tablesColumnsDictionary) {
-          if (!columns.TryGetValue(column->alias, columnHeader))
-            continue;
+          // bool columnExistsOnTable = false;
 
-          column->tableId = key;
+          const auto& columns = tablesColumnsDictionary.Get(column->tableId);
+
+          if (!columns.TryGetValue(column->alias, columnHeader)) {
+            std::cerr << "column: " << column->alias << " does not exist in the statement" << endl;
+            return false;
+          }
+
           column->columnId = columnHeader.id;
           column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
           column->index = columnHeader.ordinalPosition;
+      }
+      else {
+        bool columnExistsOnStatement = false;
 
-          break;
+        for (const auto &columns : tablesColumnsDictionary | views::values) {
+          if (!columns.TryGetValue(column->alias, columnHeader)) {
+            continue;
+          }
+
+          if (columnExistsOnStatement) {
+            std::cerr << column->alias << " is ambigious" << std::endl;
+            return false;
+          }
+
+          columnExistsOnStatement = true;
+
+          column->columnId = columnHeader.id;
+          column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
+          column->index = columnHeader.ordinalPosition;
         }
+      }
+
+
 
       // if (!columnExistsOnTable) {
       //   std::cerr << "Column: " << column->alias << " does not exist on Table" << std::endl;
@@ -1316,11 +1353,8 @@ bool UpdateStatement::Validate(){
     if (statement->where.expression != nullptr)
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, statement->where.expression);
 
-    for (const auto* join : statement->joins) {
+    for (const auto* join : statement->joins)
       AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, join->expression);
-    }
-
-    //group by here later
   }
 
   void AssignColumnIndicesToResultExpression(

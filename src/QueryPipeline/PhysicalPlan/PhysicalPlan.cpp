@@ -101,16 +101,16 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
       || dynamic_cast<PhysicalIndexSeek*>(child) != nullptr)
       return result;
 
+    std::vector<const DatabaseEngine::StorageTypes::Row*> filteredRows;
     for (const auto* row : result->rows) {
 
-      const auto value = this->filter->Evaluate(row);
-
-      if (!value.GetBool())
+      if (!this->filter->Evaluate(row).GetBool())
         continue;
 
-      result->rows.emplace_back(row);
+      filteredRows.push_back(row);
     }
 
+    result->rows = std::move(filteredRows);
     return result;
   }
 

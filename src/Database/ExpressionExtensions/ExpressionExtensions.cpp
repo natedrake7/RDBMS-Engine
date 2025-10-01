@@ -51,15 +51,14 @@ namespace Expressions {
   }
 
   Value ColumnExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const{
-
     const auto& outerRowData = outerRow->GetData();
-    const auto& innerRowData = innerRow->GetData();
 
+    //figure out index assignment
     const auto& data = this->index < outerRowData.size()
-        ? outerRowData.at(this->index)
-        : innerRowData.at(this->index - outerRowData.size());
+        ? outerRow->GetColumnByIndex(this->index)
+        : innerRow->GetColumnByIndex(this->index - outerRowData.size());
 
-    return Value(data->GetBlockData(), data->GetBlockSize(), data->GetColumnType());
+    return data;
   }
 
   Value LiteralExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const{
