@@ -43,9 +43,7 @@ namespace Expressions {
   };
 
   Value ColumnExpression::Evaluate(const DatabaseEngine::StorageTypes::Row *row) const{
-    const auto& data = row->GetData().at(this->index);
-
-    return Value(data->GetBlockData(), data->GetBlockSize(), data->GetColumnType());
+    return row->GetColumnByIndex(this->index);
   }
 
   Value ColumnExpression::Evaluate(const QueryResult &row) const{

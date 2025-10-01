@@ -40,16 +40,33 @@ namespace DatabaseEngine::StorageTypes
         RowHeader& operator= (const RowHeader& otherHeader);
     } RowHeader;
 
+    struct CachedValue {
+        Value value;
+        bool isMaterialized;
+
+        CachedValue();
+    };
+
     class Row
     {
         RowHeader header;
-        vector<Block *> data;
+        std::vector<Block *> data;
+
+        mutable std::vector<CachedValue> cache;
         const Table *table;
+
+        [[nodiscard]] bool IsBlockMaterialized(const int& indexPos)const;
+        [[nodiscard]] const Value& GetMaterializedValue(const int& indexPos)const;
+        [[nodiscard]] const Value& Materialize(const int& indexPos)const;
 
     public:
         explicit Row(const Table &table);
 
-        explicit Row(const Table &table, const vector<Block *> &data, const ByteMaps::BitMap* nullBitMap);
+        explicit Row(
+            const Table &table,
+            const vector<Block *> &data,
+            const ByteMaps::BitMap* nullBitMap
+        );
 
         Row(const Row &copyRow);
 
@@ -66,15 +83,15 @@ namespace DatabaseEngine::StorageTypes
 
         void UpdateColumnData(Block *block);
 
-        [[nodiscard]] const vector<Block *> &GetData() const;
+        [[nodiscard]] const std::vector<Block *> &GetData() const;
 
-        [[nodiscard]] vector<Block *> &GetData();
+        [[nodiscard]] std::vector<Block *> &GetData();
 
         void PrintRow() const;
 
         [[nodiscard]] const uint32_t &GetRowSize() const;
 
-        [[nodiscard]] vector<column_index_t> GetLargeBlocks()const;
+        [[nodiscard]] std::vector<column_index_t> GetLargeBlocks()const;
 
         void UpdateRowSize();
 
@@ -98,15 +115,15 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
 
-        [[nodiscard]] AdditionalDataTypes::ResultStatus Update(const vector<Value> & updates, int& diff);
+        [[nodiscard]] AdditionalDataTypes::ResultStatus Update(const std::vector<Value> & updates, int& diff);
 
         [[nodiscard]] AdditionalDataTypes::ResultStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff);
 
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
 
-        [[nodiscard]] vector<Block*> GetBlockCopies() const;
+        [[nodiscard]] std::vector<Block*> GetBlockCopies() const;
 
-        [[nodiscard]] Value GetColumnByIndex(const int& indexPos) const;
+        [[nodiscard]] const Value& GetColumnByIndex(const int& indexPos) const;
 
         void Serialize(std::vector<char>* buffer, uint32_t& pos)const;
 

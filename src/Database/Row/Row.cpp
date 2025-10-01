@@ -47,6 +47,10 @@ namespace DatabaseEngine::StorageTypes {
         return *this;
     }
 
+    CachedValue::CachedValue(){
+        this->isMaterialized = false;
+    }
+
     Row::Row(const Table& table)
     {
         this->table = &table;
@@ -102,6 +106,52 @@ namespace DatabaseEngine::StorageTypes {
     {
         for(const auto& block : this->data)
             delete block;
+    }
+
+    bool Row::IsBlockMaterialized(const int &indexPos)const {
+        return this->cache.size() > indexPos && this->cache.at(indexPos).isMaterialized;
+    }
+
+    const Value & Row::GetMaterializedValue(const int &indexPos) const{ return this->cache.at(indexPos).value; }
+
+    const Value & Row::Materialize(const int &indexPos) const{
+        if (this->cache.empty())
+            this->cache.resize(this->data.size());
+
+        //only for joins
+        if (this->cache.size() <= indexPos)
+            this->cache.resize(indexPos + 1);
+
+        const auto* dataBlock = this->data.at(indexPos);
+
+        auto&[value, isMaterialized] = this->cache.at(indexPos);
+
+        isMaterialized = true;
+
+        if (this->header.largeObjectBitMap->Get(indexPos)) {
+            const auto ptr = dataBlock->GetLargeObjectPointer();
+
+            uint32_t objectSize;
+
+            const auto* rawObject = this->GetLargeObjectValue(ptr, &objectSize);
+
+            value = Value(rawObject, objectSize, dataBlock->GetColumnType());
+
+            return value;
+        }
+
+        if (this->header.overflowBitMap->Get(indexPos)) {
+            const auto ptr = this->data.at(indexPos)->GetOverflowPointer();
+            const auto* overflowRow = this->GetOverflowValue(ptr);
+
+            value = Value(overflowRow->object, overflowRow->objectSize, dataBlock->GetColumnType());
+
+            return value;
+        }
+
+        //base scenario
+        value = Value(dataBlock->GetBlockData(), dataBlock->GetBlockSize(), dataBlock->GetColumnType());
+        return value;
     }
 
     void Row::InsertColumnData(Block *block, const  column_index_t& columnIndex)
@@ -500,32 +550,10 @@ namespace DatabaseEngine::StorageTypes {
     return copyBlocks;
   }
 
-    Value Row::GetColumnByIndex(const int &indexPos) const{
-        const auto* dataBlock = this->data.at(indexPos);
-
-        if (this->header.largeObjectBitMap->Get(indexPos)) {
-
-            const auto ptr = dataBlock->GetLargeObjectPointer();
-
-            uint32_t objectSize;
-
-            const auto* rawObject = this->GetLargeObjectValue(ptr, &objectSize);
-
-            return Value(rawObject, objectSize, dataBlock->GetColumnType());
-        }
-
-        if (this->header.overflowBitMap->Get(indexPos)) {
-            const auto ptr = this->data.at(indexPos)->GetOverflowPointer();
-
-            const auto* overflowRow = this->GetOverflowValue(ptr);
-
-            auto* block = new Block(dataBlock->GetColumn());
-            block->SetData(overflowRow->object, overflowRow->objectSize);
-
-            return block;
-        }
-
-        return dataBlock;
+    const Value& Row::GetColumnByIndex(const int &indexPos) const{
+        return (this->IsBlockMaterialized(indexPos))
+                ? this->GetMaterializedValue(indexPos)
+                : this->Materialize(indexPos);
     }
 
     void Row::Serialize(std::vector<char>* buffer, uint32_t& pos)const{
