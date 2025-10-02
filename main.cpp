@@ -66,6 +66,7 @@ using namespace Server;
 //materialize lobs only when needed and cache them in value objects.
 //on updates reset row cache
 //check decimals assignments on joins
+//add buffer pool optimization to allocate rows lazily based on if they are needed, else just store raw bytes from memory with basic metadata
 
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 

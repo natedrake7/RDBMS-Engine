@@ -55,6 +55,7 @@ namespace Expressions{
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
       [[nodiscard]] DataType GetReturnType() const override;
       [[nodiscard]] size_t GetSize() const override;
+      [[nodiscard]] bool HasTableAlias() const;
   };
 
   class LiteralExpression final : public Expression {

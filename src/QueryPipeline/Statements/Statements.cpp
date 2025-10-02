@@ -56,6 +56,10 @@ namespace QueryPipeline::Statements {
     return this->table != nullptr && this->table->Validate(this->databaseId);
   }
 
+  bool JoinStatement::IsRightJoin() const {
+    return this->type == JoinType::Right;
+  }
+
   QueryPipeline::LogicalPlan * JoinStatement::ToLogical(){
     return new LogicalTableScan(this->table, nullptr);
     // return new LogicalJoin(
@@ -434,16 +438,16 @@ namespace QueryPipeline::Statements {
 
       joinOrder.reserve(this->joins.size() + 1);
 
-
       //needs to re adjust pointers for right join -> left join change.
       joinOrder.push_back(this->table->tableId);
       for (const auto* join : this->joins)
-         joinOrder.push_back(join->table->tableId);
+          joinOrder.push_back(join->table->tableId);
 
       Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
       Constants::column_index_t columnIndex = 0;
 
       for (const auto& tableId: joinOrder) {
+        //TODO cache them at the beginning
         const auto& columns = Server::ServerInstance::Get().SelectColumns(tableId);
 
         for (const auto &column : columns) {
@@ -1058,78 +1062,84 @@ bool UpdateStatement::Validate(){
       Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
       Statement *statement,
       int* indexPos){
-
         //if wildcard ensure statement is of select statement type
         if (column->alias == Constants::WILDCARD) {
           auto* selectStatement = dynamic_cast<SelectStatement*>(statement);
-
-          return selectStatement == nullptr
-              ? false
-              : ResolveWildCardAlias(
-                  column,
-                  tableAliasesDictionary,
-                  selectStatement,
-                  indexPos
-              );
+          return selectStatement != nullptr
+              ? ResolveWildCardAlias(column, tableAliasesDictionary,selectStatement, indexPos )
+              : false;
         }
 
-        Headers::ColumnHeader columnHeader;
+       return column->HasTableAlias()
+            ? ResolveColumnAliasWhenTableAliasExists(column, tableAliasesDictionary, tablesColumnsDictionary)
+            : ResolveColumnAliasWhenTableAliasDoesNotExist(column, tableAliasesDictionary, tablesColumnsDictionary);
+  }
 
-        if (!column->tableAlias.empty()) {
-          table_id_t tableId;
+  bool ResolveColumnAliasWhenTableAliasExists(
+    Expressions::ColumnExpression *column,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary
+  ){
 
-          if (!tableAliasesDictionary.TryGetValue(column->tableAlias, tableId)) {
-            cerr << "Alias: " << column->tableAlias << " does not exist in the statement" << endl;
-            return false;
-          }
+    table_id_t tableId;
+    Headers::ColumnHeader columnHeader;
+    if (!tableAliasesDictionary.TryGetValue(column->tableAlias, tableId)) {
+      cerr << "Alias: " << column->tableAlias << " does not exist in the statement" << endl;
+      return false;
+    }
 
-          column->tableId = tableId;
+    column->tableId = tableId;
 
-          // bool columnExistsOnTable = false;
+    const auto& columns = tablesColumnsDictionary.Get(column->tableId);
 
-          const auto& columns = tablesColumnsDictionary.Get(column->tableId);
+    if (!columns.TryGetValue(column->alias, columnHeader)) {
+      std::cerr << "column: " << column->alias << " does not exist in the statement" << endl;
+      return false;
+    }
 
-          if (!columns.TryGetValue(column->alias, columnHeader)) {
-            std::cerr << "column: " << column->alias << " does not exist in the statement" << endl;
-            return false;
-          }
+    column->columnId = columnHeader.id;
+    column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
+    column->index = columnHeader.ordinalPosition;
 
-          column->columnId = columnHeader.id;
-          column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
-          column->index = columnHeader.ordinalPosition;
+    if (column->name.empty())
+      column->name = columnHeader.name;
+
+    return true;
+  }
+
+  bool ResolveColumnAliasWhenTableAliasDoesNotExist(
+    Expressions::ColumnExpression *column,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary
+  ){
+    Headers::ColumnHeader columnHeader;
+    bool columnExistsOnStatement = false;
+
+    for (const auto &columns : tablesColumnsDictionary | views::values) {
+      if (!columns.TryGetValue(column->alias, columnHeader))
+        continue;
+
+      if (columnExistsOnStatement) {
+        std::cerr << column->alias << " is ambigious" << std::endl;
+        return false;
       }
-      else {
-        bool columnExistsOnStatement = false;
 
-        for (const auto &columns : tablesColumnsDictionary | views::values) {
-          if (!columns.TryGetValue(column->alias, columnHeader)) {
-            continue;
-          }
+      columnExistsOnStatement = true;
 
-          if (columnExistsOnStatement) {
-            std::cerr << column->alias << " is ambigious" << std::endl;
-            return false;
-          }
+      column->columnId = columnHeader.id;
+      column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
+      column->index = columnHeader.ordinalPosition;
+    }
 
-          columnExistsOnStatement = true;
+    if (!columnExistsOnStatement) {
+      std::cerr << "Column: " << column->alias << " does not exist in the statement" << std::endl;
+      return false;
+    }
 
-          column->columnId = columnHeader.id;
-          column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
-          column->index = columnHeader.ordinalPosition;
-        }
-      }
+    if (column->name.empty())
+      column->name = columnHeader.name;
 
-
-
-      // if (!columnExistsOnTable) {
-      //   std::cerr << "Column: " << column->alias << " does not exist on Table" << std::endl;
-      //   return false;
-      // }
-
-      if (column->name.empty())
-        column->name = columnHeader.name;
-
-      return true;
+    return true;
   }
 
   bool ResolvePostProjectionColumnAlias(

@@ -950,8 +950,12 @@ namespace Server {
           .name = data[2]->GetString(),
           .dataType = static_cast<uint8_t>(data[3]->GetTinyInt()),
           .recordSize = data[4]->GetSmallInt(),
-          .precision = data[5]->GetBlockData() == nullptr ? Constants::INVALID_DECIMAL_PRECISION : data[5]->GetTinyInt(),
-          .scale = data[6]->GetBlockData() == nullptr ? Constants::INVALID_DECIMAL_SCALE : data[6]->GetTinyInt(),
+          .precision = data[5]->GetBlockData() == nullptr
+              ? Constants::INVALID_DECIMAL_PRECISION
+              : data[5]->GetTinyInt(),
+          .scale = data[6]->GetBlockData() == nullptr
+              ? Constants::INVALID_DECIMAL_SCALE
+              : data[6]->GetTinyInt(),
           .isNullable = data[7]->GetBool(),
           .ordinalPosition = data[8]->GetSmallInt(),
           .isSystem = data[9]->GetBool(),

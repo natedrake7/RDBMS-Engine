@@ -29,6 +29,8 @@ namespace Expressions{
 
   size_t ColumnExpression::GetSize() const{ return this->size; }
 
+  bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.empty();}
+
   LiteralExpression::LiteralExpression(const Value &value){
     this->value = value;
   }

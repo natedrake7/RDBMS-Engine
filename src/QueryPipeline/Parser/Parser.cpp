@@ -117,7 +117,7 @@ namespace QueryPipeline
             //     std::cout << std::endl;
             // }
 
-            for (const auto& column : result->columns)
+            for (const auto& column : result->displayColumnNames)
                 std::cout << column << " || ";
 
             std::cout << std::endl;

@@ -153,8 +153,10 @@ namespace QueryPipeline::Statements {
 
     JoinStatement();
     ~JoinStatement()override;
-    bool Validate() override;
-    bool Validate(const int32_t& databaseId);
+    [[nodiscard]]bool Validate() override;
+    [[nodiscard]]bool Validate(const int32_t& databaseId);
+
+    [[nodiscard]]bool IsRightJoin()const;
 
     QueryPipeline::LogicalPlan* ToLogical()override;
   };
@@ -288,7 +290,19 @@ namespace QueryPipeline::Statements {
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     Statement *statement,
     int* indexPos = nullptr
-    );
+  );
+
+  static bool ResolveColumnAliasWhenTableAliasExists(
+    Expressions::ColumnExpression* column,
+    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary
+  );
+
+  static bool ResolveColumnAliasWhenTableAliasDoesNotExist(
+    Expressions::ColumnExpression* column,
+    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary
+  );
 
   static bool ResolvePostProjectionColumnAlias(
     Expressions::ColumnExpression* column,
