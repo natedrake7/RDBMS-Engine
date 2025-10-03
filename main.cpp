@@ -147,8 +147,6 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const auto& databases = server.GetCatalog();
-
     constexpr int32_t databaseId = 2;
 
     std::cout << "Please enter a query: "<< endl;
@@ -173,6 +171,8 @@ int main()
     }
 
     //CREATE TABLE dbo.NewActors(ActorID INT PRIMARY KEY, ActorName STRING(200), MovieID INT)
+
+    const auto& databases = server.GetCatalog();
 
     server.Shutdown();
 

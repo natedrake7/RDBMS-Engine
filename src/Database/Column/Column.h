@@ -34,13 +34,12 @@ namespace DatabaseEngine::StorageTypes
     class Column
     {
         ColumnHeader header;
+        Headers::ColumnStatistics statistics;
+
         std::string name;
         const Table *table;
         bool allowNulls;
         bool isOverflowed;
-
-    protected:
-        [[nodiscard]] DataType SetColumnType() const;
 
     public:
         Column(const std::string& columnName, const DataType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls);
@@ -79,7 +78,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] Headers::IdentityColumnsHeader&  GetIdentity();
 
-        [[nodiscard]] const int32_t& GetIdentityStartingValue() const;
+        [[nodiscard]] const int32_t& GetIdentityLastValue() const;
 
         void SetIdentityStartingValue(const int32_t& identityStartingValue);
 
@@ -90,5 +89,7 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] const Headers::DefaultValuesHeader &GetDefaultValue() const;
 
         void SetIsOverflowed(const bool &isOverflowed);
+
+        void SetColumnStatistics(const Headers::ColumnStatistics& statistics);
     };
 }

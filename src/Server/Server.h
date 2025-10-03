@@ -147,8 +147,10 @@ namespace Server {
         const bool& isDeleted = false) const;
 
     AdditionalDataTypes::ResultStatus InsertTableStatisticsToMasterDb(
-      const int32_t& tableId,
       const int32_t& columnId,
+      const int64_t& rowCount = 0,
+      const int64_t& distinctCount = 0,
+      const int64_t& nullCount = 0,
       const int& version = 0,
       const bool& isDeleted = false
     ) const;
@@ -177,7 +179,15 @@ namespace Server {
     [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
     [[nodiscard]] Dictionary<int32_t, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const int32_t& constraintId) const;
     [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const int32_t& columnId) const;
+    [[nodiscard]] Headers::ColumnStatistics SelectColumnStatisticsById(
+      const int32_t& columnId,
+      const DataType& columnType
+    )const;
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
+    void UpdateTableStatisticsById(
+      const int32_t& columnId,
+      const std::vector<Value>& updates
+    )const;
     void UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 

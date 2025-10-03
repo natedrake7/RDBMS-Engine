@@ -1399,7 +1399,7 @@ namespace DatabaseEngine::StorageTypes {
 
         row->InsertColumnData(block, column->GetColumnIndex());
 
-        if (column->GetIdentityStartingValue() + identity.cacheBlock < primaryKeyValue )
+        if (column->GetIdentityLastValue() + identity.cacheBlock < primaryKeyValue )
           this->UpdateColumnIdentity(column->GetColumnId(), primaryKeyValue);
 
         return primaryKeyValue;
@@ -1511,11 +1511,20 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
+    void Table::GetColumnsStatistics() const{
+
+        for (const auto* column : this->columns) {
+          const auto columnStatistics = Server::ServerInstance::Get().SelectColumnStatisticsById(column->GetColumnId(), column->GetColumnType());
+
+
+        }
+    }
+
     void Table::UpdateMasterDatabase() const{
       for (const auto& column: this->columns) {
         const auto& identity = column->GetIdentity();
 
-        if (identity.columnId == -1)
+        if (identity.columnId == Constants::INVALID_COLUMN_ID)
           continue;
 
         this->UpdateColumnIdentity(column->GetColumnId(), identity.lastValue);

@@ -1,11 +1,10 @@
 #pragma once
-#include "../../../Database/Constants.h"
-
-
 #include <string>
 #include "../DateTime/DateTime.h"
 #include <vector>
 #include <ostream>
+
+#include "../Value/Value.h"
 
 namespace Headers {
   enum ConstraintType: uint8_t {
@@ -86,6 +85,18 @@ namespace Headers {
     AdditionalInformation additionalInfo;
   };
 
+  struct ColumnStatistics {
+    int32_t columnId;
+
+    int64_t rowCount;
+    int64_t distinctCount;
+    Value min;
+    Value max;
+    int64_t nullCount;
+
+    AdditionalInformation additionalInfo;
+  };
+
   struct ColumnHeader {
     int32_t id = Constants::INVALID_COLUMN_ID;
     int32_t tableId;
@@ -100,6 +111,7 @@ namespace Headers {
 
     IdentityColumnsHeader identity;
     DefaultValuesHeader defaultValue;
+    ColumnStatistics statistics;
     AdditionalInformation additionalInfo;
   };
 
