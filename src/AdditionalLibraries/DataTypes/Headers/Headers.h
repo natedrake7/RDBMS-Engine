@@ -91,7 +91,7 @@ namespace Headers {
     int32_t tableId;
     std::string name;
     uint8_t dataType;
-    int16_t recordSize;
+    int32_t recordSize;
     int8_t precision = Constants::INVALID_DECIMAL_PRECISION;
     int8_t scale = Constants::INVALID_DECIMAL_SCALE;
     bool isNullable;

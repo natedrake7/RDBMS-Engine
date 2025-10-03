@@ -77,10 +77,10 @@ namespace Server {
      }
 
     this->CreateSystemDatabase();
+
     const auto dbInsertResult = this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
 
     const auto schemaInsertResult = this->InsertSchemaToMasterDb(static_cast<int32_t>(dbInsertResult.primaryKeyVal), "dbo");
-
 
     Dictionary<string, column_index_t> columnNameToIndex;
 
@@ -121,6 +121,15 @@ namespace Server {
            column.nullable,
            columnPos,
            true);
+
+        if (columnResult.code != AdditionalDataTypes::ResultCode::Ok)
+          std::cerr << columnResult.message << std::endl;
+
+        const auto tableStatsResult =
+          this->InsertTableStatisticsToMasterDb(
+                    static_cast<int32_t>(tableResult.primaryKeyVal),
+            static_cast<int32_t>(columnResult.primaryKeyVal)
+          );
 
         columnNameToIndex.Add(column.name, columnPos);
         columnIdsDict.Add(column.name, static_cast<int32_t>(columnResult.primaryKeyVal));
@@ -503,6 +512,39 @@ namespace Server {
       return result;
   }
 
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertTableStatisticsToMasterDb(
+    const int32_t &tableId,
+    const int32_t &columnId,
+    const int &version,
+    const bool &isDeleted
+  ) const{
+
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
+    const auto currentDate = DataTypes::DateTime::Now();
+
+    const vector<Value> fields = {
+      Value(tableId, 0),
+      Value(columnId, 1),
+      Value(nullptr, 2),
+      Value(nullptr, 3),
+      Value(nullptr, 4),
+      Value(nullptr, 5),
+      Value(nullptr, 6),
+      Value(version, 7),
+      Value(isDeleted, 8),
+      Value(nullptr, 9),
+    };
+
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
+
+    std::cout << "Inserted table stats for table with id: " << tableId << " and column with id: " << columnId << std::endl;
+
+    return result;
+
+  }
+
   AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintToMasterDb(
       const int32_t & tableId,
       const string & constraintName,
@@ -535,11 +577,11 @@ namespace Server {
 
     const auto transactionId = this->masterDb->StartLogTransaction();
 
-      const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(transactionId, fields);
 
-      cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
+    cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
             
-      return result;
+    return result;
   }
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintColumnToMasterDb(
@@ -949,7 +991,7 @@ namespace Server {
           .tableId = data[1]->GetInt(),
           .name = data[2]->GetString(),
           .dataType = static_cast<uint8_t>(data[3]->GetTinyInt()),
-          .recordSize = data[4]->GetSmallInt(),
+          .recordSize = data[4]->GetInt(),
           .precision = data[5]->GetBlockData() == nullptr
               ? Constants::INVALID_DECIMAL_PRECISION
               : data[5]->GetTinyInt(),

@@ -65,7 +65,7 @@
         { "name": "table_id", "type": "Int" },
         { "name": "name", "type": "String", "size": 100 },
         { "name": "data_type", "type": "TinyInt" },
-        { "name": "record_size", "type": "SmallInt" },
+        { "name": "record_size", "type": "Int" },
         { "name": "precision", "type": "SmallInt", "nullable": true },
         { "name": "scale", "type": "SmallInt", "nullable": true },
         { "name": "is_nullable", "type": "Bool" },
@@ -179,6 +179,24 @@
         ],
         "hasIdentity": false,
         "primaryKey": ["column_id"]
+      },
+      {
+        "id": 11,
+        "name": "sys_table_stats",
+        "columns": [
+          { "name": "table_id",       "type": "Int"},
+          { "name": "column_id",      "type": "Int" },
+          { "name": "row_count",      "type": "BigInt", "nullable": true },
+          { "name": "distinct_count", "type": "BigInt", "nullable": true },
+          { "name": "min_value",      "type": "String", "size": -1, "nullable": true },
+          { "name": "max_value",      "type": "String", "size": -1, "nullable": true },
+          { "name": "null_count",     "type": "BigInt", "nullable": true },
+          { "name": "version",        "type": "Int", "default": 1 },
+          { "name": "is_deleted",     "type": "Bool", "default": 0 },
+          { "name": "deleted_at",     "type": "DateTime", "nullable": true }
+        ],
+        "hasIdentity": false,
+        "primaryKey": ["table_id","column_id"]
       }
   ]
 }

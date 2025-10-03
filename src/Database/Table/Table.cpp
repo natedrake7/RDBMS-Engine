@@ -675,7 +675,9 @@ namespace DatabaseEngine::StorageTypes {
         row_size_t maximumRowSize = 0;
 
         for (const auto &column : this->columns)
-            maximumRowSize += column->GetColumnSize();
+            maximumRowSize += column->isColumnLOB()
+                ? sizeof(DataObjectPointer)
+                : column->GetColumnSize();
 
         return maximumRowSize;
     }
@@ -695,7 +697,12 @@ namespace DatabaseEngine::StorageTypes {
       for (auto &column : this->columns) {
         const auto& columnSize = column->GetColumnSize();
 
-        maximumRowSize += column->isColumnOverflowed() ? sizeof(OverflowPointer) : columnSize;
+        if (column->isColumnOverflowed())
+          maximumRowSize += sizeof(OverflowPointer);
+        else if (column->isColumnLOB())
+          maximumRowSize += sizeof(DataObjectPointer);
+        else
+          maximumRowSize += columnSize;
 
         if(columnSize <= largestVariableLengthColumnSize
             || column->isColumnOverflowed()
@@ -709,7 +716,9 @@ namespace DatabaseEngine::StorageTypes {
 
       maximumRowSize -= largestVariableLengthColumnSize;
       maximumRowSize += sizeof(OverflowPointer);
-      largestColumn->SetIsOverflowed(true);
+
+      if (largestColumn != nullptr)
+        largestColumn->SetIsOverflowed(true);
 
       return maximumRowSize;
     }

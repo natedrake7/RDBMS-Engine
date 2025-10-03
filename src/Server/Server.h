@@ -26,7 +26,9 @@ namespace Server {
     SYSINDEXCOLUMNS = 6,
     SYSCONSTRAINTS = 7,
     SYSCONSTRAINTCOLUMNS = 8,
-    SYSDEFAULTVALUES = 9
+    SYSDEFAULTVALUES = 9,
+    SYSTABLESTATS = 10
+
   };
 
   class ServerInstance {
@@ -143,6 +145,13 @@ namespace Server {
         const Value& value,
         const int& version = 0,
         const bool& isDeleted = false) const;
+
+    AdditionalDataTypes::ResultStatus InsertTableStatisticsToMasterDb(
+      const int32_t& tableId,
+      const int32_t& columnId,
+      const int& version = 0,
+      const bool& isDeleted = false
+    ) const;
 
     //MasterDB Select Functions
     [[nodiscard]] vector<Headers::DatabaseHeader> GetCatalog()const;
