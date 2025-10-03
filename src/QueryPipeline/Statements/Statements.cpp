@@ -238,7 +238,7 @@ namespace QueryPipeline::Statements {
       if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, this->results[i], &i))
           return false;
 
-      int indexPos = 0;
+    int indexPos = 0;
     //validate all expressions are valid
     if (this->where.expression != nullptr) {
       if (!this->where.IsValid()) {
@@ -440,8 +440,15 @@ namespace QueryPipeline::Statements {
 
       //needs to re adjust pointers for right join -> left join change.
       joinOrder.push_back(this->table->tableId);
-      for (const auto* join : this->joins)
-          joinOrder.push_back(join->table->tableId);
+
+      for (const auto* join : this->joins) {
+        if (join->IsRightJoin()) {
+          joinOrder.insert(joinOrder.begin(), join->table->tableId);
+          continue;
+        }
+
+        joinOrder.push_back(join->table->tableId);
+      }
 
       Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
       Constants::column_index_t columnIndex = 0;

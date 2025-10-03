@@ -74,6 +74,14 @@ namespace QueryPipeline::PhysicalPlan {
           result->rows.push_back(outerRow->LeftJoin(rightResult->columns));
       }
 
+      result->columns.reserve(leftResult->columns.size() + rightResult->columns.size());
+      result->columns.insert(result->columns.end(),
+                             std::make_move_iterator(leftResult->columns.begin()),
+                             std::make_move_iterator(leftResult->columns.end()));
+      result->columns.insert(result->columns.end(),
+                             std::make_move_iterator(rightResult->columns.begin()),
+                             std::make_move_iterator(rightResult->columns.end()));
+
       delete leftResult;
       delete rightResult;
 
