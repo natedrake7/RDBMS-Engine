@@ -3,6 +3,7 @@
 #include <string>
 #include <limits>
 #include <stdexcept>
+#include "../DataTypes/Decimal/Decimal.h"
 
 using namespace std;
 

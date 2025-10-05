@@ -182,11 +182,11 @@ add_library(Server SHARED
 target_link_libraries(Server PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(Server PRIVATE AdditionalLibraries)
 
-add_executable(Client
-        src/Client/client.cpp
-        src/Client/client.h)
+# add_executable(Client
+#         src/Client/client.cpp
+#         src/Client/client.h)
 
-target_link_libraries(Client PRIVATE AdditionalLibraries)
+# target_link_libraries(Client PRIVATE AdditionalLibraries)
 
 target_link_libraries(DatabaseInterface 
                         PRIVATE Server Database AdditionalLibraries QueryPipeline)
