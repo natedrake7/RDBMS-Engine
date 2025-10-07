@@ -62,7 +62,7 @@ namespace Server {
     this->sysDbName = jsonFile.at("db_name");
     this->sysDbPath = jsonFile.at("db_path");
 
-    jsonFile.at("tables").get_to(this->sysTables);  
+    jsonFile.at("tables").get_to(this->sysTables);
 
   }
 
@@ -88,12 +88,18 @@ namespace Server {
       const auto& table = this->sysTables[i];
 
       const auto tableResult =
-      this->InsertTableToMasterDb(
-        static_cast<int32_t>(dbInsertResult.primaryKeyVal),
-        static_cast<int32_t>(schemaInsertResult.primaryKeyVal),
-        table.name,
-        static_cast<int16_t>(i),
-        true);
+        this->InsertTableToMasterDb(
+          static_cast<int32_t>(dbInsertResult.primaryKeyVal),
+          static_cast<int32_t>(schemaInsertResult.primaryKeyVal),
+          table.name,
+          static_cast<int16_t>(i),
+          true
+        );
+
+      const auto tableStatsResult =
+        this->InsertTableStatisticsToMasterDb(
+          static_cast<int32_t>(tableResult.primaryKeyVal)
+        );
 
       int columnPos = 0;
 
@@ -125,8 +131,8 @@ namespace Server {
         if (columnResult.code != AdditionalDataTypes::ResultCode::Ok)
           std::cerr << columnResult.message << std::endl;
 
-        const auto tableStatsResult =
-          this->InsertTableStatisticsToMasterDb(
+        const auto columnStatsResult =
+          this->InsertColumnStatisticsToMasterDb(
             static_cast<int32_t>(columnResult.primaryKeyVal)
           );
 
@@ -270,7 +276,7 @@ namespace Server {
     const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted database: "<< dbName << " to master db" << endl;
-    
+
     return result;
   }
 
@@ -299,7 +305,7 @@ namespace Server {
     const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted schema: "<< schemaName << " to master db" << endl;
-    
+
     return result;
   }
 
@@ -335,7 +341,7 @@ namespace Server {
       const auto result = table->InsertRow(transactionId, fields);
 
       cout << "Inserted table: "<< tableName << " to master db" << endl;
-      
+
       return result;
   }
 
@@ -383,7 +389,7 @@ namespace Server {
       const auto result = table->InsertRow(transactionId, fields);
 
       cout << "Inserted column: "<< columnName << " to master db" << endl;
-        
+
       return result;
   }
 
@@ -416,7 +422,7 @@ namespace Server {
       const auto result = table->InsertRow(transactionId, fields);
 
       cout << "Inserted index: "<< indexName << " to master db" << endl;
-          
+
       return result;
   }
 
@@ -445,7 +451,7 @@ namespace Server {
     const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted index column to master db" << endl;
-          
+
     return result;
   }
 
@@ -481,7 +487,7 @@ namespace Server {
     const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted identity column to master db" << endl;
-          
+
     return result;
   }
 
@@ -512,10 +518,8 @@ namespace Server {
   }
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertTableStatisticsToMasterDb(
-    const int32_t &columnId,
+    const int32_t &tableId,
     const int64_t& rowCount,
-    const int64_t& distinctCount,
-    const int64_t& nullCount,
     const int &version,
     const bool &isDeleted
   ) const{
@@ -524,28 +528,57 @@ namespace Server {
     const auto currentDate = DataTypes::DateTime::Now();
 
     const vector<Value> fields = {
-      Value(columnId, 0),
+      Value(tableId, 0),
       Value(rowCount, 1),
-      Value(distinctCount, 2),
-      Value(nullptr, 3),
-      Value(nullptr, 4),
-      Value(nullCount, 5),
-      Value(DataTypes::DateTime::Now(), 6),
-      Value(DataTypes::DateTime::Now(), 7),
-      Value("system", 8),
-      Value(version, 9),
-      Value(isDeleted, 10),
-      Value(nullptr, 11),
+      Value(DataTypes::DateTime::Now(), 2),
+      Value(DataTypes::DateTime::Now(), 3),
+      Value("system", 4),
+      Value(version, 5),
+      Value(isDeleted, 6),
+      Value(nullptr, 7),
     };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
-    std::cout << "Inserted table stats for column with id: " << columnId << std::endl;
+    std::cout << "Inserted table stats for column with id: " << tableId << std::endl;
 
     return result;
 
+  }
+
+  AdditionalDataTypes::ResultStatus ServerInstance::InsertColumnStatisticsToMasterDb(
+    const int32_t &columnId,
+    const int64_t &distinctCount,
+    const int64_t &nullCount,
+    const int &version,
+    const bool &isDeleted) const{
+
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
+    const auto currentDate = DataTypes::DateTime::Now();
+
+    const vector<Value> fields = {
+      Value(columnId, 0),
+      Value(distinctCount, 1),
+      Value(nullptr, 2),
+      Value(nullptr, 3),
+      Value(nullCount, 4),
+      Value(DataTypes::DateTime::Now(), 5),
+      Value(DataTypes::DateTime::Now(), 6),
+      Value("system", 7),
+      Value(version, 8),
+      Value(isDeleted, 9),
+      Value(nullptr, 10),
+    };
+
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
+
+    std::cout << "Inserted column stats for column with id: " << columnId << std::endl;
+
+    return result;
   }
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintToMasterDb(
@@ -583,7 +616,7 @@ namespace Server {
     const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
-            
+
     return result;
   }
 
@@ -611,7 +644,7 @@ namespace Server {
     const auto result = table->InsertRow(transactionId, fields);
 
     cout << "Inserted constraint column to master db" << endl;
-            
+
     return result;
   }
 
@@ -661,9 +694,11 @@ namespace Server {
       auto dbTables = this->SelectTables(dbName);
 
       for (auto& table : dbTables) {
-          table.columns = this->SelectColumns(table.id);
+        table.columns = this->SelectColumns(table.id);
+        table.statistics = this->SelectTableStatisticsById(table.id);
 
         const auto identityColumns = this->SelectIdentityColumnsByTableIdToDictionary(table.id);
+
         for (auto& column : table.columns) {
           Headers::IdentityColumnsHeader identityHeader;
           identityColumns.TryGetValue(column.id, identityHeader);
@@ -717,7 +752,7 @@ namespace Server {
       return {};
 
     const auto& data = selectedDatabases[0]->GetData();
-    
+
     return Headers::DatabaseHeader{
       .id = data[0]->GetInt(),
       .name = data[1]->GetString(),
@@ -765,7 +800,7 @@ namespace Server {
 
     if (selectedSchemas.empty())
       return {};
-    
+
     vector<Headers::SchemaHeader> schemas;
 
     for (const auto& row : selectedSchemas) {
@@ -836,13 +871,13 @@ namespace Server {
 
     if (selectedTables.empty())
       return {};
-      
+
     vector<Headers::TableHeader> selectedTableHeaders;
     selectedTableHeaders.reserve(selectedTables.size());
 
     for (const auto& row : selectedTables) {
       const auto& data = row->GetData();
-      
+
       selectedTableHeaders.emplace_back(
           Headers::TableHeader{
               data[0]->GetInt(),
@@ -985,7 +1020,7 @@ namespace Server {
 
     vector<Headers::ColumnHeader> selectedColumnHeaders;
     selectedColumnHeaders.reserve(selectedColumns.size());
-    
+
     for (const auto& row : selectedColumns) {
       const auto& data = row->GetData();
 
@@ -1177,13 +1212,47 @@ namespace Server {
     };
   }
 
+  Headers::TableStatistics ServerInstance::SelectTableStatisticsById(const int32_t &tableId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
+    std::vector<const Row*> selectedStats;
+
+    auto* columnOperation = new Expressions::ColumnExpression(0);
+    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 0));
+
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+
+    sysIndexes->ClusteredIndexScan(&selectedStats, &binaryExpr);
+
+    if (selectedStats.empty())
+      return {};
+
+    const auto& data = selectedStats.front()->GetData();
+
+    return Headers::TableStatistics{
+      .tableId = data[0]->GetInt(),
+      .rowCount = data[1]->GetBigInt(),
+        .additionalInfo{
+        .createdAt = data[2]->GetDateTime(),
+        .lastModified = data[3]->GetDateTime(),
+        .lastModifiedBy = data[4]->GetString(),
+        .version = data[5]->GetInt(),
+        .isDeleted = data[6]->GetBool(),
+        .deletedAt = data[7]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[7]->GetDateTime()
+        },
+    };
+  }
+
   Headers::ColumnStatistics ServerInstance::SelectColumnStatisticsById(
     const int32_t& columnId,
     const DataType& columnType
   ) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
     std::vector<const Row*> selectedStats;
 
     auto* columnOperation = new Expressions::ColumnExpression(0);
@@ -1200,20 +1269,19 @@ namespace Server {
 
     return Headers::ColumnStatistics{
         .columnId = data[0]->GetInt(),
-        .rowCount = data[1]->GetBigInt(),
-        .distinctCount = data[2]->GetBigInt(),
-        .min = Value(data[3]->GetBlockData(), data[3]->GetBlockSize(), columnType),
-        .max = Value(data[4]->GetBlockData(), data[4]->GetBlockSize(), columnType),
-        .nullCount = data[5]->GetBigInt(),
+        .distinctCount = data[1]->GetBigInt(),
+        .min = Value(data[2]->GetBlockData(), data[2]->GetBlockSize(), columnType),
+        .max = Value(data[3]->GetBlockData(), data[3]->GetBlockSize(), columnType),
+        .nullCount = data[4]->GetBigInt(),
           .additionalInfo{
-          .createdAt = data[6]->GetDateTime(),
-          .lastModified = data[7]->GetDateTime(),
-          .lastModifiedBy = data[8]->GetString(),
-          .version = data[9]->GetInt(),
-          .isDeleted = data[10]->GetBool(),
-          .deletedAt = data[11]->GetBlockData() == nullptr
+          .createdAt = data[5]->GetDateTime(),
+          .lastModified = data[6]->GetDateTime(),
+          .lastModifiedBy = data[7]->GetString(),
+          .version = data[8]->GetInt(),
+          .isDeleted = data[9]->GetBool(),
+          .deletedAt = data[10]->GetBlockData() == nullptr
                 ? DataTypes::DateTime()
-                : data[11]->GetDateTime()
+                : data[10]->GetDateTime()
           },
       };
   }
@@ -1443,12 +1511,25 @@ namespace Server {
   }
 
   void ServerInstance::UpdateTableStatisticsById(
-    const int32_t &columnId,
+    const int32_t &tableId,
     const std::vector<Value> &updates
   ) const{
     using namespace DatabaseEngine::StorageTypes;
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
+
+    auto* columnOperation = new Expressions::ColumnExpression(0);
+    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 0));
+
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+
+    table->ClusteredIndexScanUpdate(&binaryExpr, updates);
+  }
+
+  void ServerInstance::UpdateColumnStatisticsById(const int32_t &columnId, const std::vector<Value> &updates) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
 
     auto* columnOperation = new Expressions::ColumnExpression(0);
     auto* literaValue = new Expressions::LiteralExpression(Value(columnId, 0));
@@ -1479,21 +1560,21 @@ namespace Server {
 
     for (int i = 0;i < this->sysTables.size(); i++) {
       const auto& table = this->sysTables[i];
-      
+
       vector<Column *> columns;
       vector<column_index_t> primaryKey;
-      
+
       for (int j = 0;j < table.columns.size(); j++) {
         const auto& column = table.columns[j];
 
         block_size_t columnSize = 0;
 
         const auto normalizedColumnType = AdditionalLibraries::StringFunctions::NormalizeString(column.type);
-        
+
         if (!ColumnTypeSizes.TryGetValue(normalizedColumnType, columnSize))
           throw runtime_error("Column type " + column.type + " does not exist");
 
-        if (columnSize == 0) 
+        if (columnSize == 0)
           columnSize = column.size;
 
         const auto columnType = ColumnTypesDictionary.Get(normalizedColumnType);

@@ -27,8 +27,8 @@ namespace Server {
     SYSCONSTRAINTS = 7,
     SYSCONSTRAINTCOLUMNS = 8,
     SYSDEFAULTVALUES = 9,
-    SYSTABLESTATS = 10
-
+    SYSTABLESTATS = 10,
+    SYSCOLUMNSTATS = 11
   };
 
   class ServerInstance {
@@ -147,8 +147,14 @@ namespace Server {
         const bool& isDeleted = false) const;
 
     AdditionalDataTypes::ResultStatus InsertTableStatisticsToMasterDb(
-      const int32_t& columnId,
+      const int32_t& tableId,
       const int64_t& rowCount = 0,
+      const int& version = 0,
+      const bool& isDeleted = false
+    ) const;
+
+    AdditionalDataTypes::ResultStatus InsertColumnStatisticsToMasterDb(
+      const int32_t& columnId,
       const int64_t& distinctCount = 0,
       const int64_t& nullCount = 0,
       const int& version = 0,
@@ -179,12 +185,17 @@ namespace Server {
     [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
     [[nodiscard]] Dictionary<int32_t, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const int32_t& constraintId) const;
     [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const int32_t& columnId) const;
+    [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const int32_t& tableId)const;
     [[nodiscard]] Headers::ColumnStatistics SelectColumnStatisticsById(
       const int32_t& columnId,
       const DataType& columnType
     )const;
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
     void UpdateTableStatisticsById(
+      const int32_t& tableId,
+      const std::vector<Value>& updates
+    )const;
+    void UpdateColumnStatisticsById(
       const int32_t& columnId,
       const std::vector<Value>& updates
     )const;

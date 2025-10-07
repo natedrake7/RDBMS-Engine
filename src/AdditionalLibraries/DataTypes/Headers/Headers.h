@@ -85,10 +85,17 @@ namespace Headers {
     AdditionalInformation additionalInfo;
   };
 
+  struct TableStatistics {
+    int32_t tableId;
+
+    int64_t rowCount;
+
+    AdditionalInformation additionalInfo;
+  };
+
   struct ColumnStatistics {
     int32_t columnId;
 
-    int64_t rowCount;
     int64_t distinctCount;
     Value min;
     Value max;
@@ -124,7 +131,9 @@ namespace Headers {
     bool isSystem;
 
     AdditionalInformation additionalInfo;
-    
+
+    TableStatistics statistics;
+
     vector<ColumnHeader> columns;
     vector<ConstraintsHeader> constraints;
 

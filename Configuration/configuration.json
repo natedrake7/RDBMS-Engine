@@ -184,8 +184,23 @@
       "id": 11,
       "name": "sys_table_stats",
       "columns": [
-        { "name": "column_id",            "type": "Int" },
+        { "name": "table_id",             "type": "Int" },
         { "name": "row_count",            "type": "BigInt", "default": 0 },
+        { "name": "created_at",           "type": "DateTime" },
+        { "name": "last_modified",        "type": "DateTime" },
+        { "name": "last_modified_by",     "type": "String", "size": 100 },
+        { "name": "version",              "type": "Int",    "default": 1 },
+        { "name": "is_deleted",           "type": "Bool",   "default": 0 },
+        { "name": "deleted_at",           "type": "DateTime", "nullable": true }
+      ],
+      "hasIdentity": false,
+      "primaryKey": ["table_id"]
+    },
+    {
+      "id": 12,
+      "name": "sys_column_stats",
+      "columns": [
+        { "name": "column_id",            "type": "Int" },
         { "name": "distinct_count",       "type": "BigInt", "default": 0 },
         { "name": "min_value",            "type": "String", "size": -1, "nullable": true },
         { "name": "max_value",            "type": "String", "size": -1, "nullable": true },

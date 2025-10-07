@@ -27,11 +27,9 @@ using namespace Server;
 //advanced functions
 
 //TODO
-//Add Decimal full support
-//Add Alter table (add drop columns)
+//Add Decimal (division remains)
+//Add Alter table (test alter drop and rename)
 //Alter table alter column allow with force to smaller datatype and cause truncation if need be.
-//add further validations
-//Add joins
 //check index deletes work
 //add reset identity
 //start documenting implementation and optimize wherever possible
