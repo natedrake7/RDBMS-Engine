@@ -91,5 +91,7 @@ namespace DatabaseEngine::StorageTypes
         void SetIsOverflowed(const bool &isOverflowed);
 
         void SetColumnStatistics(const Headers::ColumnStatistics& statistics);
+
+        void UpdateColumnStatistics(const Row* row);
     };
 }

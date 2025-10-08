@@ -298,7 +298,7 @@ namespace DatabaseEngine
     {
         auto *table = new Table(masterDbHeader, tableHeader, this);
 
-        const auto masterDbColumns = Server::ServerInstance::Get().SelectColumns(masterDbHeader.id);
+        const auto& masterDbColumns = Server::ServerInstance::Get().SelectColumns(masterDbHeader.id);
 
         for (const auto & masterDbColumn : masterDbColumns) {
             if (masterDbColumn.isSystem)
@@ -313,6 +313,7 @@ namespace DatabaseEngine
         table->GetIdentityColumns();
         table->GetIndexes();
         table->GetDefaultValuesHeaders();
+        table->GetStatistics();
 
         this->tables.push_back(table);
     }

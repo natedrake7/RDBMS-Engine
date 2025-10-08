@@ -167,8 +167,7 @@ add_library(Database SHARED
         src/Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.cpp
         src/Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.h
         src/Database/ExpressionExtensions/ExpressionExtensions.cpp
-        src/Database/Column/ColumnStatsManager/ColumnStatsManager.cpp
-        src/Database/Column/ColumnStatsManager/ColumnStatsManager.h)
+)
 
 add_library(Server SHARED
         src/Server/ConnectionManager/ConnectionManager.cpp

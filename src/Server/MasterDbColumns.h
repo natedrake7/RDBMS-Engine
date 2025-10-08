@@ -19,5 +19,30 @@ namespace Server {
     IsDeleted = 12,
     DeletedAt = 13,
   };
+
+  enum class SysTableStats : uint16_t {
+    TableId = 0,
+    RowCount = 1,
+    CreatedAt = 2,
+    LastModifiedAt = 3,
+    LastModifiedBy = 4,
+    Version = 5,
+    IsDeleted = 6,
+    DeletedAt = 7,
+  };
+
+  enum class SysColumnStats : uint16_t {
+    ColumnId = 0,
+    DistinctCount = 1,
+    MininimumValue = 2,
+    MaxmimumValue = 3,
+    NullCount = 4,
+    CreatedAt = 5,
+    LastModifiedAt = 6,
+    LastModifiedBy = 7,
+    Version = 8,
+    IsDeleted = 9,
+    DeletedAt = 10,
+  };
 }
 

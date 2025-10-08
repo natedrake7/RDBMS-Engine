@@ -245,8 +245,7 @@ namespace DatabaseEngine::StorageTypes {
             ? this->ClusteredIndexInsert(row, &rowId)
             : this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
 
-        if (status.code != AdditionalDataTypes::ResultCode::Ok
-          || !this->HasNonClusteredIndexes())
+        if (status.code != AdditionalDataTypes::ResultCode::Ok)
             return status;
 
         //insert to Non Clustered Indexes
@@ -256,6 +255,14 @@ namespace DatabaseEngine::StorageTypes {
             if (status.code != AdditionalDataTypes::ResultCode::Ok)
                 return status;
         }
+
+        //update statistics (should change but just for testing)
+        this->header.statistics.rowCount++;
+
+        Server::ServerInstance::Get().UpdateTableStatisticsById(this->header.tableId, this->header.statistics.rowCount);
+
+        for (auto* column : this->columns)
+          column->UpdateColumnStatistics(row);
 
         return status;
       }
@@ -1511,12 +1518,12 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::GetColumnsStatistics() const{
+    void Table::GetStatistics(){
+        this->header.statistics = Server::ServerInstance::Get().SelectTableStatisticsById(this->header.tableId);
 
-        for (const auto* column : this->columns) {
+        for (auto* column : this->columns) {
           const auto columnStatistics = Server::ServerInstance::Get().SelectColumnStatisticsById(column->GetColumnId(), column->GetColumnType());
-
-
+          column->SetColumnStatistics(columnStatistics);
         }
     }
 

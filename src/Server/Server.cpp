@@ -229,14 +229,13 @@ namespace Server {
 
     db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
 
-    for (const auto& log : db->RecoverLogs()) {
-      std::cout << log << std::endl;
-    }
+    // for (const auto& log : db->RecoverLogs()) {
+    //   std::cout << log << std::endl;
+    // }
     // db->GetIdentityColumns();
 
     //master db id
-    if (databaseId != 1)
-      this->databases.Add(databaseId, db);
+    this->databases.Add(databaseId, db);
 
     return db;
   }
@@ -1512,9 +1511,13 @@ namespace Server {
 
   void ServerInstance::UpdateTableStatisticsById(
     const int32_t &tableId,
-    const std::vector<Value> &updates
+    const int64_t& rowCount
   ) const{
     using namespace DatabaseEngine::StorageTypes;
+
+    const std::vector<Value> updates = {
+      Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount))
+    };
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
 
@@ -1526,8 +1529,21 @@ namespace Server {
     table->ClusteredIndexScanUpdate(&binaryExpr, updates);
   }
 
-  void ServerInstance::UpdateColumnStatisticsById(const int32_t &columnId, const std::vector<Value> &updates) const{
+  void ServerInstance::UpdateColumnStatisticsById(
+    const int32_t &columnId,
+    const int64_t& distinctCount,
+    const int64_t& nullCount,
+    const Value& min,
+    const Value& max
+  ) const{
     using namespace DatabaseEngine::StorageTypes;
+
+    const std::vector<Value> updates = {
+      Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
+      Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount)),
+      Value(std::string(reinterpret_cast<const char*>(min.GetRawData()), min.GetSize()), static_cast<column_index_t>(SysColumnStats::MininimumValue)),
+      Value(std::string(reinterpret_cast<const char*>(max.GetRawData()), max.GetSize()), static_cast<column_index_t>(SysColumnStats::MaxmimumValue))
+    };
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
 

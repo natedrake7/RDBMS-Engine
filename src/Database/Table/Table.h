@@ -66,6 +66,9 @@ namespace DatabaseEngine::StorageTypes
         Headers::Index clusteredIndex;
         vector<Headers::Index> nonClusteredIndexes;
 
+        //statistics
+        Headers::TableStatistics statistics;
+
         TableHeader();
         ~TableHeader();
         TableHeader &operator=(const TableHeader &tableHeader);
@@ -344,7 +347,7 @@ namespace DatabaseEngine::StorageTypes
 
             void GetIndexes();
 
-            void GetColumnsStatistics()const;
+            void GetStatistics();
 
             void UpdateMasterDatabase() const;
 

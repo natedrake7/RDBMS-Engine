@@ -127,6 +127,9 @@ int main()
     const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
 
     //UPDATE dbo.Actors SET Name = CONCAT('Kalimera', 'HEllo')
+    //CREATE DATABASE MoviesDB
+    //CREATE TABLE dbo.Movies (ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), ReleaseDate DATETIME)
+    //INSERT INTO dbo.Movies(Name, ReleaseDate)VALUES('Batman', GETDATE())
 
     //
     // int value = -10000;

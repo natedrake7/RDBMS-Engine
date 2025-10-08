@@ -360,6 +360,10 @@ PhysicalInsert::PhysicalInsert(
         this->table->name,
         index);
 
+    const auto tableStatsResult = Server::ServerInstance::Get().InsertTableStatisticsToMasterDb(
+      tableResult.primaryKeyVal
+    );
+
     const auto* tablePtr = db->CreateTable(tableResult.primaryKeyVal, index, columnsPtrs, &this->primaryKey);
 
     Dictionary<int, int32_t> columnIdsDict;
@@ -376,6 +380,8 @@ PhysicalInsert::PhysicalInsert(
             column->isNullable,
             column->index
           );
+
+      const auto columnStatsResult = Server::ServerInstance::Get().InsertColumnStatisticsToMasterDb(columnResult.primaryKeyVal);
 
       columnIdsDict.Add(column->index, static_cast<int32_t>(columnResult.primaryKeyVal));
 

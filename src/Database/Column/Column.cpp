@@ -1,5 +1,6 @@
 ﻿#include "Column.h"
 #include "../../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../../Server/Server.h"
 #include "../Table/Table.h"
 
 namespace DatabaseEngine::StorageTypes {
@@ -93,4 +94,30 @@ namespace DatabaseEngine::StorageTypes {
     void Column::SetIsOverflowed(const bool & isOverflowed){ this->isOverflowed = isOverflowed; }
 
     void Column::SetColumnStatistics(const Headers::ColumnStatistics &statistics){ this-> statistics = statistics;}
+
+//compute distinct count too
+    void Column::UpdateColumnStatistics(const Row *row){
+        const auto& value = row->GetColumnByIndex(this->header.columnIndex);
+
+        if (value.GetIsNull()) {
+            this->statistics.nullCount++;
+            return;
+        }
+
+        const auto isLessThan = value < this->statistics.min;
+        if (isLessThan.GetBool())
+            this->statistics.min = value;
+
+        const auto isGreaterThan = value > this->statistics.max;
+        if (isGreaterThan.GetBool())
+            this->statistics.max = value;
+
+        Server::ServerInstance::Get().UpdateColumnStatisticsById(
+            this->header.id,
+            this->statistics.distinctCount,
+            this->statistics.nullCount,
+            this->statistics.min,
+            this->statistics.max
+        );
+    }
 }

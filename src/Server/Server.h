@@ -193,11 +193,14 @@ namespace Server {
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
     void UpdateTableStatisticsById(
       const int32_t& tableId,
-      const std::vector<Value>& updates
+      const int64_t& rowCount
     )const;
     void UpdateColumnStatisticsById(
       const int32_t& columnId,
-      const std::vector<Value>& updates
+      const int64_t& distinctCount,
+      const int64_t& nullCount,
+      const Value& min,
+      const Value& max
     )const;
     void UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;

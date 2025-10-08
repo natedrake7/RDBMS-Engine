@@ -416,12 +416,11 @@ namespace QueryPipeline::Statements {
       : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id != Constants::INVALID_TABLE_ID){
-      std::cerr << "Table " + this->GetFullName() + " does not exist" << std::endl;
+      std::cerr << "Table " + this->GetFullName() + " exists" << std::endl;
       return false;
     }
 
-    if (this->databaseId == Constants::INVALID_DATABASE_ID)
-      this->databaseId = selectedDatabaseId;
+    this->databaseId = selectedDatabaseId;
 
     return true;
   }
