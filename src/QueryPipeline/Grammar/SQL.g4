@@ -23,12 +23,20 @@ sqlStatement
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 selectStatement
-            :   SELECT resultList
+            :   SELECT top? distinct? resultList
                 (FROM tableName)?
                 ((joinStatement)*)?
                 whereClause?
                 orderByStatement?
             ;
+
+top
+    : TOP LAPRENT? NUMBER RAPRENT?
+    ;
+
+distinct
+    : DISTINCT
+    ;
 
 resultList
     : resultExpression (COMMA resultExpression)*
@@ -488,6 +496,8 @@ ON              : 'ON';
 TABLE           : 'TABLE';
 DEFAULT         : 'DEFAULT';
 TO              : 'TO';
+TOP             : 'TOP';
+DISTINCT        : 'DISTINCT';
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////

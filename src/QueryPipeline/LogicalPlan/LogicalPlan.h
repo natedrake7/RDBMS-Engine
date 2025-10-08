@@ -20,7 +20,6 @@ namespace QueryPipeline {
       PhysicalPlan::PhysicalCreateDatabase* ToPhysical()override;
   };
 
-
   class LogicalProject final: public LogicalPlan {
     public:
       LogicalPlan* child;
@@ -65,6 +64,7 @@ namespace QueryPipeline {
     public:
       LogicalPlan* child;
       Expressions::Expression* filter;
+
       explicit LogicalFilter( LogicalPlan* child, Expressions::Expression* filter);
       PhysicalPlan::PhysicalFilter* ToPhysical()override;
   };
@@ -79,6 +79,25 @@ namespace QueryPipeline {
         std::vector<Statements::OrderColumn*>& expressions
         );
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
+  };
+
+  class LogicalTop final : public LogicalPlan {
+    public:
+      LogicalPlan* child;
+      int64_t top;
+
+      explicit LogicalTop(LogicalPlan* child, int64_t& top);
+      ~LogicalTop() override;
+      PhysicalPlan::PhysicalTop* ToPhysical()override;
+  };
+
+  class LogicalDistinct final : public LogicalPlan {
+    public:
+      LogicalPlan* child;
+
+      explicit LogicalDistinct(LogicalPlan* child);
+      ~LogicalDistinct() override;
+      PhysicalPlan::PhysicalDistinct* ToPhysical()override;
   };
 
   class LogicalInsert final : public LogicalPlan {

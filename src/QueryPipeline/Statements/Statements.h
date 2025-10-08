@@ -174,6 +174,8 @@ namespace QueryPipeline::Statements {
   };
 
   struct SelectStatement final : Statement{
+    int64_t top;
+    bool distinct;
     std::vector<Expressions::Expression*> results;
     std::vector<Headers::ColumnHeader> columnHeaders;
 
@@ -182,6 +184,7 @@ namespace QueryPipeline::Statements {
     WhereClause where;
     OrderByStatement* orderBy;
 
+    SelectStatement();
     ~SelectStatement() override;
 
     [[nodiscard]] bool HasJoins()const;

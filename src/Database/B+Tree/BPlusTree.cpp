@@ -302,10 +302,10 @@ namespace Indexing
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
         const QueryPipeline::PhysicalPlan::IndexState& state,
         const int& rowsToSelect){
-        this->root = this->GetNode(this->firstIndexPageId);
-
-        if (!this->root)
+        if (this->firstIndexPageId == Constants::INVALID_PAGE_ID)
             return;
+
+        this->root = this->GetNode(this->firstIndexPageId);
 
         auto *currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
@@ -329,13 +329,13 @@ namespace Indexing
 
     void BPlusTree::IndexScan(
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        QueryPipeline::PhysicalPlan::IndexState& state,
+        const QueryPipeline::PhysicalPlan::IndexState& state,
         const int& rowsToSelect,
         const Expressions::Expression *expression){
-        this->root = this->GetNode(this->firstIndexPageId);
+        if (this->firstIndexPageId == Constants::INVALID_PAGE_ID)
+            return;
 
-        if (!this->root)
-          return;
+        this->root = this->GetNode(this->firstIndexPageId);
 
         auto *currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
@@ -366,11 +366,10 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result, const Expressions::Expression *expression){
+        if (this->firstIndexPageId == Constants::INVALID_PAGE_ID)
+            return;
 
         this->root = this->GetNode(this->firstIndexPageId);
-
-        if (!this->root)
-            return;
 
         auto *currentNode = this->SearchLeftMostLeafNode();
 
@@ -418,10 +417,10 @@ namespace Indexing
         QueryPipeline::PhysicalPlan::IndexState& state,
         const int& rowsToSelect){
 
-        this->root = this->GetNode(this->firstIndexPageId);
-
-        if (!this->root)
+        if (this->firstIndexPageId == Constants::INVALID_PAGE_ID)
             return;
+
+        this->root = this->GetNode(this->firstIndexPageId);
 
         auto *currentNode = state.pageId == INVALID_PAGE_ID
                         ? this->SearchLeftMostLeafNode()
@@ -466,12 +465,12 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression){
-        this->root = this->GetNode(this->firstIndexPageId);
-
-        if (!this->root)
+        if (this->firstIndexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        this->root = this->GetNode(this->firstIndexPageId);
+
+        const auto *currentNode = this->SearchLeftMostLeafNode();
 
         while (currentNode)
         {
@@ -494,10 +493,10 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
-        this->root = this->GetNode(this->firstIndexPageId);
+        if (this->firstIndexPageId == Constants::INVALID_PAGE_ID)
+            return;
 
-        if (!this->root)
-          return;
+        this->root = this->GetNode(this->firstIndexPageId);
 
         HashSet<column_index_t> updatedColumns;
 

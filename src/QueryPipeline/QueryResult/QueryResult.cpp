@@ -60,9 +60,40 @@ void QueryResult::Print() const{
 
 const std::vector<Value> & QueryResult::GetData()const{ return this->data; }
 
+int QueryResult::GetSize() const{ return this->data.size(); }
+
 void QueryResult::SetColumnIndex(const int &columnPos, const int32_t &columnIndex){
   if (columnPos >= this->data.size())
     return;
 
   this->data.at(columnPos).SetColumnIndex(columnIndex);
+}
+
+int64_t QueryResult::ComputeHash() const{
+  std::hash<std::string> strHash;
+  size_t seed = 0;
+
+  for (const auto& value : this->data) {
+    auto str = value.GetString(); // or serialize to bytes
+
+    seed ^= strHash(str) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  }
+
+  return seed;
+}
+
+bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
+  if (lhs.GetSize() != rhs.GetSize())
+    return false;
+
+  for (int i = 0;i < lhs.data.size(); i++) {
+    const auto& leftValue = lhs.data[i];
+    const auto& rightValue = rhs.data[i];
+
+    const auto areEqual = leftValue == rightValue;
+    if (areEqual.GetBool() == false)
+      return false;
+  }
+
+  return true;
 }

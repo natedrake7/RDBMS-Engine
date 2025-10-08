@@ -135,7 +135,7 @@ namespace Indexing
 
         void IndexScan(
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-            QueryPipeline::PhysicalPlan::IndexState& state,
+            const QueryPipeline::PhysicalPlan::IndexState& state,
             const int& rowsToSelect,
             const Expressions::Expression* expression);
 

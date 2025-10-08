@@ -59,6 +59,8 @@ namespace Constants
     constexpr int MAX_DECIMAL_PRECISION = 38;
     constexpr int MAX_DECIMAL_SCALE = 38;
 
+    constexpr int64_t INVALID_TOP = -1;
+
     enum class AlterTableType: uint8_t {
         AddColumn = 0,
         AlterColumn = 1,

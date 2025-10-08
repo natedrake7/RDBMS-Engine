@@ -170,7 +170,13 @@ namespace QueryPipeline::Statements {
     return new LogicalTableCreate(this->table, this->columns, this->primaryKey, constraintName);
   }
 
-   SelectStatement::~SelectStatement(){
+  SelectStatement::SelectStatement(){
+    this->top = Constants::INVALID_TOP;
+    this->distinct = false;
+    this->orderBy = nullptr;
+  }
+
+  SelectStatement::~SelectStatement(){
       delete this->table;
       delete this->orderBy;
 
@@ -500,6 +506,12 @@ namespace QueryPipeline::Statements {
 
       current = new LogicalOrder(current, this->orderBy->columns);
     }
+
+    if (this->distinct)
+      current = new LogicalDistinct(current);
+
+    if (this->top != Constants::INVALID_TOP)
+      current = new LogicalTop(current, this->top);
 
     return current;
   }

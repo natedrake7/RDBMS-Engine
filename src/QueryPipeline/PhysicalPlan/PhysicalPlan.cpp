@@ -125,6 +125,66 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     return result;
   }
 
+  PhysicalTop::PhysicalTop(PhysicalOperator* child, int64_t& top)
+    : top(std::move(top)), child(child){}
+
+  PhysicalTop::~PhysicalTop(){
+    delete this->child;
+  }
+
+  PhysicalPlanResult * PhysicalTop::Execute(const int &batchSize){
+    auto* result = this->child->Execute(batchSize);
+
+    if (this->top > result->results.size())
+      return result;
+
+    result->results.erase(result->results.begin() + this->top, result->results.end());
+
+    return result;
+  }
+
+  PhysicalDistinct::PhysicalDistinct(PhysicalOperator *child)
+    : child(child){}
+
+  PhysicalDistinct::~PhysicalDistinct(){
+    delete this->child;
+  }
+
+  PhysicalPlanResult * PhysicalDistinct::Execute(const int &batchSize){
+    auto* result = this->child->Execute(batchSize);
+
+    std::vector<QueryResult> results;
+
+    HashSet<int64_t> computedHashes;
+
+    for (auto& row : result->results) {
+
+      const auto hash = row.ComputeHash();
+
+      //if no collision occurs
+      if (!computedHashes.Contains(hash)) {
+        results.push_back(std::move(row));
+        computedHashes.Add(hash);
+        continue;
+      }
+
+      bool isDuplicate = false;
+      for (const auto& distinctRow : results) {
+        if (distinctRow == row) {
+          isDuplicate = true;
+          break;
+        }
+      }
+
+      if (!isDuplicate)
+        results.push_back(std::move(row));
+    }
+
+    result->results = std::move(results);
+
+    return result;
+  }
+
   PhysicalTableScan::PhysicalTableScan(Statements::TableName* table): table(table) {}
 
   PhysicalPlanResult* PhysicalTableScan::Execute(const int& batchSize){

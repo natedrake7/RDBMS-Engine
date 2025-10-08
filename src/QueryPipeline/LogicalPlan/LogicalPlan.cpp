@@ -250,6 +250,28 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return new PhysicalPlan::PhysicalOrderBy(this->child->ToPhysical(), this->expressions);
   }
 
+  LogicalTop::LogicalTop(LogicalPlan *child, int64_t &top)
+    : child(child), top(std::move(top)){}
+
+  LogicalTop::~LogicalTop() {
+    delete this->child;
+  }
+
+  PhysicalPlan::PhysicalTop * LogicalTop::ToPhysical(){
+    return new PhysicalPlan::PhysicalTop(this->child->ToPhysical(), this->top);
+  }
+
+  LogicalDistinct::LogicalDistinct(LogicalPlan *child)
+    : child(child) {}
+
+  LogicalDistinct::~LogicalDistinct() {
+    delete this->child;
+  }
+
+  PhysicalPlan::PhysicalDistinct * LogicalDistinct::ToPhysical(){
+    return new PhysicalPlan::PhysicalDistinct(this->child->ToPhysical());
+  }
+
   LogicalIndexCreate::LogicalIndexCreate(
     Statements::TableName *table,
     std::string &constraintName,

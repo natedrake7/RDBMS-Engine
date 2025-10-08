@@ -135,6 +135,26 @@ namespace QueryPipeline::PhysicalPlan{
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
+  class PhysicalTop final : public PhysicalOperator {
+    int64_t top;
+    PhysicalOperator* child;
+
+    public:
+      PhysicalTop(PhysicalOperator* child, int64_t& top);
+      ~PhysicalTop() override;
+
+    PhysicalPlanResult* Execute(const int& batchSize) override;
+  };
+
+  class PhysicalDistinct final : public PhysicalOperator {
+    PhysicalOperator* child;
+
+    public:
+      PhysicalDistinct(PhysicalOperator* child);
+      ~PhysicalDistinct()override;
+      PhysicalPlanResult* Execute(const int& batchSize) override;
+  };
+
   class PhysicalInsert final : public PhysicalOperator{
     Statements::TableName* table;
     std::vector<Statements::Inserts> fields;

@@ -13,7 +13,7 @@ namespace QueryPipeline {
     public:
 
       //Statements
-      antlrcpp::Any visitSelectStatement(SQLParser::SelectStatementContext *ctx) override;
+      antlrcpp::Any visitSelectStatement(SQLParser::SelectStatementContext *context) override;
 
       antlrcpp::Any visitCreateDbStatement(SQLParser::CreateDbStatementContext *context) override;
 
@@ -142,6 +142,10 @@ namespace QueryPipeline {
       antlrcpp::Any visitValuesList(SQLParser::ValuesListContext *context) override;
 
       antlrcpp::Any visitSign(SQLParser::SignContext *context) override;
+
+      antlrcpp::Any visitTop(SQLParser::TopContext *context) override;
+
+      antlrcpp::Any visitDistinct(SQLParser::DistinctContext *context) override;
   };
 
   static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {

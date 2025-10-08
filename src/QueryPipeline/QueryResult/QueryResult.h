@@ -14,5 +14,9 @@ public:
   void AddColumn(Value& field);
   void Print()const;
   [[nodiscard]] const std::vector<Value>& GetData()const;
+  [[nodiscard]] int GetSize()const;
   void SetColumnIndex(const int& columnPos, const int32_t & columnIndex);
+  int64_t ComputeHash()const;
+
+  friend bool operator==(const QueryResult& lhs, const QueryResult& rhs);
 };

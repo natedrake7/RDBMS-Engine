@@ -53,26 +53,31 @@ namespace QueryPipeline {
     return statement;
   }
 
-antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *ctx) {
+antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *context) {
     auto* statement = new Statements::SelectStatement();
 
-    if (!ctx->resultList())
-      throw SyntaxError("No arguments specified", CreatePositionErrorMessage(ctx));
+    if (!context->resultList())
+      throw SyntaxError("No arguments specified", CreatePositionErrorMessage(context));
 
-    statement->results = std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(ctx->resultList()));
+    if (context->top())
+      statement->top = std::any_cast<int64_t>(visit(context->top()));
 
-    statement->table = (ctx->tableName() != nullptr)
-              ? std::any_cast<Statements::TableName*>(visit(ctx->tableName()))
+    statement->distinct = context->distinct() != nullptr;
+
+    statement->results = std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(context->resultList()));
+
+    statement->table = (context->tableName() != nullptr)
+              ? std::any_cast<Statements::TableName*>(visit(context->tableName()))
               : nullptr;
 
-    for (auto* join : ctx->joinStatement())
+    for (auto* join : context->joinStatement())
       statement->joins.push_back(std::any_cast<Statements::JoinStatement*>(visit(join)));
 
-    if (ctx->whereClause() != nullptr)
-      statement->where = std::any_cast<Statements::WhereClause>(visit(ctx->whereClause()));
+    if (context->whereClause() != nullptr)
+      statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));
 
-    if(ctx->orderByStatement())
-      statement->orderBy = std::any_cast<Statements::OrderByStatement*>(visit(ctx->orderByStatement()));
+    if(context->orderByStatement())
+      statement->orderBy = std::any_cast<Statements::OrderByStatement*>(visit(context->orderByStatement()));
 
     return statement;
   }
@@ -250,6 +255,14 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
   antlrcpp::Any SQLVisitorImplementation::visitSign(SQLParser::SignContext *context){
     return context->getText();
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitTop(SQLParser::TopContext *context){
+    return Converter<int64_t>::Stoi(context->NUMBER()->getText());
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitDistinct(SQLParser::DistinctContext *context){
+    return true;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
