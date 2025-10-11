@@ -86,9 +86,10 @@ namespace Headers {
   };
 
   struct TableStatistics {
-    int32_t tableId;
+    int32_t tableId = Constants::INVALID_TABLE_ID;
 
-    int64_t rowCount;
+    int64_t rowCount = 0;
+    int32_t avgRowSize = 0;
 
     AdditionalInformation additionalInfo;
   };

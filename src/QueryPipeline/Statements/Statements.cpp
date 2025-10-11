@@ -185,6 +185,23 @@ namespace QueryPipeline::Statements {
       }
   }
 
+  Dictionary<std::string, Constants::column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
+    Dictionary<std::string, Constants::column_index_t> dict;
+
+    for (int i = 0;i < this->results.size(); i++) {
+      const auto& resultExpr = this->results[i];
+
+      if (resultExpr->name.empty())
+        continue;
+
+      dict.Add(resultExpr->name, i);
+    }
+
+    return dict;
+  }
+
+  bool SelectStatement::HasTopStatement() const{ return this->top != Constants::INVALID_TOP; }
+
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
   bool SelectStatement::Validate(){
@@ -438,7 +455,6 @@ namespace QueryPipeline::Statements {
 
     //join re orders take place here
     if (this->table != nullptr) {
-
       std::vector<table_id_t> joinOrder;
 
       joinOrder.reserve(this->joins.size() + 1);
@@ -478,29 +494,17 @@ namespace QueryPipeline::Statements {
 
     //here create logical joins with the expressions
     //re order here
-    for (const auto& join : this->joins) {
+    for (const auto& join : this->joins)
       current = new LogicalJoin(current, join->ToLogical(), join->expression, join->type);
-    }
 
     if (this->where.expression != nullptr)
       current = new LogicalFilter(current, this->where.expression);
 
+    const auto postProjectionIndicesDictionary = this->CreatePostProjectionIndicesDictionary();
 
-    if (!this->results.empty())
-      current = new LogicalProject(current, this->results, this->columnHeaders);
+    current = new LogicalProject(current, this->results, this->columnHeaders);
 
     if(this->orderBy != nullptr) {
-      Dictionary<std::string, Constants::column_index_t> postProjectionIndicesDictionary;
-
-      for (int i = 0;i < this->results.size(); i++) {
-        const auto& resultExpr = this->results[i];
-
-        if (resultExpr->name.empty())
-          continue;
-
-        postProjectionIndicesDictionary.Add(resultExpr->name, i);
-      }
-
       for (const auto& column : this->orderBy->columns)
         AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
 
@@ -510,7 +514,7 @@ namespace QueryPipeline::Statements {
     if (this->distinct)
       current = new LogicalDistinct(current);
 
-    if (this->top != Constants::INVALID_TOP)
+    if (this->HasTopStatement())
       current = new LogicalTop(current, this->top);
 
     return current;

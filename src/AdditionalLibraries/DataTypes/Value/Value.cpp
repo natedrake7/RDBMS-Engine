@@ -594,10 +594,20 @@ Value Value::PerformDecimalSubtraction(const DataTypes::Decimal &lhs, const Data
 
 std::tuple<bool, Value> Value::PerformNullEqualityComparison(const Value &lhs, const Value &rhs){
     if (lhs.GetIsNull())
+        return std::make_tuple(true, Value(rhs.GetIsNull(), 0));
+
+    if (rhs.GetIsNull())
+        return std::make_tuple(true, Value(false, 0));
+
+    return std::make_tuple(false, Value(nullptr, 0));
+}
+
+std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs, const Value &rhs){
+    if (lhs.GetIsNull())
         return std::make_tuple(true, Value(!rhs.GetIsNull(), 0));
 
     if (rhs.GetIsNull())
-        return std::make_tuple(true, Value(!lhs.GetIsNull(), 0));
+        return std::make_tuple(true, Value(true, 0));
 
     return std::make_tuple(false, Value(nullptr, 0));
 }
@@ -698,7 +708,7 @@ Value operator*(const Value &lhs, const Value &rhs){
 }
 
 Value operator<(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, output] = Value::PerformNullEqualityComparison(lhs, rhs);
+    const auto& [returnOutput, output] = Value::PerformNullInEqualityComparison(lhs, rhs);
     if (returnOutput)
         return output;
 
@@ -851,7 +861,8 @@ Value operator==(const Value &lhs, const Value &rhs){
 }
 
 Value operator!=(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, output] = Value::PerformNullEqualityComparison(lhs, rhs);
+    const auto& [returnOutput, output] = Value::PerformNullInEqualityComparison(lhs, rhs);
+
     if (returnOutput)
         return output;
 

@@ -142,6 +142,8 @@ namespace DatabaseEngine::StorageTypes
 
             static page_id_t GetPageIdByState(const page_id_t& extentFirstPageId, const QueryPipeline::PhysicalPlan::TableScanState& state);
 
+            void UpdateTableStatisticsFromRowInsert(const Row* row);
+
         public:
             Table(
               const table_id_t &tableId,

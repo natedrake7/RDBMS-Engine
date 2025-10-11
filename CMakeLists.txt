@@ -6,7 +6,8 @@ project(DatabaseInterface)
 
 set(BUILD_SHARED_LIBS ON)
 
-add_executable(DatabaseInterface main.cpp)
+add_executable(DatabaseInterface main.cpp
+        Queries.h)
 
 # Set this to the directory containing antlr4-runtimeConfig.cmake or antlr4-runtime-config.cmake
 find_package(antlr4-runtime CONFIG REQUIRED)

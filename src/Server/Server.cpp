@@ -519,6 +519,7 @@ namespace Server {
   AdditionalDataTypes::ResultStatus ServerInstance::InsertTableStatisticsToMasterDb(
     const int32_t &tableId,
     const int64_t& rowCount,
+    const int32_t& rowSize,
     const int &version,
     const bool &isDeleted
   ) const{
@@ -526,25 +527,27 @@ namespace Server {
     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
     const auto currentDate = DataTypes::DateTime::Now();
 
+    const std::string lastModifiedBy = "system";
+
     const vector<Value> fields = {
-      Value(tableId, 0),
-      Value(rowCount, 1),
-      Value(DataTypes::DateTime::Now(), 2),
-      Value(DataTypes::DateTime::Now(), 3),
-      Value("system", 4),
-      Value(version, 5),
-      Value(isDeleted, 6),
-      Value(nullptr, 7),
+      Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)),
+      Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
+      Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::CreatedAt)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastModifiedAt)),
+      Value(lastModifiedBy, static_cast<column_index_t>(SysTableStats::LastModifiedBy)),
+      Value(version, static_cast<column_index_t>(SysTableStats::Version)),
+      Value(isDeleted, static_cast<column_index_t>(SysTableStats::IsDeleted)),
+      Value(nullptr, static_cast<column_index_t>(SysTableStats::DeletedAt)),
     };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
-    std::cout << "Inserted table stats for column with id: " << tableId << std::endl;
+    std::cout << "Inserted table stats for table with id: " << tableId << std::endl;
 
     return result;
-
   }
 
   AdditionalDataTypes::ResultStatus ServerInstance::InsertColumnStatisticsToMasterDb(
@@ -552,23 +555,26 @@ namespace Server {
     const int64_t &distinctCount,
     const int64_t &nullCount,
     const int &version,
-    const bool &isDeleted) const{
+    const bool &isDeleted
+  ) const{
 
     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
     const auto currentDate = DataTypes::DateTime::Now();
 
+    const std::string lastModifiedBy = "system";
+
     const vector<Value> fields = {
-      Value(columnId, 0),
-      Value(distinctCount, 1),
-      Value(nullptr, 2),
-      Value(nullptr, 3),
-      Value(nullCount, 4),
-      Value(DataTypes::DateTime::Now(), 5),
-      Value(DataTypes::DateTime::Now(), 6),
-      Value("system", 7),
-      Value(version, 8),
-      Value(isDeleted, 9),
-      Value(nullptr, 10),
+      Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)),
+      Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
+      Value(nullptr, static_cast<column_index_t>(SysColumnStats::MininimumValue)),
+      Value(nullptr, static_cast<column_index_t>(SysColumnStats::MaxmimumValue)),
+      Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumnStats::CreatedAt)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumnStats::LastModifiedAt)),
+      Value(lastModifiedBy, static_cast<column_index_t>(SysColumnStats::LastModifiedBy)),
+      Value(version, static_cast<column_index_t>(SysColumnStats::Version)),
+      Value(isDeleted, static_cast<column_index_t>(SysColumnStats::IsDeleted)),
+      Value(nullptr, static_cast<column_index_t>(SysColumnStats::DeletedAt)),
     };
 
     const auto transactionId = this->masterDb->StartLogTransaction();
@@ -1217,8 +1223,8 @@ namespace Server {
     Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
     std::vector<const Row*> selectedStats;
 
-    auto* columnOperation = new Expressions::ColumnExpression(0);
-    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 0));
+    auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTableStats::TableId));
+    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)));
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -1232,15 +1238,16 @@ namespace Server {
     return Headers::TableStatistics{
       .tableId = data[0]->GetInt(),
       .rowCount = data[1]->GetBigInt(),
+      .avgRowSize = data[2]->GetInt(),
         .additionalInfo{
-        .createdAt = data[2]->GetDateTime(),
-        .lastModified = data[3]->GetDateTime(),
-        .lastModifiedBy = data[4]->GetString(),
-        .version = data[5]->GetInt(),
-        .isDeleted = data[6]->GetBool(),
-        .deletedAt = data[7]->GetBlockData() == nullptr
+        .createdAt = data[3]->GetDateTime(),
+        .lastModified = data[4]->GetDateTime(),
+        .lastModifiedBy = data[5]->GetString(),
+        .version = data[6]->GetInt(),
+        .isDeleted = data[7]->GetBool(),
+        .deletedAt = data[8]->GetBlockData() == nullptr
               ? DataTypes::DateTime()
-              : data[7]->GetDateTime()
+              : data[8]->GetDateTime()
         },
     };
   }
@@ -1511,18 +1518,20 @@ namespace Server {
 
   void ServerInstance::UpdateTableStatisticsById(
     const int32_t &tableId,
-    const int64_t& rowCount
+    const int64_t& rowCount,
+    const int32_t& rowSize
   ) const{
     using namespace DatabaseEngine::StorageTypes;
 
     const std::vector<Value> updates = {
-      Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount))
+      Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
+      Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize))
     };
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
 
-    auto* columnOperation = new Expressions::ColumnExpression(0);
-    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 0));
+    auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTableStats::TableId));
+    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)));
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
@@ -1547,8 +1556,8 @@ namespace Server {
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
 
-    auto* columnOperation = new Expressions::ColumnExpression(0);
-    auto* literaValue = new Expressions::LiteralExpression(Value(columnId, 0));
+    auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumnStats::ColumnId));
+    auto* literaValue = new Expressions::LiteralExpression(Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)));
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 

@@ -410,21 +410,20 @@ PhysicalInsert::PhysicalInsert(
 
     const auto& tables = Server::ServerInstance::Get().SelectTables(this->table->databaseId);
 
-    const auto schemas = Server::ServerInstance::Get().SelectSchemas(this->table->databaseId);
-
     const int16_t& index = tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1;
 
     const auto tableResult = Server::ServerInstance::Get().InsertTableToMasterDb(
         this->table->databaseId,
         this->table->schemaId,
         this->table->name,
-        index);
-
-    const auto tableStatsResult = Server::ServerInstance::Get().InsertTableStatisticsToMasterDb(
-      tableResult.primaryKeyVal
+        index
     );
 
-    const auto* tablePtr = db->CreateTable(tableResult.primaryKeyVal, index, columnsPtrs, &this->primaryKey);
+    const auto tableStatsResult = Server::ServerInstance::Get().InsertTableStatisticsToMasterDb(
+      static_cast<int32_t>(tableResult.primaryKeyVal)
+    );
+
+    auto* tablePtr = db->CreateTable(tableResult.primaryKeyVal, index, columnsPtrs, &this->primaryKey);
 
     Dictionary<int, int32_t> columnIdsDict;
 
@@ -511,6 +510,7 @@ PhysicalInsert::PhysicalInsert(
 
     tablePtr->GetColumnsHeaders();
     tablePtr->GetIdentityColumns();
+    tablePtr->GetStatistics();
 
     return nullptr;
   }

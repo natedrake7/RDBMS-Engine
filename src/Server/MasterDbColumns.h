@@ -20,18 +20,19 @@ namespace Server {
     DeletedAt = 13,
   };
 
-  enum class SysTableStats : uint16_t {
+  enum class SysTableStats : uint8_t {
     TableId = 0,
     RowCount = 1,
-    CreatedAt = 2,
-    LastModifiedAt = 3,
-    LastModifiedBy = 4,
-    Version = 5,
-    IsDeleted = 6,
-    DeletedAt = 7,
+    AvgRowSize = 2,
+    CreatedAt = 3,
+    LastModifiedAt = 4,
+    LastModifiedBy = 5,
+    Version = 6,
+    IsDeleted = 7,
+    DeletedAt = 8,
   };
 
-  enum class SysColumnStats : uint16_t {
+  enum class SysColumnStats : uint8_t {
     ColumnId = 0,
     DistinctCount = 1,
     MininimumValue = 2,

@@ -149,6 +149,7 @@ namespace Server {
     AdditionalDataTypes::ResultStatus InsertTableStatisticsToMasterDb(
       const int32_t& tableId,
       const int64_t& rowCount = 0,
+      const int32_t& rowSize = 0,
       const int& version = 0,
       const bool& isDeleted = false
     ) const;
@@ -193,7 +194,8 @@ namespace Server {
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
     void UpdateTableStatisticsById(
       const int32_t& tableId,
-      const int64_t& rowCount
+      const int64_t& rowCount,
+      const int32_t& rowSize
     )const;
     void UpdateColumnStatisticsById(
       const int32_t& columnId,
