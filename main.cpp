@@ -65,6 +65,7 @@ using namespace Server;
 //on updates reset row cache
 //check decimals assignments on joins
 //add buffer pool optimization to allocate rows lazily based on if they are needed, else just store raw bytes from memory with basic metadata
+//make identity BIGINT by default and downcast to int
 
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 
@@ -87,61 +88,14 @@ void RegisterSignalHandlers()
 
 int main()
 {
-    //select statement
-    const string selectActors = "SELECT * FROM dbo.Actors";
-
-    const string selectMasterDb = "SELECT * FROM dbo.sys_tables";
-
-    //select statement
-    const string selectMovies = "SELECT * FROM dbo.Movies";
-
-    //insert statement
-    const string insertActors = "INSERT INTO dbo.Actors(ActorName, ActorDesc, ActorAge) VALUES('Henry Cavill', 'kalispera', 43)";
-
-    const string insertMovies = "INSERT INTO dbo.Movies(ID, MovieName) VALUES(NEWID(), 'Batman: The Dark Knight')";
-
-    const string deleteMovies = "DELETE FROM movies.Movies WHERE MovieName = 'Batman: The Dark Knight'";
-
-    //create table
-    const string createMoviesTable = "CREATE TABLE dbo.Movies ( "
-                                        "ID GUID NOT NULL, "
-                                        "MovieName VARCHAR(800) NOT NULL"
-                                     ")";
-
-    //create table
-    const string createActorsTable = "CREATE TABLE Actors ( "
-                                     "ID INT PRIMARY KEY IDENTITY(1, 1) ,"
-                                     "ActorName VARCHAR(255) NULL, "
-                                     "ActorDesc VARCHAR(MAX),"
-                                     " ActorAge INT NOT NULL"
-                                     ")";
-
-    const string createDb = "CREATE DATABASE MoviesDb";
-
-    const string schemaCreate = "CREATE SCHEMA movies";
-
-    const string updateMovies = "UPDATE dbo.Movies SET MovieDesc = 'Batman Fights Bane' WHERE ID = 5";
-
-    const string updateActors = "UPDATE dbo.Actors SET ActorDesc = 'Henry Cavill is hot' WHERE ID <> 20";
-
-    const string actorsIndex = "CREATE INDEX idx_ActorsName ON dbo.Actors (ActorName)";
-
     //UPDATE dbo.Actors SET Name = CONCAT('Kalimera', 'HEllo')
     //CREATE DATABASE MoviesDB
     //CREATE TABLE dbo.Movies (ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), ReleaseDate DATETIME)
     //INSERT INTO dbo.Movies(Name, ReleaseDate)VALUES('Batman', GETDATE())
 
-    //
-    // int value = -10000;
-    // DataTypes::Decimal decimal(value);
-    //
-    // std::cout << decimal << std::endl;
+    //Get table stats
+    //SELECT TOP(1) TS.table_id AS ID, T.name AS Name, TS.row_count AS RowCount, TS.avg_record_size AS RowSize FROM masterDb.dbo.sys_table_stats AS TS INNER JOIN masterDb.dbo.sys_tables AS T ON T.table_id = TS.table_id AS TS ORDER BY ID DESC
 
-    // DataTypes::Decimal decimal2("0");
-    // //
-    // std::cout << "Decimal: " << decimal + decimal2 << std::endl;
-
-    // return 0;
     RegisterSignalHandlers();
 
     auto& server = ServerInstance::Get();
@@ -170,8 +124,6 @@ int main()
 
         std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
     }
-
-    //CREATE TABLE dbo.NewActors(ActorID INT PRIMARY KEY, ActorName STRING(200), MovieID INT)
 
     const auto& databases = server.GetCatalog();
 

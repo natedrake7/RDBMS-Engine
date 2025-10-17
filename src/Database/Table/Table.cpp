@@ -18,7 +18,7 @@
 #include "../Pages/IndexPage/IndexPage.h"
 #include "../../Server/Server.h"
 
-#include <iostream>
+#include <cmath>
 #include <stdexcept>
 
 
@@ -248,7 +248,7 @@ namespace DatabaseEngine::StorageTypes {
         if (status.code != AdditionalDataTypes::ResultCode::Ok)
             return status;
 
-        //insert to Non Clustered Indexes
+        //insert to NonClustered Indexes
         for (int i = 0; i < this->header.nonClusteredIndexes.size(); i++) {
             status = this->NonClusteredIndexInsert(row, i, rowId);
 
@@ -257,12 +257,7 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         //update statistics (should change but just for testing)
-        this->header.statistics.rowCount++;
-
-        Server::ServerInstance::Get().UpdateTableStatisticsById(this->header.tableId, this->header.statistics.rowCount);
-
-        for (auto* column : this->columns)
-          column->UpdateColumnStatistics(row);
+        this->UpdateTableStatisticsFromRowInsert(row);
 
         return status;
       }
@@ -288,7 +283,7 @@ namespace DatabaseEngine::StorageTypes {
           const auto& column = this->columns.at(associatedColumnIndex);
 
           //ignore auto-computed columns even if specified
-          if (column->GetIdentity().columnId != -1)
+          if (column->GetIdentity().columnId != Constants::INVALID_COLUMN_ID)
             continue;
 
           auto *block = new Block(column);
@@ -1393,12 +1388,14 @@ namespace DatabaseEngine::StorageTypes {
 
         auto& identity = column->GetIdentity();
 
-        if (identity.columnId == -1)
+        if (identity.columnId == Constants::INVALID_COLUMN_ID)
           return primaryKeyValue;
 
         const auto& columnSize = column->GetColumnSize();
 
-        auto* block = new Block(&identity.lastValue, columnSize ,column);
+        const auto value = static_cast<int64_t>(identity.lastValue);
+
+        auto* block = new Block(&value, columnSize ,column);
 
         primaryKeyValue = identity.lastValue;
 
@@ -1415,7 +1412,7 @@ namespace DatabaseEngine::StorageTypes {
       void Table::PopulateDefaultValues(Row *row, Column*& column) {
         const auto& defaultValue = column->GetDefaultValue();
 
-        if (defaultValue.columnId == -1)
+        if (defaultValue.columnId == Constants::INVALID_COLUMN_ID)
           return;
 
         auto* block = new Block(defaultValue.value.data(), defaultValue.value.size(), column);
@@ -1482,12 +1479,12 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::GetDefaultValuesHeaders() const{
         for(const auto& column: this->columns) {
-          const auto header = Server::ServerInstance::Get().SelectDefaultValueByColumnId(column->GetColumnId());
+          const auto systemHeader = Server::ServerInstance::Get().SelectDefaultValueByColumnId(column->GetColumnId());
 
-          if (header.columnId == -1)
+          if (systemHeader.columnId == Constants::INVALID_COLUMN_ID)
             continue;
 
-          column->SetDefaultValue(header);
+          column->SetDefaultValue(systemHeader);
         }
     }
 
@@ -1731,6 +1728,25 @@ namespace DatabaseEngine::StorageTypes {
 
   page_id_t Table::GetPageIdByState(const page_id_t &extentFirstPageId, const QueryPipeline::PhysicalPlan::TableScanState &state){
         return state.lastFetchedRowId.pageId == INVALID_PAGE_ID ? extentFirstPageId : state.lastFetchedRowId.pageId;
+  }
+
+  void Table::UpdateTableStatisticsFromRowInsert(const Row* row){
+        auto& stats = this->header.statistics;
+
+        stats.avgRowSize = std::ceil(
+            (stats.avgRowSize * stats.rowCount + row->GetRowSize()) /
+            (stats.rowCount + 1)
+        );
+        stats.rowCount++;
+
+        Server::ServerInstance::Get().UpdateTableStatisticsById(
+          this->header.tableId,
+          stats.rowCount,
+          stats.avgRowSize
+        );
+
+        for (auto* column : this->columns)
+          column->UpdateColumnStatistics(row);
   }
 }
 

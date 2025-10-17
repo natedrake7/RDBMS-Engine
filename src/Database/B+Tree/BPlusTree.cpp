@@ -512,7 +512,9 @@ namespace Indexing
               if(!value.GetBool())
                   continue;
 
-            this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+              if (result.code != AdditionalDataTypes::ResultCode::Ok)
+                  return;
           }
 
           if(currentNode->GetNextPage() == 0)

@@ -185,6 +185,23 @@ namespace QueryPipeline::Statements {
       }
   }
 
+  Dictionary<std::string, Constants::column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
+    Dictionary<std::string, Constants::column_index_t> dict;
+
+    for (int i = 0;i < this->results.size(); i++) {
+      const auto& resultExpr = this->results[i];
+
+      if (resultExpr->name.empty())
+        continue;
+
+      dict.Add(resultExpr->name, i);
+    }
+
+    return dict;
+  }
+
+  bool SelectStatement::HasTopStatement() const{ return this->top != Constants::INVALID_TOP; }
+
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
   bool SelectStatement::Validate(){
@@ -206,6 +223,9 @@ namespace QueryPipeline::Statements {
       if (!join->Validate(this->databaseId))
         return false;
     }
+
+    if (!this->ResolveAliases(aliasesDictionary))
+      return false;
 
     return this->ResolveAliases(aliasesDictionary);
   }
@@ -253,6 +273,7 @@ namespace QueryPipeline::Statements {
     }
 
     //validate join expressions
+
     for (const auto& join: this->joins)
       if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, join->expression))
         return false;
@@ -297,9 +318,10 @@ namespace QueryPipeline::Statements {
       || this->scale == Constants::INVALID_DECIMAL_SCALE)
       return false;
 
-    return
+    return (
       this->precision <= Constants::MAX_DECIMAL_PRECISION
-      && this->scale <= this->precision;
+      && this->scale <= this->precision
+    );
   }
 
   ColumnType::ColumnType(const std::string &name){
@@ -323,6 +345,8 @@ namespace QueryPipeline::Statements {
       std::cerr << "Increment Factor must be greater than zero" << std::endl;
       return false;
     }
+
+
 
     return true;
   }
@@ -474,19 +498,11 @@ namespace QueryPipeline::Statements {
       current = new LogicalFilter(current, this->where.expression);
 
     current = new LogicalProject(current, this->results, this->columnHeaders);
+    const auto postProjectionIndicesDictionary = this->CreatePostProjectionIndicesDictionary();
+
+    current = new LogicalProject(current, this->results, this->columnHeaders);
 
     if(this->orderBy != nullptr) {
-      Dictionary<std::string, Constants::column_index_t> postProjectionIndicesDictionary;
-
-      for (int i = 0;i < this->results.size(); i++) {
-        const auto& resultExpr = this->results[i];
-
-        if (resultExpr->name.empty())
-          continue;
-
-        postProjectionIndicesDictionary.Add(resultExpr->name, i);
-      }
-
       for (const auto& column : this->orderBy->columns)
         AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
 
@@ -496,7 +512,7 @@ namespace QueryPipeline::Statements {
     if (this->distinct)
       current = new LogicalDistinct(current);
 
-    if (this->top != Constants::INVALID_TOP)
+    if (this->HasTopStatement())
       current = new LogicalTop(current, this->top);
 
     return current;

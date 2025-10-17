@@ -53,6 +53,7 @@ class Value {
     static Value PerformDecimalSubtraction(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
 
     static std::tuple<bool, Value> PerformNullEqualityComparison(const Value& lhs, const Value& rhs);
+    static std::tuple<bool, Value> PerformNullInEqualityComparison(const Value& lhs, const Value& rhs);
 
     public:
         Value();

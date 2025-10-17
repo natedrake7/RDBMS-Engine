@@ -187,6 +187,9 @@ namespace QueryPipeline::Statements {
     SelectStatement();
     ~SelectStatement() override;
 
+    [[nodiscard]] Dictionary<std::string, Constants::column_index_t> CreatePostProjectionIndicesDictionary()const;
+
+    [[nodiscard]] bool HasTopStatement()const;
     [[nodiscard]] bool HasJoins()const;
     [[nodiscard]] bool ValidateNoTableStatement();
     [[nodiscard]] bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);

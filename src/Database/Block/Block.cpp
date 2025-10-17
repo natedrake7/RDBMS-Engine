@@ -150,7 +150,6 @@ namespace DatabaseEngine::StorageTypes {
             ss << "Value " << val << " out of range for BigInt";
 
             result.message = ss.str();
-
             return result;
         }
 

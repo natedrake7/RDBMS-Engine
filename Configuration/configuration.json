@@ -186,6 +186,7 @@
       "columns": [
         { "name": "table_id",             "type": "Int" },
         { "name": "row_count",            "type": "BigInt", "default": 0 },
+        { "name": "avg_record_size",      "type": "Int",    "default": 0 },
         { "name": "created_at",           "type": "DateTime" },
         { "name": "last_modified",        "type": "DateTime" },
         { "name": "last_modified_by",     "type": "String", "size": 100 },
