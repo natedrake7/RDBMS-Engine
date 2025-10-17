@@ -188,10 +188,6 @@ namespace QueryPipeline::Statements {
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
   bool SelectStatement::Validate(){
-    if (this->table != nullptr
-      && !this->table->Validate(this->databaseId))
-      return false;
-
     if (!this->joins.empty() && this->table == nullptr) {
       std::cerr << "Table was not specified" << std::endl;
       return false;
@@ -201,6 +197,9 @@ namespace QueryPipeline::Statements {
     if (this->table == nullptr)
       return this->ValidateNoTableStatement();
 
+    if (!this->table->Validate(this->databaseId))
+        return false;
+
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
 
     for (const auto& join: this->joins) {
@@ -208,10 +207,7 @@ namespace QueryPipeline::Statements {
         return false;
     }
 
-    if (!this->ResolveAliases(aliasesDictionary))
-      return false;
-
-    return true;
+    return this->ResolveAliases(aliasesDictionary);
   }
 
   bool SelectStatement::ValidateNoTableStatement(){
@@ -257,7 +253,6 @@ namespace QueryPipeline::Statements {
     }
 
     //validate join expressions
-
     for (const auto& join: this->joins)
       if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, join->expression))
         return false;
@@ -302,10 +297,9 @@ namespace QueryPipeline::Statements {
       || this->scale == Constants::INVALID_DECIMAL_SCALE)
       return false;
 
-    return (
+    return
       this->precision <= Constants::MAX_DECIMAL_PRECISION
-      && this->scale <= this->precision
-    );
+      && this->scale <= this->precision;
   }
 
   ColumnType::ColumnType(const std::string &name){
@@ -329,8 +323,6 @@ namespace QueryPipeline::Statements {
       std::cerr << "Increment Factor must be greater than zero" << std::endl;
       return false;
     }
-
-
 
     return true;
   }
@@ -432,62 +424,56 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
-    LogicalPlan* current = (this->table != nullptr)
-            ? new LogicalTableScan(this->table, this->joins.empty() ? this->where.expression : nullptr)
-            : nullptr;
+    if (this->table == nullptr)
+      return new LogicalProject(nullptr, this->results, this->columnHeaders);
+
+    LogicalPlan* current = new LogicalTableScan(this->table, this->joins.empty() ? this->where.expression : nullptr);
 
     //join re orders take place here
-    if (this->table != nullptr) {
+    std::vector<table_id_t> joinOrder;
 
-      std::vector<table_id_t> joinOrder;
+    joinOrder.reserve(this->joins.size() + 1);
 
-      joinOrder.reserve(this->joins.size() + 1);
+    //needs to re adjust pointers for right join -> left join change.
+    joinOrder.push_back(this->table->tableId);
 
-      //needs to re adjust pointers for right join -> left join change.
-      joinOrder.push_back(this->table->tableId);
-
-      for (const auto* join : this->joins) {
-        if (join->IsRightJoin()) {
-          joinOrder.insert(joinOrder.begin(), join->table->tableId);
-          continue;
-        }
-
-        joinOrder.push_back(join->table->tableId);
+    for (const auto* join : this->joins) {
+      if (join->IsRightJoin()) {
+        joinOrder.insert(joinOrder.begin(), join->table->tableId);
+        continue;
       }
 
-      Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
-      Constants::column_index_t columnIndex = 0;
-
-      for (const auto& tableId: joinOrder) {
-        //TODO cache them at the beginning
-        const auto& columns = Server::ServerInstance::Get().SelectColumns(tableId);
-
-        for (const auto &column : columns) {
-          if (columnIndicesDictionary.Contains(column.id))
-            continue;
-
-          columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
-        }
-
-        columnIndex += columns.size();
-      }
-
-      AssignColumnsToIndices(this, columnIndicesDictionary);
+      joinOrder.push_back(join->table->tableId);
     }
 
+    Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
+    Constants::column_index_t columnIndex = 0;
+
+    for (const auto& tableId: joinOrder) {
+      //TODO cache them at the beginning
+      const auto& columns = Server::ServerInstance::Get().SelectColumns(tableId);
+
+      for (const auto &column : columns) {
+        if (columnIndicesDictionary.Contains(column.id))
+          continue;
+
+        columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
+      }
+
+      columnIndex += columns.size();
+    }
+
+    AssignColumnsToIndices(this, columnIndicesDictionary);
 
     //here create logical joins with the expressions
     //re order here
-    for (const auto& join : this->joins) {
+    for (const auto& join : this->joins)
       current = new LogicalJoin(current, join->ToLogical(), join->expression, join->type);
-    }
 
     if (this->where.expression != nullptr)
       current = new LogicalFilter(current, this->where.expression);
 
-
-    if (!this->results.empty())
-      current = new LogicalProject(current, this->results, this->columnHeaders);
+    current = new LogicalProject(current, this->results, this->columnHeaders);
 
     if(this->orderBy != nullptr) {
       Dictionary<std::string, Constants::column_index_t> postProjectionIndicesDictionary;

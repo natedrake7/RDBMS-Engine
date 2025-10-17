@@ -115,6 +115,10 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<Headers::ColumnHeader> columnHeaders;
     PhysicalOperator* child;
 
+
+    [[nodiscard]] inline PhysicalPlanResult* ExecuteStatement(const int& batchSize);
+    [[nodiscard]] inline PhysicalPlanResult* ExecuteConstantStatement()const;
+
     public:
       PhysicalProject(
         const int32_t & databaseId,
@@ -140,7 +144,7 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalOperator* child;
 
     public:
-      PhysicalTop(PhysicalOperator* child, int64_t& top);
+      PhysicalTop(PhysicalOperator* child, const int64_t& top);
       ~PhysicalTop() override;
 
     PhysicalPlanResult* Execute(const int& batchSize) override;

@@ -23,7 +23,7 @@ PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::m
   PhysicalPlanResult* PhysicalCreateDatabase::Execute(const int& batchSize){
     const auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
 
-    Server::ServerInstance::Get().InsertSchemaToMasterDb(result.primaryKeyVal, "dbo");
+    const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(static_cast<int32_t>(result.primaryKeyVal), "dbo");
     
     DatabaseEngine::CreateDatabase(this->dbName);
 
@@ -54,46 +54,52 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
   }
 
   PhysicalPlanResult* PhysicalProject::Execute(const int& batchSize){
-      if (this->child == nullptr) {
-        auto* result = new PhysicalPlanResult();
+      return (this->child == nullptr)
+        ? this->ExecuteConstantStatement()
+        : this->ExecuteStatement(batchSize);
+  }
 
-        QueryResult resultRow;
+  PhysicalPlanResult * PhysicalProject::ExecuteStatement(const int &batchSize){
+    auto* result = this->child->Execute(batchSize);
 
-        for (const auto& expression : this->resultExpressions) {
-          result->displayColumnNames.emplace_back(expression->name);
+    for (const auto& expression : this->resultExpressions)
+      result->displayColumnNames.emplace_back(expression->name);
 
-          auto field = expression->Evaluate(nullptr);
-          resultRow.AddColumn(field);
-        }
+    for (const auto* row: result->rows) {
+      QueryResult resultRow;
 
-        result->results.push_back(std::move(resultRow));
-
-        return result;
+      for (const auto& expression : this->resultExpressions) {
+        auto field = expression->Evaluate(row);
+        resultRow.AddColumn(field);
       }
 
-      auto* result = this->child->Execute(batchSize);
+      result->results.push_back(std::move(resultRow));
+    }
 
-      for (const auto& expression : this->resultExpressions)
-        result->displayColumnNames.emplace_back(expression->name);
-
-      for (const auto* row: result->rows) {
-          QueryResult resultRow;
-
-          for (const auto& expression : this->resultExpressions) {
-            auto field = expression->Evaluate(row);
-            resultRow.AddColumn(field);
-          }
-
-          result->results.push_back(std::move(resultRow));
+    ranges::sort(this->columnHeaders,
+      [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
+          return a.ordinalPosition < b.ordinalPosition;
       }
+    );
 
-      ranges::sort(this->columnHeaders,
-        [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
-            return a.ordinalPosition < b.ordinalPosition;
-        }
-      );
+    return result;
+  }
 
-      return result;
+  PhysicalPlanResult * PhysicalProject::ExecuteConstantStatement()const{
+    auto* result = new PhysicalPlanResult();
+
+    QueryResult resultRow;
+
+    for (const auto& expression : this->resultExpressions) {
+      result->displayColumnNames.emplace_back(expression->name);
+
+      auto field = expression->Evaluate(nullptr);
+      resultRow.AddColumn(field);
+    }
+
+    result->results.push_back(std::move(resultRow));
+
+    return result;
   }
 
   PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Expressions::Expression* filter)
@@ -125,8 +131,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     return result;
   }
 
-  PhysicalTop::PhysicalTop(PhysicalOperator* child, int64_t& top)
-    : top(std::move(top)), child(child){}
+  PhysicalTop::PhysicalTop(PhysicalOperator* child, const int64_t& top)
+    : top(top), child(child){}
 
   PhysicalTop::~PhysicalTop(){
     delete this->child;
