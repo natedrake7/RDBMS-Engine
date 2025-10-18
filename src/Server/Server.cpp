@@ -1,4 +1,5 @@
 #include "Server.h"
+#include "Server.Constants.h"
 
 #include "MasterDbColumns.h"
 #include "../AdditionalLibraries/Converter/Converter.h"
@@ -746,7 +747,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(1);
     auto* literaValue = new Expressions::LiteralExpression(Value(name, 1));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::EqualIgnoreOrdinalCase);
 
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
     std::vector<const Row*> selectedDatabases;
@@ -841,21 +842,29 @@ namespace Server {
     auto* leftColumnOperation = new Expressions::ColumnExpression(1);
     auto* leftLiteraValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
-    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::Equal);
+    const auto binaryExpr = Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::EqualIgnoreOrdinalCase);
 
-    auto* rightColumnOperation = new Expressions::ColumnExpression(2);
-    auto* rightLiteraValue = new Expressions::LiteralExpression(Value(schema, 2));
-
-    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
-
-    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
+    // auto* rightColumnOperation = new Expressions::ColumnExpression(2);
+    // auto* rightLiteraValue = new Expressions::LiteralExpression(Value(schema, 2));
+    //
+    // auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
+    //
+    // const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
     std::vector<const Row*> selectedSchemas;
 
-    sysSchemas->ClusteredIndexScan(&selectedSchemas, &logicalExpr);
+    sysSchemas->ClusteredIndexScan(&selectedSchemas, &binaryExpr);
 
-    return !selectedSchemas.empty();
+    for (const auto& row : selectedSchemas) {
+      const auto& currentSchemaName = row->GetColumnByIndex(2);
+
+      if (AdditionalLibraries::StringFunctions::Lower(currentSchemaName.GetString())
+          == AdditionalLibraries::StringFunctions::Lower(schema))
+        return true;
+    }
+
+    return false;
   }
 
   vector<Headers::TableHeader> ServerInstance::SelectTables(const string &dbName) const{
@@ -959,11 +968,14 @@ namespace Server {
 
     const auto databaseHeader = this->SelectDatabase(dbName);
 
-    return this->SelectTable(databaseHeader.id, tableName, "");
+    return this->SelectTable(databaseHeader.id, tableName, ServerConstants::DEFAULT_SCHEMA_NAME.data());
   }
 
   Headers::TableHeader ServerInstance::SelectTable(const int32_t &databaseId, const string &tableName, const std::string& schema) const{
     using namespace DatabaseEngine::StorageTypes;
+
+    if (!this->SchemaExists(databaseId, schema) && !schema.empty())
+      return {};
 
     std::vector<const Row*> selectedTables;
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
@@ -976,7 +988,7 @@ namespace Server {
     auto* rightColumnOperation = new Expressions::ColumnExpression(3);
     auto* rightLiteraValue = new Expressions::LiteralExpression(Value(tableName, 3));
 
-    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
+    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::EqualIgnoreOrdinalCase);
 
     const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
@@ -1298,7 +1310,7 @@ namespace Server {
       Dictionary<string, Headers::ColumnHeader> selectedColumns;
 
       for (const auto& column : columns)
-        selectedColumns.Add(column.name, column);
+        selectedColumns.Add(AdditionalLibraries::StringFunctions::Lower(column.name), column);
 
       return selectedColumns;
     }

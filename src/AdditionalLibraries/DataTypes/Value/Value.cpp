@@ -289,6 +289,13 @@ bool Value::ParseAsBoolFromString() const{
     return false;
 }
 
+Value Value::EqualsIgnoreOrdinalCase(const Value &lhs, const Value &rhs){
+    return Value(
+        AdditionalLibraries::StringFunctions::EqualsIgnoreCase(lhs.GetString(), rhs.GetString()),
+        0
+    );
+}
+
 bool Value::TryParseAsBoolFromInt(bool& result)const{
     const auto intData = this->GetBigInt();
 

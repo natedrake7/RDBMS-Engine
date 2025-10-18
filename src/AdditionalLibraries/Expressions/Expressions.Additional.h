@@ -25,6 +25,7 @@ namespace Expressions {class Expression;
     Multiply = 8,
     Divide = 9,
     Modulo = 10,
+    EqualIgnoreOrdinalCase = 11
   };
 
   static Dictionary<std::string, ExpressionOperator> ExpressionOperatorsDictionary{

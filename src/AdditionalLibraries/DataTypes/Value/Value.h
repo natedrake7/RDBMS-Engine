@@ -164,4 +164,5 @@ class Value {
 
         [[nodiscard]] bool IsVariable()const;
         [[nodiscard]] bool ParseAsBoolFromString()const;
+        [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);
 };

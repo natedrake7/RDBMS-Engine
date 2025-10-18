@@ -84,6 +84,8 @@ namespace Expressions {
         return this->left->Evaluate(row) % this->right->Evaluate(row);
       case ExpressionOperator::Equal:
         return this->left->Evaluate(row) == this->right->Evaluate(row);
+      case ExpressionOperator::EqualIgnoreOrdinalCase:
+        return Value::EqualsIgnoreOrdinalCase(this->left->Evaluate(row), this->right->Evaluate(row));
       case ExpressionOperator::NotEqual:
         return this->left->Evaluate(row) != this->right->Evaluate(row);
       case ExpressionOperator::Greater:

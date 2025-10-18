@@ -206,7 +206,7 @@ namespace QueryPipeline::Statements {
 
   bool SelectStatement::Validate(){
     if (!this->joins.empty() && this->table == nullptr) {
-      std::cerr << "Table was not specified" << std::endl;
+      std::cerr << "Joins were specified but no calling table was not specified" << std::endl;
       return false;
     }
 
@@ -223,9 +223,6 @@ namespace QueryPipeline::Statements {
       if (!join->Validate(this->databaseId))
         return false;
     }
-
-    if (!this->ResolveAliases(aliasesDictionary))
-      return false;
 
     return this->ResolveAliases(aliasesDictionary);
   }
@@ -596,7 +593,7 @@ namespace QueryPipeline::Statements {
 
     const auto& columnsDictionary = this->tableColumnsDictionary.Get(this->table->tableId);
 
-    const auto& columnHeader = columnsDictionary.Get(columnName);
+    const auto& columnHeader = columnsDictionary.Get(AdditionalLibraries::StringFunctions::Lower(columnName));
 
     const auto columnType = static_cast<Constants::DataType>(columnHeader.dataType);
 
@@ -695,7 +692,7 @@ namespace QueryPipeline::Statements {
       Headers::ColumnHeader header;
 
       //check if columns exist on the table
-      if (!columnsDict.TryGetValue(column.name, header)) {
+      if (!columnsDict.TryGetValue(AdditionalLibraries::StringFunctions::Lower(column.name), header)) {
         std::cerr << "Column " << column.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
         return false;
       }
@@ -1056,7 +1053,7 @@ bool UpdateStatement::Validate(){
     bool columnExistsOnTable = false;
     Headers::ColumnHeader columnHeader;
     for (const auto& [key, columns]: tablesColumnsDictionary) {
-      if (!columns.TryGetValue(column.name, columnHeader))
+      if (!columns.TryGetValue(AdditionalLibraries::StringFunctions::Lower(column.name), columnHeader))
         continue;
 
       if (!columnExistsOnTable) {
@@ -1069,7 +1066,7 @@ bool UpdateStatement::Validate(){
     }
 
     if (!columnExistsOnTable) {
-      std::cerr << "Column: " << column.alias << " does not exist on Table" << std::endl;
+      std::cerr << "Column: " << column.name << " does not exist on Table" << std::endl;
       return false;
     }
 
@@ -1112,7 +1109,7 @@ bool UpdateStatement::Validate(){
 
     const auto& columns = tablesColumnsDictionary.Get(column->tableId);
 
-    if (!columns.TryGetValue(column->alias, columnHeader)) {
+    if (!columns.TryGetValue(AdditionalLibraries::StringFunctions::Lower(column->alias), columnHeader)) {
       std::cerr << "column: " << column->alias << " does not exist in the statement" << endl;
       return false;
     }
@@ -1136,7 +1133,7 @@ bool UpdateStatement::Validate(){
     bool columnExistsOnStatement = false;
 
     for (const auto &columns : tablesColumnsDictionary | views::values) {
-      if (!columns.TryGetValue(column->alias, columnHeader))
+      if (!columns.TryGetValue(AdditionalLibraries::StringFunctions::Lower(column->alias), columnHeader))
         continue;
 
       if (columnExistsOnStatement) {
