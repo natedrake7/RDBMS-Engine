@@ -8,6 +8,9 @@ namespace DatabaseEngine::StorageTypes
   class IdentityManager {
     Headers::IdentityColumnsHeader header;
     int64_t startingValue;
+
+    bool valueChanged;
+
     std::mutex mutex;
 
     [[nodiscard]] int64_t Generate();

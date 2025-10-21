@@ -3,7 +3,10 @@
 
 
 namespace DatabaseEngine::StorageTypes {
-  IdentityManager::IdentityManager() = default;
+  IdentityManager::IdentityManager() {
+    this->startingValue = 0;
+    this->valueChanged = false;
+  }
 
    IdentityManager::~IdentityManager() = default;
 
@@ -14,6 +17,8 @@ namespace DatabaseEngine::StorageTypes {
       const auto value = this->header.lastValue;
 
       this->header.lastValue += this->header.increment;
+
+      this->valueChanged = true;
 
       updateMasterDb = value >= this->startingValue + this->header.cacheBlock;
 
@@ -38,14 +43,18 @@ namespace DatabaseEngine::StorageTypes {
     if (this->header.columnId == Constants::INVALID_COLUMN_ID)
       return;
 
-    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value);
+    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value + 1);
   }
 
   void IdentityManager::UpdateMasterDb()const{
     if (this->header.columnId == Constants::INVALID_COLUMN_ID)
       return;
 
-    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, this->header.lastValue);
+    const auto value = this->valueChanged
+        ? this->header.lastValue + 1
+        : this->header.lastValue;
+
+    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value);
   }
 
   void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){

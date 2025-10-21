@@ -494,7 +494,6 @@ namespace QueryPipeline::Statements {
     if (this->where.expression != nullptr)
       current = new LogicalFilter(current, this->where.expression);
 
-    current = new LogicalProject(current, this->results, this->columnHeaders);
     const auto postProjectionIndicesDictionary = this->CreatePostProjectionIndicesDictionary();
 
     current = new LogicalProject(current, this->results, this->columnHeaders);
