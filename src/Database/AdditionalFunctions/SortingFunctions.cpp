@@ -1,7 +1,6 @@
 ﻿#include "SortingFunctions.h"
 #include <ranges>
 
-#include "../../AdditionalLibraries/DataTypes/Decimal/Decimal.h"
 #include "../../AdditionalLibraries/DataTypes/GroupCondition/GroupCondition.h"
 #include "./AggregateFunctions/AggregateFunctions.h"
 #include "../Block/Block.h"

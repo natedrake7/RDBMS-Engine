@@ -1225,10 +1225,6 @@ namespace DatabaseEngine::StorageTypes {
       pageFreeSpacePage->SetPageMetaData(page);
     }
 
-    void Table::UpdateColumnIdentity(const int32_t& columnId, const int32_t& lastValue)const{
-        Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, columnId, lastValue);
-    }
-
     void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t &indexPos){
 
         auto* clusteredTree = this->GetClusteredIndexedTree();
@@ -1386,25 +1382,17 @@ namespace DatabaseEngine::StorageTypes {
     int64_t Table::PopulateColumnIdentity(Row *row, Column*& column) const{
         int64_t primaryKeyValue = 0;
 
-        auto& identity = column->GetIdentity();
-
-        if (identity.columnId == Constants::INVALID_COLUMN_ID)
+        if (!column->GenerateIdentityValue(primaryKeyValue))
           return primaryKeyValue;
 
         const auto& columnSize = column->GetColumnSize();
 
-        const auto value = static_cast<int64_t>(identity.lastValue);
-
-        auto* block = new Block(&value, columnSize ,column);
-
-        primaryKeyValue = identity.lastValue;
-
-        identity.lastValue += identity.increment;
+        auto* block = new Block(&primaryKeyValue, columnSize ,column);
 
         row->InsertColumnData(block, column->GetColumnIndex());
 
-        if (column->GetIdentityLastValue() + identity.cacheBlock < primaryKeyValue )
-          this->UpdateColumnIdentity(column->GetColumnId(), primaryKeyValue);
+        // if (column->GetIdentityLastValue() + identity.cacheBlock < primaryKeyValue )
+        //   this->UpdateColumnIdentity(column->GetColumnId(), primaryKeyValue);
 
         return primaryKeyValue;
       }
@@ -1445,7 +1433,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
 
           column->SetIdentity(identity);
-          column->SetIdentityStartingValue(identity.lastValue);
+          // column->SetIdentityStartingValue(identity.lastValue);
 
           // this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
           break;
@@ -1469,7 +1457,7 @@ namespace DatabaseEngine::StorageTypes {
               continue;
 
             column->SetIdentity(identity);
-            column->SetIdentityStartingValue(identity.lastValue);
+            // column->SetIdentityStartingValue(identity.lastValue);
 
             // this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
             break;
@@ -1525,14 +1513,8 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::UpdateMasterDatabase() const{
-      for (const auto& column: this->columns) {
-        const auto& identity = column->GetIdentity();
-
-        if (identity.columnId == Constants::INVALID_COLUMN_ID)
-          continue;
-
-        this->UpdateColumnIdentity(column->GetColumnId(), identity.lastValue);
-      }
+      for (const auto& column: this->columns)
+        column->UpdateMetadata();
     }
 
   void Table::UpdateColumnName(const Constants::column_index_t &index, const std::string &name)const{

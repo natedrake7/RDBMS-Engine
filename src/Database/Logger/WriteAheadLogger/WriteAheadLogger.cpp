@@ -56,7 +56,7 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
     int entrySize = 0;
 
     while (true) {
-      const auto bytesRead = read(this->logFileDescriptor, buffer.data(), Constants::LOG_BATCH_SIZE);
+      const auto bytesRead = ::read(this->logFileDescriptor, buffer.data(), Constants::LOG_BATCH_SIZE);
 
       if (bytesRead < 0) {
         perror("Failed to read from log file");

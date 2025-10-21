@@ -77,7 +77,6 @@ add_library(AdditionalLibraries SHARED
 add_library(ExpressionsLibrary STATIC
             src/Expressions/Expression.h
             src/Expressions/Expression.cpp
-            src/Expressions/ExpressionExtensions.cpp
             src/Expressions/Expressions.Additional.h
 )
 
@@ -173,6 +172,8 @@ add_library(Database STATIC
         src/Database/Logger/WriteAheadLogger/WriteAheadLogger.h
         src/Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.cpp
         src/Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.h
+        src/Database/Column/IdentityManager/IdentityManager.cpp
+        src/Database/Column/IdentityManager/IdentityManager.h
 )
 
 add_library(Server STATIC

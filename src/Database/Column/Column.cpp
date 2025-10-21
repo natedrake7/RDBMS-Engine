@@ -73,19 +73,11 @@ namespace DatabaseEngine::StorageTypes {
 
     const int32_t& Column::GetColumnId() const{ return this->header.id; }
 
-    void Column::SetColumnId(const int32_t &columnId){
-        this->header.id = columnId;
-    }
+    void Column::SetColumnId(const int32_t &columnId){ this->header.id = columnId; }
 
-    Headers::IdentityColumnsHeader & Column::GetIdentity() { return this->header.identity; }
+    const Headers::IdentityColumnsHeader & Column::GetIdentity()const { return this->identityManager.GetHeader(); }
 
-    const int32_t & Column::GetIdentityLastValue() const{ return this->header.identity.lastValue; }
-
-    void Column::SetIdentityStartingValue(const int32_t &identityStartingValue){
-        this->header.identityStartingValue = identityStartingValue;
-    }
-
-    void Column::SetIdentity(const Headers::IdentityColumnsHeader  &identity){ this->header.identity = identity; }
+    void Column::SetIdentity(const Headers::IdentityColumnsHeader  &identity){ this->identityManager.SetHeader(identity); }
 
     void Column::SetDefaultValue(const Headers::DefaultValuesHeader &defaultValue){ this->header.defaultValue = defaultValue; }
 
@@ -119,5 +111,13 @@ namespace DatabaseEngine::StorageTypes {
             this->statistics.min,
             this->statistics.max
         );
+    }
+
+    bool Column::GenerateIdentityValue(int64_t& value){
+        return this->identityManager.TryGenerate(value);
+    }
+
+    void Column::UpdateMetadata(){
+        this->identityManager.UpdateMasterDb();
     }
 }

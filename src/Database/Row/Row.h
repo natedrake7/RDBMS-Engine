@@ -4,23 +4,10 @@
 #include "../../QueryPipeline/Statements/Statements.h"
 #include "../Pages/OverflowPage/OverflowPage.h"
 
-namespace DatabaseEngine
-{
-    class Database;
-}
-
-namespace Pages
-{
-    struct DataObjectPointer;
-}
-
 namespace ByteMaps
 {
     class BitMap;
 }
-
-using namespace std;
-using namespace Constants;
 
 namespace DatabaseEngine::StorageTypes
 {

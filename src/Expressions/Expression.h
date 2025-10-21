@@ -70,12 +70,6 @@ namespace Expressions{
   };
 
   class BinaryExpression final : public Expression {
-
-    [[nodiscard]] size_t GetAdditionSize() const;
-    [[nodiscard]] size_t GetSubtractionSize() const;
-    [[nodiscard]] size_t GetMultiplicationSize() const;
-    [[nodiscard]] size_t GetDivisionSize() const;
-    [[nodiscard]] size_t GetModuloSize() const;
     public:
       Expression* left;
       Expression* right;

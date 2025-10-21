@@ -126,8 +126,6 @@ namespace DatabaseEngine::StorageTypes
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
 
-            void UpdateColumnIdentity(const int32_t& columnId, const int32_t& lastValue)const;
-
             int64_t PopulateColumnIdentity(Row* row, Column*& column)const;
 
             static void PopulateDefaultValues(Row* row, Column*& column);
