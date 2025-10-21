@@ -1,8 +1,8 @@
-#include "../../AdditionalLibraries/DataTypes/Value/Value.h"
-#include "../../AdditionalLibraries/Expressions/Expression.h"
-#include "../../AdditionalLibraries/Functions/StringFunctions.h"
-#include "../Block/Block.h"
-#include "../Row/Row.h"
+#include "../AdditionalLibraries/DataTypes/Value/Value.h"
+#include "Expression.h"
+#include "../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../Database/Block/Block.h"
+#include "../Database/Row/Row.h"
 #include <functional>
 
 namespace Expressions {

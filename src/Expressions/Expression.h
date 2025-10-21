@@ -1,8 +1,8 @@
 #pragma once
 #include <string>
 #include "Expressions.Additional.h"
-#include "../../QueryPipeline/QueryResult/QueryResult.h"
-#include "../DataTypes/Value/Value.h"
+#include "../QueryPipeline/QueryResult/QueryResult.h"
+#include "../AdditionalLibraries/DataTypes/Value/Value.h"
 
 namespace DatabaseEngine::StorageTypes {
   class Row;
@@ -31,7 +31,6 @@ namespace Expressions{
       [[nodiscard]] virtual Value Evaluate(const QueryResult& row) const = 0;
       [[nodiscard]] virtual Value Evaluate(const DatabaseEngine::StorageTypes::Row* outerRow, const DatabaseEngine::StorageTypes::Row* innerRow) const = 0;
       [[nodiscard]] virtual DataType GetReturnType() const = 0;
-      [[nodiscard]] virtual size_t GetSize() const = 0;
   };
 
   class ColumnExpression final : public Expression {
@@ -54,7 +53,6 @@ namespace Expressions{
       [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
       [[nodiscard]] DataType GetReturnType() const override;
-      [[nodiscard]] size_t GetSize() const override;
       [[nodiscard]] bool HasTableAlias() const;
   };
 
@@ -69,7 +67,6 @@ namespace Expressions{
       [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
       [[nodiscard]] DataType GetReturnType() const override;
-      [[nodiscard]] size_t GetSize() const override;
   };
 
   class BinaryExpression final : public Expression {
@@ -92,7 +89,6 @@ namespace Expressions{
       [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
       [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
       [[nodiscard]] DataType GetReturnType() const override;
-      [[nodiscard]] size_t GetSize() const override;
   };
 
   class FunctionExpression final : public Expression {
@@ -146,7 +142,6 @@ namespace Expressions{
 
       [[nodiscard]] bool ValidateNumberOfArguments(std::string& errorMessage)const;
       [[nodiscard]] DataType GetReturnType() const override;
-      [[nodiscard]] size_t GetSize() const override;
   };
 
   class LogicalExpression final : public Expression{
@@ -168,6 +163,5 @@ namespace Expressions{
     [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
     [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
     [[nodiscard]] DataType GetReturnType() const override;
-    [[nodiscard]] size_t GetSize() const override;
 };
 }

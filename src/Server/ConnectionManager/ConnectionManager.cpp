@@ -14,14 +14,9 @@
 #include <fcntl.h>
 
 #ifdef _WIN32
-#define NOMINMAX
-#define byte win_byte_override // Add this before any Windows headers
-  #include <windows.h>
   #include <winsock2.h>
   #include <ws2tcpip.h>
-  #pragma comment(lib, "ws2_32.lib")
-
-#undef byte // Clean up after including
+  #pragma comment(lib, "ws2_32.lib")  // Optional if using MSVC
 #else
   #include <sys/socket.h>
   #include <sys/epoll.h>

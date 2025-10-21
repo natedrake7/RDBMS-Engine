@@ -3,8 +3,11 @@
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
-#include <unistd.h>
-
+#ifdef _WIN32
+  #include <io.h>
+#else
+  #include <unistd.h>
+#endif
 
 namespace DatabaseEngine::Logging {
 
@@ -117,7 +120,11 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
   }
 
   void WriteAheadLogger::FlushCheckPointDescriptor() const{
-    fsync(this->checkPointFileDescriptor);
+    #ifdef _WIN32
+      _commit(this->logFileDescriptor);
+    #else
+      ::fsync(this->logFileDescriptor);
+    #endif
   }
 
   CheckPoint WriteAheadLogger::RecoverLastCheckPoint() const{

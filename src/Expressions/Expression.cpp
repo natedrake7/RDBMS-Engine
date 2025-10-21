@@ -1,8 +1,7 @@
 #include "Expression.h"
 
-#include "../Coercions/Coercions.h"
-#include "../Functions/FunctionSizeEvaluator.h"
-#include "../HashSet/HashSet.h"
+#include "../AdditionalLibraries/Coercions/Coercions.h"
+#include "../AdditionalLibraries/DataTypes/Value/Value.h"
 
 #include <iostream>
 
@@ -27,8 +26,6 @@ namespace Expressions{
 
   DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
 
-  size_t ColumnExpression::GetSize() const{ return this->size; }
-
   bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.empty();}
 
   LiteralExpression::LiteralExpression(const Value &value){
@@ -37,39 +34,11 @@ namespace Expressions{
 
   DataType LiteralExpression::GetReturnType() const{ return this->value.GetType(); }
 
-  size_t LiteralExpression::GetSize() const{ return this->value.GetSize(); }
-
   Value LiteralExpression::Evaluate(
     const DatabaseEngine::StorageTypes::Row *outerRow,
     const DatabaseEngine::StorageTypes::Row *innerRow
   ) const{
     return this->value;
-  }
-
-  size_t BinaryExpression::GetAdditionSize() const{
-    switch (Value::PromoteType(this->left->GetReturnType(), this->right->GetReturnType())) {
-      case DataType::TinyInt:
-        return sizeof(int8_t);
-      case DataType::SmallInt:
-        return sizeof(int16_t);
-      case DataType::Int:
-        return sizeof(int32_t);
-      case DataType::BigInt:
-        return sizeof(int64_t);
-      case DataType::Decimal:
-        return -1;
-      case DataType::String:
-      case DataType::UnicodeString:
-        return this->left->GetSize() + this->right->GetSize();
-      case DataType::Bool:
-        return sizeof(bool);
-      case DataType::DateTime:
-      case DataType::Guid:
-      case DataType::RowIdentifier:
-      case DataType::Invalid:
-      default:
-        return -1;
-    }
   }
 
   size_t BinaryExpression::GetSubtractionSize() const{
@@ -188,30 +157,6 @@ namespace Expressions{
     return Value::PromoteType(leftType, rightType);
   }
 
-  size_t BinaryExpression::GetSize() const {
-    switch (this->operation) {
-      case ExpressionOperator::Equal:
-      case ExpressionOperator::NotEqual:
-      case ExpressionOperator::Greater:
-      case ExpressionOperator::GreaterEqual:
-      case ExpressionOperator::Less:
-      case ExpressionOperator::LessEqual:
-        return sizeof(bool);
-      case ExpressionOperator::Add:
-        return this->GetAdditionSize();
-      case ExpressionOperator::Subtract:
-        return this->GetSubtractionSize();
-      case ExpressionOperator::Multiply:
-        return this->GetMultiplicationSize();
-      case ExpressionOperator::Divide:
-        return this->GetDivisionSize();
-      case ExpressionOperator::Modulo:
-        return this->GetModuloSize();
-      default:
-        return 0;
-    }
-  }
-
   FunctionExpression::FunctionExpression(const Constants::FunctionType& type, std::vector<Expression*>& arguments) {
     this->type = type;
     this->arguments = std::move(arguments);
@@ -291,8 +236,6 @@ bool FunctionExpression::ValidateReturnType(
     return FunctionInfoDictionary.Get(this->type).returnType;
   }
 
-  size_t FunctionExpression::GetSize() const{ return Functions::FunctionSizeEvaluator::GetFunctionReturnSize(this->type, this->arguments); }
-
   LogicalExpression::LogicalExpression(
     Expression *leftExpression,
     Expression *RightExpression,
@@ -314,6 +257,4 @@ bool FunctionExpression::ValidateReturnType(
   }
 
   DataType LogicalExpression::GetReturnType() const{ return DataType::Bool; }
-
-  size_t LogicalExpression::GetSize() const{ return sizeof(bool); }
 }

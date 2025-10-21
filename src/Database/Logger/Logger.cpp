@@ -4,7 +4,11 @@
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
-#include <unistd.h>
+#ifdef _WIN32
+  #include <io.h>
+#else
+  #include <unistd.h>
+#endif
 
 namespace DatabaseEngine::Logging {
   Logger::Logger(const std::string& logFilePath){
@@ -186,14 +190,18 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
   StorageTypes::Row * LogEntry::GetRow() const{ return this->body->GetLastRowStatus(); }
 
   void Logger::FlushLogDescriptor()const{
-      fsync(this->logFileDescriptor);
-    }
+    #ifdef _WIN32
+        _commit(this->logFileDescriptor);
+    #else
+        ::fsync(this->logFileDescriptor);
+    #endif
+  }
 
   CheckPoint Logger::Log(const LogEntry &logEntry)const{
     std::vector<char> buffer;
     logEntry.Serialize(&buffer);
 
-    const __off_t fileOffset = lseek(this->logFileDescriptor, 0, SEEK_END);
+    const auto fileOffset = lseek(this->logFileDescriptor, 0, SEEK_END);
 
     const auto result = ::write(this->logFileDescriptor, buffer.data(), buffer.size());
 

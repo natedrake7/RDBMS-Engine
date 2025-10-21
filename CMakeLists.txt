@@ -14,7 +14,8 @@ find_package(antlr4-runtime CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 # === ANTLR Setup ===
-set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.1-complete.jar")
+#set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.1-complete.jar")
+set(ANTLR_JAR_PATH "${CMAKE_SOURCE_DIR}/External/ANTLR/antlr4_complete.jar")
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/antlr)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
@@ -67,15 +68,20 @@ add_library(AdditionalLibraries SHARED
         src/AdditionalLibraries/DataTypes/ErrorHandling.h
         src/AdditionalLibraries/DataTypes/Guid/Guid.cpp
         src/AdditionalLibraries/DataTypes/Guid/Guid.h
-        src/AdditionalLibraries/Expressions/Expression.h
-        src/AdditionalLibraries/Expressions/Expression.cpp
         src/AdditionalLibraries/Functions/DateFunctions.h
-        src/AdditionalLibraries/Expressions/Expressions.Additional.h
         src/AdditionalLibraries/Coercions/Coercions.h
         src/AdditionalLibraries/Coercions/Coercions.cpp
-        src/AdditionalLibraries/Functions/FunctionSizeEvaluator.h
-        src/AdditionalLibraries/Functions/FunctionSizeEvaluator.cpp
+
 )
+
+add_library(ExpressionsLibrary STATIC
+            src/Expressions/Expression.h
+            src/Expressions/Expression.cpp
+            src/Expressions/ExpressionExtensions.cpp
+            src/Expressions/Expressions.Additional.h
+)
+
+target_link_libraries(ExpressionsLibrary PRIVATE AdditionalLibraries PRIVATE Database)
 
 add_library(QueryPipeline  SHARED
         src/QueryPipeline/Parser/Parser.cpp
@@ -98,20 +104,20 @@ add_library(QueryPipeline  SHARED
         src/QueryPipeline/ErrorListener/ErrorListener.cpp
         src/QueryPipeline/ErrorListener/ErrorListener.h
         src/QueryPipeline/Constants.h
-                ${ANTLR_SRC}
         src/QueryPipeline/QueryResult/QueryResult.cpp
-        src/QueryPipeline/QueryResult/QueryResult.h)
+        src/QueryPipeline/QueryResult/QueryResult.h
+        ${ANTLR_SRC})
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
-target_link_libraries(QueryPipeline PRIVATE antlr4_static PRIVATE AdditionalLibraries)
+target_link_libraries(QueryPipeline PRIVATE ExpressionsLibrary PRIVATE AdditionalLibraries PRIVATE antlr4_shared)
 
 # Include the generated parser and lexer files
 target_include_directories(QueryPipeline PRIVATE
         ${GENERATED_DIR}
 )
 
-add_library(Database SHARED
+add_library(Database STATIC
         src/Database/Database.cpp
         src/Database/Database.IndexHandlers.cpp
         src/Database/Database.h
@@ -167,10 +173,9 @@ add_library(Database SHARED
         src/Database/Logger/WriteAheadLogger/WriteAheadLogger.h
         src/Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.cpp
         src/Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.h
-        src/Database/ExpressionExtensions/ExpressionExtensions.cpp
 )
 
-add_library(Server SHARED
+add_library(Server STATIC
         src/Server/ConnectionManager/ConnectionManager.cpp
         src/Server/ConnectionManager/ConnectionManager.h
         src/Server/Threadpool/ThreadPool.cpp
@@ -180,8 +185,9 @@ add_library(Server SHARED
         src/Server/MasterDbColumns.h
         src/Server/Server.Constants.h)
 
-target_link_libraries(Server PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(Server PRIVATE AdditionalLibraries)
+target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE AdditionalLibraries)
+
+target_link_libraries(Database PRIVATE AdditionalLibraries PRIVATE ExpressionsLibrary PRIVATE Server)
 
 # add_executable(Client
 #         src/Client/client.cpp
