@@ -38,7 +38,7 @@ namespace Headers {
     int32_t columnId = Constants::INVALID_COLUMN_ID;
     int32_t seedValue;
     int32_t increment;
-    int32_t lastValue;
+    int64_t lastValue;
 
     bool isCached;
     int32_t cacheBlock;

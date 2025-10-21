@@ -34,6 +34,13 @@ namespace DatabaseEngine::StorageTypes {
     return true;
   }
 
+  void IdentityManager::UpdateMasterDb(const int64_t &value) const{
+    if (this->header.columnId == Constants::INVALID_COLUMN_ID)
+      return;
+
+    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value);
+  }
+
   void IdentityManager::UpdateMasterDb()const{
     if (this->header.columnId == Constants::INVALID_COLUMN_ID)
       return;

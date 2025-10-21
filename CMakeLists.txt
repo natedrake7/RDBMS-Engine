@@ -82,30 +82,31 @@ add_library(ExpressionsLibrary STATIC
 
 target_link_libraries(ExpressionsLibrary PRIVATE AdditionalLibraries PRIVATE Database)
 
-add_library(QueryPipeline  SHARED
-        src/QueryPipeline/Parser/Parser.cpp
-        src/QueryPipeline/Parser/Parser.h
-        src/QueryPipeline/Visitor/Visitor.cpp
-        src/QueryPipeline/Visitor/Visitor.CreateTable.cpp
-        src/QueryPipeline/Visitor/Visitor.Joins.cpp
-        src/QueryPipeline/Visitor/Visitor.h
-        src/QueryPipeline/Cursor/Cursor.cpp
-        src/QueryPipeline/Cursor/Cursor.h
-        src/QueryPipeline/LogicalPlan/LogicalPlan.cpp
-        src/QueryPipeline/LogicalPlan/LogicalPlan.h
-        src/QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
-        src/QueryPipeline/PhysicalPlan/PhysicalPlan.AlterTable.cpp
-        src/QueryPipeline/PhysicalPlan/PhysicalPlan.Joins.cpp
-        src/QueryPipeline/PhysicalPlan/PhysicalPlan.h
-        src/QueryPipeline/Statements/Statements.cpp
-        src/QueryPipeline/Statements/Statements.h
-        src/QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
-        src/QueryPipeline/ErrorListener/ErrorListener.cpp
-        src/QueryPipeline/ErrorListener/ErrorListener.h
-        src/QueryPipeline/Constants.h
-        src/QueryPipeline/QueryResult/QueryResult.cpp
-        src/QueryPipeline/QueryResult/QueryResult.h
-        ${ANTLR_SRC})
+add_library(QueryPipeline STATIC
+            src/QueryPipeline/Parser/Parser.cpp
+            src/QueryPipeline/Parser/Parser.h
+            src/QueryPipeline/Visitor/Visitor.cpp
+            src/QueryPipeline/Visitor/Visitor.CreateTable.cpp
+            src/QueryPipeline/Visitor/Visitor.Joins.cpp
+            src/QueryPipeline/Visitor/Visitor.h
+            src/QueryPipeline/Cursor/Cursor.cpp
+            src/QueryPipeline/Cursor/Cursor.h
+            src/QueryPipeline/LogicalPlan/LogicalPlan.cpp
+            src/QueryPipeline/LogicalPlan/LogicalPlan.h
+            src/QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
+            src/QueryPipeline/PhysicalPlan/PhysicalPlan.AlterTable.cpp
+            src/QueryPipeline/PhysicalPlan/PhysicalPlan.Joins.cpp
+            src/QueryPipeline/PhysicalPlan/PhysicalPlan.h
+            src/QueryPipeline/Statements/Statements.cpp
+            src/QueryPipeline/Statements/Statements.h
+            src/QueryPipeline/PhysicalPlan/PhysicalPlan.cpp
+            src/QueryPipeline/ErrorListener/ErrorListener.cpp
+            src/QueryPipeline/ErrorListener/ErrorListener.h
+            src/QueryPipeline/Constants.h
+            src/QueryPipeline/QueryResult/QueryResult.cpp
+            src/QueryPipeline/QueryResult/QueryResult.h
+            ${ANTLR_SRC}
+)
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 

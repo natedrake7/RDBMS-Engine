@@ -108,7 +108,7 @@
         { "name": "column_id",    "type": "Int" },
         { "name": "seed_value",   "type": "Int" },
         { "name": "increment",    "type": "Int" },
-        { "name": "last_value",   "type": "Int" },
+        { "name": "last_value",   "type": "BigInt" },
         { "name": "is_cached",    "type": "Bool" },
         { "name": "cache_block",  "type": "Int" },
         { "name": "version",      "type": "Int", "default": 1 },

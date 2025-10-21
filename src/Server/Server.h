@@ -48,11 +48,7 @@ namespace Server {
     
 
   public:
-    static ServerInstance& Get() {
-      static ServerInstance instance;
-
-      return instance;
-    }
+    static ServerInstance& Get();
 
     //MasterDB Insert Functions
     void Initialize(const string& configPath);
@@ -191,7 +187,7 @@ namespace Server {
       const int32_t& columnId,
       const DataType& columnType
     )const;
-    void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const;
+    void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const;
     void UpdateTableStatisticsById(
       const int32_t& tableId,
       const int64_t& rowCount,

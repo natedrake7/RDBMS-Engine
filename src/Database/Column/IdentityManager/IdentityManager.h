@@ -11,6 +11,7 @@ namespace DatabaseEngine::StorageTypes
     std::mutex mutex;
 
     [[nodiscard]] int64_t Generate();
+    void UpdateMasterDb(const int64_t& value)const;
 
     public:
       IdentityManager();

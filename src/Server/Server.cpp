@@ -44,6 +44,12 @@ namespace Server {
 
   ServerInstance::~ServerInstance() = default;
 
+  ServerInstance & ServerInstance::Get(){
+    static ServerInstance instance;
+
+    return instance;
+  }
+
   void ServerInstance::ReadConfiguration(const std::string &configPath){
     std::ifstream file(configPath);
 
@@ -1482,7 +1488,7 @@ namespace Server {
             .columnId = data[1]->GetInt(),
             .seedValue = data[2]->GetInt(),
             .increment = data[3]->GetInt(),
-            .lastValue = data[4]->GetInt(),
+            .lastValue = data[4]->GetBigInt(),
             .isCached = data[5]->GetBool(),
             .cacheBlock = data[6]->GetInt(),
             .additionalInfo{
@@ -1504,7 +1510,7 @@ namespace Server {
       return columns;
   }
 
-  void ServerInstance::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int32_t& lastValue)const{
+  void ServerInstance::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const{
     using namespace DatabaseEngine::StorageTypes;
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
