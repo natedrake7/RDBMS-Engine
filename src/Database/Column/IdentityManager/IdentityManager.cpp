@@ -22,6 +22,9 @@ namespace DatabaseEngine::StorageTypes {
 
       updateMasterDb = value >= this->startingValue + this->header.cacheBlock;
 
+      if (updateMasterDb)
+        this->startingValue = value;
+
     this->mutex.unlock();
 
     if (updateMasterDb)
