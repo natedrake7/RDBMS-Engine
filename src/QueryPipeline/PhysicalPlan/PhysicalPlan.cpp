@@ -569,7 +569,10 @@ PhysicalInsert::PhysicalInsert(
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
+    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
+
+    result->code = updateResult.code;
+    result->message = updateResult.message;
 
     return result;
   }

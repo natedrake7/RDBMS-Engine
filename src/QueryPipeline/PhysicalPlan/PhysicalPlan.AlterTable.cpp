@@ -48,7 +48,14 @@ namespace QueryPipeline::PhysicalPlan{
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    auto* columnPtr = new DatabaseEngine::StorageTypes::Column(this->column->name.name, columnType, this->column->type.size, this->column->index, this->column->isNullable);
+    auto* columnPtr = new DatabaseEngine::StorageTypes::Column(
+      this->column->name.name,
+      columnType,
+      this->column->type.size,
+      this->column->index,
+      this->column->isNullable
+    );
+
     columnPtr->SetColumnId(columnResult.primaryKey.GetKeyAsInt());
 
     tablePtr->AddColumn(columnPtr);

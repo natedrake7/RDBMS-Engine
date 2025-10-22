@@ -265,7 +265,10 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
 
-            void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> &updates);
+            [[nodiscard]] Errors::ResultStatus ClusteredIndexScanUpdate(
+                const Expressions::Expression* expression,
+                const vector<QueryPipeline::Statements::UpdateColumn*> &updates
+            );
 
             void ClusteredIndexSeekUpdate(
                 Expressions::Expression* expression,

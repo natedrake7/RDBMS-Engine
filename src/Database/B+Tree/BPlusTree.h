@@ -104,9 +104,12 @@ namespace Indexing
 
         void IndexScanUpdate(const Expressions::Expression* expression, const vector<Value> & updates);
 
-        void IndexScanUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
+        [[nodiscard]] Errors::ResultStatus IndexScanUpdate(
+            const Expressions::Expression* expression,
+            const vector<QueryPipeline::Statements::UpdateColumn*> & updates
+        );
 
-        void IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
+        [[nodiscard]] Errors::ResultStatus IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
 
         void IndexSeekUpdate(Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
 

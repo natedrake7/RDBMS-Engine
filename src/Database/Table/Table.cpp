@@ -952,17 +952,14 @@ namespace DatabaseEngine::StorageTypes {
       tree->IndexScanUpdate(expression, updates);
     }
 
-    void Table::ClusteredIndexScanUpdate(
+    Errors::ResultStatus Table::ClusteredIndexScanUpdate(
       const Expressions::Expression *expression,
       const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
         auto* tree = this->GetClusteredIndexedTree();
 
-        if (expression == nullptr) {
-          tree->IndexScanUpdate(updates);
-          return;
-        }
-
-        tree->IndexScanUpdate(expression, updates);
+        return (expression == nullptr)
+          ? tree->IndexScanUpdate(updates)
+          : tree->IndexScanUpdate(expression, updates);
     }
 
     void Table::ClusteredIndexSeekUpdate(

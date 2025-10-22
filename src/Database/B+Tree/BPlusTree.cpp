@@ -512,11 +512,11 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+    Errors::ResultStatus BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
         this->root = this->GetNode(this->indexPageId);
 
         if (!this->root)
-            return;
+            return {};
 
         HashSet<column_index_t> updatedColumns;
 
@@ -532,21 +532,26 @@ namespace Indexing
                 if(!value.GetBool())
                     continue;
 
-                this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+                const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+
+                if (result.code != Errors::ResultCode::Ok)
+                    return result;
             }
 
             if(currentNode->GetNextPage() == 0)
-                return;
+                return {};
 
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
+
+        return {};
     }
 
-    void BPlusTree::IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+    Errors::ResultStatus BPlusTree::IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
         this->root = this->GetNode(this->indexPageId);
 
         if (!this->root)
-            return;
+            return {};
 
         HashSet<column_index_t> updatedColumns;
 
@@ -557,14 +562,20 @@ namespace Indexing
 
         while (currentNode)
         {
-            for(auto* row: *currentNode->GetDataRowsUnsafe())
-                this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+            for(auto* row: *currentNode->GetDataRowsUnsafe()) {
+                const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+
+                if (result.code != Errors::ResultCode::Ok)
+                    return result;
+            }
 
             if(currentNode->GetNextPage() == 0)
-                return;
+                return {};
 
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
+
+        return {};
     }
 
     void BPlusTree::InsertRowsToOtherTree(const int& indexPos){
