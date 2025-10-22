@@ -5,12 +5,10 @@
 #include <stdexcept>
 #include "../DataTypes/Decimal/Decimal.h"
 
-using namespace std;
-
 template<typename T>
 class Converter {
 public:
-    static T Stoi(const string& input)
+    static T Stoi(const std::string& input)
     {
         static_assert(is_integral_v<T>, "T must be integral type");
 
@@ -18,16 +16,16 @@ public:
         {
             auto value = stoll(input);
 
-            if (value < numeric_limits<T>::min() || value > numeric_limits<T>::max())
-                throw out_of_range("SafeStoi: Value is out of range of the target type.");
+            if (value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max())
+                throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
 
             return static_cast<T>(value);
         }
 
         int value = stoi(input);
 
-        if (value < numeric_limits<T>::min() || value > numeric_limits<T>::max())
-            throw out_of_range("SafeStoi: Value is out of range of the target type.");
+        if (value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max())
+            throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
 
         return static_cast<T>(value);
     }
@@ -36,7 +34,7 @@ public:
         return DataTypes::Decimal(input);
     }
 
-    static bool TryStoi(const string& input) {
+    static bool TryStoi(const std::string& input) {
         static_assert(is_integral_v<T>, "T must be integral type");
 
         const char* str = input.c_str();
@@ -50,10 +48,10 @@ public:
             return false;
 
         // Check if the value is within the target type's range
-        return !(value < numeric_limits<T>::min() || value > numeric_limits<T>::max());
+        return !(value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max());
     }
 
-    static T Stoi(const u16string& input)
+    static T Stoi(const std::u16string& input)
     {
         static_assert(is_integral_v<T>, "T must be integral type");
 
@@ -63,24 +61,24 @@ public:
         {
             long long value = stoll(converted);
 
-            if (value < numeric_limits<T>::min() || value > numeric_limits<T>::max())
-                throw out_of_range("SafeStoi: Value is out of range of the target type.");
+            if (value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max())
+                throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
 
             return static_cast<T>(value);
         }
 
         int value = stoi(converted);
 
-        if (value < numeric_limits<T>::min() || value > numeric_limits<T>::max())
-            throw out_of_range("SafeStoi: Value is out of range of the target type.");
+        if (value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max())
+            throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
 
         return static_cast<T>(value);
     }
 
-    static bool TryStoi(const u16string& input) {
+    static bool TryStoi(const std::u16string& input) {
         static_assert(is_integral_v<T>, "T must be integral type");
 
-        const wstring converted(input.begin(), input.end());
+        const std::wstring converted(input.begin(), input.end());
 
         char* endPtr = nullptr;
         errno = 0;
@@ -100,13 +98,13 @@ public:
     static bool TryStoi(const int64_t &input){
         static_assert(is_integral_v<T>, "T must be integral type");
 
-        return !(input < numeric_limits<T>::min() || input > numeric_limits<T>::max());
+        return !(input < std::numeric_limits<T>::min() || input > std::numeric_limits<T>::max());
     }
 
     static bool TryStoi(const int64_t &input, T& output){
         static_assert(is_integral_v<T>, "T must be integral type");
 
-        if (!(input < numeric_limits<T>::min() || input > numeric_limits<T>::max())) {
+        if (!(input < std::numeric_limits<T>::min() || input > std::numeric_limits<T>::max())) {
             output = static_cast<T>(input);
             return true;
         }
@@ -117,8 +115,8 @@ public:
     static T Stoi(const int64_t &input){
         static_assert(is_integral_v<T>, "T must be integral type");
 
-        if (input < numeric_limits<T>::min() || input > numeric_limits<T>::max())
-            throw out_of_range("SafeStoi: Value is out of range of the target type.");
+        if (input < std::numeric_limits<T>::min() || input > std::numeric_limits<T>::max())
+            throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
 
         return static_cast<T>(input);
     }
@@ -127,8 +125,8 @@ public:
         const DataTypes::Decimal &input,
         const unsigned int& size){
 
-        // if (input > numeric_limits<DataTypes::Decimal>::max()
-        //     || input < numeric_limits<DataTypes::Decimal>::min())
+        // if (input > std::numeric_limits<DataTypes::Decimal>::max()
+        //     || input < std::numeric_limits<DataTypes::Decimal>::min())
         //     return false;
 
         return input.GetRawDataSize() <= size;
@@ -138,7 +136,7 @@ public:
     {
         static_assert(is_integral_v<T>, "T must be integral type");
 
-        return ((rightValue > 0 && leftValue > numeric_limits<T>::max() - rightValue) ||
-            (rightValue < 0 && leftValue < numeric_limits<T>::min() - rightValue));
+        return ((rightValue > 0 && leftValue > std::numeric_limits<T>::max() - rightValue) ||
+            (rightValue < 0 && leftValue < std::numeric_limits<T>::min() - rightValue));
     }
 };

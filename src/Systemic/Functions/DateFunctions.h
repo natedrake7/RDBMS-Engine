@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 
-namespace AdditionalLibraries::DateFunctions {
+namespace Functions::DateTime {
   enum class DateInterval {
     Year = 0,
     Quarter = 1,

@@ -98,7 +98,7 @@ namespace QueryPipeline
                 return;
             }
 
-            if (result->code != AdditionalDataTypes::ResultCode::Ok) {
+            if (result->code != Errors::ResultCode::Ok) {
                 std::cerr << result->message << std::endl;
 
                 delete result;

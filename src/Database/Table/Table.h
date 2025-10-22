@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include "../Constants.h"
-#include "../../AdditionalLibraries/DataTypes/Headers/Headers.h"
+#include "../../Systemic/DataTypes/Headers/Headers.h"
 #include "../B+Tree/BPlusTree.h"
 #include "../Logger/Logger.h"
 
@@ -106,13 +106,13 @@ namespace DatabaseEngine::StorageTypes
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
 
-            [[nodiscard]] std::tuple<Row*, AdditionalDataTypes::ResultStatus> CreateRow(
+            [[nodiscard]] std::tuple<Row*, Errors::ResultStatus> CreateRow(
                 const Constants::transaction_id_t& transactionId,
                 const vector<Value>& inputData,
                 Logging::CheckPoint* checkPoint
             )const;
 
-            [[nodiscard]] std::tuple<Row*, AdditionalDataTypes::ResultStatus> CreateRow(
+            [[nodiscard]] std::tuple<Row*, Errors::ResultStatus> CreateRow(
                 const Constants::transaction_id_t& transactionId,
                 const std::vector<Value>& inputData,
                 const std::vector<Constants::column_index_t>& columnIndices,
@@ -120,7 +120,7 @@ namespace DatabaseEngine::StorageTypes
                 Logging::CheckPoint* checkPoint
             )const;
 
-            [[nodiscard]] std::tuple<Row*, AdditionalDataTypes::ResultStatus> CreateRow(
+            [[nodiscard]] std::tuple<Row*, Errors::ResultStatus> CreateRow(
                 const Constants::transaction_id_t& transactionId,
                 const std::vector<Expressions::Expression*>& inputData,
                 const std::vector<Constants::column_index_t>& columnIndices,
@@ -168,21 +168,21 @@ namespace DatabaseEngine::StorageTypes
 
             ~Table();
 
-            AdditionalDataTypes::ResultStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData);
+            Errors::ResultStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData);
 
-            AdditionalDataTypes::ResultStatus InsertRow(
+            Errors::ResultStatus InsertRow(
                 const Constants::transaction_id_t& transactionId,
                 const vector<Value> &inputData,
                 const std::vector<Constants::column_index_t>& columnIndices
             );
 
-            AdditionalDataTypes::ResultStatus InsertRow(
+            Errors::ResultStatus InsertRow(
                 const Constants::transaction_id_t& transactionId,
                 const vector<Expressions::Expression*> &inputData,
                 const std::vector<Constants::column_index_t>& columnIndices
             );
 
-            AdditionalDataTypes::ResultStatus InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
+            Errors::ResultStatus InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
 
             void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const;
 
@@ -246,22 +246,22 @@ namespace DatabaseEngine::StorageTypes
                 QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& batchSize);
 
-            AdditionalDataTypes::ResultStatus HeapInsert(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const;
+            Errors::ResultStatus HeapInsert(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const;
 
-            AdditionalDataTypes::ResultStatus ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId);
+            Errors::ResultStatus ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId);
 
-            AdditionalDataTypes::ResultStatus NonClusteredIndexInsert(
+            Errors::ResultStatus NonClusteredIndexInsert(
                 const StorageTypes::Row *row,
                 const int& nonClusteredIndexId,
                 const Headers::RowIdentifier& data);
 
-            AdditionalDataTypes::ResultStatus NonClusteredIndexInsertExistingRows(const int& indexPos);
+            Errors::ResultStatus NonClusteredIndexInsertExistingRows(const int& indexPos);
 
             int CreateNonClusteredIndex(vector<Constants::column_index_t>& columnIndices);
 
-            AdditionalDataTypes::ResultStatus HeapUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
+            Errors::ResultStatus HeapUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
 
-            AdditionalDataTypes::ResultStatus HeapUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> &updates);
+            Errors::ResultStatus HeapUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> &updates);
 
             void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
 
@@ -324,7 +324,7 @@ namespace DatabaseEngine::StorageTypes
             void InsertLargeObjectToPage(Row *row);
 
             [[nodiscard]]
-            AdditionalDataTypes::ResultStatus HandleRowUpdate(
+            Errors::ResultStatus HandleRowUpdate(
                 Pages::Page *page,
                 Row *row,
                 const std::vector<Value> &updates,
@@ -333,7 +333,7 @@ namespace DatabaseEngine::StorageTypes
             );
 
             [[nodiscard]]
-            AdditionalDataTypes::ResultStatus  HandleRowUpdate(
+            Errors::ResultStatus  HandleRowUpdate(
                 Pages::Page *page,
                 Row *row,
                 const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates,

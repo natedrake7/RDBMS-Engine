@@ -1,6 +1,6 @@
 #include "Visitor.h"
-#include "../../AdditionalLibraries/Converter/Converter.h"
-#include "../../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../../Systemic/Converter/Converter.h"
+#include "../../Systemic/Functions/StringFunctions.h"
 #include "../ErrorListener/ErrorListener.h"
 #include "../Statements/Statements.h"
 
@@ -95,15 +95,15 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->STRING()) {
       const auto& str = context->STRING()->getText();
 
-      return Value(AdditionalLibraries::StringFunctions::RemoveQuotesFromString(str), 0);
+      return Value(Functions::String::RemoveQuotesFromString(str), 0);
     }
 
     if (context->UNICODESTRING()) {
       const auto& str = context->UNICODESTRING()->getText();
 
-      const auto parsedStr = AdditionalLibraries::StringFunctions::RemoveQuotesFromUnicodeString(str);
+      const auto parsedStr = Functions::String::RemoveQuotesFromUnicodeString(str);
 
-      return Value(AdditionalLibraries::StringFunctions::ToUnicode(parsedStr), 0);
+      return Value(Functions::String::ToUnicode(parsedStr), 0);
     }
 
     if (context->NUMBER()) {
@@ -183,7 +183,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     const auto& text = context->getText();
 
-    return Statements::ColumnType(AdditionalLibraries::StringFunctions::NormalizeString(text));
+    return Statements::ColumnType(Functions::String::NormalizeString(text));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitStringType(SQLParser::StringTypeContext *context){
@@ -219,7 +219,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     const auto orderStr = std::any_cast<std::string>(visit(context->order()));
 
-    orderColumn->type = AdditionalLibraries::StringFunctions::NormalizeString(orderStr) == "desc"
+    orderColumn->type = Functions::String::NormalizeString(orderStr) == "desc"
           ? OrderType::DESCENDING
           : OrderType::ASCENDING;
 
@@ -585,7 +585,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     const auto name = std::any_cast<std::string>(visit(context->functionName()));
 
     Constants::FunctionType type;
-    if (!Expressions::FunctionTypeDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(name), type))
+    if (!Expressions::FunctionTypeDictionary.TryGetValue(Functions::String::NormalizeString(name), type))
         throw SyntaxError("Failed to parse function name: " + name, CreatePositionErrorMessage(context));
 
     if (!context->LAPRENT() || !context->RAPRENT())

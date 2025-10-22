@@ -1,9 +1,9 @@
 ﻿#include "Row.h"
-#include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../../Systemic/DataStructures/BitMap/BitMap.h"
 #include "../Table/Table.h"
 #include "../Block/Block.h"
-#include "../../AdditionalLibraries/DataTypes/DateTime/DateTime.h"
-#include "../../AdditionalLibraries/DataTypes/Decimal/Decimal.h"
+#include "../../Systemic/DataTypes/DateTime/DateTime.h"
+#include "../../Systemic/DataTypes/Decimal/Decimal.h"
 #include "../Column/Column.h"
 #include "../Pages/LargeObject/LargeObjectPage.h"
 #include <cstdint>
@@ -477,7 +477,7 @@ namespace DatabaseEngine::StorageTypes {
         return rowHeaderSize;
     }
 
-    AdditionalDataTypes::ResultStatus Row::Update( const vector<Value> & updates, int& diff){
+    Errors::ResultStatus Row::Update( const vector<Value> & updates, int& diff){
         const auto prevRowSize = this->GetRowSize();
 
         for (const auto & value : updates){
@@ -496,7 +496,7 @@ namespace DatabaseEngine::StorageTypes {
                 this->SetNullBitMapValue(associatedColumnIndex, false);
 
             const auto result = block->SetData(value);
-            if (result.code != AdditionalDataTypes::ResultCode::Ok)
+            if (result.code != Errors::ResultCode::Ok)
                 return result;
         }
 
@@ -506,7 +506,7 @@ namespace DatabaseEngine::StorageTypes {
         return {};
     }
 
-    AdditionalDataTypes::ResultStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff){
+    Errors::ResultStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff){
         const auto prevRowSize = this->GetRowSize();
 
         for (const auto & update : updates)
@@ -528,7 +528,7 @@ namespace DatabaseEngine::StorageTypes {
                 this->SetNullBitMapValue(associatedColumnIndex, false);
 
             const auto result = block->SetData(value);
-            if (result.code != AdditionalDataTypes::ResultCode::Ok)
+            if (result.code != Errors::ResultCode::Ok)
                 return result;
         }
 

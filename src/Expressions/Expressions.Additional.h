@@ -1,15 +1,14 @@
 #pragma once
 #include <string>
-#include "../AdditionalLibraries/Dictionary/Dictionary.h"
+#include "../Systemic/DataStructures/Dictionary/Dictionary.h"
 #include "../Database/Constants.h"
 
 #include <functional>
 #define UNLIMITED_ARGS (-1)
 
 namespace Expressions {
-
-
     class Expression;
+
     enum class ExpressionType {
         And = 0,
         Or = 1,

@@ -1,8 +1,8 @@
 #include "Expression.h"
 
-#include "../AdditionalLibraries/Coercions/Coercions.h"
-#include "../AdditionalLibraries/DataTypes/Value/Value.h"
-#include "../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../Systemic/Coercions/Coercions.h"
+#include "../Systemic/DataTypes/Value/Value.h"
+#include "../Systemic/Functions/StringFunctions.h"
 #include "../Database/Row/Row.h"
 #include <iostream>
 
@@ -418,37 +418,37 @@ bool FunctionExpression::ValidateReturnType(
   Value FunctionExpression::Length(const std::vector<Value>& arguments){
     const auto& field = arguments.front();
 
-    return Value(AdditionalLibraries::StringFunctions::Length(field.GetString()), 0);
+    return Value(Functions::String::Length(field.GetString()), 0);
   }
 
   Value FunctionExpression::TrimLeft(const std::vector<Value>& arguments){
     const auto& field = arguments.front();
 
-    return Value(AdditionalLibraries::StringFunctions::TrimLeft(field.GetString()), 0);
+    return Value(Functions::String::TrimLeft(field.GetString()), 0);
   }
 
   Value FunctionExpression::TrimRight(const std::vector<Value>& arguments){
     const auto& field = arguments.front();
 
-    return Value(AdditionalLibraries::StringFunctions::TrimRight(field.GetString()), 0);
+    return Value(Functions::String::TrimRight(field.GetString()), 0);
   }
 
   Value FunctionExpression::Trim(const std::vector<Value>& arguments){
     const auto& field = arguments.front();
 
-    return Value(AdditionalLibraries::StringFunctions::Trim(field.GetString()), 0);
+    return Value(Functions::String::Trim(field.GetString()), 0);
   }
 
   Value FunctionExpression::AsciiValue(const std::vector<Value>& arguments){
     const auto& field = arguments.front();
 
-    return Value(AdditionalLibraries::StringFunctions::Ascii(field.GetString()), 0);
+    return Value(Functions::String::Ascii(field.GetString()), 0);
   }
 
   Value FunctionExpression::Char(const std::vector<Value>& arguments){
     const auto& field = arguments.front();
 
-    return Value(AdditionalLibraries::StringFunctions::Char(field.GetInt()), 0);
+    return Value(Functions::String::Char(field.GetInt()), 0);
   }
 
   Value FunctionExpression::CharIndex(const std::vector<Value>& arguments){
@@ -460,19 +460,19 @@ bool FunctionExpression::ValidateReturnType(
         ? arguments.at(2).GetInt()
         : 0;
 
-    return Value(AdditionalLibraries::StringFunctions::CharIndex(subStr, str, pos), 0);
+    return Value(Functions::String::CharIndex(subStr, str, pos), 0);
   }
 
   Value FunctionExpression::Lower(const std::vector<Value>& arguments){
     const auto& field = arguments.front();
 
-    return Value(AdditionalLibraries::StringFunctions::Lower(field.GetString()), 0);
+    return Value(Functions::String::Lower(field.GetString()), 0);
   }
 
   Value FunctionExpression::Upper(const std::vector<Value>& arguments){
     const auto& field = arguments.front();
 
-    return Value(AdditionalLibraries::StringFunctions::Upper(field.GetString()), 0);
+    return Value(Functions::String::Upper(field.GetString()), 0);
   }
 
   Value FunctionExpression::Replace(const std::vector<Value>& arguments){
@@ -482,7 +482,7 @@ bool FunctionExpression::ValidateReturnType(
 
     const auto& replaceStr = arguments.at(2).GetString();
 
-    return Value(AdditionalLibraries::StringFunctions::Replace(str, subStr, replaceStr), 0);
+    return Value(Functions::String::Replace(str, subStr, replaceStr), 0);
   }
 
   Value FunctionExpression::Substr(const std::vector<Value>& arguments){
@@ -492,7 +492,7 @@ bool FunctionExpression::ValidateReturnType(
 
     const auto& endPos = arguments.at(2).GetInt();
 
-    return Value(AdditionalLibraries::StringFunctions::SubString(field, startPos, endPos), 0);
+    return Value(Functions::String::SubString(field, startPos, endPos), 0);
   }
 
   Value FunctionExpression::Left(const std::vector<Value>& arguments){
@@ -500,7 +500,7 @@ bool FunctionExpression::ValidateReturnType(
 
     const auto& startPos = arguments.at(1).GetInt();
 
-    return Value(AdditionalLibraries::StringFunctions::Left(field, startPos), 0);
+    return Value(Functions::String::Left(field, startPos), 0);
   }
 
   Value FunctionExpression::Right(const std::vector<Value>& arguments){
@@ -508,19 +508,19 @@ bool FunctionExpression::ValidateReturnType(
 
     const auto& startPos = arguments.at(1).GetInt();
 
-    return Value(AdditionalLibraries::StringFunctions::Right(field, startPos), 0);
+    return Value(Functions::String::Right(field, startPos), 0);
   }
 
   Value FunctionExpression::Reverse(const std::vector<Value>& arguments){
     const auto& str = arguments.at(0).GetString();
 
-    return Value(AdditionalLibraries::StringFunctions::Reverse(str), 0);
+    return Value(Functions::String::Reverse(str), 0);
   }
 
   Value FunctionExpression::Space(const std::vector<Value>& arguments){
     const auto& size = arguments.at(0).GetInt();
 
-    return Value(AdditionalLibraries::StringFunctions::Space(size), 0);
+    return Value(Functions::String::Space(size), 0);
   }
 
   Value FunctionExpression::GetDate(const std::vector<Value>& arguments){

@@ -1,5 +1,5 @@
 #include "Logger.h"
-#include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../../Systemic/DataStructures/BitMap/BitMap.h"
 #include "../Table/Table.h"
 #include <cstring>
 #include <fcntl.h>

@@ -1,5 +1,5 @@
 ﻿#include "GlobalAllocationMapPage.h"
-#include "../../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../../../Systemic/DataStructures/BitMap/BitMap.h"
 
 using namespace ByteMaps;
 using namespace DatabaseEngine::StorageTypes;

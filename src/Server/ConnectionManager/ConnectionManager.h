@@ -1,5 +1,5 @@
 #pragma once
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h"
+#include "../../Systemic/Network/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h"
 #include "../Threadpool/ThreadPool.h"
 
 
@@ -27,7 +27,7 @@
     using SocketEvent = epoll_event;
 #endif
 
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h"
+#include "../../Systemic/Network/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h"
 
 using namespace std;
 

@@ -1,6 +1,4 @@
 #include "Key.h"
-#include <cstring>
-
 #include "../DataTypes/Value/Value.h"
 #include "../DataTypes/Headers/Headers.h"
 
@@ -145,11 +143,18 @@ namespace DataTypes::Indexing{
         return ComparisonResult::Greater;
     }
 
-    int32_t Key::GetIdentityKey()const{
+    int32_t Key::GetKeyAsInt()const{
         if (subKeys.empty())
             throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
 
         return this->subKeys.front().value.GetInt();
+    }
+
+    int64_t Key::GetKeyAsBigInt() const{
+        if (subKeys.empty())
+            throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
+
+        return this->subKeys.front().value.GetBigInt();
     }
 
     std::ostream & operator<<(std::ostream &os, const Key &key){

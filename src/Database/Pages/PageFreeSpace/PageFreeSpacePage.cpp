@@ -1,5 +1,5 @@
 ﻿#include "PageFreeSpacePage.h"
-#include "../../../AdditionalLibraries/ByteMap/ByteMap.h"
+#include "../../../Systemic/DataStructures/ByteMap/ByteMap.h"
 
 using namespace ByteMaps;
 using namespace DatabaseEngine::StorageTypes;

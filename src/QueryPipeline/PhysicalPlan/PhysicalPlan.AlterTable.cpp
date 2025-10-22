@@ -1,6 +1,6 @@
 #include "PhysicalPlan.h"
 #include "../../Server/Server.h"
-#include "../../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../../Systemic/Functions/StringFunctions.h"
 
 #include <cstring>
 #include <iostream>
@@ -17,7 +17,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalPlanResult * PhysicalAddColumn::Execute(const int& batchSize){
 
-    const auto columnType = ColumnTypesDictionary.Get(AdditionalLibraries::StringFunctions::NormalizeString(this->column->type.name));
+    const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
 
     //if add occurs in a different index pos chaos ensues
     const auto columnResult =
@@ -32,7 +32,7 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->index
           );
 
-      if (columnResult.code != AdditionalDataTypes::ResultCode::Ok) {
+      if (columnResult.code != Errors::ResultCode::Ok) {
         auto* result = new PhysicalPlanResult();
         result->code = columnResult.code;
         result->message = columnResult.message;
@@ -41,7 +41,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (!this->column->defaultValue.GetIsNull()) {
       const auto value = this->column->defaultValue.GetString();
-      const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKey.GetIdentityKey(), this->column->defaultValue);
+      const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKey.GetKeyAsInt(), this->column->defaultValue);
     }
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
@@ -49,10 +49,10 @@ namespace QueryPipeline::PhysicalPlan{
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     auto* columnPtr = new DatabaseEngine::StorageTypes::Column(this->column->name.name, columnType, this->column->type.size, this->column->index, this->column->isNullable);
-    columnPtr->SetColumnId(columnResult.primaryKey.GetIdentityKey());
+    columnPtr->SetColumnId(columnResult.primaryKey.GetKeyAsInt());
 
     tablePtr->AddColumn(columnPtr);
-    tablePtr->GetIdentityColumnById(columnResult.primaryKey.GetIdentityKey());
+    tablePtr->GetIdentityColumnById(columnResult.primaryKey.GetKeyAsInt());
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
     tablePtr->GetDefaultValuesHeaders();

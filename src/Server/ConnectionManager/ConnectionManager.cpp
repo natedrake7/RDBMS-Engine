@@ -1,9 +1,9 @@
 #include "ConnectionManager.h"
 
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
-#include "../../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
+#include "../../Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
+#include "../../Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
+#include "../../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
+#include "../../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
 #include "../Threadpool/ThreadPool.h"
 
 #include <atomic>

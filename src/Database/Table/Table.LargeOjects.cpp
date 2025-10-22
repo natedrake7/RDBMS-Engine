@@ -1,5 +1,5 @@
 #include "Table.h"
-#include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../../Systemic/DataStructures/BitMap/BitMap.h"
 #include "../Block/Block.h"
 #include "../Constants.h"
 #include "../Database.h"
@@ -7,10 +7,6 @@
 #include "../Storage/StorageManager/StorageManager.h"
 #include "../Pages/Page.h"
 #include "../Row/Row.h"
-
-using namespace Pages;
-using namespace ByteMaps;
-using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes {
     void Table::InsertLargeObjectToPage(Row *row) 
@@ -20,7 +16,7 @@ namespace DatabaseEngine::StorageTypes {
         if (largeBlockIndexes.empty())
             return;
 
-        RowHeader *rowHeader = row->GetHeader();
+        const RowHeader *rowHeader = row->GetHeader();
 
         const auto &rowData = row->GetData();
 
@@ -37,9 +33,15 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, LargeDataObject **previousDataObject) 
-    {
-        LargeObjectPage *largeDataPage = this->GetOrCreateLargeDataPage();
+    void Table::RecursiveInsertToLargePage(
+        Row *&row,
+        page_offset_t &offset,
+        const column_index_t &columnIndex,
+        block_size_t &remainingBlockSize,
+        const bool &isFirstRecursion,
+        Pages::LargeDataObject **previousDataObject
+    ){
+        Pages::LargeObjectPage *largeDataPage = this->GetOrCreateLargeDataPage();
 
         const auto &pageSize = largeDataPage->GetBytesLeft();
 
@@ -66,7 +68,7 @@ namespace DatabaseEngine::StorageTypes {
 
         remainingBlockSize -= bytesToBeInserted;
 
-        LargeDataObject *dataObject = largeDataPage->InsertObject(
+        Pages::LargeDataObject *dataObject = largeDataPage->InsertObject(
             data + offset, bytesToBeInserted);
 
         this->database->SetPageMetaDataToPfs(largeDataPage);
@@ -82,16 +84,16 @@ namespace DatabaseEngine::StorageTypes {
         Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion,largeDataPage->GetPageId(),columnIndex);
     }
 
-    LargeObjectPage *Table::GetOrCreateLargeDataPage() const 
+    Pages::LargeObjectPage *Table::GetOrCreateLargeDataPage() const
     {
-        LargeObjectPage *largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId);
+        Pages::LargeObjectPage *largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId);
 
         return (largeDataPage == nullptr)
                     ? this->database->CreateLargeDataPage(this->header.tableId)
                     : largeDataPage;
     }
 
-    void Table::LinkLargePageDataObjectChunks(LargeDataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex) 
+    void Table::LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex)
     {
         if (dataObject != nullptr) 
             dataObject->nextPageId = lastLargePageId;
@@ -102,25 +104,25 @@ namespace DatabaseEngine::StorageTypes {
         if (!isFirstRecursion)
             return;
 
-        const DataObjectPointer objectPointer(lastLargePageId);
+        const Pages::DataObjectPointer objectPointer(lastLargePageId);
 
-        Block *block = new Block(&objectPointer, sizeof(DataObjectPointer),
+        auto *block = new Block(&objectPointer, sizeof(Pages::DataObjectPointer),
                                 this->columns[largeBlockIndex]);
 
         row->UpdateColumnData(block);
     }
 
-    LargeObjectPage *Table::GetLargeDataPage(const page_id_t &pageId) const {
+    Pages::LargeObjectPage *Table::GetLargeDataPage(const page_id_t &pageId) const {
       const auto extentId = Database::CalculateExtentIdByPageId(pageId);
 
-      return StorageManager::Get().GetLargeDataPage(this->database->GetFileName(), pageId, extentId, this);
+      return Storage::StorageManager::Get().GetLargeDataPage(this->database->GetFileName(), pageId, extentId, this);
 //      return this->database->GetLargeDataPage(pageId, this->header.tableId);
     }
 
     Pages::OverflowPage* Table::GetOverflowPage(const page_id_t & pageId) const{
       const auto extentId = Database::CalculateExtentIdByPageId(pageId);
 
-      return StorageManager::Get().GetOverflowPage(this->database->GetFileName(), pageId, extentId, this);
+      return Storage::StorageManager::Get().GetOverflowPage(this->database->GetFileName(), pageId, extentId, this);
     }
 
     const Headers::Index& Table::GetNonClusteredIndexes(const int& indexPos) const { return this->header.nonClusteredIndexes.at(indexPos); }

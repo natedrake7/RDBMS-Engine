@@ -1,11 +1,10 @@
 #pragma once
-#include "../AdditionalLibraries/Dictionary/Dictionary.h"
-#include "../AdditionalLibraries/HashSet/HashSet.h"
+#include "../Systemic/DataStructures/Dictionary/Dictionary.h"
+#include "../Systemic/DataStructures/HashSet/HashSet.h"
 #include "../Database/Constants.h"
 
 namespace QueryPipeline::PipelineConstants {
   typedef uint16_t cursor_id_t;
-
 
   static Dictionary<std::string, Constants::JoinType> JoinTypeDictionary{
     {"inner", Constants::JoinType::Inner},

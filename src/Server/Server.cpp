@@ -2,13 +2,13 @@
 #include "Server.Constants.h"
 
 #include "MasterDbColumns.h"
-#include "../AdditionalLibraries/Converter/Converter.h"
+#include "../Systemic/Converter/Converter.h"
 
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include "../Database/Block/Block.h"
 #include "../Database/Storage/StorageManager/StorageManager.h"
-#include "../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../Systemic/Functions/StringFunctions.h"
 #include "../Database/AdditionalFunctions/SortingFunctions.h"
 
 #include <iostream>
@@ -87,7 +87,7 @@ namespace Server {
 
     const auto dbInsertResult = this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
 
-    const auto schemaInsertResult = this->InsertSchemaToMasterDb(dbInsertResult.primaryKey.GetIdentityKey(), "dbo");
+    const auto schemaInsertResult = this->InsertSchemaToMasterDb(dbInsertResult.primaryKey.GetKeyAsInt(), "dbo");
 
     Dictionary<string, column_index_t> columnNameToIndex;
 
@@ -96,8 +96,8 @@ namespace Server {
 
       const auto tableResult =
         this->InsertTableToMasterDb(
-          dbInsertResult.primaryKey.GetIdentityKey(),
-          schemaInsertResult.primaryKey.GetIdentityKey(),
+          dbInsertResult.primaryKey.GetKeyAsInt(),
+          schemaInsertResult.primaryKey.GetKeyAsInt(),
           table.name,
           static_cast<int16_t>(i),
           true
@@ -105,7 +105,7 @@ namespace Server {
 
       const auto tableStatsResult =
         this->InsertTableStatisticsToMasterDb(
-         tableResult.primaryKey.GetIdentityKey()
+         tableResult.primaryKey.GetKeyAsInt()
         );
 
       int columnPos = 0;
@@ -115,17 +115,17 @@ namespace Server {
       for (auto& column: table.columns) {
 
         block_size_t columnSize;
-        ColumnTypeSizes.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(column.type), columnSize);
+        ColumnTypeSizes.TryGetValue(Functions::String::NormalizeString(column.type), columnSize);
 
         if (columnSize == 0)
           columnSize = column.size;
 
         DataType type;
-        ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(column.type), type);
+        ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(column.type), type);
 
         const auto columnResult =
           this->InsertColumnToMasterDb(
-           tableResult.primaryKey.GetIdentityKey(),
+           tableResult.primaryKey.GetKeyAsInt(),
            column.name,
            type,
            columnSize,
@@ -135,16 +135,16 @@ namespace Server {
            columnPos,
            true);
 
-        if (columnResult.code != AdditionalDataTypes::ResultCode::Ok)
+        if (columnResult.code != Errors::ResultCode::Ok)
           std::cerr << columnResult.message << std::endl;
 
         const auto columnStatsResult =
           this->InsertColumnStatisticsToMasterDb(
-            columnResult.primaryKey.GetIdentityKey()
+            columnResult.primaryKey.GetKeyAsInt()
           );
 
         columnNameToIndex.Add(column.name, columnPos);
-        columnIdsDict.Add(column.name,columnResult.primaryKey.GetIdentityKey());
+        columnIdsDict.Add(column.name,columnResult.primaryKey.GetKeyAsInt());
 
         columnPos++;
       }
@@ -162,15 +162,15 @@ namespace Server {
       //TODO keep the last value keys
       const auto indexResult =
         this->InsertIndexToMasterDb(
-        tableResult.primaryKey.GetIdentityKey(),
+        tableResult.primaryKey.GetKeyAsInt(),
         "PK" + _columns,
         true);
 
-      auto indexKey = indexResult.primaryKey.GetIdentityKey();
+      auto indexKey = indexResult.primaryKey.GetKeyAsInt();
 
       const auto constraintResult =
           this->InsertConstraintToMasterDb(
-          tableResult.primaryKey.GetIdentityKey(),
+          tableResult.primaryKey.GetKeyAsInt(),
           "PK" + _columns,
           Headers::ConstraintType::PrimaryKey,
           false,
@@ -180,20 +180,20 @@ namespace Server {
         const auto& columnIndex = columnNameToIndex.Get(table.primaryKey[j]);
 
         this->InsertIndexColumnToMasterDb(
-          indexResult.primaryKey.GetIdentityKey(),
+          indexResult.primaryKey.GetKeyAsInt(),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j),
           true);
 
         this->InsertConstraintColumnToMasterDb(
-          constraintResult.primaryKey.GetIdentityKey(),
+          constraintResult.primaryKey.GetKeyAsInt(),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j)
         );
 
         if(table.hasIdentity){
           this->InsertIdentityColumnToMasterDb(
-            tableResult.primaryKey.GetIdentityKey(),
+            tableResult.primaryKey.GetKeyAsInt(),
             columnIdsDict.Get(table.primaryKey[j]),
             1,
             1,
@@ -254,7 +254,7 @@ namespace Server {
     this->masterDb->GetIdentityColumns();
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertDbToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertDbToMasterDb(
     const string& dbName,
     const string& dbPath,
     const bool& isSystem,
@@ -286,7 +286,7 @@ namespace Server {
     return result;
   }
 
-  AdditionalDataTypes::ResultStatus  ServerInstance::InsertSchemaToMasterDb(
+  Errors::ResultStatus  ServerInstance::InsertSchemaToMasterDb(
     const int32_t &databaseId,
     const string &schemaName,
     const string &user,
@@ -315,7 +315,7 @@ namespace Server {
     return result;
   }
 
-  AdditionalDataTypes::ResultStatus  ServerInstance::InsertTableToMasterDb(
+  Errors::ResultStatus  ServerInstance::InsertTableToMasterDb(
     const int32_t & databaseId,
     const int32_t & schemaId,
     const string& tableName,
@@ -351,7 +351,7 @@ namespace Server {
       return result;
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertColumnToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertColumnToMasterDb(
     const int32_t & tableId,
     const string &columnName,
     const DataType &columnType,
@@ -399,7 +399,7 @@ namespace Server {
       return result;
   }
 
-  AdditionalDataTypes::ResultStatus  ServerInstance::InsertIndexToMasterDb(
+  Errors::ResultStatus  ServerInstance::InsertIndexToMasterDb(
     const int32_t & tableId,
     const string &indexName,
     const bool &isClustered,
@@ -432,7 +432,7 @@ namespace Server {
       return result;
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertIndexColumnToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertIndexColumnToMasterDb(
     const int32_t & indexId,
     const int32_t & columnId,
     const int16_t & ordinalPosition,
@@ -461,7 +461,7 @@ namespace Server {
     return result;
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertIdentityColumnToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertIdentityColumnToMasterDb(
       const int32_t & tableId,
       const int32_t & columnId,
       const int32_t & seedValue,
@@ -497,7 +497,7 @@ namespace Server {
     return result;
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertDefaultValuesToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertDefaultValuesToMasterDb(
     const int32_t &columnId,
     const Value &value,
     const int &version,
@@ -523,7 +523,7 @@ namespace Server {
       return result;
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertTableStatisticsToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertTableStatisticsToMasterDb(
     const int32_t &tableId,
     const int64_t& rowCount,
     const int32_t& rowSize,
@@ -557,7 +557,7 @@ namespace Server {
     return result;
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertColumnStatisticsToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertColumnStatisticsToMasterDb(
     const int32_t &columnId,
     const int64_t &distinctCount,
     const int64_t &nullCount,
@@ -593,7 +593,7 @@ namespace Server {
     return result;
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertConstraintToMasterDb(
       const int32_t & tableId,
       const string & constraintName,
       const Headers::ConstraintType & constraintType,
@@ -632,7 +632,7 @@ namespace Server {
     return result;
   }
 
-  AdditionalDataTypes::ResultStatus ServerInstance::InsertConstraintColumnToMasterDb(
+  Errors::ResultStatus ServerInstance::InsertConstraintColumnToMasterDb(
     const int32_t & constraintId,
     const int32_t & columnId,
     const int32_t & ordinalPosition,
@@ -865,8 +865,8 @@ namespace Server {
     for (const auto& row : selectedSchemas) {
       const auto& currentSchemaName = row->GetColumnByIndex(2);
 
-      if (AdditionalLibraries::StringFunctions::Lower(currentSchemaName.GetString())
-          == AdditionalLibraries::StringFunctions::Lower(schema))
+      if (Functions::String::Lower(currentSchemaName.GetString())
+          == Functions::String::Lower(schema))
         return true;
     }
 
@@ -1316,7 +1316,7 @@ namespace Server {
       Dictionary<string, Headers::ColumnHeader> selectedColumns;
 
       for (const auto& column : columns)
-        selectedColumns.Add(AdditionalLibraries::StringFunctions::Lower(column.name), column);
+        selectedColumns.Add(Functions::String::Lower(column.name), column);
 
       return selectedColumns;
     }
@@ -1612,7 +1612,7 @@ namespace Server {
 
         block_size_t columnSize = 0;
 
-        const auto normalizedColumnType = AdditionalLibraries::StringFunctions::NormalizeString(column.type);
+        const auto normalizedColumnType = Functions::String::NormalizeString(column.type);
 
         if (!ColumnTypeSizes.TryGetValue(normalizedColumnType, columnSize))
           throw runtime_error("Column type " + column.type + " does not exist");

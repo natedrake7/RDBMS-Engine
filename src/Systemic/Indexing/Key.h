@@ -13,6 +13,7 @@ namespace DataTypes::Indexing {
     };
 
     Constants::key_size_t size;
+
     Value value;
     vector<Key> subKeys;
 
@@ -36,7 +37,8 @@ namespace DataTypes::Indexing {
     void InsertKey(const Key &otherKey);
 
     static ComparisonResult CompareSubKeys(const Key& firstKey, const Key& otherKey);
-    [[nodiscard]] int32_t GetIdentityKey()const;
+    [[nodiscard]] int32_t GetKeyAsInt()const;
+    [[nodiscard]] int64_t GetKeyAsBigInt()const;
 
     //key comparison index used only on queries and not on key saveon db
     int indexKeyPosition = -1;

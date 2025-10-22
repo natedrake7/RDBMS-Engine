@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../BitMap/BitMap.h"
+#include "../../../../DataStructures/BitMap/BitMap.h"
 #include "../ResponseProtocol/ResponseProtocol.h"
 
 typedef struct ResponseRow {

@@ -1,27 +1,20 @@
 ﻿#include "HeaderPage.h"
 #include "../../Database.h"
 #include "../../Table/Table.h"
-#include "../../../AdditionalLibraries/BitMap/BitMap.h"
-#include "../../Column/Column.h"
-
 #include <cstring>
-
-using namespace DatabaseEngine;
-using namespace DatabaseEngine::StorageTypes;
-using namespace ByteMaps;
 
 namespace Pages
 {
     HeaderPage::HeaderPage(const int &pageId) : Page(pageId)
     {
-        this->databaseHeader = new DatabaseHeader();
+        this->databaseHeader = new DatabaseEngine::DatabaseHeader();
         this->isDirty = true;
         this->header.pageType = PageType::METADATA;
     }
 
     HeaderPage::HeaderPage() : Page()
     {
-        this->databaseHeader = new DatabaseHeader();
+        this->databaseHeader = new DatabaseEngine::DatabaseHeader();
         ;
         this->isDirty = true;
         this->header.pageType = PageType::METADATA;
@@ -29,7 +22,7 @@ namespace Pages
 
     HeaderPage::HeaderPage(const PageHeader &pageHeader) : Page(pageHeader)
     {
-        this->databaseHeader = new DatabaseHeader();
+        this->databaseHeader = new DatabaseEngine::DatabaseHeader();
     }
 
     HeaderPage::~HeaderPage()
@@ -79,7 +72,7 @@ namespace Pages
         }
     }
 
-    void HeaderPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
+    void HeaderPage::GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr)
     {
         memcpy(&this->databaseHeader->numberOfTables, data.data() + offSet, sizeof(table_number_t));
         offSet += sizeof(table_number_t);
@@ -92,7 +85,7 @@ namespace Pages
 
         for (int i = 0; i < this->databaseHeader->numberOfTables; i++)
         {
-            TableHeader tableHeader;
+            DatabaseEngine::StorageTypes::TableHeader tableHeader;
 
             memcpy(&tableHeader.tableId, data.data() + offSet, sizeof(table_id_t));
             offSet += sizeof(table_id_t);
@@ -156,7 +149,7 @@ namespace Pages
         }
     }
 
-    void HeaderPage::SetDbHeader(const DatabaseHeader &databaseHeader)
+    void HeaderPage::SetDbHeader(const DatabaseEngine::DatabaseHeader &databaseHeader)
     {
         *this->databaseHeader = databaseHeader;
         this->isDirty = true;
@@ -164,16 +157,16 @@ namespace Pages
         this->tablesHeaders.clear();
     }
 
-    void HeaderPage::SetTableHeader(const Table* table)
+    void HeaderPage::SetTableHeader(const DatabaseEngine::StorageTypes::Table* table)
     {
-        const TableHeader& header = table->GetTableHeader();
+        const DatabaseEngine::StorageTypes::TableHeader& header = table->GetTableHeader();
 
         this->tablesHeaders.push_back(header);
 
         this->isDirty = true;
     }
 
-    const DatabaseHeader *HeaderPage::GetDatabaseHeader() const { return this->databaseHeader; }
+    const DatabaseEngine::DatabaseHeader *HeaderPage::GetDatabaseHeader() const { return this->databaseHeader; }
 
-    const vector<TableHeader> &HeaderPage::GetTablesFullHeaders() const { return this->tablesHeaders; }
+    const vector<DatabaseEngine::StorageTypes::TableHeader> &HeaderPage::GetTablesFullHeaders() const { return this->tablesHeaders; }
 }

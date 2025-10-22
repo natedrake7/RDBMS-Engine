@@ -36,43 +36,43 @@ add_custom_target(
 
 file(GLOB ANTLR_SRC "${GENERATED_DIR}/*.cpp")
 
-add_library(AdditionalLibraries SHARED
-        src/AdditionalLibraries/BitMap/BitMap.cpp
-        src/AdditionalLibraries/BitMap/BitMap.h
-        src/AdditionalLibraries/ByteMap/ByteMap.cpp
-        src/AdditionalLibraries/ByteMap/ByteMap.h
-        src/AdditionalLibraries/DataTypes/Value/Value.cpp
-        src/AdditionalLibraries/DataTypes/Value/Value.h
-        src/AdditionalLibraries/DataTypes/DateTime/DateTime.cpp
-        src/AdditionalLibraries/DataTypes/DateTime/DateTime.h
-        src/AdditionalLibraries/DataTypes/Decimal/Decimal.cpp
-        src/AdditionalLibraries/DataTypes/Decimal/Decimal.h
-        src/AdditionalLibraries/Converter/Converter.h
-        src/AdditionalLibraries/HashSet/HashSet.h
-        src/AdditionalLibraries/DataTypes/SortCondition/SortCondition.cpp
-        src/AdditionalLibraries/DataTypes/GroupCondition/GroupCondition.cpp
-        src/AdditionalLibraries/DataTypes/GroupCondition/GroupCondition.h
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
-        src/AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
-        src/AdditionalLibraries/DataTypes/Headers/Headers.h
-        src/AdditionalLibraries/Functions/StringFunctions.h
-        src/AdditionalLibraries/DataTypes/Guid/Guid.cpp
-        src/AdditionalLibraries/DataTypes/Guid/Guid.h
-        src/AdditionalLibraries/Functions/DateFunctions.h
-        src/AdditionalLibraries/Coercions/Coercions.h
-        src/AdditionalLibraries/Coercions/Coercions.cpp
-        src/AdditionalLibraries/ErrorHandling/ErrorHandling.h
-        src/AdditionalLibraries/Indexing/Key.h
-        src/AdditionalLibraries/Indexing/Key.cpp
+add_library(Systemic SHARED
+        src/Systemic/DataStructures/BitMap/BitMap.cpp
+        src/Systemic/DataStructures/BitMap/BitMap.h
+        src/Systemic/DataStructures/ByteMap/ByteMap.cpp
+        src/Systemic/DataStructures/ByteMap/ByteMap.h
+        src/Systemic/DataTypes/Value/Value.cpp
+        src/Systemic/DataTypes/Value/Value.h
+        src/Systemic/DataTypes/DateTime/DateTime.cpp
+        src/Systemic/DataTypes/DateTime/DateTime.h
+        src/Systemic/DataTypes/Decimal/Decimal.cpp
+        src/Systemic/DataTypes/Decimal/Decimal.h
+        src/Systemic/Converter/Converter.h
+        src/Systemic/DataStructures/HashSet/HashSet.h
+        src/Systemic/DataTypes/SortCondition/SortCondition.cpp
+        src/Systemic/DataTypes/GroupCondition/GroupCondition.cpp
+        src/Systemic/DataTypes/GroupCondition/GroupCondition.h
+        src/Systemic/Network/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.cpp
+        src/Systemic/Network/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
+        src/Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
+        src/Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
+        src/Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
+        src/Systemic/Network/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
+        src/Systemic/Network/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
+        src/Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
+        src/Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h
+        src/Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.cpp
+        src/Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
+        src/Systemic/DataTypes/Headers/Headers.h
+        src/Systemic/Functions/StringFunctions.h
+        src/Systemic/DataTypes/Guid/Guid.cpp
+        src/Systemic/DataTypes/Guid/Guid.h
+        src/Systemic/Functions/DateFunctions.h
+        src/Systemic/Coercions/Coercions.h
+        src/Systemic/Coercions/Coercions.cpp
+        src/Systemic/Errors/Errors.h
+        src/Systemic/Indexing/Key.h
+        src/Systemic/Indexing/Key.cpp
 
 )
 
@@ -82,7 +82,7 @@ add_library(ExpressionsLibrary STATIC
             src/Expressions/Expressions.Additional.h
 )
 
-target_link_libraries(ExpressionsLibrary PRIVATE AdditionalLibraries PRIVATE Database)
+target_link_libraries(ExpressionsLibrary PRIVATE Systemic PRIVATE Database)
 
 add_library(QueryPipeline STATIC
             src/QueryPipeline/Parser/Parser.cpp
@@ -112,7 +112,7 @@ add_library(QueryPipeline STATIC
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
-target_link_libraries(QueryPipeline PRIVATE ExpressionsLibrary PRIVATE AdditionalLibraries PRIVATE antlr4_shared)
+target_link_libraries(QueryPipeline PRIVATE ExpressionsLibrary PRIVATE Systemic PRIVATE antlr4_shared)
 
 # Include the generated parser and lexer files
 target_include_directories(QueryPipeline PRIVATE
@@ -189,15 +189,15 @@ add_library(Server STATIC
         src/Server/MasterDbColumns.h
         src/Server/Server.Constants.h)
 
-target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE AdditionalLibraries)
+target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE Systemic)
 
-target_link_libraries(Database PRIVATE AdditionalLibraries PRIVATE ExpressionsLibrary PRIVATE Server)
+target_link_libraries(Database PRIVATE Systemic PRIVATE ExpressionsLibrary PRIVATE Server)
 
 # add_executable(Client
 #         src/Client/client.cpp
 #         src/Client/client.h)
 
-# target_link_libraries(Client PRIVATE AdditionalLibraries)
+# target_link_libraries(Client PRIVATE Systemic)
 
 target_link_libraries(DatabaseInterface 
-                        PRIVATE Server Database AdditionalLibraries QueryPipeline)
+                        PRIVATE Server Database Systemic QueryPipeline)

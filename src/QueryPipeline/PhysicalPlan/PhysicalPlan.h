@@ -1,5 +1,5 @@
 #pragma once
-#include "../../AdditionalLibraries/ErrorHandling/ErrorHandling.h"
+#include "../../Systemic/Errors/Errors.h"
 #include <string>
 #include <vector>
 #include "../../Database/Row/Row.h"
@@ -26,7 +26,7 @@ namespace QueryPipeline::PhysicalPlan{
       std::vector<QueryResult> results;
 
       std::string message;
-      AdditionalDataTypes::ResultCode code;
+      Errors::ResultCode code;
 
       PhysicalPlanResult();
       ~PhysicalPlanResult();

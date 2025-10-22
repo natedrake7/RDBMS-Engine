@@ -1,10 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include "../DataTypes/Value/Value.h"
 #include "../Indexing/Key.h"
 
-namespace AdditionalDataTypes {
+namespace Errors {
   enum ResultCode : uint8_t {
     Ok = 0,
     Error = 1,

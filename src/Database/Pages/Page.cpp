@@ -1,7 +1,7 @@
 #include "Page.h"
 #include "../Database.h"
 #include "./LargeObject/LargeObjectPage.h"
-#include "../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../../Systemic/DataStructures/BitMap/BitMap.h"
 #include "../Block/Block.h"
 #include "../Storage/StorageManager/StorageManager.h"
 

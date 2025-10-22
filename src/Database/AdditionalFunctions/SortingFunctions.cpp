@@ -1,7 +1,7 @@
 ﻿#include "SortingFunctions.h"
 #include <ranges>
 
-#include "../../AdditionalLibraries/DataTypes/GroupCondition/GroupCondition.h"
+#include "../../Systemic/DataTypes/GroupCondition/GroupCondition.h"
 #include "./AggregateFunctions/AggregateFunctions.h"
 #include "../Block/Block.h"
 #include "../Row/Row.h"

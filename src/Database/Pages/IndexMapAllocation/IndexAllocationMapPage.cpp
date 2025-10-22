@@ -1,5 +1,5 @@
 ﻿#include "IndexAllocationMapPage.h"
-#include "../../../AdditionalLibraries/BitMap/BitMap.h"
+#include "../../../Systemic/DataStructures/BitMap/BitMap.h"
 #include "../GlobalAllocationMap/GlobalAllocationMapPage.h"
 #include "../../Database.h"
 

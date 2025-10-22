@@ -3,7 +3,7 @@
 #include "../Constants.h"
 #include "../../QueryPipeline/Statements/Statements.h"
 #include "../Pages/OverflowPage/OverflowPage.h"
-#include "../../AdditionalLibraries/ErrorHandling/ErrorHandling.h"
+#include "../../Systemic/Errors/Errors.h"
 
 namespace ByteMaps
 {
@@ -109,9 +109,9 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
 
-        [[nodiscard]] AdditionalDataTypes::ResultStatus Update(const std::vector<Value> & updates, int& diff);
+        [[nodiscard]] Errors::ResultStatus Update(const std::vector<Value> & updates, int& diff);
 
-        [[nodiscard]] AdditionalDataTypes::ResultStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff);
+        [[nodiscard]] Errors::ResultStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff);
 
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
 

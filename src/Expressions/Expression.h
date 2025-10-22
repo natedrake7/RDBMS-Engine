@@ -2,7 +2,7 @@
 #include <string>
 #include "Expressions.Additional.h"
 #include "../QueryPipeline/QueryResult/QueryResult.h"
-#include "../AdditionalLibraries/DataTypes/Value/Value.h"
+#include "../Systemic/DataTypes/Value/Value.h"
 
 namespace DatabaseEngine::StorageTypes {
   class Row;

@@ -2,6 +2,7 @@
 #include <cstdint>
 #include "../../Database/Constants.h"
 #include "../DataTypes/Value/Value.h"
+#include "../DataStructures/HashSet/HashSet.h"
 
 namespace DataTypes{
     enum class CoercionType : uint8_t {

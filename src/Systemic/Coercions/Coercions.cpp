@@ -11,7 +11,7 @@ namespace DataTypes{
   }
 
   bool Coercions::ParseAsBoolFromString(const Value &value){
-    const auto strData = AdditionalLibraries::StringFunctions::Lower(value.GetString());
+    const auto strData = Functions::String::Lower(value.GetString());
 
     if (TrueStrings.Contains(strData))
       return true;
@@ -23,7 +23,7 @@ namespace DataTypes{
   }
 
   bool Coercions::ParseAsBoolFromString(const Value &value, bool &outVal){
-    const auto strData = AdditionalLibraries::StringFunctions::Lower(value.GetString());
+    const auto strData = Functions::String::Lower(value.GetString());
 
     if (TrueStrings.Contains(strData)) {
       outVal = true;

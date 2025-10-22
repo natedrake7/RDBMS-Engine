@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace AdditionalLibraries::StringFunctions {
+namespace Functions::String {
   inline std::string NormalizeString(const std::string &str) {
     auto temp = str;
     std::ranges::transform(temp, temp.begin(), ::tolower);

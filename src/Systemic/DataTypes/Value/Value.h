@@ -1,11 +1,8 @@
 #pragma once
 #include <string>
 #include "../../../Database/Constants.h"
-#include "../../HashSet/HashSet.h"
 #include "../Decimal/Decimal.h"
 #include "../Guid/Guid.h"
-
-using namespace std;
 
 static Dictionary<DataType, int> ColumnTypeRank{
   {DataType::String, 1},
@@ -19,15 +16,11 @@ static Dictionary<DataType, int> ColumnTypeRank{
   {DataType::DateTime, 9},
 };
 
-static Dictionary<DataType, HashSet<DataType>> CoercionMapping{
-
-};
-
 class Value {
-    column_index_t columnIndex;
-    object_t* data;
-    block_size_t size;
-    DataType type;
+    Constants::column_index_t columnIndex;
+    Constants::object_t* data;
+    Constants::block_size_t size;
+    Constants::DataType type;
 
     bool isIdentifier;
     std::string name;
@@ -59,37 +52,37 @@ class Value {
         Value(const Value& copyVal);
         ~Value();
 
-        explicit Value(const void* data, const column_index_t& columnIndex = 0);
+        explicit Value(const void* data, const Constants::column_index_t& columnIndex = 0);
 
-        explicit Value(const void* data, const int& size, const DataType& type);
+        explicit Value(const void* data, const int& size, const Constants::DataType& type);
 
-        explicit Value(const unsigned char* data, const int& size, const DataType& type);
+        explicit Value(const unsigned char* data, const int& size, const Constants::DataType& type);
         
-        explicit Value(const bool& data, const column_index_t& columnIndex);
+        explicit Value(const bool& data, const Constants::column_index_t& columnIndex);
         
-        explicit Value(const int8_t& data, const column_index_t& columnIndex);
+        explicit Value(const int8_t& data, const Constants::column_index_t& columnIndex);
         
-        explicit Value(const int16_t& data, const column_index_t& columnIndex);
+        explicit Value(const int16_t& data, const Constants::column_index_t& columnIndex);
         
-        explicit Value(const int32_t& data, const column_index_t& columnIndex);
+        explicit Value(const int32_t& data, const Constants::column_index_t& columnIndex);
         
-        explicit Value(const int64_t& data, const column_index_t& columnIndex);
+        explicit Value(const int64_t& data, const Constants::column_index_t& columnIndex);
         
-        explicit Value(const string& data, const column_index_t& columnIndex, const bool& isIdentifier = false);
+        explicit Value(const string& data, const Constants::column_index_t& columnIndex, const bool& isIdentifier = false);
         
-        explicit Value(const u16string& data, const column_index_t& columnIndex);
+        explicit Value(const u16string& data, const Constants::column_index_t& columnIndex);
         
-        explicit Value(const DataTypes::DateTime& data, const column_index_t& columnIndex);
+        explicit Value(const DataTypes::DateTime& data, const Constants::column_index_t& columnIndex);
         
-        explicit Value(const DataTypes::Decimal& data, const column_index_t& columnIndex);
+        explicit Value(const DataTypes::Decimal& data, const Constants::column_index_t& columnIndex);
 
-        explicit Value(const DataTypes::Guid& data, const column_index_t& columnIndex);
+        explicit Value(const DataTypes::Guid& data, const Constants::column_index_t& columnIndex);
 
         [[nodiscard]] bool GetIsNull() const;
         
-        [[nodiscard]] const column_index_t& GetColumnIndex() const;
+        [[nodiscard]] const Constants::column_index_t& GetColumnIndex() const;
 
-        [[nodiscard]] const DataType& GetType() const;
+        [[nodiscard]] const Constants::DataType& GetType() const;
       
         void SetData(const bool& data);
       
@@ -115,9 +108,9 @@ class Value {
 
         void InferType();
 
-        [[nodiscard]] const block_size_t& GetSize() const;
+        [[nodiscard]] const Constants::block_size_t& GetSize() const;
 
-        [[nodiscard]] const object_t* GetRawData() const;
+        [[nodiscard]] const Constants::object_t* GetRawData() const;
         
         [[nodiscard]] bool GetBool()const;
         
@@ -143,9 +136,9 @@ class Value {
 
         void SetColumnIndex(const Constants::column_index_t &columnIndex);
 
-        void SetType(const DataType &type);
+        void SetType(const Constants::DataType &type);
 
-        static DataType PromoteType(const DataType& lhs, const DataType& rhs);
+        static Constants::DataType PromoteType(const Constants::DataType& lhs, const Constants::DataType& rhs);
 
         friend ostream& operator<<(ostream& os, const Value& field);
 

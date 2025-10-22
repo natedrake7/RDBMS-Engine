@@ -1,6 +1,6 @@
 #pragma once
-#include "../AdditionalLibraries/DataTypes/Headers/Headers.h"
-#include "../AdditionalLibraries/ErrorHandling/ErrorHandling.h"
+#include "../Systemic/DataTypes/Headers/Headers.h"
+#include "../Systemic/Errors/Errors.h"
 #include "../Database/Database.h"
 #include <string>
 #include <vector>
@@ -52,7 +52,7 @@ namespace Server {
 
     //MasterDB Insert Functions
     void Initialize(const string& configPath);
-    AdditionalDataTypes::ResultStatus  InsertDbToMasterDb(
+    Errors::ResultStatus  InsertDbToMasterDb(
       const string& dbName,
       const string& dbPath,
       const bool& isSystem = false,
@@ -60,14 +60,14 @@ namespace Server {
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus  InsertSchemaToMasterDb(
+    Errors::ResultStatus  InsertSchemaToMasterDb(
       const int32_t& databaseId,
       const string& schemaName,
       const string& user = "system",
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus  InsertTableToMasterDb(
+    Errors::ResultStatus  InsertTableToMasterDb(
       const int32_t & databaseId,
       const int32_t & schemaId,
       const string& tableName,
@@ -77,7 +77,7 @@ namespace Server {
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus  InsertColumnToMasterDb(
+    Errors::ResultStatus  InsertColumnToMasterDb(
       const int32_t & tableId,
       const string& columnName,
       const DataType& columnType,
@@ -91,7 +91,7 @@ namespace Server {
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus  InsertIndexToMasterDb(
+    Errors::ResultStatus  InsertIndexToMasterDb(
       const int32_t & tableId,
       const string &indexName,
       const bool &isClustered,
@@ -100,7 +100,7 @@ namespace Server {
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus InsertIndexColumnToMasterDb(
+    Errors::ResultStatus InsertIndexColumnToMasterDb(
         const int32_t& indexId,
         const int32_t& columnId,
         const int16_t& ordinalPosition,
@@ -108,7 +108,7 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus InsertConstraintToMasterDb(
+    Errors::ResultStatus InsertConstraintToMasterDb(
         const int32_t& tableId,
         const std::string& constraintName,
         const Headers::ConstraintType& constraintType,
@@ -118,14 +118,14 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus InsertConstraintColumnToMasterDb(
+    Errors::ResultStatus InsertConstraintColumnToMasterDb(
         const int32_t& constraintId,
         const int32_t& columnId,
         const int32_t& ordinalPosition,
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus InsertIdentityColumnToMasterDb(
+    Errors::ResultStatus InsertIdentityColumnToMasterDb(
         const int32_t& tableId,
         const int32_t& columnId,
         const int32_t& seedValue,
@@ -136,13 +136,13 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus InsertDefaultValuesToMasterDb(
+    Errors::ResultStatus InsertDefaultValuesToMasterDb(
         const int32_t& columnId,
         const Value& value,
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    AdditionalDataTypes::ResultStatus InsertTableStatisticsToMasterDb(
+    Errors::ResultStatus InsertTableStatisticsToMasterDb(
       const int32_t& tableId,
       const int64_t& rowCount = 0,
       const int32_t& rowSize = 0,
@@ -150,7 +150,7 @@ namespace Server {
       const bool& isDeleted = false
     ) const;
 
-    AdditionalDataTypes::ResultStatus InsertColumnStatisticsToMasterDb(
+    Errors::ResultStatus InsertColumnStatisticsToMasterDb(
       const int32_t& columnId,
       const int64_t& distinctCount = 0,
       const int64_t& nullCount = 0,

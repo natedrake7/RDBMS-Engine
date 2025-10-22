@@ -1,7 +1,10 @@
 ﻿#include "BitMap.h"
-
 #include <cstring>
 #include <iostream>
+
+#include "../../../Database/Constants.h"
+
+#include <fstream>
 
 namespace ByteMaps
 {
@@ -133,7 +136,7 @@ namespace ByteMaps
 
     vector<Constants::byte> & BitMap::GetDataUnsafe(){ return this->data; }
 
-    bit_map_size_t & BitMap::GetSizeUnsafe(){ return this->size; }
+    Constants::bit_map_size_t & BitMap::GetSizeUnsafe(){ return this->size; }
 
     BitMap &BitMap::operator=(const BitMap &bitMap)
     {
@@ -146,7 +149,7 @@ namespace ByteMaps
         return *this;
     }
 
-    const bool BitMap::HasAtLeastOneEntry()
+     bool BitMap::HasAtLeastOneEntry()
     {
         if (this->lastTrueIndex < this->size)
         {
@@ -156,7 +159,7 @@ namespace ByteMaps
                 return indexValue;
         }
 
-        for (bit_map_size_t i = 0; i < this->size; i++)
+        for (Constants::bit_map_size_t i = 0; i < this->size; i++)
         {
             const bool hasValue = this->Get(i);
 

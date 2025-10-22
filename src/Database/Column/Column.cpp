@@ -1,5 +1,5 @@
 ﻿#include "Column.h"
-#include "../../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../../Systemic/Functions/StringFunctions.h"
 #include "../../Server/Server.h"
 #include "../Table/Table.h"
 
@@ -19,7 +19,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table)
     {
-        const auto normalizedType = AdditionalLibraries::StringFunctions::NormalizeString(header.type);
+        const auto normalizedType = Functions::String::NormalizeString(header.type);
 
         this->name = header.name;
         this->allowNulls = false;

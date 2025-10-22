@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "../../AdditionalLibraries/DataTypes/Value/Value.h"
-#include "../../AdditionalLibraries/Indexing/Key.h"
+#include "../../Systemic/DataTypes/Value/Value.h"
+#include "../../Systemic/Indexing/Key.h"
 
 #include <vector>
 #include "../../Database/Constants.h"
@@ -27,7 +27,7 @@ namespace Indexing
     {
         table_id_t tableId;
         int16_t tablePosition;
-        page_id_t firstIndexPageId;
+        page_id_t indexPageId;
 
         int t;
         int keySize;
@@ -41,7 +41,7 @@ namespace Indexing
         DatabaseEngine::StorageTypes::Table* table;
 
         void SplitChild(Pages::IndexPage *parent, const int &index, Pages::IndexPage *child)const;
-        Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
+        Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::ResultStatus& status);
         [[nodiscard]] Pages::IndexPage *SearchKey(const DataTypes::Indexing::Key &key) const;
         [[nodiscard]] Pages::IndexPage *SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::IndexPage*>& ancestors) const;
         [[nodiscard]] Pages::IndexPage *SearchLeftMostLeafNode() const;
@@ -70,7 +70,7 @@ namespace Indexing
         BPlusTree();
         ~BPlusTree();
 
-        Pages::IndexPage *FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
+        Pages::IndexPage *FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::ResultStatus& status);
 
         void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const;
 

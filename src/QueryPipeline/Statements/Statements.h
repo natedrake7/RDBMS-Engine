@@ -2,8 +2,8 @@
 #include <string>
 #include <vector>
 #include "../../Database/Constants.h"
-#include "../../AdditionalLibraries/DataTypes/Value/Value.h"
-#include "../../AdditionalLibraries/DataTypes/Headers/Headers.h"
+#include "../../Systemic/DataTypes/Value/Value.h"
+#include "../../Systemic/DataTypes/Headers/Headers.h"
 #include "../../Expressions/Expression.h"
 
 namespace QueryPipeline {

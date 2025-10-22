@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "../../../Constants.h"
-#include "../../../../AdditionalLibraries/DataTypes/SortCondition/SortCondition.h"
+#include "../../../../Systemic/DataTypes/SortCondition/SortCondition.h"
 
 namespace QueryPipeline::Statements {
   struct OrderColumn;

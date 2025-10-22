@@ -1,8 +1,8 @@
 #include "Statements.h"
 
 #include "../Constants.h"
-#include "../../AdditionalLibraries/Coercions/Coercions.h"
-#include "../../AdditionalLibraries/Functions/StringFunctions.h"
+#include "../../Systemic/Coercions/Coercions.h"
+#include "../../Systemic/Functions/StringFunctions.h"
 #include "../../Database/Database.h"
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
@@ -592,7 +592,7 @@ namespace QueryPipeline::Statements {
 
     const auto& columnsDictionary = this->tableColumnsDictionary.Get(this->table->tableId);
 
-    const auto& columnHeader = columnsDictionary.Get(AdditionalLibraries::StringFunctions::Lower(columnName));
+    const auto& columnHeader = columnsDictionary.Get(Functions::String::Lower(columnName));
 
     const auto columnType = static_cast<Constants::DataType>(columnHeader.dataType);
 
@@ -691,7 +691,7 @@ namespace QueryPipeline::Statements {
       Headers::ColumnHeader header;
 
       //check if columns exist on the table
-      if (!columnsDict.TryGetValue(AdditionalLibraries::StringFunctions::Lower(column.name), header)) {
+      if (!columnsDict.TryGetValue(Functions::String::Lower(column.name), header)) {
         std::cerr << "Column " << column.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
         return false;
       }
@@ -907,7 +907,7 @@ bool UpdateStatement::Validate(){
     this->newColumn->index = headers.size();
 
     Constants::DataType columnType;
-    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(this->newColumn->type.name), columnType)) {
+    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(this->newColumn->type.name), columnType)) {
       std::cerr << "Invalid Column Type " << this->newColumn->type.name << std::endl;
       return false;
     }
@@ -941,7 +941,7 @@ bool UpdateStatement::Validate(){
     }
 
     Constants::DataType columnType;
-    if (!ColumnTypesDictionary.TryGetValue(AdditionalLibraries::StringFunctions::NormalizeString(this->alterColumn->type.name), columnType)) {
+    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(this->alterColumn->type.name), columnType)) {
       std::cerr << "Invalid Column Type " << this->alterColumn->type.name << std::endl;
       return false;
     }
@@ -1052,7 +1052,7 @@ bool UpdateStatement::Validate(){
     bool columnExistsOnTable = false;
     Headers::ColumnHeader columnHeader;
     for (const auto& [key, columns]: tablesColumnsDictionary) {
-      if (!columns.TryGetValue(AdditionalLibraries::StringFunctions::Lower(column.name), columnHeader))
+      if (!columns.TryGetValue(Functions::String::Lower(column.name), columnHeader))
         continue;
 
       if (!columnExistsOnTable) {
@@ -1108,7 +1108,7 @@ bool UpdateStatement::Validate(){
 
     const auto& columns = tablesColumnsDictionary.Get(column->tableId);
 
-    if (!columns.TryGetValue(AdditionalLibraries::StringFunctions::Lower(column->alias), columnHeader)) {
+    if (!columns.TryGetValue(Functions::String::Lower(column->alias), columnHeader)) {
       std::cerr << "column: " << column->alias << " does not exist in the statement" << endl;
       return false;
     }
@@ -1132,7 +1132,7 @@ bool UpdateStatement::Validate(){
     bool columnExistsOnStatement = false;
 
     for (const auto &columns : tablesColumnsDictionary | views::values) {
-      if (!columns.TryGetValue(AdditionalLibraries::StringFunctions::Lower(column->alias), columnHeader))
+      if (!columns.TryGetValue(Functions::String::Lower(column->alias), columnHeader))
         continue;
 
       if (columnExistsOnStatement) {
