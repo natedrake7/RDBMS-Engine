@@ -11,10 +11,6 @@
 #include <string>
 #include <vector>
 
-using namespace DatabaseEngine;
-using namespace DatabaseEngine::StorageTypes;
-using namespace Storage;
-using namespace Server;
 
 // handle updates
 // deletes
@@ -40,16 +36,12 @@ using namespace Server;
 //WAL create logs for each method and verify validity, create recovery mechanism in Database Object
 //tempdb
 //transactions(usage of tempDb maybe).
-//used aliases in logical and physical table scans and joins.
-//fix aliases not working on projection
-//add on columns checking to be case insensitive and all names to be normalized to lower string
 //change select columns to return only non deleted and order by version DESC
 //validation add default values and identity cannot be together (negates the point of the other)
 //Parsing fix , allow default without null or not null (and directly set to not null)
 //add versioning on delete and recreate with same name
 //add pagination and cursors to stream batches of rows when they cant fit in memory
 //add defragmentation thread (check Overflow pages and possibly Data Pages to defragment)
-//validate length of columns to match max record_size from master DB on inserts and updates
 //Add case insensitive on identifiers
 //Add like comparison (add a caseInsensitive comparison expression for strings)
 //Check batching, fix batching on insert with select.
@@ -75,7 +67,7 @@ void shutdownServer(int signal) {
     serverRunning.store(false);
 
     cout << "Server shutting down..." << endl;
-    ServerInstance::Get().Shutdown();
+    Server::ServerInstance::Get().Shutdown();
     exit(0);
 }
 
@@ -98,7 +90,7 @@ int main()
 
     RegisterSignalHandlers();
 
-    auto& server = ServerInstance::Get();
+    auto& server = Server::ServerInstance::Get();
 
     server.Initialize("configuration.json");
 
