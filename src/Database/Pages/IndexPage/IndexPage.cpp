@@ -71,7 +71,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
     offSet += sizeof(uint16_t);
 
     for (int i = 0;i < numOfKeys; i++) {
-        auto* key = new Key();
+        auto* key = new DataTypes::Indexing::Key();
 
         for (int j = 0; j < this->additionalHeader.numberOfSubKeys; j++)
         {
@@ -83,7 +83,7 @@ void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table
             memcpy(keyValue.data(), data.data() + offSet, keySize);
             offSet += keySize;
 
-            key->InsertKey(Key(keyValue.data(), keySize, j < indexedColumnTypes.size() ? indexedColumnTypes[j] : DataType::RowIdentifier));
+            key->InsertKey(DataTypes::Indexing::Key(keyValue.data(), keySize, j < indexedColumnTypes.size() ? indexedColumnTypes[j] : DataType::RowIdentifier));
         }
 
         this->keys.push_back(key);
@@ -147,8 +147,10 @@ void IndexPage::WritePageToFile(fstream *filePtr)
     for (const auto& key : this->keys) {
         for (const auto& subKey: key->subKeys)
         {
-            filePtr->write(reinterpret_cast<const char*>(&subKey.size), sizeof(key_size_t));
-            filePtr->write(reinterpret_cast<const char*>(subKey.value.data()), subKey.size);
+            const auto size = subKey.value.GetSize();
+
+            filePtr->write(reinterpret_cast<const char*>(&size), sizeof(key_size_t));
+            filePtr->write(reinterpret_cast<const char*>(subKey.value.GetRawData()), size);
         }
     }
 
@@ -207,7 +209,7 @@ void IndexPage::UpdateBytesLeft()
     this->isDirty = true;
 }
 
-vector<Indexing::Key *>* IndexPage::GetKeysUnsafe(){ return &this->keys; }
+vector<DataTypes::Indexing::Key*>* IndexPage::GetKeysUnsafe(){ return &this->keys; }
 
 vector<Headers::RowIdentifier *> * IndexPage::GetNonClusteredDataUnsafe(){ return &this->nonClusteredData; }
 

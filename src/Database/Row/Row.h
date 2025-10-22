@@ -3,6 +3,7 @@
 #include "../Constants.h"
 #include "../../QueryPipeline/Statements/Statements.h"
 #include "../Pages/OverflowPage/OverflowPage.h"
+#include "../../AdditionalLibraries/ErrorHandling/ErrorHandling.h"
 
 namespace ByteMaps
 {

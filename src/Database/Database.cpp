@@ -320,12 +320,7 @@ namespace DatabaseEngine
 
     void Database::CreateTable(const Headers::sysTable &sysHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey, const int& ordinalPosition)
     {
-        auto *table = new Table(sysHeader, tableHeader, primaryKey, this, ordinalPosition);
-
-        for (int i = 0;i < sysHeader.columns.size(); i++)
-            table->AddColumn(new Column(sysHeader.columns[i], i,  table));
-
-        this->tables.push_back(table);
+        this->tables.push_back(new Table(sysHeader, tableHeader, primaryKey, this, ordinalPosition));
     }
 
 //    Table *Database::OpenTable(const string& schemaName, const string &tableName) const

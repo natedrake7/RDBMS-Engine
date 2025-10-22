@@ -80,12 +80,18 @@ namespace DatabaseEngine::StorageTypes
         vector<Column *> columns;
         DatabaseEngine::Database *database;
 
+        HashSet<column_id_t> clusteredIndexColumnsCache;
+
         Indexing::BPlusTree* clusteredIndexedTree;
         vector<Indexing::BPlusTree*> nonClusteredIndexedTrees;
 
         protected:
 
-            [[nodiscard]] int64_t PopulateAutoComputedColumns(Row* row)const;
+            void PopulateClusteredIndexCache(const Headers::Index& index);
+
+            bool IsColumnAutoComputedPrimaryKey(const Column* column) const;
+
+            void PopulateAutoComputedColumns(Row* row)const;
 
             [[nodiscard]] Pages::LargeObjectPage *GetOrCreateLargeDataPage() const;
 
@@ -103,7 +109,6 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] std::tuple<Row*, AdditionalDataTypes::ResultStatus> CreateRow(
                 const Constants::transaction_id_t& transactionId,
                 const vector<Value>& inputData,
-                int64_t* primaryKeyVal,
                 Logging::CheckPoint* checkPoint
             )const;
 
@@ -119,14 +124,13 @@ namespace DatabaseEngine::StorageTypes
                 const Constants::transaction_id_t& transactionId,
                 const std::vector<Expressions::Expression*>& inputData,
                 const std::vector<Constants::column_index_t>& columnIndices,
-                int64_t* primaryKeyVal,
                 Logging::CheckPoint* checkPoint
             )const;
 
             void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
             void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
 
-            int64_t PopulateColumnIdentity(Row* row, Column*& column)const;
+            static bool PopulateColumnIdentity(Row* row, Column*& column, int64_t& outValue);
 
             static void PopulateDefaultValues(Row* row, Column*& column);
 
@@ -206,8 +210,8 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexSeek(
                 std::vector<const Row*> *selectedRows,
-                const Indexing::Key* minimumValue,
-                const Indexing::Key* maximumValue);
+                const DataTypes::Indexing::Key* minimumValue,
+                const DataTypes::Indexing::Key* maximumValue);
 
             void ClusteredIndexScan(
                 std::vector<const Row*> *selectedRows,
@@ -265,8 +269,8 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexSeekUpdate(
                 Expressions::Expression* expression,
-                const Indexing::Key* minimumValue,
-                const Indexing::Key* maximumValue,
+                const DataTypes::Indexing::Key* minimumValue,
+                const DataTypes::Indexing::Key* maximumValue,
                 const vector<Value> &updates);
 
             void Truncate();

@@ -65,12 +65,14 @@ add_library(AdditionalLibraries SHARED
         src/AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h
         src/AdditionalLibraries/DataTypes/Headers/Headers.h
         src/AdditionalLibraries/Functions/StringFunctions.h
-        src/AdditionalLibraries/DataTypes/ErrorHandling.h
         src/AdditionalLibraries/DataTypes/Guid/Guid.cpp
         src/AdditionalLibraries/DataTypes/Guid/Guid.h
         src/AdditionalLibraries/Functions/DateFunctions.h
         src/AdditionalLibraries/Coercions/Coercions.h
         src/AdditionalLibraries/Coercions/Coercions.cpp
+        src/AdditionalLibraries/ErrorHandling/ErrorHandling.h
+        src/AdditionalLibraries/Indexing/Key.h
+        src/AdditionalLibraries/Indexing/Key.cpp
 
 )
 

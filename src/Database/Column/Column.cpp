@@ -117,7 +117,11 @@ namespace DatabaseEngine::StorageTypes {
         return this->identityManager.TryGenerate(value);
     }
 
-    void Column::UpdateMetadata(){
+    void Column::UpdateMetadata()const{
         this->identityManager.UpdateMasterDb();
+    }
+
+    bool Column::HasIdentity() const{
+        return this->identityManager.IsValid();
     }
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "../../AdditionalLibraries/DataTypes/ErrorHandling.h"
+#include "../../AdditionalLibraries/ErrorHandling/ErrorHandling.h"
 #include <string>
 #include <vector>
 #include "../../Database/Row/Row.h"

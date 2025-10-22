@@ -14,13 +14,12 @@ namespace DatabaseEngine::StorageTypes {
     bool updateMasterDb = false;
 
     this->mutex.lock();
+
       const auto value = this->header.lastValue;
 
       this->header.lastValue += this->header.increment;
 
-      this->valueChanged = true;
-
-      updateMasterDb = value >= this->startingValue + this->header.cacheBlock;
+      updateMasterDb = value >= (this->startingValue + this->header.cacheBlock);
 
       if (updateMasterDb)
         this->startingValue = value;
@@ -28,7 +27,7 @@ namespace DatabaseEngine::StorageTypes {
     this->mutex.unlock();
 
     if (updateMasterDb)
-      this->UpdateMasterDb();
+      this->UpdateMasterDb(value);
 
     return value;
   }
@@ -43,10 +42,7 @@ namespace DatabaseEngine::StorageTypes {
   }
 
   void IdentityManager::UpdateMasterDb(const int64_t &value) const{
-    if (this->header.columnId == Constants::INVALID_COLUMN_ID)
-      return;
-
-    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value + 1);
+    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value + this->header.increment);
   }
 
   void IdentityManager::UpdateMasterDb()const{
@@ -54,11 +50,13 @@ namespace DatabaseEngine::StorageTypes {
       return;
 
     const auto value = this->valueChanged
-        ? this->header.lastValue + 1
+        ? this->header.lastValue + this->header.increment
         : this->header.lastValue;
 
     Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value);
   }
+
+  bool IdentityManager::IsValid() const{ return this->header.columnId != Constants::INVALID_COLUMN_ID; }
 
   void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){
     this->header = newHeader;

@@ -41,6 +41,17 @@ Value::Value(const void *data, const Constants::column_index_t &columnIndex){
     this->isIdentifier = false;
 }
 
+Value::Value(const void *data, const int &size, const DataType &type){
+    this->data = nullptr;
+    this->size = size;
+    this->type = type;
+    this->isIdentifier = false;
+    this->columnIndex = 0;
+
+    this->data = new object_t[size];
+    std::memcpy(this->data, data, size);
+}
+
 Value::Value(const unsigned char *data, const int &size, const DataType &type){
     this->data = new object_t[size];
     memcpy(this->data, data, size);

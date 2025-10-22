@@ -23,7 +23,7 @@ PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::m
   PhysicalPlanResult* PhysicalCreateDatabase::Execute(const int& batchSize){
     const auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
 
-    const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(static_cast<int32_t>(result.primaryKeyVal), "dbo");
+    const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(result.primaryKey.GetIdentityKey(), "dbo");
     
     DatabaseEngine::CreateDatabase(this->dbName);
 
@@ -248,8 +248,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     result->columns = tablePtr->GetConstantColumns();
-    const Indexing::Key minKey(minValue);
-    const Indexing::Key maxKey(maxValue);
+    const DataTypes::Indexing::Key minKey(minValue);
+    const DataTypes::Indexing::Key maxKey(maxValue);
 
     //select if to use clustered or non clustered index here
 
@@ -426,33 +426,33 @@ PhysicalInsert::PhysicalInsert(
     );
 
     const auto tableStatsResult = Server::ServerInstance::Get().InsertTableStatisticsToMasterDb(
-      static_cast<int32_t>(tableResult.primaryKeyVal)
+      tableResult.primaryKey.GetIdentityKey()
     );
 
-    auto* tablePtr = db->CreateTable(tableResult.primaryKeyVal, index, columnsPtrs, &this->primaryKey);
+    auto* tablePtr = db->CreateTable(tableResult.primaryKey.GetIdentityKey(), index, columnsPtrs, &this->primaryKey);
 
     Dictionary<int, int32_t> columnIdsDict;
 
     for (const auto& column: this->columns) {
       const auto columnResult =
           Server::ServerInstance::Get().InsertColumnToMasterDb(
-            static_cast<int32_t>(tableResult.primaryKeyVal),
+            tableResult.primaryKey.GetIdentityKey(),
             column->name.name,
             ColumnTypesDictionary.Get(AdditionalLibraries::StringFunctions::NormalizeString(column->type.name)),
-            static_cast<int32_t>(column->type.size),
+            column->type.size,
             column->type.decimal.precision,
             column->type.decimal.scale,
             column->isNullable,
             column->index
           );
 
-      const auto columnStatsResult = Server::ServerInstance::Get().InsertColumnStatisticsToMasterDb(columnResult.primaryKeyVal);
+      const auto columnStatsResult = Server::ServerInstance::Get().InsertColumnStatisticsToMasterDb(columnResult.primaryKey.GetIdentityKey());
 
-      columnIdsDict.Add(column->index, static_cast<int32_t>(columnResult.primaryKeyVal));
+      columnIdsDict.Add(column->index, columnResult.primaryKey.GetIdentityKey());
 
       if (!column->defaultValue.GetIsNull() || column->defaultValue.GetSize() != 0) {
         Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(
-          static_cast<int32_t>(columnResult.primaryKeyVal),
+          columnResult.primaryKey.GetIdentityKey(),
           column->defaultValue
         );
       }
@@ -462,13 +462,13 @@ PhysicalInsert::PhysicalInsert(
         continue;
 
       Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
-          static_cast<int32_t>(tableResult.primaryKeyVal),
-          static_cast<int32_t>(columnResult.primaryKeyVal),
+          tableResult.primaryKey.GetIdentityKey(),
+          columnResult.primaryKey.GetIdentityKey(),
           column->identity->seed,
           column->identity->incrementFactor,
           column->identity->seed,
           true,
-          static_cast<int32_t>(column->identity->cacheBlock)
+          column->identity->cacheBlock
           );
     }
 
@@ -487,15 +487,15 @@ PhysicalInsert::PhysicalInsert(
         return nullptr;
 
     const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
-        static_cast<int32_t>(tableResult.primaryKeyVal),
+        tableResult.primaryKey.GetIdentityKey(),
         this->constraintName,
         true,
         false);
 
-    const auto indexId = static_cast<int32_t>(indexResult.primaryKeyVal);
+    const auto indexId = indexResult.primaryKey.GetIdentityKey();
 
     const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(
-      static_cast<int32_t>(tableResult.primaryKeyVal),
+      tableResult.primaryKey.GetIdentityKey(),
       this->constraintName,
       Headers::ConstraintType::PrimaryKey,
       false,
@@ -503,13 +503,13 @@ PhysicalInsert::PhysicalInsert(
 
     for(int i = 0;i < primaryKeyColumnIds.size(); i++){
       Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
-        static_cast<int32_t>(indexResult.primaryKeyVal),
+        indexResult.primaryKey.GetIdentityKey(),
         primaryKeyColumnIds[i],
         this->primaryKey.columns[i],
         true);
 
       Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
-        static_cast<int32_t>(constraintResult.primaryKeyVal),
+        constraintResult.primaryKey.GetIdentityKey(),
         primaryKeyColumnIds[i],
     this->primaryKey.columns[i]);
     }
@@ -594,7 +594,7 @@ PhysicalInsert::PhysicalInsert(
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    Indexing::Key key;
+    DataTypes::Indexing::Key key;
 
     tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
 
@@ -646,7 +646,7 @@ PhysicalInsert::PhysicalInsert(
         false,
         false);
 
-    const auto indexId = static_cast<int32_t>(indexResult.primaryKeyVal);
+    const auto indexId = indexResult.primaryKey.GetIdentityKey();
 
     const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(
       this->table->tableId,
@@ -660,14 +660,14 @@ PhysicalInsert::PhysicalInsert(
 
       const auto indexColumnResult =
         Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
-            indexResult.primaryKeyVal,
+            indexResult.primaryKey.GetIdentityKey(),
             header.id,
             columnPos,
             true);
 
       const auto constraintColumnResult =
         Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
-            constraintResult.primaryKeyVal,
+            constraintResult.primaryKey.GetIdentityKey(),
             header.id,
         columnPos);
     }

@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include "../../../Database/Constants.h"
-#include "../ErrorHandling.h"
 #include "../../HashSet/HashSet.h"
 #include "../Decimal/Decimal.h"
 #include "../Guid/Guid.h"
@@ -61,6 +60,8 @@ class Value {
         ~Value();
 
         explicit Value(const void* data, const column_index_t& columnIndex = 0);
+
+        explicit Value(const void* data, const int& size, const DataType& type);
 
         explicit Value(const unsigned char* data, const int& size, const DataType& type);
         

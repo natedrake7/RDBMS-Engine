@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "../Constants.h"
 #include "../../AdditionalLibraries/DataTypes/Value/Value.h"
+#include "../../AdditionalLibraries/ErrorHandling/ErrorHandling.h"
 
 #include <cstring>
 

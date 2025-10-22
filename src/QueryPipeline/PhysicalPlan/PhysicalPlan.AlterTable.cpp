@@ -41,7 +41,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (!this->column->defaultValue.GetIsNull()) {
       const auto value = this->column->defaultValue.GetString();
-      const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKeyVal, this->column->defaultValue);
+      const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKey.GetIdentityKey(), this->column->defaultValue);
     }
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
@@ -49,10 +49,10 @@ namespace QueryPipeline::PhysicalPlan{
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     auto* columnPtr = new DatabaseEngine::StorageTypes::Column(this->column->name.name, columnType, this->column->type.size, this->column->index, this->column->isNullable);
-    columnPtr->SetColumnId(static_cast<int32_t>(columnResult.primaryKeyVal));
+    columnPtr->SetColumnId(columnResult.primaryKey.GetIdentityKey());
 
     tablePtr->AddColumn(columnPtr);
-    tablePtr->GetIdentityColumnById(static_cast<int32_t>(columnResult.primaryKeyVal));
+    tablePtr->GetIdentityColumnById(columnResult.primaryKey.GetIdentityKey());
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
     tablePtr->GetDefaultValuesHeaders();

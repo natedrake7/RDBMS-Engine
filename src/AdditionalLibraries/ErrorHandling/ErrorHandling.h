@@ -1,7 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include <utility>
+#include "../DataTypes/Value/Value.h"
+#include "../Indexing/Key.h"
 
 namespace AdditionalDataTypes {
   enum ResultCode : uint8_t {
@@ -23,16 +24,19 @@ namespace AdditionalDataTypes {
   struct ResultStatus {
     ResultCode code;
     std::string message;
-    int64_t primaryKeyVal;
-    
+    DataTypes::Indexing::Key primaryKey;
+
     ResultStatus() {
       this->code = ResultCode::Ok;
-      this->primaryKeyVal = 0;
+      this->message = "";
+      this->primaryKey = DataTypes::Indexing::Key();
     }
 
-    ResultStatus(const ResultCode& code, const std::string&  message)
-      : code(code), message(message), primaryKeyVal(0) {}
-
+    ResultStatus(const ResultCode& code, const std::string&  message){
+      this->code = ResultCode::Ok;
+      this->message = message;
+      this->primaryKey = DataTypes::Indexing::Key();
+    }
   };
 }
 

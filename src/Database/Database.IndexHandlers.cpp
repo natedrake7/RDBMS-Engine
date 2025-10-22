@@ -19,27 +19,27 @@ using namespace std;
 using namespace ByteMaps;
 
 namespace DatabaseEngine {
-    Key Database::CreateKey(const vector<column_index_t>& indexedColumns, const Row* row)
+    DataTypes::Indexing::Key Database::CreateKey(const vector<column_index_t>& indexedColumns, const Row* row)
     {
-        Key key;
+        DataTypes::Indexing::Key key;
         for (const auto &columnId : indexedColumns)
         {
             const auto &keyBlock = row->GetData()[columnId];
-            key.InsertKey(Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
+            key.InsertKey(DataTypes::Indexing::Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
         }
 
         return key;
     }
 
-    Indexing::Key Database::CreateKey(const vector<column_index_t> &indexedColumns, const StorageTypes::Row *row, const Headers::RowIdentifier &rowId){
-        Key key;
+   DataTypes::Indexing::Key Database::CreateKey(const vector<column_index_t> &indexedColumns, const StorageTypes::Row *row, const Headers::RowIdentifier &rowId){
+        DataTypes::Indexing::Key key;
         for (const auto &columnId : indexedColumns)
         {
             const auto &keyBlock = row->GetData()[columnId];
-            key.InsertKey(Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
+            key.InsertKey(DataTypes::Indexing::Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
         }
 
-        key.InsertKey(Key(&rowId, sizeof(rowId), DataType::RowIdentifier));
+        key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier));
 
         return key;
     }

@@ -97,6 +97,8 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] bool GenerateIdentityValue(int64_t& value);
 
-        void UpdateMetadata();
+        void UpdateMetadata()const;
+
+        [[nodiscard]] bool HasIdentity() const;
     };
 }

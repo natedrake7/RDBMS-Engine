@@ -40,4 +40,6 @@ class HashSet : public unordered_set<T>
         {
             this->insert(key);
         }
+
+        [[nodiscard]] size_t Size()const { return this->size(); }
 };

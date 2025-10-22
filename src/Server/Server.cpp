@@ -87,7 +87,7 @@ namespace Server {
 
     const auto dbInsertResult = this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
 
-    const auto schemaInsertResult = this->InsertSchemaToMasterDb(static_cast<int32_t>(dbInsertResult.primaryKeyVal), "dbo");
+    const auto schemaInsertResult = this->InsertSchemaToMasterDb(dbInsertResult.primaryKey.GetIdentityKey(), "dbo");
 
     Dictionary<string, column_index_t> columnNameToIndex;
 
@@ -96,8 +96,8 @@ namespace Server {
 
       const auto tableResult =
         this->InsertTableToMasterDb(
-          static_cast<int32_t>(dbInsertResult.primaryKeyVal),
-          static_cast<int32_t>(schemaInsertResult.primaryKeyVal),
+          dbInsertResult.primaryKey.GetIdentityKey(),
+          schemaInsertResult.primaryKey.GetIdentityKey(),
           table.name,
           static_cast<int16_t>(i),
           true
@@ -105,7 +105,7 @@ namespace Server {
 
       const auto tableStatsResult =
         this->InsertTableStatisticsToMasterDb(
-          static_cast<int32_t>(tableResult.primaryKeyVal)
+         tableResult.primaryKey.GetIdentityKey()
         );
 
       int columnPos = 0;
@@ -125,7 +125,7 @@ namespace Server {
 
         const auto columnResult =
           this->InsertColumnToMasterDb(
-           static_cast<int32_t>(tableResult.primaryKeyVal),
+           tableResult.primaryKey.GetIdentityKey(),
            column.name,
            type,
            columnSize,
@@ -140,11 +140,11 @@ namespace Server {
 
         const auto columnStatsResult =
           this->InsertColumnStatisticsToMasterDb(
-            static_cast<int32_t>(columnResult.primaryKeyVal)
+            columnResult.primaryKey.GetIdentityKey()
           );
 
         columnNameToIndex.Add(column.name, columnPos);
-        columnIdsDict.Add(column.name, static_cast<int32_t>(columnResult.primaryKeyVal));
+        columnIdsDict.Add(column.name,columnResult.primaryKey.GetIdentityKey());
 
         columnPos++;
       }
@@ -162,15 +162,15 @@ namespace Server {
       //TODO keep the last value keys
       const auto indexResult =
         this->InsertIndexToMasterDb(
-        static_cast<int32_t>(tableResult.primaryKeyVal),
+        tableResult.primaryKey.GetIdentityKey(),
         "PK" + _columns,
         true);
 
-      auto indexKey = static_cast<int32_t>(indexResult.primaryKeyVal);
+      auto indexKey = indexResult.primaryKey.GetIdentityKey();
 
       const auto constraintResult =
           this->InsertConstraintToMasterDb(
-          static_cast<int32_t>(tableResult.primaryKeyVal),
+          tableResult.primaryKey.GetIdentityKey(),
           "PK" + _columns,
           Headers::ConstraintType::PrimaryKey,
           false,
@@ -180,20 +180,20 @@ namespace Server {
         const auto& columnIndex = columnNameToIndex.Get(table.primaryKey[j]);
 
         this->InsertIndexColumnToMasterDb(
-          static_cast<int32_t>(indexResult.primaryKeyVal),
+          indexResult.primaryKey.GetIdentityKey(),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j),
           true);
 
         this->InsertConstraintColumnToMasterDb(
-          static_cast<int32_t>(constraintResult.primaryKeyVal),
+          constraintResult.primaryKey.GetIdentityKey(),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j)
         );
 
         if(table.hasIdentity){
           this->InsertIdentityColumnToMasterDb(
-            static_cast<int32_t>(tableResult.primaryKeyVal),
+            tableResult.primaryKey.GetIdentityKey(),
             columnIdsDict.Get(table.primaryKey[j]),
             1,
             1,
@@ -666,8 +666,8 @@ namespace Server {
       Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
       std::vector<const Row*> selectedDatabases;
 
-      Indexing::Key key;
-      key.InsertKey(Indexing::Key(dbName.data(), dbName.size(), DataType::String));
+      DataTypes::Indexing::Key key;
+      key.InsertKey(DataTypes::Indexing::Key(dbName.data(), dbName.size(), DataType::String));
 
       auto* columnOperation = new Expressions::ColumnExpression(1);
       auto* literaValue = new Expressions::LiteralExpression(Value(dbName, 1));
@@ -779,8 +779,8 @@ namespace Server {
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
     std::vector<const Row*> selectedDatabases;
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
     sysDatabases->ClusteredIndexSeek(&selectedDatabases, &key, &key);
 
@@ -1157,8 +1157,8 @@ namespace Server {
     Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTCOLUMNS);
     std::vector<const Row*> rows;
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
 
@@ -1212,8 +1212,8 @@ namespace Server {
     Table* sysValues = this->masterDb->OpenTable(MasterDbTables::SYSDEFAULTVALUES);
     std::vector<const Row*> rows;
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
     sysValues->ClusteredIndexSeek(&rows, &key, &key);
 
@@ -1374,8 +1374,8 @@ namespace Server {
     Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
     std::vector<const Row*> selectedIndexes;
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key);
 
@@ -1414,8 +1414,8 @@ namespace Server {
     Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXCOLUMNS);
     std::vector<const Row*> rows;
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
 
@@ -1469,8 +1469,8 @@ namespace Server {
       Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
       std::vector<const Row*> rows;
 
-      Indexing::Key key;
-      key.InsertKey(Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+      DataTypes::Indexing::Key key;
+      key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
       table->ClusteredIndexSeek(&rows, &key, &key);
 
@@ -1587,8 +1587,8 @@ namespace Server {
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
 
-    Indexing::Key key;
-    key.InsertKey(Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
     table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
   }

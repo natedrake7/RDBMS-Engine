@@ -1,6 +1,5 @@
 #pragma once
 #include "../../../AdditionalLibraries/DataTypes/Headers/Headers.h"
-
 #include <mutex>
 
 namespace DatabaseEngine::StorageTypes
@@ -25,5 +24,7 @@ namespace DatabaseEngine::StorageTypes
 
       [[nodiscard]] bool TryGenerate(int64_t& value);
       void UpdateMasterDb()const;
+
+      [[nodiscard]] bool IsValid()const;
   };
 }

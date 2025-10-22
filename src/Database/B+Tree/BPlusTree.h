@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../../AdditionalLibraries/DataTypes/Value/Value.h"
+#include "../../AdditionalLibraries/Indexing/Key.h"
 
 #include <vector>
 #include "../../Database/Constants.h"
@@ -10,14 +11,7 @@
 #include "../Column/Column.h"
 #include "../Row/Row.h"
 
-namespace AdditionalDataTypes {
-  struct ResultStatus;
-}
-
-using namespace std;
-using namespace Constants;
-
-namespace DatabaseEngine 
+namespace DatabaseEngine
 {
     class Database;
 }
@@ -29,50 +23,6 @@ namespace Pages
 
 namespace Indexing
 {
-    typedef struct QueryData
-    {
-        page_id_t pageId;
-        page_offset_t indexPosition;
-
-        QueryData();
-        QueryData(const page_id_t &pageId, const page_offset_t &otherIndexPosition);
-        ~QueryData();
-    } QueryData;
-
-    typedef struct Key
-    {
-        vector<object_t> value;
-        key_size_t size;
-        Constants::DataType type;
-        vector<Key> subKeys;
-
-        Key();
-        Key(const void *keyValue, const key_size_t &keySize, const Constants::DataType& keyType);
-        explicit Key(const Value& field);
-
-        explicit Key(const vector<Key>& subKeys);
-        ~Key();
-
-        Key(const Key &otherKey);
-        bool operator==(const Key& otherKey) const;
-        bool operator>(const Key& otherKey) const;
-        bool operator<(const Key& otherKey) const;
-        bool operator<=(const Key& otherKey) const;
-        bool operator>=(const Key& otherKey) const;
-
-        [[nodiscard]] int GetKeySize() const;
-        [[nodiscard]] int CompareCompositeKeys(const Key& otherKey) const;
-        void InsertKey(const Key &otherKey);
-
-        static int CompareSubKeys(const Key& firstKey, const Key& otherKey);
-
-        //key comparison index used only on queries and not on key saveon db
-        int indexKeyPosition = -1;
-        int currentSearchKeyPosition = -1;
-
-        friend std::ostream& operator<<(std::ostream& os, const Key& key);
-    }Key;
-
     class BPlusTree final
     {
         table_id_t tableId;
@@ -91,15 +41,15 @@ namespace Indexing
         DatabaseEngine::StorageTypes::Table* table;
 
         void SplitChild(Pages::IndexPage *parent, const int &index, Pages::IndexPage *child)const;
-        Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
-        [[nodiscard]] Pages::IndexPage *SearchKey(const Key &key) const;
-        [[nodiscard]] Pages::IndexPage *SearchKeyWithAncestors(const Key &key, std::vector<Pages::IndexPage*>& ancestors) const;
+        Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
+        [[nodiscard]] Pages::IndexPage *SearchKey(const DataTypes::Indexing::Key &key) const;
+        [[nodiscard]] Pages::IndexPage *SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::IndexPage*>& ancestors) const;
         [[nodiscard]] Pages::IndexPage *SearchLeftMostLeafNode() const;
 
-        [[nodiscard]] Pages::IndexPage * GetNode(const page_id_t& pageId) const;
+        [[nodiscard]] Pages::IndexPage * GetNode(const Constants::page_id_t& pageId) const;
         [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId)const;
 
-        [[nodiscard]] Pages::IndexPage* AllocateNewPage(const page_id_t& parentPageId)const;
+        [[nodiscard]] Pages::IndexPage* AllocateNewPage(const Constants::page_id_t& parentPageId)const;
 
         void HandleUnderflow(Pages::IndexPage* node, const std::vector<Pages::IndexPage*>& ancestors, int& parentIndex);
         void HandleRootUnderflow();
@@ -116,17 +66,17 @@ namespace Indexing
           int& parentIndex);
 
     public:
-        explicit BPlusTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId = -1);
+        explicit BPlusTree(DatabaseEngine::StorageTypes::Table *table, const Constants::page_id_t& indexPageId, const Constants::TreeType& treeType, const int& nonClusteredIndexId = -1);
         BPlusTree();
         ~BPlusTree();
 
-        Pages::IndexPage *FindAppropriateNodeForInsert(const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
+        Pages::IndexPage *FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status);
 
-        void IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const;
+        void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const;
 
-        void IndexSeek(const Key &minKey, const Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*>* result);
+        void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*>* result);
 
-        void IndexScan(vector<QueryData> &result)const;
+        void IndexScan(vector<DataTypes::Indexing::QueryData> &result)const;
 
         void IndexScan(
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
@@ -158,11 +108,11 @@ namespace Indexing
 
         void IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
 
-        void IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Value> & updates);
+        void IndexSeekUpdate(Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
 
-        void SearchKey(const Key &key, QueryData &result) const;
+        void SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const;
 
-        void Remove(const Key& key);
+        void Remove(const DataTypes::Indexing::Key& key);
 
         Pages::IndexPage*& GetRoot();
 
@@ -172,9 +122,9 @@ namespace Indexing
 
         [[nodiscard]] const int &GetBranchingFactor() const;
 
-        void SetTreeType(const TreeType& treeType);
+        void SetTreeType(const Constants::TreeType& treeType);
 
-        [[nodiscard]] const page_id_t& GetFirstIndexPageId() const;
+        [[nodiscard]] const Constants::page_id_t& GetFirstIndexPageId() const;
 
         void InsertRowsToOtherTree(const int& indexPos);
 

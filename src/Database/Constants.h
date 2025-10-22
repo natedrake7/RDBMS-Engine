@@ -27,6 +27,7 @@ namespace Constants
 
     // table types
     typedef uint16_t table_id_t;
+    typedef int32_t column_id_t;
 
     // data types
     typedef unsigned char object_t;

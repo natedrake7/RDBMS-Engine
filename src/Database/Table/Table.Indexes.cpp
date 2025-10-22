@@ -11,7 +11,7 @@ using namespace Indexing;
 using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes {
-    void Table::ClusteredIndexSeek(std::vector<const Row*> *selectedRows, const Indexing::Key *minimumValue, const Indexing::Key *maximumValue){
+    void Table::ClusteredIndexSeek(std::vector<const Row*> *selectedRows, const DataTypes::Indexing::Key *minimumValue, const DataTypes::Indexing::Key *maximumValue){
         auto* tree = this->GetClusteredIndexedTree();
 
         tree->IndexSeek(*minimumValue, *maximumValue, selectedRows);

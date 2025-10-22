@@ -6,6 +6,7 @@
 #include "Column/Column.h"
 #include "Logger/Logger.h"
 #include "Logger/WriteAheadLogger/WriteAheadLogger.h"
+#include "Pages/IndexPage/IndexPage.h"
 #include "Table/Table.h"
 #include "Pages/OverflowPage/OverflowPage.h"
 
@@ -15,7 +16,6 @@ using namespace std;
 class RowCondition;
 
 namespace Indexing {
-  struct Key;
   struct Node;
   class BPlusTree;
   struct BPlusTreeNonClusteredData;
@@ -120,9 +120,9 @@ public:
 
     static string CreateDatabasePath(const std::string& dbName);
 
-    [[nodiscard]] static Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
+    [[nodiscard]] static DataTypes::Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
 
-    [[nodiscard]] static Indexing::Key CreateKey(
+    [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
         const vector<column_index_t>& indexedColumns,
         const StorageTypes::Row* row,
         const Headers::RowIdentifier& rowId);

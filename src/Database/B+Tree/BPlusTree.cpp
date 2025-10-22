@@ -165,7 +165,7 @@ namespace Indexing
         newChild->UpdateBytesLeft();
     }
 
-    Pages::IndexPage* BPlusTree::FindAppropriateNodeForInsert(const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status)
+    Pages::IndexPage* BPlusTree::FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status)
     {
         if (this->root == nullptr)
         {
@@ -219,7 +219,7 @@ namespace Indexing
         return node;
     }
 
-    Pages::IndexPage *BPlusTree::GetNonFullNode(Pages::IndexPage *node, const Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status)
+    Pages::IndexPage *BPlusTree::GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, AdditionalDataTypes::ResultStatus& status)
     {
         auto* keys = node->GetKeysUnsafe();
 
@@ -275,7 +275,7 @@ namespace Indexing
         return returnedNode;
     }
 
-    void BPlusTree::IndexScan(vector<QueryData> &result)const
+    void BPlusTree::IndexScan(vector<DataTypes::Indexing::QueryData> &result)const
     {
         if (!root)
             return;
@@ -650,7 +650,7 @@ namespace Indexing
 
     }
 
-    void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const Key* minKey, const Key* maxKey, const vector<Value> & updates){
+    void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates){
         this->root = this->GetNode(this->firstIndexPageId);
 
         if (!this->root)
@@ -713,7 +713,7 @@ namespace Indexing
     }
 
 
-    void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, vector<QueryData> &result) const
+    void BPlusTree::IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const
     {
         if (!this->root)
             return;
@@ -754,7 +754,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexSeek(const Key &minKey, const Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*> *result){
+    void BPlusTree::IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*> *result){
         if (this->firstIndexPageId == INVALID_PAGE_ID)
             return;
 
@@ -802,7 +802,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::SearchKey(const Key &key, QueryData &result) const
+    void BPlusTree::SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const
     {
         if (!root)
             return;
@@ -850,7 +850,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::Remove(const Key &key){
+    void BPlusTree::Remove(const DataTypes::Indexing::Key &key){
 
       if (!this->root)
         return;
@@ -1172,7 +1172,7 @@ namespace Indexing
 
     const page_id_t & BPlusTree::GetFirstIndexPageId() const { return this->firstIndexPageId; }
 
-    Pages::IndexPage *BPlusTree::SearchKey(const Key &key) const
+    Pages::IndexPage *BPlusTree::SearchKey(const DataTypes::Indexing::Key &key) const
     {
         auto *currentNode = this->root;
 
@@ -1190,7 +1190,7 @@ namespace Indexing
         return currentNode;
     }
 
-    Pages::IndexPage* BPlusTree::SearchKeyWithAncestors(const Key & key, vector<Pages::IndexPage *> & ancestors) const{
+    Pages::IndexPage* BPlusTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::IndexPage *> & ancestors) const{
       auto *currentNode = this->root;
 
       while (!currentNode->IsLeaf())
@@ -1229,318 +1229,4 @@ namespace Indexing
 
         return StorageManager::Get().GetIndexPage(this->database->GetFileName(), pageId, extentId, this->table);
     }
-
-    Key::Key()
-    {
-        this->size = 0;
-        this->type = Constants::DataType::Int;
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
-    }
-
-    Key::Key(const void *keyValue, const key_size_t &keySize, const Constants::DataType& keyType)
-    {
-        this->value.resize(keySize);
-        memcpy(this->value.data(), keyValue, keySize);
-
-        this->size = keySize;
-        this->type = keyType;
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
-    }
-
-    Key::Key(const Value &field){
-        const auto& keySize = field.GetSize();
-
-        this->value.resize(keySize);
-        memcpy(this->value.data(), field.GetRawData(), keySize);
-
-        this->size = keySize;
-        this->type = field.GetType();
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
-    }
-
-    Key::Key(const vector<Key> &subKeys)
-    {
-        this->size = 0;
-        for (const auto &key : subKeys)
-        {
-            this->subKeys.push_back(key);
-            this->size += key.size;
-        }
-        this->type = Constants::DataType::Int;
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
-    }
-
-    Key::~Key() = default;
-
-    Key::Key(const Key &otherKey)
-    {
-        this->type = otherKey.type;
-        this->size = otherKey.size;
-
-        if(otherKey.subKeys.empty())
-        {
-            this->value = otherKey.value;
-            return;
-        }
-
-        this->subKeys = otherKey.subKeys;
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
-
-        //key is not composite
-        // memcpy(this->value, otherKey.value, otherKey.size);
-
-    }
-
-    void Key::InsertKey(const Key &otherKey)
-    {
-        this->size += (otherKey.size + sizeof(key_size_t));
-
-        this->subKeys.push_back(otherKey);
-    }
-
-    bool Key::operator>(const Key& otherKey) const
-    {
-        if(!this->subKeys.empty())
-            return this->CompareCompositeKeys(otherKey) > 0;
-        
-        switch (this->type) 
-        {
-            case Constants::DataType::TinyInt:
-                return *reinterpret_cast<const int8_t*>(this->value.data()) > *reinterpret_cast<const int8_t*>(otherKey.value.data());
-            case Constants::DataType::SmallInt:
-                return *reinterpret_cast<const int16_t*>(this->value.data()) > *reinterpret_cast<const int16_t*>(otherKey.value.data());
-            case Constants::DataType::Int:
-                return *reinterpret_cast<const int32_t*>(this->value.data()) > *reinterpret_cast<const int32_t*>(otherKey.value.data());
-            case Constants::DataType::BigInt:
-                return *reinterpret_cast<const int64_t*>(this->value.data()) > *reinterpret_cast<const int64_t*>(otherKey.value.data());
-            case Constants::DataType::Guid:
-                return DataTypes::Guid(this->value.data(), this->size) > DataTypes::Guid(otherKey.value.data(), otherKey.size);
-            case Constants::DataType::String:
-            case Constants::DataType::UnicodeString:
-            {
-                if (otherKey.size > this->size)
-                    return true;
-
-                if (otherKey.size < this->size)
-                    return false;
-
-                return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) > 0;
-            }
-            case Constants::DataType::Decimal:
-                return Decimal(this->value.data(), this->size) > Decimal(otherKey.value.data(), otherKey.size);
-            case Constants::DataType::Bool:
-                return *reinterpret_cast<const bool*>(this->value.data()) > *reinterpret_cast<const bool*>(otherKey.value.data());
-            case Constants::DataType::DateTime:
-                return *reinterpret_cast<const time_t*>(this->value.data()) > *reinterpret_cast<const time_t*>(otherKey.value.data());
-            case Constants::DataType::RowIdentifier:
-                return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) > *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::DataType::Invalid:
-            default:
-                throw invalid_argument("> Invalid DataType for Key");
-        }
-    }
-
-    bool Key::operator<(const Key& otherKey) const
-    {
-        return !(*this >= otherKey);
-    }
-
-    bool Key::operator<=(const Key& otherKey) const
-    {
-        return !(*this > otherKey);
-    }
-
-    bool Key::operator>=(const Key& otherKey) const
-    {
-        if(!this->subKeys.empty())
-            return this->CompareCompositeKeys(otherKey) >= 0;
-        
-        switch (this->type) 
-        {
-            case Constants::DataType::TinyInt:
-                return *reinterpret_cast<const int8_t*>(this->value.data()) >= *reinterpret_cast<const int8_t*>(otherKey.value.data());
-            case Constants::DataType::SmallInt:
-                return *reinterpret_cast<const int16_t*>(this->value.data()) >= *reinterpret_cast<const int16_t*>(otherKey.value.data());
-            case Constants::DataType::Int:
-                return *reinterpret_cast<const int32_t*>(this->value.data()) >= *reinterpret_cast<const int32_t*>(otherKey.value.data());
-            case Constants::DataType::BigInt:
-                return *reinterpret_cast<const int64_t*>(this->value.data()) >= *reinterpret_cast<const int64_t*>(otherKey.value.data());
-            case Constants::DataType::Guid:
-                return DataTypes::Guid(this->value.data(), this->size) >= DataTypes::Guid(otherKey.value.data(), otherKey.size);
-            case Constants::DataType::String:
-            case Constants::DataType::UnicodeString:
-            {
-                if (otherKey.size > this->size)
-                    return true;
-
-                if (otherKey.size < this->size)
-                    return false;
-
-                return memcmp(otherKey.value.data(), this->value.data(), otherKey.size) >= 0;
-            }
-            case Constants::DataType::Decimal:
-                return Decimal(this->value.data(), this->size) >= Decimal(otherKey.value.data(), otherKey.size);
-            case Constants::DataType::Bool:
-                return *reinterpret_cast<const bool*>(this->value.data()) >= *reinterpret_cast<const bool*>(otherKey.value.data());
-            case Constants::DataType::DateTime:
-                return *reinterpret_cast<const time_t*>(this->value.data()) >= *reinterpret_cast<const time_t*>(otherKey.value.data());
-        case Constants::DataType::RowIdentifier:
-            return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) >= *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::DataType::Invalid: 
-            default:
-                throw invalid_argument(">= Invalid DataType for Key");
-        }
-    }
-
-    int Key::GetKeySize() const
-    {
-        return this->size;
-    }
-
-    int Key::CompareCompositeKeys(const Key& otherKey) const
-    {
-        // if (this->subKeys.size() != otherKey.subKeys.size())
-        //     throw std::invalid_argument("Key::CompareCompositeKeys: Size mismatch");
-
-        if(this->indexKeyPosition != -1)
-            return Key::CompareSubKeys(this->subKeys[this->currentSearchKeyPosition], otherKey.subKeys[this->indexKeyPosition]);
-        
-        for (int i = 0; i < this->subKeys.size(); i++)
-        {
-            if (this->subKeys[i] == otherKey.subKeys[i])
-                continue;
-
-            if (this->subKeys[i] < otherKey.subKeys[i])
-                return -1;
-
-            return 1;
-        }
-
-        return 0;
-    }
-
-    int Key::CompareSubKeys(const Key& firstKey, const Key& otherKey)
-    {
-        if (firstKey == otherKey)
-            return 0;
-
-        if (firstKey < otherKey)
-            return -1;
-
-        return 1;
-    }
-
-    std::ostream & operator<<(std::ostream &os, const Key &key){
-        if(!key.subKeys.empty())
-        {
-            os << "(";
-
-            for (int i = 0; i < key.subKeys.size(); i++) {
-                const auto& subKey = key.subKeys[i];
-            
-                os << subKey;
-            
-                if (i != key.subKeys.size() - 1)
-                    os << ", ";
-            }
-
-            os << ")";
-            
-            return os;
-        }
-
-        switch (key.type) 
-        {
-            case Constants::DataType::TinyInt:
-                os << *reinterpret_cast<const int8_t*>(key.value.data());
-                break;
-            case Constants::DataType::SmallInt:
-                os << *reinterpret_cast<const int16_t*>(key.value.data());
-                break;
-            case Constants::DataType::Int:
-                os << *reinterpret_cast<const int32_t*>(key.value.data());
-                break;
-            case Constants::DataType::BigInt:
-                os << *reinterpret_cast<const int64_t*>(key.value.data());
-                break;
-            case Constants::DataType::Guid:
-                os << DataTypes::Guid(key.value.data(), key.size).ToString();
-                break;
-            case Constants::DataType::String:
-            case Constants::DataType::UnicodeString:
-                os << reinterpret_cast<const char*>(key.value.data());
-                break;
-            case Constants::DataType::Decimal:
-                os << Decimal(key.value.data(), key.size).ToString();
-                break;
-            case Constants::DataType::Bool:
-                os << *reinterpret_cast<const bool*>(key.value.data());
-                break;
-            case Constants::DataType::DateTime:
-                os << DateTime(*reinterpret_cast<const time_t*>(key.value.data())).ToString();
-                break;
-        case Constants::DataType::RowIdentifier:
-            os << *reinterpret_cast<const Headers::RowIdentifier*>(key.value.data());
-            break;
-            case Constants::DataType::Invalid: 
-            default:
-                throw invalid_argument("Invalid DataType for Key");
-        }
-
-        return os;
-    }
-
-    bool Key::operator==(const Key& otherKey) const
-    {
-        if(!this->subKeys.empty())
-            return this->CompareCompositeKeys(otherKey) == 0;
-        
-        switch (this->type) 
-        {
-            case Constants::DataType::TinyInt:
-                return *reinterpret_cast<const int8_t*>(this->value.data()) == *reinterpret_cast<const int8_t*>(otherKey.value.data());
-            case Constants::DataType::SmallInt:
-                return *reinterpret_cast<const int16_t*>(this->value.data()) == *reinterpret_cast<const int16_t*>(otherKey.value.data());
-            case Constants::DataType::Int:
-                return *reinterpret_cast<const int32_t*>(this->value.data()) == *reinterpret_cast<const int32_t*>(otherKey.value.data());
-            case Constants::DataType::BigInt:
-                return *reinterpret_cast<const int64_t*>(this->value.data()) == *reinterpret_cast<const int64_t*>(otherKey.value.data());
-            case Constants::DataType::Guid:
-                return DataTypes::Guid(this->value.data(), this->size) == DataTypes::Guid(otherKey.value.data(), otherKey.size);
-            case Constants::DataType::String:
-            case Constants::DataType::UnicodeString:
-                return otherKey.size == this->size && memcmp(otherKey.value.data(), this->value.data(), otherKey.size) == 0;
-            case Constants::DataType::Decimal:
-                return Decimal(this->value.data(), this->size) == Decimal(otherKey.value.data(), otherKey.size);
-            case Constants::DataType::Bool:
-                return *reinterpret_cast<const bool*>(this->value.data()) == *reinterpret_cast<const bool*>(otherKey.value.data());
-            case Constants::DataType::DateTime:
-                return *reinterpret_cast<const time_t*>(this->value.data()) == *reinterpret_cast<const time_t*>(otherKey.value.data());
-        case Constants::DataType::RowIdentifier:
-            return *reinterpret_cast<const Headers::RowIdentifier*>(this->value.data()) == *reinterpret_cast<const Headers::RowIdentifier*>(otherKey.value.data());
-            case Constants::DataType::Invalid:
-            default:
-                throw invalid_argument("== Invalid DataType for Key");
-        }
-
-    }
-
-    QueryData::QueryData()
-    {
-        this->indexPosition = 0;
-        this->pageId = 0;
-    }
-
-    QueryData::QueryData(const page_id_t &pageId, const page_offset_t &otherIndexPosition)
-    {
-        this->pageId = pageId;
-        this->indexPosition = otherIndexPosition;
-    }
-
-    QueryData::~QueryData() = default;
 }

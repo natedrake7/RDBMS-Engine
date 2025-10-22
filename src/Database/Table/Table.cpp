@@ -78,8 +78,10 @@ namespace DatabaseEngine::StorageTypes {
 
         this->clusteredIndexedTree = nullptr;
 
-        if(clusteredIndex)
+        if(clusteredIndex) {
           this->header.clusteredIndex = *clusteredIndex;
+          this->PopulateClusteredIndexCache(this->header.clusteredIndex);
+        }
 
         if(nonClusteredIndexes)
           this->header.nonClusteredIndexes = *nonClusteredIndexes;
@@ -92,6 +94,8 @@ namespace DatabaseEngine::StorageTypes {
         this->header.ordinalPosition = masterDbHeader.ordinalPosition;
         this->database = database;
         this->clusteredIndexedTree = nullptr;
+
+        this->PopulateClusteredIndexCache(this->header.clusteredIndex);
       }
 
       Table::Table(const std::string& tableName, const TableHeader &tableHeader, DatabaseEngine::Database *database)
@@ -99,6 +103,8 @@ namespace DatabaseEngine::StorageTypes {
         this->header = tableHeader;
         this->database = database;
         this->clusteredIndexedTree = nullptr;
+
+        this->PopulateClusteredIndexCache(this->header.clusteredIndex);
       }
 
       Table::Table(
@@ -114,6 +120,11 @@ namespace DatabaseEngine::StorageTypes {
         this->header.tableId = systemHeader.id;
         this->header.ordinalPosition = ordinalPosition;
         this->clusteredIndexedTree = nullptr;
+
+        for (int i = 0;i < systemHeader.columns.size(); i++)
+          this->AddColumn(new Column(systemHeader.columns[i], i,  this));
+
+        this->PopulateClusteredIndexCache(this->header.clusteredIndex);
       }
 
       Table::~Table()
@@ -133,22 +144,28 @@ namespace DatabaseEngine::StorageTypes {
             delete column;
       }
 
-      vector<DataType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const
-      {
-          vector<DataType> columns;
+      void Table::PopulateClusteredIndexCache(const Headers::Index& index){
+          for (const auto& columnIndex: index.columns) {
+            const auto* column = this->columns[columnIndex];
+            this->clusteredIndexColumnsCache.Add(column->GetColumnId());
+          }
+      }
+
+      vector<DataType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const{
+          std::vector<DataType> columnDatatypes;
 
           if(treeId == 0)
           {
             for(const auto& columnIndex: this->header.clusteredIndex.columns)
-                columns.emplace_back(this->columns[columnIndex]->GetColumnType());
+                columnDatatypes.emplace_back(this->columns[columnIndex]->GetColumnType());
 
-            return columns;
+            return columnDatatypes;
           }
 
 //          for(const auto& columnIndex: this->header.nonClusteredColumnIndexes[treeId - 1])
 //              columns.emplace_back(this->columns[columnIndex]->GetColumnType());
 
-          return columns;
+          return columnDatatypes;
       }
 
     AdditionalDataTypes::ResultStatus Table::InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData){
@@ -158,7 +175,7 @@ namespace DatabaseEngine::StorageTypes {
         int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
-        auto [row, result] = this->CreateRow(transactionId, inputData, &primaryKeyVal, &checkPoint);
+        auto [row, result] = this->CreateRow(transactionId, inputData, &checkPoint);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
@@ -171,8 +188,8 @@ namespace DatabaseEngine::StorageTypes {
         this->database->LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
-        result.primaryKeyVal = primaryKeyVal;
-        
+        // result.primaryKey = primaryKeyVal;
+
         return result;
     }
 
@@ -200,7 +217,7 @@ namespace DatabaseEngine::StorageTypes {
         this->database->LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
-        result.primaryKeyVal = primaryKeyVal;
+        // result.primaryKeyVal = primaryKeyVal;
 
         return result;
     }
@@ -213,15 +230,14 @@ namespace DatabaseEngine::StorageTypes {
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
-        int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
-        auto[row,result] = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
+        auto[row,result] = this->CreateRow(transactionId, inputData, columnIndices, &checkPoint);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
 
-        result =  this->InsertRow(row, extents, startingExtentIndex);
+        result = this->InsertRow(row, extents, startingExtentIndex);
 
         if (result.code != AdditionalDataTypes::ResultCode::Ok)
           return result;
@@ -229,7 +245,6 @@ namespace DatabaseEngine::StorageTypes {
         this->database->LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
-        result.primaryKeyVal = primaryKeyVal;
 
         return result;
 
@@ -265,16 +280,12 @@ namespace DatabaseEngine::StorageTypes {
       std::tuple<Row*, AdditionalDataTypes::ResultStatus> Table::CreateRow(
         const Constants::transaction_id_t& transactionId,
         const vector<Value>& inputData,
-        int64_t* primaryKeyVal,
         Logging::CheckPoint* checkPoint
         )const
       {
         auto *row = new Row(*this);
 
-        *primaryKeyVal = this->PopulateAutoComputedColumns(row);
-
-        //TODO
-        //handle default values if no value is selected
+        this->PopulateAutoComputedColumns(row);
 
         for(const auto& input : inputData){
 
@@ -283,13 +294,10 @@ namespace DatabaseEngine::StorageTypes {
           const auto& column = this->columns.at(associatedColumnIndex);
 
           //ignore auto-computed columns even if specified
-          if (column->GetIdentity().columnId != Constants::INVALID_COLUMN_ID)
+          if (column->HasIdentity())
             continue;
 
           auto *block = new Block(column);
-
-          if (column->GetColumnType() >= Constants::DataType::Invalid)
-            throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
           if (input.GetIsNull())
           {
@@ -297,13 +305,13 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const AdditionalDataTypes::ResultStatus result = block->SetData(input);
+          const auto dataInsertResult = block->SetData(input);
 
-          if (result.code != AdditionalDataTypes::ResultCode::Ok) {
+          if (dataInsertResult.code != AdditionalDataTypes::ResultCode::Ok) {
             delete block;
             delete row;
 
-            return std::make_tuple(nullptr, result);
+            return std::make_tuple(nullptr, dataInsertResult);
           }
 
           row->InsertColumnData(block, associatedColumnIndex);
@@ -328,11 +336,10 @@ namespace DatabaseEngine::StorageTypes {
         Logging::CheckPoint *checkPoint) const{
         auto *row = new Row(*this);
 
-        *primaryKeyVal = this->PopulateAutoComputedColumns(row);
+        this->PopulateAutoComputedColumns(row);
 
         //TODO
         //handle default values if no value is selected
-
         for (int i = 0;i < inputData.size(); i++) {
           const auto& input = inputData[i];
 
@@ -382,12 +389,17 @@ namespace DatabaseEngine::StorageTypes {
         const Constants::transaction_id_t &transactionId,
         const std::vector<Expressions::Expression *> &inputData,
         const std::vector<Constants::column_index_t> &columnIndices,
-        int64_t *primaryKeyVal,
         Logging::CheckPoint *checkPoint
       ) const{
+        AdditionalDataTypes::ResultStatus result;
+
         auto *row = new Row(*this);
 
-        *primaryKeyVal = this->PopulateAutoComputedColumns(row);
+        int64_t primaryKeyValue = 0;
+
+        this->PopulateAutoComputedColumns(row);
+        // result.primaryKeyValue = primaryKeyValue;
+        result.message = "Row created successfully";
 
         for (int i = 0;i < inputData.size(); i++) {
           const auto& input = inputData[i]->Evaluate(nullptr);
@@ -397,13 +409,10 @@ namespace DatabaseEngine::StorageTypes {
           const auto& column = this->columns.at(associatedColumnIndex);
 
           //ignore auto-computed columns even if specified
-          if (column->GetIdentity().columnId != -1)
+          if (column->HasIdentity())
             continue;
 
           auto *block = new Block(column);
-
-          if (column->GetColumnType() >= Constants::DataType::Invalid)
-            throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
           if (input.GetIsNull())
           {
@@ -411,13 +420,13 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const auto result = block->SetData(input);
+          const auto dataInsertResult = block->SetData(input);
 
-          if (result.code != AdditionalDataTypes::ResultCode::Ok) {
+          if (dataInsertResult.code != AdditionalDataTypes::ResultCode::Ok) {
             delete block;
             delete row;
 
-            return std::make_tuple(nullptr, result);
+            return std::make_tuple(nullptr, dataInsertResult);
           }
 
           row->InsertColumnData(block, associatedColumnIndex);
@@ -425,13 +434,7 @@ namespace DatabaseEngine::StorageTypes {
 
         *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
-        return std::make_tuple(
-          row,
-          AdditionalDataTypes::ResultStatus(
-            AdditionalDataTypes::ResultCode::Ok,
-            "Row created successfully"
-            )
-        );
+        return std::make_tuple(row,result);
       }
 
       column_number_t Table::GetNumberOfColumns() const { return this->columns.size(); }
@@ -459,107 +462,6 @@ namespace DatabaseEngine::StorageTypes {
             }
 
         return false;
-      }
-
-      void Table::SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions, const size_t &count)
-      {
-//         const size_t rowsToSelect =  (count == -1)
-//                                     ? numeric_limits<size_t>::max()
-//                                     : count;
-//
-//           const auto tableType = this->GetTableType();
-//
-//           const auto& clusteredIndexes = this->GetClusteredIndex();
-//           const auto& nonClusteredIndexes = this->GetNonClusteredIndexes();
-//
-//           Key minimumValue;
-//           Key maximumValue;
-//
-//           bool useClusteredIndex = false;
-//           bool useNonClusteredIndex = false;
-//           bool useHeap = false;
-//
-//           bool clusteredIndexSeek = false;
-//           bool nonClusteredIndexSeek = false;
-//
-//           if(conditions != nullptr)
-//           {
-//             for(const auto& block: *conditions)
-//             {
-//                 const auto& columnIndex = block.GetColumnIndex();
-//
-//                 const ColumnType columnType = columns[columnIndex]->GetColumnType();
-//
-//                 if (columnType > Constants::ColumnType::ColumnTypeCount)
-//                   throw invalid_argument("Table::Select: Unsupported Column Type");
-//
-//                 int indexPosition = 0;
-//                 if(Table::VectorContainsIndex(clusteredIndexes, columnIndex, indexPosition))
-//                 {
-//                   useClusteredIndex = true;
-//
-//                   //figure out how to perform index seek and index scan
-//                   clusteredIndexSeek = clusteredIndexes[0] == columnIndex;
-//
-//                   if(!clusteredIndexSeek)
-//                   {
-//                     minimumValue.indexKeyPosition = indexPosition;
-//                     minimumValue.currentSearchKeyPosition = minimumValue.subKeys.size();
-//
-//                     maximumValue.indexKeyPosition = indexPosition;
-//                     maximumValue.currentSearchKeyPosition = maximumValue.subKeys.size();
-//                   }
-//                 }
-//
-//                 int nonClusteredIndexPosition = 0;
-//
-//                 for(int i = 0;i < nonClusteredIndexes.size(); i++)
-//                 {
-//                   if(Table::VectorContainsIndex(nonClusteredIndexes[i], columnIndex, indexPosition) && !clusteredIndexSeek)
-//                   {
-//                       useNonClusteredIndex = true;
-//                       nonClusteredIndexPosition = i;
-//
-//                       nonClusteredIndexSeek = nonClusteredIndexes[i][0] == columnIndex;
-//
-//                       //prioritize clustered index seek over nonclustered index seek or scan
-//                       if(!nonClusteredIndexSeek)
-//                       {
-//                         minimumValue.indexKeyPosition = indexPosition;
-//                         minimumValue.currentSearchKeyPosition = minimumValue.subKeys.size();
-//
-//                         maximumValue.indexKeyPosition = indexPosition;
-//                         maximumValue.currentSearchKeyPosition = maximumValue.subKeys.size();
-//                       }
-//                   }
-//                 }
-//
-//                 useHeap = !useNonClusteredIndex && !useClusteredIndex;
-//
-//                 minimumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
-//                 maximumValue.InsertKey(Key(block.GetBlockData(), block.GetBlockSize(), columnType));
-//             }
-//           }
-//         //handle more complex queries like prefer index seek over index scan
-// //        if(useClusteredIndex)
-// //        {
-// //            this->SelectRowsFromClusteredIndex(
-// //              &selectedRows,
-// //              rowsToSelect,
-// //              conditions != nullptr ? &minimumValue : nullptr,
-// //              conditions != nullptr ? &maximumValue : nullptr,
-// //              clusteredIndexSeek,
-// //              selectedColumnIndices
-// //            );
-// //            return;
-// //        }
-// //        else if (useNonClusteredIndex)
-// //        {
-// //            this->SelectRowsFromNonClusteredIndex(&selectedRows, rowsToSelect, nullptr, selectedColumnIndices);
-// //            return;
-// //        }
-// //
-// //        this->HeapScan(&selectedRows, rowsToSelect);
       }
 
     void Table::HeapDelete(const Expressions::Expression* expression) const
@@ -645,12 +547,12 @@ namespace DatabaseEngine::StorageTypes {
         this->database->TruncateTable(this->header.tableId);
     }
 
-    void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId) 
+    void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId)
     {
         this->header.indexAllocationMapPageId = indexAllocationMapPageId;
     }
 
-    bool Table::IsColumnNullable(const column_index_t &columnIndex) const 
+    bool Table::IsColumnNullable(const column_index_t &columnIndex) const
     {
         return this->columns.at(columnIndex)->IsColumnNullable();
     }
@@ -661,7 +563,7 @@ namespace DatabaseEngine::StorageTypes {
 
     const table_id_t &Table::GetTableId() const { return this->header.tableId; }
 
-    TableType Table::GetTableType() const 
+    TableType Table::GetTableType() const
     {
         return !this->header.clusteredIndex.columns.empty()
                     ? TableType::CLUSTERED
@@ -672,7 +574,7 @@ namespace DatabaseEngine::StorageTypes {
         return !this->header.clusteredIndex.columns.empty();
     }
 
-    row_size_t Table::GetMaximumRowSize() const 
+    row_size_t Table::GetMaximumRowSize() const
     {
         row_size_t maximumRowSize = 0;
 
@@ -781,36 +683,35 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     AdditionalDataTypes::ResultStatus Table::ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId){
+      BPlusTree* tree = this->GetClusteredIndexedTree();
 
-       BPlusTree* tree = this->GetClusteredIndexedTree();
+      const auto key = Database::CreateKey(this->GetClusteredIndex(), row);
 
-       const auto key = Database::CreateKey(this->GetClusteredIndex(), row);
+      int indexPosition = 0;
 
-       int indexPosition = 0;
+      AdditionalDataTypes::ResultStatus status;
 
-       AdditionalDataTypes::ResultStatus status;
+      auto *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
 
-       auto *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+      if (status.code != AdditionalDataTypes::ResultCode::Ok)
+         return status;
 
-       if (status.code != AdditionalDataTypes::ResultCode::Ok)
-           return status;
+      PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
 
-       PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
+      // should never fail
+      this->InsertRowToClusteredPage(pageFreeSpacePage, node, row, indexPosition);
 
-       // should never fail
-       this->InsertRowToClusteredPage(pageFreeSpacePage, node, row, indexPosition);
+      auto* keys = node->GetKeysUnsafe();
 
-       auto* keys = node->GetKeysUnsafe();
+      keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
 
-       keys->insert(keys->begin() + indexPosition, new Key(key));
+      node->UpdateBytesLeft();
 
-       node->UpdateBytesLeft();
+      rowId->indexId = indexPosition;
+      rowId->pageId = node->GetPageId();
 
-       rowId->indexId = indexPosition;
-       rowId->pageId = node->GetPageId();
-
-       // this->SplitNodeFromIndexPage(tableId, node);
-       return {};
+      status.primaryKey = key;
+      return status;
      }
 
     AdditionalDataTypes::ResultStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const{
@@ -1066,8 +967,8 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexSeekUpdate(
         Expressions::Expression* expression,
-        const Indexing::Key *minimumValue,
-        const Indexing::Key *maximumValue,
+        const DataTypes::Indexing::Key* minimumValue,
+        const DataTypes::Indexing::Key* maximumValue,
         const vector<Value> & updates){
       auto* tree = this->GetClusteredIndexedTree();
 
@@ -1304,7 +1205,7 @@ namespace DatabaseEngine::StorageTypes {
 
       auto* keys = node->GetKeysUnsafe();
 
-      keys->insert(keys->begin() + indexPosition, new Key(key));
+      keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
 
       auto* rows = node->GetNonClusteredDataUnsafe();
 
@@ -1362,39 +1263,38 @@ namespace DatabaseEngine::StorageTypes {
         return largestBlock->GetBlockSize();
     }
 
-    int64_t Table::PopulateAutoComputedColumns(Row *row)const{
-        int64_t primaryKeyValue = 0;
+    bool Table::IsColumnAutoComputedPrimaryKey(const Column *column) const{
+        return this->clusteredIndexColumnsCache.Contains(column->GetColumnId())
+          && this->clusteredIndexColumnsCache.Size() == 1;
+    }
+
+    void Table::PopulateAutoComputedColumns(Row *row)const{
+        int64_t outValue = 0;
 
         for (auto* column: this->columns) {
-          const auto pkVal = this->PopulateColumnIdentity(row, column);
+          const auto result = Table::PopulateColumnIdentity(row, column, outValue);
 
-          if (pkVal > 0) {
-            primaryKeyValue = pkVal;
+          if (result == true)
             continue;
-          }
 
           Table::PopulateDefaultValues(row, column);
         }
-
-      return primaryKeyValue;
     }
 
-    int64_t Table::PopulateColumnIdentity(Row *row, Column*& column) const{
-        int64_t primaryKeyValue = 0;
-
-        if (!column->GenerateIdentityValue(primaryKeyValue))
-          return primaryKeyValue;
+    bool Table::PopulateColumnIdentity(Row *row, Column*& column, int64_t& outValue) {
+        if (!column->GenerateIdentityValue(outValue))
+          return false;
 
         const auto& columnSize = column->GetColumnSize();
 
-        auto* block = new Block(&primaryKeyValue, columnSize ,column);
+        auto* block = new Block(&outValue, columnSize ,column);
 
         row->InsertColumnData(block, column->GetColumnIndex());
 
         // if (column->GetIdentityLastValue() + identity.cacheBlock < primaryKeyValue )
         //   this->UpdateColumnIdentity(column->GetColumnId(), primaryKeyValue);
 
-        return primaryKeyValue;
+        return true;
       }
 
       void Table::PopulateDefaultValues(Row *row, Column*& column) {

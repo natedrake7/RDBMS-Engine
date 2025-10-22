@@ -1,6 +1,6 @@
 #pragma once
 #include "../AdditionalLibraries/DataTypes/Headers/Headers.h"
-#include "../AdditionalLibraries/DataTypes/ErrorHandling.h"
+#include "../AdditionalLibraries/ErrorHandling/ErrorHandling.h"
 #include "../Database/Database.h"
 #include <string>
 #include <vector>

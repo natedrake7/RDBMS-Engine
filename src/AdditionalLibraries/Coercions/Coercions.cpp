@@ -205,8 +205,12 @@ namespace DataTypes{
         return Converter<int8_t>::Stoi(value.GetUnicodeString());
       case DataType::Bool:
         return *reinterpret_cast<const bool*>(value.GetRawData());
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Bool");
+      }
     }
   }
 
@@ -229,8 +233,12 @@ namespace DataTypes{
         return Converter<int8_t>::Stoi(value.GetUnicodeString());
       case DataType::Bool:
         return value.GetBool() ? 1 : 0;
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Tiny Int");
+      }
     }
   }
 
@@ -253,8 +261,12 @@ namespace DataTypes{
         return Converter<int16_t>::Stoi(value.GetUnicodeString());
       case DataType::Bool:
         return value.GetBool() ? 1 : 0;
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Small Int");
+      }
     }
   }
 
@@ -277,8 +289,12 @@ namespace DataTypes{
         return Converter<int32_t>::Stoi(value.GetUnicodeString());
       case DataType::Bool:
         return value.GetBool() ? 1 : 0;
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Int");
+      }
     }
   }
 
@@ -301,8 +317,12 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
         return Converter<int64_t>::Stoi(value.GetUnicodeString());
       case DataType::Bool:
         return value.GetBool() ? 1 : 0;
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Big Int");
+      }
     }
   }
 
@@ -330,8 +350,12 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
         return value.GetGuid().ToString();
       case DataType::RowIdentifier:
       case DataType::Invalid:
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw runtime_error("Invalid Column type");
+      }
     }
   }
 
@@ -347,8 +371,12 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
       case DataType::String:
       case DataType::UnicodeString:
         return Guid::FromString(value.GetString());
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Guid");
+      }
     }
   }
 
@@ -363,8 +391,12 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
       }
       case DataType::DateTime:
         return DateTime(*reinterpret_cast<const int64_t*>(value.GetRawData()));
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Guid");
+      }
     }
   }
 
@@ -391,8 +423,12 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
       case DataType::Guid:
       case DataType::RowIdentifier:
       case DataType::Invalid:
-      default:
+      default: {
+        if (valueType == DataType::Invalid)
+          throw std::invalid_argument("Invalid Field Type");
+
         throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(valueType) + " cannot be coerced to Decimal");
+      }
     }
   }
 

@@ -10,7 +10,6 @@ using namespace std;
 namespace Indexing {
 	class BPlusTree;
 	struct Node;
-	struct Key;
 	struct QueryData;
 	struct NodeHeader;
 } // namespace Indexing
@@ -40,7 +39,7 @@ namespace Pages {
 
 	class IndexPage final : public Page {
 		IndexPageAdditionalHeader additionalHeader;
-		std::vector<Indexing::Key*> keys;
+		std::vector<DataTypes::Indexing::Key*> keys;
 
 		//leaf
 		std::vector<Headers::RowIdentifier*> nonClusteredData;
@@ -73,7 +72,7 @@ namespace Pages {
 
 			[[nodiscard]] const page_id_t& GetTreeId() const;
 
-			[[nodiscard]] vector<Indexing::Key*>* GetKeysUnsafe();
+			[[nodiscard]] vector<DataTypes::Indexing::Key*>* GetKeysUnsafe();
 
 			[[nodiscard]] vector<Headers::RowIdentifier*>* GetNonClusteredDataUnsafe();
 

@@ -1,22 +1,5 @@
 #include "Table.h"
-#include "../../AdditionalLibraries/DataTypes/DateTime/DateTime.h"
-#include "../../AdditionalLibraries/DataTypes/Decimal/Decimal.h"
-#include "../../AdditionalLibraries/DataTypes/Value/Value.h"
-#include "../../AdditionalLibraries/Converter/Converter.h"
 #include "../Block/Block.h"
-#include "../Column/Column.h"
-#include "../Constants.h"
-#include "../Database.h"
-#include "../Storage/StorageManager/StorageManager.h"
-#include "../Row/Row.h"
-#include "../B+Tree/BPlusTree.h"
-#include <stdexcept>
-
-using namespace Pages;
-using namespace DataTypes;
-using namespace ByteMaps;
-using namespace Indexing;
-using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes{
     bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredIndexes.empty(); }
