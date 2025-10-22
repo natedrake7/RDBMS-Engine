@@ -1316,8 +1316,27 @@ namespace DatabaseEngine::StorageTypes {
 
       for (int i = 0;i < this->columns.size(); i++) {
         auto& column = columns[i];
+
         column->SetColumnId(columnsHeaders[i].id);
       }
+    }
+
+    void Table::UpdateIdentityManagersIds() const{
+        const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+
+        if(identityHeaders.empty())
+          return;
+
+        for(const auto& column: this->columns){
+          for (const auto& identity: identityHeaders) {
+
+            if(column->GetColumnId() != identity.columnId)
+              continue;
+
+            column->SetIdentityManagerIds(this->header.tableId);
+            break;
+          }
+        }
     }
 
     void Table::GetIdentityColumns()const{
@@ -1333,9 +1352,6 @@ namespace DatabaseEngine::StorageTypes {
             continue;
 
           column->SetIdentity(identity);
-          // column->SetIdentityStartingValue(identity.lastValue);
-
-          // this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
           break;
         }
       }
@@ -1357,9 +1373,6 @@ namespace DatabaseEngine::StorageTypes {
               continue;
 
             column->SetIdentity(identity);
-            // column->SetIdentityStartingValue(identity.lastValue);
-
-            // this->header.clusteredIndex.columns.emplace_back(column->GetColumnIndex());
             break;
           }
         }

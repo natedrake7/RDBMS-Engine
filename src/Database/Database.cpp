@@ -823,6 +823,11 @@ namespace DatabaseEngine
                 table->GetIdentityColumns();
     }
 
+    void Database::UpdateIdentityManagersIds()const{
+        for(const auto& table: this->tables)
+            table->UpdateIdentityManagersIds();
+    }
+
     void Database::GetColumnsHeaders() const{
             for (const auto& table : this->tables)
                 table->GetColumnsHeaders();

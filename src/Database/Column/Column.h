@@ -81,6 +81,8 @@ namespace DatabaseEngine::StorageTypes
 
         void SetColumnId(const int32_t &columnId);
 
+        void SetIdentityManagerIds(const int32_t& tableId);
+
         [[nodiscard]] const Headers::IdentityColumnsHeader&  GetIdentity()const;
 
         void SetIdentity(const Headers::IdentityColumnsHeader &identity);

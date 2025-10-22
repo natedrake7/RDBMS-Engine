@@ -8,8 +8,6 @@ namespace DatabaseEngine::StorageTypes
     Headers::IdentityColumnsHeader header;
     int64_t startingValue;
 
-    bool valueChanged;
-
     std::mutex mutex;
 
     [[nodiscard]] int64_t Generate();
@@ -19,6 +17,7 @@ namespace DatabaseEngine::StorageTypes
       IdentityManager();
       ~IdentityManager();
 
+      void SetHeaderIds(const int32_t& tableId, const int32_t& columnId);
       void SetHeader(const Headers::IdentityColumnsHeader& newHeader);
       [[nodiscard]] const Headers::IdentityColumnsHeader& GetHeader() const;
 

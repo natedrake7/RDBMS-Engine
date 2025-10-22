@@ -75,9 +75,13 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetColumnId(const int32_t &columnId){ this->header.id = columnId; }
 
+    void Column::SetIdentityManagerIds(const int32_t &tableId){
+        this->identityManager.SetHeaderIds(tableId, this->header.id);
+    }
+
     const Headers::IdentityColumnsHeader & Column::GetIdentity()const { return this->identityManager.GetHeader(); }
 
-    void Column::SetIdentity(const Headers::IdentityColumnsHeader  &identity){ this->identityManager.SetHeader(identity); }
+    void Column::SetIdentity(const Headers::IdentityColumnsHeader  &identity) { this->identityManager.SetHeader(identity); }
 
     void Column::SetDefaultValue(const Headers::DefaultValuesHeader &defaultValue){ this->header.defaultValue = defaultValue; }
 

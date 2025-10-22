@@ -5,10 +5,14 @@
 namespace DatabaseEngine::StorageTypes {
   IdentityManager::IdentityManager() {
     this->startingValue = 0;
-    this->valueChanged = false;
   }
 
    IdentityManager::~IdentityManager() = default;
+
+  void IdentityManager::SetHeaderIds(const int32_t &tableId, const int32_t &columnId){
+    this->header.tableId = tableId;
+    this->header.columnId = columnId;
+  }
 
   int64_t IdentityManager::Generate(){
     bool updateMasterDb = false;
@@ -49,11 +53,7 @@ namespace DatabaseEngine::StorageTypes {
     if (this->header.columnId == Constants::INVALID_COLUMN_ID)
       return;
 
-    const auto value = this->valueChanged
-        ? this->header.lastValue + this->header.increment
-        : this->header.lastValue;
-
-    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value);
+    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, this->header.lastValue);
   }
 
   bool IdentityManager::IsValid() const{ return this->header.columnId != Constants::INVALID_COLUMN_ID; }

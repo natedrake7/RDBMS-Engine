@@ -345,6 +345,8 @@ namespace DatabaseEngine::StorageTypes
 
             void GetColumnsHeaders()const;
 
+            void UpdateIdentityManagersIds()const;
+
             void GetIdentityColumns()const;
 
             void GetIdentityColumnById(const int32_t& columnId)const;

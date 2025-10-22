@@ -201,6 +201,8 @@ public:
 
     void GetIdentityColumns()const;
 
+    void UpdateIdentityManagersIds()const;
+
     void GetColumnsHeaders()const;
 
     void GetDefaultValues()const;

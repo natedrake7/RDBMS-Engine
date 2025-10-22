@@ -149,8 +149,8 @@ namespace Server {
         columnPos++;
       }
 
-      string concatenatedColumns;
-      string _columns;
+      std::string concatenatedColumns;
+      std::string _columns;
 
       for (int j = 0; j < table.primaryKey.size(); j++) {
         const auto& key = columnNameToIndex.Get(table.primaryKey[j]);
@@ -199,14 +199,14 @@ namespace Server {
             1,
             1,
             true,
-            10000
+            1000
           );
         }
       }
     }
 
     this->masterDb->GetColumnsHeaders();
-    // this->masterDb->GetIdentityColumns();
+    this->masterDb->UpdateIdentityManagersIds();
 
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
