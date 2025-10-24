@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include "../../Database/Row/Row.h"
-#include "../QueryResult/QueryResult.h"
+#include "../../Systemic/QueryResult/QueryResult.h"
 #include "../Statements/Statements.h"
 
 namespace QueryPipeline {
@@ -63,6 +63,16 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalCreateDatabase(std::string  name);
       ~PhysicalCreateDatabase() override = default;
+      PhysicalPlanResult* Execute(const int& batchSize) override;
+  };
+
+  class PhysicalUseDatabase final : public PhysicalOperator{
+    DataTypes::Guid sessionId;
+    int32_t databaseId;
+
+    public:
+      explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, const int32_t& databaseId);
+      ~PhysicalUseDatabase() override = default;
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 

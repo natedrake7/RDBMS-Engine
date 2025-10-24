@@ -94,7 +94,7 @@ int main()
 
     server.Initialize("configuration.json");
 
-    constexpr int32_t databaseId = 2;
+    const auto* session = server.CreateSession("admin");
 
     std::cout << "Please enter a query: "<< endl;
 
@@ -108,7 +108,7 @@ int main()
 
         const auto start = std::chrono::high_resolution_clock::now();
 
-        QueryPipeline::Parser::Parse(input, databaseId);
+        QueryPipeline::Parser::Parse(input, session->sessionId);
 
         const auto end = std::chrono::high_resolution_clock::now();
 

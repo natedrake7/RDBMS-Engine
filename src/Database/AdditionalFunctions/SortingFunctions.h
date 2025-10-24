@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <unordered_map>
 #include <vector>
-#include "../../QueryPipeline/QueryResult/QueryResult.h"
+#include "../../Systemic/QueryResult/QueryResult.h"
 #include "../Column/Column.h"
 
 namespace QueryPipeline::Statements {

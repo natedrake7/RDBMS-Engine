@@ -211,6 +211,22 @@ namespace Server {
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
+  Network::Session * ServerInstance::CreateSession(const std::string &username){
+    return this->sessionManager.CreateSession(username);
+  }
+
+  Network::Session * ServerInstance::GetSession(const DataTypes::Guid &key){
+    return this->sessionManager.GetSession(key);
+  }
+
+  bool ServerInstance::CloseSession(const DataTypes::Guid &key) {
+    return this->sessionManager.CloseSession(key);
+  }
+
+  bool ServerInstance::UpdateSession(const DataTypes::Guid &key, const int32_t &databaseId){
+    return this->sessionManager.UpdateSession(key, databaseId);
+  }
+
   DatabaseEngine::Database * ServerInstance::GetMasterDb()const{ return this->masterDb; }
 
   void ServerInstance::Shutdown(){

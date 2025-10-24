@@ -27,11 +27,28 @@ namespace DataTypes {
       static int GuidSize();
   };
 
+
+
   bool operator==(const Guid& guid1, const Guid& guid2);
   bool operator!=(const Guid& guid1, const Guid& guid2);
   bool operator<(const Guid& guid1, const Guid& guid2);
   bool operator>(const Guid& guid1, const Guid& guid2);
   bool operator<=(const Guid& guid1, const Guid& guid2);
   bool operator>=(const Guid& guid1, const Guid& guid2);
-
 }
+
+template<>
+  struct std::hash<DataTypes::Guid> {
+    size_t operator()(const DataTypes::Guid& guid) const noexcept {
+      size_t result = 0;
+
+      if constexpr (requires { guid.GetData(); }) {
+        for (const auto byte : guid.GetData()) {
+          result ^= std::hash<uint8_t>{}(byte)
+                    + 0x9e3779b97f4a7c15ULL + (result << 6) + (result >> 2);
+        }
+      }
+
+      return result;
+    }
+  };

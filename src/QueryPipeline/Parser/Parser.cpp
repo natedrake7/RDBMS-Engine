@@ -3,6 +3,7 @@
 #include <vector>
 #include "SQLParser.h"
 #include "../../Database/Column/Column.h"
+#include "../../Server/Server.h"
 #include "../Cursor/Cursor.h"
 #include "../ErrorListener/ErrorListener.h"
 #include "../Visitor/Visitor.h"
@@ -16,21 +17,29 @@ namespace QueryPipeline
 {
     Parser::Parser() = default;
 
-    Statements::Statement* Parser::CreateStatement(const std::any &ast, const int32_t & databaseId){
+    Statements::Statement* Parser::CreateStatement(const std::any &ast, const DataTypes::Guid& sessionId){
         function<Statements::Statement *(const any &)> handler;
 
         if (!handlers.TryGetValue(ast.type(), handler))
             return nullptr;
 
         Statements::Statement* statement = handler(ast);
-        statement->databaseId = databaseId;
-        
+
+        const auto* session = Server::ServerInstance::Get().GetSession(sessionId);
+
+        if (session == nullptr) {
+            delete statement;
+            return nullptr;
+        }
+
+        statement->databaseId = session->databaseId;
+        statement->sessionId = session->sessionId;
         return statement;
     }
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(const string& query, const int32_t & databaseId){
+    void Parser::Parse(const string& query, const DataTypes::Guid& sessionId){
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
 
@@ -56,7 +65,7 @@ namespace QueryPipeline
 
             const auto response = visitor.visit(tree);
 
-            statement = CreateStatement(response, databaseId);
+            statement = CreateStatement(response, sessionId);
         }
         catch (const exception& e) {
             std::cerr << "Parser exception: " << e.what() << std::endl;

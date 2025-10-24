@@ -546,6 +546,23 @@ namespace QueryPipeline::Statements {
     return nullptr;
   }
 
+  bool UseDatabaseStatement::Validate(){
+    const auto dbHeader = Server::ServerInstance::Get().SelectDatabase(this->name);
+
+    if (dbHeader.id == Constants::INVALID_DATABASE_ID) {
+      std::cerr << "Database " + this->name + " does not exist" << std::endl;
+      return false;
+    }
+
+    this->databaseId = dbHeader.id;
+
+    return true;
+  }
+
+  LogicalPlan * UseDatabaseStatement::ToLogical(){
+    return new LogicalUseDatabase(this->sessionId, this->databaseId);
+  }
+
    InsertStatement::~InsertStatement(){
     delete this->selectStatement;
   }

@@ -30,6 +30,27 @@ PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::m
     return new PhysicalPlanResult();
   }
 
+  PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const int32_t &databaseId)
+    : sessionId(sessionId), databaseId(databaseId){}
+
+  PhysicalPlanResult * PhysicalUseDatabase::Execute(const int &batchSize) {
+    auto* result = new PhysicalPlanResult();
+
+    const auto sessionUpdateResult = Server::ServerInstance::Get().UpdateSession(this->sessionId, this->databaseId);
+
+    if (sessionUpdateResult) {
+      result->code = Errors::ResultCode::Ok;
+      result->message = "Database selected successfully";
+
+      return result;
+    }
+
+    result->code = Errors::ResultCode::Error;
+    result->message = "Failed to select Database";
+
+    return result;
+  }
+
 PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::string &schemaName)
   : schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
@@ -39,25 +60,73 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     return new PhysicalPlanResult();
   }
 
-  PhysicalProject:: PhysicalProject(
-    const int32_t & databaseId,
-    PhysicalOperator *child,
-    std::vector<Expressions::Expression*>& resultExpressions,
-    std::vector<Headers::ColumnHeader>& columnHeaders)
-    : resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
+  PhysicalTableScan::PhysicalTableScan(Statements::TableName* table): table(table) {}
 
-  PhysicalProject::~PhysicalProject() {
-    for (const auto& expression : this->resultExpressions)
-      delete expression;
+  PhysicalPlanResult* PhysicalTableScan::Execute(const int& batchSize){
+      using namespace DatabaseEngine::StorageTypes;
+      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
-    delete this->child;
+      const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+      auto* result = new PhysicalPlanResult();
+
+      result->columns = tablePtr->GetConstantColumns();
+
+      tablePtr->HeapScan(&result->rows, this->state, batchSize);
+
+      return result;
+    }
+
+  PhysicalIndexScan::PhysicalIndexScan(Statements::TableName* table, const bool& isClustered)
+    : table(table), expression(nullptr), isClustered(isClustered) {}
+
+  PhysicalIndexScan::PhysicalIndexScan(Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
+    : table(table), expression(expression), isClustered(isClustered) {}
+
+  PhysicalPlanResult * PhysicalIndexScan::Execute(const int& batchSize){
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    result->columns = tablePtr->GetConstantColumns();
+
+    if (this->isClustered) {
+      tablePtr->ClusteredIndexScan(&result->rows, state, batchSize, this->expression);
+      return result;
+    }
+
+    tablePtr->NonClusteredIndexScan(&result->rows, 0, state, batchSize, this->expression);
+
+    return result;
   }
 
-  PhysicalPlanResult* PhysicalProject::Execute(const int& batchSize){
-      return (this->child == nullptr)
-        ? this->ExecuteConstantStatement()
-        : this->ExecuteStatement(batchSize);
+  PhysicalIndexSeek::PhysicalIndexSeek(Statements::TableName* table, const Value& minValue, const Value& maxValue)
+    : table(table), minValue(minValue), maxValue(maxValue) {}
+
+  PhysicalPlanResult* PhysicalIndexSeek::Execute(const int& batchSize){
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    result->columns = tablePtr->GetConstantColumns();
+    const DataTypes::Indexing::Key minKey(minValue);
+    const DataTypes::Indexing::Key maxKey(maxValue);
+
+    //select if to use clustered or non clustered index here
+
+    tablePtr->ClusteredIndexSeek(&result->rows,&minKey, &maxKey);
+
+    return result;
   }
+
 
   PhysicalPlanResult * PhysicalProject::ExecuteStatement(const int &batchSize){
     auto* result = this->child->Execute(batchSize);
@@ -102,6 +171,26 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     return result;
   }
 
+  PhysicalProject:: PhysicalProject(
+    const int32_t & databaseId,
+    PhysicalOperator *child,
+    std::vector<Expressions::Expression*>& resultExpressions,
+    std::vector<Headers::ColumnHeader>& columnHeaders)
+    : resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
+
+  PhysicalProject::~PhysicalProject() {
+    for (const auto& expression : this->resultExpressions)
+      delete expression;
+
+    delete this->child;
+  }
+
+  PhysicalPlanResult* PhysicalProject::Execute(const int& batchSize){
+      return (this->child == nullptr)
+        ? this->ExecuteConstantStatement()
+        : this->ExecuteStatement(batchSize);
+  }
+
   PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Expressions::Expression* filter)
         : filter(filter) , child(child) {}
 
@@ -109,7 +198,6 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     delete this->child;
     delete this->filter;
   }
-
 
   PhysicalPlanResult* PhysicalFilter::Execute(const int& batchSize){
     auto* result = child->Execute(batchSize);
@@ -187,73 +275,6 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
     }
 
     result->results = std::move(results);
-
-    return result;
-  }
-
-  PhysicalTableScan::PhysicalTableScan(Statements::TableName* table): table(table) {}
-
-  PhysicalPlanResult* PhysicalTableScan::Execute(const int& batchSize){
-      using namespace DatabaseEngine::StorageTypes;
-      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-
-      const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-      auto* result = new PhysicalPlanResult();
-
-      result->columns = tablePtr->GetConstantColumns();
-
-      tablePtr->HeapScan(&result->rows, this->state, batchSize);
-
-      return result;
-    }
-
-  PhysicalIndexScan::PhysicalIndexScan(Statements::TableName* table, const bool& isClustered)
-    : table(table), expression(nullptr), isClustered(isClustered) {}
-
-  PhysicalIndexScan::PhysicalIndexScan(Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
-    : table(table), expression(expression), isClustered(isClustered) {}
-
-  PhysicalPlanResult * PhysicalIndexScan::Execute(const int& batchSize){
-    using namespace DatabaseEngine::StorageTypes;
-
-    auto* result = new PhysicalPlanResult();
-
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-    result->columns = tablePtr->GetConstantColumns();
-
-    if (this->isClustered) {
-      tablePtr->ClusteredIndexScan(&result->rows, state, batchSize, this->expression);
-      return result;
-    }
-
-    tablePtr->NonClusteredIndexScan(&result->rows, 0, state, batchSize, this->expression);
-
-    return result;
-  }
-
-  PhysicalIndexSeek::PhysicalIndexSeek(Statements::TableName* table, const Value& minValue, const Value& maxValue)
-    : table(table), minValue(minValue), maxValue(maxValue) {}
-
-  PhysicalPlanResult* PhysicalIndexSeek::Execute(const int& batchSize){
-    using namespace DatabaseEngine::StorageTypes;
-
-    auto* result = new PhysicalPlanResult();
-
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-    result->columns = tablePtr->GetConstantColumns();
-    const DataTypes::Indexing::Key minKey(minValue);
-    const DataTypes::Indexing::Key maxKey(maxValue);
-
-    //select if to use clustered or non clustered index here
-
-    tablePtr->ClusteredIndexSeek(&result->rows,&minKey, &maxKey);
 
     return result;
   }
@@ -385,6 +406,91 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
+  PhysicalHeapUpdate::PhysicalHeapUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  : table(table), updates(std::move(updates)), expression(expression) {}
+
+  PhysicalHeapUpdate::~PhysicalHeapUpdate(){
+    delete this->expression;
+    delete this->table;
+
+    for (const auto* update : this->updates)
+      delete update;
+  }
+
+  PhysicalPlanResult* PhysicalHeapUpdate::Execute(const int& batchSize){
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    const auto insertResult = tablePtr->HeapUpdate(this->expression, this->updates);
+
+    result->code = insertResult.code;
+    result->message = insertResult.message;
+
+    return result;
+  }
+
+  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  : table(table), updates(std::move(updates)), expression(expression) {}
+
+  PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
+    delete this->expression;
+    delete this->table;
+
+    for (const auto* update : this->updates)
+      delete update;
+  }
+
+  PhysicalPlanResult* PhysicalIndexScanUpdate::Execute(const int& batchSize){
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
+
+    result->code = updateResult.code;
+    result->message = updateResult.message;
+
+    return result;
+  }
+
+  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+    : table(table), updates(std::move(updates)), expression(expression) {}
+
+  PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){
+    delete this->expression;
+    delete this->table;
+
+    for (const auto* update : this->updates)
+      delete update;
+  }
+
+  PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(const int& batchSize){
+    using namespace DatabaseEngine::StorageTypes;
+
+    auto* result = new PhysicalPlanResult();
+
+    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+
+    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    DataTypes::Indexing::Key key;
+
+    tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
+
+    // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
+
+    return result;
+  }
+
   PhysicalTableCreate::PhysicalTableCreate(
       const int32_t & databaseId,
       Statements::TableName*  table,
@@ -404,7 +510,7 @@ PhysicalInsert::PhysicalInsert(
 
     vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
     columnsPtrs.reserve(columns.size());
-    
+
     for (const auto& column: this->columns)
       columnsPtrs.push_back(new DatabaseEngine::StorageTypes::Column(
         column->name.name,
@@ -519,91 +625,6 @@ PhysicalInsert::PhysicalInsert(
     tablePtr->GetStatistics();
 
     return nullptr;
-  }
-
-  PhysicalHeapUpdate::PhysicalHeapUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-  : table(table), updates(std::move(updates)), expression(expression) {}
-
-  PhysicalHeapUpdate::~PhysicalHeapUpdate(){
-    delete this->expression;
-    delete this->table;
-
-    for (const auto* update : this->updates)
-      delete update;
-  }
-
-  PhysicalPlanResult* PhysicalHeapUpdate::Execute(const int& batchSize){
-    using namespace DatabaseEngine::StorageTypes;
-
-    auto* result = new PhysicalPlanResult();
-
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-    const auto insertResult = tablePtr->HeapUpdate(this->expression, this->updates);
-
-    result->code = insertResult.code;
-    result->message = insertResult.message;
-
-    return result;
-  }
-
-  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-  : table(table), updates(std::move(updates)), expression(expression) {}
-
-  PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
-    delete this->expression;
-    delete this->table;
-
-    for (const auto* update : this->updates)
-      delete update;
-  }
-
-  PhysicalPlanResult* PhysicalIndexScanUpdate::Execute(const int& batchSize){
-    using namespace DatabaseEngine::StorageTypes;
-
-    auto* result = new PhysicalPlanResult();
-
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
-
-    result->code = updateResult.code;
-    result->message = updateResult.message;
-
-    return result;
-  }
-
-  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-    : table(table), updates(std::move(updates)), expression(expression) {}
-
-  PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){
-    delete this->expression;
-    delete this->table;
-
-    for (const auto* update : this->updates)
-      delete update;
-  }
-
-  PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(const int& batchSize){
-    using namespace DatabaseEngine::StorageTypes;
-
-    auto* result = new PhysicalPlanResult();
-
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-    DataTypes::Indexing::Key key;
-
-    tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
-
-    // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
-
-    return result;
   }
 
   PhysicalOrderBy::PhysicalOrderBy(

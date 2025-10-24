@@ -2,10 +2,10 @@
 #include "../Systemic/DataTypes/Headers/Headers.h"
 #include "../Systemic/Errors/Errors.h"
 #include "../Database/Database.h"
+#include "SessionManager/SessionManager.h"
+
 #include <string>
 #include <vector>
-
-using namespace std;
 
 namespace DatabaseEngine {
   class Database;
@@ -32,12 +32,14 @@ namespace Server {
   };
 
   class ServerInstance {
-    string sysDbName;
-    string sysDbPath;
+    std::string sysDbName;
+    std::string sysDbPath;
     vector<Headers::sysTable> sysTables;
     DatabaseEngine::Database* masterDb;
 
     Dictionary<int32_t, DatabaseEngine::Database*> databases;
+
+    Sessions::SessionManager sessionManager;
 
     ServerInstance();
     ~ServerInstance();
@@ -46,40 +48,45 @@ namespace Server {
     void CreateSystemDatabase();
     [[nodiscard]] bool CheckIfMasterDbExists()const;
     
-
   public:
-    static ServerInstance& Get();
+    [[nodiscard]] static ServerInstance& Get();
+    void Initialize(const std::string& configPath);
+
+    //Session Functions
+    [[nodiscard]] Network::Session* CreateSession(const std::string& username);
+    [[nodiscard]] Network::Session* GetSession(const DataTypes::Guid& key);
+    [[nodiscard]] bool CloseSession(const DataTypes::Guid& key);
+    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const int32_t& databaseId);
 
     //MasterDB Insert Functions
-    void Initialize(const string& configPath);
-    Errors::ResultStatus  InsertDbToMasterDb(
-      const string& dbName,
-      const string& dbPath,
+    [[nodiscard]] Errors::ResultStatus InsertDbToMasterDb(
+      const std::string& dbName,
+      const std::string& dbPath,
       const bool& isSystem = false,
-      const string& user = "system",
+      const std::string& user = "system",
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    Errors::ResultStatus  InsertSchemaToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertSchemaToMasterDb(
       const int32_t& databaseId,
-      const string& schemaName,
-      const string& user = "system",
+      const std::string& schemaName,
+      const std::string& user = "system",
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    Errors::ResultStatus  InsertTableToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertTableToMasterDb(
       const int32_t & databaseId,
       const int32_t & schemaId,
-      const string& tableName,
+      const std::string& tableName,
       const int16_t& ordinalPosition,
       const bool& isSystem = false,
-      const string& user = "system",
+      const std::string& user = "system",
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    Errors::ResultStatus  InsertColumnToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertColumnToMasterDb(
       const int32_t & tableId,
-      const string& columnName,
+      const std::string& columnName,
       const DataType& columnType,
       const int& columnSize,
       const int8_t& precision,
@@ -87,20 +94,20 @@ namespace Server {
       const bool& isNullable,
       const int& ordinalPosition,
       const bool& isSystem = false,
-      const string& user = "system",
+      const std::string& user = "system",
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    Errors::ResultStatus  InsertIndexToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertIndexToMasterDb(
       const int32_t & tableId,
-      const string &indexName,
+      const std::string &indexName,
       const bool &isClustered,
       const bool &isDisabled = false,
-      const string& user = "system",
+      const std::string& user = "system",
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    Errors::ResultStatus InsertIndexColumnToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertIndexColumnToMasterDb(
         const int32_t& indexId,
         const int32_t& columnId,
         const int16_t& ordinalPosition,
@@ -108,9 +115,9 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    Errors::ResultStatus InsertConstraintToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertConstraintToMasterDb(
         const int32_t& tableId,
-        const std::string& constraintName,
+        const string& constraintName,
         const Headers::ConstraintType& constraintType,
         const bool& isDisabled,
         const int32_t* constraintIndexId,
@@ -118,14 +125,14 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    Errors::ResultStatus InsertConstraintColumnToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertConstraintColumnToMasterDb(
         const int32_t& constraintId,
         const int32_t& columnId,
         const int32_t& ordinalPosition,
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    Errors::ResultStatus InsertIdentityColumnToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertIdentityColumnToMasterDb(
         const int32_t& tableId,
         const int32_t& columnId,
         const int32_t& seedValue,
@@ -136,13 +143,13 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    Errors::ResultStatus InsertDefaultValuesToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertDefaultValuesToMasterDb(
         const int32_t& columnId,
         const Value& value,
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    Errors::ResultStatus InsertTableStatisticsToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertTableStatisticsToMasterDb(
       const int32_t& tableId,
       const int64_t& rowCount = 0,
       const int32_t& rowSize = 0,
@@ -150,7 +157,7 @@ namespace Server {
       const bool& isDeleted = false
     ) const;
 
-    Errors::ResultStatus InsertColumnStatisticsToMasterDb(
+    [[nodiscard]] Errors::ResultStatus InsertColumnStatisticsToMasterDb(
       const int32_t& columnId,
       const int64_t& distinctCount = 0,
       const int64_t& nullCount = 0,
@@ -159,33 +166,33 @@ namespace Server {
     ) const;
 
     //MasterDB Select Functions
-    [[nodiscard]] vector<Headers::DatabaseHeader> GetCatalog()const;
+    [[nodiscard]] std::vector<Headers::DatabaseHeader> GetCatalog()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const int32_t& databaseId) const;
-    [[nodiscard]] vector<Headers::SchemaHeader>  SelectSchemas(const int32_t& databaseId) const;
+    [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const int32_t& databaseId) const;
     [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const int32_t& databaseId) const;
     [[nodiscard]] bool SchemaExists(const int32_t &databaseId, const std::string& schema) const;
-    [[nodiscard]] vector<Headers::TableHeader> SelectTables(const string& dbName) const;
-    [[nodiscard]] vector<Headers::TableHeader> SelectTables(const int32_t & databaseId) const;
+    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const string& dbName) const;
+    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const int32_t & databaseId) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const int32_t &databaseId, const string &tableName, const std::string& schema) const;
-    [[nodiscard]] vector<Headers::ConstraintsHeader> SelectConstraints(const int32_t& tableId) const;
-    [[nodiscard]] vector<Headers::ColumnHeader> SelectColumns(const int32_t& tableId) const;
+    [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const int32_t& tableId) const;
+    [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(const int32_t& tableId) const;
     [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const int32_t& tableId) const;
-    [[nodiscard]] vector<Headers::IndexHeader> SelectIndexes(const int32_t& tableId) const;
+    [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(const int32_t& tableId) const;
     [[nodiscard]] Headers::IndexHeader SelectIndexById(const int32_t& indexId) const;
-    [[nodiscard]] vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const int32_t& indexId) const;
+    [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const int32_t& indexId) const;
     [[nodiscard]] Dictionary<int32_t, Headers::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const int32_t& indexId) const;
-    [[nodiscard]] vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const int32_t& tableId) const;
+    [[nodiscard]] std::vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const int32_t& tableId) const;
     [[nodiscard]] Dictionary<int32_t , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const int32_t& tableId) const;
-    [[nodiscard]] vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
+    [[nodiscard]] std::vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
     [[nodiscard]] Dictionary<int32_t, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const int32_t& constraintId) const;
     [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const int32_t& columnId) const;
     [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const int32_t& tableId)const;
     [[nodiscard]] Headers::ColumnStatistics SelectColumnStatisticsById(
       const int32_t& columnId,
-      const DataType& columnType
+      const Constants::DataType& columnType
     )const;
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const;
     void UpdateTableStatisticsById(

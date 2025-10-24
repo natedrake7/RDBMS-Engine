@@ -74,7 +74,14 @@ namespace QueryPipeline {
      return new PhysicalPlan::PhysicalCreateDatabase(this->dbName);
   }
 
- LogicalJoin::LogicalJoin(
+  LogicalUseDatabase::LogicalUseDatabase(const DataTypes::Guid &sessionId, const int32_t &databaseId)
+    : databaseId(databaseId), sessionId(sessionId) {}
+
+  PhysicalPlan::PhysicalUseDatabase * LogicalUseDatabase::ToPhysical(){
+    return new PhysicalPlan::PhysicalUseDatabase(this->sessionId, this->databaseId);
+  }
+
+  LogicalJoin::LogicalJoin(
    LogicalPlan *left,
    LogicalPlan *right,
    Expressions::Expression *condition,

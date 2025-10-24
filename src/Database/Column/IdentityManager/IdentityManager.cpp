@@ -17,7 +17,7 @@ namespace DatabaseEngine::StorageTypes {
   int64_t IdentityManager::Generate(){
     bool updateMasterDb = false;
 
-    this->mutex.lock();
+    std::lock_guard<std::mutex> lock(mutex);
 
       const auto value = this->header.lastValue;
 
@@ -25,13 +25,10 @@ namespace DatabaseEngine::StorageTypes {
 
       updateMasterDb = value >= (this->startingValue + this->header.cacheBlock);
 
-      if (updateMasterDb)
+      if (updateMasterDb) {
         this->startingValue = value;
-
-    this->mutex.unlock();
-
-    if (updateMasterDb)
-      this->UpdateMasterDb(value);
+        this->UpdateMasterDb(value);
+      }
 
     return value;
   }

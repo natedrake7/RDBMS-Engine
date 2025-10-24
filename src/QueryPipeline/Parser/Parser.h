@@ -11,21 +11,13 @@ namespace QueryPipeline{
 
         static Dictionary<std::type_index, function<Statements::Statement*(const std::any&)>> handlers = {
             {
-                typeid(Statements::SelectStatement*),
-                [](const auto& r) { return std::any_cast<Statements::SelectStatement*>(r); }
-            },
-            {
-                typeid(Statements::CreateTableStatement*),
-                [](const auto& r) { return std::any_cast<Statements::CreateTableStatement*>(r); }
-            },
-            {
-                typeid(Statements::InsertStatement*),
-                [](const auto& r) { return std::any_cast<Statements::InsertStatement*>(r); }
+                typeid(Statements::CreateDbStatement*),
+                [](const auto& r) { return std::any_cast<Statements::CreateDbStatement*>(r); }
             },
 
             {
-                typeid(Statements::CreateDbStatement*),
-                [](const auto& r) { return std::any_cast<Statements::CreateDbStatement*>(r); }
+                typeid(Statements::UseDatabaseStatement*),
+                [](const auto& r) { return std::any_cast<Statements::UseDatabaseStatement*>(r); }
             },
 
             {
@@ -36,6 +28,19 @@ namespace QueryPipeline{
             {
                 typeid(Statements::CreateSchemaStatement*),
                 [](const auto& r) { return std::any_cast<Statements::CreateSchemaStatement*>(r); }
+            },
+
+            {
+                typeid(Statements::SelectStatement*),
+                [](const auto& r) { return std::any_cast<Statements::SelectStatement*>(r); }
+            },
+            {
+                typeid(Statements::CreateTableStatement*),
+                [](const auto& r) { return std::any_cast<Statements::CreateTableStatement*>(r); }
+            },
+            {
+                typeid(Statements::InsertStatement*),
+                [](const auto& r) { return std::any_cast<Statements::InsertStatement*>(r); }
             },
 
             {
@@ -63,7 +68,7 @@ namespace QueryPipeline{
         ~Parser();
         Parser();
 
-        static Statements::Statement* CreateStatement(const std::any &ast, const int32_t & databaseId);
+        static Statements::Statement* CreateStatement(const std::any &ast, const DataTypes::Guid& sessionId);
 
         public:
             static Parser& Get()
@@ -73,7 +78,7 @@ namespace QueryPipeline{
                 return instance;
             }
 
-            static void Parse(const string& query, const int32_t & databaseId);
+            static void Parse(const string& query, const DataTypes::Guid& sessionId);
     };
 
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include "Expressions.Additional.h"
-#include "../QueryPipeline/QueryResult/QueryResult.h"
+#include "../Systemic/QueryResult/QueryResult.h"
 #include "../Systemic/DataTypes/Value/Value.h"
 
 namespace DatabaseEngine::StorageTypes {

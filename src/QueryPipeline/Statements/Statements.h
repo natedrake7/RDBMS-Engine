@@ -130,7 +130,10 @@ namespace QueryPipeline::Statements {
   };
 
   struct Statement {
+    DataTypes::Guid sessionId;
+
     int32_t databaseId;
+
     TableName* table;
     Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
 
@@ -200,12 +203,21 @@ namespace QueryPipeline::Statements {
 
   struct CreateDbStatement final : Statement{
     std::string name;
+
     bool Validate() override;
     LogicalPlan* ToLogical() override;
   };
 
   struct DropDbStatement final : Statement{
     std::string name;
+
+    bool Validate() override;
+    LogicalPlan* ToLogical() override;
+  };
+
+  struct UseDatabaseStatement final : Statement {
+    std::string name;
+
     bool Validate() override;
     LogicalPlan* ToLogical() override;
   };

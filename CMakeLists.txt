@@ -73,6 +73,9 @@ add_library(Systemic SHARED
         src/Systemic/Errors/Errors.h
         src/Systemic/Indexing/Key.h
         src/Systemic/Indexing/Key.cpp
+        src/Systemic/QueryResult/QueryResult.cpp
+        src/Systemic/QueryResult/QueryResult.h
+        src/Systemic/Network/Session.h
 
 )
 
@@ -105,8 +108,6 @@ add_library(QueryPipeline STATIC
             src/QueryPipeline/ErrorListener/ErrorListener.cpp
             src/QueryPipeline/ErrorListener/ErrorListener.h
             src/QueryPipeline/Constants.h
-            src/QueryPipeline/QueryResult/QueryResult.cpp
-            src/QueryPipeline/QueryResult/QueryResult.h
             ${ANTLR_SRC}
 )
 
@@ -187,7 +188,9 @@ add_library(Server STATIC
         src/Server/Server.cpp
         src/Server/Server.h
         src/Server/MasterDbColumns.h
-        src/Server/Server.Constants.h)
+        src/Server/Server.Constants.h
+        src/Server/SessionManager/SessionManager.cpp
+        src/Server/SessionManager/SessionManager.h)
 
 target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE Systemic)
 

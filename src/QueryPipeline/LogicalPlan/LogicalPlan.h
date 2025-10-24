@@ -5,9 +5,10 @@ namespace QueryPipeline {
   class LogicalPlan {
   public:
     int32_t databaseId;
+
     explicit LogicalPlan(const int32_t & databaseId);
     LogicalPlan(){
-      this->databaseId = -1;
+      this->databaseId = Constants::INVALID_DATABASE_ID;
     }
     virtual ~LogicalPlan();
     virtual PhysicalPlan::PhysicalOperator* ToPhysical() = 0;
@@ -18,6 +19,15 @@ namespace QueryPipeline {
       std::string dbName;
       explicit LogicalCreateDatabase(std::string dbName);
       PhysicalPlan::PhysicalCreateDatabase* ToPhysical()override;
+  };
+
+  class LogicalUseDatabase final : public LogicalPlan {
+    public:
+      int32_t databaseId;
+      DataTypes::Guid sessionId;
+
+      explicit LogicalUseDatabase(const DataTypes::Guid& sessionId, const int32_t& databaseId);
+      PhysicalPlan::PhysicalUseDatabase* ToPhysical()override;
   };
 
   class LogicalProject final: public LogicalPlan {

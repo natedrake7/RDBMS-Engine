@@ -2,6 +2,7 @@
 
 #include "../Systemic/Coercions/Coercions.h"
 #include "../Systemic/DataTypes/Value/Value.h"
+#include "../Systemic/QueryResult/QueryResult.h"
 #include "../Systemic/Functions/StringFunctions.h"
 #include "../Database/Row/Row.h"
 #include <iostream>

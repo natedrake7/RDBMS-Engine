@@ -6,26 +6,33 @@
 
 namespace QueryPipeline {
   antlrcpp::Any SQLVisitorImplementation::visitSqlStatement(SQLParser::SqlStatementContext *context)  {
-    if (context->selectStatement())
-      return visit(context->selectStatement());
     if (context->createDbStatement())
       return visit(context->createDbStatement());
+    if (context->useDbStatement())
+      return visit(context->useDbStatement());
     if (context->dropDbStatement())
       return visit(context->dropDbStatement());
+
+    if (context->selectStatement())
+      return visit(context->selectStatement());
     if (context->insertStatement())
       return visit(context->insertStatement());
+
     if (context->createTableStatement())
       return visit(context->createTableStatement());
     if (context->createSchemaStatement())
       return visit(context->createSchemaStatement());
+
     if (context->deleteStatement())
       return visit(context->deleteStatement());
     if(context->updateStatement())
       return visit(context->updateStatement());
+
     if (context->createIndexStatement())
       return visit(context->createIndexStatement());
     if (context->alterTableStatement())
       return visit(context->alterTableStatement());
+
     if (context->declareVariableStatement())
       return visit(context->declareVariableStatement());
     if (context->setVariableStatement())
@@ -263,6 +270,14 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
   antlrcpp::Any SQLVisitorImplementation::visitDistinct(SQLParser::DistinctContext *context){
     return true;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitUseDbStatement(SQLParser::UseDbStatementContext *context){
+    auto* statement = new Statements::UseDatabaseStatement();
+
+    statement->name = std::any_cast<std::string>(visit(context->identifier()));
+
+    return statement;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
