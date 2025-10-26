@@ -58,6 +58,11 @@
 //make identity BIGINT by default and downcast to int
 //add GRANT REVOKE statements to admin user and update user permission based on given roles
 
+
+//SECURITY COMMANDS
+//CREATE USER alice WITH PASSWORD 'secret';
+//GRANT db_writer TO alice;
+
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 
 std::atomic<bool> serverRunning{true};
