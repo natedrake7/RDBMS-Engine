@@ -12,26 +12,25 @@ namespace Server {
       static constexpr std::string_view GUEST_NAME = "guest";
 
       static constexpr auto ADMIN_PERMISSIONS = Security::Permission::ALL;
-      static constexpr auto DB_OWNER_PERMISSIONS =
-          Security::Permission::SELECT
-          | Security::Permission::INSERT
-          | Security::Permission::UPDATE
-          | Security::Permission::DELETE
-          | Security::Permission::CREATE
-          | Security::Permission::DROP
-          | Security::Permission::ALTER;
-
-      static constexpr auto DB_WRITER_PERMISSIONS =
-        Security::Permission::INSERT
-        | Security::Permission::UPDATE
-        | Security::Permission::DELETE
-        | Security::Permission::SELECT;
-
-      static constexpr auto DB_READER_PERMISSIONS =
-        Security::Permission::SELECT;
 
       static constexpr auto GUEST_PERMISSIONS =
         Security::Permission::NONE;
+
+      static constexpr Security::Permission DB_READER_PERMISSIONS =
+          Security::Permission::SELECT
+          | GUEST_PERMISSIONS;
+
+      static constexpr Security::Permission DB_WRITER_PERMISSIONS =
+          Security::Permission::INSERT
+          | Security::Permission::UPDATE
+          | Security::Permission::DELETE
+          | DB_READER_PERMISSIONS;
+
+      static constexpr Security::Permission DB_OWNER_PERMISSIONS =
+          DB_WRITER_PERMISSIONS
+          | Security::Permission::CREATE
+          | Security::Permission::DROP
+          | Security::Permission::ALTER;
   };
 
 }

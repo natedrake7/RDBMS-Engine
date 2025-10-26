@@ -56,6 +56,7 @@
 //check decimals assignments on joins
 //add buffer pool optimization to allocate rows lazily based on if they are needed, else just store raw bytes from memory with basic metadata
 //make identity BIGINT by default and downcast to int
+//add GRANT REVOKE statements to admin user and update user permission based on given roles
 
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 
