@@ -1,8 +1,6 @@
-﻿#include "src/Database/Table/Table.h"
-#include "src/QueryPipeline/Parser/Parser.h"
+﻿#include "src/QueryPipeline/Parser/Parser.h"
 #include "src/Server/Server.h"
 #include "src/Server/ConnectionManager/ConnectionManager.h"
-
 
 #include <atomic>
 #include <chrono>
@@ -94,7 +92,14 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const auto* session = server.CreateSession("admin");
+    const auto* user = server.Authenticate("admin", "admin");
+
+    if (user == nullptr) {
+        server.Shutdown();
+        return -1;
+    }
+
+    const auto* session = server.CreateSession(user);
 
     std::cout << "Please enter a query: "<< endl;
 

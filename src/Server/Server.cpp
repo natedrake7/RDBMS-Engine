@@ -179,20 +179,20 @@ namespace Server {
       for(int j = 0;j < table.primaryKey.size(); j++){
         const auto& columnIndex = columnNameToIndex.Get(table.primaryKey[j]);
 
-        this->InsertIndexColumnToMasterDb(
-          indexResult.primaryKey.GetKeyAsInt(),
-          columnIdsDict.Get(table.primaryKey[j]),
-          static_cast<int16_t>(j),
-          true);
+        auto _ = this->InsertIndexColumnToMasterDb(
+            indexResult.primaryKey.GetKeyAsInt(),
+            columnIdsDict.Get(table.primaryKey[j]),
+            static_cast<int16_t>(j),
+            true);
 
-        this->InsertConstraintColumnToMasterDb(
+        _ = this->InsertConstraintColumnToMasterDb(
           constraintResult.primaryKey.GetKeyAsInt(),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j)
         );
 
         if(table.hasIdentity){
-          this->InsertIdentityColumnToMasterDb(
+          _ = this->InsertIdentityColumnToMasterDb(
             tableResult.primaryKey.GetKeyAsInt(),
             columnIdsDict.Get(table.primaryKey[j]),
             1,
@@ -208,14 +208,21 @@ namespace Server {
     this->masterDb->GetColumnsHeaders();
     this->masterDb->UpdateIdentityManagersIds();
 
+    this->InsertSystemRoles();
+    this->InsertSystemUsers();
+
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
-  Network::Session * ServerInstance::CreateSession(const std::string &username){
-    return this->sessionManager.CreateSession(username);
+  const Security::User * ServerInstance::Authenticate(const std::string &username, const std::string &password){
+    return this->userManager.Authenticate(username, password);
   }
 
-  Network::Session * ServerInstance::GetSession(const DataTypes::Guid &key){
+  const Network::Session * ServerInstance::CreateSession(const Security::User* user){
+    return this->sessionManager.CreateSession(user);
+  }
+
+  const Network::Session * ServerInstance::GetSession(const DataTypes::Guid &key){
     return this->sessionManager.GetSession(key);
   }
 
@@ -268,6 +275,14 @@ namespace Server {
     this->masterDb = new DatabaseEngine::Database(this->sysDbName, this->sysTables);
     this->masterDb->GetColumnsHeaders();
     this->masterDb->GetIdentityColumns();
+
+    for (const auto& role : this->SelectRoles())
+      const auto _ = this->roleManager.AddRole(role.name, new Security::Role(role));
+
+    for (const auto& user : this->SelectUsers()) {
+      const auto* role = this->roleManager.GetRole(user.roleId);
+      const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
+    }
   }
 
   Errors::ResultStatus ServerInstance::InsertDbToMasterDb(
@@ -605,6 +620,74 @@ namespace Server {
     const auto result = table->InsertRow(transactionId, fields);
 
     std::cout << "Inserted column stats for column with id: " << columnId << std::endl;
+
+    return result;
+  }
+
+  Errors::ResultStatus ServerInstance::InsertRoleToMasterDb(
+    const std::string &roleName,
+    const Security::Permission &permissions,
+    const bool& isSystem,
+    const int &version,
+    const bool &isDeleted) const{
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSROLES);
+    const auto currentDate = DataTypes::DateTime::Now();
+
+    const std::string lastModifiedBy = "system";
+
+    const vector<Value> fields = {
+      Value(roleName, static_cast<column_index_t>(SysRoles::RoleName)),
+      Value(static_cast<int>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
+      Value(isSystem, static_cast<column_index_t>(SysRoles::IsSystemRole)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysRoles::CreatedAt)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysRoles::LastModifiedAt)),
+      Value(lastModifiedBy, static_cast<column_index_t>(SysRoles::LastModifiedBy)),
+      Value(version, static_cast<column_index_t>(SysRoles::Version)),
+      Value(isDeleted, static_cast<column_index_t>(SysRoles::IsDeleted)),
+      Value(nullptr, static_cast<column_index_t>(SysRoles::DeletedAt)),
+    };
+
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
+
+    std::cout << "Inserted Role " << roleName << std::endl;
+
+    return result;
+  }
+
+  Errors::ResultStatus ServerInstance::InsertUserToMasterDb(
+    const std::string &username,
+    const std::string &passwordHash,
+    const int32_t &roleId,
+    const bool& isActive,
+    const int &version,
+    const bool &isDeleted
+  ) const{
+
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSUSERS);
+    const auto currentDate = DataTypes::DateTime::Now();
+
+    const std::string lastModifiedBy = "system";
+
+    const vector<Value> fields = {
+      Value(username, static_cast<column_index_t>(SysUsers::UserName)),
+      Value(passwordHash, static_cast<column_index_t>(SysUsers::PasswordHash)),
+      Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
+      Value(isActive, static_cast<column_index_t>(SysUsers::IsActive)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysUsers::CreatedAt)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
+      Value(lastModifiedBy, static_cast<column_index_t>(SysUsers::LastModifiedBy)),
+      Value(version, static_cast<column_index_t>(SysUsers::Version)),
+      Value(isDeleted, static_cast<column_index_t>(SysUsers::IsDeleted)),
+      Value(nullptr, static_cast<column_index_t>(SysUsers::DeletedAt)),
+    };
+
+    const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(transactionId, fields);
+
+    std::cout << "Inserted User " << username << std::endl;
 
     return result;
   }
@@ -1524,6 +1607,153 @@ namespace Server {
       });
 
       return columns;
+  }
+
+  std::vector<Security::Role> ServerInstance::SelectRoles() const{
+    using namespace DatabaseEngine::StorageTypes;
+    std::vector<const Row*> rows;
+
+    std::vector<Security::Role> roles;
+
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSROLES);
+
+    table->ClusteredIndexScan(&rows);
+
+    for (const auto& row : rows) {
+      const auto& data = row->GetData();
+
+      roles.emplace_back(Security::Role(
+        data[0]->GetInt(),
+        data[1]->GetString(),
+        static_cast<Security::Permission>(data[2]->GetInt()),
+        data[3]->GetBool()
+      ));
+    }
+
+    return roles;
+  }
+
+  std::vector<Security::User> ServerInstance::SelectUsers() const{
+    using namespace DatabaseEngine::StorageTypes;
+    std::vector<const Row*> rows;
+
+    std::vector<Security::User> users;
+
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSUSERS);
+
+    table->ClusteredIndexScan(&rows);
+
+    for (const auto& row : rows) {
+      const auto& data = row->GetData();
+      users.emplace_back(
+        Security::User{
+          .id = data[0]->GetInt(),
+          .name = data[1]->GetString(),
+          .passwordHash = data[2]->GetString(),
+          .roleId =  data[3]->GetInt(),
+          .isActive = data[4]->GetBool(),
+        }
+      );
+    }
+
+    return users;
+  }
+
+  void ServerInstance::InsertSystemRoles(){
+    const auto admin = std::string(ServerConstants::ADMIN_NAME);
+    const auto dbOwner = std::string(ServerConstants::DB_OWNER_NAME);
+    const auto dbWriter = std::string(ServerConstants::DB_WRITER_NAME);
+    const auto dbReader = std::string(ServerConstants::DB_READER_NAME);
+    const auto guest = std::string(ServerConstants::GUEST_NAME);
+
+    auto result = this->InsertRoleToMasterDb(
+      admin,
+      ServerConstants::ADMIN_PERMISSIONS
+    );
+
+    auto _ = this->roleManager.AddRole(admin,
+        new Security::Role(
+        result.primaryKey.GetKeyAsInt(),
+        admin,
+        ServerConstants::ADMIN_PERMISSIONS,
+        true
+      ));
+
+    result = this->InsertRoleToMasterDb(
+      dbOwner,
+      ServerConstants::DB_OWNER_PERMISSIONS
+    );
+
+   _ = this->roleManager.AddRole(dbOwner,
+        new Security::Role(
+        result.primaryKey.GetKeyAsInt(),
+        dbOwner,
+        ServerConstants::DB_OWNER_PERMISSIONS,
+        true
+      ));
+
+    result = this->InsertRoleToMasterDb(
+      dbWriter,
+      ServerConstants::DB_WRITER_PERMISSIONS
+    );
+
+    _ = this->roleManager.AddRole(dbWriter,
+        new Security::Role(
+          result.primaryKey.GetKeyAsInt(),
+          dbWriter,
+          ServerConstants::DB_WRITER_PERMISSIONS,
+          true
+        )
+    );
+
+    result = this->InsertRoleToMasterDb(
+      dbReader,
+      ServerConstants::DB_READER_PERMISSIONS
+    );
+
+    _ = this->roleManager.AddRole(dbReader,
+       new Security::Role(
+       result.primaryKey.GetKeyAsInt(),
+        dbReader,
+        ServerConstants::DB_READER_PERMISSIONS,
+       true
+     ));
+
+    result = this->InsertRoleToMasterDb(
+      guest,
+      ServerConstants::GUEST_PERMISSIONS
+    );
+
+    _ = this->roleManager.AddRole(guest,
+       new Security::Role(
+        result.primaryKey.GetKeyAsInt(),
+        guest,
+        ServerConstants::GUEST_PERMISSIONS,
+        true
+     ));
+  }
+
+  void ServerInstance::InsertSystemUsers(){
+    const auto admin = std::string(ServerConstants::ADMIN_NAME);
+
+    const auto* role = this->roleManager.GetRole(admin);
+
+    std::string hashedPassword;
+    if (Security::UserManager::HashPassword(admin, hashedPassword) == false) {
+      std::cerr << "Failed to hash password for admin user" << std::endl;
+      return;
+    }
+
+    const auto result =
+      this->InsertUserToMasterDb(
+        admin,
+        hashedPassword,
+        role->id,
+        true
+      );
+
+    const auto _ =
+      this->userManager.AddUser(result.primaryKey.GetKeyAsInt(), admin, hashedPassword, role);
   }
 
   void ServerInstance::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const{

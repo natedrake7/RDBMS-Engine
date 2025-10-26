@@ -3,9 +3,9 @@
 #include "../Constants.h"
 #include "../../Systemic/Coercions/Coercions.h"
 #include "../../Systemic/Functions/StringFunctions.h"
-#include "../../Database/Database.h"
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
+#include "../../Server/Server.Constants.h"
 
 #include <iostream>
 #include <ranges>
@@ -17,8 +17,25 @@ namespace QueryPipeline::Statements {
     this->table = nullptr;
   }
 
-  bool DeleteStatement::Validate(){
+  bool Statement::ValidateBase()const{
+    const auto* session = Server::ServerInstance::Get().GetSession(this->sessionId);
 
+    if (!session || !session->user || !session->user->role)
+      return false;
+
+    if (!session->user->role->HasPermission(this->RequiredPermissions())) {
+      std::cerr << "User: " << session->user->name << " is not authorized to perform this action." << std::endl;
+      return false;
+    }
+
+    return true;
+  }
+
+  bool Statement::ValidateStatement(){
+    return this->ValidateBase() && this->Validate();
+  }
+
+  bool DeleteStatement::Validate(){
     if (!this->table->Validate(this->databaseId))
       return false;
 
@@ -34,6 +51,10 @@ namespace QueryPipeline::Statements {
 
   LogicalPlan * DeleteStatement::ToLogical(){
     return new LogicalDelete(this->table, this->where.expression);
+  }
+
+  Security::Permission DeleteStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
   }
 
   JoinStatement::JoinStatement() {
@@ -69,6 +90,10 @@ namespace QueryPipeline::Statements {
     //     // this->table2,
     //     // this->on.expression
     // );
+  }
+
+  Security::Permission JoinStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_READER_PERMISSIONS;
   }
 
   CreateTableStatement::~CreateTableStatement() {
@@ -168,6 +193,10 @@ namespace QueryPipeline::Statements {
     const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
 
     return new LogicalTableCreate(this->table, this->columns, this->primaryKey, constraintName);
+  }
+
+  Security::Permission CreateTableStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
   SelectStatement::SelectStatement(){
@@ -514,6 +543,10 @@ namespace QueryPipeline::Statements {
     return current;
   }
 
+  Security::Permission SelectStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_READER_PERMISSIONS;
+  }
+
   bool CreateDbStatement::Validate(){
     if (!Server::ServerInstance::Get().DatabaseExists(this->name))
       return true;
@@ -524,6 +557,10 @@ namespace QueryPipeline::Statements {
 
   LogicalPlan * CreateDbStatement::ToLogical(){
     return new LogicalCreateDatabase(this->name);
+  }
+
+  Security::Permission CreateDbStatement::RequiredPermissions() const{
+    return Server::ServerConstants::ADMIN_PERMISSIONS;
   }
 
   bool DropDbStatement::Validate(){
@@ -546,6 +583,10 @@ namespace QueryPipeline::Statements {
     return nullptr;
   }
 
+  Security::Permission DropDbStatement::RequiredPermissions() const{
+    return Server::ServerConstants::ADMIN_PERMISSIONS;
+  }
+
   bool UseDatabaseStatement::Validate(){
     const auto dbHeader = Server::ServerInstance::Get().SelectDatabase(this->name);
 
@@ -561,6 +602,10 @@ namespace QueryPipeline::Statements {
 
   LogicalPlan * UseDatabaseStatement::ToLogical(){
     return new LogicalUseDatabase(this->sessionId, this->databaseId);
+  }
+
+  Security::Permission UseDatabaseStatement::RequiredPermissions() const{
+    return Server::ServerConstants::GUEST_PERMISSIONS;
   }
 
    InsertStatement::~InsertStatement(){
@@ -768,6 +813,10 @@ namespace QueryPipeline::Statements {
     return new QueryPipeline::LogicalInsert(this->table, this->values, logicalSelect, this->columnIndices);
   }
 
+  Security::Permission InsertStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+  }
+
   bool CreateSchemaStatement::Validate(){
     if (Server::ServerInstance::Get().SchemaExists(this->databaseId, this->name)) {
       cerr << "Schema " << this->name << " already exists"  << endl;
@@ -779,6 +828,10 @@ namespace QueryPipeline::Statements {
 
   QueryPipeline::LogicalPlan * CreateSchemaStatement::ToLogical(){
     return new LogicalSchemaCreate(this->databaseId, this->name);
+  }
+
+  Security::Permission CreateSchemaStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
   UpdateColumn::UpdateColumn(){
@@ -870,6 +923,10 @@ bool UpdateStatement::Validate(){
     return new QueryPipeline::LogicalUpdate(this->table, this->updates, this->where.expression);
   }
 
+  Security::Permission UpdateStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+  }
+
   bool CreateIndexStatement::Validate(){
     if (!this->table->Validate(this->databaseId))
       return false;
@@ -907,6 +964,10 @@ bool UpdateStatement::Validate(){
 
   QueryPipeline::LogicalPlan * CreateIndexStatement::ToLogical(){
     return new QueryPipeline::LogicalIndexCreate(this->table, this->name, this->columnIndices);
+  }
+
+  Security::Permission CreateIndexStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
   bool AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
@@ -1048,6 +1109,10 @@ bool UpdateStatement::Validate(){
 
   QueryPipeline::LogicalPlan * AlterTableStatement::ToLogical(){
     return new LogicalAlterTable(this->table, this->type, this->alterColumn, this->newColumn, this->dropColumn, this->renameColumn);
+  }
+
+  Security::Permission AlterTableStatement::RequiredPermissions() const{
+    return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
   bool ResolveColumnAlias(

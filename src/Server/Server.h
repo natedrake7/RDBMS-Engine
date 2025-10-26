@@ -2,7 +2,10 @@
 #include "../Systemic/DataTypes/Headers/Headers.h"
 #include "../Systemic/Errors/Errors.h"
 #include "../Database/Database.h"
+#include "../Systemic/Security/Security.h"
+#include "RoleManager/RoleManager.h"
 #include "SessionManager/SessionManager.h"
+#include "UserManager/UserManager.h"
 
 #include <string>
 #include <vector>
@@ -28,7 +31,9 @@ namespace Server {
     SYSCONSTRAINTCOLUMNS = 8,
     SYSDEFAULTVALUES = 9,
     SYSTABLESTATS = 10,
-    SYSCOLUMNSTATS = 11
+    SYSCOLUMNSTATS = 11,
+    SYSROLES = 12,
+    SYSUSERS = 13,
   };
 
   class ServerInstance {
@@ -40,6 +45,8 @@ namespace Server {
     Dictionary<int32_t, DatabaseEngine::Database*> databases;
 
     Sessions::SessionManager sessionManager;
+    Security::RoleManager roleManager;
+    Security::UserManager userManager;
 
     ServerInstance();
     ~ServerInstance();
@@ -47,14 +54,22 @@ namespace Server {
     void ReadConfiguration(const std::string& configPath);
     void CreateSystemDatabase();
     [[nodiscard]] bool CheckIfMasterDbExists()const;
-    
+    [[nodiscard]] std::vector<Security::Role> SelectRoles()const;
+    [[nodiscard]] std::vector<Security::User> SelectUsers()const;
+
+    void InsertSystemRoles();
+    void InsertSystemUsers();
+
   public:
     [[nodiscard]] static ServerInstance& Get();
     void Initialize(const std::string& configPath);
 
+    //Security Functions
+    [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password);
+
     //Session Functions
-    [[nodiscard]] Network::Session* CreateSession(const std::string& username);
-    [[nodiscard]] Network::Session* GetSession(const DataTypes::Guid& key);
+    [[nodiscard]] const Network::Session* CreateSession(const Security::User* user);
+    [[nodiscard]] const Network::Session* GetSession(const DataTypes::Guid& key);
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& key);
     [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const int32_t& databaseId);
 
@@ -161,6 +176,23 @@ namespace Server {
       const int32_t& columnId,
       const int64_t& distinctCount = 0,
       const int64_t& nullCount = 0,
+      const int& version = 0,
+      const bool& isDeleted = false
+    ) const;
+
+    [[nodiscard]] Errors::ResultStatus InsertRoleToMasterDb(
+      const std::string& roleName,
+      const Security::Permission& permissions,
+      const bool& isSystem = true,
+      const int& version = 0,
+      const bool& isDeleted = false
+    ) const;
+
+    [[nodiscard]] Errors::ResultStatus InsertUserToMasterDb(
+      const std::string& username,
+      const std::string& passwordHash,
+      const int32_t& roleId,
+      const bool& isActive = false,
       const int& version = 0,
       const bool& isDeleted = false
     ) const;

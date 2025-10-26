@@ -106,8 +106,6 @@ class Value {
 
         void SetName(std::string& data);
 
-        void InferType();
-
         [[nodiscard]] const Constants::block_size_t& GetSize() const;
 
         [[nodiscard]] const Constants::object_t* GetRawData() const;

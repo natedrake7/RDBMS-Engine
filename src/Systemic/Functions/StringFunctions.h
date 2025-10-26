@@ -219,12 +219,14 @@ namespace Functions::String {
 
     inline bool EqualsIgnoreCase(const std::string& a, const std::string& b)
     {
-      if (a.size() != b.size()) return false;
-      for (size_t i = 0; i < a.size(); ++i) {
-        unsigned char ca = static_cast<unsigned char>(a[i]);
-        unsigned char cb = static_cast<unsigned char>(b[i]);
-        if (std::tolower(ca) != std::tolower(cb)) return false;
+      if (a.size() != b.size())
+          return false;
+
+      for (int i = 0; i < a.size(); i++) {
+          if (std::tolower(a[i]) != std::tolower(b[i]))
+              return false;
       }
+
       return true;
     }
 

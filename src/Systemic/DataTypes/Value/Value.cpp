@@ -331,28 +331,6 @@ bool Value::TryParseDate(){
     return true;
 }
 
-void Value::InferType(){
-
-    switch (this->type){
-        case Constants::DataType::BigInt:
-
-            break;
-        case Constants::DataType::Decimal:
-            break;
-        case Constants::DataType::String:
-            if (this->TryParseDate())
-                return;
-
-            break;
-        case Constants::DataType::UnicodeString:
-            break;
-        case Constants::DataType::Bool:
-            break;
-        default:
-            break;
-    }
-}
-
 void Value::SetData(const DataTypes::Decimal &data) {
     delete this->data;
     

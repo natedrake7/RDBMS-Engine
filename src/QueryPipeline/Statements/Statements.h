@@ -5,6 +5,7 @@
 #include "../../Systemic/DataTypes/Value/Value.h"
 #include "../../Systemic/DataTypes/Headers/Headers.h"
 #include "../../Expressions/Expression.h"
+#include "../../Systemic/Security/Security.h"
 
 namespace QueryPipeline {
   class LogicalPlan;
@@ -140,6 +141,10 @@ namespace QueryPipeline::Statements {
     Statement();
     virtual ~Statement() = default;
     virtual bool Validate() = 0;
+    virtual Security::Permission RequiredPermissions() const = 0;
+    bool ValidateBase()const;
+
+    bool ValidateStatement();
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
   };
 
@@ -148,6 +153,7 @@ namespace QueryPipeline::Statements {
     ~DeleteStatement() override = default;
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct JoinStatement final : public Statement{
@@ -162,6 +168,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]]bool IsRightJoin()const;
 
     QueryPipeline::LogicalPlan* ToLogical()override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct CreateTableStatement final: Statement {
@@ -174,6 +181,7 @@ namespace QueryPipeline::Statements {
 
     bool Validate() override;
     QueryPipeline::LogicalPlan* ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct SelectStatement final : Statement{
@@ -199,6 +207,7 @@ namespace QueryPipeline::Statements {
 
     [[nodiscard]] bool Validate() override;
     [[nodiscard]] LogicalPlan* ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct CreateDbStatement final : Statement{
@@ -206,6 +215,7 @@ namespace QueryPipeline::Statements {
 
     bool Validate() override;
     LogicalPlan* ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct DropDbStatement final : Statement{
@@ -213,6 +223,7 @@ namespace QueryPipeline::Statements {
 
     bool Validate() override;
     LogicalPlan* ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct UseDatabaseStatement final : Statement {
@@ -220,6 +231,7 @@ namespace QueryPipeline::Statements {
 
     bool Validate() override;
     LogicalPlan* ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct InsertStatement final : Statement{
@@ -240,6 +252,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool ResolveAliases();
     [[nodiscard]] bool Validate() override;
     [[nodiscard]] LogicalPlan* ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct CreateSchemaStatement final : Statement {
@@ -247,6 +260,7 @@ namespace QueryPipeline::Statements {
 
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct UpdateColumn{
@@ -265,6 +279,7 @@ namespace QueryPipeline::Statements {
     bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct CreateIndexStatement final : Statement {
@@ -276,6 +291,7 @@ namespace QueryPipeline::Statements {
 
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   struct AlterTableStatement final : Statement {
@@ -293,6 +309,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     bool Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
+    Security::Permission RequiredPermissions() const override;
   };
 
   static bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement);

@@ -2,9 +2,6 @@
 #include "../../Server/Server.h"
 #include "../../Systemic/Functions/StringFunctions.h"
 
-#include <cstring>
-#include <iostream>
-
 namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAddColumn::PhysicalAddColumn(Statements::TableName *table, Statements::NewColumn *column)

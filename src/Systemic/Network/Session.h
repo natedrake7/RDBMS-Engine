@@ -1,12 +1,13 @@
 #pragma once
 #include "../DataTypes/Guid/Guid.h"
 #include "../DataTypes/DateTime/DateTime.h"
+#include "../Security/Security.h"
 
 namespace Network {
   struct Session {
     DataTypes::Guid sessionId;
 
-    std::string username;
+    const Security::User* user;
 
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastActive;
@@ -14,10 +15,12 @@ namespace Network {
     int32_t databaseId;
 
     //add permissions later and session variables etc
-    Session() {
+    explicit Session(const Security::User* user) {
       this->sessionId = DataTypes::Guid();
       this->createdAt = DataTypes::DateTime();
       this->lastActive = DataTypes::DateTime();
+
+      this->user = user;
 
       //default to masterdb
       this->databaseId = 1;

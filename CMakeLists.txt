@@ -12,10 +12,15 @@ add_executable(DatabaseInterface main.cpp
 # Set this to the directory containing antlr4-runtimeConfig.cmake or antlr4-runtime-config.cmake
 find_package(antlr4-runtime CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(unofficial-sodium CONFIG REQUIRED)
 
 # === ANTLR Setup ===
-#set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.1-complete.jar")
-set(ANTLR_JAR_PATH "${CMAKE_SOURCE_DIR}/External/ANTLR/antlr4_complete.jar")
+if(WIN32)
+    set(ANTLR_JAR_PATH "${CMAKE_SOURCE_DIR}/External/ANTLR/antlr4_complete.jar")
+else ()
+    set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.1-complete.jar")
+endif()
+
 set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/antlr)
 file(MAKE_DIRECTORY ${GENERATED_DIR})
 
@@ -76,6 +81,7 @@ add_library(Systemic SHARED
         src/Systemic/QueryResult/QueryResult.cpp
         src/Systemic/QueryResult/QueryResult.h
         src/Systemic/Network/Session.h
+        src/Systemic/Security/Security.h
 
 )
 
@@ -113,7 +119,11 @@ add_library(QueryPipeline STATIC
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
-target_link_libraries(QueryPipeline PRIVATE ExpressionsLibrary PRIVATE Systemic PRIVATE antlr4_shared)
+if(WIN32)
+    target_link_libraries(QueryPipeline PRIVATE ExpressionsLibrary PRIVATE Systemic PRIVATE antlr4_shared)
+else()
+    target_link_libraries(QueryPipeline PRIVATE ExpressionsLibrary PRIVATE Systemic PRIVATE antlr4_static)
+endif()
 
 # Include the generated parser and lexer files
 target_include_directories(QueryPipeline PRIVATE
@@ -190,17 +200,25 @@ add_library(Server STATIC
         src/Server/MasterDbColumns.h
         src/Server/Server.Constants.h
         src/Server/SessionManager/SessionManager.cpp
-        src/Server/SessionManager/SessionManager.h)
+        src/Server/SessionManager/SessionManager.h
+        src/Server/RoleManager/RoleManager.cpp
+        src/Server/RoleManager/RoleManager.h
+        src/Server/UserManager/UserManager.cpp
+        src/Server/UserManager/UserManager.h)
 
-target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE Systemic)
+if(WIN32)
+    target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE Systemic PRIVATE unofficial-sodium::sodium)
+else()
+    target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE Systemic PRIVATE unofficial-sodium::sodium)
+endif()
 
 target_link_libraries(Database PRIVATE Systemic PRIVATE ExpressionsLibrary PRIVATE Server)
 
-# add_executable(Client
-#         src/Client/client.cpp
-#         src/Client/client.h)
+ add_executable(Client
+         src/Client/client.cpp
+         src/Client/client.h)
 
-# target_link_libraries(Client PRIVATE Systemic)
+ target_link_libraries(Client PRIVATE Systemic)
 
 target_link_libraries(DatabaseInterface 
                         PRIVATE Server Database Systemic QueryPipeline)

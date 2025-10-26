@@ -45,5 +45,32 @@ namespace Server {
     IsDeleted = 9,
     DeletedAt = 10,
   };
+
+  enum class SysRoles : uint8_t {
+    RoleId = 0,
+    RoleName = 1,
+    Permissions = 2,
+    IsSystemRole = 3,
+    CreatedAt = 4,
+    LastModifiedAt = 5,
+    LastModifiedBy = 6,
+    Version = 7,
+    IsDeleted = 8,
+    DeletedAt = 9,
+  };
+
+  enum class SysUsers : uint8_t {
+    UserId = 0,
+    UserName = 1,
+    PasswordHash = 2,
+    RoleId = 3,
+    IsActive = 4,
+    CreatedAt = 5,
+    LastModifiedAt = 6,
+    LastModifiedBy = 7,
+    Version = 8,
+    IsDeleted = 9,
+    DeletedAt = 10,
+  };
 }
 

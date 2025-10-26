@@ -215,6 +215,43 @@
       ],
       "hasIdentity": false,
       "primaryKey": ["column_id"]
+    },
+    {
+      "id": 13,
+      "name": "sys_roles",
+      "columns": [
+        { "name": "role_id",                  "type": "Int" },
+        { "name": "role_name",                "type": "String", "size": 100 },
+        { "name": "permissions",              "type": "Int" },
+        { "name": "is_system_role",           "type": "Bool" },
+        { "name": "created_at",           "type": "DateTime" },
+        { "name": "last_modified",            "type": "DateTime" },
+        { "name": "last_modified_by",         "type": "String", "size": 100 },
+        { "name": "version",                  "type": "Int",    "default": 1 },
+        { "name": "is_deleted",               "type": "Bool",   "default": 0 },
+        { "name": "deleted_at",               "type": "DateTime", "nullable": true }
+      ],
+      "hasIdentity": true,
+      "primaryKey": ["role_id"]
+    },
+    {
+      "id": 14,
+      "name": "sys_users",
+      "columns": [
+        { "name": "user_id",                      "type": "Int" },
+        { "name": "username",                     "type": "String", "size": 100 },
+        { "name": "password_hash",                "type": "String", "size": 200 },
+        { "name": "role_id",                      "type": "Int" },
+        { "name": "is_active",                    "type": "Bool" },
+        { "name": "created_at",                   "type": "DateTime" },
+        { "name": "last_modified",                "type": "DateTime" },
+        { "name": "last_modified_by",             "type": "String", "size": 100 },
+        { "name": "version",                      "type": "Int",    "default": 1 },
+        { "name": "is_deleted",                   "type": "Bool",   "default": 0 },
+        { "name": "deleted_at",                   "type": "DateTime", "nullable": true }
+      ],
+      "hasIdentity": true,
+      "primaryKey": ["user_id"]
     }
   ]
 }

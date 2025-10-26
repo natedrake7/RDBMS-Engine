@@ -17,8 +17,8 @@ namespace Server::Sessions {
     SessionManager();
     ~SessionManager();
 
-    Network::Session* CreateSession(const std::string& username);
-    Network::Session* GetSession(const DataTypes::Guid& id);
+    const Network::Session* CreateSession(const Security::User* user);
+    const Network::Session* GetSession(const DataTypes::Guid& id);
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& id);
     [[nodiscard]] bool UpdateSession(const DataTypes::Guid& id, const int32_t& databaseId);
   };

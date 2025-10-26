@@ -529,7 +529,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     value.SetName(variableName);
 
-    value.InferType();
+    // value.InferType();
 
     std::cout << "Variable declared: " << variableName << " with value: " << value << std::endl;
 
@@ -553,7 +553,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     value.SetName(variableName);
 
-    value.InferType();
+    // value.InferType();
 
     std::cout << "Variable set: " << variableName << " with value: " << value << std::endl;
 

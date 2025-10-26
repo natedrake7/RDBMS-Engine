@@ -7,14 +7,14 @@
 #include <sstream>
 #include <signal.h>
 
-#include "../AdditionalLibraries/Converter/Converter.h"
-#include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
-#include "../AdditionalLibraries/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
-#include "../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
+#include "../Systemic/Converter/Converter.h"
+#include "../Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
+#include "../Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
+#include "../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
 
 #include "client.h"
 
-#include "../AdditionalLibraries/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
+#include "../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -28,8 +28,6 @@
   #include <arpa/inet.h>
   #include <unistd.h>
 #endif
-
-using namespace std;
 
 ConnectionParameters parameters;
 
@@ -48,15 +46,15 @@ int main()
   signal(SIGTERM, shutdownServer);  // kill command
   signal(SIGABRT, shutdownServer);  // abort()
 
-  const vector connectionString = {
-    string("-h"),
-    string("127.0.0.5"),
-    string("-P"),
-    string("1433"),
-    string("-p"),
-    string("kalispera"),
-    string("-u"),
-    string("natedrake7")
+  const std::vector connectionString = {
+    std::string("-h"),
+    std::string("127.0.0.5"),
+    std::string("-P"),
+    std::string("1433"),
+    std::string("-p"),
+    std::string("kalispera"),
+    std::string("-u"),
+    std::string("natedrake7")
   };
 
   ValidateConnectionString(parameters, connectionString);
@@ -65,7 +63,7 @@ int main()
   cout << "Please enter the query: " << endl;
 
   while(true){
-    string input;
+    std::string input;
     
     std::getline(std::cin, input);
 
@@ -91,7 +89,7 @@ int main()
     }
 
     ResponseProtocolHeader responseHeader;
-    vector<char> buffer;
+    std::vector<char> buffer;
 
     auto bytesReceived = recv(parameters.socket, reinterpret_cast<char *>(&responseHeader), responseHeader.GetSize(), 0);
 

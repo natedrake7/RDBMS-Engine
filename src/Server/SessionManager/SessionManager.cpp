@@ -9,11 +9,10 @@ namespace Server::Sessions {
       delete session;
   }
 
-  Network::Session * SessionManager::CreateSession(const std::string& username){
+  const Network::Session * SessionManager::CreateSession(const Security::User* user){
     this->mutex.lock();
 
-    auto* session = new Network::Session();
-    session->username = username;
+    auto* session = new Network::Session(user);
 
     this->sessions.Add(session->sessionId, session);
     this->mutex.unlock();
@@ -21,7 +20,7 @@ namespace Server::Sessions {
     return session;
   }
 
-  Network::Session * SessionManager::GetSession(const DataTypes::Guid &id){
+  const Network::Session * SessionManager::GetSession(const DataTypes::Guid &id){
     Network::Session* session = nullptr;
 
     std::lock_guard<std::mutex> lock(mutex);
