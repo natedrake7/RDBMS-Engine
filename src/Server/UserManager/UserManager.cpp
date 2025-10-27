@@ -1,4 +1,9 @@
 #include "UserManager.h"
+
+#include "../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
+#include "../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
+#include "../../Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.h"
+
 #include <ranges>
 #include <iostream>
 
@@ -18,8 +23,8 @@ namespace Security {
     }
   }
 
-  User* UserManager::Authenticate(const std::string &name, const std::string &password){
-    std::lock_guard<std::mutex> lock(mutex);
+  User* UserManager::Authenticate(const std::string &name, const std::string &password)const{
+    MultiThreading::ReaderGuard guard(&this->mutex);
 
     User* user = nullptr;
     if (!this->users.TryGetValue(name, user))
@@ -30,10 +35,10 @@ namespace Security {
       : nullptr;
   }
 
-  User * UserManager::GetUser(const std::string &name){
+  const User * UserManager::GetUser(const std::string &name)const{
     User *user = nullptr;
 
-    std::lock_guard<std::mutex> lock(this->mutex);
+    MultiThreading::ReaderGuard guard(&this->mutex);
 
     this->users.TryGetValue(name, user);
 
@@ -63,7 +68,7 @@ namespace Security {
     const std::string &passwordHash,
     const Security::Role* role
   ){
-    std::lock_guard<std::mutex> lock(this->mutex);
+    MultiThreading::WriterGuard guard(&this->mutex);
 
     if (this->users.Contains(name)) {
       std::cerr << "Role" << name << " already exists." << std::endl;
@@ -81,7 +86,7 @@ namespace Security {
   }
 
   bool UserManager::RemoveUser(const std::string &name){
-    std::lock_guard<std::mutex> lock(this->mutex);
+    MultiThreading::WriterGuard guard(&this->mutex);
 
     User *user = nullptr;
     if (!this->users.TryGetValue(name, user))
@@ -90,6 +95,17 @@ namespace Security {
     this->users.Remove(name);
     delete user;
 
+    return true;
+  }
+
+  bool UserManager::GrantRole(const std::string &name, const Security::Role *role)const{
+    MultiThreading::WriterGuard guard(&this->mutex);
+
+    User *user = nullptr;
+    if (!this->users.TryGetValue(name, user))
+      return false;
+
+    user->role = role;
     return true;
   }
 }

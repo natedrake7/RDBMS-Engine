@@ -148,6 +148,31 @@ namespace QueryPipeline::Statements {
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
   };
 
+  struct CreateUserStatement final : public Statement {
+      std::string username;
+      std::string password;
+
+      std::string role;
+
+      CreateUserStatement() = default;
+      ~CreateUserStatement() override= default;
+
+      bool Validate() override;
+      Security::Permission RequiredPermissions() const override;
+      QueryPipeline::LogicalPlan* ToLogical() override;
+  };
+
+  struct GrantRoleStatement final : public Statement {
+    std::string username;
+    std::string role;
+
+    GrantRoleStatement() = default;
+    ~GrantRoleStatement() override = default;
+    bool Validate() override;
+    Security::Permission RequiredPermissions() const override;
+    QueryPipeline::LogicalPlan* ToLogical() override;
+  };
+
   struct DeleteStatement final : Statement {
     WhereClause where;
     ~DeleteStatement() override = default;

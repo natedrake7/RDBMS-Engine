@@ -1,5 +1,6 @@
 #include "IdentityManager.h"
 #include "../../../Server/Server.h"
+#include "../../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
 
 
 namespace DatabaseEngine::StorageTypes {
@@ -17,7 +18,7 @@ namespace DatabaseEngine::StorageTypes {
   int64_t IdentityManager::Generate(){
     bool updateMasterDb = false;
 
-    std::lock_guard<std::mutex> lock(mutex);
+    MultiThreading::WriterGuard guard(&this->mutex);
 
       const auto value = this->header.lastValue;
 

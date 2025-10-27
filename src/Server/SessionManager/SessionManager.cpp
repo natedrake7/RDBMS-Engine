@@ -1,4 +1,8 @@
 #include "SessionManager.h"
+
+#include "../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
+#include "../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
+
 #include <ranges>
 
 namespace Server::Sessions {
@@ -10,20 +14,19 @@ namespace Server::Sessions {
   }
 
   const Network::Session * SessionManager::CreateSession(const Security::User* user){
-    this->mutex.lock();
+    MultiThreading::WriterGuard guard(&this->mutex);
 
     auto* session = new Network::Session(user);
 
     this->sessions.Add(session->sessionId, session);
-    this->mutex.unlock();
 
     return session;
   }
 
-  const Network::Session * SessionManager::GetSession(const DataTypes::Guid &id){
+  const Network::Session * SessionManager::GetSession(const DataTypes::Guid &id)const{
     Network::Session* session = nullptr;
 
-    std::lock_guard<std::mutex> lock(mutex);
+    MultiThreading::ReaderGuard guard(&this->mutex);
 
     this->sessions.TryGetValue(id, session);
 
@@ -41,7 +44,7 @@ namespace Server::Sessions {
   bool SessionManager::CloseSession(const DataTypes::Guid &id){
     Network::Session* session = nullptr;
 
-    std::lock_guard<std::mutex> lock(mutex);
+    MultiThreading::WriterGuard guard(&this->mutex);
 
     if (this->sessions.TryGetValue(id, session)) {
       this->sessions.Remove(id);
@@ -53,8 +56,8 @@ namespace Server::Sessions {
     return false;
   }
 
-  bool SessionManager::UpdateSession(const DataTypes::Guid &id, const int32_t &databaseId){
-    std::lock_guard<std::mutex> lock(mutex);
+  bool SessionManager::UpdateSession(const DataTypes::Guid &id, const int32_t &databaseId)const{
+    MultiThreading::WriterGuard guard(&this->mutex);
 
     auto* session = this->TryGetSessionWithoutLock(id);
 

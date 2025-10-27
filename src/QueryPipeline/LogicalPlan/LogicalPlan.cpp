@@ -9,6 +9,10 @@
 namespace QueryPipeline {
    LogicalPlan::LogicalPlan(const int32_t & databaseId): databaseId(databaseId) {}
 
+   LogicalPlan::LogicalPlan(){
+     this->databaseId = Constants::INVALID_DATABASE_ID;
+   }
+
   LogicalPlan::~LogicalPlan() = default;
 
   LogicalProject::LogicalProject(
@@ -66,6 +70,22 @@ namespace QueryPipeline {
       }
 
     return new PhysicalPlan::PhysicalTableScan(this->table);
+  }
+
+   LogicalCreateUser::LogicalCreateUser(std::string& username, std::string& password, std::string& role)
+     : username(std::move(username)), password(std::move(password)), role(std::move(role)) {}
+
+  LogicalCreateUser::~LogicalCreateUser() = default;
+
+  PhysicalPlan::PhysicalOperator * LogicalCreateUser::ToPhysical() {
+    return new PhysicalPlan::PhysicalCreateUser(this->username, this->password, this->role);
+  }
+
+  LogicalGrantRole::LogicalGrantRole(std::string &username, std::string &role)
+    : username(std::move(username)), role(std::move(role)) {}
+
+  PhysicalPlan::PhysicalOperator * LogicalGrantRole::ToPhysical() {
+    return new PhysicalPlan::PhysicalGrantRole(this->username, this->role);
   }
 
   LogicalCreateDatabase::LogicalCreateDatabase(std::string dbName) : dbName(std::move(dbName)) {}

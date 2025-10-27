@@ -3,15 +3,34 @@
 
 namespace QueryPipeline {
   class LogicalPlan {
-  public:
-    int32_t databaseId;
+    public:
+      int32_t databaseId;
 
-    explicit LogicalPlan(const int32_t & databaseId);
-    LogicalPlan(){
-      this->databaseId = Constants::INVALID_DATABASE_ID;
-    }
-    virtual ~LogicalPlan();
-    virtual PhysicalPlan::PhysicalOperator* ToPhysical() = 0;
+      explicit LogicalPlan(const int32_t & databaseId);
+      LogicalPlan();
+      virtual ~LogicalPlan();
+      virtual PhysicalPlan::PhysicalOperator* ToPhysical() = 0;
+  };
+
+  class LogicalCreateUser final : public LogicalPlan {
+    public:
+      std::string username;
+      std::string password;
+      std::string role;
+
+    explicit LogicalCreateUser(std::string&  username, std::string & password, std::string & role);
+    ~LogicalCreateUser()override;
+    PhysicalPlan::PhysicalOperator * ToPhysical() override;
+  };
+
+  class LogicalGrantRole: public LogicalPlan {
+    public:
+      std::string username;
+      std::string role;
+
+    explicit LogicalGrantRole(std::string & username, std::string & role);
+    ~LogicalGrantRole()override = default;
+    PhysicalPlan::PhysicalOperator * ToPhysical() override;
   };
 
   class LogicalCreateDatabase final : public LogicalPlan {

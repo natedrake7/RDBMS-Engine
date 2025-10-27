@@ -6,6 +6,12 @@
 
 namespace QueryPipeline {
   antlrcpp::Any SQLVisitorImplementation::visitSqlStatement(SQLParser::SqlStatementContext *context)  {
+    if (context->createUserStatement())
+      return visit(context->createUserStatement());
+    if (context->grantRoleStatement())
+      return visit(context->grantRoleStatement());
+
+
     if (context->createDbStatement())
       return visit(context->createDbStatement());
     if (context->useDbStatement())
@@ -276,6 +282,25 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     auto* statement = new Statements::UseDatabaseStatement();
 
     statement->name = std::any_cast<std::string>(visit(context->identifier()));
+
+    return statement;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitCreateUserStatement(SQLParser::CreateUserStatementContext *context){
+    auto* statement = new Statements::CreateUserStatement();
+
+    statement->username = context->username->getText();
+    statement->password = context->password->getText();
+    statement->role = context->role->getText();
+
+    return statement;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitGrantRoleStatement(SQLParser::GrantRoleStatementContext *context){
+    auto* statement = new Statements::GrantRoleStatement();
+
+    statement->username = context->username->getText();
+    statement->role = context->role->getText();
 
     return statement;
   }

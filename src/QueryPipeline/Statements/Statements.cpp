@@ -35,6 +35,69 @@ namespace QueryPipeline::Statements {
     return this->ValidateBase() && this->Validate();
   }
 
+  bool CreateUserStatement::Validate(){
+    if (this->username.empty()) {
+      std::cerr << "username cannot be empty" << std::endl;
+      return false;
+    }
+
+    if (this->password.empty()) {
+      std::cerr << "password cannot be empty" << std::endl;
+      return false;
+    }
+
+    if (this->role.empty()) {
+      std::cerr << "role cannot be empty" << std::endl;
+      return false;
+    }
+
+    const auto& server = Server::ServerInstance::Get();
+
+    if (server.UserExists(this->username)) {
+      std::cerr << "User with username: " << this->username << " already exists." << std::endl;
+      return false;
+    }
+
+    if (!server.RoleExists(this->role)) {
+      std::cerr << "Role: " << this->role << " does not exist." << std::endl;
+      return false;
+    }
+
+    return true;
+  }
+
+  Security::Permission CreateUserStatement::RequiredPermissions() const{
+      return Server::ServerConstants::ADMIN_PERMISSIONS;
+  }
+
+  LogicalPlan* CreateUserStatement::ToLogical(){
+    return new LogicalCreateUser(this->username, this->password, this->role);
+  }
+
+  bool GrantRoleStatement::Validate(){
+    const auto& server = Server::ServerInstance::Get();
+
+    if (!server.UserExists(this->username)) {
+      std::cerr << "User: " << this->username << " does not exist." << std::endl;
+      return false;
+    }
+
+    if (!server.RoleExists(this->role)) {
+      std::cerr << "Role: " << this->role << " does not exist." << std::endl;
+      return false;
+    }
+
+    return true;
+  }
+
+  Security::Permission GrantRoleStatement::RequiredPermissions() const{
+    return Server::ServerConstants::ADMIN_PERMISSIONS;
+  }
+
+  LogicalPlan * GrantRoleStatement::ToLogical(){
+    return new LogicalGrantRole(this->username, this->role);
+  }
+
   bool DeleteStatement::Validate(){
     if (!this->table->Validate(this->databaseId))
       return false;

@@ -82,6 +82,12 @@ add_library(Systemic SHARED
         src/Systemic/QueryResult/QueryResult.h
         src/Systemic/Network/Session.h
         src/Systemic/Security/Security.h
+        src/Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.cpp
+        src/Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.h
+        src/Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.cpp
+        src/Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h
+        src/Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.cpp
+        src/Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h
 
 )
 

@@ -6,19 +6,60 @@
 #include "../../Database/AdditionalFunctions/SortingFunctions.h"
 #include "../../Database/Block/Block.h"
 
+#include <iostream>
+
 namespace QueryPipeline::PhysicalPlan {
+  PhysicalPlanResult::PhysicalPlanResult(){
+    this->code = Errors::ResultCode::Ok;
+  }
 
-PhysicalPlanResult::PhysicalPlanResult(){
-  this->code = Errors::ResultCode::Ok;
-}
+  PhysicalPlanResult::~PhysicalPlanResult(){
+    for (const auto* row: this->rows)
+      if (row->IsCopy())
+        delete row;
+  }
 
-PhysicalPlanResult::~PhysicalPlanResult(){
-  for (const auto* row: this->rows)
-    if (row->IsCopy())
-      delete row;
-}
+ PhysicalCreateUser::PhysicalCreateUser(std::string &username, std::string &password, std::string &role)
+   : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
 
-PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
+  PhysicalPlanResult * PhysicalCreateUser::Execute(const int &batchSize) {
+    auto* result = new PhysicalPlanResult();
+
+    auto& server = Server::ServerInstance::Get();
+
+    if (server.CreateUser(this->username, this->password, this->roleName) == false) {
+      result->code = Errors::ResultCode::Error;
+      result->message = "Failed to create user";
+    }
+
+    return result;
+  }
+
+  PhysicalGrantRole::PhysicalGrantRole(std::string &username, std::string &roleName)
+    : username(std::move(username)), roleName(std::move(roleName)) {}
+
+  PhysicalPlanResult * PhysicalGrantRole::Execute(const int &batchSize) {
+    auto* result = new PhysicalPlanResult();
+
+    const auto& server = Server::ServerInstance::Get();
+
+    const auto* role = server.GetRole(this->roleName);
+
+    if (role == nullptr) {
+      result->code = Errors::ResultCode::Error;
+      result->message = "Failed to get role " + this->roleName;
+      return result;
+    }
+
+    if (!server.GrantRole(this->username, role)) {
+      result->code = Errors::ResultCode::Error;
+      result->message = "Failed to grant role " + this->roleName + " to user: " + this->username;
+    }
+
+    return result;
+  }
+
+  PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
 
   PhysicalPlanResult* PhysicalCreateDatabase::Execute(const int& batchSize){
     const auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");

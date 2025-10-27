@@ -65,8 +65,13 @@ namespace Server {
     void Initialize(const std::string& configPath);
 
     //Security Functions
+    bool GrantRole(const std::string& username, const Security::Role* role)const;
+    bool UserExists(const std::string& userName)const;
     bool CreateUser(const std::string& userName, const std::string& password, const std::string& roleName);
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password);
+
+    bool RoleExists(const std::string& role)const;
+    const Security::Role* GetRole(const std::string& roleName)const;
 
     //Session Functions
     [[nodiscard]] const Network::Session* CreateSession(const Security::User* user);

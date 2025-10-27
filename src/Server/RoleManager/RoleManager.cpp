@@ -1,5 +1,7 @@
 #include "RoleManager.h"
 
+#include "../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
+#include "../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
 #include "../../Systemic/Security/Security.h"
 
 #include <iostream>
@@ -13,20 +15,20 @@ namespace Security {
      delete role;
   }
 
-  Role * RoleManager::GetRole(const int32_t &roleId){
+  const Role * RoleManager::GetRole(const int32_t &roleId)const{
     Role *role = nullptr;
 
-    std::lock_guard<std::mutex> lock(this->mutex);
+    MultiThreading::ReaderGuard guard(&this->mutex);
 
     this->roles.TryGetValue(roleId, role);
 
     return role;
   }
 
-  Role* RoleManager::GetRole(const std::string &name){
+  const Role* RoleManager::GetRole(const std::string &name)const{
     Role *role = nullptr;
 
-    std::lock_guard<std::mutex> lock(this->mutex);
+    MultiThreading::ReaderGuard guard(&this->mutex);
 
     int roleId = -1;
     this->rolesNames.TryGetValue(name, roleId);
@@ -36,7 +38,7 @@ namespace Security {
   }
 
   bool RoleManager::AddRole(const std::string &name, Role *role){
-    std::lock_guard<std::mutex> lock(this->mutex);
+    MultiThreading::WriterGuard guard(&this->mutex);
 
     if (this->rolesNames.Contains(name)){
       std::cerr << "Role" << name << " already exists." << std::endl;
@@ -50,7 +52,7 @@ namespace Security {
   }
 
   bool RoleManager::RemoveRole(const std::string &name){
-    std::lock_guard<std::mutex> lock(this->mutex);
+    MultiThreading::WriterGuard guard(&this->mutex);
 
     Role *role = nullptr;
 

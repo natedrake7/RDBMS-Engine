@@ -1,5 +1,6 @@
 #pragma once
 #include "../../Systemic/DataStructures/Dictionary/Dictionary.h"
+#include "../../Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.h"
 #include "../../Systemic/Network/Session.h"
 
 #include <mutex>
@@ -9,7 +10,7 @@ namespace Server::Sessions {
 
     Dictionary<DataTypes::Guid, Network::Session*> sessions;
 
-    std::mutex mutex;
+    mutable MultiThreading::ReadWriteMutex mutex;
 
     [[nodiscard]] Network::Session* TryGetSessionWithoutLock(const DataTypes::Guid& id)const;
 
@@ -18,8 +19,8 @@ namespace Server::Sessions {
     ~SessionManager();
 
     const Network::Session* CreateSession(const Security::User* user);
-    const Network::Session* GetSession(const DataTypes::Guid& id);
+    const Network::Session* GetSession(const DataTypes::Guid& id)const;
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& id);
-    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& id, const int32_t& databaseId);
+    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& id, const int32_t& databaseId)const;
   };
 }

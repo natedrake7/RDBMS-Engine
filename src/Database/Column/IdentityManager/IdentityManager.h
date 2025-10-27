@@ -1,5 +1,7 @@
 #pragma once
 #include "../../../Systemic/DataTypes/Headers/Headers.h"
+#include "../../../Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.h"
+
 #include <mutex>
 
 namespace DatabaseEngine::StorageTypes
@@ -8,7 +10,7 @@ namespace DatabaseEngine::StorageTypes
     Headers::IdentityColumnsHeader header;
     int64_t startingValue;
 
-    std::mutex mutex;
+    mutable MultiThreading::ReadWriteMutex mutex;
 
     [[nodiscard]] int64_t Generate();
     void UpdateMasterDb(const int64_t& value)const;

@@ -148,6 +148,10 @@ namespace QueryPipeline {
       antlrcpp::Any visitDistinct(SQLParser::DistinctContext *context) override;
 
       antlrcpp::Any visitUseDbStatement(SQLParser::UseDbStatementContext *context) override;
+
+      antlrcpp::Any visitCreateUserStatement(SQLParser::CreateUserStatementContext *context) override;
+
+      antlrcpp::Any visitGrantRoleStatement(SQLParser::GrantRoleStatementContext *context) override;
   };
 
   static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {

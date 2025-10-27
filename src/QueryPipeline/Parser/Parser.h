@@ -10,6 +10,15 @@ using namespace std;
 namespace QueryPipeline{
 
         static Dictionary<std::type_index, function<Statements::Statement*(const std::any&)>> handlers = {
+        {
+            typeid(Statements::CreateUserStatement*),
+            [](const auto& r) { return std::any_cast<Statements::CreateUserStatement*>(r); }
+            },
+        {
+            typeid(Statements::GrantRoleStatement*),
+            [](const auto& r) { return std::any_cast<Statements::GrantRoleStatement*>(r); }
+            },
+
             {
                 typeid(Statements::CreateDbStatement*),
                 [](const auto& r) { return std::any_cast<Statements::CreateDbStatement*>(r); }

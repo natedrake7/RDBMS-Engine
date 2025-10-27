@@ -46,7 +46,7 @@ namespace QueryPipeline::PhysicalPlan{
     int32_t lastFetchedKeyIndex;
 
     IndexState() {
-      this->pageId = INVALID_PAGE_ID;
+      this->pageId = Constants::INVALID_PAGE_ID;
       this->lastFetchedKeyIndex = -1;
     }
   };
@@ -56,6 +56,25 @@ namespace QueryPipeline::PhysicalPlan{
       explicit PhysicalOperator() = default;
       virtual ~PhysicalOperator() = default;
       virtual PhysicalPlanResult* Execute(const int& batchSize) = 0;
+  };
+
+  class PhysicalCreateUser final : public PhysicalOperator {
+    std::string username;
+    std::string password;
+    std::string roleName;
+    public:
+      explicit PhysicalCreateUser(std::string& username, std::string& password, std::string& role);
+      ~PhysicalCreateUser() = default;
+      PhysicalPlanResult* Execute(const int& batchSize);
+  };
+
+  class PhysicalGrantRole final : public PhysicalOperator {
+      std::string username;
+      std::string roleName;
+    public:
+      explicit PhysicalGrantRole(std::string& username, std::string& roleName);
+      ~PhysicalGrantRole()override = default;
+      PhysicalPlanResult* Execute(const int& batchSize);
   };
 
   class PhysicalCreateDatabase final : public PhysicalOperator{

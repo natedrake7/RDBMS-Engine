@@ -214,6 +214,14 @@ namespace Server {
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
+  bool ServerInstance::GrantRole(const std::string &username, const Security::Role *role)const{
+    return this->userManager.GrantRole(username, role);
+  }
+
+  bool ServerInstance::UserExists(const std::string &userName) const{
+    return this->userManager.GetUser(userName) != nullptr;
+  }
+
   bool ServerInstance::CreateUser(const std::string &userName, const std::string &password, const std::string& roleName){
     if (this->userManager.GetUser(userName) != nullptr)
       return false;
@@ -251,6 +259,14 @@ namespace Server {
 
   const Security::User * ServerInstance::Authenticate(const std::string &username, const std::string &password){
     return this->userManager.Authenticate(username, password);
+  }
+
+  bool ServerInstance::RoleExists(const std::string &role) const{
+    return this->roleManager.GetRole(role) != nullptr;
+  }
+
+  const Security::Role * ServerInstance::GetRole(const std::string &roleName)const {
+    return this->roleManager.GetRole(roleName);
   }
 
   const Network::Session * ServerInstance::CreateSession(const Security::User* user){
