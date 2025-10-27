@@ -204,7 +204,8 @@ add_library(Server STATIC
         src/Server/RoleManager/RoleManager.cpp
         src/Server/RoleManager/RoleManager.h
         src/Server/UserManager/UserManager.cpp
-        src/Server/UserManager/UserManager.h)
+        src/Server/UserManager/UserManager.h
+)
 
 if(WIN32)
     target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE Systemic PRIVATE unofficial-sodium::sodium)

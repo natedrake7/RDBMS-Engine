@@ -16,9 +16,9 @@ namespace Security {
       UserManager();
       ~UserManager();
 
-      [[nodiscard]]User* Authenticate(const std::string& name, const std::string& password);
-      [[nodiscard]]User* GetUser(const std::string& name);
-      [[nodiscard]]bool AddUser(
+      [[nodiscard]] User* Authenticate(const std::string& name, const std::string& password);
+      [[nodiscard]] User* GetUser(const std::string& name);
+      [[nodiscard]] bool AddUser(
         const int32_t& id,
         const std::string &name,
         const std::string &passwordHash,

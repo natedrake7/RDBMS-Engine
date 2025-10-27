@@ -65,6 +65,7 @@ namespace Server {
     void Initialize(const std::string& configPath);
 
     //Security Functions
+    bool CreateUser(const std::string& userName, const std::string& password, const std::string& roleName);
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password);
 
     //Session Functions

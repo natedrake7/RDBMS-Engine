@@ -214,6 +214,41 @@ namespace Server {
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
+  bool ServerInstance::CreateUser(const std::string &userName, const std::string &password, const std::string& roleName){
+    if (this->userManager.GetUser(userName) != nullptr)
+      return false;
+
+    const auto* role = this->roleManager.GetRole(roleName);
+
+    if (role == nullptr)
+      return false;
+
+    std::string hashedPassword;
+    if (Security::UserManager::HashPassword(password, hashedPassword) == false) {
+      std::cerr << "Failed to hash password for user" << userName << std::endl;
+      return false;
+    }
+
+    const auto result =
+      this->InsertUserToMasterDb(
+        userName,
+        hashedPassword,
+        role->id,
+        true
+      );
+
+    if (result.code != Errors::ResultCode::Ok) {
+      std::cerr << "Failed to create user"
+                << userName
+                << " with error: "
+                << result.message << std::endl;
+
+      return false;
+    }
+
+    return this->userManager.AddUser(result.primaryKey.GetKeyAsInt(), userName, hashedPassword, role);
+  }
+
   const Security::User * ServerInstance::Authenticate(const std::string &username, const std::string &password){
     return this->userManager.Authenticate(username, password);
   }
