@@ -57,7 +57,7 @@
 //add buffer pool optimization to allocate rows lazily based on if they are needed, else just store raw bytes from memory with basic metadata
 //make identity BIGINT by default and downcast to int
 //add GRANT REVOKE statements to admin user and update user permission based on given roles
-
+//Lock masterdb to now allow select nor updates and access it through views only
 
 //SECURITY COMMANDS
 //CREATE USER alice WITH PASSWORD 'secret';
