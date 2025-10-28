@@ -25,6 +25,7 @@ namespace Pages {
     {
         this->additionalHeader.tableId = tableId;
         this->additionalHeader.startingExtentId = startingExtentId;
+        this->lastAllocatedExtentId = 0;
         this->ownedExtents = new BitMap();
         this->header.bytesLeft = 0;
     }
@@ -57,7 +58,7 @@ namespace Pages {
         const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(this->header.pageId);
         const page_id_t offSet = IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
-        for (extent_id_t id = 0; id < lastAllocatedExtentId; id++)
+        for (extent_id_t id = 0; id < this->lastAllocatedExtentId; id++)
             if (this->ownedExtents->Get(id))
                allocatedExtents->push_back(offSet + id);
     }

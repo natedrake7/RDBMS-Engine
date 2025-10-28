@@ -2,17 +2,18 @@
 #include <string>
 #include "../ConnectionProtocol/ConnectionProtocol.h"
 
-using namespace std;
+namespace Network {
+  class QueryProtocol final : public ConnectionProtocol{
+    std::string query;
 
-class QueryProtocol final : public ConnectionProtocol{
-  string query;
+    public:
+      explicit QueryProtocol(const std::string& query);
+      explicit QueryProtocol(const ConnectionProtocolHeader& header): ConnectionProtocol(header){}
+      ~QueryProtocol() override = default;
+      [[nodiscard]] int GetSize() const override;
+      void Serialize() override;
+      void Deserialize(const std::vector<char>& buffer) override;
+      [[nodiscard]] const std::string& GetQuery() const;
+  };
 
-  public:
-    explicit QueryProtocol(const string& query);
-    explicit QueryProtocol(const ConnectionProtocolHeader& header): ConnectionProtocol(header){}
-    ~QueryProtocol() override = default;
-    [[nodiscard]] int GetSize() const override;
-    void Serialize() override;
-    void Deserialize(const vector<char>& buffer) override;
-    [[nodiscard]] const string& GetQuery() const;
-};
+}

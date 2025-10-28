@@ -1,9 +1,8 @@
 #pragma once
+#include "../../QueryPipeline/Cursor/Cursor.h"
 #include "../../Systemic/DataStructures/Dictionary/Dictionary.h"
 #include "../../Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.h"
 #include "../../Systemic/Network/Session.h"
-
-#include <mutex>
 
 namespace Server::Sessions {
   class SessionManager {
@@ -22,5 +21,8 @@ namespace Server::Sessions {
     const Network::Session* GetSession(const DataTypes::Guid& id)const;
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& id);
     [[nodiscard]] bool UpdateSession(const DataTypes::Guid& id, const int32_t& databaseId)const;
+
+    [[nodiscard]] QueryPipeline::Cursor* CreateCursor(const DataTypes::Guid &id, QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan)const;
+    [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id)const;
   };
 }

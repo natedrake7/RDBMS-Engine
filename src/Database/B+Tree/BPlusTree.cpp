@@ -288,7 +288,7 @@ namespace Indexing
 
     void BPlusTree::IndexScan(
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        const QueryPipeline::PhysicalPlan::IndexState& state,
+        QueryPipeline::PhysicalPlan::IndexState& state,
         const int& rowsToSelect){
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
@@ -299,14 +299,20 @@ namespace Indexing
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
-        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex + 1;
-
         while (currentNode)
         {
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
-            for (int i = startingPosition; i < rows->size(); i++)
+            for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
                 result->push_back(rows->at(i));
+
+                if (result->size() == rowsToSelect) {
+                    state.pageId = currentNode->GetPageId();
+                    state.lastFetchedKeyIndex = i;
+
+                    return;
+                }
+            }
 
             if(currentNode->GetNextPage() == 0)
                 return;
@@ -317,9 +323,10 @@ namespace Indexing
 
     void BPlusTree::IndexScan(
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        const QueryPipeline::PhysicalPlan::IndexState& state,
-        const int& rowsToSelect,
-        const Expressions::Expression *expression){
+        QueryPipeline::PhysicalPlan::IndexState& state,
+        const Expressions::Expression *expression,
+        const int& rowsToSelect
+    ){
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
@@ -329,20 +336,25 @@ namespace Indexing
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
-        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex + 1;
 
         while (currentNode)
         {
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
-            for (int i = startingPosition; i < rows->size(); i++) {
-                auto* row = rows->at(i);
+            for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
+                const auto* row = rows->at(i);
 
-                const auto value = expression->Evaluate(row);
-                if(!value.GetBool())
+                if(!expression->Evaluate(row).GetBool())
                     continue;
 
                 result->push_back(row);
+
+                if (result->size() == rowsToSelect) {
+                    state.lastFetchedKeyIndex = i;
+                    state.pageId = currentNode->GetPageId();
+
+                    return;
+                }
             }
 
             if(currentNode->GetNextPage() == 0) {

@@ -28,7 +28,7 @@ namespace DatabaseEngine::StorageTypes {
         auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-          tree->IndexScan(selectedRows, state, rowsToSelect, expression);
+          tree->IndexScan(selectedRows, state, expression, rowsToSelect);
           return;
         }
 

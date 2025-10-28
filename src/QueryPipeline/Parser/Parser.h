@@ -1,4 +1,5 @@
 #pragma once
+#include "../PhysicalPlan/PhysicalPlan.h"
 #include "../Statements/Statements.h"
 #include <any>
 #include <functional>
@@ -78,6 +79,7 @@ namespace QueryPipeline{
         Parser();
 
         static Statements::Statement* CreateStatement(const std::any &ast, const DataTypes::Guid& sessionId);
+        static void ClearQuery(const Statements::Statement* statement, const LogicalPlan* logicalPlan, const PhysicalPlan::PhysicalOperator* physicalPlan);
 
         public:
             static Parser& Get()

@@ -58,12 +58,12 @@ namespace Server {
     ThreadPool threadPool;
 
     protected:
-      static void SendToClient(const int& clientSocket, ResponseProtocol* protocol);
+      static void SendToClient(const int& clientSocket, Network::ResponseProtocol* protocol);
 
-      void GetQueryFromClient(const int& clientSocket, const ConnectionProtocolHeader& header, const vector<char>& buffer);
-      void AuthorizeClientConnection(const int& clientSocket, const ConnectionProtocolHeader &header, const vector<char>& buffer)const;
+      void GetQueryFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader& header, const vector<char>& buffer);
+      void AuthorizeClientConnection(const int& clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const;
       void HandleClientConnection(const int& clientSocket, mutex& clientMutex);
-      void ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader& header);
+      void ReadBodyFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader& header);
       void CloseServerConnection() const;
       void CloseClientConnection(const int& clientSocket) const;
       void InitializeServerSocket();

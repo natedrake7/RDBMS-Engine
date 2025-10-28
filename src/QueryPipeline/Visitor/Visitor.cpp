@@ -290,7 +290,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     auto* statement = new Statements::CreateUserStatement();
 
     statement->username = context->username->getText();
-    statement->password = context->password->getText();
+    statement->password = Functions::String::RemoveQuotesFromString(context->password->getText());
     statement->role = context->role->getText();
 
     return statement;

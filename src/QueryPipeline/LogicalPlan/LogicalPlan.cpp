@@ -89,7 +89,7 @@ namespace QueryPipeline {
     : LogicalPlan(sessionId), username(std::move(username)), role(std::move(role)) {}
 
   PhysicalPlan::PhysicalOperator * LogicalGrantRole::ToPhysical() {
-    return new PhysicalPlan::PhysicalGrantRole(this->username, this->role);
+    return new PhysicalPlan::PhysicalGrantRole(this->sessionId, this->username, this->role);
   }
 
   LogicalCreateDatabase::LogicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& dbName) : LogicalPlan(sessionId), dbName(std::move(dbName)) {}
@@ -282,8 +282,8 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return new PhysicalPlan::PhysicalOrderBy(this->child->ToPhysical(), this->expressions);
   }
 
-  LogicalTop::LogicalTop(LogicalPlan *child, int64_t &top)
-    : child(child), top(std::move(top)){}
+  LogicalTop::LogicalTop(LogicalPlan *child, const int64_t &top)
+    : child(child), top(top){}
 
   LogicalTop::~LogicalTop() {
     delete this->child;

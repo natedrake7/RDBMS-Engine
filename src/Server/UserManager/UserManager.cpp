@@ -30,9 +30,9 @@ namespace Security {
     if (!this->users.TryGetValue(name, user))
       return nullptr;
 
-    return (crypto_pwhash_str_verify(user->passwordHash.c_str(), password.c_str(), password.size()) == 0)
-      ? user
-      : nullptr;
+    return (crypto_pwhash_str_verify(user->passwordHash.c_str(), password.c_str(), password.length()) == 0)
+        ? user
+        : nullptr;
   }
 
   const User * UserManager::GetUser(const std::string &name)const{

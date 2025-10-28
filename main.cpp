@@ -65,6 +65,7 @@
 
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 
+
 std::atomic<bool> serverRunning{true};
 
 void shutdownServer(int signal) {
@@ -92,6 +93,9 @@ int main()
     //Get table stats
     //SELECT TOP(1) TS.table_id AS ID, T.name AS Name, TS.row_count AS RowCount, TS.avg_record_size AS RowSize FROM masterDb.dbo.sys_table_stats AS TS INNER JOIN masterDb.dbo.sys_tables AS T ON T.table_id = TS.table_id AS TS ORDER BY ID DESC
 
+    //Get user roles
+    //SELECT U.username AS UserName, R.role_name AS RoleName FROM dbo.sys_users AS U INNER JOIN dbo.sys_roles AS R ON R.role_id = U.role_id
+
     RegisterSignalHandlers();
 
     auto& server = Server::ServerInstance::Get();
@@ -99,6 +103,7 @@ int main()
     server.Initialize("configuration.json");
 
     const auto* user = server.Authenticate("admin", "admin");
+    // const auto* user = server.Authenticate("ioanis7", "'kalispera'");
 
     if (user == nullptr) {
         server.Shutdown();

@@ -48,7 +48,13 @@ namespace QueryPipeline::PhysicalPlan{
 
     IndexState() {
       this->pageId = Constants::INVALID_PAGE_ID;
-      this->lastFetchedKeyIndex = -1;
+      this->lastFetchedKeyIndex = Constants::INVALID_PAGE_INDEX_ID;
+    }
+
+    int GetNextKeyIndex()const {
+        return this->lastFetchedKeyIndex == Constants::INVALID_PAGE_INDEX_ID
+          ? 0
+          : this->lastFetchedKeyIndex + 1;
     }
   };
 
@@ -76,7 +82,7 @@ namespace QueryPipeline::PhysicalPlan{
       std::string username;
       std::string roleName;
     public:
-      explicit PhysicalGrantRole(std::string& username, std::string& roleName);
+      explicit PhysicalGrantRole(const DataTypes::Guid& sessionId, std::string& username, std::string& roleName);
       ~PhysicalGrantRole()override = default;
       PhysicalPlanResult* Execute(const int& batchSize)override;
   };

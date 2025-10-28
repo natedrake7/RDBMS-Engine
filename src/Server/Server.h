@@ -20,31 +20,32 @@ namespace DatabaseEngine {
 
 namespace Server {
   enum MasterDbTables: uint8_t {
-    SYSDATABASES = 0,
-    SYSSCHEMAS = 1,
-    SYSTABLES = 2,
-    SYSCOLUMNS = 3,
-    SYSINDEXES = 4,
-    SYSIDENTITYCOLUMNS = 5,
-    SYSINDEXCOLUMNS = 6,
-    SYSCONSTRAINTS = 7,
-    SYSCONSTRAINTCOLUMNS = 8,
-    SYSDEFAULTVALUES = 9,
-    SYSTABLESTATS = 10,
-    SYSCOLUMNSTATS = 11,
-    SYSROLES = 12,
-    SYSUSERS = 13,
+    SysDatabases = 0,
+    SysSchemas = 1,
+    SysTables = 2,
+    SysColumns = 3,
+    SysIndexes = 4,
+    SysIdentityColumns = 5,
+    SysIndexColumns = 6,
+    SysConstraints = 7,
+    SysConstraintColumns = 8,
+    SysDefaultValues = 9,
+    SysTableStats = 10,
+    SysColumnStats = 11,
+    SysRoles = 12,
+    SysUsers = 13,
   };
 
   class ServerInstance {
     std::string sysDbName;
     std::string sysDbPath;
-    vector<Headers::sysTable> sysTables;
+    std::vector<Headers::sysTable> sysTables;
     DatabaseEngine::Database* masterDb;
 
     Dictionary<int32_t, DatabaseEngine::Database*> databases;
 
     Sessions::SessionManager sessionManager;
+
     Security::RoleManager roleManager;
     Security::UserManager userManager;
 
@@ -68,16 +69,18 @@ namespace Server {
     [[nodiscard]]Errors::ResultStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
     bool UserExists(const std::string& userName)const;
     bool CreateUser(const std::string& userName, const std::string& password, const std::string& roleName);
-    [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password);
+    [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
 
     bool RoleExists(const std::string& role)const;
     const Security::Role* GetRole(const std::string& roleName)const;
 
     //Session Functions
     [[nodiscard]] const Network::Session* CreateSession(const Security::User* user);
-    [[nodiscard]] const Network::Session* GetSession(const DataTypes::Guid& key);
+    [[nodiscard]] const Network::Session* GetSession(const DataTypes::Guid& key)const;
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& key);
-    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const int32_t& databaseId);
+    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const int32_t& databaseId)const;
+    [[nodiscard]] QueryPipeline::Cursor* CreateCursor(const DataTypes::Guid &id, QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan)const;
+    [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id)const;
 
     //MasterDB Insert Functions
     [[nodiscard]] Errors::ResultStatus InsertDbToMasterDb(

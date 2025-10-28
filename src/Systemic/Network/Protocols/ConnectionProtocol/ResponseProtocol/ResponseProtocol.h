@@ -1,4 +1,6 @@
 #pragma once
+#include "../ConnectionHeader.h"
+#include "../../../../../Database/Block/Block.h"
 #include "../ConnectionProtocol/ConnectionProtocol.h"
 
 #include <string>
@@ -16,29 +18,36 @@ enum ResponseType : uint8_t {
 static string authorizationSuccess = "Successfully Authenticated";
 static string authorizationFailure = "Failed to authenticate";
 
-typedef struct ResponseProtocolHeader{
-  uint16_t size;
-  ResponseType statusCode;
+namespace Network {
+  struct ResponseProtocolHeader final : Network::ConnectionHeader{
+    uint16_t size;
+    ResponseType statusCode;
+    DataTypes::Guid sessionId;
 
-  ResponseProtocolHeader() : size(0), statusCode(ResponseType::InvalidResponse) {}
-  ~ResponseProtocolHeader() = default;
-  [[nodiscard]] static int GetSize()  { return sizeof(uint16_t) + sizeof(ResponseType); }
-}ResponseProtocolHeader;
+    ResponseProtocolHeader() : size(0), statusCode(ResponseType::InvalidResponse), sessionId(DataTypes::Guid::Empty()) {}
+    ~ResponseProtocolHeader()override = default;
 
-class ResponseProtocol {
-  protected:
-    ResponseProtocolHeader header;
-    vector<char> buffer;
+    void Serialize(std::vector<char> &data) override;
+    void Deserialize(const std::vector<char> &data) override;
+    [[nodiscard]] constexpr static int GetSize()  { return static_cast<int>(ConnectionHeader::Size() + sizeof(ResponseType));}
+  };
 
-  public:
-    explicit ResponseProtocol() = default;
-    explicit ResponseProtocol(const ResponseProtocolHeader &header): header(header) {}
-    explicit ResponseProtocol(const ResponseType& statusCode);
-    virtual ~ResponseProtocol() = default;
-    [[nodiscard]] virtual int GetSize() const;
-    virtual void Serialize();
-    virtual void Deserialize(const vector<char>& buffer);
-    virtual void DeserializeBody(const vector<char>& buffer);
-    virtual const vector<char>& GetSerializedProtocol();
-    [[nodiscard]] const ResponseType& GetResponseType() const;
-};
+  class ResponseProtocol{
+    protected:
+      ResponseProtocolHeader header;
+      vector<char> buffer;
+
+    public:
+      explicit ResponseProtocol() = default;
+      explicit ResponseProtocol(const ResponseProtocolHeader &header): header(header) {}
+      explicit ResponseProtocol(const ResponseType& statusCode, const DataTypes::Guid& sessionId);
+      virtual ~ResponseProtocol() = default;
+      [[nodiscard]] virtual int GetSize() const;
+      virtual void Serialize();
+      virtual void Deserialize(const vector<char>& responseBuffer);
+      virtual void DeserializeBody(const vector<char>& buffer);
+      virtual const vector<char>& GetSerializedProtocol();
+      [[nodiscard]] const ResponseType& GetResponseType() const;
+  };
+
+}

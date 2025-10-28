@@ -43,8 +43,8 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-  PhysicalGrantRole::PhysicalGrantRole(std::string &username, std::string &roleName)
-    : username(std::move(username)), roleName(std::move(roleName)) {}
+  PhysicalGrantRole::PhysicalGrantRole(const DataTypes::Guid& sessionId, std::string &username, std::string &roleName)
+    : PhysicalOperator(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
 
   PhysicalPlanResult * PhysicalGrantRole::Execute(const int &batchSize) {
     auto* result = new PhysicalPlanResult();
@@ -165,11 +165,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     result->columns = tablePtr->GetConstantColumns();
 
     if (this->isClustered) {
-      tablePtr->ClusteredIndexScan(&result->rows, state, batchSize, this->expression);
+      tablePtr->ClusteredIndexScan(&result->rows, this->state, batchSize, this->expression);
       return result;
     }
 
-    tablePtr->NonClusteredIndexScan(&result->rows, 0, state, batchSize, this->expression);
+    tablePtr->NonClusteredIndexScan(&result->rows, 0, this->state, batchSize, this->expression);
 
     return result;
   }

@@ -116,7 +116,7 @@ namespace QueryPipeline {
       explicit LogicalOrder(
         LogicalPlan* child,
         std::vector<Statements::OrderColumn*>& expressions
-        );
+      );
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
@@ -125,7 +125,7 @@ namespace QueryPipeline {
       LogicalPlan* child;
       int64_t top;
 
-      explicit LogicalTop(LogicalPlan* child, int64_t& top);
+      explicit LogicalTop(LogicalPlan* child, const int64_t& top);
       ~LogicalTop() override;
       PhysicalPlan::PhysicalTop* ToPhysical()override;
   };

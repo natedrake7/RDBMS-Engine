@@ -37,6 +37,12 @@ namespace QueryPipeline
         return statement;
     }
 
+    void Parser::ClearQuery(const Statements::Statement *statement, const LogicalPlan *logicalPlan, const PhysicalPlan::PhysicalOperator *physicalPlan) {
+        delete statement;
+        delete logicalPlan;
+        delete physicalPlan;
+    }
+
     Parser::~Parser() = default;
 
     void Parser::Parse(const string& query, const DataTypes::Guid& sessionId){
@@ -69,62 +75,49 @@ namespace QueryPipeline
         }
         catch (const exception& e) {
             std::cerr << "Parser exception: " << e.what() << std::endl;
-            delete statement;
+            Parser::ClearQuery(statement, nullptr, nullptr);
             return;
         }
 
-        if (statement == nullptr
-            || !statement->ValidateStatement()) {
-            delete statement;
+        if (statement == nullptr || !statement->ValidateStatement()) {
+            Parser::ClearQuery(statement, nullptr, nullptr);
             return;
         }
 
-        LogicalPlan* logicalPlan = statement->ToLogical();
+        auto* logicalPlan = statement->ToLogical();
         
-        if (logicalPlan == nullptr)
+        if (logicalPlan == nullptr) {
+            Parser::ClearQuery(statement, logicalPlan, nullptr);
             return;
+        }
 
-        PhysicalPlan::PhysicalOperator* physicalPlan = logicalPlan->ToPhysical();
+        auto* physicalPlan = logicalPlan->ToPhysical();
 
         if(physicalPlan == nullptr){
-          delete statement;
-          delete logicalPlan;
-          delete physicalPlan;
-          return;
+            Parser::ClearQuery(statement, logicalPlan, physicalPlan);
+            return;
         }
-
-        Cursor cursor(0, physicalPlan, 1000);
 
         PhysicalPlan::PhysicalPlanResult* result = nullptr;
 
-        while (cursor.hasMore()) {
-            result = cursor.fetchNextBatch();
+        const auto& server = Server::ServerInstance::Get();
+
+        auto* cursor = server.CreateCursor(sessionId, physicalPlan);
+
+        while (cursor->hasMore()) {
+            result = cursor->fetchNextBatch();
 
             if (result == nullptr) {
-                delete result;
-                delete statement;
-                delete logicalPlan;
+                Parser::ClearQuery(statement, logicalPlan, physicalPlan);
                 return;
             }
 
             if (result->code != Errors::ResultCode::Ok) {
                 std::cerr << result->message << std::endl;
 
-                delete result;
-                delete statement;
-                delete logicalPlan;
+                Parser::ClearQuery(statement, logicalPlan, physicalPlan);
                 return;
             }
-
-            // if (!result->rows.empty()) {
-            //     for (const auto& block : result->rows.begin()->GetData()) {
-            //         const auto* column = block->GetColumn();
-            //
-            //         std::cout << column->GetColumnName() << " || ";
-            //     }
-            //
-            //     std::cout << std::endl;
-            // }
 
             for (const auto& column : result->displayColumnNames)
                 std::cout << column << " || ";
@@ -135,8 +128,7 @@ namespace QueryPipeline
                 row.Print();
         }
 
-        delete result;
-        delete statement;
-        delete logicalPlan;
+        const auto _ = server.CloseCursor(sessionId);
+        Parser::ClearQuery(statement, logicalPlan, physicalPlan);
     }
 }

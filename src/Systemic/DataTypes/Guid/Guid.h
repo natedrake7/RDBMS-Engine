@@ -7,7 +7,7 @@ namespace DataTypes {
   constexpr int GUID_SIZE = 16;
 
   class Guid {
-    std::array<uint8_t, GUID_SIZE> data;
+    std::array<uint8_t, GUID_SIZE> data{};
 
     public:
       Guid();
@@ -15,6 +15,7 @@ namespace DataTypes {
       explicit Guid(const std::array<uint8_t, GUID_SIZE>& data);
       ~Guid();
       [[nodiscard]] int Size() const;
+      [[nodiscard]] std::array<uint8_t, GUID_SIZE>& GetDataUnsafe();
       [[nodiscard]] const std::array<uint8_t, GUID_SIZE>& GetData() const;
 
       [[nodiscard]] std::string ToString() const;
@@ -23,11 +24,10 @@ namespace DataTypes {
 
       friend std::ostream& operator<<(std::ostream& os, const Guid& guid);
       static Guid NewGuid();
+      static Guid Empty();
       static Guid FromString(const std::string& str);
-      static int GuidSize();
+      constexpr static int GuidSize() { return GUID_SIZE; };
   };
-
-
 
   bool operator==(const Guid& guid1, const Guid& guid2);
   bool operator!=(const Guid& guid1, const Guid& guid2);

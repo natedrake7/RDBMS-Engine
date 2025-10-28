@@ -61,7 +61,6 @@ add_library(Systemic SHARED
         src/Systemic/Network/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h
         src/Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.cpp
         src/Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h
-        src/Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h
         src/Systemic/Network/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.cpp
         src/Systemic/Network/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h
         src/Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.cpp
@@ -88,6 +87,7 @@ add_library(Systemic SHARED
         src/Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h
         src/Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.cpp
         src/Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h
+        src/Systemic/Network/Protocols/ConnectionProtocol/ConnectionHeader.h
 
 )
 

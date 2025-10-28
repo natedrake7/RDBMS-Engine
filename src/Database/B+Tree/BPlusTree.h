@@ -80,14 +80,16 @@ namespace Indexing
 
         void IndexScan(
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-            const QueryPipeline::PhysicalPlan::IndexState& state,
-            const int& rowsToSelect);
+            QueryPipeline::PhysicalPlan::IndexState& state,
+            const int& rowsToSelect = -1
+        );
 
         void IndexScan(
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-            const QueryPipeline::PhysicalPlan::IndexState& state,
-            const int& rowsToSelect,
-            const Expressions::Expression* expression);
+            QueryPipeline::PhysicalPlan::IndexState& state,
+            const Expressions::Expression* expression,
+            const int& rowsToSelect = -1
+        );
 
         void IndexScan(
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,

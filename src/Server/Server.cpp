@@ -269,7 +269,7 @@ namespace Server {
     return this->userManager.AddUser(result.primaryKey.GetKeyAsInt(), userName, hashedPassword, role);
   }
 
-  const Security::User * ServerInstance::Authenticate(const std::string &username, const std::string &password){
+  const Security::User * ServerInstance::Authenticate(const std::string &username, const std::string &password)const{
     return this->userManager.Authenticate(username, password);
   }
 
@@ -285,7 +285,7 @@ namespace Server {
     return this->sessionManager.CreateSession(user);
   }
 
-  const Network::Session * ServerInstance::GetSession(const DataTypes::Guid &key){
+  const Network::Session * ServerInstance::GetSession(const DataTypes::Guid &key)const{
     return this->sessionManager.GetSession(key);
   }
 
@@ -293,8 +293,16 @@ namespace Server {
     return this->sessionManager.CloseSession(key);
   }
 
-  bool ServerInstance::UpdateSession(const DataTypes::Guid &key, const int32_t &databaseId){
+  bool ServerInstance::UpdateSession(const DataTypes::Guid &key, const int32_t &databaseId)const{
     return this->sessionManager.UpdateSession(key, databaseId);
+  }
+
+  QueryPipeline::Cursor * ServerInstance::CreateCursor(const DataTypes::Guid &id, QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan) const {
+    return this->sessionManager.CreateCursor(id, physicalPlan);
+  }
+
+  bool ServerInstance::CloseCursor(const DataTypes::Guid &id) const {
+    return this->sessionManager.CloseCursor(id);
   }
 
   DatabaseEngine::Database * ServerInstance::GetMasterDb()const{ return this->masterDb; }
@@ -355,7 +363,7 @@ namespace Server {
     const string& user,
     const int& version,
     const bool& isDeleted) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
 
       const auto currentDate = DataTypes::DateTime::Now();
 
@@ -386,7 +394,7 @@ namespace Server {
     const string &user,
     const int& version,
     const bool& isDeleted) const{
-     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
      const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Value> fields = {
@@ -419,7 +427,7 @@ namespace Server {
     const int& version,
     const bool& isDeleted) const{
 
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysTables);
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Value> fields = {
@@ -458,7 +466,7 @@ namespace Server {
     const string& user,
     const int& version,
     const bool& isDeleted) const{
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysColumns);
       const auto currentDate = DataTypes::DateTime::Now();
 
       vector<Value> fields = {
@@ -501,7 +509,7 @@ namespace Server {
     const string &user,
     const int& version,
     const bool& isDeleted) const{
-     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
+     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
      const auto currentDate = DataTypes::DateTime::Now();
 
      const vector<Value> fields = {
@@ -533,7 +541,7 @@ namespace Server {
     const bool & isIncluded,
     const int& version,
     const bool& isDeleted) const{
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSINDEXCOLUMNS);
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysIndexColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const vector<Value> fields = {
@@ -566,7 +574,7 @@ namespace Server {
       const int& version,
       const bool& isDeleted) const{
 
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Value> fields = {
@@ -597,7 +605,7 @@ namespace Server {
     const int &version,
     const bool &isDeleted) const{
 
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSDEFAULTVALUES);
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysDefaultValues);
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Value> fields = {
@@ -625,7 +633,7 @@ namespace Server {
     const bool &isDeleted
   ) const{
 
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysTableStats);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const std::string lastModifiedBy = "system";
@@ -659,7 +667,7 @@ namespace Server {
     const bool &isDeleted
   ) const{
 
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysColumnStats);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const std::string lastModifiedBy = "system";
@@ -693,7 +701,7 @@ namespace Server {
     const bool& isSystem,
     const int &version,
     const bool &isDeleted) const{
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSROLES);
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysRoles);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const std::string lastModifiedBy = "system";
@@ -728,7 +736,7 @@ namespace Server {
     const bool &isDeleted
   ) const{
 
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSUSERS);
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const std::string lastModifiedBy = "system";
@@ -760,7 +768,7 @@ namespace Server {
     const int32_t &userId,
     const int32_t &roleId
   )const{
-    auto* table = this->masterDb->OpenTable(MasterDbTables::SYSUSERS);
+    auto* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
 
     const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
 
@@ -794,7 +802,7 @@ namespace Server {
       const int& version,
       const bool& isDeleted) const{
 
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
       const auto currentDate = DataTypes::DateTime::Now();
 
       vector<Value> fields = {
@@ -830,7 +838,7 @@ namespace Server {
     const int& version,
     const bool& isDeleted) const{
 
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTCOLUMNS);
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraintColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const vector<Value> fields = {
@@ -854,7 +862,7 @@ namespace Server {
   bool ServerInstance::DatabaseExists(const string &dbName) const{
       using namespace DatabaseEngine::StorageTypes;
 
-      Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
+      Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
       std::vector<const Row*> selectedDatabases;
 
       DataTypes::Indexing::Key key;
@@ -873,7 +881,7 @@ namespace Server {
   vector<Headers::DatabaseHeader> ServerInstance::GetCatalog() const{
      using namespace DatabaseEngine::StorageTypes;
 
-     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
+     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
 
      std::vector<const Row*> selectedDatabases;
 
@@ -946,7 +954,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::EqualIgnoreOrdinalCase);
 
-    Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
+    Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
     std::vector<const Row*> selectedDatabases;
 
     sysDatabases->ClusteredIndexScan(&selectedDatabases, &binaryExpr);
@@ -967,7 +975,7 @@ namespace Server {
   Headers::DatabaseHeader ServerInstance::SelectDatabaseById(const int32_t & databaseId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SYSDATABASES);
+    Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
     std::vector<const Row*> selectedDatabases;
 
     DataTypes::Indexing::Key key;
@@ -991,7 +999,7 @@ namespace Server {
   vector<Headers::SchemaHeader> ServerInstance::SelectSchemas(const int32_t& databaseId) const{
      using namespace DatabaseEngine::StorageTypes;
 
-     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
+     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
      std::vector<const Row*> selectedSchemas;
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
@@ -1048,7 +1056,7 @@ namespace Server {
     //
     // const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
-    Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SYSSCHEMAS);
+    Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
     std::vector<const Row*> selectedSchemas;
 
     sysSchemas->ClusteredIndexScan(&selectedSchemas, &binaryExpr);
@@ -1076,7 +1084,7 @@ namespace Server {
 
     std::vector<const Row*> selectedTables;
 
-    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
+    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
     sysTablesPtr->ClusteredIndexScan(&selectedTables, &binaryExpr);
 
@@ -1123,7 +1131,7 @@ namespace Server {
 
     std::vector<const Row*> selectedTables;
 
-    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
+    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
     sysTablesPtr->ClusteredIndexScan(&selectedTables, &binaryExpr);
 
@@ -1175,7 +1183,7 @@ namespace Server {
       return {};
 
     std::vector<const Row*> selectedTables;
-    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SYSTABLES);
+    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
     auto* leftColumnOperation = new Expressions::ColumnExpression(1);
     auto* leftLiteraValue = new Expressions::LiteralExpression(Value(databaseId, 1));
@@ -1213,7 +1221,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     std::vector<const Row*> selectedColumns;
-    Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
+    Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SysColumns);
 
     auto* leftColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumns::TableId));
     auto* leftLiteraValue = new Expressions::LiteralExpression(Value(tableId, static_cast<column_index_t>(SysColumns::TableId)));
@@ -1281,7 +1289,7 @@ namespace Server {
     using namespace DatabaseEngine::StorageTypes;
 
     std::vector<const Row*> selectedConstraints;
-    Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTS);
+    Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
 
     auto* columnOperation = new Expressions::ColumnExpression(1);
     auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
@@ -1345,7 +1353,7 @@ namespace Server {
   vector<Headers::ConstraintsColumnsHeader> ServerInstance::SelectConstraintColumnsByConstraintId(const int32_t & constraintId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSCONSTRAINTCOLUMNS);
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysConstraintColumns);
     std::vector<const Row*> rows;
 
     DataTypes::Indexing::Key key;
@@ -1400,7 +1408,7 @@ namespace Server {
   Headers::DefaultValuesHeader ServerInstance::SelectDefaultValueByColumnId(const int32_t &columnId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysValues = this->masterDb->OpenTable(MasterDbTables::SYSDEFAULTVALUES);
+    Table* sysValues = this->masterDb->OpenTable(MasterDbTables::SysDefaultValues);
     std::vector<const Row*> rows;
 
     DataTypes::Indexing::Key key;
@@ -1429,7 +1437,7 @@ namespace Server {
   Headers::TableStatistics ServerInstance::SelectTableStatisticsById(const int32_t &tableId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysTableStats);
     std::vector<const Row*> selectedStats;
 
     auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTableStats::TableId));
@@ -1467,7 +1475,7 @@ namespace Server {
   ) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysColumnStats);
     std::vector<const Row*> selectedStats;
 
     auto* columnOperation = new Expressions::ColumnExpression(0);
@@ -1515,7 +1523,7 @@ namespace Server {
     vector<Headers::IndexHeader> ServerInstance::SelectIndexes(const int32_t& tableId) const{
       using namespace DatabaseEngine::StorageTypes;
 
-      Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
+      Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
       std::vector<const Row*> selectedIndexes;
 
       auto* columnOperation = new Expressions::ColumnExpression(1);
@@ -1562,7 +1570,7 @@ namespace Server {
   Headers::IndexHeader ServerInstance::SelectIndexById(const int32_t & indexId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXES);
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
     std::vector<const Row*> selectedIndexes;
 
     DataTypes::Indexing::Key key;
@@ -1602,7 +1610,7 @@ namespace Server {
   vector<Headers::IndexColumnsHeader> ServerInstance::SelectIndexColumnsByIndexId(const int32_t & indexId) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SYSINDEXCOLUMNS);
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexColumns);
     std::vector<const Row*> rows;
 
     DataTypes::Indexing::Key key;
@@ -1657,7 +1665,7 @@ namespace Server {
   vector<Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableId(const int32_t & tableId) const{
       using namespace DatabaseEngine::StorageTypes;
 
-      Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
+      Table* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
       std::vector<const Row*> rows;
 
       DataTypes::Indexing::Key key;
@@ -1707,7 +1715,7 @@ namespace Server {
 
     std::vector<Security::Role> roles;
 
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSROLES);
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SysRoles);
 
     table->ClusteredIndexScan(&rows);
 
@@ -1731,7 +1739,7 @@ namespace Server {
 
     std::vector<Security::User> users;
 
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSUSERS);
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
 
     table->ClusteredIndexScan(&rows);
 
@@ -1851,7 +1859,7 @@ namespace Server {
   void ServerInstance::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSIDENTITYCOLUMNS);
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
 
     const vector<Value> updates{
       Value(lastValue, 4)
@@ -1884,7 +1892,7 @@ namespace Server {
       Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize))
     };
 
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSTABLESTATS);
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SysTableStats);
 
     auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTableStats::TableId));
     auto* literaValue = new Expressions::LiteralExpression(Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)));
@@ -1910,7 +1918,7 @@ namespace Server {
       Value(std::string(reinterpret_cast<const char*>(max.GetRawData()), max.GetSize()), static_cast<column_index_t>(SysColumnStats::MaxmimumValue))
     };
 
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNSTATS);
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SysColumnStats);
 
     auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumnStats::ColumnId));
     auto* literaValue = new Expressions::LiteralExpression(Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)));
@@ -1923,7 +1931,7 @@ namespace Server {
   Errors::ResultStatus ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
     using namespace DatabaseEngine::StorageTypes;
 
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SysColumns);
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));

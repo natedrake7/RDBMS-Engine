@@ -514,7 +514,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScanDelete(
       const Expressions::Expression *expression,
-      const QueryPipeline::PhysicalPlan::IndexState& state,
+      QueryPipeline::PhysicalPlan::IndexState& state,
       const int& batchSize){
         auto* tree = this->GetClusteredIndexedTree();
 
@@ -1531,9 +1531,10 @@ namespace DatabaseEngine::StorageTypes {
   }
 
   void Table::RemoveColumn(const Constants::column_index_t &index){
-
     //add also last updated at deleted at etc...
     const auto* removedColumn = this->columns.at(index);
+
+    const auto& server = Server::ServerInstance::Get();
 
     //schema adjustments in master db change this as well
     const std::vector<Value> removedColumnUpdates = {
@@ -1542,7 +1543,7 @@ namespace DatabaseEngine::StorageTypes {
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::DeletedAt)),
     };
 
-    Server::ServerInstance::Get().UpdateColumnById(removedColumn->GetColumnId(), removedColumnUpdates);
+    auto result = server.UpdateColumnById(removedColumn->GetColumnId(), removedColumnUpdates);
 
     this->HandleRemoveColumn(removedColumn->GetColumnIndex());
     this->columns.erase(this->columns.begin() + index);
@@ -1557,7 +1558,7 @@ namespace DatabaseEngine::StorageTypes {
       };
 
       //adjust in master db
-      Server::ServerInstance::Get().UpdateColumnById(column->GetColumnId(), updates);
+      result = server.UpdateColumnById(column->GetColumnId(), updates);
     }
 
     //adjust rows by heap or clustered

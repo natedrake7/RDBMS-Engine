@@ -3,24 +3,24 @@
 
 #include "../ConnectionProtocol/ConnectionProtocol.h"
 
-using namespace std;
+namespace Network {
+  class AuthorizeProtocol final : public ConnectionProtocol{
+    std::string username;
+    std::string password;
 
-class AuthorizeProtocol final : public ConnectionProtocol{
-  string username;
-  string password;
+    public:
+      AuthorizeProtocol() = default;
+      explicit AuthorizeProtocol(const ConnectionProtocolHeader& header): ConnectionProtocol(header){}
+      AuthorizeProtocol(const std::string& username, const std::string& password);
+      explicit AuthorizeProtocol(const std::vector<char>& buffer);
 
-  public:
-    AuthorizeProtocol() = default;
-    explicit AuthorizeProtocol(const ConnectionProtocolHeader& header): ConnectionProtocol(header){}
-    AuthorizeProtocol(const string& username, const string& password);
-    explicit AuthorizeProtocol(const vector<char>& buffer);
-    
-    ~AuthorizeProtocol() override = default;
-    
-    [[nodiscard]] int GetSize() const override;
-    void Serialize() override;
-    void Deserialize(const vector<char>& buffer) override;
+      ~AuthorizeProtocol() override = default;
 
-    [[nodiscard]] const string& GetUsername() const;
-    [[nodiscard]] const string& GetPassword() const;
-};
+      [[nodiscard]] int GetSize() const override;
+      void Serialize() override;
+      void Deserialize(const std::vector<char>& buffer) override;
+
+      [[nodiscard]] const std::string& GetUsername() const;
+      [[nodiscard]] const std::string& GetPassword() const;
+  };
+}

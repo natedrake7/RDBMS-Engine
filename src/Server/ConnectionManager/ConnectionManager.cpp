@@ -1,7 +1,8 @@
 #include "ConnectionManager.h"
 
+#include "../Server.h"
+#include "../../QueryPipeline/Parser/Parser.h"
 #include "../../Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
-#include "../../Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
 #include "../../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
 #include "../../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
 #include "../Threadpool/ThreadPool.h"
@@ -233,83 +234,89 @@ void ConnectionManager::CloseServerConnection() const
   }
 
   void ConnectionManager::HandleClientConnection(const int &clientSocket, mutex& clientMutex){
+    std::unique_lock<std::mutex> clientLock(clientMutex);
 
-    clientMutex.lock();
-    
-    ConnectionProtocolHeader header;
-    const auto headerBytesRead = recv(clientSocket, reinterpret_cast<char*>(&header), sizeof(ConnectionProtocolHeader), 0);
+    Network::ConnectionProtocolHeader header;
+    const auto headerBytesRead = recv(clientSocket, &header, Network::ConnectionProtocolHeader::GetSize(), 0);
 
     if (headerBytesRead > 0) {
       this->ReadBodyFromClient(clientSocket, header);
-      clientMutex.unlock();
       return;
     }
     
     if (headerBytesRead == 0) {
       this->CloseClientConnection(clientSocket);
-      clientMutex.unlock();
       return;
     }
     
-    clientMutex.unlock();
     perror("recv failed");
   }
 
-  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const ConnectionProtocolHeader &header){
+  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader &header){
     vector<char> buffer(header.size);
     
     if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
       perror("failed to read body from client or body was empty!");
       return;
     }
-    
-    if (header.dataType == ConnectionProtocolType::Authorize) {
-      this->AuthorizeClientConnection(clientSocket, header, buffer);
-      return;
-    }
-    
-    if (header.dataType == ConnectionProtocolType::Query) {
-      this->GetQueryFromClient(clientSocket, header, buffer);
-      return;
-    }
 
+    switch (header.type) {
+      case Network::Authorize:
+        this->AuthorizeClientConnection(clientSocket, header, buffer);
+        return;
+      case Network::Query:
+        this->GetQueryFromClient(clientSocket, header, buffer);
+        return;
+      case Network::Invalid:
+      default:
+        break;
+    }
+    
     //invalid request type
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<char>& buffer) const{
-    AuthorizeProtocol protocol(header);
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer) const{
+    Network::AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
+    auto& server = Server::ServerInstance::Get();
 
-    if (protocol.GetUsername() == "natedrake7" && protocol.GetPassword() == "kalispera") {
-      AuthorizeResponseProtocol responseProtocol(ResponseType::Authenticated);
+    const auto* user = server.Authenticate(protocol.GetUsername(), protocol.GetPassword());
+
+    const auto* newSession = server.CreateSession(user);
+
+    if (user != nullptr) {
+      Network::ResponseProtocol responseProtocol(ResponseType::Authenticated, newSession->sessionId);
       
       ConnectionManager::SendToClient(clientSocket, &responseProtocol);
     }
     else {
-      AuthorizeResponseProtocol responseProtocol(ResponseType::InvalidCredentials);
+      Network::ResponseProtocol responseProtocol(ResponseType::InvalidCredentials, DataTypes::Guid::Empty());
       ConnectionManager::SendToClient(clientSocket, &responseProtocol);
 
       this->CloseClientConnection(clientSocket);
     }
 }
 
-void ConnectionManager::GetQueryFromClient(const int &clientSocket, const ConnectionProtocolHeader &header, const vector<char> &buffer){
-    QueryProtocol protocol(header);
+void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char> &buffer){
+    Network::QueryProtocol protocol(header);
 
     protocol.Deserialize(buffer);
 
-    this->threadPool.Enqueue([query = protocol.GetQuery(), clientSocket] {
+    this->threadPool.Enqueue([query = protocol.GetQuery(), clientSocket, header] {
+
+      QueryPipeline::Parser::Parse(query, header.sessionId);
+
       const vector<string> columns = {
         {"1"},
         {"2"},
         {"3"}
       };
 
-      const vector<ResponseRow> rows = {
-        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 1)),
-        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
-        ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+      const vector<Network::ResponseRow> rows = {
+        Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 1)),
+        Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+        Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
       };
 
       const vector<string> tableColumns = {
@@ -318,13 +325,13 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Connec
         {"result"}
       };
       
-      QueryResponseProtocol response(tableColumns, rows);
+      Network::QueryResponseProtocol response(tableColumns, rows);
       
       ConnectionManager::SendToClient(clientSocket, &response);
     });
 }
 
-void ConnectionManager::SendToClient(const int &clientSocket, ResponseProtocol *protocol){
+void ConnectionManager::SendToClient(const int &clientSocket, Network::ResponseProtocol *protocol){
     if (protocol == nullptr)
       return;
 

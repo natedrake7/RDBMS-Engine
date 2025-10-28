@@ -232,13 +232,11 @@ namespace DatabaseEngine::StorageTypes
 
             void HeapScan(std::vector<const Row*> *result, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const;
 
-            void SelectForJoin(vector<Row> &selectedRows, const vector<column_index_t>& selectedColumnIndices, const vector<Block> *conditions = nullptr, const size_t &count = -1);
-
             void HeapDelete(const Expressions::Expression* expression) const;
 
             void ClusteredIndexScanDelete(
                 const Expressions::Expression* expression,
-                const QueryPipeline::PhysicalPlan::IndexState& state,
+                QueryPipeline::PhysicalPlan::IndexState& state,
                 const int& batchSize);
 
             void ClusteredIndexSeekDelete(

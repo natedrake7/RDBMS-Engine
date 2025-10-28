@@ -9,7 +9,9 @@
 #include <sstream>
 
 namespace DataTypes {
-  Guid::Guid() = default;
+  Guid::Guid() {
+    this->data = std::array<uint8_t, GUID_SIZE>{0};
+  }
 
   Guid::Guid(const unsigned char *data, const int &size){
     memcpy(this->data.data(), data, size);
@@ -21,7 +23,9 @@ namespace DataTypes {
 
   int Guid::Size() const{ return static_cast<int>(this->data.size()); }
 
-  const std::array<uint8_t, 16>& Guid::GetData() const{ return this->data; }
+  std::array<uint8_t, GUID_SIZE>& Guid::GetDataUnsafe(){ return this->data; }
+
+  const std::array<uint8_t, GUID_SIZE> & Guid::GetData() const{ return this->data; }
 
   std::string Guid::ToString() const{
     std::ostringstream oss;
@@ -113,6 +117,13 @@ namespace DataTypes {
     return Guid(data);
   }
 
+  Guid Guid::Empty() {
+    static Guid Empty;
+
+    return Empty;
+  }
+
+
   Guid Guid::FromString(const std::string &str){
     std::string hex_str;
     hex_str.reserve(32);
@@ -131,7 +142,4 @@ namespace DataTypes {
 
     return Guid(data);
   }
-
-  int Guid::GuidSize(){ return GUID_SIZE;}
-
 }

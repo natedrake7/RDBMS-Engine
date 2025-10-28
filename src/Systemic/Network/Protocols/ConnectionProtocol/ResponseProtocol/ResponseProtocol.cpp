@@ -1,46 +1,54 @@
 #include "ResponseProtocol.h"
 #include <cstring>
 
-ResponseProtocol::ResponseProtocol(const ResponseType &statusCode){
-  this->header.statusCode = statusCode;
-  this->header.size = 0;
+namespace Network {
+  ResponseProtocol::ResponseProtocol(const ResponseType& statusCode, const DataTypes::Guid& sessionId){
+    this->header.statusCode = statusCode;
+    this->header.sessionId = sessionId;
+    this->header.size = 0;
+  }
+
+  void ResponseProtocolHeader::Serialize(std::vector<char> &data){
+      data.resize(ResponseProtocolHeader::GetSize());
+
+      ConnectionHeader::Serialize(data);
+
+
+    memcpy(data.data() + ConnectionHeader::Size(), &this->statusCode, sizeof(ResponseType));
+  }
+
+  void ResponseProtocolHeader::Deserialize(const std::vector<char> &data){
+    ConnectionHeader::Deserialize(data);
+
+    memcpy(&this->statusCode, data.data() + ConnectionHeader::Size(), sizeof(ResponseType));
+  }
+
+  int ResponseProtocol::GetSize() const{ return  ResponseProtocolHeader::GetSize(); }
+
+  void ResponseProtocol::Serialize(){
+    this->header.Serialize(this->buffer);
+  }
+
+  void ResponseProtocol::Deserialize(const vector<char> &responseBuffer){
+    const char* bufferPtr = responseBuffer.data();
+
+    this->header.Deserialize(responseBuffer);
+
+    bufferPtr += ResponseProtocolHeader::GetSize();
+
+    int messageSize = 0;
+    memcpy(&messageSize, bufferPtr, sizeof(int));
+    bufferPtr += sizeof(int);
+  }
+
+  void ResponseProtocol::DeserializeBody(const vector<char> &buffer){}
+
+  const vector<char> & ResponseProtocol::GetSerializedProtocol(){
+    if (this->buffer.empty())
+      this->Serialize();
+
+    return this->buffer;
+  }
+
+  const ResponseType & ResponseProtocol::GetResponseType() const{ return this->header.statusCode; }
 }
-
-int ResponseProtocol::GetSize() const{ return  ResponseProtocolHeader::GetSize(); }
-
-void ResponseProtocol::Serialize(){
-  this->buffer.resize(this->GetSize());
-
-  char* bufferPtr = this->buffer.data();
-
-  memcpy(bufferPtr, &this->header.size, sizeof(uint16_t));
-  bufferPtr += sizeof(uint16_t);
-
-  memcpy(bufferPtr, &this->header.statusCode, sizeof(ResponseType));
-  bufferPtr += sizeof(ResponseType);
-}
-
-void ResponseProtocol::Deserialize(const vector<char> &buffer){
-  const char* bufferPtr = buffer.data();
-
-  memcpy(&this->header.size, bufferPtr, sizeof(uint16_t));
-  bufferPtr += sizeof(uint16_t);
-
-  memcpy(&this->header.statusCode, bufferPtr, sizeof(ResponseType));
-  bufferPtr += sizeof(ResponseType);
-
-  int messageSize = 0;
-  memcpy(&messageSize, bufferPtr, sizeof(int));
-  bufferPtr += sizeof(int);
-}
-
-void ResponseProtocol::DeserializeBody(const vector<char> &buffer){}
-
-const vector<char> & ResponseProtocol::GetSerializedProtocol(){
-  if (this->buffer.empty())
-    this->Serialize();
-
-  return this->buffer;
-}
-
-const ResponseType & ResponseProtocol::GetResponseType() const{ return this->header.statusCode; }
