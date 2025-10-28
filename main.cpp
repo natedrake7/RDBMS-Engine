@@ -58,6 +58,7 @@
 //make identity BIGINT by default and downcast to int
 //add GRANT REVOKE statements to admin user and update user permission based on given roles
 //Lock masterdb to now allow select nor updates and access it through views only
+//queryResponseProtocol returns an std:vector<QueryResult> which is internally std::vector<Value> so serialize that and delete ResponseRow (easy)
 
 //SECURITY COMMANDS
 //CREATE USER alice WITH PASSWORD 'secret';
