@@ -17,7 +17,8 @@ namespace Errors {
     InvalidColumn = 9,
     DuplicateKey = 10,
     ColumnSizeExceeded = 11,
-    Overflow = 12
+    Overflow = 12,
+    InvalidSession = 13,
   };
 
   struct ResultStatus {

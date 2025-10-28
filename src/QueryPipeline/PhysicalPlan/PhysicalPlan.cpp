@@ -13,13 +13,21 @@ namespace QueryPipeline::PhysicalPlan {
     this->code = Errors::ResultCode::Ok;
   }
 
+  PhysicalPlanResult::PhysicalPlanResult(const Errors::ResultCode &code, const std::string &message) {
+    this->code = code;
+    this->message = message;
+  }
+
   PhysicalPlanResult::~PhysicalPlanResult(){
     for (const auto* row: this->rows)
       if (row->IsCopy())
         delete row;
   }
 
- PhysicalCreateUser::PhysicalCreateUser(std::string &username, std::string &password, std::string &role)
+  PhysicalOperator::PhysicalOperator(const DataTypes::Guid &currentSessionId)
+    : sessionId(currentSessionId){}
+
+  PhysicalCreateUser::PhysicalCreateUser(std::string &username, std::string &password, std::string &role)
    : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
 
   PhysicalPlanResult * PhysicalCreateUser::Execute(const int &batchSize) {
@@ -51,18 +59,28 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
     }
 
-    if (!server.GrantRole(this->username, role)) {
-      result->code = Errors::ResultCode::Error;
-      result->message = "Failed to grant role " + this->roleName + " to user: " + this->username;
-    }
+    const auto grantRoleResult = server.GrantRole(this->sessionId, this->username, role);
+
+    result->code = grantRoleResult.code;
+    result->message = grantRoleResult.message;
 
     return result;
   }
 
-  PhysicalCreateDatabase::PhysicalCreateDatabase(std::string name) : dbName(std::move(name)){}
+  PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& name) : PhysicalOperator(sessionId), dbName(std::move(name)){}
 
   PhysicalPlanResult* PhysicalCreateDatabase::Execute(const int& batchSize){
-    const auto result = Server::ServerInstance::Get().InsertDbToMasterDb(this->dbName, this->dbName + ".db");
+    auto& server = Server::ServerInstance::Get();
+
+    const auto* session = server.GetSession(this->sessionId);
+
+    if (session == nullptr || session->user == nullptr)
+      return new PhysicalPlanResult{
+        Errors::ResultCode::Error,
+        "Failed to retrieve user session"
+      };
+
+    const auto result = server.InsertDbToMasterDb(this->dbName, this->dbName + ".db", false, session->user->name);
 
     const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(result.primaryKey.GetKeyAsInt(), "dbo");
     
@@ -77,9 +95,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalPlanResult * PhysicalUseDatabase::Execute(const int &batchSize) {
     auto* result = new PhysicalPlanResult();
 
-    const auto sessionUpdateResult = Server::ServerInstance::Get().UpdateSession(this->sessionId, this->databaseId);
-
-    if (sessionUpdateResult) {
+    if (Server::ServerInstance::Get().UpdateSession(this->sessionId, this->databaseId)) {
       result->code = Errors::ResultCode::Ok;
       result->message = "Database selected successfully";
 
@@ -92,13 +108,26 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::string &schemaName)
-  : schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
+PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string &schemaName)
+  : PhysicalOperator(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   PhysicalPlanResult * PhysicalSchemaCreate::Execute(const int& batchSize){
-    Server::ServerInstance::Get().InsertSchemaToMasterDb(this->databaseId, this->schemaName);
+    auto& server = Server::ServerInstance::Get();
 
-    return new PhysicalPlanResult();
+    const auto* session = server.GetSession(this->sessionId);
+
+    if (session == nullptr || session->user == nullptr)
+      return new PhysicalPlanResult{
+        Errors::ResultCode::Error,
+        "Failed to retrieve user session"
+      };
+
+    const auto insertResult = Server::ServerInstance::Get().InsertSchemaToMasterDb(this->databaseId, this->schemaName, session->user->name);
+
+    return new PhysicalPlanResult{
+      insertResult.code,
+      insertResult.message,
+    };
   }
 
   PhysicalTableScan::PhysicalTableScan(Statements::TableName* table): table(table) {}
@@ -213,7 +242,6 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const int32_t& databaseId, std::strin
   }
 
   PhysicalProject:: PhysicalProject(
-    const int32_t & databaseId,
     PhysicalOperator *child,
     std::vector<Expressions::Expression*>& resultExpressions,
     std::vector<Headers::ColumnHeader>& columnHeaders)
@@ -517,28 +545,29 @@ PhysicalInsert::PhysicalInsert(
   PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
-    auto* result = new PhysicalPlanResult();
-
     const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     DataTypes::Indexing::Key key;
 
-    tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
+    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
 
     // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
 
-    return result;
+    return new PhysicalPlanResult{
+      updateResult.code,
+      updateResult.message,
+    };
   }
 
   PhysicalTableCreate::PhysicalTableCreate(
-      const int32_t & databaseId,
+      const DataTypes::Guid& sessionId,
       Statements::TableName*  table,
       std::vector<Statements::NewColumn*> &columns,
       Headers::Index& primaryKey,
       std::string& constraintName)
-    : table(table), constraintName(std::move(constraintName)),
+    : PhysicalOperator(sessionId), table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
   PhysicalTableCreate::~PhysicalTableCreate(){
@@ -547,7 +576,18 @@ PhysicalInsert::PhysicalInsert(
   }
 
   PhysicalPlanResult* PhysicalTableCreate::Execute(const int& batchSize){
-    DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+
+    auto& server = Server::ServerInstance::Get();
+
+    const auto* session = server.GetSession(this->sessionId);
+
+    if (session == nullptr || session->user == nullptr)
+      return new PhysicalPlanResult{
+        Errors::ResultCode::Error,
+        "Failed to retrieve user session"
+      };
+
+    auto* db = server.UseDatabase(this->table->databaseId);
 
     vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
     columnsPtrs.reserve(columns.size());
@@ -561,18 +601,18 @@ PhysicalInsert::PhysicalInsert(
         column->isNullable
         ));
 
-    const auto& tables = Server::ServerInstance::Get().SelectTables(this->table->databaseId);
+    const auto& tables = server.SelectTables(this->table->databaseId);
 
-    const int16_t& index = tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1;
+    const int16_t& index = static_cast<int16_t>(tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1);
 
-    const auto tableResult = Server::ServerInstance::Get().InsertTableToMasterDb(
+    const auto tableResult = server.InsertTableToMasterDb(
         this->table->databaseId,
         this->table->schemaId,
         this->table->name,
         index
     );
 
-    const auto tableStatsResult = Server::ServerInstance::Get().InsertTableStatisticsToMasterDb(
+    const auto tableStatsResult = server.InsertTableStatisticsToMasterDb(
       tableResult.primaryKey.GetKeyAsInt()
     );
 
@@ -582,7 +622,7 @@ PhysicalInsert::PhysicalInsert(
 
     for (const auto& column: this->columns) {
       const auto columnResult =
-          Server::ServerInstance::Get().InsertColumnToMasterDb(
+          server.InsertColumnToMasterDb(
             tableResult.primaryKey.GetKeyAsInt(),
             column->name.name,
             ColumnTypesDictionary.Get(Functions::String::NormalizeString(column->type.name)),
@@ -590,15 +630,17 @@ PhysicalInsert::PhysicalInsert(
             column->type.decimal.precision,
             column->type.decimal.scale,
             column->isNullable,
-            column->index
+            column->index,
+            false,
+            session->user->name
           );
 
-      const auto columnStatsResult = Server::ServerInstance::Get().InsertColumnStatisticsToMasterDb(columnResult.primaryKey.GetKeyAsInt());
+      const auto columnStatsResult = server.InsertColumnStatisticsToMasterDb(columnResult.primaryKey.GetKeyAsInt());
 
       columnIdsDict.Add(column->index, columnResult.primaryKey.GetKeyAsInt());
 
       if (!column->defaultValue.GetIsNull() || column->defaultValue.GetSize() != 0) {
-        Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(
+        const auto _ = server.InsertDefaultValuesToMasterDb(
           columnResult.primaryKey.GetKeyAsInt(),
           column->defaultValue
         );
@@ -608,7 +650,7 @@ PhysicalInsert::PhysicalInsert(
       if (column->identity == nullptr)
         continue;
 
-      Server::ServerInstance::Get().InsertIdentityColumnToMasterDb(
+      const auto _ = server.InsertIdentityColumnToMasterDb(
           tableResult.primaryKey.GetKeyAsInt(),
           columnResult.primaryKey.GetKeyAsInt(),
           column->identity->seed,
@@ -633,32 +675,37 @@ PhysicalInsert::PhysicalInsert(
     if (primaryKeyColumnIds.empty())
         return nullptr;
 
-    const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
+    const auto indexResult = server.InsertIndexToMasterDb(
         tableResult.primaryKey.GetKeyAsInt(),
         this->constraintName,
         true,
-        false);
+        false,
+        session->user->name
+      );
 
     const auto indexId = indexResult.primaryKey.GetKeyAsInt();
 
-    const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(
+    const auto constraintResult = server.InsertConstraintToMasterDb(
       tableResult.primaryKey.GetKeyAsInt(),
-      this->constraintName,
-      Headers::ConstraintType::PrimaryKey,
-      false,
-      &indexId);
+        this->constraintName,
+        Headers::ConstraintType::PrimaryKey,
+        false,
+        &indexId,
+        session->user->name
+      );
 
     for(int i = 0;i < primaryKeyColumnIds.size(); i++){
-      Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
+      auto _ = server.InsertIndexColumnToMasterDb(
         indexResult.primaryKey.GetKeyAsInt(),
         primaryKeyColumnIds[i],
         this->primaryKey.columns[i],
         true);
 
-      Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
-        constraintResult.primaryKey.GetKeyAsInt(),
-        primaryKeyColumnIds[i],
-    this->primaryKey.columns[i]);
+      _ = server.InsertConstraintColumnToMasterDb(
+          constraintResult.primaryKey.GetKeyAsInt(),
+          primaryKeyColumnIds[i],
+      this->primaryKey.columns[i]
+        );
     }
 
     tablePtr->GetColumnsHeaders();
@@ -690,11 +737,11 @@ PhysicalInsert::PhysicalInsert(
   }
 
   PhysicalIndexCreate::PhysicalIndexCreate(
-    const int32_t &databaseId,
+    const DataTypes::Guid& sessionId,
     Statements::TableName *table,
     std::string &constraintName,
     vector<Constants::column_index_t> &columns)
-    : table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+    : PhysicalOperator(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
   PhysicalPlanResult * PhysicalIndexCreate::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();

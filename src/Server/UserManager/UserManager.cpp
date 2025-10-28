@@ -98,14 +98,22 @@ namespace Security {
     return true;
   }
 
-  bool UserManager::GrantRole(const std::string &name, const Security::Role *role)const{
+  bool UserManager::GrantRole(
+    const std::string &name,
+    const Security::Role *role,
+    int32_t& outUserId
+  )const{
     MultiThreading::WriterGuard guard(&this->mutex);
 
     User *user = nullptr;
     if (!this->users.TryGetValue(name, user))
       return false;
 
+    user->roleId = role->id;
     user->role = role;
+
+    outUserId = user->id;
+
     return true;
   }
 }

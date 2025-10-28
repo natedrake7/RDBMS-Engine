@@ -962,15 +962,19 @@ namespace DatabaseEngine::StorageTypes {
           : tree->IndexScanUpdate(expression, updates);
     }
 
-    void Table::ClusteredIndexSeekUpdate(
-        Expressions::Expression* expression,
+    Errors::ResultStatus Table::ClusteredIndexSeekUpdate(
+        const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
-        const vector<Value> & updates){
-      auto* tree = this->GetClusteredIndexedTree();
+        const vector<Value> & updates
+    ){
+        auto* tree = this->GetClusteredIndexedTree();
 
-      tree->IndexSeekUpdate(expression, minimumValue, maximumValue, updates);
+        return (expression == nullptr)
+            ? tree->IndexSeekUpdate(minimumValue, maximumValue, updates)
+            : tree->IndexSeekUpdate(expression, minimumValue, maximumValue, updates);
     }
+
     string Table::GetFileName() const{ return this->database->GetFileName(); }
 
     int Table::HandleRowOverflow(const Row *row)const{

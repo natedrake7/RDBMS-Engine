@@ -1,11 +1,12 @@
 #include "PhysicalPlan.h"
+#include "../../Server/MasterDbColumns.h"
 #include "../../Server/Server.h"
 #include "../../Systemic/Functions/StringFunctions.h"
 
 namespace QueryPipeline::PhysicalPlan{
 
-  PhysicalAddColumn::PhysicalAddColumn(Statements::TableName *table, Statements::NewColumn *column)
-    : table(table), column(column){}
+  PhysicalAddColumn::PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::TableName *table, Statements::NewColumn *column)
+    : PhysicalOperator(sessionId), table(table), column(column){}
 
   PhysicalAddColumn::~PhysicalAddColumn(){
     delete this->table;
@@ -13,12 +14,21 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalPlanResult * PhysicalAddColumn::Execute(const int& batchSize){
-
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
+
+    auto& server = Server::ServerInstance::Get();
+
+    const auto* session = server.GetSession(this->sessionId);
+
+    if (session == nullptr || session->user == nullptr)
+      return new PhysicalPlanResult{
+        Errors::ResultCode::Error,
+        "Failed to retrieve user session"
+      };
 
     //if add occurs in a different index pos chaos ensues
     const auto columnResult =
-        Server::ServerInstance::Get().InsertColumnToMasterDb(
+        server.InsertColumnToMasterDb(
           this->table->tableId,
           this->column->name.name,
           columnType,
@@ -26,7 +36,9 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->type.decimal.precision,
           this->column->type.decimal.scale,
           this->column->isNullable,
-          this->column->index
+          this->column->index,
+          false,
+          session->user->name
           );
 
       if (columnResult.code != Errors::ResultCode::Ok) {
@@ -38,10 +50,10 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (!this->column->defaultValue.GetIsNull()) {
       const auto value = this->column->defaultValue.GetString();
-      const auto defaultValueResult = Server::ServerInstance::Get().InsertDefaultValuesToMasterDb(columnResult.primaryKey.GetKeyAsInt(), this->column->defaultValue);
+      const auto defaultValueResult = server.InsertDefaultValuesToMasterDb(columnResult.primaryKey.GetKeyAsInt(), this->column->defaultValue);
     }
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = server.UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -64,8 +76,8 @@ namespace QueryPipeline::PhysicalPlan{
     return nullptr;
   }
 
-  PhysicalDropColumn::PhysicalDropColumn(Statements::TableName *table, Statements::DropColumn *column)
-    : table(table), column(column){}
+  PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::TableName *table, Statements::DropColumn *column)
+    : PhysicalOperator(sessionId), table(table), column(column){}
 
   PhysicalDropColumn::~PhysicalDropColumn(){
     delete this->table;
@@ -74,6 +86,16 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalPlanResult * PhysicalDropColumn::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
+
+    auto& server = Server::ServerInstance::Get();
+
+    const auto* session = server.GetSession(this->sessionId);
+
+    if (session == nullptr || session->user == nullptr)
+      return new PhysicalPlanResult{
+        Errors::ResultCode::Error,
+        "Failed to retrieve user session"
+      };
 
     //update master db set isDeleted to 1
     //remove it from table, remove it from rows. Adjust column indexes if need be.
@@ -86,8 +108,8 @@ namespace QueryPipeline::PhysicalPlan{
     return result;
   }
 
-  PhysicalRenameColumn::PhysicalRenameColumn(Statements::TableName *table, Statements::RenameColumn *column)
-  : table(table), column(column){}
+  PhysicalRenameColumn::PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::TableName *table, Statements::RenameColumn *column)
+  : PhysicalOperator(sessionId), table(table), column(column){}
 
   PhysicalRenameColumn::~PhysicalRenameColumn(){
     delete this->table;
@@ -97,23 +119,35 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalPlanResult * PhysicalRenameColumn::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    auto& server = Server::ServerInstance::Get();
+
+    const auto* session = server.GetSession(this->sessionId);
+
+    if (session == nullptr || session->user == nullptr)
+      return new PhysicalPlanResult{
+        Errors::ResultCode::Error,
+        "Failed to retrieve user session"
+      };
+
+    const auto* db = server.UseDatabase(this->table->databaseId);
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const std::vector<Value> updates = {
-      Value(this->column->newName.name, 2),
+      Value(this->column->newName.name, static_cast<Constants::column_index_t>(Server::SysColumns::Name)),
+      Value(DataTypes::DateTime::Now(), static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedAt)),
+      Value(session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
     };
 
-    Server::ServerInstance::Get().UpdateColumnById(this->column->columnId, updates);
+    server.UpdateColumnById(this->column->columnId, updates);
 
     tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
 
     return result;
   }
 
-  PhysicalAlterColumn::PhysicalAlterColumn(Statements::TableName *table, Statements::AlterColumn *column)
-    : table(table), column(column){}
+  PhysicalAlterColumn::PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::TableName *table, Statements::AlterColumn *column)
+    : PhysicalOperator(sessionId), table(table), column(column){}
 
   PhysicalAlterColumn::~PhysicalAlterColumn(){
     delete this->table;
@@ -123,11 +157,23 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalPlanResult * PhysicalAlterColumn::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
+    auto& server = Server::ServerInstance::Get();
+
+    const auto* session = server.GetSession(this->sessionId);
+
+    if (session == nullptr || session->user == nullptr)
+      return new PhysicalPlanResult{
+        Errors::ResultCode::Error,
+        "Failed to retrieve user session"
+      };
+
     const std::vector<Value> updates = {
-      Value(this->column->type.size, 4)
+      Value(this->column->type.size, static_cast<Constants::column_index_t>(Server::SysColumns::RecordSize)),
+      Value(DataTypes::DateTime::Now(), static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedAt)),
+      Value(session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
     };
 
-    Server::ServerInstance::Get().UpdateColumnById(this->column->columnId, updates);
+    server.UpdateColumnById(this->column->columnId, updates);
 
     return result;
   }

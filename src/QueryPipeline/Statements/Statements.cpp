@@ -71,7 +71,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan* CreateUserStatement::ToLogical(){
-    return new LogicalCreateUser(this->username, this->password, this->role);
+    return new LogicalCreateUser(this->sessionId, this->username, this->password, this->role);
   }
 
   bool GrantRoleStatement::Validate(){
@@ -95,7 +95,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * GrantRoleStatement::ToLogical(){
-    return new LogicalGrantRole(this->username, this->role);
+    return new LogicalGrantRole(this->sessionId, this->username, this->role);
   }
 
   bool DeleteStatement::Validate(){
@@ -255,7 +255,7 @@ namespace QueryPipeline::Statements {
   LogicalPlan * CreateTableStatement::ToLogical(){
     const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
 
-    return new LogicalTableCreate(this->table, this->columns, this->primaryKey, constraintName);
+    return new LogicalTableCreate(this->sessionId, this->table, this->columns, this->primaryKey, constraintName);
   }
 
   Security::Permission CreateTableStatement::RequiredPermissions() const{
@@ -619,7 +619,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * CreateDbStatement::ToLogical(){
-    return new LogicalCreateDatabase(this->name);
+    return new LogicalCreateDatabase(this->sessionId, this->name);
   }
 
   Security::Permission CreateDbStatement::RequiredPermissions() const{
@@ -890,7 +890,7 @@ namespace QueryPipeline::Statements {
   }
 
   QueryPipeline::LogicalPlan * CreateSchemaStatement::ToLogical(){
-    return new LogicalSchemaCreate(this->databaseId, this->name);
+    return new LogicalSchemaCreate(this->sessionId, this->databaseId, this->name);
   }
 
   Security::Permission CreateSchemaStatement::RequiredPermissions() const{
@@ -1026,7 +1026,7 @@ bool UpdateStatement::Validate(){
   }
 
   QueryPipeline::LogicalPlan * CreateIndexStatement::ToLogical(){
-    return new QueryPipeline::LogicalIndexCreate(this->table, this->name, this->columnIndices);
+    return new QueryPipeline::LogicalIndexCreate(this->sessionId, this->table, this->name, this->columnIndices);
   }
 
   Security::Permission CreateIndexStatement::RequiredPermissions() const{
@@ -1034,7 +1034,7 @@ bool UpdateStatement::Validate(){
   }
 
   bool AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
-    if (headers.Contains(this->newColumn->name.name)) {
+    if (headers.Contains(Functions::String::NormalizeString(this->newColumn->name.name))) {
       std::cerr << "Column " << this->newColumn->name.name << " already exists on table: "<< this->table->GetFullName() << std::endl;
       return false;
     }
@@ -1076,7 +1076,7 @@ bool UpdateStatement::Validate(){
   bool AlterTableStatement::ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
 
-    if (!headers.TryGetValue(this->alterColumn->name.name, header)) {
+    if (!headers.TryGetValue(Functions::String::NormalizeString(this->alterColumn->name.name), header)) {
       std::cerr << "Column " << this->alterColumn->name.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
       return false;
     }
@@ -1112,7 +1112,7 @@ bool UpdateStatement::Validate(){
 
   bool AlterTableStatement::ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
-    if (!headers.TryGetValue(this->dropColumn->name.name, header)) {
+    if (!headers.TryGetValue(Functions::String::NormalizeString(this->dropColumn->name.name), header)) {
       std::cerr << "Column " << this->dropColumn->name.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
       return false;
     }
@@ -1136,7 +1136,7 @@ bool UpdateStatement::Validate(){
 
   bool AlterTableStatement::ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
-    if (!headers.TryGetValue(this->renameColumn->oldName.name, header)) {
+    if (!headers.TryGetValue(Functions::String::NormalizeString(this->renameColumn->oldName.name), header)) {
       std::cerr << "Column " << this->renameColumn->oldName.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
       return false;
     }
@@ -1171,7 +1171,15 @@ bool UpdateStatement::Validate(){
   }
 
   QueryPipeline::LogicalPlan * AlterTableStatement::ToLogical(){
-    return new LogicalAlterTable(this->table, this->type, this->alterColumn, this->newColumn, this->dropColumn, this->renameColumn);
+    return new LogicalAlterTable(
+      this->sessionId,
+      this->table,
+      this->type,
+      this->alterColumn,
+      this->newColumn,
+      this->dropColumn,
+      this->renameColumn
+    );
   }
 
   Security::Permission AlterTableStatement::RequiredPermissions() const{

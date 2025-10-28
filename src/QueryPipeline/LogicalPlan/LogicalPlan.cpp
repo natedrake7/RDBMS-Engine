@@ -7,10 +7,15 @@
 #include "../Statements/Statements.h"
 
 namespace QueryPipeline {
-   LogicalPlan::LogicalPlan(const int32_t & databaseId): databaseId(databaseId) {}
+    LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId, const int32_t &databaseId)
+      : sessionId(sessionId), databaseId(databaseId) {}
 
-   LogicalPlan::LogicalPlan(){
-     this->databaseId = Constants::INVALID_DATABASE_ID;
+  LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId)
+    : sessionId(sessionId), databaseId(Constants::INVALID_DATABASE_ID) {}
+
+  LogicalPlan::LogicalPlan(){
+      this->sessionId = DataTypes::Guid();
+      this->databaseId = Constants::INVALID_DATABASE_ID;
    }
 
   LogicalPlan::~LogicalPlan() = default;
@@ -22,16 +27,15 @@ namespace QueryPipeline {
   : child(child), resultExpressions(std::move(resultExpressions)), columnsHeaders(std::move(columnsHeaders)) {}
 
   LogicalProject::~LogicalProject(){
-      delete child;
+      delete this->child;
   }
 
   PhysicalPlan::PhysicalProject * LogicalProject::ToPhysical(){
      return new PhysicalPlan::PhysicalProject(
-       this->databaseId,
-       (this->child != nullptr) ? this->child->ToPhysical() : nullptr,
-       this->resultExpressions,
-       this->columnsHeaders
-       );
+         (this->child != nullptr) ? this->child->ToPhysical() : nullptr,
+         this->resultExpressions,
+         this->columnsHeaders
+    );
   }
 
   LogicalTableScan::LogicalTableScan(Statements::TableName* table, Expressions::Expression* expression)
@@ -72,8 +76,8 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalTableScan(this->table);
   }
 
-   LogicalCreateUser::LogicalCreateUser(std::string& username, std::string& password, std::string& role)
-     : username(std::move(username)), password(std::move(password)), role(std::move(role)) {}
+   LogicalCreateUser::LogicalCreateUser(const DataTypes::Guid& sessionId, std::string& username, std::string& password, std::string& role)
+     : LogicalPlan(sessionId), username(std::move(username)), password(std::move(password)), role(std::move(role)) {}
 
   LogicalCreateUser::~LogicalCreateUser() = default;
 
@@ -81,17 +85,17 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalCreateUser(this->username, this->password, this->role);
   }
 
-  LogicalGrantRole::LogicalGrantRole(std::string &username, std::string &role)
-    : username(std::move(username)), role(std::move(role)) {}
+  LogicalGrantRole::LogicalGrantRole(const DataTypes::Guid& sessionId, std::string &username, std::string &role)
+    : LogicalPlan(sessionId), username(std::move(username)), role(std::move(role)) {}
 
   PhysicalPlan::PhysicalOperator * LogicalGrantRole::ToPhysical() {
     return new PhysicalPlan::PhysicalGrantRole(this->username, this->role);
   }
 
-  LogicalCreateDatabase::LogicalCreateDatabase(std::string dbName) : dbName(std::move(dbName)) {}
+  LogicalCreateDatabase::LogicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& dbName) : LogicalPlan(sessionId), dbName(std::move(dbName)) {}
 
   PhysicalPlan::PhysicalCreateDatabase * LogicalCreateDatabase::ToPhysical(){
-     return new PhysicalPlan::PhysicalCreateDatabase(this->dbName);
+     return new PhysicalPlan::PhysicalCreateDatabase(this->sessionId, this->dbName);
   }
 
   LogicalUseDatabase::LogicalUseDatabase(const DataTypes::Guid &sessionId, const int32_t &databaseId)
@@ -170,11 +174,11 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return new PhysicalPlan::PhysicalInsert(this->table, this->fields, physicalSelect, this->columnsIndices);
   }
 
-  LogicalSchemaCreate::LogicalSchemaCreate(const int32_t& databaseId, std::string &schemaName)
-    : schemaName(std::move(schemaName)), databaseId(databaseId) {}
+  LogicalSchemaCreate::LogicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string &schemaName)
+    : LogicalPlan(sessionId), schemaName(std::move(schemaName)), databaseId(databaseId) {}
 
   PhysicalPlan::PhysicalSchemaCreate * LogicalSchemaCreate::ToPhysical(){
-    return new PhysicalPlan::PhysicalSchemaCreate(this->databaseId, this->schemaName);
+    return new PhysicalPlan::PhysicalSchemaCreate(this->sessionId, this->databaseId, this->schemaName);
   }
 
   LogicalDelete::LogicalDelete(Statements::TableName *table, Expressions::Expression *expression)
@@ -216,19 +220,20 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
   }
 
   LogicalTableCreate::LogicalTableCreate(
+        const DataTypes::Guid& sessionId,
         Statements::TableName*  table,
         std::vector<Statements::NewColumn*>& columns,
         std::vector<column_index_t> primaryKey,
         std::string  constraintName)
-    : table(table), columns(std::move(columns)),
-      primaryKey(std::move(primaryKey)), constraintName(std::move(constraintName)) {}
+    : LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)),
+      columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
   PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(){
     Headers::Index index;
 
     index.columns = std::move(primaryKey);
 
-    return new PhysicalPlan::PhysicalTableCreate(this->databaseId, this->table, this->columns, index, this->constraintName);
+    return new PhysicalPlan::PhysicalTableCreate(this->sessionId, this->table, this->columns, index, this->constraintName);
   }
 
   LogicalUpdate::LogicalUpdate(Statements::TableName *table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression *expression)
@@ -300,34 +305,36 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
   }
 
   LogicalIndexCreate::LogicalIndexCreate(
+    const DataTypes::Guid& sessionId,
     Statements::TableName *table,
     std::string &constraintName,
     std::vector<column_index_t> &columns)
-      : table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+      : LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
   PhysicalPlan::PhysicalOperator * LogicalIndexCreate::ToPhysical(){
-    return new PhysicalPlan::PhysicalIndexCreate(this->databaseId, this->table, this->constraintName, this->columns);
+    return new PhysicalPlan::PhysicalIndexCreate(this->sessionId, this->table, this->constraintName, this->columns);
   }
 
   LogicalAlterTable::LogicalAlterTable(
+    const DataTypes::Guid& sessionId,
     Statements::TableName *table,
     const AlterTableType& type,
     Statements::AlterColumn *alterColumn,
     Statements::NewColumn *addColumn,
     Statements::DropColumn *dropColumn,
     Statements::RenameColumn *renameColumn)
-    : table(table), type(type) , alterColumn(alterColumn), dropColumn(dropColumn), renameColumn(renameColumn), addColumn(addColumn) {}
+    : LogicalPlan(sessionId), table(table), type(type) , alterColumn(alterColumn), dropColumn(dropColumn), renameColumn(renameColumn), addColumn(addColumn) {}
 
     PhysicalPlan::PhysicalOperator * LogicalAlterTable::ToPhysical(){
       switch (this->type) {
         case AlterTableType::AlterColumn:
-          return new PhysicalPlan::PhysicalAlterColumn(this->table, this->alterColumn);
+          return new PhysicalPlan::PhysicalAlterColumn(this->sessionId, this->table, this->alterColumn);
         case AlterTableType::AddColumn:
-          return new PhysicalPlan::PhysicalAddColumn(this->table, this->addColumn);
+          return new PhysicalPlan::PhysicalAddColumn(this->sessionId, this->table, this->addColumn);
         case AlterTableType::DropColumn:
-          return new PhysicalPlan::PhysicalDropColumn(this->table, this->dropColumn);
+          return new PhysicalPlan::PhysicalDropColumn(this->sessionId, this->table, this->dropColumn);
         case AlterTableType::RenameColumn:
-          return new PhysicalPlan::PhysicalRenameColumn(this->table, this->renameColumn);
+          return new PhysicalPlan::PhysicalRenameColumn(this->sessionId, this->table, this->renameColumn);
         default:
           return nullptr;
       }

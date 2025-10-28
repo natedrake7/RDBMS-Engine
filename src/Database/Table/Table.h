@@ -270,8 +270,8 @@ namespace DatabaseEngine::StorageTypes
                 const vector<QueryPipeline::Statements::UpdateColumn*> &updates
             );
 
-            void ClusteredIndexSeekUpdate(
-                Expressions::Expression* expression,
+            [[nodiscard]] Errors::ResultStatus ClusteredIndexSeekUpdate(
+                const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
                 const vector<Value> &updates);

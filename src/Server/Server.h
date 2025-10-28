@@ -65,7 +65,7 @@ namespace Server {
     void Initialize(const std::string& configPath);
 
     //Security Functions
-    bool GrantRole(const std::string& username, const Security::Role* role)const;
+    [[nodiscard]]Errors::ResultStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
     bool UserExists(const std::string& userName)const;
     bool CreateUser(const std::string& userName, const std::string& password, const std::string& roleName);
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password);
@@ -203,6 +203,12 @@ namespace Server {
       const bool& isDeleted = false
     ) const;
 
+    [[nodiscard]] Errors::ResultStatus UpdateUserById(
+      const DataTypes::Guid& callerSessionId,
+      const int32_t& userId,
+      const int32_t& roleId
+    )const;
+
     //MasterDB Select Functions
     [[nodiscard]] std::vector<Headers::DatabaseHeader> GetCatalog()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
@@ -245,7 +251,7 @@ namespace Server {
       const Value& min,
       const Value& max
     )const;
-    void UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
+    [[nodiscard]]Errors::ResultStatus UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     //Cursor Functions

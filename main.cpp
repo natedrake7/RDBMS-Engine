@@ -102,7 +102,7 @@ int main()
 
     if (user == nullptr) {
         server.Shutdown();
-        return -1;
+        return 0;
     }
 
     const auto* session = server.CreateSession(user);

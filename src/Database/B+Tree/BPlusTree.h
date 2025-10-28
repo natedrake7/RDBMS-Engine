@@ -111,7 +111,8 @@ namespace Indexing
 
         [[nodiscard]] Errors::ResultStatus IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
 
-        void IndexSeekUpdate(Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
+        Errors::ResultStatus IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
+        Errors::ResultStatus IndexSeekUpdate(const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
 
         void SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const;
 

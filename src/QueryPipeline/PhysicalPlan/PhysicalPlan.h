@@ -29,6 +29,7 @@ namespace QueryPipeline::PhysicalPlan{
       Errors::ResultCode code;
 
       PhysicalPlanResult();
+      PhysicalPlanResult(const Errors::ResultCode& code, const std::string& message);
       ~PhysicalPlanResult();
   };
 
@@ -52,8 +53,11 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalOperator {
+    protected:
+      DataTypes::Guid sessionId;
     public:
-      explicit PhysicalOperator() = default;
+      PhysicalOperator() = default;
+      explicit PhysicalOperator(const DataTypes::Guid& currentSessionId);
       virtual ~PhysicalOperator() = default;
       virtual PhysicalPlanResult* Execute(const int& batchSize) = 0;
   };
@@ -64,8 +68,8 @@ namespace QueryPipeline::PhysicalPlan{
     std::string roleName;
     public:
       explicit PhysicalCreateUser(std::string& username, std::string& password, std::string& role);
-      ~PhysicalCreateUser() = default;
-      PhysicalPlanResult* Execute(const int& batchSize);
+      ~PhysicalCreateUser()override = default;
+      PhysicalPlanResult* Execute(const int& batchSize)override;
   };
 
   class PhysicalGrantRole final : public PhysicalOperator {
@@ -74,13 +78,13 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalGrantRole(std::string& username, std::string& roleName);
       ~PhysicalGrantRole()override = default;
-      PhysicalPlanResult* Execute(const int& batchSize);
+      PhysicalPlanResult* Execute(const int& batchSize)override;
   };
 
   class PhysicalCreateDatabase final : public PhysicalOperator{
       std::string dbName;
     public:
-      explicit PhysicalCreateDatabase(std::string  name);
+      explicit PhysicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& name);
       ~PhysicalCreateDatabase() override = default;
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -100,7 +104,7 @@ namespace QueryPipeline::PhysicalPlan{
     int32_t databaseId;
 
     public:
-      explicit PhysicalSchemaCreate(const int32_t& databaseId, std::string& schemaName);
+      explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string& schemaName);
       ~PhysicalSchemaCreate() override = default;
       PhysicalPlanResult* Execute(const int& batchSize) override;
   };
@@ -150,7 +154,6 @@ namespace QueryPipeline::PhysicalPlan{
 
     public:
       PhysicalProject(
-        const int32_t & databaseId,
         PhysicalOperator* child,
         std::vector<Expressions::Expression*>& resultExpressions,
         std::vector<Headers::ColumnHeader>& columnHeaders);
@@ -282,7 +285,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     public:
       PhysicalTableCreate(
-        const int32_t & databaseId,
+        const DataTypes::Guid& sessionId,
         Statements::TableName*  table,
         std::vector<Statements::NewColumn*>& columns,
         Headers::Index& primaryKey,
@@ -307,7 +310,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     public:
     PhysicalIndexCreate(
-        const int32_t & databaseId,
+        const DataTypes::Guid& sessionId,
         Statements::TableName*  table,
         std::string& constraintName,
         vector<Constants::column_index_t>& columns);
@@ -319,36 +322,39 @@ namespace QueryPipeline::PhysicalPlan{
     Statements::NewColumn* column;
 
     public:
-    PhysicalAddColumn(Statements::TableName* table, Statements::NewColumn* column);
-    ~PhysicalAddColumn()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::NewColumn* column);
+      ~PhysicalAddColumn()override;
+      PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalDropColumn final : public PhysicalOperator {
     Statements::TableName* table;
     Statements::DropColumn* column;
+
     public:
-    PhysicalDropColumn(Statements::TableName* table, Statements::DropColumn* column);
-    ~PhysicalDropColumn()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::DropColumn* column);
+      ~PhysicalDropColumn()override;
+      PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalRenameColumn final : public PhysicalOperator {
     Statements::TableName* table;
     Statements::RenameColumn* column;
+
     public:
-    PhysicalRenameColumn(Statements::TableName* table, Statements::RenameColumn* column);
-    ~PhysicalRenameColumn()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::RenameColumn* column);
+      ~PhysicalRenameColumn()override;
+      PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalAlterColumn final : public PhysicalOperator {
     Statements::TableName* table;
     Statements::AlterColumn* column;
+
     public:
-    PhysicalAlterColumn(Statements::TableName* table, Statements::AlterColumn* column);
-    ~PhysicalAlterColumn()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::AlterColumn* column);
+      ~PhysicalAlterColumn()override;
+      PhysicalPlanResult* Execute(const int& batchSize) override;
   };
 
   class PhysicalNestedLoopInnerJoin final : public PhysicalOperator {

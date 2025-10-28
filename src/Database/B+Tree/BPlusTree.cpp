@@ -649,23 +649,26 @@ namespace Indexing
 
     }
 
-    void BPlusTree::IndexSeekUpdate(Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates){
+    Errors::ResultStatus BPlusTree::IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates){
         this->root = this->GetNode(this->indexPageId);
 
         if (!this->root)
-          return;
+          return {};
 
         HashSet<column_index_t> updatedColumns;
+        for(const auto& update : updates)
+            updatedColumns.Add(update.GetColumnIndex());
+
         auto *currentNode = this->SearchKey(*minKey);
         Pages::IndexPage *previousNode = nullptr;
 
         while (currentNode)
         {
-          auto* keys = currentNode->GetKeysUnsafe();
+          const auto* keys = currentNode->GetKeysUnsafe();
 
           if (previousNode && maxKey >= keys->at(0))
           {
-            auto* previousKeys = previousNode->GetKeysUnsafe();
+            const auto* previousKeys = previousNode->GetKeysUnsafe();
 
             // Check if the last key in the previous node is within the range
             if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
@@ -674,12 +677,16 @@ namespace Indexing
                 const auto* row = previousRows->at(previousRows->size() - 1);
 
                 const auto value = expression->Evaluate(row);
-                if(value.GetBool())
-                  this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+                if(value.GetBool()) {
+                    const auto result = this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+
+                    if (result.code != Errors::ResultCode::Ok)
+                        return result;
+                }
             }
           }
           else if(maxKey < keys->at(0))
-               return;
+               return {};
 
           const auto* rows = currentNode->GetDataRowsUnsafe();
 
@@ -697,18 +704,88 @@ namespace Indexing
               if(!value.GetBool())
                 continue;
 
-            this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);
+
+            if (result.code != Errors::ResultCode::Ok)
+              return result;
 
 //            if (maxKey < *key && !previousNode)
 //                return;
           }
 
           if(currentNode->GetNextPage() == 0)
-            return;
+            return {};
 
           previousNode = currentNode;
           currentNode = this->GetNode(currentNode->GetNextPage());
         }
+
+        return {};
+    }
+
+    Errors::ResultStatus BPlusTree::IndexSeekUpdate(const DataTypes::Indexing::Key *minKey, const DataTypes::Indexing::Key *maxKey, const vector<Value> &updates){
+                this->root = this->GetNode(this->indexPageId);
+
+        if (!this->root)
+          return {};
+
+        HashSet<column_index_t> updatedColumns;
+        for(const auto& update : updates)
+            updatedColumns.Add(update.GetColumnIndex());
+
+        auto *currentNode = this->SearchKey(*minKey);
+        Pages::IndexPage *previousNode = nullptr;
+
+        while (currentNode)
+        {
+          const auto* keys = currentNode->GetKeysUnsafe();
+
+          if (previousNode && maxKey >= keys->at(0))
+          {
+            const auto* previousKeys = previousNode->GetKeysUnsafe();
+
+            // Check if the last key in the previous node is within the range
+            if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
+                const auto* previousRows = previousNode->GetDataRowsUnsafe();
+
+                const auto result = this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+
+                if (result.code != Errors::ResultCode::Ok)
+                    return result;
+            }
+          }
+          else if(maxKey < keys->at(0))
+               return {};
+
+          const auto* rows = currentNode->GetDataRowsUnsafe();
+
+          for (int i = 0; i < keys->size(); i++)
+          {
+            const auto &key = keys->at(i);
+
+            if (*minKey > *key)
+                continue;
+
+            if (*maxKey < *key)
+                break;
+
+            const auto result = this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);
+
+            if (result.code != Errors::ResultCode::Ok)
+              return result;
+
+//            if (maxKey < *key && !previousNode)
+//                return;
+          }
+
+          if(currentNode->GetNextPage() == 0)
+            return {};
+
+          previousNode = currentNode;
+          currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        return {};
     }
 
 

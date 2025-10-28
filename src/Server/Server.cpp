@@ -214,8 +214,20 @@ namespace Server {
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
-  bool ServerInstance::GrantRole(const std::string &username, const Security::Role *role)const{
-    return this->userManager.GrantRole(username, role);
+  Errors::ResultStatus ServerInstance::GrantRole(
+    const DataTypes::Guid& currentSessionId,
+    const std::string &username,
+    const Security::Role *role
+  )const{
+    int32_t userId = -1;
+
+    if (!this->userManager.GrantRole(username, role, userId))
+      return {
+        Errors::ResultCode::Error,
+        "Failed to grant role: " + role->name + " to user: " + username,
+      };
+
+    return this->UpdateUserById(currentSessionId, userId, role->id);
   }
 
   bool ServerInstance::UserExists(const std::string &userName) const{
@@ -741,6 +753,35 @@ namespace Server {
     std::cout << "Inserted User " << username << std::endl;
 
     return result;
+  }
+
+  Errors::ResultStatus ServerInstance::UpdateUserById(
+    const DataTypes::Guid& callerSessionId,
+    const int32_t &userId,
+    const int32_t &roleId
+  )const{
+    auto* table = this->masterDb->OpenTable(MasterDbTables::SYSUSERS);
+
+    const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
+
+    if (currentSession == nullptr || currentSession->user == nullptr)
+      return{
+          Errors::ResultCode::InvalidSession,
+          "Failed to validate session"
+      };
+
+    const auto currentDate = DataTypes::DateTime::Now();
+
+    const std::vector<Value> updates = {
+      Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
+      Value(currentDate, static_cast<Constants::column_index_t>(SysUsers::LastModifiedAt)),
+      Value(currentSession->user->name, static_cast<Constants::column_index_t>(SysUsers::LastModifiedBy))
+    };
+
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int));
+
+    return table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
   }
 
   Errors::ResultStatus ServerInstance::InsertConstraintToMasterDb(
@@ -1879,7 +1920,7 @@ namespace Server {
     table->ClusteredIndexScanUpdate(&binaryExpr, updates);
   }
 
-  void ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
+  Errors::ResultStatus ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
     using namespace DatabaseEngine::StorageTypes;
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SYSCOLUMNS);
@@ -1887,7 +1928,7 @@ namespace Server {
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
+    return table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
   }
 
   void ServerInstance::CreateSystemDatabase(){
