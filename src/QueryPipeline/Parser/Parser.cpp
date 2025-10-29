@@ -37,10 +37,9 @@ namespace QueryPipeline
         return statement;
     }
 
-    void Parser::ClearQuery(const Statements::Statement *statement, const LogicalPlan *logicalPlan, const PhysicalPlan::PhysicalOperator *physicalPlan) {
+    void Parser::ClearQuery(const Statements::Statement *statement, const LogicalPlan *logicalPlan) {
         delete statement;
         delete logicalPlan;
-        delete physicalPlan;
     }
 
     Parser::~Parser() = default;
@@ -75,26 +74,26 @@ namespace QueryPipeline
         }
         catch (const exception& e) {
             std::cerr << "Parser exception: " << e.what() << std::endl;
-            Parser::ClearQuery(statement, nullptr, nullptr);
+            Parser::ClearQuery(statement, nullptr);
             return;
         }
 
         if (statement == nullptr || !statement->ValidateStatement()) {
-            Parser::ClearQuery(statement, nullptr, nullptr);
+            Parser::ClearQuery(statement, nullptr);
             return;
         }
 
         auto* logicalPlan = statement->ToLogical();
         
         if (logicalPlan == nullptr) {
-            Parser::ClearQuery(statement, logicalPlan, nullptr);
+            Parser::ClearQuery(statement, logicalPlan);
             return;
         }
 
         auto* physicalPlan = logicalPlan->ToPhysical();
 
         if(physicalPlan == nullptr){
-            Parser::ClearQuery(statement, logicalPlan, physicalPlan);
+            Parser::ClearQuery(statement, logicalPlan);
             return;
         }
 
@@ -108,14 +107,14 @@ namespace QueryPipeline
             result = cursor->fetchNextBatch();
 
             if (result == nullptr) {
-                Parser::ClearQuery(statement, logicalPlan, physicalPlan);
+                Parser::ClearQuery(statement, logicalPlan);
                 return;
             }
 
             if (result->code != Errors::ResultCode::Ok) {
                 std::cerr << result->message << std::endl;
 
-                Parser::ClearQuery(statement, logicalPlan, physicalPlan);
+                Parser::ClearQuery(statement, logicalPlan);
                 return;
             }
 
@@ -129,6 +128,6 @@ namespace QueryPipeline
         }
 
         const auto _ = server.CloseCursor(sessionId);
-        Parser::ClearQuery(statement, logicalPlan, physicalPlan);
+        Parser::ClearQuery(statement, logicalPlan);
     }
 }

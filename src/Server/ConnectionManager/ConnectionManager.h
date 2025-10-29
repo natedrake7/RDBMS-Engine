@@ -65,7 +65,7 @@ namespace Server {
       void HandleClientConnection(const int& clientSocket, mutex& clientMutex);
       void ReadBodyFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader& header);
       void CloseServerConnection() const;
-      void CloseClientConnection(const int& clientSocket) const;
+      static void CloseClientConnection(const int& clientSocket);
       void InitializeServerSocket();
     
     public:

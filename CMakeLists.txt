@@ -12,7 +12,9 @@ add_executable(DatabaseInterface main.cpp
 # Set this to the directory containing antlr4-runtimeConfig.cmake or antlr4-runtime-config.cmake
 find_package(antlr4-runtime CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(unofficial-sodium CONFIG REQUIRED)
+#find_package(unofficial-sodium CONFIG REQUIRED)
+find_package(unofficial-argon2 CONFIG REQUIRED)
+
 
 # === ANTLR Setup ===
 if(WIN32)
@@ -27,7 +29,7 @@ file(MAKE_DIRECTORY ${GENERATED_DIR})
 add_custom_command(
         OUTPUT ${GENERATED_DIR}/SQLParser.cpp
         COMMAND java -Xmx500M -cp ${ANTLR_JAR_PATH} org.antlr.v4.Tool
-        -Dlanguage=Cpp -visitor
+            -Dlanguage=Cpp -visitor
         -o ${GENERATED_DIR}
         ${CMAKE_SOURCE_DIR}/src/QueryPipeline/Grammar/SQL.g4
         DEPENDS ${CMAKE_SOURCE_DIR}/src/QueryPipeline/Grammar/SQL.g4
@@ -214,9 +216,9 @@ add_library(Server STATIC
 )
 
 if(WIN32)
-    target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE Systemic PRIVATE unofficial-sodium::sodium)
+    target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
 else()
-    target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE Systemic PRIVATE unofficial-sodium::sodium)
+    target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
 endif()
 
 target_link_libraries(Database PRIVATE Systemic PRIVATE ExpressionsLibrary PRIVATE Server)

@@ -2,20 +2,23 @@
 
 #include "../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
 #include "../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
-#include "../../Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.h"
 
 #include <ranges>
 #include <iostream>
 
-#include <sodium.h>
+// #include <sodium.h>
+#include <argon2.h>
+
 
 #include "../../Systemic/Security/Security.h"
 
 namespace Security {
-  UserManager::UserManager() {
-    if (sodium_init() < 0)
-      throw std::runtime_error("Failed to initialize libsodium library.");
-  }
+  UserManager::UserManager() =  default;
+
+  // UserManager::UserManager() {
+  //   if (sodium_init() < 0)
+  //     throw std::runtime_error("Failed to initialize libsodium library.");
+  // }
 
   UserManager::~UserManager(){
     for (const auto &user : this->users | views::values) {
@@ -30,9 +33,12 @@ namespace Security {
     if (!this->users.TryGetValue(name, user))
       return nullptr;
 
-    return (crypto_pwhash_str_verify(user->passwordHash.c_str(), password.c_str(), password.length()) == 0)
-        ? user
-        : nullptr;
+    return (argon2id_verify(user->passwordHash.c_str(), password.c_str(), password.length()) == Argon2_ErrorCodes::ARGON2_OK)
+      ? user
+      : nullptr;
+    // return (crypto_pwhash_str_verify(user->passwordHash.c_str(), password.c_str(), password.length()) == 0)
+    //     ? user
+    //     : nullptr;
   }
 
   const User * UserManager::GetUser(const std::string &name)const{
@@ -46,19 +52,45 @@ namespace Security {
   }
 
   bool UserManager::HashPassword(const std::string &password, string &outHash){
-    char hashed[crypto_pwhash_STRBYTES];
+    // char hashed[crypto_pwhash_STRBYTES];
+    //
+    // const auto result = crypto_pwhash_str(
+    //         hashed,
+    //         password.c_str(),
+    //         password.size(),
+    //         crypto_pwhash_OPSLIMIT_INTERACTIVE,
+    //         crypto_pwhash_MEMLIMIT_INTERACTIVE);
+    //
+    // if (result != 0)
+    //   return false;
+    //
+    // outHash = string(hashed, crypto_pwhash_STRBYTES);
+    // return true;
 
-    const auto result = crypto_pwhash_str(
-            hashed,
-            password.c_str(),
-            password.size(),
-            crypto_pwhash_OPSLIMIT_INTERACTIVE,
-            crypto_pwhash_MEMLIMIT_INTERACTIVE);
+   constexpr uint32_t t_cost = 3;        // iterations
+   constexpr uint32_t m_cost = 1 << 16;  // 64 MiB
+   constexpr uint32_t parallelism = 1;
 
-    if (result != 0)
+    const std::string salt = "kalispera";
+
+    char hash[128];
+    const int result = argon2id_hash_encoded(
+        t_cost,
+        m_cost,
+        parallelism,
+        password.data(),
+        password.size(),
+        salt.data(),
+      salt.size(),
+        32,  // output length in bytes
+        hash,
+        sizeof(hash)
+    );
+
+    if (result != Argon2_ErrorCodes::ARGON2_OK)
       return false;
 
-    outHash = string(hashed, crypto_pwhash_STRBYTES);
+    outHash = std::string(hash);
     return true;
   }
 

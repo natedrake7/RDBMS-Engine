@@ -79,7 +79,7 @@ namespace Server::Sessions {
 
     delete session->cursor;
 
-    session->cursor = new QueryPipeline::Cursor(0, physicalPlan, 10);
+    session->cursor = new QueryPipeline::Cursor(0, physicalPlan, 100);
     return session->cursor;
   }
 

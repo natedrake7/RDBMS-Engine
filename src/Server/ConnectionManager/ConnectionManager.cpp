@@ -221,7 +221,7 @@ void ConnectionManager::CloseServerConnection() const
 #endif
 }
 
-  void ConnectionManager::CloseClientConnection(const int &clientSocket) const
+  void ConnectionManager::CloseClientConnection(const int &clientSocket)
   {
 
 #ifdef _WIN32
@@ -237,7 +237,10 @@ void ConnectionManager::CloseServerConnection() const
     std::unique_lock<std::mutex> clientLock(clientMutex);
 
     Network::ConnectionProtocolHeader header;
-    const auto headerBytesRead = recv(clientSocket, &header, Network::ConnectionProtocolHeader::GetSize(), 0);
+    std::vector<char> buffer(Network::ConnectionProtocolHeader::GetSize());
+
+    const auto headerBytesRead = recv(clientSocket, buffer.data(), Network::ConnectionProtocolHeader::GetSize(), 0);
+    header.Deserialize(buffer);
 
     if (headerBytesRead > 0) {
       this->ReadBodyFromClient(clientSocket, header);

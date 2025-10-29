@@ -23,7 +23,7 @@ namespace Server {
       static constexpr Security::Permission DB_WRITER_PERMISSIONS =
           Security::Permission::INSERT
           | Security::Permission::UPDATE
-          | Security::Permission::DELETE
+          | Security::Permission::DELETE_PERMISSION
           | DB_READER_PERMISSIONS;
 
       static constexpr Security::Permission DB_OWNER_PERMISSIONS =

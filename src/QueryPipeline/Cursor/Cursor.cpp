@@ -4,7 +4,7 @@ namespace QueryPipeline {
   Cursor::Cursor(const PipelineConstants::cursor_id_t& cursorId, PhysicalPlan::PhysicalOperator *plan, const int &batchSize)
     : id(cursorId), batchSize(batchSize), hasMoreRows(true), plan(plan) {}
 
-  Cursor::~Cursor(){ delete plan; }
+  Cursor::~Cursor(){ delete this->plan; }
 
    PhysicalPlan::PhysicalPlanResult* Cursor::fetchNextBatch(){
     auto* result = this->plan->Execute(this->batchSize);
