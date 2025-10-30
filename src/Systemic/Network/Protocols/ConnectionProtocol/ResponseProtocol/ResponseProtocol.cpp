@@ -9,12 +9,9 @@ namespace Network {
   }
 
   void ResponseProtocolHeader::Serialize(std::vector<char> &data){
-      data.resize(ResponseProtocolHeader::GetSize());
-
       ConnectionHeader::Serialize(data);
 
-
-    memcpy(data.data() + ConnectionHeader::Size(), &this->statusCode, sizeof(ResponseType));
+      Vector::AppendToBuffer(data, &this->statusCode, sizeof(ResponseType));
   }
 
   void ResponseProtocolHeader::Deserialize(const std::vector<char> &data){

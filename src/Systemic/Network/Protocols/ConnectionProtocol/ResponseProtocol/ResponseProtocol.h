@@ -20,11 +20,9 @@ static string authorizationFailure = "Failed to authenticate";
 
 namespace Network {
   struct ResponseProtocolHeader final : Network::ConnectionHeader{
-    uint16_t size;
     ResponseType statusCode;
-    DataTypes::Guid sessionId;
 
-    ResponseProtocolHeader() : size(0), statusCode(ResponseType::InvalidResponse), sessionId(DataTypes::Guid::Empty()) {}
+    ResponseProtocolHeader() : ConnectionHeader(), statusCode(ResponseType::InvalidResponse) {}
     ~ResponseProtocolHeader()override = default;
 
     void Serialize(std::vector<char> &data) override;

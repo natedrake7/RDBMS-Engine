@@ -313,19 +313,6 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Networ
       std::vector<QueryResult> results;
       QueryPipeline::Parser::Parse(query, header.sessionId, &results);
 
-      //test return actual values
-      const vector<string> columns = {
-        {"1"},
-        {"2"},
-        {"3"}
-      };
-
-      // const vector<Network::ResponseRow> rows = {
-      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 1)),
-      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
-      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
-      // };
-
       const vector<string> tableColumns = {
         {"id"},
         {"user"},
