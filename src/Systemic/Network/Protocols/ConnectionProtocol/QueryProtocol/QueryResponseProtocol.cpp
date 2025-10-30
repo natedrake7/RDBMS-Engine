@@ -4,21 +4,7 @@
 #include <ostream>
 
 namespace Network {
-  // ResponseRow::ResponseRow(const std::vector<std::string> &columns, const ByteMaps::BitMap& nullBitMap){
-  //   this->columns = columns;
-  //   this->nullBitMap = nullBitMap;
-  // }
-  //
-  // int ResponseRow::GetSize() const{
-  //   int size = this->nullBitMap.GetSizeInBytes();
-  //
-  //   for (const auto& column: columns)
-  //     size += sizeof(int) + column.size();
-  //
-  //   return size;
-  // }
-
-QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
+  QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
     this->hasError = false;
     this->header.size = sizeof(bool);
     this->header.statusCode = ResponseType::QueryResponse;
@@ -54,29 +40,16 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
 
   int QueryResponseProtocol::GetSize() const{ return ResponseProtocol::GetSize() + header.size; }
 
-  void QueryResponseProtocol::Serialize(){
-    this->buffer.clear();
+  void QueryResponseProtocol::SerializeError(){
+    const int errorSize = static_cast<int>(this->errorMessage.size());
 
-    ResponseProtocol::Serialize();
+    Vector::AppendToBuffer(this->buffer, &errorSize, sizeof(int));
+    Vector::AppendToBuffer(this->buffer, this->errorMessage.c_str(), errorSize);
 
-    // const int size = this->GetSize();
+    this->AssignBufferSizeToProtocolSize();
+  }
 
-    Vector::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
-
-    if (this->hasError) {
-      // Vector::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
-      //
-      // const int errorSize = this->errorMessage.size();
-      // memcpy(bufferPtr, &errorSize, sizeof(int));
-      // bufferPtr += sizeof(int);
-      //
-      // memcpy(bufferPtr, this->errorMessage.data(), errorSize);
-      // bufferPtr += errorSize;
-
-      this->header.size = static_cast<uint16_t>(this->buffer.size());
-      return;
-    }
-
+  void QueryResponseProtocol::SerializeResult(){
     const int numOfTableColumns = static_cast<int>(this->columns.size());
     Vector::AppendToBuffer(this->buffer, &numOfTableColumns, sizeof(int));
 
@@ -92,30 +65,40 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
     for (const auto& row: this->rows)
       row.Serialize(this->buffer);
 
-    this->header.size = static_cast<uint16_t>(this->buffer.size() - ResponseProtocolHeader::GetSize());
+    this->AssignBufferSizeToProtocolSize();
+  }
 
+  void QueryResponseProtocol::AssignBufferSizeToProtocolSize(){
+    this->header.size = static_cast<uint16_t>(this->buffer.size() - ResponseProtocolHeader::GetSize());
     std::memcpy(this->buffer.data(), &this->header.size, sizeof(uint16_t));
   }
 
-  void QueryResponseProtocol::Deserialize(const vector<char> &buffer) {
-    uint32_t offSet = 0;
+  void QueryResponseProtocol::Serialize(){
+    this->buffer.clear();
 
-    memcpy(&this->hasError, buffer.data() + offSet, sizeof(bool));
-    offSet += sizeof(bool);
+    ResponseProtocol::Serialize();
+    Vector::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
 
     if (this->hasError) {
-      int errorSize = 0;
-
-      memcpy(&errorSize, buffer.data() + offSet, sizeof(int));
-      offSet += sizeof(int);
-
-      this->errorMessage.resize(errorSize);
-      memcpy(this->errorMessage.data(), buffer.data() + offSet, errorSize);
-      offSet += errorSize;
-
+      this->SerializeError();
       return;
     }
 
+    this->SerializeResult();
+  }
+
+  void QueryResponseProtocol::DeserializeError(const std::vector<char> &buffer, uint32_t& offSet){
+    int errorSize = 0;
+
+    memcpy(&errorSize, buffer.data() + offSet, sizeof(int));
+    offSet += sizeof(int);
+
+    this->errorMessage.resize(errorSize);
+    memcpy(this->errorMessage.data(), buffer.data() + offSet, errorSize);
+    offSet += errorSize;
+  }
+
+  void QueryResponseProtocol::DeserializeResult(const std::vector<char> &buffer, uint32_t& offSet){
     int numOfColumns = 0;
     memcpy(&numOfColumns, buffer.data() + offSet, sizeof(int));
     offSet += sizeof(int);
@@ -146,6 +129,20 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
       row.Deserialize(buffer, offSet, numOfColumns);
       this->rows.push_back(std::move(row));
     }
+  }
+
+  void QueryResponseProtocol::Deserialize(const vector<char> &buffer) {
+    uint32_t offSet = 0;
+
+    memcpy(&this->hasError, buffer.data() + offSet, sizeof(bool));
+    offSet += sizeof(bool);
+
+    if (this->hasError) {
+      this->DeserializeError(buffer, offSet);
+      return;
+    }
+
+    this->DeserializeResult(buffer, offSet);
   }
 
   ostream & operator<<(ostream &os, const QueryResponseProtocol &protocol){

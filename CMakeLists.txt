@@ -222,7 +222,9 @@ target_link_libraries(Database PRIVATE Systemic PRIVATE ExpressionsLibrary PRIVA
 
  add_executable(Client
                 src/Client/client.cpp
-                src/Client/client.h)
+                src/Client/client.h
+         src/Client/ClientManager/ClientManager.cpp
+         src/Client/ClientManager/ClientManager.h)
 
 target_link_libraries(Client
         PRIVATE

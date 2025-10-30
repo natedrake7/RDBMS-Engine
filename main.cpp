@@ -69,7 +69,7 @@
 
 std::atomic<bool> serverRunning{true};
 
-void shutdownServer(int signal) {
+void shutdownClient(int signal) {
     serverRunning.store(false);
 
     cout << "Server shutting down..." << endl;
@@ -79,9 +79,9 @@ void shutdownServer(int signal) {
 
 void RegisterSignalHandlers()
 {
-    signal(SIGINT, shutdownServer);   // Ctrl+C
-    signal(SIGTERM, shutdownServer);  // kill command
-    signal(SIGABRT, shutdownServer);  // abort()
+    signal(SIGINT, shutdownClient);   // Ctrl+C
+    signal(SIGTERM, shutdownClient);  // kill command
+    signal(SIGABRT, shutdownClient);  // abort()
 }
 
 int main()

@@ -19,7 +19,7 @@ namespace Network {
     void Serialize(std::vector<char> &responseBuffer) override;
     void Deserialize(const std::vector<char> &responseBuffer) override;
 
-    constexpr static int GetSize() { return static_cast<int>(ConnectionHeader::Size() + sizeof(ConnectionProtocolType)); }
+    constexpr static int GetSize() { return ConnectionHeader::Size() + sizeof(ConnectionProtocolType); }
   }ConnectionProtocolHeader;
 
   class ConnectionProtocol {

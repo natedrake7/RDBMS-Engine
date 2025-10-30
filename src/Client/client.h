@@ -1,10 +1,12 @@
 #pragma once
 
-typedef struct ConnectionParameters {
+#include <string>
+
+struct ConnectionParameters {
   int port;
-  string hostName;
-  string username;
-  string password;
+  std::string hostName;
+  std::string username;
+  std::string password;
 
   int socket;
 
@@ -13,8 +15,4 @@ typedef struct ConnectionParameters {
     this->socket = 0;
   }
   ~ConnectionParameters() = default;
-}ConnectionParameters;
-
-static void ValidateConnectionString(ConnectionParameters& params, const vector<string>& connectionString);
-void InitializeConnectionToServer(ConnectionParameters& params);
-void CloseConnection(ConnectionParameters& params);
+};

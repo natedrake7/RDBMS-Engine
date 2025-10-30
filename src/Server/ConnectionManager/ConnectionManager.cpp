@@ -211,9 +211,9 @@ void ConnectionManager::CloseServerConnection() const
     WSACleanup();
 
 #else
-    for (const auto& event : this->events) {
-        epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, event.data.fd, nullptr);
-        close(event.data.fd);
+    for (const auto&[event, data] : this->events) {
+        epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, data.fd, nullptr);
+        close(data.fd);
     }
 
     //close(this->parameters.serverSocket);
@@ -221,7 +221,7 @@ void ConnectionManager::CloseServerConnection() const
 #endif
 }
 
-  void ConnectionManager::CloseClientConnection(const int &clientSocket)
+  void ConnectionManager::CloseClientConnection(const int &clientSocket) const
   {
 
 #ifdef _WIN32
@@ -267,7 +267,7 @@ void ConnectionManager::CloseServerConnection() const
 
     switch (header.type) {
       case Network::Authorize:
-        ConnectionManager::AuthorizeClientConnection(clientSocket, header, buffer);
+        this->AuthorizeClientConnection(clientSocket, header, buffer);
         return;
       case Network::Query:
         this->GetQueryFromClient(clientSocket, header, buffer);
@@ -280,7 +280,7 @@ void ConnectionManager::CloseServerConnection() const
     //invalid request type
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer) {
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const {
     Network::AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
@@ -299,7 +299,7 @@ void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const
       Network::ResponseProtocol responseProtocol(ResponseType::InvalidCredentials, DataTypes::Guid::Empty());
       ConnectionManager::SendToClient(clientSocket, &responseProtocol);
 
-      ConnectionManager::CloseClientConnection(clientSocket);
+      this->CloseClientConnection(clientSocket);
     }
 }
 

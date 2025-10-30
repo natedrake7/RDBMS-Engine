@@ -14,6 +14,12 @@ namespace Network {
     std::vector<std::string> columns;
     std::vector<QueryResult> rows;
 
+    void SerializeError();
+    void SerializeResult();
+    void AssignBufferSizeToProtocolSize();
+
+    void DeserializeError(const std::vector<char>& buffer, uint32_t& offSet);
+    void DeserializeResult(const std::vector<char>& buffer, uint32_t& offSet);
 
     public:
       QueryResponseProtocol();
