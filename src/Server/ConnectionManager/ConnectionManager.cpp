@@ -311,15 +311,10 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Networ
     this->threadPool.Enqueue([query = protocol.GetQuery(), clientSocket, header] {
 
       std::vector<QueryResult> results;
-      QueryPipeline::Parser::Parse(query, header.sessionId, &results);
+      std::vector<std::string> displayColumns;
+      QueryPipeline::Parser::Parse(query, header.sessionId, &results, &displayColumns);
 
-      const vector<string> tableColumns = {
-        {"id"},
-        {"user"},
-        {"result"}
-      };
-      
-      Network::QueryResponseProtocol response(tableColumns, results);
+      Network::QueryResponseProtocol response(displayColumns, results);
       
       ConnectionManager::SendToClient(clientSocket, &response);
     });

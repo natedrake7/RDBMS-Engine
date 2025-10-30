@@ -93,6 +93,8 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
       row.Serialize(this->buffer);
 
     this->header.size = static_cast<uint16_t>(this->buffer.size() - ResponseProtocolHeader::GetSize());
+
+    std::memcpy(this->buffer.data(), &this->header.size, sizeof(uint16_t));
   }
 
   void QueryResponseProtocol::Deserialize(const vector<char> &buffer) {
