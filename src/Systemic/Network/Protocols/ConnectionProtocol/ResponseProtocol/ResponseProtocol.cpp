@@ -51,4 +51,8 @@ namespace Network {
   }
 
   const ResponseType & ResponseProtocol::GetResponseType() const{ return this->header.statusCode; }
+
+  const DataTypes::Guid & ResponseProtocol::GetSessionId() const {
+    return this->header.sessionId;
+  }
 }
