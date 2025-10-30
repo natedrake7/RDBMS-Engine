@@ -50,9 +50,9 @@ int main()
     std::string("-P"),
     std::string("1433"),
     std::string("-p"),
-    std::string("kalispera"),
+    std::string("admin"),
     std::string("-u"),
-    std::string("natedrake7")
+    std::string("admin")
   };
 
   ValidateConnectionString(parameters, connectionString);

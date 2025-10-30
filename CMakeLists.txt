@@ -215,19 +215,19 @@ add_library(Server STATIC
         src/Server/UserManager/UserManager.h
 )
 
-if(WIN32)
-    target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE ws2_32 PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
-else()
-    target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
-endif()
+target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE $<$<PLATFORM_ID:Windows>:ws2_32> PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
 
 target_link_libraries(Database PRIVATE Systemic PRIVATE ExpressionsLibrary PRIVATE Server)
 
  add_executable(Client
-         src/Client/client.cpp
-         src/Client/client.h)
+                src/Client/client.cpp
+                src/Client/client.h)
 
- target_link_libraries(Client PRIVATE Systemic)
+target_link_libraries(Client
+        PRIVATE
+        Systemic
+        $<$<PLATFORM_ID:Windows>:ws2_32>
+)
 
 target_link_libraries(DatabaseInterface 
                         PRIVATE Server Database Systemic QueryPipeline)
