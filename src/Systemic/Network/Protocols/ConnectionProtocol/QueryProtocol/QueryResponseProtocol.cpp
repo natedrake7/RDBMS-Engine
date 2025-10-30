@@ -152,18 +152,13 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
         return os;
       }
 
-    for (const auto& column: protocol.columns) {
-      os << column << " | ";
-    }
+    for (const auto& column : protocol.columns)
+      os << column << " || ";
 
     os << std::endl;
 
-    for (const auto& row: protocol.rows) {
-      for (const auto & value :  row.GetData())
-        os << value << " | ";
-
-      os << std::endl;
-    }
+    for (const auto& row: protocol.rows)
+      row.Print();
 
     return os;
   }

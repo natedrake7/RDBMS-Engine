@@ -89,9 +89,11 @@ int main()
     }
 
     Network::ResponseProtocolHeader responseHeader;
-    std::vector<char> buffer;
+    std::vector<char> buffer(Network::ResponseProtocolHeader::GetSize());
 
-    auto bytesReceived = recv(parameters.socket, reinterpret_cast<char *>(&responseHeader), Network::ResponseProtocolHeader::GetSize(), 0);
+    auto bytesReceived = recv(parameters.socket, buffer.data(), Network::ResponseProtocolHeader::GetSize(), 0);
+
+    responseHeader.Deserialize(buffer);
 
     if (bytesReceived < 0) {
       std::cerr << "Failed to get response from server" << std::endl;
@@ -112,7 +114,6 @@ int main()
     Network::QueryResponseProtocol queryResponseProtocol(responseHeader);
 
     buffer.resize(responseHeader.size);
-
     bytesReceived = recv(parameters.socket, buffer.data(), responseHeader.size, 0);
     
     if (bytesReceived < 0) {
@@ -131,6 +132,7 @@ int main()
     std::cout << queryResponseProtocol << std::endl;
   }
 
+  //notify server connection closes
   CloseConnection(parameters);
   std::cout << "Connection Closed" << std::endl;
 
