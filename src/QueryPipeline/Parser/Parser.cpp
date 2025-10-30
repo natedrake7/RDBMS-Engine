@@ -44,7 +44,12 @@ namespace QueryPipeline
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(const string& query, const DataTypes::Guid& sessionId, std::vector<QueryResult>* results){
+    void Parser::Parse(
+        const string& query,
+        const DataTypes::Guid& sessionId,
+        std::vector<QueryResult>* results,
+        std::vector<std::string>* displayColumns
+    ){
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
 
@@ -118,13 +123,16 @@ namespace QueryPipeline
                 return;
             }
 
-            for (const auto& column : result->displayColumnNames)
-                std::cout << column << " || ";
+            // for (const auto& column : result->displayColumnNames)
+            //     std::cout << column << " || ";
+            //
+            // std::cout << std::endl;
+            //
+            // for (const auto& row: result->results)
+            //     row.Print();
 
-            std::cout << std::endl;
-
-            for (const auto& row: result->results)
-                row.Print();
+            if (displayColumns != nullptr && displayColumns->empty())
+                *displayColumns = std::move(result->displayColumnNames);
 
             if (results != nullptr)
                 *results = std::move(result->results);
