@@ -60,7 +60,7 @@ namespace Server {
       static void SendToClient(const int& clientSocket, Network::ResponseProtocol* protocol);
 
       void GetQueryFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader& header, const vector<char>& buffer);
-      void AuthorizeClientConnection(const int& clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const;
+      static void AuthorizeClientConnection(const int& clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer);
       void HandleClientConnection(const int& clientSocket, mutex& clientMutex);
       void ReadBodyFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader& header);
       void CloseServerConnection() const;
