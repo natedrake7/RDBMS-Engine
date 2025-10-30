@@ -29,6 +29,8 @@
 
 ConnectionParameters parameters;
 
+DataTypes::Guid sessionId;
+
 void shutdownServer(int signal) {
   cout << endl << "Client shutting down..." << endl;
 
@@ -68,7 +70,7 @@ int main()
     if(input == "exit")
       break;
 
-    Network::QueryProtocol protocol(input);
+    Network::QueryProtocol protocol(input, sessionId);
     
     const auto& serializedProtocol = protocol.GetSerializedProtocol();
 
@@ -175,7 +177,9 @@ void AuthorizeClientConnection(const int& socket, const ConnectionParameters& pa
   if (statusCode != ResponseType::Authenticated)
     throw std::runtime_error("Unknown error occurred");
 
-  cout << "Successfully authenticated" << endl;
+
+  sessionId = responseProtocol.GetSessionId();
+  std::cout << "Successfully authenticated" << std::endl;
 }
 
 void InitializeConnectionToServer(ConnectionParameters& params) {
@@ -212,7 +216,6 @@ void InitializeConnectionToServer(ConnectionParameters& params) {
   }
 
   AuthorizeClientConnection(sock, params);
-
 
   params.socket = sock;
 }

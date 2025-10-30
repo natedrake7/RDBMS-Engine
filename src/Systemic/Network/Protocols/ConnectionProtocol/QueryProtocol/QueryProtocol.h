@@ -7,7 +7,7 @@ namespace Network {
     std::string query;
 
     public:
-      explicit QueryProtocol(const std::string& query);
+      explicit QueryProtocol(const std::string& query, const DataTypes::Guid& sessionId);
       explicit QueryProtocol(const ConnectionProtocolHeader& header): ConnectionProtocol(header){}
       ~QueryProtocol() override = default;
       [[nodiscard]] int GetSize() const override;

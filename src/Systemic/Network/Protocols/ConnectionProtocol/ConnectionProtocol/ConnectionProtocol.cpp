@@ -5,7 +5,7 @@
 
 namespace Network {
   void ConnectionProtocolHeader::Serialize(std::vector<char> &responseBuffer){
-    responseBuffer.resize(ConnectionProtocolHeader::Size());
+    // responseBuffer.resize(ConnectionProtocolHeader::Size());
 
     ConnectionHeader::Serialize(responseBuffer);
 

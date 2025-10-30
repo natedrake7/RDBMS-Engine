@@ -48,6 +48,7 @@ namespace Network {
       virtual void DeserializeBody(const vector<char>& buffer);
       virtual const vector<char>& GetSerializedProtocol();
       [[nodiscard]] const ResponseType& GetResponseType() const;
+      [[nodiscard]] const DataTypes::Guid& GetSessionId() const;
   };
 
 }
