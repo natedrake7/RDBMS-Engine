@@ -90,9 +90,9 @@ void QueryResult::Serialize(std::vector<char>& buffer) const{
     const auto size = value.GetSize();
     const auto type = value.GetType();
 
-    Network::QueryResponseProtocol::AppendToBuffer(buffer, &size, sizeof(Constants::block_size_t));
-    Network::QueryResponseProtocol::AppendToBuffer(buffer, &type, sizeof(Constants::DataType));
-    Network::QueryResponseProtocol::AppendToBuffer(buffer, value.GetRawData(), size);
+    Vector::AppendToBuffer(buffer, &size, sizeof(Constants::block_size_t));
+    Vector::AppendToBuffer(buffer, &type, sizeof(Constants::DataType));
+    Vector::AppendToBuffer(buffer, value.GetRawData(), size);
   }
 }
 

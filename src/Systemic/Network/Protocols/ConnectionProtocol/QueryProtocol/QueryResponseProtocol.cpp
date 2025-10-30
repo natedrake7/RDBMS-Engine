@@ -52,11 +52,6 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
     this->columns = columns;
   }
 
-  void QueryResponseProtocol::AppendToBuffer(std::vector<char> &buffer, const void *data, const int &size){
-    const auto* bytes = static_cast<const char*>(data);
-    buffer.insert(buffer.end(), bytes, bytes + size);
-  }
-
   int QueryResponseProtocol::GetSize() const{ return ResponseProtocol::GetSize() + header.size; }
 
   void QueryResponseProtocol::Serialize(){
@@ -66,10 +61,10 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
 
     // const int size = this->GetSize();
 
-    QueryResponseProtocol::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
+    Vector::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
 
     if (this->hasError) {
-      // QueryResponseProtocol::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
+      // Vector::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
       //
       // const int errorSize = this->errorMessage.size();
       // memcpy(bufferPtr, &errorSize, sizeof(int));
@@ -83,16 +78,16 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
     }
 
     const int numOfTableColumns = static_cast<int>(this->columns.size());
-    QueryResponseProtocol::AppendToBuffer(this->buffer, &numOfTableColumns, sizeof(int));
+    Vector::AppendToBuffer(this->buffer, &numOfTableColumns, sizeof(int));
 
     for (const auto& column: this->columns) {
       const int columnSize = static_cast<int>(column.size());
-      QueryResponseProtocol::AppendToBuffer(this->buffer, &columnSize, sizeof(int));
-      QueryResponseProtocol::AppendToBuffer(this->buffer, column.data(), columnSize);
+      Vector::AppendToBuffer(this->buffer, &columnSize, sizeof(int));
+      Vector::AppendToBuffer(this->buffer, column.data(), columnSize);
     }
 
     const int numOfRows = static_cast<int>(this->rows.size());
-    QueryResponseProtocol::AppendToBuffer(this->buffer, &numOfRows, sizeof(int));
+    Vector::AppendToBuffer(this->buffer, &numOfRows, sizeof(int));
 
     for (const auto& row: this->rows)
       row.Serialize(this->buffer);

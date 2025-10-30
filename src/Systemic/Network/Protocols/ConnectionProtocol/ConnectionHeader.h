@@ -1,4 +1,7 @@
 #pragma once
+#include "../../../DataStructures/Vector/Vector.h"
+
+
 #include <cstdint>
 #include "../../../DataTypes/Guid/Guid.h"
 
@@ -17,20 +20,21 @@ namespace Network {
     virtual ~ConnectionHeader() = default;
 
     virtual void Serialize(std::vector<char>& responseBuffer) {
-      if (responseBuffer.empty())
-        responseBuffer.resize(ConnectionHeader::Size());
+      Vector::AppendToBuffer(responseBuffer, &this->size, sizeof(uint16_t));
 
-      memcpy(responseBuffer.data(), &size, sizeof(uint16_t));
+      // memcpy(responseBuffer.data(), &this->size, sizeof(uint16_t));
 
-      memcpy(responseBuffer.data() + sizeof(uint16_t), sessionId.GetDataUnsafe().data(), DataTypes::Guid::GuidSize());
+      Vector::AppendToBuffer(responseBuffer, sessionId.GetDataUnsafe().data(), DataTypes::Guid::GuidSize());
+
+      // memcpy(responseBuffer.data() + sizeof(uint16_t), sessionId.GetDataUnsafe().data(), DataTypes::Guid::GuidSize());
     }
 
     virtual void Deserialize(const std::vector<char>& responseBuffer) {
       if (responseBuffer.empty())
         return;
 
-      memcpy(&size, responseBuffer.data(), sizeof(uint16_t));
-      memcpy(sessionId.GetDataUnsafe().data(), responseBuffer.data() + sizeof(uint16_t), DataTypes::Guid::GuidSize());
+      memcpy(&this->size, responseBuffer.data(), sizeof(uint16_t));
+      memcpy(this->sessionId.GetDataUnsafe().data(), responseBuffer.data() + sizeof(uint16_t), DataTypes::Guid::GuidSize());
     }
 
     constexpr static int Size(){ return sizeof(uint16_t) + DataTypes::Guid::GuidSize(); }

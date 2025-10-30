@@ -13,31 +13,37 @@ namespace Network {
   }
 
   int AuthorizeProtocol::GetSize() const{
-    return ConnectionProtocol::GetSize() + 2 * sizeof(int) + this->username.size() + this->password.size();
+    return static_cast<int>(ConnectionProtocol::GetSize() + 2 * sizeof(int) + this->username.size() + this->password.size());
   }
 
   void AuthorizeProtocol::Serialize(){
-    buffer.resize(this->GetSize());
+    // this->buffer.resize(this->GetSize());
 
     ConnectionProtocol::Serialize();
 
-    char *bufferPtr = this->buffer.data() + sizeof(ConnectionProtocolHeader);
+    // char *bufferPtr = this->buffer.data() + ConnectionProtocol::GetSize();
 
     const int usernameSize = this->username.size();
+    Vector::AppendToBuffer(this->buffer, &usernameSize, sizeof(int));
+    Vector::AppendToBuffer(this->buffer, this->username.c_str(), usernameSize);
 
-    memcpy(bufferPtr, &usernameSize, sizeof(int));
-    bufferPtr += sizeof(int);
 
-    memcpy(bufferPtr, this->username.c_str(), usernameSize);
-    bufferPtr += usernameSize;
+    // memcpy(bufferPtr, &usernameSize, sizeof(int));
+    // bufferPtr += sizeof(int);
+
+    // memcpy(bufferPtr, this->username.c_str(), usernameSize);
+    // bufferPtr += usernameSize;
 
     const int passwordSize = this->password.size();
 
-    memcpy(bufferPtr, &passwordSize, sizeof(int));
-    bufferPtr += sizeof(int);
+   Vector::AppendToBuffer(this->buffer, &passwordSize, sizeof(int));
+   Vector::AppendToBuffer(this->buffer, this->password.c_str(), passwordSize);
 
-    memcpy(bufferPtr, this->password.c_str(), passwordSize);
-    bufferPtr += passwordSize;
+    // memcpy(bufferPtr, &passwordSize, sizeof(int));
+    // bufferPtr += sizeof(int);
+    //
+    // memcpy(bufferPtr, this->password.c_str(), passwordSize);
+    // bufferPtr += passwordSize;
   }
 
   void AuthorizeProtocol::Deserialize(const std::vector<char> &buffer){

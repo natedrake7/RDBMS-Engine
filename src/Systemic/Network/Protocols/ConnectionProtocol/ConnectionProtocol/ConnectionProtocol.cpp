@@ -1,4 +1,6 @@
 #include "ConnectionProtocol.h"
+#include "../../../../DataStructures/Vector/Vector.h"
+
 #include <cstring>
 
 namespace Network {
@@ -7,7 +9,9 @@ namespace Network {
 
     ConnectionHeader::Serialize(responseBuffer);
 
-    memcpy(responseBuffer.data() + ConnectionHeader::Size(), &this->type, sizeof(ConnectionProtocolType));
+    Vector::AppendToBuffer(responseBuffer, &this->type, sizeof(ConnectionProtocolType));
+
+    // memcpy(responseBuffer.data() + ConnectionHeader::Size(), &this->type, sizeof(ConnectionProtocolType));
   }
 
   void ConnectionProtocolHeader::Deserialize(const std::vector<char> &responseBuffer){
@@ -19,7 +23,7 @@ namespace Network {
   int ConnectionProtocol::GetSize() const{ return Network::ConnectionProtocolHeader::GetSize(); }
 
   void ConnectionProtocol::Serialize(){
-    if (buffer.empty()) {
+    if (this->buffer.empty()) {
       this->buffer.clear();
       this->header.Serialize(this->buffer);
     }

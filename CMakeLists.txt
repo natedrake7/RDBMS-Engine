@@ -90,6 +90,7 @@ add_library(Systemic SHARED
         src/Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.cpp
         src/Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h
         src/Systemic/Network/Protocols/ConnectionProtocol/ConnectionHeader.h
+        src/Systemic/DataStructures/Vector/Vector.h
 
 )
 

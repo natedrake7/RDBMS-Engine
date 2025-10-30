@@ -28,8 +28,6 @@ namespace Network {
       void Deserialize(const std::vector<char>& buffer) override;
 
       friend ostream& operator<<(ostream& os, const QueryResponseProtocol& protocol);
-
-      static void AppendToBuffer(std::vector<char>& buffer, const void* data, const int& size);
   };
 
 }
