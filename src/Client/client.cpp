@@ -32,7 +32,7 @@ ConnectionParameters parameters;
 DataTypes::Guid sessionId;
 
 void shutdownServer(int signal) {
-  cout << endl << "Client shutting down..." << endl;
+  std::cout << std::endl << "Client shutting down..." << std::endl;
 
   CloseConnection(parameters);
 
@@ -60,7 +60,7 @@ int main()
   ValidateConnectionString(parameters, connectionString);
   InitializeConnectionToServer(parameters);
 
-  cout << "Please enter the query: " << endl;
+  std::cout << "Please enter the query: " << std::endl;
 
   while(true){
     std::string input;
@@ -78,34 +78,34 @@ int main()
 
     if(bytesSent < 0)
     {
-      cerr << "Failed to send request to server" << endl;
+      std::cerr << "Failed to send request to server" << std::endl;
       CloseConnection(parameters);
       return -1;
     }
 
     if (bytesSent == 0) {
-      cout << "Connection lost" << endl;
+      std::cout << "Connection lost" << std::endl;
       CloseConnection(parameters);
     }
 
     Network::ResponseProtocolHeader responseHeader;
     std::vector<char> buffer;
 
-    auto bytesReceived = recv(parameters.socket, reinterpret_cast<char *>(&responseHeader), responseHeader.GetSize(), 0);
+    auto bytesReceived = recv(parameters.socket, reinterpret_cast<char *>(&responseHeader), Network::ResponseProtocolHeader::GetSize(), 0);
 
     if (bytesReceived < 0) {
-      cerr << "Failed to get response from server" << endl;
+      std::cerr << "Failed to get response from server" << std::endl;
       CloseConnection(parameters);
       return -1;
     }
 
     if (bytesReceived == 0) {
-      cout << "Connection lost" << endl;
+      std::cout << "Connection lost" << std::endl;
       CloseConnection(parameters);
     }
 
     if (responseHeader.statusCode != ResponseType::QueryResponse) {
-      cerr << "Failed to get response from server" << endl;
+      std::cerr << "Failed to get response from server" << std::endl;
       CloseConnection(parameters);
     }
 
@@ -116,23 +116,23 @@ int main()
     bytesReceived = recv(parameters.socket, buffer.data(), responseHeader.size, 0);
     
     if (bytesReceived < 0) {
-      cerr << "Failed to get response from server" << endl;
+      std::cerr << "Failed to get response from server" << std::endl;
       CloseConnection(parameters);
       return -1;
     }
 
     if (bytesReceived == 0) {
-      cout << "Connection lost" << endl;
+      std::cout << "Connection lost" << std::endl;
       CloseConnection(parameters);
     }
 
     queryResponseProtocol.Deserialize(buffer);
 
-    cout << queryResponseProtocol << endl;
+    std::cout << queryResponseProtocol << std::endl;
   }
 
   CloseConnection(parameters);
-  cout << "Connection Closed" << endl;
+  std::cout << "Connection Closed" << std::endl;
 
   return 0;
 }
@@ -144,10 +144,10 @@ void AuthorizeClientConnection(const int& socket, const ConnectionParameters& pa
 
   const auto bytesSent = send(socket, serializedObject.data(), serializedObject.size(), 0);
 
-  cout << bytesSent << endl;
+  std::cout << bytesSent << std::endl;
 
   if (bytesSent < 0) {
-    cerr << "Failed to send request to server" << endl;
+    cerr << "Failed to send request to server" << std::endl;
     return;
   }
 
@@ -160,11 +160,11 @@ void AuthorizeClientConnection(const int& socket, const ConnectionParameters& pa
   const auto bytesReceived = recv(socket, buffer.data(), responseProtocolSize, 0);
 
   if (bytesReceived < 0) {
-    cerr << "Failed to receive response from server" << endl;
+    cerr << "Failed to receive response from server" << std::endl;
   }
 
   if (bytesReceived == 0) {
-    cout << "Connection to server has been lost" << endl;
+    std::cout << "Connection to server has been lost" << std::endl;
   }
 
   responseProtocol.Deserialize(buffer);
