@@ -111,7 +111,7 @@ namespace Server {
         newEvent.fd = clientSocket;
         newEvent.events = POLLIN;
         newEvent.revents = 0;
-        this->events.push_back(newEvent);
+        this->events[i] = newEvent;
         cout << "Accepted client (Windows): " << clientSocket << endl;
 
 #else
@@ -239,7 +239,9 @@ void ConnectionManager::CloseServerConnection() const
     Network::ConnectionProtocolHeader header;
     std::vector<char> buffer(Network::ConnectionProtocolHeader::GetSize());
 
-    const auto headerBytesRead = recv(clientSocket, buffer.data(), Network::ConnectionProtocolHeader::GetSize(), 0);
+    const auto headerSize = Network::ConnectionProtocolHeader::GetSize();
+
+    const auto headerBytesRead = recv(clientSocket, buffer.data(), headerSize, 0);
     header.Deserialize(buffer);
 
     if (headerBytesRead > 0) {
@@ -259,13 +261,13 @@ void ConnectionManager::CloseServerConnection() const
     vector<char> buffer(header.size);
     
     if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
-      perror("failed to read body from client or body was empty!");
+      std::cerr << "Failed to read body from client or body was empty" << std::endl;
       return;
     }
 
     switch (header.type) {
       case Network::Authorize:
-        this->AuthorizeClientConnection(clientSocket, header, buffer);
+        ConnectionManager::AuthorizeClientConnection(clientSocket, header, buffer);
         return;
       case Network::Query:
         this->GetQueryFromClient(clientSocket, header, buffer);
@@ -278,7 +280,7 @@ void ConnectionManager::CloseServerConnection() const
     //invalid request type
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer) const{
+void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer) {
     Network::AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
@@ -310,19 +312,6 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Networ
 
       std::vector<QueryResult> results;
       QueryPipeline::Parser::Parse(query, header.sessionId, &results);
-
-      //test return actual values
-      const vector<string> columns = {
-        {"1"},
-        {"2"},
-        {"3"}
-      };
-
-      // const vector<Network::ResponseRow> rows = {
-      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 1)),
-      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
-      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
-      // };
 
       const vector<string> tableColumns = {
         {"id"},

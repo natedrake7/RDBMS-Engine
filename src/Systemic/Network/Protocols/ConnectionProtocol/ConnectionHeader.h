@@ -21,12 +21,7 @@ namespace Network {
 
     virtual void Serialize(std::vector<char>& responseBuffer) {
       Vector::AppendToBuffer(responseBuffer, &this->size, sizeof(uint16_t));
-
-      // memcpy(responseBuffer.data(), &this->size, sizeof(uint16_t));
-
       Vector::AppendToBuffer(responseBuffer, sessionId.GetDataUnsafe().data(), DataTypes::Guid::GuidSize());
-
-      // memcpy(responseBuffer.data() + sizeof(uint16_t), sessionId.GetDataUnsafe().data(), DataTypes::Guid::GuidSize());
     }
 
     virtual void Deserialize(const std::vector<char>& responseBuffer) {

@@ -75,13 +75,15 @@ namespace QueryPipeline{
         };
 
     class Parser{
-        ~Parser();
-        Parser();
+
 
         static Statements::Statement* CreateStatement(const std::any &ast, const DataTypes::Guid& sessionId);
         static void ClearQuery(const Statements::Statement* statement,const LogicalPlan* logicalPlan);
 
         public:
+            Parser();
+            ~Parser();
+
             static Parser& Get()
             {
                 static Parser instance;

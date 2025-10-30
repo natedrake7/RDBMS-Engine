@@ -103,42 +103,42 @@ int main()
 
     server.Initialize("configuration.json");
 
-    const auto* user = server.Authenticate("admin", "admin");
-    // const auto* user = server.Authenticate("ioanis7", "'kalispera'");
-
-    if (user == nullptr) {
-        server.Shutdown();
-        return 0;
-    }
-
-    const auto* session = server.CreateSession(user);
-
-    std::cout << "Please enter a query: "<< endl;
-
-    while (true) {
-        std::string input;
-
-        std::getline(std::cin, input);
-
-        if (input == "exit")
-            break;
-
-        const auto start = std::chrono::high_resolution_clock::now();
-
-        QueryPipeline::Parser::Parse(input, session->sessionId);
-
-        const auto end = std::chrono::high_resolution_clock::now();
-
-        const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
-
-        std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
-    }
-
-    const auto& databases = server.GetCatalog();
-
-    server.Shutdown();
-
-    return 0;
+    // const auto* user = server.Authenticate("admin", "admin");
+    // // const auto* user = server.Authenticate("ioanis7", "'kalispera'");
+    //
+    // if (user == nullptr) {
+    //     server.Shutdown();
+    //     return 0;
+    // }
+    //
+    // const auto* session = server.CreateSession(user);
+    //
+    // std::cout << "Please enter a query: "<< endl;
+    //
+    // while (true) {
+    //     std::string input;
+    //
+    //     std::getline(std::cin, input);
+    //
+    //     if (input == "exit")
+    //         break;
+    //
+    //     const auto start = std::chrono::high_resolution_clock::now();
+    //
+    //     QueryPipeline::Parser::Parse(input, session->sessionId);
+    //
+    //     const auto end = std::chrono::high_resolution_clock::now();
+    //
+    //     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+    //
+    //     std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
+    // }
+    //
+    // const auto& databases = server.GetCatalog();
+    //
+    // server.Shutdown();
+    //
+    // return 0;
 
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
@@ -147,7 +147,14 @@ int main()
     try {
         cout << "Server Initialized correctly, type exit to shutdown" << endl;
         
-        while (serverRunning) { }
+        while (serverRunning) {
+            std::string input;
+
+            std::getline(std::cin, input);
+
+            if (input == "exit")
+                break;
+        }
     }
     catch (const exception& e) {
         cout << e.what() << endl;
@@ -156,6 +163,8 @@ int main()
     serverRunning = false;
     
     connectionThread.join();
-    
+
+    server.Shutdown();
+
     return 0;
 }

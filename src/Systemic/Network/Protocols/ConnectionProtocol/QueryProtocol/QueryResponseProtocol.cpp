@@ -92,7 +92,7 @@ QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
     for (const auto& row: this->rows)
       row.Serialize(this->buffer);
 
-    this->header.size = static_cast<uint16_t>(this->buffer.size());
+    this->header.size = static_cast<uint16_t>(this->buffer.size() - ResponseProtocolHeader::GetSize());
   }
 
   void QueryResponseProtocol::Deserialize(const vector<char> &buffer) {
