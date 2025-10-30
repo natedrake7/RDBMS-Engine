@@ -207,7 +207,7 @@ void ConnectionManager::CloseServerConnection() const
     for (const auto& event : this->events) 
         closesocket(event.fd);
 
-    //closesocket(this->parameters.serverSocket);
+    closesocket(this->parameters.serverSocket);
     WSACleanup();
 
 #else
@@ -248,7 +248,7 @@ void ConnectionManager::CloseServerConnection() const
     }
     
     if (headerBytesRead == 0) {
-      this->CloseClientConnection(clientSocket);
+      ConnectionManager::CloseClientConnection(clientSocket);
       return;
     }
     
@@ -297,7 +297,7 @@ void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const
       Network::ResponseProtocol responseProtocol(ResponseType::InvalidCredentials, DataTypes::Guid::Empty());
       ConnectionManager::SendToClient(clientSocket, &responseProtocol);
 
-      this->CloseClientConnection(clientSocket);
+      ConnectionManager::CloseClientConnection(clientSocket);
     }
 }
 
@@ -308,19 +308,21 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Networ
 
     this->threadPool.Enqueue([query = protocol.GetQuery(), clientSocket, header] {
 
-      QueryPipeline::Parser::Parse(query, header.sessionId);
+      std::vector<QueryResult> results;
+      QueryPipeline::Parser::Parse(query, header.sessionId, &results);
 
+      //test return actual values
       const vector<string> columns = {
         {"1"},
         {"2"},
         {"3"}
       };
 
-      const vector<Network::ResponseRow> rows = {
-        Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 1)),
-        Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
-        Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
-      };
+      // const vector<Network::ResponseRow> rows = {
+      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 1)),
+      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+      //   Network::ResponseRow(columns, ByteMaps::BitMap(columns.size(), 0)),
+      // };
 
       const vector<string> tableColumns = {
         {"id"},
@@ -328,7 +330,7 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Networ
         {"result"}
       };
       
-      Network::QueryResponseProtocol response(tableColumns, rows);
+      Network::QueryResponseProtocol response(tableColumns, results);
       
       ConnectionManager::SendToClient(clientSocket, &response);
     });
@@ -338,11 +340,9 @@ void ConnectionManager::SendToClient(const int &clientSocket, Network::ResponseP
     if (protocol == nullptr)
       return;
 
-    const auto& serializedProtocol = protocol->GetSerializedProtocol();
+    const auto& packet = protocol->GetSerializedProtocol();
 
-    const auto protocolSize = protocol->GetSize();
-
-    const auto bytesSent = send(clientSocket, serializedProtocol.data(), protocolSize, 0);
+    const auto bytesSent = send(clientSocket, packet.data(), protocol->GetSize(), 0);
 
     if (bytesSent > 0)
       return;

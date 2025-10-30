@@ -89,7 +89,7 @@ namespace QueryPipeline{
                 return instance;
             }
 
-            static void Parse(const string& query, const DataTypes::Guid& sessionId);
+            static void Parse(const string& query, const DataTypes::Guid& sessionId, std::vector<QueryResult>* result = nullptr);
     };
 
 }

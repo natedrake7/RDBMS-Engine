@@ -1,4 +1,7 @@
 #include "QueryResult.h"
+
+#include "../Network/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
+
 #include <iostream>
 
 void QueryResult::AddColumn(Value &field){
@@ -79,7 +82,30 @@ int64_t QueryResult::ComputeHash() const{
     seed ^= strHash(str) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
   }
 
-  return seed;
+  return static_cast<int64_t>(seed);
+}
+
+void QueryResult::Serialize(std::vector<char>& buffer) const{
+  for (const auto& value : this->data) {
+    const auto size = value.GetSize();
+    const auto type = value.GetType();
+
+    Network::QueryResponseProtocol::AppendToBuffer(buffer, &size, sizeof(Constants::block_size_t));
+    Network::QueryResponseProtocol::AppendToBuffer(buffer, &type, sizeof(Constants::DataType));
+    Network::QueryResponseProtocol::AppendToBuffer(buffer, value.GetRawData(), size);
+  }
+}
+
+void QueryResult::Deserialize(const std::vector<char> &buffer, uint32_t &offset, const int& dataSize){
+  this->data.reserve(dataSize);
+
+  for (int i = 0;i < dataSize; i++) {
+      auto value = Value();
+
+      value.Deserialize(buffer, offset);
+
+      this->data.push_back(std::move(value));
+  }
 }
 
 bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
@@ -87,11 +113,7 @@ bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
     return false;
 
   for (int i = 0;i < lhs.data.size(); i++) {
-    const auto& leftValue = lhs.data[i];
-    const auto& rightValue = rhs.data[i];
-
-    const auto areEqual = leftValue == rightValue;
-    if (areEqual.GetBool() == false)
+    if ((lhs.data[i] == rhs.data[i]).GetBool() == false)
       return false;
   }
 

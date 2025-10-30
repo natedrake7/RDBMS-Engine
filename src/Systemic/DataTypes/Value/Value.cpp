@@ -389,6 +389,18 @@ void Value::SetColumnIndex(const Constants::column_index_t &columnIndex) { this-
 
 void Value::SetType(const Constants::DataType &type){ this->type = type; }
 
+void Value::Deserialize(const std::vector<char> &buffer, uint32_t &offset){
+    memcpy(&this->size, buffer.data() + offset, sizeof(Constants::block_size_t));
+    offset += sizeof(Constants::block_size_t);
+
+    memcpy(&this->type, buffer.data() + offset, sizeof(Constants::DataType));
+    offset += sizeof(Constants::DataType);
+
+    this->data = new object_t[this->size];
+    memcpy(this->data, buffer.data() + offset, sizeof(Constants::object_t) * this->size);
+    offset += this->size;
+}
+
 const Constants::DataType & Value::GetType() const{ return this->type; }
 
 const block_size_t& Value::GetSize() const{ return this->size; }

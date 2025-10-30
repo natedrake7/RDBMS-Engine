@@ -4,21 +4,21 @@
 #include <ostream>
 
 namespace Network {
-  ResponseRow::ResponseRow(const vector<string> &columns, const ByteMaps::BitMap& nullBitMap){
-    this->columns = columns;
-    this->nullBitMap = nullBitMap;
-  }
+  // ResponseRow::ResponseRow(const std::vector<std::string> &columns, const ByteMaps::BitMap& nullBitMap){
+  //   this->columns = columns;
+  //   this->nullBitMap = nullBitMap;
+  // }
+  //
+  // int ResponseRow::GetSize() const{
+  //   int size = this->nullBitMap.GetSizeInBytes();
+  //
+  //   for (const auto& column: columns)
+  //     size += sizeof(int) + column.size();
+  //
+  //   return size;
+  // }
 
-  int ResponseRow::GetSize() const{
-    int size = this->nullBitMap.GetSizeInBytes();
-
-    for (const auto& column: columns)
-      size += sizeof(int) + column.size();
-
-    return size;
-  }
-
-  QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
+QueryResponseProtocol::QueryResponseProtocol() : ResponseProtocol() {
     this->hasError = false;
     this->header.size = sizeof(bool);
     this->header.statusCode = ResponseType::QueryResponse;
@@ -45,178 +45,109 @@ namespace Network {
     this->header.statusCode = ResponseType::QueryResponse;
   }
 
-  QueryResponseProtocol::QueryResponseProtocol(const vector<string>& columns, const vector<ResponseRow> &rows){
+  QueryResponseProtocol::QueryResponseProtocol(const std::vector<std::string>& columns, std::vector<QueryResult> &rows){
     this->hasError = false;
-
-    int size = sizeof(bool) + sizeof(int);
-
-    for (const auto& row: rows)
-      size += row.GetSize();
-
-    size += sizeof(int);
-    for (const auto& column: columns)
-      size += sizeof(int) + column.size();
-
-    this->header.size = size;
     this->header.statusCode = ResponseType::QueryResponse;
-    this->rows = rows;
+    this->rows = std::move(rows);
     this->columns = columns;
+  }
+
+  void QueryResponseProtocol::AppendToBuffer(std::vector<char> &buffer, const void *data, const int &size){
+    const auto* bytes = static_cast<const char*>(data);
+    buffer.insert(buffer.end(), bytes, bytes + size);
   }
 
   int QueryResponseProtocol::GetSize() const{ return ResponseProtocol::GetSize() + header.size; }
 
   void QueryResponseProtocol::Serialize(){
+    this->buffer.clear();
+
     ResponseProtocol::Serialize();
 
-    const int size = this->GetSize();
-    this->buffer.resize(size);
+    // const int size = this->GetSize();
 
-    char* bufferPtr = this->buffer.data() + ResponseProtocol::GetSize();
-
-    memcpy(bufferPtr, &this->hasError, sizeof(bool));
-    bufferPtr += sizeof(bool);
+    QueryResponseProtocol::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
 
     if (this->hasError) {
-      const int errorSize = this->errorMessage.size();
-      memcpy(bufferPtr, &errorSize, sizeof(int));
-      bufferPtr += sizeof(int);
+      // QueryResponseProtocol::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
+      //
+      // const int errorSize = this->errorMessage.size();
+      // memcpy(bufferPtr, &errorSize, sizeof(int));
+      // bufferPtr += sizeof(int);
+      //
+      // memcpy(bufferPtr, this->errorMessage.data(), errorSize);
+      // bufferPtr += errorSize;
 
-      memcpy(bufferPtr, this->errorMessage.data(), errorSize);
-      bufferPtr += errorSize;
-
+      this->header.size = static_cast<uint16_t>(this->buffer.size());
       return;
     }
 
-    const int numOfTableColumns = this->columns.size();
-    memcpy(bufferPtr, &numOfTableColumns, sizeof(int));
-    bufferPtr += sizeof(int);
+    const int numOfTableColumns = static_cast<int>(this->columns.size());
+    QueryResponseProtocol::AppendToBuffer(this->buffer, &numOfTableColumns, sizeof(int));
 
     for (const auto& column: this->columns) {
-      const int columnSize = column.size();
-      memcpy(bufferPtr, &columnSize, sizeof(int));
-      bufferPtr += sizeof(int);
-
-      memcpy(bufferPtr, column.data(), columnSize);
-      bufferPtr += columnSize;
+      const int columnSize = static_cast<int>(column.size());
+      QueryResponseProtocol::AppendToBuffer(this->buffer, &columnSize, sizeof(int));
+      QueryResponseProtocol::AppendToBuffer(this->buffer, column.data(), columnSize);
     }
 
-    const int numOfRows = this->rows.size();
+    const int numOfRows = static_cast<int>(this->rows.size());
+    QueryResponseProtocol::AppendToBuffer(this->buffer, &numOfRows, sizeof(int));
 
-    memcpy(bufferPtr, &numOfRows, sizeof(int));
-    bufferPtr += sizeof(int);
+    for (const auto& row: this->rows)
+      row.Serialize(this->buffer);
 
-    for (auto& row: this->rows) {
-      // auto& bitMapData = row.nullBitMap.GetDataUnsafe();
-
-      // int bitMapSize = bitMapData.size();
-      // memcpy(bufferPtr, &bitMapSize, sizeof(int));
-      // bufferPtr += sizeof(int);
-      //
-      // memcpy(bufferPtr, bitMapData.data(), bitMapSize);
-      // bufferPtr += bitMapSize;
-
-      // const auto bitMapSize = row.nullBitMap.GetSize();
-      //
-      // memcpy(bufferPtr, &bitMapSize, sizeof(Constants::bit_map_size_t));
-      // bufferPtr += sizeof(Constants::bit_map_size_t);
-      //
-      // const int dataSize = bitMapData.size() * sizeof(Constants::byte);
-      //
-      // memcpy(bufferPtr, bitMapData.data(), dataSize);
-      // bufferPtr += dataSize;
-
-      for (const auto& column: row.columns) {
-        const int columnSize = column.size();
-
-        memcpy(bufferPtr, &columnSize, sizeof(int));
-        bufferPtr += sizeof(int);
-
-        memcpy(bufferPtr, column.data(), columnSize);
-        bufferPtr += columnSize;
-      }
-    }
+    this->header.size = static_cast<uint16_t>(this->buffer.size());
   }
 
   void QueryResponseProtocol::Deserialize(const vector<char> &buffer) {
-    const char* bufferPtr = buffer.data();
+    uint32_t offSet = 0;
 
-    memcpy(&this->hasError, bufferPtr, sizeof(bool));
-    bufferPtr += sizeof(bool);
+    memcpy(&this->hasError, buffer.data() + offSet, sizeof(bool));
+    offSet += sizeof(bool);
 
     if (this->hasError) {
       int errorSize = 0;
 
-      memcpy(&errorSize, bufferPtr, sizeof(int));
-      bufferPtr += sizeof(int);
+      memcpy(&errorSize, buffer.data() + offSet, sizeof(int));
+      offSet += sizeof(int);
 
       this->errorMessage.resize(errorSize);
-      memcpy(this->errorMessage.data(), bufferPtr, errorSize);
-      bufferPtr += errorSize;
+      memcpy(this->errorMessage.data(), buffer.data() + offSet, errorSize);
+      offSet += errorSize;
 
       return;
     }
 
     int numOfColumns = 0;
-    memcpy(&numOfColumns, bufferPtr, sizeof(int));
-    bufferPtr += sizeof(int);
+    memcpy(&numOfColumns, buffer.data() + offSet, sizeof(int));
+    offSet += sizeof(int);
 
+    this->columns.clear();
     this->columns.resize(numOfColumns);
 
     for (int i = 0;i < numOfColumns; i++) {
       int columnSize = 0;
-      memcpy(&columnSize, bufferPtr, sizeof(int));
-      bufferPtr += sizeof(int);
+      memcpy(&columnSize, buffer.data() + offSet, sizeof(int));
+      offSet += sizeof(int);
 
       this->columns[i].resize(columnSize);
-      memcpy(this->columns[i].data(), bufferPtr, columnSize);
-      bufferPtr += columnSize;
+      memcpy(this->columns[i].data(), buffer.data() + offSet, columnSize);
+      offSet += columnSize;
     }
 
     int numOfRows = 0;
-    memcpy(&numOfRows, bufferPtr, sizeof(int));
-    bufferPtr += sizeof(int);
+    memcpy(&numOfRows, buffer.data() + offSet, sizeof(int));
+    offSet += sizeof(int);
 
-    this->rows.resize(numOfRows);
+    this->rows.clear();
+    this->rows.reserve(numOfRows);
 
     for (int i = 0; i < numOfRows; i++) {
-      this->rows[i].columns.resize(numOfColumns);
+      auto row = QueryResult();
 
-      // auto& bitMapSize = this->rows[i].nullBitMap.GetSizeUnsafe();
-      //
-      // memcpy(&bitMapSize, bufferPtr, sizeof(Constants::bit_map_size_t));
-      // bufferPtr += sizeof(Constants::bit_map_size_t);
-      //
-      // const Constants::bit_map_size_t &bytesToRead = (bitMapSize + 7) / 8;
-      //
-      // for (Constants::bit_map_size_t bitMapBytes = 0; i < bytesToRead; i++)
-      // {
-      //   Constants::byte value;
-      //   memcpy(&value, bufferPtr, sizeof(Constants::byte));
-      //   this->rows[i].nullBitMap.SetByte(bitMapBytes, value);
-      //
-      //   bufferPtr += sizeof(Constants::byte);
-      // }
-
-      // int bitMapSize = 0;
-      // memcpy(&bitMapSize, bufferPtr, sizeof(int));
-      // bufferPtr += sizeof(int);
-      //
-      // auto& bitMapData = this->rows[i].nullBitMap.GetDataUnsafe();
-      // bitMapData.resize(bitMapSize);
-      //
-      // memcpy(bitMapData.data(), bufferPtr, bitMapSize);
-      // bufferPtr += bitMapSize;
-
-      for (int j = 0; j < numOfColumns; j++) {
-        int columnSize = 0;
-        memcpy(&columnSize, bufferPtr, sizeof(int));
-        bufferPtr += sizeof(int);
-
-        this->rows[i].columns[j].resize(columnSize);
-
-        memcpy(this->rows[i].columns[j].data(), bufferPtr, columnSize);
-        bufferPtr += columnSize;
-      }
+      row.Deserialize(buffer, offSet, numOfColumns);
+      this->rows.push_back(std::move(row));
     }
   }
 
@@ -230,19 +161,13 @@ namespace Network {
       os << column << " | ";
     }
 
-    os << endl;
+    os << std::endl;
 
     for (const auto& row: protocol.rows) {
-      for (int i = 0; i< row.columns.size(); i++) {
-        // if (row.nullBitMap.Get(i)) {
-        //   os << "NULL" << " | ";
-        //   continue;
-        // }
+      for (const auto & value :  row.GetData())
+        os << value << " | ";
 
-        os << row.columns[i] << " | ";
-      }
-
-      os << endl;
+      os << std::endl;
     }
 
     return os;

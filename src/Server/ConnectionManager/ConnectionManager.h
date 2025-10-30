@@ -7,7 +7,6 @@
 #include <string>
 
 #ifdef _WIN32
-
 #define NOMINMAX
 #define byte win_byte_override // Add this before any Windows headers
     #include <ws2tcpip.h>

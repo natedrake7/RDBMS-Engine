@@ -136,6 +136,8 @@ class Value {
 
         void SetType(const Constants::DataType &type);
 
+        void Deserialize(const std::vector<char>& buffer, uint32_t& offset);
+
         static Constants::DataType PromoteType(const Constants::DataType& lhs, const Constants::DataType& rhs);
 
         friend ostream& operator<<(ostream& os, const Value& field);

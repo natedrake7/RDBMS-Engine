@@ -44,7 +44,7 @@ namespace QueryPipeline
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(const string& query, const DataTypes::Guid& sessionId){
+    void Parser::Parse(const string& query, const DataTypes::Guid& sessionId, std::vector<QueryResult>* results){
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
 
@@ -125,6 +125,9 @@ namespace QueryPipeline
 
             for (const auto& row: result->results)
                 row.Print();
+
+            if (results != nullptr)
+                *results = std::move(result->results);
         }
 
         const auto _ = server.CloseCursor(sessionId);

@@ -5,11 +5,9 @@
 #include <vector>
 #include <cstring>
 #include <sstream>
-#include <signal.h>
 
 #include "../Systemic/Converter/Converter.h"
 #include "../Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeProtocol.h"
-#include "../Systemic/Network/Protocols/ConnectionProtocol/AuthorizeProtocol/AuthorizeResponseProtocol.h"
 #include "../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
 
 #include "client.h"
@@ -70,7 +68,7 @@ int main()
     if(input == "exit")
       break;
 
-    QueryProtocol protocol(input);
+    Network::QueryProtocol protocol(input);
     
     const auto& serializedProtocol = protocol.GetSerializedProtocol();
 
@@ -88,7 +86,7 @@ int main()
       CloseConnection(parameters);
     }
 
-    ResponseProtocolHeader responseHeader;
+    Network::ResponseProtocolHeader responseHeader;
     std::vector<char> buffer;
 
     auto bytesReceived = recv(parameters.socket, reinterpret_cast<char *>(&responseHeader), responseHeader.GetSize(), 0);
@@ -109,7 +107,7 @@ int main()
       CloseConnection(parameters);
     }
 
-    QueryResponseProtocol queryResponseProtocol(responseHeader);
+    Network::QueryResponseProtocol queryResponseProtocol(responseHeader);
 
     buffer.resize(responseHeader.size);
 
@@ -137,8 +135,8 @@ int main()
   return 0;
 }
 
-void AuthorizeClientConnection(const int& socket, const ConnectionParameters& parameters) {
-  AuthorizeProtocol protocol(parameters.username, parameters.password);
+void AuthorizeClientConnection(const int& socket, const ConnectionParameters& params) {
+  Network::AuthorizeProtocol protocol(params.username, params.password);
 
   const auto& serializedObject = protocol.GetSerializedProtocol();
 
@@ -151,7 +149,7 @@ void AuthorizeClientConnection(const int& socket, const ConnectionParameters& pa
     return;
   }
 
-  AuthorizeResponseProtocol responseProtocol;
+  Network::ResponseProtocol responseProtocol;
 
   const int responseProtocolSize = responseProtocol.GetSize();
 
@@ -180,14 +178,14 @@ void AuthorizeClientConnection(const int& socket, const ConnectionParameters& pa
   cout << "Successfully authenticated" << endl;
 }
 
-void InitializeConnectionToServer(ConnectionParameters& parameters) {
+void InitializeConnectionToServer(ConnectionParameters& params) {
   #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData))
       throw runtime_error("WSAStartup failed");
   #endif
 
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
+  const auto sock = socket(AF_INET, SOCK_STREAM, 0);
 
   if (sock < 0)
     throw runtime_error("Failed to initialize socket");
@@ -195,9 +193,9 @@ void InitializeConnectionToServer(ConnectionParameters& parameters) {
   sockaddr_in serverAddress = {};
 
   serverAddress.sin_family = AF_INET;
-  serverAddress.sin_port = htons(parameters.port);
+  serverAddress.sin_port = htons(params.port);
 
-  inet_pton(AF_INET, parameters.hostName.c_str(), &serverAddress.sin_addr);
+  inet_pton(AF_INET, params.hostName.c_str(), &serverAddress.sin_addr);
 
   if (connect(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
     #ifdef _WIN32
@@ -208,28 +206,28 @@ void InitializeConnectionToServer(ConnectionParameters& parameters) {
     #endif
 
     std::ostringstream oss;
-    oss << "Failed to connect to host: " << parameters.hostName << ":" << parameters.port;
+    oss << "Failed to connect to host: " << params.hostName << ":" << params.port;
 
     throw runtime_error(oss.str());
   }
 
-  AuthorizeClientConnection(sock, parameters);
+  AuthorizeClientConnection(sock, params);
 
 
-  parameters.socket = sock;
+  params.socket = sock;
 }
 
-void CloseConnection(ConnectionParameters &parameters)
+void CloseConnection(ConnectionParameters &params)
 {
   #ifdef _WIN32
-    closesocket(parameters.socket);
+    closesocket(params.socket);
     WSACleanup();
   #else
-    close(parameters.socket);
+    close(params.socket);
   #endif
 }
 
-void ValidateConnectionString(ConnectionParameters& parameters, const vector<string>& connectionString) {
+void ValidateConnectionString(ConnectionParameters& params, const vector<string>& connectionString) {
   
   for (int i = 0; i < connectionString.size(); i++) {
     const auto& parameter = connectionString[i];
@@ -238,19 +236,19 @@ void ValidateConnectionString(ConnectionParameters& parameters, const vector<str
       throw invalid_argument("invalid argument specified in connection string!");
     
     if (parameter == "-P") {
-      parameters.port = Converter<int32_t>::Stoi(connectionString[++i]);
+      params.port = Converter<int32_t>::Stoi(connectionString[++i]);
       continue;
     }
     if (parameter == "-h") {
-      parameters.hostName = connectionString[++i];
+      params.hostName = connectionString[++i];
       continue;
     }
     if (parameter == "-u") {
-      parameters.username = connectionString[++i];
+      params.username = connectionString[++i];
       continue;
     }
     if (parameter == "-p") {
-      parameters.password = connectionString[++i];
+      params.password = connectionString[++i];
       continue;
     }
     

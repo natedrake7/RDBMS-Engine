@@ -15,6 +15,6 @@ typedef struct ConnectionParameters {
   ~ConnectionParameters() = default;
 }ConnectionParameters;
 
-static void ValidateConnectionString(ConnectionParameters& parameters, const vector<string>& connectionString);
-void InitializeConnectionToServer(ConnectionParameters& parameters);
-void CloseConnection(ConnectionParameters& parameters);
+static void ValidateConnectionString(ConnectionParameters& params, const vector<string>& connectionString);
+void InitializeConnectionToServer(ConnectionParameters& params);
+void CloseConnection(ConnectionParameters& params);
