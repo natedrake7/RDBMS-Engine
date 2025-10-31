@@ -124,18 +124,25 @@ namespace Server {
         std::cout << "Accepted client (Windows): " << clientSocket << std::endl;
 
 #else
-        auto& evt = this->events[i];
-        if (!(evt.events & EPOLLIN))
+        auto&[event, data] = this->events[i];
+
+        if (event & (EPOLLHUP | EPOLLERR)) {
+          this->HandleClientDisconnection(data.fd, eventCount, i);
+          continue;
+        }
+
+        if (!(event & EPOLLIN))
             continue;
 
-        if (evt.data.fd != this->parameters.serverSocket) {
-            ConnectionManager::HandleClientConnection(evt.data.fd, eventMutexes[i]);
+        if (data.fd != this->parameters.serverSocket) {
+            ConnectionManager::HandleClientConnection(data.fd, eventMutexes[i]);
             continue;
         }
 
         sockaddr_in clientAddress{};
         socklen_t clientSize = sizeof(clientAddress);
-        int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
+        const int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
+
         if (clientSocket < 0) {
             cerr << "Failed to accept client (Linux)" << endl;
             continue;
@@ -231,7 +238,7 @@ void ConnectionManager::CloseServerConnection() const
     close(this->parameters.epollFileDescriptor);
 #endif
 }
-
+#ifdef WIN32
   void ConnectionManager::HandleClientDisconnection(const SocketEvent& event, int& totalEvents, int& index){
     std::cout << "Client disconnected: " << event.fd << std::endl;
 
@@ -241,6 +248,18 @@ void ConnectionManager::CloseServerConnection() const
     index--;
     totalEvents--;
   }
+#else
+  void ConnectionManager::HandleClientDisconnection(const int &socket, int &totalEvents, int &index){
+    std::cout << "Client disconnected: " << socket << std::endl;
+
+    this->CloseClientConnection(socket);
+
+    this->events.erase(this->events.begin() + index);
+
+    index--;
+    totalEvents--;
+  }
+#endif
 
   void ConnectionManager::CloseClientConnection(const int &clientSocket) const
   {

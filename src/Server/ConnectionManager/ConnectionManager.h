@@ -62,10 +62,14 @@ namespace Server {
       void HandleClientConnection(const int& clientSocket, mutex& clientMutex);
       void ReadBodyFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader& header);
       void CloseServerConnection() const;
-      void HandleClientDisconnection(const SocketEvent& event, int& totalEvents, int& index);
       void CloseClientConnection(const int& clientSocket) const;
       void InitializeServerSocket();
-    
+
+#ifdef _WIN32
+      void HandleClientDisconnection(const SocketEvent& event, int& totalEvents, int& index);
+#else
+    void HandleClientDisconnection(const int& socket, int& totalEvents, int& index);
+#endif
     public:
       explicit ConnectionManager(const ConnectionParameters& parameters);
       ~ConnectionManager() = default;
