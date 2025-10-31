@@ -639,7 +639,7 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus CreateDbStatement::Validate(){
-    if (!Server::ServerInstance::Get().DatabaseExists(this->name)) {
+    if (Server::ServerInstance::Get().DatabaseExists(this->name)) {
       ostringstream os;
       os << "Database " + this->name + " already exists";
 
