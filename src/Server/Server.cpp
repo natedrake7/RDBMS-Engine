@@ -135,7 +135,7 @@ namespace Server {
            columnPos,
            true);
 
-        if (columnResult.code != Errors::ResultCode::Ok)
+        if (columnResult.code != Errors::RuntimeError::Ok)
           std::cerr << columnResult.message << std::endl;
 
         const auto columnStatsResult =
@@ -214,7 +214,7 @@ namespace Server {
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
-  Errors::ResultStatus ServerInstance::GrantRole(
+  Errors::RuntimeStatus ServerInstance::GrantRole(
     const DataTypes::Guid& currentSessionId,
     const std::string &username,
     const Security::Role *role
@@ -223,7 +223,7 @@ namespace Server {
 
     if (!this->userManager.GrantRole(username, role, userId))
       return {
-        Errors::ResultCode::Error,
+        Errors::RuntimeError::Error,
         "Failed to grant role: " + role->name + " to user: " + username,
       };
 
@@ -257,7 +257,7 @@ namespace Server {
         true
       );
 
-    if (result.code != Errors::ResultCode::Ok) {
+    if (result.code != Errors::RuntimeError::Ok) {
       std::cerr << "Failed to create user"
                 << userName
                 << " with error: "
@@ -356,7 +356,7 @@ namespace Server {
     }
   }
 
-  Errors::ResultStatus ServerInstance::InsertDbToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertDbToMasterDb(
     const string& dbName,
     const string& dbPath,
     const bool& isSystem,
@@ -388,7 +388,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus  ServerInstance::InsertSchemaToMasterDb(
+  Errors::RuntimeStatus  ServerInstance::InsertSchemaToMasterDb(
     const int32_t &databaseId,
     const string &schemaName,
     const string &user,
@@ -417,7 +417,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus  ServerInstance::InsertTableToMasterDb(
+  Errors::RuntimeStatus  ServerInstance::InsertTableToMasterDb(
     const int32_t & databaseId,
     const int32_t & schemaId,
     const string& tableName,
@@ -453,7 +453,7 @@ namespace Server {
       return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertColumnToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertColumnToMasterDb(
     const int32_t & tableId,
     const string &columnName,
     const DataType &columnType,
@@ -501,7 +501,7 @@ namespace Server {
       return result;
   }
 
-  Errors::ResultStatus  ServerInstance::InsertIndexToMasterDb(
+  Errors::RuntimeStatus  ServerInstance::InsertIndexToMasterDb(
     const int32_t & tableId,
     const string &indexName,
     const bool &isClustered,
@@ -534,7 +534,7 @@ namespace Server {
       return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertIndexColumnToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertIndexColumnToMasterDb(
     const int32_t & indexId,
     const int32_t & columnId,
     const int16_t & ordinalPosition,
@@ -563,7 +563,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertIdentityColumnToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertIdentityColumnToMasterDb(
       const int32_t & tableId,
       const int32_t & columnId,
       const int32_t & seedValue,
@@ -599,7 +599,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertDefaultValuesToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertDefaultValuesToMasterDb(
     const int32_t &columnId,
     const Value &value,
     const int &version,
@@ -625,7 +625,7 @@ namespace Server {
       return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertTableStatisticsToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertTableStatisticsToMasterDb(
     const int32_t &tableId,
     const int64_t& rowCount,
     const int32_t& rowSize,
@@ -659,7 +659,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertColumnStatisticsToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertColumnStatisticsToMasterDb(
     const int32_t &columnId,
     const int64_t &distinctCount,
     const int64_t &nullCount,
@@ -695,7 +695,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertRoleToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertRoleToMasterDb(
     const std::string &roleName,
     const Security::Permission &permissions,
     const bool& isSystem,
@@ -727,7 +727,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertUserToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertUserToMasterDb(
     const std::string &username,
     const std::string &passwordHash,
     const int32_t &roleId,
@@ -763,7 +763,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus ServerInstance::UpdateUserById(
+  Errors::RuntimeStatus ServerInstance::UpdateUserById(
     const DataTypes::Guid& callerSessionId,
     const int32_t &userId,
     const int32_t &roleId
@@ -774,7 +774,7 @@ namespace Server {
 
     if (currentSession == nullptr || currentSession->user == nullptr)
       return{
-          Errors::ResultCode::InvalidSession,
+          Errors::RuntimeError::InvalidSession,
           "Failed to validate session"
       };
 
@@ -792,7 +792,7 @@ namespace Server {
     return table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
   }
 
-  Errors::ResultStatus ServerInstance::InsertConstraintToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertConstraintToMasterDb(
       const int32_t & tableId,
       const string & constraintName,
       const Headers::ConstraintType & constraintType,
@@ -831,7 +831,7 @@ namespace Server {
     return result;
   }
 
-  Errors::ResultStatus ServerInstance::InsertConstraintColumnToMasterDb(
+  Errors::RuntimeStatus ServerInstance::InsertConstraintColumnToMasterDb(
     const int32_t & constraintId,
     const int32_t & columnId,
     const int32_t & ordinalPosition,
@@ -1928,7 +1928,7 @@ namespace Server {
     table->ClusteredIndexScanUpdate(&binaryExpr, updates);
   }
 
-  Errors::ResultStatus ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
+  Errors::RuntimeStatus ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
     using namespace DatabaseEngine::StorageTypes;
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SysColumns);

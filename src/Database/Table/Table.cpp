@@ -168,7 +168,7 @@ namespace DatabaseEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    Errors::ResultStatus Table::InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData){
+    Errors::RuntimeStatus Table::InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
@@ -177,12 +177,12 @@ namespace DatabaseEngine::StorageTypes {
 
         auto [row, result] = this->CreateRow(transactionId, inputData, &checkPoint);
 
-        if (result.code != Errors::ResultCode::Ok)
+        if (result.code != Errors::RuntimeError::Ok)
           return result;
 
         result =  this->InsertRow(row, extents, startingExtentIndex);
 
-        if (result.code != Errors::ResultCode::Ok)
+        if (result.code != Errors::RuntimeError::Ok)
           return result;
 
         this->database->LogCheckPoint(checkPoint);
@@ -193,7 +193,7 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Table::InsertRow(
+    Errors::RuntimeStatus Table::InsertRow(
       const Constants::transaction_id_t &transactionId,
       const vector<Value> &inputData,
       const std::vector<Constants::column_index_t> &columnIndices
@@ -206,12 +206,12 @@ namespace DatabaseEngine::StorageTypes {
 
         auto [row, result] = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
 
-        if (result.code != Errors::ResultCode::Ok)
+        if (result.code != Errors::RuntimeError::Ok)
           return result;
 
         result =  this->InsertRow(row, extents, startingExtentIndex);
 
-        if (result.code != Errors::ResultCode::Ok)
+        if (result.code != Errors::RuntimeError::Ok)
           return result;
 
         this->database->LogCheckPoint(checkPoint);
@@ -222,7 +222,7 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Table::InsertRow(
+    Errors::RuntimeStatus Table::InsertRow(
       const Constants::transaction_id_t &transactionId,
       const vector<Expressions::Expression *> &inputData,
       const std::vector<Constants::column_index_t> &columnIndices
@@ -234,12 +234,12 @@ namespace DatabaseEngine::StorageTypes {
 
         auto[row,result] = this->CreateRow(transactionId, inputData, columnIndices, &checkPoint);
 
-        if (result.code != Errors::ResultCode::Ok)
+        if (result.code != Errors::RuntimeError::Ok)
           return result;
 
         result = this->InsertRow(row, extents, startingExtentIndex);
 
-        if (result.code != Errors::ResultCode::Ok)
+        if (result.code != Errors::RuntimeError::Ok)
           return result;
 
         this->database->LogCheckPoint(checkPoint);
@@ -250,7 +250,7 @@ namespace DatabaseEngine::StorageTypes {
 
     }
 
-      Errors::ResultStatus Table::InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex)
+      Errors::RuntimeStatus Table::InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex)
       {
         this->InsertLargeObjectToPage(row);
 
@@ -260,14 +260,14 @@ namespace DatabaseEngine::StorageTypes {
             ? this->ClusteredIndexInsert(row, &rowId)
             : this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
 
-        if (status.code != Errors::ResultCode::Ok)
+        if (status.code != Errors::RuntimeError::Ok)
             return status;
 
         //insert to NonClustered Indexes
         for (int i = 0; i < this->header.nonClusteredIndexes.size(); i++) {
             status = this->NonClusteredIndexInsert(row, i, rowId);
 
-            if (status.code != Errors::ResultCode::Ok)
+            if (status.code != Errors::RuntimeError::Ok)
                 return status;
         }
 
@@ -277,7 +277,7 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-      std::tuple<Row*, Errors::ResultStatus> Table::CreateRow(
+      std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
         const Constants::transaction_id_t& transactionId,
         const vector<Value>& inputData,
         Logging::CheckPoint* checkPoint
@@ -307,7 +307,7 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto dataInsertResult = block->SetData(input);
 
-          if (dataInsertResult.code != Errors::ResultCode::Ok) {
+          if (dataInsertResult.code != Errors::RuntimeError::Ok) {
             delete block;
             delete row;
 
@@ -321,14 +321,14 @@ namespace DatabaseEngine::StorageTypes {
 
         return std::make_tuple(
       row,
-          Errors::ResultStatus(
-            Errors::ResultCode::Ok,
+          Errors::RuntimeStatus(
+            Errors::RuntimeError::Ok,
           "Row created successfully"
             )
         );
       }
 
-      std::tuple<Row*, Errors::ResultStatus> Table::CreateRow(
+      std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
         const Constants::transaction_id_t &transactionId,
         const std::vector<Value> &inputData,
         const std::vector<Constants::column_index_t> &columnIndices,
@@ -362,9 +362,9 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const Errors::ResultStatus result = block->SetData(input);
+          const Errors::RuntimeStatus result = block->SetData(input);
 
-          if (result.code != Errors::ResultCode::Ok) {
+          if (result.code != Errors::RuntimeError::Ok) {
             delete block;
             delete row;
 
@@ -378,20 +378,20 @@ namespace DatabaseEngine::StorageTypes {
 
         return std::make_tuple(
         row,
-          Errors::ResultStatus(
-            Errors::ResultCode::Ok,
+          Errors::RuntimeStatus(
+            Errors::RuntimeError::Ok,
             "Row created successfully"
             )
         );
       }
 
-     std::tuple<Row*, Errors::ResultStatus> Table::CreateRow(
+     std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
         const Constants::transaction_id_t &transactionId,
         const std::vector<Expressions::Expression *> &inputData,
         const std::vector<Constants::column_index_t> &columnIndices,
         Logging::CheckPoint *checkPoint
       ) const{
-        Errors::ResultStatus result;
+        Errors::RuntimeStatus result;
 
         auto *row = new Row(*this);
 
@@ -422,7 +422,7 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto dataInsertResult = block->SetData(input);
 
-          if (dataInsertResult.code != Errors::ResultCode::Ok) {
+          if (dataInsertResult.code != Errors::RuntimeError::Ok) {
             delete block;
             delete row;
 
@@ -682,18 +682,18 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    Errors::ResultStatus Table::ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId){
+    Errors::RuntimeStatus Table::ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId){
       BPlusTree* tree = this->GetClusteredIndexedTree();
 
       const auto key = Database::CreateKey(this->GetClusteredIndex(), row);
 
       int indexPosition = 0;
 
-      Errors::ResultStatus status;
+      Errors::RuntimeStatus status;
 
       auto *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
 
-      if (status.code != Errors::ResultCode::Ok)
+      if (status.code != Errors::RuntimeError::Ok)
          return status;
 
       PageFreeSpacePage *pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
@@ -714,7 +714,7 @@ namespace DatabaseEngine::StorageTypes {
       return status;
      }
 
-    Errors::ResultStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const{
+    Errors::RuntimeStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const{
       const auto& filename = this->database->GetFileName();
 
       while(row->GetTotalRowSize() > PAGE_SIZE - PageHeader::GetPageHeaderSize())
@@ -790,7 +790,7 @@ namespace DatabaseEngine::StorageTypes {
         return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
     }
 
-  Errors::ResultStatus Table::HeapUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
+  Errors::RuntimeStatus Table::HeapUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return {};
 
@@ -838,7 +838,7 @@ namespace DatabaseEngine::StorageTypes {
 
                 const auto result = this->HandleRowUpdate(page, row, updates, updatedColumns);
 
-                if (result.code != Errors::ResultCode::Ok)
+                if (result.code != Errors::RuntimeError::Ok)
                   return result;
             }
           }
@@ -847,7 +847,7 @@ namespace DatabaseEngine::StorageTypes {
         return {};
     }
 
-    Errors::ResultStatus Table::HeapUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+    Errors::RuntimeStatus Table::HeapUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return {};
 
@@ -895,7 +895,7 @@ namespace DatabaseEngine::StorageTypes {
 
                 const auto result = this->HandleRowUpdate(page, row, updates, updatedColumns);
 
-                if (result.code != Errors::ResultCode::Ok)
+                if (result.code != Errors::RuntimeError::Ok)
                   return result;
             }
           }
@@ -952,7 +952,7 @@ namespace DatabaseEngine::StorageTypes {
       tree->IndexScanUpdate(expression, updates);
     }
 
-    Errors::ResultStatus Table::ClusteredIndexScanUpdate(
+    Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
       const Expressions::Expression *expression,
       const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
         auto* tree = this->GetClusteredIndexedTree();
@@ -962,7 +962,7 @@ namespace DatabaseEngine::StorageTypes {
           : tree->IndexScanUpdate(expression, updates);
     }
 
-    Errors::ResultStatus Table::ClusteredIndexSeekUpdate(
+    Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
@@ -1029,7 +1029,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     //create differrent one to handle clustered updates
-    Errors::ResultStatus Table::HandleRowUpdate(
+    Errors::RuntimeStatus Table::HandleRowUpdate(
       Pages::Page *page,
       Row *row, const
       std::vector<Value> &updates,
@@ -1041,7 +1041,7 @@ namespace DatabaseEngine::StorageTypes {
         int diff = 0;
         auto result = row->Update(updates, diff);
 
-        if (result.code != Errors::ResultCode::Ok)
+        if (result.code != Errors::RuntimeError::Ok)
           return result;
 
         if(page->GetBytesLeft() - diff > 0){
@@ -1069,7 +1069,7 @@ namespace DatabaseEngine::StorageTypes {
         return {};
     }
 
-  Errors::ResultStatus Table::HandleRowUpdate(
+  Errors::RuntimeStatus Table::HandleRowUpdate(
     Pages::Page *page,
     Row *row,
     const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
@@ -1185,7 +1185,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    Errors::ResultStatus Table::NonClusteredIndexInsert(
+    Errors::RuntimeStatus Table::NonClusteredIndexInsert(
       const StorageTypes::Row *row,
       const int & nonClusteredIndexId,
       const Headers::RowIdentifier & data){
@@ -1197,11 +1197,11 @@ namespace DatabaseEngine::StorageTypes {
       const auto key = Database::CreateKey(indexedColumns, row, data);
 
       int indexPosition = 0;
-      Errors::ResultStatus status;
+      Errors::RuntimeStatus status;
 
       auto *node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
 
-      if (status.code != Errors::ResultCode::Ok)
+      if (status.code != Errors::RuntimeError::Ok)
           return status;
 
       auto* keys = node->GetKeysUnsafe();
@@ -1221,7 +1221,7 @@ namespace DatabaseEngine::StorageTypes {
       return status;
     }
 
-    Errors::ResultStatus Table::NonClusteredIndexInsertExistingRows(const int &indexPos){
+    Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const int &indexPos){
         const auto tableType = this->GetTableType();
 
         if (tableType == TableType::CLUSTERED) {

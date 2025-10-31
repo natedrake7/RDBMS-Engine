@@ -44,7 +44,7 @@ namespace QueryPipeline
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(
+    Errors::Error Parser::Parse(
         const string& query,
         const DataTypes::Guid& sessionId,
         std::vector<QueryResult>* results,
@@ -78,28 +78,36 @@ namespace QueryPipeline
             statement = CreateStatement(response, sessionId);
         }
         catch (const exception& e) {
-            std::cerr << "Parser exception: " << e.what() << std::endl;
             Parser::ClearQuery(statement, nullptr);
-            return;
+
+            ostringstream os;
+            os << "Parser exception: " << e.what();
+
+            return {true, os.str()};
         }
 
-        if (statement == nullptr || !statement->ValidateStatement()) {
+        if (statement == nullptr) {
             Parser::ClearQuery(statement, nullptr);
-            return;
+            return {true, "Unexpected error occured during statement build"};
+        }
+
+        auto validation = statement->ValidateStatement();
+        if (!validation.IsOk()) {
+            Parser::ClearQuery(statement, nullptr);
+            return {true, validation.message};
         }
 
         auto* logicalPlan = statement->ToLogical();
         
         if (logicalPlan == nullptr) {
             Parser::ClearQuery(statement, logicalPlan);
-            return;
+            return {true, "Unexpected error occured during plan build"};
         }
 
         auto* physicalPlan = logicalPlan->ToPhysical();
-
         if(physicalPlan == nullptr){
             Parser::ClearQuery(statement, logicalPlan);
-            return;
+            return {true, "Unexpected error occured during physical plan build"};
         }
 
         PhysicalPlan::PhysicalPlanResult* result = nullptr;
@@ -113,23 +121,13 @@ namespace QueryPipeline
 
             if (result == nullptr) {
                 Parser::ClearQuery(statement, logicalPlan);
-                return;
+                return {false, "Command completed Successfully"};
             }
 
-            if (result->code != Errors::ResultCode::Ok) {
-                std::cerr << result->message << std::endl;
-
+            if (!result->IsOk()){
                 Parser::ClearQuery(statement, logicalPlan);
-                return;
+                return {true, result->message};
             }
-
-            // for (const auto& column : result->displayColumnNames)
-            //     std::cout << column << " || ";
-            //
-            // std::cout << std::endl;
-            //
-            // for (const auto& row: result->results)
-            //     row.Print();
 
             if (displayColumns != nullptr && displayColumns->empty())
                 *displayColumns = std::move(result->displayColumnNames);
@@ -140,5 +138,7 @@ namespace QueryPipeline
 
         const auto _ = server.CloseCursor(sessionId);
         Parser::ClearQuery(statement, logicalPlan);
+
+        return {};
     }
 }

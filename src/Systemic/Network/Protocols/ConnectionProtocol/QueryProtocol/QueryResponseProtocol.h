@@ -9,16 +9,16 @@ namespace Network {
 
   class QueryResponseProtocol final : public ResponseProtocol{
     bool hasError;
-    std::string errorMessage;
+    std::string message;
 
     std::vector<std::string> columns;
     std::vector<QueryResult> rows;
 
-    void SerializeError();
+    void SerializeMessage();
     void SerializeResult();
     void AssignBufferSizeToProtocolSize();
 
-    void DeserializeError(const std::vector<char>& buffer, uint32_t& offSet);
+    void DeserializeMessage(const std::vector<char>& buffer, uint32_t& offSet);
     void DeserializeResult(const std::vector<char>& buffer, uint32_t& offSet);
 
     public:
@@ -28,7 +28,12 @@ namespace Network {
       explicit QueryResponseProtocol(const ResponseProtocolHeader &header);
       explicit QueryResponseProtocol(const ResponseType& statusCode, const DataTypes::Guid& sessionId);
       explicit QueryResponseProtocol(const std::string& errorMessage);
-      explicit QueryResponseProtocol(const std::vector<std::string>& columns, std::vector<QueryResult>& rows);
+      explicit QueryResponseProtocol(
+        const bool& hasError,
+        const std::string& message,
+        const std::vector<std::string>& columns,
+        std::vector<QueryResult>& rows
+      );
       [[nodiscard]] int GetSize() const override;
       void Serialize() override;
       void Deserialize(const std::vector<char>& buffer) override;

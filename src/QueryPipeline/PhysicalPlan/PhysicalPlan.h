@@ -26,11 +26,13 @@ namespace QueryPipeline::PhysicalPlan{
       std::vector<QueryResult> results;
 
       std::string message;
-      Errors::ResultCode code;
+      Errors::RuntimeError code;
 
       PhysicalPlanResult();
-      PhysicalPlanResult(const Errors::ResultCode& code, const std::string& message);
+      PhysicalPlanResult(const Errors::RuntimeError& code, const std::string& message);
       ~PhysicalPlanResult();
+
+      [[nodiscard]] bool IsOk()const;
   };
 
   struct TableScanState {

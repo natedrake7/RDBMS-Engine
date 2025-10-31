@@ -312,9 +312,9 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Networ
 
       std::vector<QueryResult> results;
       std::vector<std::string> displayColumns;
-      QueryPipeline::Parser::Parse(query, header.sessionId, &results, &displayColumns);
+      const auto status = QueryPipeline::Parser::Parse(query, header.sessionId, &results, &displayColumns);
 
-      Network::QueryResponseProtocol response(displayColumns, results);
+      Network::QueryResponseProtocol response(status.hasError, status.message, displayColumns, results);
       
       ConnectionManager::SendToClient(clientSocket, &response);
     });

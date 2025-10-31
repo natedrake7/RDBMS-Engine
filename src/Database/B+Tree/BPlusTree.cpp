@@ -153,7 +153,7 @@ namespace Indexing
         newChild->UpdateBytesLeft();
     }
 
-    Pages::IndexPage* BPlusTree::FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::ResultStatus& status)
+    Pages::IndexPage* BPlusTree::FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
     {
         if (this->root == nullptr)
         {
@@ -201,13 +201,13 @@ namespace Indexing
 
         auto* node = this->GetNonFullNode(this->root, key, indexPosition, status);
 
-        if (status.code != Errors::ResultCode::Ok)
+        if (status.code != Errors::RuntimeError::Ok)
             return nullptr;
 
         return node;
     }
 
-    Pages::IndexPage *BPlusTree::GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::ResultStatus& status)
+    Pages::IndexPage *BPlusTree::GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
     {
         auto* keys = node->GetKeysUnsafe();
 
@@ -225,7 +225,7 @@ namespace Indexing
 
                 std::cerr << "BPlusTree::GetNonFullNode: Key " << key << " already exists" << std::endl;
 
-                status.code = Errors::ResultCode::DuplicateKey;
+                status.code = Errors::RuntimeError::DuplicateKey;
                 status.message = oss.str();
                 return nullptr;
             }
@@ -257,7 +257,7 @@ namespace Indexing
 
         auto* returnedNode = this->GetNonFullNode(this->GetNode(children->at(childIndex)), key, indexPosition, status);
 
-        if (status.code != Errors::ResultCode::Ok)
+        if (status.code != Errors::RuntimeError::Ok)
             return nullptr;
         
         return returnedNode;
@@ -513,7 +513,7 @@ namespace Indexing
                   continue;
 
             const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
-              if (result.code != Errors::ResultCode::Ok)
+              if (result.code != Errors::RuntimeError::Ok)
                   return;
           }
 
@@ -524,7 +524,7 @@ namespace Indexing
         }
     }
 
-    Errors::ResultStatus BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
         this->root = this->GetNode(this->indexPageId);
 
         if (!this->root)
@@ -546,7 +546,7 @@ namespace Indexing
 
                 const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
 
-                if (result.code != Errors::ResultCode::Ok)
+                if (result.code != Errors::RuntimeError::Ok)
                     return result;
             }
 
@@ -559,7 +559,7 @@ namespace Indexing
         return {};
     }
 
-    Errors::ResultStatus BPlusTree::IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
         this->root = this->GetNode(this->indexPageId);
 
         if (!this->root)
@@ -577,7 +577,7 @@ namespace Indexing
             for(auto* row: *currentNode->GetDataRowsUnsafe()) {
                 const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
 
-                if (result.code != Errors::ResultCode::Ok)
+                if (result.code != Errors::RuntimeError::Ok)
                     return result;
             }
 
@@ -661,7 +661,7 @@ namespace Indexing
 
     }
 
-    Errors::ResultStatus BPlusTree::IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates){
+    Errors::RuntimeStatus BPlusTree::IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates){
         this->root = this->GetNode(this->indexPageId);
 
         if (!this->root)
@@ -692,7 +692,7 @@ namespace Indexing
                 if(value.GetBool()) {
                     const auto result = this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
 
-                    if (result.code != Errors::ResultCode::Ok)
+                    if (result.code != Errors::RuntimeError::Ok)
                         return result;
                 }
             }
@@ -718,7 +718,7 @@ namespace Indexing
 
             const auto result = this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);
 
-            if (result.code != Errors::ResultCode::Ok)
+            if (result.code != Errors::RuntimeError::Ok)
               return result;
 
 //            if (maxKey < *key && !previousNode)
@@ -735,7 +735,7 @@ namespace Indexing
         return {};
     }
 
-    Errors::ResultStatus BPlusTree::IndexSeekUpdate(const DataTypes::Indexing::Key *minKey, const DataTypes::Indexing::Key *maxKey, const vector<Value> &updates){
+    Errors::RuntimeStatus BPlusTree::IndexSeekUpdate(const DataTypes::Indexing::Key *minKey, const DataTypes::Indexing::Key *maxKey, const vector<Value> &updates){
                 this->root = this->GetNode(this->indexPageId);
 
         if (!this->root)
@@ -762,7 +762,7 @@ namespace Indexing
 
                 const auto result = this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
 
-                if (result.code != Errors::ResultCode::Ok)
+                if (result.code != Errors::RuntimeError::Ok)
                     return result;
             }
           }
@@ -783,7 +783,7 @@ namespace Indexing
 
             const auto result = this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);
 
-            if (result.code != Errors::ResultCode::Ok)
+            if (result.code != Errors::RuntimeError::Ok)
               return result;
 
 //            if (maxKey < *key && !previousNode)

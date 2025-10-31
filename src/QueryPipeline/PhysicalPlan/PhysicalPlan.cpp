@@ -10,10 +10,10 @@
 
 namespace QueryPipeline::PhysicalPlan {
   PhysicalPlanResult::PhysicalPlanResult(){
-    this->code = Errors::ResultCode::Ok;
+    this->code = Errors::RuntimeError::Ok;
   }
 
-  PhysicalPlanResult::PhysicalPlanResult(const Errors::ResultCode &code, const std::string &message) {
+  PhysicalPlanResult::PhysicalPlanResult(const Errors::RuntimeError &code, const std::string &message) {
     this->code = code;
     this->message = message;
   }
@@ -22,6 +22,10 @@ namespace QueryPipeline::PhysicalPlan {
     for (const auto* row: this->rows)
       if (row->IsCopy())
         delete row;
+  }
+
+  bool PhysicalPlanResult::IsOk() const {
+    return this->code == Errors::RuntimeError::Ok;
   }
 
   PhysicalOperator::PhysicalOperator(const DataTypes::Guid &currentSessionId)
@@ -36,7 +40,7 @@ namespace QueryPipeline::PhysicalPlan {
     auto& server = Server::ServerInstance::Get();
 
     if (server.CreateUser(this->username, this->password, this->roleName) == false) {
-      result->code = Errors::ResultCode::Error;
+      result->code = Errors::RuntimeError::Error;
       result->message = "Failed to create user";
     }
 
@@ -54,7 +58,7 @@ namespace QueryPipeline::PhysicalPlan {
     const auto* role = server.GetRole(this->roleName);
 
     if (role == nullptr) {
-      result->code = Errors::ResultCode::Error;
+      result->code = Errors::RuntimeError::Error;
       result->message = "Failed to get role " + this->roleName;
       return result;
     }
@@ -76,7 +80,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     if (session == nullptr || session->user == nullptr)
       return new PhysicalPlanResult{
-        Errors::ResultCode::Error,
+        Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
@@ -96,13 +100,13 @@ namespace QueryPipeline::PhysicalPlan {
     auto* result = new PhysicalPlanResult();
 
     if (Server::ServerInstance::Get().UpdateSession(this->sessionId, this->databaseId)) {
-      result->code = Errors::ResultCode::Ok;
+      result->code = Errors::RuntimeError::Ok;
       result->message = "Database selected successfully";
 
       return result;
     }
 
-    result->code = Errors::ResultCode::Error;
+    result->code = Errors::RuntimeError::Error;
     result->message = "Failed to select Database";
 
     return result;
@@ -118,7 +122,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     if (session == nullptr || session->user == nullptr)
       return new PhysicalPlanResult{
-        Errors::ResultCode::Error,
+        Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
@@ -354,7 +358,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     for (auto& row : result->results) {
       const auto insertResult = tablePtr->InsertRow(transactionId, row.GetData(), this->columnsIndices);
 
-      if (insertResult.code != Errors::ResultCode::Ok) {
+      if (insertResult.code != Errors::RuntimeError::Ok) {
         result->message = insertResult.message;
         result->code = insertResult.code;
         return result;
@@ -362,7 +366,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
     result->message = "Rows inserted: " + std::to_string(result->results.size());
-    result->code = Errors::ResultCode::Ok;
+    result->code = Errors::RuntimeError::Ok;
     return result;
   }
 
@@ -372,7 +376,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     for (const auto&[columns] : this->fields) {
       const auto insertResult = tablePtr->InsertRow(transactionId, columns, this->columnsIndices);
 
-      if (insertResult.code != Errors::ResultCode::Ok) {
+      if (insertResult.code != Errors::RuntimeError::Ok) {
         result->message = insertResult.message;
         result->code = insertResult.code;
         return result;
@@ -380,7 +384,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
     result->message = "Rows inserted: " + std::to_string(this->fields.size());
-    result->code = Errors::ResultCode::Ok;
+    result->code = Errors::RuntimeError::Ok;
     return result;
   }
 
@@ -583,7 +587,7 @@ PhysicalInsert::PhysicalInsert(
 
     if (session == nullptr || session->user == nullptr)
       return new PhysicalPlanResult{
-        Errors::ResultCode::Error,
+        Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 

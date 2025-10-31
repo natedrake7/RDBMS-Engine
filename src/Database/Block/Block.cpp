@@ -60,7 +60,7 @@ namespace DatabaseEngine::StorageTypes {
         this->size = inputSize;
     }
 
-    Errors::ResultStatus Block::SetData(const Value &value){
+    Errors::RuntimeStatus Block::SetData(const Value &value){
         delete this->data;
         this->data = nullptr;
 
@@ -72,13 +72,13 @@ namespace DatabaseEngine::StorageTypes {
         return this->SetDataByType(value);
     }
 
-    Errors::ResultStatus Block::SetTinyInt(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetTinyInt(const Value &value){
+        Errors::RuntimeStatus result;
         const auto val = value.GetBigInt();
         int8_t convertedValue;
 
         if (!Converter<int8_t>::TryStoi(val, convertedValue)) {
-            result.code = Errors::ResultCode::Overflow;
+            result.code = Errors::RuntimeError::Overflow;
 
             ostringstream ss;
 
@@ -93,14 +93,14 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Block::SetSmallInt(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetSmallInt(const Value &value){
+        Errors::RuntimeStatus result;
 
         const auto val = value.GetBigInt();
         int16_t convertedValue;
 
         if (!Converter<int16_t>::TryStoi(val, convertedValue)) {
-            result.code = Errors::ResultCode::Overflow;
+            result.code = Errors::RuntimeError::Overflow;
 
             ostringstream ss;
 
@@ -115,14 +115,14 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Block::SetInt(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetInt(const Value &value){
+        Errors::RuntimeStatus result;
 
         const auto val = value.GetBigInt();
         int32_t convertedValue;
 
         if (!Converter<int32_t>::TryStoi(val, convertedValue)) {
-            result.code = Errors::ResultCode::Overflow;
+            result.code = Errors::RuntimeError::Overflow;
 
             ostringstream ss;
 
@@ -137,13 +137,13 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Block::SetBigInt(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetBigInt(const Value &value){
+        Errors::RuntimeStatus result;
 
         const auto val = value.GetBigInt();
 
         if (!Converter<int64_t>::TryStoi(val)) {
-            result.code = Errors::ResultCode::Overflow;
+            result.code = Errors::RuntimeError::Overflow;
 
             ostringstream ss;
 
@@ -157,14 +157,14 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Block::SetDecimal(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetDecimal(const Value &value){
+        Errors::RuntimeStatus result;
 
         const auto val = value.GetDecimal();
         const auto& columnHeader = this->column->GetColumnHeader();
 
         if (!Converter<DataTypes::Decimal>::TryStoi(val, this->column->GetColumnSize())) {
-            result.code = Errors::ResultCode::Overflow;
+            result.code = Errors::RuntimeError::Overflow;
 
             ostringstream ss;
 
@@ -181,14 +181,14 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Block::SetString(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetString(const Value &value){
+        Errors::RuntimeStatus result;
 
         const auto val = value.GetString();
         const auto& columnHeader = this->column->GetColumnHeader();
 
         if (val.size() > columnHeader.recordSize) {
-            result.code = Errors::ResultCode::Overflow;
+            result.code = Errors::RuntimeError::Overflow;
 
             ostringstream ss;
 
@@ -204,14 +204,14 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Block::SetUnicodeString(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetUnicodeString(const Value &value){
+        Errors::RuntimeStatus result;
 
         const auto val = value.GetUnicodeString();
         const auto& columnHeader = this->column->GetColumnHeader();
 
         if (val.size() > columnHeader.recordSize) {
-            result.code = Errors::ResultCode::Overflow;
+            result.code = Errors::RuntimeError::Overflow;
 
             ostringstream ss;
 
@@ -227,14 +227,14 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Block::SetBool(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetBool(const Value &value){
+        Errors::RuntimeStatus result;
 
         const auto val = value.GetBigInt();
         bool convertedValue;
 
         if (!Converter<bool>::TryStoi(val, convertedValue)) {
-            result.code = Errors::ResultCode::Overflow;
+            result.code = Errors::RuntimeError::Overflow;
 
             ostringstream ss;
 
@@ -249,21 +249,21 @@ namespace DatabaseEngine::StorageTypes {
         return result;
     }
 
-    Errors::ResultStatus Block::SetDateTime(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetDateTime(const Value &value){
+        Errors::RuntimeStatus result;
 
         this->CopyToBuffer(value.GetDateTime());
         return result;
     }
 
-    Errors::ResultStatus Block::SetGuid(const Value &value){
-        Errors::ResultStatus result;
+    Errors::RuntimeStatus Block::SetGuid(const Value &value){
+        Errors::RuntimeStatus result;
 
         this->CopyToBuffer(value.GetGuid());
         return result;
     }
 
-    Errors::ResultStatus Block::SetDataByType(const Value &value){
+    Errors::RuntimeStatus Block::SetDataByType(const Value &value){
         switch (this->GetColumnType()) {
             case DataType::TinyInt:
                 return this->SetTinyInt(value);

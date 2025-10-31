@@ -22,7 +22,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (session == nullptr || session->user == nullptr)
       return new PhysicalPlanResult{
-        Errors::ResultCode::Error,
+        Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
@@ -41,7 +41,7 @@ namespace QueryPipeline::PhysicalPlan{
           session->user->name
           );
 
-      if (columnResult.code != Errors::ResultCode::Ok) {
+      if (columnResult.code != Errors::RuntimeError::Ok) {
         auto* result = new PhysicalPlanResult();
         result->code = columnResult.code;
         result->message = columnResult.message;
@@ -93,7 +93,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (session == nullptr || session->user == nullptr)
       return new PhysicalPlanResult{
-        Errors::ResultCode::Error,
+        Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
@@ -125,7 +125,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (session == nullptr || session->user == nullptr)
       return new PhysicalPlanResult{
-        Errors::ResultCode::Error,
+        Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
@@ -163,7 +163,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (session == nullptr || session->user == nullptr)
       return new PhysicalPlanResult{
-        Errors::ResultCode::Error,
+        Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 

@@ -66,7 +66,7 @@ namespace Server {
     void Initialize(const std::string& configPath);
 
     //Security Functions
-    [[nodiscard]]Errors::ResultStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
+    [[nodiscard]]Errors::RuntimeStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
     bool UserExists(const std::string& userName)const;
     bool CreateUser(const std::string& userName, const std::string& password, const std::string& roleName);
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
@@ -83,7 +83,7 @@ namespace Server {
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id)const;
 
     //MasterDB Insert Functions
-    [[nodiscard]] Errors::ResultStatus InsertDbToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(
       const std::string& dbName,
       const std::string& dbPath,
       const bool& isSystem = false,
@@ -91,14 +91,14 @@ namespace Server {
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertSchemaToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertSchemaToMasterDb(
       const int32_t& databaseId,
       const std::string& schemaName,
       const std::string& user = "system",
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertTableToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertTableToMasterDb(
       const int32_t & databaseId,
       const int32_t & schemaId,
       const std::string& tableName,
@@ -108,7 +108,7 @@ namespace Server {
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertColumnToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertColumnToMasterDb(
       const int32_t & tableId,
       const std::string& columnName,
       const DataType& columnType,
@@ -122,7 +122,7 @@ namespace Server {
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertIndexToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertIndexToMasterDb(
       const int32_t & tableId,
       const std::string &indexName,
       const bool &isClustered,
@@ -131,7 +131,7 @@ namespace Server {
       const int& version = 0,
       const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertIndexColumnToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertIndexColumnToMasterDb(
         const int32_t& indexId,
         const int32_t& columnId,
         const int16_t& ordinalPosition,
@@ -139,7 +139,7 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertConstraintToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertConstraintToMasterDb(
         const int32_t& tableId,
         const string& constraintName,
         const Headers::ConstraintType& constraintType,
@@ -149,14 +149,14 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertConstraintColumnToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertConstraintColumnToMasterDb(
         const int32_t& constraintId,
         const int32_t& columnId,
         const int32_t& ordinalPosition,
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertIdentityColumnToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertIdentityColumnToMasterDb(
         const int32_t& tableId,
         const int32_t& columnId,
         const int32_t& seedValue,
@@ -167,13 +167,13 @@ namespace Server {
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertDefaultValuesToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertDefaultValuesToMasterDb(
         const int32_t& columnId,
         const Value& value,
         const int& version = 0,
         const bool& isDeleted = false) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertTableStatisticsToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertTableStatisticsToMasterDb(
       const int32_t& tableId,
       const int64_t& rowCount = 0,
       const int32_t& rowSize = 0,
@@ -181,7 +181,7 @@ namespace Server {
       const bool& isDeleted = false
     ) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertColumnStatisticsToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
       const int32_t& columnId,
       const int64_t& distinctCount = 0,
       const int64_t& nullCount = 0,
@@ -189,7 +189,7 @@ namespace Server {
       const bool& isDeleted = false
     ) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertRoleToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertRoleToMasterDb(
       const std::string& roleName,
       const Security::Permission& permissions,
       const bool& isSystem = true,
@@ -197,7 +197,7 @@ namespace Server {
       const bool& isDeleted = false
     ) const;
 
-    [[nodiscard]] Errors::ResultStatus InsertUserToMasterDb(
+    [[nodiscard]] Errors::RuntimeStatus InsertUserToMasterDb(
       const std::string& username,
       const std::string& passwordHash,
       const int32_t& roleId,
@@ -206,7 +206,7 @@ namespace Server {
       const bool& isDeleted = false
     ) const;
 
-    [[nodiscard]] Errors::ResultStatus UpdateUserById(
+    [[nodiscard]] Errors::RuntimeStatus UpdateUserById(
       const DataTypes::Guid& callerSessionId,
       const int32_t& userId,
       const int32_t& roleId
@@ -254,7 +254,7 @@ namespace Server {
       const Value& min,
       const Value& max
     )const;
-    [[nodiscard]]Errors::ResultStatus UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
+    [[nodiscard]]Errors::RuntimeStatus UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
     [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     //Cursor Functions

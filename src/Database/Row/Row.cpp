@@ -477,7 +477,7 @@ namespace DatabaseEngine::StorageTypes {
         return rowHeaderSize;
     }
 
-    Errors::ResultStatus Row::Update( const vector<Value> & updates, int& diff){
+    Errors::RuntimeStatus Row::Update( const vector<Value> & updates, int& diff){
         const auto prevRowSize = this->GetRowSize();
 
         for (const auto & value : updates){
@@ -496,7 +496,7 @@ namespace DatabaseEngine::StorageTypes {
                 this->SetNullBitMapValue(associatedColumnIndex, false);
 
             const auto result = block->SetData(value);
-            if (result.code != Errors::ResultCode::Ok)
+            if (result.code != Errors::RuntimeError::Ok)
                 return result;
         }
 
@@ -506,7 +506,7 @@ namespace DatabaseEngine::StorageTypes {
         return {};
     }
 
-    Errors::ResultStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff){
+    Errors::RuntimeStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff){
         const auto prevRowSize = this->GetRowSize();
 
         for (const auto & update : updates)
@@ -528,7 +528,7 @@ namespace DatabaseEngine::StorageTypes {
                 this->SetNullBitMapValue(associatedColumnIndex, false);
 
             const auto result = block->SetData(value);
-            if (result.code != Errors::ResultCode::Ok)
+            if (result.code != Errors::RuntimeError::Ok)
                 return result;
         }
 

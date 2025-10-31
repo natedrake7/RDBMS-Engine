@@ -6,6 +6,7 @@
 #include "../../Systemic/DataTypes/Headers/Headers.h"
 #include "../../Expressions/Expression.h"
 #include "../../Systemic/Security/Security.h"
+#include "../../Systemic/Errors/Errors.h"
 
 namespace QueryPipeline {
   class LogicalPlan;
@@ -41,7 +42,7 @@ namespace QueryPipeline::Statements {
     Identity() = default;
     ~Identity() = default;
 
-    [[nodiscard]] bool Validate() const;
+    [[nodiscard]] Errors::ValidationStatus Validate() const;
   };
 
   struct NewColumn {
@@ -122,8 +123,8 @@ namespace QueryPipeline::Statements {
     TableName();
     [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
-    [[nodiscard]] bool Validate(const int32_t& selectedDatabaseId);
-    [[nodiscard]] bool ValidateTableCreate(const int32_t& selectedDatabaseId);
+    [[nodiscard]] Errors::ValidationStatus Validate(const int32_t& selectedDatabaseId);
+    [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const int32_t& selectedDatabaseId);
   };
 
   struct Inserts {
@@ -140,11 +141,11 @@ namespace QueryPipeline::Statements {
 
     Statement();
     virtual ~Statement() = default;
-    virtual bool Validate() = 0;
+    virtual Errors::ValidationStatus Validate() = 0;
     virtual Security::Permission RequiredPermissions() const = 0;
-    bool ValidateBase()const;
+    Errors::ValidationStatus ValidateBase()const;
 
-    bool ValidateStatement();
+    Errors::ValidationStatus ValidateStatement();
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
   };
 
@@ -157,7 +158,7 @@ namespace QueryPipeline::Statements {
       CreateUserStatement() = default;
       ~CreateUserStatement() override= default;
 
-      bool Validate() override;
+      Errors::ValidationStatus Validate() override;
       Security::Permission RequiredPermissions() const override;
       QueryPipeline::LogicalPlan* ToLogical() override;
   };
@@ -168,7 +169,7 @@ namespace QueryPipeline::Statements {
 
     GrantRoleStatement() = default;
     ~GrantRoleStatement() override = default;
-    bool Validate() override;
+    Errors::ValidationStatus Validate() override;
     Security::Permission RequiredPermissions() const override;
     QueryPipeline::LogicalPlan* ToLogical() override;
   };
@@ -176,7 +177,7 @@ namespace QueryPipeline::Statements {
   struct DeleteStatement final : Statement {
     WhereClause where;
     ~DeleteStatement() override = default;
-    bool Validate() override;
+    Errors::ValidationStatus Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -187,8 +188,8 @@ namespace QueryPipeline::Statements {
 
     JoinStatement();
     ~JoinStatement()override;
-    [[nodiscard]]bool Validate() override;
-    [[nodiscard]]bool Validate(const int32_t& databaseId);
+    [[nodiscard]]Errors::ValidationStatus Validate() override;
+    [[nodiscard]]Errors::ValidationStatus Validate(const int32_t& databaseId);
 
     [[nodiscard]]bool IsRightJoin()const;
 
@@ -204,7 +205,7 @@ namespace QueryPipeline::Statements {
     CreateTableStatement();
     ~CreateTableStatement() override;
 
-    bool Validate() override;
+    Errors::ValidationStatus Validate() override;
     QueryPipeline::LogicalPlan* ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -227,10 +228,10 @@ namespace QueryPipeline::Statements {
 
     [[nodiscard]] bool HasTopStatement()const;
     [[nodiscard]] bool HasJoins()const;
-    [[nodiscard]] bool ValidateNoTableStatement();
-    [[nodiscard]] bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
+    [[nodiscard]] Errors::ValidationStatus ValidateNoTableStatement();
+    [[nodiscard]] Errors::ValidationStatus ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
 
-    [[nodiscard]] bool Validate() override;
+    [[nodiscard]] Errors::ValidationStatus Validate() override;
     [[nodiscard]] LogicalPlan* ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -238,7 +239,7 @@ namespace QueryPipeline::Statements {
   struct CreateDbStatement final : Statement{
     std::string name;
 
-    bool Validate() override;
+    Errors::ValidationStatus Validate() override;
     LogicalPlan* ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -246,7 +247,7 @@ namespace QueryPipeline::Statements {
   struct DropDbStatement final : Statement{
     std::string name;
 
-    bool Validate() override;
+    Errors::ValidationStatus Validate() override;
     LogicalPlan* ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -254,7 +255,7 @@ namespace QueryPipeline::Statements {
   struct UseDatabaseStatement final : Statement {
     std::string name;
 
-    bool Validate() override;
+    Errors::ValidationStatus Validate() override;
     LogicalPlan* ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -271,11 +272,11 @@ namespace QueryPipeline::Statements {
     void InsertDefaultValuesForMissingColumns(const Headers::ColumnHeader& header, const Headers::DefaultValuesHeader& defaultValue);
     void InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header);
 
-    [[nodiscard]] bool ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName)const;
+    [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName)const;
     [[nodiscard]] bool HasSelectStatement() const;
-    [[nodiscard]] bool ValidateSelectStatement()const;
-    [[nodiscard]] bool ResolveAliases();
-    [[nodiscard]] bool Validate() override;
+    [[nodiscard]] Errors::ValidationStatus ValidateSelectStatement()const;
+    [[nodiscard]] Errors::ValidationStatus ResolveAliases();
+    [[nodiscard]] Errors::ValidationStatus Validate() override;
     [[nodiscard]] LogicalPlan* ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -283,7 +284,7 @@ namespace QueryPipeline::Statements {
   struct CreateSchemaStatement final : Statement {
     std::string name;
 
-    bool Validate() override;
+    Errors::ValidationStatus Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -300,9 +301,9 @@ namespace QueryPipeline::Statements {
     std::vector<UpdateColumn*> updates;
     WhereClause where;
 
-    [[nodiscard]] bool ValidateReturnType(const UpdateColumn* update)const;
-    bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
-    bool Validate() override;
+    [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const UpdateColumn* update)const;
+    Errors::ValidationStatus ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary);
+    Errors::ValidationStatus Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -314,7 +315,7 @@ namespace QueryPipeline::Statements {
     vector<column_index_t> columnIndices;
     bool isUnique;
 
-    bool Validate() override;
+    Errors::ValidationStatus Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
@@ -328,23 +329,23 @@ namespace QueryPipeline::Statements {
     DropColumn* dropColumn;
     RenameColumn* renameColumn;
 
-    [[nodiscard]] bool ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] bool ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] bool ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] bool ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    bool Validate() override;
+    [[nodiscard]] Errors::ValidationStatus ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    Errors::ValidationStatus Validate() override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     Security::Permission RequiredPermissions() const override;
   };
 
   static bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement);
 
-  static bool ResolveColumnAlias(
+  static Errors::ValidationStatus ResolveColumnAlias(
     ColumnName& column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary);
 
-  static bool ResolveColumnAlias(
+  static Errors::ValidationStatus ResolveColumnAlias(
     Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
@@ -352,24 +353,24 @@ namespace QueryPipeline::Statements {
     int* indexPos = nullptr
   );
 
-  static bool ResolveColumnAliasWhenTableAliasExists(
+  static Errors::ValidationStatus ResolveColumnAliasWhenTableAliasExists(
     Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary
   );
 
-  static bool ResolveColumnAliasWhenTableAliasDoesNotExist(
+  static Errors::ValidationStatus ResolveColumnAliasWhenTableAliasDoesNotExist(
     Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary
   );
 
-  static bool ResolvePostProjectionColumnAlias(
+  static Errors::ValidationStatus ResolvePostProjectionColumnAlias(
     Expressions::ColumnExpression* column,
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
     );
 
-  static bool ResolveExpressionAliases(
+  static Errors::ValidationStatus ResolveExpressionAliases(
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     Statement *statement,
@@ -382,17 +383,17 @@ namespace QueryPipeline::Statements {
     const Expressions::Expression* right
   );
 
-  static bool ResolvePostProjectionAliases(
+  static Errors::ValidationStatus ResolvePostProjectionAliases(
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases,
     Expressions::Expression *expr
   );
 
-  static bool ResolveExpressionAliases(
+  static Errors::ValidationStatus ResolveExpressionAliases(
     Statement *statement,
     Expressions::Expression *expr
     );
 
-  static bool ResolveWildCardAlias(
+  static Errors::ValidationStatus ResolveWildCardAlias(
     const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     SelectStatement *statement,

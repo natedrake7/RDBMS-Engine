@@ -26,13 +26,19 @@ namespace Network {
 
   QueryResponseProtocol::QueryResponseProtocol(const string &errorMessage){
     this->hasError = true;
-    this->errorMessage = errorMessage;
+    this->message = errorMessage;
     this->header.size = sizeof(bool) + errorMessage.size();
     this->header.statusCode = ResponseType::QueryResponse;
   }
 
-  QueryResponseProtocol::QueryResponseProtocol(const std::vector<std::string>& columns, std::vector<QueryResult> &rows){
-    this->hasError = false;
+QueryResponseProtocol::QueryResponseProtocol(
+    const bool& hasError,
+    const std::string& message,
+    const std::vector<std::string>& columns,
+    std::vector<QueryResult>& rows
+  ){
+    this->hasError = hasError;
+    this->message = message;
     this->header.statusCode = ResponseType::QueryResponse;
     this->rows = std::move(rows);
     this->columns = columns;
@@ -40,11 +46,11 @@ namespace Network {
 
   int QueryResponseProtocol::GetSize() const{ return ResponseProtocol::GetSize() + header.size; }
 
-  void QueryResponseProtocol::SerializeError(){
-    const int errorSize = static_cast<int>(this->errorMessage.size());
+  void QueryResponseProtocol::SerializeMessage(){
+    const int errorSize = static_cast<int>(this->message.size());
 
     Vector::AppendToBuffer(this->buffer, &errorSize, sizeof(int));
-    Vector::AppendToBuffer(this->buffer, this->errorMessage.c_str(), errorSize);
+    Vector::AppendToBuffer(this->buffer, this->message.c_str(), errorSize);
 
     this->AssignBufferSizeToProtocolSize();
   }
@@ -79,22 +85,18 @@ namespace Network {
     ResponseProtocol::Serialize();
     Vector::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
 
-    if (this->hasError) {
-      this->SerializeError();
-      return;
-    }
-
+    this->SerializeMessage();
     this->SerializeResult();
   }
 
-  void QueryResponseProtocol::DeserializeError(const std::vector<char> &buffer, uint32_t& offSet){
+  void QueryResponseProtocol::DeserializeMessage(const std::vector<char> &buffer, uint32_t& offSet){
     int errorSize = 0;
 
     memcpy(&errorSize, buffer.data() + offSet, sizeof(int));
     offSet += sizeof(int);
 
-    this->errorMessage.resize(errorSize);
-    memcpy(this->errorMessage.data(), buffer.data() + offSet, errorSize);
+    this->message.resize(errorSize);
+    memcpy(this->message.data(), buffer.data() + offSet, errorSize);
     offSet += errorSize;
   }
 
@@ -137,17 +139,13 @@ namespace Network {
     memcpy(&this->hasError, buffer.data() + offSet, sizeof(bool));
     offSet += sizeof(bool);
 
-    if (this->hasError) {
-      this->DeserializeError(buffer, offSet);
-      return;
-    }
-
+    this->DeserializeMessage(buffer, offSet);
     this->DeserializeResult(buffer, offSet);
   }
 
   ostream & operator<<(ostream &os, const QueryResponseProtocol &protocol){
       if (protocol.hasError) {
-        os << protocol.errorMessage;
+        os << protocol.message;
         return os;
       }
 

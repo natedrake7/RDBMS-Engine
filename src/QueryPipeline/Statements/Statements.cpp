@@ -17,53 +17,57 @@ namespace QueryPipeline::Statements {
     this->table = nullptr;
   }
 
-  bool Statement::ValidateBase()const{
+  Errors::ValidationStatus Statement::ValidateBase()const{
     const auto* session = Server::ServerInstance::Get().GetSession(this->sessionId);
 
     if (!session || !session->user || !session->user->role)
-      return false;
+      return {Errors::ValidationError::Error, "Failed to get user session"};
 
     if (!session->user->role->HasPermission(this->RequiredPermissions())) {
-      std::cerr << "User: " << session->user->name << " is not authorized to perform this action." << std::endl;
-      return false;
+      ostringstream os;
+      os  << "User: " << session->user->name << " is not authorized to perform this action.";
+
+      return {Errors::ValidationError::Error, os.str()};
     }
 
-    return true;
+    return {Errors::ValidationError::Ok, ""};
   }
 
-  bool Statement::ValidateStatement(){
-    return this->ValidateBase() && this->Validate();
+  Errors::ValidationStatus Statement::ValidateStatement(){
+    auto result = this->ValidateBase();
+
+    if (!result.IsOk())
+      return result;
+
+    return this->Validate();
   }
 
-  bool CreateUserStatement::Validate(){
-    if (this->username.empty()) {
-      std::cerr << "username cannot be empty" << std::endl;
-      return false;
-    }
+  Errors::ValidationStatus CreateUserStatement::Validate(){
+    if (this->username.empty())
+      return {Errors::ValidationError::Error,  "username cannot be empty"};
 
-    if (this->password.empty()) {
-      std::cerr << "password cannot be empty" << std::endl;
-      return false;
-    }
+    if (this->password.empty())
+      return {Errors::ValidationError::Error,  "password cannot be empty"};
 
-    if (this->role.empty()) {
-      std::cerr << "role cannot be empty" << std::endl;
-      return false;
-    }
+    if (this->role.empty())
+      return {Errors::ValidationError::Error,  "role cannot be empty"};
 
     const auto& server = Server::ServerInstance::Get();
 
+    ostringstream os;
     if (server.UserExists(this->username)) {
-      std::cerr << "User with username: " << this->username << " already exists." << std::endl;
-      return false;
+      os << "User with username: " << this->username << " already exists.";
+
+      return {Errors::ValidationError::Error,  os.str()};
     }
 
     if (!server.RoleExists(this->role)) {
-      std::cerr << "Role: " << this->role << " does not exist." << std::endl;
-      return false;
+      os << "Role: " << this->role << " does not exist.";
+
+      return {Errors::ValidationError::Error,  os.str()};
     }
 
-    return true;
+    return {Errors::ValidationError::Ok,  ""};
   }
 
   Security::Permission CreateUserStatement::RequiredPermissions() const{
@@ -74,20 +78,21 @@ namespace QueryPipeline::Statements {
     return new LogicalCreateUser(this->sessionId, this->username, this->password, this->role);
   }
 
-  bool GrantRoleStatement::Validate(){
+  Errors::ValidationStatus GrantRoleStatement::Validate(){
     const auto& server = Server::ServerInstance::Get();
 
+    ostringstream os;
     if (!server.UserExists(this->username)) {
-      std::cerr << "User: " << this->username << " does not exist." << std::endl;
-      return false;
+      os << "User: " << this->username << " does not exist.";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     if (!server.RoleExists(this->role)) {
-      std::cerr << "Role: " << this->role << " does not exist." << std::endl;
-      return false;
+      os << "Role: " << this->role << " does not exist.";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
-    return true;
+    return {};
   }
 
   Security::Permission GrantRoleStatement::RequiredPermissions() const{
@@ -98,17 +103,18 @@ namespace QueryPipeline::Statements {
     return new LogicalGrantRole(this->sessionId, this->username, this->role);
   }
 
-  bool DeleteStatement::Validate(){
-    if (!this->table->Validate(this->databaseId))
-      return false;
+  Errors::ValidationStatus DeleteStatement::Validate(){
+    auto result = this->table->Validate(this->databaseId);
+
+    if (!result.IsOk())
+      return result;
 
     if (this->where.expression == nullptr)
-      return true;
+      return {};
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
-
-    return true;
+    return {};
     // return this->where.expression->Validate(columnsDict);
   }
 
@@ -130,14 +136,17 @@ namespace QueryPipeline::Statements {
       delete this->table;
   }
 
-  bool JoinStatement::Validate(){
-    return true;
+  Errors::ValidationStatus JoinStatement::Validate(){
+    return {};
   }
 
-  bool JoinStatement::Validate(const int32_t& databaseId){
+  Errors::ValidationStatus JoinStatement::Validate(const int32_t& databaseId){
     this->databaseId = databaseId;
 
-    return this->table != nullptr && this->table->Validate(this->databaseId);
+    if (this->table == nullptr)
+      return {Errors::ValidationError::Error, "No table was specified in the join statement"};
+
+    return this->table->Validate(this->databaseId);
   }
 
   bool JoinStatement::IsRightJoin() const {
@@ -176,16 +185,21 @@ namespace QueryPipeline::Statements {
     this->constraint = nullptr;
   }
 
-  bool CreateTableStatement::Validate(){
-    if (!this->table->ValidateTableCreate(this->databaseId))
-      return false;
+  Errors::ValidationStatus CreateTableStatement::Validate(){
+    auto result = this->table->ValidateTableCreate(this->databaseId);
+
+    if (!result.IsOk())
+      return result;
+
+    ostringstream os;
 
     const auto& schemasDict = Server::ServerInstance::Get().SelectSchemasToDictionary(this->databaseId);
-
     Headers::SchemaHeader schemaHeader;
-    if (!schemasDict.TryGetValue(this->table->schema, schemaHeader)) {
-      std::cerr << "Schema: " << this->table->schema << "does not exist." << std::endl;
-      return false;
+
+
+    if (!schemasDict.TryGetValue(Functions::String::Lower(this->table->schema), schemaHeader)) {
+      os << "Schema: " << this->table->schema << "does not exist.";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     this->table->schemaId = schemaHeader.id;
@@ -198,10 +212,9 @@ namespace QueryPipeline::Statements {
       uint16_t columnSize;
 
       if (!ColumnTypeSizes.TryGetValue(column->type.name, columnSize)) {
-        std::cerr << "Column Type: " + column->type.name + " does not exist" << endl;
-        return false;
+        os << "Column Type: " + column->type.name + " does not exist";
+        return {Errors::ValidationError::Error, os.str()};
       }
-
 
       if (columnSize != 0)
         column->type.size = columnSize;
@@ -210,8 +223,8 @@ namespace QueryPipeline::Statements {
 
       if (dataType == DataType::Decimal) {
         if (!column->type.decimal.Validate()) {
-          std::cerr << "Decimal type requires precision and scale to be set correctly" << std::endl;
-          return false;
+          os << "Decimal type requires precision and scale to be set correctly";
+          return {Errors::ValidationError::Error, os.str()};
         }
 
         column->type.size = DataTypes::Decimal::Size(column->type.decimal.precision);
@@ -222,8 +235,8 @@ namespace QueryPipeline::Statements {
       columnNamesToIndexes.Add(column->name.name, column->index);
 
       if(column->isPrimaryKey && primaryKeyFound){
-        cerr << "Cannot have multiple primary keys defined. Consider declaring a composite key" << endl;
-        return false;
+        os << "Cannot have multiple primary keys defined. Consider declaring a composite key";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       if (column->isPrimaryKey) {
@@ -231,25 +244,28 @@ namespace QueryPipeline::Statements {
         primaryKeyFound = true;
 
         //store the pointer if found, else let it be null
-        if(column->HasIdentity()
-          && !column->identity->Validate())
-            return false;
+        if(column->HasIdentity()) {
+          auto identityResult = column->identity->Validate();
+
+          if (!identityResult.IsOk())
+            return identityResult;
+        }
       }
     }
 
     if (this->constraint == nullptr)
-      return true;
+      return {};
 
     if (primaryKeyFound) {
-      std::cerr << "Cannot have a primary key and a constraint declared" << std::endl;
-      return false;
+      os << "Cannot have a primary key and a constraint declared";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     //primary key will be clear for sure here
     for (const auto& column: this->constraint->columns)
       this->primaryKey.push_back(columnNamesToIndexes[column.name]);
 
-    return true;
+    return {};
   }
 
   LogicalPlan * CreateTableStatement::ToLogical(){
@@ -296,44 +312,47 @@ namespace QueryPipeline::Statements {
 
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
-  bool SelectStatement::Validate(){
+  Errors::ValidationStatus SelectStatement::Validate(){
+    ostringstream os;
     if (!this->joins.empty() && this->table == nullptr) {
-      std::cerr << "Joins were specified but no calling table was not specified" << std::endl;
-      return false;
+      os << "Joins were specified but no calling table was not specified";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     //resolve expressions here since no column is to be used
     if (this->table == nullptr)
       return this->ValidateNoTableStatement();
 
-    if (!this->table->Validate(this->databaseId))
-        return false;
+    auto tableResult = this->table->Validate(this->databaseId);
+    if (!tableResult.IsOk())
+        return tableResult;
 
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
 
     for (const auto& join: this->joins) {
-      if (!join->Validate(this->databaseId))
-        return false;
+      auto joinResult = join->Validate(this->databaseId);
+      if (!joinResult.IsOk())
+        return joinResult;
     }
 
     return this->ResolveAliases(aliasesDictionary);
   }
 
-  bool SelectStatement::ValidateNoTableStatement(){
+  Errors::ValidationStatus SelectStatement::ValidateNoTableStatement(){
     for (const auto& resultExpr : this->results){
-      if (!ResolveExpressionAliases(this, resultExpr))
-        return false;
+      auto exprResult = ResolveExpressionAliases(this, resultExpr);
+
+      if (!exprResult.IsOk())
+        return exprResult;
     }
 
-    if (this->HasJoins()) {
-      std::cerr << "Missing FROM statement but joins were given" << std::endl;
-      return false;
-    }
+    if (this->HasJoins())
+      return {Errors::ValidationError::Error, "Missing FROM statement but joins were given"};
 
-    return true;
+    return {};
   }
 
-  bool SelectStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+  Errors::ValidationStatus SelectStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
     this->tableColumnsDictionary.Add(this->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId));
@@ -345,30 +364,36 @@ namespace QueryPipeline::Statements {
     }
 
     //start resolving aliases
-    for (int i = 0; i < this->results.size(); i++)
-      if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, this->results[i], &i))
-          return false;
+    for (int i = 0; i < this->results.size(); i++) {
+      auto expressionResult = ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, this->results[i], &i);
+
+      if (!expressionResult.IsOk())
+        return expressionResult;
+    }
+
 
     int indexPos = 0;
     //validate all expressions are valid
     if (this->where.expression != nullptr) {
-      if (!this->where.IsValid()) {
-        std::cerr << "Where expression must be either a logical or a binary expression" << std::endl;
-        return false;
-      }
+      if (!this->where.IsValid())
+        return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
 
-      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression, &indexPos))
-        return false;
+      auto expressionResult = ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression, &indexPos);
+      if (!expressionResult.IsOk())
+        return expressionResult;
     }
 
     //validate join expressions
 
-    for (const auto& join: this->joins)
-      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, join->expression))
-        return false;
+    for (const auto& join: this->joins) {
+      auto expressionResult = ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, join->expression);
+
+      if (!expressionResult.IsOk())
+        return expressionResult;
+    }
 
     if (this->orderBy == nullptr)
-      return true;
+      return {};
 
     Dictionary<std::string, const Expressions::Expression*> postProjectionAliases;
 
@@ -377,19 +402,23 @@ namespace QueryPipeline::Statements {
         continue;
 
       if (postProjectionAliases.Contains(resultExpr->name)) {
-        std::cerr << resultExpr->name << " already exists on result set"<< std::endl;
-        return false;
+        ostringstream os;
+
+        os << resultExpr->name << " already exists on result set";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       postProjectionAliases.Add(resultExpr->name, resultExpr);
     }
 
     for (const auto& column: this->orderBy->columns) {
-      if (!ResolvePostProjectionAliases(postProjectionAliases, column->expression))
-        return false;
+      auto postProjectionExpr = ResolvePostProjectionAliases(postProjectionAliases, column->expression);
+
+      if (!postProjectionExpr.IsOk())
+        return postProjectionExpr;
     }
 
-    return true;
+    return {};
   }
 
    DecimalType::DecimalType(){
@@ -429,15 +458,11 @@ namespace QueryPipeline::Statements {
     this->size = 0;
   }
 
-  bool Identity::Validate() const{
-    if (this->incrementFactor <= 0) {
-      std::cerr << "Increment Factor must be greater than zero" << std::endl;
-      return false;
-    }
+  Errors::ValidationStatus Identity::Validate() const{
+    if (this->incrementFactor <= 0)
+      return {Errors::ValidationError::Error, "Increment Factor must be greater than zero"};
 
-
-
-    return true;
+    return {};
   }
 
   bool NewColumn::HasIdentity()const{ return this->identity != nullptr;}
@@ -504,36 +529,39 @@ namespace QueryPipeline::Statements {
     return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
   }
 
-  bool TableName::Validate(const int32_t& selectedDatabaseId) {
+  Errors::ValidationStatus TableName::Validate(const int32_t& selectedDatabaseId) {
     const auto tableHeader = (!this->database.empty())
         ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
         : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id == Constants::INVALID_TABLE_ID){
-      std::cerr << "Table " + this->GetFullName() + " does not exist" << std::endl;
-      return false;
+      ostringstream os;
+
+      os << "Table " + this->GetFullName() + " does not exist";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     this->tableId = tableHeader.id;
     this->ordinalPosition = tableHeader.ordinalPosition;
     this->databaseId = tableHeader.databaseId;
 
-    return true;
+    return {};
   }
 
-  bool TableName::ValidateTableCreate(const int32_t &selectedDatabaseId){
+  Errors::ValidationStatus TableName::ValidateTableCreate(const int32_t &selectedDatabaseId){
     const auto tableHeader = (!this->database.empty())
       ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
       : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id != Constants::INVALID_TABLE_ID){
-      std::cerr << "Table " + this->GetFullName() + " exists" << std::endl;
-      return false;
+      ostringstream os;
+      os << "Table " + this->GetFullName() + " exists";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     this->databaseId = selectedDatabaseId;
 
-    return true;
+    return {};
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
@@ -610,12 +638,15 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::DB_READER_PERMISSIONS;
   }
 
-  bool CreateDbStatement::Validate(){
-    if (!Server::ServerInstance::Get().DatabaseExists(this->name))
-      return true;
+  Errors::ValidationStatus CreateDbStatement::Validate(){
+    if (!Server::ServerInstance::Get().DatabaseExists(this->name)) {
+      ostringstream os;
+      os << "Database " + this->name + " already exists";
 
-    cerr << "Database " + this->name + " already exists" << endl;
-    return false;
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    return {};
   }
 
   LogicalPlan * CreateDbStatement::ToLogical(){
@@ -626,20 +657,22 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::ADMIN_PERMISSIONS;
   }
 
-  bool DropDbStatement::Validate(){
+   Errors::ValidationStatus DropDbStatement::Validate(){
+    ostringstream os;
+
     const auto database = Server::ServerInstance::Get().SelectDatabase(this->name);
 
     if (database.name.empty()) {
-      cerr << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist" << endl;
-      return false;
+      os << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     if (database.isSystem) {
-      cerr << "Cannot drop: " << this->name << ". Database" << this->name << " is a system database" << endl;
-     return false;
+      os << "Cannot drop: " << this->name << ". Database" << this->name << " is a system database";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
-    return true;
+    return {};
   }
   
   LogicalPlan * DropDbStatement::ToLogical(){
@@ -650,17 +683,19 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::ADMIN_PERMISSIONS;
   }
 
-  bool UseDatabaseStatement::Validate(){
+  Errors::ValidationStatus UseDatabaseStatement::Validate(){
     const auto dbHeader = Server::ServerInstance::Get().SelectDatabase(this->name);
 
     if (dbHeader.id == Constants::INVALID_DATABASE_ID) {
-      std::cerr << "Database " + this->name + " does not exist" << std::endl;
-      return false;
+      ostringstream os;
+
+      os << "Database " + this->name + " does not exist";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     this->databaseId = dbHeader.id;
 
-    return true;
+    return {};
   }
 
   LogicalPlan * UseDatabaseStatement::ToLogical(){
@@ -712,7 +747,7 @@ namespace QueryPipeline::Statements {
       insertColumns.emplace_back(new Expressions::LiteralExpression(Value(nullptr, header.ordinalPosition)));
   }
 
-  bool InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName) const{
+  Errors::ValidationStatus InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName) const{
     const auto valueType = expression->GetReturnType();
 
     const auto& columnsDictionary = this->tableColumnsDictionary.Get(this->table->tableId);
@@ -725,59 +760,62 @@ namespace QueryPipeline::Statements {
       valueType,
         columnType
       ))
-      return true;
+      return {};
 
     const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(expression);
+
+    ostringstream os;
 
     if (literalExpr != nullptr) {
       if (literalExpr->value.GetIsNull()) {
         if (columnHeader.isNullable)
-          return true;
+          return {};
 
-        std::cerr << "Column " << columnHeader.name << " does not allow NULL. Insert fails." << std::endl;
-        return false;
+
+        os << "Column " << columnHeader.name << " does not allow NULL. Insert fails.";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       if (DataTypes::Coercions::CanBeParsedToType(columnType, literalExpr->value))
-        return true;
+        return {};
     }
 
-    std::cerr << "Cannot update column " << columnHeader.name << " of type "
+    os << "Cannot update column " << columnHeader.name << " of type "
               << ColumnTypesToStringDictionary.Get(columnType)
               << " with value of type "
-              << ColumnTypesToStringDictionary.Get(valueType) << std::endl;
+              << ColumnTypesToStringDictionary.Get(valueType);
 
-    return false;
+    return {Errors::ValidationError::Error, os.str()};
   }
 
   bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
-  bool InsertStatement::ValidateSelectStatement()const{
+  Errors::ValidationStatus InsertStatement::ValidateSelectStatement()const{
 
     if (this->selectStatement == nullptr)
-      return true;
+      return {};
 
-    if (this->selectStatement->results.size() != this->columns.size()) {
-      std::cerr << "Invalid number of arguments specified on select statement" << std::endl;
-      return false;
-    }
+    if (this->selectStatement->results.size() != this->columns.size())
+      return {Errors::ValidationError::Error, "Invalid number of arguments specified on select statement"};
 
     this->selectStatement->databaseId = this->databaseId;
 
-    if (!this->selectStatement->Validate())
-      return false;
+    auto selectStatus = this->selectStatement->Validate();
+    if (!selectStatus.IsOk())
+      return selectStatus;
 
     for (int i = 0;i < this->selectStatement->results.size();i++) {
       const auto& resultExpression = this->selectStatement->results[i];
 
-      if (!this->ValidateReturnType(resultExpression, this->columns[i].name))
-        return false;
+      auto returnTypeStatus = this->ValidateReturnType(resultExpression, this->columns[i].name);
+      if (!returnTypeStatus.IsOk())
+        return returnTypeStatus;
     }
 
-    return true;
+    return {};
   }
 
-  bool InsertStatement::ResolveAliases(){
+  Errors::ValidationStatus InsertStatement::ResolveAliases(){
     Dictionary<std::string, table_id_t> tableAliasesDictionary{
       {this->table->GetAlias(), this->table->tableId}
     };
@@ -787,21 +825,26 @@ namespace QueryPipeline::Statements {
       for (int i = 0;i < insertColumns.size(); i++) {
         const auto& value = insertColumns[i];
 
-        if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, value))
-          return false;
+        auto expressionStatus = ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, value);
+        if (!expressionStatus.IsOk())
+          return expressionStatus;
 
-        if (!this->ValidateReturnType(value, this->columns[i].name))
-          return false;
+        auto returnTypeStatus = this->ValidateReturnType(value, this->columns[i].name);
+        if (!returnTypeStatus.IsOk())
+          return returnTypeStatus;
       }
     }
 
-    return true;
+    return {};
   }
   //TODO validate length of columns to match max record_size from master DB
-  bool InsertStatement::Validate(){
-    if (this->table == nullptr
-      || !this->table->Validate(this->databaseId))
-      return false;
+  Errors::ValidationStatus InsertStatement::Validate(){
+    if (this->table == nullptr)
+      return {Errors::ValidationError::Error, "No table was specified"};
+
+    auto tableStatus = this->table->Validate(this->databaseId);
+    if (!tableStatus.IsOk())
+      return tableStatus;
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
@@ -811,20 +854,20 @@ namespace QueryPipeline::Statements {
 
     //validate insert columns existance
     HashSet<int32_t> statementColumns;
-
+    ostringstream os;
     for (auto & column : this->columns) {
       Headers::ColumnHeader header;
 
       //check if columns exist on the table
       if (!columnsDict.TryGetValue(Functions::String::Lower(column.name), header)) {
-        std::cerr << "Column " << column.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
-        return false;
+        os << "Column " << column.name << " does not exist on table: " << this->table->GetFullName();
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       //check if the specified column is an identity column
       if (identityColumns.Contains(header.id)) {
-        std::cerr << "Cannot specify an identity column for insert" << std::endl;
-        return false;
+        os << "Cannot specify an identity column for insert";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       column.index = header.ordinalPosition;
@@ -851,20 +894,16 @@ namespace QueryPipeline::Statements {
       const auto defaultValue = Server::ServerInstance::Get().SelectDefaultValueByColumnId(header.id);
 
       if (defaultValue.columnId == Constants::INVALID_COLUMN_ID) {
-        std::cerr << "Column " << columnName << " does not allow NULLS. Insert fails" << std::endl;
-        return false;
+        os << "Column " << columnName << " does not allow NULLS. Insert fails";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       this->InsertDefaultValuesForMissingColumns(header, defaultValue);
     }
 
-    if (this->HasSelectStatement())
-      return this->ValidateSelectStatement();
-
-    if (!this->ResolveAliases())
-      return false;
-
-    return true;
+    return (this->HasSelectStatement())
+      ? this->ValidateSelectStatement()
+      : this->ResolveAliases();
   }
 
   LogicalPlan* InsertStatement::ToLogical() {
@@ -880,13 +919,15 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::DB_WRITER_PERMISSIONS;
   }
 
-  bool CreateSchemaStatement::Validate(){
+  Errors::ValidationStatus CreateSchemaStatement::Validate(){
     if (Server::ServerInstance::Get().SchemaExists(this->databaseId, this->name)) {
-      cerr << "Schema " << this->name << " already exists"  << endl;
-      return false;
+      ostringstream os;
+      os << "Schema " << this->name << " already exists";
+
+      return {Errors::ValidationError::Error, os.str()};
     }
 
-    return true;
+    return {};
   }
 
   QueryPipeline::LogicalPlan * CreateSchemaStatement::ToLogical(){
@@ -905,13 +946,16 @@ namespace QueryPipeline::Statements {
     delete this->value;
   }
 
-  bool UpdateStatement::ValidateReturnType(const UpdateColumn* update) const{
+  Errors::ValidationStatus UpdateStatement::ValidateReturnType(const UpdateColumn* update) const{
+    ostringstream os;
+
     const auto valueType = update->value->GetReturnType();
+
     if (DataTypes::Coercions::IsCoercionAllowed(
       valueType,
         update->name.returnType)
         )
-      return true;
+      return {};
 
     const auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(update->value);
 
@@ -920,25 +964,25 @@ namespace QueryPipeline::Statements {
         const auto& columns = this->tableColumnsDictionary.Get(this->table->tableId);
 
         if (columns.Get(update->name.name).isNullable)
-          return true;
+          return {};
 
-        std::cerr << "Column " << update->name.name << " does not allow NULL. Update fails." << std::endl;
-        return false;
+        os << "Column " << update->name.name << " does not allow NULL. Update fails.";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       if (DataTypes::Coercions::CanBeParsedToType(update->name.returnType, literalExpr->value))
-        return true;
+        return {};
     }
 
-    std::cerr << "Cannot update column " << update->name.name << " of type "
+    os << "Cannot update column " << update->name.name << " of type "
               << ColumnTypesToStringDictionary.Get(update->name.returnType)
               << " with value of type "
-              << ColumnTypesToStringDictionary.Get(valueType) << std::endl;
+              << ColumnTypesToStringDictionary.Get(valueType);
 
-    return false;
+    return {Errors::ValidationError::Error, os.str()};
   }
 
-  bool UpdateStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+  Errors::ValidationStatus UpdateStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
     this->tableColumnsDictionary.Add(this->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId));
@@ -947,36 +991,41 @@ namespace QueryPipeline::Statements {
     for (int i = 0; i < this->updates.size(); i++) {
       auto* update = this->updates.at(i);
 
-      if (!ResolveColumnAlias(update->name, tableAliasesDictionary, this->tableColumnsDictionary))
-        return false;
+      auto columnAliasStatus = ResolveColumnAlias(update->name, tableAliasesDictionary, this->tableColumnsDictionary);
+      if (!columnAliasStatus.IsOk())
+        return columnAliasStatus;
 
-      if (!ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, update->value))
-          return false;
+      auto expressionStatus = ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, update->value);
+      if (!expressionStatus.IsOk())
+          return expressionStatus;
 
-      if (!this->ValidateReturnType(update))
-        return false;
+      auto returnTypeResult = this->ValidateReturnType(update);
+      if (!returnTypeResult.IsOk())
+        return returnTypeResult;
     }
 
     //validate all expressions are valid
     if (this->where.expression != nullptr) {
-      if (!this->where.IsValid()) {
-        std::cerr << "Where expression must be either a logical or a binary expression" << std::endl;
-        return false;
-      }
+      if (!this->where.IsValid())
+        return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
 
-      int indexPos = 0;
-      if (!ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression))
-        return false;
+      auto expessionStatus = ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression);
+      if (!expessionStatus.IsOk())
+        return expessionStatus;
     }
 
-    return true;
+    return {};
   }
 
 
-bool UpdateStatement::Validate(){
-    if (this->table == nullptr
-      || !this->table->Validate(this->databaseId))
-      return false;
+Errors::ValidationStatus UpdateStatement::Validate(){
+
+    if (this->table == nullptr)
+      return {Errors::ValidationError::Error, "Table was not specified"};
+
+    auto tableStatus = this->table->Validate(this->databaseId);
+    if (!tableStatus.IsOk())
+      return tableStatus;
 
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
     return this->ResolveAliases(aliasesDictionary);
@@ -990,23 +1039,24 @@ bool UpdateStatement::Validate(){
     return Server::ServerConstants::DB_WRITER_PERMISSIONS;
   }
 
-  bool CreateIndexStatement::Validate(){
-    if (!this->table->Validate(this->databaseId))
-      return false;
+  Errors::ValidationStatus CreateIndexStatement::Validate(){
+    auto tableStatus = this->table->Validate(this->databaseId);
+    if (!tableStatus.IsOk())
+      return tableStatus;
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
+    ostringstream os;
     for(auto& column: this->columns) {
       Headers::ColumnHeader header;
 
       if (columnsDict.TryGetValue(column, header)) {
         this->columnIndices.push_back(header.ordinalPosition);
-
         continue;
       }
 
-      cerr << "Column " << column << " does not exist on table: " << this->table->schema << "." << this->table->name << endl;
-      return false;
+      os << "Column " << column << " does not exist on table: " << this->table->schema << "." << this->table->name;
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
@@ -1015,14 +1065,14 @@ bool UpdateStatement::Validate(){
       const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexIdToDictionary(index.id);
 
       if (index.name == this->name) {
-        cerr << "Index with name: " << index.name << " already exists" << endl;
-        return false;
+        os << "Index with name: " << index.name << " already exists";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       //check if identical index exists (no need for a duplicate).
     }
 
-    return true;
+    return {};
   }
 
   QueryPipeline::LogicalPlan * CreateIndexStatement::ToLogical(){
@@ -1033,24 +1083,25 @@ bool UpdateStatement::Validate(){
     return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
-  bool AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+    ostringstream os;
     if (headers.Contains(Functions::String::NormalizeString(this->newColumn->name.name))) {
-      std::cerr << "Column " << this->newColumn->name.name << " already exists on table: "<< this->table->GetFullName() << std::endl;
-      return false;
+      os << "Column " << this->newColumn->name.name << " already exists on table: "<< this->table->GetFullName();
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     if (!this->newColumn->isNullable
       && this->newColumn->defaultValue.GetIsNull()) {
-      std::cerr << "Cannot insert default Value NULL when NOT NULL is specified" << std::endl;
-      return false;
+      os << "Cannot insert default Value NULL when NOT NULL is specified";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     this->newColumn->index = headers.size();
 
     Constants::DataType columnType;
     if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(this->newColumn->type.name), columnType)) {
-      std::cerr << "Invalid Column Type " << this->newColumn->type.name << std::endl;
-      return false;
+      os << "Invalid Column Type " << this->newColumn->type.name;
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     const auto recordSize = ColumnTypeSizes.Get(this->newColumn->type.name);
@@ -1060,8 +1111,8 @@ bool UpdateStatement::Validate(){
 
     if (columnType == DataType::Decimal) {
       if (!this->newColumn->type.decimal.Validate()) {
-        std::cerr << "Decimal type requires precision and scale to be set correctly" << std::endl;
-        return false;
+        os << "Decimal type requires precision and scale to be set correctly";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       this->newColumn->type.size = DataTypes::Decimal::Size(this->newColumn->type.decimal.precision);
@@ -1070,51 +1121,54 @@ bool UpdateStatement::Validate(){
     //TODO Check this
     // this->addColumn->defaultValue.Validate(columnType, this->addColumn->index);
 
-    return true;
+    return {};
   }
 
-  bool AlterTableStatement::ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
 
+    ostringstream os;
     if (!headers.TryGetValue(Functions::String::NormalizeString(this->alterColumn->name.name), header)) {
-      std::cerr << "Column " << this->alterColumn->name.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
-      return false;
+      os << "Column " << this->alterColumn->name.name << " does not exist on table: " << this->table->GetFullName();
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     Constants::DataType columnType;
     if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(this->alterColumn->type.name), columnType)) {
-      std::cerr << "Invalid Column Type " << this->alterColumn->type.name << std::endl;
-      return false;
+      os << "Invalid Column Type " << this->alterColumn->type.name;
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     if ((PipelineConstants::ValidStringConversions.Contains(columnType)
       && !PipelineConstants::ValidStringConversions.Contains(static_cast<Constants::DataType>(header.dataType)))
       || (PipelineConstants::ValidIntegerConversions.Contains(columnType)
         && !PipelineConstants::ValidIntegerConversions.Contains(static_cast<Constants::DataType>(header.dataType)))){
-          std::cerr << "Cannot alter column " << this->alterColumn->name.name << " from type: "
+          os << "Cannot alter column " << this->alterColumn->name.name << " from type: "
                     << ColumnTypesToStringDictionary.Get(static_cast<Constants::DataType>(header.dataType))
-                    << "to type: " << this->alterColumn->type.name << std::endl;
+                    << "to type: " << this->alterColumn->type.name;
 
-        return false;
+        return {Errors::ValidationError::Error, os.str()};
     }
 
     if (header.recordSize > this->alterColumn->type.size) {
-      std::cerr << "Cannot alter column " << this->alterColumn->type.name
+      os << "Cannot alter column " << this->alterColumn->type.name
                 << " with size " <<  header.recordSize << " to size: " << this->alterColumn->type.size
                 << std::endl
-                << "Use FORCE if potential data corruption is acceptable" << std::endl;
-      return false;
+                << "Use FORCE if potential data corruption is acceptable";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     this->alterColumn->columnId = header.id;
-    return true;
+    return {};
   }
 
-  bool AlterTableStatement::ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+    ostringstream os;
+
     Headers::ColumnHeader header;
     if (!headers.TryGetValue(Functions::String::NormalizeString(this->dropColumn->name.name), header)) {
-      std::cerr << "Column " << this->dropColumn->name.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
-      return false;
+      os << "Column " << this->dropColumn->name.name << " does not exist on table: " << this->table->GetFullName();
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     //validate no index or constraint uses it
@@ -1124,33 +1178,36 @@ bool UpdateStatement::Validate(){
       const auto columns = Server::ServerInstance::Get().SelectConstraintColumnsByConstraintIdToDictionary(constraint.constraintId);
 
       if (columns.Contains(header.id)) {
-        std::cerr << "Cannot drop column: " << header.name << " as it is referenced by constraint: " << constraint.name << std::endl;
-        return false;
+        os << "Cannot drop column: " << header.name << " as it is referenced by constraint: " << constraint.name;
+        return {Errors::ValidationError::Error, os.str()};
       }
     }
 
     this->dropColumn->index = header.ordinalPosition;
-
-    return true;
+    return {};
   }
 
-  bool AlterTableStatement::ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
     if (!headers.TryGetValue(Functions::String::NormalizeString(this->renameColumn->oldName.name), header)) {
-      std::cerr << "Column " << this->renameColumn->oldName.name << " does not exist on table: " << this->table->GetFullName() << std::endl;
-      return false;
+      ostringstream os;
+      os << "Column " << this->renameColumn->oldName.name << " does not exist on table: " << this->table->GetFullName();
+      return {Errors::ValidationError::Error, os.str()};;
     }
 
     this->renameColumn->columnId = header.id;
     this->renameColumn->ordinalPosition = header.ordinalPosition;
 
-    return true;
+    return {};
   }
 
-  bool AlterTableStatement::Validate(){
-    if (this->table == nullptr
-     || !this->table->Validate(this->databaseId))
-      return false;
+  Errors::ValidationStatus AlterTableStatement::Validate(){
+    if (this->table == nullptr)
+      return {Errors::ValidationError::Error, "Table was not specified"};
+
+    auto tableStatus = this->table->Validate(this->databaseId);
+    if (!tableStatus.IsOk())
+      return tableStatus;
 
     const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
 
@@ -1165,8 +1222,7 @@ bool UpdateStatement::Validate(){
       case AlterTableType::RenameColumn:
         return this->ValidateRenameColumn(columnsDict);
       default:
-        std::cerr << "Unknown table type" << std::endl;
-        return false;
+        return {Errors::ValidationError::Error, "Unknown table type"};
     }
   }
 
@@ -1186,17 +1242,18 @@ bool UpdateStatement::Validate(){
     return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
-  bool ResolveColumnAlias(
+  Errors::ValidationStatus ResolveColumnAlias(
     ColumnName &column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary){
 
+    ostringstream os;
     if (!column.alias.empty()) {
       table_id_t tableId;
 
       if (!tableAliasesDictionary.TryGetValue(column.alias, tableId)) {
-        cerr << "Alias: " << column.alias << " does not exist in the statement" << endl;
-        return false;
+        os << "Alias: " << column.alias << " does not exist in the statement";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       column.tableId = tableId;
@@ -1218,14 +1275,14 @@ bool UpdateStatement::Validate(){
     }
 
     if (!columnExistsOnTable) {
-      std::cerr << "Column: " << column.name << " does not exist on Table" << std::endl;
-      return false;
+      os << "Column: " << column.name << " does not exist on Table";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
-    return true;
+    return {};
   }
 
-  bool ResolveColumnAlias(
+  Errors::ValidationStatus ResolveColumnAlias(
       Expressions::ColumnExpression* column,
       const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
       Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
@@ -1234,9 +1291,11 @@ bool UpdateStatement::Validate(){
         //if wildcard ensure statement is of select statement type
         if (column->alias == Constants::WILDCARD) {
           auto* selectStatement = dynamic_cast<SelectStatement*>(statement);
-          return selectStatement != nullptr
-              ? ResolveWildCardAlias(column, tableAliasesDictionary,selectStatement, indexPos )
-              : false;
+
+          if (selectStatement != nullptr)
+            return ResolveWildCardAlias(column, tableAliasesDictionary,selectStatement, indexPos);
+
+          return {Errors::ValidationError::Error, ""};
         }
 
        return column->HasTableAlias()
@@ -1244,17 +1303,19 @@ bool UpdateStatement::Validate(){
             : ResolveColumnAliasWhenTableAliasDoesNotExist(column, tableAliasesDictionary, tablesColumnsDictionary);
   }
 
-  bool ResolveColumnAliasWhenTableAliasExists(
+  Errors::ValidationStatus ResolveColumnAliasWhenTableAliasExists(
     Expressions::ColumnExpression *column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary
   ){
+    ostringstream os;
 
     table_id_t tableId;
     Headers::ColumnHeader columnHeader;
+
     if (!tableAliasesDictionary.TryGetValue(column->tableAlias, tableId)) {
-      cerr << "Alias: " << column->tableAlias << " does not exist in the statement" << endl;
-      return false;
+      os << "Alias: " << column->tableAlias << " does not exist in the statement";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     column->tableId = tableId;
@@ -1262,8 +1323,8 @@ bool UpdateStatement::Validate(){
     const auto& columns = tablesColumnsDictionary.Get(column->tableId);
 
     if (!columns.TryGetValue(Functions::String::Lower(column->alias), columnHeader)) {
-      std::cerr << "column: " << column->alias << " does not exist in the statement" << endl;
-      return false;
+      os << "column: " << column->alias << " does not exist in the statement";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     column->columnId = columnHeader.id;
@@ -1273,14 +1334,16 @@ bool UpdateStatement::Validate(){
     if (column->name.empty())
       column->name = columnHeader.name;
 
-    return true;
+    return {};
   }
 
-  bool ResolveColumnAliasWhenTableAliasDoesNotExist(
+  Errors::ValidationStatus ResolveColumnAliasWhenTableAliasDoesNotExist(
     Expressions::ColumnExpression *column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary
   ){
+    ostringstream os;
+
     Headers::ColumnHeader columnHeader;
     bool columnExistsOnStatement = false;
 
@@ -1289,8 +1352,8 @@ bool UpdateStatement::Validate(){
         continue;
 
       if (columnExistsOnStatement) {
-        std::cerr << column->alias << " is ambigious" << std::endl;
-        return false;
+        os << column->alias << " is ambigious";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       columnExistsOnStatement = true;
@@ -1301,47 +1364,57 @@ bool UpdateStatement::Validate(){
     }
 
     if (!columnExistsOnStatement) {
-      std::cerr << "Column: " << column->alias << " does not exist in the statement" << std::endl;
-      return false;
+      os << "Column: " << column->alias << " does not exist in the statement";
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     if (column->name.empty())
       column->name = columnHeader.name;
 
-    return true;
+    return {};
   }
 
-  bool ResolvePostProjectionColumnAlias(
+  Errors::ValidationStatus ResolvePostProjectionColumnAlias(
     Expressions::ColumnExpression *column,
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
     ){
-
     const Expressions::Expression* expression;
     if (!postProjectionAliases.TryGetValue(column->alias, expression)) {
-      std::cerr << "Column: " << column->alias << " does not exist in the statement" << std::endl;
-      return false;
+      ostringstream os;
+      os << "Column: " << column->alias << " does not exist in the statement";
+
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     column->returnType = expression->GetReturnType();
-    return true;
+    return {};
   }
 
-  bool ResolveExpressionAliases(
+  Errors::ValidationStatus ResolveExpressionAliases(
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     Statement *statement,
     Expressions::Expression *expr,
     int* indexPos){
+
+    ostringstream os;
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
+      if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
+        const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
+        const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+
+        os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
+        return {Errors::ValidationError::Error, os.str()};
+      }
+
       return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos)
-          && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos)
-          && ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right);
+          && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos);
     }
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
       if (statement->table == nullptr) {
-        std::cerr << "No table was specified but column with name: " << columnExpr->alias << " was specified." << std::endl;
-        return false;
+        os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
       return ResolveColumnAlias(columnExpr, tableAliasesDictionary, tablesColumnsDictionary, statement, indexPos);
@@ -1351,32 +1424,40 @@ bool UpdateStatement::Validate(){
 
       //validate children expressions and assign return types and ids to column expressions
       for (auto* childExpr : functionExpr->arguments) {
-        if (!ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos))
-          return false;
+        auto childExpressionResult = ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos);
+
+        if (!childExpressionResult.IsOk())
+          return childExpressionResult;
       }
 
       //validate number of arguments
       std::string errorMessage;
-      if (!functionExpr->ValidateNumberOfArguments(errorMessage)) {
-        std::cerr << errorMessage << std::endl;
-        return false;
-      }
+      if (!functionExpr->ValidateNumberOfArguments(errorMessage))
+        return {Errors::ValidationError::Error, errorMessage};
     }
 
     if (auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(expr)) {
       DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
-      return true;
+      return {};
     }
 
     if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
       //validate type
+      if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
+
+        const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
+        const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
+
+        os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
+
+        return {Errors::ValidationError::Error, os.str()};
+      }
 
       return ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->left, indexPos)
-        && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos)
-        && ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right);
+        && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos);
     }
 
-    return true;
+    return {};
   }
 
   bool ValidateExpressionCoercionTypes(const Expressions::Expression *left, const Expressions::Expression *right){
@@ -1415,7 +1496,7 @@ bool UpdateStatement::Validate(){
     return true;
   }
 
-  bool ResolvePostProjectionAliases(
+  Errors::ValidationStatus ResolvePostProjectionAliases(
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases,
     Expressions::Expression *expr){
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
@@ -1428,49 +1509,51 @@ bool UpdateStatement::Validate(){
     if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
       //validate children expressions and assign return types and ids to column expressions
       for (auto* childExpr : functionExpr->arguments) {
-        if (!ResolvePostProjectionAliases(postProjectionAliases, childExpr))
-          return false;
+        auto childExprStatus = ResolvePostProjectionAliases(postProjectionAliases, childExpr);
+
+        if (!childExprStatus.IsOk())
+          return childExprStatus;
       }
 
       //validate number of arguments
       std::string errorMessage;
-      if (!functionExpr->ValidateNumberOfArguments(errorMessage)) {
-        std::cerr << errorMessage << std::endl;
-        return false;
-      }
+      if (!functionExpr->ValidateNumberOfArguments(errorMessage))
+        return {Errors::ValidationError::Error, errorMessage};
     }
 
     if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
       //validate type
-
       return ResolvePostProjectionAliases(postProjectionAliases, logicalExpr->left)
         && ResolvePostProjectionAliases(postProjectionAliases, logicalExpr->right);
     }
 
-    return true;
+    return {};
   }
 
-  bool ResolveExpressionAliases(Statement *statement, Expressions::Expression *expr){
+  Errors::ValidationStatus ResolveExpressionAliases(Statement *statement, Expressions::Expression *expr){
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
       return  ResolveExpressionAliases(statement, binaryExpr->left) &&
               ResolveExpressionAliases(statement, binaryExpr->right);
 
     if (const auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
-        std::cerr << "No table was specified but column with name: " << columnExpr->alias << " was specified." << std::endl;
-        return false;
+        ostringstream os;
+        os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
+
+        return {Errors::ValidationError::Error, os.str()};
     }
 
     if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
       //validate functionExpression
       std::string errorMessage;
       if (!functionExpr->ValidateNumberOfArguments(errorMessage)) {
-        std::cerr << errorMessage << std::endl;
-        return false;
+        return {Errors::ValidationError::Error, errorMessage};
       }
 
       for (auto* childExpr : functionExpr->arguments) {
-        if (!ResolveExpressionAliases(statement, childExpr))
-          return false;
+        auto childExpressionResult = ResolveExpressionAliases(statement, childExpr);
+
+        if (!childExpressionResult.IsOk())
+          return childExpressionResult;
       }
     }
 
@@ -1483,20 +1566,20 @@ bool UpdateStatement::Validate(){
 
     //TODO Validate Literals and functions
 
-    return true;
+    return {};
   }
 
-  bool ResolveWildCardAlias(
+  Errors::ValidationStatus ResolveWildCardAlias(
     const Expressions::ColumnExpression* column,
     const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
     SelectStatement *statement,
     int* indexPos){
 
     if (column->alias != Constants::WILDCARD)
-      return true;
+      return {};
 
     if (indexPos == nullptr)
-      return false;
+      return {Errors::ValidationError::Error, "Unexpected error occured during wildcard validation"};
 
     //if no alias is specified get all the columns from the existing tables in the query
     if (column->tableAlias.empty()) {
@@ -1523,15 +1606,16 @@ bool UpdateStatement::Validate(){
       *indexPos += counter;
 
       delete column;
-      return true;
+      return {};
     }
 
     //else get only from the specified
     table_id_t tableId = 0;
     if (!column->tableAlias.empty()
       && !tableAliasesDictionary.TryGetValue(column->tableAlias, tableId)) {
-      std::cerr << "Alias " << column->tableAlias << " does on exist on statement" << std::endl;
-      return false;
+        ostringstream os;
+        os << "Alias " << column->tableAlias << " does on exist on statement";
+        return {Errors::ValidationError::Error, os.str()};
       }
 
 
@@ -1555,7 +1639,7 @@ bool UpdateStatement::Validate(){
 
     delete column;
 
-    return true;
+    return {};
   }
 
   void AssignColumnsToIndices(SelectStatement *statement, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary){

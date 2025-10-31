@@ -29,7 +29,7 @@ namespace DatabaseEngine::StorageTypes {
         block_size_t size;
         const Column* column;
 
-        Errors::ResultStatus SetDataByType(const Value& value);
+        Errors::RuntimeStatus SetDataByType(const Value& value);
 
         template <typename T>
         void CopyToBuffer(const T& value);
@@ -39,16 +39,16 @@ namespace DatabaseEngine::StorageTypes {
         inline void CopyToBuffer(const DataTypes::DateTime& src);
         inline void CopyToBuffer(const DataTypes::Guid& src);
 
-        inline Errors::ResultStatus SetTinyInt(const Value& value);
-        inline Errors::ResultStatus SetSmallInt(const Value& value);
-        inline Errors::ResultStatus SetInt(const Value& value);
-        inline Errors::ResultStatus SetBigInt(const Value& value);
-        inline Errors::ResultStatus SetDecimal(const Value& value);
-        inline Errors::ResultStatus SetString(const Value& value);
-        inline Errors::ResultStatus SetUnicodeString(const Value& value);
-        inline Errors::ResultStatus SetBool(const Value& value);
-        inline Errors::ResultStatus SetDateTime(const Value& value);
-        inline Errors::ResultStatus SetGuid(const Value& value);
+        inline Errors::RuntimeStatus SetTinyInt(const Value& value);
+        inline Errors::RuntimeStatus SetSmallInt(const Value& value);
+        inline Errors::RuntimeStatus SetInt(const Value& value);
+        inline Errors::RuntimeStatus SetBigInt(const Value& value);
+        inline Errors::RuntimeStatus SetDecimal(const Value& value);
+        inline Errors::RuntimeStatus SetString(const Value& value);
+        inline Errors::RuntimeStatus SetUnicodeString(const Value& value);
+        inline Errors::RuntimeStatus SetBool(const Value& value);
+        inline Errors::RuntimeStatus SetDateTime(const Value& value);
+        inline Errors::RuntimeStatus SetGuid(const Value& value);
 
 
     public:
@@ -64,7 +64,7 @@ namespace DatabaseEngine::StorageTypes {
 
         void SetData(const void* inputData, const block_size_t& inputSize);
 
-        [[nodiscard]] Errors::ResultStatus SetData(const Value& value);
+        [[nodiscard]] Errors::RuntimeStatus SetData(const Value& value);
 
         [[nodiscard]] object_t* GetBlockData() const;
 

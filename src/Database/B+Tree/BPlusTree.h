@@ -41,7 +41,7 @@ namespace Indexing
         DatabaseEngine::StorageTypes::Table* table;
 
         void SplitChild(Pages::IndexPage *parent, const int &index, Pages::IndexPage *child)const;
-        Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::ResultStatus& status);
+        Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
         [[nodiscard]] Pages::IndexPage *SearchKey(const DataTypes::Indexing::Key &key) const;
         [[nodiscard]] Pages::IndexPage *SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::IndexPage*>& ancestors) const;
         [[nodiscard]] Pages::IndexPage *SearchLeftMostLeafNode() const;
@@ -70,7 +70,7 @@ namespace Indexing
         BPlusTree();
         ~BPlusTree();
 
-        Pages::IndexPage *FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::ResultStatus& status);
+        Pages::IndexPage *FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
 
         void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const;
 
@@ -106,15 +106,15 @@ namespace Indexing
 
         void IndexScanUpdate(const Expressions::Expression* expression, const vector<Value> & updates);
 
-        [[nodiscard]] Errors::ResultStatus IndexScanUpdate(
+        [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const Expressions::Expression* expression,
             const vector<QueryPipeline::Statements::UpdateColumn*> & updates
         );
 
-        [[nodiscard]] Errors::ResultStatus IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
+        [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
 
-        Errors::ResultStatus IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
-        Errors::ResultStatus IndexSeekUpdate(const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
+        Errors::RuntimeStatus IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
+        Errors::RuntimeStatus IndexSeekUpdate(const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
 
         void SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const;
 
