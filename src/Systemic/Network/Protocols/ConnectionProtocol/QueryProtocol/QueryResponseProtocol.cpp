@@ -144,10 +144,10 @@ QueryResponseProtocol::QueryResponseProtocol(
   }
 
   ostream & operator<<(ostream &os, const QueryResponseProtocol &protocol){
-      if (protocol.hasError) {
-        os << protocol.message;
-        return os;
-      }
+    os << protocol.message << std::endl;
+
+    if (protocol.hasError)
+      return os;
 
     for (const auto& column : protocol.columns)
       os << column << " || ";
