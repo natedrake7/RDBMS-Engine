@@ -69,7 +69,6 @@ namespace Server {
 
     this->threadPool.InitializeWorkers(isServerRunning, 20);
 
-
     int eventCount = 0;
     while (isServerRunning) {
 #ifdef _WIN32
@@ -125,18 +124,18 @@ namespace Server {
         std::cout << "Accepted client (Windows): " << clientSocket << std::endl;
 
 #else
-        auto&[event, data] = this->events[i];
+        auto& evt = this->events[i];
 
-        if (event & (EPOLLHUP | EPOLLERR)) {
-          this->HandleClientDisconnection(data.fd, eventCount, i);
+        if (evt.events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
+          this->HandleClientDisconnection(evt.data.fd, eventCount, i);
           continue;
         }
 
-        if (!(event & EPOLLIN))
+        if (!(evt.events & EPOLLIN))
             continue;
 
-        if (data.fd != this->parameters.serverSocket) {
-            ConnectionManager::HandleClientConnection(data.fd, eventMutexes[i]);
+        if (evt.data.fd != this->parameters.serverSocket) {
+            ConnectionManager::HandleClientConnection(evt.data.fd, eventMutexes[i]);
             continue;
         }
 
@@ -152,7 +151,7 @@ namespace Server {
         fcntl(clientSocket, F_SETFL, fcntl(clientSocket, F_GETFL, 0) | O_NONBLOCK);
 
         epoll_event newEvent{};
-        newEvent.events = EPOLLIN | EPOLLET;
+        newEvent.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
         newEvent.data.fd = clientSocket;
         epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, clientSocket, &newEvent);
         cout << "Accepted client (Linux): " << clientSocket << endl;
@@ -260,10 +259,10 @@ void ConnectionManager::CloseServerConnection() const
 
     this->CloseClientConnection(socket);
 
-    this->events.erase(this->events.begin() + index);
+    // this->events.erase(this->events.begin() + index);
 
-    index--;
-    totalEvents--;
+    // index--;
+    // totalEvents--;
   }
 #endif
 
