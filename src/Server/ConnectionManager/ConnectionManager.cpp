@@ -80,8 +80,8 @@ namespace Server {
         eventCount = currentEvents;
 #endif
 
-      if (eventCount < 0) {
-        std::cerr << "epoll_wait failed"<< strerror(errno) << endl;
+      if (eventCount < 0 && errno != EINTR) {
+        std::cerr << "epoll_wait failed " << strerror(errno) << endl;
         break;
       }
 
