@@ -65,9 +65,10 @@ namespace Server {
     this->InitializeServerSocket();
 
     vector<mutex> eventMutexes(this->parameters.numberOfConnections);
-    // this->events.resize(this->parameters.numberOfConnections);
+    this->events.resize(this->parameters.numberOfConnections);
 
     this->threadPool.InitializeWorkers(isServerRunning, 20);
+
 
     int eventCount = 0;
     while (isServerRunning) {
@@ -178,6 +179,9 @@ namespace Server {
     if (sock < 0)
       throw runtime_error("Failed to create socket");
 
+    const int flags = fcntl(sock, F_GETFL, 0);
+    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+
     sockaddr_in serverAddress = {};
 
     serverAddress.sin_family = AF_INET;
@@ -210,7 +214,9 @@ namespace Server {
     event.events = EPOLLIN;
     event.data.fd = sock;
 
-    epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, sock, &event);
+    if (epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, sock, &event) == -1) {
+      perror("epoll_ctl failed to add server socket");
+    }
 #endif
 
     this->parameters.serverSocket = sock;
