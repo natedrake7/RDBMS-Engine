@@ -65,15 +65,18 @@ namespace Server {
     this->InitializeServerSocket();
 
     vector<mutex> eventMutexes(this->parameters.numberOfConnections);
-    this->events.resize(this->parameters.numberOfConnections);
+    // this->events.resize(this->parameters.numberOfConnections);
 
-    threadPool.InitializeWorkers(isServerRunning, 20);
-    
+    this->threadPool.InitializeWorkers(isServerRunning, 20);
+
+    int eventCount = 0;
     while (isServerRunning) {
 #ifdef _WIN32
-	    const int eventCount = WSAPoll(this->events.data(), this->events.size(), 10);
+	    const int _ = WSAPoll(this->events.data(), this->events.size(), 10);
+      eventCount = this->events.size();
 #else
-        const int eventCount = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), 10);
+        const int currentEvents = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), 10);
+        eventCount = currentEvents;
 #endif
 
       if (eventCount < 0) {
@@ -89,7 +92,13 @@ namespace Server {
         eventMutexes[i].unlock();
         
 #ifdef _WIN32
-        auto& evt = this->events[i];
+        const auto& evt = this->events[i];
+
+        if (evt.revents & (POLLHUP | POLLERR | POLLNVAL)) {
+          this->HandleClientDisconnection(evt,eventCount, i);
+          continue;
+        }
+
         if (!(evt.revents & POLLIN))
             continue;
 
@@ -98,7 +107,7 @@ namespace Server {
             continue;
         }
 
-        SOCKET clientSocket = accept(this->parameters.serverSocket, nullptr, nullptr);
+        const auto clientSocket = accept(this->parameters.serverSocket, nullptr, nullptr);
         if (clientSocket == INVALID_SOCKET) {
             cerr << "Failed to accept client (Windows)" << endl;
             continue;
@@ -111,8 +120,8 @@ namespace Server {
         newEvent.fd = clientSocket;
         newEvent.events = POLLIN;
         newEvent.revents = 0;
-        this->events[i] = newEvent;
-        cout << "Accepted client (Windows): " << clientSocket << endl;
+        this->events.push_back(std::move(newEvent));
+        std::cout << "Accepted client (Windows): " << clientSocket << std::endl;
 
 #else
         auto& evt = this->events[i];
@@ -207,6 +216,7 @@ void ConnectionManager::CloseServerConnection() const
     for (const auto& event : this->events) 
         closesocket(event.fd);
 
+    shutdown(this->parameters.serverSocket, SD_BOTH);
     closesocket(this->parameters.serverSocket);
     WSACleanup();
 
@@ -216,18 +226,30 @@ void ConnectionManager::CloseServerConnection() const
         close(data.fd);
     }
 
+    shutdown(this->parameters.serverSocket, SHUT_RDWR);
     //close(this->parameters.serverSocket);
     close(this->parameters.epollFileDescriptor);
 #endif
 }
 
+  void ConnectionManager::HandleClientDisconnection(const SocketEvent& event, int& totalEvents, int& index){
+    std::cout << "Client disconnected: " << event.fd << std::endl;
+
+    this->CloseClientConnection(event.fd);
+
+    this->events.erase(this->events.begin() + index);
+    index--;
+    totalEvents--;
+  }
+
   void ConnectionManager::CloseClientConnection(const int &clientSocket) const
   {
 
 #ifdef _WIN32
+    shutdown(clientSocket, SD_BOTH);
     closesocket(clientSocket);
-    WSACleanup();
 #else
+    shutdown(clientSocket, SHUT_RDWR);
     epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_DEL, clientSocket, nullptr);
     close(clientSocket);
 #endif
@@ -239,9 +261,7 @@ void ConnectionManager::CloseServerConnection() const
     Network::ConnectionProtocolHeader header;
     std::vector<char> buffer(Network::ConnectionProtocolHeader::GetSize());
 
-    const auto headerSize = Network::ConnectionProtocolHeader::GetSize();
-
-    const auto headerBytesRead = recv(clientSocket, buffer.data(), headerSize, 0);
+    const auto headerBytesRead = recv(clientSocket, buffer.data(), Network::ConnectionProtocolHeader::GetSize(), 0);
     header.Deserialize(buffer);
 
     if (headerBytesRead > 0) {
