@@ -1,5 +1,6 @@
 #pragma once
 #include "../../Systemic/Network/Protocols/ConnectionProtocol/ResponseProtocol/ResponseProtocol.h"
+#include "../../Systemic/Network/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h"
 #include "../Threadpool/ThreadPool.h"
 
 
@@ -26,15 +27,12 @@
     using SocketEvent = epoll_event;
 #endif
 
-#include "../../Systemic/Network/Protocols/ConnectionProtocol/ConnectionProtocol/ConnectionProtocol.h"
 
 using namespace std;
 
 namespace Server {
 
-  constexpr int MAX_CONNECTIONS = 10;
-
-  typedef struct ConnectionParameters {
+  struct ConnectionParameters {
     int port;
     int serverSocket;
     int epollFileDescriptor;
@@ -44,8 +42,8 @@ namespace Server {
     int timeoutTime;
 
     ConnectionParameters();
-    explicit ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime);
-  }ConnectionParameters;
+    ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime);
+  };
 
 
 

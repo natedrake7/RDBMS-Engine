@@ -31,6 +31,10 @@ namespace Server {
           | Security::Permission::CREATE
           | Security::Permission::DROP
           | Security::Permission::ALTER;
+
+      static constexpr int INVALID_FILE_DESCRIPTOR = -1;
+      static constexpr int MAX_CONNECTIONS = 10;
+
   };
 
 }

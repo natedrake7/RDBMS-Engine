@@ -6,6 +6,7 @@
 #include "../../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryProtocol.h"
 #include "../../Systemic/Network/Protocols/ConnectionProtocol/QueryProtocol/QueryResponseProtocol.h"
 #include "../Threadpool/ThreadPool.h"
+#include "../Server.Constants.h"
 
 #include <atomic>
 #include <cstring>
@@ -27,15 +28,14 @@
 #endif
 
 namespace Server {
-
   ConnectionParameters::ConnectionParameters() {
     this->hostName = "127.0.0.1";
     this->numberOfConnections = 20;
     this->timeoutTime = 10;
     this->port = 1433;
 
-    this->epollFileDescriptor = -1;
-    this->serverSocket = -1;
+    this->epollFileDescriptor = ServerConstants::INVALID_FILE_DESCRIPTOR;
+    this->serverSocket = ServerConstants::INVALID_FILE_DESCRIPTOR;
   }
 
   ConnectionParameters::ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime){
@@ -44,8 +44,8 @@ namespace Server {
     this->timeoutTime = timeoutTime;
     this->port = port;
 
-    this->epollFileDescriptor = -1;
-    this->serverSocket = -1;
+    this->epollFileDescriptor = ServerConstants::INVALID_FILE_DESCRIPTOR;
+    this->serverSocket = ServerConstants::INVALID_FILE_DESCRIPTOR;
   }
 
   void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning)
