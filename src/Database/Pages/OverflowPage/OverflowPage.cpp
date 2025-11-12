@@ -81,7 +81,7 @@ namespace Pages {
     }
   }
 
-  void OverflowPage::GetPageDataFromFile(const vector<char> & data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t & offSet, fstream *filePtr){
+  void OverflowPage::ReadFromDisk(const vector<char> & data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t & offSet, fstream *filePtr){
      for(int i = 0;i < this->header.pageSize; i++){
         auto* row = new OverflowRow();
 

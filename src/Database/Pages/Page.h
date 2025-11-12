@@ -3,6 +3,9 @@
 #include <string>
 #include "../Constants.h"
 #include "../../Systemic/DataTypes/Value/Value.h"
+#include "../../Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.h"
+
+#include <atomic>
 
 namespace Expressions {
     class Expression;
@@ -37,6 +40,10 @@ namespace Pages
     {
     protected:
         bool isDirty;
+        std::atomic<int> pinCount;
+        bool hasSecondChance;
+        mutable MultiThreading::ReadWriteMutex latch;
+
         Constants::log_sequence_number_t logSequenceNumber;
 
         string filename;
@@ -61,7 +68,7 @@ namespace Pages
         void InsertRow(DatabaseEngine::StorageTypes::Row *row, int* indexPosition = nullptr);
         void InsertRow(DatabaseEngine::StorageTypes::Row *row, const int& indexPosition);
 
-        virtual void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
+        virtual void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
         virtual void WritePageToFile(fstream *filePtr);
 
         void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
@@ -75,7 +82,7 @@ namespace Pages
 
         [[nodiscard]] const string &GetFileName() const;
         [[nodiscard]] const page_id_t &GetPageId() const;
-        [[nodiscard]] const bool &GetPageDirtyStatus() const;
+        [[nodiscard]] const bool &IsDirty() const;
         [[nodiscard]] const page_size_t &GetBytesLeft() const;
         void SetDirty();
 
@@ -93,5 +100,18 @@ namespace Pages
         [[nodiscard]] const DatabaseEngine::StorageTypes::Row* GetRow(const int& indexPosition)const;
 
         [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
+
+        void IncreatePinCount();
+        void DecreasePinCount();
+
+        int GetPinCount() const;
+
+        bool HasSecondChance()const;
+        void SetHasSecondChanceUnsafe(const bool &secondChance);
+
+        void UniqueLock()const;
+        void SharedLock()const;
+        void UniqueUnlock()const;
+        void SharedUnlock()const;
     };
 }

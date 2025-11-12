@@ -79,7 +79,7 @@ namespace Pages {
         this->isDirty = true;
     }
 
-    void PageFreeSpacePage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
+    void PageFreeSpacePage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
     {
         this->pageMap->GetDataFromFile(data, offSet, this->header.pageSize);
     }

@@ -2,6 +2,7 @@
 #include "../Database.h"
 #include "./LargeObject/LargeObjectPage.h"
 #include "../../Systemic/DataStructures/BitMap/BitMap.h"
+#include "../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
 #include "../Block/Block.h"
 #include "../Storage/StorageManager/StorageManager.h"
 
@@ -16,7 +17,7 @@ namespace Pages
         this->pageType = PageType::Error;
         this->pageId = INVALID_PAGE_ID;
         this->pageSize = 0;
-        this->bytesLeft = PAGE_SIZE - GetPageHeaderSize();
+        this->bytesLeft = static_cast<Constants::page_size_t>(PAGE_SIZE - GetPageHeaderSize());
     }
 
     PageHeader::~PageHeader() = default;
@@ -27,12 +28,18 @@ namespace Pages
     {
         this->header.pageId = pageId;
         this->isDirty = isPageCreation;
+        this->pinCount = 1;
+        this->hasSecondChance = true;
+        this->logSequenceNumber = 0;
         this->header.pageType = PageType::DATA;
     }
 
     Page::Page()
     {
         this->isDirty = false;
+        this->pinCount = 1;
+        this->hasSecondChance = true;
+        this->logSequenceNumber = 0;
         this->header.pageType = PageType::DATA;
     }
 
@@ -40,6 +47,9 @@ namespace Pages
     {
         this->header = pageHeader;
         this->isDirty = false;
+        this->pinCount = 1;
+        this->hasSecondChance = true;
+        this->logSequenceNumber = 0;
     }
 
     Page::~Page()
@@ -68,7 +78,7 @@ namespace Pages
         this->isDirty = true;
     }
 
-    void Page::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
+    void Page::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
     {
         const auto &columns = table->GetColumns();
 
@@ -248,7 +258,7 @@ namespace Pages
 
     const page_id_t &Page::GetPageId() const { return this->header.pageId; }
 
-    const bool &Page::GetPageDirtyStatus() const { return this->isDirty; }
+    const bool &Page::IsDirty() const { return this->isDirty; }
 
     const page_size_t &Page::GetBytesLeft() const { return this->header.bytesLeft; }
 
@@ -297,4 +307,40 @@ namespace Pages
     const Row * Page::GetRow(const int &indexPosition)const { return this->rows.at(indexPosition); }
 
     vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsUnsafe() { return &this->rows; }
+
+    void Page::IncreatePinCount() {
+        this->pinCount.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    void Page::DecreasePinCount() {
+        this->pinCount.fetch_sub(1, std::memory_order_relaxed);
+    }
+
+    int Page::GetPinCount() const {
+        return this->pinCount.load(std::memory_order_relaxed);
+    }
+
+    bool Page::HasSecondChance() const{
+        return this->hasSecondChance;
+    }
+
+    void Page::SetHasSecondChanceUnsafe(const bool &secondChance) {
+        this->hasSecondChance = secondChance;
+    }
+
+    void Page::UniqueLock()const {
+        this->latch.UniqueLock();
+    }
+
+    void Page::UniqueUnlock() const{
+        this->latch.UniqueUnlock();
+    }
+
+    void Page::SharedLock() const{
+        this->latch.SharedLock();
+    }
+
+    void Page::SharedUnlock() const {
+        this->latch.SharedUnlock();
+    }
 }

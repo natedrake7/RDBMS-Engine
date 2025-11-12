@@ -61,7 +61,7 @@ IndexPage::~IndexPage()
         delete key;
 }
 
-void IndexPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) 
+void IndexPage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) 
 {
     this->ReadAdditionalHeaderFromFile(data, offSet);
     const vector<DataType> indexedColumnTypes = table->GetColumnTypeByTreeId(this->additionalHeader.treeId);

@@ -26,7 +26,7 @@ namespace Pages {
         [[nodiscard]] bool IsPageAllocated(const page_id_t& pageId) const;
         [[nodiscard]] PageType GetPageType(const page_id_t& pageId) const;
         [[nodiscard]] Constants::byte GetPageSizeCategory(const page_id_t& pageId) const;
-        void GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
+        void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
         void WritePageToFile(fstream *filePtr) override;
         void SetPageMetaData(const Page* page);
         void SetPageAllocated(const page_id_t& pageId);

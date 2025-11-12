@@ -93,7 +93,7 @@ namespace Pages {
         return (IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + lastAllocatedExtent);
     }
 
-    void IndexAllocationMapPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
+    void IndexAllocationMapPage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
     {
         this->GetAdditionalHeaderFromFile(data, offSet);
         this->ownedExtents->GetDataFromFile(data, offSet);

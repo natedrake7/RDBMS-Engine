@@ -500,7 +500,7 @@ namespace DatabaseEngine::StorageTypes {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
               break;
 
-            Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
+            Page *page = StorageManager::Get().GetPage(filename, extentPageId, this);
 
             page->Delete(expression);
 
@@ -661,7 +661,7 @@ namespace DatabaseEngine::StorageTypes {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
               break;
 
-            const Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
+            const Page *page = StorageManager::Get().GetPage(filename, extentPageId, this);
 
             if (page->GetPageSize() == 0)
               continue;
@@ -760,7 +760,7 @@ namespace DatabaseEngine::StorageTypes {
               // find potential candidate
               if (rowCategory <= pageSizeCategory)
               {
-                  Page *page = StorageManager::Get().GetPage(filename, pageId, extentId, this);
+                  Page *page = StorageManager::Get().GetPage(filename, pageId, this);
 
                   if (row->GetTotalRowSize() > page->GetBytesLeft())
                       continue;
@@ -821,7 +821,7 @@ namespace DatabaseEngine::StorageTypes {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
               break;
 
-            Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
+            Page *page = StorageManager::Get().GetPage(filename, extentPageId, this);
 
             if (page->GetPageSize() == 0)
               continue;
@@ -878,7 +878,7 @@ namespace DatabaseEngine::StorageTypes {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
               break;
 
-            Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
+            Page *page = StorageManager::Get().GetPage(filename, extentPageId, this);
 
             if (page->GetPageSize() == 0)
               continue;
@@ -1163,7 +1163,7 @@ namespace DatabaseEngine::StorageTypes {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
               break;
 
-            Page *page = StorageManager::Get().GetPage(filename, extentPageId, extentId, this);
+            Page *page = StorageManager::Get().GetPage(filename, extentPageId, this);
 
             if (page->GetPageSize() == 0)
               continue;
@@ -1520,7 +1520,7 @@ namespace DatabaseEngine::StorageTypes {
           if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
             break;
 
-          auto* page = StorageManager::Get().GetPage(filename, pageId, extentId, this);
+          auto* page = StorageManager::Get().GetPage(filename, pageId, this);
 
           for (auto* row: *page->GetDataRowsUnsafe())
             this->HandleAddColumn(page, row, index, defaultValue);
@@ -1613,7 +1613,7 @@ namespace DatabaseEngine::StorageTypes {
         if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
           break;
 
-        auto* page = StorageManager::Get().GetPage(filename, pageId, extentId, this);
+        auto* page = StorageManager::Get().GetPage(filename, pageId, this);
 
         for (auto* row: *page->GetDataRowsUnsafe())
           Table::HandleRemoveColumn(page, row, index);

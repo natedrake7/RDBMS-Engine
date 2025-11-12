@@ -52,7 +52,7 @@ namespace Pages {
         delete this->data;
     }
 
-    void LargeObjectPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t& offSet, fstream* filePtr)
+    void LargeObjectPage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t& offSet, fstream* filePtr)
     {
       if(this->header.pageSize == 0)
         return;

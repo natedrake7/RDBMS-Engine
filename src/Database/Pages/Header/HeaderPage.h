@@ -21,7 +21,7 @@ namespace Pages {
         explicit HeaderPage(const PageHeader &pageHeader);
         ~HeaderPage() override;
         void WritePageToFile(fstream* filePtr) override;
-        void GetPageDataFromFile(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
+        void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void SetDbHeader(const DatabaseEngine::DatabaseHeader& databaseHeader);
         void SetTableHeader(const DatabaseEngine::StorageTypes::Table* table);
         [[nodiscard]] const DatabaseEngine::DatabaseHeader* GetDatabaseHeader() const;

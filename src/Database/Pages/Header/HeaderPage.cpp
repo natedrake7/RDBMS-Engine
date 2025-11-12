@@ -72,7 +72,7 @@ namespace Pages
         }
     }
 
-    void HeaderPage::GetPageDataFromFile(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr)
+    void HeaderPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr)
     {
         memcpy(&this->databaseHeader->numberOfTables, data.data() + offSet, sizeof(table_number_t));
         offSet += sizeof(table_number_t);

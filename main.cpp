@@ -65,6 +65,7 @@
 //GRANT db_writer TO alice;
 
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
+//TODO add priority in pages to store system pages indefinetely and decrease second chance count
 
 
 std::atomic<bool> serverRunning{true};
@@ -103,42 +104,52 @@ int main()
 
     server.Initialize("configuration.json");
 
-    // const auto* user = server.Authenticate("admin", "admin");
-    // // const auto* user = server.Authenticate("ioanis7", "'kalispera'");
-    //
-    // if (user == nullptr) {
-    //     server.Shutdown();
-    //     return 0;
-    // }
-    //
-    // const auto* session = server.CreateSession(user);
-    //
-    // std::cout << "Please enter a query: "<< endl;
-    //
-    // while (true) {
-    //     std::string input;
-    //
-    //     std::getline(std::cin, input);
-    //
-    //     if (input == "exit")
-    //         break;
-    //
-    //     const auto start = std::chrono::high_resolution_clock::now();
-    //
-    //     QueryPipeline::Parser::Parse(input, session->sessionId);
-    //
-    //     const auto end = std::chrono::high_resolution_clock::now();
-    //
-    //     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
-    //
-    //     std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
-    // }
-    //
-    // const auto& databases = server.GetCatalog();
-    //
-    // server.Shutdown();
-    //
-    // return 0;
+    const auto* user = server.Authenticate("admin", "admin");
+    // const auto* user = server.Authenticate("ioanis7", "'kalispera'");
+
+    if (user == nullptr) {
+        server.Shutdown();
+        return 0;
+    }
+
+    const auto* session = server.CreateSession(user);
+
+    std::cout << "Please enter a query: "<< endl;
+
+    while (true) {
+        std::string input;
+
+        std::getline(std::cin, input);
+
+        if (input == "exit")
+            break;
+
+        const auto start = std::chrono::high_resolution_clock::now();
+
+        std::vector<QueryResult> results;
+        std::vector<std::string> displayColumns;
+        QueryPipeline::Parser::Parse(input, session->sessionId, &results, &displayColumns);
+
+        for (const auto& column : displayColumns)
+           std::cout << column << " || ";
+
+       std::cout << std::endl;
+
+        for (const auto& row: results)
+            row.Print();
+
+        const auto end = std::chrono::high_resolution_clock::now();
+
+        const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+
+        std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
+    }
+
+    const auto& databases = server.GetCatalog();
+
+    server.Shutdown();
+
+    return 0;
 
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 

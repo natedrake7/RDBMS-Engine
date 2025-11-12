@@ -64,9 +64,7 @@ namespace DatabaseEngine::StorageTypes {
         if (expression != nullptr) {
 
           for (const auto& rowId : rowIds) {
-            const auto extentId = Database::CalculateExtentIdByPageId(rowId.pageId);
-
-            const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, extentId, this);
+            const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
             auto* row = page->GetRow(rowId.indexId);
 
@@ -82,9 +80,7 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         for (const auto& rowId : rowIds) {
-          const auto extentId = Database::CalculateExtentIdByPageId(rowId.pageId);
-
-          const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, extentId, this);
+          const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
           selectedRows->push_back(page->GetRow(rowId.indexId));
         }

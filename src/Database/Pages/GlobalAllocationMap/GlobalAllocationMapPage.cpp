@@ -55,7 +55,7 @@ namespace Pages {
         this->extentsMap->WriteDataToFile(filePtr);
     }
 
-    void GlobalAllocationMapPage::GetPageDataFromFile(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
+    void GlobalAllocationMapPage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
     {
         this->extentsMap->GetDataFromFile(data, offSet);
     }

@@ -458,7 +458,7 @@ namespace DatabaseEngine
                 if (pageSizeCategory == 0)
                     continue;
 
-                nextLeafPage = StorageManager::Get().GetPage(this->filename, nextLeafPageId, extentId, &table);
+                nextLeafPage = StorageManager::Get().GetPage(this->filename, nextLeafPageId, &table);
 
                 if (nextLeafPage->GetPageSize() == 0)
                     break;
@@ -555,7 +555,7 @@ namespace DatabaseEngine
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreatePage(this->filename, pageId));
         }
 
-        return StorageManager::Get().GetPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
+        return StorageManager::Get().GetPage(this->filename, lowerLimit, this->tables[tableId]);
     }
 
     LargeObjectPage *Database::CreateLargeDataPage(const table_id_t &tableId)
