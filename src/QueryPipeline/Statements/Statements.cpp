@@ -1399,6 +1399,12 @@ Errors::ValidationStatus UpdateStatement::Validate(){
 
     ostringstream os;
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
+      auto result = ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos)
+            && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos);
+
+      if (!result.IsOk())
+        return result;
+
       if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
         const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
         const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
@@ -1406,9 +1412,6 @@ Errors::ValidationStatus UpdateStatement::Validate(){
         os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
         return {Errors::ValidationError::Error, os.str()};
       }
-
-      return  ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos)
-          && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos);
     }
 
     if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
@@ -1442,6 +1445,12 @@ Errors::ValidationStatus UpdateStatement::Validate(){
     }
 
     if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
+      auto result = ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->left, indexPos)
+                && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos);
+
+      if (!result.IsOk())
+        return result;
+
       //validate type
       if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
 
@@ -1452,9 +1461,6 @@ Errors::ValidationStatus UpdateStatement::Validate(){
 
         return {Errors::ValidationError::Error, os.str()};
       }
-
-      return ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->left, indexPos)
-        && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos);
     }
 
     return {};

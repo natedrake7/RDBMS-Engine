@@ -65,7 +65,7 @@ namespace Server {
     this->InitializeServerSocket();
 
     vector<mutex> eventMutexes(this->parameters.numberOfConnections);
-    // this->events.resize(this->parameters.numberOfConnections);
+    this->events.resize(this->parameters.numberOfConnections);
 
     this->threadPool.InitializeWorkers(isServerRunning, 20);
 
@@ -79,8 +79,8 @@ namespace Server {
         eventCount = currentEvents;
 #endif
 
-      if (eventCount < 0) {
-        std::cerr << "epoll_wait failed"<< strerror(errno) << endl;
+      if (eventCount < 0 && errno != EINTR) {
+        std::cerr << "epoll_wait failed " << strerror(errno) << endl;
         break;
       }
 
@@ -125,6 +125,12 @@ namespace Server {
 
 #else
         auto& evt = this->events[i];
+
+        if (evt.events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
+          this->HandleClientDisconnection(evt.data.fd, eventCount, i);
+          continue;
+        }
+
         if (!(evt.events & EPOLLIN))
             continue;
 
@@ -135,7 +141,8 @@ namespace Server {
 
         sockaddr_in clientAddress{};
         socklen_t clientSize = sizeof(clientAddress);
-        int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
+        const int clientSocket = accept(this->parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
+
         if (clientSocket < 0) {
             cerr << "Failed to accept client (Linux)" << endl;
             continue;
@@ -144,7 +151,7 @@ namespace Server {
         fcntl(clientSocket, F_SETFL, fcntl(clientSocket, F_GETFL, 0) | O_NONBLOCK);
 
         epoll_event newEvent{};
-        newEvent.events = EPOLLIN | EPOLLET;
+        newEvent.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
         newEvent.data.fd = clientSocket;
         epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, clientSocket, &newEvent);
         cout << "Accepted client (Linux): " << clientSocket << endl;
@@ -170,6 +177,9 @@ namespace Server {
 
     if (sock < 0)
       throw runtime_error("Failed to create socket");
+
+    const int flags = fcntl(sock, F_GETFL, 0);
+    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 
     sockaddr_in serverAddress = {};
 
@@ -203,7 +213,9 @@ namespace Server {
     event.events = EPOLLIN;
     event.data.fd = sock;
 
-    epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, sock, &event);
+    if (epoll_ctl(this->parameters.epollFileDescriptor, EPOLL_CTL_ADD, sock, &event) == -1) {
+      perror("epoll_ctl failed to add server socket");
+    }
 #endif
 
     this->parameters.serverSocket = sock;
@@ -231,7 +243,7 @@ void ConnectionManager::CloseServerConnection() const
     close(this->parameters.epollFileDescriptor);
 #endif
 }
-
+#ifdef WIN32
   void ConnectionManager::HandleClientDisconnection(const SocketEvent& event, int& totalEvents, int& index){
     std::cout << "Client disconnected: " << event.fd << std::endl;
 
@@ -241,6 +253,18 @@ void ConnectionManager::CloseServerConnection() const
     index--;
     totalEvents--;
   }
+#else
+  void ConnectionManager::HandleClientDisconnection(const int &socket, int &totalEvents, int &index){
+    std::cout << "Client disconnected: " << socket << std::endl;
+
+    this->CloseClientConnection(socket);
+
+    // this->events.erase(this->events.begin() + index);
+
+    // index--;
+    // totalEvents--;
+  }
+#endif
 
   void ConnectionManager::CloseClientConnection(const int &clientSocket) const
   {
