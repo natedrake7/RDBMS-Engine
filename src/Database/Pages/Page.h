@@ -24,7 +24,7 @@ namespace DatabaseEngine::StorageTypes
 
 namespace Pages
 {
-    typedef struct PageHeader
+    struct PageHeader
     {
         page_id_t pageId;
         page_size_t pageSize;
@@ -33,15 +33,17 @@ namespace Pages
 
         PageHeader();
         ~PageHeader();
-        static page_size_t GetPageHeaderSize();
-    } PageHeader;
+    };
 
     class Page
     {
     protected:
+
         bool isDirty;
         std::atomic<int> pinCount;
+        std::atomic<Constants::PagePriority> priority;
         bool hasSecondChance;
+
         mutable MultiThreading::ReadWriteMutex latch;
 
         Constants::log_sequence_number_t logSequenceNumber;
@@ -51,7 +53,7 @@ namespace Pages
 
         vector<DatabaseEngine::StorageTypes::Row *> rows;
         void WritePageHeaderToFile(fstream *filePtr) const;
-        static DatabaseEngine::StorageTypes::Row* ReadRowFromFile(
+        static DatabaseEngine::StorageTypes::Row* ReadRowFromDisk(
             const vector<char>& data,
             const DatabaseEngine::StorageTypes::Table *table,
             page_offset_t &offSet,
@@ -101,10 +103,11 @@ namespace Pages
 
         [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
 
-        void IncreatePinCount();
+        void IncreasePinCount();
         void DecreasePinCount();
 
         int GetPinCount() const;
+        Constants::PagePriority GetPriority() const;
 
         bool HasSecondChance()const;
         void SetHasSecondChanceUnsafe(const bool &secondChance);
@@ -113,5 +116,7 @@ namespace Pages
         void SharedLock()const;
         void UniqueUnlock()const;
         void SharedUnlock()const;
+
+        [[nodiscard]] MultiThreading::ReadWriteMutex& GetLatch() const;
     };
 }

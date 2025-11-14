@@ -170,16 +170,21 @@ namespace Server {
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData))
-      throw runtime_error( "WSAStartup failed");
+      throw std::runtime_error( "WSAStartup failed");
 #endif
-    
-    const int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    const auto sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if (sock < 0)
-      throw runtime_error("Failed to create socket");
+      throw std::runtime_error("Failed to create socket");
 
-    const int flags = fcntl(sock, F_GETFL, 0);
+#ifdef _WIN32
+    u_long mode = 1;
+    ioctlsocket(sock, FIONBIO, &mode);
+#else
+    int flags = fcntl(sock, F_GETFL, 0);
     fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+#endif
 
     sockaddr_in serverAddress = {};
 
@@ -188,11 +193,11 @@ namespace Server {
     serverAddress.sin_port = htons(this->parameters.port);
 
     if (::bind(sock, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0)
-      throw runtime_error("Failed to bind socket");
+      throw std::runtime_error("Failed to bind socket");
     
     if (listen(sock, SOMAXCONN) < 0) {
       this->CloseServerConnection();
-      throw runtime_error("Failed to listen on socket");
+      throw std::runtime_error("Failed to listen on socket");
     }
 
 #ifdef _WIN32

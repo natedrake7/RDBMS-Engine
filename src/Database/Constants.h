@@ -10,7 +10,7 @@
 namespace Constants
 {
     constexpr size_t PAGE_SIZE = 8 * 1024;
-    constexpr size_t MAX_NUMBER_OF_PAGES = 15000;
+    constexpr size_t MAX_NUMBER_OF_PAGES = 10000;
     constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;
     constexpr size_t EXTENT_SIZE = 8;
     constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
@@ -96,6 +96,14 @@ namespace Constants
         Error = 8
     };
 
+    enum class PagePriority : uint8_t
+    {
+        LOW = 0,
+        MEDIUM = 1,
+        HIGH = 2,
+        SYSTEM = 3,
+    };
+
     enum class TableType : uint8_t
     {
         HEAP = 0,
@@ -162,9 +170,13 @@ namespace Constants
 
     constexpr uint16_t PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - 7;
     constexpr uint16_t NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
+    constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
+    constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(page_id_t) + sizeof(TreeType) + sizeof(uint8_t) + 3 * sizeof(bool) + sizeof(uint16_t);
+    constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
+
     constexpr uint16_t GAM_PAGE_SIZE = 64000;
     constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;
-    constexpr page_id_t HEADER_PAGE_ID = 1;
+    constexpr page_id_t HEADER_PAGE_ID = 0;
 
     enum class JoinType : uint8_t {
         Inner = 0,

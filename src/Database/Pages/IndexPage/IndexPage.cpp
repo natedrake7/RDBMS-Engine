@@ -5,8 +5,6 @@
 #include <ostream>
 #include <stdexcept>
 
-using namespace Indexing;
-using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages {
 
@@ -41,7 +39,7 @@ IndexPage::IndexPage(const page_id_t &pageId, const bool &isPageCreation) : Page
     this->header.pageType = PageType::INDEX;
     this->nextNode = 0;
     this->previousNode = 0;
-    this->header.bytesLeft  = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+    this->header.bytesLeft  = Constants::INDEX_PAGE_DEFAULT_SIZE;
 }
 
 IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader) {
@@ -51,17 +49,14 @@ IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader) {
 
 IndexPage::~IndexPage() 
 {
-    // for (const auto& rows: this->rows)
-    //     delete rows;
-
-    for (const auto& nonClusteredData: this->nonClusteredData)
-        delete nonClusteredData;
+    for (const auto& data: this->nonClusteredData)
+        delete data;
 
     for (const auto& key : keys)
         delete key;
 }
 
-void IndexPage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr) 
+void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr)
 {
     this->ReadAdditionalHeaderFromFile(data, offSet);
     const vector<DataType> indexedColumnTypes = table->GetColumnTypeByTreeId(this->additionalHeader.treeId);
@@ -115,7 +110,7 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const Table *table, page_
 
     if (this->additionalHeader.treeType == TreeType::Clustered) {
         for (int i = 0;i < this->header.pageSize; i++) {
-            auto* row = Page::ReadRowFromFile(data, table, offSet, columns);
+            auto* row = Page::ReadRowFromDisk(data, table, offSet, columns);
 
             this->rows.push_back(row);
         }
@@ -185,7 +180,7 @@ const page_id_t & IndexPage::GetTreeId() const { return this->additionalHeader.t
 
 void IndexPage::UpdateBytesLeft()
 {
-    this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+    this->header.bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
 
     for (const auto& key : this->keys)
         this->header.bytesLeft -= key->size;
@@ -282,7 +277,7 @@ void IndexPage::UpdatePageSize()
 }
 
 void IndexPage::MarkEmpty(){
-  this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize() - IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+  this->header.bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
 
   this->header.pageSize = 0;
 
@@ -319,9 +314,4 @@ IndexPageAdditionalHeader::IndexPageAdditionalHeader()
 }
 
 IndexPageAdditionalHeader::~IndexPageAdditionalHeader() = default;
-
-page_size_t IndexPageAdditionalHeader::GetAdditionalHeaderSize()
-{
-    return sizeof(page_id_t) + sizeof(TreeType) + sizeof(uint8_t) + 3 * sizeof(bool) + sizeof(uint16_t);
-}
 } // namespace Pages

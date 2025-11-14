@@ -9,15 +9,16 @@ namespace Pages
     {
         this->databaseHeader = new DatabaseEngine::DatabaseHeader();
         this->isDirty = true;
-        this->header.pageType = PageType::METADATA;
+        this->header.pageType = Constants::PageType::METADATA;
+        this->priority = Constants::PagePriority::SYSTEM;
     }
 
     HeaderPage::HeaderPage() : Page()
     {
         this->databaseHeader = new DatabaseEngine::DatabaseHeader();
-        ;
         this->isDirty = true;
-        this->header.pageType = PageType::METADATA;
+        this->header.pageType = Constants::PageType::METADATA;
+        this->priority = Constants::PagePriority::SYSTEM;
     }
 
     HeaderPage::HeaderPage(const PageHeader &pageHeader) : Page(pageHeader)
@@ -99,42 +100,9 @@ namespace Pages
             memcpy(&tableHeader.clusteredIndexPageId, data.data() + offSet, sizeof(page_id_t));
             offSet += sizeof(page_id_t);
 
-            // tableHeader.columnsNullBitMap = new BitMap(tableHeader.numberOfColumns);
-            // tableHeader.columnsNullBitMap->GetDataFromFile(data, offSet);
-
-//            uint8_t numberOfClusteredIndexedColumns;
-//            memcpy(&numberOfClusteredIndexedColumns, data.data() + offSet, sizeof(uint8_t));
-//            offSet += sizeof(uint8_t);
-//
-//            for(int j = 0; j < numberOfClusteredIndexedColumns; j++)
-//            {
-//                column_index_t columnIndex;
-//                memcpy(&columnIndex, data.data() + offSet, sizeof(column_index_t));
-//                offSet += sizeof(column_index_t);
-//
-//                tableHeader.clusteredColumnIndexes.push_back(columnIndex);
-//            }
-//
             uint8_t numberOfNonClusteredIndexes;
             memcpy(&numberOfNonClusteredIndexes, data.data() + offSet, sizeof(uint8_t));
             offSet += sizeof(uint8_t);
-//
-//            tableHeader.nonClusteredColumnIndexes.resize(numberOfNonClusteredIndexes);
-//            for(int j = 0; j < numberOfNonClusteredIndexes; j++)
-//            {
-//                uint8_t numberOfNonClusteredIndexedColumns;
-//                memcpy(&numberOfNonClusteredIndexedColumns, data.data() + offSet, sizeof(uint8_t));
-//                offSet += sizeof(uint8_t);
-//
-//                for(int k = 0; k < numberOfNonClusteredIndexedColumns; k++)
-//                {
-//                    column_index_t columnIndex;
-//                    memcpy(&columnIndex, data.data() + offSet, sizeof(column_index_t));
-//                    offSet += sizeof(column_index_t);
-//
-//                    tableHeader.nonClusteredColumnIndexes[j].push_back(columnIndex);
-//                }
-//            }
 
             for (int j = 0; j < numberOfNonClusteredIndexes; j++)
             {
@@ -149,9 +117,9 @@ namespace Pages
         }
     }
 
-    void HeaderPage::SetDbHeader(const DatabaseEngine::DatabaseHeader &databaseHeader)
+    void HeaderPage::SetDbHeader(const DatabaseEngine::DatabaseHeader &header)
     {
-        *this->databaseHeader = databaseHeader;
+        *this->databaseHeader = header;
         this->isDirty = true;
 
         this->tablesHeaders.clear();

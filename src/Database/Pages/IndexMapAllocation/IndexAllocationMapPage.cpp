@@ -5,20 +5,17 @@
 
 #include <cstring>
 
-using namespace ByteMaps;
-using namespace DatabaseEngine::StorageTypes;
-using namespace DatabaseEngine;
-
 namespace Pages {
     IndexAllocationMapPage::IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId) : Page(pageId)
     {
         this->additionalHeader.tableId = tableId;
         this->additionalHeader.startingExtentId = startingExtentId;
         this->header.bytesLeft -= (sizeof(table_id_t) + sizeof(extent_id_t));
-        this->ownedExtents = new BitMap(GAM_PAGE_SIZE);
+        this->ownedExtents = new ByteMaps::BitMap(GAM_PAGE_SIZE);
         this->isDirty = true;
         this->header.pageType = PageType::IAM;
         this->header.bytesLeft = 0;
+        this->priority = Constants::PagePriority::SYSTEM;
     }
 
     IndexAllocationMapPage::IndexAllocationMapPage(const PageHeader& pageHeader, const extent_id_t& startingExtentId, const table_id_t& tableId) : Page(pageHeader)
@@ -26,8 +23,9 @@ namespace Pages {
         this->additionalHeader.tableId = tableId;
         this->additionalHeader.startingExtentId = startingExtentId;
         this->lastAllocatedExtentId = 0;
-        this->ownedExtents = new BitMap();
+        this->ownedExtents = new ByteMaps::BitMap();
         this->header.bytesLeft = 0;
+        this->priority = Constants::PagePriority::SYSTEM;
     }
 
     IndexAllocationMapPage::~IndexAllocationMapPage()
@@ -55,7 +53,7 @@ namespace Pages {
 
     void IndexAllocationMapPage::GetAllocatedExtents(vector<extent_id_t>* allocatedExtents) const
     {
-        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(this->header.pageId);
+        const page_id_t globalAllocationMapPageId = DatabaseEngine::Database::GetGamAssociatedPage(this->header.pageId);
         const page_id_t offSet = IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
         for (extent_id_t id = 0; id < this->lastAllocatedExtentId; id++)
@@ -67,7 +65,7 @@ namespace Pages {
     {
         allocatedExtents->clear();
 
-        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(this->header.pageId);
+        const page_id_t globalAllocationMapPageId = DatabaseEngine::Database::GetGamAssociatedPage(this->header.pageId);
 
         if(startingExtentIndex >= this->ownedExtents->GetSize())
             return;
@@ -81,7 +79,7 @@ namespace Pages {
 
     extent_id_t IndexAllocationMapPage::GetLastAllocatedExtent() const
     {
-        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(this->header.pageId);
+        const page_id_t globalAllocationMapPageId = DatabaseEngine::Database::GetGamAssociatedPage(this->header.pageId);
 
         extent_id_t lastAllocatedExtent = 0;
         for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
@@ -90,10 +88,10 @@ namespace Pages {
                 lastAllocatedExtent = id;
         }
 
-        return (IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + lastAllocatedExtent);
+        return IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + lastAllocatedExtent;
     }
 
-    void IndexAllocationMapPage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
+    void IndexAllocationMapPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet,fstream *filePtr)
     {
         this->GetAdditionalHeaderFromFile(data, offSet);
         this->ownedExtents->GetDataFromFile(data, offSet);

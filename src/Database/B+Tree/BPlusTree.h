@@ -9,6 +9,7 @@
 #include <fstream>
 
 #include "../Column/Column.h"
+#include "../Pages/PageGuard/PageGuard.h"
 #include "../Row/Row.h"
 
 namespace DatabaseEngine
@@ -32,37 +33,35 @@ namespace Indexing
         int t;
         int keySize;
 
-        Pages::IndexPage *root;
-
         TreeType type;
         int nonClusteredIndexId;
 
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
-        void SplitChild(Pages::IndexPage *parent, const int &index, Pages::IndexPage *child)const;
-        Pages::IndexPage *GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
-        [[nodiscard]] Pages::IndexPage *SearchKey(const DataTypes::Indexing::Key &key) const;
-        [[nodiscard]] Pages::IndexPage *SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::IndexPage*>& ancestors) const;
-        [[nodiscard]] Pages::IndexPage *SearchLeftMostLeafNode() const;
+        void SplitChild(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child)const;
+        Pages::PageGuard<Pages::IndexPage> GetNonFullNode(Pages::PageGuard<Pages::IndexPage>& node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKey(const DataTypes::Indexing::Key &key) const;
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchLeftMostLeafNode() const;
 
-        [[nodiscard]] Pages::IndexPage * GetNode(const Constants::page_id_t& pageId) const;
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetNode(const Constants::page_id_t& pageId) const;
         [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId)const;
 
-        [[nodiscard]] Pages::IndexPage* AllocateNewPage(const Constants::page_id_t& parentPageId)const;
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> AllocateNewPage(const Constants::page_id_t& parentPageId)const;
 
-        void HandleUnderflow(Pages::IndexPage* node, const std::vector<Pages::IndexPage*>& ancestors, int& parentIndex);
+        void HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex);
         void HandleRootUnderflow();
 
-        bool TryBorrowFromLeftSibling(Pages::IndexPage* node, Pages::IndexPage* parent, const int& index)const;
-        bool TryBorrowFromRightSibling(Pages::IndexPage* node, Pages::IndexPage* parent, const int& index)const;
+        bool TryBorrowFromLeftSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int& index)const;
+        bool TryBorrowFromRightSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int& index)const;
 
         void MergeNodes(
-          Pages::IndexPage* leftNode,
-          Pages::IndexPage* rightNode,
-          Pages::IndexPage* parent,
+          Pages::PageGuard<Pages::IndexPage>& leftNode,
+          Pages::PageGuard<Pages::IndexPage>& rightNode,
+          Pages::PageGuard<Pages::IndexPage>& parent,
           int parentKeyIndex,
-          const std::vector<Pages::IndexPage*>& ancestors,
+        std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors,
           int& parentIndex);
 
     public:
@@ -70,11 +69,11 @@ namespace Indexing
         BPlusTree();
         ~BPlusTree();
 
-        Pages::IndexPage *FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
+        Pages::PageGuard<Pages::IndexPage> FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
 
         void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const;
 
-        void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*>* result);
+        void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*>* result)const;
 
         void IndexScan(vector<DataTypes::Indexing::QueryData> &result)const;
 
@@ -82,47 +81,43 @@ namespace Indexing
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             QueryPipeline::PhysicalPlan::IndexState& state,
             const int& rowsToSelect = -1
-        );
+        )const;
 
         void IndexScan(
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             QueryPipeline::PhysicalPlan::IndexState& state,
             const Expressions::Expression* expression,
             const int& rowsToSelect = -1
-        );
+        )const;
 
         void IndexScan(
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-            const Expressions::Expression* expression);
+            const Expressions::Expression* expression)const;
 
-        void IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result);
+        void IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result)const;
 
         void IndexScan(
             vector<Headers::RowIdentifier>* result,
             QueryPipeline::PhysicalPlan::IndexState& state,
-            const int& rowsToSelect);
+            const int& rowsToSelect)const;
 
-        void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression);
+        void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
-        void IndexScanUpdate(const Expressions::Expression* expression, const vector<Value> & updates);
+        void IndexScanUpdate(const Expressions::Expression* expression, const vector<Value> & updates)const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const Expressions::Expression* expression,
             const vector<QueryPipeline::Statements::UpdateColumn*> & updates
-        );
+        )const;
 
-        [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates);
+        [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates)const;
 
-        Errors::RuntimeStatus IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
-        Errors::RuntimeStatus IndexSeekUpdate(const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates);
+        Errors::RuntimeStatus IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates)const;
+        Errors::RuntimeStatus IndexSeekUpdate(const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates)const;
 
         void SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const;
 
         void Remove(const DataTypes::Indexing::Key& key);
-
-        Pages::IndexPage*& GetRoot();
-
-        void SetRoot(Pages::IndexPage *&node);
 
         void SetBranchingFactor(const int &branchingFactor);
 
@@ -132,10 +127,10 @@ namespace Indexing
 
         [[nodiscard]] const Constants::page_id_t& GetFirstIndexPageId() const;
 
-        void InsertRowsToOtherTree(const int& indexPos);
+        void InsertRowsToOtherTree(const int& indexPos)const;
 
-        void InsertColumnToRow(const Constants::column_index_t& index, const Value& defaultValue);
+        void InsertColumnToRow(const Constants::column_index_t& index, const Value& defaultValue)const;
 
-        void RemoveColumnFromRow(const Constants::column_index_t& index);
+        void RemoveColumnFromRow(const Constants::column_index_t& index)const;
     };
 }

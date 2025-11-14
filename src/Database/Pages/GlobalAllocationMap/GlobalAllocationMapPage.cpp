@@ -1,23 +1,22 @@
 ﻿#include "GlobalAllocationMapPage.h"
 #include "../../../Systemic/DataStructures/BitMap/BitMap.h"
 
-using namespace ByteMaps;
-using namespace DatabaseEngine::StorageTypes;
-
 namespace Pages {
     GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t& pageId) : Page(pageId)
     {
-        this->header.pageType = PageType::GAM;
-        this->extentsMap = new BitMap(EXTENT_BIT_MAP_SIZE, 0xFF);
+        this->header.pageType = Constants::PageType::GAM;
+        this->extentsMap = new ByteMaps::BitMap(Constants::EXTENT_BIT_MAP_SIZE, 0xFF);
         this->header.bytesLeft = 0;
         this->isDirty = true;
         this->lastAllocatedExtentId = 0;
+        this->priority = Constants::PagePriority::SYSTEM;
 
     }
     GlobalAllocationMapPage::GlobalAllocationMapPage(const PageHeader& pageHeader) : Page(pageHeader)
     {
-        this->extentsMap = new BitMap();
+        this->extentsMap = new ByteMaps::BitMap();
         this->lastAllocatedExtentId = 0;
+        this->priority = Constants::PagePriority::SYSTEM;
     }
 
     GlobalAllocationMapPage::~GlobalAllocationMapPage()
@@ -55,13 +54,11 @@ namespace Pages {
         this->extentsMap->WriteDataToFile(filePtr);
     }
 
-    void GlobalAllocationMapPage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
+    void GlobalAllocationMapPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr)
     {
         this->extentsMap->GetDataFromFile(data, offSet);
     }
 
     bool GlobalAllocationMapPage::IsFull() const { return !this->extentsMap->Get(extentsMap->GetSize() - 1); }
-
-    page_size_t GlobalAllocationMapPage::GetAvailableSize() { return PAGE_SIZE - PageHeader::GetPageHeaderSize(); }
 }
 

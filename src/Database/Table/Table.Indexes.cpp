@@ -64,7 +64,7 @@ namespace DatabaseEngine::StorageTypes {
         if (expression != nullptr) {
 
           for (const auto& rowId : rowIds) {
-            const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
+            const auto page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
             auto* row = page->GetRow(rowId.indexId);
 
@@ -80,7 +80,7 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         for (const auto& rowId : rowIds) {
-          const auto* page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
+          const auto page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
           selectedRows->push_back(page->GetRow(rowId.indexId));
         }
@@ -161,23 +161,19 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::GetClusteredIndexFromDisk() const
     {
-        auto* root = Table::GetIndexFromDisk(this->header.clusteredIndexPageId);
-
-        this->clusteredIndexedTree->SetRoot(root);
+        auto root = Table::GetIndexFromDisk(this->header.clusteredIndexPageId);
 
         this->clusteredIndexedTree->SetTreeType(TreeType::Clustered);
     }
 
     void Table::GetNonClusteredIndexFromDisk(const int& indexId) const
     {
-        auto* root =  Table::GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
-
-        this->nonClusteredIndexedTrees[indexId]->SetRoot(root);
+        auto root =  Table::GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
 
         this->nonClusteredIndexedTrees[indexId]->SetTreeType(TreeType::NonClustered);
     }
 
-    Pages::IndexPage* Table::GetIndexFromDisk(const page_id_t & indexPageId) const
+    Pages::PageGuard<Pages::IndexPage> Table::GetIndexFromDisk(const page_id_t & indexPageId) const
     {
         const auto& filename = this->database->GetFileName();
 

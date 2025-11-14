@@ -5,6 +5,7 @@
 #include "../../Systemic/DataTypes/Headers/Headers.h"
 #include "../B+Tree/BPlusTree.h"
 #include "../Logger/Logger.h"
+#include "../Pages/PageGuard/PageGuard.h"
 
 namespace QueryPipeline::Statements {
     struct Expression;
@@ -93,7 +94,7 @@ namespace DatabaseEngine::StorageTypes
 
             void PopulateAutoComputedColumns(Row* row)const;
 
-            [[nodiscard]] Pages::LargeObjectPage *GetOrCreateLargeDataPage() const;
+            [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetOrCreateLargeDataPage() const;
 
             static void LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
@@ -104,7 +105,7 @@ namespace DatabaseEngine::StorageTypes
 
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
-            [[nodiscard]] Pages::IndexPage* GetIndexFromDisk(const page_id_t& indexPageId) const;
+            [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetIndexFromDisk(const page_id_t& indexPageId) const;
 
             [[nodiscard]] std::tuple<Row*, Errors::RuntimeStatus> CreateRow(
                 const Constants::transaction_id_t& transactionId,
@@ -127,8 +128,8 @@ namespace DatabaseEngine::StorageTypes
                 Logging::CheckPoint* checkPoint
             )const;
 
-            void InsertRowToPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
-            void InsertRowToClusteredPage(Pages::PageFreeSpacePage *pageFreeSpacePage, Pages::Page *page, Row *row, const int &indexPosition)const;
+            void InsertRowToPage(Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage, Pages::PageGuard<Pages::Page>& page, Row *row, const int &indexPosition)const;
+            void InsertRowToClusteredPage(Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage, Pages::Page* page, Row *row, const int &indexPosition)const;
 
             static bool PopulateColumnIdentity(Row* row, Column*& column, int64_t& outValue);
 
@@ -200,9 +201,9 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] std::vector<const Column*> GetConstantColumns() const;
 
-            [[nodiscard]] Pages::LargeObjectPage *GetLargeDataPage(const page_id_t &pageId) const;
+            [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const page_id_t &pageId) const;
 
-            [[nodiscard]] Pages::OverflowPage *GetOverflowPage(const page_id_t &pageId) const;
+            [[nodiscard]] Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(const page_id_t &pageId) const;
 
             [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(const int& indexPos) const;
 

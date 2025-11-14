@@ -17,39 +17,40 @@ namespace Pages
         this->pageType = PageType::Error;
         this->pageId = INVALID_PAGE_ID;
         this->pageSize = 0;
-        this->bytesLeft = static_cast<Constants::page_size_t>(PAGE_SIZE - GetPageHeaderSize());
+        this->bytesLeft = static_cast<Constants::page_size_t>(PAGE_SIZE - Constants::PAGE_HEADER_SIZE);
     }
 
     PageHeader::~PageHeader() = default;
-
-    page_size_t PageHeader::GetPageHeaderSize() { return sizeof(page_id_t) + 2 * sizeof(page_size_t) + sizeof(PageType); }
 
     Page::Page(const page_id_t &pageId, const bool &isPageCreation)
     {
         this->header.pageId = pageId;
         this->isDirty = isPageCreation;
-        this->pinCount = 1;
+        this->pinCount = 0;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
         this->header.pageType = PageType::DATA;
+        this->priority = Constants::PagePriority::LOW;
     }
 
     Page::Page()
     {
         this->isDirty = false;
-        this->pinCount = 1;
+        this->pinCount = 0;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
         this->header.pageType = PageType::DATA;
+        this->priority = Constants::PagePriority::LOW;
     }
 
     Page::Page(const PageHeader &pageHeader)
     {
         this->header = pageHeader;
         this->isDirty = false;
-        this->pinCount = 1;
+        this->pinCount = 0;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
+        this->priority = Constants::PagePriority::LOW;
     }
 
     Page::~Page()
@@ -82,13 +83,11 @@ namespace Pages
     {
         const auto &columns = table->GetColumns();
 
-        for (int i = 0; i < this->header.pageSize; i++) {
-            auto* row = Page::ReadRowFromFile(data, table, offSet, columns);
-            this->rows.push_back(row);
-        }
+        for (int i = 0; i < this->header.pageSize; i++)
+            this->rows.push_back(Page::ReadRowFromDisk(data, table, offSet, columns));
     }
 
-    Row* Page::ReadRowFromFile(const vector<char>& data, const Table *table, page_offset_t &offSet, const vector<Column*>& columns){
+    Row* Page::ReadRowFromDisk(const vector<char>& data, const Table *table, page_offset_t &offSet, const vector<Column*>& columns){
         auto*  row = new Row(*table);
         RowHeader *rowHeader = row->GetHeader();
 
@@ -216,7 +215,6 @@ namespace Pages
                     {
                         DataObjectPointer objectPointer;
                         memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
-
                     }
                 }
               //delete row to deallocate space
@@ -239,7 +237,7 @@ namespace Pages
 
     void Page::UpdateBytesLeft()
     {
-        this->header.bytesLeft = PAGE_SIZE - this->header.GetPageHeaderSize();
+        this->header.bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
 
         for (const auto &row : this->rows)
             this->header.bytesLeft -= row->GetTotalRowSize();
@@ -308,7 +306,7 @@ namespace Pages
 
     vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsUnsafe() { return &this->rows; }
 
-    void Page::IncreatePinCount() {
+    void Page::IncreasePinCount() {
         this->pinCount.fetch_add(1, std::memory_order_relaxed);
     }
 
@@ -318,6 +316,10 @@ namespace Pages
 
     int Page::GetPinCount() const {
         return this->pinCount.load(std::memory_order_relaxed);
+    }
+
+    Constants::PagePriority Page::GetPriority() const {
+        return this->priority.load(std::memory_order_relaxed);
     }
 
     bool Page::HasSecondChance() const{
@@ -342,5 +344,9 @@ namespace Pages
 
     void Page::SharedUnlock() const {
         this->latch.SharedUnlock();
+    }
+
+    MultiThreading::ReadWriteMutex & Page::GetLatch() const {
+        return this->latch;
     }
 }

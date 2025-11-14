@@ -1,9 +1,6 @@
 ﻿#include "PageFreeSpacePage.h"
 #include "../../../Systemic/DataStructures/ByteMap/ByteMap.h"
 
-using namespace ByteMaps;
-using namespace DatabaseEngine::StorageTypes;
-
 namespace Pages {
     PageFreeSpacePage::PageFreeSpacePage() : Page()
     {
@@ -12,16 +9,17 @@ namespace Pages {
 
     PageFreeSpacePage::PageFreeSpacePage(const PageHeader &pageHeader) : Page(pageHeader)
     {
-        this->pageMap = new ByteMap(this->header.pageSize);
+        this->pageMap = new ByteMaps::ByteMap(this->header.pageSize);
     }
 
-    PageFreeSpacePage::PageFreeSpacePage(const page_id_t &pageId) : Page(pageId)
+    PageFreeSpacePage::PageFreeSpacePage(const page_id_t &pageId) : Page(pageId, true)
     {
-        this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize();
-        this->pageMap = new ByteMap(PAGE_FREE_SPACE_SIZE);
-        this->header.pageSize = PAGE_FREE_SPACE_SIZE;
+        this->header.bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
+        this->pageMap = new ByteMaps::ByteMap(PAGE_FREE_SPACE_SIZE);
+        this->header.pageSize = Constants::PAGE_FREE_SPACE_SIZE;
         this->header.bytesLeft = 0;
-        this->header.pageType = PageType::FREESPACE;
+        this->header.pageType = Constants::PageType::FREESPACE;
+        this->priority = Constants::PagePriority::SYSTEM;
     }
 
     PageFreeSpacePage::~PageFreeSpacePage()
@@ -29,9 +27,8 @@ namespace Pages {
         delete this->pageMap;
     }
 
-    void PageFreeSpacePage::SetPageAllocated(const page_id_t &pageId)
+    void PageFreeSpacePage::SetPageAllocated(const page_id_t &pageId)const
     {
-        const auto pos = PageFreeSpacePage::GetPagePosition(pageId);
         this->pageMap->SetPageIsAllocated(PageFreeSpacePage::GetPagePosition(pageId), true);
     }
 
@@ -39,18 +36,18 @@ namespace Pages {
       return this->pageMap->IsAllocated(PageFreeSpacePage::GetPagePosition(pageId));
     }
 
-    void PageFreeSpacePage::SetPageFreed(const page_id_t &pageId) {
+    void PageFreeSpacePage::SetPageFreed(const page_id_t &pageId)const {
       this->pageMap->SetPageIsAllocated(PageFreeSpacePage::GetPagePosition(pageId), false);
     }
 
-    void PageFreeSpacePage::SetPageType(const page_id_t &pageId, const PageType &pageType) {
+    void PageFreeSpacePage::SetPageType(const page_id_t &pageId, const PageType &pageType)const {
       this->pageMap->SetPageType(PageFreeSpacePage::GetPagePosition(pageId), static_cast<Constants::byte>(pageType));
     }
 
     void PageFreeSpacePage::SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft)
     {
 
-        const Constants::byte pageAllocationStatus = static_cast<Constants::byte>(bytesLeft * 15 / PAGE_SIZE);
+        const auto pageAllocationStatus = static_cast<Constants::byte>(bytesLeft * 15 / PAGE_SIZE);
 
         this->pageMap->SetFreeSpace(PageFreeSpacePage::GetPagePosition(pageId), pageAllocationStatus);
 
@@ -79,7 +76,7 @@ namespace Pages {
         this->isDirty = true;
     }
 
-    void PageFreeSpacePage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet,fstream *filePtr)
+    void PageFreeSpacePage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet,fstream *filePtr)
     {
         this->pageMap->GetDataFromFile(data, offSet, this->header.pageSize);
     }

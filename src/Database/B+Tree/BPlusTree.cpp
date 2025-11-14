@@ -19,7 +19,6 @@ namespace Indexing
         //handle degree here correctly based on indexed columns
         this->keySize = table->CalculateIndexKeySize(nonClusteredIndexId);
         this->t = BPlusTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
-        this->root = nullptr;
         this->tableId = tableHeader.tableId;
         this->tablePosition = tableHeader.ordinalPosition;
         this->indexPageId = indexPageId;
@@ -31,7 +30,6 @@ namespace Indexing
 
     BPlusTree::BPlusTree()
     {
-        this->root = nullptr;
         this->t = 0;
         this->tableId = 0;
         this->keySize = 0;
@@ -45,7 +43,7 @@ namespace Indexing
     int BPlusTree::CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId)const
     {
         if(treeType == TreeType::Clustered){
-          const uint32_t pageSize = PAGE_SIZE - Pages::PageHeader::GetPageHeaderSize() - Pages::IndexPageAdditionalHeader::GetAdditionalHeaderSize();
+          const uint32_t pageSize = Constants::INDEX_PAGE_DEFAULT_SIZE;
 
           auto rowSize = table->GetMaximumRowSize();
           int degree = static_cast<int>(pageSize / ((this->keySize + rowSize) * 2));
@@ -71,16 +69,16 @@ namespace Indexing
             keySize += column->GetColumnSize();
         }
 
-        const auto pageSize = (PAGE_SIZE - Pages::PageHeader::GetPageHeaderSize() - Pages::IndexPageAdditionalHeader::GetAdditionalHeaderSize());
+        const auto pageSize = (Constants::INDEX_PAGE_DEFAULT_SIZE);
 
         const auto degree = static_cast<int>(pageSize / ((this->keySize + Constants::ROW_ID_SIZE) * 2));
 
         return degree;
     }
 
-    void BPlusTree::SplitChild(Pages::IndexPage *parent, const int &index, Pages::IndexPage *child)const
+    void BPlusTree::SplitChild(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child)const
     {
-        auto* newChild = this->AllocateNewPage(parent->GetPageId());
+        auto newChild = this->AllocateNewPage(parent->GetPageId());
 
         newChild->SetIsLeaf(child->IsLeaf());
         newChild->SetIsRoot(false);
@@ -153,18 +151,19 @@ namespace Indexing
         newChild->UpdateBytesLeft();
     }
 
-    Pages::IndexPage* BPlusTree::FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
     {
-        if (this->root == nullptr)
+        Pages::PageGuard<Pages::IndexPage> root;
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
         {
             //maybe root page is removed and need to be reopened
-            this->root = this->AllocateNewPage(INVALID_PAGE_ID);
+            root = this->AllocateNewPage(INVALID_PAGE_ID);
 
-            this->root->SetIsRoot(true);
-            this->root->SetIsLeaf(true);
-            this->root->SetTreeType(this->type);
+            root->SetIsRoot(true);
+            root->SetIsLeaf(true);
+            root->SetTreeType(this->type);
 
-            this->indexPageId = this->root->GetPageId();
+            this->indexPageId = root->GetPageId();
 
             if(this->nonClusteredIndexId != -1)
               this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
@@ -174,17 +173,21 @@ namespace Indexing
             // this->InsertNodeToPage(this->root, 0);
         }
 
-        if (this->root->GetKeysUnsafe()->size() == 2 * t - 1) // root is full,
+        root = this->GetNode(this->indexPageId);
+
+        if (root->GetKeysUnsafe()->size() == 2 * t - 1) // root is full,
         {
-            auto* newRoot = this->AllocateNewPage(this->indexPageId);
+            auto newRoot = this->AllocateNewPage(this->indexPageId);
 
             newRoot->SetIsRoot(true);
             newRoot->SetIsLeaf(false);
             newRoot->SetTreeType(this->type);
 
-            newRoot->InsertChild(this->root->GetPageId());
+            auto oldRoot = this->GetNode(this->indexPageId);
 
-            this->root->SetIsRoot(false);
+            newRoot->InsertChild(oldRoot->GetPageId());
+
+            oldRoot->SetIsRoot(false);
             this->indexPageId = newRoot->GetPageId();
 
             if(this->nonClusteredIndexId != -1)
@@ -193,21 +196,13 @@ namespace Indexing
               this->table->SetClusteredIndexPageId(this->indexPageId);
 
             // split the root
-            this->SplitChild(newRoot, 0, this->root);
-
-            // root is the newRoot
-            this->root = newRoot;
+            this->SplitChild(newRoot, 0, oldRoot);
         }
 
-        auto* node = this->GetNonFullNode(this->root, key, indexPosition, status);
-
-        if (status.code != Errors::RuntimeError::Ok)
-            return nullptr;
-
-        return node;
+        return this->GetNonFullNode(root, key, indexPosition, status);
     }
 
-    Pages::IndexPage *BPlusTree::GetNonFullNode(Pages::IndexPage *node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNonFullNode(Pages::PageGuard<Pages::IndexPage>& node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
     {
         auto* keys = node->GetKeysUnsafe();
 
@@ -227,7 +222,8 @@ namespace Indexing
 
                 status.code = Errors::RuntimeError::DuplicateKey;
                 status.message = oss.str();
-                return nullptr;
+
+                return node;
             }
 
 
@@ -243,9 +239,9 @@ namespace Indexing
 
         const auto* children = node->GetChildren();
 
-        auto *child = this->GetNode(children->at(childIndex));
+        auto child = this->GetNode(children->at(childIndex));
 
-        auto* childKeys = child->GetKeysUnsafe();
+        const auto* childKeys = child->GetKeysUnsafe();
 
         if (childKeys->size() == 2 * t - 1)
         {
@@ -255,23 +251,20 @@ namespace Indexing
                 childIndex++;
         }
 
-        auto* returnedNode = this->GetNonFullNode(this->GetNode(children->at(childIndex)), key, indexPosition, status);
+        auto intermediateNode = this->GetNode(children->at(childIndex));
 
-        if (status.code != Errors::RuntimeError::Ok)
-            return nullptr;
-        
-        return returnedNode;
+        return this->GetNonFullNode(intermediateNode, key, indexPosition, status);
     }
 
     void BPlusTree::IndexScan(vector<DataTypes::Indexing::QueryData> &result)const
     {
-        if (!root)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
-        Pages::IndexPage *previousNode = nullptr;
+        auto currentNode = this->SearchLeftMostLeafNode();
+        Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             auto* keys = currentNode->GetKeysUnsafe();
 
@@ -281,7 +274,7 @@ namespace Indexing
             if(currentNode->GetNextPage() == 0)
                 return;
 
-            previousNode = currentNode;
+            // previousNode = currentNode;
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
     }
@@ -289,17 +282,15 @@ namespace Indexing
     void BPlusTree::IndexScan(
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
         QueryPipeline::PhysicalPlan::IndexState& state,
-        const int& rowsToSelect){
+        const int& rowsToSelect)const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        this->root = this->GetNode(this->indexPageId);
-
-        auto *currentNode = state.pageId == INVALID_PAGE_ID
+        auto currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
@@ -326,18 +317,16 @@ namespace Indexing
         QueryPipeline::PhysicalPlan::IndexState& state,
         const Expressions::Expression *expression,
         const int& rowsToSelect
-    ){
+    )const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        this->root = this->GetNode(this->indexPageId);
-
-        auto *currentNode = state.pageId == INVALID_PAGE_ID
+        auto currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
@@ -365,15 +354,16 @@ namespace Indexing
       }
     }
 
-    void BPlusTree::IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result, const Expressions::Expression *expression){
+    void BPlusTree::IndexScan(
+        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+        const Expressions::Expression *expression
+    )const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        this->root = this->GetNode(this->indexPageId);
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
-
-        while (currentNode)
+        while (currentNode.Get())
         {
             for (const auto* row : *currentNode->GetDataRowsUnsafe()) {
                 if(!expression->Evaluate(row).GetBool())
@@ -390,15 +380,13 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result){
-        this->root = this->GetNode(this->indexPageId);
-
-        if (!this->root)
+    void BPlusTree::IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result)const{
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             for (const auto* row : *currentNode->GetDataRowsUnsafe()) {
                 result->push_back(row);
@@ -415,20 +403,18 @@ namespace Indexing
     void BPlusTree::IndexScan(
         vector<Headers::RowIdentifier> *result,
         QueryPipeline::PhysicalPlan::IndexState& state,
-        const int& rowsToSelect){
+        const int& rowsToSelect)const{
 
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        this->root = this->GetNode(this->indexPageId);
-
-        auto *currentNode = state.pageId == INVALID_PAGE_ID
+        auto currentNode = state.pageId == INVALID_PAGE_ID
                         ? this->SearchLeftMostLeafNode()
                         : this->GetNode(state.pageId);
 
         const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex + 1;
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             const auto* rowIds = currentNode->GetNonClusteredDataUnsafe();
 
@@ -464,15 +450,13 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression){
+    void BPlusTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression)const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        this->root = this->GetNode(this->indexPageId);
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        const auto *currentNode = this->SearchLeftMostLeafNode();
-
-        while (currentNode)
+        while (currentNode.Get())
         {
             // for(auto* row: *currentNode->GetDataRowsUnsafe()){
             //     if(!row->Evaluate(expression))
@@ -492,27 +476,26 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Value> & updates)const{
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
-
-        this->root = this->GetNode(this->indexPageId);
 
         HashSet<column_index_t> updatedColumns;
 
         for(const auto& update : updates)
           updatedColumns.Add(update.GetColumnIndex());
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode)
+        while (currentNode.Get())
         {
           for(auto* row: *currentNode->GetDataRowsUnsafe()){
               const auto value = expression->Evaluate(row);
               if(!value.GetBool())
                   continue;
 
-            const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, updates, updatedColumns, false);
+
               if (result.code != Errors::RuntimeError::Ok)
                   return;
           }
@@ -524,10 +507,8 @@ namespace Indexing
         }
     }
 
-    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
-        this->root = this->GetNode(this->indexPageId);
-
-        if (!this->root)
+    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
+        if (this->indexPageId == INVALID_PAGE_ID)
             return {};
 
         HashSet<column_index_t> updatedColumns;
@@ -535,16 +516,16 @@ namespace Indexing
         for(const auto& update : updates)
             updatedColumns.Add(update->name.index);
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             for(auto* row: *currentNode->GetDataRowsUnsafe()){
                 const auto value = expression->Evaluate(row);
                 if(!value.GetBool())
                     continue;
 
-                const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, updates, updatedColumns, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
                     return result;
@@ -559,10 +540,8 @@ namespace Indexing
         return {};
     }
 
-    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
-        this->root = this->GetNode(this->indexPageId);
-
-        if (!this->root)
+    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
+        if (this->indexPageId == INVALID_PAGE_ID)
             return {};
 
         HashSet<column_index_t> updatedColumns;
@@ -570,12 +549,12 @@ namespace Indexing
         for(const auto& update : updates)
             updatedColumns.Add(update->name.index);
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             for(auto* row: *currentNode->GetDataRowsUnsafe()) {
-                const auto result = this->table->HandleRowUpdate(currentNode, row, updates, updatedColumns, false);
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, updates, updatedColumns, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
                     return result;
@@ -590,18 +569,13 @@ namespace Indexing
         return {};
     }
 
-    void BPlusTree::InsertRowsToOtherTree(const int& indexPos){
+    void BPlusTree::InsertRowsToOtherTree(const int& indexPos)const{
         if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
-        this->root = this->GetNode(this->indexPageId);
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        if (!this->root)
-            return;
-
-        auto *currentNode = this->SearchLeftMostLeafNode();
-
-        while (currentNode)
+        while (currentNode.Get())
         {
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
@@ -618,18 +592,16 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::InsertColumnToRow(const Constants::column_index_t& index, const Value &defaultValue){
-        this->root = this->GetNode(this->indexPageId);
-
-        if (!this->root)
+    void BPlusTree::InsertColumnToRow(const Constants::column_index_t& index, const Value &defaultValue)const{
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             for(auto* row: *currentNode->GetDataRowsUnsafe())
-                this->table->HandleAddColumn(currentNode, row, index, defaultValue);
+                this->table->HandleAddColumn(currentNode.Get(), row, index, defaultValue);
 
             if(currentNode->GetNextPage() == 0
                 || currentNode->GetNextPage() == INVALID_PAGE_ID)
@@ -639,18 +611,18 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::RemoveColumnFromRow(const Constants::column_index_t &index){
-        this->root = this->GetNode(this->indexPageId);
-
-        if (!this->root)
+    void BPlusTree::RemoveColumnFromRow(const Constants::column_index_t &index)const{
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        auto *currentNode = this->SearchLeftMostLeafNode();
+        auto root = this->GetNode(this->indexPageId);
 
-        while (currentNode)
+        auto currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode.Get())
         {
             for(auto* row: *currentNode->GetDataRowsUnsafe())
-                DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode, row, index);
+                DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode.Get(), row, index);
 
             if(currentNode->GetNextPage() == 0
                 || currentNode->GetNextPage() == INVALID_PAGE_ID)
@@ -661,24 +633,29 @@ namespace Indexing
 
     }
 
-    Errors::RuntimeStatus BPlusTree::IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates){
-        this->root = this->GetNode(this->indexPageId);
+    Errors::RuntimeStatus BPlusTree::IndexSeekUpdate(
+        const Expressions::Expression* expression,
+        const DataTypes::Indexing::Key* minKey,
+        const DataTypes::Indexing::Key* maxKey,
+        const vector<Value> & updates
+    )const{
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+            return {};
 
-        if (!this->root)
-          return {};
+        auto root = this->GetNode(this->indexPageId);
 
         HashSet<column_index_t> updatedColumns;
         for(const auto& update : updates)
             updatedColumns.Add(update.GetColumnIndex());
 
-        auto *currentNode = this->SearchKey(*minKey);
-        Pages::IndexPage *previousNode = nullptr;
+        auto currentNode = this->SearchKey(*minKey);
+        Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        while (currentNode)
+        while (currentNode.Get())
         {
           const auto* keys = currentNode->GetKeysUnsafe();
 
-          if (previousNode && maxKey >= keys->at(0))
+          if (previousNode.Get() && maxKey >= keys->at(0))
           {
             const auto* previousKeys = previousNode->GetKeysUnsafe();
 
@@ -690,7 +667,7 @@ namespace Indexing
 
                 const auto value = expression->Evaluate(row);
                 if(value.GetBool()) {
-                    const auto result = this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+                    const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
 
                     if (result.code != Errors::RuntimeError::Ok)
                         return result;
@@ -716,7 +693,7 @@ namespace Indexing
               if(!value.GetBool())
                 continue;
 
-            const auto result = this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), updates, updatedColumns, false);
 
             if (result.code != Errors::RuntimeError::Ok)
               return result;
@@ -735,24 +712,28 @@ namespace Indexing
         return {};
     }
 
-    Errors::RuntimeStatus BPlusTree::IndexSeekUpdate(const DataTypes::Indexing::Key *minKey, const DataTypes::Indexing::Key *maxKey, const vector<Value> &updates){
-                this->root = this->GetNode(this->indexPageId);
+    Errors::RuntimeStatus BPlusTree::IndexSeekUpdate(
+        const DataTypes::Indexing::Key *minKey,
+        const DataTypes::Indexing::Key *maxKey,
+        const vector<Value> &updates
+    )const{
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+            return {};
 
-        if (!this->root)
-          return {};
+        auto root = this->GetNode(this->indexPageId);
 
         HashSet<column_index_t> updatedColumns;
         for(const auto& update : updates)
             updatedColumns.Add(update.GetColumnIndex());
 
-        auto *currentNode = this->SearchKey(*minKey);
-        Pages::IndexPage *previousNode = nullptr;
+        auto currentNode = this->SearchKey(*minKey);
+        Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        while (currentNode)
+        while (currentNode.Get())
         {
           const auto* keys = currentNode->GetKeysUnsafe();
 
-          if (previousNode && maxKey >= keys->at(0))
+          if (previousNode.Get() && maxKey >= keys->at(0))
           {
             const auto* previousKeys = previousNode->GetKeysUnsafe();
 
@@ -760,7 +741,7 @@ namespace Indexing
             if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
                 const auto* previousRows = previousNode->GetDataRowsUnsafe();
 
-                const auto result = this->table->HandleRowUpdate(previousNode, previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+                const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
                     return result;
@@ -781,7 +762,7 @@ namespace Indexing
             if (*maxKey < *key)
                 break;
 
-            const auto result = this->table->HandleRowUpdate(currentNode, rows->at(i), updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), updates, updatedColumns, false);
 
             if (result.code != Errors::RuntimeError::Ok)
               return result;
@@ -803,17 +784,17 @@ namespace Indexing
 
     void BPlusTree::IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const
     {
-        if (!this->root)
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        auto *currentNode = this->SearchKey(minKey);
-        Pages::IndexPage *previousNode = nullptr;
+        auto currentNode = this->SearchKey(minKey);
+        Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        while (currentNode)
+        while (currentNode.Get())
         {
             auto* keys = currentNode->GetKeysUnsafe();
 
-            if (previousNode && maxKey >= *keys->at(0))
+            if (previousNode.Get() && maxKey >= *keys->at(0))
             {
                 auto* previousKeys = previousNode->GetKeysUnsafe();
 
@@ -842,23 +823,24 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*> *result){
+    void BPlusTree::IndexSeek(
+        const DataTypes::Indexing::Key &minKey,
+        const DataTypes::Indexing::Key &maxKey,
+        std::vector<const DatabaseEngine::StorageTypes::Row*> *result
+    )const{
         if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
-        this->root = this->GetNode(this->indexPageId);
+        auto root = this->GetNode(this->indexPageId);
 
-        if (!this->root)
-            return;
+        auto currentNode = this->SearchKey(minKey);
+        Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        auto *currentNode = this->SearchKey(minKey);
-        Pages::IndexPage *previousNode = nullptr;
-
-        while (currentNode)
+        while (currentNode.Get())
         {
             const auto* keys = currentNode->GetKeysUnsafe();
 
-            if (previousNode && maxKey >= *keys->at(0))
+            if (previousNode.Get() && maxKey >= *keys->at(0))
             {
                 const auto* previousKeys = previousNode->GetKeysUnsafe();
 
@@ -892,10 +874,10 @@ namespace Indexing
 
     void BPlusTree::SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const
     {
-        if (!root)
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        auto *currentNode = this->root;
+        auto currentNode = this->GetNode(this->indexPageId);
 
         while (!currentNode->IsLeaf())
         {
@@ -910,12 +892,12 @@ namespace Indexing
             currentNode = this->GetNode(children->at(index));
         }
         
-        Pages::IndexPage *previousNode = nullptr;
-        while (currentNode)
+        Pages::PageGuard<Pages::IndexPage> previousNode;
+        while (currentNode.Get() != nullptr)
         {
             auto* keys = currentNode->GetKeysUnsafe();
 
-            if (previousNode && key <= *keys->at(0))
+            if (previousNode.Get() && key <= *keys->at(0))
             {
                 // result.pageId = previousNode->dataPageId;
                 // result.indexPosition = previousNode->keys.size();
@@ -940,11 +922,11 @@ namespace Indexing
 
     void BPlusTree::Remove(const DataTypes::Indexing::Key &key){
 
-      if (!this->root)
+      if (this->indexPageId == Constants::INVALID_PAGE_ID)
         return;
 
-      std::vector<Pages::IndexPage*> ancestors;
-      auto *currentNode = this->SearchKeyWithAncestors(key, ancestors);
+      vector<Pages::PageGuard<Pages::IndexPage>> ancestors;
+      auto currentNode = std::move(this->SearchKeyWithAncestors(key, ancestors));
 
       auto* keys = currentNode->GetKeysUnsafe();
 
@@ -986,13 +968,13 @@ namespace Indexing
       this->HandleUnderflow(currentNode, ancestors, parentIndex);
    }
 
-   void BPlusTree::HandleUnderflow(Pages::IndexPage* node, const std::vector<Pages::IndexPage*>& ancestors, int& parentIndex) {
+   void BPlusTree::HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex) {
         if (node->IsRoot()) {
            this->HandleRootUnderflow();
            return;
         }
 
-        auto* parent = ancestors.at(parentIndex);
+        auto& parent = ancestors.at(parentIndex);
 
         int index = -1;
 
@@ -1014,33 +996,35 @@ namespace Indexing
 
        //if borrowing failed merge nodes
        if (index > 0) {
-           auto* leftSibling = this->GetNode(children->at(index - 1));
+           auto leftSibling = this->GetNode(children->at(index - 1));
            this->MergeNodes(leftSibling, node, parent, index - 1, ancestors, parentIndex);
 
            return;
        }
 
-      auto* rightSibling = this->GetNode(children->at(index + 1));
+      auto rightSibling = this->GetNode(children->at(index + 1));
       this->MergeNodes(node, rightSibling, parent, index, ancestors, parentIndex);
   }
 
     void BPlusTree::HandleRootUnderflow() {
-        const auto* keys = this->root->GetKeysUnsafe();
-        auto* children = this->root->GetChildren();
+        auto root = this->GetNode(this->indexPageId);
+
+        const auto* keys = root->GetKeysUnsafe();
+        auto* children = root->GetChildren();
 
         //root only has one child, delete current root and make child root
          if (keys->empty() && !children->empty()) {
-              const auto* oldRoot = this->root;
+            auto oldRoot = std::move(root);
 
-              auto* newRoot = this->GetNode(children->at(0));
+            auto newRoot = std::move(this->GetNode(children->at(0)));
 
-              newRoot->SetIsRoot(true);
+            newRoot->SetIsRoot(true);
 
-              this->root->MarkEmpty();
+            root->MarkEmpty();
 
-              this->root = newRoot;
+            this->indexPageId = newRoot->GetPageId();
 
-             return;
+            return;
          }
 
          if (!keys->empty())
@@ -1048,14 +1032,13 @@ namespace Indexing
 
          //else root is empty and delete it (no more index items should be available but just to be sure
 
-        this->root->MarkEmpty();
-        this->root = nullptr; // Tree is now empty
+        root->MarkEmpty();
     }
 
-    bool BPlusTree::TryBorrowFromLeftSibling(Pages::IndexPage* node, Pages::IndexPage* parent, const int& index)const{
+    bool BPlusTree::TryBorrowFromLeftSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int& index)const{
         auto* children = parent->GetChildren();
 
-        auto* sibling = this->GetNode(children->at(index - 1));
+        auto sibling = std::move(this->GetNode(children->at(index - 1)));
 
         auto* siblingKeys = sibling->GetKeysUnsafe();
 
@@ -1115,11 +1098,11 @@ namespace Indexing
         return true;
     }
 
-    bool BPlusTree::TryBorrowFromRightSibling(Pages::IndexPage *node, Pages::IndexPage *parent, const int &index) const{
+    bool BPlusTree::TryBorrowFromRightSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int &index) const{
 
           auto* children = parent->GetChildren();
 
-          auto* sibling = this->GetNode(children->at(index + 1));
+          auto sibling = this->GetNode(children->at(index + 1));
 
           auto* siblingKeys = sibling->GetKeysUnsafe();
 
@@ -1177,11 +1160,11 @@ namespace Indexing
     }
 
     void BPlusTree::MergeNodes(
-        Pages::IndexPage *leftNode,
-        Pages::IndexPage *rightNode,
-        Pages::IndexPage *parent,
+       Pages::PageGuard<Pages::IndexPage>& leftNode,
+       Pages::PageGuard<Pages::IndexPage>& rightNode,
+       Pages::PageGuard<Pages::IndexPage>& parent,
         int parentKeyIndex,
-        const std::vector<Pages::IndexPage*>& ancestors,
+        std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors,
         int& parentIndex){
           auto* leftNodeKeys = leftNode->GetKeysUnsafe();
           auto* rightNodeKeys = rightNode->GetKeysUnsafe();
@@ -1209,7 +1192,7 @@ namespace Indexing
 
 
               if(rightNode->GetNextPage() != 0){
-                auto* nextNode = this->GetNode(rightNode->GetNextPage());
+                auto nextNode = this->GetNode(rightNode->GetNextPage());
                 nextNode->SetPreviousPage(leftNode->GetPageId());
               }
          }
@@ -1245,12 +1228,8 @@ namespace Indexing
             this->HandleUnderflow(parent, ancestors, parentIndex);
           }
 
-         delete rightNode;
+         delete rightNode.Get();
     }
-
-    Pages::IndexPage*& BPlusTree::GetRoot() { return this->root; }
-
-    void BPlusTree::SetRoot(Pages::IndexPage *&node) { this->root = node; }
 
     void BPlusTree::SetBranchingFactor(const int &branchingFactor) { this->t = branchingFactor; }
 
@@ -1260,9 +1239,9 @@ namespace Indexing
 
     const page_id_t & BPlusTree::GetFirstIndexPageId() const { return this->indexPageId; }
 
-    Pages::IndexPage *BPlusTree::SearchKey(const DataTypes::Indexing::Key &key) const
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::SearchKey(const DataTypes::Indexing::Key &key) const
     {
-        auto *currentNode = this->root;
+        auto currentNode = this->GetNode(this->indexPageId);
 
         while (!currentNode->IsLeaf())
         {
@@ -1272,14 +1251,14 @@ namespace Indexing
 
             const int index = iterator - keys->begin();
 
-            currentNode = this->GetNode(currentNode->GetChildren()->at(index));
+            currentNode = std::move(this->GetNode(currentNode->GetChildren()->at(index)));
         }
 
         return currentNode;
     }
 
-    Pages::IndexPage* BPlusTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::IndexPage *> & ancestors) const{
-      auto *currentNode = this->root;
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::PageGuard<Pages::IndexPage>> & ancestors) const{
+      auto currentNode = this->GetNode(this->indexPageId);
 
       while (!currentNode->IsLeaf())
       {
@@ -1289,17 +1268,17 @@ namespace Indexing
 
         const int index = iterator - keys->begin();
 
-        ancestors.push_back(currentNode);
+        ancestors.push_back(std::move(currentNode));
 
-        currentNode = this->GetNode(currentNode->GetChildren()->at(index));
+        currentNode = std::move(this->GetNode(currentNode->GetChildren()->at(index)));
       }
 
       return currentNode;
     }
 
-   Pages::IndexPage *BPlusTree::SearchLeftMostLeafNode() const
+  Pages::PageGuard<Pages::IndexPage> BPlusTree::SearchLeftMostLeafNode() const
     {
-        auto *currentNode = this->root;
+        auto currentNode = this->GetNode(this->indexPageId);
         
         while (!currentNode->IsLeaf())
             currentNode = this->GetNode(currentNode->GetChildren()->at(0));
@@ -1307,11 +1286,11 @@ namespace Indexing
         return currentNode;
     }
 
-    Pages::IndexPage * BPlusTree::AllocateNewPage(const page_id_t& parentPageId)const{
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::AllocateNewPage(const page_id_t& parentPageId)const{
         return this->database->FindOrAllocateNextIndexPage(this->tablePosition, parentPageId, this->nonClusteredIndexId);
     }
 
-    Pages::IndexPage * BPlusTree::GetNode(const page_id_t& pageId) const
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNode(const page_id_t& pageId) const
     {
         const extent_id_t extentId = DatabaseEngine::Database::CalculateExtentIdByPageId(pageId);
 

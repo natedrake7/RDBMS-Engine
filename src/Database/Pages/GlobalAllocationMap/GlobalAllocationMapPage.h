@@ -14,9 +14,6 @@ namespace Pages {
         ByteMaps::BitMap* extentsMap;
         extent_id_t lastAllocatedExtentId;
     
-    protected:
-        static page_size_t GetAvailableSize();
-    
     public:
         explicit GlobalAllocationMapPage(const page_id_t& pageId);
         explicit GlobalAllocationMapPage(const PageHeader& pageHeader);

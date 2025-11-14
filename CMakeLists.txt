@@ -197,6 +197,7 @@ add_library(Database STATIC
         src/Database/Logger/CrashRecoveryLogger/CrashRecoveryLogger.h
         src/Database/Column/IdentityManager/IdentityManager.cpp
         src/Database/Column/IdentityManager/IdentityManager.h
+        src/Database/Pages/PageGuard/PageGuard.h
 )
 
 add_library(Server STATIC

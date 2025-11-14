@@ -2,12 +2,11 @@
 #include "../../Constants.h"
 #include <condition_variable>
 #include <list>
-#include <mutex>
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include "../FileManager/FileManager.h"
 #include "../../Pages/OverflowPage/OverflowPage.h"
+#include "../../Pages/PageGuard/PageGuard.h"
 
 namespace DatabaseEngine {
 class Database;
@@ -29,10 +28,8 @@ namespace Pages {
 } // namespace Pages
 
 namespace Storage {
-class FileManager;
-using namespace std;
-
-typedef list<Pages::Page *>::iterator PageIterator;
+  class FileManager;
+  using namespace std;
 
 class StorageManager final{
   int capacity;
@@ -60,27 +57,28 @@ protected:
   static Pages::PageHeader GetPageHeaderFromFile(const vector<char> &data, Constants::page_offset_t &offSet);
   bool IsPageCached(const std::string& filename, const Constants::page_id_t &pageId)const;
   void InsertPageToCache(Pages::Page *page, const std::string &filename, const Constants::page_id_t &pageId);
+  Pages::Page* GetRawPage(const std::string& filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table);
 
 public:
   static StorageManager& Get();
   ~StorageManager();
   void CreateFile(const std::string& fileName, const std::string& extension);
-  Pages::Page *CreatePage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::Page *GetPage(const std::string& filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table);
-  Pages::HeaderPage *GetHeaderPage(const std::string &filename);
-  Pages::HeaderPage *CreateHeaderPage(const std::string &filename);
-  Pages::LargeObjectPage *CreateLargeDataPage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::LargeObjectPage * GetLargeDataPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
-  Pages::OverflowPage *CreateOverflowPage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::OverflowPage *GetOverflowPage(const std::string& filename, const page_id_t &pageId, const extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
-  Pages::GlobalAllocationMapPage *CreateGlobalAllocationMapPage(const std::string &filename, const Constants::page_id_t &pageId);
-  Pages::GlobalAllocationMapPage *GetGlobalAllocationMapPage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::IndexAllocationMapPage *CreateIndexAllocationMapPage(const std::string& filename, const Constants::table_id_t &tableId, const Constants::page_id_t &pageId,const Constants::extent_id_t &startingExtentId);
-  Pages::IndexAllocationMapPage *GetIndexAllocationMapPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
-  Pages::PageFreeSpacePage *CreatePageFreeSpacePage(const std::string &filename, const Constants::page_id_t &pageId);
-  Pages::PageFreeSpacePage * GetPageFreeSpacePage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::IndexPage *CreateIndexPage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::IndexPage *GetIndexPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
+  Pages::PageGuard<Pages::Page> CreatePage(const std::string& filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::Page> GetPage(const std::string& filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::PageGuard<Pages::HeaderPage> GetHeaderPage(const std::string &filename);
+  Pages::PageGuard<Pages::HeaderPage> CreateHeaderPage(const std::string &filename);
+  Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(const std::string& filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(const std::string& filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(const std::string& filename, const page_id_t &pageId, const extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::PageGuard<Pages::GlobalAllocationMapPage> CreateGlobalAllocationMapPage(const std::string &filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::GlobalAllocationMapPage> GetGlobalAllocationMapPage(const std::string& filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::IndexAllocationMapPage> CreateIndexAllocationMapPage(const std::string& filename, const Constants::table_id_t &tableId, const Constants::page_id_t &pageId,const Constants::extent_id_t &startingExtentId);
+  Pages::PageGuard<Pages::IndexAllocationMapPage> GetIndexAllocationMapPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::PageGuard<Pages::PageFreeSpacePage> CreatePageFreeSpacePage(const std::string &filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::PageFreeSpacePage> GetPageFreeSpacePage(const std::string& filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::IndexPage> CreateIndexPage(const std::string& filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::IndexPage> GetIndexPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
 };
 
 } // namespace Storage

@@ -9,6 +9,7 @@
 #include "Pages/IndexPage/IndexPage.h"
 #include "Table/Table.h"
 #include "Pages/OverflowPage/OverflowPage.h"
+#include "Pages/PageGuard/PageGuard.h"
 
 using namespace Constants;
 using namespace std;
@@ -84,7 +85,7 @@ protected:
     static bool IsSystemPage(const page_id_t &pageId);
 
 
-    bool AllocateNewExtent( Pages::PageFreeSpacePage **pageFreeSpacePage,
+    bool AllocateNewExtent( Pages::PageGuard<Pages::PageFreeSpacePage> *pageFreeSpacePage,
                             page_id_t *lowerLimit,
                             page_id_t *newPageId,
                             extent_id_t *newExtentId,
@@ -127,7 +128,7 @@ public:
         const StorageTypes::Row* row,
         const Headers::RowIdentifier& rowId);
 
-    [[nodiscard]] static Pages::PageFreeSpacePage* GetAssociatedPfsPage(const string& filename, const page_id_t& pageId);
+    [[nodiscard]] static Pages::PageGuard<Pages::PageFreeSpacePage> GetAssociatedPfsPage(const string& filename, const page_id_t& pageId);
 
     static page_id_t GetGamAssociatedPage(const page_id_t &pageId);
 
@@ -164,19 +165,19 @@ public:
 
     void TruncateTable(const table_id_t& tableId);
 
-    Pages::OverflowPage *CreateOverflowPage(const table_id_t &tableId);
+    Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(const table_id_t &tableId);
 
-    Pages::Page *CreateDataPage(const table_id_t &tableId);
+    Pages::PageGuard<Pages::Page> CreateDataPage(const table_id_t &tableId);
 
-    Pages::LargeObjectPage *CreateLargeDataPage(const table_id_t &tableId);
+    Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(const table_id_t &tableId);
 
-    [[nodiscard]] Pages::LargeObjectPage *GetTableLastLargeDataPage(const table_id_t &tableId)const;
+    [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetTableLastLargeDataPage(const table_id_t &tableId)const;
 
-    [[nodiscard]] Pages::LargeObjectPage *GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
+    [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
 
-    Pages::OverflowPage* GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
+    Pages::PageGuard<Pages::OverflowPage> GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
 
-    Pages::IndexPage *CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId = 0);
+    Pages::PageGuard<Pages::IndexPage> CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId = 0);
 
     void SetPageMetaDataToPfs(const Pages::Page *page)const;
 
@@ -188,14 +189,15 @@ public:
 
     static extent_id_t CalculateExtentIdByPageId(const page_id_t &pageId);
 
-    [[nodiscard]] Pages::Page *FindOrAllocateNextDataPage(  Pages::PageFreeSpacePage *&pageFreeSpacePage,
+    [[nodiscard]] Pages::PageGuard<Pages::Page> FindOrAllocateNextDataPage(
+                                                            Pages::PageGuard<Pages::PageFreeSpacePage> &pageFreeSpacePage,
                                                             const page_id_t &pageId,
                                                             const page_id_t &extentFirstPageId,
                                                             const extent_id_t &extentId,
                                                             const StorageTypes::Table &table,
                                                             extent_id_t *nextExtentId);
 
-    [[nodiscard]] Pages::IndexPage* FindOrAllocateNextIndexPage(  const table_id_t& tableId
+    [[nodiscard]] Pages::PageGuard<Pages::IndexPage> FindOrAllocateNextIndexPage(  const table_id_t& tableId
                                                                 , const page_id_t &indexPageId
                                                                 , const int& nonClusteredIndexId = -1);
 

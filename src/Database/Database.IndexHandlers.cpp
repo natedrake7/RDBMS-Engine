@@ -44,7 +44,7 @@ namespace DatabaseEngine {
         return key;
     }
 
-	IndexPage* Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nonClusteredIndexId)
+	Pages::PageGuard<Pages::IndexPage> Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nonClusteredIndexId)
     {
         const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
 
@@ -58,7 +58,7 @@ namespace DatabaseEngine {
 
         if(indexPageId == INVALID_PAGE_ID)
         {
-            IndexPage* newIndexPage = this->CreateIndexPage(tableId, indexId);
+            auto newIndexPage = this->CreateIndexPage(tableId, indexId);
             
             newIndexPage->SetTreeType(isNonClusteredIndex 
                                     ? TreeType::NonClustered 
@@ -69,7 +69,7 @@ namespace DatabaseEngine {
 
         const auto indexAllocationPageExtentId = Database::CalculateExtentIdByPageId(tableHeader.indexAllocationMapPageId);
 
-        const IndexAllocationMapPage* indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(
+        const auto indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(
             this->filename,
             tableHeader.indexAllocationMapPageId,
             indexAllocationPageExtentId,
@@ -85,7 +85,7 @@ namespace DatabaseEngine {
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
             {
-                const PageFreeSpacePage * pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextIndexPageId);
+                const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextIndexPageId);
 
                 if (pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
                     continue;
@@ -94,7 +94,7 @@ namespace DatabaseEngine {
                 if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
                     continue;
 
-                IndexPage* indexPage = StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, extentId, table);
+                auto indexPage = StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, extentId, table);
 
                 if(!indexPage->isEmpty())
                     continue;
@@ -106,7 +106,7 @@ namespace DatabaseEngine {
             }
         }
 
-        IndexPage* newIndexPage = this->CreateIndexPage(tableId, indexId);
+        auto newIndexPage = this->CreateIndexPage(tableId, indexId);
             
         newIndexPage->SetTreeType(isNonClusteredIndex 
                                 ? TreeType::NonClustered 

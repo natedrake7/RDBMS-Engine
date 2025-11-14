@@ -34,7 +34,6 @@ namespace Pages {
 
 		IndexPageAdditionalHeader();
 		~IndexPageAdditionalHeader();
-		static page_size_t GetAdditionalHeaderSize();
 	}IndexPageAdditionalHeader;
 
 	class IndexPage final : public Page {

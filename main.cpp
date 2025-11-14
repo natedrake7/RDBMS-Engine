@@ -66,6 +66,7 @@
 
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 //TODO add priority in pages to store system pages indefinetely and decrease second chance count
+//TODO add page wrapper to handle page pin counts and locks releases etc
 
 
 std::atomic<bool> serverRunning{true};

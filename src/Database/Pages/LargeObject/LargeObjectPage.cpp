@@ -3,8 +3,6 @@
 
 #include <cstring>
 
-using namespace DatabaseEngine::StorageTypes;
-
 namespace Pages {
     LargeDataObject::LargeDataObject()
     {
@@ -52,7 +50,7 @@ namespace Pages {
         delete this->data;
     }
 
-    void LargeObjectPage::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t& offSet, fstream* filePtr)
+    void LargeObjectPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t& offSet, fstream* filePtr)
     {
       if(this->header.pageSize == 0)
         return;
@@ -97,10 +95,10 @@ namespace Pages {
         return this->data;
     }
 
-    LargeDataObject* LargeObjectPage::GetObject() { return this->data; }
+    LargeDataObject* LargeObjectPage::GetObject()const { return this->data; }
 
     LargeDataObject* LargeObjectPage::DeleteObject(){
-      this->header.bytesLeft = PAGE_SIZE - PageHeader::GetPageHeaderSize();
+      this->header.bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
       this->header.pageSize = 0;
 
       this->isDirty = true;

@@ -43,7 +43,7 @@ namespace Pages {
         void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WritePageToFile(fstream* filePtr) override;
         LargeDataObject* InsertObject(const object_t* object, const page_size_t& size);
-        LargeDataObject* GetObject();
+        LargeDataObject* GetObject()const;
         LargeDataObject* DeleteObject();
     };
 }

@@ -1,7 +1,3 @@
-//
-// Created by natedrake7 on 5/27/25.
-//
-
 #include <cstring>
 #include "OverflowPage.h"
 
@@ -57,7 +53,7 @@ namespace Pages {
   }
 
   void OverflowPage::UpdateBytesLeft(){
-    this->header.bytesLeft = static_cast<page_size_t>(PAGE_SIZE - PageHeader::GetPageHeaderSize());
+    this->header.bytesLeft = static_cast<page_size_t>(Constants::PAGE_SIZE_WITHOUT_HEADER);
 
     for(const auto& row : this->data){
       if(row == nullptr) //ignore fragmented parts

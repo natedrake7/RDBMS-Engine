@@ -361,7 +361,7 @@ namespace DatabaseEngine::StorageTypes {
 
     unsigned char* Row::GetLargeObjectValue(const DataObjectPointer &objectPointer, uint32_t* objectSize) const
     {
-        LargeObjectPage* page = this->table->GetLargeDataPage(objectPointer.pageId);
+        auto page = this->table->GetLargeDataPage(objectPointer.pageId);
 
         const LargeDataObject* object = page->GetObject();
 
@@ -398,7 +398,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Block * Row::GetLargeObject(const Pages::DataObjectPointer &objectPointer, const Column *column)const{
-        auto* page = this->table->GetLargeDataPage(objectPointer.pageId);
+        auto page = this->table->GetLargeDataPage(objectPointer.pageId);
 
         const auto* object = page->GetObject();
 
@@ -433,7 +433,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Pages::OverflowRow* Row::GetOverflowValue(const Pages::OverflowPointer & objectPointer) const{
-        const OverflowPage* page = this->table->GetOverflowPage(objectPointer.pageId);
+        const auto page = this->table->GetOverflowPage(objectPointer.pageId);
         return page->GetObject(objectPointer.index);
     }
 
