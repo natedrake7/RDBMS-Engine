@@ -2,6 +2,7 @@
 #include "../../../Systemic/DataStructures/BitMap/BitMap.h"
 #include "../GlobalAllocationMap/GlobalAllocationMapPage.h"
 #include "../../Database.h"
+#include "../../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
 
 #include <cstring>
 
@@ -69,7 +70,8 @@ namespace Pages {
 
         if(startingExtentIndex >= this->ownedExtents->GetSize())
             return;
-        
+
+        MultiThreading::ReaderGuard lock(&this->latch);
         for (extent_id_t id = startingExtentIndex; id < this->ownedExtents->GetSize(); id++)
         {
             if (this->ownedExtents->Get(id))

@@ -17,6 +17,7 @@
 #include "../B+Tree/BPlusTree.h"
 #include "../Pages/IndexPage/IndexPage.h"
 #include "../../Server/Server.h"
+#include "../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
 
 #include <cmath>
 #include <stdexcept>
@@ -633,7 +634,7 @@ namespace DatabaseEngine::StorageTypes {
       const size_t &rowsToSelect
     )const
     {
-        if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+        if(this->header.indexAllocationMapPageId == Constants::INVALID_PAGE_ID)
             return;
 
         const auto& filename = this->database->GetFileName();
@@ -656,12 +657,16 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto pageId = Table::GetPageIdByState(extentStartingPageId, state);
 
+          MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage->GetLatch());
+
           for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
           {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
               break;
 
-            const auto page = StorageManager::Get().GetPage(filename, extentPageId, this);
+            auto page = StorageManager::Get().GetPage(filename, extentPageId, this);
+
+            MultiThreading::ReaderGuard lock(&page->GetLatch());
 
             if (page->GetPageSize() == 0)
               continue;
@@ -669,6 +674,10 @@ namespace DatabaseEngine::StorageTypes {
             //update state to know where to start
             state.extentId = extentId;
             state.lastFetchedRowId.pageId = extentPageId;
+
+            const auto* rows = page->GetDataRowsUnsafe();
+
+            result->insert(result->end(), rows->begin(), rows->end());
 
             const auto startingPos = (state.lastFetchedRowId.indexId == Constants::INVALID_PAGE_INDEX_ID)
                   ? 0

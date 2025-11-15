@@ -8,5 +8,7 @@ namespace MultiThreading {
     public:
       explicit ReaderGuard(ReadWriteMutex* mtx);
       ~ReaderGuard();
+
+      void Release()const;
   };
 }

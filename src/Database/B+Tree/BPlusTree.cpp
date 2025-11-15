@@ -7,6 +7,8 @@
 #include "../../Database/Storage/StorageManager/StorageManager.h"
 #include "../../Database/Column/Column.h"
 #include "../Database.h"
+#include "../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
+#include "../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
 #include "../Row/Row.h"
 #include "../Block/Block.h"
 
@@ -202,8 +204,11 @@ namespace Indexing
         return this->GetNonFullNode(root, key, indexPosition, status);
     }
 
+//TODO proper locking
     Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNonFullNode(Pages::PageGuard<Pages::IndexPage>& node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
     {
+        MultiThreading::ReaderGuard lock(&node->GetLatch());
+
         auto* keys = node->GetKeysUnsafe();
 
         if (node->IsLeaf())
@@ -232,7 +237,10 @@ namespace Indexing
 
             return node;
         }
-        
+
+        lock.Release();
+
+
         const auto iterator = ranges::lower_bound(*keys, &key);
 
         int childIndex = iterator - keys->begin();
@@ -250,6 +258,7 @@ namespace Indexing
             if (key > *keys->at(childIndex))
                 childIndex++;
         }
+
 
         auto intermediateNode = this->GetNode(children->at(childIndex));
 
@@ -286,12 +295,14 @@ namespace Indexing
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        auto currentNode = state.pageId == INVALID_PAGE_ID
+        auto currentNode = state.pageId == Constants::INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
         while (currentNode.Get())
         {
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
@@ -325,9 +336,10 @@ namespace Indexing
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
-
         while (currentNode.Get())
         {
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
@@ -365,6 +377,8 @@ namespace Indexing
 
         while (currentNode.Get())
         {
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
             for (const auto* row : *currentNode->GetDataRowsUnsafe()) {
                 if(!expression->Evaluate(row).GetBool())
                     continue;
@@ -381,20 +395,21 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result)const{
-        if (this->indexPageId == INVALID_PAGE_ID)
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
         while (currentNode.Get())
         {
-            for (const auto* row : *currentNode->GetDataRowsUnsafe()) {
-                result->push_back(row);
-            }
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
-            if(currentNode->GetNextPage() == 0) {
+            auto* pageRows = currentNode->GetDataRowsUnsafe();
+
+            result->insert(result->begin(), pageRows->begin(), pageRows->end());
+
+            if(currentNode->GetNextPage() == 0)
                 return;
-            }
 
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
@@ -412,10 +427,12 @@ namespace Indexing
                         ? this->SearchLeftMostLeafNode()
                         : this->GetNode(state.pageId);
 
-        const int startingPosition = state.lastFetchedKeyIndex == -1 ? 0 : state.lastFetchedKeyIndex + 1;
+        const int startingPosition = state.GetNextKeyIndex();
 
         while (currentNode.Get())
         {
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
             const auto* rowIds = currentNode->GetNonClusteredDataUnsafe();
 
             for (int i = startingPosition; i < rowIds->size(); i++) {
@@ -489,7 +506,9 @@ namespace Indexing
 
         while (currentNode.Get())
         {
-          for(auto* row: *currentNode->GetDataRowsUnsafe()){
+            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
+
+            for(auto* row: *currentNode->GetDataRowsUnsafe()){
               const auto value = expression->Evaluate(row);
               if(!value.GetBool())
                   continue;
@@ -507,12 +526,14 @@ namespace Indexing
         }
     }
 
-    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
-        if (this->indexPageId == INVALID_PAGE_ID)
+    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(
+        const Expressions::Expression *expression,
+        const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
+    )const{
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return {};
 
         HashSet<column_index_t> updatedColumns;
-
         for(const auto& update : updates)
             updatedColumns.Add(update->name.index);
 
@@ -520,6 +541,8 @@ namespace Indexing
 
         while (currentNode.Get())
         {
+            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
+
             for(auto* row: *currentNode->GetDataRowsUnsafe()){
                 const auto value = expression->Evaluate(row);
                 if(!value.GetBool())
@@ -553,6 +576,8 @@ namespace Indexing
 
         while (currentNode.Get())
         {
+            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
+
             for(auto* row: *currentNode->GetDataRowsUnsafe()) {
                 const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, updates, updatedColumns, false);
 
@@ -569,6 +594,7 @@ namespace Indexing
         return {};
     }
 
+//escalate to table lock
     void BPlusTree::InsertRowsToOtherTree(const int& indexPos)const{
         if (this->indexPageId == INVALID_PAGE_ID)
             return;
@@ -642,8 +668,6 @@ namespace Indexing
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return {};
 
-        auto root = this->GetNode(this->indexPageId);
-
         HashSet<column_index_t> updatedColumns;
         for(const auto& update : updates)
             updatedColumns.Add(update.GetColumnIndex());
@@ -651,30 +675,37 @@ namespace Indexing
         auto currentNode = this->SearchKey(*minKey);
         Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        while (currentNode.Get())
+        while (true)
         {
-          const auto* keys = currentNode->GetKeysUnsafe();
+            if (currentNode.Get() == nullptr)
+                break;
 
-          if (previousNode.Get() && maxKey >= keys->at(0))
-          {
-            const auto* previousKeys = previousNode->GetKeysUnsafe();
+            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
-            // Check if the last key in the previous node is within the range
-            if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
-                const auto* previousRows = previousNode->GetDataRowsUnsafe();
+            const auto* keys = currentNode->GetKeysUnsafe();
 
-                const auto* row = previousRows->at(previousRows->size() - 1);
+            if (previousNode.Get() && maxKey >= keys->at(0))
+            {
+                MultiThreading::WriterGuard previousNodeLock(&previousNode->GetLatch());
 
-                const auto value = expression->Evaluate(row);
-                if(value.GetBool()) {
-                    const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+                const auto* previousKeys = previousNode->GetKeysUnsafe();
 
-                    if (result.code != Errors::RuntimeError::Ok)
-                        return result;
+                // Check if the last key in the previous node is within the range
+                if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
+                    const auto* previousRows = previousNode->GetDataRowsUnsafe();
+
+                    const auto* row = previousRows->at(previousRows->size() - 1);
+
+                    const auto value = expression->Evaluate(row);
+                    if(value.GetBool()) {
+                        const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+
+                        if (result.code != Errors::RuntimeError::Ok)
+                            return result;
+                    }
                 }
             }
-          }
-          else if(maxKey < keys->at(0))
+            else if(maxKey < keys->at(0))
                return {};
 
           const auto* rows = currentNode->GetDataRowsUnsafe();
@@ -720,8 +751,6 @@ namespace Indexing
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return {};
 
-        auto root = this->GetNode(this->indexPageId);
-
         HashSet<column_index_t> updatedColumns;
         for(const auto& update : updates)
             updatedColumns.Add(update.GetColumnIndex());
@@ -731,23 +760,30 @@ namespace Indexing
 
         while (currentNode.Get())
         {
-          const auto* keys = currentNode->GetKeysUnsafe();
+            if (currentNode.Get() == nullptr)
+                break;
 
-          if (previousNode.Get() && maxKey >= keys->at(0))
-          {
-            const auto* previousKeys = previousNode->GetKeysUnsafe();
+            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
-            // Check if the last key in the previous node is within the range
-            if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
-                const auto* previousRows = previousNode->GetDataRowsUnsafe();
+            const auto* keys = currentNode->GetKeysUnsafe();
 
-                const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+            if (previousNode.Get() && maxKey >= keys->at(0))
+            {
+                MultiThreading::WriterGuard previousNodeLock(&previousNode->GetLatch());
 
-                if (result.code != Errors::RuntimeError::Ok)
-                    return result;
+                const auto* previousKeys = previousNode->GetKeysUnsafe();
+
+                // Check if the last key in the previous node is within the range
+                if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
+                    const auto* previousRows = previousNode->GetDataRowsUnsafe();
+
+                    const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+
+                    if (result.code != Errors::RuntimeError::Ok)
+                        return result;
+                }
             }
-          }
-          else if(maxKey < keys->at(0))
+            else if(maxKey < keys->at(0))
                return {};
 
           const auto* rows = currentNode->GetDataRowsUnsafe();
@@ -831,23 +867,28 @@ namespace Indexing
         if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
-        auto root = this->GetNode(this->indexPageId);
-
         auto currentNode = this->SearchKey(minKey);
+
         Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        while (currentNode.Get())
+        while (true)
         {
+            if (currentNode.Get())
+                break;
+
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
             const auto* keys = currentNode->GetKeysUnsafe();
 
             if (previousNode.Get() && maxKey >= *keys->at(0))
             {
+                MultiThreading::ReaderGuard previousNodeLock(&previousNode->GetLatch());
+
                 const auto* previousKeys = previousNode->GetKeysUnsafe();
 
                 // Check if the last key in the previous node is within the range
-                if (maxKey >= *previousKeys->at(previousKeys->size() - 1)) {
+                if (maxKey >= *previousKeys->at(previousKeys->size() - 1))
                     result->push_back(previousNode->GetRow(previousKeys->size() - 1));
-                }
             }
 
             for (int i = 0; i < keys->size(); i++)
@@ -877,24 +918,30 @@ namespace Indexing
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
-        auto currentNode = this->GetNode(this->indexPageId);
+        // auto currentNode = this->GetNode(this->indexPageId);
+        //
+        // while (!currentNode->IsLeaf())
+        // {
+        //     auto* keys = currentNode->GetKeysUnsafe();
+        //
+        //     const auto iterator = ranges::lower_bound(*keys, &key);
+        //
+        //     const int index = iterator - keys->begin();
+        //
+        //     auto* children = currentNode->GetChildren();
+        //
+        //     currentNode = this->GetNode(children->at(index));
+        // }
 
-        while (!currentNode->IsLeaf())
-        {
-            auto* keys = currentNode->GetKeysUnsafe();
-
-            const auto iterator = ranges::lower_bound(*keys, &key);
-
-            const int index = iterator - keys->begin();
-
-            auto* children = currentNode->GetChildren();
-
-            currentNode = this->GetNode(children->at(index));
-        }
+        auto currentNode = this->SearchKey(key);
         
         Pages::PageGuard<Pages::IndexPage> previousNode;
-        while (currentNode.Get() != nullptr)
+        while (true)
         {
+            if (currentNode.Get() == nullptr)
+                return;
+
+            // MultiThreading::ReaderGuard
             auto* keys = currentNode->GetKeysUnsafe();
 
             if (previousNode.Get() && key <= *keys->at(0))
@@ -1243,15 +1290,20 @@ namespace Indexing
     {
         auto currentNode = this->GetNode(this->indexPageId);
 
-        while (!currentNode->IsLeaf())
-        {
-            auto* keys = currentNode->GetKeysUnsafe();
+        while (true) {
+
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
+            if (currentNode->IsLeaf())
+                return currentNode;
+
+            const auto* keys = currentNode->GetKeysUnsafe();
 
             const auto iterator = ranges::lower_bound(*keys, &key);
 
-            const int index = iterator - keys->begin();
+            const auto index = iterator - keys->begin();
 
-            currentNode = std::move(this->GetNode(currentNode->GetChildren()->at(index)));
+            currentNode = this->GetNode(currentNode->GetChildren()->at(index));
         }
 
         return currentNode;
@@ -1279,9 +1331,16 @@ namespace Indexing
   Pages::PageGuard<Pages::IndexPage> BPlusTree::SearchLeftMostLeafNode() const
     {
         auto currentNode = this->GetNode(this->indexPageId);
-        
-        while (!currentNode->IsLeaf())
+
+
+        while (true) {
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
+            if (currentNode->IsLeaf())
+                return currentNode;
+
             currentNode = this->GetNode(currentNode->GetChildren()->at(0));
+        }
 
         return currentNode;
     }

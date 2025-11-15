@@ -39,7 +39,7 @@ namespace DatabaseEngine::StorageTypes {
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
-        auto* tree = this->GetClusteredIndexedTree();
+        const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
           tree->IndexScan(selectedRows, expression);

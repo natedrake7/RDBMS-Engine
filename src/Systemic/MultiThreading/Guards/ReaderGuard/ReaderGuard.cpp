@@ -12,4 +12,8 @@ ReaderGuard::~ReaderGuard(){
   this->mutex->SharedUnlock();
 }
 
+void ReaderGuard::Release()const{
+  this->mutex->SharedUnlock();
+}
+
 }
