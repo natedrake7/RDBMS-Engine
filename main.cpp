@@ -131,6 +131,8 @@ int main()
         std::vector<std::string> displayColumns;
         QueryPipeline::Parser::Parse(input, session->sessionId, &results, &displayColumns);
 
+        const auto end = std::chrono::high_resolution_clock::now();
+
         for (const auto& column : displayColumns)
            std::cout << column << " || ";
 
@@ -139,7 +141,6 @@ int main()
         for (const auto& row: results)
             row.Print();
 
-        const auto end = std::chrono::high_resolution_clock::now();
 
         const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 

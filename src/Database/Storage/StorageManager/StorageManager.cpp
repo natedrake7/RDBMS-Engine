@@ -187,7 +187,7 @@ Pages::Page* StorageManager::OpenExtent(
   Pages::Page* returnPage = nullptr;
 
   // read page from disk, call this->fileManager
-  fstream *file = this->fileManager.GetFile(filename);
+  auto *file = this->fileManager.GetFile(filename);
 
   const page_id_t firstExtentPageId = DatabaseEngine::Database::CalculateSystemPageOffsetByExtentId(extentId);
 
@@ -204,8 +204,8 @@ Pages::Page* StorageManager::OpenExtent(
 
   const auto &bytesRead = file->gcount();
 
-  for (int i = 0; i < EXTENT_SIZE; i++){
-    offSet = i * PAGE_SIZE;
+  for (int i = 0; i < Constants::EXTENT_SIZE; i++){
+    offSet = i * Constants::PAGE_SIZE;
 
     if (bytesRead < offSet)
       break;
@@ -317,6 +317,8 @@ void StorageManager::InsertPageToCache(Pages::Page *page, const std::string &fil
     auto* victim = this->EvictPage();
     this->RemovePage(victim);
   }
+
+  page->SetFileName(filename);
 
   const size_t frameIndex = clockHand % capacity;
   this->frames[frameIndex] = page;

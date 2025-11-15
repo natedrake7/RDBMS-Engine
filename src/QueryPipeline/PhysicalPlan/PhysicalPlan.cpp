@@ -138,7 +138,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalPlanResult* PhysicalTableScan::Execute(const int& batchSize){
       using namespace DatabaseEngine::StorageTypes;
-      const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+      const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
       const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -162,7 +162,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -186,7 +186,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -408,7 +408,7 @@ PhysicalInsert::PhysicalInsert(
   PhysicalPlanResult* PhysicalInsert::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
     
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -430,7 +430,7 @@ PhysicalInsert::PhysicalInsert(
   PhysicalPlanResult * PhysicalHeapDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -450,7 +450,7 @@ PhysicalInsert::PhysicalInsert(
   PhysicalPlanResult * PhysicalIndexScanDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -470,7 +470,7 @@ PhysicalInsert::PhysicalInsert(
   PhysicalPlanResult * PhysicalIndexSeekDelete::Execute(const int& batchSize){
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -495,7 +495,7 @@ PhysicalInsert::PhysicalInsert(
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -523,7 +523,7 @@ PhysicalInsert::PhysicalInsert(
 
     auto* result = new PhysicalPlanResult();
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -549,7 +549,7 @@ PhysicalInsert::PhysicalInsert(
   PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(const int& batchSize){
     using namespace DatabaseEngine::StorageTypes;
 
-    const DatabaseEngine::Database* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 

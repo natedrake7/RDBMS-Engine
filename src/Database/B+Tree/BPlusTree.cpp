@@ -873,7 +873,7 @@ namespace Indexing
 
         while (true)
         {
-            if (currentNode.Get())
+            if (!currentNode.Get())
                 break;
 
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
