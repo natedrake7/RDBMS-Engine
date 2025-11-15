@@ -24,6 +24,7 @@ namespace Pages
     HeaderPage::HeaderPage(const PageHeader &pageHeader) : Page(pageHeader)
     {
         this->databaseHeader = new DatabaseEngine::DatabaseHeader();
+        this->priority = Constants::PagePriority::SYSTEM;
     }
 
     HeaderPage::~HeaderPage()

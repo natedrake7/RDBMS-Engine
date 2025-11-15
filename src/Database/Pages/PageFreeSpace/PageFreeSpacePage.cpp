@@ -10,6 +10,7 @@ namespace Pages {
     PageFreeSpacePage::PageFreeSpacePage(const PageHeader &pageHeader) : Page(pageHeader)
     {
         this->pageMap = new ByteMaps::ByteMap(this->header.pageSize);
+        this->priority = Constants::PagePriority::SYSTEM;
     }
 
     PageFreeSpacePage::PageFreeSpacePage(const page_id_t &pageId) : Page(pageId, true)

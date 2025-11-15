@@ -171,6 +171,8 @@ void StorageManager::RemovePageWithoutKeyDeletion(Pages::Page *page){
   auto* file = this->fileManager.GetFile(filename);
 
   if (page->IsDirty()) {
+    StorageManager::SetWriteFilePointerToOffset(file, page->GetPageId() * Constants::PAGE_SIZE);
+
     page->WritePageToFile(file);
     file->flush();
   }
@@ -260,11 +262,9 @@ Pages::Page* StorageManager::OpenExtent(
 
 Pages::PageGuard<HeaderPage> StorageManager::CreateHeaderPage(const string &filename)
 {
-  constexpr page_id_t pageId = 0;
+  auto *page = new HeaderPage(Constants::HEADER_PAGE_ID);
 
-  auto *page = new HeaderPage(pageId);
-
-  this->InsertPageToCache(page, filename, pageId);
+  this->InsertPageToCache(page, filename, Constants::HEADER_PAGE_ID);
 
   return Pages::PageGuard<HeaderPage>(page);
 }

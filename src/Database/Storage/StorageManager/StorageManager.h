@@ -1,7 +1,6 @@
 #pragma once
 #include "../../Constants.h"
 #include <condition_variable>
-#include <list>
 #include <string>
 #include <vector>
 #include "../FileManager/FileManager.h"

@@ -639,8 +639,8 @@ namespace DatabaseEngine
             *newPageId = Database::CalculateSystemPageOffsetByExtentId(*newExtentId);
         }
 
-        const bool isFirstExtent = indexAllocationMapPageId == INVALID_PAGE_ID;
-        if (isFirstExtent && tableMapPage.Get() == nullptr)
+        const bool isFirstExtent = indexAllocationMapPageId == Constants::INVALID_PAGE_ID;
+        if (isFirstExtent && !tableMapPage.Get())
         {
             tableMapPage = StorageManager::Get().CreateIndexAllocationMapPage(this->filename, tableId, *newPageId, *newExtentId);
 

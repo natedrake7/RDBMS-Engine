@@ -207,7 +207,7 @@ namespace Indexing
 //TODO proper locking
     Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNonFullNode(Pages::PageGuard<Pages::IndexPage>& node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
     {
-        MultiThreading::ReaderGuard lock(&node->GetLatch());
+        const MultiThreading::ReaderGuard lock(&node->GetLatch());
 
         auto* keys = node->GetKeysUnsafe();
 
@@ -238,8 +238,6 @@ namespace Indexing
             return node;
         }
 
-        lock.Release();
-
 
         const auto iterator = ranges::lower_bound(*keys, &key);
 
@@ -247,7 +245,13 @@ namespace Indexing
 
         const auto* children = node->GetChildren();
 
-        auto child = this->GetNode(children->at(childIndex));
+        const auto childId = children->at(childIndex);
+
+        auto child = this->GetNode(childId);
+
+        MultiThreading::ReaderGuard childLatch(&child->GetLatch());
+
+        lock.Release();
 
         const auto* childKeys = child->GetKeysUnsafe();
 
