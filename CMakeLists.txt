@@ -198,6 +198,8 @@ add_library(Database STATIC
         src/Database/Column/IdentityManager/IdentityManager.cpp
         src/Database/Column/IdentityManager/IdentityManager.h
         src/Database/Pages/PageGuard/PageGuard.h
+        src/Database/TransactionManager/TransactionManager.cpp
+        src/Database/TransactionManager/TransactionManager.h
 )
 
 add_library(Server STATIC

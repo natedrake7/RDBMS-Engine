@@ -69,7 +69,11 @@ namespace Server::Sessions {
     return true;
   }
 
-  QueryPipeline::Cursor* SessionManager::CreateCursor(const DataTypes::Guid &id, QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan)const{
+  QueryPipeline::Cursor* SessionManager::CreateCursor(
+    const DataTypes::Guid &id,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan
+  )const{
     MultiThreading::WriterGuard guard(&this->mutex);
 
     auto* session = this->TryGetSessionWithoutLock(id);
@@ -79,7 +83,7 @@ namespace Server::Sessions {
 
     delete session->cursor;
 
-    session->cursor = new QueryPipeline::Cursor(0, physicalPlan, 10000);
+    session->cursor = new QueryPipeline::Cursor(0, properties, physicalPlan);
     return session->cursor;
   }
 

@@ -79,7 +79,11 @@ namespace Server {
     [[nodiscard]] const Network::Session* GetSession(const DataTypes::Guid& key)const;
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& key);
     [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const int32_t& databaseId)const;
-    [[nodiscard]] QueryPipeline::Cursor* CreateCursor(const DataTypes::Guid &id, QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan)const;
+    [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
+      const DataTypes::Guid &id,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan
+    )const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id)const;
 
     //MasterDB Insert Functions

@@ -14,11 +14,11 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
 
-  PhysicalPlanResult * PhysicalNestedLoopInnerJoin::Execute(const int &batchSize){
+  PhysicalPlanResult * PhysicalNestedLoopInnerJoin::Execute(const PhysicalPlanExecutionProperties& properties){
     auto* result = new PhysicalPlan::PhysicalPlanResult();
 
-    const auto* leftResult = this->left->Execute(batchSize);
-    const auto* rightResult = this->right->Execute(batchSize);
+    const auto* leftResult = this->left->Execute(properties);
+    const auto* rightResult = this->right->Execute(properties);
 
     //create new row
     for (const auto* outerRow: leftResult->rows) {
@@ -48,11 +48,11 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  PhysicalPlanResult * PhysicalNestedLoopLeftJoin::Execute(const int &batchSize){
+  PhysicalPlanResult * PhysicalNestedLoopLeftJoin::Execute(const PhysicalPlanExecutionProperties& properties){
       auto* result = new PhysicalPlan::PhysicalPlanResult();
 
-      const auto* leftResult = this->left->Execute(batchSize);
-      const auto* rightResult = this->right->Execute(batchSize);
+      const auto* leftResult = this->left->Execute(properties);
+      const auto* rightResult = this->right->Execute(properties);
 
       //create new row
       for (const auto* outerRow: leftResult->rows) {
@@ -99,11 +99,11 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  PhysicalPlanResult * PhysicalNestedLoopFullJoin::Execute(const int &batchSize){
+  PhysicalPlanResult * PhysicalNestedLoopFullJoin::Execute(const PhysicalPlanExecutionProperties& properties){
       auto* result = new PhysicalPlan::PhysicalPlanResult();
 
-      const auto* leftResult = this->left->Execute(batchSize);
-      const auto* rightResult = this->right->Execute(batchSize);
+      const auto* leftResult = this->left->Execute(properties);
+      const auto* rightResult = this->right->Execute(properties);
 
 
       std::vector<bool> leftMatched(leftResult->rows.size(), false);

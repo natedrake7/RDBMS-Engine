@@ -297,8 +297,12 @@ namespace Server {
     return this->sessionManager.UpdateSession(key, databaseId);
   }
 
-  QueryPipeline::Cursor * ServerInstance::CreateCursor(const DataTypes::Guid &id, QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan) const {
-    return this->sessionManager.CreateCursor(id, physicalPlan);
+  QueryPipeline::Cursor * ServerInstance::CreateCursor(
+    const DataTypes::Guid &id,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan
+  ) const {
+    return this->sessionManager.CreateCursor(id, properties, physicalPlan);
   }
 
   bool ServerInstance::CloseCursor(const DataTypes::Guid &id) const {

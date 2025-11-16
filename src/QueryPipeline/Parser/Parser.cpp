@@ -3,6 +3,7 @@
 #include <vector>
 #include "SQLParser.h"
 #include "../../Database/Column/Column.h"
+#include "../../Database/TransactionManager/TransactionManager.h"
 #include "../../Server/Server.h"
 #include "../Cursor/Cursor.h"
 #include "../ErrorListener/ErrorListener.h"
@@ -114,7 +115,14 @@ namespace QueryPipeline
 
         const auto& server = Server::ServerInstance::Get();
 
-        auto* cursor = server.CreateCursor(sessionId, physicalPlan);
+        auto transactionId = DatabaseEngine::TransactionManager::Get().BeginTransaction(sessionId);
+
+        PhysicalPlan::PhysicalPlanExecutionProperties properties{
+            transactionId,
+            1000
+        };
+
+        auto* cursor = server.CreateCursor(sessionId, properties, physicalPlan);
 
         while (cursor->hasMore()) {
             result = cursor->fetchNextBatch();

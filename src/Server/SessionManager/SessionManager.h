@@ -22,7 +22,10 @@ namespace Server::Sessions {
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& id);
     [[nodiscard]] bool UpdateSession(const DataTypes::Guid& id, const int32_t& databaseId)const;
 
-    [[nodiscard]] QueryPipeline::Cursor* CreateCursor(const DataTypes::Guid &id, QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan)const;
+    [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
+      const DataTypes::Guid &id,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan)const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id)const;
   };
 }

@@ -3,7 +3,12 @@
 #include "../DataTypes/DateTime/DateTime.h"
 #include "../Security/Security.h"
 
+namespace QueryPipeline {
+  class Cursor;
+}
+
 namespace Network {
+
   struct Session {
     DataTypes::Guid sessionId;
 
@@ -15,6 +20,8 @@ namespace Network {
     int32_t databaseId;
 
     QueryPipeline::Cursor* cursor;
+
+    Constants::transaction_id_t transactionId;
 
     //add permissions later and session variables etc
     explicit Session(const Security::User* user) {
@@ -28,6 +35,7 @@ namespace Network {
 
       //default to masterdb
       this->databaseId = 1;
+      this->transactionId = 0;
     }
   };
 }

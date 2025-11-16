@@ -60,6 +60,11 @@ namespace QueryPipeline::PhysicalPlan{
     }
   };
 
+  struct PhysicalPlanExecutionProperties {
+    Constants::transaction_id_t transactionId;
+    int batchSize;
+  };
+
   class PhysicalOperator {
     protected:
       DataTypes::Guid sessionId;
@@ -67,7 +72,7 @@ namespace QueryPipeline::PhysicalPlan{
       PhysicalOperator() = default;
       explicit PhysicalOperator(const DataTypes::Guid& currentSessionId);
       virtual ~PhysicalOperator() = default;
-      virtual PhysicalPlanResult* Execute(const int& batchSize) = 0;
+      virtual PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) = 0;
   };
 
   class PhysicalCreateUser final : public PhysicalOperator {
@@ -77,7 +82,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalCreateUser(std::string& username, std::string& password, std::string& role);
       ~PhysicalCreateUser()override = default;
-      PhysicalPlanResult* Execute(const int& batchSize)override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties)override;
   };
 
   class PhysicalGrantRole final : public PhysicalOperator {
@@ -86,7 +91,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalGrantRole(const DataTypes::Guid& sessionId, std::string& username, std::string& roleName);
       ~PhysicalGrantRole()override = default;
-      PhysicalPlanResult* Execute(const int& batchSize)override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties)override;
   };
 
   class PhysicalCreateDatabase final : public PhysicalOperator{
@@ -94,7 +99,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& name);
       ~PhysicalCreateDatabase() override = default;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalUseDatabase final : public PhysicalOperator{
@@ -104,7 +109,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, const int32_t& databaseId);
       ~PhysicalUseDatabase() override = default;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalSchemaCreate final : public PhysicalOperator{
@@ -114,7 +119,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string& schemaName);
       ~PhysicalSchemaCreate() override = default;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalTableScan final : public PhysicalOperator{
@@ -124,7 +129,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalTableScan(Statements::TableName* table);
       ~PhysicalTableScan()override = default;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexScan final : public PhysicalOperator{
@@ -137,7 +142,7 @@ namespace QueryPipeline::PhysicalPlan{
     explicit PhysicalIndexScan(Statements::TableName* table, const bool& isClustered = false);
     explicit PhysicalIndexScan(Statements::TableName* table, Expressions::Expression* expression, const bool& isClustered = false);
     ~PhysicalIndexScan()override = default;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexSeek final : public PhysicalOperator{
@@ -148,7 +153,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalIndexSeek(Statements::TableName* table, const Value& minValue, const Value& maxValue);
       ~PhysicalIndexSeek()override = default;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalProject final : public PhysicalOperator{
@@ -157,7 +162,7 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalOperator* child;
 
 
-    [[nodiscard]] inline PhysicalPlanResult* ExecuteStatement(const int& batchSize);
+    [[nodiscard]] inline PhysicalPlanResult* ExecuteStatement(const PhysicalPlanExecutionProperties& properties);
     [[nodiscard]] inline PhysicalPlanResult* ExecuteConstantStatement()const;
 
     public:
@@ -166,7 +171,7 @@ namespace QueryPipeline::PhysicalPlan{
         std::vector<Expressions::Expression*>& resultExpressions,
         std::vector<Headers::ColumnHeader>& columnHeaders);
       ~PhysicalProject() override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalFilter final : public PhysicalOperator{
@@ -176,7 +181,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalFilter(PhysicalOperator* child, Expressions::Expression* filter);
       ~PhysicalFilter() override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalTop final : public PhysicalOperator {
@@ -187,7 +192,7 @@ namespace QueryPipeline::PhysicalPlan{
       PhysicalTop(PhysicalOperator* child, const int64_t& top);
       ~PhysicalTop() override;
 
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalDistinct final : public PhysicalOperator {
@@ -196,7 +201,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalDistinct(PhysicalOperator* child);
       ~PhysicalDistinct()override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalInsert final : public PhysicalOperator{
@@ -207,8 +212,8 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<column_index_t> columnsIndices;
 
 
-    PhysicalPlanResult* InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId, const int& batchSize)const;
-    PhysicalPlanResult* InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const transaction_id_t& transactionId);
+    PhysicalPlanResult* InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const PhysicalPlanExecutionProperties& properties)const;
+    PhysicalPlanResult* InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const PhysicalPlanExecutionProperties& properties);
   public:
     PhysicalInsert(
       Statements::TableName* table,
@@ -217,7 +222,7 @@ namespace QueryPipeline::PhysicalPlan{
       std::vector<column_index_t>& columnsIndices
     );
     ~PhysicalInsert()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalHeapDelete final : public PhysicalOperator{
@@ -227,7 +232,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalHeapDelete(Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalHeapDelete()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexScanDelete final : public PhysicalOperator{
@@ -238,7 +243,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalIndexScanDelete(Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalIndexScanDelete()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexSeekDelete final : public PhysicalOperator{
@@ -249,7 +254,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalIndexSeekDelete(Statements::TableName* table, Expressions::Expression* expression);
     ~PhysicalIndexSeekDelete()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalHeapUpdate final : public PhysicalOperator{
@@ -260,7 +265,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalHeapUpdate(Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalHeapUpdate()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexScanUpdate final : public PhysicalOperator{
@@ -271,7 +276,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalIndexScanUpdate(Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalIndexScanUpdate()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexSeekUpdate final : public PhysicalOperator{
@@ -282,7 +287,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalIndexSeekUpdate(Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalIndexSeekUpdate()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalTableCreate final : public PhysicalOperator{
@@ -299,7 +304,7 @@ namespace QueryPipeline::PhysicalPlan{
         Headers::Index& primaryKey,
         std::string& constraintName);
       ~PhysicalTableCreate()override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalOrderBy final : public PhysicalOperator{
@@ -308,7 +313,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalOrderBy(PhysicalOperator* child, std::vector<Statements::OrderColumn*>& expressions);
     ~PhysicalOrderBy()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexCreate final : public PhysicalOperator {
@@ -322,7 +327,7 @@ namespace QueryPipeline::PhysicalPlan{
         Statements::TableName*  table,
         std::string& constraintName,
         vector<Constants::column_index_t>& columns);
-    PhysicalPlanResult * Execute(const int& batchSize) override;
+    PhysicalPlanResult * Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalAddColumn final : public PhysicalOperator {
@@ -332,7 +337,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::NewColumn* column);
       ~PhysicalAddColumn()override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalDropColumn final : public PhysicalOperator {
@@ -342,7 +347,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::DropColumn* column);
       ~PhysicalDropColumn()override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalRenameColumn final : public PhysicalOperator {
@@ -352,7 +357,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::RenameColumn* column);
       ~PhysicalRenameColumn()override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalAlterColumn final : public PhysicalOperator {
@@ -362,7 +367,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::AlterColumn* column);
       ~PhysicalAlterColumn()override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalNestedLoopInnerJoin final : public PhysicalOperator {
@@ -377,7 +382,7 @@ namespace QueryPipeline::PhysicalPlan{
         Expressions::Expression* joinCondition
       );
       ~PhysicalNestedLoopInnerJoin()override;
-      PhysicalPlanResult* Execute(const int& batchSize) override;
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalNestedLoopLeftJoin final : public PhysicalOperator {
@@ -392,7 +397,7 @@ namespace QueryPipeline::PhysicalPlan{
       Expressions::Expression* joinCondition
     );
     ~PhysicalNestedLoopLeftJoin()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalNestedLoopFullJoin final : public PhysicalOperator {
@@ -407,6 +412,6 @@ namespace QueryPipeline::PhysicalPlan{
       Expressions::Expression* joinCondition
     );
     ~PhysicalNestedLoopFullJoin()override;
-    PhysicalPlanResult* Execute(const int& batchSize) override;
+    PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 }

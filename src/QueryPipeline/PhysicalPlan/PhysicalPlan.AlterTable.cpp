@@ -13,7 +13,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalAddColumn::Execute(const int& batchSize){
+  PhysicalPlanResult * PhysicalAddColumn::Execute(const PhysicalPlanExecutionProperties& properties){
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
 
     auto& server = Server::ServerInstance::Get();
@@ -84,7 +84,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalDropColumn::Execute(const int& batchSize){
+  PhysicalPlanResult * PhysicalDropColumn::Execute(const PhysicalPlanExecutionProperties& properties){
     auto* result = new PhysicalPlanResult();
 
     auto& server = Server::ServerInstance::Get();
@@ -116,7 +116,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalRenameColumn::Execute(const int& batchSize){
+  PhysicalPlanResult * PhysicalRenameColumn::Execute(const PhysicalPlanExecutionProperties& properties){
     auto* result = new PhysicalPlanResult();
 
     auto& server = Server::ServerInstance::Get();
@@ -154,7 +154,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalAlterColumn::Execute(const int& batchSize){
+  PhysicalPlanResult * PhysicalAlterColumn::Execute(const PhysicalPlanExecutionProperties& properties){
     auto* result = new PhysicalPlanResult();
 
     auto& server = Server::ServerInstance::Get();

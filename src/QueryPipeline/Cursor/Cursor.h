@@ -5,15 +5,17 @@
 namespace QueryPipeline {
   class Cursor {
     PipelineConstants::cursor_id_t id;
-    int batchSize;
+     PhysicalPlan::PhysicalPlanExecutionProperties properties;
+
     bool hasMoreRows;
+
     PhysicalPlan::PhysicalOperator* plan;
 
   public:
-    Cursor(const PipelineConstants::cursor_id_t& cursorId, PhysicalPlan::PhysicalOperator* plan, const int& batchSize = 100);
+    Cursor(const PipelineConstants::cursor_id_t& cursorId, const PhysicalPlan::PhysicalPlanExecutionProperties& properties, PhysicalPlan::PhysicalOperator* plan);
     ~Cursor();
 
-    [[nodiscard]] PhysicalPlan::PhysicalPlanResult * fetchNextBatch();
+    [[nodiscard]] PhysicalPlan::PhysicalPlanResult* fetchNextBatch();
     [[nodiscard]] const bool& hasMore()const;
   };
 }
