@@ -37,7 +37,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     auto& server = Server::ServerInstance::Get();
 
-    if (server.CreateUser(this->username, this->password, this->roleName) == false) {
+    if (server.CreateUser(properties.transactionId, this->username, this->password, this->roleName) == false) {
       result->code = Errors::RuntimeError::Error;
       result->message = "Failed to create user";
     }
@@ -82,9 +82,9 @@ namespace QueryPipeline::PhysicalPlan {
         "Failed to retrieve user session"
       };
 
-    const auto result = server.InsertDbToMasterDb(this->dbName, this->dbName + ".db", false, session->user->name);
+    const auto result = server.InsertDbToMasterDb(properties.transactionId, this->dbName, this->dbName + ".db", false, session->user->name);
 
-    const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(result.primaryKey.GetKeyAsInt(), "dbo");
+    const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(properties.transactionId, result.primaryKey.GetKeyAsInt(), "dbo");
     
     DatabaseEngine::CreateDatabase(this->dbName);
 
@@ -124,7 +124,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         "Failed to retrieve user session"
       };
 
-    const auto insertResult = Server::ServerInstance::Get().InsertSchemaToMasterDb(this->databaseId, this->schemaName, session->user->name);
+    const auto insertResult = Server::ServerInstance::Get().InsertSchemaToMasterDb(properties.transactionId, this->databaseId, this->schemaName, session->user->name);
 
     return new PhysicalPlanResult{
       insertResult.code,
@@ -608,6 +608,7 @@ PhysicalInsert::PhysicalInsert(
     const int16_t& index = static_cast<int16_t>(tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1);
 
     const auto tableResult = server.InsertTableToMasterDb(
+        properties.transactionId,
         this->table->databaseId,
         this->table->schemaId,
         this->table->name,
@@ -615,6 +616,7 @@ PhysicalInsert::PhysicalInsert(
     );
 
     const auto tableStatsResult = server.InsertTableStatisticsToMasterDb(
+      properties.transactionId,
       tableResult.primaryKey.GetKeyAsInt()
     );
 
@@ -625,6 +627,7 @@ PhysicalInsert::PhysicalInsert(
     for (const auto& column: this->columns) {
       const auto columnResult =
           server.InsertColumnToMasterDb(
+            properties.transactionId,
             tableResult.primaryKey.GetKeyAsInt(),
             column->name.name,
             ColumnTypesDictionary.Get(Functions::String::NormalizeString(column->type.name)),
@@ -637,12 +640,13 @@ PhysicalInsert::PhysicalInsert(
             session->user->name
           );
 
-      const auto columnStatsResult = server.InsertColumnStatisticsToMasterDb(columnResult.primaryKey.GetKeyAsInt());
+      const auto columnStatsResult = server.InsertColumnStatisticsToMasterDb(properties.transactionId, columnResult.primaryKey.GetKeyAsInt());
 
       columnIdsDict.Add(column->index, columnResult.primaryKey.GetKeyAsInt());
 
       if (!column->defaultValue.GetIsNull() || column->defaultValue.GetSize() != 0) {
         const auto _ = server.InsertDefaultValuesToMasterDb(
+          properties.transactionId,
           columnResult.primaryKey.GetKeyAsInt(),
           column->defaultValue
         );
@@ -653,6 +657,7 @@ PhysicalInsert::PhysicalInsert(
         continue;
 
       const auto _ = server.InsertIdentityColumnToMasterDb(
+          properties.transactionId,
           tableResult.primaryKey.GetKeyAsInt(),
           columnResult.primaryKey.GetKeyAsInt(),
           column->identity->seed,
@@ -678,6 +683,7 @@ PhysicalInsert::PhysicalInsert(
         return nullptr;
 
     const auto indexResult = server.InsertIndexToMasterDb(
+         properties.transactionId,
         tableResult.primaryKey.GetKeyAsInt(),
         this->constraintName,
         true,
@@ -688,6 +694,7 @@ PhysicalInsert::PhysicalInsert(
     const auto indexId = indexResult.primaryKey.GetKeyAsInt();
 
     const auto constraintResult = server.InsertConstraintToMasterDb(
+        properties.transactionId,
       tableResult.primaryKey.GetKeyAsInt(),
         this->constraintName,
         Headers::ConstraintType::PrimaryKey,
@@ -698,12 +705,14 @@ PhysicalInsert::PhysicalInsert(
 
     for(int i = 0;i < primaryKeyColumnIds.size(); i++){
       auto _ = server.InsertIndexColumnToMasterDb(
+        properties.transactionId,
         indexResult.primaryKey.GetKeyAsInt(),
         primaryKeyColumnIds[i],
         this->primaryKey.columns[i],
         true);
 
       _ = server.InsertConstraintColumnToMasterDb(
+          properties.transactionId,
           constraintResult.primaryKey.GetKeyAsInt(),
           primaryKeyColumnIds[i],
       this->primaryKey.columns[i]
@@ -755,6 +764,7 @@ PhysicalInsert::PhysicalInsert(
     const auto columnsHeaders = Server::ServerInstance::Get().SelectColumns(this->table->tableId);
 
     const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
+        properties.transactionId,
         this->table->tableId,
         this->constraintName,
         false,
@@ -762,7 +772,8 @@ PhysicalInsert::PhysicalInsert(
 
     const auto indexId = indexResult.primaryKey.GetKeyAsInt();
 
-    const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(
+    const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(\
+      properties.transactionId,
       this->table->tableId,
       this->constraintName,
       Headers::ConstraintType::IndexKey,
@@ -774,6 +785,7 @@ PhysicalInsert::PhysicalInsert(
 
       const auto indexColumnResult =
         Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
+             properties.transactionId,
             indexResult.primaryKey.GetKeyAsInt(),
             header.id,
             columnPos,
@@ -781,6 +793,7 @@ PhysicalInsert::PhysicalInsert(
 
       const auto constraintColumnResult =
         Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
+              properties.transactionId,
             constraintResult.primaryKey.GetKeyAsInt(),
             header.id,
         columnPos);

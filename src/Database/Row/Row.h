@@ -2,11 +2,16 @@
 #include <vector>
 #include "../Constants.h"
 #include "../../QueryPipeline/Statements/Statements.h"
-#include "../Pages/OverflowPage/OverflowPage.h"
 #include "../../Systemic/Errors/Errors.h"
+#include "../Pages/Page.h"
+#include "../Pages/LargeObject/LargeObjectPage.h"
 
-namespace ByteMaps
-{
+namespace Pages {
+    struct OverflowPointer;
+    struct OverflowRow;
+}
+
+namespace ByteMaps{
     class BitMap;
 }
 
@@ -15,18 +20,24 @@ namespace DatabaseEngine::StorageTypes
     class Table;
     class Block;
 
-    typedef struct RowHeader
+    struct RowVersioningHeader {
+        Constants::transaction_id_t createdTransactionId;
+        Constants::transaction_id_t deletedTransactionId;
+
+        Pages::RowVersionPointer olderVersionPointer;
+    };
+
+    struct RowHeader
     {
+        row_size_t rowSize;
         ByteMaps::BitMap *nullBitMap;
         ByteMaps::BitMap *largeObjectBitMap;
         ByteMaps::BitMap *overflowBitMap;
-        row_size_t rowSize;
-        size_t maxRowSize;
 
         RowHeader();
         ~RowHeader();
         RowHeader& operator= (const RowHeader& otherHeader);
-    } RowHeader;
+    };
 
     struct CachedValue {
         Value value;
@@ -38,6 +49,8 @@ namespace DatabaseEngine::StorageTypes
     class Row
     {
         RowHeader header;
+        RowVersioningHeader versionHeader;
+
         std::vector<Block *> data;
 
         mutable std::vector<CachedValue> cache;
@@ -58,7 +71,7 @@ namespace DatabaseEngine::StorageTypes
             const ByteMaps::BitMap* nullBitMap
         );
 
-        Row(const std::vector<const Column*>& columns);
+        explicit Row(const std::vector<const Column*>& columns);
 
         Row(const Row &copyRow);
 
@@ -103,7 +116,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] bool GetOverflowBitMapValue(const bit_map_pos_t &position) const;
 
-        RowHeader *GetHeader();
+        RowHeader* GetHeader();
 
         [[nodiscard]] row_size_t GetTotalRowSize() const;
 
@@ -119,10 +132,6 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] const Value& GetColumnByIndex(const int& indexPos) const;
 
-        void Serialize(std::vector<char>* buffer, uint32_t& pos)const;
-
-        void Deserialize(const std::vector<char>* buffer, uint32_t& pos);
-
         [[nodiscard]] Row* Join(const Row* row) const;
 
         [[nodiscard]] Row* LeftJoin(const std::vector<const Column*>& innerTableColumns) const;
@@ -132,5 +141,33 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] const bool& IsCopy()const;
 
         friend std::ostream& operator<<(std::ostream& os, const Row& row);
+
+        void SetCurrentTransactionId(const Constants::transaction_id_t& transactionId);
+
+        void SetDeletedTransactionId(const Constants::transaction_id_t& transactionId);
+
+        void SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset);
+
+        bool IsVisibleForTransaction(const Constants::transaction_id_t& transactionId) const;
+
+        const RowVersioningHeader& GetVersionHeader() const;
+
+        //Getters Setters Serializers etc
+
+        void Serialize(std::vector<char>* buffer, uint32_t& pos)const;
+
+        void Deserialize(const std::vector<char>* buffer, uint32_t& pos);
+
+        void ReadHeaderFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet);
+
+        void ReadVersionHeaderFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet);
+
+        void ReadDataFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet, const std::vector<Column*>& columns);
+
+        void WriteHeaderToDisk(fstream* filePtr)const;
+
+        void WriteVersionHeaderToDisk(fstream* filePtr)const;
+
+        void WriteDataToDisk(fstream* filePtr)const;
     };
 }

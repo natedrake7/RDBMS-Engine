@@ -68,9 +68,9 @@ namespace Pages {
       offSet += this->data->objectSize;
     }
 
-    void LargeObjectPage::WritePageToFile(fstream *filePtr)
+    void LargeObjectPage::WriteToDisk(fstream *filePtr)
     {
-        this->WritePageHeaderToFile(filePtr);
+        this->WritePageHeaderToDisk(filePtr);
 
         if(this->header.pageSize == 0)
           return;

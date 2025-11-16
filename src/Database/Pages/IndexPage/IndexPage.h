@@ -62,7 +62,7 @@ namespace Pages {
 			~IndexPage() override;
 
 			void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
-			void WritePageToFile(fstream *filePtr) override;
+			void WriteToDisk(fstream *filePtr) override;
 
                         void MarkEmpty();
 

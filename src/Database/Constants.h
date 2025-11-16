@@ -45,6 +45,7 @@ namespace Constants
     typedef uint32_t log_sequence_number_t;
     typedef uint64_t transaction_id_t;
 
+
     constexpr transaction_id_t INVALID_LOG_SEQUENCE_NUMBER = std::numeric_limits<log_sequence_number_t>::max();
     constexpr table_id_t INVALID_TABLE_ORDINAL_POS = std::numeric_limits<table_id_t>::max();
     constexpr transaction_id_t INVALID_TRANSACTION_ID = std::numeric_limits<transaction_id_t>::max();
@@ -177,6 +178,8 @@ namespace Constants
     constexpr uint16_t GAM_PAGE_SIZE = 64000;
     constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;
     constexpr page_id_t HEADER_PAGE_ID = 0;
+
+    constexpr row_header_size_t ROW_VERSION_HEADER_SIZE = 2 * sizeof(transaction_id_t) + sizeof(page_id_t) + sizeof(page_offset_t);
 
     enum class JoinType : uint8_t {
         Inner = 0,

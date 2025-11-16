@@ -128,12 +128,12 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
     }
 }
 
-void IndexPage::WritePageToFile(fstream *filePtr) 
+void IndexPage::WriteToDisk(fstream *filePtr)
 {
     if (!this->keys.empty())
         this->additionalHeader.numberOfSubKeys = this->keys.front()->subKeys.size();
     
-    this->WritePageHeaderToFile(filePtr);
+    this->WritePageHeaderToDisk(filePtr);
     this->WriteAdditionalHeaderToFile(filePtr);
 
     const uint16_t numOfKeys = this->keys.size();
@@ -163,7 +163,7 @@ void IndexPage::WritePageToFile(fstream *filePtr)
 
     if (this->additionalHeader.treeType == TreeType::Clustered) {
         for (const auto& row : this->rows)
-            Page::WriteRowToFile(filePtr, row);
+            Page::WriteRowToDisk(filePtr, row);
 
         return;
     }

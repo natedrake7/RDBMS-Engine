@@ -39,7 +39,7 @@ namespace Pages {
         void GetAllocatedExtents(vector<extent_id_t>* allocatedExtents, const extent_id_t& startingExtentIndex) const;
         [[nodiscard]] extent_id_t GetLastAllocatedExtent() const;
         void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
-        void WritePageToFile(fstream* filePtr) override;
+        void WriteToDisk(fstream* filePtr) override;
         void SetNextPageId(const page_id_t& nextPageId);
         const page_id_t& GetNextPageId() const;
     };

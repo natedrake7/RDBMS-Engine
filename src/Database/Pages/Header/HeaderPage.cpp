@@ -32,9 +32,9 @@ namespace Pages
         delete this->databaseHeader;
     }
 
-    void HeaderPage::WritePageToFile(fstream *filePtr)
+    void HeaderPage::WriteToDisk(fstream *filePtr)
     {
-        this->WritePageHeaderToFile(filePtr);
+        this->WritePageHeaderToDisk(filePtr);
 
         filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->numberOfTables), sizeof(table_number_t));
         filePtr->write(reinterpret_cast<const char *>(&this->databaseHeader->lastPageFreeSpacePageId), sizeof(page_id_t));

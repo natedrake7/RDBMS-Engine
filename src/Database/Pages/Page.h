@@ -24,6 +24,16 @@ namespace DatabaseEngine::StorageTypes
 
 namespace Pages
 {
+    struct RowVersionPointer {
+        Constants::page_id_t pageId;
+        Constants::page_offset_t offset;
+
+        RowVersionPointer() {
+            this->pageId = Constants::INVALID_PAGE_ID;
+            this->offset = 0;
+        }
+    };
+
     struct PageHeader
     {
         page_id_t pageId;
@@ -52,14 +62,14 @@ namespace Pages
         PageHeader header;
 
         vector<DatabaseEngine::StorageTypes::Row *> rows;
-        void WritePageHeaderToFile(fstream *filePtr) const;
+        void WritePageHeaderToDisk(fstream *filePtr) const;
         static DatabaseEngine::StorageTypes::Row* ReadRowFromDisk(
             const vector<char>& data,
             const DatabaseEngine::StorageTypes::Table *table,
             page_offset_t &offSet,
             const vector<DatabaseEngine::StorageTypes::Column*>& columns);
 
-        static void WriteRowToFile(fstream* filePtr, DatabaseEngine::StorageTypes::Row* row);
+        static void WriteRowToDisk(fstream* filePtr, const DatabaseEngine::StorageTypes::Row* row);
 
     public:
         explicit Page(const page_id_t &pageId, const bool &isPageCreation = false);
@@ -71,7 +81,7 @@ namespace Pages
         void InsertRow(DatabaseEngine::StorageTypes::Row *row, const int& indexPosition);
 
         virtual void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
-        virtual void WritePageToFile(fstream *filePtr);
+        virtual void WriteToDisk(fstream *filePtr);
 
         void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
         void Delete(const Expressions::Expression* expression);

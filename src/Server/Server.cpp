@@ -10,6 +10,7 @@
 #include "../Database/Storage/StorageManager/StorageManager.h"
 #include "../Systemic/Functions/StringFunctions.h"
 #include "../Database/AdditionalFunctions/SortingFunctions.h"
+#include "../Database/TransactionManager/TransactionManager.h"
 
 #include <iostream>
 
@@ -85,9 +86,11 @@ namespace Server {
 
     this->CreateSystemDatabase();
 
-    const auto dbInsertResult = this->InsertDbToMasterDb(this->sysDbName, this->sysDbPath, true);
+    const auto transactionId = DatabaseEngine::TransactionManager::Get().BeginTransaction(DataTypes::Guid::Empty());
 
-    const auto schemaInsertResult = this->InsertSchemaToMasterDb(dbInsertResult.primaryKey.GetKeyAsInt(), "dbo");
+    const auto dbInsertResult = this->InsertDbToMasterDb(transactionId, this->sysDbName, this->sysDbPath, true);
+
+    const auto schemaInsertResult = this->InsertSchemaToMasterDb(transactionId, dbInsertResult.primaryKey.GetKeyAsInt(), "dbo");
 
     Dictionary<string, column_index_t> columnNameToIndex;
 
@@ -96,6 +99,7 @@ namespace Server {
 
       const auto tableResult =
         this->InsertTableToMasterDb(
+            transactionId,
           dbInsertResult.primaryKey.GetKeyAsInt(),
           schemaInsertResult.primaryKey.GetKeyAsInt(),
           table.name,
@@ -105,6 +109,7 @@ namespace Server {
 
       const auto tableStatsResult =
         this->InsertTableStatisticsToMasterDb(
+          transactionId,
          tableResult.primaryKey.GetKeyAsInt()
         );
 
@@ -125,6 +130,7 @@ namespace Server {
 
         const auto columnResult =
           this->InsertColumnToMasterDb(
+            transactionId,
            tableResult.primaryKey.GetKeyAsInt(),
            column.name,
            type,
@@ -140,6 +146,7 @@ namespace Server {
 
         const auto columnStatsResult =
           this->InsertColumnStatisticsToMasterDb(
+            transactionId,
             columnResult.primaryKey.GetKeyAsInt()
           );
 
@@ -162,14 +169,17 @@ namespace Server {
       //TODO keep the last value keys
       const auto indexResult =
         this->InsertIndexToMasterDb(
+        transactionId,
         tableResult.primaryKey.GetKeyAsInt(),
         "PK" + _columns,
-        true);
+        true
+      );
 
       auto indexKey = indexResult.primaryKey.GetKeyAsInt();
 
       const auto constraintResult =
           this->InsertConstraintToMasterDb(
+          transactionId,
           tableResult.primaryKey.GetKeyAsInt(),
           "PK" + _columns,
           Headers::ConstraintType::PrimaryKey,
@@ -180,12 +190,14 @@ namespace Server {
         const auto& columnIndex = columnNameToIndex.Get(table.primaryKey[j]);
 
         auto _ = this->InsertIndexColumnToMasterDb(
+            transactionId,
             indexResult.primaryKey.GetKeyAsInt(),
             columnIdsDict.Get(table.primaryKey[j]),
             static_cast<int16_t>(j),
             true);
 
         _ = this->InsertConstraintColumnToMasterDb(
+          transactionId,
           constraintResult.primaryKey.GetKeyAsInt(),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j)
@@ -193,6 +205,7 @@ namespace Server {
 
         if(table.hasIdentity){
           _ = this->InsertIdentityColumnToMasterDb(
+            transactionId,
             tableResult.primaryKey.GetKeyAsInt(),
             columnIdsDict.Get(table.primaryKey[j]),
             1,
@@ -208,8 +221,8 @@ namespace Server {
     this->masterDb->GetColumnsHeaders();
     this->masterDb->UpdateIdentityManagersIds();
 
-    this->InsertSystemRoles();
-    this->InsertSystemUsers();
+    this->InsertSystemRoles(transactionId);
+    this->InsertSystemUsers(transactionId);
 
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
@@ -234,7 +247,7 @@ namespace Server {
     return this->userManager.GetUser(userName) != nullptr;
   }
 
-  bool ServerInstance::CreateUser(const std::string &userName, const std::string &password, const std::string& roleName){
+  bool ServerInstance::CreateUser(const transaction_id_t& transactionId, const std::string &userName, const std::string &password, const std::string& roleName){
     if (this->userManager.GetUser(userName) != nullptr)
       return false;
 
@@ -251,6 +264,7 @@ namespace Server {
 
     const auto result =
       this->InsertUserToMasterDb(
+        transactionId,
         userName,
         hashedPassword,
         role->id,
@@ -361,12 +375,14 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertDbToMasterDb(
+    const transaction_id_t& transactionId,
     const string& dbName,
     const string& dbPath,
     const bool& isSystem,
     const string& user,
     const int& version,
-    const bool& isDeleted) const{
+    const bool& isDeleted
+  ) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
 
       const auto currentDate = DataTypes::DateTime::Now();
@@ -383,7 +399,7 @@ namespace Server {
         Value(nullptr, 9),
     };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -393,6 +409,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertSchemaToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t &databaseId,
     const string &schemaName,
     const string &user,
@@ -412,7 +429,7 @@ namespace Server {
         Value(nullptr, 8),
      };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -422,6 +439,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertTableToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t & databaseId,
     const int32_t & schemaId,
     const string& tableName,
@@ -429,7 +447,8 @@ namespace Server {
     const bool& isSystem,
     const string& user,
     const int& version,
-    const bool& isDeleted) const{
+    const bool& isDeleted
+  ) const{
 
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysTables);
       const auto currentDate = DataTypes::DateTime::Now();
@@ -448,7 +467,7 @@ namespace Server {
         Value(nullptr, 11),
       };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
       const auto result = table->InsertRow(transactionId, fields);
 
@@ -458,6 +477,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertColumnToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t & tableId,
     const string &columnName,
     const DataType &columnType,
@@ -469,7 +489,8 @@ namespace Server {
     const bool& isSystem,
     const string& user,
     const int& version,
-    const bool& isDeleted) const{
+    const bool& isDeleted
+  ) const{
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysColumns);
       const auto currentDate = DataTypes::DateTime::Now();
 
@@ -496,7 +517,7 @@ namespace Server {
         fields[5] = Value(scale, 6);
       }
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
       const auto result = table->InsertRow(transactionId, fields);
 
@@ -506,6 +527,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertIndexToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t & tableId,
     const string &indexName,
     const bool &isClustered,
@@ -529,7 +551,7 @@ namespace Server {
       Value(nullptr, 10),
      };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
       const auto result = table->InsertRow(transactionId, fields);
 
@@ -539,6 +561,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertIndexColumnToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t & indexId,
     const int32_t & columnId,
     const int16_t & ordinalPosition,
@@ -558,7 +581,7 @@ namespace Server {
       Value(nullptr, 6),
     };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -568,6 +591,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertIdentityColumnToMasterDb(
+      const transaction_id_t& transactionId,
       const int32_t & tableId,
       const int32_t & columnId,
       const int32_t & seedValue,
@@ -576,7 +600,8 @@ namespace Server {
       const bool & isCached,
       const int32_t & cacheBlock,
       const int& version,
-      const bool& isDeleted) const{
+      const bool& isDeleted
+  ) const{
 
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
       const auto currentDate = DataTypes::DateTime::Now();
@@ -594,7 +619,7 @@ namespace Server {
         Value(nullptr, 9),
       };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -604,6 +629,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertDefaultValuesToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t &columnId,
     const Value &value,
     const int &version,
@@ -620,7 +646,7 @@ namespace Server {
         Value(nullptr, 4),
       };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
       const auto result = table->InsertRow(transactionId, fields);
 
@@ -630,6 +656,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertTableStatisticsToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t &tableId,
     const int64_t& rowCount,
     const int32_t& rowSize,
@@ -654,7 +681,7 @@ namespace Server {
       Value(nullptr, static_cast<column_index_t>(SysTableStats::DeletedAt)),
     };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -664,6 +691,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertColumnStatisticsToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t &columnId,
     const int64_t &distinctCount,
     const int64_t &nullCount,
@@ -690,7 +718,7 @@ namespace Server {
       Value(nullptr, static_cast<column_index_t>(SysColumnStats::DeletedAt)),
     };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -700,6 +728,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertRoleToMasterDb(
+    const transaction_id_t& transactionId,
     const std::string &roleName,
     const Security::Permission &permissions,
     const bool& isSystem,
@@ -722,7 +751,7 @@ namespace Server {
       Value(nullptr, static_cast<column_index_t>(SysRoles::DeletedAt)),
     };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -732,6 +761,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertUserToMasterDb(
+    const transaction_id_t& transactionId,
     const std::string &username,
     const std::string &passwordHash,
     const int32_t &roleId,
@@ -758,7 +788,7 @@ namespace Server {
       Value(nullptr, static_cast<column_index_t>(SysUsers::DeletedAt)),
     };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -797,6 +827,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertConstraintToMasterDb(
+      const transaction_id_t& transactionId,
       const int32_t & tableId,
       const string & constraintName,
       const Headers::ConstraintType & constraintType,
@@ -804,7 +835,8 @@ namespace Server {
       const int32_t *constraintIndexId,
       const string & user,
       const int& version,
-      const bool& isDeleted) const{
+      const bool& isDeleted
+  ) const{
 
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
       const auto currentDate = DataTypes::DateTime::Now();
@@ -826,7 +858,7 @@ namespace Server {
       if(constraintIndexId != nullptr)
           fields.at(4).SetData(*constraintIndexId);
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -836,6 +868,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertConstraintColumnToMasterDb(
+    const transaction_id_t& transactionId,
     const int32_t & constraintId,
     const int32_t & columnId,
     const int32_t & ordinalPosition,
@@ -854,7 +887,7 @@ namespace Server {
         Value(nullptr, 5),
     };
 
-    const auto transactionId = this->masterDb->StartLogTransaction();
+    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(transactionId, fields);
 
@@ -1763,7 +1796,7 @@ namespace Server {
     return users;
   }
 
-  void ServerInstance::InsertSystemRoles(){
+  void ServerInstance::InsertSystemRoles(const transaction_id_t& transactionId){
     const auto admin = std::string(ServerConstants::ADMIN_NAME);
     const auto dbOwner = std::string(ServerConstants::DB_OWNER_NAME);
     const auto dbWriter = std::string(ServerConstants::DB_WRITER_NAME);
@@ -1771,6 +1804,7 @@ namespace Server {
     const auto guest = std::string(ServerConstants::GUEST_NAME);
 
     auto result = this->InsertRoleToMasterDb(
+      transactionId,
       admin,
       ServerConstants::ADMIN_PERMISSIONS
     );
@@ -1784,6 +1818,7 @@ namespace Server {
       ));
 
     result = this->InsertRoleToMasterDb(
+      transactionId,
       dbOwner,
       ServerConstants::DB_OWNER_PERMISSIONS
     );
@@ -1797,6 +1832,7 @@ namespace Server {
       ));
 
     result = this->InsertRoleToMasterDb(
+      transactionId,
       dbWriter,
       ServerConstants::DB_WRITER_PERMISSIONS
     );
@@ -1811,6 +1847,7 @@ namespace Server {
     );
 
     result = this->InsertRoleToMasterDb(
+      transactionId,
       dbReader,
       ServerConstants::DB_READER_PERMISSIONS
     );
@@ -1824,6 +1861,7 @@ namespace Server {
      ));
 
     result = this->InsertRoleToMasterDb(
+      transactionId,
       guest,
       ServerConstants::GUEST_PERMISSIONS
     );
@@ -1837,7 +1875,7 @@ namespace Server {
      ));
   }
 
-  void ServerInstance::InsertSystemUsers(){
+  void ServerInstance::InsertSystemUsers(const transaction_id_t& transactionId){
     const auto admin = std::string(ServerConstants::ADMIN_NAME);
 
     const auto* role = this->roleManager.GetRole(admin);
@@ -1850,6 +1888,7 @@ namespace Server {
 
     const auto result =
       this->InsertUserToMasterDb(
+          transactionId,
         admin,
         hashedPassword,
         role->id,

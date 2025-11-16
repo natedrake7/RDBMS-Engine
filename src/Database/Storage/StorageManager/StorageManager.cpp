@@ -154,7 +154,7 @@ void StorageManager::RemovePage(Pages::Page *page){
   auto* file = this->fileManager.GetFile(filename);
 
   if (page->IsDirty()) {
-    page->WritePageToFile(file);
+    page->WriteToDisk(file);
     file->flush();
   }
 
@@ -173,7 +173,7 @@ void StorageManager::RemovePageWithoutKeyDeletion(Pages::Page *page){
   if (page->IsDirty()) {
     StorageManager::SetWriteFilePointerToOffset(file, page->GetPageId() * Constants::PAGE_SIZE);
 
-    page->WritePageToFile(file);
+    page->WriteToDisk(file);
     file->flush();
   }
 

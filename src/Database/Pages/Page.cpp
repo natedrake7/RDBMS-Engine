@@ -59,8 +59,7 @@ namespace Pages
             delete row;
     }
 
-    void Page::InsertRow(Row *row, int* indexPosition)
-    {
+    void Page::InsertRow(Row *row, int* indexPosition){
         this->rows.push_back(row);
         
         if(indexPosition != nullptr)
@@ -71,16 +70,14 @@ namespace Pages
         this->isDirty = true;
     }
 
-    void Page::InsertRow(Row *row, const int& indexPosition)
-    {
+    void Page::InsertRow(Row *row, const int& indexPosition){
         this->rows.insert(this->rows.begin() + indexPosition, row);
         this->header.bytesLeft -= row->GetTotalRowSize();
         this->header.pageSize++;
         this->isDirty = true;
     }
 
-    void Page::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr)
-    {
+    void Page::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr){
         const auto &columns = table->GetColumns();
 
         for (int i = 0; i < this->header.pageSize; i++)
@@ -89,79 +86,21 @@ namespace Pages
 
     Row* Page::ReadRowFromDisk(const vector<char>& data, const Table *table, page_offset_t &offSet, const vector<Column*>& columns){
         auto*  row = new Row(*table);
-        RowHeader *rowHeader = row->GetHeader();
 
-        memcpy(&rowHeader->rowSize, data.data() + offSet, sizeof(row_size_t));
-        offSet += sizeof(row_size_t);
-
-        memcpy(&rowHeader->maxRowSize, data.data() + offSet, sizeof(size_t));
-        offSet += sizeof(size_t);
-
-        rowHeader->nullBitMap->GetDataFromFile(data, offSet);
-        rowHeader->largeObjectBitMap->GetDataFromFile(data, offSet);
-        rowHeader->overflowBitMap->GetDataFromFile(data, offSet);
-
-        for (int j = 0; j < columns.size(); j++)
-        {
-            if (rowHeader->nullBitMap->Get(j))
-            {
-                auto *block = new Block(columns[j]);
-
-                row->InsertColumnData(block, j);
-
-                continue;
-            }
-
-            block_size_t bytesToRead;
-
-            memcpy(&bytesToRead, data.data() + offSet, sizeof(block_size_t));
-            offSet += sizeof(block_size_t);
-
-            auto *bytes = new unsigned char[bytesToRead];
-            memcpy(bytes, data.data() + offSet, bytesToRead);
-
-            offSet += bytesToRead;
-
-            auto *block = new Block(bytes, bytesToRead, columns[j]);
-
-            row->InsertColumnData(block, j);
-        }
+        row->ReadHeaderFromDisk(data, offSet);
+        row->ReadVersionHeaderFromDisk(data, offSet);
+        row->ReadDataFromDisk(data, offSet, columns);
 
         return row;
     }
 
-    void Page::WriteRowToFile(fstream* filePtr, Row* row){
-        const RowHeader *rowHeader = row->GetHeader();
-
-        filePtr->write(reinterpret_cast<const char *>(&rowHeader->rowSize), sizeof(row_size_t));
-        filePtr->write(reinterpret_cast<const char *>(&rowHeader->maxRowSize), sizeof(size_t));
-        rowHeader->nullBitMap->WriteDataToFile(filePtr);
-        rowHeader->largeObjectBitMap->WriteDataToFile(filePtr);
-        rowHeader->overflowBitMap->WriteDataToFile(filePtr);
-
-        column_index_t columnIndex = 0;
-        for (const auto &block : row->GetData())
-        {
-            if (rowHeader->nullBitMap->Get(columnIndex))
-            {
-                columnIndex++;
-                continue;
-            }
-
-            block_size_t dataSize = block->GetBlockSize();
-
-            filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(block_size_t));
-
-            const auto &data = block->GetBlockData();
-
-            filePtr->write(reinterpret_cast<const char *>(data), dataSize);
-
-            columnIndex++;
-        }
+    void Page::WriteRowToDisk(fstream* filePtr, const Row* row){
+        row->WriteHeaderToDisk(filePtr);
+        row->WriteVersionHeaderToDisk(filePtr);
+        row->WriteDataToDisk(filePtr);
     }
 
-    void Page::WritePageHeaderToFile(fstream *filePtr) const
-    {
+    void Page::WritePageHeaderToDisk(fstream *filePtr) const{
         filePtr->write(reinterpret_cast<const char *>(&this->header.pageId), sizeof(page_id_t));
         filePtr->write(reinterpret_cast<const char *>(&this->header.pageSize), sizeof(page_size_t));
         filePtr->write(reinterpret_cast<const char *>(&this->header.bytesLeft), sizeof(page_size_t));
@@ -169,12 +108,11 @@ namespace Pages
     }
 
 
-    void Page::WritePageToFile(fstream *filePtr)
-    {
-        this->WritePageHeaderToFile(filePtr);
+    void Page::WriteToDisk(fstream *filePtr){
+        this->WritePageHeaderToDisk(filePtr);
 
         for (const auto &row : this->rows)
-            Page::WriteRowToFile(filePtr, row);
+            Page::WriteRowToDisk(filePtr, row);
     }
 
     void Page::Delete(vector<Row*> &deletedRows, const Expressions::Expression *expression){

@@ -63,8 +63,8 @@ namespace Pages {
     }
   }
 
-  void OverflowPage::WritePageToFile(fstream *filePtr){
-   this->WritePageHeaderToFile(filePtr);
+  void OverflowPage::WriteToDisk(fstream *filePtr){
+   this->WritePageHeaderToDisk(filePtr);
 
     for(const auto& row : this->data){
       if(row == nullptr)

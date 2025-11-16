@@ -21,7 +21,6 @@ namespace DatabaseEngine::StorageTypes {
     RowHeader::RowHeader()
     {
         this->rowSize = 0;
-        this->maxRowSize = 0;
         this->nullBitMap = nullptr;
         this->largeObjectBitMap = nullptr;
         this->overflowBitMap = nullptr;
@@ -40,7 +39,6 @@ namespace DatabaseEngine::StorageTypes {
             return *this;
 
         this->rowSize = otherHeader.rowSize;
-        this->maxRowSize = otherHeader.maxRowSize;
         this->nullBitMap = new ByteMaps::BitMap(otherHeader.nullBitMap);
         this->largeObjectBitMap = new ByteMaps::BitMap(otherHeader.largeObjectBitMap);
         this->overflowBitMap = new ByteMaps::BitMap(otherHeader.overflowBitMap);
@@ -123,7 +121,6 @@ namespace DatabaseEngine::StorageTypes {
             this->data.push_back(new Block(block));
 
         this->UpdateRowSize();
-        this->header.maxRowSize = 0;
         this->isCopy = false;
     }
 
@@ -139,7 +136,6 @@ namespace DatabaseEngine::StorageTypes {
             this->data.push_back(new Block(column));
 
         this->UpdateRowSize();
-        this->header.maxRowSize = 0;
         this->isCopy = true;
     }
 
@@ -445,6 +441,90 @@ namespace DatabaseEngine::StorageTypes {
 
     bool Row::GetOverflowBitMapValue(const bit_map_pos_t & position) const{ return this->header.overflowBitMap->Get(position); }
 
+    void Row::ReadHeaderFromDisk(const std::vector<char> &buffer, Constants::page_offset_t &offSet) {
+        memcpy(&this->header.rowSize, buffer.data() + offSet, sizeof(row_size_t));
+        offSet += sizeof(row_size_t);
+
+        this->header.nullBitMap->GetDataFromFile(buffer, offSet);
+        this->header.largeObjectBitMap->GetDataFromFile(buffer, offSet);
+        this->header.overflowBitMap->GetDataFromFile(buffer, offSet);
+    }
+
+    void Row::ReadVersionHeaderFromDisk(const std::vector<char> &buffer, Constants::page_offset_t &offSet) {
+        memcpy(&this->versionHeader.createdTransactionId, buffer.data() + offSet, sizeof(transaction_id_t));
+        offSet += sizeof(transaction_id_t);
+
+        memcpy(&this->versionHeader.deletedTransactionId, buffer.data() + offSet, sizeof(transaction_id_t));
+        offSet += sizeof(transaction_id_t);
+
+        memcpy(&this->versionHeader.olderVersionPointer.pageId, buffer.data() + offSet, sizeof(page_id_t));
+        offSet += sizeof(page_id_t);
+
+        memcpy(&this->versionHeader.olderVersionPointer.offset, buffer.data() + offSet, sizeof(page_offset_t));
+        offSet += sizeof(page_offset_t);
+    }
+
+    void Row::ReadDataFromDisk(
+        const std::vector<char> &buffer,
+        Constants::page_offset_t &offSet,
+        const std::vector<Column*>& columns
+    ) {
+        for (int j = 0; j < columns.size(); j++)
+        {
+            if (this->header.nullBitMap->Get(j))
+            {
+                auto *block = new Block(columns[j]);
+
+                this->InsertColumnData(block, j);
+
+                continue;
+            }
+
+            block_size_t bytesToRead;
+
+            memcpy(&bytesToRead, buffer.data() + offSet, sizeof(block_size_t));
+            offSet += sizeof(block_size_t);
+
+            auto *bytes = new unsigned char[bytesToRead];
+            memcpy(bytes, buffer.data() + offSet, bytesToRead);
+
+            offSet += bytesToRead;
+
+            auto *block = new Block(bytes, bytesToRead, columns[j]);
+
+            this->InsertColumnData(block, j);
+        }
+    }
+
+    void Row::WriteHeaderToDisk(fstream* filePtr) const {
+        filePtr->write(reinterpret_cast<const char *>(&this->header.rowSize), sizeof(row_size_t));
+
+        this->header.nullBitMap->WriteDataToFile(filePtr);
+        this->header.largeObjectBitMap->WriteDataToFile(filePtr);
+        this->header.overflowBitMap->WriteDataToFile(filePtr);
+    }
+
+    void Row::WriteVersionHeaderToDisk(fstream *filePtr) const {
+        filePtr->write(reinterpret_cast<const char *>(&this->versionHeader.createdTransactionId), sizeof(transaction_id_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->versionHeader.deletedTransactionId), sizeof(transaction_id_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->versionHeader.olderVersionPointer.pageId), sizeof(page_id_t));
+        filePtr->write(reinterpret_cast<const char *>(&this->versionHeader.olderVersionPointer.offset), sizeof(page_offset_t));
+    }
+
+    void Row::WriteDataToDisk(fstream *filePtr) const {
+        for (int i = 0;i < this->data.size(); i++) {
+            if (this->header.nullBitMap->Get(i))
+                continue;
+
+            const auto& block = this->data[i];
+
+            const auto dataSize = block->GetBlockSize();
+
+            filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(block_size_t));
+            filePtr->write(reinterpret_cast<const char *>(block->GetBlockData()), dataSize);
+        }
+    }
+
     RowHeader* Row::GetHeader() { return &this->header; }
 
     row_size_t Row::GetTotalRowSize() const
@@ -473,6 +553,8 @@ namespace DatabaseEngine::StorageTypes {
 
         if (this->header.overflowBitMap != nullptr)
             rowHeaderSize += this->header.overflowBitMap->GetSizeInBytes();
+
+        rowHeaderSize += Constants::ROW_VERSION_HEADER_SIZE;
 
         return rowHeaderSize;
     }
@@ -602,8 +684,6 @@ namespace DatabaseEngine::StorageTypes {
     void Row::Serialize(std::vector<char>* buffer, uint32_t& pos)const{
         memcpy(buffer->data() + pos, &this->header.rowSize, sizeof(row_size_t));
         pos += sizeof(row_size_t);
-        memcpy(buffer->data() + pos, &this->header.maxRowSize, sizeof(size_t));
-        pos += sizeof(size_t);
 
         this->header.nullBitMap->WriteDataToFile(buffer, pos);
         this->header.largeObjectBitMap->WriteDataToFile(buffer, pos);
@@ -631,23 +711,18 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Row::Deserialize(const std::vector<char> *buffer, uint32_t &pos){
-        auto *rowHeader = this->GetHeader();
-
-        memcpy(&rowHeader->rowSize, buffer->data() + pos, sizeof(row_size_t));
+        memcpy(&this->header.rowSize, buffer->data() + pos, sizeof(row_size_t));
         pos += sizeof(row_size_t);
 
-        memcpy(&rowHeader->maxRowSize, buffer->data() + pos, sizeof(size_t));
-        pos += sizeof(size_t);
-
-        rowHeader->nullBitMap->GetDataFromFile(*buffer, pos);
-        rowHeader->largeObjectBitMap->GetDataFromFile(*buffer, pos);
-        rowHeader->overflowBitMap->GetDataFromFile(*buffer, pos);
+        this->header.nullBitMap->GetDataFromFile(*buffer, pos);
+        this->header.largeObjectBitMap->GetDataFromFile(*buffer, pos);
+        this->header.overflowBitMap->GetDataFromFile(*buffer, pos);
 
         const auto& columns = this->table->GetColumns();
 
         for (int j = 0; j < columns.size(); j++)
         {
-            if (rowHeader->nullBitMap->Get(j))
+            if (this->header.nullBitMap->Get(j))
             {
                 auto *block = new StorageTypes::Block(columns[j]);
                 this->InsertColumnData(block, j);
@@ -699,6 +774,28 @@ namespace DatabaseEngine::StorageTypes {
 
         return joinedRow;
     }
+
+    void Row::SetCurrentTransactionId(const Constants::transaction_id_t &transactionId){
+        this->versionHeader.createdTransactionId = transactionId;
+    }
+
+    void Row::SetDeletedTransactionId(const Constants::transaction_id_t &transactionId) {
+        this->versionHeader.deletedTransactionId = transactionId;
+    }
+
+    void Row::SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset) {
+        this->versionHeader.olderVersionPointer.pageId = pageId;
+        this->versionHeader.olderVersionPointer.offset = offset;
+    }
+
+    bool Row::IsVisibleForTransaction(const Constants::transaction_id_t &transactionId) const {
+        return this->versionHeader.createdTransactionId <= transactionId
+               && (this->versionHeader.deletedTransactionId == 0
+                   || this->versionHeader.deletedTransactionId > transactionId
+                );
+    }
+
+    const RowVersioningHeader & Row::GetVersionHeader() const { return this->versionHeader; }
 
     const bool & Row::IsCopy() const{ return this->isCopy; }
 

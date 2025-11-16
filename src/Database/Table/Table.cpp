@@ -318,6 +318,8 @@ namespace DatabaseEngine::StorageTypes {
           row->InsertColumnData(block, associatedColumnIndex);
         }
 
+        row->SetCurrentTransactionId(transactionId);
+
         *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
         return std::make_tuple(
@@ -363,7 +365,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const Errors::RuntimeStatus result = block->SetData(input);
+          const auto result = block->SetData(input);
 
           if (result.code != Errors::RuntimeError::Ok) {
             delete block;
@@ -374,6 +376,8 @@ namespace DatabaseEngine::StorageTypes {
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
+
+        row->SetCurrentTransactionId(transactionId);
 
         *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
@@ -432,6 +436,8 @@ namespace DatabaseEngine::StorageTypes {
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
+
+        row->SetCurrentTransactionId(transactionId);
 
         *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
 

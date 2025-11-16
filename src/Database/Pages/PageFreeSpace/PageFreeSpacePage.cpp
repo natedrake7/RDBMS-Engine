@@ -82,9 +82,9 @@ namespace Pages {
         this->pageMap->GetDataFromFile(data, offSet, this->header.pageSize);
     }
 
-    void PageFreeSpacePage::WritePageToFile(fstream *filePtr)
+    void PageFreeSpacePage::WriteToDisk(fstream *filePtr)
     {
-        this->WritePageHeaderToFile(filePtr);
+        this->WritePageHeaderToDisk(filePtr);
 
         this->pageMap->WriteDataToFile(filePtr);
     }

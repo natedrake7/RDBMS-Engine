@@ -99,9 +99,9 @@ namespace Pages {
         this->ownedExtents->GetDataFromFile(data, offSet);
     }
 
-    void IndexAllocationMapPage::WritePageToFile(fstream *filePtr)
+    void IndexAllocationMapPage::WriteToDisk(fstream *filePtr)
     {
-        this->WritePageHeaderToFile(filePtr);
+        this->WritePageHeaderToDisk(filePtr);
 
         this->WriteAdditionalHeaderToFile(filePtr);
 

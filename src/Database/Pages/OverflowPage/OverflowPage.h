@@ -26,7 +26,7 @@ namespace Pages {
     explicit OverflowPage(const page_id_t &pageId, const bool &isPageCreation = false);
     explicit OverflowPage(const PageHeader &pageHeader);
     void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
-    void WritePageToFile(fstream* filePtr) override;
+    void WriteToDisk(fstream* filePtr) override;
     void UpdateBytesLeft() override;
     OverflowRow* InsertObject(const object_t* object, const page_size_t& size, int& indexPos);
     [[nodiscard]] OverflowRow* GetObject(const page_offset_t& index)const;

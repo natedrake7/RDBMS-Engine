@@ -220,8 +220,12 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
       const Constants::table_id_t& tableOrdinalPosition,
       LoggingStructures::LogEntryBody* body) {
 
-    const auto logSequenceNumber = this->transactionLogSequenceNumbers.Get(transactionId);
-    this->transactionLogSequenceNumbers.Update(transactionId, logSequenceNumber + 1);
+    log_sequence_number_t logSequenceNumber = 0;
+
+    if (this->transactionLogSequenceNumbers.TryGetValue(transactionId, logSequenceNumber))
+      this->transactionLogSequenceNumbers.Update(transactionId, logSequenceNumber + 1);
+    else
+      this->transactionLogSequenceNumbers.Add(transactionId, 0);
 
     return {
       transactionId,

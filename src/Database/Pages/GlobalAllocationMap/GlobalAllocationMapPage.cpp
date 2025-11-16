@@ -48,9 +48,9 @@ namespace Pages {
         this->isDirty = true;
     }
 
-    void GlobalAllocationMapPage::WritePageToFile(fstream *filePtr)
+    void GlobalAllocationMapPage::WriteToDisk(fstream *filePtr)
     {
-        this->WritePageHeaderToFile(filePtr);
+        this->WritePageHeaderToDisk(filePtr);
         this->extentsMap->WriteDataToFile(filePtr);
     }
 
