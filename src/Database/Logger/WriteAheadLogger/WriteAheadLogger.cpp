@@ -25,6 +25,13 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
        ::close(this->checkPointFileDescriptor);
   }
 
+  WriteAheadLogger & WriteAheadLogger::Get() {
+    const auto& logFilePath = Constants::WRITE_AHEAD_LOG_FILE.data();
+
+    static WriteAheadLogger instance(logFilePath);
+    return instance;
+  }
+
   void WriteAheadLogger::LogCheckPoint(CheckPoint& checkPoint)const{
      checkPoint.checkSum = CheckPoint::CalculateCheckSum(checkPoint);
 
@@ -143,7 +150,7 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
 
     if (result == 0) {
       //first insert failed no bytes were read
-      checkPoint.transactionId = 0;
+      checkPoint.transactionId = Constants::INVALID_TRANSACTION_ID;
       return checkPoint;
     }
 

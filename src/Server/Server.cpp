@@ -80,6 +80,10 @@ namespace Server {
      if (this->CheckIfMasterDbExists()) {
        this->UseMasterDb();
 
+       const auto checkpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
+
+       DatabaseEngine::TransactionManager::Get().SetTransactionId(checkpoint.transactionId + 1);
+
        std::cout << this->sysDbName << " initialized successfully" << std::endl;
        return;
      }
@@ -2033,8 +2037,6 @@ namespace Server {
       Headers::Index index(primaryKey);
       this->masterDb->CreateTable(table.id, i, columns, &index);
     }
-
-    this->masterDb->InitializeLogger(this->sysDbName);
   }
 
   bool ServerInstance::CheckIfMasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }

@@ -9,6 +9,8 @@
 
 namespace Constants
 {
+    constexpr std::string_view WRITE_AHEAD_LOG_FILE = "wal.log";
+
     constexpr size_t PAGE_SIZE = 8 * 1024;
     constexpr size_t MAX_NUMBER_OF_PAGES = 10000;
     constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;

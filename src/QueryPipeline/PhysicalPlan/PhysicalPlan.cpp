@@ -410,8 +410,6 @@ PhysicalInsert::PhysicalInsert(
     
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto transactionId = db->StartLogTransaction();
-
     return (this->child != nullptr)
         ? this->InsertFromChild(tablePtr, properties)
         : this->InsertFromFields(tablePtr, properties);

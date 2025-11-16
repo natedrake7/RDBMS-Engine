@@ -25,6 +25,7 @@ public:
   static TransactionManager& Get();
 
   Constants::transaction_id_t BeginTransaction(const DataTypes::Guid& sessionId);
+  void SetTransactionId(const Constants::transaction_id_t& transactionId);
 };
 
 } // DatabaseEngine

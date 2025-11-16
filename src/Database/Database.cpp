@@ -147,7 +147,6 @@ namespace DatabaseEngine
         const auto headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
 
         this->header = *headerPage->GetDatabaseHeader();
-        this->writeAheadLogger = nullptr;
 
         const auto& headerPageTables = headerPage->GetTablesFullHeaders();
 
@@ -164,8 +163,6 @@ namespace DatabaseEngine
 
           this->CreateTable(tables[i], headerPageTables[i], index, i);
         }
-
-        this->InitializeLogger(dbName);
     }
 
     Database::Database(const string &dbName, const bool& isServerInitialization) {
@@ -174,7 +171,6 @@ namespace DatabaseEngine
         const auto headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
 
         this->header = *headerPage->GetDatabaseHeader();
-        this->writeAheadLogger = nullptr;
 
         if (isServerInitialization)
             return;
@@ -189,8 +185,6 @@ namespace DatabaseEngine
 
         for (int i = 0;i < masterDbData.size(); i++)
             this->CreateTable(masterDbData[i], headerPageTables[i]);
-
-        this->InitializeLogger(dbName);
     }
 
     Database::~Database()
@@ -200,14 +194,9 @@ namespace DatabaseEngine
 
         for (const auto &dbTable : this->tables)
             delete dbTable;
-
-        delete this->writeAheadLogger;
     }
 
-    std::vector<Logging::LogEntry> Database::RecoverLogs()const{
-        if (this->writeAheadLogger == nullptr)
-            return {};
-
+    std::vector<Logging::LogEntry> Database::RecoverLogs(){
         return {};
         // return this->writeAheadLogger->RecoverLogs(this->tables);
     }
@@ -250,31 +239,24 @@ namespace DatabaseEngine
 
     }
 
-    void Database::LogCheckPoint(Logging::CheckPoint &checkPoint) const{
-        this->writeAheadLogger->LogCheckPoint(checkPoint);
+    void Database::LogCheckPoint(Logging::CheckPoint &checkPoint) {
+        Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
     }
-
-    void Database::InitializeLogger(const std::string& dbName){
-        if (this->writeAheadLogger != nullptr)
-            return;
-
-        this->writeAheadLogger = new Logging::WriteAheadLogger(Database::CreateDatabasePath(dbName) + "_log");
-    }
-
-    Constants::transaction_id_t Database::StartLogTransaction()const{ return this->writeAheadLogger->StartTransaction(); }
 
     Logging::CheckPoint Database::LogRowInsert(
         StorageTypes::Row *row,
         const Constants::transaction_id_t& transactionId,
-        const Constants::table_id_t& tableOrdinal) const{
+        const Constants::table_id_t& tableOrdinal
+    ) {
+        auto& logger =  Logging::WriteAheadLogger::Get();
 
-        const auto logEntry = this->writeAheadLogger->CreateLogEntry(
+        const auto logEntry = logger.CreateLogEntry(
             transactionId,
             Logging::OperationType::InsertRow,
             tableOrdinal,
             new LoggingStructures::RowInsertBody(row));
 
-        return this->writeAheadLogger->Log(logEntry);
+        return logger.Log(logEntry);
     }
 
     Table *Database::CreateTable(

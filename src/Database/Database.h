@@ -11,11 +11,6 @@
 #include "Pages/OverflowPage/OverflowPage.h"
 #include "Pages/PageGuard/PageGuard.h"
 
-using namespace Constants;
-using namespace std;
-
-class RowCondition;
-
 namespace Indexing {
   struct Node;
   class BPlusTree;
@@ -47,7 +42,7 @@ class Page;
 namespace DatabaseEngine {
 enum { MAX_TABLE_SIZE = 10 * 1024 };
 
-typedef struct DatabaseHeader {
+struct DatabaseHeader {
   table_number_t numberOfTables;
   table_id_t lastTableId;
   page_id_t lastPageFreeSpacePageId;
@@ -59,26 +54,22 @@ typedef struct DatabaseHeader {
                  const page_id_t &lastGamPageId);
   DatabaseHeader(const DatabaseHeader &dbHeader);
   DatabaseHeader &operator=(const DatabaseHeader &dbHeader);
-} DatabaseHeader;
+};
 
 class Database {
   DatabaseHeader header;
   std::string name;
-  string filename;
-  string fileExtension;
-  string systemFilename;
+  std::string filename;
+  std::string fileExtension;
+  std::string systemFilename;
 
   Dictionary<int32_t, table_id_t> tableIdsDictionary;
 
   vector<StorageTypes::Table *> tables;
 
-  Logging::WriteAheadLogger* writeAheadLogger;
-
 protected:
 
     void PopulateFilenames(const std::string& dbName);
-
-    static void MergeRows(StorageTypes::Row& row, const vector<StorageTypes::Row>& selectedRows, const vector<column_index_t>& selectedColumnIndices, const StorageTypes::Table *secondTable);
 
     void WriteHeaderToFile() const;
 
@@ -104,20 +95,17 @@ public:
 
     ~Database();
 
-    std::vector<Logging::LogEntry> RecoverLogs()const;
+    static std::vector<Logging::LogEntry> RecoverLogs();
 
     void EnterRecoveryMode()const;
 
-    void InitializeLogger(const std::string& dbName);
+    static void LogCheckPoint(Logging::CheckPoint& checkPoint);
 
-    void LogCheckPoint(Logging::CheckPoint& checkPoint) const;
-
-    [[nodiscard]] Constants::transaction_id_t StartLogTransaction()const;
-
-    [[nodiscard]] Logging::CheckPoint LogRowInsert(
+    [[nodiscard]] static Logging::CheckPoint LogRowInsert(
         StorageTypes::Row* row,
         const Constants::transaction_id_t& transactionId,
-        const Constants::table_id_t& tableOrdinal)const;
+        const Constants::table_id_t& tableOrdinal
+    );
 
     static string CreateDatabasePath(const std::string& dbName);
 

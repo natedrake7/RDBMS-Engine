@@ -34,4 +34,10 @@ namespace DatabaseEngine {
     return transactionId;
   }
 
+  void TransactionManager::SetTransactionId(const Constants::transaction_id_t &transactionId) {
+    std::unique_lock<std::mutex> lock(this->transactionMutex);
+
+    this->currentTransactionId = transactionId;
+  }
+
 } // DatabaseEngine
