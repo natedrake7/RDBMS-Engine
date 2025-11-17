@@ -106,8 +106,8 @@ namespace DatabaseEngine
     {
       const float freeSpacePercentage = static_cast<float>(size) / PAGE_SIZE;
 
-      // Direct mapping to 16 levels (0-15)
-      return static_cast<Constants::byte>(freeSpacePercentage * 15);
+      // Direct mapping to 7levels (0-7)
+      return static_cast<Constants::byte>(freeSpacePercentage * 7);
     }
 
     page_id_t Database::CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId)
@@ -218,7 +218,8 @@ namespace DatabaseEngine
     void Database::ApplyRecoveryLog(
         const Logging::LogEntry &logEntry,
         std::vector<extent_id_t>& allocatedExtents,
-        extent_id_t& startingExtentIndex)const{
+        extent_id_t& startingExtentIndex
+    )const{
         if (!logEntry.ValidateIntegrity())
             return;
 
@@ -254,7 +255,8 @@ namespace DatabaseEngine
             transactionId,
             Logging::OperationType::InsertRow,
             tableOrdinal,
-            new LoggingStructures::RowInsertBody(row));
+            new LoggingStructures::RowInsertBody(row)
+        );
 
         return logger.Log(logEntry);
     }
@@ -512,7 +514,7 @@ namespace DatabaseEngine
         page_id_t lowerLimit = 0, newPageId = 0;
 
         if (!this->AllocateNewExtent(&pageFreeSpacePage, &lowerLimit, &newPageId, &newExtentId, tableId))
-            return Pages::PageGuard<Pages::OverflowPage>();
+            return {};
 
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
             pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
@@ -529,7 +531,7 @@ namespace DatabaseEngine
         page_id_t lowerLimit = 0, newPageId = 0;
 
         if (!this->AllocateNewExtent(&pageFreeSpacePage, &lowerLimit, &newPageId, &newExtentId, tableId))
-            return Pages::PageGuard();
+            return {};
 
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
 
@@ -577,6 +579,27 @@ namespace DatabaseEngine
         }
 
         return StorageManager::Get().GetIndexPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
+    }
+
+    Pages::PageGuard<UndoPage> Database::CreateUndoPage(const table_id_t &tableId)
+    {
+        Pages::PageGuard<PageFreeSpacePage> pageFreeSpacePage;
+        extent_id_t newExtentId = 0;
+        page_id_t lowerLimit = 0, newPageId = 0;
+
+        if (!this->AllocateNewExtent(&pageFreeSpacePage, &lowerLimit, &newPageId, &newExtentId, tableId))
+            return {};
+
+        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
+
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
+
+            auto undoPage = StorageManager::Get().CreateUndoPage(this->filename, pageId);
+
+            pageFreeSpacePage->SetPageMetaData(undoPage.Get());
+        }
+
+        return StorageManager::Get().GetUndoPage(this->filename, lowerLimit, this->tables[tableId]);
     }
 
     bool Database::AllocateNewExtent(Pages::PageGuard<Pages::PageFreeSpacePage> *pageFreeSpacePage, page_id_t *lowerLimit, page_id_t *newPageId, extent_id_t *newExtentId, const table_id_t &tableId)
@@ -703,19 +726,19 @@ namespace DatabaseEngine
             }
         }
 
-        return Pages::PageGuard<LargeObjectPage>();;
+        return {};
     }
 
     Pages::PageGuard<Pages::OverflowPage> Database::GetLastOverflowPage(const table_id_t & tableId, const block_size_t& size){
         if (tableId >= this->tables.size())
-            return Pages::PageGuard<Pages::OverflowPage>();
+            return {};
 
         const auto& table = this->tables[tableId];
 
         const auto& tableMapPageId = table->GetTableHeader().indexAllocationMapPageId;
 
         if(tableMapPageId == INVALID_PAGE_ID)
-            return Pages::PageGuard<Pages::OverflowPage>();
+            return {};
 
         const auto iamExtentId = Database::CalculateExtentIdByPageId(tableMapPageId);
 
@@ -750,6 +773,52 @@ namespace DatabaseEngine
         }
 
         return this->CreateOverflowPage(tableId);
+    }
+
+    Pages::PageGuard<Pages::UndoPage> Database::GetLastUndoPage(const table_id_t &tableId, const row_size_t &size) {
+            if (tableId >= this->tables.size())
+                return {};
+
+            const auto& table = this->tables[tableId];
+
+            const auto& tableMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+
+            if(tableMapPageId == INVALID_PAGE_ID)
+                return {};
+
+            const auto iamExtentId = Database::CalculateExtentIdByPageId(tableMapPageId);
+
+            const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, iamExtentId, table);
+
+            vector<extent_id_t> allocatedExtents;
+            tableMapPage->GetAllocatedExtents(&allocatedExtents);
+
+            for (const auto &extentId : allocatedExtents)
+            {
+                const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+
+                for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++)
+                {
+                    const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
+
+                    const auto pageFreeSpace = StorageManager::Get().GetPageFreeSpacePage(this->systemFilename, correspondingPfsPageId);
+
+                    if (pageFreeSpace->GetPageType(pageId) != PageType::UNDO)
+                        break;
+
+                    const auto categorySize = Database::GetObjectSizeToCategory(size);
+
+                    if(pageFreeSpace->GetPageSizeCategory(pageId) <= categorySize)
+                        continue;
+
+                    auto undoPage = StorageManager::Get().GetUndoPage(this->filename, pageId, table);
+
+                    if (undoPage->GetBytesLeft() >= size)
+                        return undoPage;
+                }
+            }
+
+        return this->CreateUndoPage(tableId);
     }
 
     Pages::PageGuard<LargeObjectPage> Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const

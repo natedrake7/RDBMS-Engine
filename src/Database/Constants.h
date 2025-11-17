@@ -96,7 +96,7 @@ namespace Constants
         GAM = 5,
         FREESPACE = 6,
         OVERFLOW = 7,
-        Error = 8
+        UNDO = 8
     };
 
     enum class PagePriority : uint8_t

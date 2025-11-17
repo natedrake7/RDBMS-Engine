@@ -47,9 +47,8 @@ namespace DatabaseEngine::Logging {
                const Constants::log_sequence_number_t& logSequenceNumber,
                const off_t& logFileOffset);
   };
-
-
   struct LogEntry  {
+
     Constants::transaction_id_t transactionId;
     OperationType operation;
     Constants::table_id_t tableOrdinalPosition; //in master db

@@ -12,7 +12,7 @@ using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes {
     void Table::ClusteredIndexSeek(std::vector<const Row*> *selectedRows, const DataTypes::Indexing::Key *minimumValue, const DataTypes::Indexing::Key *maximumValue){
-        auto* tree = this->GetClusteredIndexedTree();
+        const auto* tree = this->GetClusteredIndexedTree();
 
         tree->IndexSeek(*minimumValue, *maximumValue, selectedRows);
     }
@@ -25,7 +25,7 @@ namespace DatabaseEngine::StorageTypes {
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
-        auto* tree = this->GetClusteredIndexedTree();
+        const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
           tree->IndexScan(selectedRows, state, expression, rowsToSelect);

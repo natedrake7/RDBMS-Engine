@@ -47,8 +47,7 @@ namespace Pages {
 
     void PageFreeSpacePage::SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft)
     {
-
-        const auto pageAllocationStatus = static_cast<Constants::byte>(bytesLeft * 15 / PAGE_SIZE);
+        const auto pageAllocationStatus = static_cast<Constants::byte>(bytesLeft * 7 / PAGE_SIZE);
 
         this->pageMap->SetFreeSpace(PageFreeSpacePage::GetPagePosition(pageId), pageAllocationStatus);
 

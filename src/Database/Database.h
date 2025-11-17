@@ -10,6 +10,7 @@
 #include "Table/Table.h"
 #include "Pages/OverflowPage/OverflowPage.h"
 #include "Pages/PageGuard/PageGuard.h"
+#include "Pages/UndoPage/UndoPage.h"
 
 namespace Indexing {
   struct Node;
@@ -159,11 +160,15 @@ public:
 
     Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(const table_id_t &tableId);
 
+    Pages::PageGuard<Pages::UndoPage> CreateUndoPage(const table_id_t &tableId);
+
     [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetTableLastLargeDataPage(const table_id_t &tableId)const;
 
     [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
 
     Pages::PageGuard<Pages::OverflowPage> GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
+
+    Pages::PageGuard<Pages::UndoPage> GetLastUndoPage(const table_id_t &tableId, const row_size_t& size);
 
     Pages::PageGuard<Pages::IndexPage> CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId = 0);
 

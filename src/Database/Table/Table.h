@@ -96,7 +96,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetOrCreateLargeDataPage() const;
 
-            static void LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex);
+            static void LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId);
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::LargeDataObject **previousDataObject);
 
@@ -146,6 +146,8 @@ namespace DatabaseEngine::StorageTypes
             static page_id_t GetPageIdByState(const page_id_t& extentFirstPageId, const QueryPipeline::PhysicalPlan::TableScanState& state);
 
             void UpdateTableStatisticsFromRowInsert(const Row* row);
+
+            Errors::RuntimeStatus InsertRowVersionToUndoPage(const Row *row, Pages::RowVersionPointer& rowPointer) const;
 
         public:
             Table(

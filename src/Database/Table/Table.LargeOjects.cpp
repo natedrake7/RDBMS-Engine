@@ -93,7 +93,7 @@ namespace DatabaseEngine::StorageTypes {
                     : largeDataPage;
     }
 
-    void Table::LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId, const large_page_index_t &objectIndex)
+    void Table::LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId)
     {
         if (dataObject != nullptr) 
             dataObject->nextPageId = lastLargePageId;

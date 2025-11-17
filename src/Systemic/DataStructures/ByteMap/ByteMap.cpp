@@ -41,14 +41,13 @@ namespace ByteMaps {
     // Set the page type (bits 1-2)
     void ByteMap::SetPageType(const Constants::byte_map_pos_t& pos, const Constants::byte& type)
     {
-      this->CheckIndex(pos);
+        this->CheckIndex(pos);
 
-      if (type > 0x07)  // Changed from 0x03 to 0x07 since we now have 3 bits
-         throw std::invalid_argument("Page type must be between 0 and 7 (3 bits).");
+        if (type > 0x0F)  // 4 bits → max 15
+            throw std::invalid_argument("Page type must be between 0 and 15 (4 bits).");
 
-      Constants::byte typeValue = (type << TYPE_SHIFT) & TYPE_MASK;
-      data[pos] = (data[pos] & ~TYPE_MASK) | typeValue;
-
+        const Constants::byte typeValue = (type << TYPE_SHIFT) & TYPE_MASK;
+        data[pos] = (data[pos] & ~TYPE_MASK) | typeValue;
     }
 
     // Get the page type (bits 1-2)
@@ -58,13 +57,13 @@ namespace ByteMaps {
       return (data[pos] & TYPE_MASK) >> TYPE_SHIFT; // Extract bits 1-3
     }
 
-    // Set the free space percentage (bits 3-7)
+    // Set the free space percentage (bits 5-7)
     void ByteMap::SetFreeSpace(const Constants::byte_map_pos_t& pos, const Constants::byte& percentage)
     {
       this->CheckIndex(pos);
 
-      if (percentage > 15) // Still 5 bits, but now using bits 4-8
-          throw std::invalid_argument("Free space percentage must be between 0 and 31.");
+      if (percentage > 7) // 3 bits
+          throw std::invalid_argument("Free space percentage must be between 0 and 7.");
 
       data[pos] = (data[pos] & ~SIZE_MASK) | (percentage & SIZE_MASK);
     }

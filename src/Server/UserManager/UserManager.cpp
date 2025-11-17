@@ -21,7 +21,7 @@ namespace Security {
   // }
 
   UserManager::~UserManager(){
-    for (const auto &user : this->users | views::values) {
+    for (const auto &user : this->users | std::views::values) {
       delete user;
     }
   }
@@ -51,7 +51,7 @@ namespace Security {
     return user;
   }
 
-  bool UserManager::HashPassword(const std::string &password, string &outHash){
+  bool UserManager::HashPassword(const std::string &password, std::string &outHash){
     // char hashed[crypto_pwhash_STRBYTES];
     //
     // const auto result = crypto_pwhash_str(

@@ -1,4 +1,5 @@
-﻿#include "src/QueryPipeline/Parser/Parser.h"
+﻿#include "src/Database/GarbageCollector/GarbageCollector.h"
+#include "src/QueryPipeline/Parser/Parser.h"
 #include "src/Server/Server.h"
 #include "src/Server/ConnectionManager/ConnectionManager.h"
 
@@ -106,6 +107,12 @@ int main()
 
     server.Initialize("configuration.json");
 
+    Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
+
+    std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
+
+    std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
+
     const auto* user = server.Authenticate("admin", "admin");
     // const auto* user = server.Authenticate("ioanis7", "'kalispera'");
 
@@ -150,13 +157,13 @@ int main()
 
     const auto& databases = server.GetCatalog();
 
+    serverRunning = false;
+
+    connectionThread.join();
+    garbageCollectorThread.join();
+
     server.Shutdown();
-
     return 0;
-
-    Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
-
-    std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
     try {
         cout << "Server Initialized correctly, type exit to shutdown" << endl;

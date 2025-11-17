@@ -18,6 +18,7 @@
 #include "../Pages/IndexPage/IndexPage.h"
 #include "../../Server/Server.h"
 #include "../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
+#include "../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
 
 #include <cmath>
 #include <stdexcept>
@@ -320,7 +321,7 @@ namespace DatabaseEngine::StorageTypes {
 
         row->SetCurrentTransactionId(transactionId);
 
-        *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
         return std::make_tuple(
       row,
@@ -379,7 +380,7 @@ namespace DatabaseEngine::StorageTypes {
 
         row->SetCurrentTransactionId(transactionId);
 
-        *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
         return std::make_tuple(
         row,
@@ -439,7 +440,7 @@ namespace DatabaseEngine::StorageTypes {
 
         row->SetCurrentTransactionId(transactionId);
 
-        *checkPoint = this->database->LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
         return std::make_tuple(row,result);
       }
@@ -925,11 +926,13 @@ namespace DatabaseEngine::StorageTypes {
       const RowHeader* rowHeader = row->GetHeader();
 
       for(const auto& block : row->GetData()){
-        if(!updatedColumns.Contains(block->GetColumnIndex())
-          || !rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
+        const auto& columnIndex = block->GetColumnIndex();
+
+        if(!updatedColumns.Contains(columnIndex)
+          || !rowHeader->largeObjectBitMap->Get(columnIndex))
           continue;
 
-        rowHeader->largeObjectBitMap->Set(block->GetColumnIndex(), false);
+        rowHeader->largeObjectBitMap->Set(columnIndex, false);
 
         auto objectPointer = block->GetLargeObjectPointer();
 
@@ -939,10 +942,15 @@ namespace DatabaseEngine::StorageTypes {
 
         auto* objectPtr = largeObjectPage->DeleteObject();
 
-        auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
+        {
+          auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
 
-        pfsPage->SetPageMetaData(largeObjectPage.Get());
-        pfsPage->SetPageFreed(largeObjectPage->GetPageId());
+          MultiThreading::WriterGuard lock(&pfsPage->GetLatch());
+
+          pfsPage->SetPageMetaData(largeObjectPage.Get());
+          pfsPage->SetPageFreed(largeObjectPage->GetPageId());
+        }
+
 
         while(objectPtr->nextPageId != 0){
             largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPtr->nextPageId);
@@ -952,17 +960,22 @@ namespace DatabaseEngine::StorageTypes {
             LargeDataObject* prevObject = objectPtr;
             objectPtr = nextLargeObjectPage->DeleteObject();
 
-            pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
+            {
+              auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
 
-            pfsPage->SetPageMetaData(nextLargeObjectPage.Get());
-            pfsPage->SetPageFreed(nextLargeObjectPage->GetPageId());
+              MultiThreading::WriterGuard lock(&pfsPage->GetLatch());
+
+              pfsPage->SetPageMetaData(nextLargeObjectPage.Get());
+              pfsPage->SetPageFreed(nextLargeObjectPage->GetPageId());
+
+            }
 
         }
       }
     }
 
     void Table::ClusteredIndexScanUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
-      auto* tree = this->GetClusteredIndexedTree();
+      const auto* tree = this->GetClusteredIndexedTree();
 
       tree->IndexScanUpdate(expression, updates);
     }
@@ -970,7 +983,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
       const Expressions::Expression *expression,
       const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
-        auto* tree = this->GetClusteredIndexedTree();
+        const auto* tree = this->GetClusteredIndexedTree();
 
         return (expression == nullptr)
           ? tree->IndexScanUpdate(updates)
@@ -1046,12 +1059,20 @@ namespace DatabaseEngine::StorageTypes {
     //create differrent one to handle clustered updates
     Errors::RuntimeStatus Table::HandleRowUpdate(
       Pages::Page *page,
-      Row *row, const
-      std::vector<Value> &updates,
+      Row *row,
+      const std::vector<Value> &updates,
       const HashSet<column_index_t>& updatedColumns,
-      const bool &isHeap){
-        this->DeleteLargeObjectFromPage(row, updatedColumns);
-        this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+      const bool &isHeap
+    ){
+        // this->DeleteLargeObjectFromPage(row, updatedColumns);
+        // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+
+        //copy row for old transactions
+        //this has the pointers of the old row to LOBS and overflow pages
+
+        RowVersionPointer oldVersionPointer;
+        this->InsertRowVersionToUndoPage(row, oldVersionPointer);
+        row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
 
         int diff = 0;
         auto result = row->Update(updates, diff);
@@ -1090,8 +1111,12 @@ namespace DatabaseEngine::StorageTypes {
     const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
     const HashSet<column_index_t> &updatedColumns,
     const bool &isHeap){
-        this->DeleteLargeObjectFromPage(row, updatedColumns);
-        this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+        // this->DeleteLargeObjectFromPage(row, updatedColumns);
+        // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+
+        RowVersionPointer oldVersionPointer;
+        this->InsertRowVersionToUndoPage(row, oldVersionPointer);
+        row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
 
         int diff = 0;
         auto result = row->Update(updates, diff);
@@ -1659,6 +1684,25 @@ namespace DatabaseEngine::StorageTypes {
 
         for (auto* column : this->columns)
           column->UpdateColumnStatistics(row);
+  }
+
+  Errors::RuntimeStatus Table::InsertRowVersionToUndoPage(const Row *row, RowVersionPointer& rowPointer) const{
+      if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+        return {};
+
+      auto* oldRow = new Row(row);
+
+      auto undoPage = this->database->GetLastUndoPage(this->header.tableId, row->GetTotalRowSize());
+
+      MultiThreading::WriterGuard lock(&undoPage->GetLatch());
+
+      int offset = 0;
+      undoPage->InsertRow(oldRow, &offset);
+
+      rowPointer.pageId = undoPage->GetPageId();
+      rowPointer.offset = offset;
+
+      return {};
   }
 }
 

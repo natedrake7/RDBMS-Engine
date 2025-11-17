@@ -6,11 +6,11 @@ using namespace std;
 
 namespace ByteMaps {
 
-    static constexpr Constants::byte ALLOCATION_MASK = 0x80;  // 1000 0000
-    static constexpr Constants::byte TYPE_MASK      = 0x70;  // 0111 0000
-    static constexpr Constants::byte SIZE_MASK      = 0x0F;  // 0000 1111
+    static constexpr Constants::byte ALLOCATION_MASK = 0x80;  // bit 7
+    static constexpr Constants::byte TYPE_MASK      = 0x78;  // bits 3–6 (0111 1000)
+    static constexpr Constants::byte SIZE_MASK      = 0x07;  // bits 0–2 (0000 0111)
 
-    static constexpr int TYPE_SHIFT = 4;
+    static constexpr int TYPE_SHIFT = 3;  // shift left 3 to reach bits 3–6
 
     class ByteMap {
         vector<Constants::byte> data;

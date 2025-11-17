@@ -6,6 +6,7 @@
 #include "../FileManager/FileManager.h"
 #include "../../Pages/OverflowPage/OverflowPage.h"
 #include "../../Pages/PageGuard/PageGuard.h"
+#include "../../Pages/UndoPage/UndoPage.h"
 
 namespace DatabaseEngine {
 class Database;
@@ -78,6 +79,9 @@ public:
   Pages::PageGuard<Pages::PageFreeSpacePage> GetPageFreeSpacePage(const std::string& filename, const Constants::page_id_t &pageId);
   Pages::PageGuard<Pages::IndexPage> CreateIndexPage(const std::string& filename, const Constants::page_id_t &pageId);
   Pages::PageGuard<Pages::IndexPage> GetIndexPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
+  Pages::PageGuard<Pages::UndoPage> CreateUndoPage(const std::string& filename, const Constants::page_id_t &pageId);
+  Pages::PageGuard<Pages::UndoPage> GetUndoPage(const std::string& filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table);
+
 };
 
 } // namespace Storage

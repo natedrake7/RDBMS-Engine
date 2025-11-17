@@ -40,4 +40,25 @@ namespace DatabaseEngine {
     this->currentTransactionId = transactionId;
   }
 
-} // DatabaseEngine
+  void TransactionManager::CommitTransaction(const Constants::transaction_id_t &transactionId) {
+    std::unique_lock<std::mutex> lock(this->dictionaryMutex);
+
+    this->activeTransactions.Remove(transactionId);
+  }
+
+  void TransactionManager::RollbackTransaction(const Constants::transaction_id_t &transactionId){
+    {
+      std::unique_lock<std::mutex> lock(this->dictionaryMutex);
+
+      this->activeTransactions.Remove(transactionId);
+    }
+
+    //apply rollback mechanism
+  }
+
+  Constants::transaction_id_t TransactionManager::GetOldestActiveTransactionId() {
+    std::unique_lock<std::mutex> lock(this->dictionaryMutex);
+
+    return this->activeTransactions.FirstOrDefault().transactionId;
+  }
+}

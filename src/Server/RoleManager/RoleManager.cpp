@@ -11,7 +11,7 @@ namespace Security {
   RoleManager::RoleManager() = default;
 
   RoleManager::~RoleManager(){
-   for (const auto &role: this->roles | views::values)
+   for (const auto &role: this->roles | std::views::values)
      delete role;
   }
 

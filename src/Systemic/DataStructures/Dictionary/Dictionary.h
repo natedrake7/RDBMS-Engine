@@ -1,15 +1,13 @@
 #pragma once
 #include <unordered_map>
 
-using namespace std;
-
 template<typename Key, typename Value>
 class Dictionary : public std::unordered_map<Key, Value>
 {
     public:
         Dictionary() : std::unordered_map<Key, Value>() {}
 
-        Dictionary(const initializer_list<pair<const Key, Value>>& values) : unordered_map<Key, Value>(values) {}
+        Dictionary(const std::initializer_list<std::pair<const Key, Value>>& values) : std::unordered_map<Key, Value>(values) {}
 
         bool TryGetValue(const Key& key, Value& value) const
         {

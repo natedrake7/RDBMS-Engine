@@ -143,6 +143,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         this->table = copyRow.table;
         this->header = copyRow.header;
+        this->versionHeader = copyRow.versionHeader;
 
         for (const auto& block : copyRow.data)
             this->data.push_back(new Block(block));
@@ -153,6 +154,7 @@ namespace DatabaseEngine::StorageTypes {
     Row::Row(const Row *row){
         this->table = row->table;
         this->header = row->header;
+        this->versionHeader = row->versionHeader;
         // this->cache = row->cache;
 
         for (const auto& block : row->data)
@@ -167,6 +169,7 @@ namespace DatabaseEngine::StorageTypes {
             return *this;
 
         this->header = copyRow.header;
+        this->versionHeader = copyRow.versionHeader;
         this->table = copyRow.table;
 
         this->data.clear();
@@ -340,11 +343,8 @@ namespace DatabaseEngine::StorageTypes {
         vector<column_index_t> largeBlocksIndexes;
         for(const auto& block : this->data)
         {
-            const column_index_t& blockIndex = block->GetColumnIndex();
-            const block_size_t& blockSize = block->GetBlockSize();
-
-            if(blockSize >= LARGE_DATA_OBJECT_SIZE)
-                largeBlocksIndexes.push_back(blockIndex);
+            if(block->GetBlockSize() >= LARGE_DATA_OBJECT_SIZE)
+                largeBlocksIndexes.push_back(block->GetColumnIndex());
         }
 
         return largeBlocksIndexes;

@@ -91,6 +91,7 @@ add_library(Systemic SHARED
         src/Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h
         src/Systemic/Network/Protocols/ConnectionProtocol/ConnectionHeader.h
         src/Systemic/DataStructures/Vector/Vector.h
+        src/Systemic/DataStructures/SortedDictionary/SortedDictionary.h
 
 )
 
@@ -200,6 +201,10 @@ add_library(Database STATIC
         src/Database/Pages/PageGuard/PageGuard.h
         src/Database/TransactionManager/TransactionManager.cpp
         src/Database/TransactionManager/TransactionManager.h
+        src/Database/Pages/UndoPage/UndoPage.cpp
+        src/Database/Pages/UndoPage/UndoPage.h
+        src/Database/GarbageCollector/GarbageCollector.cpp
+        src/Database/GarbageCollector/GarbageCollector.h
 )
 
 add_library(Server STATIC

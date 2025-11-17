@@ -25,6 +25,11 @@ namespace DatabaseEngine::StorageTypes
         Constants::transaction_id_t deletedTransactionId;
 
         Pages::RowVersionPointer olderVersionPointer;
+
+        RowVersioningHeader() {
+            this->createdTransactionId = Constants::INVALID_TRANSACTION_ID;
+            this->deletedTransactionId = 0;
+        }
     };
 
     struct RowHeader

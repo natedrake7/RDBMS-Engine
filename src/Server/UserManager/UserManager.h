@@ -28,6 +28,6 @@ namespace Security {
 
       bool GrantRole(const std::string& name, const Security::Role* role, int32_t& outUserId)const;
 
-      static bool HashPassword(const std::string& password, string& outHash);
+      static bool HashPassword(const std::string& password, std::string& outHash);
   };
 }

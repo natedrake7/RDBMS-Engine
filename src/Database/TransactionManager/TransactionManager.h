@@ -1,6 +1,7 @@
 #pragma once
 #include <mutex>
 #include "../Constants.h"
+#include "../../Systemic/DataStructures/SortedDictionary/SortedDictionary.h"
 #include "../../Systemic/Network/Session.h"
 
 namespace DatabaseEngine {
@@ -16,7 +17,7 @@ class TransactionManager {
   Constants::transaction_id_t currentTransactionId;
 
   std::mutex dictionaryMutex;
-  Dictionary<Constants::transaction_id_t, TransactionInfo> activeTransactions;
+  SortedDictionary<Constants::transaction_id_t, TransactionInfo> activeTransactions;
 
   TransactionManager();
   ~TransactionManager();
@@ -26,6 +27,9 @@ public:
 
   Constants::transaction_id_t BeginTransaction(const DataTypes::Guid& sessionId);
   void SetTransactionId(const Constants::transaction_id_t& transactionId);
+  void CommitTransaction(const Constants::transaction_id_t& transactionId);
+  void RollbackTransaction(const Constants::transaction_id_t& transactionId);
+  Constants::transaction_id_t GetOldestActiveTransactionId();
 };
 
 } // DatabaseEngine
