@@ -479,14 +479,12 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto indexAllocationExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
-
         const auto tableMapPage =
             StorageManager::Get().GetIndexAllocationMapPage(
               filename,
               this->header.indexAllocationMapPageId,
-              indexAllocationExtentId,
-              this);
+              this
+            );
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -646,9 +644,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto indexAllocationPageExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
-
-        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, indexAllocationPageExtentId, this);
+        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, state.extentId);
@@ -746,9 +742,7 @@ namespace DatabaseEngine::StorageTypes {
           return {};
       }
 
-      const auto indexPageExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
-
-      const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, indexPageExtentId, this);
+      const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
       tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
       lastExtentIndex = allocatedExtents.size() - 1;
@@ -812,9 +806,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto indexAllocationExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
-
-        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, indexAllocationExtentId, this);
+        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -869,9 +861,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto indexAllocationExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
-
-        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, indexAllocationExtentId, this);
+        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -936,9 +926,7 @@ namespace DatabaseEngine::StorageTypes {
 
         auto objectPointer = block->GetLargeObjectPointer();
 
-        auto largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPointer.pageId);
-
-        auto largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, largeObjectExtentId, this);
+        auto largeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, this);
 
         auto* objectPtr = largeObjectPage->DeleteObject();
 
@@ -953,9 +941,7 @@ namespace DatabaseEngine::StorageTypes {
 
 
         while(objectPtr->nextPageId != 0){
-            largeObjectExtentId = Database::CalculateExtentIdByPageId(objectPtr->nextPageId);
-
-            auto nextLargeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, largeObjectExtentId, this);
+            auto nextLargeObjectPage = StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, this);
 
             LargeDataObject* prevObject = objectPtr;
             objectPtr = nextLargeObjectPage->DeleteObject();
@@ -1042,9 +1028,7 @@ namespace DatabaseEngine::StorageTypes {
 
         auto objectPointer = block->GetOverflowPointer();
 
-        auto overflowExtentId = Database::CalculateExtentIdByPageId(objectPointer.pageId);
-
-        auto overflowPage = StorageManager::Get().GetOverflowPage(filename, objectPointer.pageId, overflowExtentId, this);
+        auto overflowPage = StorageManager::Get().GetOverflowPage(filename, objectPointer.pageId, this);
 
         const auto* overflowRow = overflowPage->DeleteObject(objectPointer.index);
 
@@ -1071,7 +1055,7 @@ namespace DatabaseEngine::StorageTypes {
         //this has the pointers of the old row to LOBS and overflow pages
 
         RowVersionPointer oldVersionPointer;
-        this->InsertRowVersionToUndoPage(row, oldVersionPointer);
+        Server::ServerInstance::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
         row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
 
         int diff = 0;
@@ -1087,7 +1071,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetRowSize()) > 0){
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalRowSize()) > 0){
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 
@@ -1115,7 +1099,8 @@ namespace DatabaseEngine::StorageTypes {
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
 
         RowVersionPointer oldVersionPointer;
-        this->InsertRowVersionToUndoPage(row, oldVersionPointer);
+
+        Server::ServerInstance::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
         row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
 
         int diff = 0;
@@ -1128,7 +1113,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetRowSize()) > 0){
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalRowSize()) > 0){
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 
@@ -1180,9 +1165,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto indexAllocationExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
-
-        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, indexAllocationExtentId, this);
+        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -1298,8 +1281,6 @@ namespace DatabaseEngine::StorageTypes {
 
         const OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
         largestBlock->SetData(&ptr, sizeof(OverflowPointer));
-
-        row->UpdateRowSize();
 
         return largestBlock->GetBlockSize();
     }
@@ -1509,7 +1490,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        // if(isHeap && (PAGE_SIZE - PageHeader::GetPageHeaderSize() - row->GetRowSize()) > 0){
+        // if(isHeap && (PAGE_SIZE - PageHeader::GetPageHeaderSize() - row->GetTotalRowSize()) > 0){
         //   vector<extent_id_t> allocatedExtents;
         //   extent_id_t startingExtentIndex = 0;
         //
@@ -1539,9 +1520,7 @@ namespace DatabaseEngine::StorageTypes {
   void Table::PopulateColumnByHeap(const Constants::column_index_t &index, const Value &defaultValue){
     const auto& filename = this->GetFileName();
 
-    const auto tableMapExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
-
-    const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, tableMapExtentId, this);
+    const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
     std::vector<extent_id_t> allocatedExtents;
     tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
@@ -1632,9 +1611,7 @@ namespace DatabaseEngine::StorageTypes {
   void Table::RemoveColumnByHeap(const column_index_t &index)const{
     const auto& filename = this->GetFileName();
 
-    const auto tableMapExtentId = Database::CalculateExtentIdByPageId(this->header.indexAllocationMapPageId);
-
-    const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, tableMapExtentId, this);
+    const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
     std::vector<extent_id_t> allocatedExtents;
     tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
@@ -1671,7 +1648,7 @@ namespace DatabaseEngine::StorageTypes {
         auto& stats = this->header.statistics;
 
         stats.avgRowSize = std::ceil(
-            (stats.avgRowSize * stats.rowCount + row->GetRowSize()) /
+            (stats.avgRowSize * stats.rowCount + row->GetTotalRowSize()) /
             (stats.rowCount + 1)
         );
         stats.rowCount++;
@@ -1684,25 +1661,6 @@ namespace DatabaseEngine::StorageTypes {
 
         for (auto* column : this->columns)
           column->UpdateColumnStatistics(row);
-  }
-
-  Errors::RuntimeStatus Table::InsertRowVersionToUndoPage(const Row *row, RowVersionPointer& rowPointer) const{
-      if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
-        return {};
-
-      auto* oldRow = new Row(row);
-
-      auto undoPage = this->database->GetLastUndoPage(this->header.tableId, row->GetTotalRowSize());
-
-      MultiThreading::WriterGuard lock(&undoPage->GetLatch());
-
-      int offset = 0;
-      undoPage->InsertRow(oldRow, &offset);
-
-      rowPointer.pageId = undoPage->GetPageId();
-      rowPointer.offset = offset;
-
-      return {};
   }
 }
 

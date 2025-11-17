@@ -12,4 +12,8 @@ namespace MultiThreading {
     this->mutex->UniqueUnlock();
   }
 
+  void WriterGuard::Release()const {
+    this->mutex->UniqueUnlock();
+  }
+
 }

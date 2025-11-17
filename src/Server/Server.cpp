@@ -10,6 +10,7 @@
 #include "../Database/Storage/StorageManager/StorageManager.h"
 #include "../Systemic/Functions/StringFunctions.h"
 #include "../Database/AdditionalFunctions/SortingFunctions.h"
+#include "../Database/Logger/WriteAheadLogger/WriteAheadLogger.h"
 #include "../Database/TransactionManager/TransactionManager.h"
 
 #include <iostream>
@@ -41,6 +42,7 @@ namespace Headers {
 namespace Server {
    ServerInstance::ServerInstance(){
      this->masterDb = nullptr;
+     this->versionDb = nullptr;
   }
 
   ServerInstance::~ServerInstance() = default;
@@ -70,21 +72,18 @@ namespace Server {
     this->sysDbName = jsonFile.at("db_name");
     this->sysDbPath = jsonFile.at("db_path");
 
-    jsonFile.at("tables").get_to(this->sysTables);
+    this->versionDbName = jsonFile.at("version_db_name");
+    this->versionDbPath = jsonFile.at("version_db_path");
 
+    jsonFile.at("tables").get_to(this->sysTables);
   }
 
   void ServerInstance::Initialize(const string &configPath){
     this->ReadConfiguration(configPath);
 
+    this->CreateVersionDatabase();
      if (this->CheckIfMasterDbExists()) {
        this->UseMasterDb();
-
-       const auto checkpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
-
-       DatabaseEngine::TransactionManager::Get().SetTransactionId(checkpoint.transactionId + 1);
-
-       std::cout << this->sysDbName << " initialized successfully" << std::endl;
        return;
      }
 
@@ -336,7 +335,9 @@ namespace Server {
     }
 
     this->masterDb->UpdateMasterDatabase();
+
     delete this->masterDb;
+    delete this->versionDb;
   }
 
   DatabaseEngine::Database* ServerInstance::UseDatabase(const int32_t & databaseId, const bool& isServerInitialization){
@@ -376,7 +377,15 @@ namespace Server {
       const auto* role = this->roleManager.GetRole(user.roleId);
       const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
     }
+
+    const auto checkpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
+
+    DatabaseEngine::TransactionManager::Get().SetTransactionId(checkpoint.transactionId + 1);
+
+    std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
+
+  DatabaseEngine::VersionDatabase * ServerInstance::GetVersionDatabase() const{ return this->versionDb; }
 
   Errors::RuntimeStatus ServerInstance::InsertDbToMasterDb(
     const transaction_id_t& transactionId,
@@ -2039,7 +2048,19 @@ namespace Server {
     }
   }
 
+  void ServerInstance::CreateVersionDatabase() {
+    if (this->CheckIfVersionDbExists()) {
+      this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
+      return;
+    }
+
+    DatabaseEngine::CreateDatabase(this->versionDbName);
+    this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
+  }
+
   bool ServerInstance::CheckIfMasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }
+
+  bool ServerInstance::CheckIfVersionDbExists() const{ return std::filesystem::exists(this->versionDbPath); }
 
   Dictionary<int32_t , Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableIdToDictionary(const int32_t & tableId) const{
     const auto columns = this->SelectIdentityColumnsByTableId(tableId);

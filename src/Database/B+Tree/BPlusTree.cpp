@@ -1353,10 +1353,7 @@ namespace Indexing
         return this->database->FindOrAllocateNextIndexPage(this->tablePosition, parentPageId, this->nonClusteredIndexId);
     }
 
-    Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNode(const page_id_t& pageId) const
-    {
-        const extent_id_t extentId = DatabaseEngine::Database::CalculateExtentIdByPageId(pageId);
-
-        return Storage::StorageManager::Get().GetIndexPage(this->database->GetFileName(), pageId, extentId, this->table);
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNode(const page_id_t& pageId) const{
+        return Storage::StorageManager::Get().GetIndexPage(this->database->GetFileName(), pageId, this->table);
     }
 }

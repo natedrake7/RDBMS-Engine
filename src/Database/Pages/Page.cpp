@@ -78,6 +78,13 @@ namespace Pages
     }
 
     void Page::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr){
+        if (table == nullptr) {
+            for (int i = 0; i < this->header.pageSize; i++)
+                this->rows.push_back(Page::ReadRowFromDisk(data, offSet));
+
+            return;
+        }
+
         const auto &columns = table->GetColumns();
 
         for (int i = 0; i < this->header.pageSize; i++)
@@ -90,6 +97,16 @@ namespace Pages
         row->ReadHeaderFromDisk(data, offSet);
         row->ReadVersionHeaderFromDisk(data, offSet);
         row->ReadDataFromDisk(data, offSet, columns);
+
+        return row;
+    }
+
+    DatabaseEngine::StorageTypes::Row * Page::ReadRowFromDisk(const vector<char> &data, page_offset_t &offSet) {
+        auto*  row = new Row();
+
+        row->ReadHeaderFromDisk(data, offSet);
+        row->ReadVersionHeaderFromDisk(data, offSet);
+        row->ReadDataFromDisk(data, offSet);
 
         return row;
     }
@@ -165,6 +182,18 @@ namespace Pages
 
         this->header.pageSize = this->rows.size();
         this->UpdateBytesLeft();
+    }
+
+    void Page::Delete(const int &indexPosition) {
+        const auto* row = this->rows[indexPosition];
+
+        this->rows.erase(this->rows.begin() + indexPosition);
+
+        delete row;
+
+        this->UpdateBytesLeft();
+        this->isDirty = true;
+        this->header.pageSize--;
     }
 
     void Page::SetFileName(const string &filename) { this->filename = filename; }

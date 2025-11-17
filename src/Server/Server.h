@@ -2,6 +2,7 @@
 #include "../Systemic/DataTypes/Headers/Headers.h"
 #include "../Systemic/Errors/Errors.h"
 #include "../Database/Database.h"
+#include "../Database/VersionDatabase/VersionDatabase.h"
 #include "../Systemic/Security/Security.h"
 #include "RoleManager/RoleManager.h"
 #include "SessionManager/SessionManager.h"
@@ -39,8 +40,13 @@ namespace Server {
   class ServerInstance {
     std::string sysDbName;
     std::string sysDbPath;
+
+    std::string versionDbName;
+    std::string versionDbPath;
+
     std::vector<Headers::sysTable> sysTables;
     DatabaseEngine::Database* masterDb;
+    DatabaseEngine::VersionDatabase *versionDb;
 
     Dictionary<int32_t, DatabaseEngine::Database*> databases;
 
@@ -54,7 +60,9 @@ namespace Server {
 
     void ReadConfiguration(const std::string& configPath);
     void CreateSystemDatabase();
+    void CreateVersionDatabase();
     [[nodiscard]] bool CheckIfMasterDbExists()const;
+    [[nodiscard]] bool CheckIfVersionDbExists()const;
     [[nodiscard]] std::vector<Security::Role> SelectRoles()const;
     [[nodiscard]] std::vector<Security::User> SelectUsers()const;
 
@@ -293,6 +301,8 @@ namespace Server {
     void Shutdown();
     [[nodiscard]] DatabaseEngine::Database* UseDatabase(const int32_t & databaseId, const bool& isServerInitialization = false);
     void UseMasterDb();
+
+    DatabaseEngine::VersionDatabase* GetVersionDatabase()const;
     
   };
 }

@@ -1,6 +1,8 @@
 {
   "db_name": "masterDb",
   "db_path": "masterDb/masterDb.db",
+  "version_db_name": "versionDb",
+  "version_db_path": "versionDb/versionDb.db",
   "tables": [
     {
       "id": 1,

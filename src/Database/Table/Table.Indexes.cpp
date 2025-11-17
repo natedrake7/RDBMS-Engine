@@ -177,8 +177,6 @@ namespace DatabaseEngine::StorageTypes {
     {
         const auto& filename = this->database->GetFileName();
 
-        const extent_id_t indexPageExtentId = Database::CalculateExtentIdByPageId(indexPageId);
-
-        return StorageManager::Get().GetIndexPage(filename, indexPageId, indexPageExtentId, this);
+        return StorageManager::Get().GetIndexPage(filename, indexPageId, this);
     }
 }

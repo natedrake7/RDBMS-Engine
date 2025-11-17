@@ -67,7 +67,13 @@ namespace Pages
             const vector<char>& data,
             const DatabaseEngine::StorageTypes::Table *table,
             page_offset_t &offSet,
-            const vector<DatabaseEngine::StorageTypes::Column*>& columns);
+            const vector<DatabaseEngine::StorageTypes::Column*>& columns
+        );
+
+        static DatabaseEngine::StorageTypes::Row* ReadRowFromDisk(
+            const vector<char>& data,
+            page_offset_t &offSet
+        );
 
         static void WriteRowToDisk(fstream* filePtr, const DatabaseEngine::StorageTypes::Row* row);
 
@@ -85,6 +91,7 @@ namespace Pages
 
         void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
         void Delete(const Expressions::Expression* expression);
+        void Delete(const int& indexPosition);
 
         void SetFileName(const string &filename);
         void SetPageId(const page_id_t &pageId);

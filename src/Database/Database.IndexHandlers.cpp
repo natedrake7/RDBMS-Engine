@@ -67,12 +67,9 @@ namespace DatabaseEngine {
             return newIndexPage;
         }
 
-        const auto indexAllocationPageExtentId = Database::CalculateExtentIdByPageId(tableHeader.indexAllocationMapPageId);
-
         const auto indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(
             this->filename,
             tableHeader.indexAllocationMapPageId,
-            indexAllocationPageExtentId,
             table
         );
         
@@ -94,7 +91,7 @@ namespace DatabaseEngine {
                 if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
                     continue;
 
-                auto indexPage = StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, extentId, table);
+                auto indexPage = StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, table);
 
                 if(!indexPage->isEmpty())
                     continue;

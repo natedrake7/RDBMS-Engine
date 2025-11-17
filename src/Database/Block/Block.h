@@ -52,6 +52,8 @@ namespace DatabaseEngine::StorageTypes {
 
 
     public:
+        explicit Block();
+
         explicit Block(const Column* column);
 
         explicit Block(const Block* block);

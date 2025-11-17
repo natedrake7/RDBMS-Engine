@@ -14,6 +14,8 @@
 #include "Pages/LargeObject/LargeObjectPage.h"
 #include "Storage/StorageManager/StorageManager.h"
 #include "../Server/Server.h"
+#include "Logger/WriteAheadLogger/WriteAheadLogger.h"
+
 #include <iostream>
 
 using namespace Pages;
@@ -348,7 +350,7 @@ namespace DatabaseEngine
 
         const auto extentId = Database::CalculateExtentIdByPageId(tableHeader.indexAllocationMapPageId);
 
-        const auto indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId, extentId, table);
+        const auto indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId, table);
 
         if (indexAllocationMapPage.Get() == nullptr)
         {
@@ -476,7 +478,7 @@ namespace DatabaseEngine
         {
             const auto iamExtentId = Database::CalculateExtentIdByPageId(indexAllocationMapPageId);
 
-            const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, iamExtentId, table);
+            const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, table);
 
             vector<extent_id_t> allocatedExtents;
             tableMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -521,7 +523,7 @@ namespace DatabaseEngine
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateOverflowPage(this->filename, pageId).Get());
         }
 
-        return StorageManager::Get().GetOverflowPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
+        return StorageManager::Get().GetOverflowPage(this->filename, lowerLimit, this->tables[tableId]);
     }
 
     Pages::PageGuard<Page> Database::CreateDataPage(const table_id_t &tableId)
@@ -557,7 +559,7 @@ namespace DatabaseEngine
           pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateLargeDataPage(this->filename, pageId).Get());
         }
 
-        return StorageManager::Get().GetLargeDataPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
+        return StorageManager::Get().GetLargeDataPage(this->filename, lowerLimit, this->tables[tableId]);
     }
 
     Pages::PageGuard<IndexPage> Database::CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId)
@@ -578,28 +580,7 @@ namespace DatabaseEngine
             pageFreeSpacePage->SetPageMetaData(indexPage.Get());
         }
 
-        return StorageManager::Get().GetIndexPage(this->filename, lowerLimit, newExtentId, this->tables[tableId]);
-    }
-
-    Pages::PageGuard<UndoPage> Database::CreateUndoPage(const table_id_t &tableId)
-    {
-        Pages::PageGuard<PageFreeSpacePage> pageFreeSpacePage;
-        extent_id_t newExtentId = 0;
-        page_id_t lowerLimit = 0, newPageId = 0;
-
-        if (!this->AllocateNewExtent(&pageFreeSpacePage, &lowerLimit, &newPageId, &newExtentId, tableId))
-            return {};
-
-        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
-
-            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
-
-            auto undoPage = StorageManager::Get().CreateUndoPage(this->filename, pageId);
-
-            pageFreeSpacePage->SetPageMetaData(undoPage.Get());
-        }
-
-        return StorageManager::Get().GetUndoPage(this->filename, lowerLimit, this->tables[tableId]);
+        return StorageManager::Get().GetIndexPage(this->filename, lowerLimit, this->tables[tableId]);
     }
 
     bool Database::AllocateNewExtent(Pages::PageGuard<Pages::PageFreeSpacePage> *pageFreeSpacePage, page_id_t *lowerLimit, page_id_t *newPageId, extent_id_t *newExtentId, const table_id_t &tableId)
@@ -625,7 +606,7 @@ namespace DatabaseEngine
 
 
             // get the last iam page always
-            auto previousTableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, extentId, table);
+            auto previousTableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, table);
 
             *newExtentId = gamPage->AllocateExtent();
 
@@ -654,7 +635,7 @@ namespace DatabaseEngine
             this->tables[tableId]->UpdateIndexAllocationMapPageId(*newPageId);
         }
         else
-            tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, extentId, table);
+            tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, table);
 
         tableMapPage->SetAllocatedExtent(*newExtentId, gamPage.Get());
 
@@ -701,7 +682,7 @@ namespace DatabaseEngine
 
         const auto iamExtentId = Database::CalculateExtentIdByPageId(tableMapPageId);
 
-        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, iamExtentId, table);
+        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, table);
 
         vector<extent_id_t> allocatedExtents;
         tableMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -719,7 +700,7 @@ namespace DatabaseEngine
                 if (pageFreeSpace->GetPageType(pageId) != PageType::LOB)
                     break;
 
-                auto lastLargeDataPage = StorageManager::Get().GetLargeDataPage(this->filename, pageId, extentId, this->tables[tableId]);
+                auto lastLargeDataPage = StorageManager::Get().GetLargeDataPage(this->filename, pageId, this->tables[tableId]);
 
                 if (lastLargeDataPage->GetPageSize() == 0)
                     return lastLargeDataPage;
@@ -742,7 +723,7 @@ namespace DatabaseEngine
 
         const auto iamExtentId = Database::CalculateExtentIdByPageId(tableMapPageId);
 
-        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, iamExtentId, table);
+        const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, table);
 
         vector<extent_id_t> allocatedExtents;
         tableMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -765,7 +746,7 @@ namespace DatabaseEngine
                 if(pageFreeSpace->GetPageSizeCategory(pageId) <= categorySize)
                     continue;
 
-                auto lastOverflowPage = StorageManager::Get().GetOverflowPage(this->filename, pageId, extentId, table);
+                auto lastOverflowPage = StorageManager::Get().GetOverflowPage(this->filename, pageId, table);
 
                 if (lastOverflowPage->GetBytesLeft() >= size)
                     return lastOverflowPage;
@@ -775,57 +756,13 @@ namespace DatabaseEngine
         return this->CreateOverflowPage(tableId);
     }
 
-    Pages::PageGuard<Pages::UndoPage> Database::GetLastUndoPage(const table_id_t &tableId, const row_size_t &size) {
-            if (tableId >= this->tables.size())
-                return {};
 
-            const auto& table = this->tables[tableId];
-
-            const auto& tableMapPageId = table->GetTableHeader().indexAllocationMapPageId;
-
-            if(tableMapPageId == INVALID_PAGE_ID)
-                return {};
-
-            const auto iamExtentId = Database::CalculateExtentIdByPageId(tableMapPageId);
-
-            const auto tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, iamExtentId, table);
-
-            vector<extent_id_t> allocatedExtents;
-            tableMapPage->GetAllocatedExtents(&allocatedExtents);
-
-            for (const auto &extentId : allocatedExtents)
-            {
-                const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
-
-                for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++)
-                {
-                    const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
-
-                    const auto pageFreeSpace = StorageManager::Get().GetPageFreeSpacePage(this->systemFilename, correspondingPfsPageId);
-
-                    if (pageFreeSpace->GetPageType(pageId) != PageType::UNDO)
-                        break;
-
-                    const auto categorySize = Database::GetObjectSizeToCategory(size);
-
-                    if(pageFreeSpace->GetPageSizeCategory(pageId) <= categorySize)
-                        continue;
-
-                    auto undoPage = StorageManager::Get().GetUndoPage(this->filename, pageId, table);
-
-                    if (undoPage->GetBytesLeft() >= size)
-                        return undoPage;
-                }
-            }
-
-        return this->CreateUndoPage(tableId);
-    }
 
     Pages::PageGuard<LargeObjectPage> Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const
     {
         const auto extentId = Database::CalculateExtentIdByPageId(pageId);
 
-        return StorageManager::Get().GetLargeDataPage(this->filename, pageId, extentId, this->tables[tableId]);
+        return StorageManager::Get().GetLargeDataPage(this->filename, pageId, this->tables[tableId]);
 
 //        if (tableId >= this->tables.size())
 //            return nullptr;

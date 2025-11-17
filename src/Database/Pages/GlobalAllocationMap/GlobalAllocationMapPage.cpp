@@ -1,5 +1,7 @@
 ﻿#include "GlobalAllocationMapPage.h"
 #include "../../../Systemic/DataStructures/BitMap/BitMap.h"
+#include "../../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
+#include "../IndexMapAllocation/IndexAllocationMapPage.h"
 
 namespace Pages {
     GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t& pageId) : Page(pageId)
@@ -60,5 +62,25 @@ namespace Pages {
     }
 
     bool GlobalAllocationMapPage::IsFull() const { return !this->extentsMap->Get(extentsMap->GetSize() - 1); }
+
+//Locks Latch
+    std::vector<extent_id_t> GlobalAllocationMapPage::GetAllocatedExtents(const extent_id_t& startingIndex) const {
+        std::vector<extent_id_t> allocatedExtents;
+
+        if(startingIndex >= this->extentsMap->GetSize())
+            return allocatedExtents;
+
+        MultiThreading::ReaderGuard lock(&this->latch);
+
+        allocatedExtents.reserve(this->extentsMap->GetSize() - startingIndex);
+
+        for (extent_id_t id = startingIndex; id < this->extentsMap->GetSize(); id++)
+        {
+            if (!this->extentsMap->Get(id))
+                allocatedExtents.push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(this->header.pageId) + id);
+        }
+
+        return allocatedExtents;
+    }
 }
 

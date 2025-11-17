@@ -201,10 +201,10 @@ add_library(Database STATIC
         src/Database/Pages/PageGuard/PageGuard.h
         src/Database/TransactionManager/TransactionManager.cpp
         src/Database/TransactionManager/TransactionManager.h
-        src/Database/Pages/UndoPage/UndoPage.cpp
-        src/Database/Pages/UndoPage/UndoPage.h
         src/Database/GarbageCollector/GarbageCollector.cpp
         src/Database/GarbageCollector/GarbageCollector.h
+        src/Database/VersionDatabase/VersionDatabase.cpp
+        src/Database/VersionDatabase/VersionDatabase.h
 )
 
 add_library(Server STATIC

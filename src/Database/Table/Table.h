@@ -147,8 +147,6 @@ namespace DatabaseEngine::StorageTypes
 
             void UpdateTableStatisticsFromRowInsert(const Row* row);
 
-            Errors::RuntimeStatus InsertRowVersionToUndoPage(const Row *row, Pages::RowVersionPointer& rowPointer) const;
-
         public:
             Table(
               const table_id_t &tableId,

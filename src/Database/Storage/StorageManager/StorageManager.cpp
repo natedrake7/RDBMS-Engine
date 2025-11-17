@@ -75,13 +75,13 @@ Page *StorageManager::GetRawPage(
   return this->OpenExtent(pageId, filename, extentId, table);
 }
 
-Pages::PageGuard<LargeObjectPage> StorageManager::GetLargeDataPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table *table)
+Pages::PageGuard<LargeObjectPage> StorageManager::GetLargeDataPage(const string& filename, const page_id_t &pageId, const Table *table)
 {
   auto* page = dynamic_cast<LargeObjectPage *>(this->GetRawPage(filename, pageId, table));
   return Pages::PageGuard<LargeObjectPage>(page);
 }
 
-Pages::PageGuard<OverflowPage> StorageManager::GetOverflowPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table *table)
+Pages::PageGuard<OverflowPage> StorageManager::GetOverflowPage(const string& filename, const page_id_t &pageId, const Table *table)
 {
   auto* page = dynamic_cast<OverflowPage *>(this->GetRawPage(filename, pageId, table));
 
@@ -231,11 +231,13 @@ Pages::Page* StorageManager::OpenExtent(
       return nullptr;
     }
 
-    MultiThreading::WriterGuard pageLock(&page->GetLatch());
+    {
+      MultiThreading::WriterGuard pageLock(&page->GetLatch());
 
-    page->ReadFromDisk(buffer, table, offSet, file);
-    page->SetFileName(filename);
-    page->SetHasSecondChanceUnsafe(true);
+      page->ReadFromDisk(buffer, table, offSet, file);
+      page->SetFileName(filename);
+      page->SetHasSecondChanceUnsafe(true);
+    }
 
     if (pageHeader.pageId == pageId)
       returnPage = page;
@@ -310,14 +312,6 @@ Pages::PageGuard<Pages::IndexPage> StorageManager::CreateIndexPage(const string&
   return Pages::PageGuard<Pages::IndexPage>(page);
 }
 
-Pages::PageGuard<Pages::UndoPage> StorageManager::CreateUndoPage(const std::string &filename, const Constants::page_id_t &pageId){
-  auto *page = new Pages::UndoPage(pageId, true);
-
-  this->InsertPageToCache(page, filename, pageId);
-
-  return Pages::PageGuard<Pages::UndoPage>(page);
-}
-
 void StorageManager::InsertPageToCache(Pages::Page *page, const std::string &filename, const Constants::page_id_t &pageId){
   MultiThreading::WriterGuard lock(&this->tableMutex);
 
@@ -348,20 +342,14 @@ Pages::PageGuard<PageFreeSpacePage>StorageManager::GetPageFreeSpacePage(const st
   return Pages::PageGuard<PageFreeSpacePage>(page);
 }
 
-Pages::PageGuard<Pages::IndexPage> StorageManager::GetIndexPage(const string& filename, const page_id_t &pageId, const extent_id_t &extentId, const Table* table)
+Pages::PageGuard<Pages::IndexPage> StorageManager::GetIndexPage(const string& filename, const page_id_t &pageId, const Table* table)
 {
   auto* page = dynamic_cast<IndexPage *>(this->GetRawPage(filename, pageId, table));
 
   return Pages::PageGuard<Pages::IndexPage>(page);
 }
 
-Pages::PageGuard<Pages::UndoPage> StorageManager::GetUndoPage(const std::string &filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table){
-  auto* page = dynamic_cast<UndoPage *>(this->GetRawPage(filename, pageId, table));
-
-  return Pages::PageGuard<Pages::UndoPage>(page);
-}
-
-Pages::PageGuard<IndexAllocationMapPage> StorageManager::GetIndexAllocationMapPage(const string& filename, const page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table)
+Pages::PageGuard<IndexAllocationMapPage> StorageManager::GetIndexAllocationMapPage(const string& filename, const page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table)
 {
   auto* page = dynamic_cast<IndexAllocationMapPage *>(this->GetRawPage(filename, pageId, table));
   return Pages::PageGuard<IndexAllocationMapPage>(page);
@@ -426,9 +414,6 @@ bool StorageManager::AllocateMemoryBasedOnPageType(Page **page, const PageHeader
       break;
     case PageType::OVERFLOW:
       *page = new OverflowPage(pageHeader);
-      break;
-    case PageType::UNDO:
-      *page = new UndoPage(pageHeader);
       break;
     default:
       return false;

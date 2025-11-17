@@ -6,7 +6,6 @@
 #include "../FileManager/FileManager.h"
 #include "../../Pages/OverflowPage/OverflowPage.h"
 #include "../../Pages/PageGuard/PageGuard.h"
-#include "../../Pages/UndoPage/UndoPage.h"
 
 namespace DatabaseEngine {
 class Database;
@@ -68,20 +67,17 @@ public:
   Pages::PageGuard<Pages::HeaderPage> GetHeaderPage(const std::string &filename);
   Pages::PageGuard<Pages::HeaderPage> CreateHeaderPage(const std::string &filename);
   Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const std::string& filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(const std::string& filename, const page_id_t &pageId, const extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(const std::string& filename, const page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::PageGuard<Pages::GlobalAllocationMapPage> CreateGlobalAllocationMapPage(const std::string &filename, const Constants::page_id_t &pageId);
   Pages::PageGuard<Pages::GlobalAllocationMapPage> GetGlobalAllocationMapPage(const std::string& filename, const Constants::page_id_t &pageId);
   Pages::PageGuard<Pages::IndexAllocationMapPage> CreateIndexAllocationMapPage(const std::string& filename, const Constants::table_id_t &tableId, const Constants::page_id_t &pageId,const Constants::extent_id_t &startingExtentId);
-  Pages::PageGuard<Pages::IndexAllocationMapPage> GetIndexAllocationMapPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table *table);
+  Pages::PageGuard<Pages::IndexAllocationMapPage> GetIndexAllocationMapPage(const std::string& filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::PageGuard<Pages::PageFreeSpacePage> CreatePageFreeSpacePage(const std::string &filename, const Constants::page_id_t &pageId);
   Pages::PageGuard<Pages::PageFreeSpacePage> GetPageFreeSpacePage(const std::string& filename, const Constants::page_id_t &pageId);
   Pages::PageGuard<Pages::IndexPage> CreateIndexPage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::PageGuard<Pages::IndexPage> GetIndexPage(const std::string& filename, const Constants::page_id_t &pageId, const Constants::extent_id_t &extentId, const DatabaseEngine::StorageTypes::Table* table);
-  Pages::PageGuard<Pages::UndoPage> CreateUndoPage(const std::string& filename, const Constants::page_id_t &pageId);
-  Pages::PageGuard<Pages::UndoPage> GetUndoPage(const std::string& filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table);
-
+  Pages::PageGuard<Pages::IndexPage> GetIndexPage(const std::string& filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table* table);
 };
 
 } // namespace Storage

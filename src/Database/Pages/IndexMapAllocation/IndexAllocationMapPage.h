@@ -27,8 +27,7 @@ namespace Pages {
     protected:
         void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
         void WriteAdditionalHeaderToFile(fstream* filePtr)const;
-        static page_id_t CalculatePageIdOffsetByGamPageId(const page_id_t& globalAllocationMapPageId);
-    
+
     public:
         IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId);
         IndexAllocationMapPage(const PageHeader& pageHeader, const extent_id_t& startingExtentId, const table_id_t& tableId);
@@ -42,5 +41,7 @@ namespace Pages {
         void WriteToDisk(fstream* filePtr) override;
         void SetNextPageId(const page_id_t& nextPageId);
         const page_id_t& GetNextPageId() const;
+        static page_id_t CalculatePageIdOffsetByGamPageId(const page_id_t& globalAllocationMapPageId);
+
     };
 }

@@ -32,9 +32,10 @@ namespace DatabaseEngine::StorageTypes
         }
     };
 
-    struct RowHeader
-    {
-        row_size_t rowSize;
+    struct RowHeader{
+        table_id_t tableId;
+        column_number_t numberOfColumns;
+
         ByteMaps::BitMap *nullBitMap;
         ByteMaps::BitMap *largeObjectBitMap;
         ByteMaps::BitMap *overflowBitMap;
@@ -51,8 +52,7 @@ namespace DatabaseEngine::StorageTypes
         CachedValue();
     };
 
-    class Row
-    {
+    class Row{
         RowHeader header;
         RowVersioningHeader versionHeader;
 
@@ -82,11 +82,16 @@ namespace DatabaseEngine::StorageTypes
 
         explicit Row(const Row* row);
 
+        explicit Row();
+
         Row& operator=(const Row &copyRow);
 
         ~Row();
 
         void InsertColumnData(Block *block, const column_index_t &columnIndex);
+
+        //used by versionDb
+        void InsertColumnAtEnd(Block* block);
 
         //primarily used by the join operation
         [[nodiscard]] int InsertNewColumn(Block* block);
@@ -101,11 +106,7 @@ namespace DatabaseEngine::StorageTypes
 
         void PrintRow() const;
 
-        [[nodiscard]] const uint32_t &GetRowSize() const;
-
         [[nodiscard]] std::vector<column_index_t> GetLargeBlocks()const;
-
-        void UpdateRowSize();
 
         unsigned char *GetLargeObjectValue(const Pages::DataObjectPointer &objectPointer, uint32_t *objectSize) const;
 
@@ -127,7 +128,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
 
-        [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<Value> & updates, int& diff);
+        [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<Value> & updates, int& diff)const;
 
         [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff);
 
@@ -168,6 +169,8 @@ namespace DatabaseEngine::StorageTypes
         void ReadVersionHeaderFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet);
 
         void ReadDataFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet, const std::vector<Column*>& columns);
+
+        void ReadDataFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet);
 
         void WriteHeaderToDisk(fstream* filePtr)const;
 

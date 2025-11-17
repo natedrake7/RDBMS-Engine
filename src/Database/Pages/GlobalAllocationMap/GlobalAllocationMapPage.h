@@ -23,6 +23,7 @@ namespace Pages {
         void WriteToDisk(fstream *filePtr) override;
         void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         [[nodiscard]] bool IsFull() const;
+        std::vector<extent_id_t> GetAllocatedExtents(const extent_id_t& startingIndex = 0) const;
     };
 }
 

@@ -9,6 +9,8 @@ namespace MultiThreading {
     public:
       explicit WriterGuard(ReadWriteMutex* mtx);
       ~WriterGuard();
+
+      void Release()const;
   };
 
 }

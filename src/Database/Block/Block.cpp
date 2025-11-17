@@ -6,7 +6,12 @@
 #include <iostream>
 
 namespace DatabaseEngine::StorageTypes {
-    
+    Block::Block() {
+        this->size = 0;
+        this->column = nullptr;
+        this->data = nullptr;
+    }
+
     Block::Block(const void* data, const block_size_t& size, const Column* column)
     {
         this->size = size;

@@ -65,13 +65,17 @@
 //CREATE USER alice WITH PASSWORD 'secret';
 //GRANT db_writer TO alice;
 
+//create tempDB to store row versions and invoke it at each call
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 //TODO add priority in pages to store system pages indefinetely and decrease second chance count
 //TODO add page wrapper to handle page pin counts and locks releases etc
 //TODO add commits and rollbacks.
+//Also update row version pointers on commit to point to the latest version and not have to traverse the linked list on each select
+//TODO add isolation levels (read uncommitted, read committed, repeatable read, serializable)
+//TODO add deadlock detection and resolution mechanism
+//validate correct versionDb implementation
 
-
-std::atomic<bool> serverRunning{true};
+std::atomic<bool> serverRunning{false};
 
 void shutdownClient(int signal) {
     serverRunning.store(false);
@@ -107,9 +111,10 @@ int main()
 
     server.Initialize("configuration.json");
 
+
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
-    std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
+    // std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
     std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
@@ -122,6 +127,8 @@ int main()
     }
 
     const auto* session = server.CreateSession(user);
+
+    serverRunning.store(true);
 
     std::cout << "Please enter a query: "<< endl;
 
@@ -159,7 +166,7 @@ int main()
 
     serverRunning = false;
 
-    connectionThread.join();
+    // connectionThread.join();
     garbageCollectorThread.join();
 
     server.Shutdown();
@@ -183,7 +190,7 @@ int main()
 
     serverRunning = false;
     
-    connectionThread.join();
+    // connectionThread.join();
 
     server.Shutdown();
 
