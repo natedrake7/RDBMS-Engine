@@ -80,7 +80,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     statement->results = std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(context->resultList()));
 
     statement->table = (context->tableName() != nullptr)
-              ? std::any_cast<Statements::TableName*>(visit(context->tableName()))
+              ? std::any_cast<Statements::DataSource*>(visit(context->tableName()))
               : nullptr;
 
     for (auto* join : context->joinStatement())
@@ -154,7 +154,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
   antlrcpp::Any SQLVisitorImplementation::visitInsertStatement(SQLParser::InsertStatementContext *context){
     auto* statement = new Statements::InsertStatement();
 
-    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+    statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
 
     statement->columns = std::move(this->GetColumnsList(context->columnList()));
 
@@ -338,7 +338,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitDeleteStatement(SQLParser::DeleteStatementContext *context){
     auto* statement = new Statements::DeleteStatement();
 
-    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+    statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
 
     if (context->whereClause())
       statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));
@@ -371,7 +371,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     if (!context->name)
       throw SyntaxError("No table was specified", CreatePositionErrorMessage(context));
 
-    auto* statement = new Statements::TableName();
+    auto* statement = new Statements::DataSource();
 
     if (context->databaseName && context->schemaName) {
       statement->database = std::any_cast<std::string>(visit(context->databaseName));
@@ -443,7 +443,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitUpdateStatement(SQLParser::UpdateStatementContext *context){
     auto* statement = new Statements::UpdateStatement();
 
-    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+    statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
 
     statement->updates = std::any_cast<std::vector<Statements::UpdateColumn*>>(visit(context->updateColumnsList()));
 
@@ -468,7 +468,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     auto* statement = new Statements::CreateIndexStatement();
 
     statement->isUnique = context->UNIQUE() != nullptr;
-    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+    statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
 
     statement->name = std::any_cast<std::string>(visit(context->identifier()));
 
@@ -482,7 +482,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   antlrcpp::Any SQLVisitorImplementation::visitAlterTableStatement(SQLParser::AlterTableStatementContext *context){
     auto* statement = new Statements::AlterTableStatement();
 
-    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+    statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
 
     const auto& action = context->alterTableAction();
 

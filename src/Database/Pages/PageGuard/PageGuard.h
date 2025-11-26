@@ -8,9 +8,8 @@ namespace Pages{
     T* _page;
 
     void Release() {
-      if (this->_page) {
+      if (this->_page)
         this->_page->DecreasePinCount();
-      }
     }
 
     public:
@@ -37,11 +36,12 @@ namespace Pages{
 
     //Move assignment operator
       PageGuard& operator=(PageGuard&& other) noexcept {
-        if (this != &other) {
-          this->Release();
-          this->_page = other._page;
-          other._page = nullptr;
-        }
+        if (this == &other)
+          return *this;
+
+        this->Release();
+        this->_page = other._page;
+        other._page = nullptr;
 
         return *this;
       }
@@ -59,6 +59,8 @@ namespace Pages{
       ~PageGuard() {
         this->Release();
       }
+
+      [[nodiscard]] bool IsValid() const { return this->_page != nullptr; }
 
       T* operator->() { return this->_page; }
       const T* operator->() const { return this->_page; }

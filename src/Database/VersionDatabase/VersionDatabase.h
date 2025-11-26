@@ -11,14 +11,25 @@ namespace DatabaseEngine{
     std::string fileExtension;
     std::string systemFilename;
 
+    MultiThreading::ReadWriteMutex lastUsedPageMutex;
+    page_id_t lastUsedPageId;
+
+    MultiThreading::ReadWriteMutex gamPageMutex;
+    MultiThreading::ReadWriteMutex pfsPageMutex;
+
     static string CreateDatabasePath(const string & dbName);
 
     void PopulateFilenames(const std::string& dbName);
     void WriteHeaderToFile()const;
 
     bool AllocateNewExtent(
-        page_id_t *newPageId,
-        extent_id_t *newExtentId
+        page_id_t& newPageId,
+        extent_id_t& newExtentId
+    );
+
+    Pages::PageGuard<Pages::Page> TryGetLastUndoPage(
+        const DatabaseEngine::StorageTypes::Table* table,
+        const row_size_t &size
     );
 
     Pages::PageGuard<Pages::Page> CreateUndoPage();

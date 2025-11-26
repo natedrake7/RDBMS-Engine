@@ -109,7 +109,9 @@ namespace QueryPipeline::Statements {
     bool Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict);
   };
 
-  struct TableName {
+//can be a table a view or a subquery or a function returning a table literally many things
+//add inheritance
+  struct DataSource {
     std::string database;
     std::string schema;
     std::string name;
@@ -120,7 +122,7 @@ namespace QueryPipeline::Statements {
     int32_t schemaId;
     int16_t ordinalPosition;
 
-    TableName();
+    DataSource();
     [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
     [[nodiscard]] Errors::ValidationStatus Validate(const int32_t& selectedDatabaseId);
@@ -136,7 +138,7 @@ namespace QueryPipeline::Statements {
 
     int32_t databaseId;
 
-    TableName* table;
+    DataSource* table;
     Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
 
     Statement();
@@ -309,7 +311,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct CreateIndexStatement final : Statement {
-    TableName* table;
+    DataSource* table;
     std::string name;
     vector<std::string> columns;
     vector<column_index_t> columnIndices;
@@ -321,7 +323,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct AlterTableStatement final : Statement {
-    TableName* table;
+    DataSource* table;
     Constants::AlterTableType type;
 
     NewColumn* newColumn;

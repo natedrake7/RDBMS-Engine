@@ -111,6 +111,7 @@ int main()
 
     server.Initialize("configuration.json");
 
+    serverRunning.store(true);
 
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
@@ -128,8 +129,6 @@ int main()
 
     const auto* session = server.CreateSession(user);
 
-    serverRunning.store(true);
-
     std::cout << "Please enter a query: "<< endl;
 
     while (true) {
@@ -144,9 +143,14 @@ int main()
 
         std::vector<QueryResult> results;
         std::vector<std::string> displayColumns;
-        QueryPipeline::Parser::Parse(input, session->sessionId, &results, &displayColumns);
+        const auto status = QueryPipeline::Parser::Parse(input, session->sessionId, &results, &displayColumns);
 
         const auto end = std::chrono::high_resolution_clock::now();
+
+        if (status.hasError) {
+            std::cout << "Error: " << status.message << std::endl;
+            continue;
+        }
 
         for (const auto& column : displayColumns)
            std::cout << column << " || ";
@@ -156,13 +160,12 @@ int main()
         for (const auto& row: results)
             row.Print();
 
-
         const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
         std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
     }
 
-    const auto& databases = server.GetCatalog();
+    // const auto& databases = server.GetCatalog();
 
     serverRunning = false;
 

@@ -132,7 +132,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     };
   }
 
-  PhysicalTableScan::PhysicalTableScan(Statements::TableName* table): table(table) {}
+  PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table): table(table) {}
 
   PhysicalPlanResult* PhysicalTableScan::Execute(const PhysicalPlanExecutionProperties& properties){
       using namespace DatabaseEngine::StorageTypes;
@@ -149,10 +149,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       return result;
     }
 
-  PhysicalIndexScan::PhysicalIndexScan(Statements::TableName* table, const bool& isClustered)
+  PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered)
     : table(table), expression(nullptr), isClustered(isClustered) {}
 
-  PhysicalIndexScan::PhysicalIndexScan(Statements::TableName *table, Expressions::Expression *expression, const bool & isClustered)
+  PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource *table, Expressions::Expression *expression, const bool & isClustered)
     : table(table), expression(expression), isClustered(isClustered) {}
 
   PhysicalPlanResult * PhysicalIndexScan::Execute(const PhysicalPlanExecutionProperties& properties){
@@ -176,7 +176,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalIndexSeek::PhysicalIndexSeek(Statements::TableName* table, const Value& minValue, const Value& maxValue)
+  PhysicalIndexSeek::PhysicalIndexSeek(Statements::DataSource* table, const Value& minValue, const Value& maxValue)
     : table(table), minValue(minValue), maxValue(maxValue) {}
 
   PhysicalPlanResult* PhysicalIndexSeek::Execute(const PhysicalPlanExecutionProperties& properties){
@@ -387,7 +387,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
 PhysicalInsert::PhysicalInsert(
-  Statements::TableName* table,
+  Statements::DataSource* table,
   std::vector<Statements::Inserts> &fields,
   PhysicalOperator* child,
   std::vector<column_index_t>& columnsIndices)
@@ -415,7 +415,7 @@ PhysicalInsert::PhysicalInsert(
         : this->InsertFromFields(tablePtr, properties);
   }
 
-  PhysicalHeapDelete::PhysicalHeapDelete(Statements::TableName *table, Expressions::Expression *expression)
+  PhysicalHeapDelete::PhysicalHeapDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
   PhysicalHeapDelete::~PhysicalHeapDelete(){
@@ -435,7 +435,7 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalIndexScanDelete::PhysicalIndexScanDelete(Statements::TableName *table, Expressions::Expression *expression)
+  PhysicalIndexScanDelete::PhysicalIndexScanDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
   PhysicalIndexScanDelete::~PhysicalIndexScanDelete(){
@@ -455,7 +455,7 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(Statements::TableName *table, Expressions::Expression *expression)
+  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
   PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete(){
@@ -475,7 +475,7 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalHeapUpdate::PhysicalHeapUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  PhysicalHeapUpdate::PhysicalHeapUpdate(Statements::DataSource *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
   : table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalHeapUpdate::~PhysicalHeapUpdate(){
@@ -503,7 +503,7 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(Statements::DataSource *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
   : table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
@@ -531,7 +531,7 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(Statements::TableName *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
+  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(Statements::DataSource *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
     : table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){
@@ -563,7 +563,7 @@ PhysicalInsert::PhysicalInsert(
 
   PhysicalTableCreate::PhysicalTableCreate(
       const DataTypes::Guid& sessionId,
-      Statements::TableName*  table,
+      Statements::DataSource*  table,
       std::vector<Statements::NewColumn*> &columns,
       Headers::Index& primaryKey,
       std::string& constraintName)
@@ -747,7 +747,7 @@ PhysicalInsert::PhysicalInsert(
 
   PhysicalIndexCreate::PhysicalIndexCreate(
     const DataTypes::Guid& sessionId,
-    Statements::TableName *table,
+    Statements::DataSource *table,
     std::string &constraintName,
     vector<Constants::column_index_t> &columns)
     : PhysicalOperator(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}

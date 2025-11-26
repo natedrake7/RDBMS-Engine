@@ -1,37 +1,35 @@
 ﻿#pragma once
 
+#include "../../../Systemic/DataStructures/Dictionary/Dictionary.h"
+#include "../../../Systemic/MultiThreading/ReadWriteMutex/ReadWriteMutex.h"
 #include <fstream>
-#include <list>
-#include <unordered_map>
+#include <vector>
+
 namespace Storage{
     constexpr size_t MAX_OPEN_FILES = 2;
-    
-    using namespace std;
-    typedef struct File {
-        string name;
-        fstream* filePtr;
-        int lastPageId;
 
-        explicit File(const string& filename);
+    typedef struct File {
+        std::string name;
+        std::fstream* filePtr;
+
+        explicit File(const std::string& filename);
         ~File();
     }File;
 
-    typedef list<File*>::iterator FileIterator;
-
     class FileManager final {
-        list<File*> filesList;
-        unordered_map<string, FileIterator> cache;
+        Dictionary<std::string, File*> fileTable;
+        mutable MultiThreading::ReadWriteMutex tableMutex; // protects pageTable_ and frame insertion
         
         protected:
-            void OpenFile(const string& fileName);
-            void RemoveFile();
+            std::fstream* OpenFile(const std::string& fileName);
+            // void RemoveFile();
         
         public:
             explicit  FileManager();
             FileManager(const FileManager& other) = delete;
             ~FileManager();
-            void CreateFile(const string& fileName, const string& extension);
-            fstream* GetFile(const string& fileName);
-            void CloseFile(const string& fileName);
+            void CreateFile(const std::string& fileName, const std::string& extension)const;
+            std::fstream* GetFile(const std::string& fileName);
+            void CloseFile(const std::string& fileName);
     };
 }

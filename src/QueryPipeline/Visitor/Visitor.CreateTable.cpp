@@ -8,7 +8,7 @@ namespace QueryPipeline{
   antlrcpp::Any SQLVisitorImplementation::visitCreateTableStatement(SQLParser::CreateTableStatementContext *context){
     auto* statement = new Statements::CreateTableStatement();
 
-    statement->table = std::any_cast<Statements::TableName*>(visit(context->tableName()));
+    statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
 
     for (const auto columnContext: context->addColumn()) {
       const auto column = std::any_cast<Statements::NewColumn*>(visit(columnContext));

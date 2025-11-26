@@ -191,7 +191,7 @@ Pages::Page* StorageManager::OpenExtent(
   // read page from disk, call this->fileManager
   auto *file = this->fileManager.GetFile(filename);
 
-  const page_id_t firstExtentPageId = DatabaseEngine::Database::CalculateSystemPageOffsetByExtentId(extentId);
+  const page_id_t firstExtentPageId = DatabaseEngine::Database::CalculateFirstPageIdByExtentId(extentId);
 
   const streampos extentOffset = firstExtentPageId * PAGE_SIZE;
 

@@ -28,7 +28,7 @@ namespace Pages {
 
     extent_id_t GlobalAllocationMapPage::AllocateExtent()
     {
-        for (extent_id_t extentId = lastAllocatedExtentId; extentId < this->extentsMap->GetSize(); extentId++)
+        for (extent_id_t extentId = this->lastAllocatedExtentId; extentId < this->extentsMap->GetSize(); extentId++)
         {
             if (this->extentsMap->Get(extentId))
             {
@@ -61,7 +61,11 @@ namespace Pages {
         this->extentsMap->GetDataFromFile(data, offSet);
     }
 
-    bool GlobalAllocationMapPage::IsFull() const { return !this->extentsMap->Get(extentsMap->GetSize() - 1); }
+    bool GlobalAllocationMapPage::IsFull() const {
+        MultiThreading::ReaderGuard lock(&this->latch);
+
+        return !this->extentsMap->Get(extentsMap->GetSize() - 1);
+    }
 
 //Locks Latch
     std::vector<extent_id_t> GlobalAllocationMapPage::GetAllocatedExtents(const extent_id_t& startingIndex) const {

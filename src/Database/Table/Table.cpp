@@ -244,7 +244,7 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != Errors::RuntimeError::Ok)
           return result;
 
-        this->database->LogCheckPoint(checkPoint);
+        Database::LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
 
@@ -751,7 +751,7 @@ namespace DatabaseEngine::StorageTypes {
 
       for (const auto &extentId : allocatedExtents)
       {
-          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+          const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
 
           const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                                 ? extentFirstPageId
@@ -1526,7 +1526,7 @@ namespace DatabaseEngine::StorageTypes {
     tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
 
     for (const auto& extentId: allocatedExtents) {
-      const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+      const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
 
       const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                             ? extentFirstPageId
@@ -1617,7 +1617,7 @@ namespace DatabaseEngine::StorageTypes {
     tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
 
     for (const auto& extentId: allocatedExtents) {
-      const page_id_t extentFirstPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+      const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
 
       const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                             ? extentFirstPageId

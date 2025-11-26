@@ -11,6 +11,7 @@ namespace DatabaseEngine {
  VersionDatabase::VersionDatabase(const std::string &filename){
    this->PopulateFilenames(filename);
 
+   this->lastUsedPageId = Constants::INVALID_PAGE_ID;
    const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFilename);
 
    this->header = *headerPage->GetDatabaseHeader();
@@ -36,45 +37,76 @@ namespace DatabaseEngine {
    metaDataPage->SetDbHeader(this->header);
  }
 
-  bool VersionDatabase::AllocateNewExtent(page_id_t *newPageId, extent_id_t *newExtentId) {
-        auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
+  bool VersionDatabase::AllocateNewExtent(page_id_t& newPageId, extent_id_t& newExtentId){
+    {
+      const MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
 
-        if (gamPage->IsFull())
-        {
-            gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(this->systemFilename, gamPage->GetPageId() + GAM_NUMBER_OF_PAGES);
+      auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
 
-            *newExtentId = gamPage->AllocateExtent();
+      if (gamPage->IsFull())
+      {
+        const auto nextGamPageId = Database::CalculateNextGamPageId(this->header.lastGamPageId);
 
-            *newPageId = Database::CalculateSystemPageOffsetByExtentId(*newExtentId);
-        }
-        else
-        {
-            *newExtentId = gamPage->AllocateExtent();
-            *newPageId = Database::CalculateSystemPageOffsetByExtentId(*newExtentId);
-        }
+        gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(this->systemFilename, nextGamPageId);
 
-        const auto pfsPageId = Database::GetPfsAssociatedPage(*newPageId);
+        this->header.lastGamPageId = gamPage->GetPageId();
+      }
 
-        if(pfsPageId > this->header.lastPageFreeSpacePageId){
-            Storage::StorageManager::Get().CreatePageFreeSpacePage(this->systemFilename, pfsPageId);
-            this->header.lastPageFreeSpacePageId = pfsPageId;
-        }
+      // Step 3: allocate an extent from the current (or new) GAM page
+      newExtentId = gamPage->AllocateExtent();
+      newPageId   = Database::CalculateFirstPageIdByExtentId(newExtentId);
+    }
 
-        const auto gamPageId = Database::GetGamAssociatedPage(*newPageId);
+    // Step 4: ensure PFS page exists
+    const auto pfsPageId = Database::GetPfsAssociatedPage(newPageId);
 
-        if(gamPageId > gamPage->GetPageId()){
-            gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(this->filename, gamPageId);
-            this->header.lastGamPageId = gamPageId;
-        }
+    {
+      MultiThreading::WriterGuard pfsLock(&this->pfsPageMutex);
 
-      return true;
- }
+      if (pfsPageId > this->header.lastPageFreeSpacePageId) {
+        Storage::StorageManager::Get().CreatePageFreeSpacePage(this->systemFilename, pfsPageId);
+        this->header.lastPageFreeSpacePageId = pfsPageId;
+      }
+    }
+
+    return true;
+  }
+
+  Pages::PageGuard<Pages::Page> VersionDatabase::TryGetLastUndoPage(
+    const DatabaseEngine::StorageTypes::Table *table,
+    const row_size_t &size
+  ) {
+    Constants::page_id_t pageId;
+
+    {
+      MultiThreading::ReaderGuard lock(&this->lastUsedPageMutex);
+
+      if (this->lastUsedPageId == Constants::INVALID_PAGE_ID)
+        return {};
+
+      pageId = this->lastUsedPageId;
+    }
+
+    auto lastUsedPage = Storage::StorageManager::Get().GetPage(this->filename, pageId, table);
+
+    MultiThreading::ReaderGuard lastUsedPageLatch(&lastUsedPage->GetLatch());
+
+    if (lastUsedPage->GetBytesLeft() >= size)
+      return lastUsedPage;
+
+    return {};
+  }
 
   Pages::PageGuard<Pages::Page> VersionDatabase::CreateUndoPage(){
      extent_id_t newExtentId = 0;
      page_id_t newPageId = 0;
 
-    this->AllocateNewExtent(&newPageId, &newExtentId);
+     this->AllocateNewExtent(newPageId, newExtentId);
+
+     {
+        MultiThreading::WriterGuard pageIdLock(&this->lastUsedPageMutex);
+        this->lastUsedPageId = newPageId;
+     }
 
      for (page_id_t pageId = newPageId; pageId < newPageId + EXTENT_SIZE; pageId++){
        auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
@@ -92,9 +124,13 @@ namespace DatabaseEngine {
   Pages::PageGuard<Pages::Page> VersionDatabase::GetLastUndoPage(const DatabaseEngine::StorageTypes::Table* table, const row_size_t &size) {
     const auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
 
+    auto cachedPage = this->TryGetLastUndoPage(table, size);
+    if (cachedPage.IsValid())
+      return cachedPage;
+
     for (const auto &extentId : gamPage->GetAllocatedExtents())
     {
-      const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+      const page_id_t firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId);
 
       for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++)
       {
@@ -114,8 +150,14 @@ namespace DatabaseEngine {
 
          MultiThreading::ReaderGuard undoLatch(&undoPage->GetLatch());
 
-         if (undoPage->GetBytesLeft() >= size)
+         if (undoPage->GetBytesLeft() >= size) {
+           {
+             MultiThreading::WriterGuard lock(&this->lastUsedPageMutex);
+             this->lastUsedPageId = undoPage->GetPageId();
+           }
+
            return undoPage;
+         }
       }
     }
 
@@ -129,7 +171,7 @@ namespace DatabaseEngine {
   ) {
    auto* oldRow = new StorageTypes::Row(row);
 
-   auto undoPage =  this->GetLastUndoPage(table, row->GetTotalRowSize());
+   auto undoPage = this->GetLastUndoPage(table, row->GetTotalRowSize());
 
    MultiThreading::WriterGuard lock(&undoPage->GetLatch());
 
@@ -152,7 +194,7 @@ namespace DatabaseEngine {
     const auto extents = this->GetAllocatedExtents(startingExtentId);
 
     for (const auto &extentId : extents){
-      const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+      const page_id_t firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId);
 
       bool isExtentEmpty = true;
       for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++){

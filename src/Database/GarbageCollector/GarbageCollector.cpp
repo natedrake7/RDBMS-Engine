@@ -8,7 +8,7 @@
 namespace DatabaseEngine {
   void GarbageCollector::Collect(const std::atomic<bool>& isServerRunning){
     auto& transactionManager = TransactionManager::Get();
-    auto* versionDatabase = Server::ServerInstance::Get().GetVersionDatabase();
+    const auto* versionDatabase = Server::ServerInstance::Get().GetVersionDatabase();
 
     Constants::page_id_t lastScannedPageId = 0;
     Constants::extent_id_t lastScannedExtentId = 0;
@@ -19,7 +19,7 @@ namespace DatabaseEngine {
 
       lastScannedExtentId = versionDatabase->CleanupVersionedData(oldestTransactionId, lastScannedExtentId);
 
-      std::this_thread::sleep_for(1000ms);
+      std::this_thread::sleep_for(10000ms);
     }
   }
 

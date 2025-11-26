@@ -38,7 +38,7 @@ namespace QueryPipeline {
     );
   }
 
-  LogicalTableScan::LogicalTableScan(Statements::TableName* table, Expressions::Expression* expression)
+  LogicalTableScan::LogicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
   : table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalTableScan::ToPhysical(){
@@ -156,7 +156,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
   }
 
   LogicalInsert::LogicalInsert(
-    Statements::TableName* table,
+    Statements::DataSource* table,
     std::vector<Statements::Inserts> &fields,
     LogicalPlan* child,
     std::vector<column_index_t>& columnIndices
@@ -181,7 +181,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return new PhysicalPlan::PhysicalSchemaCreate(this->sessionId, this->databaseId, this->schemaName);
   }
 
-  LogicalDelete::LogicalDelete(Statements::TableName *table, Expressions::Expression *expression)
+  LogicalDelete::LogicalDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalDelete::ToPhysical(){
@@ -221,7 +221,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
 
   LogicalTableCreate::LogicalTableCreate(
         const DataTypes::Guid& sessionId,
-        Statements::TableName*  table,
+        Statements::DataSource*  table,
         std::vector<Statements::NewColumn*>& columns,
         std::vector<column_index_t> primaryKey,
         std::string  constraintName)
@@ -236,7 +236,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return new PhysicalPlan::PhysicalTableCreate(this->sessionId, this->table, this->columns, index, this->constraintName);
   }
 
-  LogicalUpdate::LogicalUpdate(Statements::TableName *table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression *expression)
+  LogicalUpdate::LogicalUpdate(Statements::DataSource *table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression *expression)
   : table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator* LogicalUpdate::ToPhysical(){
@@ -306,7 +306,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
 
   LogicalIndexCreate::LogicalIndexCreate(
     const DataTypes::Guid& sessionId,
-    Statements::TableName *table,
+    Statements::DataSource *table,
     std::string &constraintName,
     std::vector<column_index_t> &columns)
       : LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
@@ -317,7 +317,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
 
   LogicalAlterTable::LogicalAlterTable(
     const DataTypes::Guid& sessionId,
-    Statements::TableName *table,
+    Statements::DataSource *table,
     const AlterTableType& type,
     Statements::AlterColumn *alterColumn,
     Statements::NewColumn *addColumn,

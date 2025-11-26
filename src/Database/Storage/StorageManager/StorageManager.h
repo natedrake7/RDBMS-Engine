@@ -8,11 +8,11 @@
 #include "../../Pages/PageGuard/PageGuard.h"
 
 namespace DatabaseEngine {
-class Database;
+  class Database;
 
-namespace StorageTypes {
-  class Table;
-}
+  namespace StorageTypes {
+    class Table;
+  }
 } // namespace DatabaseEngine
 
 namespace Pages {
@@ -27,9 +27,6 @@ namespace Pages {
 } // namespace Pages
 
 namespace Storage {
-  class FileManager;
-  using namespace std;
-
 class StorageManager final{
   int capacity;
   int clockHand;

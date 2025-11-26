@@ -511,7 +511,7 @@ namespace QueryPipeline::Statements {
       delete column;
   }
 
-   TableName::TableName() {
+   DataSource::DataSource() {
     this->databaseId = Constants::INVALID_DATABASE_ID;
     this->tableId = Constants::INVALID_TABLE_ID;
     this->schemaId = Constants::INVALID_SCHEMA_ID;
@@ -519,17 +519,17 @@ namespace QueryPipeline::Statements {
     this->schema = "dbo";
   }
 
-  std::string TableName::GetAlias() const{
+  std::string DataSource::GetAlias() const{
     return this->alias.empty()
         ? this->GetFullName()
           : this->alias;
   }
 
-  std::string TableName::GetFullName() const {
+  std::string DataSource::GetFullName() const {
     return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
   }
 
-  Errors::ValidationStatus TableName::Validate(const int32_t& selectedDatabaseId) {
+  Errors::ValidationStatus DataSource::Validate(const int32_t& selectedDatabaseId) {
     const auto tableHeader = (!this->database.empty())
         ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
         : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
@@ -548,7 +548,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus TableName::ValidateTableCreate(const int32_t &selectedDatabaseId){
+  Errors::ValidationStatus DataSource::ValidateTableCreate(const int32_t &selectedDatabaseId){
     const auto tableHeader = (!this->database.empty())
       ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
       : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);

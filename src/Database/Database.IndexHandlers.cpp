@@ -78,7 +78,7 @@ namespace DatabaseEngine {
 
         for(const auto& extentId: allocatedExtents)
         {
-            const page_id_t firstExtentPageId = Database::CalculateSystemPageOffsetByExtentId(extentId);
+            const page_id_t firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId);
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
             {

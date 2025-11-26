@@ -72,10 +72,10 @@ namespace QueryPipeline {
 
   class LogicalTableScan final : public LogicalPlan {
     public:
-      Statements::TableName* table;
+      Statements::DataSource* table;
       Expressions::Expression* expression;
       explicit LogicalTableScan(
-        Statements::TableName* table,
+        Statements::DataSource* table,
         Expressions::Expression* expression
       );
       PhysicalPlan::PhysicalOperator* ToPhysical() override;
@@ -141,14 +141,14 @@ namespace QueryPipeline {
 
   class LogicalInsert final : public LogicalPlan {
     public:
-      Statements::TableName* table;
+      Statements::DataSource* table;
       std::vector<Statements::Inserts> fields;
 
       LogicalPlan* child;
       std::vector<column_index_t> columnsIndices;
 
       explicit LogicalInsert(
-        Statements::TableName* table,
+        Statements::DataSource* table,
         std::vector<Statements::Inserts>& fields,
         LogicalPlan* child,
         std::vector<column_index_t>& columnIndices
@@ -167,32 +167,32 @@ namespace QueryPipeline {
 
   class LogicalDelete final : public LogicalPlan {
   public:
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Expressions::Expression* expression;
-    explicit LogicalDelete(Statements::TableName* table, Expressions::Expression* expression);
+    explicit LogicalDelete(Statements::DataSource* table, Expressions::Expression* expression);
     PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
   class LogicalUpdate final : public LogicalPlan {
     public:
-      Statements::TableName* table;
+      Statements::DataSource* table;
       std::vector<Statements::UpdateColumn*> updates;
       Expressions::Expression* expression;
 
-      explicit LogicalUpdate(Statements::TableName* table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression* expression);
+      explicit LogicalUpdate(Statements::DataSource* table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator* ToPhysical()override;
   };
 
   class LogicalTableCreate final : public LogicalPlan {
     public:
-      Statements::TableName* table;
+      Statements::DataSource* table;
       std::string constraintName;
       std::vector<Statements::NewColumn*> columns;
       vector<column_index_t> primaryKey;
 
       explicit LogicalTableCreate(
         const DataTypes::Guid& sessionId,
-        Statements::TableName* table,
+        Statements::DataSource* table,
         std::vector<Statements::NewColumn*>& columns,
         std::vector<column_index_t> primaryKey,
         std::string  constraintName);
@@ -201,12 +201,12 @@ namespace QueryPipeline {
 
   class LogicalIndexCreate final : public LogicalPlan {
     public:
-    Statements::TableName* table;
+    Statements::DataSource* table;
     std::string constraintName;
     std::vector<column_index_t> columns;
     explicit LogicalIndexCreate(
       const DataTypes::Guid& sessionId,
-      Statements::TableName* table,
+      Statements::DataSource* table,
       std::string& constraintName,
       std::vector<column_index_t>& columns
     );
@@ -215,7 +215,7 @@ namespace QueryPipeline {
 
   class LogicalAlterTable final : public LogicalPlan {
     public:
-      Statements::TableName* table;
+      Statements::DataSource* table;
       Constants::AlterTableType type;
 
       Statements::AlterColumn* alterColumn;
@@ -225,7 +225,7 @@ namespace QueryPipeline {
 
       explicit LogicalAlterTable(
         const DataTypes::Guid& sessionId,
-        Statements::TableName* table,
+        Statements::DataSource* table,
         const AlterTableType& type,
         Statements::AlterColumn* alterColumn,
         Statements::NewColumn* addColumn,

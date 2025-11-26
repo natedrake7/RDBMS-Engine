@@ -232,36 +232,41 @@ namespace Functions::String {
 
     inline int CompareIgnoreCase(const std::string& a, const std::string& b)
     {
-      const size_t n = std::min(a.size(), b.size());
-      for (size_t i = 0; i < n; ++i) {
-        unsigned char ca = static_cast<unsigned char>(a[i]);
-        unsigned char cb = static_cast<unsigned char>(b[i]);
-        int la = std::tolower(ca);
-        int lb = std::tolower(cb);
+      const auto n = std::min(a.size(), b.size());
+
+      for (int i = 0; i < n; i++) {
+        const int la = std::tolower(a[i]);
+        const int lb = std::tolower(b[i]);
+
         if (la < lb) return -1;
         if (la > lb) return 1;
       }
+
       if (a.size() < b.size()) return -1;
       if (a.size() > b.size()) return 1;
+
       return 0;
     }
 
     inline bool StartsWithIgnoreCase(const std::string& s, const std::string& prefix)
     {
       if (prefix.size() > s.size()) return false;
-      for (size_t i = 0; i < prefix.size(); ++i) {
-        if (std::tolower(static_cast<unsigned char>(s[i])) != std::tolower(static_cast<unsigned char>(prefix[i]))) return false;
-      }
+
+      for (int i = 0; i < prefix.size(); i++)
+        if (std::tolower(s[i]) != std::tolower(prefix[i])) return false;
+
       return true;
     }
 
     inline bool EndsWithIgnoreCase(const std::string& s, const std::string& suffix)
     {
       if (suffix.size() > s.size()) return false;
-      size_t offset = s.size() - suffix.size();
-      for (size_t i = 0; i < suffix.size(); ++i) {
-        if (std::tolower(static_cast<unsigned char>(s[offset + i])) != std::tolower(static_cast<unsigned char>(suffix[i]))) return false;
-      }
+
+      const auto offset = s.size() - suffix.size();
+
+      for (int i = 0; i < suffix.size(); i++)
+        if (std::tolower(s[offset + i]) != std::tolower(suffix[i])) return false;
+
       return true;
     }
 }

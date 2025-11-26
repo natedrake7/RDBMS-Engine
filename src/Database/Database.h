@@ -66,6 +66,9 @@ class Database {
 
   vector<StorageTypes::Table *> tables;
 
+  MultiThreading::ReadWriteMutex gamPageMutex;
+  MultiThreading::ReadWriteMutex pfsPageMutex;
+
 protected:
 
     void PopulateFilenames(const std::string& dbName);
@@ -75,15 +78,11 @@ protected:
     static bool IsSystemPage(const page_id_t &pageId);
 
 
-    bool AllocateNewExtent( Pages::PageGuard<Pages::PageFreeSpacePage> *pageFreeSpacePage,
-                            page_id_t *lowerLimit,
-                            page_id_t *newPageId,
-                            extent_id_t *newExtentId,
-                            const table_id_t &tableId);
+    bool AllocateNewExtent(page_id_t& lowerLimit, page_id_t& newPageId, extent_id_t& newExtentId, const table_id_t &tableId);
 
     [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
 
-    [[nodiscard]] bool ValidateLogIntegrity(const Logging::LogEntry& logEntry) const;
+    // [[nodiscard]] bool ValidateLogIntegrity(const Logging::LogEntry& logEntry) const;
 
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry, std::vector<extent_id_t>& allocatedExtents, extent_id_t& startingExtentIndex)const;
 
@@ -122,6 +121,8 @@ public:
     static page_id_t GetPfsAssociatedPage(const page_id_t &pageId);
 
     static page_id_t CalculateSystemPageOffset(const page_id_t &pageId);
+
+    static page_id_t CalculateNextGamPageId(const page_id_t &currentGamPageId);
 
     static Constants::byte GetObjectSizeToCategory(const row_size_t &size);
 
@@ -172,7 +173,7 @@ public:
 
     [[nodiscard]] string GetSystemFilename() const;
 
-    static page_id_t CalculateSystemPageOffsetByExtentId(const extent_id_t &extentId);
+    static page_id_t CalculateFirstPageIdByExtentId(const extent_id_t &extentId);
 
     static extent_id_t CalculateExtentIdByPageId(const page_id_t &pageId);
 

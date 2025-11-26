@@ -143,7 +143,7 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
       return checkPoint;
     }
 
-    ::lseek(this->checkPointFileDescriptor, fileSize - CheckPoint::Size(), SEEK_SET);
+    ::lseek(this->checkPointFileDescriptor, static_cast<long>(fileSize - CheckPoint::Size()), SEEK_SET);
 
     // ::lseek(this->checkPointFileDescriptor, 0, SEEK_SET);
     const auto result = ::read(this->checkPointFileDescriptor, &checkPoint, CheckPoint::Size());
@@ -156,9 +156,9 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
 
     if (result < 0 || result != CheckPoint::Size()) {
       std::cerr << "Failed to read checkpoint from checkpoint file" << std::endl;
-      perror("Failed to read from checkpoint file");
+      // perror("Failed to read from checkpoint file");
 
-      throw std::runtime_error("Failed to recover last checkpoint");
+      // throw std::runtime_error("Failed to recover last checkpoint");
     }
 
     // if (CheckPoint::CalculateCheckSum(checkPoint) != checkPoint.checkSum) {

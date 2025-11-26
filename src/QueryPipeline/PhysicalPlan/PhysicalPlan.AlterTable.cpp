@@ -5,7 +5,7 @@
 
 namespace QueryPipeline::PhysicalPlan{
 
-  PhysicalAddColumn::PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::TableName *table, Statements::NewColumn *column)
+  PhysicalAddColumn::PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::NewColumn *column)
     : PhysicalOperator(sessionId), table(table), column(column){}
 
   PhysicalAddColumn::~PhysicalAddColumn(){
@@ -77,7 +77,7 @@ namespace QueryPipeline::PhysicalPlan{
     return nullptr;
   }
 
-  PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::TableName *table, Statements::DropColumn *column)
+  PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::DropColumn *column)
     : PhysicalOperator(sessionId), table(table), column(column){}
 
   PhysicalDropColumn::~PhysicalDropColumn(){
@@ -109,7 +109,7 @@ namespace QueryPipeline::PhysicalPlan{
     return result;
   }
 
-  PhysicalRenameColumn::PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::TableName *table, Statements::RenameColumn *column)
+  PhysicalRenameColumn::PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::RenameColumn *column)
   : PhysicalOperator(sessionId), table(table), column(column){}
 
   PhysicalRenameColumn::~PhysicalRenameColumn(){
@@ -147,7 +147,7 @@ namespace QueryPipeline::PhysicalPlan{
     return result;
   }
 
-  PhysicalAlterColumn::PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::TableName *table, Statements::AlterColumn *column)
+  PhysicalAlterColumn::PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::AlterColumn *column)
     : PhysicalOperator(sessionId), table(table), column(column){}
 
   PhysicalAlterColumn::~PhysicalAlterColumn(){

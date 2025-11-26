@@ -1,19 +1,25 @@
 ﻿#include "FileManager.h"
+
+#include "../../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
+#include "../../../Systemic/MultiThreading/Guards/WriterGuard/WriterGuard.h"
+
 #include <filesystem>
+#include <ranges>
 namespace fs = std::filesystem;
 
 namespace Storage{
 
-    File::File(const string& filename)
+    File::File(const std::string& filename)
     {
         this->name = filename;
-        this->filePtr = new fstream(filename.c_str(), ios::out | ios::in | ios::binary);
-        this->lastPageId = -1;
+        this->filePtr = new std::fstream(filename.c_str(), std::ios::out | std::ios::in | std::ios::binary);
     }
 
     File::~File()
     {
+        this->filePtr->flush();
         this->filePtr->close();
+
         delete this->filePtr;
         filePtr = nullptr;
     }
@@ -22,93 +28,94 @@ namespace Storage{
 
     FileManager::~FileManager()
     {
-        for(const auto& file : this->filesList)
+        for(const auto &file : this->fileTable | std::views::values)
             delete file;
     }
 
-    void FileManager::CreateFile(const string& fileName, const string& extension)
+    void FileManager::CreateFile(const std::string& fileName, const std::string& extension)const
     {
-        const auto& fileIteratorKeyPair = this->cache.find(fileName);
-        
-        if(fileIteratorKeyPair != this->cache.end())
-            throw runtime_error("File already exists");
-        
-        ifstream fileExists(fileName + extension);
+        {
+            MultiThreading::ReaderGuard lock(&this->tableMutex);
+
+            if (this->fileTable.Contains(fileName))
+                throw std::runtime_error("File already exists");
+        }
+
+        std::ifstream fileExists(fileName + extension);
 
         if(fileExists)
-            throw runtime_error("Database with name: " + fileName +" already exists");
+            throw std::runtime_error("Database with name: " + fileName +" already exists");
 
         fileExists.close();
 
-        fs::path fullPath = fs::path(fileName + extension);
+        auto fullPath = fs::path(fileName + extension);
 
-        fs::path parentDir = fullPath.parent_path();
+        auto parentDir = fullPath.parent_path();
 
         if(!parentDir.empty() && !fs::exists(parentDir))
           fs::create_directories(parentDir);
 
-        ofstream file(fileName + extension);
+        std::ofstream file(fileName + extension);
 
         if(!file)
-            throw runtime_error("Database " + fileName + " could not be created");
+            throw std::runtime_error("Database " + fileName + " could not be created");
 
         file.close();
     }
 
-    fstream* FileManager::GetFile(const string& fileName)
+    std::fstream* FileManager::GetFile(const std::string& fileName)
     {
-        const auto& fileIteratorKeyPair = this->cache.find(fileName);
-        
-        if(fileIteratorKeyPair == this->cache.end())
-            this->OpenFile(fileName);
-        else
         {
-            this->filesList.push_front(*fileIteratorKeyPair->second);
-            this->filesList.erase(fileIteratorKeyPair->second);
-            this->cache[fileName] = this->filesList.begin();
+            MultiThreading::ReaderGuard lock(&this->tableMutex);
+
+            File* file = nullptr;
+            if (this->fileTable.TryGetValue(fileName, file))
+                return file->filePtr;
         }
 
-        return (*this->filesList.begin())->filePtr;
+        return this->OpenFile(fileName);
     }
 
-    void FileManager::CloseFile(const string& fileName)
+    void FileManager::CloseFile(const std::string& fileName)
     {
-        const auto& fileIteratorKeyPair = this->cache.find(fileName);
-        if(fileIteratorKeyPair == this->cache.end())
+        MultiThreading::WriterGuard lock(&this->tableMutex);
+
+        File* file = nullptr;
+        if (!this->fileTable.TryGetValue(fileName, file))
             return;
-        
-        this->filesList.erase(fileIteratorKeyPair->second);
-        this->cache.erase(fileIteratorKeyPair->first);
 
-        delete *fileIteratorKeyPair->second;
+        delete file;
+        this->fileTable.Remove(fileName);
     }
 
-    void FileManager::OpenFile(const string& fileName)
+    std::fstream* FileManager::OpenFile(const std::string& fileName)
     {
-        if(this->filesList.size() == MAX_OPEN_FILES)
-            this->RemoveFile();
+        // if(this->filesList.size() == MAX_OPEN_FILES)
+        //     this->RemoveFile();
 
-        File* file = new File(fileName);
+        auto* file = new File(fileName);
 
         if(!file->filePtr->is_open())
         {
             delete file;
-            throw runtime_error("File could not be opened");
+            throw std::runtime_error("File could not be opened");
         }
 
-        this->filesList.push_front(file);
-        this->cache[fileName] = this->filesList.begin();
+        MultiThreading::WriterGuard lock(&this->tableMutex);
+
+        this->fileTable.Add(fileName, file);
+
+        return file->filePtr;
     }
 
-    void FileManager::RemoveFile()
-    {
-        const auto& fileIterator = prev(this->filesList.end());
-
-        this->cache.erase((*fileIterator)->name);
-
-        delete *fileIterator;
-
-        this->filesList.erase(fileIterator);
-            
-    }
+    // void FileManager::RemoveFile()
+    // {
+    //     const auto& fileIterator = prev(this->filesList.end());
+    //
+    //     this->cache.erase((*fileIterator)->name);
+    //
+    //     delete *fileIterator;
+    //
+    //     this->filesList.erase(fileIterator);
+    // }
 };

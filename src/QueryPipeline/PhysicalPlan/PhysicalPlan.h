@@ -123,35 +123,35 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalTableScan final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     TableScanState state;
 
     public:
-      explicit PhysicalTableScan(Statements::TableName* table);
+      explicit PhysicalTableScan(Statements::DataSource* table);
       ~PhysicalTableScan()override = default;
       PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexScan final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Expressions::Expression* expression;
     IndexState state;
     bool isClustered;
 
   public:
-    explicit PhysicalIndexScan(Statements::TableName* table, const bool& isClustered = false);
-    explicit PhysicalIndexScan(Statements::TableName* table, Expressions::Expression* expression, const bool& isClustered = false);
+    explicit PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered = false);
+    explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, const bool& isClustered = false);
     ~PhysicalIndexScan()override = default;
     PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexSeek final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Value minValue;
     Value maxValue;
 
     public:
-      explicit PhysicalIndexSeek(Statements::TableName* table, const Value& minValue, const Value& maxValue);
+      explicit PhysicalIndexSeek(Statements::DataSource* table, const Value& minValue, const Value& maxValue);
       ~PhysicalIndexSeek()override = default;
       PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
@@ -205,7 +205,7 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalInsert final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     std::vector<Statements::Inserts> fields;
 
     PhysicalOperator* child;
@@ -216,7 +216,7 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalPlanResult* InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const PhysicalPlanExecutionProperties& properties);
   public:
     PhysicalInsert(
-      Statements::TableName* table,
+      Statements::DataSource* table,
       std::vector<Statements::Inserts>& fields,
       PhysicalOperator* child,
       std::vector<column_index_t>& columnsIndices
@@ -226,72 +226,72 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalHeapDelete final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Expressions::Expression* expression;
 
   public:
-    PhysicalHeapDelete(Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalHeapDelete(Statements::DataSource* table, Expressions::Expression* expression);
     ~PhysicalHeapDelete()override;
     PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexScanDelete final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Expressions::Expression* expression;
     IndexState state;
 
   public:
-    PhysicalIndexScanDelete(Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalIndexScanDelete(Statements::DataSource* table, Expressions::Expression* expression);
     ~PhysicalIndexScanDelete()override;
     PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexSeekDelete final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Expressions::Expression* expression;
     IndexState state;
 
   public:
-    PhysicalIndexSeekDelete(Statements::TableName* table, Expressions::Expression* expression);
+    PhysicalIndexSeekDelete(Statements::DataSource* table, Expressions::Expression* expression);
     ~PhysicalIndexSeekDelete()override;
     PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalHeapUpdate final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     std::vector<Statements::UpdateColumn*>  updates;
     Expressions::Expression* expression;
 
   public:
-    PhysicalHeapUpdate(Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
+    PhysicalHeapUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalHeapUpdate()override;
     PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexScanUpdate final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     std::vector<Statements::UpdateColumn*>  updates;
     Expressions::Expression* expression;
 
   public:
-    PhysicalIndexScanUpdate(Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
+    PhysicalIndexScanUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalIndexScanUpdate()override;
     PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalIndexSeekUpdate final : public PhysicalOperator{
-    Statements::TableName* table;
+    Statements::DataSource* table;
     std::vector<Statements::UpdateColumn*>  updates;
     Expressions::Expression* expression;
 
   public:
-    PhysicalIndexSeekUpdate(Statements::TableName* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
+    PhysicalIndexSeekUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
     ~PhysicalIndexSeekUpdate()override;
     PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalTableCreate final : public PhysicalOperator{
-      Statements::TableName*  table;
+      Statements::DataSource*  table;
       std::string constraintName;
       std::vector<Statements::NewColumn*> columns;
       Headers::Index primaryKey;
@@ -299,7 +299,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalTableCreate(
         const DataTypes::Guid& sessionId,
-        Statements::TableName*  table,
+        Statements::DataSource*  table,
         std::vector<Statements::NewColumn*>& columns,
         Headers::Index& primaryKey,
         std::string& constraintName);
@@ -317,55 +317,55 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalIndexCreate final : public PhysicalOperator {
-    Statements::TableName* table;
+    Statements::DataSource* table;
     std::string constraintName;
     std::vector<Constants::column_index_t> columns;
 
     public:
     PhysicalIndexCreate(
         const DataTypes::Guid& sessionId,
-        Statements::TableName*  table,
+        Statements::DataSource*  table,
         std::string& constraintName,
         vector<Constants::column_index_t>& columns);
     PhysicalPlanResult * Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalAddColumn final : public PhysicalOperator {
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Statements::NewColumn* column;
 
     public:
-      PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::NewColumn* column);
+      PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::NewColumn* column);
       ~PhysicalAddColumn()override;
       PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalDropColumn final : public PhysicalOperator {
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Statements::DropColumn* column;
 
     public:
-      PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::DropColumn* column);
+      PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::DropColumn* column);
       ~PhysicalDropColumn()override;
       PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalRenameColumn final : public PhysicalOperator {
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Statements::RenameColumn* column;
 
     public:
-      PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::RenameColumn* column);
+      PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::RenameColumn* column);
       ~PhysicalRenameColumn()override;
       PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
 
   class PhysicalAlterColumn final : public PhysicalOperator {
-    Statements::TableName* table;
+    Statements::DataSource* table;
     Statements::AlterColumn* column;
 
     public:
-      PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::TableName* table, Statements::AlterColumn* column);
+      PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::AlterColumn* column);
       ~PhysicalAlterColumn()override;
       PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };
