@@ -2,6 +2,7 @@
 #include "src/QueryPipeline/Parser/Parser.h"
 #include "src/Server/Server.h"
 #include "src/Server/ConnectionManager/ConnectionManager.h"
+#include "src/Systemic/Functions/StringFunctions.h"
 
 #include <atomic>
 #include <chrono>
@@ -131,12 +132,14 @@ int main()
 
     std::cout << "Please enter a query: "<< endl;
 
+    const std::string exit = "exit";
+
     while (true) {
         std::string input;
 
         std::getline(std::cin, input);
 
-        if (input == "exit")
+        if (Functions::String::EqualsIgnoreCase(input, exit))
             break;
 
         const auto start = std::chrono::high_resolution_clock::now();
@@ -183,7 +186,7 @@ int main()
 
             std::getline(std::cin, input);
 
-            if (input == "exit")
+            if (Functions::String::EqualsIgnoreCase(input, exit))
                 break;
         }
     }
