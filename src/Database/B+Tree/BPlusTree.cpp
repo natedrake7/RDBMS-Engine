@@ -293,9 +293,10 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScan(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        QueryPipeline::PhysicalPlan::IndexState& state,
-        const int& rowsToSelect)const{
+        QueryPipeline::PhysicalPlan::IndexState& state
+    )const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
@@ -310,9 +311,10 @@ namespace Indexing
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
-                result->push_back(rows->at(i));
+                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.transactionId);
+                result->push_back(row);
 
-                if (result->size() == rowsToSelect) {
+                if (result->size() == properties.batchSize) {
                     state.pageId = currentNode->GetPageId();
                     state.lastFetchedKeyIndex = i;
 
@@ -328,10 +330,10 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScan(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
         QueryPipeline::PhysicalPlan::IndexState& state,
-        const Expressions::Expression *expression,
-        const int& rowsToSelect
+        const Expressions::Expression *expression
     )const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
@@ -347,14 +349,14 @@ namespace Indexing
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
-                const auto* row = rows->at(i);
+                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.transactionId);
 
                 if(!expression->Evaluate(row).GetBool())
                     continue;
 
                 result->push_back(row);
 
-                if (result->size() == rowsToSelect) {
+                if (result->size() == properties.batchSize) {
                     state.lastFetchedKeyIndex = i;
                     state.pageId = currentNode->GetPageId();
 
@@ -371,6 +373,7 @@ namespace Indexing
     }
 
     void BPlusTree::IndexScan(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
         const Expressions::Expression *expression
     )const{
@@ -383,7 +386,9 @@ namespace Indexing
         {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
-            for (const auto* row : *currentNode->GetDataRowsUnsafe()) {
+            for (const auto* pageRow : *currentNode->GetDataRowsUnsafe()) {
+                auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
+
                 if(!expression->Evaluate(row).GetBool())
                     continue;
 
@@ -398,7 +403,10 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result)const{
+    void BPlusTree::IndexScan(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        std::vector<const DatabaseEngine::StorageTypes::Row*> *result
+    )const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
@@ -408,9 +416,10 @@ namespace Indexing
         {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
-            auto* pageRows = currentNode->GetDataRowsUnsafe();
-
-            result->insert(result->begin(), pageRows->begin(), pageRows->end());
+            for (const auto& pageRow : *currentNode->GetDataRowsUnsafe()) {
+                auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
+                result->push_back(row);
+            }
 
             if(currentNode->GetNextPage() == 0)
                 return;

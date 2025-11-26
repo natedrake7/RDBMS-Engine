@@ -1,4 +1,6 @@
 ﻿#include "Row.h"
+
+#include "../../Server/Server.h"
 #include "../../Systemic/DataStructures/BitMap/BitMap.h"
 #include "../Table/Table.h"
 #include "../Block/Block.h"
@@ -119,7 +121,6 @@ namespace DatabaseEngine::StorageTypes {
     Row::Row(const Table& table, const vector<Block*>& data, const BitMap* nullBitMap)
     {
         this->table = &table;
-
         this->header.nullBitMap = new BitMap(*nullBitMap);
 
         for (const auto& block : data)
@@ -830,6 +831,13 @@ namespace DatabaseEngine::StorageTypes {
     void Row::SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset) {
         this->versionHeader.olderVersionPointer.pageId = pageId;
         this->versionHeader.olderVersionPointer.offset = offset;
+    }
+
+    const Row* Row::GetVisibleVersionForTransaction(const Constants::transaction_id_t &transactionId) const {
+       if (this->IsVisibleForTransaction(transactionId))
+           return this;
+
+        return Server::ServerInstance::Get().GetVersionDatabase()->RetrieveRow(transactionId, this->versionHeader.olderVersionPointer, this->table);
     }
 
     bool Row::IsVisibleForTransaction(const Constants::transaction_id_t &transactionId) const {

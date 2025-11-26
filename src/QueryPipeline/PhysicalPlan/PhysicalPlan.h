@@ -42,6 +42,18 @@ namespace QueryPipeline::PhysicalPlan{
     TableScanState(){
       this->extentId = 0;
     }
+
+    [[nodiscard]] int GetNextKeyIndex()const {
+      return (this->lastFetchedRowId.indexId == Constants::INVALID_PAGE_INDEX_ID)
+              ? 0
+              : this->lastFetchedRowId.indexId + 1;
+    }
+
+    [[nodiscard]] int GetPageId(const Constants::extent_id_t& extentFirstPageId)const {
+      return this->lastFetchedRowId.pageId == INVALID_PAGE_ID
+          ? extentFirstPageId
+          : this->lastFetchedRowId.pageId;
+    }
   };
 
   struct IndexState {
@@ -53,7 +65,7 @@ namespace QueryPipeline::PhysicalPlan{
       this->lastFetchedKeyIndex = Constants::INVALID_PAGE_INDEX_ID;
     }
 
-    int GetNextKeyIndex()const {
+    [[nodiscard]] int GetNextKeyIndex()const {
         return this->lastFetchedKeyIndex == Constants::INVALID_PAGE_INDEX_ID
           ? 0
           : this->lastFetchedKeyIndex + 1;

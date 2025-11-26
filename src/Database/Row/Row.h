@@ -6,6 +6,10 @@
 #include "../Pages/Page.h"
 #include "../Pages/LargeObject/LargeObjectPage.h"
 
+namespace Server {
+    class ServerInstance;
+}
+
 namespace Pages {
     struct OverflowPointer;
     struct OverflowRow;
@@ -153,6 +157,8 @@ namespace DatabaseEngine::StorageTypes
         void SetDeletedTransactionId(const Constants::transaction_id_t& transactionId);
 
         void SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset);
+
+        const Row* GetVisibleVersionForTransaction(const Constants::transaction_id_t& transactionId) const;
 
         bool IsVisibleForTransaction(const Constants::transaction_id_t& transactionId) const;
 

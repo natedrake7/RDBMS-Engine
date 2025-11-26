@@ -55,6 +55,8 @@ namespace Server {
     Security::RoleManager roleManager;
     Security::UserManager userManager;
 
+    QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties properties;
+
     ServerInstance();
     ~ServerInstance();
 

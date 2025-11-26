@@ -171,18 +171,37 @@ namespace DatabaseEngine {
   ) {
    auto* oldRow = new StorageTypes::Row(row);
 
-   auto undoPage = this->GetLastUndoPage(table, row->GetTotalRowSize());
+   auto page = this->GetLastUndoPage(table, row->GetTotalRowSize());
 
-   MultiThreading::WriterGuard lock(&undoPage->GetLatch());
+   MultiThreading::WriterGuard lock(&page->GetLatch());
 
    int offset = 0;
-   undoPage->InsertRow(oldRow, &offset);
+   page->InsertRow(oldRow, &offset);
 
-   rowPointer.pageId = undoPage->GetPageId();
+   rowPointer.pageId = page->GetPageId();
    rowPointer.offset = offset;
 
    return {};
  }
+
+  const StorageTypes::Row * VersionDatabase::RetrieveRow(
+    const Constants::transaction_id_t& transactionId,
+    const Pages::RowVersionPointer &rowPointer,
+    const DatabaseEngine::StorageTypes::Table *table
+  )const {
+
+    const StorageTypes::Row* row = nullptr;
+
+    {
+      auto page = Storage::StorageManager::Get().GetPage(this->filename, rowPointer.pageId, table);
+
+      MultiThreading::ReaderGuard lock(&page->GetLatch());
+
+      row = page->GetRow(rowPointer.offset);
+    }
+
+    return row->GetVisibleVersionForTransaction(transactionId);
+  }
 
   std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const Constants::extent_id_t& startingExtentId) const {
     auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
@@ -239,9 +258,8 @@ namespace DatabaseEngine {
 
         gamPage->DeallocateExtent(extentId);
       }
-
     }
 
-    return extents.size() > 0 ? extents.back() + 1 : 0;
+    return extents.empty() ? 0 : extents.back() + 1;
   }
 }

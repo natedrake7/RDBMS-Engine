@@ -143,8 +143,6 @@ namespace DatabaseEngine::StorageTypes
 
             void RemoveColumnByHeap(const column_index_t& index)const;
 
-            static page_id_t GetPageIdByState(const page_id_t& extentFirstPageId, const QueryPipeline::PhysicalPlan::TableScanState& state);
-
             void UpdateTableStatisticsFromRowInsert(const Row* row);
 
         public:
@@ -212,38 +210,49 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexSeek(
                 std::vector<const Row*> *selectedRows,
                 const DataTypes::Indexing::Key* minimumValue,
-                const DataTypes::Indexing::Key* maximumValue);
+                const DataTypes::Indexing::Key* maximumValu
+            );
 
             void ClusteredIndexScan(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 QueryPipeline::PhysicalPlan::IndexState& state,
-                const int& rowsToSelect = -1,
-                const Expressions::Expression* expression = nullptr);
+                const Expressions::Expression* expression = nullptr
+            );
 
             void ClusteredIndexScan(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
-                const Expressions::Expression* expression = nullptr);
+                const Expressions::Expression* expression = nullptr
+            );
 
             void NonClusteredIndexScan(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 const int& indexPos,
                 QueryPipeline::PhysicalPlan::IndexState& state,
-                const int& rowsToSelect = -1,
-                const Expressions::Expression* expression = nullptr);
+                const Expressions::Expression* expression = nullptr
+            );
 
-            void HeapScan(std::vector<const Row*> *result, QueryPipeline::PhysicalPlan::TableScanState& state, const size_t &rowsToSelect)const;
+            void HeapScan(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                std::vector<const Row*> *result,
+                QueryPipeline::PhysicalPlan::TableScanState& state
+            )const;
 
             void HeapDelete(const Expressions::Expression* expression) const;
 
             void ClusteredIndexScanDelete(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 const Expressions::Expression* expression,
-                QueryPipeline::PhysicalPlan::IndexState& state,
-                const int& batchSize);
+                QueryPipeline::PhysicalPlan::IndexState& state
+            );
 
             void ClusteredIndexSeekDelete(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 const Expressions::Expression* expression,
-                QueryPipeline::PhysicalPlan::IndexState& state,
-                const int& batchSize);
+                QueryPipeline::PhysicalPlan::IndexState& state
+            );
 
             Errors::RuntimeStatus HeapInsert(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const;
 

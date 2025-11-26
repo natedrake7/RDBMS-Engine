@@ -1,6 +1,7 @@
 #include "Table.h"
 #include "../Constants.h"
 #include "../Database.h"
+#include "../../Systemic/MultiThreading/Guards/ReaderGuard/ReaderGuard.h"
 #include "../Pages/IndexPage/IndexPage.h"
 #include "../Storage/StorageManager/StorageManager.h"
 #include "../B+Tree/BPlusTree.h"
@@ -18,55 +19,65 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScan(
-      std::vector<const Row*> *selectedRows,
-      QueryPipeline::PhysicalPlan::IndexState& state,
-      const int& rowsToSelect,
-      const Expressions::Expression* expression){
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        std::vector<const Row*> *selectedRows,
+        QueryPipeline::PhysicalPlan::IndexState& state,
+        const Expressions::Expression* expression
+    ){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-          tree->IndexScan(selectedRows, state, expression, rowsToSelect);
+          tree->IndexScan(properties, selectedRows, state, expression);
           return;
         }
 
-        tree->IndexScan(selectedRows, state, rowsToSelect);
+        tree->IndexScan(properties, selectedRows, state);
     }
 
-    void Table::ClusteredIndexScan(std::vector<const Row*> *selectedRows, const Expressions::Expression *expression){
+    void Table::ClusteredIndexScan(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        std::vector<const Row*> *selectedRows,
+        const Expressions::Expression *expression
+    ){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-          tree->IndexScan(selectedRows, expression);
+          tree->IndexScan(properties, selectedRows, expression);
           return;
         }
 
-        tree->IndexScan(selectedRows);
+        tree->IndexScan(properties, selectedRows);
     }
 
     void Table::NonClusteredIndexScan(
-      std::vector<const Row*> *selectedRows,
-      const int &indexPos,
-      QueryPipeline::PhysicalPlan::IndexState& state,
-      const int& rowsToSelect,
-      const Expressions::Expression *expression){
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        std::vector<const Row*> *selectedRows,
+        const int &indexPos,
+        QueryPipeline::PhysicalPlan::IndexState& state,
+        const Expressions::Expression *expression
+    ){
 
-        auto* tree = this->GetNonClusteredIndexTree(indexPos);
+        const auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
         std::vector<Headers::RowIdentifier> rowIds;
-        tree->IndexScan(&rowIds, state, rowsToSelect);
+        tree->IndexScan(&rowIds, state, properties.batchSize);
 
         if (expression != nullptr) {
 
           for (const auto& rowId : rowIds) {
             const auto page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
-            auto* row = page->GetRow(rowId.indexId);
+            MultiThreading::ReaderGuard lock(&page->GetLatch());
+
+            auto* pageRow = page->GetRow(rowId.indexId);
+
+            const auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
 
             const auto conditionResult = expression->Evaluate(row);
 
@@ -80,9 +91,15 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         for (const auto& rowId : rowIds) {
-          const auto page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
+            const auto page = StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
-          selectedRows->push_back(page->GetRow(rowId.indexId));
+            MultiThreading::ReaderGuard lock(&page->GetLatch());
+
+            auto* pageRow = page->GetRow(rowId.indexId);
+
+            const auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
+
+            selectedRows->push_back(row);
         }
     }
 

@@ -78,28 +78,34 @@ namespace Indexing
         void IndexScan(vector<DataTypes::Indexing::QueryData> &result)const;
 
         void IndexScan(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-            QueryPipeline::PhysicalPlan::IndexState& state,
-            const int& rowsToSelect = -1
+            QueryPipeline::PhysicalPlan::IndexState& state
         )const;
 
         void IndexScan(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             QueryPipeline::PhysicalPlan::IndexState& state,
-            const Expressions::Expression* expression,
-            const int& rowsToSelect = -1
+            const Expressions::Expression* expression
         )const;
 
         void IndexScan(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-            const Expressions::Expression* expression)const;
+            const Expressions::Expression* expression
+        )const;
 
-        void IndexScan(std::vector<const DatabaseEngine::StorageTypes::Row*> *result)const;
+        void IndexScan(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            std::vector<const DatabaseEngine::StorageTypes::Row*> *result
+        )const;
 
         void IndexScan(
             vector<Headers::RowIdentifier>* result,
             QueryPipeline::PhysicalPlan::IndexState& state,
-            const int& rowsToSelect)const;
+            const int& rowsToSelect
+        )const;
 
         void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression)const;
 

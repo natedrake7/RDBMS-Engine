@@ -519,13 +519,14 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanDelete(
-      const Expressions::Expression *expression,
-      QueryPipeline::PhysicalPlan::IndexState& state,
-      const int& batchSize){
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        const Expressions::Expression *expression,
+        QueryPipeline::PhysicalPlan::IndexState& state
+    ){
         auto* tree = this->GetClusteredIndexedTree();
 
         std::vector<const Row*> results;
-        tree->IndexScan(&results, state, batchSize);
+        tree->IndexScan(properties, &results, state);
 
         if(results.empty())
           return;
@@ -542,9 +543,10 @@ namespace DatabaseEngine::StorageTypes {
    }
 
   void Table::ClusteredIndexSeekDelete(
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const Expressions::Expression *expression,
-    QueryPipeline::PhysicalPlan::IndexState &state,
-    const int &batchSize){
+    QueryPipeline::PhysicalPlan::IndexState &state
+  ){
 
   }
 
@@ -634,9 +636,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::HeapScan(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       std::vector<const Row*> *result,
-      QueryPipeline::PhysicalPlan::TableScanState& state,
-      const size_t &rowsToSelect
+      QueryPipeline::PhysicalPlan::TableScanState& state
     )const
     {
         if(this->header.indexAllocationMapPageId == Constants::INVALID_PAGE_ID)
@@ -658,11 +660,9 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-          const auto pageId = Table::GetPageIdByState(extentStartingPageId, state);
-
           MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage->GetLatch());
 
-          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          for (page_id_t extentPageId = state.GetPageId(extentStartingPageId); extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
           {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
               break;
@@ -678,18 +678,21 @@ namespace DatabaseEngine::StorageTypes {
             state.extentId = extentId;
             state.lastFetchedRowId.pageId = extentPageId;
 
-            const auto* rows = page->GetDataRowsUnsafe();
+            const auto* pageRows = page->GetDataRowsUnsafe();
 
-            result->insert(result->end(), rows->begin(), rows->end());
+            for (int i = state.lastFetchedRowId.indexId; i < page->GetPageSize(); i++) {
+              const auto* pageRow = (*pageRows)[i];
 
-            const auto startingPos = (state.lastFetchedRowId.indexId == Constants::INVALID_PAGE_INDEX_ID)
-                  ? 0
-                  : state.lastFetchedRowId.indexId + 1;
 
-            state.lastFetchedRowId.indexId = page->GetRows(result, rowsToSelect, startingPos);
+              const auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
 
-            if (result->size() == rowsToSelect)
-              return;
+              result->push_back(row);
+
+              state.lastFetchedRowId.indexId = i;
+
+              if (result->size() == properties.batchSize)
+                return;
+            }
           }
         }
     }
@@ -1638,10 +1641,6 @@ namespace DatabaseEngine::StorageTypes {
         pageFreeSpacePage->SetPageMetaData(page.Get());
       }
     }
-  }
-
-  page_id_t Table::GetPageIdByState(const page_id_t &extentFirstPageId, const QueryPipeline::PhysicalPlan::TableScanState &state){
-        return state.lastFetchedRowId.pageId == INVALID_PAGE_ID ? extentFirstPageId : state.lastFetchedRowId.pageId;
   }
 
   void Table::UpdateTableStatisticsFromRowInsert(const Row* row){

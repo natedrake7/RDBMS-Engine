@@ -55,6 +55,9 @@ namespace Constants
     constexpr int32_t INVALID_PAGE_INDEX_ID = -1;
     constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(int32_t);
 
+    constexpr transaction_id_t FIRST_TRANSACTION_ID = 0;
+    constexpr int DEFAULT_BATCH_SIZE = 10000;
+
     constexpr std::string_view WILDCARD = "*";
 
     constexpr int8_t INVALID_DECIMAL_PRECISION = -1;

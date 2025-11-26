@@ -36,12 +36,6 @@ namespace Functions::String {
   //     return result;
   // }
 
-  inline std::u16string ToUnicode(const std::string &str) {
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-
-    return convert.from_bytes(str);
-  }
-
     inline std::string Concat(const std::vector<std::string>& strings)
     {
         std::string result;

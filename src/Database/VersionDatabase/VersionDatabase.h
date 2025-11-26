@@ -39,9 +39,21 @@ namespace DatabaseEngine{
       explicit VersionDatabase(const std::string& filename);
       ~VersionDatabase();
 
-      Errors::RuntimeStatus InsertRow(const StorageTypes::Row *row, Pages::RowVersionPointer& rowPointer, const DatabaseEngine::StorageTypes::Table* table);
+      Errors::RuntimeStatus InsertRow(
+        const StorageTypes::Row *row,
+        Pages::RowVersionPointer& rowPointer,
+        const DatabaseEngine::StorageTypes::Table* table
+      );
+      const StorageTypes::Row* RetrieveRow(
+        const Constants::transaction_id_t& transactionId,
+        const Pages::RowVersionPointer& rowPointer,
+        const DatabaseEngine::StorageTypes::Table* table
+      )const;
       [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(const Constants::extent_id_t& startingExtentId)const;
 
-      Constants::extent_id_t CleanupVersionedData(const Constants::transaction_id_t& transactionId, const Constants::extent_id_t& startingExtentId = 0)const;
+      [[nodiscard]] Constants::extent_id_t CleanupVersionedData(
+        const Constants::transaction_id_t& transactionId,
+        const Constants::extent_id_t& startingExtentId = 0
+      )const;
   };
 }

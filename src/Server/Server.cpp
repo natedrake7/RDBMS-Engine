@@ -43,6 +43,9 @@ namespace Server {
    ServerInstance::ServerInstance(){
      this->masterDb = nullptr;
      this->versionDb = nullptr;
+
+     this->properties.transactionId = Constants::FIRST_TRANSACTION_ID;
+     this->properties.batchSize = Constants::DEFAULT_BATCH_SIZE;
   }
 
   ServerInstance::~ServerInstance() = default;
@@ -923,7 +926,7 @@ namespace Server {
 
       const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-      sysDatabases->ClusteredIndexScan(&selectedDatabases, &binaryExpr);
+      sysDatabases->ClusteredIndexScan(this->properties, &selectedDatabases, &binaryExpr);
 
       return !selectedDatabases.empty();
   }
@@ -935,7 +938,7 @@ namespace Server {
 
      std::vector<const Row*> selectedDatabases;
 
-     sysDatabases->ClusteredIndexScan(&selectedDatabases);
+     sysDatabases->ClusteredIndexScan(this->properties, &selectedDatabases);
 
      vector<Headers::DatabaseHeader> databasesHeaders;
 
@@ -1007,7 +1010,7 @@ namespace Server {
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
     std::vector<const Row*> selectedDatabases;
 
-    sysDatabases->ClusteredIndexScan(&selectedDatabases, &binaryExpr);
+    sysDatabases->ClusteredIndexScan(this->properties, &selectedDatabases, &binaryExpr);
 
     if (selectedDatabases.empty())
       return {};
@@ -1057,7 +1060,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    sysSchemas->ClusteredIndexScan(&selectedSchemas, &binaryExpr);
+    sysSchemas->ClusteredIndexScan(this->properties, &selectedSchemas, &binaryExpr);
 
     if (selectedSchemas.empty())
       return {};
@@ -1109,7 +1112,7 @@ namespace Server {
     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
     std::vector<const Row*> selectedSchemas;
 
-    sysSchemas->ClusteredIndexScan(&selectedSchemas, &binaryExpr);
+    sysSchemas->ClusteredIndexScan(this->properties, &selectedSchemas, &binaryExpr);
 
     for (const auto& row : selectedSchemas) {
       const auto& currentSchemaName = row->GetColumnByIndex(2);
@@ -1136,7 +1139,7 @@ namespace Server {
 
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
-    sysTablesPtr->ClusteredIndexScan(&selectedTables, &binaryExpr);
+    sysTablesPtr->ClusteredIndexScan(this->properties, &selectedTables, &binaryExpr);
 
     if (selectedTables.empty())
       return {};
@@ -1183,7 +1186,7 @@ namespace Server {
 
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
-    sysTablesPtr->ClusteredIndexScan(&selectedTables, &binaryExpr);
+    sysTablesPtr->ClusteredIndexScan(this->properties, &selectedTables, &binaryExpr);
 
     if (selectedTables.empty())
       return {};
@@ -1247,7 +1250,7 @@ namespace Server {
 
     const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
-    sysTablesPtr->ClusteredIndexScan(&selectedTables, &logicalExpr);
+    sysTablesPtr->ClusteredIndexScan(this->properties, &selectedTables, &logicalExpr);
 
     if (selectedTables.empty())
       return {};
@@ -1285,7 +1288,7 @@ namespace Server {
 
     const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
-    sysColumns->ClusteredIndexScan(&selectedColumns, &logicalExpr);
+    sysColumns->ClusteredIndexScan(this->properties, &selectedColumns, &logicalExpr);
 
     if (selectedColumns.empty())
       return {};
@@ -1346,7 +1349,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    constraintsTable->ClusteredIndexScan(&selectedConstraints, &binaryExpr);
+    constraintsTable->ClusteredIndexScan(this->properties, &selectedConstraints, &binaryExpr);
 
     if (selectedConstraints.empty())
       return {};
@@ -1495,7 +1498,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    sysIndexes->ClusteredIndexScan(&selectedStats, &binaryExpr);
+    sysIndexes->ClusteredIndexScan(this->properties, &selectedStats, &binaryExpr);
 
     if (selectedStats.empty())
       return {};
@@ -1533,7 +1536,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    sysIndexes->ClusteredIndexScan(&selectedStats, &binaryExpr);
+    sysIndexes->ClusteredIndexScan(this->properties, &selectedStats, &binaryExpr);
 
     if (selectedStats.empty())
       return {};
@@ -1581,7 +1584,7 @@ namespace Server {
 
       const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-      sysIndexes->ClusteredIndexScan(&selectedIndexes, &binaryExpr);
+      sysIndexes->ClusteredIndexScan(this->properties, &selectedIndexes, &binaryExpr);
 
       vector<Headers::IndexHeader> selectedIndexHeaders;
 
@@ -1767,7 +1770,7 @@ namespace Server {
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SysRoles);
 
-    table->ClusteredIndexScan(&rows);
+    table->ClusteredIndexScan(this->properties, &rows);
 
     for (const auto& row : rows) {
       const auto& data = row->GetData();
@@ -1791,7 +1794,7 @@ namespace Server {
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
 
-    table->ClusteredIndexScan(&rows);
+    table->ClusteredIndexScan(this->properties, &rows);
 
     for (const auto& row : rows) {
       const auto& data = row->GetData();

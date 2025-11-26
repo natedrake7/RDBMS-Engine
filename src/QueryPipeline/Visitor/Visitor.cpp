@@ -114,9 +114,7 @@ antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectSt
     if (context->UNICODESTRING()) {
       const auto& str = context->UNICODESTRING()->getText();
 
-      const auto parsedStr = Functions::String::RemoveQuotesFromUnicodeString(str);
-
-      return Value(Functions::String::ToUnicode(parsedStr), 0);
+      return Value(Functions::String::RemoveQuotesFromString(str), 0);
     }
 
     if (context->NUMBER()) {

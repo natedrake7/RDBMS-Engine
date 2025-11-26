@@ -144,7 +144,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
       result->columns = tablePtr->GetConstantColumns();
 
-      tablePtr->HeapScan(&result->rows, this->state, properties.batchSize);
+      tablePtr->HeapScan(properties, &result->rows, this->state);
 
       return result;
     }
@@ -167,11 +167,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     result->columns = tablePtr->GetConstantColumns();
 
     if (this->isClustered) {
-      tablePtr->ClusteredIndexScan(&result->rows, this->state, properties.batchSize, this->expression);
+      tablePtr->ClusteredIndexScan(properties, &result->rows, this->state, this->expression);
       return result;
     }
 
-    tablePtr->NonClusteredIndexScan(&result->rows, 0, this->state, properties.batchSize, this->expression);
+    tablePtr->NonClusteredIndexScan(properties, &result->rows, 0, this->state, this->expression);
 
     return result;
   }
@@ -450,7 +450,7 @@ PhysicalInsert::PhysicalInsert(
 
     DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexScanDelete(this->expression, state, properties.batchSize);
+    tablePtr->ClusteredIndexScanDelete(properties, this->expression, state);
 
     return result;
   }
@@ -470,7 +470,7 @@ PhysicalInsert::PhysicalInsert(
 
     DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexSeekDelete(expression, state, properties.batchSize);
+    tablePtr->ClusteredIndexSeekDelete(properties, this->expression, this->state);
 
     return result;
   }
