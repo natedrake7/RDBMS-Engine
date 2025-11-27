@@ -1,5 +1,7 @@
 #include "TransactionManager.h"
 
+#include <ranges>
+
 namespace DatabaseEngine {
    TransactionManager::TransactionManager(){
     this->currentTransactionId = 0;
@@ -13,25 +15,32 @@ namespace DatabaseEngine {
     return instance;
   }
 
-  Constants::transaction_id_t TransactionManager::BeginTransaction(const DataTypes::Guid& sessionId){
-    Constants::transaction_id_t transactionId = 0;
+  QueryPipeline::PhysicalPlan::Snapshot TransactionManager::BeginTransaction(const DataTypes::Guid& sessionId){
+    QueryPipeline::PhysicalPlan::Snapshot snapshot;
+
     {
       std::unique_lock<std::mutex> lock(this->transactionMutex);
 
-      transactionId = this->currentTransactionId++;
+      snapshot.maximumTransactionId = this->currentTransactionId;
+      snapshot.transactionId = this->currentTransactionId++;
     }
 
     {
       std::unique_lock<std::mutex> lock(this->dictionaryMutex);
 
-      this->activeTransactions.Add(transactionId,
+      snapshot.minimumTransactionId = this->activeTransactions.FirstOrDefault().transactionId;
+
+      for (const auto &[activeTransactionId, _] : this->activeTransactions | views::values)
+        snapshot.activeTransactionIds.Add(activeTransactionId);
+
+      this->activeTransactions.Add(snapshot.transactionId,
         TransactionInfo{
-          transactionId,
+          snapshot.transactionId,
           sessionId
       });
     }
 
-    return transactionId;
+    return snapshot;
   }
 
   void TransactionManager::SetTransactionId(const Constants::transaction_id_t &transactionId) {
@@ -40,17 +49,17 @@ namespace DatabaseEngine {
     this->currentTransactionId = transactionId;
   }
 
-  void TransactionManager::CommitTransaction(const Constants::transaction_id_t &transactionId) {
+  void TransactionManager::CommitTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) {
     std::unique_lock<std::mutex> lock(this->dictionaryMutex);
 
-    this->activeTransactions.Remove(transactionId);
+    this->activeTransactions.Remove(snapshot.transactionId);
   }
 
-  void TransactionManager::RollbackTransaction(const Constants::transaction_id_t &transactionId){
+  void TransactionManager::RollbackTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot){
     {
       std::unique_lock<std::mutex> lock(this->dictionaryMutex);
 
-      this->activeTransactions.Remove(transactionId);
+      this->activeTransactions.Remove(snapshot.transactionId);
     }
 
     //apply rollback mechanism

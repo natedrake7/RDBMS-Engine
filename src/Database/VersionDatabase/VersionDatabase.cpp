@@ -185,7 +185,7 @@ namespace DatabaseEngine {
  }
 
   const StorageTypes::Row * VersionDatabase::RetrieveRow(
-    const Constants::transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::Snapshot& snapshot,
     const Pages::RowVersionPointer &rowPointer,
     const DatabaseEngine::StorageTypes::Table *table
   )const {
@@ -200,7 +200,7 @@ namespace DatabaseEngine {
       row = page->GetRow(rowPointer.offset);
     }
 
-    return row->GetVisibleVersionForTransaction(transactionId);
+    return row->GetVisibleVersionForTransaction(snapshot);
   }
 
   std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const Constants::extent_id_t& startingExtentId) const {

@@ -61,4 +61,12 @@ public:
 
     return this->begin()->second;
   }
+
+  Value LastOrDefault() const
+  {
+    if (this->empty())
+      return Value();
+
+    return this->rbegin()->second;
+  }
 };

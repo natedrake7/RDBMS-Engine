@@ -311,7 +311,7 @@ namespace Indexing
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
-                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.transactionId);
+                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
                 result->push_back(row);
 
                 if (result->size() == properties.batchSize) {
@@ -349,7 +349,7 @@ namespace Indexing
             const auto* rows = currentNode->GetDataRowsUnsafe();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
-                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.transactionId);
+                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
 
                 if(!expression->Evaluate(row).GetBool())
                     continue;
@@ -387,7 +387,7 @@ namespace Indexing
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
             for (const auto* pageRow : *currentNode->GetDataRowsUnsafe()) {
-                auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
+                auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
                 if(!expression->Evaluate(row).GetBool())
                     continue;
@@ -417,7 +417,7 @@ namespace Indexing
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
             for (const auto& pageRow : *currentNode->GetDataRowsUnsafe()) {
-                auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
+                auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
                 result->push_back(row);
             }
 

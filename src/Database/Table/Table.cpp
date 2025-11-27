@@ -170,14 +170,14 @@ namespace DatabaseEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    Errors::RuntimeStatus Table::InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData){
+    Errors::RuntimeStatus Table::InsertRow(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const vector<Value> &inputData){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
         int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
-        auto [row, result] = this->CreateRow(transactionId, inputData, &checkPoint);
+        auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, &checkPoint);
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -196,7 +196,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::InsertRow(
-      const Constants::transaction_id_t &transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const vector<Value> &inputData,
       const std::vector<Constants::column_index_t> &columnIndices
     ){
@@ -206,7 +206,7 @@ namespace DatabaseEngine::StorageTypes {
         int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
-        auto [row, result] = this->CreateRow(transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
+        auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -225,7 +225,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::InsertRow(
-      const Constants::transaction_id_t &transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const vector<Expressions::Expression *> &inputData,
       const std::vector<Constants::column_index_t> &columnIndices
     ){
@@ -234,7 +234,7 @@ namespace DatabaseEngine::StorageTypes {
 
         Logging::CheckPoint checkPoint;
 
-        auto[row,result] = this->CreateRow(transactionId, inputData, columnIndices, &checkPoint);
+        auto[row,result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &checkPoint);
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -684,7 +684,7 @@ namespace DatabaseEngine::StorageTypes {
               const auto* pageRow = (*pageRows)[i];
 
 
-              const auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
+              const auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
               result->push_back(row);
 

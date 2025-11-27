@@ -116,10 +116,10 @@ namespace QueryPipeline
         const auto& server = Server::ServerInstance::Get();
         auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
-        auto transactionId = transactionManager.BeginTransaction(sessionId);
+        auto snapshot = transactionManager.BeginTransaction(sessionId);
 
         PhysicalPlan::PhysicalPlanExecutionProperties properties{
-            transactionId,
+            snapshot,
             1000
         };
 
@@ -136,7 +136,7 @@ namespace QueryPipeline
             if (!result->IsOk()){
                 Parser::ClearQuery(statement, logicalPlan);
 
-                transactionManager.RollbackTransaction(transactionId);
+                transactionManager.RollbackTransaction(snapshot);
                 return {true, result->message};
             }
 
@@ -149,7 +149,8 @@ namespace QueryPipeline
 
         const auto _ = server.CloseCursor(sessionId);
         Parser::ClearQuery(statement, logicalPlan);
-        transactionManager.CommitTransaction(transactionId);
+
+        transactionManager.CommitTransaction(snapshot);
 
         return {};
     }

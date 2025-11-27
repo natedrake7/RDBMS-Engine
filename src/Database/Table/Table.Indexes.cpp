@@ -77,7 +77,7 @@ namespace DatabaseEngine::StorageTypes {
 
             auto* pageRow = page->GetRow(rowId.indexId);
 
-            const auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
+            const auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
             const auto conditionResult = expression->Evaluate(row);
 
@@ -97,7 +97,7 @@ namespace DatabaseEngine::StorageTypes {
 
             auto* pageRow = page->GetRow(rowId.indexId);
 
-            const auto* row = pageRow->GetVisibleVersionForTransaction(properties.transactionId);
+            const auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
             selectedRows->push_back(row);
         }

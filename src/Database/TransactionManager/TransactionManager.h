@@ -1,6 +1,7 @@
 #pragma once
 #include <mutex>
 #include "../Constants.h"
+#include "../../QueryPipeline/PhysicalPlan/PhysicalPlan.h"
 #include "../../Systemic/DataStructures/SortedDictionary/SortedDictionary.h"
 #include "../../Systemic/Network/Session.h"
 
@@ -25,10 +26,10 @@ class TransactionManager {
 public:
   static TransactionManager& Get();
 
-  Constants::transaction_id_t BeginTransaction(const DataTypes::Guid& sessionId);
+  QueryPipeline::PhysicalPlan::Snapshot BeginTransaction(const DataTypes::Guid& sessionId);
   void SetTransactionId(const Constants::transaction_id_t& transactionId);
-  void CommitTransaction(const Constants::transaction_id_t& transactionId);
-  void RollbackTransaction(const Constants::transaction_id_t& transactionId);
+  void CommitTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot);
+  void RollbackTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot);
   Constants::transaction_id_t GetOldestActiveTransactionId();
 };
 

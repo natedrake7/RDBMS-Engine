@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "../../Database/Row/Row.h"
+#include "../../Systemic/DataStructures/HashSet/HashSet.h"
 #include "../../Systemic/QueryResult/QueryResult.h"
 #include "../Statements/Statements.h"
 
@@ -72,10 +73,25 @@ namespace QueryPipeline::PhysicalPlan{
     }
   };
 
-  struct PhysicalPlanExecutionProperties {
+  struct Snapshot {
     Constants::transaction_id_t transactionId;
+
+    Constants::transaction_id_t minimumTransactionId;
+    Constants::transaction_id_t maximumTransactionId;
+    HashSet<Constants::transaction_id_t> activeTransactionIds;
+
+    Snapshot() {
+      this->transactionId = Constants::FIRST_TRANSACTION_ID;
+      this->minimumTransactionId = Constants::FIRST_TRANSACTION_ID;
+      this->maximumTransactionId = Constants::FIRST_TRANSACTION_ID;
+    }
+  };
+
+  struct PhysicalPlanExecutionProperties {
+    Snapshot snapshot;
     int batchSize;
   };
+
 
   class PhysicalOperator {
     protected:

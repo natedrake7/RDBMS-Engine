@@ -6,6 +6,11 @@
 #include "../Pages/Page.h"
 #include "../Pages/LargeObject/LargeObjectPage.h"
 
+
+namespace QueryPipeline::PhysicalPlan {
+    struct Snapshot;
+}
+
 namespace Server {
     class ServerInstance;
 }
@@ -70,6 +75,8 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] bool IsBlockMaterialized(const int& indexPos)const;
         [[nodiscard]] const Value& GetMaterializedValue(const int& indexPos)const;
         [[nodiscard]] const Value& Materialize(const int& indexPos)const;
+
+        bool IsDeleted(const QueryPipeline::PhysicalPlan::Snapshot& snapshot)const;
 
     public:
         explicit Row(const Table &table);
@@ -158,9 +165,9 @@ namespace DatabaseEngine::StorageTypes
 
         void SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset);
 
-        const Row* GetVisibleVersionForTransaction(const Constants::transaction_id_t& transactionId) const;
+        const Row* GetVisibleVersionForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const;
 
-        bool IsVisibleForTransaction(const Constants::transaction_id_t& transactionId) const;
+        bool IsVisibleForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const;
 
         const RowVersioningHeader& GetVersionHeader() const;
 

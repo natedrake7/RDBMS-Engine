@@ -29,7 +29,7 @@ namespace QueryPipeline::PhysicalPlan{
     //if add occurs in a different index pos chaos ensues
     const auto columnResult =
         server.InsertColumnToMasterDb(
-          properties.transactionId,
+          properties,
           this->table->tableId,
           this->column->name.name,
           columnType,
@@ -51,7 +51,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (!this->column->defaultValue.GetIsNull()) {
       const auto value = this->column->defaultValue.GetString();
-      const auto defaultValueResult = server.InsertDefaultValuesToMasterDb(properties.transactionId, columnResult.primaryKey.GetKeyAsInt(), this->column->defaultValue);
+      const auto defaultValueResult = server.InsertDefaultValuesToMasterDb(properties, columnResult.primaryKey.GetKeyAsInt(), this->column->defaultValue);
     }
 
     const auto* db = server.UseDatabase(this->table->databaseId);

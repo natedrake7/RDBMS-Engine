@@ -116,7 +116,7 @@ int main()
 
     Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
-    // std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
+    std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
     std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
@@ -142,37 +142,37 @@ int main()
         if (Functions::String::EqualsIgnoreCase(input, exit))
             break;
 
-        const auto start = std::chrono::high_resolution_clock::now();
-
-        std::vector<QueryResult> results;
-        std::vector<std::string> displayColumns;
-        const auto status = QueryPipeline::Parser::Parse(input, session->sessionId, &results, &displayColumns);
-
-        const auto end = std::chrono::high_resolution_clock::now();
-
-        if (status.hasError) {
-            std::cout << "Error: " << status.message << std::endl;
-            continue;
-        }
-
-        for (const auto& column : displayColumns)
-           std::cout << column << " || ";
-
-       std::cout << std::endl;
-
-        for (const auto& row: results)
-            row.Print();
-
-        const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
-
-        std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
+       //  const auto start = std::chrono::high_resolution_clock::now();
+       //
+       //  std::vector<QueryResult> results;
+       //  std::vector<std::string> displayColumns;
+       //  const auto status = QueryPipeline::Parser::Parse(input, session->sessionId, &results, &displayColumns);
+       //
+       //  const auto end = std::chrono::high_resolution_clock::now();
+       //
+       //  if (status.hasError) {
+       //      std::cerr << "Error: " << status.message << std::endl;
+       //      continue;
+       //  }
+       //
+       //  for (const auto& column : displayColumns)
+       //     std::cout << column << " || ";
+       //
+       // std::cout << std::endl;
+       //
+       //  for (const auto& row: results)
+       //      row.Print();
+       //
+       //  const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+       //
+       //  std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
     }
 
     // const auto& databases = server.GetCatalog();
 
-    serverRunning = false;
+    serverRunning.store(false, std::memory_order_relaxed);
 
-    // connectionThread.join();
+    connectionThread.join();
     garbageCollectorThread.join();
 
     server.Shutdown();

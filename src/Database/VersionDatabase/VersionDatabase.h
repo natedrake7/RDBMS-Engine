@@ -45,7 +45,7 @@ namespace DatabaseEngine{
         const DatabaseEngine::StorageTypes::Table* table
       );
       const StorageTypes::Row* RetrieveRow(
-        const Constants::transaction_id_t& transactionId,
+        const QueryPipeline::PhysicalPlan::Snapshot& snapshot,
         const Pages::RowVersionPointer& rowPointer,
         const DatabaseEngine::StorageTypes::Table* table
       )const;

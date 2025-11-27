@@ -337,19 +337,19 @@ void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const
 
     const auto* user = server.Authenticate(protocol.GetUsername(), protocol.GetPassword());
 
-    const auto* newSession = server.CreateSession(user);
-
-    if (user != nullptr) {
-      Network::ResponseProtocol responseProtocol(ResponseType::Authenticated, newSession->sessionId);
-      
-      ConnectionManager::SendToClient(clientSocket, &responseProtocol);
-    }
-    else {
+    if (user == nullptr) {
       Network::ResponseProtocol responseProtocol(ResponseType::InvalidCredentials, DataTypes::Guid::Empty());
       ConnectionManager::SendToClient(clientSocket, &responseProtocol);
 
       this->CloseClientConnection(clientSocket);
+      return;
     }
+
+    const auto* newSession = server.CreateSession(user);
+
+    Network::ResponseProtocol responseProtocol(ResponseType::Authenticated, newSession->sessionId);
+
+    ConnectionManager::SendToClient(clientSocket, &responseProtocol);
 }
 
 void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char> &buffer){

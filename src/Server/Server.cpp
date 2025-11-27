@@ -44,8 +44,7 @@ namespace Server {
      this->masterDb = nullptr;
      this->versionDb = nullptr;
 
-     this->properties.transactionId = Constants::FIRST_TRANSACTION_ID;
-     this->properties.batchSize = Constants::DEFAULT_BATCH_SIZE;
+     this->baseProperties.batchSize = Constants::DEFAULT_BATCH_SIZE;
   }
 
   ServerInstance::~ServerInstance() = default;
@@ -92,11 +91,9 @@ namespace Server {
 
     this->CreateSystemDatabase();
 
-    const auto transactionId = DatabaseEngine::TransactionManager::Get().BeginTransaction(DataTypes::Guid::Empty());
+    const auto dbInsertResult = this->InsertDbToMasterDb(this->baseProperties, this->sysDbName, this->sysDbPath, true);
 
-    const auto dbInsertResult = this->InsertDbToMasterDb(transactionId, this->sysDbName, this->sysDbPath, true);
-
-    const auto schemaInsertResult = this->InsertSchemaToMasterDb(transactionId, dbInsertResult.primaryKey.GetKeyAsInt(), "dbo");
+    const auto schemaInsertResult = this->InsertSchemaToMasterDb(this->baseProperties, dbInsertResult.primaryKey.GetKeyAsInt(), "dbo");
 
     Dictionary<string, column_index_t> columnNameToIndex;
 
@@ -105,7 +102,7 @@ namespace Server {
 
       const auto tableResult =
         this->InsertTableToMasterDb(
-            transactionId,
+            this->baseProperties,
           dbInsertResult.primaryKey.GetKeyAsInt(),
           schemaInsertResult.primaryKey.GetKeyAsInt(),
           table.name,
@@ -115,7 +112,7 @@ namespace Server {
 
       const auto tableStatsResult =
         this->InsertTableStatisticsToMasterDb(
-          transactionId,
+          this->baseProperties,
          tableResult.primaryKey.GetKeyAsInt()
         );
 
@@ -136,7 +133,7 @@ namespace Server {
 
         const auto columnResult =
           this->InsertColumnToMasterDb(
-            transactionId,
+            this->baseProperties,
            tableResult.primaryKey.GetKeyAsInt(),
            column.name,
            type,
@@ -152,7 +149,7 @@ namespace Server {
 
         const auto columnStatsResult =
           this->InsertColumnStatisticsToMasterDb(
-            transactionId,
+            this->baseProperties,
             columnResult.primaryKey.GetKeyAsInt()
           );
 
@@ -175,7 +172,7 @@ namespace Server {
       //TODO keep the last value keys
       const auto indexResult =
         this->InsertIndexToMasterDb(
-        transactionId,
+        this->baseProperties,
         tableResult.primaryKey.GetKeyAsInt(),
         "PK" + _columns,
         true
@@ -185,7 +182,7 @@ namespace Server {
 
       const auto constraintResult =
           this->InsertConstraintToMasterDb(
-          transactionId,
+          this->baseProperties,
           tableResult.primaryKey.GetKeyAsInt(),
           "PK" + _columns,
           Headers::ConstraintType::PrimaryKey,
@@ -196,14 +193,14 @@ namespace Server {
         const auto& columnIndex = columnNameToIndex.Get(table.primaryKey[j]);
 
         auto _ = this->InsertIndexColumnToMasterDb(
-            transactionId,
+            this->baseProperties,
             indexResult.primaryKey.GetKeyAsInt(),
             columnIdsDict.Get(table.primaryKey[j]),
             static_cast<int16_t>(j),
             true);
 
         _ = this->InsertConstraintColumnToMasterDb(
-          transactionId,
+          this->baseProperties,
           constraintResult.primaryKey.GetKeyAsInt(),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j)
@@ -211,7 +208,7 @@ namespace Server {
 
         if(table.hasIdentity){
           _ = this->InsertIdentityColumnToMasterDb(
-            transactionId,
+            this->baseProperties,
             tableResult.primaryKey.GetKeyAsInt(),
             columnIdsDict.Get(table.primaryKey[j]),
             1,
@@ -227,8 +224,8 @@ namespace Server {
     this->masterDb->GetColumnsHeaders();
     this->masterDb->UpdateIdentityManagersIds();
 
-    this->InsertSystemRoles(transactionId);
-    this->InsertSystemUsers(transactionId);
+    this->InsertSystemRoles(this->baseProperties);
+    this->InsertSystemUsers(this->baseProperties);
 
     std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
@@ -253,7 +250,7 @@ namespace Server {
     return this->userManager.GetUser(userName) != nullptr;
   }
 
-  bool ServerInstance::CreateUser(const transaction_id_t& transactionId, const std::string &userName, const std::string &password, const std::string& roleName){
+  bool ServerInstance::CreateUser(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const std::string &userName, const std::string &password, const std::string& roleName){
     if (this->userManager.GetUser(userName) != nullptr)
       return false;
 
@@ -270,7 +267,7 @@ namespace Server {
 
     const auto result =
       this->InsertUserToMasterDb(
-        transactionId,
+        properties,
         userName,
         hashedPassword,
         role->id,
@@ -391,7 +388,7 @@ namespace Server {
   DatabaseEngine::VersionDatabase * ServerInstance::GetVersionDatabase() const{ return this->versionDb; }
 
   Errors::RuntimeStatus ServerInstance::InsertDbToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const string& dbName,
     const string& dbPath,
     const bool& isSystem,
@@ -417,7 +414,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted database: "<< dbName << " to master db" << endl;
 
@@ -425,7 +422,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertSchemaToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t &databaseId,
     const string &schemaName,
     const string &user,
@@ -447,7 +444,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted schema: "<< schemaName << " to master db" << endl;
 
@@ -455,7 +452,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertTableToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t & databaseId,
     const int32_t & schemaId,
     const string& tableName,
@@ -485,7 +482,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-      const auto result = table->InsertRow(transactionId, fields);
+      const auto result = table->InsertRow(properties, fields);
 
       cout << "Inserted table: "<< tableName << " to master db" << endl;
 
@@ -493,7 +490,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertColumnToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t & tableId,
     const string &columnName,
     const DataType &columnType,
@@ -535,7 +532,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-      const auto result = table->InsertRow(transactionId, fields);
+      const auto result = table->InsertRow(properties, fields);
 
       cout << "Inserted column: "<< columnName << " to master db" << endl;
 
@@ -543,7 +540,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertIndexToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t & tableId,
     const string &indexName,
     const bool &isClustered,
@@ -569,7 +566,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-      const auto result = table->InsertRow(transactionId, fields);
+      const auto result = table->InsertRow(properties, fields);
 
       cout << "Inserted index: "<< indexName << " to master db" << endl;
 
@@ -577,7 +574,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertIndexColumnToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t & indexId,
     const int32_t & columnId,
     const int16_t & ordinalPosition,
@@ -599,7 +596,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted index column to master db" << endl;
 
@@ -607,7 +604,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertIdentityColumnToMasterDb(
-      const transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t & tableId,
       const int32_t & columnId,
       const int32_t & seedValue,
@@ -637,7 +634,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted identity column to master db" << endl;
 
@@ -645,7 +642,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertDefaultValuesToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t &columnId,
     const Value &value,
     const int &version,
@@ -664,7 +661,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-      const auto result = table->InsertRow(transactionId, fields);
+      const auto result = table->InsertRow(properties, fields);
 
       std::cout << "Inserted default value " << value << " to master db" << std::endl;
 
@@ -672,7 +669,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertTableStatisticsToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t &tableId,
     const int64_t& rowCount,
     const int32_t& rowSize,
@@ -699,7 +696,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     std::cout << "Inserted table stats for table with id: " << tableId << std::endl;
 
@@ -707,7 +704,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertColumnStatisticsToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t &columnId,
     const int64_t &distinctCount,
     const int64_t &nullCount,
@@ -736,7 +733,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     std::cout << "Inserted column stats for column with id: " << columnId << std::endl;
 
@@ -744,7 +741,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertRoleToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const std::string &roleName,
     const Security::Permission &permissions,
     const bool& isSystem,
@@ -769,7 +766,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     std::cout << "Inserted Role " << roleName << std::endl;
 
@@ -777,7 +774,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertUserToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const std::string &username,
     const std::string &passwordHash,
     const int32_t &roleId,
@@ -806,7 +803,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     std::cout << "Inserted User " << username << std::endl;
 
@@ -843,7 +840,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertConstraintToMasterDb(
-      const transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t & tableId,
       const string & constraintName,
       const Headers::ConstraintType & constraintType,
@@ -876,7 +873,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
 
@@ -884,7 +881,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertConstraintColumnToMasterDb(
-    const transaction_id_t& transactionId,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const int32_t & constraintId,
     const int32_t & columnId,
     const int32_t & ordinalPosition,
@@ -905,7 +902,7 @@ namespace Server {
 
     // const auto transactionId = this->masterDb->StartLogTransaction();
 
-    const auto result = table->InsertRow(transactionId, fields);
+    const auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted constraint column to master db" << endl;
 
@@ -926,7 +923,7 @@ namespace Server {
 
       const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-      sysDatabases->ClusteredIndexScan(this->properties, &selectedDatabases, &binaryExpr);
+      sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
 
       return !selectedDatabases.empty();
   }
@@ -938,7 +935,7 @@ namespace Server {
 
      std::vector<const Row*> selectedDatabases;
 
-     sysDatabases->ClusteredIndexScan(this->properties, &selectedDatabases);
+     sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases);
 
      vector<Headers::DatabaseHeader> databasesHeaders;
 
@@ -1010,7 +1007,7 @@ namespace Server {
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
     std::vector<const Row*> selectedDatabases;
 
-    sysDatabases->ClusteredIndexScan(this->properties, &selectedDatabases, &binaryExpr);
+    sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
 
     if (selectedDatabases.empty())
       return {};
@@ -1060,7 +1057,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    sysSchemas->ClusteredIndexScan(this->properties, &selectedSchemas, &binaryExpr);
+    sysSchemas->ClusteredIndexScan(this->baseProperties, &selectedSchemas, &binaryExpr);
 
     if (selectedSchemas.empty())
       return {};
@@ -1112,7 +1109,7 @@ namespace Server {
     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
     std::vector<const Row*> selectedSchemas;
 
-    sysSchemas->ClusteredIndexScan(this->properties, &selectedSchemas, &binaryExpr);
+    sysSchemas->ClusteredIndexScan(this->baseProperties, &selectedSchemas, &binaryExpr);
 
     for (const auto& row : selectedSchemas) {
       const auto& currentSchemaName = row->GetColumnByIndex(2);
@@ -1139,7 +1136,7 @@ namespace Server {
 
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
-    sysTablesPtr->ClusteredIndexScan(this->properties, &selectedTables, &binaryExpr);
+    sysTablesPtr->ClusteredIndexScan(this->baseProperties, &selectedTables, &binaryExpr);
 
     if (selectedTables.empty())
       return {};
@@ -1186,7 +1183,7 @@ namespace Server {
 
     Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
-    sysTablesPtr->ClusteredIndexScan(this->properties, &selectedTables, &binaryExpr);
+    sysTablesPtr->ClusteredIndexScan(this->baseProperties, &selectedTables, &binaryExpr);
 
     if (selectedTables.empty())
       return {};
@@ -1250,7 +1247,7 @@ namespace Server {
 
     const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
-    sysTablesPtr->ClusteredIndexScan(this->properties, &selectedTables, &logicalExpr);
+    sysTablesPtr->ClusteredIndexScan(this->baseProperties, &selectedTables, &logicalExpr);
 
     if (selectedTables.empty())
       return {};
@@ -1288,7 +1285,7 @@ namespace Server {
 
     const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
-    sysColumns->ClusteredIndexScan(this->properties, &selectedColumns, &logicalExpr);
+    sysColumns->ClusteredIndexScan(this->baseProperties, &selectedColumns, &logicalExpr);
 
     if (selectedColumns.empty())
       return {};
@@ -1349,7 +1346,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    constraintsTable->ClusteredIndexScan(this->properties, &selectedConstraints, &binaryExpr);
+    constraintsTable->ClusteredIndexScan(this->baseProperties, &selectedConstraints, &binaryExpr);
 
     if (selectedConstraints.empty())
       return {};
@@ -1498,7 +1495,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    sysIndexes->ClusteredIndexScan(this->properties, &selectedStats, &binaryExpr);
+    sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedStats, &binaryExpr);
 
     if (selectedStats.empty())
       return {};
@@ -1536,7 +1533,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    sysIndexes->ClusteredIndexScan(this->properties, &selectedStats, &binaryExpr);
+    sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedStats, &binaryExpr);
 
     if (selectedStats.empty())
       return {};
@@ -1584,7 +1581,7 @@ namespace Server {
 
       const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-      sysIndexes->ClusteredIndexScan(this->properties, &selectedIndexes, &binaryExpr);
+      sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedIndexes, &binaryExpr);
 
       vector<Headers::IndexHeader> selectedIndexHeaders;
 
@@ -1770,7 +1767,7 @@ namespace Server {
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SysRoles);
 
-    table->ClusteredIndexScan(this->properties, &rows);
+    table->ClusteredIndexScan(this->baseProperties, &rows);
 
     for (const auto& row : rows) {
       const auto& data = row->GetData();
@@ -1794,7 +1791,7 @@ namespace Server {
 
     Table* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
 
-    table->ClusteredIndexScan(this->properties, &rows);
+    table->ClusteredIndexScan(this->baseProperties, &rows);
 
     for (const auto& row : rows) {
       const auto& data = row->GetData();
@@ -1812,7 +1809,7 @@ namespace Server {
     return users;
   }
 
-  void ServerInstance::InsertSystemRoles(const transaction_id_t& transactionId){
+  void ServerInstance::InsertSystemRoles(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties){
     const auto admin = std::string(ServerConstants::ADMIN_NAME);
     const auto dbOwner = std::string(ServerConstants::DB_OWNER_NAME);
     const auto dbWriter = std::string(ServerConstants::DB_WRITER_NAME);
@@ -1820,7 +1817,7 @@ namespace Server {
     const auto guest = std::string(ServerConstants::GUEST_NAME);
 
     auto result = this->InsertRoleToMasterDb(
-      transactionId,
+      properties,
       admin,
       ServerConstants::ADMIN_PERMISSIONS
     );
@@ -1834,7 +1831,7 @@ namespace Server {
       ));
 
     result = this->InsertRoleToMasterDb(
-      transactionId,
+      properties,
       dbOwner,
       ServerConstants::DB_OWNER_PERMISSIONS
     );
@@ -1848,7 +1845,7 @@ namespace Server {
       ));
 
     result = this->InsertRoleToMasterDb(
-      transactionId,
+      properties,
       dbWriter,
       ServerConstants::DB_WRITER_PERMISSIONS
     );
@@ -1863,7 +1860,7 @@ namespace Server {
     );
 
     result = this->InsertRoleToMasterDb(
-      transactionId,
+      properties,
       dbReader,
       ServerConstants::DB_READER_PERMISSIONS
     );
@@ -1877,7 +1874,7 @@ namespace Server {
      ));
 
     result = this->InsertRoleToMasterDb(
-      transactionId,
+      properties,
       guest,
       ServerConstants::GUEST_PERMISSIONS
     );
@@ -1891,7 +1888,7 @@ namespace Server {
      ));
   }
 
-  void ServerInstance::InsertSystemUsers(const transaction_id_t& transactionId){
+  void ServerInstance::InsertSystemUsers(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties){
     const auto admin = std::string(ServerConstants::ADMIN_NAME);
 
     const auto* role = this->roleManager.GetRole(admin);
@@ -1904,7 +1901,7 @@ namespace Server {
 
     const auto result =
       this->InsertUserToMasterDb(
-          transactionId,
+          properties,
         admin,
         hashedPassword,
         role->id,

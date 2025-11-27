@@ -167,16 +167,16 @@ namespace DatabaseEngine::StorageTypes
 
             ~Table();
 
-            Errors::RuntimeStatus InsertRow(const Constants::transaction_id_t& transactionId, const vector<Value> &inputData);
+            Errors::RuntimeStatus InsertRow(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const vector<Value> &inputData);
 
             Errors::RuntimeStatus InsertRow(
-                const Constants::transaction_id_t& transactionId,
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 const vector<Value> &inputData,
                 const std::vector<Constants::column_index_t>& columnIndices
             );
 
             Errors::RuntimeStatus InsertRow(
-                const Constants::transaction_id_t& transactionId,
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 const vector<Expressions::Expression*> &inputData,
                 const std::vector<Constants::column_index_t>& columnIndices
             );

@@ -55,7 +55,7 @@ namespace Server {
     Security::RoleManager roleManager;
     Security::UserManager userManager;
 
-    QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties properties;
+    QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties baseProperties;
 
     ServerInstance();
     ~ServerInstance();
@@ -68,8 +68,8 @@ namespace Server {
     [[nodiscard]] std::vector<Security::Role> SelectRoles()const;
     [[nodiscard]] std::vector<Security::User> SelectUsers()const;
 
-    void InsertSystemRoles(const transaction_id_t& transactionId);
-    void InsertSystemUsers(const transaction_id_t& transactionId);
+    void InsertSystemRoles(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties);
+    void InsertSystemUsers(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties);
 
   public:
     [[nodiscard]] static ServerInstance& Get();
@@ -78,7 +78,7 @@ namespace Server {
     //Security Functions
     [[nodiscard]]Errors::RuntimeStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
     bool UserExists(const std::string& userName)const;
-    bool CreateUser(const transaction_id_t& transactionId, const std::string& userName, const std::string& password, const std::string& roleName);
+    bool CreateUser(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const std::string& userName, const std::string& password, const std::string& roleName);
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
 
     bool RoleExists(const std::string& role)const;
@@ -98,7 +98,7 @@ namespace Server {
 
     //MasterDB Insert Functions
     [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const std::string& dbName,
       const std::string& dbPath,
       const bool& isSystem = false,
@@ -108,7 +108,7 @@ namespace Server {
   ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertSchemaToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t& databaseId,
       const std::string& schemaName,
       const std::string& user = "system",
@@ -117,7 +117,7 @@ namespace Server {
   ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertTableToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t & databaseId,
       const int32_t & schemaId,
       const std::string& tableName,
@@ -129,7 +129,7 @@ namespace Server {
   ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t & tableId,
       const std::string& columnName,
       const DataType& columnType,
@@ -145,7 +145,7 @@ namespace Server {
   ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t & tableId,
       const std::string &indexName,
       const bool &isClustered,
@@ -156,7 +156,7 @@ namespace Server {
   ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexColumnToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const int32_t& indexId,
         const int32_t& columnId,
         const int16_t& ordinalPosition,
@@ -166,7 +166,7 @@ namespace Server {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertConstraintToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const int32_t& tableId,
         const string& constraintName,
         const Headers::ConstraintType& constraintType,
@@ -178,7 +178,7 @@ namespace Server {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertConstraintColumnToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const int32_t& constraintId,
         const int32_t& columnId,
         const int32_t& ordinalPosition,
@@ -187,7 +187,7 @@ namespace Server {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIdentityColumnToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const int32_t& tableId,
         const int32_t& columnId,
         const int32_t& seedValue,
@@ -200,7 +200,7 @@ namespace Server {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertDefaultValuesToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const int32_t& columnId,
         const Value& value,
         const int& version = 0,
@@ -208,7 +208,7 @@ namespace Server {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertTableStatisticsToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t& tableId,
       const int64_t& rowCount = 0,
       const int32_t& rowSize = 0,
@@ -217,7 +217,7 @@ namespace Server {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
-      const Constants::transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t& columnId,
       const int64_t& distinctCount = 0,
       const int64_t& nullCount = 0,
@@ -226,7 +226,7 @@ namespace Server {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertRoleToMasterDb(
-      const transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const std::string& roleName,
       const Security::Permission& permissions,
       const bool& isSystem = true,
@@ -235,7 +235,7 @@ namespace Server {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertUserToMasterDb(
-      const transaction_id_t& transactionId,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const std::string& username,
       const std::string& passwordHash,
       const int32_t& roleId,

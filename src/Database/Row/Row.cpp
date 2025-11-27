@@ -833,18 +833,30 @@ namespace DatabaseEngine::StorageTypes {
         this->versionHeader.olderVersionPointer.offset = offset;
     }
 
-    const Row* Row::GetVisibleVersionForTransaction(const Constants::transaction_id_t &transactionId) const {
-       if (this->IsVisibleForTransaction(transactionId))
+    const Row* Row::GetVisibleVersionForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const {
+       if (this->IsVisibleForTransaction(snapshot))
            return this;
 
-        return Server::ServerInstance::Get().GetVersionDatabase()->RetrieveRow(transactionId, this->versionHeader.olderVersionPointer, this->table);
+        return Server::ServerInstance::Get().GetVersionDatabase()->RetrieveRow(snapshot, this->versionHeader.olderVersionPointer, this->table);
     }
 
-    bool Row::IsVisibleForTransaction(const Constants::transaction_id_t &transactionId) const {
-        return this->versionHeader.createdTransactionId <= transactionId
-               && (this->versionHeader.deletedTransactionId == 0
-                   || this->versionHeader.deletedTransactionId > transactionId
-                );
+    bool Row::IsDeleted(const QueryPipeline::PhysicalPlan::Snapshot &snapshot) const{
+        return this->versionHeader.deletedTransactionId != 0
+               && this->versionHeader.deletedTransactionId < snapshot.maximumTransactionId
+               && !snapshot.activeTransactionIds.Contains(this->versionHeader.deletedTransactionId)
+               && this->versionHeader.deletedTransactionId != snapshot.transactionId;
+    }
+
+    bool Row::IsVisibleForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const {
+        if (this->versionHeader.createdTransactionId <= snapshot.minimumTransactionId)
+            return !this->IsDeleted(snapshot);
+
+        if (this->versionHeader.createdTransactionId == snapshot.transactionId
+            || this->versionHeader.createdTransactionId >= snapshot.maximumTransactionId
+            || snapshot.activeTransactionIds.Contains(this->versionHeader.createdTransactionId))
+            return false;
+
+        return !this->IsDeleted(snapshot);
     }
 
     const RowVersioningHeader & Row::GetVersionHeader() const { return this->versionHeader; }
