@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include "SQLParser.h"
-#include "../../Database/Column/Column.h"
 #include "../../Database/TransactionManager/TransactionManager.h"
 #include "../../Server/Server.h"
 #include "../Cursor/Cursor.h"
@@ -10,6 +9,7 @@
 #include "../Visitor/Visitor.h"
 #include "../LogicalPlan/LogicalPlan.h"
 #include "../PhysicalPlan/PhysicalPlan.h"
+#include <thread>
 
 #include <SQLBaseListener.h>
 #include <SQLLexer.h>
@@ -117,6 +117,10 @@ namespace QueryPipeline
         auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
         auto snapshot = transactionManager.BeginTransaction(sessionId);
+
+        std::cout << "Executing transaction: " << snapshot.transactionId
+            << " by thread: " << std::this_thread::get_id()
+            << std::endl;
 
         PhysicalPlan::PhysicalPlanExecutionProperties properties{
             snapshot,
