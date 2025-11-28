@@ -127,6 +127,13 @@ namespace QueryPipeline
             1000
         };
 
+        //for test
+        if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {
+            std::this_thread::sleep_for(5000ms);
+
+            int val = 0;
+        }
+
         auto* cursor = server.CreateCursor(sessionId, properties, physicalPlan);
 
         while (cursor->hasMore()) {

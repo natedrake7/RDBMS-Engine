@@ -143,7 +143,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<Value> & updates, int& diff)const;
 
-        [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff);
+        [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff)const;
 
         [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
 

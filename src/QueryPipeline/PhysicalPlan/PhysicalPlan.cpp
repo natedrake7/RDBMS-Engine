@@ -495,7 +495,7 @@ PhysicalInsert::PhysicalInsert(
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto insertResult = tablePtr->HeapUpdate(this->expression, this->updates);
+    const auto insertResult = tablePtr->HeapUpdate(properties, this->expression, this->updates);
 
     result->code = insertResult.code;
     result->message = insertResult.message;
@@ -523,7 +523,7 @@ PhysicalInsert::PhysicalInsert(
 
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
+    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(properties, this->expression, this->updates);
 
     result->code = updateResult.code;
     result->message = updateResult.message;
@@ -551,7 +551,7 @@ PhysicalInsert::PhysicalInsert(
 
     DataTypes::Indexing::Key key;
 
-    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(this->expression, this->updates);
+    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(properties, this->expression, this->updates);
 
     // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
 

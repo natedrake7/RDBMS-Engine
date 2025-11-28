@@ -611,6 +611,9 @@ namespace DatabaseEngine::StorageTypes {
 
             auto *block = this->data.at(associatedColumnIndex);
 
+            if (associatedColumnIndex < this->cache.size())
+                this->cache.at(associatedColumnIndex).isMaterialized = false;
+
             if (value.GetIsNull())
             {
               block->SetData(nullptr, 0);
@@ -633,7 +636,7 @@ namespace DatabaseEngine::StorageTypes {
         return {};
     }
 
-    Errors::RuntimeStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff){
+    Errors::RuntimeStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff)const{
         const auto prevRowSize = this->GetTotalRowSize();
 
         for (const auto & update : updates)
@@ -643,6 +646,9 @@ namespace DatabaseEngine::StorageTypes {
             const column_index_t &associatedColumnIndex = update->name.index;
 
             auto *block = this->data.at(associatedColumnIndex);
+
+            if (associatedColumnIndex < this->cache.size())
+                this->cache.at(associatedColumnIndex).isMaterialized = false;
 
             if (value.GetIsNull())
             {
@@ -844,7 +850,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     bool Row::IsDeleted(const QueryPipeline::PhysicalPlan::Snapshot &snapshot) const{
-        return this->versionHeader.deletedTransactionId != 0
+        return this->versionHeader.deletedTransactionId != Constants::FIRST_TRANSACTION_ID
                && this->versionHeader.deletedTransactionId < snapshot.maximumTransactionId
                && !snapshot.activeTransactionIds.Contains(this->versionHeader.deletedTransactionId)
                && this->versionHeader.deletedTransactionId != snapshot.transactionId;
@@ -854,7 +860,7 @@ namespace DatabaseEngine::StorageTypes {
         if (snapshot.IsSystemTransaction())
             return true;
 
-        if (this->versionHeader.createdTransactionId <= snapshot.minimumTransactionId)
+        if (this->versionHeader.createdTransactionId < snapshot.minimumTransactionId)
             return !this->IsDeleted(snapshot);
 
         if (this->versionHeader.createdTransactionId == snapshot.transactionId

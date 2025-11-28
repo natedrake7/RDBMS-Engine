@@ -806,7 +806,11 @@ namespace DatabaseEngine::StorageTypes {
         return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
     }
 
-  Errors::RuntimeStatus Table::HeapUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
+  Errors::RuntimeStatus Table::HeapUpdate(
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const Expressions::Expression *expression,
+    const vector<Value> & updates
+  ){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return {};
 
@@ -850,7 +854,7 @@ namespace DatabaseEngine::StorageTypes {
               if(!value.GetBool())
                   continue;
 
-                const auto result = this->HandleRowUpdate(page.Get(), row, updates, updatedColumns);
+                const auto result = this->HandleRowUpdate(page.Get(), row, properties, updates, updatedColumns);
 
                 if (result.code != Errors::RuntimeError::Ok)
                   return result;
@@ -861,7 +865,11 @@ namespace DatabaseEngine::StorageTypes {
         return {};
     }
 
-    Errors::RuntimeStatus Table::HeapUpdate(const Expressions::Expression *expression, const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+    Errors::RuntimeStatus Table::HeapUpdate(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const Expressions::Expression *expression,
+      const vector<QueryPipeline::Statements::UpdateColumn *> &updates
+    ){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return {};
 
@@ -905,7 +913,7 @@ namespace DatabaseEngine::StorageTypes {
               if(!value.GetBool())
                   continue;
 
-                const auto result = this->HandleRowUpdate(page.Get(), row, updates, updatedColumns);
+                const auto result = this->HandleRowUpdate(page.Get(), row, properties, updates, updatedColumns);
 
                 if (result.code != Errors::RuntimeError::Ok)
                   return result;
@@ -966,23 +974,30 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-    void Table::ClusteredIndexScanUpdate(const Expressions::Expression *expression, const vector<Value> & updates){
+    void Table::ClusteredIndexScanUpdate(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const Expressions::Expression *expression,
+      const vector<Value> & updates
+    ){
       const auto* tree = this->GetClusteredIndexedTree();
 
-      tree->IndexScanUpdate(expression, updates);
+      tree->IndexScanUpdate(properties, expression, updates);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const Expressions::Expression *expression,
-      const vector<QueryPipeline::Statements::UpdateColumn *> &updates){
+      const vector<QueryPipeline::Statements::UpdateColumn *> &updates
+    ){
         const auto* tree = this->GetClusteredIndexedTree();
 
         return (expression == nullptr)
-          ? tree->IndexScanUpdate(updates)
-          : tree->IndexScanUpdate(expression, updates);
+          ? tree->IndexScanUpdate(properties, updates)
+          : tree->IndexScanUpdate(properties, expression, updates);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
@@ -991,8 +1006,8 @@ namespace DatabaseEngine::StorageTypes {
         auto* tree = this->GetClusteredIndexedTree();
 
         return (expression == nullptr)
-            ? tree->IndexSeekUpdate(minimumValue, maximumValue, updates)
-            : tree->IndexSeekUpdate(expression, minimumValue, maximumValue, updates);
+            ? tree->IndexSeekUpdate(properties, minimumValue, maximumValue, updates)
+            : tree->IndexSeekUpdate(properties, expression, minimumValue, maximumValue, updates);
     }
 
     string Table::GetFileName() const{ return this->database->GetFileName(); }
@@ -1050,6 +1065,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::HandleRowUpdate(
       Pages::Page *page,
       Row *row,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const std::vector<Value> &updates,
       const HashSet<column_index_t>& updatedColumns,
       const bool &isHeap
@@ -1063,6 +1079,7 @@ namespace DatabaseEngine::StorageTypes {
         RowVersionPointer oldVersionPointer;
         Server::ServerInstance::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
         row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
+        row->SetCurrentTransactionId(properties.snapshot.transactionId);
 
         int diff = 0;
         auto result = row->Update(updates, diff);
@@ -1098,6 +1115,7 @@ namespace DatabaseEngine::StorageTypes {
   Errors::RuntimeStatus Table::HandleRowUpdate(
     Pages::Page *page,
     Row *row,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
     const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
     const HashSet<column_index_t> &updatedColumns,
     const bool &isHeap){
@@ -1108,6 +1126,7 @@ namespace DatabaseEngine::StorageTypes {
 
         Server::ServerInstance::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
         row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
+        row->SetCurrentTransactionId(properties.snapshot.transactionId);
 
         int diff = 0;
         auto result = row->Update(updates, diff);

@@ -109,17 +109,36 @@ namespace Indexing
 
         void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
-        void IndexScanUpdate(const Expressions::Expression* expression, const vector<Value> & updates)const;
+        void IndexScanUpdate(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const Expressions::Expression* expression,
+            const vector<Value> & updates
+        )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
             const Expressions::Expression* expression,
             const vector<QueryPipeline::Statements::UpdateColumn*> & updates
         )const;
 
-        [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn*> & updates)const;
+        [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const vector<QueryPipeline::Statements::UpdateColumn*> & updates
+        )const;
 
-        Errors::RuntimeStatus IndexSeekUpdate(const Expressions::Expression* expression, const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates)const;
-        Errors::RuntimeStatus IndexSeekUpdate(const DataTypes::Indexing::Key* minKey, const DataTypes::Indexing::Key* maxKey, const vector<Value> & updates)const;
+        Errors::RuntimeStatus IndexSeekUpdate(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const Expressions::Expression* expression,
+            const DataTypes::Indexing::Key* minKey,
+            const DataTypes::Indexing::Key* maxKey,
+            const vector<Value> & updates
+        )const;
+        Errors::RuntimeStatus IndexSeekUpdate(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const DataTypes::Indexing::Key* minKey,
+            const DataTypes::Indexing::Key* maxKey,
+            const vector<Value> & updates
+        )const;
 
         void SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const;
 

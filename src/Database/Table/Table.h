@@ -267,18 +267,32 @@ namespace DatabaseEngine::StorageTypes
 
             int CreateNonClusteredIndex(vector<Constants::column_index_t>& columnIndices);
 
-            Errors::RuntimeStatus HeapUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
+            Errors::RuntimeStatus HeapUpdate(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const Expressions::Expression* expression,
+                const vector<Value> &updates
+            );
 
-            Errors::RuntimeStatus HeapUpdate(const Expressions::Expression* expression, const vector<QueryPipeline::Statements::UpdateColumn*> &updates);
+            Errors::RuntimeStatus HeapUpdate(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const Expressions::Expression* expression,
+                const vector<QueryPipeline::Statements::UpdateColumn*> &updates
+            );
 
-            void ClusteredIndexScanUpdate(const Expressions::Expression* expression, const vector<Value> &updates);
+            void ClusteredIndexScanUpdate(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const Expressions::Expression* expression,
+                const vector<Value> &updates
+            );
 
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexScanUpdate(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 const vector<QueryPipeline::Statements::UpdateColumn*> &updates
             );
 
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
@@ -338,6 +352,7 @@ namespace DatabaseEngine::StorageTypes
             Errors::RuntimeStatus HandleRowUpdate(
                 Pages::Page *page,
                 Row *row,
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 const std::vector<Value> &updates,
                 const HashSet<column_index_t>& updatedColumns,
                 const bool &isHeap = true
@@ -347,6 +362,7 @@ namespace DatabaseEngine::StorageTypes
             Errors::RuntimeStatus  HandleRowUpdate(
                 Pages::Page *page,
                 Row *row,
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates,
                 const HashSet<column_index_t>& updatedColumns,
                 const bool &isHeap = true

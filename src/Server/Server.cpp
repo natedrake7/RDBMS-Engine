@@ -836,7 +836,7 @@ namespace Server {
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int));
 
-    return table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
+    return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
   }
 
   Errors::RuntimeStatus ServerInstance::InsertConstraintToMasterDb(
@@ -1933,7 +1933,7 @@ namespace Server {
 
     const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
 
-    table->ClusteredIndexScanUpdate(&logicalExpr, updates);
+    table->ClusteredIndexScanUpdate(this->baseProperties, &logicalExpr, updates);
   }
 
   void ServerInstance::UpdateTableStatisticsById(
@@ -1955,7 +1955,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    table->ClusteredIndexScanUpdate(&binaryExpr, updates);
+    table->ClusteredIndexScanUpdate(this->baseProperties, &binaryExpr, updates);
   }
 
   void ServerInstance::UpdateColumnStatisticsById(
@@ -1981,7 +1981,7 @@ namespace Server {
 
     const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-    table->ClusteredIndexScanUpdate(&binaryExpr, updates);
+    table->ClusteredIndexScanUpdate(this->baseProperties, &binaryExpr, updates);
   }
 
   Errors::RuntimeStatus ServerInstance::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
@@ -1992,7 +1992,7 @@ namespace Server {
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    return table->ClusteredIndexSeekUpdate(nullptr, &key, &key, updates);
+    return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
   }
 
   void ServerInstance::CreateSystemDatabase(){

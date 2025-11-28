@@ -22,13 +22,13 @@ class ThreadPool {
 template <class F>
 void ThreadPool::Enqueue(F &&task)
 {
-  std::unique_lock<std::mutex> lock(queueMutex);
-    
-  tasks.emplace(std::forward<F>(task));
+  {
+    std::unique_lock<std::mutex> lock(this->queueMutex);
 
-  lock.unlock();
-  
-  condition.notify_one();
+    this->tasks.emplace(std::forward<F>(task));
+  }
+
+  this->condition.notify_one();
 }
 
 

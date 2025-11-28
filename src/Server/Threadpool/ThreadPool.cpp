@@ -3,9 +3,9 @@
 ThreadPool::ThreadPool() = default;
 
 ThreadPool::~ThreadPool(){
-  condition.notify_all();
+  this->condition.notify_all();
 
-  for (std::thread &worker : workers)
+  for (auto &worker : this->workers)
     worker.join();
 }
 
@@ -14,19 +14,22 @@ void ThreadPool::InitializeWorkers(const std::atomic<bool> &isServerRunning, con
     this->workers.emplace_back([this, &isServerRunning] {
 
       while (true) {
-        std::unique_lock<std::mutex> lock(this->queueMutex);
 
-        this->condition.wait(lock, [this, &isServerRunning]() {
-          return !this->tasks.empty() || !isServerRunning.load();
-        });
+        std::function<void()> task;
 
-        if (!isServerRunning.load())
-          return;
+        {
+          std::unique_lock<std::mutex> lock(this->queueMutex);
 
-        const std::function<void()> task = std::move(this->tasks.front());
-        this->tasks.pop();
+          this->condition.wait(lock, [this, &isServerRunning]() {
+            return !this->tasks.empty() || !isServerRunning.load();
+          });
 
-        lock.unlock();
+          if (!isServerRunning.load())
+            return;
+
+          task = std::move(this->tasks.front());
+          this->tasks.pop();
+        }
 
         task();
       }

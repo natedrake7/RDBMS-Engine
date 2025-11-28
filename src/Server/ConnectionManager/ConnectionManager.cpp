@@ -287,13 +287,20 @@ void ConnectionManager::CloseServerConnection() const
   void ConnectionManager::HandleClientConnection(const int &clientSocket, mutex& clientMutex){
     std::unique_lock<std::mutex> clientLock(clientMutex);
 
-    Network::ConnectionProtocolHeader header;
     std::vector<char> buffer(Network::ConnectionProtocolHeader::GetSize());
 
     const auto headerBytesRead = recv(clientSocket, buffer.data(), Network::ConnectionProtocolHeader::GetSize(), 0);
-    header.Deserialize(buffer);
+
+    const int err = WSAGetLastError();
+    if (err == WSAEWOULDBLOCK) {
+      // No data available now — just return and continue
+      return;
+    }
 
     if (headerBytesRead > 0) {
+      Network::ConnectionProtocolHeader header;
+      header.Deserialize(buffer);
+
       this->ReadBodyFromClient(clientSocket, header);
       return;
     }

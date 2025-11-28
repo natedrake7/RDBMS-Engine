@@ -517,7 +517,11 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexScanUpdate(const Expressions::Expression *expression, const vector<Value> & updates)const{
+    void BPlusTree::IndexScanUpdate(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        const Expressions::Expression *expression,
+        const vector<Value> & updates
+    )const{
         if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
@@ -537,7 +541,7 @@ namespace Indexing
               if(!value.GetBool())
                   continue;
 
-            const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
 
               if (result.code != Errors::RuntimeError::Ok)
                   return;
@@ -551,6 +555,7 @@ namespace Indexing
     }
 
     Errors::RuntimeStatus BPlusTree::IndexScanUpdate(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const Expressions::Expression *expression,
         const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
     )const{
@@ -572,7 +577,7 @@ namespace Indexing
                 if(!value.GetBool())
                     continue;
 
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, updates, updatedColumns, false);
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
                     return result;
@@ -587,7 +592,7 @@ namespace Indexing
         return {};
     }
 
-    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
+    Errors::RuntimeStatus BPlusTree::IndexScanUpdate(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
         if (this->indexPageId == INVALID_PAGE_ID)
             return {};
 
@@ -603,7 +608,7 @@ namespace Indexing
             MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
             for(auto* row: *currentNode->GetDataRowsUnsafe()) {
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, updates, updatedColumns, false);
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
                     return result;
@@ -684,6 +689,7 @@ namespace Indexing
     }
 
     Errors::RuntimeStatus BPlusTree::IndexSeekUpdate(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minKey,
         const DataTypes::Indexing::Key* maxKey,
@@ -722,7 +728,7 @@ namespace Indexing
 
                     const auto value = expression->Evaluate(row);
                     if(value.GetBool()) {
-                        const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+                        const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), properties, updates, updatedColumns, false);
 
                         if (result.code != Errors::RuntimeError::Ok)
                             return result;
@@ -748,7 +754,7 @@ namespace Indexing
               if(!value.GetBool())
                 continue;
 
-            const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, updatedColumns, false);
 
             if (result.code != Errors::RuntimeError::Ok)
               return result;
@@ -768,6 +774,7 @@ namespace Indexing
     }
 
     Errors::RuntimeStatus BPlusTree::IndexSeekUpdate(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const DataTypes::Indexing::Key *minKey,
         const DataTypes::Indexing::Key *maxKey,
         const vector<Value> &updates
@@ -801,7 +808,7 @@ namespace Indexing
                 if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
                     const auto* previousRows = previousNode->GetDataRowsUnsafe();
 
-                    const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), updates, updatedColumns, false);
+                    const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), properties, updates, updatedColumns, false);
 
                     if (result.code != Errors::RuntimeError::Ok)
                         return result;
@@ -822,7 +829,7 @@ namespace Indexing
             if (*maxKey < *key)
                 break;
 
-            const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, updatedColumns, false);
 
             if (result.code != Errors::RuntimeError::Ok)
               return result;
