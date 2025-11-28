@@ -312,6 +312,10 @@ namespace Indexing
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
                 const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                if (!row)
+                    continue;
+
                 result->push_back(row);
 
                 if (result->size() == properties.batchSize) {
@@ -351,6 +355,9 @@ namespace Indexing
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
                 const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
 
+                if (!row)
+                    continue;
+
                 if(!expression->Evaluate(row).GetBool())
                     continue;
 
@@ -389,7 +396,7 @@ namespace Indexing
             for (const auto* pageRow : *currentNode->GetDataRowsUnsafe()) {
                 auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
-                if(!expression->Evaluate(row).GetBool())
+                if(!row || !expression->Evaluate(row).GetBool())
                     continue;
 
                 result->push_back(row);
@@ -418,6 +425,10 @@ namespace Indexing
 
             for (const auto& pageRow : *currentNode->GetDataRowsUnsafe()) {
                 auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
+
+                if (!row)
+                    continue;
+
                 result->push_back(row);
             }
 

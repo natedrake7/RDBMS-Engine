@@ -79,9 +79,7 @@ namespace DatabaseEngine::StorageTypes {
 
             const auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
-            const auto conditionResult = expression->Evaluate(row);
-
-            if (!conditionResult.GetBool())
+            if (!row || !expression->Evaluate(row).GetBool())
               continue;
 
             selectedRows->push_back(row);
@@ -98,6 +96,9 @@ namespace DatabaseEngine::StorageTypes {
             auto* pageRow = page->GetRow(rowId.indexId);
 
             const auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
+
+            if (!row)
+                continue;
 
             selectedRows->push_back(row);
         }

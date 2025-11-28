@@ -837,6 +837,9 @@ namespace DatabaseEngine::StorageTypes {
        if (this->IsVisibleForTransaction(snapshot))
            return this;
 
+        if (!this->versionHeader.HasOlderVersion())
+            return nullptr;
+
         return Server::ServerInstance::Get().GetVersionDatabase()->RetrieveRow(snapshot, this->versionHeader.olderVersionPointer, this->table);
     }
 
@@ -848,6 +851,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     bool Row::IsVisibleForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const {
+        if (snapshot.IsSystemTransaction())
+            return true;
+
         if (this->versionHeader.createdTransactionId <= snapshot.minimumTransactionId)
             return !this->IsDeleted(snapshot);
 

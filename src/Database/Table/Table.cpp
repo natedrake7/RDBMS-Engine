@@ -686,6 +686,9 @@ namespace DatabaseEngine::StorageTypes {
 
               const auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
+              if (!row)
+                continue;
+
               result->push_back(row);
 
               state.lastFetchedRowId.indexId = i;

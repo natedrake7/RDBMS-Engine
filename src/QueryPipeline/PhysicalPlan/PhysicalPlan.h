@@ -85,6 +85,8 @@ namespace QueryPipeline::PhysicalPlan{
       this->minimumTransactionId = Constants::FIRST_TRANSACTION_ID;
       this->maximumTransactionId = Constants::FIRST_TRANSACTION_ID;
     }
+
+    [[nodiscard]] bool IsSystemTransaction()const{ return this->transactionId == Constants::FIRST_TRANSACTION_ID; }
   };
 
   struct PhysicalPlanExecutionProperties {

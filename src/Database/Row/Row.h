@@ -39,6 +39,8 @@ namespace DatabaseEngine::StorageTypes
             this->createdTransactionId = Constants::INVALID_TRANSACTION_ID;
             this->deletedTransactionId = 0;
         }
+
+        [[nodiscard]] bool HasOlderVersion()const { return this->olderVersionPointer.pageId != Constants::INVALID_PAGE_ID; }
     };
 
     struct RowHeader{
