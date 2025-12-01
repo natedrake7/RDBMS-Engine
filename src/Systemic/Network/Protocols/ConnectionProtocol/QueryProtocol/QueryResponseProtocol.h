@@ -8,6 +8,8 @@ namespace Network {
   //and also null fields too
 
   class QueryResponseProtocol final : public ResponseProtocol{
+    bool hasMore;
+
     bool hasError;
     std::string message;
 
@@ -30,6 +32,7 @@ namespace Network {
       explicit QueryResponseProtocol(const std::string& errorMessage);
       explicit QueryResponseProtocol(
         const bool& hasError,
+        const bool& hasMore,
         const std::string& message,
         const std::vector<std::string>& columns,
         std::vector<QueryResult>& rows

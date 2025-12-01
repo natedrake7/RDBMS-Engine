@@ -371,7 +371,7 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const int& socket
     auto parserResult = QueryPipeline::Parser::StartTransaction(query, header.sessionId);
 
     if (parserResult.status.hasError) {
-      Network::QueryResponseProtocol response(parserResult.status.hasError, parserResult.status.message, parserResult.columns, parserResult.rows);
+      Network::QueryResponseProtocol response(parserResult.status.hasError, false, parserResult.status.message, parserResult.columns, parserResult.rows);
       ConnectionManager::SendToClient(socket, &response);
 
       return;
@@ -380,12 +380,13 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const int& socket
     while (parserResult.cursor->hasMore()) {
       auto batchResult = QueryPipeline::Parser::Execute(parserResult.cursor, header.sessionId);
 
-        Network::QueryResponseProtocol response(parserResult.status.hasError, parserResult.status.message, parserResult.columns, parserResult.rows);
-        ConnectionManager::SendToClient(socket, &response);
+      bool hasMore = !batchResult.status.hasError && parserResult.cursor->hasMore();
 
-      if (batchResult.status.hasError) {
+      Network::QueryResponseProtocol response(batchResult.status.hasError, hasMore, batchResult.status.message, batchResult.columns, batchResult.rows);
+      ConnectionManager::SendToClient(socket, &response);
+
+      if (batchResult.status.hasError)
         return;
-      }
   }
 
     QueryPipeline::Parser::CommitTransaction(header.sessionId, parserResult.cursor->GetSnapshot());

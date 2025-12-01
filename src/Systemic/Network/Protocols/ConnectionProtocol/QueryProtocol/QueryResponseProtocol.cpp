@@ -8,17 +8,20 @@ namespace Network {
     this->hasError = false;
     this->header.size = sizeof(bool);
     this->header.statusCode = ResponseType::QueryResponse;
+    this->hasMore = false;
   }
 
   QueryResponseProtocol::~QueryResponseProtocol() = default;
 
   QueryResponseProtocol::QueryResponseProtocol(const ResponseProtocolHeader &header) : ResponseProtocol(header) {
+    this->hasMore = false;
     this->hasError = false;
     this->header.size = sizeof(bool);
     this->header.statusCode = ResponseType::QueryResponse;
   }
 
   QueryResponseProtocol::QueryResponseProtocol(const ResponseType &statusCode, const DataTypes::Guid& sessionId) : ResponseProtocol(statusCode, sessionId) {
+    this->hasMore = false;
     this->hasError = false;
     this->header.size = sizeof(bool);
     this->header.statusCode = ResponseType::QueryResponse;
@@ -26,6 +29,7 @@ namespace Network {
 
   QueryResponseProtocol::QueryResponseProtocol(const string &errorMessage){
     this->hasError = true;
+    this->hasMore = false;
     this->message = errorMessage;
     this->header.size = sizeof(bool) + errorMessage.size();
     this->header.statusCode = ResponseType::QueryResponse;
@@ -33,11 +37,13 @@ namespace Network {
 
 QueryResponseProtocol::QueryResponseProtocol(
     const bool& hasError,
+    const bool& hasMore,
     const std::string& message,
     const std::vector<std::string>& columns,
     std::vector<QueryResult>& rows
   ){
     this->hasError = hasError;
+    this->hasMore = hasMore;
     this->message = message;
     this->header.statusCode = ResponseType::QueryResponse;
     this->rows = std::move(rows);
@@ -84,6 +90,7 @@ QueryResponseProtocol::QueryResponseProtocol(
 
     ResponseProtocol::Serialize();
     Vector::AppendToBuffer(this->buffer, &this->hasError, sizeof(bool));
+    Vector::AppendToBuffer(this->buffer, &this->hasMore, sizeof(bool));
 
     this->SerializeMessage();
     this->SerializeResult();
@@ -137,6 +144,9 @@ QueryResponseProtocol::QueryResponseProtocol(
     uint32_t offSet = 0;
 
     memcpy(&this->hasError, buffer.data() + offSet, sizeof(bool));
+    offSet += sizeof(bool);
+
+    memcpy(&this->hasMore, buffer.data() + offSet, sizeof(bool));
     offSet += sizeof(bool);
 
     this->DeserializeMessage(buffer, offSet);
