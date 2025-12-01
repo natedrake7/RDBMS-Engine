@@ -1,4 +1,5 @@
 #pragma once
+#include "../Cursor/Cursor.h"
 #include "../PhysicalPlan/PhysicalPlan.h"
 #include "../Statements/Statements.h"
 #include <any>
@@ -6,7 +7,8 @@
 #include <typeindex>
 
 
-using namespace std;
+namespace QueryPipeline {
+class Cursor;}using namespace std;
 
 namespace QueryPipeline{
 
@@ -74,11 +76,29 @@ namespace QueryPipeline{
             },
         };
 
+    struct ParserResult {
+        Errors::Error status;
+        std::vector<QueryResult> rows;
+        std::vector<std::string> columns;
+        Cursor* cursor;
+
+        bool hasMore;
+
+        ParserResult() {
+            this->hasMore = false;
+            this->cursor = nullptr;
+        }
+
+        explicit ParserResult(const Errors::Error& error);
+    };
+
     class Parser{
-
-
         static Statements::Statement* CreateStatement(const std::any &ast, const DataTypes::Guid& sessionId);
         static void ClearQuery(const Statements::Statement* statement,const LogicalPlan* logicalPlan);
+
+        static Statements::Statement* Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
+        static PhysicalPlan::PhysicalOperator* BuildExecutionPlan(ParserResult& result, Statements::Statement* statement);
+        static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId);
 
         public:
             Parser();
@@ -87,16 +107,17 @@ namespace QueryPipeline{
             static Parser& Get()
             {
                 static Parser instance;
-
                 return instance;
             }
 
-            static Errors::Error Parse(
-                const string& query,
-                const DataTypes::Guid& sessionId,
-                std::vector<QueryResult>* results = nullptr,
-                std::vector<std::string>* displayColumns = nullptr
+            static ParserResult StartTransaction(const string& query, const DataTypes::Guid& sessionId);
+
+            static ParserResult Execute(
+                Cursor* cursor,
+                const DataTypes::Guid& sessionId
             );
+
+            static void CommitTransaction(const DataTypes::Guid& sessionId, const PhysicalPlan::Snapshot& snapshot);
     };
 
 }

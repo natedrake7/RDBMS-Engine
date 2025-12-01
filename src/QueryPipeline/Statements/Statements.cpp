@@ -285,7 +285,7 @@ namespace QueryPipeline::Statements {
   }
 
   SelectStatement::~SelectStatement(){
-      delete this->table;
+      // delete this->table;
       delete this->orderBy;
 
       for (const auto* join : this->joins) {

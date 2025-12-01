@@ -364,16 +364,31 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Networ
 
     protocol.Deserialize(buffer);
 
-    this->threadPool.Enqueue([query = protocol.GetQuery(), clientSocket, header] {
+    this->threadPool.Enqueue([this, query = protocol.GetQuery(), clientSocket, header] {  this->ExecuteQuery(query, clientSocket, header); });
+}
 
-      std::vector<QueryResult> results;
-      std::vector<std::string> displayColumns;
-      const auto status = QueryPipeline::Parser::Parse(query, header.sessionId, &results, &displayColumns);
+void ConnectionManager::ExecuteQuery(const std::string& query, const int& socket, const Network::ConnectionProtocolHeader &header){
+    auto parserResult = QueryPipeline::Parser::StartTransaction(query, header.sessionId);
 
-      Network::QueryResponseProtocol response(status.hasError, status.message, displayColumns, results);
-      
-      ConnectionManager::SendToClient(clientSocket, &response);
-    });
+    if (parserResult.status.hasError) {
+      Network::QueryResponseProtocol response(parserResult.status.hasError, parserResult.status.message, parserResult.columns, parserResult.rows);
+      ConnectionManager::SendToClient(socket, &response);
+
+      return;
+    }
+
+    while (parserResult.cursor->hasMore()) {
+      auto batchResult = QueryPipeline::Parser::Execute(parserResult.cursor, header.sessionId);
+
+        Network::QueryResponseProtocol response(parserResult.status.hasError, parserResult.status.message, parserResult.columns, parserResult.rows);
+        ConnectionManager::SendToClient(socket, &response);
+
+      if (batchResult.status.hasError) {
+        return;
+      }
+  }
+
+    QueryPipeline::Parser::CommitTransaction(header.sessionId, parserResult.cursor->GetSnapshot());
 }
 
 void ConnectionManager::SendToClient(const int &clientSocket, Network::ResponseProtocol *protocol){

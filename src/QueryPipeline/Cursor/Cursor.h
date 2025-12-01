@@ -17,5 +17,6 @@ namespace QueryPipeline {
 
     [[nodiscard]] PhysicalPlan::PhysicalPlanResult* fetchNextBatch();
     [[nodiscard]] const bool& hasMore()const;
+    [[nodiscard]] const PhysicalPlan::Snapshot& GetSnapshot()const;
   };
 }

@@ -19,4 +19,6 @@ namespace QueryPipeline {
 
   const bool & Cursor::hasMore() const{ return this->hasMoreRows; }
 
+  const PhysicalPlan::Snapshot & Cursor::GetSnapshot() const{ return this->properties.snapshot; }
+
 }

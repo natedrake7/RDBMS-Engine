@@ -75,6 +75,8 @@
 //TODO add isolation levels (read uncommitted, read committed, repeatable read, serializable)
 //TODO add deadlock detection and resolution mechanism
 //validate correct versionDb implementation
+//Added batch streamline
+//need to fix bug on background thread
 
 std::atomic<bool> serverRunning{false};
 
@@ -92,6 +94,8 @@ void RegisterSignalHandlers()
     signal(SIGTERM, shutdownClient);  // kill command
     signal(SIGABRT, shutdownClient);  // abort()
 }
+
+void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId);
 
 int main()
 {
@@ -121,7 +125,6 @@ int main()
     std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
     const auto* user = server.Authenticate("admin", "admin");
-    // const auto* user = server.Authenticate("ioanis7", "'kalispera'");
 
     if (user == nullptr) {
         server.Shutdown();
@@ -142,30 +145,7 @@ int main()
         if (Functions::String::EqualsIgnoreCase(input, exit))
             break;
 
-        const auto start = std::chrono::high_resolution_clock::now();
-
-        std::vector<QueryResult> results;
-        std::vector<std::string> displayColumns;
-        const auto status = QueryPipeline::Parser::Parse(input, session->sessionId, &results, &displayColumns);
-
-        const auto end = std::chrono::high_resolution_clock::now();
-
-        if (status.hasError) {
-            std::cerr << "Error: " << status.message << std::endl;
-            continue;
-        }
-
-        for (const auto& column : displayColumns)
-           std::cout << column << " || ";
-
-       std::cout << std::endl;
-
-        for (const auto& row: results)
-            row.Print();
-
-        const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
-
-        std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
+        ExecuteQuery(input, session->sessionId);
     }
 
     // const auto& databases = server.GetCatalog();
@@ -177,28 +157,40 @@ int main()
 
     server.Shutdown();
     return 0;
+}
 
-    try {
-        cout << "Server Initialized correctly, type exit to shutdown" << endl;
-        
-        while (serverRunning) {
-            std::string input;
+void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
+    const auto start = std::chrono::high_resolution_clock::now();
 
-            std::getline(std::cin, input);
+    const auto parserResult = QueryPipeline::Parser::StartTransaction(query, sessionId);
 
-            if (Functions::String::EqualsIgnoreCase(input, exit))
-                break;
+    if (parserResult.status.hasError) {
+        std::cerr << "Error: " << parserResult.status.message << std::endl;
+        return;
+    }
+
+    while (parserResult.cursor->hasMore()) {
+        auto batchResult = QueryPipeline::Parser::Execute(parserResult.cursor, sessionId);
+
+        if (batchResult.status.hasError) {
+            std::cerr << "Error: " << batchResult.status.message << std::endl;
+            continue;
         }
+
+        for (const auto& column : batchResult.columns)
+            std::cout << column << " || ";
+
+        std::cout << std::endl;
+
+        for (const auto& row: batchResult.rows)
+            row.Print();
     }
-    catch (const exception& e) {
-        cout << e.what() << endl;
-    }
 
-    serverRunning = false;
-    
-    // connectionThread.join();
+    QueryPipeline::Parser::CommitTransaction(sessionId, parserResult.cursor->GetSnapshot());
 
-    server.Shutdown();
+    const auto end = std::chrono::high_resolution_clock::now();
 
-    return 0;
+    const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+
+    std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
 }

@@ -18,6 +18,10 @@ namespace QueryPipeline
 {
     Parser::Parser() = default;
 
+     ParserResult::ParserResult(const Errors::Error &error){
+        this->status = error;
+     }
+
     Statements::Statement* Parser::CreateStatement(const std::any &ast, const DataTypes::Guid& sessionId){
         function<Statements::Statement *(const any &)> handler;
 
@@ -45,12 +49,8 @@ namespace QueryPipeline
 
     Parser::~Parser() = default;
 
-    Errors::Error Parser::Parse(
-        const string& query,
-        const DataTypes::Guid& sessionId,
-        std::vector<QueryResult>* results,
-        std::vector<std::string>* displayColumns
-    ){
+    Statements::Statement* Parser::Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query) {
+        static auto errorListener = ErrorListener();
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
 
@@ -64,7 +64,7 @@ namespace QueryPipeline
         SQLParser parser(&tokens);
 
         parser.removeErrorListeners();
-        parser.addErrorListener(new ErrorListener()); // Add custom
+        parser.addErrorListener(&errorListener); // Add custom
 
         // Start parsing, typically using the start rule of the grammar
         Statements::Statement* statement = nullptr;
@@ -84,85 +84,121 @@ namespace QueryPipeline
             ostringstream os;
             os << "Parser exception: " << e.what();
 
-            return {true, os.str()};
+            result.status = {true, os.str()};
+            return nullptr;
         }
 
-        if (statement == nullptr) {
-            Parser::ClearQuery(statement, nullptr);
-            return {true, "Unexpected error occured during statement build"};
-        }
+        return statement;
+     }
 
+    PhysicalPlan::PhysicalOperator * Parser::BuildExecutionPlan(ParserResult &result, Statements::Statement *statement) {
         auto validation = statement->ValidateStatement();
         if (!validation.IsOk()) {
             Parser::ClearQuery(statement, nullptr);
-            return {true, validation.message};
+
+            result.status  = {true, validation.message};
+            return nullptr;
         }
 
         auto* logicalPlan = statement->ToLogical();
-        
+
         if (logicalPlan == nullptr) {
             Parser::ClearQuery(statement, logicalPlan);
-            return {true, "Unexpected error occured during plan build"};
+
+            result.status  = {true, "Unexpected error occurred during plan build"};
+             return nullptr;
         }
 
         auto* physicalPlan = logicalPlan->ToPhysical();
+        Parser::ClearQuery(statement, logicalPlan);
+
         if(physicalPlan == nullptr){
-            Parser::ClearQuery(statement, logicalPlan);
-            return {true, "Unexpected error occured during physical plan build"};
+            result.status  = {true, "Unexpected error occurred during physical plan build"};
+            return nullptr;
         }
 
-        PhysicalPlan::PhysicalPlanResult* result = nullptr;
+        return physicalPlan;
+    }
 
-        const auto& server = Server::ServerInstance::Get();
-        auto& transactionManager = DatabaseEngine::TransactionManager::Get();
+    void Parser::CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId) {
+        static const auto& server = Server::ServerInstance::Get();
 
-        auto snapshot = transactionManager.BeginTransaction(sessionId);
+        const auto _ = server.CloseCursor(sessionId);
+    }
 
-        std::cout << "Executing transaction: " << snapshot.transactionId
-            << " by thread: " << std::this_thread::get_id()
-            << std::endl;
+    ParserResult Parser::StartTransaction(const string &query, const DataTypes::Guid &sessionId){
+        ParserResult result;
 
-        PhysicalPlan::PhysicalPlanExecutionProperties properties{
+        auto* statement = Parser::Parse(result, sessionId, query);
+
+        if (result.status.hasError)
+            return result;
+
+        auto* physicalPlan = Parser::BuildExecutionPlan(result, statement);
+
+        if (result.status.hasError)
+            return result;
+
+        static const auto& server = Server::ServerInstance::Get();
+        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
+
+        const auto snapshot = transactionManager.BeginTransaction(sessionId);
+
+        std::cout   << "Executing transaction: " << snapshot.transactionId
+                    << " by thread: " << std::this_thread::get_id()
+                    << std::endl;
+
+        const PhysicalPlan::PhysicalPlanExecutionProperties properties{
             snapshot,
             1000
         };
 
         //for test
-        if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {
-            std::this_thread::sleep_for(5000ms);
+        // if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {
+        //     std::this_thread::sleep_for(5000ms);
+        // }
 
-            int val = 0;
+        result.cursor = server.CreateCursor(sessionId, properties, physicalPlan);
+
+        return result;
+    }
+
+    ParserResult Parser::Execute(
+        Cursor* cursor,
+        const DataTypes::Guid& sessionId
+    ){
+        ParserResult result;
+        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
+
+        //return the cursor to allow the thread to fetch more
+        auto* executionResult = cursor->fetchNextBatch();
+
+        if (executionResult == nullptr) {
+            result.status  = {false, "Command completed Successfully"};
+
+            Parser::CleanUpPostExecutionObjects(sessionId);
+            return result;
         }
 
-        auto* cursor = server.CreateCursor(sessionId, properties, physicalPlan);
+        if (!executionResult->IsOk()){
+            transactionManager.RollbackTransaction(cursor->GetSnapshot());
+            Parser::CleanUpPostExecutionObjects(sessionId);
 
-        while (cursor->hasMore()) {
-            result = cursor->fetchNextBatch();
-
-            if (result == nullptr) {
-                Parser::ClearQuery(statement, logicalPlan);
-                return {false, "Command completed Successfully"};
-            }
-
-            if (!result->IsOk()){
-                Parser::ClearQuery(statement, logicalPlan);
-
-                transactionManager.RollbackTransaction(snapshot);
-                return {true, result->message};
-            }
-
-            if (displayColumns != nullptr && displayColumns->empty())
-                *displayColumns = std::move(result->displayColumnNames);
-
-            if (results != nullptr)
-                *results = std::move(result->results);
+            result.status  = {true, executionResult->message};
+            return result;
         }
 
-        const auto _ = server.CloseCursor(sessionId);
-        Parser::ClearQuery(statement, logicalPlan);
+        result.columns = std::move(executionResult->displayColumnNames);
+        result.rows = std::move(executionResult->results);
+
+        return result;
+    }
+
+    void Parser::CommitTransaction(const DataTypes::Guid& sessionId, const PhysicalPlan::Snapshot& snapshot) {
+        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
         transactionManager.CommitTransaction(snapshot);
 
-        return {};
+        Parser::CleanUpPostExecutionObjects(sessionId);
     }
 }

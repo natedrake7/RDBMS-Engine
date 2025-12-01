@@ -132,7 +132,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     };
   }
 
-  PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table): table(table) {}
+  PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table): table(std::move(table)) {}
 
   PhysicalPlanResult* PhysicalTableScan::Execute(const PhysicalPlanExecutionProperties& properties){
       using namespace DatabaseEngine::StorageTypes;
@@ -150,10 +150,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered)
-    : table(table), expression(nullptr), isClustered(isClustered) {}
+    : table(std::move(table)), expression(nullptr), isClustered(isClustered) {}
 
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource *table, Expressions::Expression *expression, const bool & isClustered)
-    : table(table), expression(expression), isClustered(isClustered) {}
+    : table(std::move(table)), expression(expression), isClustered(isClustered) {}
 
   PhysicalPlanResult * PhysicalIndexScan::Execute(const PhysicalPlanExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;
@@ -177,7 +177,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   PhysicalIndexSeek::PhysicalIndexSeek(Statements::DataSource* table, const Value& minValue, const Value& maxValue)
-    : table(table), minValue(minValue), maxValue(maxValue) {}
+    : table(std::move(table)), minValue(minValue), maxValue(maxValue) {}
 
   PhysicalPlanResult* PhysicalIndexSeek::Execute(const PhysicalPlanExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;

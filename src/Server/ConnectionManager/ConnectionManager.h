@@ -65,6 +65,8 @@ namespace Server {
       void CloseClientConnection(const int& clientSocket) const;
       void InitializeServerSocket();
 
+      static void ExecuteQuery(const std::string& query, const int& socket, const Network::ConnectionProtocolHeader &header);
+
 #ifdef _WIN32
       void HandleClientDisconnection(const SocketEvent& event, int& totalEvents, int& index);
 #else
