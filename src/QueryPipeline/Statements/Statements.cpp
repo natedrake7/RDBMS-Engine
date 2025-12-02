@@ -170,7 +170,6 @@ namespace QueryPipeline::Statements {
 
   CreateTableStatement::~CreateTableStatement() {
       delete this->constraint;
-      delete this->table;
 
       for(const auto& column : this->columns)
           delete column;

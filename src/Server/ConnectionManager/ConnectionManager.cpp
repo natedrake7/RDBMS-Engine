@@ -377,19 +377,28 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const int& socket
       return;
     }
 
+    bool hasError = false;
+
     while (parserResult.cursor->hasMore()) {
-      auto batchResult = QueryPipeline::Parser::Execute(parserResult.cursor, header.sessionId);
+      auto batchResult = QueryPipeline::Parser::Execute(parserResult.cursor);
 
       bool hasMore = !batchResult.status.hasError && parserResult.cursor->hasMore();
 
       Network::QueryResponseProtocol response(batchResult.status.hasError, hasMore, batchResult.status.message, batchResult.columns, batchResult.rows);
       ConnectionManager::SendToClient(socket, &response);
 
-      if (batchResult.status.hasError)
-        return;
+      if (batchResult.status.hasError) {
+        hasError = true;
+        break;
+      }
   }
 
-    QueryPipeline::Parser::CommitTransaction(header.sessionId, parserResult.cursor->GetSnapshot());
+  if (hasError) {
+    QueryPipeline::Parser::RollbackTransaction(header.sessionId, parserResult.cursor->GetSnapshot());
+    return;
+  }
+
+  QueryPipeline::Parser::CommitTransaction(header.sessionId, parserResult.cursor->GetSnapshot());
 }
 
 void ConnectionManager::SendToClient(const int &clientSocket, Network::ResponseProtocol *protocol){

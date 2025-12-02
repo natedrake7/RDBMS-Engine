@@ -169,12 +169,15 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
         return;
     }
 
+    bool hasError = false;
+
     while (parserResult.cursor->hasMore()) {
-        auto batchResult = QueryPipeline::Parser::Execute(parserResult.cursor, sessionId);
+        auto batchResult = QueryPipeline::Parser::Execute(parserResult.cursor);
 
         if (batchResult.status.hasError) {
             std::cerr << "Error: " << batchResult.status.message << std::endl;
-            continue;
+            hasError = true;
+            break;
         }
 
         for (const auto& column : batchResult.columns)
@@ -186,7 +189,10 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
             row.Print();
     }
 
-    QueryPipeline::Parser::CommitTransaction(sessionId, parserResult.cursor->GetSnapshot());
+    if (hasError)
+        QueryPipeline::Parser::RollbackTransaction(sessionId, parserResult.cursor->GetSnapshot());
+    else
+        QueryPipeline::Parser::CommitTransaction(sessionId, parserResult.cursor->GetSnapshot());
 
     const auto end = std::chrono::high_resolution_clock::now();
 

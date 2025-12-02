@@ -163,27 +163,17 @@ namespace QueryPipeline
         return result;
     }
 
-    ParserResult Parser::Execute(
-        Cursor* cursor,
-        const DataTypes::Guid& sessionId
-    ){
+    ParserResult Parser::Execute(Cursor* cursor){
         ParserResult result;
-        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
-
         //return the cursor to allow the thread to fetch more
         auto* executionResult = cursor->fetchNextBatch();
 
         if (executionResult == nullptr) {
             result.status  = {false, "Command completed Successfully"};
-
-            Parser::CleanUpPostExecutionObjects(sessionId);
             return result;
         }
 
         if (!executionResult->IsOk()){
-            transactionManager.RollbackTransaction(cursor->GetSnapshot());
-            Parser::CleanUpPostExecutionObjects(sessionId);
-
             result.status  = {true, executionResult->message};
             return result;
         }
@@ -198,6 +188,14 @@ namespace QueryPipeline
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
         transactionManager.CommitTransaction(snapshot);
+
+        Parser::CleanUpPostExecutionObjects(sessionId);
+    }
+
+    void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const PhysicalPlan::Snapshot &snapshot) {
+        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
+
+        transactionManager.RollbackTransaction(snapshot);
 
         Parser::CleanUpPostExecutionObjects(sessionId);
     }

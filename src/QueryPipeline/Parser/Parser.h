@@ -112,12 +112,10 @@ namespace QueryPipeline{
 
             static ParserResult StartTransaction(const string& query, const DataTypes::Guid& sessionId);
 
-            static ParserResult Execute(
-                Cursor* cursor,
-                const DataTypes::Guid& sessionId
-            );
+            static ParserResult Execute(Cursor* cursor);
 
             static void CommitTransaction(const DataTypes::Guid& sessionId, const PhysicalPlan::Snapshot& snapshot);
+            static void RollbackTransaction(const DataTypes::Guid& sessionId, const PhysicalPlan::Snapshot& snapshot);
     };
 
 }

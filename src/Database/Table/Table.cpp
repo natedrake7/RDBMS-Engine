@@ -680,7 +680,7 @@ namespace DatabaseEngine::StorageTypes {
 
             const auto* pageRows = page->GetDataRowsUnsafe();
 
-            for (int i = state.lastFetchedRowId.indexId; i < page->GetPageSize(); i++) {
+            for (int i = state.GetNextKeyIndex(); i < page->GetPageSize(); i++) {
               const auto* pageRow = (*pageRows)[i];
 
 
