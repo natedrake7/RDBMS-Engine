@@ -61,10 +61,10 @@ namespace Server {
     ~ServerInstance();
 
     void ReadConfiguration(const std::string& configPath);
-    void CreateSystemDatabase();
+    void CreateMasterDatabase();
     void CreateVersionDatabase();
-    [[nodiscard]] bool CheckIfMasterDbExists()const;
-    [[nodiscard]] bool CheckIfVersionDbExists()const;
+    [[nodiscard]] bool MasterDbExists()const;
+    [[nodiscard]] bool VersionDbExists()const;
     [[nodiscard]] std::vector<Security::Role> SelectRoles()const;
     [[nodiscard]] std::vector<Security::User> SelectUsers()const;
 

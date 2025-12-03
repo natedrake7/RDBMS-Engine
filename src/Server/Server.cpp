@@ -84,12 +84,7 @@ namespace Server {
     this->ReadConfiguration(configPath);
 
     this->CreateVersionDatabase();
-     if (this->CheckIfMasterDbExists()) {
-       this->UseMasterDb();
-       return;
-     }
-
-    this->CreateSystemDatabase();
+    this->CreateMasterDatabase();
 
     const auto dbInsertResult = this->InsertDbToMasterDb(this->baseProperties, this->sysDbName, this->sysDbPath, true);
 
@@ -133,16 +128,17 @@ namespace Server {
 
         const auto columnResult =
           this->InsertColumnToMasterDb(
-            this->baseProperties,
-           tableResult.primaryKey.GetKeyAsInt(),
-           column.name,
-           type,
-           columnSize,
-           Constants::INVALID_DECIMAL_PRECISION,
-           Constants::INVALID_DECIMAL_SCALE,
-           column.nullable,
-           columnPos,
-           true);
+              this->baseProperties,
+             tableResult.primaryKey.GetKeyAsInt(),
+             column.name,
+             type,
+             columnSize,
+             Constants::INVALID_DECIMAL_PRECISION,
+             Constants::INVALID_DECIMAL_SCALE,
+             column.nullable,
+             columnPos,
+             true
+          );
 
         if (columnResult.code != Errors::RuntimeError::Ok)
           std::cerr << columnResult.message << std::endl;
@@ -197,7 +193,8 @@ namespace Server {
             indexResult.primaryKey.GetKeyAsInt(),
             columnIdsDict.Get(table.primaryKey[j]),
             static_cast<int16_t>(j),
-            true);
+            true
+        );
 
         _ = this->InsertConstraintColumnToMasterDb(
           this->baseProperties,
@@ -1977,9 +1974,9 @@ namespace Server {
     Table* table = this->masterDb->OpenTable(MasterDbTables::SysColumnStats);
 
     auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumnStats::ColumnId));
-    auto* literaValue = new Expressions::LiteralExpression(Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)));
+    auto* literalValue = new Expressions::LiteralExpression(Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literalValue, Expressions::ExpressionOperator::Equal);
 
     table->ClusteredIndexScanUpdate(this->baseProperties, &binaryExpr, updates);
   }
@@ -1995,9 +1992,14 @@ namespace Server {
     return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
   }
 
-  void ServerInstance::CreateSystemDatabase(){
+  void ServerInstance::CreateMasterDatabase(){
     using namespace DatabaseEngine;
     using namespace DatabaseEngine::StorageTypes;
+
+    if (this->MasterDbExists()) {
+      this->UseMasterDb();
+      return;
+    }
 
     CreateDatabase(this->sysDbName);
 
@@ -2049,7 +2051,7 @@ namespace Server {
   }
 
   void ServerInstance::CreateVersionDatabase() {
-    if (this->CheckIfVersionDbExists()) {
+    if (this->VersionDbExists()) {
       this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
       return;
     }
@@ -2058,9 +2060,9 @@ namespace Server {
     this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
   }
 
-  bool ServerInstance::CheckIfMasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }
+  bool ServerInstance::MasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }
 
-  bool ServerInstance::CheckIfVersionDbExists() const{ return std::filesystem::exists(this->versionDbPath); }
+  bool ServerInstance::VersionDbExists() const{ return std::filesystem::exists(this->versionDbPath); }
 
   Dictionary<int32_t , Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableIdToDictionary(const int32_t & tableId) const{
     const auto columns = this->SelectIdentityColumnsByTableId(tableId);

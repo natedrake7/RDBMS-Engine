@@ -87,9 +87,9 @@ namespace DatabaseEngine::StorageTypes {
 
     const Headers::DefaultValuesHeader & Column::GetDefaultValue() const{ return this->header.defaultValue; }
 
-    void Column::SetIsOverflowed(const bool & isOverflowed){ this->isOverflowed = isOverflowed; }
+    void Column::SetIsOverflowed(const bool & isOverflow){ this->isOverflowed = isOverflow; }
 
-    void Column::SetColumnStatistics(const Headers::ColumnStatistics &statistics){ this-> statistics = statistics;}
+    void Column::SetColumnStatistics(const Headers::ColumnStatistics &stats){ this-> statistics = stats;}
 
 //compute distinct count too
     void Column::UpdateColumnStatistics(const Row *row){
@@ -100,13 +100,13 @@ namespace DatabaseEngine::StorageTypes {
             return;
         }
 
-        const auto isLessThan = value < this->statistics.min;
-        if (isLessThan.GetBool())
-            this->statistics.min = value;
-
-        const auto isGreaterThan = value > this->statistics.max;
-        if (isGreaterThan.GetBool())
-            this->statistics.max = value;
+        // const auto isLessThan = value < this->statistics.min;
+        // if (isLessThan.GetBool())
+        //     this->statistics.min = value;
+        //
+        // const auto isGreaterThan = value > this->statistics.max;
+        // if (isGreaterThan.GetBool())
+        //     this->statistics.max = value;
 
         Server::ServerInstance::Get().UpdateColumnStatisticsById(
             this->header.id,

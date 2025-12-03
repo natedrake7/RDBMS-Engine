@@ -91,9 +91,9 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] const Headers::DefaultValuesHeader &GetDefaultValue() const;
 
-        void SetIsOverflowed(const bool &isOverflowed);
+        void SetIsOverflowed(const bool &isOverflow);
 
-        void SetColumnStatistics(const Headers::ColumnStatistics& statistics);
+        void SetColumnStatistics(const Headers::ColumnStatistics& stats);
 
         void UpdateColumnStatistics(const StorageTypes::Row* row);
 

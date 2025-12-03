@@ -187,7 +187,7 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != Errors::RuntimeError::Ok)
           return result;
 
-        this->database->LogCheckPoint(checkPoint);
+        DatabaseEngine::Database::LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
         // result.primaryKey = primaryKeyVal;
@@ -1680,8 +1680,9 @@ namespace DatabaseEngine::StorageTypes {
           stats.avgRowSize
         );
 
-        for (auto* column : this->columns)
-          column->UpdateColumnStatistics(row);
+        //TODO fix updating
+        // for (auto* column : this->columns)
+        //   column->UpdateColumnStatistics(row);
   }
 }
 

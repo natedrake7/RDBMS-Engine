@@ -205,8 +205,8 @@
       "columns": [
         { "name": "column_id",            "type": "Int" },
         { "name": "distinct_count",       "type": "BigInt", "default": 0 },
-        { "name": "min_value",            "type": "String", "size": -1, "nullable": true },
-        { "name": "max_value",            "type": "String", "size": -1, "nullable": true },
+        { "name": "min_value",            "type": "String", "size": 200, "nullable": true },
+        { "name": "max_value",            "type": "String", "size": 200, "nullable": true },
         { "name": "null_count",           "type": "BigInt", "nullable": true },
         { "name": "created_at",           "type": "DateTime" },
         { "name": "last_modified",        "type": "DateTime" },
