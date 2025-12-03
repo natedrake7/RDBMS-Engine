@@ -77,6 +77,7 @@
 //validate correct versionDb implementation
 //Added batch streamline
 //need to fix bug on background thread
+//check sys_column_stats implementation.
 
 std::atomic<bool> serverRunning{false};
 

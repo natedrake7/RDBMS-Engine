@@ -189,7 +189,6 @@ namespace QueryPipeline::Statements {
     Constants::JoinType type;
 
     JoinStatement();
-    ~JoinStatement()override;
     [[nodiscard]]Errors::ValidationStatus Validate() override;
     [[nodiscard]]Errors::ValidationStatus Validate(const int32_t& databaseId);
 

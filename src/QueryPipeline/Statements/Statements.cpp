@@ -132,10 +132,6 @@ namespace QueryPipeline::Statements {
     this->expression = nullptr;
   }
 
-  JoinStatement::~JoinStatement(){
-      delete this->table;
-  }
-
   Errors::ValidationStatus JoinStatement::Validate(){
     return {};
   }
