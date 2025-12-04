@@ -20,11 +20,15 @@ namespace QueryPipeline::PhysicalPlan {
     const auto* leftResult = this->left->Execute(properties);
     const auto* rightResult = this->right->Execute(properties);
 
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join);
+
     //create new row
     for (const auto* outerRow: leftResult->rows) {
       for (const auto* innerRow: rightResult->rows) {
 
-        if (!this->joinCondition->Evaluate(outerRow, innerRow).GetBool())
+        context.outerRow = outerRow;
+        context.innerRow = innerRow;
+        if (!this->joinCondition->Evaluate(context).GetBool())
           continue;
 
         result->rows.push_back(outerRow->Join(innerRow));
@@ -54,13 +58,17 @@ namespace QueryPipeline::PhysicalPlan {
       const auto* leftResult = this->left->Execute(properties);
       const auto* rightResult = this->right->Execute(properties);
 
+      Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join);
       //create new row
       for (const auto* outerRow: leftResult->rows) {
 
         bool hasMatched = false;
         for (const auto* innerRow: rightResult->rows) {
 
-          if (!this->joinCondition->Evaluate(outerRow, innerRow).GetBool())
+          context.outerRow = outerRow;
+          context.innerRow = innerRow;
+
+          if (!this->joinCondition->Evaluate(context).GetBool())
             continue;
 
           const auto* joinedRow = outerRow->Join(innerRow);
@@ -105,16 +113,20 @@ namespace QueryPipeline::PhysicalPlan {
       const auto* leftResult = this->left->Execute(properties);
       const auto* rightResult = this->right->Execute(properties);
 
-
       std::vector<bool> leftMatched(leftResult->rows.size(), false);
       std::vector<bool> rightMatched(rightResult->rows.size(), false);
+
+      Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join);
 
       for (int i = 0;i < leftResult->rows.size();i++) {
         for (int j = 0;j < rightResult->rows.size();j++) {
           const auto* outerRow = leftResult->rows[i];
           const auto* innerRow = rightResult->rows[j];
 
-          if (!this->joinCondition->Evaluate(outerRow, innerRow).GetBool())
+          context.outerRow = outerRow;
+          context.innerRow = innerRow;
+
+          if (!this->joinCondition->Evaluate(context).GetBool())
             continue;
 
           result->rows.push_back(outerRow->Join(innerRow));

@@ -151,6 +151,28 @@ namespace QueryPipeline::Statements {
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
   };
 
+  struct DeclareVariableStatement final: public Statement {
+    Value value;
+    std::string name;
+
+    DeclareVariableStatement() = default;
+    Errors::ValidationStatus Validate() override;
+    Security::Permission RequiredPermissions() const override;
+
+    QueryPipeline::LogicalPlan* ToLogical() override;
+  };
+
+  struct SetVariableStatement final: public Statement {
+    Value value;
+    std::string name;
+
+    SetVariableStatement() = default;
+    Errors::ValidationStatus Validate() override;
+    Security::Permission RequiredPermissions() const override;
+
+    QueryPipeline::LogicalPlan* ToLogical() override;
+  };
+
   struct CreateUserStatement final : public Statement {
       std::string username;
       std::string password;

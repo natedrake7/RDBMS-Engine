@@ -50,6 +50,12 @@ class Value {
     public:
         Value();
         Value(const Value& copyVal);
+
+        //Move Constructor
+        Value(Value&& other)noexcept;
+
+        //Move Assignment Operator
+        Value& operator=(Value&& other) noexcept;
         ~Value();
 
         explicit Value(const void* data, const Constants::column_index_t& columnIndex = 0);

@@ -22,6 +22,9 @@ namespace Server::Sessions {
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& id);
     [[nodiscard]] bool UpdateSession(const DataTypes::Guid& id, const int32_t& databaseId)const;
 
+    [[nodiscard]] bool AddVariable(const DataTypes::Guid& id, const Value& value, const std::string& name)const;
+    [[nodiscard]] bool SetVariable(const DataTypes::Guid& id, const Value& value, const std::string& name)const;
+
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,
       const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,

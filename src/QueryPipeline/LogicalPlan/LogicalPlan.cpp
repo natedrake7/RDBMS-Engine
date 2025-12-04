@@ -20,6 +20,20 @@ namespace QueryPipeline {
 
   LogicalPlan::~LogicalPlan() = default;
 
+  LogicalDeclareVariable::LogicalDeclareVariable(const DataTypes::Guid &sessionId, Value& value, std::string& name)
+    : LogicalPlan(sessionId), value(std::move(value)), name(std::move(name)){}
+
+  PhysicalPlan::PhysicalOperator * LogicalDeclareVariable::ToPhysical() {
+    return new PhysicalPlan::PhysicalDeclareVariable(this->sessionId, this->value, this->name);
+  }
+
+  LogicalSetVariable::LogicalSetVariable(const DataTypes::Guid &sessionId, Value &value, std::string &name)
+    : LogicalPlan(sessionId), value(std::move(value)), name(std::move(name)){}
+
+  PhysicalPlan::PhysicalOperator * LogicalSetVariable::ToPhysical() {
+    return new PhysicalPlan::PhysicalSetVariable(this->sessionId, this->value, this->name);
+  }
+
   LogicalProject::LogicalProject(
     LogicalPlan *child,
     std::vector<Expressions::Expression*> &resultExpressions,

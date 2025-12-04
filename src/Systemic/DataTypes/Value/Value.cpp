@@ -31,6 +31,42 @@ Value::Value(const Value &copyVal){
     memcpy(this->data, copyVal.data, this->size);
 }
 
+Value::Value(Value &&other)noexcept {
+    if (this == &other)
+        return;
+
+    this->size = other.size;
+    this->type = other.type;
+    this->data = other.data;
+    this->columnIndex = other.columnIndex;
+    this->isIdentifier = other.isIdentifier;
+
+    other.data = nullptr;
+    other.size = 0;
+    other.columnIndex = 0;
+    other.isIdentifier = false;
+}
+
+Value & Value::operator=(Value &&other) noexcept{
+    if (this == &other)
+        return *this;
+
+    delete[] this->data;
+
+    this->size = other.size;
+    this->type = other.type;
+    this->data = other.data;
+    this->columnIndex = other.columnIndex;
+    this->isIdentifier = other.isIdentifier;
+
+    other.data = nullptr;
+    other.size = 0;
+    other.columnIndex = 0;
+    other.isIdentifier = false;
+
+    return *this;
+}
+
 Value::Value(const void *data, const Constants::column_index_t &columnIndex){
     this->data = nullptr;
     this->columnIndex = columnIndex;

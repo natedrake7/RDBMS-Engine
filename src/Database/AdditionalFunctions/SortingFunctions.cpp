@@ -130,10 +130,14 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
 
 bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResult& secondRow, const vector<QueryPipeline::Statements::OrderColumn*> &sortConditions)
 {
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::MaterializedRow);
     for (const auto& condition : sortConditions)
     {
-        const auto& firstValue = condition->expression->Evaluate(firstRow);
-        const auto& secondValue = condition->expression->Evaluate(secondRow);
+        context.materializedRow = firstRow;
+        const auto& firstValue = condition->expression->Evaluate(context);
+
+        context.materializedRow = secondRow;
+        const auto& secondValue = condition->expression->Evaluate(context);
 
         //if column is indexed(and it is the first condition, it is already sorted by it so set the result accordingly result is positive)
         // const int result = SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);

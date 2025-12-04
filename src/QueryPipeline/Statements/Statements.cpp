@@ -42,6 +42,30 @@ namespace QueryPipeline::Statements {
     return this->Validate();
   }
 
+  Errors::ValidationStatus DeclareVariableStatement::Validate() {
+    return {};
+  }
+
+  Security::Permission DeclareVariableStatement::RequiredPermissions() const {
+    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+  }
+
+  QueryPipeline::LogicalPlan * DeclareVariableStatement::ToLogical() {
+    return new LogicalDeclareVariable(this->sessionId, this->value, this->name);
+  }
+
+  Errors::ValidationStatus SetVariableStatement::Validate() {
+    return {};
+  }
+
+  Security::Permission SetVariableStatement::RequiredPermissions() const {
+    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+  }
+
+  QueryPipeline::LogicalPlan * SetVariableStatement::ToLogical() {
+    return new LogicalSetVariable(this->sessionId, this->value, this->name);
+  }
+
   Errors::ValidationStatus CreateUserStatement::Validate(){
     if (this->username.empty())
       return {Errors::ValidationError::Error,  "username cannot be empty"};

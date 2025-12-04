@@ -133,10 +133,14 @@ namespace Pages
     }
 
     void Page::Delete(vector<Row*> &deletedRows, const Expressions::Expression *expression){
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+
         for (int i = 0; i < this->rows.size(); i++) {
             auto* row = this->rows[i];
 
-            const auto value = expression->Evaluate(row);
+            context.row = row;
+
+            const auto value = expression->Evaluate(context);
             if (value.GetBool()) {
                 this->rows.erase(this->rows.begin() + i);
                 i--;
@@ -154,10 +158,13 @@ namespace Pages
     }
 
     void Page::Delete(const Expressions::Expression *expression){
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+
         for (int i = 0; i < this->rows.size(); i++) {
             auto* row = this->rows[i];
 
-            const auto value = expression->Evaluate(row);
+            context.row = row;
+            const auto value = expression->Evaluate(context);
             if (value.GetBool()) {
                 this->rows.erase(this->rows.begin() + i);
                 i--;

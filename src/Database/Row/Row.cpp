@@ -639,9 +639,10 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff)const{
         const auto prevRowSize = this->GetTotalRowSize();
 
+        Expressions::EvaluationContext context(this);
         for (const auto & update : updates)
         {
-            const auto value = update->value->Evaluate(this);
+            const auto value = update->value->Evaluate(context);
 
             const column_index_t &associatedColumnIndex = update->name.index;
 

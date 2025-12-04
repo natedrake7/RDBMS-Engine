@@ -26,8 +26,57 @@ namespace QueryPipeline::PhysicalPlan {
     return this->code == Errors::RuntimeError::Ok;
   }
 
+   PhysicalPlanExecutionProperties::PhysicalPlanExecutionProperties(const Snapshot &snapshot, const int &batchSize, const Dictionary<std::string, Value>& variables) {
+    this->snapshot = snapshot;
+    this->batchSize = batchSize;
+    this->variables = &variables;
+  }
+
+  PhysicalPlanExecutionProperties::PhysicalPlanExecutionProperties() {
+    this->batchSize = 0;
+    this->variables = nullptr;
+  }
+
   PhysicalOperator::PhysicalOperator(const DataTypes::Guid &currentSessionId)
     : sessionId(currentSessionId){}
+
+  PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Value &value, std::string &name)
+    : PhysicalOperator(currentSessionId), value(std::move(value)), name(std::move(name)){}
+
+  PhysicalPlanResult * PhysicalDeclareVariable::Execute(const PhysicalPlanExecutionProperties &properties) {
+    auto* result = new PhysicalPlanResult();
+
+    static auto& server = Server::ServerInstance::Get();
+
+    if (!server.AddVariable(this->sessionId, this->value, this->name)) {
+      result->code = Errors::RuntimeError::Error;
+      result->message = "Failed to add variable";
+    }
+
+    result->code = Errors::RuntimeError::Ok;
+    result->message = "Added variable with name: " + this->name;
+
+    return result;
+  }
+
+  PhysicalSetVariable::PhysicalSetVariable(const DataTypes::Guid &currentSessionId, Value &value, std::string &name)
+    : PhysicalOperator(currentSessionId), value(std::move(value)), name(std::move(name)){}
+
+  PhysicalPlanResult * PhysicalSetVariable::Execute(const PhysicalPlanExecutionProperties &properties) {
+    auto* result = new PhysicalPlanResult();
+
+    static auto& server = Server::ServerInstance::Get();
+
+    if (!server.SetVariable(this->sessionId, this->value, this->name)) {
+      result->code = Errors::RuntimeError::Error;
+      result->message = "Failed to add variable";
+    }
+
+    result->code = Errors::RuntimeError::Ok;
+    result->message = "Added variable with name: " + this->name;
+
+    return result;
+  }
 
   PhysicalCreateUser::PhysicalCreateUser(std::string &username, std::string &password, std::string &role)
    : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
@@ -206,11 +255,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     for (const auto& expression : this->resultExpressions)
       result->displayColumnNames.emplace_back(expression->name);
 
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+
     for (const auto* row: result->rows) {
       QueryResult resultRow;
 
       for (const auto& expression : this->resultExpressions) {
-        auto field = expression->Evaluate(row);
+        context.row = row;
+        auto field = expression->Evaluate(context);
         resultRow.AddColumn(field);
       }
 
@@ -231,10 +283,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     QueryResult resultRow;
 
+    const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant);
+
     for (const auto& expression : this->resultExpressions) {
       result->displayColumnNames.emplace_back(expression->name);
 
-      auto field = expression->Evaluate(nullptr);
+      auto field = expression->Evaluate(context);
       resultRow.AddColumn(field);
     }
 
@@ -277,10 +331,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       || dynamic_cast<PhysicalIndexSeek*>(child) != nullptr)
       return result;
 
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+
     std::vector<const DatabaseEngine::StorageTypes::Row*> filteredRows;
     for (const auto* row : result->rows) {
 
-      if (!this->filter->Evaluate(row).GetBool())
+      context.row = row;
+      if (!this->filter->Evaluate(context).GetBool())
         continue;
 
       filteredRows.push_back(row);

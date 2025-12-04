@@ -14,6 +14,24 @@ namespace QueryPipeline {
       virtual PhysicalPlan::PhysicalOperator* ToPhysical() = 0;
   };
 
+  class LogicalDeclareVariable final : public LogicalPlan {
+    public:
+      Value value;
+      std::string name;
+
+      LogicalDeclareVariable(const DataTypes::Guid& sessionId, Value& value, std::string& name);
+      PhysicalPlan::PhysicalOperator * ToPhysical() override;
+  };
+
+  class LogicalSetVariable final : public LogicalPlan {
+    public:
+      Value value;
+      std::string name;
+
+      LogicalSetVariable(const DataTypes::Guid& sessionId, Value& value, std::string& name);
+      PhysicalPlan::PhysicalOperator * ToPhysical() override;
+  };
+
   class LogicalCreateUser final : public LogicalPlan {
     public:
       std::string username;

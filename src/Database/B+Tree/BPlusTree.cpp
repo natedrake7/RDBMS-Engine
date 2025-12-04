@@ -346,6 +346,8 @@ namespace Indexing
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+
         while (currentNode.Get())
         {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
@@ -358,7 +360,8 @@ namespace Indexing
                 if (!row)
                     continue;
 
-                if(!expression->Evaluate(row).GetBool())
+                context.row = row;
+                if(!expression->Evaluate(context).GetBool())
                     continue;
 
                 result->push_back(row);
@@ -388,6 +391,7 @@ namespace Indexing
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
 
         while (currentNode.Get())
         {
@@ -396,7 +400,8 @@ namespace Indexing
             for (const auto* pageRow : *currentNode->GetDataRowsUnsafe()) {
                 auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
-                if(!row || !expression->Evaluate(row).GetBool())
+                context.row = row;
+                if(!row || !expression->Evaluate(context).GetBool())
                     continue;
 
                 result->push_back(row);
@@ -531,14 +536,17 @@ namespace Indexing
           updatedColumns.Add(update.GetColumnIndex());
 
         auto currentNode = this->SearchLeftMostLeafNode();
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
 
         while (currentNode.Get())
         {
             MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
             for(auto* row: *currentNode->GetDataRowsUnsafe()){
-              const auto value = expression->Evaluate(row);
-              if(!value.GetBool())
+
+                context.row = row;
+                const auto value = expression->Evaluate(context);
+                if(!value.GetBool())
                   continue;
 
             const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
@@ -567,13 +575,16 @@ namespace Indexing
             updatedColumns.Add(update->name.index);
 
         auto currentNode = this->SearchLeftMostLeafNode();
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
 
         while (currentNode.Get())
         {
             MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
             for(auto* row: *currentNode->GetDataRowsUnsafe()){
-                const auto value = expression->Evaluate(row);
+                context.row = row;
+
+                const auto value = expression->Evaluate(context);
                 if(!value.GetBool())
                     continue;
 
@@ -705,6 +716,7 @@ namespace Indexing
         auto currentNode = this->SearchKey(*minKey);
         Pages::PageGuard<Pages::IndexPage> previousNode;
 
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
         while (true)
         {
             if (currentNode.Get() == nullptr)
@@ -726,7 +738,8 @@ namespace Indexing
 
                     const auto* row = previousRows->at(previousRows->size() - 1);
 
-                    const auto value = expression->Evaluate(row);
+                    context.row = row;
+                    const auto value = expression->Evaluate(context);
                     if(value.GetBool()) {
                         const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), properties, updates, updatedColumns, false);
 
@@ -750,7 +763,8 @@ namespace Indexing
             if (*maxKey < *key)
                 break;
 
-              const auto value = expression->Evaluate(rows->at(i));
+              context.row = rows->at(i);
+              const auto value = expression->Evaluate(context);
               if(!value.GetBool())
                 continue;
 

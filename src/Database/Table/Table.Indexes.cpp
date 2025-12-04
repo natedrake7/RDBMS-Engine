@@ -68,6 +68,8 @@ namespace DatabaseEngine::StorageTypes {
         std::vector<Headers::RowIdentifier> rowIds;
         tree->IndexScan(&rowIds, state, properties.batchSize);
 
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+
         if (expression != nullptr) {
 
           for (const auto& rowId : rowIds) {
@@ -79,7 +81,8 @@ namespace DatabaseEngine::StorageTypes {
 
             const auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
-            if (!row || !expression->Evaluate(row).GetBool())
+            context.row = row;
+            if (!row || !expression->Evaluate(context).GetBool())
               continue;
 
             selectedRows->push_back(row);

@@ -400,7 +400,7 @@ namespace DatabaseEngine::StorageTypes {
         result.message = "Row created successfully";
 
         for (int i = 0;i < inputData.size(); i++) {
-          const auto& input = inputData[i]->Evaluate(nullptr);
+          const auto& input = inputData[i]->Evaluate({});
 
           const auto& associatedColumnIndex = columnIndices.at(i);
 
@@ -523,9 +523,12 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
           return;
 
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+
         for(const auto& row : results){
 
-          const auto value = expression->Evaluate(row);
+          context.row = row;
+          const auto value = expression->Evaluate(context);
           if(value.GetBool())
           {
             const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, row);
@@ -826,6 +829,8 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
+          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+
           for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
           {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
@@ -839,10 +844,11 @@ namespace DatabaseEngine::StorageTypes {
             const auto* rows = page->GetDataRowsUnsafe();
 
             std::vector<extent_id_t> allocatedExtents;
-            extent_id_t startingExtentIndex = 0;
 
             for(auto* row : *rows){
-              const auto value = expression->Evaluate(row);
+
+              context.row = row;
+              const auto value = expression->Evaluate(context);
               if(!value.GetBool())
                   continue;
 
@@ -885,6 +891,7 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
+          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
           for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
           {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
@@ -901,7 +908,8 @@ namespace DatabaseEngine::StorageTypes {
             extent_id_t startingExtentIndex = 0;
 
             for(auto* row : *rows){
-              const auto value = expression->Evaluate(row);
+              context.row = row;
+              const auto value = expression->Evaluate(context);
               if(!value.GetBool())
                   continue;
 

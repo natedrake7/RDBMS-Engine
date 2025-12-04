@@ -49,12 +49,6 @@ namespace Server {
 
   ServerInstance::~ServerInstance() = default;
 
-  ServerInstance & ServerInstance::Get(){
-    static ServerInstance instance;
-
-    return instance;
-  }
-
   void ServerInstance::ReadConfiguration(const std::string &configPath){
     std::ifstream file(configPath);
 
@@ -78,6 +72,239 @@ namespace Server {
     this->versionDbPath = jsonFile.at("version_db_path");
 
     jsonFile.at("tables").get_to(this->sysTables);
+  }
+
+  bool ServerInstance::CreateMasterDatabase(){
+    using namespace DatabaseEngine;
+    using namespace DatabaseEngine::StorageTypes;
+
+    if (this->MasterDbExists()) {
+      this->UseMasterDb();
+      return true;
+    }
+
+    CreateDatabase(this->sysDbName);
+
+    this->masterDb = new DatabaseEngine::Database(this->sysDbName, true);
+
+    for (int i = 0;i < this->sysTables.size(); i++) {
+      const auto& table = this->sysTables[i];
+
+      vector<Column *> columns;
+      vector<column_index_t> primaryKey;
+
+      for (int j = 0;j < table.columns.size(); j++) {
+        const auto& column = table.columns[j];
+
+        block_size_t columnSize = 0;
+
+        const auto normalizedColumnType = Functions::String::NormalizeString(column.type);
+
+        if (!ColumnTypeSizes.TryGetValue(normalizedColumnType, columnSize))
+          throw runtime_error("Column type " + column.type + " does not exist");
+
+        if (columnSize == 0)
+          columnSize = column.size;
+
+        const auto columnType = ColumnTypesDictionary.Get(normalizedColumnType);
+
+        for (const auto& key: table.primaryKey) {
+          if (column.name != key)
+            continue;
+
+          primaryKey.push_back(j);
+        }
+
+        columns.push_back(new Column(column.name, columnType, columnSize, j, column.nullable));
+      }
+
+      if (primaryKey.empty())
+        throw runtime_error("All tables in masterDb must have a primary key");
+
+      if (table.hasIdentity) {
+        auto* columnPtr = columns.at(primaryKey[0]);
+
+        columnPtr->SetIdentity(Headers::IdentityColumnsHeader(-1, columnPtr->GetColumnIndex(), 1, 1, 1, true, 10000));
+      }
+
+      Headers::Index index(primaryKey);
+      this->masterDb->CreateTable(table.id, i, columns, &index);
+    }
+
+    return false;
+  }
+
+  void ServerInstance::CreateVersionDatabase() {
+    if (this->VersionDbExists()) {
+      this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
+      return;
+    }
+
+    DatabaseEngine::CreateDatabase(this->versionDbName);
+    this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
+  }
+
+  bool ServerInstance::MasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }
+
+  bool ServerInstance::VersionDbExists() const{ return std::filesystem::exists(this->versionDbPath); }
+
+  std::vector<Security::Role> ServerInstance::SelectRoles() const{
+    using namespace DatabaseEngine::StorageTypes;
+    std::vector<const Row*> rows;
+
+    std::vector<Security::Role> roles;
+
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SysRoles);
+
+    table->ClusteredIndexScan(this->baseProperties, &rows);
+
+    for (const auto& row : rows) {
+      const auto& data = row->GetData();
+
+      roles.emplace_back(
+        data[0]->GetInt(),
+        data[1]->GetString(),
+        static_cast<Security::Permission>(data[2]->GetInt()),
+        data[3]->GetBool()
+      );
+    }
+
+    return roles;
+  }
+
+  std::vector<Security::User> ServerInstance::SelectUsers() const{
+    using namespace DatabaseEngine::StorageTypes;
+    std::vector<const Row*> rows;
+
+    std::vector<Security::User> users;
+
+    Table* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
+
+    table->ClusteredIndexScan(this->baseProperties, &rows);
+
+    for (const auto& row : rows) {
+      const auto& data = row->GetData();
+      users.emplace_back(
+        Security::User{
+          .id = data[0]->GetInt(),
+          .name = data[1]->GetString(),
+          .passwordHash = data[2]->GetString(),
+          .roleId =  data[3]->GetInt(),
+          .isActive = data[4]->GetBool(),
+        }
+      );
+    }
+
+    return users;
+  }
+
+  void ServerInstance::InsertSystemRoles(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties){
+    const auto admin = std::string(ServerConstants::ADMIN_NAME);
+    const auto dbOwner = std::string(ServerConstants::DB_OWNER_NAME);
+    const auto dbWriter = std::string(ServerConstants::DB_WRITER_NAME);
+    const auto dbReader = std::string(ServerConstants::DB_READER_NAME);
+    const auto guest = std::string(ServerConstants::GUEST_NAME);
+
+    auto result = this->InsertRoleToMasterDb(
+      properties,
+      admin,
+      ServerConstants::ADMIN_PERMISSIONS
+    );
+
+    auto _ = this->roleManager.AddRole(admin,
+        new Security::Role(
+        result.primaryKey.GetKeyAsInt(),
+        admin,
+        ServerConstants::ADMIN_PERMISSIONS,
+        true
+      ));
+
+    result = this->InsertRoleToMasterDb(
+      properties,
+      dbOwner,
+      ServerConstants::DB_OWNER_PERMISSIONS
+    );
+
+   _ = this->roleManager.AddRole(dbOwner,
+        new Security::Role(
+        result.primaryKey.GetKeyAsInt(),
+        dbOwner,
+        ServerConstants::DB_OWNER_PERMISSIONS,
+        true
+      ));
+
+    result = this->InsertRoleToMasterDb(
+      properties,
+      dbWriter,
+      ServerConstants::DB_WRITER_PERMISSIONS
+    );
+
+    _ = this->roleManager.AddRole(dbWriter,
+        new Security::Role(
+          result.primaryKey.GetKeyAsInt(),
+          dbWriter,
+          ServerConstants::DB_WRITER_PERMISSIONS,
+          true
+        )
+    );
+
+    result = this->InsertRoleToMasterDb(
+      properties,
+      dbReader,
+      ServerConstants::DB_READER_PERMISSIONS
+    );
+
+    _ = this->roleManager.AddRole(dbReader,
+       new Security::Role(
+       result.primaryKey.GetKeyAsInt(),
+        dbReader,
+        ServerConstants::DB_READER_PERMISSIONS,
+       true
+     ));
+
+    result = this->InsertRoleToMasterDb(
+      properties,
+      guest,
+      ServerConstants::GUEST_PERMISSIONS
+    );
+
+    _ = this->roleManager.AddRole(guest,
+       new Security::Role(
+        result.primaryKey.GetKeyAsInt(),
+        guest,
+        ServerConstants::GUEST_PERMISSIONS,
+        true
+     ));
+  }
+
+  void ServerInstance::InsertSystemUsers(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties){
+    const auto admin = std::string(ServerConstants::ADMIN_NAME);
+
+    const auto* role = this->roleManager.GetRole(admin);
+
+    std::string hashedPassword;
+    if (Security::UserManager::HashPassword(admin, hashedPassword) == false) {
+      std::cerr << "Failed to hash password for admin user" << std::endl;
+      return;
+    }
+
+    const auto result =
+      this->InsertUserToMasterDb(
+          properties,
+        admin,
+        hashedPassword,
+        role->id,
+        true
+      );
+
+    const auto _ =
+      this->userManager.AddUser(result.primaryKey.GetKeyAsInt(), admin, hashedPassword, role);
+  }
+
+  ServerInstance & ServerInstance::Get(){
+    static ServerInstance instance;
+
+    return instance;
   }
 
   void ServerInstance::Initialize(const string &configPath){
@@ -308,8 +535,17 @@ namespace Server {
     return this->sessionManager.CloseSession(key);
   }
 
+
   bool ServerInstance::UpdateSession(const DataTypes::Guid &key, const int32_t &databaseId)const{
     return this->sessionManager.UpdateSession(key, databaseId);
+  }
+
+  bool ServerInstance::AddVariable(const DataTypes::Guid &sessionId, const Value &value, const std::string &name) const {
+    return this->sessionManager.AddVariable(sessionId, value, name);
+  }
+
+  bool ServerInstance::SetVariable(const DataTypes::Guid &sessionId, const Value &value, const std::string &name) const {
+    return this->sessionManager.SetVariable(sessionId, value, name);
   }
 
   QueryPipeline::Cursor * ServerInstance::CreateCursor(
@@ -323,67 +559,6 @@ namespace Server {
   bool ServerInstance::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId) const {
     return this->sessionManager.CloseCursor(id, cursorId);
   }
-
-  DatabaseEngine::Database * ServerInstance::GetMasterDb()const{ return this->masterDb; }
-
-  void ServerInstance::Shutdown(){
-    for (const auto &database: this->databases | views::values){
-      database->UpdateMasterDatabase();
-      delete database;
-    }
-
-    this->masterDb->UpdateMasterDatabase();
-
-    delete this->masterDb;
-    delete this->versionDb;
-  }
-
-  DatabaseEngine::Database* ServerInstance::UseDatabase(const int32_t & databaseId, const bool& isServerInitialization){
-    DatabaseEngine::Database *db = nullptr;
-
-    if (databaseId == 1)
-      return this->masterDb;
-
-    if (this->databases.TryGetValue(databaseId, db))
-      return db;
-
-    const auto dbHeader = this->SelectDatabaseById(databaseId);
-
-    db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
-
-    // for (const auto& log : db->RecoverLogs()) {
-    //   std::cout << log << std::endl;
-    // }
-    // db->GetIdentityColumns();
-
-    //master db id
-    this->databases.Add(databaseId, db);
-
-    return db;
-  }
-
-
-  void ServerInstance::UseMasterDb(){
-    this->masterDb = new DatabaseEngine::Database(this->sysDbName, this->sysTables);
-    this->masterDb->GetColumnsHeaders();
-    this->masterDb->GetIdentityColumns();
-
-    for (const auto& role : this->SelectRoles())
-      const auto _ = this->roleManager.AddRole(role.name, new Security::Role(role));
-
-    for (const auto& user : this->SelectUsers()) {
-      const auto* role = this->roleManager.GetRole(user.roleId);
-      const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
-    }
-
-    const auto checkpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
-
-    DatabaseEngine::TransactionManager::Get().SetTransactionId(checkpoint.transactionId + 1);
-
-    std::cout << this->sysDbName << " initialized successfully" << std::endl;
-  }
-
-  DatabaseEngine::VersionDatabase * ServerInstance::GetVersionDatabase() const{ return this->versionDb; }
 
   Errors::RuntimeStatus ServerInstance::InsertDbToMasterDb(
     const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
@@ -597,6 +772,76 @@ namespace Server {
     const auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted index column to master db" << endl;
+
+    return result;
+  }
+
+  Errors::RuntimeStatus ServerInstance::InsertConstraintToMasterDb(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const int32_t & tableId,
+      const string & constraintName,
+      const Headers::ConstraintType & constraintType,
+      const bool & isDisabled,
+      const int32_t *constraintIndexId,
+      const string & user,
+      const int& version,
+      const bool& isDeleted
+  ) const{
+
+      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
+      const auto currentDate = DataTypes::DateTime::Now();
+
+      vector<Value> fields = {
+          Value(tableId, 1),
+          Value(constraintName, 2),
+          Value(static_cast<int8_t>(constraintType), 3),
+          Value(isDisabled, 4),
+          Value(nullptr, 5),
+          Value(currentDate, 6),
+          Value(currentDate, 7),
+          Value(user, 8),
+          Value(version, 9),
+          Value(isDeleted, 10),
+          Value(nullptr, 11),
+      };
+
+      if(constraintIndexId != nullptr)
+          fields.at(4).SetData(*constraintIndexId);
+
+    // const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(properties, fields);
+
+    cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
+
+    return result;
+  }
+
+  Errors::RuntimeStatus ServerInstance::InsertConstraintColumnToMasterDb(
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const int32_t & constraintId,
+    const int32_t & columnId,
+    const int32_t & ordinalPosition,
+    const int& version,
+    const bool& isDeleted) const{
+
+    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraintColumns);
+    const auto currentDate = DataTypes::DateTime::Now();
+
+    const vector<Value> fields = {
+        Value(constraintId, 0),
+        Value(columnId, 1),
+        Value(ordinalPosition, 2),
+        Value(version, 3),
+        Value(isDeleted, 4),
+        Value(nullptr, 5),
+    };
+
+    // const auto transactionId = this->masterDb->StartLogTransaction();
+
+    const auto result = table->InsertRow(properties, fields);
+
+    cout << "Inserted constraint column to master db" << endl;
 
     return result;
   }
@@ -835,95 +1080,6 @@ namespace Server {
     return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
   }
 
-  Errors::RuntimeStatus ServerInstance::InsertConstraintToMasterDb(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
-      const int32_t & tableId,
-      const string & constraintName,
-      const Headers::ConstraintType & constraintType,
-      const bool & isDisabled,
-      const int32_t *constraintIndexId,
-      const string & user,
-      const int& version,
-      const bool& isDeleted
-  ) const{
-
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
-      const auto currentDate = DataTypes::DateTime::Now();
-
-      vector<Value> fields = {
-          Value(tableId, 1),
-          Value(constraintName, 2),
-          Value(static_cast<int8_t>(constraintType), 3),
-          Value(isDisabled, 4),
-          Value(nullptr, 5),
-          Value(currentDate, 6),
-          Value(currentDate, 7),
-          Value(user, 8),
-          Value(version, 9),
-          Value(isDeleted, 10),
-          Value(nullptr, 11),
-      };
-
-      if(constraintIndexId != nullptr)
-          fields.at(4).SetData(*constraintIndexId);
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
-
-    const auto result = table->InsertRow(properties, fields);
-
-    cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
-
-    return result;
-  }
-
-  Errors::RuntimeStatus ServerInstance::InsertConstraintColumnToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
-    const int32_t & constraintId,
-    const int32_t & columnId,
-    const int32_t & ordinalPosition,
-    const int& version,
-    const bool& isDeleted) const{
-
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraintColumns);
-    const auto currentDate = DataTypes::DateTime::Now();
-
-    const vector<Value> fields = {
-        Value(constraintId, 0),
-        Value(columnId, 1),
-        Value(ordinalPosition, 2),
-        Value(version, 3),
-        Value(isDeleted, 4),
-        Value(nullptr, 5),
-    };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
-
-    const auto result = table->InsertRow(properties, fields);
-
-    cout << "Inserted constraint column to master db" << endl;
-
-    return result;
-  }
-
-  bool ServerInstance::DatabaseExists(const string &dbName) const{
-      using namespace DatabaseEngine::StorageTypes;
-
-      Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
-      std::vector<const Row*> selectedDatabases;
-
-      DataTypes::Indexing::Key key;
-      key.InsertKey(DataTypes::Indexing::Key(dbName.data(), dbName.size(), DataType::String));
-
-      auto* columnOperation = new Expressions::ColumnExpression(1);
-      auto* literaValue = new Expressions::LiteralExpression(Value(dbName, 1));
-
-      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
-
-      sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
-
-      return !selectedDatabases.empty();
-  }
-
   vector<Headers::DatabaseHeader> ServerInstance::GetCatalog() const{
      using namespace DatabaseEngine::StorageTypes;
 
@@ -990,6 +1146,25 @@ namespace Server {
     }
 
     return databasesHeaders;
+  }
+
+  bool ServerInstance::DatabaseExists(const string &dbName) const{
+      using namespace DatabaseEngine::StorageTypes;
+
+      Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
+      std::vector<const Row*> selectedDatabases;
+
+      DataTypes::Indexing::Key key;
+      key.InsertKey(DataTypes::Indexing::Key(dbName.data(), dbName.size(), DataType::String));
+
+      auto* columnOperation = new Expressions::ColumnExpression(1);
+      auto* literaValue = new Expressions::LiteralExpression(Value(dbName, 1));
+
+      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+
+      sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
+
+      return !selectedDatabases.empty();
   }
 
   Headers::DatabaseHeader ServerInstance::SelectDatabase(const std::string &name) const{
@@ -1263,6 +1438,71 @@ namespace Server {
     };
   }
 
+  vector<Headers::ConstraintsHeader> ServerInstance::SelectConstraints(const int32_t & tableId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    std::vector<const Row*> selectedConstraints;
+    Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
+
+    auto* columnOperation = new Expressions::ColumnExpression(1);
+    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
+
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+
+    constraintsTable->ClusteredIndexScan(this->baseProperties, &selectedConstraints, &binaryExpr);
+
+    if (selectedConstraints.empty())
+      return {};
+
+    vector<Headers::ConstraintsHeader> selectedConstraintsHeader;
+    selectedConstraintsHeader.reserve(selectedConstraints.size());
+
+    for (const auto& row : selectedConstraints) {
+      const auto& data = row->GetData();
+
+      auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0]->GetInt());
+
+      const auto indexId =(data[5]->GetBlockData() == nullptr)
+              ? -1
+              : data[5]->GetInt();
+
+      Headers::IndexHeader index;
+      if(indexId != -1)
+        index = this->SelectIndexById(indexId);
+
+      selectedConstraintsHeader.emplace_back(
+        Headers::ConstraintsHeader{
+          .constraintId = data[0]->GetInt(),
+          .tableId = data[1]->GetInt(),
+          .name = data[2]->GetString(),
+          .type = static_cast<Headers::ConstraintType>(data[3]->GetTinyInt()),
+          .isDisabled = data[4]->GetBool(),
+          .indexId = indexId,
+          .index = std::move(index),
+          .columns = std::move(constraintColumns),
+          .additionalInfo{
+              .createdAt = data[6]->GetDateTime(),
+              .lastModified = data[7]->GetDateTime(),
+              .lastModifiedBy = data[8]->GetString(),
+              .version = data[9]->GetInt(),
+              .isDeleted = data[10]->GetBool(),
+              .deletedAt = data[11]->GetBlockData() == nullptr
+                    ? DataTypes::DateTime()
+                    : data[11]->GetDateTime() //might crash, is nullable
+          },
+        }
+      );
+    }
+
+    ranges::sort(selectedConstraintsHeader,
+    [](const Headers::ConstraintsHeader& a, const Headers::ConstraintsHeader& b) {
+        return a.constraintId < b.constraintId;
+    }
+    );
+
+    return selectedConstraintsHeader;
+  }
+
   vector<Headers::ColumnHeader> ServerInstance::SelectColumns(const int32_t& tableId) const{
     using namespace DatabaseEngine::StorageTypes;
 
@@ -1331,69 +1571,215 @@ namespace Server {
      return selectedColumnHeaders;
   }
 
-  vector<Headers::ConstraintsHeader> ServerInstance::SelectConstraints(const int32_t & tableId) const{
-    using namespace DatabaseEngine::StorageTypes;
+  Dictionary<string, Headers::ColumnHeader> ServerInstance::SelectColumnsToDictionary(const int32_t& tableId) const{
+      const auto columns = this->SelectColumns(tableId);
 
-    std::vector<const Row*> selectedConstraints;
-    Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
+      Dictionary<string, Headers::ColumnHeader> selectedColumns;
 
-    auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
+      for (const auto& column : columns)
+        selectedColumns.Add(Functions::String::Lower(column.name), column);
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+      return selectedColumns;
+    }
 
-    constraintsTable->ClusteredIndexScan(this->baseProperties, &selectedConstraints, &binaryExpr);
+  vector<Headers::IndexHeader> ServerInstance::SelectIndexes(const int32_t& tableId) const{
+      using namespace DatabaseEngine::StorageTypes;
 
-    if (selectedConstraints.empty())
-      return {};
+      Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
+      std::vector<const Row*> selectedIndexes;
 
-    vector<Headers::ConstraintsHeader> selectedConstraintsHeader;
-    selectedConstraintsHeader.reserve(selectedConstraints.size());
+      auto* columnOperation = new Expressions::ColumnExpression(1);
+      auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
 
-    for (const auto& row : selectedConstraints) {
-      const auto& data = row->GetData();
+      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
 
-      auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0]->GetInt());
+      sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedIndexes, &binaryExpr);
 
-      const auto indexId =(data[5]->GetBlockData() == nullptr)
-              ? -1
-              : data[5]->GetInt();
+      vector<Headers::IndexHeader> selectedIndexHeaders;
 
-      Headers::IndexHeader index;
-      if(indexId != -1)
-        index = this->SelectIndexById(indexId);
+      for (const auto& row : selectedIndexes) {
+        const auto& data = row->GetData();
 
-      selectedConstraintsHeader.emplace_back(
-        Headers::ConstraintsHeader{
-          .constraintId = data[0]->GetInt(),
+        selectedIndexHeaders.emplace_back(
+        Headers::IndexHeader{
+          .id = data[0]->GetInt(),
           .tableId = data[1]->GetInt(),
           .name = data[2]->GetString(),
-          .type = static_cast<Headers::ConstraintType>(data[3]->GetTinyInt()),
+          .isClustered = data[3]->GetBool(),
           .isDisabled = data[4]->GetBool(),
-          .indexId = indexId,
-          .index = std::move(index),
-          .columns = std::move(constraintColumns),
+            .additionalInfo{
+            .createdAt = data[5]->GetDateTime(),
+            .lastModified = data[6]->GetDateTime(),
+            .lastModifiedBy = data[7]->GetString(),
+            .version = data[8]->GetInt(),
+            .isDeleted = data[9]->GetBool(),
+            .deletedAt = data[10]->GetBlockData() == nullptr
+                  ? DataTypes::DateTime()
+                  : data[10]->GetDateTime()
+            },
+        });
+      }
+
+      //get the clustered first
+      ranges::sort(selectedIndexHeaders,
+      [](const Headers::IndexHeader& a, const Headers::IndexHeader& b) {
+        return a.isClustered > b.isClustered;
+      });
+
+      return selectedIndexHeaders;
+  }
+
+  Headers::IndexHeader ServerInstance::SelectIndexById(const int32_t & indexId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
+    std::vector<const Row*> selectedIndexes;
+
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
+
+    sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key);
+
+    if(selectedIndexes.empty())
+      return {};
+
+    auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
+
+    vector<Headers::IndexHeader> selectedIndexHeaders;
+
+    const auto& data = selectedIndexes.at(0)->GetData();
+
+    return Headers::IndexHeader{
+      .id = data[0]->GetInt(),
+      .tableId = data[1]->GetInt(),
+      .name = data[2]->GetString(),
+      .isClustered = data[3]->GetBool(),
+      .isDisabled = data[4]->GetBool(),
+      .additionalInfo{
+        .createdAt = data[5]->GetDateTime(),
+        .lastModified = data[6]->GetDateTime(),
+        .lastModifiedBy = data[7]->GetString(),
+        .version = data[8]->GetInt(),
+        .isDeleted = data[9]->GetBool(),
+        .deletedAt = data[10]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[10]->GetDateTime()
+      },
+      .columns = std::move(indexColumns),
+      };
+  }
+
+    vector<Headers::IndexColumnsHeader> ServerInstance::SelectIndexColumnsByIndexId(const int32_t & indexId) const{
+    using namespace DatabaseEngine::StorageTypes;
+
+    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexColumns);
+    std::vector<const Row*> rows;
+
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
+
+    sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
+
+    if(rows.empty())
+      return {};
+
+    vector<Headers::IndexColumnsHeader> indexColumns;
+
+    for (const auto& row : rows) {
+      const auto& data = row->GetData();
+
+      indexColumns.emplace_back(
+        Headers::IndexColumnsHeader{
+          .indexId = data[0]->GetInt(),
+          .columnId = data[1]->GetInt(),
+          .ordinalPosition = data[2]->GetSmallInt(),
+          .isIncluded = data[3]->GetBool(),
           .additionalInfo{
-              .createdAt = data[6]->GetDateTime(),
-              .lastModified = data[7]->GetDateTime(),
-              .lastModifiedBy = data[8]->GetString(),
-              .version = data[9]->GetInt(),
-              .isDeleted = data[10]->GetBool(),
-              .deletedAt = data[11]->GetBlockData() == nullptr
+            .version = data[4]->GetInt(),
+            .isDeleted = data[5]->GetBool(),
+            .deletedAt = data[6]->GetBlockData() == nullptr
+                  ? DataTypes::DateTime()
+                  : data[6]->GetDateTime()
+          }
+        });
+    }
+
+    //get them sorted by ordinal position
+    ranges::sort(indexColumns,
+    [](const Headers::IndexColumnsHeader& a, const Headers::IndexColumnsHeader& b) {
+      return a.ordinalPosition > b.ordinalPosition;
+    });
+
+    return indexColumns;
+  }
+
+  Dictionary<int32_t, Headers::IndexColumnsHeader> ServerInstance::SelectIndexColumnsByIndexIdToDictionary(const int32_t &indexId) const{
+    const auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
+
+    Dictionary<int32_t, Headers::IndexColumnsHeader> indexColumnsDict;
+
+    for (const auto& indexColumn : indexColumns)
+      indexColumnsDict.Add(indexColumn.columnId, indexColumn);
+
+    return indexColumnsDict;
+  }
+
+  vector<Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableId(const int32_t & tableId) const{
+      using namespace DatabaseEngine::StorageTypes;
+
+      Table* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
+      std::vector<const Row*> rows;
+
+      DataTypes::Indexing::Key key;
+      key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+
+      table->ClusteredIndexSeek(&rows, &key, &key);
+
+      if(rows.empty())
+        return {};
+
+      vector<Headers::IdentityColumnsHeader> columns;
+
+      for (const auto& row : rows) {
+        const auto& data = row->GetData();
+
+        columns.emplace_back(
+          Headers::IdentityColumnsHeader{
+            .tableId = data[0]->GetInt(),
+            .columnId = data[1]->GetInt(),
+            .seedValue = data[2]->GetInt(),
+            .increment = data[3]->GetInt(),
+            .lastValue = data[4]->GetBigInt(),
+            .isCached = data[5]->GetBool(),
+            .cacheBlock = data[6]->GetInt(),
+            .additionalInfo{
+              .version = data[7]->GetInt(),
+              .isDeleted = data[8]->GetBool(),
+              .deletedAt = data[9]->GetBlockData() == nullptr
                     ? DataTypes::DateTime()
-                    : data[11]->GetDateTime() //might crash, is nullable
-          },
-        }
-      );
-    }
+                    : data[9]->GetDateTime()
+            }
+          });
+      }
 
-    ranges::sort(selectedConstraintsHeader,
-    [](const Headers::ConstraintsHeader& a, const Headers::ConstraintsHeader& b) {
-        return a.constraintId < b.constraintId;
-    }
-    );
+      //get them sorted by ordinal position
+      ranges::sort(columns,
+      [](const Headers::IdentityColumnsHeader& a, const Headers::IdentityColumnsHeader& b) {
+        return a.columnId > b.columnId;
+      });
 
-    return selectedConstraintsHeader;
+      return columns;
+  }
+
+  Dictionary<int32_t , Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableIdToDictionary(const int32_t & tableId) const{
+    const auto columns = this->SelectIdentityColumnsByTableId(tableId);
+
+    Dictionary<int32_t, Headers::IdentityColumnsHeader> dict;
+
+    for(const auto& column : columns)
+        dict.Add(column.columnId, column);
+
+    return dict;
   }
 
   vector<Headers::ConstraintsColumnsHeader> ServerInstance::SelectConstraintColumnsByConstraintId(const int32_t & constraintId) const{
@@ -1555,359 +1941,6 @@ namespace Server {
       };
   }
 
-  Dictionary<string, Headers::ColumnHeader> ServerInstance::SelectColumnsToDictionary(const int32_t& tableId) const{
-      const auto columns = this->SelectColumns(tableId);
-
-      Dictionary<string, Headers::ColumnHeader> selectedColumns;
-
-      for (const auto& column : columns)
-        selectedColumns.Add(Functions::String::Lower(column.name), column);
-
-      return selectedColumns;
-    }
-
-    vector<Headers::IndexHeader> ServerInstance::SelectIndexes(const int32_t& tableId) const{
-      using namespace DatabaseEngine::StorageTypes;
-
-      Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
-      std::vector<const Row*> selectedIndexes;
-
-      auto* columnOperation = new Expressions::ColumnExpression(1);
-      auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
-
-      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
-
-      sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedIndexes, &binaryExpr);
-
-      vector<Headers::IndexHeader> selectedIndexHeaders;
-
-      for (const auto& row : selectedIndexes) {
-        const auto& data = row->GetData();
-
-        selectedIndexHeaders.emplace_back(
-        Headers::IndexHeader{
-          .id = data[0]->GetInt(),
-          .tableId = data[1]->GetInt(),
-          .name = data[2]->GetString(),
-          .isClustered = data[3]->GetBool(),
-          .isDisabled = data[4]->GetBool(),
-            .additionalInfo{
-            .createdAt = data[5]->GetDateTime(),
-            .lastModified = data[6]->GetDateTime(),
-            .lastModifiedBy = data[7]->GetString(),
-            .version = data[8]->GetInt(),
-            .isDeleted = data[9]->GetBool(),
-            .deletedAt = data[10]->GetBlockData() == nullptr
-                  ? DataTypes::DateTime()
-                  : data[10]->GetDateTime()
-            },
-        });
-      }
-
-      //get the clustered first
-      ranges::sort(selectedIndexHeaders,
-      [](const Headers::IndexHeader& a, const Headers::IndexHeader& b) {
-        return a.isClustered > b.isClustered;
-      });
-
-      return selectedIndexHeaders;
-  }
-
-  Headers::IndexHeader ServerInstance::SelectIndexById(const int32_t & indexId) const{
-    using namespace DatabaseEngine::StorageTypes;
-
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
-    std::vector<const Row*> selectedIndexes;
-
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
-
-    sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key);
-
-    if(selectedIndexes.empty())
-      return {};
-
-    auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
-
-    vector<Headers::IndexHeader> selectedIndexHeaders;
-
-    const auto& data = selectedIndexes.at(0)->GetData();
-
-    return Headers::IndexHeader{
-      .id = data[0]->GetInt(),
-      .tableId = data[1]->GetInt(),
-      .name = data[2]->GetString(),
-      .isClustered = data[3]->GetBool(),
-      .isDisabled = data[4]->GetBool(),
-      .additionalInfo{
-        .createdAt = data[5]->GetDateTime(),
-        .lastModified = data[6]->GetDateTime(),
-        .lastModifiedBy = data[7]->GetString(),
-        .version = data[8]->GetInt(),
-        .isDeleted = data[9]->GetBool(),
-        .deletedAt = data[10]->GetBlockData() == nullptr
-              ? DataTypes::DateTime()
-              : data[10]->GetDateTime()
-      },
-      .columns = std::move(indexColumns),
-      };
-  }
-
-  vector<Headers::IndexColumnsHeader> ServerInstance::SelectIndexColumnsByIndexId(const int32_t & indexId) const{
-    using namespace DatabaseEngine::StorageTypes;
-
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexColumns);
-    std::vector<const Row*> rows;
-
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
-
-    sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
-
-    if(rows.empty())
-      return {};
-
-    vector<Headers::IndexColumnsHeader> indexColumns;
-
-    for (const auto& row : rows) {
-      const auto& data = row->GetData();
-
-      indexColumns.emplace_back(
-        Headers::IndexColumnsHeader{
-          .indexId = data[0]->GetInt(),
-          .columnId = data[1]->GetInt(),
-          .ordinalPosition = data[2]->GetSmallInt(),
-          .isIncluded = data[3]->GetBool(),
-          .additionalInfo{
-            .version = data[4]->GetInt(),
-            .isDeleted = data[5]->GetBool(),
-            .deletedAt = data[6]->GetBlockData() == nullptr
-                  ? DataTypes::DateTime()
-                  : data[6]->GetDateTime()
-          }
-        });
-    }
-
-    //get them sorted by ordinal position
-    ranges::sort(indexColumns,
-    [](const Headers::IndexColumnsHeader& a, const Headers::IndexColumnsHeader& b) {
-      return a.ordinalPosition > b.ordinalPosition;
-    });
-
-    return indexColumns;
-  }
-
-  Dictionary<int32_t, Headers::IndexColumnsHeader> ServerInstance::SelectIndexColumnsByIndexIdToDictionary(const int32_t &indexId) const{
-    const auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
-
-    Dictionary<int32_t, Headers::IndexColumnsHeader> indexColumnsDict;
-
-    for (const auto& indexColumn : indexColumns)
-      indexColumnsDict.Add(indexColumn.columnId, indexColumn);
-
-    return indexColumnsDict;
-  }
-
-  vector<Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableId(const int32_t & tableId) const{
-      using namespace DatabaseEngine::StorageTypes;
-
-      Table* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
-      std::vector<const Row*> rows;
-
-      DataTypes::Indexing::Key key;
-      key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
-
-      table->ClusteredIndexSeek(&rows, &key, &key);
-
-      if(rows.empty())
-        return {};
-
-      vector<Headers::IdentityColumnsHeader> columns;
-
-      for (const auto& row : rows) {
-        const auto& data = row->GetData();
-
-        columns.emplace_back(
-          Headers::IdentityColumnsHeader{
-            .tableId = data[0]->GetInt(),
-            .columnId = data[1]->GetInt(),
-            .seedValue = data[2]->GetInt(),
-            .increment = data[3]->GetInt(),
-            .lastValue = data[4]->GetBigInt(),
-            .isCached = data[5]->GetBool(),
-            .cacheBlock = data[6]->GetInt(),
-            .additionalInfo{
-              .version = data[7]->GetInt(),
-              .isDeleted = data[8]->GetBool(),
-              .deletedAt = data[9]->GetBlockData() == nullptr
-                    ? DataTypes::DateTime()
-                    : data[9]->GetDateTime()
-            }
-          });
-      }
-
-      //get them sorted by ordinal position
-      ranges::sort(columns,
-      [](const Headers::IdentityColumnsHeader& a, const Headers::IdentityColumnsHeader& b) {
-        return a.columnId > b.columnId;
-      });
-
-      return columns;
-  }
-
-  std::vector<Security::Role> ServerInstance::SelectRoles() const{
-    using namespace DatabaseEngine::StorageTypes;
-    std::vector<const Row*> rows;
-
-    std::vector<Security::Role> roles;
-
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SysRoles);
-
-    table->ClusteredIndexScan(this->baseProperties, &rows);
-
-    for (const auto& row : rows) {
-      const auto& data = row->GetData();
-
-      roles.emplace_back(
-        data[0]->GetInt(),
-        data[1]->GetString(),
-        static_cast<Security::Permission>(data[2]->GetInt()),
-        data[3]->GetBool()
-      );
-    }
-
-    return roles;
-  }
-
-  std::vector<Security::User> ServerInstance::SelectUsers() const{
-    using namespace DatabaseEngine::StorageTypes;
-    std::vector<const Row*> rows;
-
-    std::vector<Security::User> users;
-
-    Table* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
-
-    table->ClusteredIndexScan(this->baseProperties, &rows);
-
-    for (const auto& row : rows) {
-      const auto& data = row->GetData();
-      users.emplace_back(
-        Security::User{
-          .id = data[0]->GetInt(),
-          .name = data[1]->GetString(),
-          .passwordHash = data[2]->GetString(),
-          .roleId =  data[3]->GetInt(),
-          .isActive = data[4]->GetBool(),
-        }
-      );
-    }
-
-    return users;
-  }
-
-  void ServerInstance::InsertSystemRoles(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties){
-    const auto admin = std::string(ServerConstants::ADMIN_NAME);
-    const auto dbOwner = std::string(ServerConstants::DB_OWNER_NAME);
-    const auto dbWriter = std::string(ServerConstants::DB_WRITER_NAME);
-    const auto dbReader = std::string(ServerConstants::DB_READER_NAME);
-    const auto guest = std::string(ServerConstants::GUEST_NAME);
-
-    auto result = this->InsertRoleToMasterDb(
-      properties,
-      admin,
-      ServerConstants::ADMIN_PERMISSIONS
-    );
-
-    auto _ = this->roleManager.AddRole(admin,
-        new Security::Role(
-        result.primaryKey.GetKeyAsInt(),
-        admin,
-        ServerConstants::ADMIN_PERMISSIONS,
-        true
-      ));
-
-    result = this->InsertRoleToMasterDb(
-      properties,
-      dbOwner,
-      ServerConstants::DB_OWNER_PERMISSIONS
-    );
-
-   _ = this->roleManager.AddRole(dbOwner,
-        new Security::Role(
-        result.primaryKey.GetKeyAsInt(),
-        dbOwner,
-        ServerConstants::DB_OWNER_PERMISSIONS,
-        true
-      ));
-
-    result = this->InsertRoleToMasterDb(
-      properties,
-      dbWriter,
-      ServerConstants::DB_WRITER_PERMISSIONS
-    );
-
-    _ = this->roleManager.AddRole(dbWriter,
-        new Security::Role(
-          result.primaryKey.GetKeyAsInt(),
-          dbWriter,
-          ServerConstants::DB_WRITER_PERMISSIONS,
-          true
-        )
-    );
-
-    result = this->InsertRoleToMasterDb(
-      properties,
-      dbReader,
-      ServerConstants::DB_READER_PERMISSIONS
-    );
-
-    _ = this->roleManager.AddRole(dbReader,
-       new Security::Role(
-       result.primaryKey.GetKeyAsInt(),
-        dbReader,
-        ServerConstants::DB_READER_PERMISSIONS,
-       true
-     ));
-
-    result = this->InsertRoleToMasterDb(
-      properties,
-      guest,
-      ServerConstants::GUEST_PERMISSIONS
-    );
-
-    _ = this->roleManager.AddRole(guest,
-       new Security::Role(
-        result.primaryKey.GetKeyAsInt(),
-        guest,
-        ServerConstants::GUEST_PERMISSIONS,
-        true
-     ));
-  }
-
-  void ServerInstance::InsertSystemUsers(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties){
-    const auto admin = std::string(ServerConstants::ADMIN_NAME);
-
-    const auto* role = this->roleManager.GetRole(admin);
-
-    std::string hashedPassword;
-    if (Security::UserManager::HashPassword(admin, hashedPassword) == false) {
-      std::cerr << "Failed to hash password for admin user" << std::endl;
-      return;
-    }
-
-    const auto result =
-      this->InsertUserToMasterDb(
-          properties,
-        admin,
-        hashedPassword,
-        role->id,
-        true
-      );
-
-    const auto _ =
-      this->userManager.AddUser(result.primaryKey.GetKeyAsInt(), admin, hashedPassword, role);
-  }
-
   void ServerInstance::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const{
     using namespace DatabaseEngine::StorageTypes;
 
@@ -1991,88 +2024,63 @@ namespace Server {
     return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
   }
 
-  bool ServerInstance::CreateMasterDatabase(){
-    using namespace DatabaseEngine;
-    using namespace DatabaseEngine::StorageTypes;
+  DatabaseEngine::Database * ServerInstance::GetMasterDb()const{ return this->masterDb; }
 
-    if (this->MasterDbExists()) {
-      this->UseMasterDb();
-      return true;
+  void ServerInstance::Shutdown(){
+    for (const auto &database: this->databases | views::values){
+      database->UpdateMasterDatabase();
+      delete database;
     }
 
-    CreateDatabase(this->sysDbName);
+    this->masterDb->UpdateMasterDatabase();
 
-    this->masterDb = new DatabaseEngine::Database(this->sysDbName, true);
+    delete this->masterDb;
+    delete this->versionDb;
+  }
 
-    for (int i = 0;i < this->sysTables.size(); i++) {
-      const auto& table = this->sysTables[i];
+  DatabaseEngine::Database* ServerInstance::UseDatabase(const int32_t & databaseId, const bool& isServerInitialization){
+    DatabaseEngine::Database *db = nullptr;
 
-      vector<Column *> columns;
-      vector<column_index_t> primaryKey;
+    if (databaseId == 1)
+      return this->masterDb;
 
-      for (int j = 0;j < table.columns.size(); j++) {
-        const auto& column = table.columns[j];
+    if (this->databases.TryGetValue(databaseId, db))
+      return db;
 
-        block_size_t columnSize = 0;
+    const auto dbHeader = this->SelectDatabaseById(databaseId);
 
-        const auto normalizedColumnType = Functions::String::NormalizeString(column.type);
+    db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
 
-        if (!ColumnTypeSizes.TryGetValue(normalizedColumnType, columnSize))
-          throw runtime_error("Column type " + column.type + " does not exist");
+    // for (const auto& log : db->RecoverLogs()) {
+    //   std::cout << log << std::endl;
+    // }
+    // db->GetIdentityColumns();
 
-        if (columnSize == 0)
-          columnSize = column.size;
+    //master db id
+    this->databases.Add(databaseId, db);
 
-        const auto columnType = ColumnTypesDictionary.Get(normalizedColumnType);
+    return db;
+  }
 
-        for (const auto& key: table.primaryKey) {
-          if (column.name != key)
-            continue;
+  void ServerInstance::UseMasterDb(){
+    this->masterDb = new DatabaseEngine::Database(this->sysDbName, this->sysTables);
+    this->masterDb->GetColumnsHeaders();
+    this->masterDb->GetIdentityColumns();
 
-          primaryKey.push_back(j);
-        }
+    for (const auto& role : this->SelectRoles())
+      const auto _ = this->roleManager.AddRole(role.name, new Security::Role(role));
 
-        columns.push_back(new Column(column.name, columnType, columnSize, j, column.nullable));
-      }
-
-      if (primaryKey.empty())
-        throw runtime_error("All tables in masterDb must have a primary key");
-
-      if (table.hasIdentity) {
-        auto* columnPtr = columns.at(primaryKey[0]);
-
-        columnPtr->SetIdentity(Headers::IdentityColumnsHeader(-1, columnPtr->GetColumnIndex(), 1, 1, 1, true, 10000));
-      }
-
-      Headers::Index index(primaryKey);
-      this->masterDb->CreateTable(table.id, i, columns, &index);
+    for (const auto& user : this->SelectUsers()) {
+      const auto* role = this->roleManager.GetRole(user.roleId);
+      const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
     }
 
-    return false;
+    const auto checkpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
+
+    DatabaseEngine::TransactionManager::Get().SetTransactionId(checkpoint.transactionId + 1);
+
+    std::cout << this->sysDbName << " initialized successfully" << std::endl;
   }
 
-  void ServerInstance::CreateVersionDatabase() {
-    if (this->VersionDbExists()) {
-      this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
-      return;
-    }
-
-    DatabaseEngine::CreateDatabase(this->versionDbName);
-    this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
-  }
-
-  bool ServerInstance::MasterDbExists() const{ return std::filesystem::exists(this->sysDbPath); }
-
-  bool ServerInstance::VersionDbExists() const{ return std::filesystem::exists(this->versionDbPath); }
-
-  Dictionary<int32_t , Headers::IdentityColumnsHeader> ServerInstance::SelectIdentityColumnsByTableIdToDictionary(const int32_t & tableId) const{
-    const auto columns = this->SelectIdentityColumnsByTableId(tableId);
-
-    Dictionary<int32_t, Headers::IdentityColumnsHeader> dict;
-
-    for(const auto& column : columns)
-        dict.Add(column.columnId, column);
-
-    return dict;
-  }
+  DatabaseEngine::VersionDatabase * ServerInstance::GetVersionDatabase() const{ return this->versionDb; }
 }

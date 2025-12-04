@@ -21,15 +21,38 @@ namespace QueryPipeline::Statements {
 }
 
 namespace Expressions{
+  struct EvaluationContext {
+    enum class EvaluationContextType {
+      Constant = 0,
+      SingleRow = 1,
+      MaterializedRow = 2,
+      Join = 3,
+      Aggregate = 4,
+      Window = 5,
+    };
+
+    EvaluationContextType type;
+
+    const DatabaseEngine::StorageTypes::Row* row;
+    const DatabaseEngine::StorageTypes::Row* outerRow;
+    const DatabaseEngine::StorageTypes::Row* innerRow;
+
+    QueryResult materializedRow;
+
+    EvaluationContext();
+    explicit EvaluationContext(const EvaluationContextType& type);
+    explicit EvaluationContext(const DatabaseEngine::StorageTypes::Row* row);
+    explicit EvaluationContext(const QueryResult& row);
+    EvaluationContext(const DatabaseEngine::StorageTypes::Row* outerRow, const DatabaseEngine::StorageTypes::Row* innerRow);
+  };
+
   class Expression {
     public:
       std::string name;
       virtual ~Expression() = default;
       Expression() = default;
 
-      [[nodiscard]] virtual Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const = 0;
-      [[nodiscard]] virtual Value Evaluate(const QueryResult& row) const = 0;
-      [[nodiscard]] virtual Value Evaluate(const DatabaseEngine::StorageTypes::Row* outerRow, const DatabaseEngine::StorageTypes::Row* innerRow) const = 0;
+      [[nodiscard]] virtual Value Evaluate(const EvaluationContext& context) const = 0;
       [[nodiscard]] virtual DataType GetReturnType() const = 0;
   };
 
@@ -49,9 +72,7 @@ namespace Expressions{
       explicit ColumnExpression(const column_index_t& index);
       ~ColumnExpression()override = default;
 
-      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
-      [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
-      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
+      [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
       [[nodiscard]] DataType GetReturnType() const override;
       [[nodiscard]] bool HasTableAlias() const;
   };
@@ -63,9 +84,7 @@ namespace Expressions{
       explicit LiteralExpression(const Value& value);
       ~LiteralExpression()override = default;
 
-      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
-      [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
-      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
+      [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
       [[nodiscard]] DataType GetReturnType() const override;
   };
 
@@ -79,9 +98,7 @@ namespace Expressions{
       BinaryExpression(Expression* left, Expression* right, const ExpressionOperator& operation);
       ~BinaryExpression()override;
 
-      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
-      [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
-      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
+      [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
       [[nodiscard]] DataType GetReturnType() const override;
   };
 
@@ -105,9 +122,7 @@ namespace Expressions{
       FunctionExpression(const Constants::FunctionType& type, std::vector<Expression*>& arguments);
       ~FunctionExpression()override;
 
-      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
-      [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
-      [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
+      [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
 
       //String Function
 
@@ -153,9 +168,7 @@ namespace Expressions{
       LogicalExpression();
       ~LogicalExpression()override;
 
-    [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row* row) const override;
-    [[nodiscard]] Value Evaluate(const QueryResult &row) const override;
-    [[nodiscard]] Value Evaluate(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) const override;
+    [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
     [[nodiscard]] DataType GetReturnType() const override;
 };
 }

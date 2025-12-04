@@ -92,6 +92,11 @@ namespace QueryPipeline::PhysicalPlan{
   struct PhysicalPlanExecutionProperties {
     Snapshot snapshot;
     int batchSize;
+
+    const Dictionary<std::string, Value>* variables;
+
+    PhysicalPlanExecutionProperties(const Snapshot& snapshot, const int& batchSize, const Dictionary<std::string, Value>& variables);
+    PhysicalPlanExecutionProperties();
   };
 
 
@@ -103,6 +108,24 @@ namespace QueryPipeline::PhysicalPlan{
       explicit PhysicalOperator(const DataTypes::Guid& currentSessionId);
       virtual ~PhysicalOperator() = default;
       virtual PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) = 0;
+  };
+
+  class PhysicalDeclareVariable final : public PhysicalOperator {
+    Value value;
+    std::string name;
+
+    public:
+      explicit PhysicalDeclareVariable(const DataTypes::Guid& currentSessionId, Value& value, std::string& name);
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties)override;
+  };
+
+  class PhysicalSetVariable final : public PhysicalOperator {
+    Value value;
+    std::string name;
+
+    public:
+      explicit PhysicalSetVariable(const DataTypes::Guid& currentSessionId, Value& value, std::string& name);
+      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties)override;
   };
 
   class PhysicalCreateUser final : public PhysicalOperator {

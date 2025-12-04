@@ -21,10 +21,11 @@ namespace Network {
     int32_t databaseId;
 
     SortedDictionary<uint16_t, QueryPipeline::Cursor*> cursors;
+    Dictionary<std::string, Value> variables;
 
     uint16_t nextCursorId;
 
-    Constants::transaction_id_t transactionId;
+    transaction_id_t transactionId;
 
     //add permissions later and session variables etc
     explicit Session(const Security::User* user) {
