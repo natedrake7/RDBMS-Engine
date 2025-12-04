@@ -117,7 +117,6 @@ namespace DatabaseEngine::StorageTypes
                 const Constants::transaction_id_t& transactionId,
                 const std::vector<Value>& inputData,
                 const std::vector<Constants::column_index_t>& columnIndices,
-                int64_t* primaryKeyVal,
                 Logging::CheckPoint* checkPoint
             )const;
 
@@ -399,12 +398,5 @@ namespace DatabaseEngine::StorageTypes
             void RemoveColumn(const Constants::column_index_t& index);
 
             void HandleRemoveColumn(const Constants::column_index_t& index);
-
-            void NestedLoopJoin(
-                std::vector<Row> *selectedRows,
-                const Expressions::Expression* expression
-            );
-
-
     };
 }

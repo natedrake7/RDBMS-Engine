@@ -100,13 +100,14 @@ namespace DatabaseEngine::StorageTypes {
             return;
         }
 
-        // const auto isLessThan = value < this->statistics.min;
-        // if (isLessThan.GetBool())
-        //     this->statistics.min = value;
-        //
-        // const auto isGreaterThan = value > this->statistics.max;
-        // if (isGreaterThan.GetBool())
-        //     this->statistics.max = value;
+        this->statistics.nullCount = 1;
+        this->statistics.distinctCount = 1;
+
+        if ((value < this->statistics.min).GetBool())
+            this->statistics.min = value;
+
+        if ((value > this->statistics.max).GetBool())
+            this->statistics.max = value;
 
         Server::ServerInstance::Get().UpdateColumnStatisticsById(
             this->header.id,

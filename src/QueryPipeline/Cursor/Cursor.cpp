@@ -21,4 +21,6 @@ namespace QueryPipeline {
 
   const PhysicalPlan::Snapshot & Cursor::GetSnapshot() const{ return this->properties.snapshot; }
 
+  const PipelineConstants::cursor_id_t & Cursor::GetId() const{ return this->id; }
+
 }

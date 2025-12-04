@@ -174,7 +174,6 @@ namespace DatabaseEngine::StorageTypes {
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
-        int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
         auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, &checkPoint);
@@ -187,11 +186,9 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != Errors::RuntimeError::Ok)
           return result;
 
-        DatabaseEngine::Database::LogCheckPoint(checkPoint);
+        Database::LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
-        // result.primaryKey = primaryKeyVal;
-
         return result;
     }
 
@@ -203,10 +200,9 @@ namespace DatabaseEngine::StorageTypes {
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
-        int64_t primaryKeyVal = 0;
         Logging::CheckPoint checkPoint;
 
-        auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &primaryKeyVal, &checkPoint);
+        auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &checkPoint);
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -216,10 +212,9 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != Errors::RuntimeError::Ok)
           return result;
 
-        this->database->LogCheckPoint(checkPoint);
+        Database::LogCheckPoint(checkPoint);
 
         result.message = "Rows affected: 1";
-        // result.primaryKeyVal = primaryKeyVal;
 
         return result;
     }
@@ -327,7 +322,7 @@ namespace DatabaseEngine::StorageTypes {
       row,
           Errors::RuntimeStatus(
             Errors::RuntimeError::Ok,
-          "Row created successfully"
+      "Row created successfully"
             )
         );
       }
@@ -336,8 +331,8 @@ namespace DatabaseEngine::StorageTypes {
         const Constants::transaction_id_t &transactionId,
         const std::vector<Value> &inputData,
         const std::vector<Constants::column_index_t> &columnIndices,
-        int64_t *primaryKeyVal,
-        Logging::CheckPoint *checkPoint) const{
+        Logging::CheckPoint *checkPoint
+      ) const{
         auto *row = new Row(*this);
 
         this->PopulateAutoComputedColumns(row);
@@ -401,10 +396,7 @@ namespace DatabaseEngine::StorageTypes {
 
         auto *row = new Row(*this);
 
-        int64_t primaryKeyValue = 0;
-
         this->PopulateAutoComputedColumns(row);
-        // result.primaryKeyValue = primaryKeyValue;
         result.message = "Row created successfully";
 
         for (int i = 0;i < inputData.size(); i++) {
@@ -1338,9 +1330,6 @@ namespace DatabaseEngine::StorageTypes {
 
         row->InsertColumnData(block, column->GetColumnIndex());
 
-        // if (column->GetIdentityLastValue() + identity.cacheBlock < primaryKeyValue )
-        //   this->UpdateColumnIdentity(column->GetColumnId(), primaryKeyValue);
-
         return true;
       }
 
@@ -1496,7 +1485,7 @@ namespace DatabaseEngine::StorageTypes {
   }
 
   void Table::PopulateColumnByClusteredIndex(const Constants::column_index_t &index, const Value &defaultValue){
-        auto* tree = this->GetClusteredIndexedTree();
+        const auto* tree = this->GetClusteredIndexedTree();
 
         tree->InsertColumnToRow(index, defaultValue);
   }
@@ -1621,14 +1610,9 @@ namespace DatabaseEngine::StorageTypes {
     this->RemoveColumnByHeap(index);
   }
 
-  void Table::NestedLoopJoin(std::vector<Row> *selectedRows, const Expressions::Expression *expression){
-
-
-  }
-
   void Table::RemoveColumnByClusteredIndex(const column_index_t &index){
 
-    auto* tree = this->GetClusteredIndexedTree();
+    const auto* tree = this->GetClusteredIndexedTree();
 
     tree->RemoveColumnFromRow(index);
   }
@@ -1681,8 +1665,8 @@ namespace DatabaseEngine::StorageTypes {
         );
 
         //TODO fix updating
-        // for (auto* column : this->columns)
-        //   column->UpdateColumnStatistics(row);
+        for (auto* column : this->columns)
+          column->UpdateColumnStatistics(row);
   }
 }
 

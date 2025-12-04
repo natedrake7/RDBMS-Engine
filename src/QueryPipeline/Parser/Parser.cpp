@@ -20,36 +20,48 @@ namespace QueryPipeline
 
      ParserResult::ParserResult(const Errors::Error &error){
         this->status = error;
+        this->hasMore = false;
      }
 
-    Statements::Statement* Parser::CreateStatement(const std::any &ast, const DataTypes::Guid& sessionId){
+    std::vector<Statements::Statement*> Parser::CreateStatement(const std::any &queries, const DataTypes::Guid& sessionId){
         function<Statements::Statement *(const any &)> handler;
 
-        if (!handlers.TryGetValue(ast.type(), handler))
-            return nullptr;
+        std::vector<Statements::Statement*> statements;
 
-        Statements::Statement* statement = handler(ast);
-
+        const auto castQueries = std::any_cast<std::vector<std::any>>(queries);
         const auto* session = Server::ServerInstance::Get().GetSession(sessionId);
 
-        if (session == nullptr) {
-            delete statement;
-            return nullptr;
-        }
+         for (const auto& query: castQueries) {
 
-        statement->databaseId = session->databaseId;
-        statement->sessionId = session->sessionId;
-        return statement;
+             if (!handlers.TryGetValue(query.type(), handler))
+                 return {};
+
+             Statements::Statement* statement = handler(query);
+
+            if (session == nullptr) {
+                delete statement;
+                continue;
+            }
+
+            statement->databaseId = session->databaseId;
+            statement->sessionId = session->sessionId;
+
+            statements.push_back(statement);
+         }
+
+        return statements;
     }
 
-    void Parser::ClearQuery(const Statements::Statement *statement, const LogicalPlan *logicalPlan) {
-        delete statement;
+    void Parser::ClearQuery(const std::vector<Statements::Statement*>& statements, const LogicalPlan *logicalPlan) {
+         for (const auto* statement: statements)
+             delete statement;
+
         delete logicalPlan;
     }
 
     Parser::~Parser() = default;
 
-    Statements::Statement* Parser::Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query) {
+    std::vector<Statements::Statement*> Parser::Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query) {
         static auto errorListener = ErrorListener();
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
@@ -67,8 +79,7 @@ namespace QueryPipeline
         parser.addErrorListener(&errorListener); // Add custom
 
         // Start parsing, typically using the start rule of the grammar
-        Statements::Statement* statement = nullptr;
-
+        std::vector<Statements::Statement*> statements;
         try {
             SQLParser::SqlStatementContext *tree = parser.sqlStatement();
 
@@ -76,26 +87,24 @@ namespace QueryPipeline
 
             const auto response = visitor.visit(tree);
 
-            statement = CreateStatement(response, sessionId);
+            statements = CreateStatement(response, sessionId);
         }
         catch (const exception& e) {
-            Parser::ClearQuery(statement, nullptr);
+            Parser::ClearQuery(statements, nullptr);
 
             ostringstream os;
             os << "Parser exception: " << e.what();
 
             result.status = {true, os.str()};
-            return nullptr;
+            return {};
         }
 
-        return statement;
+        return statements;
      }
 
     PhysicalPlan::PhysicalOperator * Parser::BuildExecutionPlan(ParserResult &result, Statements::Statement *statement) {
         auto validation = statement->ValidateStatement();
         if (!validation.IsOk()) {
-            Parser::ClearQuery(statement, nullptr);
-
             result.status  = {true, validation.message};
             return nullptr;
         }
@@ -103,15 +112,11 @@ namespace QueryPipeline
         auto* logicalPlan = statement->ToLogical();
 
         if (logicalPlan == nullptr) {
-            Parser::ClearQuery(statement, logicalPlan);
-
             result.status  = {true, "Unexpected error occurred during plan build"};
-             return nullptr;
+            return nullptr;
         }
 
         auto* physicalPlan = logicalPlan->ToPhysical();
-        Parser::ClearQuery(statement, logicalPlan);
-
         if(physicalPlan == nullptr){
             result.status  = {true, "Unexpected error occurred during physical plan build"};
             return nullptr;
@@ -120,21 +125,16 @@ namespace QueryPipeline
         return physicalPlan;
     }
 
-    void Parser::CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId) {
+    void Parser::CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId) {
         static const auto& server = Server::ServerInstance::Get();
 
-        const auto _ = server.CloseCursor(sessionId);
+        const auto _ = server.CloseCursor(sessionId, cursorId);
     }
 
     ParserResult Parser::StartTransaction(const string &query, const DataTypes::Guid &sessionId){
         ParserResult result;
 
-        auto* statement = Parser::Parse(result, sessionId, query);
-
-        if (result.status.hasError)
-            return result;
-
-        auto* physicalPlan = Parser::BuildExecutionPlan(result, statement);
+        const auto statements = Parser::Parse(result, sessionId, query);
 
         if (result.status.hasError)
             return result;
@@ -142,23 +142,34 @@ namespace QueryPipeline
         static const auto& server = Server::ServerInstance::Get();
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
-        const auto snapshot = transactionManager.BeginTransaction(sessionId);
+        for (auto* statement: statements) {
+            auto* physicalPlan = Parser::BuildExecutionPlan(result, statement);
 
-        std::cout   << "Executing transaction: " << snapshot.transactionId
-                    << " by thread: " << std::this_thread::get_id()
-                    << std::endl;
+            if (result.status.hasError) {
+                break;
+            }
 
-        const PhysicalPlan::PhysicalPlanExecutionProperties properties{
-            snapshot,
-            1000
-        };
+            const auto snapshot = transactionManager.BeginTransaction(sessionId);
 
-        //for test
-        // if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {
-        //     std::this_thread::sleep_for(5000ms);
-        // }
+            std::cout   << "Executing transaction: " << snapshot.transactionId
+                        << " by thread: " << std::this_thread::get_id()
+                        << std::endl;
 
-        result.cursor = server.CreateCursor(sessionId, properties, physicalPlan);
+            const PhysicalPlan::PhysicalPlanExecutionProperties properties{
+                snapshot,
+                1000
+            };
+
+            //for test
+            // if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {
+            //     std::this_thread::sleep_for(5000ms);
+            // }
+
+            result.cursors.push_back(server.CreateCursor(sessionId, properties, physicalPlan));
+        }
+
+        if (result.status.hasError)
+            Parser::ClearQuery(statements, nullptr);
 
         return result;
     }
@@ -184,19 +195,19 @@ namespace QueryPipeline
         return result;
     }
 
-    void Parser::CommitTransaction(const DataTypes::Guid& sessionId, const PhysicalPlan::Snapshot& snapshot) {
+    void Parser::CommitTransaction(const DataTypes::Guid& sessionId, const QueryPipeline::Cursor* cursor) {
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
-        transactionManager.CommitTransaction(snapshot);
+        transactionManager.CommitTransaction(cursor->GetSnapshot());
 
-        Parser::CleanUpPostExecutionObjects(sessionId);
+        Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }
 
-    void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const PhysicalPlan::Snapshot &snapshot) {
+    void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const QueryPipeline::Cursor* cursor) {
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
-        transactionManager.RollbackTransaction(snapshot);
+        transactionManager.RollbackTransaction(cursor->GetSnapshot());
 
-        Parser::CleanUpPostExecutionObjects(sessionId);
+        Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }
 }

@@ -80,25 +80,24 @@ namespace QueryPipeline{
         Errors::Error status;
         std::vector<QueryResult> rows;
         std::vector<std::string> columns;
-        Cursor* cursor;
+        std::vector<Cursor*> cursors;
 
         bool hasMore;
 
         ParserResult() {
             this->hasMore = false;
-            this->cursor = nullptr;
         }
 
         explicit ParserResult(const Errors::Error& error);
     };
 
     class Parser{
-        static Statements::Statement* CreateStatement(const std::any &ast, const DataTypes::Guid& sessionId);
-        static void ClearQuery(const Statements::Statement* statement,const LogicalPlan* logicalPlan);
+        static std::vector<Statements::Statement*> CreateStatement(const std::any &queries, const DataTypes::Guid& sessionId);
+        static void ClearQuery(const std::vector<Statements::Statement*>& statements, const LogicalPlan* logicalPlan);
 
-        static Statements::Statement* Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
+        static std::vector<Statements::Statement*> Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
         static PhysicalPlan::PhysicalOperator* BuildExecutionPlan(ParserResult& result, Statements::Statement* statement);
-        static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId);
+        static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId);
 
         public:
             Parser();
@@ -114,8 +113,8 @@ namespace QueryPipeline{
 
             static ParserResult Execute(Cursor* cursor);
 
-            static void CommitTransaction(const DataTypes::Guid& sessionId, const PhysicalPlan::Snapshot& snapshot);
-            static void RollbackTransaction(const DataTypes::Guid& sessionId, const PhysicalPlan::Snapshot& snapshot);
+            static void CommitTransaction(const DataTypes::Guid& sessionId, const QueryPipeline::Cursor* cursor);
+            static void RollbackTransaction(const DataTypes::Guid& sessionId, const QueryPipeline::Cursor* cursor);
     };
 
 }

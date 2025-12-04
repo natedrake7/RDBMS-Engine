@@ -11,6 +11,7 @@ namespace QueryPipeline {
 
   class SQLVisitorImplementation final : public SQLVisitor {
     public:
+      antlrcpp::Any visitStatement(SQLParser::StatementContext *context) override;
 
       //Statements
       antlrcpp::Any visitSelectStatement(SQLParser::SelectStatementContext *context) override;

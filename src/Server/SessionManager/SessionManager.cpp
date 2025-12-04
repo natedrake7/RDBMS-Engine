@@ -81,13 +81,15 @@ namespace Server::Sessions {
     if (session == nullptr)
       return nullptr;
 
-    delete session->cursor;
+    const auto cursorId = session->nextCursorId++;
 
-    session->cursor = new QueryPipeline::Cursor(0, properties, physicalPlan);
-    return session->cursor;
+    auto* cursor = new QueryPipeline::Cursor(cursorId, properties, physicalPlan);
+
+    session->cursors.Add(cursorId, cursor);
+    return cursor;
   }
 
-  bool SessionManager::CloseCursor(const DataTypes::Guid &id) const{
+  bool SessionManager::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId) const{
     MultiThreading::WriterGuard guard(&this->mutex);
 
     auto* session = this->TryGetSessionWithoutLock(id);
@@ -95,9 +97,10 @@ namespace Server::Sessions {
     if (session == nullptr)
       return false;
 
-    delete session->cursor;
-    session->cursor = nullptr;
+    const auto* cursor = session->cursors.Get(cursorId);
+    delete cursor;
 
+    session->cursors.Remove(cursorId);
     return true;
   }
 

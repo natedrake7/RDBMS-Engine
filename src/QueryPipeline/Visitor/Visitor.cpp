@@ -6,6 +6,15 @@
 
 namespace QueryPipeline {
   antlrcpp::Any SQLVisitorImplementation::visitSqlStatement(SQLParser::SqlStatementContext *context)  {
+    std::vector<std::any> statements;
+
+    for (const auto& statement: context->statement())
+      statements.push_back(this->visit(statement));
+
+    return statements;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitStatement(SQLParser::StatementContext *context) {
     if (context->createUserStatement())
       return visit(context->createUserStatement());
     if (context->grantRoleStatement())
@@ -44,7 +53,6 @@ namespace QueryPipeline {
     if (context->setVariableStatement())
       return visit(context->setVariableStatement());
 
-
     return nullptr;
   }
 
@@ -66,7 +74,7 @@ namespace QueryPipeline {
     return statement;
   }
 
-antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *context) {
+  antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *context) {
     auto* statement = new Statements::SelectStatement();
 
     if (!context->resultList())

@@ -1,4 +1,5 @@
 #pragma once
+#include "../DataStructures/SortedDictionary/SortedDictionary.h"
 #include "../DataTypes/Guid/Guid.h"
 #include "../DataTypes/DateTime/DateTime.h"
 #include "../Security/Security.h"
@@ -19,7 +20,9 @@ namespace Network {
 
     int32_t databaseId;
 
-    QueryPipeline::Cursor* cursor;
+    SortedDictionary<uint16_t, QueryPipeline::Cursor*> cursors;
+
+    uint16_t nextCursorId;
 
     Constants::transaction_id_t transactionId;
 
@@ -28,8 +31,7 @@ namespace Network {
       this->sessionId = DataTypes::Guid::NewGuid();
       this->createdAt = DataTypes::DateTime();
       this->lastActive = DataTypes::DateTime();
-
-      this->cursor = nullptr;
+      this->nextCursorId = 0;
 
       this->user = user;
 

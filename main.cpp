@@ -172,28 +172,32 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
 
     bool hasError = false;
 
-    while (parserResult.cursor->hasMore()) {
-        auto batchResult = QueryPipeline::Parser::Execute(parserResult.cursor);
+    for (auto* cursor : parserResult.cursors) {
+        while (cursor->hasMore()) {
+            auto batchResult = QueryPipeline::Parser::Execute(cursor);
 
-        if (batchResult.status.hasError) {
-            std::cerr << "Error: " << batchResult.status.message << std::endl;
-            hasError = true;
-            break;
+            if (batchResult.status.hasError) {
+                std::cerr << "Error: " << batchResult.status.message << std::endl;
+                hasError = true;
+                break;
+            }
+
+            for (const auto& column : batchResult.columns)
+                std::cout << column << " || ";
+
+            std::cout << std::endl;
+
+            for (const auto& row: batchResult.rows)
+                row.Print();
         }
 
-        for (const auto& column : batchResult.columns)
-            std::cout << column << " || ";
+        if (hasError) {
+            QueryPipeline::Parser::RollbackTransaction(sessionId, cursor);
+            continue;
+        }
 
-        std::cout << std::endl;
-
-        for (const auto& row: batchResult.rows)
-            row.Print();
+        QueryPipeline::Parser::CommitTransaction(sessionId, cursor);
     }
-
-    if (hasError)
-        QueryPipeline::Parser::RollbackTransaction(sessionId, parserResult.cursor->GetSnapshot());
-    else
-        QueryPipeline::Parser::CommitTransaction(sessionId, parserResult.cursor->GetSnapshot());
 
     const auto end = std::chrono::high_resolution_clock::now();
 

@@ -5,7 +5,7 @@
 namespace QueryPipeline {
   class Cursor {
     PipelineConstants::cursor_id_t id;
-     PhysicalPlan::PhysicalPlanExecutionProperties properties;
+    PhysicalPlan::PhysicalPlanExecutionProperties properties;
 
     bool hasMoreRows;
 
@@ -18,5 +18,6 @@ namespace QueryPipeline {
     [[nodiscard]] PhysicalPlan::PhysicalPlanResult* fetchNextBatch();
     [[nodiscard]] const bool& hasMore()const;
     [[nodiscard]] const PhysicalPlan::Snapshot& GetSnapshot()const;
+    [[nodiscard]] const PipelineConstants::cursor_id_t& GetId()const;
   };
 }

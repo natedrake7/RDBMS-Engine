@@ -84,7 +84,8 @@ namespace Server {
     this->ReadConfiguration(configPath);
 
     this->CreateVersionDatabase();
-    this->CreateMasterDatabase();
+    if (this->CreateMasterDatabase())
+      return;
 
     const auto dbInsertResult = this->InsertDbToMasterDb(this->baseProperties, this->sysDbName, this->sysDbPath, true);
 
@@ -319,8 +320,8 @@ namespace Server {
     return this->sessionManager.CreateCursor(id, properties, physicalPlan);
   }
 
-  bool ServerInstance::CloseCursor(const DataTypes::Guid &id) const {
-    return this->sessionManager.CloseCursor(id);
+  bool ServerInstance::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId) const {
+    return this->sessionManager.CloseCursor(id, cursorId);
   }
 
   DatabaseEngine::Database * ServerInstance::GetMasterDb()const{ return this->masterDb; }
@@ -690,8 +691,6 @@ namespace Server {
       Value(isDeleted, static_cast<column_index_t>(SysTableStats::IsDeleted)),
       Value(nullptr, static_cast<column_index_t>(SysTableStats::DeletedAt)),
     };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(properties, fields);
 
@@ -1769,12 +1768,12 @@ namespace Server {
     for (const auto& row : rows) {
       const auto& data = row->GetData();
 
-      roles.emplace_back(Security::Role(
+      roles.emplace_back(
         data[0]->GetInt(),
         data[1]->GetString(),
         static_cast<Security::Permission>(data[2]->GetInt()),
         data[3]->GetBool()
-      ));
+      );
     }
 
     return roles;
@@ -1992,13 +1991,13 @@ namespace Server {
     return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
   }
 
-  void ServerInstance::CreateMasterDatabase(){
+  bool ServerInstance::CreateMasterDatabase(){
     using namespace DatabaseEngine;
     using namespace DatabaseEngine::StorageTypes;
 
     if (this->MasterDbExists()) {
       this->UseMasterDb();
-      return;
+      return true;
     }
 
     CreateDatabase(this->sysDbName);
@@ -2048,6 +2047,8 @@ namespace Server {
       Headers::Index index(primaryKey);
       this->masterDb->CreateTable(table.id, i, columns, &index);
     }
+
+    return false;
   }
 
   void ServerInstance::CreateVersionDatabase() {

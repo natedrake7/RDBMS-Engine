@@ -4,7 +4,11 @@ options {
   caseInsensitive = true;
 }
 
-sqlStatement 
+sqlStatement
+    : (statement ';')+
+    ;
+
+statement
     : createUserStatement
     | grantRoleStatement
     | selectStatement

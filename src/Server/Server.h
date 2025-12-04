@@ -61,7 +61,7 @@ namespace Server {
     ~ServerInstance();
 
     void ReadConfiguration(const std::string& configPath);
-    void CreateMasterDatabase();
+    bool CreateMasterDatabase();
     void CreateVersionDatabase();
     [[nodiscard]] bool MasterDbExists()const;
     [[nodiscard]] bool VersionDbExists()const;
@@ -94,7 +94,7 @@ namespace Server {
       const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan
     )const;
-    [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id)const;
+    [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
 
     //MasterDB Insert Functions
     [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(

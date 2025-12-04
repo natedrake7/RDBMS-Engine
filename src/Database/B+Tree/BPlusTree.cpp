@@ -648,7 +648,7 @@ namespace Indexing
     }
 
     void BPlusTree::InsertColumnToRow(const Constants::column_index_t& index, const Value &defaultValue)const{
-        if (this->indexPageId == INVALID_PAGE_ID)
+        if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
