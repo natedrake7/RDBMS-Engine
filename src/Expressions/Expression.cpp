@@ -134,6 +134,10 @@ namespace Expressions{
     this->value = value;
   }
 
+  LiteralExpression::LiteralExpression(Value &value) {
+    this->value = std::move(value);
+  }
+
   Value LiteralExpression::Evaluate(const EvaluationContext &context) const{
     return this->value;
   }
@@ -296,12 +300,13 @@ namespace Expressions{
     return true;
   }
 
-bool FunctionExpression::ValidateReturnType(
-    const FunctionInfo &info,
-    std::string &errorMessage,
-    const DataType& expectedType,
-    const DataType& returnType,
-    const int& index) {
+  bool FunctionExpression::ValidateReturnType(
+      const FunctionInfo &info,
+      std::string &errorMessage,
+      const DataType& expectedType,
+      const DataType& returnType,
+      const int& index
+  ) {
     if (returnType == DataType::Invalid) {
       errorMessage = "Function: " + info.name +
                         " has an argument at position " + std::to_string(index + 1) +
@@ -309,7 +314,7 @@ bool FunctionExpression::ValidateReturnType(
       return false;
     }
 
-    if (returnType != expectedType && !info.allowImplicitCast) {
+    if (!DataTypes::Coercions::IsCoercionAllowed(returnType, expectedType, info.allowImplicitCast)) {
       errorMessage = "Function: " + info.name +
                      " expects argument " + std::to_string(index + 1) +
                      " to be of type: " + Constants::ColumnTypesToStringDictionary.Get(expectedType) +

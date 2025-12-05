@@ -658,13 +658,13 @@ std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs,
 Value operator+(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value::PerformTinyIntAddition(lhs.GetTinyInt(), rhs.GetTinyInt());
         case Constants::DataType::SmallInt:
-            return Value::PerformSmallIntAddition(lhs.GetSmallInt(), rhs.GetSmallInt());
         case Constants::DataType::Int:
-            return Value::PerformIntAddition(lhs.GetInt(), rhs.GetInt());
-        case Constants::DataType::BigInt:
-            return Value::PerformBigIntAddition(lhs.GetBigInt(), rhs.GetBigInt());
+        case Constants::DataType::BigInt: {
+            auto value = Value::PerformBigIntAddition(lhs.GetBigInt(), rhs.GetBigInt());
+            DataTypes::Coercions::DeduceIntegerType(value);
+            return value;
+        }
         case Constants::DataType::Decimal:
             return Value::PerformDecimalAddition(lhs.GetDecimal(), rhs.GetDecimal());
         case Constants::DataType::String:
@@ -692,13 +692,13 @@ Value& Value::operator+=(const Value &rhs){
 Value operator-(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value::PerformTinyIntSubtraction(lhs.GetTinyInt(), rhs.GetTinyInt());
         case Constants::DataType::SmallInt:
-            return Value::PerformSmallIntSubtraction(lhs.GetSmallInt(), rhs.GetSmallInt());
         case Constants::DataType::Int:
-            return Value::PerformIntSubtraction(lhs.GetInt(), rhs.GetInt());
-        case Constants::DataType::BigInt:
-            return Value::PerformBigIntSubtraction(lhs.GetBigInt(), rhs.GetBigInt());
+        case Constants::DataType::BigInt: {
+            auto value = Value::PerformBigIntSubtraction(lhs.GetBigInt(), rhs.GetBigInt());
+            DataTypes::Coercions::DeduceIntegerType(value);
+            return value;
+        }
         case Constants::DataType::Decimal:
             return Value::PerformDecimalSubtraction(lhs.GetDecimal(), rhs.GetDecimal());
         case Constants::DataType::String:
@@ -723,13 +723,13 @@ Value operator/(const Value &lhs, const Value &rhs){
 Value operator*(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value(lhs.GetTinyInt() * rhs.GetTinyInt(), 0);
         case Constants::DataType::SmallInt:
-            return Value(lhs.GetSmallInt() * rhs.GetSmallInt(), 0);
         case Constants::DataType::Int:
-            return Value(lhs.GetInt() * rhs.GetInt(), 0);
-        case Constants::DataType::BigInt:
-            return Value(lhs.GetBigInt() * rhs.GetBigInt(), 0);
+        case Constants::DataType::BigInt: {
+            auto value = Value(lhs.GetBigInt() * rhs.GetBigInt(), 0);
+            DataTypes::Coercions::DeduceIntegerType(value);
+            return value;
+        }
         case Constants::DataType::Bool:
             return Value(lhs.GetBool() * rhs.GetBool(), 0);
         case Constants::DataType::Decimal:
@@ -756,11 +756,8 @@ Value operator<(const Value &lhs, const Value &rhs){
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value(lhs.GetTinyInt() < rhs.GetTinyInt(), 0);
         case Constants::DataType::SmallInt:
-            return Value(lhs.GetSmallInt() < rhs.GetSmallInt(), 0);
         case Constants::DataType::Int:
-            return Value(lhs.GetInt() < rhs.GetInt(), 0);
         case Constants::DataType::BigInt:
             return Value(lhs.GetBigInt() < rhs.GetBigInt(), 0);
         case Constants::DataType::Decimal:
@@ -798,11 +795,8 @@ Value operator<=(const Value &lhs, const Value &rhs){
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value(lhs.GetTinyInt() <= rhs.GetTinyInt(), 0);
         case Constants::DataType::SmallInt:
-            return Value(lhs.GetSmallInt() <= rhs.GetSmallInt(), 0);
         case Constants::DataType::Int:
-            return Value(lhs.GetInt() <= rhs.GetInt(), 0);
         case Constants::DataType::BigInt:
             return Value(lhs.GetBigInt() <= rhs.GetBigInt(), 0);
         case Constants::DataType::Decimal:
@@ -835,11 +829,8 @@ Value operator>=(const Value &lhs, const Value &rhs){
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value(lhs.GetTinyInt() >= rhs.GetTinyInt(), 0);
         case Constants::DataType::SmallInt:
-            return Value(lhs.GetSmallInt() >= rhs.GetSmallInt(), 0);
         case Constants::DataType::Int:
-            return Value(lhs.GetInt() >= rhs.GetInt(), 0);
         case Constants::DataType::BigInt:
             return Value(lhs.GetBigInt() >= rhs.GetBigInt(), 0);
         case Constants::DataType::Decimal:
@@ -872,13 +863,13 @@ Value operator==(const Value &lhs, const Value &rhs){
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value(lhs.GetTinyInt() == rhs.GetTinyInt(), 0);
         case Constants::DataType::SmallInt:
-            return Value(lhs.GetSmallInt() == rhs.GetSmallInt(), 0);
         case Constants::DataType::Int:
-            return Value(lhs.GetInt() == rhs.GetInt(), 0);
-        case Constants::DataType::BigInt:
-            return Value(lhs.GetBigInt() == rhs.GetBigInt(), 0);
+        case Constants::DataType::BigInt: {
+            auto value = Value(lhs.GetBigInt() == rhs.GetBigInt(), 0);
+            DataTypes::Coercions::DeduceIntegerType(value);
+            return value;
+        }
         case Constants::DataType::Decimal:
             return Value(lhs.GetDecimal() == rhs.GetDecimal(), 0);
         case Constants::DataType::String:
@@ -910,13 +901,13 @@ Value operator!=(const Value &lhs, const Value &rhs){
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value(lhs.GetTinyInt() != rhs.GetTinyInt(), 0);
         case Constants::DataType::SmallInt:
-            return Value(lhs.GetSmallInt() != rhs.GetSmallInt(), 0);
         case Constants::DataType::Int:
-            return Value(lhs.GetInt() != rhs.GetInt(), 0);
-        case Constants::DataType::BigInt:
-            return Value(lhs.GetBigInt() != rhs.GetBigInt(), 0);
+        case Constants::DataType::BigInt: {
+            auto value = Value(lhs.GetBigInt() != rhs.GetBigInt(), 0);
+            DataTypes::Coercions::DeduceIntegerType(value);
+            return value;
+        }
         case Constants::DataType::Decimal:
             return Value(lhs.GetDecimal() != rhs.GetDecimal(), 0);
         case Constants::DataType::String:
@@ -943,13 +934,13 @@ Value operator!=(const Value &lhs, const Value &rhs){
 Value operator%(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case Constants::DataType::TinyInt:
-            return Value(lhs.GetTinyInt() % rhs.GetTinyInt(), 0);
         case Constants::DataType::SmallInt:
-            return Value(lhs.GetSmallInt() % rhs.GetSmallInt(), 0);
         case Constants::DataType::Int:
-            return Value(lhs.GetInt() % rhs.GetInt(), 0);
-        case Constants::DataType::BigInt:
-            return Value(lhs.GetBigInt() % rhs.GetBigInt(), 0);
+        case Constants::DataType::BigInt: {
+            auto value = Value(lhs.GetBigInt() % rhs.GetBigInt(), 0);
+            DataTypes::Coercions::DeduceIntegerType(value);
+            return value;
+        }
         case Constants::DataType::Bool:
             return Value(lhs.GetBool() % rhs.GetBool(), 0);
         case Constants::DataType::Decimal:

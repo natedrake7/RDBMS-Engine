@@ -17,6 +17,13 @@ namespace QueryPipeline {
 
 namespace QueryPipeline::Statements {
 
+  struct StatementValidationScope {
+    Dictionary<std::string, table_id_t> tableAliasesDictionary;
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> tablesColumnsDictionary;
+    int indexPos;
+    Statements::Statement* statement;
+  };
+
   struct DecimalType {
     int8_t precision;
     int8_t scale;
@@ -402,7 +409,7 @@ namespace QueryPipeline::Statements {
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
     Statement *statement,
-    Expressions::Expression *expr,
+    Expressions::Expression*& expression,
     int* indexPos = nullptr
   );
 
@@ -423,8 +430,7 @@ namespace QueryPipeline::Statements {
 
   static Errors::ValidationStatus ResolveExpressionAliases(
     ParserValidationScope& validationScope,
-    Statement *statement,
-    Expressions::Expression *expr
+    Expressions::Expression*& expression
   );
 
   static Errors::ValidationStatus ResolveWildCardAlias(
@@ -432,7 +438,69 @@ namespace QueryPipeline::Statements {
     const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
     SelectStatement *statement,
     int* indexPos = nullptr
-    );
+  );
+
+
+//Constant Statements
+  static Errors::ValidationStatus ResolveBinaryExpressionAliases(
+    ParserValidationScope& validationScope,
+    Expressions::BinaryExpression* binaryExpr,
+    Expressions::Expression*& expression
+  );
+
+//Non Constant Statements
+  static Errors::ValidationStatus ResolveBinaryExpressionAliases(
+    ParserValidationScope& validationScope,
+    Expressions::BinaryExpression* binaryExpr,
+    Expressions::Expression*& expression,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    Statement *statement,
+    int* indexPos
+  );
+
+  static Errors::ValidationStatus ResolveFunctionExpressionAliases(
+    ParserValidationScope& validationScope,
+    const Expressions::FunctionExpression* funcExpr,
+    Expressions::Expression*& expression
+  );
+
+  static Errors::ValidationStatus ResolveFunctionExpressionAliases(
+    ParserValidationScope& validationScope,
+    const Expressions::FunctionExpression* funcExpr,
+    Expressions::Expression*& expression,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    Statement *statement,
+    int* indexPos
+  );
+
+  static Errors::ValidationStatus ResolveLogicalExpressionAliases(
+    ParserValidationScope& validationScope,
+    Expressions::LogicalExpression* logicalExpr,
+    Expressions::Expression*& expression
+  );
+
+  static Errors::ValidationStatus ResolveLogicalExpressionAliases(
+    ParserValidationScope& validationScope,
+    Expressions::LogicalExpression* logicalExpr,
+    Expressions::Expression*& expression,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    Statement *statement,
+    int* indexPos
+  );
+
+  static Errors::ValidationStatus ResolveVariableExpressionAliases(
+    const ParserValidationScope& validationScope,
+    Expressions::VariableExpression* variableExpr
+  );
+
+  static Errors::ValidationStatus ResolveLiteralExpressionAliases(Expressions::LiteralExpression* literalExpr);
+
+  static Errors::ValidationStatus ResolveColumnExpressionAliases(const Expressions::ColumnExpression *columnExpr);
+
+  static void EvaluateConstantExpression(Expressions::Expression*& expression);
 
   static void AssignColumnsToIndices(SelectStatement* statement, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);
 
@@ -443,6 +511,7 @@ namespace QueryPipeline::Statements {
 
   static void AssignPostProjectionIndicesToExpression(
     const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
-    Expressions::Expression* expr);
+    Expressions::Expression* expr
+  );
 
 }

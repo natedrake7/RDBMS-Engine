@@ -85,6 +85,7 @@ namespace Expressions{
       Value value;
 
       explicit LiteralExpression(const Value& value);
+      explicit LiteralExpression(Value& value);
       ~LiteralExpression()override = default;
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
@@ -93,7 +94,7 @@ namespace Expressions{
 
   class BinaryExpression final : public Expression {
     public:
-      Expression* left;
+      Expressions::Expression* left;
       Expression* right;
 
       ExpressionOperator operation;

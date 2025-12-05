@@ -125,7 +125,8 @@ int main()
 
     std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
-    std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
+    //figue out issue
+    // std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
     const auto* user = server.Authenticate("admin", "admin");
 
@@ -156,7 +157,7 @@ int main()
     serverRunning.store(false, std::memory_order_relaxed);
 
     connectionThread.join();
-    garbageCollectorThread.join();
+    // garbageCollectorThread.join();
 
     server.Shutdown();
     return 0;
