@@ -130,7 +130,7 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
 
 bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResult& secondRow, const vector<QueryPipeline::Statements::OrderColumn*> &sortConditions)
 {
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::MaterializedRow);
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::MaterializedRow, {});
     for (const auto& condition : sortConditions)
     {
         context.materializedRow = firstRow;

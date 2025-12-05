@@ -239,7 +239,10 @@ namespace DatabaseEngine::StorageTypes
                 QueryPipeline::PhysicalPlan::TableScanState& state
             )const;
 
-            void HeapDelete(const Expressions::Expression* expression) const;
+            void HeapDelete(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const Expressions::Expression* expression
+            ) const;
 
             void ClusteredIndexScanDelete(
                 const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,

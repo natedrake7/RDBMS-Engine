@@ -92,7 +92,7 @@ add_library(Systemic SHARED
         src/Systemic/Network/Protocols/ConnectionProtocol/ConnectionHeader.h
         src/Systemic/DataStructures/Vector/Vector.h
         src/Systemic/DataStructures/SortedDictionary/SortedDictionary.h
-
+        src/Systemic/DataTypes/Variable/Variable.h
 )
 
 add_library(ExpressionsLibrary STATIC

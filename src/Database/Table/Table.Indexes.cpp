@@ -68,7 +68,7 @@ namespace DatabaseEngine::StorageTypes {
         std::vector<Headers::RowIdentifier> rowIds;
         tree->IndexScan(&rowIds, state, properties.batchSize);
 
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         if (expression != nullptr) {
 

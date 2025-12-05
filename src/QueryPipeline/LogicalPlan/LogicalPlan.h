@@ -16,19 +16,10 @@ namespace QueryPipeline {
 
   class LogicalDeclareVariable final : public LogicalPlan {
     public:
-      Value value;
-      std::string name;
+      Variable variable;
+      Expressions::Expression* expression;
 
-      LogicalDeclareVariable(const DataTypes::Guid& sessionId, Value& value, std::string& name);
-      PhysicalPlan::PhysicalOperator * ToPhysical() override;
-  };
-
-  class LogicalSetVariable final : public LogicalPlan {
-    public:
-      Value value;
-      std::string name;
-
-      LogicalSetVariable(const DataTypes::Guid& sessionId, Value& value, std::string& name);
+      LogicalDeclareVariable(const DataTypes::Guid& sessionId, Variable& variable, Expressions::Expression* expression);
       PhysicalPlan::PhysicalOperator * ToPhysical() override;
   };
 

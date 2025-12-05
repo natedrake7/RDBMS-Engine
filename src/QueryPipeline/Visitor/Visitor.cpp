@@ -552,43 +552,66 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitDeclareVariableStatement(SQLParser::DeclareVariableStatementContext *context){
-    auto variableName = std::any_cast<std::string>(visit(context->variableName()));
+    auto* statement = new Statements::DeclareVariableStatement();
 
-    auto value = context->literalValue()
-        ? std::any_cast<Value>(visit(context->literalValue()))
-        : Value(nullptr, 0);
+    if (context->resultExpression()) {
+      const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(context->resultExpression()));
+      statement->expression = expression;
+    }
 
-    value.SetName(variableName);
+    statement->variable.SetValue(Value(nullptr, 0));
 
-    // value.InferType();
+    auto name = std::any_cast<std::string>(visit(context->variableName()));
 
-    std::cout << "Variable declared: " << variableName << " with value: " << value << std::endl;
+    statement->variable.SetName(name);
 
-    return value;
+    const auto type = (context->variableType())
+        ? std::any_cast<DataType>(visit(context->variableType()))
+        : statement->variable.GetValue().GetType();
+
+    statement->variable.SetType(type);
+
+    return statement;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitVariableName(SQLParser::VariableNameContext *context){
-    return context->IDENTIFIER()->getText();
+    return "@" + context->IDENTIFIER()->getText();
   }
 
+  //optional type inference is recommended
   antlrcpp::Any SQLVisitorImplementation::visitVariableType(SQLParser::VariableTypeContext *context){
-    //optional type inference is recommended
+    DataType type;
+
+    const auto text = context->getText();
+
+    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(text), type)) {
+      throw SyntaxError("Datatype: " + text + " does not exist", CreatePositionErrorMessage(context));
+    }
+
+    return type;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitSetVariableStatement(SQLParser::SetVariableStatementContext *context){
-    auto variableName = std::any_cast<std::string>(visit(context->variableName()));
+    auto* statement = new Statements::SetVariableStatement();
 
-    auto value = context->literalValue()
-        ? std::any_cast<Value>(visit(context->literalValue()))
-        : Value(nullptr, 0);
+    if (context->resultExpression()) {
+      const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(context->resultExpression()));
+      statement->expression = expression;
+    }
 
-    value.SetName(variableName);
+    statement->variable.SetValue(Value(nullptr, 0));
 
-    // value.InferType();
+    auto name = std::any_cast<std::string>(visit(context->variableName()));
 
-    std::cout << "Variable set: " << variableName << " with value: " << value << std::endl;
+    statement->variable.SetName(name);
 
-    return value;
+    const auto type = (context->variableType())
+        ? std::any_cast<DataType>(visit(context->variableType()))
+        : statement->variable.GetValue().GetType();
+
+    statement->variable.SetType(type);
+
+    return statement;
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitResultList(SQLParser::ResultListContext *context){
@@ -619,7 +642,9 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       };
 
     if (context->variableName()) {
-
+      return ExpressionWrapper{
+        new Expressions::VariableExpression(std::any_cast<std::string>(visit(context->variableName())))
+      };
     }
 
     throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));

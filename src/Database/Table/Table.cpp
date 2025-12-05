@@ -464,7 +464,10 @@ namespace DatabaseEngine::StorageTypes {
         return false;
       }
 
-    void Table::HeapDelete(const Expressions::Expression* expression) const
+    void Table::HeapDelete(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const Expressions::Expression* expression
+    ) const
     {
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
@@ -482,6 +485,7 @@ namespace DatabaseEngine::StorageTypes {
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
 
         vector<Row*> rowsToBeInserted;
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         for (const auto &extentId : tableExtentIds)
         {
@@ -500,7 +504,16 @@ namespace DatabaseEngine::StorageTypes {
 
             auto page = StorageManager::Get().GetPage(filename, extentPageId, this);
 
-            page->Delete(expression);
+            const auto* rows = page->GetDataRowsUnsafe();
+
+            for (int i = 0; i < rows->size(); i++) {
+              const auto& row = rows->at(i);
+
+              context.row = row;
+
+              if (expression->Evaluate(context).GetBool())
+                page->Delete(i);
+            }
 
             page->UpdateBytesLeft();
             page->UpdatePageSize();
@@ -523,7 +536,7 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
           return;
 
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         for(const auto& row : results){
 
@@ -829,7 +842,7 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
           for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
           {
@@ -891,7 +904,7 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
           for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
           {
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)

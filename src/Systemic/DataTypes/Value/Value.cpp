@@ -290,8 +290,8 @@ void Value::SetData(const DataTypes::Guid &data){
     this->type = Constants::DataType::Guid;
 }
 
-void Value::SetName(std::string &data){
-    this->name = std::move(data);
+void Value::SetName(std::string &name){
+    this->name = std::move(name);
 }
 
 bool Value::TryParseAsBool(bool& result)const{
@@ -449,8 +449,8 @@ bool Value::IsVariable()const{ return !this->name.empty(); }
 
 ostream & operator<<(ostream& os, const Value &field){
 
-    if (!field.name.empty())
-        os << field.name << ": ";
+    // if (!field.name.empty())
+    //     os << field.name << ": ";
 
     if (field.GetIsNull()) {
         os << "NULL";

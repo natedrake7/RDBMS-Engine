@@ -26,7 +26,7 @@ namespace QueryPipeline::PhysicalPlan {
     return this->code == Errors::RuntimeError::Ok;
   }
 
-   PhysicalPlanExecutionProperties::PhysicalPlanExecutionProperties(const Snapshot &snapshot, const int &batchSize, const Dictionary<std::string, Value>& variables) {
+   PhysicalPlanExecutionProperties::PhysicalPlanExecutionProperties(const Snapshot &snapshot, const int &batchSize, const Dictionary<std::string, Variable>& variables) {
     this->snapshot = snapshot;
     this->batchSize = batchSize;
     this->variables = &variables;
@@ -40,40 +40,26 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalOperator::PhysicalOperator(const DataTypes::Guid &currentSessionId)
     : sessionId(currentSessionId){}
 
-  PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Value &value, std::string &name)
-    : PhysicalOperator(currentSessionId), value(std::move(value)), name(std::move(name)){}
+  PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
+    : PhysicalOperator(currentSessionId), variable(std::move(variable)), expression(expression){}
 
   PhysicalPlanResult * PhysicalDeclareVariable::Execute(const PhysicalPlanExecutionProperties &properties) {
     auto* result = new PhysicalPlanResult();
 
     static auto& server = Server::ServerInstance::Get();
 
-    if (!server.AddVariable(this->sessionId, this->value, this->name)) {
+    const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant, properties.variables);
+
+    auto value = this->expression->Evaluate(context);
+    this->variable.SetValue(value);
+
+    if (!server.AddOrSetVariable(this->sessionId, this->variable)) {
       result->code = Errors::RuntimeError::Error;
       result->message = "Failed to add variable";
     }
 
     result->code = Errors::RuntimeError::Ok;
-    result->message = "Added variable with name: " + this->name;
-
-    return result;
-  }
-
-  PhysicalSetVariable::PhysicalSetVariable(const DataTypes::Guid &currentSessionId, Value &value, std::string &name)
-    : PhysicalOperator(currentSessionId), value(std::move(value)), name(std::move(name)){}
-
-  PhysicalPlanResult * PhysicalSetVariable::Execute(const PhysicalPlanExecutionProperties &properties) {
-    auto* result = new PhysicalPlanResult();
-
-    static auto& server = Server::ServerInstance::Get();
-
-    if (!server.SetVariable(this->sessionId, this->value, this->name)) {
-      result->code = Errors::RuntimeError::Error;
-      result->message = "Failed to add variable";
-    }
-
-    result->code = Errors::RuntimeError::Ok;
-    result->message = "Added variable with name: " + this->name;
+    result->message = "Added variable with name: " + this->variable.GetName();
 
     return result;
   }
@@ -255,7 +241,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     for (const auto& expression : this->resultExpressions)
       result->displayColumnNames.emplace_back(expression->name);
 
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
     for (const auto* row: result->rows) {
       QueryResult resultRow;
@@ -278,12 +264,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalPlanResult * PhysicalProject::ExecuteConstantStatement()const{
+  PhysicalPlanResult * PhysicalProject::ExecuteConstantStatement(const PhysicalPlanExecutionProperties& properties)const{
     auto* result = new PhysicalPlanResult();
 
     QueryResult resultRow;
 
-    const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant);
+    const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant, properties.variables);
 
     for (const auto& expression : this->resultExpressions) {
       result->displayColumnNames.emplace_back(expression->name);
@@ -312,7 +298,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalPlanResult* PhysicalProject::Execute(const PhysicalPlanExecutionProperties& properties){
       return (this->child == nullptr)
-        ? this->ExecuteConstantStatement()
+        ? this->ExecuteConstantStatement(properties)
         : this->ExecuteStatement(properties);
   }
 
@@ -331,7 +317,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       || dynamic_cast<PhysicalIndexSeek*>(child) != nullptr)
       return result;
 
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
     std::vector<const DatabaseEngine::StorageTypes::Row*> filteredRows;
     for (const auto* row : result->rows) {
@@ -487,7 +473,7 @@ PhysicalInsert::PhysicalInsert(
 
     const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->HeapDelete(this->expression);
+    tablePtr->HeapDelete(properties, this->expression);
 
     return result;
   }

@@ -540,12 +540,8 @@ namespace Server {
     return this->sessionManager.UpdateSession(key, databaseId);
   }
 
-  bool ServerInstance::AddVariable(const DataTypes::Guid &sessionId, const Value &value, const std::string &name) const {
-    return this->sessionManager.AddVariable(sessionId, value, name);
-  }
-
-  bool ServerInstance::SetVariable(const DataTypes::Guid &sessionId, const Value &value, const std::string &name) const {
-    return this->sessionManager.SetVariable(sessionId, value, name);
+  bool ServerInstance::AddOrSetVariable(const DataTypes::Guid &sessionId, const Variable& variable) const {
+    return this->sessionManager.AddOrSetVariable(sessionId, variable);
   }
 
   QueryPipeline::Cursor * ServerInstance::CreateCursor(

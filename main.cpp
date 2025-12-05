@@ -110,6 +110,8 @@ int main()
 
     //Get user roles
     //SELECT U.username AS UserName, R.role_name AS RoleName FROM dbo.sys_users AS U INNER JOIN dbo.sys_roles AS R ON R.role_id = U.role_id
+    //SET @TableId INT = '10'
+    //SELECT * FROM dbo.sys_tables WHERE table_id = @TableId
 
     RegisterSignalHandlers();
 

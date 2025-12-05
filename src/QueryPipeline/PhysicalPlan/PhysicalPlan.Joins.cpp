@@ -20,7 +20,7 @@ namespace QueryPipeline::PhysicalPlan {
     const auto* leftResult = this->left->Execute(properties);
     const auto* rightResult = this->right->Execute(properties);
 
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join);
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
 
     //create new row
     for (const auto* outerRow: leftResult->rows) {
@@ -58,7 +58,7 @@ namespace QueryPipeline::PhysicalPlan {
       const auto* leftResult = this->left->Execute(properties);
       const auto* rightResult = this->right->Execute(properties);
 
-      Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join);
+      Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
       //create new row
       for (const auto* outerRow: leftResult->rows) {
 
@@ -116,7 +116,7 @@ namespace QueryPipeline::PhysicalPlan {
       std::vector<bool> leftMatched(leftResult->rows.size(), false);
       std::vector<bool> rightMatched(rightResult->rows.size(), false);
 
-      Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join);
+      Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
 
       for (int i = 0;i < leftResult->rows.size();i++) {
         for (int j = 0;j < rightResult->rows.size();j++) {

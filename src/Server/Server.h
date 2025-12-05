@@ -89,8 +89,7 @@ namespace Server {
     [[nodiscard]] const Network::Session* GetSession(const DataTypes::Guid& key)const;
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& key);
     [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const int32_t& databaseId)const;
-    [[nodiscard]] bool AddVariable(const DataTypes::Guid& sessionId, const Value& value, const std::string& name)const;
-    [[nodiscard]] bool SetVariable(const DataTypes::Guid& sessionId, const Value& value, const std::string& name)const;
+    [[nodiscard]] bool AddOrSetVariable(const DataTypes::Guid& sessionId, const Variable& variable)const;
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,

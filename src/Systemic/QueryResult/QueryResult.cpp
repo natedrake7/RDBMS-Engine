@@ -23,7 +23,7 @@ void QueryResult::Print() const{
 
       switch (column.GetType()){
         case DataType::TinyInt:
-          std::cout << column.GetTinyInt();
+          std::cout << static_cast<int16_t>(column.GetTinyInt());
           break;
         case DataType::SmallInt:
           std::cout << column.GetSmallInt();

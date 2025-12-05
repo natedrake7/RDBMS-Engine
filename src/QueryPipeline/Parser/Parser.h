@@ -1,80 +1,32 @@
 #pragma once
-#include "../Cursor/Cursor.h"
-#include "../PhysicalPlan/PhysicalPlan.h"
-#include "../Statements/Statements.h"
 #include <any>
-#include <functional>
-#include <typeindex>
-
-
-namespace QueryPipeline {
-class Cursor;}using namespace std;
+#include "../../Systemic/DataStructures/Dictionary/Dictionary.h"
+#include "../../Systemic/DataTypes/Variable/Variable.h"
+#include "../../Systemic/Errors/Errors.h"
+#include "../../Systemic/QueryResult/QueryResult.h"
+#include <cstdint>
+#include <string>
 
 namespace QueryPipeline{
 
-        static Dictionary<std::type_index, function<Statements::Statement*(const std::any&)>> handlers = {
-        {
-            typeid(Statements::CreateUserStatement*),
-            [](const auto& r) { return std::any_cast<Statements::CreateUserStatement*>(r); }
-            },
-        {
-            typeid(Statements::GrantRoleStatement*),
-            [](const auto& r) { return std::any_cast<Statements::GrantRoleStatement*>(r); }
-            },
+    namespace Statements {
+        struct Statement;
+    }
 
-            {
-                typeid(Statements::CreateDbStatement*),
-                [](const auto& r) { return std::any_cast<Statements::CreateDbStatement*>(r); }
-            },
+    namespace PhysicalPlan {
+        class PhysicalOperator;
+    }
 
-            {
-                typeid(Statements::UseDatabaseStatement*),
-                [](const auto& r) { return std::any_cast<Statements::UseDatabaseStatement*>(r); }
-            },
+    class LogicalPlan;
+    class Cursor;
 
-            {
-                typeid(Statements::DropDbStatement*),
-                [](const auto& r) { return std::any_cast<Statements::DropDbStatement*>(r); }
-            },
+    struct ParserValidationScope {
+        Dictionary<std::string, Constants::DataType> variables;
+    };
 
-            {
-                typeid(Statements::CreateSchemaStatement*),
-                [](const auto& r) { return std::any_cast<Statements::CreateSchemaStatement*>(r); }
-            },
-
-            {
-                typeid(Statements::SelectStatement*),
-                [](const auto& r) { return std::any_cast<Statements::SelectStatement*>(r); }
-            },
-            {
-                typeid(Statements::CreateTableStatement*),
-                [](const auto& r) { return std::any_cast<Statements::CreateTableStatement*>(r); }
-            },
-            {
-                typeid(Statements::InsertStatement*),
-                [](const auto& r) { return std::any_cast<Statements::InsertStatement*>(r); }
-            },
-
-            {
-                typeid(Statements::DeleteStatement*),
-                [](const auto& r) { return std::any_cast<Statements::DeleteStatement*>(r); }
-            },
-
-            {
-                typeid(Statements::UpdateStatement*),
-                [](const auto& r) { return std::any_cast<Statements::UpdateStatement*>(r); }
-            },
-
-            {
-                typeid(Statements::CreateIndexStatement*),
-                [](const auto& r) { return std::any_cast<Statements::CreateIndexStatement*>(r); }
-            },
-
-            {
-                typeid(Statements::AlterTableStatement*),
-                [](const auto& r) { return std::any_cast<Statements::AlterTableStatement*>(r); }
-            },
-        };
+    // struct StatementValidationScope {
+    //     Dictionary<std::string, table_id_t> tableAliasesDictionary;
+    // };
 
     struct ParserResult {
         Errors::Error status;
@@ -82,14 +34,19 @@ namespace QueryPipeline{
         std::vector<std::string> columns;
         std::vector<Cursor*> cursors;
 
+        ParserValidationScope validationScope;
+
         bool hasMore;
 
         ParserResult() {
             this->hasMore = false;
         }
 
+        void CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables);
+
         explicit ParserResult(const Errors::Error& error);
     };
+
 
     class Parser{
         static std::vector<Statements::Statement*> CreateStatement(const std::any &queries, const DataTypes::Guid& sessionId);
@@ -97,7 +54,7 @@ namespace QueryPipeline{
 
         static std::vector<Statements::Statement*> Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
         static PhysicalPlan::PhysicalOperator* BuildExecutionPlan(ParserResult& result, Statements::Statement* statement);
-        static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId);
+        static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const uint16_t& cursorId);
 
         public:
             Parser();
@@ -109,7 +66,7 @@ namespace QueryPipeline{
                 return instance;
             }
 
-            static ParserResult StartTransaction(const string& query, const DataTypes::Guid& sessionId);
+            static ParserResult StartTransaction(const std::string& query, const DataTypes::Guid& sessionId);
 
             static ParserResult Execute(Cursor* cursor);
 

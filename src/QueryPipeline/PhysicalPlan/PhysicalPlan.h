@@ -16,7 +16,6 @@ namespace DatabaseEngine::StorageTypes {
 }
 
 namespace QueryPipeline::PhysicalPlan{
-
   struct PhysicalPlanResult {
       std::vector<std::string> displayColumnNames;
 
@@ -93,12 +92,11 @@ namespace QueryPipeline::PhysicalPlan{
     Snapshot snapshot;
     int batchSize;
 
-    const Dictionary<std::string, Value>* variables;
+    const Dictionary<std::string, Variable>* variables;
 
-    PhysicalPlanExecutionProperties(const Snapshot& snapshot, const int& batchSize, const Dictionary<std::string, Value>& variables);
+    PhysicalPlanExecutionProperties(const Snapshot& snapshot, const int& batchSize, const Dictionary<std::string, Variable>& variables);
     PhysicalPlanExecutionProperties();
   };
-
 
   class PhysicalOperator {
     protected:
@@ -111,20 +109,11 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalDeclareVariable final : public PhysicalOperator {
-    Value value;
-    std::string name;
+    Variable variable;
+    Expressions::Expression* expression;
 
     public:
-      explicit PhysicalDeclareVariable(const DataTypes::Guid& currentSessionId, Value& value, std::string& name);
-      PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties)override;
-  };
-
-  class PhysicalSetVariable final : public PhysicalOperator {
-    Value value;
-    std::string name;
-
-    public:
-      explicit PhysicalSetVariable(const DataTypes::Guid& currentSessionId, Value& value, std::string& name);
+      explicit PhysicalDeclareVariable(const DataTypes::Guid& currentSessionId, Variable& variable, Expressions::Expression* expression);
       PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties)override;
   };
 
@@ -216,7 +205,7 @@ namespace QueryPipeline::PhysicalPlan{
 
 
     [[nodiscard]] inline PhysicalPlanResult* ExecuteStatement(const PhysicalPlanExecutionProperties& properties);
-    [[nodiscard]] inline PhysicalPlanResult* ExecuteConstantStatement()const;
+    [[nodiscard]] inline PhysicalPlanResult* ExecuteConstantStatement(const PhysicalPlanExecutionProperties& properties)const;
 
     public:
       PhysicalProject(

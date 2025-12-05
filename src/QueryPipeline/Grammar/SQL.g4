@@ -346,11 +346,11 @@ functionName
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 declareVariableStatement
-    : DECLARE variableName (variableType)? (EQUAL literalValue)?;
+    : DECLARE variableName (variableType)? (EQUAL resultExpression)?;
 
 
 setVariableStatement
-    : SET variableName EQUAL literalValue
+    : SET variableName (variableType)? EQUAL resultExpression
     ;
 
 variableName

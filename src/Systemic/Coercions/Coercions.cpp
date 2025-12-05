@@ -187,7 +187,7 @@ namespace DataTypes{
   }
 
   bool Coercions::ToBool(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     switch (valueType) {
       case DataType::TinyInt:
         return Converter<bool>::Stoi(value.GetTinyInt());
@@ -215,7 +215,7 @@ namespace DataTypes{
   }
 
   int8_t Coercions::ToTinyInt(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     switch (valueType) {
       case DataType::TinyInt:
         return *reinterpret_cast<const int8_t *>(value.GetRawData());
@@ -243,7 +243,7 @@ namespace DataTypes{
   }
 
   int16_t Coercions::ToSmallInt(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     switch (valueType) {
       case DataType::TinyInt:
         return *reinterpret_cast<const int8_t *>(value.GetRawData());
@@ -271,7 +271,7 @@ namespace DataTypes{
   }
 
   int32_t Coercions::ToInt(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     switch (valueType) {
       case DataType::TinyInt:
         return *reinterpret_cast<const int8_t *>(value.GetRawData());
@@ -299,7 +299,7 @@ namespace DataTypes{
   }
 
 int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     switch (valueType) {
       case DataType::TinyInt:
         return *reinterpret_cast<const int8_t *>(value.GetRawData());
@@ -327,7 +327,7 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
   }
 
   std::string Coercions::ToString(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     switch (valueType) {
       case DataType::TinyInt:
         return std::to_string(value.GetTinyInt());
@@ -364,7 +364,7 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
   }
 
   Guid Coercions::ToGuid(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     switch (valueType) {
       case DataType::Guid:
         return {value.GetRawData(), value.GetSize()};
@@ -381,7 +381,7 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
   }
 
   DateTime Coercions::ToDateTime(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     switch (valueType) {
       case DataType::UnicodeString:
       case DataType::String: {
@@ -401,7 +401,7 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
   }
 
   Decimal Coercions::ToDecimal(const Value &value, const bool &explicitCast){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
 
     switch (valueType) {
       case DataType::TinyInt:
@@ -433,7 +433,7 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
   }
 
   bool Coercions::CanBeParsedToType(const Constants::DataType &toType, const Value &value){
-    const auto valueType = value.GetType();
+    const auto& valueType = value.GetType();
     const auto coercionType = GetCoercionType(valueType, toType);
 
     if (coercionType == CoercionType::None)

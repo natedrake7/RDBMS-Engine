@@ -3,6 +3,7 @@
 #include "Expressions.Additional.h"
 #include "../Systemic/QueryResult/QueryResult.h"
 #include "../Systemic/DataTypes/Value/Value.h"
+#include "../Systemic/DataTypes/Variable/Variable.h"
 
 namespace DatabaseEngine::StorageTypes {
   class Row;
@@ -39,8 +40,10 @@ namespace Expressions{
 
     QueryResult materializedRow;
 
+    const Dictionary<std::string, Variable>* variables;
+
     EvaluationContext();
-    explicit EvaluationContext(const EvaluationContextType& type);
+    explicit EvaluationContext(const EvaluationContextType& type, const Dictionary<std::string, Variable>* variables);
     explicit EvaluationContext(const DatabaseEngine::StorageTypes::Row* row);
     explicit EvaluationContext(const QueryResult& row);
     EvaluationContext(const DatabaseEngine::StorageTypes::Row* outerRow, const DatabaseEngine::StorageTypes::Row* innerRow);
@@ -155,20 +158,34 @@ namespace Expressions{
 
   class LogicalExpression final : public Expression{
       public:
-      ExpressionType type;
+        ExpressionType type;
 
-      Expression* left;
-      Expression* right;
+        Expression* left;
+        Expression* right;
 
-      LogicalExpression(
-        Expression *leftExpression,
-        Expression *RightExpression,
-        const ExpressionType &type
-      );
-      LogicalExpression();
-      ~LogicalExpression()override;
+        LogicalExpression(
+          Expression *leftExpression,
+          Expression *RightExpression,
+          const ExpressionType &type
+        );
+        LogicalExpression();
+        ~LogicalExpression()override;
 
-    [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
-    [[nodiscard]] DataType GetReturnType() const override;
-};
+        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
+        [[nodiscard]] DataType GetReturnType() const override;
+  };
+
+  class VariableExpression final : public Expression {
+
+    public:
+      std::string name;
+      std::string normalizedName;
+      DataType type;
+
+      explicit VariableExpression(const std::string& name);
+
+      [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
+      [[nodiscard]]DataType GetReturnType() const override;
+
+  };
 }

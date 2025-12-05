@@ -48,27 +48,31 @@ namespace Expressions{
     this->row = nullptr;
     this->outerRow = nullptr;
     this->innerRow = nullptr;
+    this->variables = nullptr;
   }
 
-  EvaluationContext::EvaluationContext(const EvaluationContextType &type) {
-     this->type = type;
-     this->row = nullptr;
-     this->outerRow = nullptr;
-     this->innerRow = nullptr;
+  EvaluationContext::EvaluationContext(const EvaluationContextType &type, const Dictionary<std::string, Variable>* variables) {
+      this->type = type;
+      this->variables = variables;
+      this->row = nullptr;
+      this->outerRow = nullptr;
+      this->innerRow = nullptr;
    }
 
   EvaluationContext::EvaluationContext(const DatabaseEngine::StorageTypes::Row *row){
-     this->type = EvaluationContextType::SingleRow;
-     this->row = row;
-     this->outerRow = nullptr;
-     this->innerRow = nullptr;
+      this->type = EvaluationContextType::SingleRow;
+      this->row = row;
+      this->outerRow = nullptr;
+      this->innerRow = nullptr;
+      this->variables = nullptr;
   }
 
   EvaluationContext::EvaluationContext(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) {
-     this->type = EvaluationContextType::Join;
-     this->outerRow = outerRow;
-     this->innerRow = innerRow;
-     this->row = nullptr;
+      this->type = EvaluationContextType::Join;
+      this->outerRow = outerRow;
+      this->innerRow = innerRow;
+      this->row = nullptr;
+      this->variables = nullptr;
    }
 
   EvaluationContext::EvaluationContext(const QueryResult &row) {
@@ -77,6 +81,7 @@ namespace Expressions{
       this->outerRow = nullptr;
       this->innerRow = nullptr;
       this->materializedRow = row;
+      this->variables = nullptr;
    }
 
   ColumnExpression::ColumnExpression(const std::string &name, const std::string &tableAlias){
@@ -207,6 +212,18 @@ namespace Expressions{
   }
 
   DataType LogicalExpression::GetReturnType() const{ return DataType::Bool; }
+
+   VariableExpression::VariableExpression(const std::string &name) {
+    this->name = name;
+    this->normalizedName = Functions::String::NormalizeString(this->name);
+    this->type = DataType::Invalid;
+  }
+
+  Value VariableExpression::Evaluate(const EvaluationContext &context) const {
+    return context.variables->Get(this->normalizedName).GetValue();
+  }
+
+  DataType VariableExpression::GetReturnType() const { return this->type; }
 
   Value LogicalExpression::Evaluate(const EvaluationContext& context) const {
     switch (this->type) {

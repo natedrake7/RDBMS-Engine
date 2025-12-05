@@ -132,64 +132,64 @@ namespace Pages
             Page::WriteRowToDisk(filePtr, row);
     }
 
-    void Page::Delete(vector<Row*> &deletedRows, const Expressions::Expression *expression){
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+    // void Page::Delete(vector<Row*> &deletedRows, const Expressions::Expression *expression){
+    //     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+    //
+    //     for (int i = 0; i < this->rows.size(); i++) {
+    //         auto* row = this->rows[i];
+    //
+    //         context.row = row;
+    //
+    //         const auto value = expression->Evaluate(context);
+    //         if (value.GetBool()) {
+    //             this->rows.erase(this->rows.begin() + i);
+    //             i--;
+    //
+    //             //remove it from index as well
+    //
+    //             deletedRows.push_back(row);
+    //
+    //             //deleted row, mark it as dirty
+    //             this->isDirty = true;
+    //         }
+    //     }
+    //
+    //     this->header.pageSize = this->rows.size();
+    // }
 
-        for (int i = 0; i < this->rows.size(); i++) {
-            auto* row = this->rows[i];
-
-            context.row = row;
-
-            const auto value = expression->Evaluate(context);
-            if (value.GetBool()) {
-                this->rows.erase(this->rows.begin() + i);
-                i--;
-
-                //remove it from index as well
-
-                deletedRows.push_back(row);
-
-                //deleted row, mark it as dirty
-                this->isDirty = true;
-            }
-        }
-
-        this->header.pageSize = this->rows.size();
-    }
-
-    void Page::Delete(const Expressions::Expression *expression){
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
-
-        for (int i = 0; i < this->rows.size(); i++) {
-            auto* row = this->rows[i];
-
-            context.row = row;
-            const auto value = expression->Evaluate(context);
-            if (value.GetBool()) {
-                this->rows.erase(this->rows.begin() + i);
-                i--;
-
-                RowHeader *rowHeader = row->GetHeader();
-
-                for (const auto &block : row->GetData())
-                {
-                    if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
-                    {
-                        DataObjectPointer objectPointer;
-                        memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
-                    }
-                }
-              //delete row to deallocate space
-              delete row;
-
-              //deleted row, mark it as dirty
-              this->isDirty = true;
-            }
-        }
-
-        this->header.pageSize = this->rows.size();
-        this->UpdateBytesLeft();
-    }
+    // void Page::Delete(const Expressions::Expression *expression){
+    //     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+    //
+    //     for (int i = 0; i < this->rows.size(); i++) {
+    //         auto* row = this->rows[i];
+    //
+    //         context.row = row;
+    //         const auto value = expression->Evaluate(context);
+    //         if (value.GetBool()) {
+    //             this->rows.erase(this->rows.begin() + i);
+    //             i--;
+    //
+    //             RowHeader *rowHeader = row->GetHeader();
+    //
+    //             for (const auto &block : row->GetData())
+    //             {
+    //                 if (rowHeader->largeObjectBitMap->Get(block->GetColumnIndex()))
+    //                 {
+    //                     DataObjectPointer objectPointer;
+    //                     memcpy(&objectPointer, block->GetBlockData(), sizeof(DataObjectPointer));
+    //                 }
+    //             }
+    //           //delete row to deallocate space
+    //           delete row;
+    //
+    //           //deleted row, mark it as dirty
+    //           this->isDirty = true;
+    //         }
+    //     }
+    //
+    //     this->header.pageSize = this->rows.size();
+    //     this->UpdateBytesLeft();
+    // }
 
     void Page::Delete(const int &indexPosition) {
         const auto* row = this->rows[indexPosition];

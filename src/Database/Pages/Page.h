@@ -89,8 +89,8 @@ namespace Pages
         virtual void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
         virtual void WriteToDisk(fstream *filePtr);
 
-        void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
-        void Delete(const Expressions::Expression* expression);
+        // void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
+        // void Delete(const Expressions::Expression* expression);
         void Delete(const int& indexPosition);
 
         void SetFileName(const string &filename);

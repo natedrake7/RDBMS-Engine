@@ -346,7 +346,7 @@ namespace Indexing
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         while (currentNode.Get())
         {
@@ -391,7 +391,7 @@ namespace Indexing
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         while (currentNode.Get())
         {
@@ -536,7 +536,7 @@ namespace Indexing
           updatedColumns.Add(update.GetColumnIndex());
 
         auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         while (currentNode.Get())
         {
@@ -575,7 +575,7 @@ namespace Indexing
             updatedColumns.Add(update->name.index);
 
         auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         while (currentNode.Get())
         {
@@ -716,7 +716,7 @@ namespace Indexing
         auto currentNode = this->SearchKey(*minKey);
         Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
         while (true)
         {
             if (currentNode.Get() == nullptr)

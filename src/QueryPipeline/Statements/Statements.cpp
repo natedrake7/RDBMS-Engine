@@ -6,6 +6,7 @@
 #include "../../Server/Server.h"
 #include "../LogicalPlan/LogicalPlan.h"
 #include "../../Server/Server.Constants.h"
+#include "../Parser/Parser.h"
 
 #include <iostream>
 #include <ranges>
@@ -33,16 +34,42 @@ namespace QueryPipeline::Statements {
     return {Errors::ValidationError::Ok, ""};
   }
 
-  Errors::ValidationStatus Statement::ValidateStatement(){
+  Errors::ValidationStatus Statement::ValidateStatement(ParserValidationScope& validationScope){
     auto result = this->ValidateBase();
 
     if (!result.IsOk())
       return result;
 
-    return this->Validate();
+    return this->Validate(validationScope);
   }
 
-  Errors::ValidationStatus DeclareVariableStatement::Validate() {
+  Errors::ValidationStatus DeclareVariableStatement::Validate(ParserValidationScope& validationScope) {
+    const auto& type = this->variable.GetType();
+
+    if (this->expression) {
+      auto res = ResolveExpressionAliases(validationScope, this, this->expression);
+
+      if (!res.IsOk())
+        return res;
+
+      if (type != DataType::Invalid && !ValidateExpressionCoercionTypes(type, this->expression)) {
+
+        ostringstream os;
+
+        os  << "Cannot convert from: "
+            << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
+            << " to type: " << ColumnTypesToStringDictionary.Get(type)
+            << " safely";
+
+        return {Errors::ValidationError::Error, os.str()};
+      }
+
+      if (type == DataType::Invalid)
+        this->variable.SetType(this->expression->GetReturnType());
+    }
+
+    validationScope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
+
     return {};
   }
 
@@ -51,10 +78,36 @@ namespace QueryPipeline::Statements {
   }
 
   QueryPipeline::LogicalPlan * DeclareVariableStatement::ToLogical() {
-    return new LogicalDeclareVariable(this->sessionId, this->value, this->name);
+    return new LogicalDeclareVariable(this->sessionId, this->variable, this->expression);
   }
 
-  Errors::ValidationStatus SetVariableStatement::Validate() {
+  Errors::ValidationStatus SetVariableStatement::Validate(ParserValidationScope& validationScope) {
+    const auto& type = this->variable.GetType();
+
+    if (this->expression) {
+      auto res = ResolveExpressionAliases(validationScope, this, this->expression);
+
+      if (!res.IsOk())
+        return res;
+
+      if (type != DataType::Invalid && !ValidateExpressionCoercionTypes(type, this->expression)) {
+
+        ostringstream os;
+
+        os  << "Cannot convert from: "
+            << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
+            << " to type: " << ColumnTypesToStringDictionary.Get(type)
+            << " safely";
+
+        return {Errors::ValidationError::Error, os.str()};
+      }
+
+      if (type == DataType::Invalid)
+        this->variable.SetType(this->expression->GetReturnType());
+    }
+
+    validationScope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
+
     return {};
   }
 
@@ -63,10 +116,10 @@ namespace QueryPipeline::Statements {
   }
 
   QueryPipeline::LogicalPlan * SetVariableStatement::ToLogical() {
-    return new LogicalSetVariable(this->sessionId, this->value, this->name);
+    return new LogicalDeclareVariable(this->sessionId, this->variable, this->expression);
   }
 
-  Errors::ValidationStatus CreateUserStatement::Validate(){
+  Errors::ValidationStatus CreateUserStatement::Validate(ParserValidationScope& validationScope){
     if (this->username.empty())
       return {Errors::ValidationError::Error,  "username cannot be empty"};
 
@@ -102,7 +155,7 @@ namespace QueryPipeline::Statements {
     return new LogicalCreateUser(this->sessionId, this->username, this->password, this->role);
   }
 
-  Errors::ValidationStatus GrantRoleStatement::Validate(){
+  Errors::ValidationStatus GrantRoleStatement::Validate(ParserValidationScope& validationScope){
     const auto& server = Server::ServerInstance::Get();
 
     ostringstream os;
@@ -127,7 +180,7 @@ namespace QueryPipeline::Statements {
     return new LogicalGrantRole(this->sessionId, this->username, this->role);
   }
 
-  Errors::ValidationStatus DeleteStatement::Validate(){
+  Errors::ValidationStatus DeleteStatement::Validate(ParserValidationScope& validationScope){
     auto result = this->table->Validate(this->databaseId);
 
     if (!result.IsOk())
@@ -156,7 +209,7 @@ namespace QueryPipeline::Statements {
     this->expression = nullptr;
   }
 
-  Errors::ValidationStatus JoinStatement::Validate(){
+  Errors::ValidationStatus JoinStatement::Validate(ParserValidationScope& validationScope){
     return {};
   }
 
@@ -204,7 +257,7 @@ namespace QueryPipeline::Statements {
     this->constraint = nullptr;
   }
 
-  Errors::ValidationStatus CreateTableStatement::Validate(){
+  Errors::ValidationStatus CreateTableStatement::Validate(ParserValidationScope& validationScope){
     auto result = this->table->ValidateTableCreate(this->databaseId);
 
     if (!result.IsOk())
@@ -331,16 +384,16 @@ namespace QueryPipeline::Statements {
 
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
-  Errors::ValidationStatus SelectStatement::Validate(){
-    ostringstream os;
+  Errors::ValidationStatus SelectStatement::Validate(ParserValidationScope& validationScope){
     if (!this->joins.empty() && this->table == nullptr) {
+      ostringstream os;
       os << "Joins were specified but no calling table was not specified";
       return {Errors::ValidationError::Error, os.str()};
     }
 
     //resolve expressions here since no column is to be used
     if (this->table == nullptr)
-      return this->ValidateNoTableStatement();
+      return this->ValidateNoTableStatement(validationScope);
 
     auto tableResult = this->table->Validate(this->databaseId);
     if (!tableResult.IsOk())
@@ -354,12 +407,12 @@ namespace QueryPipeline::Statements {
         return joinResult;
     }
 
-    return this->ResolveAliases(aliasesDictionary);
+    return this->ResolveAliases(validationScope, aliasesDictionary);
   }
 
-  Errors::ValidationStatus SelectStatement::ValidateNoTableStatement(){
+  Errors::ValidationStatus SelectStatement::ValidateNoTableStatement(ParserValidationScope& validationScope){
     for (const auto& resultExpr : this->results){
-      auto exprResult = ResolveExpressionAliases(this, resultExpr);
+      auto exprResult = ResolveExpressionAliases(validationScope, this, resultExpr);
 
       if (!exprResult.IsOk())
         return exprResult;
@@ -371,7 +424,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus SelectStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+  Errors::ValidationStatus SelectStatement::ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
     this->tableColumnsDictionary.Add(this->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId));
@@ -384,7 +437,7 @@ namespace QueryPipeline::Statements {
 
     //start resolving aliases
     for (int i = 0; i < this->results.size(); i++) {
-      auto expressionResult = ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, this->results[i], &i);
+      auto expressionResult = ResolveExpressionAliases(validationScope, tableAliasesDictionary, this->tableColumnsDictionary, this, this->results[i], &i);
 
       if (!expressionResult.IsOk())
         return expressionResult;
@@ -397,7 +450,7 @@ namespace QueryPipeline::Statements {
       if (!this->where.IsValid())
         return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
 
-      auto expressionResult = ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression, &indexPos);
+      auto expressionResult = ResolveExpressionAliases(validationScope, tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression, &indexPos);
       if (!expressionResult.IsOk())
         return expressionResult;
     }
@@ -405,7 +458,7 @@ namespace QueryPipeline::Statements {
     //validate join expressions
 
     for (const auto& join: this->joins) {
-      auto expressionResult = ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, join->expression);
+      auto expressionResult = ResolveExpressionAliases(validationScope, tableAliasesDictionary,this->tableColumnsDictionary, this, join->expression);
 
       if (!expressionResult.IsOk())
         return expressionResult;
@@ -657,7 +710,7 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::DB_READER_PERMISSIONS;
   }
 
-  Errors::ValidationStatus CreateDbStatement::Validate(){
+  Errors::ValidationStatus CreateDbStatement::Validate(ParserValidationScope& validationScope){
     if (Server::ServerInstance::Get().DatabaseExists(this->name)) {
       ostringstream os;
       os << "Database " + this->name + " already exists";
@@ -676,7 +729,7 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::ADMIN_PERMISSIONS;
   }
 
-   Errors::ValidationStatus DropDbStatement::Validate(){
+   Errors::ValidationStatus DropDbStatement::Validate(ParserValidationScope& validationScope){
     ostringstream os;
 
     const auto database = Server::ServerInstance::Get().SelectDatabase(this->name);
@@ -702,7 +755,7 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::ADMIN_PERMISSIONS;
   }
 
-  Errors::ValidationStatus UseDatabaseStatement::Validate(){
+  Errors::ValidationStatus UseDatabaseStatement::Validate(ParserValidationScope& validationScope){
     const auto dbHeader = Server::ServerInstance::Get().SelectDatabase(this->name);
 
     if (dbHeader.id == Constants::INVALID_DATABASE_ID) {
@@ -809,7 +862,7 @@ namespace QueryPipeline::Statements {
 
   bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
-  Errors::ValidationStatus InsertStatement::ValidateSelectStatement()const{
+  Errors::ValidationStatus InsertStatement::ValidateSelectStatement(ParserValidationScope& validationScope)const{
 
     if (this->selectStatement == nullptr)
       return {};
@@ -819,7 +872,7 @@ namespace QueryPipeline::Statements {
 
     this->selectStatement->databaseId = this->databaseId;
 
-    auto selectStatus = this->selectStatement->Validate();
+    auto selectStatus = this->selectStatement->Validate(validationScope);
     if (!selectStatus.IsOk())
       return selectStatus;
 
@@ -834,7 +887,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus InsertStatement::ResolveAliases(){
+  Errors::ValidationStatus InsertStatement::ResolveAliases(ParserValidationScope& validationScope){
     Dictionary<std::string, table_id_t> tableAliasesDictionary{
       {this->table->GetAlias(), this->table->tableId}
     };
@@ -844,7 +897,7 @@ namespace QueryPipeline::Statements {
       for (int i = 0;i < insertColumns.size(); i++) {
         const auto& value = insertColumns[i];
 
-        auto expressionStatus = ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, value);
+        auto expressionStatus = ResolveExpressionAliases(validationScope, tableAliasesDictionary, this->tableColumnsDictionary, this, value);
         if (!expressionStatus.IsOk())
           return expressionStatus;
 
@@ -857,7 +910,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
   //TODO validate length of columns to match max record_size from master DB
-  Errors::ValidationStatus InsertStatement::Validate(){
+  Errors::ValidationStatus InsertStatement::Validate(ParserValidationScope& validationScope){
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "No table was specified"};
 
@@ -921,8 +974,8 @@ namespace QueryPipeline::Statements {
     }
 
     return (this->HasSelectStatement())
-      ? this->ValidateSelectStatement()
-      : this->ResolveAliases();
+      ? this->ValidateSelectStatement(validationScope)
+      : this->ResolveAliases(validationScope);
   }
 
   LogicalPlan* InsertStatement::ToLogical() {
@@ -938,7 +991,7 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::DB_WRITER_PERMISSIONS;
   }
 
-  Errors::ValidationStatus CreateSchemaStatement::Validate(){
+  Errors::ValidationStatus CreateSchemaStatement::Validate(ParserValidationScope& validationScope){
     if (Server::ServerInstance::Get().SchemaExists(this->databaseId, this->name)) {
       ostringstream os;
       os << "Schema " << this->name << " already exists";
@@ -1001,7 +1054,7 @@ namespace QueryPipeline::Statements {
     return {Errors::ValidationError::Error, os.str()};
   }
 
-  Errors::ValidationStatus UpdateStatement::ResolveAliases(Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+  Errors::ValidationStatus UpdateStatement::ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
     this->tableColumnsDictionary.Add(this->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId));
@@ -1014,7 +1067,7 @@ namespace QueryPipeline::Statements {
       if (!columnAliasStatus.IsOk())
         return columnAliasStatus;
 
-      auto expressionStatus = ResolveExpressionAliases(tableAliasesDictionary, this->tableColumnsDictionary, this, update->value);
+      auto expressionStatus = ResolveExpressionAliases(validationScope, tableAliasesDictionary, this->tableColumnsDictionary, this, update->value);
       if (!expressionStatus.IsOk())
           return expressionStatus;
 
@@ -1028,7 +1081,7 @@ namespace QueryPipeline::Statements {
       if (!this->where.IsValid())
         return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
 
-      auto expessionStatus = ResolveExpressionAliases(tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression);
+      auto expessionStatus = ResolveExpressionAliases(validationScope, tableAliasesDictionary,this->tableColumnsDictionary, this, this->where.expression);
       if (!expessionStatus.IsOk())
         return expessionStatus;
     }
@@ -1037,7 +1090,7 @@ namespace QueryPipeline::Statements {
   }
 
 
-Errors::ValidationStatus UpdateStatement::Validate(){
+Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& validationScope){
 
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "Table was not specified"};
@@ -1047,7 +1100,7 @@ Errors::ValidationStatus UpdateStatement::Validate(){
       return tableStatus;
 
     Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
-    return this->ResolveAliases(aliasesDictionary);
+    return this->ResolveAliases(validationScope, aliasesDictionary);
   }
 
   QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
@@ -1058,7 +1111,7 @@ Errors::ValidationStatus UpdateStatement::Validate(){
     return Server::ServerConstants::DB_WRITER_PERMISSIONS;
   }
 
-  Errors::ValidationStatus CreateIndexStatement::Validate(){
+  Errors::ValidationStatus CreateIndexStatement::Validate(ParserValidationScope& validationScope){
     auto tableStatus = this->table->Validate(this->databaseId);
     if (!tableStatus.IsOk())
       return tableStatus;
@@ -1220,7 +1273,7 @@ Errors::ValidationStatus UpdateStatement::Validate(){
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::Validate(){
+  Errors::ValidationStatus AlterTableStatement::Validate(ParserValidationScope& validationScope){
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "Table was not specified"};
 
@@ -1410,16 +1463,18 @@ Errors::ValidationStatus UpdateStatement::Validate(){
   }
 
   Errors::ValidationStatus ResolveExpressionAliases(
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    Statement *statement,
-    Expressions::Expression *expr,
-    int* indexPos){
+      ParserValidationScope& validationScope,
+      const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+      Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+      Statement *statement,
+      Expressions::Expression *expr,
+      int* indexPos
+    ){
 
     ostringstream os;
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
-      auto result = ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos)
-            && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos);
+      auto result = ResolveExpressionAliases(validationScope, tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->left, indexPos)
+            && ResolveExpressionAliases(validationScope, tableAliasesDictionary, tablesColumnsDictionary, statement, binaryExpr->right, indexPos);
 
       if (!result.IsOk())
         return result;
@@ -1446,7 +1501,7 @@ Errors::ValidationStatus UpdateStatement::Validate(){
 
       //validate children expressions and assign return types and ids to column expressions
       for (auto* childExpr : functionExpr->arguments) {
-        auto childExpressionResult = ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos);
+        auto childExpressionResult = ResolveExpressionAliases(validationScope, tableAliasesDictionary, tablesColumnsDictionary, statement, childExpr, indexPos);
 
         if (!childExpressionResult.IsOk())
           return childExpressionResult;
@@ -1464,8 +1519,8 @@ Errors::ValidationStatus UpdateStatement::Validate(){
     }
 
     if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
-      auto result = ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->left, indexPos)
-                && ResolveExpressionAliases(tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos);
+      auto result = ResolveExpressionAliases(validationScope, tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->left, indexPos)
+                && ResolveExpressionAliases(validationScope, tableAliasesDictionary, tablesColumnsDictionary, statement, logicalExpr->right, indexPos);
 
       if (!result.IsOk())
         return result;
@@ -1476,10 +1531,21 @@ Errors::ValidationStatus UpdateStatement::Validate(){
         const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
         const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
 
-        os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
+        os << "Invalid conversion between " << leftTypeStr << " and " << rightTypeStr <<".Use explicit cast";
 
         return {Errors::ValidationError::Error, os.str()};
       }
+    }
+
+    if (auto* variableExpr = dynamic_cast<Expressions::VariableExpression*>(expr)) {
+      //check if it exists the rest of the mechanism will catch it and as
+      DataType type;
+      if (!validationScope.variables.TryGetValue(variableExpr->normalizedName, type)) {
+        os << "Variable: " << variableExpr->name <<" was not declared in this scope";
+        return {Errors::ValidationError::Error, os.str()};
+      }
+
+      variableExpr->type = type;
     }
 
     return {};
@@ -1514,11 +1580,24 @@ Errors::ValidationStatus UpdateStatement::Validate(){
 
       return DataTypes::Coercions::IsCoercionAllowed(left->GetReturnType(), rightColumn->GetReturnType());
     }
+
     if (leftColumn != nullptr && rightColumn != nullptr)
       return DataTypes::Coercions::IsCoercionAllowed(leftColumn->GetReturnType(), rightColumn->GetReturnType()) ||
              DataTypes::Coercions::IsCoercionAllowed(rightColumn->GetReturnType(), leftColumn->GetReturnType());
 
     return true;
+  }
+
+  bool ValidateExpressionCoercionTypes(const DataType &type, const Expressions::Expression *expression) {
+    if (auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(expression)) {
+      if (literalExpr->value.GetIsNull()
+        || DataTypes::Coercions::CanBeParsedToType(type, literalExpr->value))
+        return true;
+
+      return DataTypes::Coercions::IsCoercionAllowed(literalExpr->GetReturnType(), type);
+    }
+
+    return DataTypes::Coercions::IsCoercionAllowed(expression->GetReturnType(), type);
   }
 
   Errors::ValidationStatus ResolvePostProjectionAliases(
@@ -1555,13 +1634,24 @@ Errors::ValidationStatus UpdateStatement::Validate(){
     return {};
   }
 
-  Errors::ValidationStatus ResolveExpressionAliases(Statement *statement, Expressions::Expression *expr){
-    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
-      return  ResolveExpressionAliases(statement, binaryExpr->left) &&
-              ResolveExpressionAliases(statement, binaryExpr->right);
+  Errors::ValidationStatus  ResolveExpressionAliases(ParserValidationScope& validationScope, Statement *statement, Expressions::Expression *expr){
+    ostringstream os;
+    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
+      auto result = ResolveExpressionAliases(validationScope, statement, binaryExpr->left)
+                      && ResolveExpressionAliases(validationScope, statement, binaryExpr->right);
+      if (!result.IsOk())
+        return result;
+
+      if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
+        const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
+        const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+
+        os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
+        return {Errors::ValidationError::Error, os.str()};
+      }
+    }
 
     if (const auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
-        ostringstream os;
         os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
 
         return {Errors::ValidationError::Error, os.str()};
@@ -1575,7 +1665,7 @@ Errors::ValidationStatus UpdateStatement::Validate(){
       }
 
       for (auto* childExpr : functionExpr->arguments) {
-        auto childExpressionResult = ResolveExpressionAliases(statement, childExpr);
+        auto childExpressionResult = ResolveExpressionAliases(validationScope, statement, childExpr);
 
         if (!childExpressionResult.IsOk())
           return childExpressionResult;
@@ -1584,10 +1674,40 @@ Errors::ValidationStatus UpdateStatement::Validate(){
 
     if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
       //validate type
+      auto result = ResolveExpressionAliases(validationScope, statement, logicalExpr->left)
+              && ResolveExpressionAliases(validationScope, statement, logicalExpr->right);
 
-      return ResolveExpressionAliases(statement, logicalExpr->left)
-        && ResolveExpressionAliases(statement, logicalExpr->right);
+      if (!result.IsOk())
+        return result;
+
+      //validate type
+      if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
+
+        const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
+        const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
+
+        os << "Invalid conversion between " << leftTypeStr << " and " << rightTypeStr <<".Use explicit cast";
+
+        return {Errors::ValidationError::Error, os.str()};
+      }
     }
+
+    if (auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(expr)) {
+      DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
+      return {};
+    }
+
+    if (auto* variableExpr = dynamic_cast<Expressions::VariableExpression*>(expr)) {
+      //check if it exists the rest of the mechanism will catch it and as
+      DataType type;
+      if (!validationScope.variables.TryGetValue(variableExpr->normalizedName, type)) {
+        os << "Variable: " << variableExpr->name <<" was not declared in this scope";
+        return {Errors::ValidationError::Error, os.str()};
+      }
+
+      variableExpr->type = type;
+    }
+
 
     //TODO Validate Literals and functions
 

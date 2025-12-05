@@ -2,6 +2,7 @@
 #include "../DataStructures/SortedDictionary/SortedDictionary.h"
 #include "../DataTypes/Guid/Guid.h"
 #include "../DataTypes/DateTime/DateTime.h"
+#include "../DataTypes/Variable/Variable.h"
 #include "../Security/Security.h"
 
 namespace QueryPipeline {
@@ -21,7 +22,7 @@ namespace Network {
     int32_t databaseId;
 
     SortedDictionary<uint16_t, QueryPipeline::Cursor*> cursors;
-    Dictionary<std::string, Value> variables;
+    Dictionary<std::string, Variable> variables;
 
     uint16_t nextCursorId;
 

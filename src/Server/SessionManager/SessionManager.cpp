@@ -69,7 +69,7 @@ namespace Server::Sessions {
     return true;
   }
 
-  bool SessionManager::AddVariable(const DataTypes::Guid &id, const Value &value, const std::string &name)const {
+  bool SessionManager::AddOrSetVariable(const DataTypes::Guid &id, const Variable& variable)const {
     MultiThreading::WriterGuard guard(&this->mutex);
 
     auto* session = this->TryGetSessionWithoutLock(id);
@@ -77,30 +77,7 @@ namespace Server::Sessions {
     if (session == nullptr)
       return false;
 
-
-    if (session->variables.Contains(name)) {
-      session->variables[name] = value;
-      return true;
-    }
-
-    session->variables.Add(name, value);
-    return true;
-  }
-
-  bool SessionManager::SetVariable(const DataTypes::Guid &id, const Value &value, const std::string &name)const {
-    MultiThreading::WriterGuard guard(&this->mutex);
-
-    auto* session = this->TryGetSessionWithoutLock(id);
-
-    if (session == nullptr)
-      return false;
-
-    if (!session->variables.Contains(name)) {
-      session->variables.Add(name, value);
-      return true;
-    }
-
-    session->variables[name] = value;
+    session->variables.AddOrUpdate(variable.GetNormalizedName(), variable);
     return true;
   }
 

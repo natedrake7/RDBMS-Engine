@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "SQLParser.h"
+#include <typeindex>
 #include "../../Database/TransactionManager/TransactionManager.h"
 #include "../../Server/Server.h"
 #include "../Cursor/Cursor.h"
@@ -14,17 +15,96 @@
 #include <SQLBaseListener.h>
 #include <SQLLexer.h>
 
+
 namespace QueryPipeline
 {
+    static Dictionary<std::type_index, std::function<Statements::Statement*(const std::any&)>> handlers = {
+    {
+        typeid(Statements::CreateUserStatement*),
+        [](const auto& r) { return std::any_cast<Statements::CreateUserStatement*>(r); }
+        },
+    {
+        typeid(Statements::GrantRoleStatement*),
+        [](const auto& r) { return std::any_cast<Statements::GrantRoleStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::CreateDbStatement*),
+            [](const auto& r) { return std::any_cast<Statements::CreateDbStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::UseDatabaseStatement*),
+            [](const auto& r) { return std::any_cast<Statements::UseDatabaseStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::DropDbStatement*),
+            [](const auto& r) { return std::any_cast<Statements::DropDbStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::CreateSchemaStatement*),
+            [](const auto& r) { return std::any_cast<Statements::CreateSchemaStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::SelectStatement*),
+            [](const auto& r) { return std::any_cast<Statements::SelectStatement*>(r); }
+        },
+        {
+            typeid(Statements::CreateTableStatement*),
+            [](const auto& r) { return std::any_cast<Statements::CreateTableStatement*>(r); }
+        },
+        {
+            typeid(Statements::InsertStatement*),
+            [](const auto& r) { return std::any_cast<Statements::InsertStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::DeleteStatement*),
+            [](const auto& r) { return std::any_cast<Statements::DeleteStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::UpdateStatement*),
+            [](const auto& r) { return std::any_cast<Statements::UpdateStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::CreateIndexStatement*),
+            [](const auto& r) { return std::any_cast<Statements::CreateIndexStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::AlterTableStatement*),
+            [](const auto& r) { return std::any_cast<Statements::AlterTableStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::DeclareVariableStatement*),
+            [](const auto& r) { return std::any_cast<Statements::DeclareVariableStatement*>(r); }
+        },
+
+        {
+            typeid(Statements::SetVariableStatement*),
+            [](const auto& r) { return std::any_cast<Statements::SetVariableStatement*>(r); }
+        },
+    };
+
     Parser::Parser() = default;
 
-     ParserResult::ParserResult(const Errors::Error &error){
+     void ParserResult::CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables){
+        for (const auto& [key, variable] : sessionVariables)
+            this->validationScope.variables.ForceAdd(key, variable.GetType());
+    }
+
+    ParserResult::ParserResult(const Errors::Error &error){
         this->status = error;
         this->hasMore = false;
      }
 
     std::vector<Statements::Statement*> Parser::CreateStatement(const std::any &queries, const DataTypes::Guid& sessionId){
-        function<Statements::Statement *(const any &)> handler;
 
         std::vector<Statements::Statement*> statements;
 
@@ -32,6 +112,8 @@ namespace QueryPipeline
         const auto* session = Server::ServerInstance::Get().GetSession(sessionId);
 
          for (const auto& query: castQueries) {
+
+             function<Statements::Statement *(const any &)> handler;
 
              if (!handlers.TryGetValue(query.type(), handler))
                  return {};
@@ -103,7 +185,7 @@ namespace QueryPipeline
      }
 
     PhysicalPlan::PhysicalOperator * Parser::BuildExecutionPlan(ParserResult &result, Statements::Statement *statement) {
-        auto validation = statement->ValidateStatement();
+        auto validation = statement->ValidateStatement(result.validationScope);
         if (!validation.IsOk()) {
             result.status  = {true, validation.message};
             return nullptr;
@@ -132,15 +214,19 @@ namespace QueryPipeline
     }
 
     ParserResult Parser::StartTransaction(const string &query, const DataTypes::Guid &sessionId){
+        static const auto& server = Server::ServerInstance::Get();
+        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
+
         ParserResult result;
+
+        const auto* session = server.GetSession(sessionId);
+
+        result.CreateValidationScope(session->variables);
 
         const auto statements = Parser::Parse(result, sessionId, query);
 
         if (result.status.hasError)
             return result;
-
-        static const auto& server = Server::ServerInstance::Get();
-        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
         for (auto* statement: statements) {
             auto* physicalPlan = Parser::BuildExecutionPlan(result, statement);
@@ -155,7 +241,6 @@ namespace QueryPipeline
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
 
-            const auto* session = server.GetSession(sessionId);
 
             const PhysicalPlan::PhysicalPlanExecutionProperties properties(snapshot,1000, session->variables);
 

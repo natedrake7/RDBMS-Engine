@@ -110,7 +110,7 @@ class Value {
 
         void SetData(const DataTypes::Guid& data);
 
-        void SetName(std::string& data);
+        void SetName(std::string& name);
 
         [[nodiscard]] const Constants::block_size_t& GetSize() const;
 
