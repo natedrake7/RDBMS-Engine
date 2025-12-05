@@ -17,6 +17,8 @@ namespace QueryPipeline {
 
 namespace QueryPipeline::Statements {
 
+  struct SelectStatement;
+
   struct StatementValidationScope {
     Dictionary<std::string, table_id_t> tableAliasesDictionary;
     Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> tablesColumnsDictionary;
@@ -137,6 +139,10 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] std::string GetFullName()const;
     [[nodiscard]] Errors::ValidationStatus Validate(const int32_t& selectedDatabaseId);
     [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const int32_t& selectedDatabaseId);
+  };
+
+  struct SubQuery : DataSource {
+    Statements::SelectStatement* statement;
   };
 
   struct Inserts {

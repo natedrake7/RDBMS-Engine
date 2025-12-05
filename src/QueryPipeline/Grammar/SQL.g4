@@ -46,7 +46,7 @@ grantRoleStatement
 ////////////////////////////////////////////////////////////
 selectStatement
             :   SELECT top? distinct? resultList
-                (FROM tableName)?
+                (FROM datasource)?
                 ((joinStatement)*)?
                 whereClause?
                 orderByStatement?
@@ -339,6 +339,16 @@ functionName
     : IDENTIFIER
     | LEFT  { _input->LA(1) == LAPRENT }?
     | RIGHT { _input->LA(1) == LAPRENT }?
+    ;
+
+//Datasource Declaration
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+datasource
+    : tableName
+    | LAPRENT selectStatement RAPRENT
     ;
 
 //Variable Declaration

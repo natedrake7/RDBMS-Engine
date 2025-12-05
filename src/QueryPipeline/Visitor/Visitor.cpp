@@ -87,8 +87,8 @@ namespace QueryPipeline {
 
     statement->results = std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(context->resultList()));
 
-    statement->table = (context->tableName() != nullptr)
-              ? std::any_cast<Statements::DataSource*>(visit(context->tableName()))
+    statement->table = (context->datasource() != nullptr)
+              ? std::any_cast<Statements::DataSource*>(visit(context->datasource()))
               : nullptr;
 
     for (auto* join : context->joinStatement())
@@ -101,6 +101,16 @@ namespace QueryPipeline {
       statement->orderBy = std::any_cast<Statements::OrderByStatement*>(visit(context->orderByStatement()));
 
     return statement;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitDatasource(SQLParser::DatasourceContext *context) {
+    if (context->tableName())
+      return std::any_cast<Statements::DataSource*>(visit(context->tableName()));
+
+    if (context->selectStatement())
+      return std::any_cast<Statements::DataSource*>(visit(context->selectStatement()));
+
+    throw SyntaxError("Invalid Data source specified", CreatePositionErrorMessage(context));
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitWhereClause(SQLParser::WhereClauseContext *context){
