@@ -12,16 +12,6 @@
 #include <vector>
 
 
-// handle updates
-// deletes
-// row ids
-// object ids
-//truncate should deallocate the space used by the pages instead of marking it as free?
-//delete should defragment pages when done and combine them on heap files.
-//handle joins
-//deletes
-//advanced functions
-
 //TODO
 //Add Decimal (division remains)
 //Add Alter table (test alter drop and rename)
@@ -100,18 +90,8 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId);
 
 int main()
 {
-    //UPDATE dbo.Actors SET Name = CONCAT('Kalimera', 'HEllo')
-    //CREATE DATABASE MoviesDB
-    //CREATE TABLE dbo.Movies (ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), ReleaseDate DATETIME)
-    //INSERT INTO dbo.Movies(Name, ReleaseDate)VALUES('Batman', GETDATE())
-
     //Get table stats
     //SELECT TOP(1) TS.table_id AS ID, T.name AS Name, TS.row_count AS RowCount, TS.avg_record_size AS RowSize FROM masterDb.dbo.sys_table_stats AS TS INNER JOIN masterDb.dbo.sys_tables AS T ON T.table_id = TS.table_id AS TS ORDER BY ID DESC
-
-    //Get user roles
-    //SELECT U.username AS UserName, R.role_name AS RoleName FROM dbo.sys_users AS U INNER JOIN dbo.sys_roles AS R ON R.role_id = U.role_id
-    //SET @TableId INT = '10'
-    //SELECT * FROM dbo.sys_tables WHERE table_id = @TableId
 
     RegisterSignalHandlers();
 
