@@ -93,6 +93,12 @@ namespace Expressions{
   };
 
   class BinaryExpression final : public Expression {
+      [[nodiscard]] bool ValidateAddition()const;
+      [[nodiscard]] bool ValidateSubtraction()const;
+      [[nodiscard]] bool ValidateMultiplication()const;
+      [[nodiscard]] bool ValidateDivision()const;
+      [[nodiscard]] bool ValidateModulo()const;
+
     public:
       Expressions::Expression* left;
       Expression* right;
@@ -104,6 +110,8 @@ namespace Expressions{
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
       [[nodiscard]] DataType GetReturnType() const override;
+
+      [[nodiscard]] bool ValidateOperation()const;
   };
 
   class FunctionExpression final : public Expression {

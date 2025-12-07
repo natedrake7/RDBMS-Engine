@@ -320,7 +320,8 @@ namespace Constants
         {DataType::String, "String"},
         {DataType::Decimal, "Decimal"},
         {DataType::UnicodeString, "Unicodestring"},
-        {DataType::Guid, "Guid"}
+        {DataType::Guid, "Guid"},
+        {DataType::Invalid, "Invalid"}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 }

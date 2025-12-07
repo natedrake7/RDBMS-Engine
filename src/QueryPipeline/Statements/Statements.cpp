@@ -1679,6 +1679,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (!result.IsOk())
       return result;
 
+    //validate binary expression action
     if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
       ostringstream os;
 
@@ -1686,6 +1687,16 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
 
       os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    if (!binaryExpr->ValidateOperation()) {
+      ostringstream os;
+      os  << "Invalid operation between datatypes: "
+          << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
+          << " and "
+          << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+
       return {Errors::ValidationError::Error, os.str()};
     }
 
@@ -1715,6 +1726,16 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
 
       os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    if (!binaryExpr->ValidateOperation()) {
+      ostringstream os;
+      os  << "Invalid operation between datatypes: "
+          << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
+          << " and "
+          << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+
       return {Errors::ValidationError::Error, os.str()};
     }
 

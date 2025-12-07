@@ -291,11 +291,13 @@ void ConnectionManager::CloseServerConnection() const
 
     const auto headerBytesRead = recv(clientSocket, buffer.data(), Network::ConnectionProtocolHeader::GetSize(), 0);
 
+#ifdef WIN32
     const int err = WSAGetLastError();
     if (err == WSAEWOULDBLOCK) {
       // No data available now — just return and continue
       return;
     }
+#endif
 
     if (headerBytesRead > 0) {
       Network::ConnectionProtocolHeader header;

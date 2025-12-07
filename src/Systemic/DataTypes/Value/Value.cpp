@@ -779,7 +779,7 @@ Value operator<(const Value &lhs, const Value &rhs){
                 + ColumnTypesToStringDictionary.Get(lhs.type)
                 + " and right operand has type: "
                 + ColumnTypesToStringDictionary.Get(rhs.type)
-                );
+            );
     }
 }
 

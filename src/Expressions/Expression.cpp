@@ -163,6 +163,128 @@ namespace Expressions{
     return Value::PromoteType(leftType, rightType);
   }
 
+
+  bool BinaryExpression::ValidateAddition()const{
+    const auto leftType = this->left->GetReturnType();
+    const auto rightType = this->right->GetReturnType();
+
+    switch (Value::PromoteType(leftType, rightType)) {
+      case Constants::DataType::TinyInt:
+      case Constants::DataType::SmallInt:
+      case Constants::DataType::Int:
+      case Constants::DataType::BigInt:
+      case Constants::DataType::Decimal:
+      case Constants::DataType::String:
+      case Constants::DataType::UnicodeString:
+      case Constants::DataType::Bool:
+        return true;
+      case Constants::DataType::DateTime:
+      case Constants::DataType::Guid:
+      case Constants::DataType::RowIdentifier:
+      case Constants::DataType::Invalid:
+      default:
+        return false;
+    }
+  }
+
+  bool BinaryExpression::ValidateSubtraction() const{
+    const auto leftType = this->left->GetReturnType();
+    const auto rightType = this->right->GetReturnType();
+
+    switch (Value::PromoteType(leftType, rightType)) {
+      case Constants::DataType::TinyInt:
+      case Constants::DataType::SmallInt:
+      case Constants::DataType::Int:
+      case Constants::DataType::BigInt:
+      case Constants::DataType::Decimal:
+      case Constants::DataType::Bool:
+        return true;
+      case Constants::DataType::String:
+      case Constants::DataType::UnicodeString:
+      case Constants::DataType::DateTime:
+      case Constants::DataType::Guid:
+      case Constants::DataType::RowIdentifier:
+      case Constants::DataType::Invalid:
+      default:
+        return false;
+    }
+  }
+
+  bool BinaryExpression::ValidateMultiplication() const{
+    const auto leftType = this->left->GetReturnType();
+    const auto rightType = this->right->GetReturnType();
+
+    switch (Value::PromoteType(leftType, rightType)) {
+      case Constants::DataType::TinyInt:
+      case Constants::DataType::SmallInt:
+      case Constants::DataType::Int:
+      case Constants::DataType::BigInt:
+      case Constants::DataType::Decimal:
+      case Constants::DataType::Bool:
+        return true;
+      case Constants::DataType::String:
+      case Constants::DataType::UnicodeString:
+      case Constants::DataType::DateTime:
+      case Constants::DataType::Guid:
+      case Constants::DataType::RowIdentifier:
+      case Constants::DataType::Invalid:
+      default:
+        return false;
+    }
+  }
+
+  bool BinaryExpression::ValidateDivision() const{
+    return false;
+  }
+
+  bool BinaryExpression::ValidateModulo() const{
+    const auto leftType = this->left->GetReturnType();
+    const auto rightType = this->right->GetReturnType();
+
+    switch (Value::PromoteType(leftType, rightType)) {
+      case Constants::DataType::TinyInt:
+      case Constants::DataType::SmallInt:
+      case Constants::DataType::Int:
+      case Constants::DataType::BigInt:
+      case Constants::DataType::Bool:
+      case Constants::DataType::Decimal:
+        return true;
+      case Constants::DataType::String:
+      case Constants::DataType::UnicodeString:
+      case Constants::DataType::DateTime:
+      case Constants::DataType::Guid:
+      case Constants::DataType::RowIdentifier:
+      case Constants::DataType::Invalid:
+      default:
+        return false;
+    }
+  }
+
+  bool BinaryExpression::ValidateOperation() const {
+    switch (this->operation) {
+      case ExpressionOperator::Add:
+        return this->ValidateAddition();
+      case ExpressionOperator::Subtract:
+        return this->ValidateSubtraction();
+      case ExpressionOperator::Multiply:
+        return this->ValidateMultiplication();
+      case ExpressionOperator::Divide:
+        return this->ValidateDivision();
+      case ExpressionOperator::Modulo:
+        return this->ValidateModulo();
+      case ExpressionOperator::Equal:
+      case ExpressionOperator::EqualIgnoreOrdinalCase:
+      case ExpressionOperator::NotEqual:
+      case ExpressionOperator::Greater:
+      case ExpressionOperator::GreaterEqual:
+      case ExpressionOperator::Less:
+      case ExpressionOperator::LessEqual:
+        return true;
+      default:
+        throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
+    }
+  }
+
 //TODO Implement field logical operations.
   Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
     switch (this->operation) {
