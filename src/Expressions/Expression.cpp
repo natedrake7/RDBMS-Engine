@@ -339,7 +339,65 @@ namespace Expressions{
 
   DataType LogicalExpression::GetReturnType() const{ return DataType::Bool; }
 
-   VariableExpression::VariableExpression(const std::string &name) {
+  Value BranchExpression::EvaluateSwitch(const EvaluationContext &context) const{
+    for (int i = 0;i < this->branches.size(); i++) {
+      if (this->branches[i]->Evaluate(context).GetBool())
+        return this->results[i]->Evaluate(context);
+    }
+
+    return this->baseCase->Evaluate(context);
+  }
+
+  Value BranchExpression::EvaluateTernary(const EvaluationContext &context) const{
+    if (this->branches[0]->Evaluate(context).GetBool())
+      return this->results[0]->Evaluate(context);
+
+    return this->results[1]->Evaluate(context);
+  }
+
+  BranchExpression::BranchExpression(const BranchType &type) {
+    this->type = type;
+    this->baseCase = nullptr;
+  }
+
+  Value BranchExpression::Evaluate(const EvaluationContext &context) const {
+    switch (this->type) {
+      case BranchType::Switch:
+        return this->EvaluateSwitch(context);
+      case BranchType::Ternary:
+        return this->EvaluateTernary(context);
+      default:
+        throw std::runtime_error("Unknown expression branching type");
+    }
+  }
+
+  DataType BranchExpression::GetReturnType() const {
+    auto returnType = DataType::String;
+    for (const auto& result : this->results)
+      returnType = Value::PromoteType(result->GetReturnType(), returnType);
+
+    if (this->HasBaseCase())
+      returnType = Value::PromoteType(this->baseCase->GetReturnType(), returnType);
+
+    return returnType;
+  }
+
+  bool BranchExpression::HasBaseCase() const {
+    return this->type == BranchType::Switch;
+  }
+
+  bool BranchExpression::ValidateNumberOfArguments() const {
+    switch (this->type) {
+      case BranchType::Switch:
+        return this->branches.size() > 0 && this->branches.size() == this->results.size() && this->baseCase != nullptr;
+      case BranchType::Ternary:
+        return this->branches.size() == 1 && this->results.size() == 2 && this->baseCase == nullptr;
+      default:
+          throw std::runtime_error("Unknown expression branching type");
+    }
+  }
+
+  VariableExpression::VariableExpression(const std::string &name) {
     this->name = name;
     this->normalizedName = Functions::String::NormalizeString(this->name);
     this->type = DataType::Invalid;

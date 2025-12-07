@@ -506,6 +506,22 @@ namespace QueryPipeline::Statements {
 
   static Errors::ValidationStatus ResolveColumnExpressionAliases(const Expressions::ColumnExpression *columnExpr);
 
+  static Errors::ValidationStatus ResolveBranchExpressionAliases(
+    ParserValidationScope& validationScope,
+    Expressions::BranchExpression* branchExpr,
+    Expressions::Expression*& expression,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+    Statement *statement,
+    int* indexPos
+);
+
+  static Errors::ValidationStatus ResolveBranchExpressionAliases(
+    ParserValidationScope& validationScope,
+    Expressions::BranchExpression* branchExpr,
+    Expressions::Expression*& expression
+  );
+
   static void EvaluateConstantExpression(Expressions::Expression*& expression);
 
   static void AssignColumnsToIndices(SelectStatement* statement, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);

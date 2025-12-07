@@ -122,6 +122,24 @@ resultValue
     | columnName
     | literalValue
     | variableName
+    | branchingExpression
+    ;
+
+branchingExpression
+    : switchExpression
+    | ternaryExpression
+    ;
+
+switchExpression
+    : SWITCH caseExpression* DEFAULT (baseCase=resultExpression)
+    ;
+
+caseExpression
+    : CASE (branch=resultExpression) THEN (result=resultExpression)
+    ;
+
+ternaryExpression
+    : IIF LAPRENT (branch=resultExpression) COMMA (trueResult=resultExpression) COMMA (falseResult=resultExpression) RAPRENT
     ;
 
 whereClause
@@ -514,6 +532,18 @@ USTRING_LITERAL         : 'USTRING';
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
+
+//Branching Expressions
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+SWITCH          : 'SWITCH';
+CASE            : 'CASE';
+WHEN            : 'WHEN';
+THEN            : 'THEN';
+
+IIF             : 'IIF';
 
 //Statements
 ////////////////////////////////////////////////////////////

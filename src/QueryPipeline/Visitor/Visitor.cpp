@@ -113,6 +113,49 @@ namespace QueryPipeline {
     throw SyntaxError("Invalid Data source specified", CreatePositionErrorMessage(context));
   }
 
+  antlrcpp::Any SQLVisitorImplementation::visitBranchingExpression(SQLParser::BranchingExpressionContext *context) {
+    if (context->switchExpression())
+      return this->visit(context->switchExpression());
+
+    return this->visit(context->ternaryExpression());
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitSwitchExpression(SQLParser::SwitchExpressionContext *context) {
+    auto* expression = new Expressions::BranchExpression(Expressions::BranchType::Switch);
+
+    for (const auto& caseExpression : context->caseExpression()) {
+      const auto& [branch] = std::any_cast<ExpressionWrapper>(visit(caseExpression->branch));
+      expression->branches.push_back(branch);
+
+      const auto& [result] = std::any_cast<ExpressionWrapper>(visit(caseExpression->result));
+      expression->results.push_back(result);
+    }
+
+    const auto& [baseCase] = std::any_cast<ExpressionWrapper>(visit(context->baseCase));
+    expression->baseCase = baseCase;
+
+    return expression;
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitCaseExpression(SQLParser::CaseExpressionContext *context) {
+
+  }
+
+  antlrcpp::Any SQLVisitorImplementation::visitTernaryExpression(SQLParser::TernaryExpressionContext *context){
+    auto* expression = new Expressions::BranchExpression(Expressions::BranchType::Ternary);
+
+    const auto& [branch] = std::any_cast<ExpressionWrapper>(visit(context->branch));
+    expression->branches.push_back(branch);
+
+    const auto& [trueResult] = std::any_cast<ExpressionWrapper>(visit(context->trueResult));
+    expression->results.push_back(trueResult);
+
+    const auto& [falseResult] = std::any_cast<ExpressionWrapper>(visit(context->falseResult));
+    expression->results.push_back(falseResult);
+
+    return expression;
+  }
+
   antlrcpp::Any SQLVisitorImplementation::visitWhereClause(SQLParser::WhereClauseContext *context){
     Statements::WhereClause where;
     const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(context->resultExpression()));
@@ -651,11 +694,15 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
         new Expressions::LiteralExpression(std::any_cast<Value>(visit(context->literalValue())))
       };
 
-    if (context->variableName()) {
+    if (context->variableName())
       return ExpressionWrapper{
         new Expressions::VariableExpression(std::any_cast<std::string>(visit(context->variableName())))
       };
-    }
+
+    if (context->branchingExpression())
+      return ExpressionWrapper{
+        std::any_cast<Expressions::BranchExpression*>(visit(context->branchingExpression()))
+      };
 
     throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
   }

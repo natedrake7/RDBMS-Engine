@@ -32,7 +32,7 @@ namespace Expressions {
 
     enum class BranchType {
         Switch = 0,
-        IIF = 1,
+        Ternary = 1,
       };
 
       static Dictionary<std::string, BinaryOperator> ExpressionOperatorsDictionary{

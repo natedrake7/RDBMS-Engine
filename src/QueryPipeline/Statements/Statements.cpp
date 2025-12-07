@@ -1487,6 +1487,9 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (auto* variableExpr = dynamic_cast<Expressions::VariableExpression*>(expression))
       return ResolveVariableExpressionAliases(validationScope, variableExpr);
 
+    if (auto* branchExpr = dynamic_cast<Expressions::BranchExpression*>(expression))
+      return ResolveBranchExpressionAliases(validationScope, branchExpr, expression, tableAliasesDictionary, tablesColumnsDictionary, statement, indexPos);
+
     return {Errors::ValidationError::Error, "Unknown expression"};
   }
 
@@ -1591,6 +1594,9 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
 
     if (auto* variableExpr = dynamic_cast<Expressions::VariableExpression*>(expression))
       return ResolveVariableExpressionAliases(validationScope, variableExpr);
+
+    if (auto* branchExpr = dynamic_cast<Expressions::BranchExpression*>(expression))
+      return ResolveBranchExpressionAliases(validationScope, branchExpr, expression);
 
     return {Errors::ValidationError::Error, "Unknown expression"};
   }
@@ -1866,18 +1872,106 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return {};
   }
 
-Errors::ValidationStatus ResolveLiteralExpressionAliases(Expressions::LiteralExpression* literalExpr){
-    DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
+  Errors::ValidationStatus ResolveLiteralExpressionAliases(Expressions::LiteralExpression* literalExpr){
+      DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
+      return {};
+  }
+
+  Errors::ValidationStatus ResolveColumnExpressionAliases(const Expressions::ColumnExpression *columnExpr){
+      ostringstream os;
+
+      os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
+
+      return {Errors::ValidationError::Error, os.str()};
+}
+
+  Errors::ValidationStatus ResolveBranchExpressionAliases(
+    ParserValidationScope &validationScope,
+    Expressions::BranchExpression *branchExpr,
+    Expressions::Expression *&expression,
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
+    Statement *statement,
+    int *indexPos
+  ) {
+    if (!branchExpr->ValidateNumberOfArguments())
+      return {Errors::ValidationError::Error, "Invalid number of arguments specified on branching expression"};
+
+    for (auto& branch : branchExpr->branches) {
+      auto result = ResolveExpressionAliases(validationScope, tableAliasesDictionary, tablesColumnsDictionary, statement, branch, indexPos);
+      if (!result.IsOk())
+        return result;
+    }
+
+    for (auto& resultExpr : branchExpr->results) {
+      auto result = ResolveExpressionAliases(validationScope, tableAliasesDictionary, tablesColumnsDictionary, statement, resultExpr, indexPos);
+      if (!result.IsOk())
+        return result;
+    }
+
+    if (branchExpr->HasBaseCase()) {
+      auto result = ResolveExpressionAliases(validationScope, tableAliasesDictionary, tablesColumnsDictionary, statement, branchExpr->baseCase, indexPos);
+      if (!result.IsOk())
+        return result;
+    }
+
+    const auto returnType = branchExpr->GetReturnType();
+
+    for (const auto& resultExpr : branchExpr->results) {
+      if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
+        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
+    }
+
+    if (branchExpr->HasBaseCase()) {
+      if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
+        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
+    }
+
+    EvaluateConstantExpression(expression);
     return {};
-}
+  }
 
-Errors::ValidationStatus ResolveColumnExpressionAliases(const Expressions::ColumnExpression *columnExpr){
-    ostringstream os;
+  Errors::ValidationStatus ResolveBranchExpressionAliases(
+    ParserValidationScope &validationScope,
+    Expressions::BranchExpression *branchExpr,
+    Expressions::Expression *&expression
+  ){
+    if (!branchExpr->ValidateNumberOfArguments())
+      return {Errors::ValidationError::Error, "Invalid number of arguments specified on branching expression"};
 
-    os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
+    for (auto& branch : branchExpr->branches) {
+      auto result = ResolveExpressionAliases(validationScope, branch);
+      if (!result.IsOk())
+        return result;
+    }
 
-    return {Errors::ValidationError::Error, os.str()};
-}
+    for (auto& resultExpr : branchExpr->results) {
+      auto result = ResolveExpressionAliases(validationScope, resultExpr);
+      if (!result.IsOk())
+        return result;
+    }
+
+    if (branchExpr->HasBaseCase()) {
+      auto result = ResolveExpressionAliases(validationScope, branchExpr->baseCase);
+      if (!result.IsOk())
+        return result;
+    }
+
+    const auto returnType = branchExpr->GetReturnType();
+
+    for (const auto& resultExpr : branchExpr->results) {
+      if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
+        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
+    }
+
+    if (branchExpr->HasBaseCase()) {
+      if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
+        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
+    }
+
+    EvaluateConstantExpression(expression);
+    return {};
+  }
 
   void EvaluateConstantExpression(Expressions::Expression*& expression) {
     if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expression)) {
@@ -1912,6 +2006,10 @@ Errors::ValidationStatus ResolveColumnExpressionAliases(const Expressions::Colum
       delete expression;
       expression = new Expressions::LiteralExpression(value);
     }
+    //
+    // if (const auto* branchExpr = dynamic_cast<Expressions::BranchExpression*>(expression)) {
+    //   for (const auto& )
+    // }
 
     //Evaluate Function expressions too
   }

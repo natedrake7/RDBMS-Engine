@@ -185,20 +185,26 @@ namespace Expressions{
   };
 
   class BranchExpression final : public Expression {
+      [[nodiscard]] Value EvaluateSwitch(const EvaluationContext &context)const;
+      [[nodiscard]] Value EvaluateTernary(const EvaluationContext &context)const;
+
       public:
         BranchType type;
         std::vector<Expression*> branches;
+        std::vector<Expression*> results;
         std::vector<Expression*> arguments;
 
         Expression* baseCase;
 
-
+        explicit BranchExpression(const BranchType& type);
         [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
         [[nodiscard]]DataType GetReturnType() const override;
+
+        [[nodiscard]] bool HasBaseCase()const;
+        [[nodiscard]] bool ValidateNumberOfArguments()const;
   };
 
   class VariableExpression final : public Expression {
-
     public:
       std::string name;
       std::string normalizedName;
