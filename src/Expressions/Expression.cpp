@@ -40,7 +40,15 @@ namespace Expressions{
           { Constants::FunctionType::Left,       &FunctionExpression::Left },
           { Constants::FunctionType::Right,      &FunctionExpression::Right },
           { Constants::FunctionType::Reverse,    &FunctionExpression::Reverse },
-          { Constants::FunctionType::Space,      &FunctionExpression::Space }
+          { Constants::FunctionType::Space,      &FunctionExpression::Space },
+
+          { Constants::FunctionType::NullIf,     &FunctionExpression::NullIf },
+          { Constants::FunctionType::Coalesce,   &FunctionExpression::Coalesce },
+    };
+
+    static Dictionary<Constants::FunctionType, std::function<bool(const std::vector<Expressions::Expression*>& arguments, std::string& errorMessage)>> FunctionAdditionalValidationsDictionary{
+          {Constants::FunctionType::NullIf,     &FunctionExpression::ValidateNullIf},
+          {Constants::FunctionType::Coalesce,   &FunctionExpression::ValidateCoalesce},
     };
 
   EvaluationContext::EvaluationContext() {
@@ -156,11 +164,27 @@ namespace Expressions{
   }
 
   DataType BinaryExpression::GetReturnType() const{
-    const auto& leftType = this->left->GetReturnType();
-
-    const auto& rightType = this->right->GetReturnType();
-
-    return Value::PromoteType(leftType, rightType);
+    switch (this->operation) {
+      case BinaryOperator::Add:
+      case BinaryOperator::Subtract:
+      case BinaryOperator::Multiply:
+      case BinaryOperator::Divide:
+      case BinaryOperator::Modulo: {
+        const auto& leftType = this->left->GetReturnType();
+        const auto& rightType = this->right->GetReturnType();
+        return Value::PromoteType(leftType, rightType);
+      }
+      case BinaryOperator::Equal:
+      case BinaryOperator::EqualIgnoreOrdinalCase:
+      case BinaryOperator::NotEqual:
+      case BinaryOperator::Greater:
+      case BinaryOperator::GreaterEqual:
+      case BinaryOperator::Less:
+      case BinaryOperator::LessEqual:
+        return DataType::Bool;
+      default:
+        throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
+    }
   }
 
 
@@ -360,6 +384,16 @@ namespace Expressions{
     this->baseCase = nullptr;
   }
 
+  BranchExpression::~BranchExpression() {
+    for (const auto* branch : this->branches)
+      delete branch;
+
+    for (const auto* result : this->results)
+      delete result;
+
+    delete this->baseCase;
+  }
+
   Value BranchExpression::Evaluate(const EvaluationContext &context) const {
     switch (this->type) {
       case BranchType::Switch:
@@ -457,9 +491,18 @@ namespace Expressions{
       return false;
     }
 
-    return (info.maxArgs == UNLIMITED_ARGS)
-      ? this->ValidateUnlimitedArgumentTypes(info, errorMessage)
-      : this->ValidateArgumentTypes(info, errorMessage);
+    const auto argResult =
+      (info.maxArgs == UNLIMITED_ARGS)
+        ? this->ValidateUnlimitedArgumentTypes(info, errorMessage)
+        : this->ValidateArgumentTypes(info, errorMessage);
+
+    if (!argResult)
+      return false;
+
+    if (info.additionalValidations)
+      return PerformAdditionalValidations(errorMessage);
+
+    return true;
   }
 
   bool FunctionExpression::ValidateUnlimitedArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const{
@@ -500,6 +543,64 @@ namespace Expressions{
                      " to be of type: " + Constants::ColumnTypesToStringDictionary.Get(expectedType) +
                      ", but got type: " + Constants::ColumnTypesToStringDictionary.Get(returnType);
       return false;
+    }
+
+    return true;
+  }
+
+  void FunctionExpression::ConstructInvalidCastMessage(std::string &errorMessage, const DataType &fromType, const DataType &toType) {
+    ostringstream os;
+
+    os  << "Cannot cast safely type: "
+        << ColumnTypesToStringDictionary.Get(fromType)
+        << " to type "
+        << ColumnTypesToStringDictionary.Get(toType);
+
+    errorMessage = os.str();
+  }
+
+  bool FunctionExpression::PerformAdditionalValidations(std::string& errorMessage)const {
+    return FunctionAdditionalValidationsDictionary.Get(this->type)(this->arguments, errorMessage);
+  }
+
+  bool FunctionExpression::ValidateNullIf(const std::vector<Expressions::Expression*>& arguments, std::string &errorMessage) {
+    const auto& firstArgumentType = arguments[0]->GetReturnType();
+    const auto& secondArgumentType = arguments[1]->GetReturnType();
+
+    const auto promotedType = Value::PromoteType(
+      firstArgumentType,
+      secondArgumentType
+    );
+
+    if (!DataTypes::Coercions::IsCoercionAllowed(firstArgumentType, promotedType)) {
+      FunctionExpression::ConstructInvalidCastMessage(errorMessage, firstArgumentType, promotedType);
+      return false;
+    }
+
+    if (!DataTypes::Coercions::IsCoercionAllowed(secondArgumentType, promotedType)) {
+      FunctionExpression::ConstructInvalidCastMessage(errorMessage, secondArgumentType, promotedType);
+      return false;
+    }
+
+    return true;
+  }
+
+  bool FunctionExpression::ValidateCoalesce(const std::vector<Expressions::Expression*>& arguments, std::string &errorMessage){
+    auto promotedType = DataType::String;
+
+    std::vector<DataType> argTypes;
+    for (const auto& argument : arguments) {
+      const auto argType = argument->GetReturnType();
+
+      argTypes.push_back(argType);
+      promotedType = Value::PromoteType(promotedType, argType);
+    }
+
+    for (const auto& type : argTypes) {
+      if (!DataTypes::Coercions::IsCoercionAllowed(type, promotedType)) {
+        FunctionExpression::ConstructInvalidCastMessage(errorMessage, type, promotedType);
+        return false;
+      }
     }
 
     return true;
@@ -642,5 +743,23 @@ namespace Expressions{
 
   Value FunctionExpression::NewGuid(const std::vector<Value>& arguments){
     return Value(DataTypes::Guid::NewGuid(), 0);
+  }
+
+  Value FunctionExpression::NullIf(const std::vector<Value> &arguments) {
+    auto& firstArg = arguments.front();
+    const auto& secondArg = arguments.at(1);
+
+    return (firstArg == secondArg).GetBool()
+        ? Value(nullptr, 0)
+          : firstArg;
+  }
+
+  Value FunctionExpression::Coalesce(const std::vector<Value> &arguments) {
+    for (auto& argument : arguments) {
+      if (!argument.GetIsNull())
+        return argument;
+    }
+
+    return arguments.front();
   }
 }

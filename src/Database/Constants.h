@@ -279,7 +279,13 @@ namespace Constants
         Sum = 121,
         Avg = 122,
         Min = 123,
-        Max = 124
+        Max = 124,
+
+        // -----------------------
+        // Null Checking Functions
+        // -----------------------
+        Coalesce = 150,
+        NullIf = 121
     };
 
     static Dictionary<string, block_size_t> ColumnTypeSizes = {

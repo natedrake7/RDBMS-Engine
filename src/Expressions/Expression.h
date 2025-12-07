@@ -125,6 +125,8 @@ namespace Expressions{
       const DataType& returnType,
       const int& index
     );
+    static void ConstructInvalidCastMessage(std::string& errorMessage, const DataType& fromType, const DataType& toType);
+    bool PerformAdditionalValidations(std::string& errorMessage)const;
 
     public:
       std::vector<Expression*> arguments;
@@ -137,7 +139,6 @@ namespace Expressions{
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
 
       //String Function
-
       [[nodiscard]] static Value Concat(const std::vector<Value>& arguments);
       [[nodiscard]] static Value Length(const std::vector<Value>& arguments);
       [[nodiscard]] static Value TrimLeft(const std::vector<Value>& arguments);
@@ -160,6 +161,13 @@ namespace Expressions{
 
       //Guid Functions
       [[nodiscard]] static Value NewGuid(const std::vector<Value>& arguments);
+
+      //Null Checking Functions
+      [[nodiscard]] static Value NullIf(const std::vector<Value>& arguments);
+      [[nodiscard]] static bool ValidateNullIf(const std::vector<Expressions::Expression*>& arguments, std::string& errorMessage);
+
+      [[nodiscard]] static Value Coalesce(const std::vector<Value>& arguments);
+      [[nodiscard]] static bool ValidateCoalesce(const std::vector<Expressions::Expression*>& arguments, std::string& errorMessage);
 
       [[nodiscard]] bool ValidateNumberOfArguments(std::string& errorMessage)const;
       [[nodiscard]] DataType GetReturnType() const override;
@@ -197,6 +205,7 @@ namespace Expressions{
         Expression* baseCase;
 
         explicit BranchExpression(const BranchType& type);
+        ~BranchExpression()override;
         [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
         [[nodiscard]]DataType GetReturnType() const override;
 

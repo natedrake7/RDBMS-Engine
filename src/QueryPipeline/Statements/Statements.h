@@ -20,10 +20,17 @@ namespace QueryPipeline::Statements {
   struct SelectStatement;
 
   struct StatementValidationScope {
-    Dictionary<std::string, table_id_t> tableAliasesDictionary;
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> tablesColumnsDictionary;
-    int indexPos;
+    const Dictionary<std::string, table_id_t>* tableAliasesDictionary;
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>* tablesColumnsDictionary;
+    int* indexPos;
     Statements::Statement* statement;
+
+    StatementValidationScope(
+      const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
+      Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+      Statement* statement,
+      int* indexPos = nullptr
+    );
   };
 
   struct DecimalType {
@@ -172,7 +179,7 @@ namespace QueryPipeline::Statements {
 
     Expressions::Expression* expression;
 
-    DeclareVariableStatement() = default;
+    DeclareVariableStatement();
     Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
 
@@ -183,7 +190,7 @@ namespace QueryPipeline::Statements {
     Variable variable;
     Expressions::Expression* expression;
 
-    SetVariableStatement() = default;
+    SetVariableStatement();
     Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
 
@@ -378,31 +385,24 @@ namespace QueryPipeline::Statements {
     Security::Permission RequiredPermissions() const override;
   };
 
-  static bool ResolveAliases(Dictionary<std::string, table_id_t>& tableAliasesDictionary, SelectStatement *statement);
-
   static Errors::ValidationStatus ResolveColumnAlias(
     ColumnName& column,
-    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary);
+    StatementValidationScope& statementValidationScope
+  );
 
   static Errors::ValidationStatus ResolveColumnAlias(
     Expressions::ColumnExpression* column,
-    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    Statement *statement,
-    int* indexPos = nullptr
+    StatementValidationScope& statementValidationScope
   );
 
   static Errors::ValidationStatus ResolveColumnAliasWhenTableAliasExists(
     Expressions::ColumnExpression* column,
-    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary
+    const StatementValidationScope& statementValidationScope
   );
 
   static Errors::ValidationStatus ResolveColumnAliasWhenTableAliasDoesNotExist(
     Expressions::ColumnExpression* column,
-    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary
+    const StatementValidationScope& statementValidationScope
   );
 
   static Errors::ValidationStatus ResolvePostProjectionColumnAlias(
@@ -412,11 +412,8 @@ namespace QueryPipeline::Statements {
 
   static Errors::ValidationStatus ResolveExpressionAliases(
     ParserValidationScope& validationScope,
-    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    Statement *statement,
-    Expressions::Expression*& expression,
-    int* indexPos = nullptr
+    StatementValidationScope& statementValidationScope,
+    Expressions::Expression*& expression
   );
 
   static bool ValidateExpressionCoercionTypes(
@@ -441,11 +438,9 @@ namespace QueryPipeline::Statements {
 
   static Errors::ValidationStatus ResolveWildCardAlias(
     const Expressions::ColumnExpression* column,
-    const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-    SelectStatement *statement,
-    int* indexPos = nullptr
+    const StatementValidationScope& statementValidationScope,
+    SelectStatement *statement
   );
-
 
 //Constant Statements
   static Errors::ValidationStatus ResolveBinaryExpressionAliases(
@@ -459,10 +454,7 @@ namespace QueryPipeline::Statements {
     ParserValidationScope& validationScope,
     Expressions::BinaryExpression* binaryExpr,
     Expressions::Expression*& expression,
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    Statement *statement,
-    int* indexPos
+    StatementValidationScope& statementValidationScope
   );
 
   static Errors::ValidationStatus ResolveFunctionExpressionAliases(
@@ -475,10 +467,7 @@ namespace QueryPipeline::Statements {
     ParserValidationScope& validationScope,
     const Expressions::FunctionExpression* funcExpr,
     Expressions::Expression*& expression,
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    Statement *statement,
-    int* indexPos
+    StatementValidationScope& statementValidationScope
   );
 
   static Errors::ValidationStatus ResolveLogicalExpressionAliases(
@@ -491,10 +480,7 @@ namespace QueryPipeline::Statements {
     ParserValidationScope& validationScope,
     Expressions::LogicalExpression* logicalExpr,
     Expressions::Expression*& expression,
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    Statement *statement,
-    int* indexPos
+    StatementValidationScope& statementValidationScope
   );
 
   static Errors::ValidationStatus ResolveVariableExpressionAliases(
@@ -510,11 +496,8 @@ namespace QueryPipeline::Statements {
     ParserValidationScope& validationScope,
     Expressions::BranchExpression* branchExpr,
     Expressions::Expression*& expression,
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
-    Statement *statement,
-    int* indexPos
-);
+    StatementValidationScope& statementValidationScope
+  );
 
   static Errors::ValidationStatus ResolveBranchExpressionAliases(
     ParserValidationScope& validationScope,
