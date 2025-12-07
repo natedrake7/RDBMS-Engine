@@ -13,14 +13,14 @@ namespace QueryPipeline::PipelineConstants {
     {"full", Constants::JoinType::Full},
   };
 
-  static HashSet<Constants::DataType> ValidIntegerConversions{
+  static HashSet<Constants::DataType> ValidTableIntegerConversions{
     Constants::DataType::TinyInt,
     Constants::DataType::SmallInt,
     Constants::DataType::Int,
     Constants::DataType::BigInt,
   };
 
-  static HashSet<Constants::DataType> ValidStringConversions{
+  static HashSet<Constants::DataType> ValidTableStringConversions{
     Constants::DataType::String,
     Constants::DataType::UnicodeString
   };

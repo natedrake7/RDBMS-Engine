@@ -1156,7 +1156,7 @@ namespace Server {
       auto* columnOperation = new Expressions::ColumnExpression(1);
       auto* literaValue = new Expressions::LiteralExpression(Value(dbName, 1));
 
-      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
       sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
 
@@ -1169,7 +1169,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(1);
     auto* literaValue = new Expressions::LiteralExpression(Value(name, 1));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::EqualIgnoreOrdinalCase);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
     Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
     std::vector<const Row*> selectedDatabases;
@@ -1222,7 +1222,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(1);
     auto* literaValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
     sysSchemas->ClusteredIndexScan(this->baseProperties, &selectedSchemas, &binaryExpr);
 
@@ -1264,7 +1264,7 @@ namespace Server {
     auto* leftColumnOperation = new Expressions::ColumnExpression(1);
     auto* leftLiteraValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
-    const auto binaryExpr = Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::EqualIgnoreOrdinalCase);
+    const auto binaryExpr = Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
     // auto* rightColumnOperation = new Expressions::ColumnExpression(2);
     // auto* rightLiteraValue = new Expressions::LiteralExpression(Value(schema, 2));
@@ -1297,7 +1297,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(1);
     auto* literaValue = new Expressions::LiteralExpression(Value(databaseHeader.id, 1));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
     std::vector<const Row*> selectedTables;
 
@@ -1344,7 +1344,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(1);
     auto* literaValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
     std::vector<const Row*> selectedTables;
 
@@ -1405,14 +1405,14 @@ namespace Server {
     auto* leftColumnOperation = new Expressions::ColumnExpression(1);
     auto* leftLiteraValue = new Expressions::LiteralExpression(Value(databaseId, 1));
 
-    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::Equal);
+    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::BinaryOperator::Equal);
 
     auto* rightColumnOperation = new Expressions::ColumnExpression(3);
     auto* rightLiteraValue = new Expressions::LiteralExpression(Value(tableName, 3));
 
-    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::EqualIgnoreOrdinalCase);
+    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
-    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
+    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::LogicalType::And);
 
     sysTablesPtr->ClusteredIndexScan(this->baseProperties, &selectedTables, &logicalExpr);
 
@@ -1443,7 +1443,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(1);
     auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
     constraintsTable->ClusteredIndexScan(this->baseProperties, &selectedConstraints, &binaryExpr);
 
@@ -1508,14 +1508,14 @@ namespace Server {
     auto* leftColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumns::TableId));
     auto* leftLiteraValue = new Expressions::LiteralExpression(Value(tableId, static_cast<column_index_t>(SysColumns::TableId)));
 
-    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::Equal);
+    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::BinaryOperator::Equal);
 
     auto* rightColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumns::IsDeleted));
     auto* rightLiteraValue = new Expressions::LiteralExpression(Value(false, static_cast<column_index_t>(SysColumns::IsDeleted)));
 
-    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
+    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::BinaryOperator::Equal);
 
-    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
+    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::LogicalType::And);
 
     sysColumns->ClusteredIndexScan(this->baseProperties, &selectedColumns, &logicalExpr);
 
@@ -1587,7 +1587,7 @@ namespace Server {
       auto* columnOperation = new Expressions::ColumnExpression(1);
       auto* literaValue = new Expressions::LiteralExpression(Value(tableId, 1));
 
-      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
       sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedIndexes, &binaryExpr);
 
@@ -1871,7 +1871,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTableStats::TableId));
     auto* literaValue = new Expressions::LiteralExpression(Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
     sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedStats, &binaryExpr);
 
@@ -1909,7 +1909,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(0);
     auto* literaValue = new Expressions::LiteralExpression(Value(columnId, 0));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
     sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedStats, &binaryExpr);
 
@@ -1949,14 +1949,14 @@ namespace Server {
     auto* leftColumnOperation = new Expressions::ColumnExpression(0);
     auto* leftLiteraValue = new Expressions::LiteralExpression(Value(tableId, 0));
 
-    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::ExpressionOperator::Equal);
+    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::BinaryOperator::Equal);
 
     auto* rightColumnOperation = new Expressions::ColumnExpression(1);
     auto* rightLiteraValue = new Expressions::LiteralExpression(Value(columnId, 1));
 
-    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
+    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::BinaryOperator::Equal);
 
-    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
+    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::LogicalType::And);
 
     table->ClusteredIndexScanUpdate(this->baseProperties, &logicalExpr, updates);
   }
@@ -1978,7 +1978,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTableStats::TableId));
     auto* literaValue = new Expressions::LiteralExpression(Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
 
     table->ClusteredIndexScanUpdate(this->baseProperties, &binaryExpr, updates);
   }
@@ -2004,7 +2004,7 @@ namespace Server {
     auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumnStats::ColumnId));
     auto* literalValue = new Expressions::LiteralExpression(Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literalValue, Expressions::ExpressionOperator::Equal);
+    const Expressions::BinaryExpression binaryExpr(columnOperation, literalValue, Expressions::BinaryOperator::Equal);
 
     table->ClusteredIndexScanUpdate(this->baseProperties, &binaryExpr, updates);
   }

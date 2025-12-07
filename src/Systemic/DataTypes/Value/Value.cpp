@@ -13,14 +13,12 @@ Value::Value()
     this->size = 0;
     this->type = Constants::DataType::Invalid;
     this->columnIndex = 0;
-    this->isIdentifier = false;
 }
 
 Value::Value(const Value &copyVal){
     this->size = copyVal.size;
     this->type = copyVal.type;
     this->columnIndex = copyVal.columnIndex;
-    this->isIdentifier = copyVal.isIdentifier;
 
     if (copyVal.data == nullptr) {
         this->data = nullptr;
@@ -39,12 +37,10 @@ Value::Value(Value &&other)noexcept {
     this->type = other.type;
     this->data = other.data;
     this->columnIndex = other.columnIndex;
-    this->isIdentifier = other.isIdentifier;
 
     other.data = nullptr;
     other.size = 0;
     other.columnIndex = 0;
-    other.isIdentifier = false;
 }
 
 Value & Value::operator=(Value &&other) noexcept{
@@ -57,12 +53,10 @@ Value & Value::operator=(Value &&other) noexcept{
     this->type = other.type;
     this->data = other.data;
     this->columnIndex = other.columnIndex;
-    this->isIdentifier = other.isIdentifier;
 
     other.data = nullptr;
     other.size = 0;
     other.columnIndex = 0;
-    other.isIdentifier = false;
 
     return *this;
 }
@@ -72,14 +66,12 @@ Value::Value(const void *data, const Constants::column_index_t &columnIndex){
     this->columnIndex = columnIndex;
     this->size = 0;
     this->type = Constants::DataType::Invalid;
-    this->isIdentifier = false;
 }
 
 Value::Value(const void *data, const int &size, const Constants::DataType &type){
     this->data = nullptr;
     this->size = size;
     this->type = type;
-    this->isIdentifier = false;
     this->columnIndex = 0;
 
     this->data = new Constants::object_t[size];
@@ -93,7 +85,6 @@ Value::Value(const unsigned char *data, const int &size, const Constants::DataTy
     this->size = size;
     this->type = type;
     this->columnIndex = 0;
-    this->isIdentifier = false;
 }
 
 Value::Value(const bool &data, const column_index_t &columnIndex){
@@ -103,7 +94,6 @@ Value::Value(const bool &data, const column_index_t &columnIndex){
     this->size = sizeof(bool);
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::Bool;
-    this->isIdentifier = false;
 }
 
 Value::Value(const int8_t &data, const column_index_t &columnIndex){
@@ -113,7 +103,6 @@ Value::Value(const int8_t &data, const column_index_t &columnIndex){
     this->size = sizeof(int8_t);
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::TinyInt;
-    this->isIdentifier = false;
 }
 
 Value::Value(const int16_t &data, const column_index_t &columnIndex){
@@ -123,7 +112,6 @@ Value::Value(const int16_t &data, const column_index_t &columnIndex){
     this->size = sizeof(int16_t);
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::SmallInt;
-    this->isIdentifier = false;
 }
 
 Value::Value(const int32_t &data, const column_index_t &columnIndex){
@@ -133,7 +121,6 @@ Value::Value(const int32_t &data, const column_index_t &columnIndex){
     this->size = sizeof(int32_t);
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::Int;
-    this->isIdentifier = false;
 }
 
 Value::Value(const int64_t &data, const column_index_t &columnIndex){
@@ -143,7 +130,6 @@ Value::Value(const int64_t &data, const column_index_t &columnIndex){
     this->size = sizeof(int64_t);
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::BigInt;
-    this->isIdentifier = false;
 }
 
 Value::Value(const DataTypes::DateTime &data, const column_index_t &columnIndex){
@@ -153,7 +139,6 @@ Value::Value(const DataTypes::DateTime &data, const column_index_t &columnIndex)
     this->size = DataTypes::DateTime::DateTimeSize();
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::DateTime;
-    this->isIdentifier = false;
 }
 
 Value::Value(const DataTypes::Decimal &data, const column_index_t &columnIndex){
@@ -163,7 +148,6 @@ Value::Value(const DataTypes::Decimal &data, const column_index_t &columnIndex){
     memcpy(this->data, data.GetRawData(), this->size);
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::Decimal;
-    this->isIdentifier = false;
 }
 
 Value::Value(const DataTypes::Guid &data, const column_index_t &columnIndex){
@@ -173,7 +157,6 @@ Value::Value(const DataTypes::Guid &data, const column_index_t &columnIndex){
 
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::Guid;
-    this->isIdentifier = false;
 }
 
 Value::Value(const string &data, const Constants::column_index_t& columnIndex, const bool& isIdentifier)
@@ -184,7 +167,6 @@ Value::Value(const string &data, const Constants::column_index_t& columnIndex, c
     
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::String;
-    this->isIdentifier = isIdentifier;
 }
 
 Value::Value(const u16string &data, const Constants::column_index_t &columnIndex)
@@ -195,7 +177,6 @@ Value::Value(const u16string &data, const Constants::column_index_t &columnIndex
     
     this->columnIndex = columnIndex;
     this->type = Constants::DataType::UnicodeString;
-    this->isIdentifier = false;
 }
 
 Value::~Value() = default;
@@ -204,94 +185,90 @@ bool Value::GetIsNull() const { return this->data == nullptr; }
 
 const Constants::column_index_t & Value::GetColumnIndex() const { return this->columnIndex;}
 
-void Value::SetData(const bool &data){
+void Value::SetData(const bool &otherData){
     delete this->data;
     
     this->data = new Constants::object_t[sizeof(bool)];
-    memcpy(this->data, &data, sizeof(bool));
+    memcpy(this->data, &otherData, sizeof(bool));
     this->size = sizeof(bool);
 
     this->type = Constants::DataType::Bool;
 }
 
-void Value::SetData(const string &data) {
+void Value::SetData(const string &otherData) {
     delete this->data;
 
-    this->size = data.size();
+    this->size = otherData.size();
     this->data = new Constants::object_t[this->size];
-    memcpy(this->data, data.data(), this->size);
+    memcpy(this->data, otherData.data(), this->size);
 
     this->type = Constants::DataType::String;
 }
-void Value::SetData(const u16string &data) {
+void Value::SetData(const u16string &otherData) {
     delete this->data;
     
-    this->size = data.size();
+    this->size = otherData.size();
     this->data = new Constants::object_t[this->size];
-    memcpy(this->data, data.data(), this->size);
+    memcpy(this->data, otherData.data(), this->size);
 
     this->type = Constants::DataType::UnicodeString;
 }
-void Value::SetData(const int8_t &data) { 
+void Value::SetData(const int8_t &otherData) {
     delete this->data;
     
     this->data = new Constants::object_t[sizeof(int8_t)];
-    memcpy(this->data, &data, sizeof(int8_t));
+    memcpy(this->data, &otherData, sizeof(int8_t));
     this->size = sizeof(int8_t);
 
     this->type = Constants::DataType::TinyInt;
 }
 
-void Value::SetData(const int16_t &data) { 
+void Value::SetData(const int16_t &otherData) {
     delete this->data;
     
     this->data = new Constants::object_t[sizeof(int16_t)];
-    memcpy(this->data, &data, sizeof(int16_t));
+    memcpy(this->data, &otherData, sizeof(int16_t));
     this->size = sizeof(int16_t);
 
     this->type = Constants::DataType::SmallInt;
 }
-void Value::SetData(const int32_t &data) { 
+void Value::SetData(const int32_t &otherData) {
     delete this->data;
     
     this->data = new Constants::object_t[sizeof(int32_t)];
-    memcpy(this->data, &data, sizeof(int32_t));
+    memcpy(this->data, &otherData, sizeof(int32_t));
     this->size = sizeof(int32_t);
 
     this->type = Constants::DataType::Int;
 }
-void Value::SetData(const int64_t &data) { 
+void Value::SetData(const int64_t &otherData) {
     delete this->data;
     
     this->data = new Constants::object_t[sizeof(int64_t)];
-    memcpy(this->data, &data, sizeof(int64_t));
+    memcpy(this->data, &otherData, sizeof(int64_t));
     this->size = sizeof(int64_t);
 
     this->type = Constants::DataType::BigInt;
 }
-void Value::SetData(const DataTypes::DateTime &data) {
+void Value::SetData(const DataTypes::DateTime &otherData) {
     delete this->data;
     
     this->data = new Constants::object_t[DataTypes::DateTime::DateTimeSize()];
-    memcpy(this->data, &data.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
+    memcpy(this->data, &otherData.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
     
     this->size = DataTypes::DateTime::DateTimeSize();
 
     this->type = Constants::DataType::DateTime;
 }
 
-void Value::SetData(const DataTypes::Guid &data){
+void Value::SetData(const DataTypes::Guid &otherData){
     delete this->data;
 
-    this->size = data.Size();
+    this->size = otherData.Size();
     this->data = new Constants::object_t[this->size];
-    memcpy(this->data, data.GetData().data(), this->size);
+    memcpy(this->data, otherData.GetData().data(), this->size);
 
     this->type = Constants::DataType::Guid;
-}
-
-void Value::SetName(std::string &name){
-    this->name = std::move(name);
 }
 
 bool Value::TryParseAsBool(bool& result)const{
@@ -367,12 +344,12 @@ bool Value::TryParseDate(){
     return true;
 }
 
-void Value::SetData(const DataTypes::Decimal &data) {
+void Value::SetData(const DataTypes::Decimal &otherData) {
     delete this->data;
     
-    this->size = data.GetRawDataSize();
+    this->size = otherData.GetRawDataSize();
     this->data = new Constants::object_t[this->size];
-    memcpy(this->data, data.GetRawData(), this->size);
+    memcpy(this->data, otherData.GetRawData(), this->size);
 
     this->type = Constants::DataType::Decimal;
 }
@@ -421,9 +398,9 @@ DataTypes::Guid Value::GetGuid() const {
 
 time_t Value::GetUnixTimeStamp() const{ return *reinterpret_cast<time_t *>(this->data); }
 
-void Value::SetColumnIndex(const Constants::column_index_t &columnIndex) { this->columnIndex = columnIndex; }
+void Value::SetColumnIndex(const Constants::column_index_t &otherIndex) { this->columnIndex = otherIndex; }
 
-void Value::SetType(const Constants::DataType &type){ this->type = type; }
+void Value::SetType(const Constants::DataType &otherType){ this->type = otherType; }
 
 void Value::Deserialize(const std::vector<char> &buffer, uint32_t &offset){
     memcpy(&this->size, buffer.data() + offset, sizeof(Constants::block_size_t));
@@ -445,13 +422,7 @@ Constants::DataType Value::PromoteType(const Constants::DataType &lhs, const Con
     return  ColumnTypeRank.Get(lhs) > ColumnTypeRank.Get(rhs) ? lhs : rhs;
 }
 
-bool Value::IsVariable()const{ return !this->name.empty(); }
-
 ostream & operator<<(ostream& os, const Value &field){
-
-    // if (!field.name.empty())
-    //     os << field.name << ": ";
-
     if (field.GetIsNull()) {
         os << "NULL";
         return os;
@@ -474,10 +445,7 @@ ostream & operator<<(ostream& os, const Value &field){
             os << field.GetDecimal();
             break;
         case Constants::DataType::String:
-            os << field.GetString();
-            break;
         case Constants::DataType::UnicodeString:
-            //TODO
             os << field.GetString();
             break;
         case Constants::DataType::Bool:

@@ -144,7 +144,7 @@ namespace Expressions{
 
   DataType LiteralExpression::GetReturnType() const{ return this->value.GetType(); }
 
-  BinaryExpression::BinaryExpression(Expression *left, Expression *right, const ExpressionOperator &operation){
+  BinaryExpression::BinaryExpression(Expression *left, Expression *right, const BinaryOperator &operation){
     this->left = left;
     this->right = right;
     this->operation = operation;
@@ -262,23 +262,23 @@ namespace Expressions{
 
   bool BinaryExpression::ValidateOperation() const {
     switch (this->operation) {
-      case ExpressionOperator::Add:
+      case BinaryOperator::Add:
         return this->ValidateAddition();
-      case ExpressionOperator::Subtract:
+      case BinaryOperator::Subtract:
         return this->ValidateSubtraction();
-      case ExpressionOperator::Multiply:
+      case BinaryOperator::Multiply:
         return this->ValidateMultiplication();
-      case ExpressionOperator::Divide:
+      case BinaryOperator::Divide:
         return this->ValidateDivision();
-      case ExpressionOperator::Modulo:
+      case BinaryOperator::Modulo:
         return this->ValidateModulo();
-      case ExpressionOperator::Equal:
-      case ExpressionOperator::EqualIgnoreOrdinalCase:
-      case ExpressionOperator::NotEqual:
-      case ExpressionOperator::Greater:
-      case ExpressionOperator::GreaterEqual:
-      case ExpressionOperator::Less:
-      case ExpressionOperator::LessEqual:
+      case BinaryOperator::Equal:
+      case BinaryOperator::EqualIgnoreOrdinalCase:
+      case BinaryOperator::NotEqual:
+      case BinaryOperator::Greater:
+      case BinaryOperator::GreaterEqual:
+      case BinaryOperator::Less:
+      case BinaryOperator::LessEqual:
         return true;
       default:
         throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
@@ -288,29 +288,29 @@ namespace Expressions{
 //TODO Implement field logical operations.
   Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
     switch (this->operation) {
-      case ExpressionOperator::Add:
+      case BinaryOperator::Add:
         return this->left->Evaluate(context) + this->right->Evaluate(context);
-      case ExpressionOperator::Subtract:
+      case BinaryOperator::Subtract:
         return this->left->Evaluate(context) - this->right->Evaluate(context);
-      case ExpressionOperator::Multiply:
+      case BinaryOperator::Multiply:
         return this->left->Evaluate(context) * this->right->Evaluate(context);
-      case ExpressionOperator::Divide:
+      case BinaryOperator::Divide:
         return this->left->Evaluate(context) / this->right->Evaluate(context);
-      case ExpressionOperator::Modulo:
+      case BinaryOperator::Modulo:
         return this->left->Evaluate(context) % this->right->Evaluate(context);
-      case ExpressionOperator::Equal:
+      case BinaryOperator::Equal:
         return this->left->Evaluate(context) == this->right->Evaluate(context);
-      case ExpressionOperator::EqualIgnoreOrdinalCase:
+      case BinaryOperator::EqualIgnoreOrdinalCase:
         return Value::EqualsIgnoreOrdinalCase(this->left->Evaluate(context), this->right->Evaluate(context));
-      case ExpressionOperator::NotEqual:
+      case BinaryOperator::NotEqual:
         return this->left->Evaluate(context) != this->right->Evaluate(context);
-      case ExpressionOperator::Greater:
+      case BinaryOperator::Greater:
         return this->left->Evaluate(context) > this->right->Evaluate(context);
-      case ExpressionOperator::GreaterEqual:
+      case BinaryOperator::GreaterEqual:
         return this->left->Evaluate(context) >= this->right->Evaluate(context);
-      case ExpressionOperator::Less:
+      case BinaryOperator::Less:
         return this->left->Evaluate(context) < this->right->Evaluate(context);
-      case ExpressionOperator::LessEqual:
+      case BinaryOperator::LessEqual:
         return this->left->Evaluate(context) <= this->right->Evaluate(context);
       default:
           throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
@@ -320,14 +320,14 @@ namespace Expressions{
   LogicalExpression::LogicalExpression(
     Expression *leftExpression,
     Expression *RightExpression,
-    const ExpressionType &type){
+    const LogicalType &type){
     this->type = type;
     this->left = leftExpression;
     this->right = RightExpression;
   }
 
   LogicalExpression::LogicalExpression(){
-    this->type = ExpressionType::Invalid;
+    this->type = LogicalType::Invalid;
     this->left = nullptr;
     this->right = nullptr;
   }
@@ -353,19 +353,19 @@ namespace Expressions{
 
   Value LogicalExpression::Evaluate(const EvaluationContext& context) const {
     switch (this->type) {
-      case ExpressionType::And:{
+      case LogicalType::And:{
         const auto leftValue = this->left->Evaluate(context);
         const auto rightValue = this->right->Evaluate(context);
 
         return Value(leftValue.GetBool() && rightValue.GetBool(), 0);
       }
-      case ExpressionType::Or:{
+      case LogicalType::Or:{
         const auto leftValue = this->left->Evaluate(context);
         const auto rightValue = this->right->Evaluate(context);
 
         return Value(leftValue.GetBool() || rightValue.GetBool(), 0);
       }
-      case ExpressionType::Invalid:
+      case LogicalType::Invalid:
       default:
       throw std::runtime_error("Unknown predicate" + std::to_string(static_cast<int>(this->type)));
     }

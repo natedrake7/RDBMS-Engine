@@ -103,9 +103,9 @@ namespace Expressions{
       Expressions::Expression* left;
       Expression* right;
 
-      ExpressionOperator operation;
+      BinaryOperator operation;
 
-      BinaryExpression(Expression* left, Expression* right, const ExpressionOperator& operation);
+      BinaryExpression(Expression* left, Expression* right, const BinaryOperator& operation);
       ~BinaryExpression()override;
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
@@ -167,7 +167,7 @@ namespace Expressions{
 
   class LogicalExpression final : public Expression{
       public:
-        ExpressionType type;
+        LogicalType type;
 
         Expression* left;
         Expression* right;
@@ -175,13 +175,26 @@ namespace Expressions{
         LogicalExpression(
           Expression *leftExpression,
           Expression *RightExpression,
-          const ExpressionType &type
+          const LogicalType &type
         );
         LogicalExpression();
         ~LogicalExpression()override;
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
         [[nodiscard]] DataType GetReturnType() const override;
+  };
+
+  class BranchExpression final : public Expression {
+      public:
+        BranchType type;
+        std::vector<Expression*> branches;
+        std::vector<Expression*> arguments;
+
+        Expression* baseCase;
+
+
+        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
+        [[nodiscard]]DataType GetReturnType() const override;
   };
 
   class VariableExpression final : public Expression {

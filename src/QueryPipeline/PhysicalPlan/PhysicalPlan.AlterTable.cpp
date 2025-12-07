@@ -140,7 +140,7 @@ namespace QueryPipeline::PhysicalPlan{
       Value(session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
     };
 
-    server.UpdateColumnById(this->column->columnId, updates);
+    const auto _ = server.UpdateColumnById(this->column->columnId, updates);
 
     tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
 
@@ -174,7 +174,7 @@ namespace QueryPipeline::PhysicalPlan{
       Value(session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
     };
 
-    server.UpdateColumnById(this->column->columnId, updates);
+    const auto _ = server.UpdateColumnById(this->column->columnId, updates);
 
     return result;
   }

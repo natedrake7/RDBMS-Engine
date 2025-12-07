@@ -1210,10 +1210,10 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    if ((PipelineConstants::ValidStringConversions.Contains(columnType)
-      && !PipelineConstants::ValidStringConversions.Contains(static_cast<Constants::DataType>(header.dataType)))
-      || (PipelineConstants::ValidIntegerConversions.Contains(columnType)
-        && !PipelineConstants::ValidIntegerConversions.Contains(static_cast<Constants::DataType>(header.dataType)))){
+    if ((PipelineConstants::ValidTableStringConversions.Contains(columnType)
+      && !PipelineConstants::ValidTableStringConversions.Contains(static_cast<Constants::DataType>(header.dataType)))
+      || (PipelineConstants::ValidTableIntegerConversions.Contains(columnType)
+        && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<Constants::DataType>(header.dataType)))){
           os << "Cannot alter column " << this->alterColumn->name.name << " from type: "
                     << ColumnTypesToStringDictionary.Get(static_cast<Constants::DataType>(header.dataType))
                     << "to type: " << this->alterColumn->type.name;

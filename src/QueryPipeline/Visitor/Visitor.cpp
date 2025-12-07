@@ -704,7 +704,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     for (int i = 1;i < context->andExpr().size(); i++) {
       const auto& [right] = std::any_cast<ExpressionWrapper>(visit(context->andExpr(i)));
 
-      expression = new Expressions::LogicalExpression(expression, right, Expressions::ExpressionType::Or);
+      expression = new Expressions::LogicalExpression(expression, right, Expressions::LogicalType::Or);
     }
 
     expression->name = (context->alias()) ? std::any_cast<std::string>(visit(context->alias())) : "";
@@ -720,7 +720,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     for (int i = 1;i < context->equalityExpr().size(); i++) {
       const auto& [right] = std::any_cast<ExpressionWrapper>(visit(context->equalityExpr(i)));
 
-      expression = new Expressions::LogicalExpression(expression, right, Expressions::ExpressionType::And);
+      expression = new Expressions::LogicalExpression(expression, right, Expressions::LogicalType::And);
     }
 
     return ExpressionWrapper{ expression };
@@ -736,7 +736,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->atomicOperator().at(i - 1)));
 
-      Expressions::ExpressionOperator operationType;
+      Expressions::BinaryOperator operationType;
       if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
         throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
@@ -762,7 +762,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->relationalOperator().at(i - 1)));
 
-      Expressions::ExpressionOperator operationType;
+      Expressions::BinaryOperator operationType;
       if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
         throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
@@ -798,7 +798,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->additiveOperator().at(i - 1)));
 
-      Expressions::ExpressionOperator operationType;
+      Expressions::BinaryOperator operationType;
       if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
         throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
@@ -825,7 +825,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
       const auto operation = std::any_cast<std::string>(visit(context->multiplicativeOperator().at(i - 1)));
 
-      Expressions::ExpressionOperator operationType;
+      Expressions::BinaryOperator operationType;
       if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(operation, operationType))
         throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 

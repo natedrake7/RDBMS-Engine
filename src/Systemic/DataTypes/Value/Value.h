@@ -22,9 +22,6 @@ class Value {
     Constants::block_size_t size;
     Constants::DataType type;
 
-    bool isIdentifier;
-    std::string name;
-
     [[nodiscard]] bool TryParseAsBool(bool& result)const;
     [[nodiscard]] bool TryParseAsBoolFromString(bool& result)const;
     [[nodiscard]] bool TryParseAsBoolFromInt(bool& result)const;
@@ -90,27 +87,25 @@ class Value {
 
         [[nodiscard]] const Constants::DataType& GetType() const;
       
-        void SetData(const bool& data);
+        void SetData(const bool& otherData);
       
-        void SetData(const int8_t& data);
+        void SetData(const int8_t& otherData);
       
-        void SetData(const int16_t& data);
+        void SetData(const int16_t& otherData);
       
-        void SetData(const int32_t& data);
+        void SetData(const int32_t& otherData);
       
-        void SetData(const int64_t& data);
+        void SetData(const int64_t& otherData);
       
-        void SetData(const string& data);
+        void SetData(const string& otherData);
       
-        void SetData(const u16string& data);
+        void SetData(const u16string& otherData);
       
-        void SetData(const DataTypes::Decimal& data);
+        void SetData(const DataTypes::Decimal& otherData);
       
-        void SetData(const DataTypes::DateTime& data);
+        void SetData(const DataTypes::DateTime& otherData);
 
-        void SetData(const DataTypes::Guid& data);
-
-        void SetName(std::string& name);
+        void SetData(const DataTypes::Guid& otherData);
 
         [[nodiscard]] const Constants::block_size_t& GetSize() const;
 
@@ -138,9 +133,9 @@ class Value {
 
         [[nodiscard]] DataTypes::Guid GetGuid()const;
 
-        void SetColumnIndex(const Constants::column_index_t &columnIndex);
+        void SetColumnIndex(const Constants::column_index_t &otherIndex);
 
-        void SetType(const Constants::DataType &type);
+        void SetType(const Constants::DataType &otherType);
 
         void Deserialize(const std::vector<char>& buffer, uint32_t& offset);
 
@@ -162,7 +157,6 @@ class Value {
         friend Value operator==(const Value& lhs, const Value& rhs);
         friend Value operator!=(const Value& lhs, const Value& rhs);
 
-        [[nodiscard]] bool IsVariable()const;
         [[nodiscard]] bool ParseAsBoolFromString()const;
         [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);
 };

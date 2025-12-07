@@ -9,13 +9,13 @@
 namespace Expressions {
     class Expression;
 
-    enum class ExpressionType {
+    enum class LogicalType {
         And = 0,
         Or = 1,
         Invalid = 2
       };
 
-      enum class ExpressionOperator {
+    enum class BinaryOperator {
         Equal = 0,
         NotEqual = 1,
         Greater = 2,
@@ -28,21 +28,26 @@ namespace Expressions {
         Divide = 9,
         Modulo = 10,
         EqualIgnoreOrdinalCase = 11
+    };
+
+    enum class BranchType {
+        Switch = 0,
+        IIF = 1,
       };
 
-      static Dictionary<std::string, ExpressionOperator> ExpressionOperatorsDictionary{
-        { "=", ExpressionOperator::Equal },
-        { "!=", ExpressionOperator::NotEqual },
-        { "<>", ExpressionOperator::NotEqual },
-        { ">", ExpressionOperator::Greater },
-        { ">=", ExpressionOperator::GreaterEqual },
-        { "<", ExpressionOperator::Less },
-        { "<=", ExpressionOperator::LessEqual },
-        { "+", ExpressionOperator::Add },
-        { "-", ExpressionOperator::Subtract },
-        { "*", ExpressionOperator::Multiply },
-        { "/", ExpressionOperator::Divide },
-        { "%", ExpressionOperator::Modulo },
+      static Dictionary<std::string, BinaryOperator> ExpressionOperatorsDictionary{
+        { "=", BinaryOperator::Equal },
+        { "!=", BinaryOperator::NotEqual },
+        { "<>", BinaryOperator::NotEqual },
+        { ">", BinaryOperator::Greater },
+        { ">=", BinaryOperator::GreaterEqual },
+        { "<", BinaryOperator::Less },
+        { "<=", BinaryOperator::LessEqual },
+        { "+", BinaryOperator::Add },
+        { "-", BinaryOperator::Subtract },
+        { "*", BinaryOperator::Multiply },
+        { "/", BinaryOperator::Divide },
+        { "%", BinaryOperator::Modulo },
       };
 
     static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
