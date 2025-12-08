@@ -45,6 +45,91 @@ namespace QueryPipeline {
     );
   }
 
+  bool LogicalTableScan::CanIndexSeekColumnExpression(
+    const std::vector<Headers::IndexColumnsHeader>& indexColumns,
+    const Expressions::ColumnExpression *columnExpression,
+    const Expressions::Expression* otherExpression,
+    Value& value
+    ) {
+    const auto& header = indexColumns[0];
+    if (header.columnId != columnExpression->columnId)
+      return false;
+
+    if (otherExpression->IsConstant()) {
+      value = otherExpression->AsConstant()->value;
+      return true;
+    }
+
+    if (otherExpression->IsVariable()) {
+      return false;
+    }
+
+    return false;
+  }
+
+  bool LogicalTableScan::CanIndexSeekBinaryExpression(
+    const std::vector<Headers::IndexColumnsHeader>& indexColumns,
+    const Expressions::BinaryExpression *binaryExpression,
+    Value& value
+  ) {
+    switch (binaryExpression->operation) {
+      case Expressions::BinaryOperator::Equal:
+        case Expressions::BinaryOperator::Greater:
+        case Expressions::BinaryOperator::GreaterEqual:
+        case Expressions::BinaryOperator::Less:
+        case Expressions::BinaryOperator::LessEqual: {
+           if( binaryExpression->left->IsColumn())
+             return LogicalTableScan::CanIndexSeekColumnExpression(indexColumns, binaryExpression->left->AsColumn(), binaryExpression->right, value);
+           if (binaryExpression->right->IsColumn())
+              return LogicalTableScan::CanIndexSeekColumnExpression(indexColumns, binaryExpression->right->AsColumn(), binaryExpression->left, value);
+        }
+        case Expressions::BinaryOperator::NotEqual:
+        case Expressions::BinaryOperator::Add:
+        case Expressions::BinaryOperator::Subtract:
+        case Expressions::BinaryOperator::Multiply:
+        case Expressions::BinaryOperator::Divide:
+        case Expressions::BinaryOperator::Modulo:
+        case Expressions::BinaryOperator::EqualIgnoreOrdinalCase:
+        default:
+          break;
+    }
+
+    return false;
+  }
+
+  bool LogicalTableScan::CanIndexSeekLogicalExpression(
+    const std::vector<Headers::IndexColumnsHeader>& indexColumns,
+    const Expressions::LogicalExpression *logicalExpression,
+    Value& value
+  ){
+    return CanIndexSeek(indexColumns, logicalExpression->left, value)
+          && CanIndexSeek(indexColumns, logicalExpression->right, value);
+  }
+
+  bool LogicalTableScan::CanIndexSeek(
+    const std::vector<Headers::IndexColumnsHeader>& indexColumns,
+    const Expressions::Expression* expr,
+    Value& value
+  ) {
+    if (expr == nullptr)
+      return false;
+
+    switch (expr->expressionType) {
+      case Expressions::ExpressionType::Binary:
+          return LogicalTableScan::CanIndexSeekBinaryExpression(indexColumns, expr->AsBinary(), value);
+      case Expressions::ExpressionType::Logical:
+          return LogicalTableScan::CanIndexSeekLogicalExpression(indexColumns, expr->AsLogical(), value);
+      case Expressions::ExpressionType::Column:
+      case Expressions::ExpressionType::Constant:
+      case Expressions::ExpressionType::Variable:
+      case Expressions::ExpressionType::Branch:
+      case Expressions::ExpressionType::Function:
+      case Expressions::ExpressionType::Expression:
+      default:
+        return false;
+    }
+  }
+
   LogicalTableScan::LogicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
   : table(table), expression(expression) {}
 
@@ -56,32 +141,16 @@ namespace QueryPipeline {
         return new PhysicalPlan::PhysicalTableScan(this->table);
 
       //if expression is complex defer from index seek
-      const bool canIndexSeek = expression != nullptr;
-
-      HashSet<column_index_t> expressionColumns;
-
-      // if (expression != nullptr)
-      //   expression->GetColumns(expressionColumns);
-
     for (const auto& index: indexes) {
-        const auto indexHeader = Server::ServerInstance::Get().SelectIndexById(index.id);
+        const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexId(index.id);
 
-          if (canIndexSeek) {
-            for (const auto& column: index.columns) {
-                //if columns is first prefer it, else break because index scan will occur
-                //index seek
-//              if (!expressionColumns.Contains(column))
-                  break;
+        auto value = Value(nullptr, 0);
+        if (this->CanIndexSeek(indexedColumns, this->expression, value)) {
+          //temporary
+          auto copyVal = value;
+          return new PhysicalPlan::PhysicalIndexSeek(this->table, value, copyVal);
+        }
 
-            }
-          }
-
-        // auto valueFirst = Value(10, 0);
-        // auto valueSecond = Value(14, 0);
-        //
-        // return new PhysicalPlan::PhysicalIndexSeek(this->table, valueFirst, valueSecond);
-
-        //find the first non clustered and use it
         return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, index.isClustered);
       }
 

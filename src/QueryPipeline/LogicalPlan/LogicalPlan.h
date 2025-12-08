@@ -1,4 +1,5 @@
 #pragma once
+#include "../../Database/Database.h"
 #include "../PhysicalPlan/PhysicalPlan.h"
 
 namespace QueryPipeline {
@@ -80,6 +81,28 @@ namespace QueryPipeline {
   };
 
   class LogicalTableScan final : public LogicalPlan {
+    [[nodiscard]] static bool CanIndexSeekColumnExpression(
+      const std::vector<Headers::IndexColumnsHeader>& indexColumns,
+      const Expressions::ColumnExpression* columnExpression,
+      const Expressions::Expression* otherExpression,
+      Value& value
+    );
+    [[nodiscard]] static bool CanIndexSeekBinaryExpression(
+      const std::vector<Headers::IndexColumnsHeader>& indexColumns,
+      const Expressions::BinaryExpression* binaryExpression,
+      Value& value
+    );
+    [[nodiscard]] static bool CanIndexSeekLogicalExpression(
+      const std::vector<Headers::IndexColumnsHeader>& indexColumns,
+      const Expressions::LogicalExpression* logicalExpression,
+      Value& value
+    );
+    [[nodiscard]] static bool CanIndexSeek(
+      const std::vector<Headers::IndexColumnsHeader>& indexColumns,
+      const Expressions::Expression* expr,
+      Value& value
+    );
+
     public:
       Statements::DataSource* table;
       Expressions::Expression* expression;

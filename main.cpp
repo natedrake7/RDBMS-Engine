@@ -69,6 +69,7 @@
 //need to fix bug on background thread
 //check sys_column_stats implementation.
 //check why tree order is desc and not asc
+//Improve index seek selection and split or statements in sub queries
 
 std::atomic<bool> serverRunning{false};
 

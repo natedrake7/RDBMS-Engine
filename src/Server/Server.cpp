@@ -1702,7 +1702,7 @@ namespace Server {
     //get them sorted by ordinal position
     ranges::sort(indexColumns,
     [](const Headers::IndexColumnsHeader& a, const Headers::IndexColumnsHeader& b) {
-      return a.ordinalPosition > b.ordinalPosition;
+      return a.ordinalPosition < b.ordinalPosition;
     });
 
     return indexColumns;
