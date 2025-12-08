@@ -21,16 +21,20 @@ namespace DataTypes::Indexing {
     Key();
     Key(const void *keyValue, const Constants::key_size_t &keySize, const Constants::DataType& keyType);
     explicit Key(const Value& field);
+    explicit Key(Value& field);
 
     explicit Key(const std::vector<Key>& subKeys);
     ~Key();
 
     Key(const Key &otherKey);
+
     bool operator==(const Key& otherKey) const;
     bool operator>(const Key& otherKey) const;
     bool operator<(const Key& otherKey) const;
     bool operator<=(const Key& otherKey) const;
     bool operator>=(const Key& otherKey) const;
+    bool InClosedRange(const Key& minKey, const Key& maxKey) const;
+    bool InOpenRange(const Key& minKey, const Key& maxKey) const;
 
     [[nodiscard]] const Value &GetValue() const;
     [[nodiscard]] ComparisonResult CompareCompositeKeys(const Key& otherKey) const;

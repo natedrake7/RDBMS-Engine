@@ -7,7 +7,6 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include "../Database/Block/Block.h"
-#include "../Database/Storage/StorageManager/StorageManager.h"
 #include "../Systemic/Functions/StringFunctions.h"
 #include "../Database/AdditionalFunctions/SortingFunctions.h"
 #include "../Database/Logger/WriteAheadLogger/WriteAheadLogger.h"
@@ -1198,7 +1197,7 @@ namespace Server {
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    sysDatabases->ClusteredIndexSeek(&selectedDatabases, &key, &key);
+    sysDatabases->ClusteredIndexSeek(this->baseProperties, &selectedDatabases, key, key);
 
     if (selectedDatabases.empty())
       return {};
@@ -1634,7 +1633,7 @@ namespace Server {
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(&selectedIndexes, &key, &key);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key, key);
 
     if(selectedIndexes.empty())
       return {};
@@ -1674,7 +1673,7 @@ namespace Server {
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key, key);
 
     if(rows.empty())
       return {};
@@ -1729,7 +1728,7 @@ namespace Server {
       DataTypes::Indexing::Key key;
       key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-      table->ClusteredIndexSeek(&rows, &key, &key);
+      table->ClusteredIndexSeek(this->baseProperties, &rows, key, key);
 
       if(rows.empty())
         return {};
@@ -1787,7 +1786,7 @@ namespace Server {
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(&rows, &key, &key);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key, key);
 
     if(rows.empty())
       return {};
@@ -1842,7 +1841,7 @@ namespace Server {
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    sysValues->ClusteredIndexSeek(&rows, &key, &key);
+    sysValues->ClusteredIndexSeek(this->baseProperties, &rows, key, key);
 
     if(rows.empty())
       return {};

@@ -76,6 +76,11 @@ namespace QueryPipeline {
             }
           }
 
+        // auto valueFirst = Value(10, 0);
+        // auto valueSecond = Value(14, 0);
+        //
+        // return new PhysicalPlan::PhysicalIndexSeek(this->table, valueFirst, valueSecond);
+
         //find the first non clustered and use it
         return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, index.isClustered);
       }

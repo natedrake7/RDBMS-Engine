@@ -193,7 +193,7 @@ namespace QueryPipeline::PhysicalPlan{
     Value maxValue;
 
     public:
-      explicit PhysicalIndexSeek(Statements::DataSource* table, const Value& minValue, const Value& maxValue);
+      explicit PhysicalIndexSeek(Statements::DataSource* table, Value& minValue, Value& maxValue);
       ~PhysicalIndexSeek()override = default;
       PhysicalPlanResult* Execute(const PhysicalPlanExecutionProperties& properties) override;
   };

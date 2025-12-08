@@ -439,7 +439,7 @@ namespace DatabaseEngine::StorageTypes {
 
       column_number_t Table::GetNumberOfColumns() const { return this->columns.size(); }
 
-      const TableHeader &Table::GetTableHeader() const { return this->header; }
+      const TableHeader &Table::GetHeader() const { return this->header; }
 
       const vector<Column *> &Table::GetColumns() const { return this->columns; }
 

@@ -44,11 +44,13 @@ namespace DatabaseEngine {
         return key;
     }
 
-	Pages::PageGuard<Pages::IndexPage> Database::FindOrAllocateNextIndexPage(const table_id_t& tableId, const page_id_t &indexPageId, const int& nonClusteredIndexId)
+	Pages::PageGuard<Pages::IndexPage> Database::FindOrAllocateNextIndexPage(
+	    Table*& table,
+	    const page_id_t &indexPageId,
+	    const int& nonClusteredIndexId
+	)
     {
-        const auto& tableHeader = this->GetTable(tableId)->GetTableHeader();
-
-        const Table* table = this->tables.at(tableId);
+        const auto& tableHeader = table->GetHeader();
 
         const bool isNonClusteredIndex = nonClusteredIndexId != -1;
 
@@ -58,7 +60,7 @@ namespace DatabaseEngine {
 
         if(indexPageId == INVALID_PAGE_ID)
         {
-            auto newIndexPage = this->CreateIndexPage(tableId, indexId);
+            auto newIndexPage = this->CreateIndexPage(tableHeader.tableId, indexId);
             
             newIndexPage->SetTreeType(isNonClusteredIndex 
                                     ? TreeType::NonClustered 
@@ -103,7 +105,7 @@ namespace DatabaseEngine {
             }
         }
 
-        auto newIndexPage = this->CreateIndexPage(tableId, indexId);
+        auto newIndexPage = this->CreateIndexPage(tableHeader.tableId, indexId);
             
         newIndexPage->SetTreeType(isNonClusteredIndex 
                                 ? TreeType::NonClustered 

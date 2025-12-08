@@ -185,9 +185,11 @@ public:
                                                             const StorageTypes::Table &table,
                                                             extent_id_t *nextExtentId);
 
-    [[nodiscard]] Pages::PageGuard<Pages::IndexPage> FindOrAllocateNextIndexPage(  const table_id_t& tableId
-                                                                , const page_id_t &indexPageId
-                                                                , const int& nonClusteredIndexId = -1);
+    [[nodiscard]] Pages::PageGuard<Pages::IndexPage> FindOrAllocateNextIndexPage(
+      StorageTypes::Table*& table,
+      const page_id_t &indexPageId,
+      const int& nonClusteredIndexId = -1
+    );
 
     void GetIdentityColumns()const;
 

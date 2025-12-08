@@ -211,8 +211,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalIndexSeek::PhysicalIndexSeek(Statements::DataSource* table, const Value& minValue, const Value& maxValue)
-    : table(std::move(table)), minValue(minValue), maxValue(maxValue) {}
+  PhysicalIndexSeek::PhysicalIndexSeek(Statements::DataSource* table, Value& minValue, Value& maxValue)
+    : table(std::move(table)), minValue(std::move(minValue)), maxValue(std::move(maxValue)) {}
 
   PhysicalPlanResult* PhysicalIndexSeek::Execute(const PhysicalPlanExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;
@@ -224,12 +224,15 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     result->columns = tablePtr->GetConstantColumns();
-    const DataTypes::Indexing::Key minKey(minValue);
-    const DataTypes::Indexing::Key maxKey(maxValue);
+
+    DataTypes::Indexing::Key minKey;
+    minKey.InsertKey(DataTypes::Indexing::Key(this->minValue));
+
+    DataTypes::Indexing::Key maxKey;
+    maxKey.InsertKey(DataTypes::Indexing::Key(this->maxValue));
 
     //select if to use clustered or non clustered index here
-
-    tablePtr->ClusteredIndexSeek(&result->rows,&minKey, &maxKey);
+    tablePtr->ClusteredIndexSeek(properties, &result->rows,minKey, maxKey);
 
     return result;
   }

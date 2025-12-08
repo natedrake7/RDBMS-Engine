@@ -16,13 +16,9 @@ namespace Indexing
 {
     BPlusTree::BPlusTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
     {
-        const auto &tableHeader = table->GetTableHeader();
-
         //handle degree here correctly based on indexed columns
         this->keySize = table->CalculateIndexKeySize(nonClusteredIndexId);
-        this->t = BPlusTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
-        this->tableId = tableHeader.tableId;
-        this->tablePosition = tableHeader.ordinalPosition;
+        this->degree = BPlusTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
         this->indexPageId = indexPageId;
         this->type = treeType;
         this->database = table->GetDatabase();
@@ -32,55 +28,54 @@ namespace Indexing
 
     BPlusTree::BPlusTree()
     {
-        this->t = 0;
-        this->tableId = 0;
+        this->degree = 0;
         this->keySize = 0;
+        this->nonClusteredIndexId = -1;
+        this->indexPageId = Constants::INVALID_PAGE_INDEX_ID;
+        this->table = nullptr;
+        this->database = nullptr;
+        this->type = TreeType::NonClustered;
     }
 
     BPlusTree::~BPlusTree() = default;
-    //{
-    //    this->DeleteNode(root);
-    //}
 
-    int BPlusTree::CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId)const
+    int BPlusTree::CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, const TreeType& treeType, const int& nonClusteredId)const
     {
         if(treeType == TreeType::Clustered){
-          const uint32_t pageSize = Constants::INDEX_PAGE_DEFAULT_SIZE;
+          auto rowSize = otherTable->GetMaximumRowSize();
+          int calculatedDegree = static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
 
-          auto rowSize = table->GetMaximumRowSize();
-          int degree = static_cast<int>(pageSize / ((this->keySize + rowSize) * 2));
+          while(calculatedDegree < 2){
+            rowSize = otherTable->ReduceMaximumRowSize();
 
-          while(degree < 2){
-            rowSize = table->ReduceMaximumRowSize();
-
-            degree = static_cast<int>(pageSize / ((this->keySize + rowSize) * 2));
+            calculatedDegree = static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
           }
 
-          return degree;
+          return calculatedDegree;
         }
 
-        const vector<DatabaseEngine::StorageTypes::Column*>& columns = table->GetColumns();
+        const vector<DatabaseEngine::StorageTypes::Column*>& columns = otherTable->GetColumns();
 
-        const auto& index = table->GetNonClusteredIndexes(nonClusteredIndexId);
+        const auto& index = otherTable->GetNonClusteredIndexes(nonClusteredId);
 
-        int keySize = 0;
+        int computedKeySize = 0;
         for(const auto& columnPos: index.columns)
         {
             const DatabaseEngine::StorageTypes::Column* column = columns.at(columnPos);
 
-            keySize += column->GetColumnSize();
+            computedKeySize += column->GetColumnSize();
         }
 
-        const auto pageSize = (Constants::INDEX_PAGE_DEFAULT_SIZE);
-
-        const auto degree = static_cast<int>(pageSize / ((this->keySize + Constants::ROW_ID_SIZE) * 2));
-
-        return degree;
+        return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + Constants::ROW_ID_SIZE) * 2));
     }
 
-    void BPlusTree::SplitChild(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child)const
+    void BPlusTree::SplitChild(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child)
     {
         auto newChild = this->AllocateNewPage(parent->GetPageId());
+
+        MultiThreading::WriterGuard parentLock(&parent->GetLatch());
+        MultiThreading::WriterGuard childLock(&child->GetLatch());
+        MultiThreading::WriterGuard newChildLock(&newChild->GetLatch());
 
         newChild->SetIsLeaf(child->IsLeaf());
         newChild->SetIsRoot(false);
@@ -91,15 +86,15 @@ namespace Indexing
         auto* parentKeys = parent->GetKeysUnsafe();
 
         // Move the middle key from the child to the parent
-        parentKeys->insert(parentKeys->begin() + index, (*childKeys)[t - 1]);
+        parentKeys->insert(parentKeys->begin() + index, (*childKeys)[this->degree - 1]);
 
         auto* newChildKeys = newChild->GetKeysUnsafe();
 
         // Assign the second half of the child's keys to the new child
-        newChildKeys->assign(childKeys->begin() + t, childKeys->end());
+        newChildKeys->assign(childKeys->begin() + this->degree, childKeys->end());
 
         // Resize the old child to keep only the first half of its keys
-        childKeys->resize(t - 1);
+        childKeys->resize(this->degree - 1);
 
         auto* parentChildren = parent->GetChildren();
 
@@ -112,9 +107,9 @@ namespace Indexing
 
                 auto* newChildRows = newChild->GetDataRowsUnsafe();
 
-                newChildRows->assign(childRows->begin() + t, childRows->end());
+                newChildRows->assign(childRows->begin() + this->degree, childRows->end());
 
-                childRows->resize(t);
+                childRows->resize(this->degree);
             }
             else
             {
@@ -122,9 +117,9 @@ namespace Indexing
 
                 auto* newChildRows = newChild->GetNonClusteredDataUnsafe();
 
-                newChildRows->assign(childRows->begin() + t, childRows->end());
+                newChildRows->assign(childRows->begin() + this->degree, childRows->end());
 
-                childRows->resize(t);
+                childRows->resize(this->degree);
             }
 
             newChild->SetNextPage(child->GetNextPage());
@@ -142,10 +137,10 @@ namespace Indexing
             auto* childChildren = child->GetChildren();
 
             // Assign the second half of the child pointers to the new child
-            newChildChildren->assign(childChildren->begin() + t, childChildren->end());
+            newChildChildren->assign(childChildren->begin() + degree, childChildren->end());
 
             // Resize the old child's childrenHeaders vector to keep only the first half
-            childChildren->resize(t);
+            childChildren->resize(degree);
         }
 
         parent->UpdateBytesLeft();
@@ -177,7 +172,7 @@ namespace Indexing
 
         root = this->GetNode(this->indexPageId);
 
-        if (root->GetKeysUnsafe()->size() == 2 * t - 1) // root is full,
+        if (root->GetKeysUnsafe()->size() == 2 * degree - 1) // root is full,
         {
             auto newRoot = this->AllocateNewPage(this->indexPageId);
 
@@ -255,7 +250,7 @@ namespace Indexing
 
         const auto* childKeys = child->GetKeysUnsafe();
 
-        if (childKeys->size() == 2 * t - 1)
+        if (childKeys->size() == 2 * degree - 1)
         {
             this->SplitChild(node, childIndex, child);
 
@@ -279,7 +274,7 @@ namespace Indexing
 
         while (currentNode.Get())
         {
-            auto* keys = currentNode->GetKeysUnsafe();
+            // auto* keys = currentNode->GetKeysUnsafe();
 
             // for (int i = 0; i < keys->size(); i++)
             //     result.emplace_back(currentNode->dataPageId, i);
@@ -803,8 +798,7 @@ namespace Indexing
         auto currentNode = this->SearchKey(*minKey);
         Pages::PageGuard<Pages::IndexPage> previousNode;
 
-        while (currentNode.Get())
-        {
+        while (currentNode.Get()){
             if (currentNode.Get() == nullptr)
                 break;
 
@@ -812,59 +806,57 @@ namespace Indexing
 
             const auto* keys = currentNode->GetKeysUnsafe();
 
-            if (previousNode.Get() && maxKey >= keys->at(0))
+            if (previousNode.Get())
             {
-                MultiThreading::WriterGuard previousNodeLock(&previousNode->GetLatch());
+                if (maxKey >= keys->at(0)) {
+                    MultiThreading::WriterGuard previousNodeLock(&previousNode->GetLatch());
 
-                const auto* previousKeys = previousNode->GetKeysUnsafe();
+                    const auto* previousKeys = previousNode->GetKeysUnsafe();
 
-                // Check if the last key in the previous node is within the range
-                if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
-                    const auto* previousRows = previousNode->GetDataRowsUnsafe();
+                    // Check if the last key in the previous node is within the range
+                    if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
+                        const auto* previousRows = previousNode->GetDataRowsUnsafe();
 
-                    const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), properties, updates, updatedColumns, false);
+                        const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), properties, updates, updatedColumns, false);
 
-                    if (result.code != Errors::RuntimeError::Ok)
-                        return result;
+                        if (result.code != Errors::RuntimeError::Ok)
+                            return result;
+                    }
                 }
+                else if(maxKey < keys->at(0))
+                    return {};
             }
-            else if(maxKey < keys->at(0))
-               return {};
 
-          const auto* rows = currentNode->GetDataRowsUnsafe();
+            const auto* rows = currentNode->GetDataRowsUnsafe();
 
-          for (int i = 0; i < keys->size(); i++)
-          {
-            const auto &key = keys->at(i);
+            for (int i = 0; i < keys->size(); i++){
+                const auto &key = keys->at(i);
 
-            if (*minKey > *key)
-                continue;
+                if (*minKey > *key)
+                    continue;
 
-            if (*maxKey < *key)
-                break;
+                if (*maxKey < *key)
+                    break;
 
-            const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, updatedColumns, false);
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, updatedColumns, false);
 
-            if (result.code != Errors::RuntimeError::Ok)
-              return result;
+                if (result.code != Errors::RuntimeError::Ok)
+                  return result;
+            }
 
-//            if (maxKey < *key && !previousNode)
-//                return;
-          }
+            if(currentNode->GetNextPage() == 0)
+                return {};
 
-          if(currentNode->GetNextPage() == 0)
-            return {};
-
-          previousNode = currentNode;
-          currentNode = this->GetNode(currentNode->GetNextPage());
+            previousNode = currentNode;
+            currentNode = this->GetNode(currentNode->GetNextPage());
         }
 
         return {};
     }
 
 
-    void BPlusTree::IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const
-    {
+    //TODO fix non clusteredIndex Seek
+    void BPlusTree::IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
@@ -877,7 +869,7 @@ namespace Indexing
 
             if (previousNode.Get() && maxKey >= *keys->at(0))
             {
-                auto* previousKeys = previousNode->GetKeysUnsafe();
+                // auto* previousKeys = previousNode->GetKeysUnsafe();
 
                 // Check if the last key in the previous node is within the range
                 // if (maxKey >= *previousKeys->at(previousKeys->size() - 1))
@@ -905,6 +897,7 @@ namespace Indexing
     }
 
     void BPlusTree::IndexSeek(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result
@@ -925,29 +918,35 @@ namespace Indexing
 
             const auto* keys = currentNode->GetKeysUnsafe();
 
-            if (previousNode.Get() && maxKey >= *keys->at(0))
-            {
-                MultiThreading::ReaderGuard previousNodeLock(&previousNode->GetLatch());
+            if (previousNode.Get()){
+                if (maxKey >= *keys->at(0)) {
+                    MultiThreading::ReaderGuard previousNodeLock(&previousNode->GetLatch());
 
-                const auto* previousKeys = previousNode->GetKeysUnsafe();
+                    const auto* previousKeys = previousNode->GetKeysUnsafe();
 
-                // Check if the last key in the previous node is within the range
-                if (maxKey >= *previousKeys->at(previousKeys->size() - 1))
-                    result->push_back(previousNode->GetRow(previousKeys->size() - 1));
+                    // Check if the last key in the previous node is within the range
+                    if (maxKey >= *previousKeys->at(previousKeys->size() - 1))
+                        result->push_back(previousNode->GetRow(previousKeys->size() - 1));
+                }
+                else
+                    return;
             }
 
-            for (int i = 0; i < keys->size(); i++)
-            {
+            for (int i = 0; i < keys->size(); i++){
                 const auto &key = keys->at(i);
 
-                if (minKey <= *key && maxKey >= *key)
-                {
-                    result->push_back(currentNode->GetRow(i));
+                if (key->InClosedRange(minKey, maxKey)){
+                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                    if (!visibleRow)
+                        continue;
+
+                    result->push_back(visibleRow);
                     continue;
                 }
 
-//                if (maxKey < *key)
-//                    return;
+                if (maxKey < *key)
+                    return;
             }
 
             if(currentNode->GetNextPage() == 0)
@@ -1053,7 +1052,7 @@ namespace Indexing
       currentNode->UpdatePageSize();
       currentNode->UpdateBytesLeft();
 
-      if (keys->size() >= (t - 1 ) / 2)
+      if (keys->size() >= (degree - 1 ) / 2)
         return;
 
       int parentIndex = ancestors.size() - 1;
@@ -1134,7 +1133,7 @@ namespace Indexing
 
         auto* siblingKeys = sibling->GetKeysUnsafe();
 
-         if (siblingKeys->size() <= (t - 1) / 2)
+         if (siblingKeys->size() <= (degree - 1) / 2)
              return false;
 
         auto* parentKeys = parent->GetKeysUnsafe();
@@ -1198,7 +1197,7 @@ namespace Indexing
 
           auto* siblingKeys = sibling->GetKeysUnsafe();
 
-         if (siblingKeys->size() <= (t - 1) / 2)
+         if (siblingKeys->size() <= (degree - 1) / 2)
              return false;
 
           auto* nodeKeys = node->GetKeysUnsafe();
@@ -1315,7 +1314,7 @@ namespace Indexing
           parent->UpdateBytesLeft();
 
          // Handle parent underflow if necessary
-         if (parentKeys->size() < (t - 1) / 2 && !parent->IsRoot()){
+         if (parentKeys->size() < (degree - 1) / 2 && !parent->IsRoot()){
             parentIndex--;
             this->HandleUnderflow(parent, ancestors, parentIndex);
           }
@@ -1323,9 +1322,9 @@ namespace Indexing
          delete rightNode.Get();
     }
 
-    void BPlusTree::SetBranchingFactor(const int &branchingFactor) { this->t = branchingFactor; }
+    void BPlusTree::SetBranchingFactor(const int &branchingFactor) { this->degree = branchingFactor; }
 
-    const int &BPlusTree::GetBranchingFactor() const { return this->t; }
+    const int &BPlusTree::GetBranchingFactor() const { return this->degree; }
 
     void BPlusTree::SetTreeType(const TreeType & treeType) { this->type = treeType; }
 
@@ -1350,8 +1349,6 @@ namespace Indexing
 
             currentNode = this->GetNode(currentNode->GetChildren()->at(index));
         }
-
-        return currentNode;
     }
 
     Pages::PageGuard<Pages::IndexPage> BPlusTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::PageGuard<Pages::IndexPage>> & ancestors) const{
@@ -1386,12 +1383,10 @@ namespace Indexing
 
             currentNode = this->GetNode(currentNode->GetChildren()->at(0));
         }
-
-        return currentNode;
     }
 
-    Pages::PageGuard<Pages::IndexPage> BPlusTree::AllocateNewPage(const page_id_t& parentPageId)const{
-        return this->database->FindOrAllocateNextIndexPage(this->tablePosition, parentPageId, this->nonClusteredIndexId);
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::AllocateNewPage(const page_id_t& parentPageId){
+        return this->database->FindOrAllocateNextIndexPage(this->table, parentPageId, this->nonClusteredIndexId);
     }
 
     Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNode(const page_id_t& pageId) const{

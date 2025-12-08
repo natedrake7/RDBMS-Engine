@@ -351,7 +351,7 @@ namespace DatabaseEngine
         if (table == nullptr)
             return;
 
-        const auto& tableHeader = table->GetTableHeader();
+        const auto& tableHeader = table->GetHeader();
 
         const auto extentId = Database::CalculateExtentIdByPageId(tableHeader.indexAllocationMapPageId);
 
@@ -477,7 +477,7 @@ namespace DatabaseEngine
     {
         Table *table = this->tables.at(tableId);
 
-        auto indexAllocationMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+        auto indexAllocationMapPageId = table->GetHeader().indexAllocationMapPageId;
 
         while (indexAllocationMapPageId != INVALID_PAGE_ID)
         {
@@ -593,7 +593,7 @@ namespace DatabaseEngine
         bool isFirstExtent = false;
         {
             const auto* table = this->tables[tableId];
-            const Constants::page_id_t indexAllocationMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+            const Constants::page_id_t indexAllocationMapPageId = table->GetHeader().indexAllocationMapPageId;
             MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
 
             auto gamPage = StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
@@ -680,7 +680,7 @@ namespace DatabaseEngine
 
         const auto* table = this->tables[tableId];
 
-        const auto& tableMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+        const auto& tableMapPageId = table->GetHeader().indexAllocationMapPageId;
 
         if(tableMapPageId == INVALID_PAGE_ID)
             return Pages::PageGuard<LargeObjectPage>();
@@ -721,7 +721,7 @@ namespace DatabaseEngine
 
         const auto& table = this->tables[tableId];
 
-        const auto& tableMapPageId = table->GetTableHeader().indexAllocationMapPageId;
+        const auto& tableMapPageId = table->GetHeader().indexAllocationMapPageId;
 
         if(tableMapPageId == INVALID_PAGE_ID)
             return {};

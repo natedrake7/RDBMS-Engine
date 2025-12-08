@@ -128,7 +128,7 @@ namespace Pages
 
     void HeaderPage::SetTableHeader(const DatabaseEngine::StorageTypes::Table* table)
     {
-        const DatabaseEngine::StorageTypes::TableHeader& header = table->GetTableHeader();
+        const DatabaseEngine::StorageTypes::TableHeader& header = table->GetHeader();
 
         this->tablesHeaders.push_back(header);
 

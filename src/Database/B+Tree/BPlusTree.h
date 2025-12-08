@@ -12,13 +12,11 @@
 #include "../Pages/PageGuard/PageGuard.h"
 #include "../Row/Row.h"
 
-namespace DatabaseEngine
-{
+namespace DatabaseEngine{
     class Database;
 }
 
-namespace Pages
-{
+namespace Pages{
     class IndexPage;
 }
 
@@ -26,11 +24,9 @@ namespace Indexing
 {
     class BPlusTree final
     {
-        table_id_t tableId;
-        int16_t tablePosition;
         page_id_t indexPageId;
 
-        int t;
+        int degree;
         int keySize;
 
         TreeType type;
@@ -39,16 +35,16 @@ namespace Indexing
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
-        void SplitChild(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child)const;
+        void SplitChild(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child);
         Pages::PageGuard<Pages::IndexPage> GetNonFullNode(Pages::PageGuard<Pages::IndexPage>& node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKey(const DataTypes::Indexing::Key &key) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchLeftMostLeafNode() const;
 
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetNode(const Constants::page_id_t& pageId) const;
-        [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* table, const TreeType& treeType, const int& nonClusteredIndexId)const;
+        [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, const TreeType& treeType, const int& nonClusteredId)const;
 
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> AllocateNewPage(const Constants::page_id_t& parentPageId)const;
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> AllocateNewPage(const Constants::page_id_t& parentPageId);
 
         void HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex);
         void HandleRootUnderflow();
@@ -71,9 +67,18 @@ namespace Indexing
 
         Pages::PageGuard<Pages::IndexPage> FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
 
-        void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const;
+        void IndexSeek(
+            const DataTypes::Indexing::Key &minKey,
+            const DataTypes::Indexing::Key &maxKey,
+            vector<DataTypes::Indexing::QueryData> &result
+        )const;
 
-        void IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, std::vector<const DatabaseEngine::StorageTypes::Row*>* result)const;
+        void IndexSeek(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const DataTypes::Indexing::Key &minKey,
+            const DataTypes::Indexing::Key &maxKey,
+            std::vector<const DatabaseEngine::StorageTypes::Row*>* result
+        )const;
 
         void IndexScan(vector<DataTypes::Indexing::QueryData> &result)const;
 

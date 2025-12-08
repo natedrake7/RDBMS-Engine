@@ -192,7 +192,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
 
-            [[nodiscard]] const TableHeader &GetTableHeader() const;
+            [[nodiscard]] const TableHeader &GetHeader() const;
 
             [[nodiscard]] const vector<Column *> &GetColumns() const;
 
@@ -207,9 +207,10 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
 
             void ClusteredIndexSeek(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
-                const DataTypes::Indexing::Key* minimumValue,
-                const DataTypes::Indexing::Key* maximumValu
+                const DataTypes::Indexing::Key& minKey,
+                const DataTypes::Indexing::Key& maxKey
             );
 
             void ClusteredIndexScan(

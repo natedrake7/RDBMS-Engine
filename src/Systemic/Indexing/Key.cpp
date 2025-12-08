@@ -38,7 +38,18 @@ namespace DataTypes::Indexing{
 
         this->indexKeyPosition = -1;
         this->currentSearchKeyPosition = -1;
-        this->size = field.GetSize();
+        this->size = this->value.GetSize();
+    }
+
+    Key::Key(Value &field) {
+
+
+
+        this->value = std::move(field);
+
+        this->indexKeyPosition = -1;
+        this->currentSearchKeyPosition = -1;
+        this->size = this->value.GetSize();
     }
 
     Key::Key(const vector<Key> &subKeys)
@@ -110,6 +121,10 @@ namespace DataTypes::Indexing{
 
         return result.GetBool();
     }
+
+    bool Key::InClosedRange(const Key &minKey, const Key &maxKey) const { return minKey <= *this && maxKey >= *this; }
+
+    bool Key::InOpenRange(const Key &minKey, const Key &maxKey) const { return minKey < *this && maxKey > *this; }
 
     const Value & Key::GetValue() const { return this->value; }
 
