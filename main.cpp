@@ -70,6 +70,10 @@
 //check sys_column_stats implementation.
 //check why tree order is desc and not asc
 //Improve index seek selection and split or statements in sub queries
+//when or statments exist break into multiple index seek queries(if not index seek dont break go to index scan)
+//create union logical and physical plan node to concatanate the results of the subqueries(later add it as a command)
+//store or available values by operation type and by operation prededence(on each subquery) find
+//the 2 or 1 values that matter(range query should have 1 min 1 max if equality exists it has precedence)
 
 std::atomic<bool> serverRunning{false};
 
