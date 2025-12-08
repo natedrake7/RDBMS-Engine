@@ -9,11 +9,18 @@ ReaderGuard::ReaderGuard(ReadWriteMutex* mtx){
 }
 
 ReaderGuard::~ReaderGuard(){
+  if (this->mutex == nullptr)
+    return;
+
   this->mutex->SharedUnlock();
 }
 
 void ReaderGuard::Release()const{
   this->mutex->SharedUnlock();
+}
+
+void ReaderGuard::DisableMutex(){
+  this->mutex = nullptr;
 }
 
 }

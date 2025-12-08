@@ -18,6 +18,8 @@ namespace MultiThreading {
     void SharedUnlock();
     void UniqueLock();
     void UniqueUnlock();
+
+    void PromoteLock();
   };
 
 }

@@ -567,12 +567,16 @@ namespace DatabaseEngine
         return StorageManager::Get().GetLargeDataPage(this->filename, lowerLimit, this->tables[tableId]);
     }
 
-    Pages::PageGuard<IndexPage> Database::CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId)
+    Pages::PageGuard<IndexPage> Database::CreateIndexPage(
+        const StorageTypes::Table* table,
+        const table_id_t &tableOrdinalPosition,
+        const page_id_t& treeId
+    )
     {
         extent_id_t newExtentId = 0;
         page_id_t lowerLimit = 0, newPageId = 0;
 
-        this->AllocateNewExtent(lowerLimit, newPageId, newExtentId, tableId);
+        this->AllocateNewExtent(lowerLimit, newPageId, newExtentId, tableOrdinalPosition);
 
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
         {
@@ -585,7 +589,7 @@ namespace DatabaseEngine
             pageFreeSpacePage->SetPageMetaData(indexPage.Get());
         }
 
-        return StorageManager::Get().GetIndexPage(this->filename, lowerLimit, this->tables[tableId]);
+        return StorageManager::Get().GetIndexPage(this->filename, lowerLimit, table);
     }
 
     bool Database::AllocateNewExtent(page_id_t& lowerLimit, page_id_t& newPageId, extent_id_t& newExtentId, const table_id_t &tableId)

@@ -68,6 +68,7 @@
 //Added batch streamline
 //need to fix bug on background thread
 //check sys_column_stats implementation.
+//check why tree order is desc and not asc
 
 std::atomic<bool> serverRunning{false};
 

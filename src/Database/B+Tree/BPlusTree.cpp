@@ -69,12 +69,22 @@ namespace Indexing
         return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + Constants::ROW_ID_SIZE) * 2));
     }
 
-    void BPlusTree::SplitChild(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child)
-    {
+    void BPlusTree::SplitChild(
+        Pages::PageGuard<Pages::IndexPage>& parent,
+        MultiThreading::ReaderGuard& parentReadLock,
+        const int &index,
+        Pages::PageGuard<Pages::IndexPage>& child,
+        MultiThreading::ReaderGuard& childReadLock
+    ){
+        auto parentLock = MultiThreading::WriterGuard::Promote(&parent->GetLatch(), parentReadLock);
+        auto childLock = MultiThreading::WriterGuard::Promote(&child->GetLatch(), childReadLock);
+
+        this->SplitChildNoLock(parent, index, child);
+    }
+
+    void BPlusTree::SplitChildNoLock(Pages::PageGuard<Pages::IndexPage> &parent, const int &index, Pages::PageGuard<Pages::IndexPage> &child) {
         auto newChild = this->AllocateNewPage(parent->GetPageId());
 
-        MultiThreading::WriterGuard parentLock(&parent->GetLatch());
-        MultiThreading::WriterGuard childLock(&child->GetLatch());
         MultiThreading::WriterGuard newChildLock(&newChild->GetLatch());
 
         newChild->SetIsLeaf(child->IsLeaf());
@@ -137,10 +147,10 @@ namespace Indexing
             auto* childChildren = child->GetChildren();
 
             // Assign the second half of the child pointers to the new child
-            newChildChildren->assign(childChildren->begin() + degree, childChildren->end());
+            newChildChildren->assign(childChildren->begin() + this->degree, childChildren->end());
 
             // Resize the old child's childrenHeaders vector to keep only the first half
-            childChildren->resize(degree);
+            childChildren->resize(this->degree);
         }
 
         parent->UpdateBytesLeft();
@@ -154,7 +164,7 @@ namespace Indexing
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
         {
             //maybe root page is removed and need to be reopened
-            root = this->AllocateNewPage(INVALID_PAGE_ID);
+            root = this->AllocateNewPage(Constants::INVALID_PAGE_ID);
 
             root->SetIsRoot(true);
             root->SetIsLeaf(true);
@@ -172,20 +182,26 @@ namespace Indexing
 
         root = this->GetNode(this->indexPageId);
 
-        if (root->GetKeysUnsafe()->size() == 2 * degree - 1) // root is full,
+        if (root->GetKeysUnsafe()->size() == 2 * this->degree - 1) // root is full,
         {
+            Pages::PageGuard<Pages::IndexPage> oldRoot;
             auto newRoot = this->AllocateNewPage(this->indexPageId);
 
-            newRoot->SetIsRoot(true);
-            newRoot->SetIsLeaf(false);
-            newRoot->SetTreeType(this->type);
+            {
+                MultiThreading::WriterGuard newRootLock(&newRoot->GetLatch());
 
-            auto oldRoot = this->GetNode(this->indexPageId);
+                newRoot->SetIsRoot(true);
+                newRoot->SetIsLeaf(false);
+                newRoot->SetTreeType(this->type);
 
-            newRoot->InsertChild(oldRoot->GetPageId());
+                oldRoot = this->GetNode(this->indexPageId);
 
-            oldRoot->SetIsRoot(false);
-            this->indexPageId = newRoot->GetPageId();
+                MultiThreading::WriterGuard oldRootLock(&oldRoot->GetLatch());
+
+                newRoot->InsertChild(oldRoot->GetPageId());
+                oldRoot->SetIsRoot(false);
+                this->indexPageId = newRoot->GetPageId();
+            }
 
             if(this->nonClusteredIndexId != -1)
               this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
@@ -193,16 +209,20 @@ namespace Indexing
               this->table->SetClusteredIndexPageId(this->indexPageId);
 
             // split the root
-            this->SplitChild(newRoot, 0, oldRoot);
+            this->SplitChildNoLock(newRoot, 0, oldRoot);
         }
 
         return this->GetNonFullNode(root, key, indexPosition, status);
     }
 
 //TODO proper locking
-    Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNonFullNode(Pages::PageGuard<Pages::IndexPage>& node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
-    {
-        const MultiThreading::ReaderGuard lock(&node->GetLatch());
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNonFullNode(
+        Pages::PageGuard<Pages::IndexPage>& node,
+        const DataTypes::Indexing::Key &key,
+        int *indexPosition,
+        Errors::RuntimeStatus& status
+    ){
+        MultiThreading::ReaderGuard parentLock(&node->GetLatch());
 
         auto* keys = node->GetKeysUnsafe();
 
@@ -216,12 +236,12 @@ namespace Indexing
                 && ((keys->size() > indexPos && key == *keys->at(indexPos))
                 || (indexPos > 0 && key == *keys->at(indexPos - 1))))
             {
-                const ostringstream oss;
+                ostringstream os;
 
-                std::cerr << "BPlusTree::GetNonFullNode: Key " << key << " already exists" << std::endl;
+               os << "BPlusTree::GetNonFullNode: Key " << key << " already exists" << std::endl;
 
                 status.code = Errors::RuntimeError::DuplicateKey;
-                status.message = oss.str();
+                status.message = os.str();
 
                 return node;
             }
@@ -233,7 +253,6 @@ namespace Indexing
             return node;
         }
 
-
         const auto iterator = ranges::lower_bound(*keys, &key);
 
         int childIndex = iterator - keys->begin();
@@ -244,20 +263,17 @@ namespace Indexing
 
         auto child = this->GetNode(childId);
 
-        MultiThreading::ReaderGuard childLatch(&child->GetLatch());
-
-        lock.Release();
+        MultiThreading::ReaderGuard childLock(&child->GetLatch());
 
         const auto* childKeys = child->GetKeysUnsafe();
 
-        if (childKeys->size() == 2 * degree - 1)
+        if (childKeys->size() == 2 * this->degree - 1)
         {
-            this->SplitChild(node, childIndex, child);
+            this->SplitChild(node, parentLock, childIndex, child, childLock);
 
             if (key > *keys->at(childIndex))
                 childIndex++;
         }
-
 
         auto intermediateNode = this->GetNode(children->at(childIndex));
 
@@ -279,7 +295,7 @@ namespace Indexing
             // for (int i = 0; i < keys->size(); i++)
             //     result.emplace_back(currentNode->dataPageId, i);
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             // previousNode = currentNode;
@@ -321,7 +337,7 @@ namespace Indexing
                 }
             }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -369,7 +385,7 @@ namespace Indexing
                 }
             }
 
-            if(currentNode->GetNextPage() == 0) {
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID) {
               return;
             }
 
@@ -402,9 +418,8 @@ namespace Indexing
                 result->push_back(row);
             }
 
-            if(currentNode->GetNextPage() == 0) {
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
-            }
 
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
@@ -432,7 +447,7 @@ namespace Indexing
                 result->push_back(row);
             }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -442,7 +457,8 @@ namespace Indexing
     void BPlusTree::IndexScan(
         vector<Headers::RowIdentifier> *result,
         QueryPipeline::PhysicalPlan::IndexState& state,
-        const int& rowsToSelect)const{
+        const int& rowsToSelect
+    )const{
 
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
@@ -484,7 +500,7 @@ namespace Indexing
             //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
             // }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -510,7 +526,7 @@ namespace Indexing
             //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
             // }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -550,7 +566,7 @@ namespace Indexing
                   return;
           }
 
-          if(currentNode->GetNextPage() == 0)
+          if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
             return;
 
           currentNode = this->GetNode(currentNode->GetNextPage());
@@ -589,7 +605,7 @@ namespace Indexing
                     return result;
             }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return {};
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -620,7 +636,7 @@ namespace Indexing
                     return result;
             }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return {};
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -646,7 +662,7 @@ namespace Indexing
                 this->table->NonClusteredIndexInsert(row, indexPos, Headers::RowIdentifier(currentNode->GetPageId(), i));
             }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -664,8 +680,7 @@ namespace Indexing
             for(auto* row: *currentNode->GetDataRowsUnsafe())
                 this->table->HandleAddColumn(currentNode.Get(), row, index, defaultValue);
 
-            if(currentNode->GetNextPage() == 0
-                || currentNode->GetNextPage() == INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -685,8 +700,7 @@ namespace Indexing
             for(auto* row: *currentNode->GetDataRowsUnsafe())
                 DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode.Get(), row, index);
 
-            if(currentNode->GetNextPage() == 0
-                || currentNode->GetNextPage() == INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -772,7 +786,7 @@ namespace Indexing
 //                return;
           }
 
-          if(currentNode->GetNextPage() == 0)
+          if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
             return {};
 
           previousNode = currentNode;
@@ -844,7 +858,7 @@ namespace Indexing
                   return result;
             }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return {};
 
             previousNode = currentNode;
@@ -888,7 +902,7 @@ namespace Indexing
                     return;
             }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             previousNode = currentNode;
@@ -945,11 +959,12 @@ namespace Indexing
                     continue;
                 }
 
-                if (maxKey < *key)
-                    return;
+                //
+                // if (maxKey < *key)
+                //     return;
             }
 
-            if(currentNode->GetNextPage() == 0)
+            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
             previousNode = currentNode;
@@ -1282,7 +1297,7 @@ namespace Indexing
               leftNode->SetNextPage(rightNode->GetNextPage());
 
 
-              if(rightNode->GetNextPage() != 0){
+              if(rightNode->GetNextPage() != Constants::INVALID_PAGE_ID){
                 auto nextNode = this->GetNode(rightNode->GetNextPage());
                 nextNode->SetPreviousPage(leftNode->GetPageId());
               }
@@ -1370,10 +1385,8 @@ namespace Indexing
       return currentNode;
     }
 
-  Pages::PageGuard<Pages::IndexPage> BPlusTree::SearchLeftMostLeafNode() const
-    {
+  Pages::PageGuard<Pages::IndexPage> BPlusTree::SearchLeftMostLeafNode() const{
         auto currentNode = this->GetNode(this->indexPageId);
-
 
         while (true) {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());

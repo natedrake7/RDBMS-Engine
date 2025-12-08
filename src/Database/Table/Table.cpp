@@ -711,7 +711,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId){
       BPlusTree* tree = this->GetClusteredIndexedTree();
 
-      const auto key = Database::CreateKey(this->GetClusteredIndex(), row);
+      auto key = Database::CreateKey(this->GetClusteredIndex(), row);
 
       int indexPosition = 0;
 
@@ -723,6 +723,9 @@ namespace DatabaseEngine::StorageTypes {
          return status;
 
       auto pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
+
+      MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage->GetLatch());
+      MultiThreading::WriterGuard pageLock(&node->GetLatch());
 
       // should never fail
       this->InsertRowToClusteredPage(pageFreeSpacePage, node.Get(), row, indexPosition);

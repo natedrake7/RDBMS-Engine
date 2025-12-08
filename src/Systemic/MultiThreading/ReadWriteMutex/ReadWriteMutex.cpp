@@ -45,6 +45,14 @@ void ReadWriteMutex::UniqueUnlock(){
   this->readersCV.notify_all();
 }
 
+void ReadWriteMutex::PromoteLock(){
+   std::unique_lock<std::mutex> lk(mutex);
 
+   this->readers--;
+   this->writersWaiting++;
 
+   this->writersCV.wait(lk, [this](){ return !this->writerActive && this->readers == 0; });
+   this->writersWaiting--;
+   this->writerActive = true;
+}
 }

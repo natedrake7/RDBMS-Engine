@@ -60,7 +60,7 @@ namespace DatabaseEngine {
 
         if(indexPageId == INVALID_PAGE_ID)
         {
-            auto newIndexPage = this->CreateIndexPage(tableHeader.tableId, indexId);
+            auto newIndexPage = this->CreateIndexPage(table, tableHeader.ordinalPosition, indexId);
             
             newIndexPage->SetTreeType(isNonClusteredIndex 
                                     ? TreeType::NonClustered 
@@ -105,7 +105,7 @@ namespace DatabaseEngine {
             }
         }
 
-        auto newIndexPage = this->CreateIndexPage(tableHeader.tableId, indexId);
+        auto newIndexPage = this->CreateIndexPage(table, tableHeader.ordinalPosition, indexId);
             
         newIndexPage->SetTreeType(isNonClusteredIndex 
                                 ? TreeType::NonClustered 

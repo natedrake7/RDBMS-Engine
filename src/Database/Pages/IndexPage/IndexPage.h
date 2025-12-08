@@ -24,7 +24,7 @@ namespace Storage {
 
 namespace Pages {
 
-	typedef struct IndexPageAdditionalHeader {
+	struct IndexPageAdditionalHeader {
 		TreeType treeType;
 		page_id_t treeId;
 		uint8_t numberOfSubKeys;
@@ -34,7 +34,7 @@ namespace Pages {
 
 		IndexPageAdditionalHeader();
 		~IndexPageAdditionalHeader();
-	}IndexPageAdditionalHeader;
+	};
 
 	class IndexPage final : public Page {
 		IndexPageAdditionalHeader additionalHeader;

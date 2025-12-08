@@ -10,5 +10,6 @@ namespace MultiThreading {
       ~ReaderGuard();
 
       void Release()const;
+      void DisableMutex();
   };
 }

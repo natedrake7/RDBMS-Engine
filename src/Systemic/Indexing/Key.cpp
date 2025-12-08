@@ -70,8 +70,7 @@ namespace DataTypes::Indexing{
     {
         this->size = otherKey.size;
 
-        if(otherKey.subKeys.empty())
-        {
+        if(otherKey.subKeys.empty()){
             this->value = otherKey.value;
             return;
         }
@@ -84,6 +83,26 @@ namespace DataTypes::Indexing{
         // memcpy(this->value, otherKey.value, otherKey.size);
 
     }
+
+    // Key::Key(Key &&other) noexcept {
+    //     if (this == &other)
+    //         return;
+    //
+    //     this->size = other.size;
+    //
+    //     if(other.subKeys.empty()){
+    //         this->value = other.value;
+    //         other.value = Value(nullptr, 0);
+    //         return;
+    //     }
+    //
+    //     this->subKeys = other.subKeys;
+    //     this->indexKeyPosition = -1;
+    //     this->currentSearchKeyPosition = -1;
+    //
+    //     other.size = 0;
+    //     other.subKeys.clear();
+    // }
 
     void Key::InsertKey(const Key &otherKey)
     {
@@ -133,8 +152,7 @@ namespace DataTypes::Indexing{
         if(this->indexKeyPosition != -1)
             return Key::CompareSubKeys(this->subKeys[this->currentSearchKeyPosition], otherKey.subKeys[this->indexKeyPosition]);
 
-        for (int i = 0; i < this->subKeys.size(); i++)
-        {
+        for (int i = 0; i < this->subKeys.size(); i++){
             if (this->subKeys[i] == otherKey.subKeys[i])
                 continue;
 

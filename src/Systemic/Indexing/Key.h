@@ -27,12 +27,14 @@ namespace DataTypes::Indexing {
     ~Key();
 
     Key(const Key &otherKey);
+    // Key(Key&& other)noexcept;
 
     bool operator==(const Key& otherKey) const;
     bool operator>(const Key& otherKey) const;
     bool operator<(const Key& otherKey) const;
     bool operator<=(const Key& otherKey) const;
     bool operator>=(const Key& otherKey) const;
+
     bool InClosedRange(const Key& minKey, const Key& maxKey) const;
     bool InOpenRange(const Key& minKey, const Key& maxKey) const;
 

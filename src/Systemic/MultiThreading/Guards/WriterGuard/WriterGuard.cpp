@@ -1,6 +1,7 @@
 #include "WriterGuard.h"
 
 #include "../../ReadWriteMutex/ReadWriteMutex.h"
+#include "../ReaderGuard/ReaderGuard.h"
 
 namespace MultiThreading {
   WriterGuard::WriterGuard(ReadWriteMutex *mtx){
@@ -8,8 +9,50 @@ namespace MultiThreading {
     this->mutex->UniqueLock();
   }
 
+  WriterGuard::WriterGuard() {
+    this->mutex = nullptr;
+  }
+
   WriterGuard::~WriterGuard(){
-    this->mutex->UniqueUnlock();
+    if (this->mutex != nullptr)
+      this->mutex->UniqueUnlock();
+  }
+
+  WriterGuard::WriterGuard(WriterGuard &&other) noexcept {
+    if (this == &other)
+      return;
+
+    this->mutex = other.mutex;
+    other.mutex = nullptr;
+  }
+
+  WriterGuard & WriterGuard::operator=(WriterGuard &&other) noexcept {
+    if (this == &other)
+      return *this;
+
+    this->mutex = other.mutex;
+    other.mutex = nullptr;
+
+    return *this;
+  }
+
+  void WriterGuard::PromoteLock()const{
+    this->mutex->PromoteLock();
+  }
+
+  void WriterGuard::SetMutex(ReadWriteMutex *mtx) {
+    this->mutex = mtx;
+  }
+
+  WriterGuard WriterGuard::Promote(ReadWriteMutex *mtx, ReaderGuard& readGuard) {
+    auto guard = WriterGuard();
+
+    readGuard.DisableMutex();
+
+    guard.SetMutex(mtx);
+    guard.PromoteLock();
+
+    return guard;
   }
 
   void WriterGuard::Release()const {

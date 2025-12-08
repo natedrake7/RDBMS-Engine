@@ -6,11 +6,13 @@
 #include "../../Database/Constants.h"
 #include "../../QueryPipeline/PhysicalPlan/PhysicalPlan.h"
 
-#include <fstream>
-
 #include "../Column/Column.h"
 #include "../Pages/PageGuard/PageGuard.h"
 #include "../Row/Row.h"
+
+namespace MultiThreading {
+class ReaderGuard;
+}
 
 namespace DatabaseEngine{
     class Database;
@@ -35,7 +37,14 @@ namespace Indexing
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
-        void SplitChild(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child);
+        void SplitChild(
+            Pages::PageGuard<Pages::IndexPage>& parent,
+            MultiThreading::ReaderGuard& parentReadLock,
+            const int &index,
+            Pages::PageGuard<Pages::IndexPage>& child,
+            MultiThreading::ReaderGuard& childReadLock
+        );
+        void SplitChildNoLock(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child);
         Pages::PageGuard<Pages::IndexPage> GetNonFullNode(Pages::PageGuard<Pages::IndexPage>& node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKey(const DataTypes::Indexing::Key &key) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;

@@ -37,14 +37,14 @@ void IndexPage::ReadAdditionalHeaderFromFile(const vector<char>& data, page_offs
 IndexPage::IndexPage(const page_id_t &pageId, const bool &isPageCreation) : Page(pageId, isPageCreation) 
 {
     this->header.pageType = PageType::INDEX;
-    this->nextNode = 0;
-    this->previousNode = 0;
+    this->nextNode = Constants::INVALID_PAGE_ID;
+    this->previousNode = Constants::INVALID_PAGE_ID;
     this->header.bytesLeft  = Constants::INDEX_PAGE_DEFAULT_SIZE;
 }
 
 IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader) {
-    this->nextNode = 0;
-    this->previousNode = 0;
+    this->nextNode = Constants::INVALID_PAGE_ID;
+    this->previousNode = Constants::INVALID_PAGE_ID;
 }
 
 IndexPage::~IndexPage() 

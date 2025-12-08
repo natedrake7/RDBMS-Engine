@@ -165,7 +165,11 @@ public:
 
     Pages::PageGuard<Pages::OverflowPage> GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
 
-    Pages::PageGuard<Pages::IndexPage> CreateIndexPage(const table_id_t &tableId, const page_id_t& treeId = 0);
+    Pages::PageGuard<Pages::IndexPage> CreateIndexPage(
+      const StorageTypes::Table* table,
+      const table_id_t &tableOrdinalPosition,
+      const page_id_t& treeId = 0
+    );
 
     void SetPageMetaDataToPfs(const Pages::Page *page)const;
 
