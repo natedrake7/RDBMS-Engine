@@ -691,7 +691,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
 
     if (context->literalValue())
      return ExpressionWrapper{
-        new Expressions::LiteralExpression(std::any_cast<Value>(visit(context->literalValue())))
+        new Expressions::ConstantExpression(std::any_cast<Value>(visit(context->literalValue())))
       };
 
     if (context->variableName())

@@ -83,6 +83,30 @@ namespace Expressions{
       this->variables = nullptr;
    }
 
+  bool Expression::IsBinary() const{ return this->expressionType == ExpressionType::Binary; }
+  bool Expression::IsLogical() const{ return this->expressionType == ExpressionType::Logical; }
+  bool Expression::IsConstant() const{ return this->expressionType == ExpressionType::Constant; }
+  bool Expression::IsVariable() const{ return this->expressionType == ExpressionType::Variable; }
+  bool Expression::IsColumn() const{ return this->expressionType == ExpressionType::Column; }
+  bool Expression::IsFunction() const{ return this->expressionType == ExpressionType::Function; }
+  bool Expression::IsBranch() const{ return this->expressionType == ExpressionType::Branch; }
+
+  BinaryExpression * Expression::AsBinary(){ return this->IsBinary() ? static_cast<BinaryExpression*>(this) : nullptr; }
+  LogicalExpression * Expression::AsLogical(){ return this->IsLogical() ? static_cast<LogicalExpression*>(this) : nullptr; }
+  ColumnExpression * Expression::AsColumn(){ return this->IsColumn() ? static_cast<ColumnExpression*>(this) : nullptr; }
+  VariableExpression * Expression::AsVariable(){ return this->IsVariable() ? static_cast<VariableExpression*>(this) : nullptr; }
+  ConstantExpression * Expression::AsConstant(){ return this->IsConstant() ? static_cast<ConstantExpression*>(this) : nullptr; }
+  BranchExpression * Expression::AsBranch(){ return this->IsBranch() ? static_cast<BranchExpression*>(this) : nullptr; }
+  FunctionExpression * Expression::AsFunction(){ return this->IsFunction() ? static_cast<FunctionExpression*>(this) : nullptr; }
+
+  const BinaryExpression * Expression::AsBinary() const{ return this->IsBinary() ? static_cast<const BinaryExpression*>(this) : nullptr; }
+  const LogicalExpression * Expression::AsLogical() const{ return this->IsLogical() ? static_cast<const LogicalExpression*>(this) : nullptr; }
+  const ColumnExpression * Expression::AsColumn() const{ return this->IsColumn() ? static_cast<const ColumnExpression*>(this) : nullptr; }
+  const VariableExpression * Expression::AsVariable() const{ return this->IsVariable() ? static_cast<const VariableExpression*>(this) : nullptr; }
+  const ConstantExpression * Expression::AsConstant() const{ return this->IsConstant() ? static_cast<const ConstantExpression*>(this) : nullptr; }
+  const BranchExpression * Expression::AsBranch() const{ return this->IsBranch() ? static_cast<const BranchExpression*>(this) : nullptr; }
+  const FunctionExpression * Expression::AsFunction() const{ return this->IsFunction() ? static_cast<const FunctionExpression*>(this) : nullptr; }
+
   EvaluationContext::EvaluationContext(const QueryResult &row) {
       this->type = EvaluationContextType::MaterializedRow;
       this->row = nullptr;
@@ -101,6 +125,7 @@ namespace Expressions{
     this->index = 0;
     this->size = 0;
     this->returnType = DataType::Invalid;
+    this->expressionType = ExpressionType::Column;
   }
 
   ColumnExpression::ColumnExpression(const column_index_t &index){
@@ -109,6 +134,7 @@ namespace Expressions{
     this->returnType = DataType::Invalid;
     this->tableId = Constants::INVALID_TABLE_ID;
     this->columnId = Constants::INVALID_COLUMN_ID;
+    this->expressionType = ExpressionType::Column;
   }
 
   DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
@@ -138,24 +164,27 @@ namespace Expressions{
     return {};
   }
 
-  LiteralExpression::LiteralExpression(const Value &value){
+  ConstantExpression::ConstantExpression(const Value &value){
     this->value = value;
+    this->expressionType = ExpressionType::Constant;
   }
 
-  LiteralExpression::LiteralExpression(Value &value) {
+  ConstantExpression::ConstantExpression(Value &value) {
     this->value = std::move(value);
+    this->expressionType = ExpressionType::Constant;
   }
 
-  Value LiteralExpression::Evaluate(const EvaluationContext &context) const{
+  Value ConstantExpression::Evaluate(const EvaluationContext &context) const{
     return this->value;
   }
 
-  DataType LiteralExpression::GetReturnType() const{ return this->value.GetType(); }
+  DataType ConstantExpression::GetReturnType() const{ return this->value.GetType(); }
 
   BinaryExpression::BinaryExpression(Expression *left, Expression *right, const BinaryOperator &operation){
     this->left = left;
     this->right = right;
     this->operation = operation;
+    this->expressionType = ExpressionType::Binary;
   }
 
   BinaryExpression::~BinaryExpression(){
@@ -344,16 +373,19 @@ namespace Expressions{
   LogicalExpression::LogicalExpression(
     Expression *leftExpression,
     Expression *RightExpression,
-    const LogicalType &type){
-    this->type = type;
+    const LogicalType &logicalType
+  ){
+    this->logicalType = logicalType;
     this->left = leftExpression;
     this->right = RightExpression;
+    this->expressionType = ExpressionType::Logical;
   }
 
   LogicalExpression::LogicalExpression(){
-    this->type = LogicalType::Invalid;
+    this->logicalType = LogicalType::Invalid;
     this->left = nullptr;
     this->right = nullptr;
+    this->expressionType = ExpressionType::Logical;
   }
 
   LogicalExpression::~LogicalExpression(){
@@ -380,8 +412,9 @@ namespace Expressions{
   }
 
   BranchExpression::BranchExpression(const BranchType &type) {
-    this->type = type;
+    this->branchType = type;
     this->baseCase = nullptr;
+    this->expressionType = ExpressionType::Branch;
   }
 
   BranchExpression::~BranchExpression() {
@@ -395,7 +428,7 @@ namespace Expressions{
   }
 
   Value BranchExpression::Evaluate(const EvaluationContext &context) const {
-    switch (this->type) {
+    switch (this->branchType) {
       case BranchType::Switch:
         return this->EvaluateSwitch(context);
       case BranchType::Ternary:
@@ -417,11 +450,11 @@ namespace Expressions{
   }
 
   bool BranchExpression::HasBaseCase() const {
-    return this->type == BranchType::Switch;
+    return this->branchType == BranchType::Switch;
   }
 
   bool BranchExpression::ValidateNumberOfArguments() const {
-    switch (this->type) {
+    switch (this->branchType) {
       case BranchType::Switch:
         return this->branches.size() > 0 && this->branches.size() == this->results.size() && this->baseCase != nullptr;
       case BranchType::Ternary:
@@ -434,17 +467,18 @@ namespace Expressions{
   VariableExpression::VariableExpression(const std::string &name) {
     this->name = name;
     this->normalizedName = Functions::String::NormalizeString(this->name);
-    this->type = DataType::Invalid;
+    this->dataType = DataType::Invalid;
+    this->expressionType = ExpressionType::Variable;
   }
 
   Value VariableExpression::Evaluate(const EvaluationContext &context) const {
     return context.variables->Get(this->normalizedName).GetValue();
   }
 
-  DataType VariableExpression::GetReturnType() const { return this->type; }
+  DataType VariableExpression::GetReturnType() const { return this->dataType; }
 
   Value LogicalExpression::Evaluate(const EvaluationContext& context) const {
-    switch (this->type) {
+    switch (this->logicalType) {
       case LogicalType::And:{
         const auto leftValue = this->left->Evaluate(context);
         const auto rightValue = this->right->Evaluate(context);
@@ -459,13 +493,14 @@ namespace Expressions{
       }
       case LogicalType::Invalid:
       default:
-      throw std::runtime_error("Unknown predicate" + std::to_string(static_cast<int>(this->type)));
+      throw std::runtime_error("Unknown predicate" + std::to_string(static_cast<int>(this->logicalType)));
     }
   }
 
-  FunctionExpression::FunctionExpression(const Constants::FunctionType& type, std::vector<Expression*>& arguments) {
-    this->type = type;
+  FunctionExpression::FunctionExpression(const Constants::FunctionType& functionType, std::vector<Expression*>& arguments) {
+    this->functionType = functionType;
     this->arguments = std::move(arguments);
+    this->expressionType = ExpressionType::Function;
   }
 
   FunctionExpression::~FunctionExpression() {
@@ -474,7 +509,7 @@ namespace Expressions{
   }
 
   bool FunctionExpression::ValidateNumberOfArguments(std::string& errorMessage)const {
-    const auto& info = FunctionInfoDictionary.Get(this->type);
+    const auto& info = FunctionInfoDictionary.Get(this->functionType);
 
     const auto argSize = this->arguments.size();
     if (argSize < info.minArgs || (argSize > info.maxArgs && info.maxArgs != UNLIMITED_ARGS)) {
@@ -560,7 +595,7 @@ namespace Expressions{
   }
 
   bool FunctionExpression::PerformAdditionalValidations(std::string& errorMessage)const {
-    return FunctionAdditionalValidationsDictionary.Get(this->type)(this->arguments, errorMessage);
+    return FunctionAdditionalValidationsDictionary.Get(this->functionType)(this->arguments, errorMessage);
   }
 
   bool FunctionExpression::ValidateNullIf(const std::vector<Expressions::Expression*>& arguments, std::string &errorMessage) {
@@ -607,7 +642,7 @@ namespace Expressions{
   }
 
   Constants::DataType FunctionExpression::GetReturnType() const{
-    return FunctionInfoDictionary.Get(this->type).returnType;
+    return FunctionInfoDictionary.Get(this->functionType).returnType;
   }
 
   Value FunctionExpression::Evaluate(const EvaluationContext& context) const {
@@ -617,7 +652,7 @@ namespace Expressions{
     for (const auto& arg : this->arguments)
       argVals.emplace_back(arg->Evaluate(context));
 
-    return FunctionDictionary.Get(this->type)(argVals);
+    return FunctionDictionary.Get(this->functionType)(argVals);
   }
 
   Value FunctionExpression::Concat(const std::vector<Value>& arguments){

@@ -22,6 +22,14 @@ namespace QueryPipeline::Statements {
 }
 
 namespace Expressions{
+  class BinaryExpression;
+  class LogicalExpression;
+  class FunctionExpression;
+  class VariableExpression;
+  class ColumnExpression;
+  class ConstantExpression;
+  class BranchExpression;
+
   struct EvaluationContext {
     enum class EvaluationContextType {
       Constant = 0,
@@ -51,12 +59,38 @@ namespace Expressions{
 
   class Expression {
     public:
+      ExpressionType expressionType;
       std::string name;
+
       virtual ~Expression() = default;
       Expression() = default;
 
       [[nodiscard]] virtual Value Evaluate(const EvaluationContext& context) const = 0;
       [[nodiscard]] virtual DataType GetReturnType() const = 0;
+
+      [[nodiscard]] bool IsBinary()const;
+      [[nodiscard]] bool IsLogical()const;
+      [[nodiscard]] bool IsConstant()const;
+      [[nodiscard]] bool IsVariable()const;
+      [[nodiscard]] bool IsColumn()const;
+      [[nodiscard]] bool IsFunction()const;
+      [[nodiscard]] bool IsBranch()const;
+
+      [[nodiscard]] BinaryExpression* AsBinary();
+      [[nodiscard]] LogicalExpression* AsLogical();
+      [[nodiscard]] ColumnExpression* AsColumn();
+      [[nodiscard]] VariableExpression* AsVariable();
+      [[nodiscard]] ConstantExpression* AsConstant();
+      [[nodiscard]] BranchExpression* AsBranch();
+      [[nodiscard]] FunctionExpression* AsFunction();
+
+      [[nodiscard]] const BinaryExpression* AsBinary()const;
+      [[nodiscard]] const LogicalExpression* AsLogical()const;
+      [[nodiscard]] const ColumnExpression* AsColumn()const;
+      [[nodiscard]] const VariableExpression* AsVariable()const;
+      [[nodiscard]] const ConstantExpression* AsConstant()const;
+      [[nodiscard]] const BranchExpression* AsBranch()const;
+      [[nodiscard]] const FunctionExpression* AsFunction()const;
   };
 
   class ColumnExpression final : public Expression {
@@ -80,13 +114,13 @@ namespace Expressions{
       [[nodiscard]] bool HasTableAlias() const;
   };
 
-  class LiteralExpression final : public Expression {
+  class ConstantExpression final : public Expression {
     public:
       Value value;
 
-      explicit LiteralExpression(const Value& value);
-      explicit LiteralExpression(Value& value);
-      ~LiteralExpression()override = default;
+      explicit ConstantExpression(const Value& value);
+      explicit ConstantExpression(Value& value);
+      ~ConstantExpression()override = default;
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
       [[nodiscard]] DataType GetReturnType() const override;
@@ -131,9 +165,9 @@ namespace Expressions{
     public:
       std::vector<Expression*> arguments;
 
-      Constants::FunctionType type;
+      Constants::FunctionType functionType;
 
-      FunctionExpression(const Constants::FunctionType& type, std::vector<Expression*>& arguments);
+      FunctionExpression(const Constants::FunctionType& functionType, std::vector<Expression*>& arguments);
       ~FunctionExpression()override;
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
@@ -175,7 +209,7 @@ namespace Expressions{
 
   class LogicalExpression final : public Expression{
       public:
-        LogicalType type;
+        LogicalType logicalType;
 
         Expression* left;
         Expression* right;
@@ -183,7 +217,7 @@ namespace Expressions{
         LogicalExpression(
           Expression *leftExpression,
           Expression *RightExpression,
-          const LogicalType &type
+          const LogicalType &logicalType
         );
         LogicalExpression();
         ~LogicalExpression()override;
@@ -197,7 +231,7 @@ namespace Expressions{
       [[nodiscard]] Value EvaluateTernary(const EvaluationContext &context)const;
 
       public:
-        BranchType type;
+        BranchType branchType;
         std::vector<Expression*> branches;
         std::vector<Expression*> results;
         std::vector<Expression*> arguments;
@@ -217,7 +251,7 @@ namespace Expressions{
     public:
       std::string name;
       std::string normalizedName;
-      DataType type;
+      DataType dataType;
 
       explicit VariableExpression(const std::string& name);
 

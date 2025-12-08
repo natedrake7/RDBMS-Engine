@@ -277,6 +277,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool HasJoins()const;
     [[nodiscard]] Errors::ValidationStatus ValidateNoTableStatement(ParserValidationScope& validationScope);
     [[nodiscard]] Errors::ValidationStatus ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
+    void AssignColumnsToIndices(const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary)const;
 
     [[nodiscard]] Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
     [[nodiscard]] LogicalPlan* ToLogical() override;
@@ -385,35 +386,100 @@ namespace QueryPipeline::Statements {
     Security::Permission RequiredPermissions() const override;
   };
 
-  static Errors::ValidationStatus ResolveColumnAlias(
+  /**
+   * @name Expression Compilation Functions
+   * Functions to compile expressions, resolve their corresponding table
+   * assign ordinal positions in table, optimize etc
+   * @{
+   */
+
+  static Errors::ValidationStatus CompileExpression(
+    ParserValidationScope& validationScope,
+    Expressions::Expression*& expression
+  );
+
+  static Errors::ValidationStatus CompileExpression(
+    ParserValidationScope& validationScope,
+    StatementValidationScope& statementValidationScope,
+    Expressions::Expression*& expression
+  );
+
+  static Errors::ValidationStatus CompileBinaryExpression(
+    ParserValidationScope& validationScope,
+    Expressions::BinaryExpression* binaryExpr,
+    Expressions::Expression*& expression
+  );
+
+  static Errors::ValidationStatus CompileBinaryExpression(
+    ParserValidationScope& validationScope,
+    Expressions::BinaryExpression* binaryExpr,
+    Expressions::Expression*& expression,
+    StatementValidationScope& statementValidationScope
+  );
+
+  static Errors::ValidationStatus CompileLogicalExpression(
+    ParserValidationScope& validationScope,
+    Expressions::LogicalExpression* logicalExpr,
+    Expressions::Expression*& expression
+  );
+
+  static Errors::ValidationStatus CompileLogicalExpression(
+    ParserValidationScope& validationScope,
+    Expressions::LogicalExpression* logicalExpr,
+    Expressions::Expression*& expression,
+    StatementValidationScope& statementValidationScope
+  );
+
+  static Errors::ValidationStatus CompileFunctionExpression(
+    ParserValidationScope& validationScope,
+    const Expressions::FunctionExpression* funcExpr,
+    Expressions::Expression*& expression
+  );
+
+  static Errors::ValidationStatus CompileFunctionExpression(
+    ParserValidationScope& validationScope,
+    const Expressions::FunctionExpression* funcExpr,
+    Expressions::Expression*& expression,
+    StatementValidationScope& statementValidationScope
+  );
+
+  static Errors::ValidationStatus CompileBranchExpression(
+    ParserValidationScope& validationScope,
+    Expressions::BranchExpression* branchExpr,
+    Expressions::Expression*& expression,
+    StatementValidationScope& statementValidationScope
+  );
+
+  static Errors::ValidationStatus CompileBranchExpression(
+    ParserValidationScope& validationScope,
+    Expressions::BranchExpression* branchExpr,
+    Expressions::Expression*& expression
+  );
+
+  static Errors::ValidationStatus CompileColumnExpression(const Expressions::ColumnExpression *columnExpr);
+
+  static Errors::ValidationStatus CompileColumnExpression(Expressions::ColumnExpression* column, const StatementValidationScope& statementValidationScope);
+
+  static Errors::ValidationStatus CompileVariableExpression(
+    const ParserValidationScope& validationScope,
+    Expressions::VariableExpression* variableExpr
+  );
+
+  static Errors::ValidationStatus CompileColumnExpression(
     ColumnName& column,
     StatementValidationScope& statementValidationScope
   );
 
-  static Errors::ValidationStatus ResolveColumnAlias(
-    Expressions::ColumnExpression* column,
-    StatementValidationScope& statementValidationScope
-  );
+  static Errors::ValidationStatus CompileConstantExpression(Expressions::ConstantExpression* literalExpr);
 
-  static Errors::ValidationStatus ResolveColumnAliasWhenTableAliasExists(
+  static Errors::ValidationStatus CompileColumnWhenTableAliasExists(
     Expressions::ColumnExpression* column,
     const StatementValidationScope& statementValidationScope
   );
 
-  static Errors::ValidationStatus ResolveColumnAliasWhenTableAliasDoesNotExist(
+  static Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
     Expressions::ColumnExpression* column,
     const StatementValidationScope& statementValidationScope
-  );
-
-  static Errors::ValidationStatus ResolvePostProjectionColumnAlias(
-    Expressions::ColumnExpression* column,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
-    );
-
-  static Errors::ValidationStatus ResolveExpressionAliases(
-    ParserValidationScope& validationScope,
-    StatementValidationScope& statementValidationScope,
-    Expressions::Expression*& expression
   );
 
   static bool ValidateExpressionCoercionTypes(
@@ -426,97 +492,144 @@ namespace QueryPipeline::Statements {
     const Expressions::Expression* expression
   );
 
-  static Errors::ValidationStatus ResolvePostProjectionAliases(
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases,
-    Expressions::Expression *expr
-  );
-
-  static Errors::ValidationStatus ResolveExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::Expression*& expression
-  );
-
-  static Errors::ValidationStatus ResolveWildCardAlias(
+  static Errors::ValidationStatus CompileWildcard(
     const Expressions::ColumnExpression* column,
     const StatementValidationScope& statementValidationScope,
     SelectStatement *statement
   );
 
-//Constant Statements
-  static Errors::ValidationStatus ResolveBinaryExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::BinaryExpression* binaryExpr,
-    Expressions::Expression*& expression
-  );
+  /** @} End of Expression Compilation Functions */
 
-//Non Constant Statements
-  static Errors::ValidationStatus ResolveBinaryExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::BinaryExpression* binaryExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  );
+  /**
+   * @name Folding-Optimization Functions
+   * Functions to optimize and pre-evaluate if can, expressions to reduce runtime overhead
+   * @{
+   */
 
-  static Errors::ValidationStatus ResolveFunctionExpressionAliases(
-    ParserValidationScope& validationScope,
-    const Expressions::FunctionExpression* funcExpr,
-    Expressions::Expression*& expression
-  );
+  static void FoldExpression(Expressions::Expression*& expression);
 
-  static Errors::ValidationStatus ResolveFunctionExpressionAliases(
-    ParserValidationScope& validationScope,
-    const Expressions::FunctionExpression* funcExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  );
+  static void FoldBinaryExpression(const Expressions::BinaryExpression* castExpr, Expressions::Expression*& expression);
 
-  static Errors::ValidationStatus ResolveLogicalExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::LogicalExpression* logicalExpr,
-    Expressions::Expression*& expression
-  );
+  static void FoldLogicalExpression(const Expressions::LogicalExpression* castExpr, Expressions::Expression*& expression);
 
-  static Errors::ValidationStatus ResolveLogicalExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::LogicalExpression* logicalExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  );
+  static void FoldFunctionExpression(const Expressions::FunctionExpression* castExpr, Expressions::Expression*& expression);
 
-  static Errors::ValidationStatus ResolveVariableExpressionAliases(
-    const ParserValidationScope& validationScope,
-    Expressions::VariableExpression* variableExpr
-  );
+  static void FoldBranchExpression(Expressions::BranchExpression* castExpr, Expressions::Expression*& expression);
 
-  static Errors::ValidationStatus ResolveLiteralExpressionAliases(Expressions::LiteralExpression* literalExpr);
+  /** @} End of Folding-Optimization Functions */
 
-  static Errors::ValidationStatus ResolveColumnExpressionAliases(const Expressions::ColumnExpression *columnExpr);
-
-  static Errors::ValidationStatus ResolveBranchExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::BranchExpression* branchExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  );
-
-  static Errors::ValidationStatus ResolveBranchExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::BranchExpression* branchExpr,
-    Expressions::Expression*& expression
-  );
-
-  static void EvaluateConstantExpression(Expressions::Expression*& expression);
-
-  static void AssignColumnsToIndices(SelectStatement* statement, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary);
-
-  static void AssignColumnIndicesToResultExpression(
-    SelectStatement* statement,
+  /**
+   * @name Index Assignment Functions
+   * Functions to assign column's ordinal position in the table
+   * @{
+   */
+  static void AssignColumnIndicesToExpression(
     const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
-    Expressions::Expression* expr);
+    Expressions::Expression* expression
+  );
+
+  static void AssignColumnIndicesToBinaryExpression(
+    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Expressions::BinaryExpression* expression
+  );
+
+  static void AssignColumnIndicesToLogicalExpression(
+    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Expressions::LogicalExpression* expression
+  );
+
+  static void AssignColumnIndicesToBranchExpression(
+    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Expressions::BranchExpression* expression
+  );
+
+  static void AssignColumnIndicesToFunctionExpression(
+    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Expressions::FunctionExpression* expression
+  );
+
+  static void AssignColumnIndicesToColumnExpression(
+    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    Expressions::ColumnExpression* expression
+  );
+
+  /** @} End of Index Assignment Functions */
+
+
+  /**
+   * @name Post Projection Alias Resolvement Functions
+   * Functions to resolve aliases used in post projection statements(order by)
+   * @{
+   */
+  static Errors::ValidationStatus CompilePostProjectionExpression(
+    Expressions::Expression *expression,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+  );
+
+  static Errors::ValidationStatus CompilePostProjectionColumnExpression(
+    Expressions::ColumnExpression* column,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+  );
+
+  static Errors::ValidationStatus CompilePostProjectionBinaryExpression(
+    const Expressions::BinaryExpression* expression,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+  );
+
+  static Errors::ValidationStatus CompilePostProjectionLogicalExpression(
+    const Expressions::LogicalExpression* expression,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+  );
+
+  static Errors::ValidationStatus CompilePostProjectionFunctionExpression(
+    const Expressions::FunctionExpression* expression,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+  );
+
+  static Errors::ValidationStatus CompilePostProjectionBranchExpression(
+    const Expressions::BranchExpression* expression,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+  );
+
+  /** @} End of Post Projection Alias Resolvement Functions */
+
+
+  /**
+   * @name Post Projection Index Assignment Functions
+   * Functions to assign expression's index from the results to the post projection statements(order by)
+   * @{
+   */
 
   static void AssignPostProjectionIndicesToExpression(
     const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
-    Expressions::Expression* expr
+    Expressions::Expression* expression
   );
+
+  static void AssignPostProjectionIndicesToBinaryExpression(
+    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Expressions::BinaryExpression* expression
+  );
+
+  static void AssignPostProjectionIndicesToLogicalExpression(
+    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Expressions::LogicalExpression* expression
+  );
+
+  static void AssignPostProjectionIndicesToFunctionExpression(
+    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Expressions::FunctionExpression* expression
+  );
+
+  static void AssignPostProjectionIndicesToBranchExpression(
+    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Expressions::BranchExpression* expression
+  );
+
+  static void AssignPostProjectionIndicesToColumnExpression(
+    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    Expressions::ColumnExpression* expression
+  );
+
+  /** @} End of Post Projection Index Assignment Functions */
 
 }

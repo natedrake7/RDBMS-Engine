@@ -33,22 +33,33 @@ namespace Expressions {
     enum class BranchType {
         Switch = 0,
         Ternary = 1,
-      };
+    };
 
-      static Dictionary<std::string, BinaryOperator> ExpressionOperatorsDictionary{
-        { "=", BinaryOperator::Equal },
-        { "!=", BinaryOperator::NotEqual },
-        { "<>", BinaryOperator::NotEqual },
-        { ">", BinaryOperator::Greater },
-        { ">=", BinaryOperator::GreaterEqual },
-        { "<", BinaryOperator::Less },
-        { "<=", BinaryOperator::LessEqual },
-        { "+", BinaryOperator::Add },
-        { "-", BinaryOperator::Subtract },
-        { "*", BinaryOperator::Multiply },
-        { "/", BinaryOperator::Divide },
-        { "%", BinaryOperator::Modulo },
-      };
+    enum class ExpressionType : uint8_t {
+        Expression = 0,
+        Column = 1,
+        Constant = 2,
+        Binary = 3,
+        Logical = 4,
+        Variable = 5,
+        Branch = 6,
+        Function = 7
+    };
+
+    static Dictionary<std::string, BinaryOperator> ExpressionOperatorsDictionary{
+    { "=", BinaryOperator::Equal },
+    { "!=", BinaryOperator::NotEqual },
+    { "<>", BinaryOperator::NotEqual },
+    { ">", BinaryOperator::Greater },
+    { ">=", BinaryOperator::GreaterEqual },
+    { "<", BinaryOperator::Less },
+    { "<=", BinaryOperator::LessEqual },
+    { "+", BinaryOperator::Add },
+    { "-", BinaryOperator::Subtract },
+    { "*", BinaryOperator::Multiply },
+    { "/", BinaryOperator::Divide },
+    { "%", BinaryOperator::Modulo },
+    };
 
     static Dictionary<std::string, Constants::FunctionType> FunctionTypeDictionary{
           {"getdate",   Constants::FunctionType::GetDate},

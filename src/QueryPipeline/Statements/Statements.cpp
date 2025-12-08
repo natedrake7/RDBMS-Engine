@@ -52,7 +52,7 @@ namespace QueryPipeline::Statements {
     const auto& type = this->variable.GetType();
 
     if (this->expression) {
-      auto res = ResolveExpressionAliases(validationScope, this->expression);
+      auto res = CompileExpression(validationScope, this->expression);
 
       if (!res.IsOk())
         return res;
@@ -94,7 +94,7 @@ namespace QueryPipeline::Statements {
     const auto& type = this->variable.GetType();
 
     if (this->expression) {
-      auto res = ResolveExpressionAliases(validationScope, this->expression);
+      auto res = CompileExpression(validationScope, this->expression);
 
       if (!res.IsOk())
         return res;
@@ -261,6 +261,161 @@ namespace QueryPipeline::Statements {
   //   return new LogicalJoin(this->table, this->joinType, this->table2, this->on.expression);
   // }
 
+  StatementValidationScope::StatementValidationScope(
+    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
+    Statement *statement,
+    int *indexPos
+  ) {
+    this->tableAliasesDictionary = &tableAliasesDictionary;
+    this->tablesColumnsDictionary = &tablesColumnsDictionary;
+    this->statement = statement;
+    this->indexPos = indexPos;
+  }
+
+  DecimalType::DecimalType(){
+    this->precision = Constants::INVALID_DECIMAL_PRECISION;
+    this->scale = Constants::INVALID_DECIMAL_SCALE;
+  }
+
+  DecimalType::DecimalType(const int8_t &precision, const int8_t &scale){
+    this->precision = precision;
+    this->scale = scale;
+  }
+
+  bool DecimalType::Validate() const{
+    if (this->precision == Constants::INVALID_DECIMAL_PRECISION
+      || this->scale == Constants::INVALID_DECIMAL_SCALE)
+      return false;
+
+    return (
+      this->precision <= Constants::MAX_DECIMAL_PRECISION
+      && this->scale <= this->precision
+    );
+  }
+
+  ColumnType::ColumnType(const std::string &name){
+    this->name = name;
+    this->size = 0;
+  }
+
+  ColumnType::ColumnType(const std::string &name, const int &size){
+    this->name = name;
+    this->size = size;
+  }
+
+  ColumnType::ColumnType(const std::string &name, const DecimalType &decimal){
+    this->name = name;
+    this->decimal = decimal;
+    this->size = 0;
+  }
+
+  Errors::ValidationStatus Identity::Validate() const{
+    if (this->incrementFactor <= 0)
+      return {Errors::ValidationError::Error, "Increment Factor must be greater than zero"};
+
+    return {};
+  }
+
+  bool NewColumn::HasIdentity()const{ return this->identity != nullptr;}
+
+  OrderColumn::OrderColumn(){
+    this->expression = nullptr;
+    this->type = OrderType::ASCENDING;
+  }
+
+  OrderColumn::~OrderColumn(){
+    delete this->expression;
+  }
+
+  WhereClause::WhereClause() { this->expression = nullptr; }
+
+  bool WhereClause::IsValid() const{
+    return (this->expression == nullptr)
+        || this->expression->IsLogical()
+        || this->expression->IsBinary();
+  }
+
+  OrderByStatement::~OrderByStatement(){
+    for (const auto* column: this->columns)
+      delete column;
+  }
+
+  bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
+
+    HashSet<std::string> selectColumnMap;
+    // for (const auto& selectColumn : selectColumns) {
+    //   selectColumnMap.Add(selectColumn->name.name);
+    // }
+    //
+    // for(const auto& column : this->columns){
+    //   if(!selectColumnMap.Contains(column->name.name)){
+    //     cerr << "Column " << column->name.name << " does not exist on the statement." << endl;
+    //     return false;
+    //   }
+    //
+    //   Headers::ColumnHeader header;
+    //   columnsDict.TryGetValue(column->name.name, header);
+    //
+    //   this->columnIndices.emplace_back(header.ordinalPosition);
+    // }
+
+    return true;
+  }
+
+  DataSource::DataSource() {
+    this->databaseId = Constants::INVALID_DATABASE_ID;
+    this->tableId = Constants::INVALID_TABLE_ID;
+    this->schemaId = Constants::INVALID_SCHEMA_ID;
+    this->ordinalPosition = Constants::INVALID_ORDINAL_POS;
+    this->schema = "dbo";
+  }
+
+  std::string DataSource::GetAlias() const{
+    return this->alias.empty()
+        ? this->GetFullName()
+          : this->alias;
+  }
+
+  std::string DataSource::GetFullName() const {
+    return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
+  }
+
+  Errors::ValidationStatus DataSource::Validate(const int32_t& selectedDatabaseId) {
+    const auto tableHeader = (!this->database.empty())
+        ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
+        : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
+
+    if (tableHeader.id == Constants::INVALID_TABLE_ID){
+      ostringstream os;
+
+      os << "Table " + this->GetFullName() + " does not exist";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    this->tableId = tableHeader.id;
+    this->ordinalPosition = tableHeader.ordinalPosition;
+    this->databaseId = tableHeader.databaseId;
+
+    return {};
+  }
+
+  Errors::ValidationStatus DataSource::ValidateTableCreate(const int32_t &selectedDatabaseId){
+    const auto tableHeader = (!this->database.empty())
+      ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
+      : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
+
+    if (tableHeader.id != Constants::INVALID_TABLE_ID){
+      ostringstream os;
+      os << "Table " + this->GetFullName() + " exists";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    this->databaseId = selectedDatabaseId;
+
+    return {};
+  }
+
   CreateTableStatement::CreateTableStatement(){
     this->table = nullptr;
     this->constraint = nullptr;
@@ -389,39 +544,13 @@ namespace QueryPipeline::Statements {
     return dict;
   }
 
-  bool SelectStatement::HasTopStatement() const{ return this->top != Constants::INVALID_TOP; }
+   bool SelectStatement::HasTopStatement() const{ return this->top != Constants::INVALID_TOP; }
 
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
-  Errors::ValidationStatus SelectStatement::Validate(ParserValidationScope& validationScope){
-    if (!this->joins.empty() && this->table == nullptr) {
-      ostringstream os;
-      os << "Joins were specified but no calling table was not specified";
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    //resolve expressions here since no column is to be used
-    if (this->table == nullptr)
-      return this->ValidateNoTableStatement(validationScope);
-
-    auto tableResult = this->table->Validate(this->databaseId);
-    if (!tableResult.IsOk())
-        return tableResult;
-
-    Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
-
-    for (const auto& join: this->joins) {
-      auto joinResult = join->Validate(this->databaseId);
-      if (!joinResult.IsOk())
-        return joinResult;
-    }
-
-    return this->ResolveAliases(validationScope, aliasesDictionary);
-  }
-
   Errors::ValidationStatus SelectStatement::ValidateNoTableStatement(ParserValidationScope& validationScope){
     for (auto& resultExpr : this->results){
-      auto exprResult = ResolveExpressionAliases(validationScope, resultExpr);
+      auto exprResult = CompileExpression(validationScope, resultExpr);
 
       if (!exprResult.IsOk())
         return exprResult;
@@ -454,7 +583,7 @@ namespace QueryPipeline::Statements {
     for (int i = 0; i < this->results.size(); i++) {
 
       statementValidationScope.indexPos = &i;
-      auto expressionResult = ResolveExpressionAliases(validationScope, statementValidationScope, this->results[i]);
+      auto expressionResult = CompileExpression(validationScope, statementValidationScope, this->results[i]);
 
       if (!expressionResult.IsOk())
         return expressionResult;
@@ -466,7 +595,7 @@ namespace QueryPipeline::Statements {
         return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
 
 
-      auto expressionResult = ResolveExpressionAliases(validationScope, statementValidationScope, this->where.expression);
+      auto expressionResult = CompileExpression(validationScope, statementValidationScope, this->where.expression);
       if (!expressionResult.IsOk())
         return expressionResult;
     }
@@ -474,7 +603,7 @@ namespace QueryPipeline::Statements {
     //validate join expressions
     statementValidationScope.indexPos = nullptr;
     for (const auto& join: this->joins) {
-      auto expressionResult = ResolveExpressionAliases(validationScope, statementValidationScope, join->expression);
+      auto expressionResult = CompileExpression(validationScope, statementValidationScope, join->expression);
 
       if (!expressionResult.IsOk())
         return expressionResult;
@@ -500,7 +629,7 @@ namespace QueryPipeline::Statements {
     }
 
     for (const auto& column: this->orderBy->columns) {
-      auto postProjectionExpr = ResolvePostProjectionAliases(postProjectionAliases, column->expression);
+      auto postProjectionExpr = CompilePostProjectionExpression(column->expression, postProjectionAliases);
 
       if (!postProjectionExpr.IsOk())
         return postProjectionExpr;
@@ -509,159 +638,41 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  StatementValidationScope::StatementValidationScope(
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
-    Statement *statement,
-    int *indexPos
-  ) {
-    this->tableAliasesDictionary = &tableAliasesDictionary;
-    this->tablesColumnsDictionary = &tablesColumnsDictionary;
-    this->statement = statement;
-    this->indexPos = indexPos;
+  void SelectStatement::AssignColumnsToIndices(const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary)const {
+    for (const auto& resultExpr : this->results)
+      AssignColumnIndicesToExpression(columnIndicesDictionary, resultExpr);
+
+    if (this->where.expression != nullptr)
+      AssignColumnIndicesToExpression(columnIndicesDictionary, this->where.expression);
+
+    for (const auto* join : this->joins)
+      AssignColumnIndicesToExpression(columnIndicesDictionary, join->expression);
   }
 
-  DecimalType::DecimalType(){
-    this->precision = Constants::INVALID_DECIMAL_PRECISION;
-    this->scale = Constants::INVALID_DECIMAL_SCALE;
-  }
-
-  DecimalType::DecimalType(const int8_t &precision, const int8_t &scale){
-    this->precision = precision;
-    this->scale = scale;
-  }
-
-  bool DecimalType::Validate() const{
-    if (this->precision == Constants::INVALID_DECIMAL_PRECISION
-      || this->scale == Constants::INVALID_DECIMAL_SCALE)
-      return false;
-
-    return (
-      this->precision <= Constants::MAX_DECIMAL_PRECISION
-      && this->scale <= this->precision
-    );
-  }
-
-  ColumnType::ColumnType(const std::string &name){
-    this->name = name;
-    this->size = 0;
-  }
-
-  ColumnType::ColumnType(const std::string &name, const int &size){
-    this->name = name;
-    this->size = size;
-  }
-
-  ColumnType::ColumnType(const std::string &name, const DecimalType &decimal){
-    this->name = name;
-    this->decimal = decimal;
-    this->size = 0;
-  }
-
-  Errors::ValidationStatus Identity::Validate() const{
-    if (this->incrementFactor <= 0)
-      return {Errors::ValidationError::Error, "Increment Factor must be greater than zero"};
-
-    return {};
-  }
-
-  bool NewColumn::HasIdentity()const{ return this->identity != nullptr;}
-
-  OrderColumn::OrderColumn(){
-    this->expression = nullptr;
-    this->type = OrderType::ASCENDING;
-  }
-
-  OrderColumn::~OrderColumn(){
-    delete this->expression;
-  }
-
-  WhereClause::WhereClause() { this->expression = nullptr; }
-
-  bool WhereClause::IsValid() const{
-    return (this->expression == nullptr)
-        || dynamic_cast<Expressions::LogicalExpression*>(this->expression)
-        || dynamic_cast<Expressions::BinaryExpression*>(this->expression);
-  }
-
-  bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
-
-    HashSet<std::string> selectColumnMap;
-    // for (const auto& selectColumn : selectColumns) {
-    //   selectColumnMap.Add(selectColumn->name.name);
-    // }
-    //
-    // for(const auto& column : this->columns){
-    //   if(!selectColumnMap.Contains(column->name.name)){
-    //     cerr << "Column " << column->name.name << " does not exist on the statement." << endl;
-    //     return false;
-    //   }
-    //
-    //   Headers::ColumnHeader header;
-    //   columnsDict.TryGetValue(column->name.name, header);
-    //
-    //   this->columnIndices.emplace_back(header.ordinalPosition);
-    // }
-
-    return true;
-  }
-
-  OrderByStatement::~OrderByStatement(){
-    for (const auto* column: this->columns)
-      delete column;
-  }
-
-   DataSource::DataSource() {
-    this->databaseId = Constants::INVALID_DATABASE_ID;
-    this->tableId = Constants::INVALID_TABLE_ID;
-    this->schemaId = Constants::INVALID_SCHEMA_ID;
-    this->ordinalPosition = Constants::INVALID_ORDINAL_POS;
-    this->schema = "dbo";
-  }
-
-  std::string DataSource::GetAlias() const{
-    return this->alias.empty()
-        ? this->GetFullName()
-          : this->alias;
-  }
-
-  std::string DataSource::GetFullName() const {
-    return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
-  }
-
-  Errors::ValidationStatus DataSource::Validate(const int32_t& selectedDatabaseId) {
-    const auto tableHeader = (!this->database.empty())
-        ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
-        : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
-
-    if (tableHeader.id == Constants::INVALID_TABLE_ID){
+  Errors::ValidationStatus SelectStatement::Validate(ParserValidationScope& validationScope){
+    if (!this->joins.empty() && this->table == nullptr) {
       ostringstream os;
-
-      os << "Table " + this->GetFullName() + " does not exist";
+      os << "Joins were specified but no calling table was not specified";
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    this->tableId = tableHeader.id;
-    this->ordinalPosition = tableHeader.ordinalPosition;
-    this->databaseId = tableHeader.databaseId;
+    //resolve expressions here since no column is to be used
+    if (this->table == nullptr)
+      return this->ValidateNoTableStatement(validationScope);
 
-    return {};
-  }
+    auto tableResult = this->table->Validate(this->databaseId);
+    if (!tableResult.IsOk())
+        return tableResult;
 
-  Errors::ValidationStatus DataSource::ValidateTableCreate(const int32_t &selectedDatabaseId){
-    const auto tableHeader = (!this->database.empty())
-      ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
-      : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
+    Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
 
-    if (tableHeader.id != Constants::INVALID_TABLE_ID){
-      ostringstream os;
-      os << "Table " + this->GetFullName() + " exists";
-      return {Errors::ValidationError::Error, os.str()};
+    for (const auto& join: this->joins) {
+      auto joinResult = join->Validate(this->databaseId);
+      if (!joinResult.IsOk())
+        return joinResult;
     }
 
-    this->databaseId = selectedDatabaseId;
-
-    return {};
+    return this->ResolveAliases(validationScope, aliasesDictionary);
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
@@ -704,7 +715,7 @@ namespace QueryPipeline::Statements {
       columnIndex += columns.size();
     }
 
-    AssignColumnsToIndices(this, columnIndicesDictionary);
+    this->AssignColumnsToIndices(columnIndicesDictionary);
 
     //here create logical joins with the expressions
     //re order here
@@ -825,7 +836,7 @@ namespace QueryPipeline::Statements {
       const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
 
       insertColumns.emplace_back(
-          new Expressions::LiteralExpression(Value(
+          new Expressions::ConstantExpression(Value(
             data,
             static_cast<int>(defaultValue.value.size()),
             static_cast<DataType>(header.dataType)
@@ -844,7 +855,7 @@ namespace QueryPipeline::Statements {
     });
 
     for (auto& [insertColumns] : this->values)
-      insertColumns.emplace_back(new Expressions::LiteralExpression(Value(nullptr, header.ordinalPosition)));
+      insertColumns.emplace_back(new Expressions::ConstantExpression(Value(nullptr, header.ordinalPosition)));
   }
 
   Errors::ValidationStatus InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName) const{
@@ -862,12 +873,12 @@ namespace QueryPipeline::Statements {
       ))
       return {};
 
-    const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(expression);
-
     ostringstream os;
 
-    if (literalExpr != nullptr) {
-      if (literalExpr->value.GetIsNull()) {
+    if (expression->IsConstant()) {
+      auto* constantExpr = expression->AsConstant();
+
+      if (constantExpr->value.GetIsNull()) {
         if (columnHeader.isNullable)
           return {};
 
@@ -876,7 +887,7 @@ namespace QueryPipeline::Statements {
         return {Errors::ValidationError::Error, os.str()};
       }
 
-      if (DataTypes::Coercions::CanBeParsedToType(columnType, literalExpr->value))
+      if (DataTypes::Coercions::CanBeParsedToType(columnType, constantExpr->value))
         return {};
     }
 
@@ -932,7 +943,7 @@ namespace QueryPipeline::Statements {
       for (int i = 0;i < insertColumns.size(); i++) {
         auto& value = insertColumns[i];
 
-        auto expressionStatus = ResolveExpressionAliases(validationScope, statementValidationScope, value);
+        auto expressionStatus = CompileExpression(validationScope, statementValidationScope, value);
         if (!expressionStatus.IsOk())
           return expressionStatus;
 
@@ -1065,10 +1076,10 @@ namespace QueryPipeline::Statements {
         )
       return {};
 
-    const auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(update->value);
+    if (update->value->IsConstant()) {
+      const auto* constantExpr = update->value->AsConstant();
 
-    if (literalExpr != nullptr) {
-      if (literalExpr->value.GetIsNull()) {
+      if (constantExpr->value.GetIsNull()) {
         const auto& columns = this->tableColumnsDictionary.Get(this->table->tableId);
 
         if (columns.Get(update->name.name).isNullable)
@@ -1078,7 +1089,7 @@ namespace QueryPipeline::Statements {
         return {Errors::ValidationError::Error, os.str()};
       }
 
-      if (DataTypes::Coercions::CanBeParsedToType(update->name.returnType, literalExpr->value))
+      if (DataTypes::Coercions::CanBeParsedToType(update->name.returnType, constantExpr->value))
         return {};
     }
 
@@ -1104,11 +1115,11 @@ namespace QueryPipeline::Statements {
 
     //start resolving aliases
     for (const auto& update : this->updates) {
-      auto columnAliasStatus = ResolveColumnAlias(update->name, statementValidationScope);
+      auto columnAliasStatus = CompileColumnExpression(update->name, statementValidationScope);
       if (!columnAliasStatus.IsOk())
         return columnAliasStatus;
 
-      auto expressionStatus = ResolveExpressionAliases(validationScope, statementValidationScope, update->value);
+      auto expressionStatus = CompileExpression(validationScope, statementValidationScope, update->value);
       if (!expressionStatus.IsOk())
           return expressionStatus;
 
@@ -1122,7 +1133,7 @@ namespace QueryPipeline::Statements {
       if (!this->where.IsValid())
         return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
 
-      auto expressionStatus = ResolveExpressionAliases(validationScope, statementValidationScope, this->where.expression);
+      auto expressionStatus = CompileExpression(validationScope, statementValidationScope, this->where.expression);
       if (!expressionStatus.IsOk())
         return expressionStatus;
     }
@@ -1355,7 +1366,370 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
-  Errors::ValidationStatus ResolveColumnAlias(
+  Errors::ValidationStatus CompileExpression(ParserValidationScope& validationScope, Expressions::Expression*& expression){
+    switch (expression->expressionType) {
+      case Expressions::ExpressionType::Binary:
+        return CompileBinaryExpression(validationScope, expression->AsBinary(), expression);
+      case Expressions::ExpressionType::Logical:
+        return CompileLogicalExpression(validationScope, expression->AsLogical(), expression);
+      case Expressions::ExpressionType::Branch:
+        return CompileBranchExpression(validationScope, expression->AsBranch(), expression);
+      case Expressions::ExpressionType::Function:
+        return CompileFunctionExpression(validationScope, expression->AsFunction(), expression);
+      case Expressions::ExpressionType::Column:
+        return CompileColumnExpression(expression->AsColumn());
+      case Expressions::ExpressionType::Variable:
+        return CompileVariableExpression(validationScope, expression->AsVariable());
+      case Expressions::ExpressionType::Constant:
+        return CompileConstantExpression(expression->AsConstant());
+      case Expressions::ExpressionType::Expression:
+      default:
+        break;
+    }
+
+    return {Errors::ValidationError::Error, "Unknown expression"};
+  }
+
+  Errors::ValidationStatus CompileExpression(
+      ParserValidationScope& validationScope,
+      StatementValidationScope& statementValidationScope,
+      Expressions::Expression*& expression
+    ){
+
+    switch (expression->expressionType) {
+    case Expressions::ExpressionType::Binary:
+      return CompileBinaryExpression(validationScope, expression->AsBinary(), expression, statementValidationScope);
+    case Expressions::ExpressionType::Logical:
+      return CompileLogicalExpression(validationScope, expression->AsLogical(), expression, statementValidationScope);
+    case Expressions::ExpressionType::Branch:
+      return CompileBranchExpression(validationScope, expression->AsBranch(), expression, statementValidationScope);
+    case Expressions::ExpressionType::Function:
+      return CompileFunctionExpression(validationScope, expression->AsFunction(), expression, statementValidationScope);
+    case Expressions::ExpressionType::Column:
+      return CompileColumnExpression(expression->AsColumn(), statementValidationScope);
+    case Expressions::ExpressionType::Variable:
+      return CompileVariableExpression(validationScope, expression->AsVariable());
+    case Expressions::ExpressionType::Constant:
+      return CompileConstantExpression(expression->AsConstant());
+    case Expressions::ExpressionType::Expression:
+    default:
+      break;
+    }
+
+    return {Errors::ValidationError::Error, "Unknown expression"};
+  }
+
+  Errors::ValidationStatus CompileBinaryExpression(
+    ParserValidationScope& validationScope,
+    Expressions::BinaryExpression *binaryExpr,
+    Expressions::Expression *&expression
+  ) {
+    auto result = CompileExpression(validationScope, binaryExpr->left)
+                && CompileExpression(validationScope, binaryExpr->right);
+
+    if (!result.IsOk())
+      return result;
+
+    //validate binary expression action
+    if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
+      ostringstream os;
+
+      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
+      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+
+      os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    if (!binaryExpr->ValidateOperation()) {
+      ostringstream os;
+      os  << "Invalid operation between datatypes: "
+          << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
+          << " and "
+          << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    FoldBinaryExpression(binaryExpr, expression);
+    return {};
+  }
+
+  Errors::ValidationStatus CompileBinaryExpression(
+    ParserValidationScope& validationScope,
+    Expressions::BinaryExpression* binaryExpr,
+    Expressions::Expression*& expression,
+    StatementValidationScope& statementValidationScope
+  ) {
+    auto result = CompileExpression(validationScope, statementValidationScope, binaryExpr->left)
+          && CompileExpression(validationScope, statementValidationScope, binaryExpr->right);
+
+    if (!result.IsOk())
+      return result;
+
+    if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
+      ostringstream os;
+
+      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
+      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+
+      os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    if (!binaryExpr->ValidateOperation()) {
+      ostringstream os;
+      os  << "Invalid operation between datatypes: "
+          << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
+          << " and "
+          << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    FoldBinaryExpression(binaryExpr, expression);
+    return {};
+  }
+
+  Errors::ValidationStatus CompileLogicalExpression(
+    ParserValidationScope &validationScope,
+    Expressions::LogicalExpression *logicalExpr,
+    Expressions::Expression *&expression
+  ) {
+    //validate type
+    auto result = CompileExpression(validationScope, logicalExpr->left)
+            && CompileExpression(validationScope, logicalExpr->right);
+
+    if (!result.IsOk())
+      return result;
+
+    //validate type
+    if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
+      ostringstream os;
+
+      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
+      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
+
+      os << "Invalid conversion between " << leftTypeStr << " and " << rightTypeStr <<".Use explicit cast";
+
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    FoldLogicalExpression(logicalExpr, expression);
+    return {};
+  }
+
+  Errors::ValidationStatus CompileLogicalExpression(
+      ParserValidationScope& validationScope,
+      Expressions::LogicalExpression* logicalExpr,
+      Expressions::Expression*& expression,
+      StatementValidationScope& statementValidationScope
+    ) {
+    auto result = CompileExpression(validationScope, statementValidationScope, logicalExpr->left)
+                    && CompileExpression(validationScope, statementValidationScope, logicalExpr->right);
+
+    if (!result.IsOk())
+      return result;
+
+    //validate type
+    if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
+      ostringstream os;
+
+      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
+      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
+
+      os << "Invalid conversion between " << leftTypeStr << " and " << rightTypeStr <<".Use explicit cast";
+
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    FoldLogicalExpression(logicalExpr, expression);
+    return {};
+  }
+
+  Errors::ValidationStatus CompileFunctionExpression(
+    ParserValidationScope &validationScope,
+    const Expressions::FunctionExpression *funcExpr,
+    Expressions::Expression *&expression
+  ) {
+    for (auto* childExpr : funcExpr->arguments) {
+      auto childExpressionResult = CompileExpression(validationScope, childExpr);
+
+      if (!childExpressionResult.IsOk())
+        return childExpressionResult;
+    }
+
+    //validate functionExpression
+    std::string errorMessage;
+    if (!funcExpr->ValidateNumberOfArguments(errorMessage))
+      return {Errors::ValidationError::Error, errorMessage};
+
+    FoldFunctionExpression(funcExpr, expression);
+    return {};
+  }
+
+  Errors::ValidationStatus CompileFunctionExpression(
+    ParserValidationScope &validationScope,
+    const Expressions::FunctionExpression *funcExpr,
+    Expressions::Expression *&expression,
+    StatementValidationScope& statementValidationScope
+  ) {
+    //validate children expressions and assign return types and ids to column expressions
+    for (auto* childExpr : funcExpr->arguments) {
+      auto childExpressionResult = CompileExpression(validationScope, statementValidationScope, childExpr);
+
+      if (!childExpressionResult.IsOk())
+        return childExpressionResult;
+    }
+
+    //validate number of arguments
+    std::string errorMessage;
+    if (!funcExpr->ValidateNumberOfArguments(errorMessage))
+      return {Errors::ValidationError::Error, errorMessage};
+
+    FoldFunctionExpression(funcExpr, expression);
+    return {};
+  }
+
+  Errors::ValidationStatus CompileBranchExpression(
+    ParserValidationScope &validationScope,
+    Expressions::BranchExpression *branchExpr,
+    Expressions::Expression *&expression,
+    StatementValidationScope& statementValidationScope
+  ) {
+    if (!branchExpr->ValidateNumberOfArguments())
+      return {Errors::ValidationError::Error, "Invalid number of arguments specified on branching expression"};
+
+    for (auto& branch : branchExpr->branches) {
+      auto result = CompileExpression(validationScope, statementValidationScope, branch);
+      if (!result.IsOk())
+        return result;
+
+      if (!ValidateExpressionCoercionTypes(DataType::Bool, branch)) {
+        ostringstream os;
+
+        os  << "Expression of type: "
+            << ColumnTypesToStringDictionary.Get(branch->GetReturnType())
+            << " cannot be used as a branching condition";
+
+        return {Errors::ValidationError::Error, os.str()};
+      }
+    }
+
+    for (auto& resultExpr : branchExpr->results) {
+      auto result = CompileExpression(validationScope, statementValidationScope, resultExpr);
+      if (!result.IsOk())
+        return result;
+    }
+
+    if (branchExpr->HasBaseCase()) {
+      auto result = CompileExpression(validationScope, statementValidationScope, branchExpr->baseCase);
+      if (!result.IsOk())
+        return result;
+    }
+
+    const auto returnType = branchExpr->GetReturnType();
+
+    for (const auto& resultExpr : branchExpr->results) {
+      if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
+        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
+    }
+
+    if (branchExpr->HasBaseCase()) {
+      if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
+        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
+    }
+
+    FoldBranchExpression(branchExpr, expression);
+    return {};
+  }
+
+  Errors::ValidationStatus CompileBranchExpression(
+    ParserValidationScope &validationScope,
+    Expressions::BranchExpression *branchExpr,
+    Expressions::Expression *&expression
+  ){
+    if (!branchExpr->ValidateNumberOfArguments())
+      return {Errors::ValidationError::Error, "Invalid number of arguments specified on branching expression"};
+
+    for (auto& branch : branchExpr->branches) {
+      auto result = CompileExpression(validationScope, branch);
+      if (!result.IsOk())
+        return result;
+    }
+
+    for (auto& resultExpr : branchExpr->results) {
+      auto result = CompileExpression(validationScope, resultExpr);
+      if (!result.IsOk())
+        return result;
+    }
+
+    if (branchExpr->HasBaseCase()) {
+      auto result = CompileExpression(validationScope, branchExpr->baseCase);
+      if (!result.IsOk())
+        return result;
+    }
+
+    const auto returnType = branchExpr->GetReturnType();
+
+    for (const auto& resultExpr : branchExpr->results) {
+      if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
+        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
+    }
+
+    if (branchExpr->HasBaseCase()) {
+      if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
+        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
+    }
+
+    FoldBranchExpression(branchExpr, expression);
+    return {};
+  }
+
+  Errors::ValidationStatus CompileColumnExpression(const Expressions::ColumnExpression *columnExpr){
+      ostringstream os;
+
+      os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
+
+      return {Errors::ValidationError::Error, os.str()};
+}
+
+  Errors::ValidationStatus CompileColumnExpression(
+      Expressions::ColumnExpression* column,
+      const StatementValidationScope& statementValidationScope
+    ){
+        //if wildcard ensure statement is of select statement type
+        if (column->alias == Constants::WILDCARD) {
+          auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope.statement);
+
+          if (selectStatement != nullptr)
+            return CompileWildcard(column, statementValidationScope, selectStatement);
+
+          return {Errors::ValidationError::Error, ""};
+        }
+
+       return column->HasTableAlias()
+            ? CompileColumnWhenTableAliasExists(column, statementValidationScope)
+            : CompileColumnWhenNoTableAliasExists(column, statementValidationScope);
+  }
+
+  Errors::ValidationStatus CompileVariableExpression(
+    const ParserValidationScope &validationScope,
+    Expressions::VariableExpression* variableExpr
+  ){
+    DataType type;
+    if (!validationScope.variables.TryGetValue(variableExpr->normalizedName, type)) {
+      ostringstream os;
+      os << "Variable: " << variableExpr->name <<" was not declared in this scope";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    variableExpr->dataType = type;
+
+    return {};
+  }
+
+  Errors::ValidationStatus CompileColumnExpression(
     ColumnName &column,
     StatementValidationScope& statementValidationScope
   ){
@@ -1394,26 +1768,12 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return {};
   }
 
-  Errors::ValidationStatus ResolveColumnAlias(
-      Expressions::ColumnExpression* column,
-      StatementValidationScope& statementValidationScope
-    ){
-        //if wildcard ensure statement is of select statement type
-        if (column->alias == Constants::WILDCARD) {
-          auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope.statement);
-
-          if (selectStatement != nullptr)
-            return ResolveWildCardAlias(column, statementValidationScope, selectStatement);
-
-          return {Errors::ValidationError::Error, ""};
-        }
-
-       return column->HasTableAlias()
-            ? ResolveColumnAliasWhenTableAliasExists(column, statementValidationScope)
-            : ResolveColumnAliasWhenTableAliasDoesNotExist(column, statementValidationScope);
+  Errors::ValidationStatus CompileConstantExpression(Expressions::ConstantExpression* literalExpr){
+      DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
+      return {};
   }
 
-  Errors::ValidationStatus ResolveColumnAliasWhenTableAliasExists(
+  Errors::ValidationStatus CompileColumnWhenTableAliasExists(
     Expressions::ColumnExpression *column,
     const StatementValidationScope& statementValidationScope
   ){
@@ -1446,7 +1806,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return {};
   }
 
-  Errors::ValidationStatus ResolveColumnAliasWhenTableAliasDoesNotExist(
+  Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
     Expressions::ColumnExpression *column,
     const StatementValidationScope& statementValidationScope
   ){
@@ -1482,76 +1842,31 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return {};
   }
 
-  Errors::ValidationStatus ResolvePostProjectionColumnAlias(
-    Expressions::ColumnExpression *column,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
-    ){
-    const Expressions::Expression* expression;
-    if (!postProjectionAliases.TryGetValue(column->alias, expression)) {
-      ostringstream os;
-      os << "Column: " << column->alias << " does not exist in the statement";
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    column->returnType = expression->GetReturnType();
-    return {};
-  }
-
-  Errors::ValidationStatus ResolveExpressionAliases(
-      ParserValidationScope& validationScope,
-      StatementValidationScope& statementValidationScope,
-      Expressions::Expression*& expression
-    ){
-    if (auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expression))
-      return ResolveBinaryExpressionAliases(validationScope, binaryExpr, expression, statementValidationScope);
-
-    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expression))
-      return ResolveColumnAlias(columnExpr, statementValidationScope);
-
-    if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expression))
-      return ResolveFunctionExpressionAliases(validationScope, functionExpr, expression, statementValidationScope);
-
-    if (auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(expression))
-      return ResolveLiteralExpressionAliases(literalExpr);
-
-    if (auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expression))
-      return ResolveLogicalExpressionAliases(validationScope, logicalExpr, expression, statementValidationScope);
-
-    if (auto* variableExpr = dynamic_cast<Expressions::VariableExpression*>(expression))
-      return ResolveVariableExpressionAliases(validationScope, variableExpr);
-
-    if (auto* branchExpr = dynamic_cast<Expressions::BranchExpression*>(expression))
-      return ResolveBranchExpressionAliases(validationScope, branchExpr, expression, statementValidationScope);
-
-    return {Errors::ValidationError::Error, "Unknown expression"};
-  }
-
   bool ValidateExpressionCoercionTypes(const Expressions::Expression *left, const Expressions::Expression *right){
     // If one side is a column expression, its type takes precedence
-    const auto* leftColumn = dynamic_cast<const Expressions::ColumnExpression*>(left);
-    const auto* rightColumn = dynamic_cast<const Expressions::ColumnExpression*>(right);
+    const auto* leftColumn = left->AsColumn();
+    const auto* rightColumn = right->AsColumn();
 
     if (leftColumn == nullptr && rightColumn == nullptr)
       return DataTypes::Coercions::IsCoercionAllowed(left->GetReturnType(), right->GetReturnType()) ||
            DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), left->GetReturnType());
 
     if (leftColumn != nullptr && rightColumn == nullptr) {
-      const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(right);
+      const auto* constantExpr = right->AsConstant();
 
-      if (literalExpr != nullptr
-        && (literalExpr->value.GetIsNull()
-        || DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), literalExpr->value)))
+      if (constantExpr != nullptr
+        && (constantExpr->value.GetIsNull()
+        || DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), constantExpr->value)))
         return true;
 
       return DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), leftColumn->GetReturnType());
     }
 
     if (leftColumn == nullptr && rightColumn != nullptr) {
-      const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(left);
+      const auto* constantExpr = left->AsConstant();
 
-      if (literalExpr != nullptr
-        && DataTypes::Coercions::CanBeParsedToType(rightColumn->GetReturnType(), literalExpr->value))
+      if (constantExpr != nullptr
+        && DataTypes::Coercions::CanBeParsedToType(rightColumn->GetReturnType(), constantExpr->value))
         return true;
 
       return DataTypes::Coercions::IsCoercionAllowed(left->GetReturnType(), rightColumn->GetReturnType());
@@ -1565,77 +1880,20 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
   }
 
   bool ValidateExpressionCoercionTypes(const DataType &type, const Expressions::Expression *expression) {
-    if (auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(expression)) {
-      if (literalExpr->value.GetIsNull()
-        || DataTypes::Coercions::CanBeParsedToType(type, literalExpr->value))
+    if (expression->IsConstant()) {
+      auto* constantExpr = expression->AsConstant();
+
+      if (constantExpr->value.GetIsNull()
+        || DataTypes::Coercions::CanBeParsedToType(type, constantExpr->value))
         return true;
 
-      return DataTypes::Coercions::IsCoercionAllowed(literalExpr->GetReturnType(), type);
+      return DataTypes::Coercions::IsCoercionAllowed(constantExpr->GetReturnType(), type);
     }
 
     return DataTypes::Coercions::IsCoercionAllowed(expression->GetReturnType(), type);
   }
 
-  Errors::ValidationStatus ResolvePostProjectionAliases(
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases,
-    Expressions::Expression *expr){
-    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr))
-      return  ResolvePostProjectionAliases(postProjectionAliases, binaryExpr->left)
-          && ResolvePostProjectionAliases(postProjectionAliases, binaryExpr->right);
-
-    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr))
-      return ResolvePostProjectionColumnAlias(columnExpr, postProjectionAliases);
-
-    if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
-      //validate children expressions and assign return types and ids to column expressions
-      for (auto* childExpr : functionExpr->arguments) {
-        auto childExprStatus = ResolvePostProjectionAliases(postProjectionAliases, childExpr);
-
-        if (!childExprStatus.IsOk())
-          return childExprStatus;
-      }
-
-      //validate number of arguments
-      std::string errorMessage;
-      if (!functionExpr->ValidateNumberOfArguments(errorMessage))
-        return {Errors::ValidationError::Error, errorMessage};
-    }
-
-    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
-      //validate type
-      return ResolvePostProjectionAliases(postProjectionAliases, logicalExpr->left)
-        && ResolvePostProjectionAliases(postProjectionAliases, logicalExpr->right);
-    }
-
-    return {};
-  }
-
-  Errors::ValidationStatus ResolveExpressionAliases(ParserValidationScope& validationScope, Expressions::Expression*& expression){
-    if (auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expression))
-      return ResolveBinaryExpressionAliases(validationScope, binaryExpr, expression);
-
-    if (const auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expression))
-      return ResolveColumnExpressionAliases(columnExpr);
-
-    if (const auto* functionExpr = dynamic_cast<Expressions::FunctionExpression*>(expression))
-      return ResolveFunctionExpressionAliases(validationScope, functionExpr, expression);
-
-    if (auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expression))
-      return ResolveLogicalExpressionAliases(validationScope, logicalExpr, expression);
-
-    if (auto* literalExpr = dynamic_cast<Expressions::LiteralExpression*>(expression))
-      return ResolveLiteralExpressionAliases(literalExpr);
-
-    if (auto* variableExpr = dynamic_cast<Expressions::VariableExpression*>(expression))
-      return ResolveVariableExpressionAliases(validationScope, variableExpr);
-
-    if (auto* branchExpr = dynamic_cast<Expressions::BranchExpression*>(expression))
-      return ResolveBranchExpressionAliases(validationScope, branchExpr, expression);
-
-    return {Errors::ValidationError::Error, "Unknown expression"};
-  }
-
-  Errors::ValidationStatus ResolveWildCardAlias(
+  Errors::ValidationStatus CompileWildcard(
     const Expressions::ColumnExpression* column,
     const StatementValidationScope& statementValidationScope,
     SelectStatement* statement
@@ -1708,426 +1966,354 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return {};
   }
 
-  Errors::ValidationStatus ResolveBinaryExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::BinaryExpression *binaryExpr,
-    Expressions::Expression *&expression
+  void FoldExpression(Expressions::Expression *&expression) {
+    switch (expression->expressionType) {
+      case Expressions::ExpressionType::Binary:
+        FoldBinaryExpression(expression->AsBinary(), expression);
+        break;
+      case Expressions::ExpressionType::Logical:
+        FoldLogicalExpression(expression->AsLogical(), expression);
+        break;
+      case Expressions::ExpressionType::Branch:
+        FoldBranchExpression(expression->AsBranch(), expression);
+        break;
+      case Expressions::ExpressionType::Function:
+        FoldFunctionExpression(expression->AsFunction(), expression);
+        break;
+      case Expressions::ExpressionType::Expression:
+      case Expressions::ExpressionType::Column:
+      case Expressions::ExpressionType::Constant:
+      case Expressions::ExpressionType::Variable:
+        break;
+    }
+  }
+
+  void FoldBinaryExpression(const Expressions::BinaryExpression *castExpr, Expressions::Expression *&expression){
+    if (!castExpr->left->IsConstant()
+      || !castExpr->right->IsConstant())
+      return;
+
+    auto value = castExpr->Evaluate({});
+
+    delete expression;
+    expression = new Expressions::ConstantExpression(value);
+  }
+
+  void FoldLogicalExpression(const Expressions::LogicalExpression *castExpr, Expressions::Expression *&expression){
+    if (!castExpr->left->IsConstant()
+      || !castExpr->right->IsConstant())
+      return;
+
+    auto value = castExpr->Evaluate({});
+
+    delete expression;
+    expression = new Expressions::ConstantExpression(value);
+  }
+
+  void FoldFunctionExpression(const Expressions::FunctionExpression *castExpr, Expressions::Expression *&expression){
+    for (const auto& argument : castExpr->arguments) {
+      if (!argument->IsConstant())
+        return;
+    }
+
+    auto value = castExpr->Evaluate({});
+    delete expression;
+    expression = new Expressions::ConstantExpression(value);
+  }
+
+  void FoldBranchExpression(Expressions::BranchExpression *castExpr, Expressions::Expression *&expression){
+    for (int i = 0;i < castExpr->branches.size(); i++) {
+      const auto* branch = castExpr->branches[i];
+
+      if (!branch->IsConstant())
+        return;
+
+      const auto value = branch->AsConstant()->Evaluate({});
+
+      if (value.GetBool()) {
+        auto* resultExpr = castExpr->results[i];
+        castExpr->results[i] = nullptr;
+        delete expression;
+
+        expression = resultExpr;
+        FoldExpression(expression);
+        return;
+      }
+    }
+  }
+
+  void AssignColumnIndicesToExpression(
+    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    Expressions::Expression *expression
+  ){
+    switch (expression->expressionType) {
+    case Expressions::ExpressionType::Binary:
+      AssignColumnIndicesToBinaryExpression(columnIndicesDictionary, expression->AsBinary());
+      break;
+    case Expressions::ExpressionType::Logical:
+      AssignColumnIndicesToLogicalExpression(columnIndicesDictionary, expression->AsLogical());
+      break;
+    case Expressions::ExpressionType::Branch:
+      AssignColumnIndicesToBranchExpression(columnIndicesDictionary, expression->AsBranch());
+      break;
+    case Expressions::ExpressionType::Function:
+      AssignColumnIndicesToFunctionExpression(columnIndicesDictionary, expression->AsFunction());
+      break;
+    case Expressions::ExpressionType::Column:
+      AssignColumnIndicesToColumnExpression(columnIndicesDictionary, expression->AsColumn());
+      break;
+    case Expressions::ExpressionType::Variable:
+    case Expressions::ExpressionType::Expression:
+    case Expressions::ExpressionType::Constant:
+    default:
+      break;
+    }
+  }
+
+  void AssignColumnIndicesToBinaryExpression(
+    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Expressions::BinaryExpression *expression
   ) {
-    auto result = ResolveExpressionAliases(validationScope, binaryExpr->left)
-                && ResolveExpressionAliases(validationScope, binaryExpr->right);
+    AssignColumnIndicesToExpression(columnIndicesDictionary, expression->left);
+    AssignColumnIndicesToExpression(columnIndicesDictionary, expression->right);
+  }
 
-    if (!result.IsOk())
-      return result;
+  void AssignColumnIndicesToLogicalExpression(
+    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Expressions::LogicalExpression *expression
+  ){
+      AssignColumnIndicesToExpression(columnIndicesDictionary, expression->left);
+      AssignColumnIndicesToExpression(columnIndicesDictionary, expression->right);
+  }
 
-    //validate binary expression action
-    if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
-      ostringstream os;
+  void AssignColumnIndicesToBranchExpression(
+    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Expressions::BranchExpression *expression
+  ) {
+    for (const auto& argument : expression->arguments)
+      AssignColumnIndicesToExpression(columnIndicesDictionary, argument);
 
-      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
-      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+    for (const auto& branch : expression->branches)
+      AssignColumnIndicesToExpression(columnIndicesDictionary, branch);
 
-      os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
-      return {Errors::ValidationError::Error, os.str()};
+    for (const auto& result : expression->results)
+      AssignColumnIndicesToExpression(columnIndicesDictionary, result);
+
+    if (expression->HasBaseCase())
+      AssignColumnIndicesToExpression(columnIndicesDictionary, expression->baseCase);
+  }
+
+  void AssignColumnIndicesToFunctionExpression(
+    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Expressions::FunctionExpression *expression
+  ) {
+    for (auto* childExpr : expression->arguments)
+      AssignColumnIndicesToExpression(columnIndicesDictionary, childExpr);
+  }
+
+  void AssignColumnIndicesToColumnExpression(
+    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    Expressions::ColumnExpression *expression
+  ) {
+    expression->index = columnIndicesDictionary.Get(expression->columnId);
+  }
+
+  Errors::ValidationStatus CompilePostProjectionExpression(
+    Expressions::Expression *expression,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+  ){
+    switch (expression->expressionType) {
+      case Expressions::ExpressionType::Binary:
+        return CompilePostProjectionBinaryExpression(expression->AsBinary(), postProjectionAliases);
+      case Expressions::ExpressionType::Logical:
+        return CompilePostProjectionLogicalExpression(expression->AsLogical(), postProjectionAliases);
+      case Expressions::ExpressionType::Branch:
+        return CompilePostProjectionBranchExpression(expression->AsBranch(), postProjectionAliases);
+      case Expressions::ExpressionType::Function:
+        return CompilePostProjectionFunctionExpression(expression->AsFunction(), postProjectionAliases);
+      case Expressions::ExpressionType::Column:
+        return CompilePostProjectionColumnExpression(expression->AsColumn(), postProjectionAliases);
+      case Expressions::ExpressionType::Variable:
+      case Expressions::ExpressionType::Constant:
+      case Expressions::ExpressionType::Expression:
+      default:
+        break;
     }
 
-    if (!binaryExpr->ValidateOperation()) {
-      ostringstream os;
-      os  << "Invalid operation between datatypes: "
-          << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
-          << " and "
-          << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    EvaluateConstantExpression(expression);
     return {};
   }
 
-  Errors::ValidationStatus ResolveBinaryExpressionAliases(
-    ParserValidationScope& validationScope,
-    Expressions::BinaryExpression* binaryExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  ) {
-    auto result = ResolveExpressionAliases(validationScope, statementValidationScope, binaryExpr->left)
-          && ResolveExpressionAliases(validationScope, statementValidationScope, binaryExpr->right);
-
-    if (!result.IsOk())
-      return result;
-
-    if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
+  Errors::ValidationStatus CompilePostProjectionColumnExpression(
+    Expressions::ColumnExpression *column,
+    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    ){
+    const Expressions::Expression* expression;
+    if (!postProjectionAliases.TryGetValue(column->alias, expression)) {
       ostringstream os;
-
-      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
-      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
-
-      os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    if (!binaryExpr->ValidateOperation()) {
-      ostringstream os;
-      os  << "Invalid operation between datatypes: "
-          << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
-          << " and "
-          << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+      os << "Column: " << column->alias << " does not exist in the statement";
 
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    EvaluateConstantExpression(expression);
+    column->returnType = expression->GetReturnType();
     return {};
   }
 
-  Errors::ValidationStatus ResolveFunctionExpressionAliases(
-    ParserValidationScope &validationScope,
-    const Expressions::FunctionExpression *funcExpr,
-    Expressions::Expression *&expression
-  ) {
-    for (auto* childExpr : funcExpr->arguments) {
-      auto childExpressionResult = ResolveExpressionAliases(validationScope, childExpr);
-
-      if (!childExpressionResult.IsOk())
-        return childExpressionResult;
-    }
-
-    //validate functionExpression
-    std::string errorMessage;
-    if (!funcExpr->ValidateNumberOfArguments(errorMessage))
-      return {Errors::ValidationError::Error, errorMessage};
-
-    EvaluateConstantExpression(expression);
-
-    return {};
+  Errors::ValidationStatus CompilePostProjectionBinaryExpression(
+    const Expressions::BinaryExpression *expression,
+    const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
+  ){
+    return CompilePostProjectionExpression(expression->left, postProjectionAliases)
+    && CompilePostProjectionExpression(expression->right, postProjectionAliases);
   }
 
-  Errors::ValidationStatus ResolveFunctionExpressionAliases(
-    ParserValidationScope &validationScope,
-    const Expressions::FunctionExpression *funcExpr,
-    Expressions::Expression *&expression,
-    StatementValidationScope& statementValidationScope
-  ) {
-    //validate children expressions and assign return types and ids to column expressions
-    for (auto* childExpr : funcExpr->arguments) {
-      auto childExpressionResult = ResolveExpressionAliases(validationScope, statementValidationScope, childExpr);
+  Errors::ValidationStatus CompilePostProjectionLogicalExpression(
+    const Expressions::LogicalExpression *expression,
+    const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
+  ){
+    return CompilePostProjectionExpression(expression->left, postProjectionAliases)
+    && CompilePostProjectionExpression(expression->right, postProjectionAliases);
+  }
 
-      if (!childExpressionResult.IsOk())
-        return childExpressionResult;
+  Errors::ValidationStatus CompilePostProjectionFunctionExpression(
+    const Expressions::FunctionExpression *expression,
+    const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
+  ){
+    for (auto* childExpr : expression->arguments) {
+      auto childExprStatus = CompilePostProjectionExpression(childExpr, postProjectionAliases);
+
+      if (!childExprStatus.IsOk())
+        return childExprStatus;
     }
 
     //validate number of arguments
     std::string errorMessage;
-    if (!funcExpr->ValidateNumberOfArguments(errorMessage))
+    if (!expression->ValidateNumberOfArguments(errorMessage))
       return {Errors::ValidationError::Error, errorMessage};
 
-    EvaluateConstantExpression(expression);
     return {};
   }
 
-  Errors::ValidationStatus ResolveLogicalExpressionAliases(
-    ParserValidationScope &validationScope,
-    Expressions::LogicalExpression *logicalExpr,
-    Expressions::Expression *&expression
-  ) {
-    //validate type
-    auto result = ResolveExpressionAliases(validationScope, logicalExpr->left)
-            && ResolveExpressionAliases(validationScope, logicalExpr->right);
-
-    if (!result.IsOk())
-      return result;
-
-    //validate type
-    if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
-      ostringstream os;
-
-      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
-      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
-
-      os << "Invalid conversion between " << leftTypeStr << " and " << rightTypeStr <<".Use explicit cast";
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    EvaluateConstantExpression(expression);
-    return {};
-  }
-
-  Errors::ValidationStatus ResolveLogicalExpressionAliases(
-      ParserValidationScope& validationScope,
-      Expressions::LogicalExpression* logicalExpr,
-      Expressions::Expression*& expression,
-      StatementValidationScope& statementValidationScope
-    ) {
-    auto result = ResolveExpressionAliases(validationScope, statementValidationScope, logicalExpr->left)
-                    && ResolveExpressionAliases(validationScope, statementValidationScope, logicalExpr->right);
-
-    if (!result.IsOk())
-      return result;
-
-    //validate type
-    if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
-      ostringstream os;
-
-      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
-      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
-
-      os << "Invalid conversion between " << leftTypeStr << " and " << rightTypeStr <<".Use explicit cast";
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    EvaluateConstantExpression(expression);
-    return {};
-  }
-
-  Errors::ValidationStatus ResolveVariableExpressionAliases(
-    const ParserValidationScope &validationScope,
-    Expressions::VariableExpression* variableExpr
+  Errors::ValidationStatus CompilePostProjectionBranchExpression(
+    const Expressions::BranchExpression *expression,
+    const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
   ){
-    DataType type;
-    if (!validationScope.variables.TryGetValue(variableExpr->normalizedName, type)) {
-      ostringstream os;
-      os << "Variable: " << variableExpr->name <<" was not declared in this scope";
-      return {Errors::ValidationError::Error, os.str()};
+    for (const auto& argument : expression->arguments) {
+      auto result = CompilePostProjectionExpression(argument, postProjectionAliases);
+
+      if (!result.IsOk())
+        return result;
     }
 
-    variableExpr->type = type;
+    for (const auto& branch : expression->branches) {
+      auto result = CompilePostProjectionExpression(branch, postProjectionAliases);
+
+      if (!result.IsOk())
+        return result;
+    }
+
+    for (const auto& resultExpr : expression->results) {
+      auto result = CompilePostProjectionExpression(resultExpr, postProjectionAliases);
+
+      if (!result.IsOk())
+        return result;
+    }
 
     return {};
-  }
-
-  Errors::ValidationStatus ResolveLiteralExpressionAliases(Expressions::LiteralExpression* literalExpr){
-      DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
-      return {};
-  }
-
-  Errors::ValidationStatus ResolveColumnExpressionAliases(const Expressions::ColumnExpression *columnExpr){
-      ostringstream os;
-
-      os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
-
-      return {Errors::ValidationError::Error, os.str()};
-}
-
-  Errors::ValidationStatus ResolveBranchExpressionAliases(
-    ParserValidationScope &validationScope,
-    Expressions::BranchExpression *branchExpr,
-    Expressions::Expression *&expression,
-    StatementValidationScope& statementValidationScope
-  ) {
-    if (!branchExpr->ValidateNumberOfArguments())
-      return {Errors::ValidationError::Error, "Invalid number of arguments specified on branching expression"};
-
-    for (auto& branch : branchExpr->branches) {
-      auto result = ResolveExpressionAliases(validationScope, statementValidationScope, branch);
-      if (!result.IsOk())
-        return result;
-
-      if (!ValidateExpressionCoercionTypes(DataType::Bool, branch)) {
-        ostringstream os;
-
-        os  << "Expression of type: "
-            << ColumnTypesToStringDictionary.Get(branch->GetReturnType())
-            << " cannot be used as a branching condition";
-
-        return {Errors::ValidationError::Error, os.str()};
-      }
-    }
-
-    for (auto& resultExpr : branchExpr->results) {
-      auto result = ResolveExpressionAliases(validationScope, statementValidationScope, resultExpr);
-      if (!result.IsOk())
-        return result;
-    }
-
-    if (branchExpr->HasBaseCase()) {
-      auto result = ResolveExpressionAliases(validationScope, statementValidationScope, branchExpr->baseCase);
-      if (!result.IsOk())
-        return result;
-    }
-
-    const auto returnType = branchExpr->GetReturnType();
-
-    for (const auto& resultExpr : branchExpr->results) {
-      if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
-        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
-    }
-
-    if (branchExpr->HasBaseCase()) {
-      if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
-        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
-    }
-
-    EvaluateConstantExpression(expression);
-    return {};
-  }
-
-  Errors::ValidationStatus ResolveBranchExpressionAliases(
-    ParserValidationScope &validationScope,
-    Expressions::BranchExpression *branchExpr,
-    Expressions::Expression *&expression
-  ){
-    if (!branchExpr->ValidateNumberOfArguments())
-      return {Errors::ValidationError::Error, "Invalid number of arguments specified on branching expression"};
-
-    for (auto& branch : branchExpr->branches) {
-      auto result = ResolveExpressionAliases(validationScope, branch);
-      if (!result.IsOk())
-        return result;
-    }
-
-    for (auto& resultExpr : branchExpr->results) {
-      auto result = ResolveExpressionAliases(validationScope, resultExpr);
-      if (!result.IsOk())
-        return result;
-    }
-
-    if (branchExpr->HasBaseCase()) {
-      auto result = ResolveExpressionAliases(validationScope, branchExpr->baseCase);
-      if (!result.IsOk())
-        return result;
-    }
-
-    const auto returnType = branchExpr->GetReturnType();
-
-    for (const auto& resultExpr : branchExpr->results) {
-      if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
-        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
-    }
-
-    if (branchExpr->HasBaseCase()) {
-      if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
-        return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
-    }
-
-    EvaluateConstantExpression(expression);
-    return {};
-  }
-
-  void EvaluateConstantExpression(Expressions::Expression*& expression) {
-    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expression)) {
-      if (!dynamic_cast<Expressions::LiteralExpression*>(binaryExpr->left)
-        || !dynamic_cast<Expressions::LiteralExpression*>(binaryExpr->right))
-        return;
-
-      auto value = binaryExpr->Evaluate({});
-
-      delete expression;
-      expression = new Expressions::LiteralExpression(value);
-    }
-
-    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expression)) {
-      if (!dynamic_cast<Expressions::LiteralExpression*>(logicalExpr->left)
-        || !dynamic_cast<Expressions::LiteralExpression*>(logicalExpr->right))
-        return;
-
-      auto value = logicalExpr->Evaluate({});
-
-      delete expression;
-      expression = new Expressions::LiteralExpression(value);
-    }
-
-    if (const auto* funcExpr = dynamic_cast<Expressions::FunctionExpression*>(expression)) {
-      for (const auto& argument : funcExpr->arguments) {
-        if (!dynamic_cast<Expressions::LiteralExpression*>(argument))
-          return;
-      }
-
-      auto value = funcExpr->Evaluate({});
-      delete expression;
-      expression = new Expressions::LiteralExpression(value);
-    }
-
-    if (auto* branchExpr = dynamic_cast<Expressions::BranchExpression*>(expression)) {
-      for (int i = 0;i < branchExpr->branches.size(); i++) {
-        const auto* branch = branchExpr->branches[i];
-
-        if (const auto* literalExpr = dynamic_cast<const Expressions::LiteralExpression*>(branch)) {
-          const auto value = literalExpr->Evaluate({});
-
-          if (value.GetBool()) {
-            auto* resultExpr = branchExpr->results[i];
-            branchExpr->results[i] = nullptr;
-            delete expression;
-
-            expression = resultExpr;
-            EvaluateConstantExpression(expression);
-
-            return;
-          }
-
-          continue;
-        }
-
-        return;
-      }
-    }
-  }
-
-  void AssignColumnsToIndices(SelectStatement *statement, const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary){
-    for (const auto& resultExpr : statement->results)
-      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, resultExpr);
-
-    if (statement->where.expression != nullptr)
-      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, statement->where.expression);
-
-    for (const auto* join : statement->joins)
-      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, join->expression);
-  }
-
-  void AssignColumnIndicesToResultExpression(
-    SelectStatement *statement,
-    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
-    Expressions::Expression *expr){
-
-    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
-      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, binaryExpr->left);
-      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, binaryExpr->right);
-      return;
-    }
-
-    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
-      columnExpr->index = columnIndicesDictionary.Get(columnExpr->columnId);
-      return;
-    }
-
-    if (const auto* funcExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
-      for (auto* childExpr : funcExpr->arguments)
-        AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, childExpr);
-      return;
-    }
-
-    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
-      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, logicalExpr->left);
-      AssignColumnIndicesToResultExpression(statement, columnIndicesDictionary, logicalExpr->right);
-    }
   }
 
   void AssignPostProjectionIndicesToExpression(
     const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
-    Expressions::Expression *expr){
-    if (const auto* binaryExpr = dynamic_cast<Expressions::BinaryExpression*>(expr)) {
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, binaryExpr->left);
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, binaryExpr->right);
-      return;
+    Expressions::Expression *expression
+  ){
+    switch (expression->expressionType) {
+      case Expressions::ExpressionType::Binary:
+        AssignPostProjectionIndicesToBinaryExpression(columnIndicesDictionary, expression->AsBinary());
+        break;
+      case Expressions::ExpressionType::Logical:
+        AssignPostProjectionIndicesToLogicalExpression(columnIndicesDictionary, expression->AsLogical());
+        break;
+      case Expressions::ExpressionType::Branch:
+        AssignPostProjectionIndicesToBranchExpression(columnIndicesDictionary, expression->AsBranch());
+        break;
+      case Expressions::ExpressionType::Function:
+        AssignPostProjectionIndicesToFunctionExpression(columnIndicesDictionary, expression->AsFunction());
+        break;
+      case Expressions::ExpressionType::Column:
+        AssignPostProjectionIndicesToColumnExpression(columnIndicesDictionary, expression->AsColumn());
+        break;
+      case Expressions::ExpressionType::Expression:
+      case Expressions::ExpressionType::Constant:
+      case Expressions::ExpressionType::Variable:
+      default:
+      break;
     }
+  }
 
-    if (auto* columnExpr = dynamic_cast<Expressions::ColumnExpression*>(expr)) {
-      columnExpr->index = columnIndicesDictionary.Get(columnExpr->alias);
-      return;
-    }
+  void AssignPostProjectionIndicesToBinaryExpression(
+    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Expressions::BinaryExpression *expression
+  ){
+    AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
+    AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->right);
+  }
 
-    if (const auto* funcExpr = dynamic_cast<Expressions::FunctionExpression*>(expr)) {
-      for (auto* childExpr : funcExpr->arguments)
-        AssignPostProjectionIndicesToExpression(columnIndicesDictionary, childExpr);
-      return;
-    }
+  void AssignPostProjectionIndicesToLogicalExpression(
+    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Expressions::LogicalExpression *expression
+  ){
+    AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
+    AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->right);
+  }
 
-    if (const auto* logicalExpr = dynamic_cast<Expressions::LogicalExpression*>(expr)) {
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, logicalExpr->left);
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, logicalExpr->right);
-    }
+  void AssignPostProjectionIndicesToFunctionExpression(
+    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Expressions::FunctionExpression *expression
+  ){
+    for (auto* childExpr : expression->arguments)
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, childExpr);
+  }
+
+  void AssignPostProjectionIndicesToBranchExpression(
+    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Expressions::BranchExpression *expression
+  ) {
+    for (auto* argument : expression->arguments)
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, argument);
+
+    for (auto* branch : expression->branches)
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, branch);
+
+    for (auto* result : expression->results)
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, result);
+
+    if (expression->HasBaseCase())
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->baseCase);
+  }
+
+  void AssignPostProjectionIndicesToBranchExpression(
+    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    Expressions::BranchExpression *expression
+  ){
+
+    for (auto*& argument : expression->arguments)
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, argument);
+
+    for (auto*& branch : expression->branches)
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, branch);
+
+    for (auto*& resultExpr : expression->results)
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, resultExpr);
+
+    if (expression->HasBaseCase())
+      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->baseCase);
+  }
+
+  void AssignPostProjectionIndicesToColumnExpression(
+    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    Expressions::ColumnExpression *expression
+  ) {
+    expression->index = columnIndicesDictionary.Get(expression->alias);
   }
 
 };
