@@ -614,7 +614,7 @@ namespace DatabaseEngine::StorageTypes {
             if (associatedColumnIndex < this->cache.size())
                 this->cache.at(associatedColumnIndex).isMaterialized = false;
 
-            if (value.GetIsNull())
+            if (value.IsNull())
             {
               block->SetData(nullptr, 0);
               this->SetNullBitMapValue(associatedColumnIndex, true);
@@ -651,7 +651,7 @@ namespace DatabaseEngine::StorageTypes {
             if (associatedColumnIndex < this->cache.size())
                 this->cache.at(associatedColumnIndex).isMaterialized = false;
 
-            if (value.GetIsNull())
+            if (value.IsNull())
             {
                 block->SetData(nullptr, 0);
                 this->SetNullBitMapValue(associatedColumnIndex, true);

@@ -85,22 +85,26 @@ namespace QueryPipeline {
       const std::vector<Headers::IndexColumnsHeader>& indexColumns,
       const Expressions::ColumnExpression* columnExpression,
       const Expressions::Expression* otherExpression,
-      Value& value
+      Value& value,
+      int& depth
     );
     [[nodiscard]] static bool CanIndexSeekBinaryExpression(
       const std::vector<Headers::IndexColumnsHeader>& indexColumns,
       const Expressions::BinaryExpression* binaryExpression,
-      Value& value
+      Value& value,
+      int& depth
     );
     [[nodiscard]] static bool CanIndexSeekLogicalExpression(
       const std::vector<Headers::IndexColumnsHeader>& indexColumns,
       const Expressions::LogicalExpression* logicalExpression,
-      Value& value
+      Value& value,
+      int& depth
     );
     [[nodiscard]] static bool CanIndexSeek(
       const std::vector<Headers::IndexColumnsHeader>& indexColumns,
       const Expressions::Expression* expr,
-      Value& value
+      Value& value,
+      int& depth
     );
 
     public:

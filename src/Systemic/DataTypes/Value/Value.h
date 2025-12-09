@@ -81,7 +81,7 @@ class Value {
 
         explicit Value(const DataTypes::Guid& data, const Constants::column_index_t& columnIndex);
 
-        [[nodiscard]] bool GetIsNull() const;
+        [[nodiscard]] bool IsNull() const;
         
         [[nodiscard]] const Constants::column_index_t& GetColumnIndex() const;
 

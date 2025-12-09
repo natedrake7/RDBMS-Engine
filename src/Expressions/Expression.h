@@ -222,6 +222,10 @@ namespace Expressions{
         LogicalExpression();
         ~LogicalExpression()override;
 
+        [[nodiscard]] bool IsOr()const;
+        [[nodiscard]] bool IsAnd()const;
+        [[nodiscard]] bool HasAtLeastOneConstant()const;
+
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
         [[nodiscard]] DataType GetReturnType() const override;
   };

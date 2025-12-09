@@ -688,7 +688,7 @@ PhysicalInsert::PhysicalInsert(
 
       columnIdsDict.Add(column->index, columnResult.primaryKey.GetKeyAsInt());
 
-      if (!column->defaultValue.GetIsNull() || column->defaultValue.GetSize() != 0) {
+      if (!column->defaultValue.IsNull() || column->defaultValue.GetSize() != 0) {
         const auto _ = server.InsertDefaultValuesToMasterDb(
           properties,
           columnResult.primaryKey.GetKeyAsInt(),

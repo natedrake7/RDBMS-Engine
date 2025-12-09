@@ -2,6 +2,7 @@
 
 #include "../Constants.h"
 #include "../../Database/Database.h"
+#include "../../Database/Database.h"
 #include "../../Systemic/Coercions/Coercions.h"
 #include "../../Systemic/Functions/StringFunctions.h"
 #include "../../Server/Server.h"
@@ -548,7 +549,9 @@ namespace QueryPipeline::Statements {
 
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
-  Errors::ValidationStatus SelectStatement::ValidateNoTableStatement(ParserValidationScope& validationScope){
+  bool SelectStatement::HasWhere() const{ return this->where.expression != nullptr; }
+
+  Errors::ValidationStatus SelectStatement::CompileNoTableStatement(ParserValidationScope& validationScope){
     for (auto& resultExpr : this->results){
       auto exprResult = CompileExpression(validationScope, resultExpr);
 
@@ -562,7 +565,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus SelectStatement::ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+  Errors::ValidationStatus SelectStatement::Compile(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
     this->tableColumnsDictionary.Add(this->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId));
@@ -589,16 +592,9 @@ namespace QueryPipeline::Statements {
         return expressionResult;
     }
 
-    //validate all expressions are valid
-    if (this->where.expression != nullptr) {
-      if (!this->where.IsValid())
-        return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
-
-
-      auto expressionResult = CompileExpression(validationScope, statementValidationScope, this->where.expression);
-      if (!expressionResult.IsOk())
-        return expressionResult;
-    }
+    auto result = this->CompileWhereClause(validationScope, statementValidationScope);
+    if (!result.IsOk())
+      return result;
 
     //validate join expressions
     statementValidationScope.indexPos = nullptr;
@@ -638,6 +634,26 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
+  Errors::ValidationStatus SelectStatement::CompileWhereClause(
+    ParserValidationScope &validationScope,
+    StatementValidationScope& statementValidationScope
+  ) {
+    if (!this->HasWhere())
+      return {};
+
+    if (!this->where.IsValid())
+      return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
+
+    auto expressionResult = CompileExpression(validationScope, statementValidationScope, this->where.expression);
+    if (!expressionResult.IsOk())
+      return expressionResult;
+
+    if (!ValidateExpressionCoercionTypes(DataType::Bool, this->where.expression))
+      return ClauseCannotBeEvaluatedToBool(this->where.expression->GetReturnType());
+
+    return {};
+  }
+
   void SelectStatement::AssignColumnsToIndices(const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary)const {
     for (const auto& resultExpr : this->results)
       AssignColumnIndicesToExpression(columnIndicesDictionary, resultExpr);
@@ -658,7 +674,7 @@ namespace QueryPipeline::Statements {
 
     //resolve expressions here since no column is to be used
     if (this->table == nullptr)
-      return this->ValidateNoTableStatement(validationScope);
+      return this->CompileNoTableStatement(validationScope);
 
     auto tableResult = this->table->Validate(this->databaseId);
     if (!tableResult.IsOk())
@@ -672,7 +688,7 @@ namespace QueryPipeline::Statements {
         return joinResult;
     }
 
-    return this->ResolveAliases(validationScope, aliasesDictionary);
+    return this->Compile(validationScope, aliasesDictionary);
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
@@ -878,7 +894,7 @@ namespace QueryPipeline::Statements {
     if (expression->IsConstant()) {
       auto* constantExpr = expression->AsConstant();
 
-      if (constantExpr->value.GetIsNull()) {
+      if (constantExpr->value.IsNull()) {
         if (columnHeader.isNullable)
           return {};
 
@@ -1079,7 +1095,7 @@ namespace QueryPipeline::Statements {
     if (update->value->IsConstant()) {
       const auto* constantExpr = update->value->AsConstant();
 
-      if (constantExpr->value.GetIsNull()) {
+      if (constantExpr->value.IsNull()) {
         const auto& columns = this->tableColumnsDictionary.Get(this->table->tableId);
 
         if (columns.Get(update->name.name).isNullable)
@@ -1215,7 +1231,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     }
 
     if (!this->newColumn->isNullable
-      && this->newColumn->defaultValue.GetIsNull()) {
+      && this->newColumn->defaultValue.IsNull()) {
       os << "Cannot insert default Value NULL when NOT NULL is specified";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -1451,7 +1467,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    FoldBinaryExpression(binaryExpr, expression);
+    FoldExpression(binaryExpr, expression);
     return {};
   }
 
@@ -1487,7 +1503,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    FoldBinaryExpression(binaryExpr, expression);
+    FoldExpression(binaryExpr, expression);
     return {};
   }
 
@@ -1503,19 +1519,12 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (!result.IsOk())
       return result;
 
-    //validate type
-    if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
-      ostringstream os;
+    if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
+      return ClauseCannotBeEvaluatedToBool(logicalExpr->left->GetReturnType());
+    if (ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
+      return ClauseCannotBeEvaluatedToBool( logicalExpr->right->GetReturnType());
 
-      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
-      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
-
-      os << "Invalid conversion between " << leftTypeStr << " and " << rightTypeStr <<".Use explicit cast";
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    FoldLogicalExpression(logicalExpr, expression);
+    FoldExpression(logicalExpr, expression);
     return {};
   }
 
@@ -1531,19 +1540,12 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (!result.IsOk())
       return result;
 
-    //validate type
-    if (!ValidateExpressionCoercionTypes(logicalExpr->left, logicalExpr->right)) {
-      ostringstream os;
+    if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
+      return ClauseCannotBeEvaluatedToBool(logicalExpr->left->GetReturnType());
+    if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
+      return ClauseCannotBeEvaluatedToBool( logicalExpr->right->GetReturnType());
 
-      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->left->GetReturnType());
-      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(logicalExpr->right->GetReturnType());
-
-      os << "Invalid conversion between " << leftTypeStr << " and " << rightTypeStr <<".Use explicit cast";
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    FoldLogicalExpression(logicalExpr, expression);
+    FoldExpression(logicalExpr, expression);
     return {};
   }
 
@@ -1564,7 +1566,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (!funcExpr->ValidateNumberOfArguments(errorMessage))
       return {Errors::ValidationError::Error, errorMessage};
 
-    FoldFunctionExpression(funcExpr, expression);
+    FoldExpression(funcExpr, expression);
     return {};
   }
 
@@ -1587,7 +1589,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (!funcExpr->ValidateNumberOfArguments(errorMessage))
       return {Errors::ValidationError::Error, errorMessage};
 
-    FoldFunctionExpression(funcExpr, expression);
+    FoldExpression(funcExpr, expression);
     return {};
   }
 
@@ -1640,7 +1642,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
         return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
     }
 
-    FoldBranchExpression(branchExpr, expression);
+    FoldExpression(branchExpr, expression);
     return {};
   }
 
@@ -1682,7 +1684,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
         return {Errors::ValidationError::Error, "Branching Expression Result types cannot be coerced to datatype"};
     }
 
-    FoldBranchExpression(branchExpr, expression);
+    FoldExpression(branchExpr, expression);
     return {};
   }
 
@@ -1855,7 +1857,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       const auto* constantExpr = right->AsConstant();
 
       if (constantExpr != nullptr
-        && (constantExpr->value.GetIsNull()
+        && (constantExpr->value.IsNull()
         || DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), constantExpr->value)))
         return true;
 
@@ -1883,7 +1885,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (expression->IsConstant()) {
       auto* constantExpr = expression->AsConstant();
 
-      if (constantExpr->value.GetIsNull()
+      if (constantExpr->value.IsNull()
         || DataTypes::Coercions::CanBeParsedToType(type, constantExpr->value))
         return true;
 
@@ -1951,7 +1953,8 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
 
       auto* columnExpression = new Expressions::ColumnExpression(
             header.name,
-            statement->table->GetAlias());
+            statement->table->GetAlias()
+      );
 
       columnExpression->name = header.name;
       columnExpression->columnId = header.id;
@@ -1969,16 +1972,16 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
   void FoldExpression(Expressions::Expression *&expression) {
     switch (expression->expressionType) {
       case Expressions::ExpressionType::Binary:
-        FoldBinaryExpression(expression->AsBinary(), expression);
+        FoldExpression(expression->AsBinary(), expression);
         break;
       case Expressions::ExpressionType::Logical:
-        FoldLogicalExpression(expression->AsLogical(), expression);
+        FoldExpression(expression->AsLogical(), expression);
         break;
       case Expressions::ExpressionType::Branch:
-        FoldBranchExpression(expression->AsBranch(), expression);
+        FoldExpression(expression->AsBranch(), expression);
         break;
       case Expressions::ExpressionType::Function:
-        FoldFunctionExpression(expression->AsFunction(), expression);
+        FoldExpression(expression->AsFunction(), expression);
         break;
       case Expressions::ExpressionType::Expression:
       case Expressions::ExpressionType::Column:
@@ -1988,40 +1991,50 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     }
   }
 
-  void FoldBinaryExpression(const Expressions::BinaryExpression *castExpr, Expressions::Expression *&expression){
+  void FoldExpression(const Expressions::BinaryExpression *castExpr, Expressions::Expression *&expression){
     if (!castExpr->left->IsConstant()
       || !castExpr->right->IsConstant())
       return;
 
-    auto value = castExpr->Evaluate({});
-
-    delete expression;
-    expression = new Expressions::ConstantExpression(value);
+    EvaluateExpression(expression);
   }
 
-  void FoldLogicalExpression(const Expressions::LogicalExpression *castExpr, Expressions::Expression *&expression){
-    if (!castExpr->left->IsConstant()
-      || !castExpr->right->IsConstant())
+  void FoldExpression(Expressions::LogicalExpression *castExpr, Expressions::Expression *&expression){
+    //If expression is of type OR and either right or left is a constant, it will always be true
+    if (castExpr->IsOr()) {
+      if (castExpr->left->IsConstant()) {
+        PropagateExpression(expression, castExpr->left);
+        return;
+      }
+
+      if (castExpr->right->IsConstant()) {
+        PropagateExpression(expression, castExpr->right);
+      }
+
       return;
+    }
 
-    auto value = castExpr->Evaluate({});
+    //if expression is and and it has one constant propagate child
+    //keep the right
+    if (castExpr->left->IsConstant()) {
+      TryPropagateChildExpression(expression, castExpr->left, castExpr->right);
+      return;
+    }
 
-    delete expression;
-    expression = new Expressions::ConstantExpression(value);
+    if (castExpr->right->IsConstant())
+      TryPropagateChildExpression(expression, castExpr->right, castExpr->left);
   }
 
-  void FoldFunctionExpression(const Expressions::FunctionExpression *castExpr, Expressions::Expression *&expression){
+  void FoldExpression(const Expressions::FunctionExpression *castExpr, Expressions::Expression *&expression){
     for (const auto& argument : castExpr->arguments) {
       if (!argument->IsConstant())
         return;
     }
 
-    auto value = castExpr->Evaluate({});
-    delete expression;
-    expression = new Expressions::ConstantExpression(value);
+    EvaluateExpression(expression);
   }
 
-  void FoldBranchExpression(Expressions::BranchExpression *castExpr, Expressions::Expression *&expression){
+  void FoldExpression(Expressions::BranchExpression *castExpr, Expressions::Expression *&expression){
     for (int i = 0;i < castExpr->branches.size(); i++) {
       const auto* branch = castExpr->branches[i];
 
@@ -2029,17 +2042,32 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
         return;
 
       const auto value = branch->AsConstant()->Evaluate({});
-
       if (value.GetBool()) {
-        auto* resultExpr = castExpr->results[i];
-        castExpr->results[i] = nullptr;
-        delete expression;
-
-        expression = resultExpr;
+        PropagateExpression(expression, castExpr->results[i]);
         FoldExpression(expression);
         return;
       }
     }
+  }
+
+  void PropagateExpression(Expressions::Expression *&expression, Expressions::Expression *&childExpr) {
+    auto* expr = childExpr;
+    childExpr = nullptr;
+
+    delete expression;
+    expression = expr;
+  }
+
+  void EvaluateExpression(Expressions::Expression *&expression) {
+    auto value = expression->Evaluate({});
+    delete expression;
+
+    expression = new Expressions::ConstantExpression(value);
+  }
+
+  void AssignConstantToExpression(Expressions::Expression *&expression) {
+    delete expression;
+    expression = new Expressions::ConstantExpression(Value(true, 0));
   }
 
   void AssignColumnIndicesToExpression(
@@ -2316,4 +2344,30 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     expression->index = columnIndicesDictionary.Get(expression->alias);
   }
 
+  Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType &type) {
+    ostringstream os;
+
+    os  << "Expression of type: " << ColumnTypesToStringDictionary.Get(type)
+        << " cannot be converted to type: Bool";
+
+    return {Errors::ValidationError::Error, os.str()};
+  }
+
+  void TryPropagateChildExpression(
+    Expressions::Expression*& expression,
+    Expressions::Expression*& leftExpr,
+    Expressions::Expression*& rightExpr
+  ){
+    const auto* left = leftExpr->AsConstant();
+    if (left->value.IsNull())
+      return;
+
+    if(DataTypes::Coercions::CanBeParsedToType(DataType::Bool, left->value)
+      && left->value.GetBool() == false) {
+      PropagateExpression(expression, leftExpr);
+      return;
+      }
+
+    PropagateExpression(expression, rightExpr);
+  }
 };

@@ -393,6 +393,12 @@ namespace Expressions{
     delete this->right;
   }
 
+  bool LogicalExpression::IsOr() const{ return this->logicalType == LogicalType::Or; }
+
+  bool LogicalExpression::IsAnd() const{ return this->logicalType == LogicalType::And; }
+
+  bool LogicalExpression::HasAtLeastOneConstant() const{ return this->left->IsConstant() || this->right->IsConstant(); }
+
   DataType LogicalExpression::GetReturnType() const{ return DataType::Bool; }
 
   Value BranchExpression::EvaluateSwitch(const EvaluationContext &context) const{
@@ -791,7 +797,7 @@ namespace Expressions{
 
   Value FunctionExpression::Coalesce(const std::vector<Value> &arguments) {
     for (auto& argument : arguments) {
-      if (!argument.GetIsNull())
+      if (!argument.IsNull())
         return argument;
     }
 

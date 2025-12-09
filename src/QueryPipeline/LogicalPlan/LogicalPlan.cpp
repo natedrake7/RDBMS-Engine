@@ -49,8 +49,12 @@ namespace QueryPipeline {
     const std::vector<Headers::IndexColumnsHeader>& indexColumns,
     const Expressions::ColumnExpression *columnExpression,
     const Expressions::Expression* otherExpression,
-    Value& value
+    Value& value,
+    int& depth
     ) {
+
+    depth++;
+
     const auto& header = indexColumns[0];
     if (header.columnId != columnExpression->columnId)
       return false;
@@ -70,8 +74,11 @@ namespace QueryPipeline {
   bool LogicalTableScan::CanIndexSeekBinaryExpression(
     const std::vector<Headers::IndexColumnsHeader>& indexColumns,
     const Expressions::BinaryExpression *binaryExpression,
-    Value& value
+    Value& value,
+    int& depth
   ) {
+
+    depth++;
     switch (binaryExpression->operation) {
       case Expressions::BinaryOperator::Equal:
         case Expressions::BinaryOperator::Greater:
@@ -79,9 +86,21 @@ namespace QueryPipeline {
         case Expressions::BinaryOperator::Less:
         case Expressions::BinaryOperator::LessEqual: {
            if( binaryExpression->left->IsColumn())
-             return LogicalTableScan::CanIndexSeekColumnExpression(indexColumns, binaryExpression->left->AsColumn(), binaryExpression->right, value);
+             return LogicalTableScan::CanIndexSeekColumnExpression(
+               indexColumns,
+               binaryExpression->left->AsColumn(),
+               binaryExpression->right,
+               value,
+               depth
+              );
            if (binaryExpression->right->IsColumn())
-              return LogicalTableScan::CanIndexSeekColumnExpression(indexColumns, binaryExpression->right->AsColumn(), binaryExpression->left, value);
+              return LogicalTableScan::CanIndexSeekColumnExpression(
+                indexColumns,
+                binaryExpression->right->AsColumn(),
+                binaryExpression->left,
+                value,
+                depth
+              );
         }
         case Expressions::BinaryOperator::NotEqual:
         case Expressions::BinaryOperator::Add:
@@ -100,25 +119,29 @@ namespace QueryPipeline {
   bool LogicalTableScan::CanIndexSeekLogicalExpression(
     const std::vector<Headers::IndexColumnsHeader>& indexColumns,
     const Expressions::LogicalExpression *logicalExpression,
-    Value& value
+    Value& value,
+    int& depth
   ){
-    return CanIndexSeek(indexColumns, logicalExpression->left, value)
-          && CanIndexSeek(indexColumns, logicalExpression->right, value);
+    depth++;
+    return CanIndexSeek(indexColumns, logicalExpression->left, value, depth)
+          && CanIndexSeek(indexColumns, logicalExpression->right, value, depth);
   }
 
   bool LogicalTableScan::CanIndexSeek(
     const std::vector<Headers::IndexColumnsHeader>& indexColumns,
     const Expressions::Expression* expr,
-    Value& value
+    Value& value,
+    int& depth
   ) {
     if (expr == nullptr)
       return false;
 
+    depth++;
     switch (expr->expressionType) {
       case Expressions::ExpressionType::Binary:
-          return LogicalTableScan::CanIndexSeekBinaryExpression(indexColumns, expr->AsBinary(), value);
+          return LogicalTableScan::CanIndexSeekBinaryExpression(indexColumns, expr->AsBinary(), value, depth);
       case Expressions::ExpressionType::Logical:
-          return LogicalTableScan::CanIndexSeekLogicalExpression(indexColumns, expr->AsLogical(), value);
+          return LogicalTableScan::CanIndexSeekLogicalExpression(indexColumns, expr->AsLogical(), value, depth);
       case Expressions::ExpressionType::Column:
       case Expressions::ExpressionType::Constant:
       case Expressions::ExpressionType::Variable:
@@ -141,11 +164,12 @@ namespace QueryPipeline {
         return new PhysicalPlan::PhysicalTableScan(this->table);
 
       //if expression is complex defer from index seek
-    for (const auto& index: indexes) {
+      for (const auto& index: indexes) {
         const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexId(index.id);
 
         auto value = Value(nullptr, 0);
-        if (this->CanIndexSeek(indexedColumns, this->expression, value)) {
+        int depth = 0;
+        if (LogicalTableScan::CanIndexSeek(indexedColumns, this->expression, value, depth)) {
           //temporary
           auto copyVal = value;
           return new PhysicalPlan::PhysicalIndexSeek(this->table, value, copyVal);

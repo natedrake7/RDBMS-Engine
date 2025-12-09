@@ -181,7 +181,7 @@ Value::Value(const u16string &data, const Constants::column_index_t &columnIndex
 
 Value::~Value() = default;
 
-bool Value::GetIsNull() const { return this->data == nullptr; }
+bool Value::IsNull() const { return this->data == nullptr; }
 
 const Constants::column_index_t & Value::GetColumnIndex() const { return this->columnIndex;}
 
@@ -423,7 +423,7 @@ Constants::DataType Value::PromoteType(const Constants::DataType &lhs, const Con
 }
 
 ostream & operator<<(ostream& os, const Value &field){
-    if (field.GetIsNull()) {
+    if (field.IsNull()) {
         os << "NULL";
         return os;
     }
@@ -603,20 +603,20 @@ Value Value::PerformDecimalSubtraction(const DataTypes::Decimal &lhs, const Data
 }
 
 std::tuple<bool, Value> Value::PerformNullEqualityComparison(const Value &lhs, const Value &rhs){
-    if (lhs.GetIsNull())
-        return std::make_tuple(true, Value(rhs.GetIsNull(), 0));
+    if (lhs.IsNull())
+        return std::make_tuple(true, Value(rhs.IsNull(), 0));
 
-    if (rhs.GetIsNull())
+    if (rhs.IsNull())
         return std::make_tuple(true, Value(false, 0));
 
     return std::make_tuple(false, Value(nullptr, 0));
 }
 
 std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs, const Value &rhs){
-    if (lhs.GetIsNull())
-        return std::make_tuple(true, Value(!rhs.GetIsNull(), 0));
+    if (lhs.IsNull())
+        return std::make_tuple(true, Value(!rhs.IsNull(), 0));
 
-    if (rhs.GetIsNull())
+    if (rhs.IsNull())
         return std::make_tuple(true, Value(true, 0));
 
     return std::make_tuple(false, Value(nullptr, 0));

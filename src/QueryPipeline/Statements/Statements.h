@@ -275,8 +275,10 @@ namespace QueryPipeline::Statements {
 
     [[nodiscard]] bool HasTopStatement()const;
     [[nodiscard]] bool HasJoins()const;
-    [[nodiscard]] Errors::ValidationStatus ValidateNoTableStatement(ParserValidationScope& validationScope);
-    [[nodiscard]] Errors::ValidationStatus ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
+    [[nodiscard]] bool HasWhere()const;
+    [[nodiscard]] Errors::ValidationStatus CompileNoTableStatement(ParserValidationScope& validationScope);
+    [[nodiscard]] Errors::ValidationStatus Compile(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
+    [[nodiscard]] Errors::ValidationStatus CompileWhereClause(ParserValidationScope& validationScope, StatementValidationScope& statementValidationScope);
     void AssignColumnsToIndices(const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary)const;
 
     [[nodiscard]] Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
@@ -508,15 +510,43 @@ namespace QueryPipeline::Statements {
 
   static void FoldExpression(Expressions::Expression*& expression);
 
-  static void FoldBinaryExpression(const Expressions::BinaryExpression* castExpr, Expressions::Expression*& expression);
+  static void FoldExpression(const Expressions::BinaryExpression* castExpr, Expressions::Expression*& expression);
 
-  static void FoldLogicalExpression(const Expressions::LogicalExpression* castExpr, Expressions::Expression*& expression);
+  static void FoldExpression(Expressions::LogicalExpression* castExpr, Expressions::Expression*& expression);
 
-  static void FoldFunctionExpression(const Expressions::FunctionExpression* castExpr, Expressions::Expression*& expression);
+  static void FoldExpression(const Expressions::FunctionExpression* castExpr, Expressions::Expression*& expression);
 
-  static void FoldBranchExpression(Expressions::BranchExpression* castExpr, Expressions::Expression*& expression);
+  static void FoldExpression(Expressions::BranchExpression* castExpr, Expressions::Expression*& expression);
 
   /** @} End of Folding-Optimization Functions */
+
+  /**
+   * @name Propagation-Optimization Functions
+   * Functions to propagate child expressions as parents if can be
+   * @{
+   */
+
+  static void PropagateExpression(Expressions::Expression*& expression, Expressions::Expression*& childExpr);
+
+  static void TryPropagateChildExpression(
+    Expressions::Expression*& expression,
+    Expressions::Expression*& leftExpr,
+    Expressions::Expression*& rightExpr
+  );
+
+  /** @} End of Propagation-Optimization Functions */
+
+/**
+ * @name Evaluation-Optimization Functions
+ * Functions to evaluate  expressions to constants
+ * @{
+ */
+
+static void EvaluateExpression(Expressions::Expression*& expression);
+
+static void AssignConstantToExpression(Expressions::Expression*& expression);
+
+/** @} End of Propagation-Optimization Functions */
 
   /**
    * @name Index Assignment Functions
@@ -632,4 +662,13 @@ namespace QueryPipeline::Statements {
 
   /** @} End of Post Projection Index Assignment Functions */
 
+  /**
+   * @name Helper Functions
+   * Functions construct helper error messages etc...
+   * @{
+   */
+
+  static Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType& type);
+
+  /** @} End of Helper Functions */
 }

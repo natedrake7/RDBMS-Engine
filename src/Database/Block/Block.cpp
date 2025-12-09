@@ -69,7 +69,7 @@ namespace DatabaseEngine::StorageTypes {
         delete this->data;
         this->data = nullptr;
 
-        if (value.GetIsNull()) {
+        if (value.IsNull()) {
             this->size = 0;
             return {};
         }
@@ -372,7 +372,7 @@ bool operator!=(const DatabaseEngine::StorageTypes::Block &block, const Value &f
 //Tiny Int Comparison -> string, bool, unicodeString, decimal
 
 bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
-    if (field.GetIsNull()
+    if (field.IsNull()
         || block.GetBlockData() == nullptr)
         return block.GetBlockData() == nullptr;
 
@@ -412,7 +412,7 @@ bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Value &f
 }
 
 bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
-    if (field.GetIsNull()
+    if (field.IsNull()
         || block.GetBlockData() == nullptr)
         return block.GetBlockData() != nullptr;
 

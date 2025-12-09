@@ -296,7 +296,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto *block = new Block(column);
 
-          if (input.GetIsNull())
+          if (input.IsNull())
           {
             Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
             continue;
@@ -355,7 +355,7 @@ namespace DatabaseEngine::StorageTypes {
           if (column->GetColumnType() >= Constants::DataType::Invalid)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
-          if (input.GetIsNull())
+          if (input.IsNull())
           {
             Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
             continue;
@@ -412,7 +412,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto *block = new Block(column);
 
-          if (input.GetIsNull())
+          if (input.IsNull())
           {
             Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
             continue;

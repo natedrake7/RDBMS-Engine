@@ -49,7 +49,7 @@ namespace QueryPipeline::PhysicalPlan{
         return result;
       }
 
-    if (!this->column->defaultValue.GetIsNull()) {
+    if (!this->column->defaultValue.IsNull()) {
       const auto value = this->column->defaultValue.GetString();
       const auto defaultValueResult = server.InsertDefaultValuesToMasterDb(properties, columnResult.primaryKey.GetKeyAsInt(), this->column->defaultValue);
     }

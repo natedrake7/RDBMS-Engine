@@ -95,7 +95,7 @@ namespace DatabaseEngine::StorageTypes {
     void Column::UpdateColumnStatistics(const Row *row){
         const auto& value = row->GetColumnByIndex(this->header.columnIndex);
 
-        if (value.GetIsNull()) {
+        if (value.IsNull()) {
             this->statistics.nullCount++;
             return;
         }
