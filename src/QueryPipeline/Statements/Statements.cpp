@@ -551,6 +551,8 @@ namespace QueryPipeline::Statements {
 
   bool SelectStatement::HasWhere() const{ return this->where.expression != nullptr; }
 
+  bool SelectStatement::IsConstant() const{ return this->table == nullptr; }
+
   Errors::ValidationStatus SelectStatement::CompileNoTableStatement(ParserValidationScope& validationScope){
     for (auto& resultExpr : this->results){
       auto exprResult = CompileExpression(validationScope, resultExpr);
@@ -692,19 +694,17 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
-    if (this->table == nullptr)
+    if (this->IsConstant())
       return new LogicalProject(nullptr, this->results, this->columnHeaders);
 
-    LogicalPlan* current = new LogicalTableScan(this->table, this->joins.empty() ? this->where.expression : nullptr);
+    LogicalPlan* current = new LogicalTableScan(this->table, !this->HasJoins() ? this->where.expression : nullptr);
 
     //join re orders take place here
     std::vector<table_id_t> joinOrder;
-
     joinOrder.reserve(this->joins.size() + 1);
 
     //needs to re adjust pointers for right join -> left join change.
     joinOrder.push_back(this->table->tableId);
-
     for (const auto* join : this->joins) {
       if (join->IsRightJoin()) {
         joinOrder.insert(joinOrder.begin(), join->table->tableId);
@@ -2370,4 +2370,4 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
 
     PropagateExpression(expression, rightExpr);
   }
-};
+}

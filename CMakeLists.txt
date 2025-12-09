@@ -125,6 +125,8 @@ add_library(QueryPipeline STATIC
             src/QueryPipeline/ErrorListener/ErrorListener.h
             src/QueryPipeline/Constants.h
             ${ANTLR_SRC}
+        src/QueryPipeline/Optimizer/Optimizer.h
+        src/QueryPipeline/Optimizer/Optimizer.cpp
 )
 
 add_dependencies(QueryPipeline GenerateSQLParser)

@@ -1,13 +1,14 @@
 #include "LogicalPlan.h"
 
 #include "../../Server/Server.h"
+#include "../Optimizer/Optimizer.h"
 
 #include <utility>
 
 #include "../Statements/Statements.h"
 
 namespace QueryPipeline {
-    LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId, const int32_t &databaseId)
+  LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId, const int32_t &databaseId)
       : sessionId(sessionId), databaseId(databaseId) {}
 
   LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId)
@@ -44,137 +45,37 @@ namespace QueryPipeline {
          this->columnsHeaders
     );
   }
-
-  bool LogicalTableScan::CanIndexSeekColumnExpression(
-    const std::vector<Headers::IndexColumnsHeader>& indexColumns,
-    const Expressions::ColumnExpression *columnExpression,
-    const Expressions::Expression* otherExpression,
-    Value& value,
-    int& depth
-    ) {
-
-    depth++;
-
-    const auto& header = indexColumns[0];
-    if (header.columnId != columnExpression->columnId)
-      return false;
-
-    if (otherExpression->IsConstant()) {
-      value = otherExpression->AsConstant()->value;
-      return true;
-    }
-
-    if (otherExpression->IsVariable()) {
-      return false;
-    }
-
-    return false;
-  }
-
-  bool LogicalTableScan::CanIndexSeekBinaryExpression(
-    const std::vector<Headers::IndexColumnsHeader>& indexColumns,
-    const Expressions::BinaryExpression *binaryExpression,
-    Value& value,
-    int& depth
-  ) {
-
-    depth++;
-    switch (binaryExpression->operation) {
-      case Expressions::BinaryOperator::Equal:
-        case Expressions::BinaryOperator::Greater:
-        case Expressions::BinaryOperator::GreaterEqual:
-        case Expressions::BinaryOperator::Less:
-        case Expressions::BinaryOperator::LessEqual: {
-           if( binaryExpression->left->IsColumn())
-             return LogicalTableScan::CanIndexSeekColumnExpression(
-               indexColumns,
-               binaryExpression->left->AsColumn(),
-               binaryExpression->right,
-               value,
-               depth
-              );
-           if (binaryExpression->right->IsColumn())
-              return LogicalTableScan::CanIndexSeekColumnExpression(
-                indexColumns,
-                binaryExpression->right->AsColumn(),
-                binaryExpression->left,
-                value,
-                depth
-              );
-        }
-        case Expressions::BinaryOperator::NotEqual:
-        case Expressions::BinaryOperator::Add:
-        case Expressions::BinaryOperator::Subtract:
-        case Expressions::BinaryOperator::Multiply:
-        case Expressions::BinaryOperator::Divide:
-        case Expressions::BinaryOperator::Modulo:
-        case Expressions::BinaryOperator::EqualIgnoreOrdinalCase:
-        default:
-          break;
-    }
-
-    return false;
-  }
-
-  bool LogicalTableScan::CanIndexSeekLogicalExpression(
-    const std::vector<Headers::IndexColumnsHeader>& indexColumns,
-    const Expressions::LogicalExpression *logicalExpression,
-    Value& value,
-    int& depth
-  ){
-    depth++;
-    return CanIndexSeek(indexColumns, logicalExpression->left, value, depth)
-          && CanIndexSeek(indexColumns, logicalExpression->right, value, depth);
-  }
-
-  bool LogicalTableScan::CanIndexSeek(
-    const std::vector<Headers::IndexColumnsHeader>& indexColumns,
-    const Expressions::Expression* expr,
-    Value& value,
-    int& depth
-  ) {
-    if (expr == nullptr)
-      return false;
-
-    depth++;
-    switch (expr->expressionType) {
-      case Expressions::ExpressionType::Binary:
-          return LogicalTableScan::CanIndexSeekBinaryExpression(indexColumns, expr->AsBinary(), value, depth);
-      case Expressions::ExpressionType::Logical:
-          return LogicalTableScan::CanIndexSeekLogicalExpression(indexColumns, expr->AsLogical(), value, depth);
-      case Expressions::ExpressionType::Column:
-      case Expressions::ExpressionType::Constant:
-      case Expressions::ExpressionType::Variable:
-      case Expressions::ExpressionType::Branch:
-      case Expressions::ExpressionType::Function:
-      case Expressions::ExpressionType::Expression:
-      default:
-        return false;
-    }
-  }
-
   LogicalTableScan::LogicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
   : table(table), expression(expression) {}
 
   PhysicalPlan::PhysicalOperator * LogicalTableScan::ToPhysical(){
-      const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
+      auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
       //if no indexes are available heap scan
       if (indexes.empty())
         return new PhysicalPlan::PhysicalTableScan(this->table);
 
+
+      if (this->expression != nullptr) {
+        for (auto& index: indexes) {
+          index.columns = Server::ServerInstance::Get().SelectIndexColumnsByIndexId(index.id);
+
+          auto results = Optimizer::AnalyzeTableScan(this, index.columns);
+
+          //baseCase
+          if (results.size() == 1) {
+            auto& result = results[0];
+            return new PhysicalPlan::PhysicalIndexSeek(this->table, result.range.start, result.range.end);
+          }
+
+          // for (auto& result : results) {
+          //   auto* seekStatement = new PhysicalPlan::PhysicalIndexSeek(this->table, result.range.start, result.range.end);
+          // }
+        }
+      }
+
       //if expression is complex defer from index seek
       for (const auto& index: indexes) {
-        const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexId(index.id);
-
-        auto value = Value(nullptr, 0);
-        int depth = 0;
-        if (LogicalTableScan::CanIndexSeek(indexedColumns, this->expression, value, depth)) {
-          //temporary
-          auto copyVal = value;
-          return new PhysicalPlan::PhysicalIndexSeek(this->table, value, copyVal);
-        }
-
         return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, index.isClustered);
       }
 

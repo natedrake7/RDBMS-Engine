@@ -276,6 +276,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool HasTopStatement()const;
     [[nodiscard]] bool HasJoins()const;
     [[nodiscard]] bool HasWhere()const;
+    [[nodiscard]] bool IsConstant()const;
     [[nodiscard]] Errors::ValidationStatus CompileNoTableStatement(ParserValidationScope& validationScope);
     [[nodiscard]] Errors::ValidationStatus Compile(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     [[nodiscard]] Errors::ValidationStatus CompileWhereClause(ParserValidationScope& validationScope, StatementValidationScope& statementValidationScope);
