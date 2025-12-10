@@ -33,8 +33,9 @@ namespace Server {
     SysDefaultValues = 9,
     SysTableStats = 10,
     SysColumnStats = 11,
-    SysRoles = 12,
-    SysUsers = 13,
+    SysColumnHistograms = 12,
+    SysRoles = 13,
+    SysUsers = 14,
   };
 
   class ServerInstance {
@@ -222,9 +223,15 @@ namespace Server {
       const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
       const int32_t& columnId,
       const int64_t& distinctCount = 0,
-      const int64_t& nullCount = 0,
-      const int& version = 0,
-      const bool& isDeleted = false
+      const int64_t& nullCount = 0
+    ) const;
+
+    [[nodiscard]] Errors::RuntimeStatus InsertColumnHistogramsToMasterDb(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const int32_t& columnId,
+      const Value& min,
+      const Value& max,
+      const int64_t& distinctCount = 0
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertRoleToMasterDb(
@@ -278,6 +285,10 @@ namespace Server {
     [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const int32_t& columnId) const;
     [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const int32_t& tableId)const;
     [[nodiscard]] Headers::ColumnStatistics SelectColumnStatisticsById(
+      const int32_t& columnId,
+      const Constants::DataType& columnType
+    )const;
+    [[nodiscard]] std::vector<Headers::ColumnHistograms> SelectColumnHistogramsByColumnId(
       const int32_t& columnId,
       const Constants::DataType& columnType
     )const;

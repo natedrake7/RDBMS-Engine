@@ -91,6 +91,10 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetColumnStatistics(const Headers::ColumnStatistics &stats){ this-> statistics = stats;}
 
+    void Column::SetHistograms(std::vector<Headers::ColumnHistograms> &otherHistograms) {
+        this->histograms = std::move(otherHistograms);
+    }
+
 //compute distinct count too
     void Column::UpdateColumnStatistics(const Row *row){
         const auto& value = row->GetColumnByIndex(this->header.columnIndex);

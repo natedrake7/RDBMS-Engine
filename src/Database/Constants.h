@@ -21,11 +21,15 @@ namespace Constants
     constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
     constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
 
+    constexpr int32_t NUMBER_OF_HISTOGRAM_BUCKETS = 100;
+
     constexpr int32_t INVALID_DATABASE_ID = -1;
     constexpr int32_t INVALID_TABLE_ID = -1;
     constexpr int32_t INVALID_COLUMN_ID = -1;
     constexpr int32_t INVALID_SCHEMA_ID = -1;
     constexpr int16_t INVALID_ORDINAL_POS = -1;
+    constexpr int32_t INVALID_CONSTRAINT_ID = -1;
+    constexpr int32_t INVALID_INDEX_ID = -1;
 
     // table types
     typedef uint16_t table_id_t;
@@ -208,7 +212,7 @@ namespace Constants
         DateTime = 8,
         Guid = 9,
         RowIdentifier = 10,
-        Invalid = 11
+        Unknown = 11
     };
 
 
@@ -327,7 +331,7 @@ namespace Constants
         {DataType::Decimal, "Decimal"},
         {DataType::UnicodeString, "Unicodestring"},
         {DataType::Guid, "Guid"},
-        {DataType::Invalid, "Invalid"}
+        {DataType::Unknown, "Invalid"}
         //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
     };
 }

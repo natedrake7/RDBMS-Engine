@@ -344,7 +344,7 @@ namespace DatabaseEngine::StorageTypes {
                     std::cout << DateTime(time);
                     break;
                 }
-                case DataType::Invalid:
+                case DataType::Unknown:
                 default:
                     throw invalid_argument("Row::PrintRow Invalid Column specified");
             }
@@ -947,7 +947,7 @@ namespace DatabaseEngine::StorageTypes {
                     cout << DateTime(reinterpret_cast<time_t>(blockData)).ToString();
                     break;
                 }
-                case DataType::Invalid:
+                case DataType::Unknown:
                 default:
                     throw invalid_argument("Row::PrintRow Invalid Column specified");
             }

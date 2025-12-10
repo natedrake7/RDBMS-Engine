@@ -8,7 +8,7 @@
       "id": 1,
       "name": "sys_databases",
       "columns": [
-        { "name": "database_id", "type": "Int" },
+        { "name": "database_id", "type": "Int", "hasIdentity": true},
         { "name": "name", "type": "String", "size": 100 },
         { "name": "filepath", "type": "String", "size": 100 },
         { "name": "is_system", "type": "Bool" },
@@ -19,14 +19,13 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": true,
       "primaryKey": ["database_id"]
     },
     {
       "id": 2,
       "name": "sys_schemas",
       "columns": [
-        { "name": "schema_id", "type": "Int" },
+        { "name": "schema_id", "type": "Int", "hasIdentity": true},
         { "name": "database_id", "type": "Int" },
         { "name": "name", "type": "String", "size": 100 },
         { "name": "created_at", "type": "DateTime" },
@@ -36,14 +35,13 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": true,
       "primaryKey": ["schema_id"]
     },
     {
       "id": 3,
       "name": "sys_tables",
       "columns": [
-        { "name": "table_id", "type": "Int" },
+        { "name": "table_id", "type": "Int", "hasIdentity": true},
         { "name": "database_id", "type": "Int" },
         { "name": "schema_id", "type": "Int" },
         { "name": "name", "type": "String", "size": 100 },
@@ -56,15 +54,14 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": true,
       "primaryKey": ["table_id"]
     },
     {
       "id": 4,
       "name": "sys_columns",
       "columns": [
-        { "name": "column_id", "type": "Int" },
         { "name": "table_id", "type": "Int" },
+        { "name": "column_id", "type": "Int", "hasIdentity": true},
         { "name": "name", "type": "String", "size": 100 },
         { "name": "data_type", "type": "TinyInt" },
         { "name": "record_size", "type": "Int" },
@@ -80,14 +77,13 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": true,
-      "primaryKey": ["column_id"]
+      "primaryKey": ["table_id", "column_id"]
     },
     {
       "id": 5,
       "name": "sys_indexes",
       "columns": [
-        { "name": "index_id", "type": "Int" },
+        { "name": "index_id", "type": "Int", "hasIdentity": true},
         { "name": "table_id", "type": "Int" },
         { "name": "name", "type": "String", "size": 100 },
         { "name": "is_clustered", "type": "Bool" },
@@ -99,7 +95,6 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": true,
       "primaryKey": ["index_id"]
     },
     {
@@ -117,7 +112,6 @@
         { "name": "is_deleted",   "type": "Bool", "default": 0 },
         { "name": "deleted_at",   "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": false,
       "primaryKey": ["table_id", "column_id"]
     },
     {
@@ -132,14 +126,13 @@
         { "name": "is_deleted",       "type": "Bool", "default": 0 },
         { "name": "deleted_at",       "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": false,
       "primaryKey": ["index_id", "column_id"]
     },
     {
       "id": 8,
       "name": "sys_constraints",
       "columns": [
-        { "name": "constraint_id",        "type": "Int" },
+        { "name": "constraint_id",        "type": "Int", "hasIdentity": true},
         { "name": "table_id",             "type": "Int" },
         { "name": "name",                 "type": "String", "size": 100 },
         { "name": "constraint_type",      "type": "TinyInt" },
@@ -152,7 +145,6 @@
         { "name": "is_deleted",           "type": "Bool", "default": 0 },
         { "name": "deleted_at",           "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": true,
       "primaryKey": ["constraint_id"]
     },
     {
@@ -166,7 +158,6 @@
         { "name": "is_deleted",       "type": "Bool", "default": 0 },
         { "name": "deleted_at",       "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": false,
       "primaryKey": ["constraint_id", "column_id"]
     },
     {
@@ -179,7 +170,6 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": false,
       "primaryKey": ["column_id"]
     },
     {
@@ -188,15 +178,8 @@
       "columns": [
         { "name": "table_id",             "type": "Int" },
         { "name": "row_count",            "type": "BigInt", "default": 0 },
-        { "name": "avg_record_size",      "type": "Int",    "default": 0 },
-        { "name": "created_at",           "type": "DateTime" },
-        { "name": "last_modified",        "type": "DateTime" },
-        { "name": "last_modified_by",     "type": "String", "size": 100 },
-        { "name": "version",              "type": "Int",    "default": 1 },
-        { "name": "is_deleted",           "type": "Bool",   "default": 0 },
-        { "name": "deleted_at",           "type": "DateTime", "nullable": true }
+        { "name": "avg_record_size",      "type": "Int",    "default": 0 }
       ],
-      "hasIdentity": false,
       "primaryKey": ["table_id"]
     },
     {
@@ -207,40 +190,45 @@
         { "name": "distinct_count",       "type": "BigInt", "default": 0 },
         { "name": "min_value",            "type": "String", "size": 200, "nullable": true },
         { "name": "max_value",            "type": "String", "size": 200, "nullable": true },
-        { "name": "null_count",           "type": "BigInt", "nullable": true },
-        { "name": "created_at",           "type": "DateTime" },
-        { "name": "last_modified",        "type": "DateTime" },
-        { "name": "last_modified_by",     "type": "String", "size": 100 },
-        { "name": "version",              "type": "Int",    "default": 1 },
-        { "name": "is_deleted",           "type": "Bool",   "default": 0 },
-        { "name": "deleted_at",           "type": "DateTime", "nullable": true }
+        { "name": "null_count",           "type": "BigInt", "nullable": true }
       ],
-      "hasIdentity": false,
       "primaryKey": ["column_id"]
     },
     {
       "id": 13,
+      "name": "sys_column_histograms",
+      "columns": [
+        { "name": "column_id",            "type": "Int" },
+        { "name": "histogram_id",         "type": "Int",    "hasIdentity": true },
+        { "name": "range_start",          "type": "String", "size": 200, "nullable": true },
+        { "name": "range_end",            "type": "String", "size": 200, "nullable": true },
+        { "name": "row_count",            "type": "Int", "default":  0},
+        { "name": "distinct_count",       "type": "Int", "default": 0 }
+      ],
+      "primaryKey": ["column_id", "histogram_id"]
+    },
+    {
+      "id": 14,
       "name": "sys_roles",
       "columns": [
-        { "name": "role_id",                  "type": "Int" },
+        { "name": "role_id",                  "type": "Int", "hasIdentity": true},
         { "name": "role_name",                "type": "String", "size": 100 },
         { "name": "permissions",              "type": "Int" },
         { "name": "is_system_role",           "type": "Bool" },
-        { "name": "created_at",           "type": "DateTime" },
+        { "name": "created_at",               "type": "DateTime" },
         { "name": "last_modified",            "type": "DateTime" },
         { "name": "last_modified_by",         "type": "String", "size": 100 },
         { "name": "version",                  "type": "Int",    "default": 1 },
         { "name": "is_deleted",               "type": "Bool",   "default": 0 },
         { "name": "deleted_at",               "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": true,
       "primaryKey": ["role_id"]
     },
     {
-      "id": 14,
+      "id": 15,
       "name": "sys_users",
       "columns": [
-        { "name": "user_id",                      "type": "Int" },
+        { "name": "user_id",                      "type": "Int", "hasIdentity": true},
         { "name": "username",                     "type": "String", "size": 100 },
         { "name": "password_hash",                "type": "String", "size": 200 },
         { "name": "role_id",                      "type": "Int" },
@@ -252,7 +240,6 @@
         { "name": "is_deleted",                   "type": "Bool",   "default": 0 },
         { "name": "deleted_at",                   "type": "DateTime", "nullable": true }
       ],
-      "hasIdentity": true,
       "primaryKey": ["user_id"]
     }
   ]

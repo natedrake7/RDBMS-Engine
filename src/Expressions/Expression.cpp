@@ -124,14 +124,14 @@ namespace Expressions{
     this->columnId = Constants::INVALID_COLUMN_ID;
     this->index = 0;
     this->size = 0;
-    this->returnType = DataType::Invalid;
+    this->returnType = DataType::Unknown;
     this->expressionType = ExpressionType::Column;
   }
 
   ColumnExpression::ColumnExpression(const column_index_t &index){
     this->index = index;
     this->size = 0;
-    this->returnType = DataType::Invalid;
+    this->returnType = DataType::Unknown;
     this->tableId = Constants::INVALID_TABLE_ID;
     this->columnId = Constants::INVALID_COLUMN_ID;
     this->expressionType = ExpressionType::Column;
@@ -234,7 +234,7 @@ namespace Expressions{
       case Constants::DataType::DateTime:
       case Constants::DataType::Guid:
       case Constants::DataType::RowIdentifier:
-      case Constants::DataType::Invalid:
+      case Constants::DataType::Unknown:
       default:
         return false;
     }
@@ -257,7 +257,7 @@ namespace Expressions{
       case Constants::DataType::DateTime:
       case Constants::DataType::Guid:
       case Constants::DataType::RowIdentifier:
-      case Constants::DataType::Invalid:
+      case Constants::DataType::Unknown:
       default:
         return false;
     }
@@ -280,7 +280,7 @@ namespace Expressions{
       case Constants::DataType::DateTime:
       case Constants::DataType::Guid:
       case Constants::DataType::RowIdentifier:
-      case Constants::DataType::Invalid:
+      case Constants::DataType::Unknown:
       default:
         return false;
     }
@@ -307,7 +307,7 @@ namespace Expressions{
       case Constants::DataType::DateTime:
       case Constants::DataType::Guid:
       case Constants::DataType::RowIdentifier:
-      case Constants::DataType::Invalid:
+      case Constants::DataType::Unknown:
       default:
         return false;
     }
@@ -473,7 +473,7 @@ namespace Expressions{
   VariableExpression::VariableExpression(const std::string &name) {
     this->name = name;
     this->normalizedName = Functions::String::NormalizeString(this->name);
-    this->dataType = DataType::Invalid;
+    this->dataType = DataType::Unknown;
     this->expressionType = ExpressionType::Variable;
   }
 
@@ -571,7 +571,7 @@ namespace Expressions{
       const DataType& returnType,
       const int& index
   ) {
-    if (returnType == DataType::Invalid) {
+    if (returnType == DataType::Unknown) {
       errorMessage = "Function: " + info.name +
                         " has an argument at position " + std::to_string(index + 1) +
                         " with invalid type";

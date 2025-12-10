@@ -10,7 +10,7 @@ namespace DatabaseEngine::StorageTypes
     class Block;
     class Row;
 
-    typedef struct ColumnHeader
+    struct ColumnHeader
     {
         int32_t id;
         Constants::DataType columnType;
@@ -20,13 +20,14 @@ namespace DatabaseEngine::StorageTypes
         int8_t scale;
 
         Headers::DefaultValuesHeader defaultValue;
-    } ColumnHeader;
+    };
 
     class Column
     {
         ColumnHeader header;
         IdentityManager identityManager;
         Headers::ColumnStatistics statistics;
+        std::vector<Headers::ColumnHistograms> histograms;
 
         std::string name;
         const Table *table;
@@ -94,6 +95,8 @@ namespace DatabaseEngine::StorageTypes
         void SetIsOverflowed(const bool &isOverflow);
 
         void SetColumnStatistics(const Headers::ColumnStatistics& stats);
+
+        void SetHistograms(std::vector<Headers::ColumnHistograms>& otherHistograms);
 
         void UpdateColumnStatistics(const StorageTypes::Row* row);
 

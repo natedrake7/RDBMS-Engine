@@ -16,7 +16,7 @@ namespace Headers {
     NotNull = 5
   };
 
-  struct AdditionalInformation{
+  struct AuditInformation{
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
     std::string lastModifiedBy;
@@ -26,11 +26,12 @@ namespace Headers {
   };
 
   struct IndexColumnsHeader{
-    int32_t indexId = -1;
+    int32_t indexId = Constants::INVALID_INDEX_ID;
     int32_t columnId;
     int16_t ordinalPosition;
     bool isIncluded;
-    AdditionalInformation additionalInfo;
+
+    AuditInformation additionalInfo;
   };
 
   struct IdentityColumnsHeader{
@@ -42,7 +43,7 @@ namespace Headers {
 
     bool isCached;
     int32_t cacheBlock;
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
   };
 
   struct IndexHeader {
@@ -51,30 +52,30 @@ namespace Headers {
     std::string name;
     bool isClustered;
     bool isDisabled;
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
 
     std::vector<IndexColumnsHeader> columns;
     IdentityColumnsHeader identity;
   };
 
   struct ConstraintsColumnsHeader{
-    int32_t constraintId = -1;
+    int32_t constraintId = Constants::INVALID_CONSTRAINT_ID;
     int32_t columnId;
     int32_t ordinalPosition;
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
   };
 
   struct ConstraintsHeader{
-    int32_t constraintId = -1;
+    int32_t constraintId = Constants::INVALID_CONSTRAINT_ID;
     int32_t tableId;
     std::string name;
     ConstraintType type;
     bool isDisabled;
-    int32_t indexId = -1;
+    int32_t indexId = Constants::INVALID_INDEX_ID;
     IndexHeader index;
     vector<ConstraintsColumnsHeader> columns;
 
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
   };
 
   struct DefaultValuesHeader {
@@ -82,7 +83,7 @@ namespace Headers {
     std::string value;
     //add size here
 
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
   };
 
   struct TableStatistics {
@@ -90,8 +91,6 @@ namespace Headers {
 
     int64_t rowCount = 0;
     int32_t avgRowSize = 0;
-
-    AdditionalInformation additionalInfo;
   };
 
   struct ColumnStatistics {
@@ -101,8 +100,17 @@ namespace Headers {
     Value min;
     Value max;
     int64_t nullCount;
+  };
 
-    AdditionalInformation additionalInfo;
+  struct ColumnHistograms {
+    int32_t columnId;
+    int32_t histogramId;
+
+    Value rangeStart;
+    Value rangeEnd;
+
+    int32_t rowCount;
+    int32_t distinctCount;
   };
 
   struct ColumnHeader {
@@ -120,7 +128,7 @@ namespace Headers {
     IdentityColumnsHeader identity;
     DefaultValuesHeader defaultValue;
     ColumnStatistics statistics;
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
   };
 
   struct TableHeader {
@@ -131,7 +139,7 @@ namespace Headers {
     int16_t ordinalPosition;
     bool isSystem;
 
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
 
     TableStatistics statistics;
 
@@ -145,7 +153,7 @@ namespace Headers {
     int32_t id = -1;
     int32_t databaseId;
     std::string name;
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
   };
 
   struct DatabaseHeader {
@@ -153,7 +161,7 @@ namespace Headers {
     std::string name;
     std::string filepath;
     bool isSystem;
-    AdditionalInformation additionalInfo;
+    AuditInformation additionalInfo;
 
     std::vector<TableHeader> tables;
     std::vector<SchemaHeader> schemas;
@@ -166,6 +174,7 @@ namespace Headers {
     int size = 0;
     int _default = 0;
     bool nullable = false;
+    bool hasIdentity = false;
   };
 
   struct sysTable {
@@ -205,7 +214,6 @@ namespace Headers {
     }
 
     ~RowIdentifier() = default;
-
   };
 
   inline std::ostream& operator<<(std::ostream& os, const RowIdentifier& rowId) {

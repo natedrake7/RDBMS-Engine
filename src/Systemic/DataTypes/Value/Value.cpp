@@ -11,7 +11,7 @@ Value::Value()
 {
     this->data = nullptr;
     this->size = 0;
-    this->type = Constants::DataType::Invalid;
+    this->type = Constants::DataType::Unknown;
     this->columnIndex = 0;
 }
 
@@ -65,7 +65,7 @@ Value::Value(const void *data, const Constants::column_index_t &columnIndex){
     this->data = nullptr;
     this->columnIndex = columnIndex;
     this->size = 0;
-    this->type = Constants::DataType::Invalid;
+    this->type = Constants::DataType::Unknown;
 }
 
 Value::Value(const void *data, const int &size, const Constants::DataType &type){
@@ -643,7 +643,7 @@ Value operator+(const Value &lhs, const Value &rhs){
         case Constants::DataType::DateTime:
         case Constants::DataType::Guid:
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -675,7 +675,7 @@ Value operator-(const Value &lhs, const Value &rhs){
         case Constants::DataType::DateTime:
         case Constants::DataType::Guid:
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -707,7 +707,7 @@ Value operator*(const Value &lhs, const Value &rhs){
         case Constants::DataType::DateTime:
         case Constants::DataType::Guid:
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -741,7 +741,7 @@ Value operator<(const Value &lhs, const Value &rhs){
         case Constants::DataType::Guid:
             return Value(lhs.GetGuid() < rhs.GetGuid(), 0);
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -780,7 +780,7 @@ Value operator<=(const Value &lhs, const Value &rhs){
         case Constants::DataType::Guid:
             return Value(lhs.GetGuid() <= rhs.GetGuid(), 0);
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -799,8 +799,12 @@ Value operator>=(const Value &lhs, const Value &rhs){
         case Constants::DataType::TinyInt:
         case Constants::DataType::SmallInt:
         case Constants::DataType::Int:
-        case Constants::DataType::BigInt:
-            return Value(lhs.GetBigInt() >= rhs.GetBigInt(), 0);
+        case Constants::DataType::BigInt: {
+            const auto left = lhs.GetBigInt();
+            const auto right = rhs.GetBigInt();
+
+            return Value(left >= right, 0);
+        }
         case Constants::DataType::Decimal:
             return Value(lhs.GetDecimal() >= rhs.GetDecimal(), 0);
         case Constants::DataType::String:
@@ -814,13 +818,13 @@ Value operator>=(const Value &lhs, const Value &rhs){
         case Constants::DataType::Guid:
             return Value(lhs.GetGuid() >= rhs.GetGuid(), 0);
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
                 + " and right operand has type: "
                 + ColumnTypesToStringDictionary.Get(rhs.type)
-                );
+            );
     }
 }
 
@@ -851,7 +855,7 @@ Value operator==(const Value &lhs, const Value &rhs){
         case Constants::DataType::Guid:
             return Value(lhs.GetGuid() == rhs.GetGuid(), 0);
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -889,7 +893,7 @@ Value operator!=(const Value &lhs, const Value &rhs){
         case Constants::DataType::Guid:
             return Value(lhs.GetGuid() != rhs.GetGuid(), 0);
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -918,7 +922,7 @@ Value operator%(const Value &lhs, const Value &rhs){
         case Constants::DataType::DateTime:
         case Constants::DataType::Guid:
         case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Invalid:
+        case Constants::DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)

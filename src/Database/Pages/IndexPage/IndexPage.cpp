@@ -128,8 +128,7 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
     }
 }
 
-void IndexPage::WriteToDisk(fstream *filePtr)
-{
+void IndexPage::WriteToDisk(fstream *filePtr){
     if (!this->keys.empty())
         this->additionalHeader.numberOfSubKeys = this->keys.front()->subKeys.size();
     

@@ -216,6 +216,7 @@ namespace Pages
         for (const auto &row : this->rows)
             this->header.bytesLeft -= row->GetTotalRowSize();
 
+        this->header.pageSize = this->rows.size();
         this->isDirty = true;
     }
 

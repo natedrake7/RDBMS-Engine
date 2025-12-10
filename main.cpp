@@ -99,7 +99,7 @@ int main()
     //Get table stats
     //SELECT TOP(1) TS.table_id AS ID, T.name AS Name, TS.row_count AS RowCount, TS.avg_record_size AS RowSize FROM masterDb.dbo.sys_table_stats AS TS INNER JOIN masterDb.dbo.sys_tables AS T ON T.table_id = TS.table_id AS TS ORDER BY ID DESC
 
-    RegisterSignalHandlers();
+    // RegisterSignalHandlers();
 
     auto& server = Server::ServerInstance::Get();
 

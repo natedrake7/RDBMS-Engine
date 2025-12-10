@@ -12,7 +12,7 @@ using namespace Indexing;
 using namespace Storage;
 
 namespace DatabaseEngine::StorageTypes {
-    void Table::ClusteredIndexSeek(
+    void Table::ClusteredIndexSeekRange(
         const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         std::vector<const Row*> *selectedRows,
         const DataTypes::Indexing::Key& minKey,
@@ -20,7 +20,16 @@ namespace DatabaseEngine::StorageTypes {
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
-        tree->IndexSeek(properties, minKey, maxKey, selectedRows);
+        tree->IndexSeekRange(properties, minKey, maxKey, selectedRows);
+    }
+
+    void Table::ClusteredIndexSeek(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties &properties,
+        std::vector<const Row *> *selectedRows,
+        const DataTypes::Indexing::Key &key
+    ) {
+        const auto* tree = this->GetClusteredIndexedTree();
+        tree->IndexSeek(properties, key, selectedRows);
     }
 
     void Table::ClusteredIndexScan(

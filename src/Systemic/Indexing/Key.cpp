@@ -42,9 +42,6 @@ namespace DataTypes::Indexing{
     }
 
     Key::Key(Value &field) {
-
-
-
         this->value = std::move(field);
 
         this->indexKeyPosition = -1;
@@ -82,6 +79,19 @@ namespace DataTypes::Indexing{
         //key is not composite
         // memcpy(this->value, otherKey.value, otherKey.size);
 
+    }
+
+    Key::Key(const Key *&otherKey) {
+        this->size = otherKey->size;
+
+        if(otherKey->subKeys.empty()){
+            this->value = otherKey->value;
+            return;
+        }
+
+        this->subKeys = otherKey->subKeys;
+        this->indexKeyPosition = -1;
+        this->currentSearchKeyPosition = -1;
     }
 
     // Key::Key(Key &&other) noexcept {
@@ -145,13 +155,41 @@ namespace DataTypes::Indexing{
 
     bool Key::InOpenRange(const Key &minKey, const Key &maxKey) const { return minKey < *this && maxKey > *this; }
 
+    bool Key::PartialEqualityCompare(const Key &otherKey) const {
+        const auto compareLength = std::min(this->subKeys.size(), otherKey.subKeys.size());
+
+        for (int i = 0; i < compareLength; i++){
+            if (this->subKeys[i] == otherKey.subKeys[i])
+                continue;
+
+            if (this->subKeys[i] < otherKey.subKeys[i])
+                return false;
+
+            return false;
+        }
+
+        return true;
+    }
+
+    bool Key::PartialGreaterThan(const Key &otherKey) const {
+        const auto compareLength = std::min(this->subKeys.size(), otherKey.subKeys.size());
+
+        for (int i = 0; i < compareLength; i++){
+            if (this->subKeys[i] == otherKey.subKeys[i])
+                continue;
+
+            if (this->subKeys[i] < otherKey.subKeys[i])
+                return false;
+
+            return true;
+        }
+
+        return true;
+    }
+
     const Value & Key::GetValue() const { return this->value; }
 
-    Key::ComparisonResult Key::CompareCompositeKeys(const Key& otherKey) const
-    {
-        if(this->indexKeyPosition != -1)
-            return Key::CompareSubKeys(this->subKeys[this->currentSearchKeyPosition], otherKey.subKeys[this->indexKeyPosition]);
-
+    Key::ComparisonResult Key::CompareCompositeKeys(const Key& otherKey) const{
         for (int i = 0; i < this->subKeys.size(); i++){
             if (this->subKeys[i] == otherKey.subKeys[i])
                 continue;
@@ -176,18 +214,24 @@ namespace DataTypes::Indexing{
         return ComparisonResult::Greater;
     }
 
-    int32_t Key::GetKeyAsInt()const{
+    int32_t Key::AsInt(const int& pos)const{
         if (subKeys.empty())
             throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
 
-        return this->subKeys.front().value.GetInt();
+        if (subKeys.size() < pos)
+            throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
+
+        return this->subKeys.at(pos).value.GetInt();
     }
 
-    int64_t Key::GetKeyAsBigInt() const{
+    int64_t Key::AsBigInt(const int& pos) const{
         if (subKeys.empty())
             throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
 
-        return this->subKeys.front().value.GetBigInt();
+        if (subKeys.size() < pos)
+            throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
+
+        return this->subKeys.at(pos).value.GetBigInt();
     }
 
     std::ostream & operator<<(std::ostream &os, const Key &key){

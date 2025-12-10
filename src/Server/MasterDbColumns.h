@@ -4,8 +4,8 @@
 
 namespace Server {
   enum class SysColumns : uint16_t {
-    ColumnId = 0,
-    TableId = 1,
+    TableId = 0,
+    ColumnId = 1,
     Name = 2,
     DataType = 3,
     RecordSize = 4,
@@ -25,27 +25,24 @@ namespace Server {
   enum class SysTableStats : uint8_t {
     TableId = 0,
     RowCount = 1,
-    AvgRowSize = 2,
-    CreatedAt = 3,
-    LastModifiedAt = 4,
-    LastModifiedBy = 5,
-    Version = 6,
-    IsDeleted = 7,
-    DeletedAt = 8,
+    AvgRowSize = 2
   };
 
   enum class SysColumnStats : uint8_t {
     ColumnId = 0,
     DistinctCount = 1,
-    MininimumValue = 2,
-    MaxmimumValue = 3,
-    NullCount = 4,
-    CreatedAt = 5,
-    LastModifiedAt = 6,
-    LastModifiedBy = 7,
-    Version = 8,
-    IsDeleted = 9,
-    DeletedAt = 10,
+    MinimumValue = 2,
+    MaximumValue = 3,
+    NullCount = 4
+  };
+
+  enum class SysColumnHistograms : uint8_t {
+    ColumnId = 0,
+    HistogramId = 1,
+    RangeStart = 2,
+    RangeEnd = 3,
+    RowCount = 4,
+    DistinctCount = 5,
   };
 
   enum class SysRoles : uint8_t {

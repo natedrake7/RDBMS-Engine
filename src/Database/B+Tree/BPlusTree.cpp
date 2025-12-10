@@ -69,6 +69,96 @@ namespace Indexing
         return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + Constants::ROW_ID_SIZE) * 2));
     }
 
+    int BPlusTree::LowerBound(
+        const std::vector<DataTypes::Indexing::Key *> *keys,
+        const DataTypes::Indexing::Key &key
+    )  {
+        for (int i = 0; i < keys->size(); i++) {
+            const auto &currentKey = (*keys)[i];
+
+            if (*currentKey >= key)
+                return i;
+        }
+
+        return keys->size();
+    }
+
+    int BPlusTree::PartialLowerBound(const std::vector<DataTypes::Indexing::Key *> *keys, const DataTypes::Indexing::Key &key) {
+        for (int i = 0; i < keys->size(); i++) {
+            const auto &currentKey = (*keys)[i];
+
+            if (currentKey->PartialGreaterThan(key))
+                return i;
+        }
+
+        return keys->size();
+    }
+
+    bool BPlusTree::IsDuplicateKey(
+        const std::vector<DataTypes::Indexing::Key *> *keys,
+        const DataTypes::Indexing::Key &key,
+        const int &indexPos
+    ) {
+        return !keys->empty() && (
+            (keys->size() > indexPos && key == *keys->at(indexPos))
+            || (indexPos > 0 && key == *keys->at(indexPos - 1))
+        );
+    }
+
+    void BPlusTree::CreateDuplicateKeyError(Errors::RuntimeStatus& status, const DataTypes::Indexing::Key &key) {
+        ostringstream os;
+
+        os << "BPlusTree::GetNonFullNode: Key " << key << " already exists" << std::endl;
+
+        status.code = Errors::RuntimeError::DuplicateKey;
+        status.message = os.str();
+    }
+
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::CreateRootPage(int& indexPosition) {
+        //maybe root page is removed and need to be reopened
+        auto root = this->AllocateNewPage(Constants::INVALID_PAGE_ID);
+
+        {
+            MultiThreading::WriterGuard lock(&root->GetLatch());
+
+            root->SetIsRoot(true);
+            root->SetIsLeaf(true);
+            root->SetTreeType(this->type);
+        }
+
+        this->indexPageId = root->GetPageId();
+        indexPosition = 0;
+
+        return root;
+    }
+
+    void BPlusTree::SplitRoot(Pages::PageGuard<Pages::IndexPage>& root, MultiThreading::ReaderGuard& rootLock) {
+        {
+            auto newRoot = this->AllocateNewPage(this->indexPageId);
+
+            MultiThreading::WriterGuard newRootLock(&newRoot->GetLatch());
+
+            newRoot->SetIsRoot(true);
+            newRoot->SetIsLeaf(false);
+            newRoot->SetTreeType(this->type);
+
+            auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root->GetLatch(), rootLock);
+
+            newRoot->InsertChild(root->GetPageId());
+            root->SetIsRoot(false);
+            this->indexPageId = newRoot->GetPageId();
+
+            this->SplitChildNoLock(newRoot, 0, root);
+            root = newRoot;
+        }
+
+        //let table mutexes handle this
+        if(this->nonClusteredIndexId != -1)
+            this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
+        else
+            this->table->SetClusteredIndexPageId(this->indexPageId);
+    }
+
     void BPlusTree::SplitChild(
         Pages::PageGuard<Pages::IndexPage>& parent,
         MultiThreading::ReaderGuard& parentReadLock,
@@ -82,7 +172,89 @@ namespace Indexing
         this->SplitChildNoLock(parent, index, child);
     }
 
-    void BPlusTree::SplitChildNoLock(Pages::PageGuard<Pages::IndexPage> &parent, const int &index, Pages::PageGuard<Pages::IndexPage> &child) {
+    void BPlusTree::SplitLeafNoLock(
+        Pages::PageGuard<Pages::IndexPage> &parent,
+        Pages::PageGuard<Pages::IndexPage> &child,
+        Pages::PageGuard<Pages::IndexPage> &newChild,
+        const int& index
+    )const {
+        auto* childKeys = child->GetKeysUnsafe();
+        auto* newChildKeys = newChild->GetKeysUnsafe();
+        auto* parentKeys = parent->GetKeysUnsafe();
+
+        const auto* upgradedKey = (*childKeys)[this->degree - 1];
+        auto* newKey = new DataTypes::Indexing::Key(upgradedKey);
+
+        auto* parentChildren = parent->GetChildren();
+
+        // Move the middle key from the child to the parent
+        parentKeys->insert(parentKeys->begin() + index, newKey);
+        parentChildren->insert(parentChildren->begin() + index + 1, newChild->GetPageId());
+
+        // Assign the second half of the child's keys to the new child
+        newChildKeys->assign(childKeys->begin() + this->degree, childKeys->end());
+        childKeys->resize(this->degree);
+
+        if (this->type == TreeType::Clustered) {
+            auto* childRows = child->GetDataRowsUnsafe();
+
+            auto* newChildRows = newChild->GetDataRowsUnsafe();
+
+            newChildRows->assign(childRows->begin() + this->degree, childRows->end());
+            childRows->resize(this->degree);
+        }
+        else{
+            auto* childRows = child->GetNonClusteredDataUnsafe();
+
+            auto* newChildRows = newChild->GetNonClusteredDataUnsafe();
+
+            newChildRows->assign(childRows->begin() + this->degree, childRows->end());
+            childRows->resize(this->degree);
+        }
+
+        newChild->SetNextPage(child->GetNextPage());
+        newChild->SetPreviousPage(child->GetPageId());
+
+        child->SetNextPage(newChild->GetPageId());
+    }
+
+    void BPlusTree::SplitInternalNodeNoLock(
+        Pages::PageGuard<Pages::IndexPage> &parent,
+        Pages::PageGuard<Pages::IndexPage> &child,
+        Pages::PageGuard<Pages::IndexPage> &newChild,
+        const int& index
+    ) const {
+        auto* childKeys = child->GetKeysUnsafe();
+        auto* newChildKeys = newChild->GetKeysUnsafe();
+        auto* parentKeys = parent->GetKeysUnsafe();
+
+        // Move the middle key from the child to the parent
+        parentKeys->insert(parentKeys->begin() + index, (*childKeys)[this->degree - 1]);
+
+        // Assign the second half of the child's keys to the new child
+        newChildKeys->assign(childKeys->begin() + this->degree, childKeys->end());
+
+        auto* parentChildren = parent->GetChildren();
+
+        parentChildren->insert(parentChildren->begin() + index + 1, newChild->GetPageId());
+
+        childKeys->resize(this->degree - 1);
+
+        auto* newChildChildren = newChild->GetChildren();
+        auto* childChildren = child->GetChildren();
+
+        // Assign the second half of the child pointers to the new child
+        newChildChildren->assign(childChildren->begin() + this->degree, childChildren->end());
+
+        // Resize the old child's childrenHeaders vector to keep only the first half
+        childChildren->resize(this->degree);
+    }
+
+    void BPlusTree::SplitChildNoLock(
+        Pages::PageGuard<Pages::IndexPage> &parent,
+        const int &index,
+        Pages::PageGuard<Pages::IndexPage> &child
+    ) {
         auto newChild = this->AllocateNewPage(parent->GetPageId());
 
         MultiThreading::WriterGuard newChildLock(&newChild->GetLatch());
@@ -91,193 +263,110 @@ namespace Indexing
         newChild->SetIsRoot(false);
         newChild->SetTreeType(this->type);
 
-        auto* childKeys = child->GetKeysUnsafe();
-
-        auto* parentKeys = parent->GetKeysUnsafe();
-
-        // Move the middle key from the child to the parent
-        parentKeys->insert(parentKeys->begin() + index, (*childKeys)[this->degree - 1]);
-
-        auto* newChildKeys = newChild->GetKeysUnsafe();
-
-        // Assign the second half of the child's keys to the new child
-        newChildKeys->assign(childKeys->begin() + this->degree, childKeys->end());
-
-        // Resize the old child to keep only the first half of its keys
-        childKeys->resize(this->degree - 1);
-
-        auto* parentChildren = parent->GetChildren();
-
-        parentChildren->insert(parentChildren->begin() + index + 1, newChild->GetPageId());
-
         if (child->IsLeaf())
-        {
-            if (this->type == TreeType::Clustered) {
-                auto* childRows = child->GetDataRowsUnsafe();
-
-                auto* newChildRows = newChild->GetDataRowsUnsafe();
-
-                newChildRows->assign(childRows->begin() + this->degree, childRows->end());
-
-                childRows->resize(this->degree);
-            }
-            else
-            {
-                auto* childRows = child->GetNonClusteredDataUnsafe();
-
-                auto* newChildRows = newChild->GetNonClusteredDataUnsafe();
-
-                newChildRows->assign(childRows->begin() + this->degree, childRows->end());
-
-                childRows->resize(this->degree);
-            }
-
-            newChild->SetNextPage(child->GetNextPage());
-            newChild->SetPreviousPage(child->GetPageId());
-
-            child->SetNextPage(newChild->GetPageId());
-
-            child->UpdatePageSize();
-            newChild->UpdatePageSize();
-        }
+            this->SplitLeafNoLock(parent, child, newChild, index);
         else
-        {
-            auto* newChildChildren = newChild->GetChildren();
-
-            auto* childChildren = child->GetChildren();
-
-            // Assign the second half of the child pointers to the new child
-            newChildChildren->assign(childChildren->begin() + this->degree, childChildren->end());
-
-            // Resize the old child's childrenHeaders vector to keep only the first half
-            childChildren->resize(this->degree);
-        }
+            this->SplitInternalNodeNoLock(parent, child, newChild, index);
 
         parent->UpdateBytesLeft();
         child->UpdateBytesLeft();
         newChild->UpdateBytesLeft();
+
+        parent->UpdatePageSize();
+        child->UpdatePageSize();
+        newChild->UpdatePageSize();
     }
 
-    Pages::PageGuard<Pages::IndexPage> BPlusTree::FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status)
-    {
-        Pages::PageGuard<Pages::IndexPage> root;
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
-        {
-            //maybe root page is removed and need to be reopened
-            root = this->AllocateNewPage(Constants::INVALID_PAGE_ID);
-
-            root->SetIsRoot(true);
-            root->SetIsLeaf(true);
-            root->SetTreeType(this->type);
-
-            this->indexPageId = root->GetPageId();
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::FindInsertNode(
+        const DataTypes::Indexing::Key &key,
+        int &indexPosition,
+        Errors::RuntimeStatus& status
+    ){
+        //base case scenario
+        if (this->indexPageId == Constants::INVALID_PAGE_ID) {
+            auto root =  this->CreateRootPage(indexPosition);
 
             if(this->nonClusteredIndexId != -1)
-              this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
+                this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
             else
-              this->table->SetClusteredIndexPageId(this->indexPageId);
+                this->table->SetClusteredIndexPageId(this->indexPageId);
 
-            // this->InsertNodeToPage(this->root, 0);
+            return root;
         }
 
-        root = this->GetNode(this->indexPageId);
+        auto root = this->GetNode(this->indexPageId);
 
-        if (root->GetKeysUnsafe()->size() == 2 * this->degree - 1) // root is full,
         {
-            Pages::PageGuard<Pages::IndexPage> oldRoot;
-            auto newRoot = this->AllocateNewPage(this->indexPageId);
+            MultiThreading::ReaderGuard rootLock(&root->GetLatch());
 
-            {
-                MultiThreading::WriterGuard newRootLock(&newRoot->GetLatch());
-
-                newRoot->SetIsRoot(true);
-                newRoot->SetIsLeaf(false);
-                newRoot->SetTreeType(this->type);
-
-                oldRoot = this->GetNode(this->indexPageId);
-
-                MultiThreading::WriterGuard oldRootLock(&oldRoot->GetLatch());
-
-                newRoot->InsertChild(oldRoot->GetPageId());
-                oldRoot->SetIsRoot(false);
-                this->indexPageId = newRoot->GetPageId();
-            }
-
-            if(this->nonClusteredIndexId != -1)
-              this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
-            else
-              this->table->SetClusteredIndexPageId(this->indexPageId);
-
-            // split the root
-            this->SplitChildNoLock(newRoot, 0, oldRoot);
+            if (root->GetKeysUnsafe()->size() == 2 * this->degree - 1) // root is full,
+                this->SplitRoot(root, rootLock);
         }
 
         return this->GetNonFullNode(root, key, indexPosition, status);
     }
 
-//TODO proper locking
     Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNonFullNode(
-        Pages::PageGuard<Pages::IndexPage>& node,
+        Pages::PageGuard<Pages::IndexPage>& parent,
         const DataTypes::Indexing::Key &key,
-        int *indexPosition,
+        int& indexPosition,
         Errors::RuntimeStatus& status
     ){
-        MultiThreading::ReaderGuard parentLock(&node->GetLatch());
-
-        auto* keys = node->GetKeysUnsafe();
-
-        if (node->IsLeaf())
+        Pages::PageGuard<Pages::IndexPage> intermediateNode;
         {
-            const auto iterator = ranges::upper_bound(*keys, &key);
+            MultiThreading::ReaderGuard parentLock(&parent->GetLatch());
 
-            const int indexPos = iterator - keys->begin();
+            const auto* parentKeys = parent->GetKeysUnsafe();
+            if (parent->IsLeaf())
+                return BPlusTree::GetNonFullLeafNode(parent, parentKeys, key, indexPosition, status);
 
-            if (!keys->empty()
-                && ((keys->size() > indexPos && key == *keys->at(indexPos))
-                || (indexPos > 0 && key == *keys->at(indexPos - 1))))
-            {
-                ostringstream os;
+            auto childIndex = BPlusTree::LowerBound(parentKeys, key);
 
-               os << "BPlusTree::GetNonFullNode: Key " << key << " already exists" << std::endl;
+            const auto* parentChildren = parent->GetChildren();
 
-                status.code = Errors::RuntimeError::DuplicateKey;
-                status.message = os.str();
+            const auto childId = parentChildren->at(childIndex);
 
-                return node;
+            auto child = this->GetNode(childId);
+
+            MultiThreading::ReaderGuard childLock(&child->GetLatch());
+
+            const auto* childKeys = child->GetKeysUnsafe();
+
+            if (childKeys->size() == 2 * this->degree - 1){
+                this->SplitChild(parent, parentLock, childIndex, child, childLock);
+
+                //split child will break the lock and we need to reacquire it
+                MultiThreading::ReaderGuard newParentLock(&parent->GetLatch());
+
+                if (key > *parentKeys->at(childIndex))
+                    childIndex++;
+
+                intermediateNode = this->GetNode(parentChildren->at(childIndex));
             }
+            else
+                intermediateNode = this->GetNode(parentChildren->at(childIndex));
+        }
 
+        return this->GetNonFullNode(intermediateNode, key, indexPosition, status);
+    }
 
-            if (indexPosition != nullptr)
-                *indexPosition = indexPos;
+    Pages::PageGuard<Pages::IndexPage> BPlusTree::GetNonFullLeafNode(
+        Pages::PageGuard<Pages::IndexPage> &node,
+        const std::vector<DataTypes::Indexing::Key*>*& parentKeys,
+        const DataTypes::Indexing::Key &key,
+        int &indexPosition,
+        Errors::RuntimeStatus &status
+    ) {
+        const auto indexPos = BPlusTree::LowerBound(parentKeys, key);
 
+        if (BPlusTree::IsDuplicateKey(parentKeys, key, indexPos))
+        {
+            BPlusTree::CreateDuplicateKeyError(status, key);
             return node;
         }
 
-        const auto iterator = ranges::lower_bound(*keys, &key);
-
-        int childIndex = iterator - keys->begin();
-
-        const auto* children = node->GetChildren();
-
-        const auto childId = children->at(childIndex);
-
-        auto child = this->GetNode(childId);
-
-        MultiThreading::ReaderGuard childLock(&child->GetLatch());
-
-        const auto* childKeys = child->GetKeysUnsafe();
-
-        if (childKeys->size() == 2 * this->degree - 1)
-        {
-            this->SplitChild(node, parentLock, childIndex, child, childLock);
-
-            if (key > *keys->at(childIndex))
-                childIndex++;
-        }
-
-        auto intermediateNode = this->GetNode(children->at(childIndex));
-
-        return this->GetNonFullNode(intermediateNode, key, indexPosition, status);
+        indexPosition = indexPos;
+        return node;
     }
 
     void BPlusTree::IndexScan(vector<DataTypes::Indexing::QueryData> &result)const
@@ -870,7 +959,7 @@ namespace Indexing
 
 
     //TODO fix non clusteredIndex Seek
-    void BPlusTree::IndexSeek(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const{
+    void BPlusTree::IndexSeekRange(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
@@ -910,7 +999,7 @@ namespace Indexing
         }
     }
 
-    void BPlusTree::IndexSeek(
+    void BPlusTree::IndexSeekRange(
         const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
@@ -921,30 +1010,13 @@ namespace Indexing
 
         auto currentNode = this->SearchKey(minKey);
 
-        Pages::PageGuard<Pages::IndexPage> previousNode;
-
-        while (true)
-        {
+        while (true){
             if (!currentNode.Get())
                 break;
 
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
             const auto* keys = currentNode->GetKeysUnsafe();
-
-            if (previousNode.Get()){
-                if (maxKey >= *keys->at(0)) {
-                    MultiThreading::ReaderGuard previousNodeLock(&previousNode->GetLatch());
-
-                    const auto* previousKeys = previousNode->GetKeysUnsafe();
-
-                    // Check if the last key in the previous node is within the range
-                    if (maxKey >= *previousKeys->at(previousKeys->size() - 1))
-                        result->push_back(previousNode->GetRow(previousKeys->size() - 1));
-                }
-                else
-                    return;
-            }
 
             for (int i = 0; i < keys->size(); i++){
                 const auto &key = keys->at(i);
@@ -959,16 +1031,62 @@ namespace Indexing
                     continue;
                 }
 
-                //
-                // if (maxKey < *key)
-                //     return;
+                if (maxKey < *key)
+                    return;
             }
 
             if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
                 return;
 
-            previousNode = currentNode;
             currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BPlusTree::IndexSeek(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties &properties,
+        const DataTypes::Indexing::Key &key,
+        std::vector<const DatabaseEngine::StorageTypes::Row *> *result
+    ) const {
+        if (this->indexPageId == INVALID_PAGE_ID)
+            return;
+
+        auto currentNode = this->SearchKey(key);
+
+        while (true){
+            if (!currentNode.Get())
+                break;
+
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            for (int i = 0; i < keys->size(); i++){
+                const auto& rowKey = keys->at(i);
+
+                if (key == *rowKey) {
+                    try {
+
+                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                    if (!visibleRow)
+                        continue;
+
+                    result->push_back(visibleRow);
+                    }
+                    catch (...) {
+                        std::cout << "Exception in IndexSeek" << std::endl;
+                    }
+                }
+
+                if (key < *rowKey)
+                    return;
+            }
+
+            const auto& nextNodeId = currentNode->GetNextPage();
+            if(nextNodeId == Constants::INVALID_PAGE_ID)
+                return;
+
+            currentNode = this->GetNode(nextNodeId);
         }
     }
 
@@ -1350,7 +1468,6 @@ namespace Indexing
         auto currentNode = this->GetNode(this->indexPageId);
 
         while (true) {
-
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
             if (currentNode->IsLeaf())
@@ -1358,9 +1475,7 @@ namespace Indexing
 
             const auto* keys = currentNode->GetKeysUnsafe();
 
-            const auto iterator = ranges::lower_bound(*keys, &key);
-
-            const auto index = iterator - keys->begin();
+            const auto index = BPlusTree::PartialLowerBound(keys, key);
 
             currentNode = this->GetNode(currentNode->GetChildren()->at(index));
         }
@@ -1371,11 +1486,12 @@ namespace Indexing
 
       while (!currentNode->IsLeaf())
       {
-        auto* keys = currentNode->GetKeysUnsafe();
+        const auto* keys = currentNode->GetKeysUnsafe();
 
         const auto iterator = ranges::lower_bound(*keys, &key);
-
-        const int index = iterator - keys->begin();
+        //
+        // const int index = iterator - keys->begin();
+        const auto index = BPlusTree::LowerBound(keys, key);
 
         ancestors.push_back(std::move(currentNode));
 

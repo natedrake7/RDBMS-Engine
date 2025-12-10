@@ -27,6 +27,7 @@ namespace DataTypes::Indexing {
     ~Key();
 
     Key(const Key &otherKey);
+    explicit Key(const Key*& otherKey);
     // Key(Key&& other)noexcept;
 
     bool operator==(const Key& otherKey) const;
@@ -35,16 +36,19 @@ namespace DataTypes::Indexing {
     bool operator<=(const Key& otherKey) const;
     bool operator>=(const Key& otherKey) const;
 
-    bool InClosedRange(const Key& minKey, const Key& maxKey) const;
-    bool InOpenRange(const Key& minKey, const Key& maxKey) const;
+    [[nodiscard]] bool InClosedRange(const Key& minKey, const Key& maxKey) const;
+    [[nodiscard]] bool InOpenRange(const Key& minKey, const Key& maxKey) const;
+
+    [[nodiscard]] bool PartialEqualityCompare(const Key& otherKey) const;
+    [[nodiscard]] bool PartialGreaterThan(const Key& otherKey) const;
 
     [[nodiscard]] const Value &GetValue() const;
     [[nodiscard]] ComparisonResult CompareCompositeKeys(const Key& otherKey) const;
     void InsertKey(const Key &otherKey);
 
     static ComparisonResult CompareSubKeys(const Key& firstKey, const Key& otherKey);
-    [[nodiscard]] int32_t GetKeyAsInt()const;
-    [[nodiscard]] int64_t GetKeyAsBigInt()const;
+    [[nodiscard]] int32_t AsInt(const int& pos = 0)const;
+    [[nodiscard]] int64_t AsBigInt(const int& pos = 0)const;
 
     //key comparison index used only on queries and not on key saveon db
     int indexKeyPosition = -1;

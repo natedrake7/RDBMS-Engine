@@ -52,7 +52,7 @@ namespace DatabaseEngine::StorageTypes
     class Column;
     struct ColumnHeader;
 
-    typedef struct TableHeader
+    struct TableHeader
     {
         table_id_t tableId;
         int16_t ordinalPosition;
@@ -73,7 +73,7 @@ namespace DatabaseEngine::StorageTypes
         TableHeader();
         ~TableHeader();
         TableHeader &operator=(const TableHeader &tableHeader);
-    } TableHeader;
+    };
 
     class Table final
     {
@@ -206,11 +206,17 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
 
-            void ClusteredIndexSeek(
+            void ClusteredIndexSeekRange(
                 const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey
+            );
+
+            void ClusteredIndexSeek(
+                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                std::vector<const Row*> *selectedRows,
+                const DataTypes::Indexing::Key& key
             );
 
             void ClusteredIndexScan(

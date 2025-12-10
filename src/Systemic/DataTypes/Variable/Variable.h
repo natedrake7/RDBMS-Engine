@@ -13,7 +13,7 @@ class Variable {
 
   public:
     Variable() {
-      this->type = DataType::Invalid;
+      this->type = DataType::Unknown;
     }
 
     Variable(Value& value, const Constants::DataType& type, std::string& name)
@@ -28,7 +28,7 @@ class Variable {
       this->normalizedName = std::move(other.normalizedName);
 
       other.value = {};
-      other.type = DataType::Invalid;
+      other.type = DataType::Unknown;
       other.name = {};
       other.normalizedName = {};
     }
@@ -52,7 +52,7 @@ class Variable {
       other.value = {};
       other.name = {};
       other.normalizedName = {};
-      other.type = DataType::Invalid;
+      other.type = DataType::Unknown;
 
       return *this;
     }

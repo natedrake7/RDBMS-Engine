@@ -6,6 +6,8 @@
 #include "../../Database/AdditionalFunctions/SortingFunctions.h"
 #include "../../Database/Block/Block.h"
 
+#include <iostream>
+
 namespace QueryPipeline::PhysicalPlan {
   PhysicalPlanResult::PhysicalPlanResult(){
     this->code = Errors::RuntimeError::Ok;
@@ -119,7 +121,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     const auto result = server.InsertDbToMasterDb(properties, this->dbName, this->dbName + ".db", false, session->user->name);
 
-    const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(properties, result.primaryKey.GetKeyAsInt(), "dbo");
+    const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(properties, result.primaryKey.AsInt(), "dbo");
     
     DatabaseEngine::CreateDatabase(this->dbName);
 
@@ -185,10 +187,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered)
-    : table(std::move(table)), expression(nullptr), isClustered(isClustered) {}
+    : table(table), expression(nullptr), isClustered(isClustered) {}
 
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource *table, Expressions::Expression *expression, const bool & isClustered)
-    : table(std::move(table)), expression(expression), isClustered(isClustered) {}
+    : table(table), expression(expression), isClustered(isClustered) {}
 
   PhysicalPlanResult * PhysicalIndexScan::Execute(const PhysicalPlanExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;
@@ -215,13 +217,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     : table(std::move(table)), minValue(std::move(minValue)), maxValue(std::move(maxValue)) {}
 
   PhysicalPlanResult* PhysicalIndexSeek::Execute(const PhysicalPlanExecutionProperties& properties){
-    using namespace DatabaseEngine::StorageTypes;
 
     auto* result = new PhysicalPlanResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     result->columns = tablePtr->GetConstantColumns();
 
@@ -232,7 +233,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     maxKey.InsertKey(DataTypes::Indexing::Key(this->maxValue));
 
     //select if to use clustered or non clustered index here
-    tablePtr->ClusteredIndexSeek(properties, &result->rows,minKey, maxKey);
+    tablePtr->ClusteredIndexSeekRange(properties, &result->rows,minKey, maxKey);
 
     return result;
   }
@@ -661,10 +662,10 @@ PhysicalInsert::PhysicalInsert(
 
     const auto tableStatsResult = server.InsertTableStatisticsToMasterDb(
       properties,
-      tableResult.primaryKey.GetKeyAsInt()
+      tableResult.primaryKey.AsInt()
     );
 
-    auto* tablePtr = db->CreateTable(tableResult.primaryKey.GetKeyAsInt(), index, columnsPtrs, &this->primaryKey);
+    auto* tablePtr = db->CreateTable(tableResult.primaryKey.AsInt(), index, columnsPtrs, &this->primaryKey);
 
     Dictionary<int, int32_t> columnIdsDict;
 
@@ -672,7 +673,7 @@ PhysicalInsert::PhysicalInsert(
       const auto columnResult =
           server.InsertColumnToMasterDb(
             properties,
-            tableResult.primaryKey.GetKeyAsInt(),
+            tableResult.primaryKey.AsInt(),
             column->name.name,
             ColumnTypesDictionary.Get(Functions::String::NormalizeString(column->type.name)),
             column->type.size,
@@ -684,14 +685,28 @@ PhysicalInsert::PhysicalInsert(
             session->user->name
           );
 
-      const auto columnStatsResult = server.InsertColumnStatisticsToMasterDb(properties, columnResult.primaryKey.GetKeyAsInt());
+      const auto columnId = columnResult.primaryKey.AsInt(1);
 
-      columnIdsDict.Add(column->index, columnResult.primaryKey.GetKeyAsInt());
+      const auto columnStatsResult = server.InsertColumnStatisticsToMasterDb(properties, columnId);
+
+      //fixed 100 buckets for now
+      for (int i = 0;i < Constants::NUMBER_OF_HISTOGRAM_BUCKETS; i++) {
+        const auto histogramResult =
+            server.InsertColumnHistogramsToMasterDb(
+              properties,
+              columnId,
+              Value(nullptr, 0),
+              Value(nullptr, 0),
+              0
+            );
+      }
+
+      columnIdsDict.Add(column->index, columnResult.primaryKey.AsInt(1));
 
       if (!column->defaultValue.IsNull() || column->defaultValue.GetSize() != 0) {
         const auto _ = server.InsertDefaultValuesToMasterDb(
           properties,
-          columnResult.primaryKey.GetKeyAsInt(),
+          columnResult.primaryKey.AsInt(1),
           column->defaultValue
         );
       }
@@ -702,8 +717,8 @@ PhysicalInsert::PhysicalInsert(
 
       const auto _ = server.InsertIdentityColumnToMasterDb(
           properties,
-          tableResult.primaryKey.GetKeyAsInt(),
-          columnResult.primaryKey.GetKeyAsInt(),
+          tableResult.primaryKey.AsInt(),
+          columnResult.primaryKey.AsInt(1),
           column->identity->seed,
           column->identity->incrementFactor,
           column->identity->seed,
@@ -723,23 +738,27 @@ PhysicalInsert::PhysicalInsert(
       primaryKeyColumnIds.push_back(columnIdsDict.Get(column));
     }
 
-    if (primaryKeyColumnIds.empty())
-        return nullptr;
+    if (primaryKeyColumnIds.empty()) {
+      tablePtr->GetColumnsHeaders();
+      tablePtr->GetIdentityColumns();
+      tablePtr->GetStatistics();
+      return nullptr;
+    }
 
     const auto indexResult = server.InsertIndexToMasterDb(
          properties,
-        tableResult.primaryKey.GetKeyAsInt(),
+        tableResult.primaryKey.AsInt(),
         this->constraintName,
         true,
         false,
         session->user->name
       );
 
-    const auto indexId = indexResult.primaryKey.GetKeyAsInt();
+    const auto indexId = indexResult.primaryKey.AsInt();
 
     const auto constraintResult = server.InsertConstraintToMasterDb(
         properties,
-      tableResult.primaryKey.GetKeyAsInt(),
+      tableResult.primaryKey.AsInt(),
         this->constraintName,
         Headers::ConstraintType::PrimaryKey,
         false,
@@ -750,14 +769,14 @@ PhysicalInsert::PhysicalInsert(
     for(int i = 0;i < primaryKeyColumnIds.size(); i++){
       auto _ = server.InsertIndexColumnToMasterDb(
         properties,
-        indexResult.primaryKey.GetKeyAsInt(),
+        indexResult.primaryKey.AsInt(),
         primaryKeyColumnIds[i],
         this->primaryKey.columns[i],
         true);
 
       _ = server.InsertConstraintColumnToMasterDb(
           properties,
-          constraintResult.primaryKey.GetKeyAsInt(),
+          constraintResult.primaryKey.AsInt(),
           primaryKeyColumnIds[i],
       this->primaryKey.columns[i]
         );
@@ -814,7 +833,7 @@ PhysicalInsert::PhysicalInsert(
         false,
         false);
 
-    const auto indexId = indexResult.primaryKey.GetKeyAsInt();
+    const auto indexId = indexResult.primaryKey.AsInt();
 
     const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(\
       properties,
@@ -830,7 +849,7 @@ PhysicalInsert::PhysicalInsert(
       const auto indexColumnResult =
         Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
              properties,
-            indexResult.primaryKey.GetKeyAsInt(),
+            indexResult.primaryKey.AsInt(),
             header.id,
             columnPos,
             true);
@@ -838,7 +857,7 @@ PhysicalInsert::PhysicalInsert(
       const auto constraintColumnResult =
         Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
               properties,
-            constraintResult.primaryKey.GetKeyAsInt(),
+            constraintResult.primaryKey.AsInt(),
             header.id,
         columnPos);
     }

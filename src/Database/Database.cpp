@@ -173,6 +173,8 @@ namespace DatabaseEngine
     }
 
     Database::Database(const string &dbName, const bool& isServerInitialization) {
+        static auto& server = Server::ServerInstance::Get();
+
         this->PopulateFilenames(dbName);
 
         const auto headerPage = StorageManager::Get().GetHeaderPage(this->systemFilename);
@@ -183,8 +185,7 @@ namespace DatabaseEngine
             return;
 
         //query get from masterDb
-        const auto& masterDbData = Server::ServerInstance::Get().SelectTables(dbName);
-
+        const auto& masterDbData = server.SelectTables(dbName);
         const auto& headerPageTables = headerPage->GetTablesFullHeaders();
 
         if (headerPageTables.size() != masterDbData.size())
@@ -285,8 +286,7 @@ namespace DatabaseEngine
         return table;
     }
 
-    void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader)
-    {
+    void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader){
         auto *table = new Table(masterDbHeader, tableHeader, this);
 
         const auto& masterDbColumns = Server::ServerInstance::Get().SelectColumns(masterDbHeader.id);

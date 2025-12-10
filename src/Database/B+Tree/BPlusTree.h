@@ -37,6 +37,19 @@ namespace Indexing
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
+        static int LowerBound(const std::vector<DataTypes::Indexing::Key*>* keys, const DataTypes::Indexing::Key &key);
+        static int PartialLowerBound(const std::vector<DataTypes::Indexing::Key*>* keys, const DataTypes::Indexing::Key &key);
+        static bool IsDuplicateKey(
+            const std::vector<DataTypes::Indexing::Key*>* keys,
+            const DataTypes::Indexing::Key &key,
+            const int& indexPos
+        );
+        static void CreateDuplicateKeyError(Errors::RuntimeStatus& status, const DataTypes::Indexing::Key &key);
+
+        Pages::PageGuard<Pages::IndexPage> CreateRootPage(int& indexPosition);
+
+        void SplitRoot(Pages::PageGuard<Pages::IndexPage>& root, MultiThreading::ReaderGuard& rootLock);
+
         void SplitChild(
             Pages::PageGuard<Pages::IndexPage>& parent,
             MultiThreading::ReaderGuard& parentReadLock,
@@ -44,8 +57,37 @@ namespace Indexing
             Pages::PageGuard<Pages::IndexPage>& child,
             MultiThreading::ReaderGuard& childReadLock
         );
+
+        void SplitLeafNoLock(
+            Pages::PageGuard<Pages::IndexPage>& parent,
+            Pages::PageGuard<Pages::IndexPage>& child,
+            Pages::PageGuard<Pages::IndexPage>& newChild,
+            const int& index
+        )const;
+
+        void SplitInternalNodeNoLock(
+            Pages::PageGuard<Pages::IndexPage>& parent,
+            Pages::PageGuard<Pages::IndexPage>& child,
+            Pages::PageGuard<Pages::IndexPage>& newChild,
+            const int& index
+        )const;
+
         void SplitChildNoLock(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child);
-        Pages::PageGuard<Pages::IndexPage> GetNonFullNode(Pages::PageGuard<Pages::IndexPage>& node, const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
+        Pages::PageGuard<Pages::IndexPage> GetNonFullNode(
+            Pages::PageGuard<Pages::IndexPage>& parent,
+            const DataTypes::Indexing::Key &key,
+            int& indexPosition,
+            Errors::RuntimeStatus& status
+        );
+
+        static Pages::PageGuard<Pages::IndexPage> GetNonFullLeafNode(
+            Pages::PageGuard<Pages::IndexPage>& node,
+            const std::vector<DataTypes::Indexing::Key*>*& parentKeys,
+            const DataTypes::Indexing::Key &key,
+            int& indexPosition,
+            Errors::RuntimeStatus& status
+        );
+
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKey(const DataTypes::Indexing::Key &key) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchLeftMostLeafNode() const;
@@ -62,30 +104,41 @@ namespace Indexing
         bool TryBorrowFromRightSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int& index)const;
 
         void MergeNodes(
-          Pages::PageGuard<Pages::IndexPage>& leftNode,
-          Pages::PageGuard<Pages::IndexPage>& rightNode,
-          Pages::PageGuard<Pages::IndexPage>& parent,
-          int parentKeyIndex,
-        std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors,
-          int& parentIndex);
+            Pages::PageGuard<Pages::IndexPage>& leftNode,
+            Pages::PageGuard<Pages::IndexPage>& rightNode,
+            Pages::PageGuard<Pages::IndexPage>& parent,
+            int parentKeyIndex,
+            std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors,
+            int& parentIndex
+        );
 
     public:
         explicit BPlusTree(DatabaseEngine::StorageTypes::Table *table, const Constants::page_id_t& indexPageId, const Constants::TreeType& treeType, const int& nonClusteredIndexId = -1);
         BPlusTree();
         ~BPlusTree();
 
-        Pages::PageGuard<Pages::IndexPage> FindAppropriateNodeForInsert(const DataTypes::Indexing::Key &key, int *indexPosition, Errors::RuntimeStatus& status);
+        Pages::PageGuard<Pages::IndexPage> FindInsertNode(
+            const DataTypes::Indexing::Key &key,
+            int &indexPosition,
+            Errors::RuntimeStatus& status
+        );
 
-        void IndexSeek(
+        void IndexSeekRange(
             const DataTypes::Indexing::Key &minKey,
             const DataTypes::Indexing::Key &maxKey,
             vector<DataTypes::Indexing::QueryData> &result
         )const;
 
-        void IndexSeek(
+        void IndexSeekRange(
             const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
             const DataTypes::Indexing::Key &minKey,
             const DataTypes::Indexing::Key &maxKey,
+            std::vector<const DatabaseEngine::StorageTypes::Row*>* result
+        )const;
+
+        void IndexSeek(
+            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const DataTypes::Indexing::Key &key,
             std::vector<const DatabaseEngine::StorageTypes::Row*>* result
         )const;
 

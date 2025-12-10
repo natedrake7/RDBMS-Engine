@@ -352,7 +352,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto *block = new Block(column);
 
-          if (column->GetColumnType() >= Constants::DataType::Invalid)
+          if (column->GetColumnType() >= Constants::DataType::Unknown)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
           if (input.IsNull())
@@ -711,13 +711,13 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId){
       BPlusTree* tree = this->GetClusteredIndexedTree();
 
-      auto key = Database::CreateKey(this->GetClusteredIndex(), row);
+      const auto key = Database::CreateKey(this->GetClusteredIndex(), row);
 
       int indexPosition = 0;
 
       Errors::RuntimeStatus status;
 
-      auto node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+      auto node = tree->FindInsertNode(key, indexPosition, status);
 
       if (status.code != Errors::RuntimeError::Ok)
          return status;
@@ -735,6 +735,7 @@ namespace DatabaseEngine::StorageTypes {
       keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
 
       node->UpdateBytesLeft();
+      node->UpdatePageSize();
 
       rowId->indexId = indexPosition;
       rowId->pageId = node->GetPageId();
@@ -1263,7 +1264,7 @@ namespace DatabaseEngine::StorageTypes {
       int indexPosition = 0;
       Errors::RuntimeStatus status;
 
-      auto node = tree->FindAppropriateNodeForInsert(key, &indexPosition, status);
+      auto node = tree->FindInsertNode(key, indexPosition, status);
 
       if (status.code != Errors::RuntimeError::Ok)
           return status;
@@ -1371,6 +1372,9 @@ namespace DatabaseEngine::StorageTypes {
     void Table::GetColumnsHeaders()const{
       const auto columnsHeaders = Server::ServerInstance::Get().SelectColumns(this->header.tableId);
 
+      if (this->header.tableId == 13) {
+        int val = 0;
+      }
       if (columnsHeaders.empty())
         return;
 
@@ -1477,11 +1481,19 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::GetStatistics(){
-        this->header.statistics = Server::ServerInstance::Get().SelectTableStatisticsById(this->header.tableId);
+        static auto& server = Server::ServerInstance::Get();
+
+        this->header.statistics = server.SelectTableStatisticsById(this->header.tableId);
 
         for (auto* column : this->columns) {
-          const auto columnStatistics = Server::ServerInstance::Get().SelectColumnStatisticsById(column->GetColumnId(), column->GetColumnType());
+          const auto& columnId = column->GetColumnId();
+          const auto& columnType = column->GetColumnType();
+
+          const auto columnStatistics = server.SelectColumnStatisticsById(columnId, columnType);
           column->SetColumnStatistics(columnStatistics);
+
+          auto histograms = server.SelectColumnHistogramsByColumnId(columnId, columnType);
+          column->SetHistograms(histograms);
         }
     }
 

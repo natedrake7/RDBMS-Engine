@@ -291,7 +291,7 @@ namespace DatabaseEngine::StorageTypes {
             case DataType::Guid:
                 return this->SetGuid(value);
             case DataType::RowIdentifier:
-            case DataType::Invalid:
+            case DataType::Unknown:
             default:
                 throw std::runtime_error("Invalid Datatype for column");
         }
@@ -397,7 +397,7 @@ bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Value &f
             return block.GetDateTime() == field.GetDateTime();
         case DataType::Guid:
             return block.GetGuid() == field.GetGuid();
-        case DataType::Invalid:
+        case DataType::Unknown:
         default:
             throw invalid_argument("invalid column type");
     }
@@ -437,7 +437,7 @@ bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Value &fi
             return block.GetDateTime() >  field.GetDateTime();
         case DataType::Guid:
             return block.GetGuid() > field.GetGuid();
-        case DataType::Invalid:
+        case DataType::Unknown:
         default:
             throw invalid_argument("invalid column type");
     }

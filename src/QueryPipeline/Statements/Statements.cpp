@@ -58,7 +58,7 @@ namespace QueryPipeline::Statements {
       if (!res.IsOk())
         return res;
 
-      if (type != DataType::Invalid && !ValidateExpressionCoercionTypes(type, this->expression)) {
+      if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
 
         ostringstream os;
 
@@ -70,7 +70,7 @@ namespace QueryPipeline::Statements {
         return {Errors::ValidationError::Error, os.str()};
       }
 
-      if (type == DataType::Invalid)
+      if (type == DataType::Unknown)
         this->variable.SetType(this->expression->GetReturnType());
     }
 
@@ -100,7 +100,7 @@ namespace QueryPipeline::Statements {
       if (!res.IsOk())
         return res;
 
-      if (type != DataType::Invalid && !ValidateExpressionCoercionTypes(type, this->expression)) {
+      if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
 
         ostringstream os;
 
@@ -112,7 +112,7 @@ namespace QueryPipeline::Statements {
         return {Errors::ValidationError::Error, os.str()};
       }
 
-      if (type == DataType::Invalid)
+      if (type == DataType::Unknown)
         this->variable.SetType(this->expression->GetReturnType());
     }
 
@@ -1923,6 +1923,7 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
           columnExpression->name = header.name;
           columnExpression->columnId = header.id;
           columnExpression->tableId = tableId;
+          columnExpression->index = header.ordinalPosition;
 
           statement->results.insert(statement->results.begin() + *statementValidationScope.indexPos + counter, columnExpression);
           counter++;
