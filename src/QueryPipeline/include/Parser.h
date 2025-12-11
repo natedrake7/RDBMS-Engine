@@ -14,7 +14,7 @@ namespace QueryPipeline{
     }
 
     namespace PhysicalPlan {
-        class PhysicalOperator;
+        class ExecutionNode;
     }
 
     class LogicalPlan;
@@ -53,7 +53,7 @@ namespace QueryPipeline{
         static void ClearQuery(const std::vector<Statements::Statement*>& statements, const LogicalPlan* logicalPlan);
 
         static std::vector<Statements::Statement*> Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
-        static PhysicalPlan::PhysicalOperator* BuildExecutionPlan(ParserResult& result, Statements::Statement* statement);
+        static PhysicalPlan::ExecutionNode* BuildExecutionPlan(ParserResult& result, Statements::Statement* statement);
         static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const uint16_t& cursorId);
 
         public:

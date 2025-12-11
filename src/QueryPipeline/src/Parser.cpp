@@ -183,7 +183,7 @@ namespace QueryPipeline
         return statements;
      }
 
-    PhysicalPlan::PhysicalOperator * Parser::BuildExecutionPlan(ParserResult &result, Statements::Statement *statement) {
+    PhysicalPlan::ExecutionNode * Parser::BuildExecutionPlan(ParserResult &result, Statements::Statement *statement) {
         auto validation = statement->ValidateStatement(result.validationScope);
         if (!validation.IsOk()) {
             result.status  = {true, validation.message};
@@ -241,7 +241,7 @@ namespace QueryPipeline
                         << std::endl;
 
 
-            const PhysicalPlan::PhysicalPlanExecutionProperties properties(snapshot,1000, session->variables);
+            const PhysicalPlan::ExecutionProperties properties(snapshot,1000, session->variables);
 
             //for test
             // if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {

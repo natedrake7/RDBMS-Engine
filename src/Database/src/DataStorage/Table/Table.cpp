@@ -163,7 +163,7 @@ namespace DatabaseEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    Errors::RuntimeStatus Table::InsertRow(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const vector<Value> &inputData){
+    Errors::RuntimeStatus Table::InsertRow(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties, const vector<Value> &inputData){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
@@ -186,7 +186,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::InsertRow(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const vector<Value> &inputData,
       const std::vector<Constants::column_index_t> &columnIndices
     ){
@@ -213,7 +213,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::InsertRow(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const vector<Expressions::Expression *> &inputData,
       const std::vector<Constants::column_index_t> &columnIndices
     ){
@@ -458,7 +458,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
     void Table::HeapDelete(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const Expressions::Expression* expression
     ) const
     {
@@ -517,7 +517,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanDelete(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
         const Expressions::Expression *expression,
         QueryPipeline::PhysicalPlan::IndexState& state
     ){
@@ -544,7 +544,7 @@ namespace DatabaseEngine::StorageTypes {
    }
 
   void Table::ClusteredIndexSeekDelete(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const Expressions::Expression *expression,
     QueryPipeline::PhysicalPlan::IndexState &state
   ){
@@ -637,9 +637,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::HeapScan(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       std::vector<const Row*> *result,
-      QueryPipeline::PhysicalPlan::TableScanState& state
+      QueryPipeline::PhysicalPlan::ScanState& state
     )const
     {
         if(this->header.indexAllocationMapPageId == Constants::INVALID_PAGE_ID)
@@ -812,7 +812,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
   Errors::RuntimeStatus Table::HeapUpdate(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const Expressions::Expression *expression,
     const vector<Value> & updates
   ){
@@ -874,7 +874,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::HeapUpdate(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const Expressions::Expression *expression,
       const vector<QueryPipeline::Statements::UpdateColumn *> &updates
     ){
@@ -985,7 +985,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanUpdate(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const Expressions::Expression *expression,
       const vector<Value> & updates
     ){
@@ -995,7 +995,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const Expressions::Expression *expression,
       const vector<QueryPipeline::Statements::UpdateColumn *> &updates
     ){
@@ -1007,7 +1007,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
-        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
@@ -1075,7 +1075,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::HandleRowUpdate(
       Pages::Page *page,
       Row *row,
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const std::vector<Value> &updates,
       const HashSet<column_index_t>& updatedColumns,
       const bool &isHeap
@@ -1125,7 +1125,7 @@ namespace DatabaseEngine::StorageTypes {
   Errors::RuntimeStatus Table::HandleRowUpdate(
     Pages::Page *page,
     Row *row,
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
     const HashSet<column_index_t> &updatedColumns,
     const bool &isHeap){

@@ -166,16 +166,16 @@ namespace DatabaseEngine::StorageTypes
 
             ~Table();
 
-            Errors::RuntimeStatus InsertRow(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const vector<Value> &inputData);
+            Errors::RuntimeStatus InsertRow(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties, const vector<Value> &inputData);
 
             Errors::RuntimeStatus InsertRow(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const vector<Value> &inputData,
                 const std::vector<Constants::column_index_t>& columnIndices
             );
 
             Errors::RuntimeStatus InsertRow(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const vector<Expressions::Expression*> &inputData,
                 const std::vector<Constants::column_index_t>& columnIndices
             );
@@ -207,33 +207,33 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
 
             void ClusteredIndexSeekRange(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey
             );
 
             void ClusteredIndexSeek(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 const DataTypes::Indexing::Key& key
             );
 
             void ClusteredIndexScan(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 QueryPipeline::PhysicalPlan::IndexState& state,
                 const Expressions::Expression* expression = nullptr
             );
 
             void ClusteredIndexScan(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 const Expressions::Expression* expression = nullptr
             );
 
             void NonClusteredIndexScan(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 const int& indexPos,
                 QueryPipeline::PhysicalPlan::IndexState& state,
@@ -241,24 +241,24 @@ namespace DatabaseEngine::StorageTypes
             );
 
             void HeapScan(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 std::vector<const Row*> *result,
-                QueryPipeline::PhysicalPlan::TableScanState& state
+                QueryPipeline::PhysicalPlan::ScanState& state
             )const;
 
             void HeapDelete(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const Expressions::Expression* expression
             ) const;
 
             void ClusteredIndexScanDelete(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 QueryPipeline::PhysicalPlan::IndexState& state
             );
 
             void ClusteredIndexSeekDelete(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 QueryPipeline::PhysicalPlan::IndexState& state
             );
@@ -277,31 +277,31 @@ namespace DatabaseEngine::StorageTypes
             int CreateNonClusteredIndex(vector<Constants::column_index_t>& columnIndices);
 
             Errors::RuntimeStatus HeapUpdate(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 const vector<Value> &updates
             );
 
             Errors::RuntimeStatus HeapUpdate(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 const vector<QueryPipeline::Statements::UpdateColumn*> &updates
             );
 
             void ClusteredIndexScanUpdate(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 const vector<Value> &updates
             );
 
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexScanUpdate(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 const vector<QueryPipeline::Statements::UpdateColumn*> &updates
             );
 
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
@@ -361,7 +361,7 @@ namespace DatabaseEngine::StorageTypes
             Errors::RuntimeStatus HandleRowUpdate(
                 Pages::Page *page,
                 Row *row,
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const std::vector<Value> &updates,
                 const HashSet<column_index_t>& updatedColumns,
                 const bool &isHeap = true
@@ -371,7 +371,7 @@ namespace DatabaseEngine::StorageTypes
             Errors::RuntimeStatus  HandleRowUpdate(
                 Pages::Page *page,
                 Row *row,
-                const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+                const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates,
                 const HashSet<column_index_t>& updatedColumns,
                 const bool &isHeap = true

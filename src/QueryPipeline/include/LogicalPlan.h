@@ -12,7 +12,7 @@ namespace QueryPipeline {
       explicit LogicalPlan(const DataTypes::Guid& sessionId);
       LogicalPlan();
       virtual ~LogicalPlan();
-      virtual PhysicalPlan::PhysicalOperator* ToPhysical() = 0;
+      virtual PhysicalPlan::ExecutionNode* ToPhysical() = 0;
   };
 
   class LogicalDeclareVariable final : public LogicalPlan {
@@ -21,7 +21,7 @@ namespace QueryPipeline {
       Expressions::Expression* expression;
 
       LogicalDeclareVariable(const DataTypes::Guid& sessionId, Variable& variable, Expressions::Expression* expression);
-      PhysicalPlan::PhysicalOperator * ToPhysical() override;
+      PhysicalPlan::ExecutionNode * ToPhysical() override;
   };
 
   class LogicalCreateUser final : public LogicalPlan {
@@ -37,7 +37,7 @@ namespace QueryPipeline {
       std::string & role
     );
     ~LogicalCreateUser()override;
-    PhysicalPlan::PhysicalOperator * ToPhysical() override;
+    PhysicalPlan::ExecutionNode * ToPhysical() override;
   };
 
   class LogicalGrantRole final: public LogicalPlan {
@@ -47,7 +47,7 @@ namespace QueryPipeline {
 
     explicit LogicalGrantRole(const DataTypes::Guid& sessionId, std::string & username, std::string & role);
     ~LogicalGrantRole()override = default;
-    PhysicalPlan::PhysicalOperator * ToPhysical() override;
+    PhysicalPlan::ExecutionNode * ToPhysical() override;
   };
 
   class LogicalCreateDatabase final : public LogicalPlan {
@@ -88,7 +88,7 @@ namespace QueryPipeline {
         Statements::DataSource* table,
         Expressions::Expression* expression
       );
-      PhysicalPlan::PhysicalOperator* ToPhysical() override;
+      PhysicalPlan::ExecutionNode* ToPhysical() override;
   };
 
   class LogicalJoin final : public LogicalPlan {
@@ -106,7 +106,7 @@ namespace QueryPipeline {
 
     ~LogicalJoin() override;
 
-    PhysicalPlan::PhysicalOperator* ToPhysical()override;
+    PhysicalPlan::ExecutionNode* ToPhysical()override;
   };
 
   class LogicalFilter final : public LogicalPlan {
@@ -127,7 +127,7 @@ namespace QueryPipeline {
         LogicalPlan* child,
         std::vector<Statements::OrderColumn*>& expressions
       );
-      PhysicalPlan::PhysicalOperator* ToPhysical()override;
+      PhysicalPlan::ExecutionNode* ToPhysical()override;
   };
 
   class LogicalTop final : public LogicalPlan {
@@ -180,7 +180,7 @@ namespace QueryPipeline {
     Statements::DataSource* table;
     Expressions::Expression* expression;
     explicit LogicalDelete(Statements::DataSource* table, Expressions::Expression* expression);
-    PhysicalPlan::PhysicalOperator* ToPhysical()override;
+    PhysicalPlan::ExecutionNode* ToPhysical()override;
   };
 
   class LogicalUpdate final : public LogicalPlan {
@@ -190,7 +190,7 @@ namespace QueryPipeline {
       Expressions::Expression* expression;
 
       explicit LogicalUpdate(Statements::DataSource* table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression* expression);
-      PhysicalPlan::PhysicalOperator* ToPhysical()override;
+      PhysicalPlan::ExecutionNode* ToPhysical()override;
   };
 
   class LogicalTableCreate final : public LogicalPlan {
@@ -220,7 +220,7 @@ namespace QueryPipeline {
       std::string& constraintName,
       std::vector<column_index_t>& columns
     );
-    PhysicalPlan::PhysicalOperator * ToPhysical() override;
+    PhysicalPlan::ExecutionNode * ToPhysical() override;
   };
 
   class LogicalAlterTable final : public LogicalPlan {
@@ -242,7 +242,7 @@ namespace QueryPipeline {
         Statements::DropColumn* dropColumn,
         Statements::RenameColumn* renameColumn);
 
-      PhysicalPlan::PhysicalOperator * ToPhysical() override;
+      PhysicalPlan::ExecutionNode * ToPhysical() override;
   };
 }
 

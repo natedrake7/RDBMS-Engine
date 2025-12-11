@@ -208,7 +208,7 @@ namespace QueryPipeline::Statements {
       std::string role;
 
       CreateUserStatement() = default;
-      ~CreateUserStatement() override= default;
+      ~CreateUserStatement() override = default;
 
       Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
       Security::Permission RequiredPermissions() const override;

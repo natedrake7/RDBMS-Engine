@@ -3,8 +3,8 @@
 namespace QueryPipeline::PhysicalPlan {
 
   PhysicalNestedLoopInnerJoin::PhysicalNestedLoopInnerJoin(
-    PhysicalOperator* left,
-    PhysicalOperator* right,
+    ExecutionNode* left,
+    ExecutionNode* right,
     Expressions::Expression *joinCondition)
     : left(left), right(right), joinCondition(joinCondition){}
 
@@ -14,8 +14,8 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
 
-  PhysicalPlanResult * PhysicalNestedLoopInnerJoin::Execute(const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlan::PhysicalPlanResult();
+  ExecutionResult * PhysicalNestedLoopInnerJoin::Execute(const ExecutionProperties& properties){
+    auto* result = new PhysicalPlan::ExecutionResult();
 
     const auto* leftResult = this->left->Execute(properties);
     const auto* rightResult = this->right->Execute(properties);
@@ -42,8 +42,8 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   PhysicalNestedLoopLeftJoin::PhysicalNestedLoopLeftJoin(
-    PhysicalOperator* left,
-    PhysicalOperator* right,
+    ExecutionNode* left,
+    ExecutionNode* right,
     Expressions::Expression *joinCondition)
     : left(left), right(right), joinCondition(joinCondition){}
 
@@ -52,8 +52,8 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  PhysicalPlanResult * PhysicalNestedLoopLeftJoin::Execute(const PhysicalPlanExecutionProperties& properties){
-      auto* result = new PhysicalPlan::PhysicalPlanResult();
+  ExecutionResult * PhysicalNestedLoopLeftJoin::Execute(const ExecutionProperties& properties){
+      auto* result = new PhysicalPlan::ExecutionResult();
 
       const auto* leftResult = this->left->Execute(properties);
       const auto* rightResult = this->right->Execute(properties);
@@ -97,8 +97,8 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   PhysicalNestedLoopFullJoin::PhysicalNestedLoopFullJoin(
-    PhysicalOperator* left,
-    PhysicalOperator* right,
+    ExecutionNode* left,
+    ExecutionNode* right,
     Expressions::Expression *joinCondition)
     : left(left), right(right), joinCondition(joinCondition){}
 
@@ -107,8 +107,8 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  PhysicalPlanResult * PhysicalNestedLoopFullJoin::Execute(const PhysicalPlanExecutionProperties& properties){
-      auto* result = new PhysicalPlan::PhysicalPlanResult();
+  ExecutionResult * PhysicalNestedLoopFullJoin::Execute(const ExecutionProperties& properties){
+      auto* result = new PhysicalPlan::ExecutionResult();
 
       const auto* leftResult = this->left->Execute(properties);
       const auto* rightResult = this->right->Execute(properties);

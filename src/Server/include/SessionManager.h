@@ -26,8 +26,8 @@ namespace Server::Sessions {
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
-      QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan)const;
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan)const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
   };
 }

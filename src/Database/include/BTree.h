@@ -129,14 +129,14 @@ namespace Indexing
         )const;
 
         void IndexSeekRange(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &minKey,
             const DataTypes::Indexing::Key &maxKey,
             std::vector<const DatabaseEngine::StorageTypes::Row*>* result
         )const;
 
         void IndexSeek(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &key,
             std::vector<const DatabaseEngine::StorageTypes::Row*>* result
         )const;
@@ -144,26 +144,26 @@ namespace Indexing
         void IndexScan(vector<DataTypes::Indexing::QueryData> &result)const;
 
         void IndexScan(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             QueryPipeline::PhysicalPlan::IndexState& state
         )const;
 
         void IndexScan(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             QueryPipeline::PhysicalPlan::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result
         )const;
 
@@ -176,31 +176,31 @@ namespace Indexing
         void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void IndexScanUpdate(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             const Expressions::Expression* expression,
             const vector<Value> & updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             const Expressions::Expression* expression,
             const vector<QueryPipeline::Statements::UpdateColumn*> & updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             const vector<QueryPipeline::Statements::UpdateColumn*> & updates
         )const;
 
         Errors::RuntimeStatus IndexSeekUpdate(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const vector<Value> & updates
         )const;
         Errors::RuntimeStatus IndexSeekUpdate(
-            const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const vector<Value> & updates

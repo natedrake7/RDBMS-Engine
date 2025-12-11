@@ -7,44 +7,44 @@
 #include "../../../Database/include/DataStorage/Block.h"
 
 namespace QueryPipeline::PhysicalPlan {
-  PhysicalPlanResult::PhysicalPlanResult(){
+  ExecutionResult::ExecutionResult(){
     this->code = Errors::RuntimeError::Ok;
   }
 
-  PhysicalPlanResult::PhysicalPlanResult(const Errors::RuntimeError &code, const std::string &message) {
+  ExecutionResult::ExecutionResult(const Errors::RuntimeError &code, const std::string &message) {
     this->code = code;
     this->message = message;
   }
 
-  PhysicalPlanResult::~PhysicalPlanResult(){
+  ExecutionResult::~ExecutionResult(){
     for (const auto* row: this->rows)
       if (row->IsCopy())
         delete row;
   }
 
-  bool PhysicalPlanResult::IsOk() const {
+  bool ExecutionResult::IsOk() const {
     return this->code == Errors::RuntimeError::Ok;
   }
 
-   PhysicalPlanExecutionProperties::PhysicalPlanExecutionProperties(const Snapshot &snapshot, const int &batchSize, const Dictionary<std::string, Variable>& variables) {
+   ExecutionProperties::ExecutionProperties(const Snapshot &snapshot, const int &batchSize, const Dictionary<std::string, Variable>& variables) {
     this->snapshot = snapshot;
     this->batchSize = batchSize;
     this->variables = &variables;
   }
 
-  PhysicalPlanExecutionProperties::PhysicalPlanExecutionProperties() {
+  ExecutionProperties::ExecutionProperties() {
     this->batchSize = 0;
     this->variables = nullptr;
   }
 
-  PhysicalOperator::PhysicalOperator(const DataTypes::Guid &currentSessionId)
+  ExecutionNode::ExecutionNode(const DataTypes::Guid &currentSessionId)
     : sessionId(currentSessionId){}
 
   PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
-    : PhysicalOperator(currentSessionId), variable(std::move(variable)), expression(expression){}
+    : ExecutionNode(currentSessionId), variable(std::move(variable)), expression(expression){}
 
-  PhysicalPlanResult * PhysicalDeclareVariable::Execute(const PhysicalPlanExecutionProperties &properties) {
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalDeclareVariable::Execute(const ExecutionProperties &properties) {
+    auto* result = new ExecutionResult();
 
     static auto& server = Server::ServerInstance::Get();
 
@@ -67,8 +67,8 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateUser::PhysicalCreateUser(std::string &username, std::string &password, std::string &role)
    : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
 
-  PhysicalPlanResult * PhysicalCreateUser::Execute(const PhysicalPlanExecutionProperties& properties) {
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalCreateUser::Execute(const ExecutionProperties& properties) {
+    auto* result = new ExecutionResult();
 
     auto& server = Server::ServerInstance::Get();
 
@@ -81,10 +81,10 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   PhysicalGrantRole::PhysicalGrantRole(const DataTypes::Guid& sessionId, std::string &username, std::string &roleName)
-    : PhysicalOperator(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
+    : ExecutionNode(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
 
-  PhysicalPlanResult * PhysicalGrantRole::Execute(const PhysicalPlanExecutionProperties& properties) {
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalGrantRole::Execute(const ExecutionProperties& properties) {
+    auto* result = new ExecutionResult();
 
     const auto& server = Server::ServerInstance::Get();
 
@@ -104,15 +104,15 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-  PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& name) : PhysicalOperator(sessionId), dbName(std::move(name)){}
+  PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& name) : ExecutionNode(sessionId), dbName(std::move(name)){}
 
-  PhysicalPlanResult* PhysicalCreateDatabase::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalCreateDatabase::Execute(const ExecutionProperties& properties){
     auto& server = Server::ServerInstance::Get();
 
     const auto* session = server.GetSession(this->sessionId);
 
     if (session == nullptr || session->user == nullptr)
-      return new PhysicalPlanResult{
+      return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
@@ -120,17 +120,17 @@ namespace QueryPipeline::PhysicalPlan {
     const auto result = server.InsertDbToMasterDb(properties, this->dbName, this->dbName + ".db", false, session->user->name);
 
     const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(properties, result.primaryKey.AsInt(), "dbo");
-    
+
     DatabaseEngine::CreateDatabase(this->dbName);
 
-    return new PhysicalPlanResult();
+    return new ExecutionResult();
   }
 
   PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const int32_t &databaseId)
     : sessionId(sessionId), databaseId(databaseId){}
 
-  PhysicalPlanResult * PhysicalUseDatabase::Execute(const PhysicalPlanExecutionProperties& properties) {
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalUseDatabase::Execute(const ExecutionProperties& properties) {
+    auto* result = new ExecutionResult();
 
     if (Server::ServerInstance::Get().UpdateSession(this->sessionId, this->databaseId)) {
       result->code = Errors::RuntimeError::Ok;
@@ -146,22 +146,22 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
 PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string &schemaName)
-  : PhysicalOperator(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
+  : ExecutionNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
-  PhysicalPlanResult * PhysicalSchemaCreate::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult * PhysicalSchemaCreate::Execute(const ExecutionProperties& properties){
     auto& server = Server::ServerInstance::Get();
 
     const auto* session = server.GetSession(this->sessionId);
 
     if (session == nullptr || session->user == nullptr)
-      return new PhysicalPlanResult{
+      return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
     const auto insertResult = Server::ServerInstance::Get().InsertSchemaToMasterDb(properties, this->databaseId, this->schemaName, session->user->name);
 
-    return new PhysicalPlanResult{
+    return new ExecutionResult{
       insertResult.code,
       insertResult.message,
     };
@@ -169,13 +169,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table): table(std::move(table)) {}
 
-  PhysicalPlanResult* PhysicalTableScan::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalTableScan::Execute(const ExecutionProperties& properties){
       using namespace DatabaseEngine::StorageTypes;
       const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
       const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-      auto* result = new PhysicalPlanResult();
+      auto* result = new ExecutionResult();
 
       result->columns = tablePtr->GetConstantColumns();
 
@@ -190,10 +190,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource *table, Expressions::Expression *expression, const bool & isClustered)
     : table(table), expression(expression), isClustered(isClustered) {}
 
-  PhysicalPlanResult * PhysicalIndexScan::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult * PhysicalIndexScan::Execute(const ExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;
 
-    auto* result = new PhysicalPlanResult();
+    auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
@@ -214,9 +214,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   PhysicalIndexSeek::PhysicalIndexSeek(Statements::DataSource* table, Value& minValue, Value& maxValue)
     : table(std::move(table)), minValue(std::move(minValue)), maxValue(std::move(maxValue)) {}
 
-  PhysicalPlanResult* PhysicalIndexSeek::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalIndexSeek::Execute(const ExecutionProperties& properties){
 
-    auto* result = new PhysicalPlanResult();
+    auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
@@ -237,7 +237,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
 
-  PhysicalPlanResult * PhysicalProject::ExecuteStatement(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult * PhysicalProject::ExecuteStatement(const ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
 
     for (const auto& expression : this->resultExpressions)
@@ -266,8 +266,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalPlanResult * PhysicalProject::ExecuteConstantStatement(const PhysicalPlanExecutionProperties& properties)const{
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalProject::ExecuteConstantStatement(const ExecutionProperties& properties)const{
+    auto* result = new ExecutionResult();
 
     QueryResult resultRow;
 
@@ -286,7 +286,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   PhysicalProject:: PhysicalProject(
-    PhysicalOperator *child,
+    ExecutionNode *child,
     std::vector<Expressions::Expression*>& resultExpressions,
     std::vector<Headers::ColumnHeader>& columnHeaders)
     : resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
@@ -298,13 +298,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     delete this->child;
   }
 
-  PhysicalPlanResult* PhysicalProject::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalProject::Execute(const ExecutionProperties& properties){
       return (this->child == nullptr)
         ? this->ExecuteConstantStatement(properties)
         : this->ExecuteStatement(properties);
   }
 
-  PhysicalFilter::PhysicalFilter(PhysicalOperator *child, Expressions::Expression* filter)
+  PhysicalFilter::PhysicalFilter(ExecutionNode *child, Expressions::Expression* filter)
         : filter(filter) , child(child) {}
 
   PhysicalFilter::~PhysicalFilter(){
@@ -312,7 +312,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     delete this->filter;
   }
 
-  PhysicalPlanResult* PhysicalFilter::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalFilter::Execute(const ExecutionProperties& properties){
     auto* result = child->Execute(properties);
 
     if(dynamic_cast<PhysicalIndexScan*>(child) != nullptr
@@ -335,14 +335,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalTop::PhysicalTop(PhysicalOperator* child, const int64_t& top)
+  PhysicalTop::PhysicalTop(ExecutionNode* child, const int64_t& top)
     : top(top), child(child){}
 
   PhysicalTop::~PhysicalTop(){
     delete this->child;
   }
 
-  PhysicalPlanResult * PhysicalTop::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult * PhysicalTop::Execute(const ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
 
     if (this->top > result->results.size())
@@ -353,14 +353,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalDistinct::PhysicalDistinct(PhysicalOperator *child)
+  PhysicalDistinct::PhysicalDistinct(ExecutionNode *child)
     : child(child){}
 
   PhysicalDistinct::~PhysicalDistinct(){
     delete this->child;
   }
 
-  PhysicalPlanResult * PhysicalDistinct::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult * PhysicalDistinct::Execute(const ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
 
     std::vector<QueryResult> results;
@@ -395,7 +395,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalPlanResult* PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const PhysicalPlanExecutionProperties& properties)const{
+  ExecutionResult* PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const ExecutionProperties& properties)const{
     auto* result = this->child->Execute(properties);
 
     for (auto& row : result->results) {
@@ -413,8 +413,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalPlanResult* PhysicalInsert::InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult* PhysicalInsert::InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
 
     for (const auto&[columns] : this->fields) {
       const auto insertResult = tablePtr->InsertRow(properties, columns, this->columnsIndices);
@@ -434,7 +434,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 PhysicalInsert::PhysicalInsert(
   Statements::DataSource* table,
   std::vector<Statements::Inserts> &fields,
-  PhysicalOperator* child,
+  ExecutionNode* child,
   std::vector<column_index_t>& columnsIndices)
     : table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnsIndices)) {}
 
@@ -448,11 +448,11 @@ PhysicalInsert::PhysicalInsert(
     delete this->child;
   }
 
-  PhysicalPlanResult* PhysicalInsert::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalInsert::Execute(const ExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-    
+
     Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     return (this->child != nullptr)
@@ -468,8 +468,8 @@ PhysicalInsert::PhysicalInsert(
     delete this->table;
   }
 
-  PhysicalPlanResult * PhysicalHeapDelete::Execute(const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalHeapDelete::Execute(const ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
@@ -488,8 +488,8 @@ PhysicalInsert::PhysicalInsert(
       delete this->table;
   }
 
-  PhysicalPlanResult * PhysicalIndexScanDelete::Execute(const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalIndexScanDelete::Execute(const ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
@@ -508,8 +508,8 @@ PhysicalInsert::PhysicalInsert(
     delete this->table;
   }
 
-  PhysicalPlanResult * PhysicalIndexSeekDelete::Execute(const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalIndexSeekDelete::Execute(const ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
@@ -531,10 +531,10 @@ PhysicalInsert::PhysicalInsert(
       delete update;
   }
 
-  PhysicalPlanResult* PhysicalHeapUpdate::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalHeapUpdate::Execute(const ExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;
 
-    auto* result = new PhysicalPlanResult();
+    auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
@@ -559,10 +559,10 @@ PhysicalInsert::PhysicalInsert(
       delete update;
   }
 
-  PhysicalPlanResult* PhysicalIndexScanUpdate::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalIndexScanUpdate::Execute(const ExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;
 
-    auto* result = new PhysicalPlanResult();
+    auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 
@@ -587,7 +587,7 @@ PhysicalInsert::PhysicalInsert(
       delete update;
   }
 
-  PhysicalPlanResult* PhysicalIndexSeekUpdate::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalIndexSeekUpdate::Execute(const ExecutionProperties& properties){
     using namespace DatabaseEngine::StorageTypes;
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
@@ -600,7 +600,7 @@ PhysicalInsert::PhysicalInsert(
 
     // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
 
-    return new PhysicalPlanResult{
+    return new ExecutionResult{
       updateResult.code,
       updateResult.message,
     };
@@ -612,7 +612,7 @@ PhysicalInsert::PhysicalInsert(
       std::vector<Statements::NewColumn*> &columns,
       Headers::Index& primaryKey,
       std::string& constraintName)
-    : PhysicalOperator(sessionId), table(table), constraintName(std::move(constraintName)),
+    : ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
   PhysicalTableCreate::~PhysicalTableCreate(){
@@ -620,14 +620,14 @@ PhysicalInsert::PhysicalInsert(
       delete column;
   }
 
-  PhysicalPlanResult* PhysicalTableCreate::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalTableCreate::Execute(const ExecutionProperties& properties){
 
     auto& server = Server::ServerInstance::Get();
 
     const auto* session = server.GetSession(this->sessionId);
 
     if (session == nullptr || session->user == nullptr)
-      return new PhysicalPlanResult{
+      return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
@@ -788,7 +788,7 @@ PhysicalInsert::PhysicalInsert(
   }
 
   PhysicalOrderBy::PhysicalOrderBy(
-      PhysicalOperator *child,
+      ExecutionNode *child,
       std::vector<Statements::OrderColumn*>& expressions)
     : child(child), expressions(std::move(expressions)){}
 
@@ -800,7 +800,7 @@ PhysicalInsert::PhysicalInsert(
     delete this->child;
   }
 
-  PhysicalPlanResult* PhysicalOrderBy::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult* PhysicalOrderBy::Execute(const ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
 
     SortingFunctions::OrderBy(result->results, this->expressions);
@@ -813,10 +813,10 @@ PhysicalInsert::PhysicalInsert(
     Statements::DataSource *table,
     std::string &constraintName,
     vector<Constants::column_index_t> &columns)
-    : PhysicalOperator(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+    : ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
-  PhysicalPlanResult * PhysicalIndexCreate::Execute(const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalIndexCreate::Execute(const ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
 

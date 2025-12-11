@@ -6,14 +6,14 @@
 namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAddColumn::PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::NewColumn *column)
-    : PhysicalOperator(sessionId), table(table), column(column){}
+    : ExecutionNode(sessionId), table(table), column(column){}
 
   PhysicalAddColumn::~PhysicalAddColumn(){
     delete this->table;
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalAddColumn::Execute(const PhysicalPlanExecutionProperties& properties){
+  ExecutionResult * PhysicalAddColumn::Execute(const ExecutionProperties& properties){
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
 
     auto& server = Server::ServerInstance::Get();
@@ -21,7 +21,7 @@ namespace QueryPipeline::PhysicalPlan{
     const auto* session = server.GetSession(this->sessionId);
 
     if (session == nullptr || session->user == nullptr)
-      return new PhysicalPlanResult{
+      return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
@@ -43,7 +43,7 @@ namespace QueryPipeline::PhysicalPlan{
           );
 
       if (columnResult.code != Errors::RuntimeError::Ok) {
-        auto* result = new PhysicalPlanResult();
+        auto* result = new ExecutionResult();
         result->code = columnResult.code;
         result->message = columnResult.message;
         return result;
@@ -78,22 +78,22 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::DropColumn *column)
-    : PhysicalOperator(sessionId), table(table), column(column){}
+    : ExecutionNode(sessionId), table(table), column(column){}
 
   PhysicalDropColumn::~PhysicalDropColumn(){
     delete this->table;
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalDropColumn::Execute(const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalDropColumn::Execute(const ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
 
     auto& server = Server::ServerInstance::Get();
 
     const auto* session = server.GetSession(this->sessionId);
 
     if (session == nullptr || session->user == nullptr)
-      return new PhysicalPlanResult{
+      return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
@@ -110,22 +110,22 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalRenameColumn::PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::RenameColumn *column)
-  : PhysicalOperator(sessionId), table(table), column(column){}
+  : ExecutionNode(sessionId), table(table), column(column){}
 
   PhysicalRenameColumn::~PhysicalRenameColumn(){
     delete this->table;
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalRenameColumn::Execute(const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalRenameColumn::Execute(const ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
 
     auto& server = Server::ServerInstance::Get();
 
     const auto* session = server.GetSession(this->sessionId);
 
     if (session == nullptr || session->user == nullptr)
-      return new PhysicalPlanResult{
+      return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
@@ -148,22 +148,22 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalAlterColumn::PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::AlterColumn *column)
-    : PhysicalOperator(sessionId), table(table), column(column){}
+    : ExecutionNode(sessionId), table(table), column(column){}
 
   PhysicalAlterColumn::~PhysicalAlterColumn(){
     delete this->table;
     delete this->column;
   }
 
-  PhysicalPlanResult * PhysicalAlterColumn::Execute(const PhysicalPlanExecutionProperties& properties){
-    auto* result = new PhysicalPlanResult();
+  ExecutionResult * PhysicalAlterColumn::Execute(const ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
 
     auto& server = Server::ServerInstance::Get();
 
     const auto* session = server.GetSession(this->sessionId);
 
     if (session == nullptr || session->user == nullptr)
-      return new PhysicalPlanResult{
+      return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };

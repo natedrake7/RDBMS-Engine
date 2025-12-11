@@ -196,7 +196,7 @@ namespace Server {
     return users;
   }
 
-  void ServerInstance::InsertSystemRoles(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties){
+  void ServerInstance::InsertSystemRoles(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties){
     const auto admin = std::string(ServerConstants::ADMIN_NAME);
     const auto dbOwner = std::string(ServerConstants::DB_OWNER_NAME);
     const auto dbWriter = std::string(ServerConstants::DB_WRITER_NAME);
@@ -275,7 +275,7 @@ namespace Server {
      ));
   }
 
-  void ServerInstance::InsertSystemUsers(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties){
+  void ServerInstance::InsertSystemUsers(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties){
     const auto admin = std::string(ServerConstants::ADMIN_NAME);
 
     const auto* role = this->roleManager.GetRole(admin);
@@ -487,7 +487,7 @@ namespace Server {
     return this->userManager.GetUser(userName) != nullptr;
   }
 
-  bool ServerInstance::CreateUser(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const std::string &userName, const std::string &password, const std::string& roleName){
+  bool ServerInstance::CreateUser(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties, const std::string &userName, const std::string &password, const std::string& roleName){
     if (this->userManager.GetUser(userName) != nullptr)
       return false;
 
@@ -558,8 +558,8 @@ namespace Server {
 
   QueryPipeline::Cursor * ServerInstance::CreateCursor(
     const DataTypes::Guid &id,
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
-    QueryPipeline::PhysicalPlan::PhysicalOperator *physicalPlan
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+    QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
   ) const {
     return this->sessionManager.CreateCursor(id, properties, physicalPlan);
   }
@@ -569,7 +569,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertDbToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const string& dbName,
     const string& dbPath,
     const bool& isSystem,
@@ -603,7 +603,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertSchemaToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t &databaseId,
     const string &schemaName,
     const string &user,
@@ -633,7 +633,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertTableToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t & databaseId,
     const int32_t & schemaId,
     const string& tableName,
@@ -671,7 +671,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertColumnToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t & tableId,
     const string &columnName,
     const DataType &columnType,
@@ -720,7 +720,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus  ServerInstance::InsertIndexToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t & tableId,
     const string &indexName,
     const bool &isClustered,
@@ -754,7 +754,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertIndexColumnToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t & indexId,
     const int32_t & columnId,
     const int16_t & ordinalPosition,
@@ -784,7 +784,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertConstraintToMasterDb(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const int32_t & tableId,
       const string & constraintName,
       const Headers::ConstraintType & constraintType,
@@ -825,7 +825,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertConstraintColumnToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t & constraintId,
     const int32_t & columnId,
     const int32_t & ordinalPosition,
@@ -854,7 +854,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertIdentityColumnToMasterDb(
-      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const int32_t & tableId,
       const int32_t & columnId,
       const int32_t & seedValue,
@@ -892,7 +892,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertDefaultValuesToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t &columnId,
     const Value &value,
     const int &version,
@@ -919,7 +919,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertTableStatisticsToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t &tableId,
     const int64_t& rowCount,
     const int32_t& rowSize,
@@ -946,7 +946,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertColumnStatisticsToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t &columnId,
     const int64_t &distinctCount,
     const int64_t &nullCount
@@ -973,7 +973,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertColumnHistogramsToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties &properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties &properties,
     const int32_t &columnId,
     const Value &min,
     const Value &max,
@@ -998,7 +998,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertRoleToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const std::string &roleName,
     const Security::Permission &permissions,
     const bool& isSystem,
@@ -1031,7 +1031,7 @@ namespace Server {
   }
 
   Errors::RuntimeStatus ServerInstance::InsertUserToMasterDb(
-    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const std::string &username,
     const std::string &passwordHash,
     const int32_t &roleId,

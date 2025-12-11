@@ -22,7 +22,7 @@ namespace QueryPipeline {
   LogicalDeclareVariable::LogicalDeclareVariable(const DataTypes::Guid &sessionId, Variable& variable, Expressions::Expression* expression)
     : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression){}
 
-  PhysicalPlan::PhysicalOperator * LogicalDeclareVariable::ToPhysical() {
+  PhysicalPlan::ExecutionNode * LogicalDeclareVariable::ToPhysical() {
     return new PhysicalPlan::PhysicalDeclareVariable(this->sessionId, this->variable, this->expression);
   }
 
@@ -46,7 +46,7 @@ namespace QueryPipeline {
   LogicalTableScan::LogicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
   : table(table), expression(expression) {}
 
-  PhysicalPlan::PhysicalOperator * LogicalTableScan::ToPhysical(){
+  PhysicalPlan::ExecutionNode * LogicalTableScan::ToPhysical(){
       auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
       //if no indexes are available heap scan
@@ -85,14 +85,14 @@ namespace QueryPipeline {
 
   LogicalCreateUser::~LogicalCreateUser() = default;
 
-  PhysicalPlan::PhysicalOperator * LogicalCreateUser::ToPhysical() {
+  PhysicalPlan::ExecutionNode * LogicalCreateUser::ToPhysical() {
     return new PhysicalPlan::PhysicalCreateUser(this->username, this->password, this->role);
   }
 
   LogicalGrantRole::LogicalGrantRole(const DataTypes::Guid& sessionId, std::string &username, std::string &role)
     : LogicalPlan(sessionId), username(std::move(username)), role(std::move(role)) {}
 
-  PhysicalPlan::PhysicalOperator * LogicalGrantRole::ToPhysical() {
+  PhysicalPlan::ExecutionNode * LogicalGrantRole::ToPhysical() {
     return new PhysicalPlan::PhysicalGrantRole(this->sessionId, this->username, this->role);
   }
 
@@ -121,7 +121,7 @@ namespace QueryPipeline {
     delete this->right;
   }
 
-  PhysicalPlan::PhysicalOperator * LogicalJoin::ToPhysical(){
+  PhysicalPlan::ExecutionNode * LogicalJoin::ToPhysical(){
     switch (this->type) {
       case JoinType::Inner:
         return new PhysicalPlan::PhysicalNestedLoopInnerJoin(
@@ -188,7 +188,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
   LogicalDelete::LogicalDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
-  PhysicalPlan::PhysicalOperator * LogicalDelete::ToPhysical(){
+  PhysicalPlan::ExecutionNode * LogicalDelete::ToPhysical(){
     const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
     //if no indexes are available heap scan
@@ -243,7 +243,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
   LogicalUpdate::LogicalUpdate(Statements::DataSource *table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression *expression)
   : table(table), updates(std::move(updates)), expression(expression) {}
 
-  PhysicalPlan::PhysicalOperator* LogicalUpdate::ToPhysical(){
+  PhysicalPlan::ExecutionNode* LogicalUpdate::ToPhysical(){
       const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
 
       //if no indexes are available heap scan
@@ -282,7 +282,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
   LogicalOrder::LogicalOrder(LogicalPlan *child, std::vector<Statements::OrderColumn*>& expressions)
     : child(child), expressions(std::move(expressions)) {}
 
-  PhysicalPlan::PhysicalOperator* LogicalOrder::ToPhysical(){
+  PhysicalPlan::ExecutionNode* LogicalOrder::ToPhysical(){
     return new PhysicalPlan::PhysicalOrderBy(this->child->ToPhysical(), this->expressions);
   }
 
@@ -315,7 +315,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     std::vector<column_index_t> &columns)
       : LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
-  PhysicalPlan::PhysicalOperator * LogicalIndexCreate::ToPhysical(){
+  PhysicalPlan::ExecutionNode * LogicalIndexCreate::ToPhysical(){
     return new PhysicalPlan::PhysicalIndexCreate(this->sessionId, this->table, this->constraintName, this->columns);
   }
 
@@ -329,7 +329,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     Statements::RenameColumn *renameColumn)
     : LogicalPlan(sessionId), table(table), type(type) , alterColumn(alterColumn), dropColumn(dropColumn), renameColumn(renameColumn), addColumn(addColumn) {}
 
-    PhysicalPlan::PhysicalOperator * LogicalAlterTable::ToPhysical(){
+    PhysicalPlan::ExecutionNode * LogicalAlterTable::ToPhysical(){
       switch (this->type) {
         case AlterTableType::AlterColumn:
           return new PhysicalPlan::PhysicalAlterColumn(this->sessionId, this->table, this->alterColumn);
