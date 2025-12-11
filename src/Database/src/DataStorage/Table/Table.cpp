@@ -1,0 +1,1702 @@
+﻿#include "../../../include/Constants.h"
+#include "../../../../Systemic/include/DataTypes/Value.h"
+#include "../../../../Systemic/include/DataStructures/BitMap.h"
+#include "../../../include/DataStorage//Block.h"
+#include "../../../include/DataStorage/Column.h"
+#include "../../../include/DataStorage/Row.h"
+#include "../../../include/DataStorage/Table.h"
+#include "../../../include/Pages/Page.h"
+#include "../../../include/Pages/HeaderPage.h"
+#include "../../../include/Pages/LargeObjectPage.h"
+#include "../../../include/Pages/IndexAllocationMapPage.h"
+#include "../../../include/Pages/PageFreeSpacePage.h"
+#include "../../../include/Pages/IndexPage.h"
+#include "../../../include/BufferPool/StorageManager.h"
+#include "../../../include/BTree.h"
+#include "../../../../Server/include/Server.h"
+#include "../../../../Systemic/include/Guards/ReaderGuard.h"
+#include "../../../../Systemic/include/Guards/WriterGuard.h"
+#include "../../../../QueryPipeline/include/Statements.h"
+#include "../../../../Server/include/MasterDbColumns.h"
+#include "../../../include/Database.h"
+
+#include <cmath>
+#include <stdexcept>
+
+namespace DatabaseEngine::StorageTypes {
+      TableHeader::TableHeader() 
+      {
+        this->indexAllocationMapPageId = INVALID_PAGE_ID;
+        this->tableId = 0;
+        this->numberOfColumns = 0;
+        this->clusteredIndexPageId = INVALID_PAGE_ID;
+        this->ordinalPosition = 0;
+      }
+
+      TableHeader::~TableHeader() = default;
+
+      TableHeader &TableHeader::operator=(const TableHeader &tableHeader) 
+      {
+        if (this == &tableHeader)
+          return *this;
+
+        this->numberOfColumns = tableHeader.numberOfColumns;
+        this->tableId = tableHeader.tableId;
+
+
+        this->indexAllocationMapPageId = tableHeader.indexAllocationMapPageId;
+        this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
+        this->nonClusteredIndexPageIds = tableHeader.nonClusteredIndexPageIds;
+
+        this->clusteredIndex = tableHeader.clusteredIndex;
+
+        for(const auto& nonClusteredIndex: tableHeader.nonClusteredIndexes)
+            this->nonClusteredIndexes.push_back(nonClusteredIndex);
+
+        return *this;
+      }
+
+      Table::Table(
+        const table_id_t &tableId,
+        const int& ordinalPosition,
+        const vector<Column *> &columns,
+        DatabaseEngine::Database *database,
+        const Headers::Index* clusteredIndex,
+        const vector<Headers::Index> *nonClusteredIndexes)
+      {
+//        this->schema = schema;
+        this->columns = columns;
+        this->database = database;
+        this->header.numberOfColumns = columns.size();
+        this->header.tableId = tableId;
+        this->header.ordinalPosition = ordinalPosition;
+
+        this->clusteredIndexedTree = nullptr;
+
+        if(clusteredIndex) {
+          this->header.clusteredIndex = *clusteredIndex;
+          this->PopulateClusteredIndexCache(this->header.clusteredIndex);
+        }
+
+        if(nonClusteredIndexes)
+          this->header.nonClusteredIndexes = *nonClusteredIndexes;
+      }
+
+      Table::Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, DatabaseEngine::Database *database)
+      {
+        this->header = tableHeader;
+        this->header.tableId = masterDbHeader.id;
+        this->header.ordinalPosition = masterDbHeader.ordinalPosition;
+        this->database = database;
+        this->clusteredIndexedTree = nullptr;
+
+        this->PopulateClusteredIndexCache(this->header.clusteredIndex);
+      }
+
+      Table::Table(const std::string& tableName, const TableHeader &tableHeader, DatabaseEngine::Database *database)
+      {
+        this->header = tableHeader;
+        this->database = database;
+        this->clusteredIndexedTree = nullptr;
+
+        this->PopulateClusteredIndexCache(this->header.clusteredIndex);
+      }
+
+      Table::Table(
+        const Headers::sysTable &systemHeader,
+        const TableHeader &tableHeader,
+        const Headers::Index& primaryKey,
+        DatabaseEngine::Database *database,
+        const int& ordinalPosition){
+
+        this->header = tableHeader;
+        this->header.clusteredIndex = primaryKey;
+        this->database = database;
+        this->header.tableId = systemHeader.id;
+        this->header.ordinalPosition = ordinalPosition;
+        this->clusteredIndexedTree = nullptr;
+
+        for (int i = 0;i < systemHeader.columns.size(); i++)
+          this->AddColumn(new Column(systemHeader.columns[i], i,  this));
+
+        this->PopulateClusteredIndexCache(this->header.clusteredIndex);
+      }
+
+      Table::~Table()
+      {
+        delete this->clusteredIndexedTree;
+
+        for (const auto & nonClusteredIndexedTree : this->nonClusteredIndexedTrees) {
+          this->header.nonClusteredIndexPageIds.push_back(nonClusteredIndexedTree->GetFirstIndexPageId());
+            delete nonClusteredIndexedTree;
+        }
+
+        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->database->GetSystemFilename());
+
+        headerPage->SetTableHeader(this);
+
+        for (const auto &column : columns)
+            delete column;
+      }
+
+      void Table::PopulateClusteredIndexCache(const Headers::Index& index){
+          for (const auto& columnIndex: index.columns) {
+            const auto* column = this->columns[columnIndex];
+            this->clusteredIndexColumnsCache.Add(column->GetColumnId());
+          }
+      }
+
+      vector<DataType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const{
+          std::vector<DataType> columnDatatypes;
+
+          if(treeId == 0)
+          {
+            for(const auto& columnIndex: this->header.clusteredIndex.columns)
+                columnDatatypes.emplace_back(this->columns[columnIndex]->GetColumnType());
+
+            return columnDatatypes;
+          }
+
+//          for(const auto& columnIndex: this->header.nonClusteredColumnIndexes[treeId - 1])
+//              columns.emplace_back(this->columns[columnIndex]->GetColumnType());
+
+          return columnDatatypes;
+      }
+
+    Errors::RuntimeStatus Table::InsertRow(const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties, const vector<Value> &inputData){
+        extent_id_t startingExtentIndex = 0;
+        vector<extent_id_t> extents;
+
+        Logging::CheckPoint checkPoint;
+
+        auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, &checkPoint);
+
+        if (result.code != Errors::RuntimeError::Ok)
+          return result;
+
+        result =  this->InsertRow(row, extents, startingExtentIndex);
+
+        if (result.code != Errors::RuntimeError::Ok)
+          return result;
+
+        Database::LogCheckPoint(checkPoint);
+
+        result.message = "Rows affected: 1";
+        return result;
+    }
+
+    Errors::RuntimeStatus Table::InsertRow(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const vector<Value> &inputData,
+      const std::vector<Constants::column_index_t> &columnIndices
+    ){
+        extent_id_t startingExtentIndex = 0;
+        vector<extent_id_t> extents;
+
+        Logging::CheckPoint checkPoint;
+
+        auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &checkPoint);
+
+        if (result.code != Errors::RuntimeError::Ok)
+          return result;
+
+        result =  this->InsertRow(row, extents, startingExtentIndex);
+
+        if (result.code != Errors::RuntimeError::Ok)
+          return result;
+
+        Database::LogCheckPoint(checkPoint);
+
+        result.message = "Rows affected: 1";
+
+        return result;
+    }
+
+    Errors::RuntimeStatus Table::InsertRow(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const vector<Expressions::Expression *> &inputData,
+      const std::vector<Constants::column_index_t> &columnIndices
+    ){
+        extent_id_t startingExtentIndex = 0;
+        vector<extent_id_t> extents;
+
+        Logging::CheckPoint checkPoint;
+
+        auto[row,result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &checkPoint);
+
+        if (result.code != Errors::RuntimeError::Ok)
+          return result;
+
+        result = this->InsertRow(row, extents, startingExtentIndex);
+
+        if (result.code != Errors::RuntimeError::Ok)
+          return result;
+
+        Database::LogCheckPoint(checkPoint);
+
+        result.message = "Rows affected: 1";
+
+        return result;
+
+    }
+
+      Errors::RuntimeStatus Table::InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex)
+      {
+        this->InsertLargeObjectToPage(row);
+
+        //row_id
+        Headers::RowIdentifier rowId;
+        auto status = this->IsClustered()
+            ? this->ClusteredIndexInsert(row, &rowId)
+            : this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
+
+        if (status.code != Errors::RuntimeError::Ok)
+            return status;
+
+        //insert to NonClustered Indexes
+        for (int i = 0; i < this->header.nonClusteredIndexes.size(); i++) {
+            status = this->NonClusteredIndexInsert(row, i, rowId);
+
+            if (status.code != Errors::RuntimeError::Ok)
+                return status;
+        }
+
+        //update statistics (should change but just for testing)
+        this->UpdateTableStatisticsFromRowInsert(row);
+
+        return status;
+      }
+
+      std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
+        const Constants::transaction_id_t& transactionId,
+        const vector<Value>& inputData,
+        Logging::CheckPoint* checkPoint
+        )const
+      {
+        auto *row = new Row(*this);
+
+        this->PopulateAutoComputedColumns(row);
+
+        for(const auto& input : inputData){
+
+          const auto& associatedColumnIndex = input.GetColumnIndex();
+
+          const auto& column = this->columns.at(associatedColumnIndex);
+
+          //ignore auto-computed columns even if specified
+          if (column->HasIdentity())
+            continue;
+
+          auto *block = new Block(column);
+
+          if (input.IsNull())
+          {
+            Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
+            continue;
+          }
+
+          const auto dataInsertResult = block->SetData(input);
+
+          if (dataInsertResult.code != Errors::RuntimeError::Ok) {
+            delete block;
+            delete row;
+
+            return std::make_tuple(nullptr, dataInsertResult);
+          }
+
+          row->InsertColumnData(block, associatedColumnIndex);
+        }
+
+        row->SetCurrentTransactionId(transactionId);
+
+        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
+
+        return std::make_tuple(
+      row,
+          Errors::RuntimeStatus(
+            Errors::RuntimeError::Ok,
+      "Row created successfully"
+            )
+        );
+      }
+
+      std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
+        const Constants::transaction_id_t &transactionId,
+        const std::vector<Value> &inputData,
+        const std::vector<Constants::column_index_t> &columnIndices,
+        Logging::CheckPoint *checkPoint
+      ) const{
+        auto *row = new Row(*this);
+
+        this->PopulateAutoComputedColumns(row);
+
+        //TODO
+        //handle default values if no value is selected
+        for (int i = 0;i < inputData.size(); i++) {
+          const auto& input = inputData[i];
+
+          const auto& associatedColumnIndex = columnIndices.at(i);
+
+          const auto& column = this->columns.at(associatedColumnIndex);
+
+          //ignore auto-computed columns even if specified
+          if (column->GetIdentity().columnId != Constants::INVALID_COLUMN_ID)
+            continue;
+
+          auto *block = new Block(column);
+
+          if (column->GetColumnType() >= Constants::DataType::Unknown)
+            throw invalid_argument("Table::InsertRow: Unsupported Column Type");
+
+          if (input.IsNull())
+          {
+            Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
+            continue;
+          }
+
+          const auto result = block->SetData(input);
+
+          if (result.code != Errors::RuntimeError::Ok) {
+            delete block;
+            delete row;
+
+            return std::make_tuple(nullptr, result);
+          }
+
+          row->InsertColumnData(block, associatedColumnIndex);
+        }
+
+        row->SetCurrentTransactionId(transactionId);
+
+        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
+
+        return std::make_tuple(
+        row,
+          Errors::RuntimeStatus(
+            Errors::RuntimeError::Ok,
+            "Row created successfully"
+            )
+        );
+      }
+
+     std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
+        const Constants::transaction_id_t &transactionId,
+        const std::vector<Expressions::Expression *> &inputData,
+        const std::vector<Constants::column_index_t> &columnIndices,
+        Logging::CheckPoint *checkPoint
+      ) const{
+        Errors::RuntimeStatus result;
+
+        auto *row = new Row(*this);
+
+        this->PopulateAutoComputedColumns(row);
+        result.message = "Row created successfully";
+
+        for (int i = 0;i < inputData.size(); i++) {
+          const auto& input = inputData[i]->Evaluate({});
+
+          const auto& associatedColumnIndex = columnIndices.at(i);
+
+          const auto& column = this->columns.at(associatedColumnIndex);
+
+          //ignore auto-computed columns even if specified
+          if (column->HasIdentity())
+            continue;
+
+          auto *block = new Block(column);
+
+          if (input.IsNull())
+          {
+            Table::CheckAndInsertNullValues(block, row, associatedColumnIndex);
+            continue;
+          }
+
+          const auto dataInsertResult = block->SetData(input);
+
+          if (dataInsertResult.code != Errors::RuntimeError::Ok) {
+            delete block;
+            delete row;
+
+            return std::make_tuple(nullptr, dataInsertResult);
+          }
+
+          row->InsertColumnData(block, associatedColumnIndex);
+        }
+
+        row->SetCurrentTransactionId(transactionId);
+
+        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
+
+        return std::make_tuple(row,result);
+      }
+
+      column_number_t Table::GetNumberOfColumns() const { return this->columns.size(); }
+
+      const TableHeader &Table::GetHeader() const { return this->header; }
+
+      const vector<Column *> &Table::GetColumns() const { return this->columns; }
+
+      std::vector<const Column *> Table::GetConstantColumns() const {
+        std::vector<const Column*> constColumns;
+
+        for (const auto* column : this->columns)
+          constColumns.push_back(column);
+
+        return constColumns;
+      }
+
+      bool Table::VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition)
+      {
+        for(int i = 0;i < vector.size(); i++)
+            if(vector[i] == index)
+            {
+              indexPosition = i;
+              return true;
+            }
+
+        return false;
+      }
+
+    void Table::HeapDelete(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const Expressions::Expression* expression
+    ) const
+    {
+        if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return;
+
+        const auto& filename = this->database->GetFileName();
+
+        const auto tableMapPage =
+            Storage::StorageManager::Get().GetIndexAllocationMapPage(
+              filename,
+              this->header.indexAllocationMapPageId,
+              this
+            );
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
+
+        vector<Row*> rowsToBeInserted;
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+        for (const auto &extentId : tableExtentIds)
+        {
+          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+          auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+
+          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                       ? extentFirstPageId
+                                       : extentFirstPageId + 1;
+
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
+            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+              break;
+
+            auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
+
+            const auto* rows = page->GetDataRowsUnsafe();
+
+            for (int i = 0; i < rows->size(); i++) {
+              const auto& row = rows->at(i);
+
+              context.row = row;
+
+              if (expression->Evaluate(context).GetBool())
+                page->Delete(i);
+            }
+
+            page->UpdateBytesLeft();
+            page->UpdatePageSize();
+
+            pageFreeSpacePage->SetPageMetaData(page.Get());
+          }
+        }
+    }
+
+    void Table::ClusteredIndexScanDelete(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        const Expressions::Expression *expression,
+        QueryPipeline::PhysicalPlan::IndexState& state
+    ){
+        auto* tree = this->GetClusteredIndexedTree();
+
+        std::vector<const Row*> results;
+        tree->IndexScan(properties, &results, state);
+
+        if(results.empty())
+          return;
+
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+        for(const auto& row : results){
+
+          context.row = row;
+          const auto value = expression->Evaluate(context);
+          if(value.GetBool())
+          {
+            const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, row);
+            tree->Remove(key);
+          }
+        }
+   }
+
+  void Table::ClusteredIndexSeekDelete(
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const Expressions::Expression *expression,
+    QueryPipeline::PhysicalPlan::IndexState &state
+  ){
+
+  }
+
+    void Table::Truncate()
+    {
+        this->database->TruncateTable(this->header.tableId);
+    }
+
+    void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId)
+    {
+        this->header.indexAllocationMapPageId = indexAllocationMapPageId;
+    }
+
+    bool Table::IsColumnNullable(const column_index_t &columnIndex) const
+    {
+        return this->columns.at(columnIndex)->IsColumnNullable();
+    }
+
+    void Table::AddColumn(Column *column) { this->columns.push_back(column); }
+
+    string Table::GetSchema(){ return {}; }
+
+    const table_id_t &Table::GetTableId() const { return this->header.tableId; }
+
+    TableType Table::GetTableType() const
+    {
+        return !this->header.clusteredIndex.columns.empty()
+                    ? TableType::CLUSTERED
+                    : TableType::HEAP;
+    }
+
+    bool Table::IsClustered() const{
+        return !this->header.clusteredIndex.columns.empty();
+    }
+
+    row_size_t Table::GetMaximumRowSize() const
+    {
+        row_size_t maximumRowSize = 0;
+
+        for (const auto &column : this->columns)
+            maximumRowSize += column->isColumnLOB()
+                ? sizeof(Pages::DataObjectPointer)
+                : column->GetColumnSize();
+
+        return maximumRowSize;
+    }
+
+    row_size_t Table::ReduceMaximumRowSize() const {
+      row_size_t maximumRowSize = 0;
+
+      row_size_t largestVariableLengthColumnSize = 0;
+
+      Column* largestColumn = nullptr;
+
+      HashSet<column_index_t> clusteredColumns;
+
+      for(const auto& column : this->header.clusteredIndex.columns)
+        clusteredColumns.Add(column);
+
+      for (auto &column : this->columns) {
+        const auto& columnSize = column->GetColumnSize();
+
+        if (column->isColumnOverflowed())
+          maximumRowSize += sizeof(Pages::OverflowPointer);
+        else if (column->isColumnLOB())
+          maximumRowSize += sizeof(Pages::DataObjectPointer);
+        else
+          maximumRowSize += columnSize;
+
+        if(columnSize <= largestVariableLengthColumnSize
+            || column->isColumnOverflowed()
+            || columnSize >= LARGE_DATA_OBJECT_SIZE
+            || clusteredColumns.Contains(column->GetColumnIndex()))
+          continue;
+
+        largestVariableLengthColumnSize = columnSize;
+        largestColumn = column;
+      }
+
+      maximumRowSize -= largestVariableLengthColumnSize;
+      maximumRowSize += sizeof(Pages::OverflowPointer);
+
+      if (largestColumn != nullptr)
+        largestColumn->SetIsOverflowed(true);
+
+      return maximumRowSize;
+    }
+
+    void Table::HeapScan(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      std::vector<const Row*> *result,
+      QueryPipeline::PhysicalPlan::TableScanState& state
+    )const
+    {
+        if(this->header.indexAllocationMapPageId == Constants::INVALID_PAGE_ID)
+            return;
+
+        const auto& filename = this->database->GetFileName();
+
+        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, state.extentId);
+
+        for (const auto& extentId : tableExtentIds){
+          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+          const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+
+          const auto extentStartingPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                      ? extentFirstPageId
+                                      : extentFirstPageId + 1;
+
+          MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage->GetLatch());
+
+          for (page_id_t extentPageId = state.GetPageId(extentStartingPageId); extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
+            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+              break;
+
+            auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
+
+            MultiThreading::ReaderGuard lock(&page->GetLatch());
+
+            if (page->GetPageSize() == 0)
+              continue;
+
+            //update state to know where to start
+            state.extentId = extentId;
+            state.lastFetchedRowId.pageId = extentPageId;
+
+            const auto* pageRows = page->GetDataRowsUnsafe();
+
+            for (int i = state.GetNextKeyIndex(); i < page->GetPageSize(); i++) {
+              const auto* pageRow = (*pageRows)[i];
+
+
+              const auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
+
+              if (!row)
+                continue;
+
+              result->push_back(row);
+
+              state.lastFetchedRowId.indexId = i;
+
+              if (result->size() == properties.batchSize)
+                return;
+            }
+          }
+        }
+    }
+
+    Errors::RuntimeStatus Table::ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId){
+      auto* tree = this->GetClusteredIndexedTree();
+
+      const auto key = Database::CreateKey(this->GetClusteredIndex(), row);
+
+      int indexPosition = 0;
+
+      Errors::RuntimeStatus status;
+
+      auto node = tree->FindInsertNode(key, indexPosition, status);
+
+      if (status.code != Errors::RuntimeError::Ok)
+         return status;
+
+      auto pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
+
+      MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage->GetLatch());
+      MultiThreading::WriterGuard pageLock(&node->GetLatch());
+
+      // should never fail
+      this->InsertRowToClusteredPage(pageFreeSpacePage, node.Get(), row, indexPosition);
+
+      auto* keys = node->GetKeysUnsafe();
+
+      keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
+
+      node->UpdateBytesLeft();
+      node->UpdatePageSize();
+
+      rowId->indexId = indexPosition;
+      rowId->pageId = node->GetPageId();
+
+      status.primaryKey = key;
+      return status;
+     }
+
+    Errors::RuntimeStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const{
+      const auto& filename = this->database->GetFileName();
+
+      while(row->GetTotalRowSize() > Constants::PAGE_SIZE_WITHOUT_HEADER)
+        this->HandleRowOverflow(row);
+
+      if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+      {
+          auto newPage = this->database->CreateDataPage(this->header.ordinalPosition);
+
+          newPage->InsertRow(row, &rowId->indexId);
+          rowId->pageId = newPage->GetPageId();
+
+          return {};
+      }
+
+      const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+
+      tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
+      lastExtentIndex = allocatedExtents.size() - 1;
+
+      const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
+
+      for (const auto &extentId : allocatedExtents)
+      {
+          const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+
+          const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                                ? extentFirstPageId
+                                                : extentFirstPageId + 1;
+
+          for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+          {
+
+              auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pageId);
+
+              if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
+                  break;
+
+              const Constants::byte pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(pageId);
+
+              // find potential candidate
+              if (rowCategory <= pageSizeCategory)
+              {
+                  auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
+
+                  if (row->GetTotalRowSize() > page->GetBytesLeft())
+                      continue;
+
+                  page->InsertRow(row, &rowId->indexId);
+                  pageFreeSpacePage->SetPageMetaData(page.Get());
+
+                  rowId->pageId = pageId;
+                  return {};
+              }
+          }
+      }
+
+      auto newPage = this->database->CreateDataPage(this->header.ordinalPosition);
+      newPage->InsertRow(row, rowId->indexId);
+      rowId->pageId = newPage->GetPageId();
+
+      return {};
+    }
+
+    int Table::CreateNonClusteredIndex(vector<Constants::column_index_t> &columnIndices){
+        Headers::Index index;
+        index.columns = std::move(columnIndices);
+
+        this->header.nonClusteredIndexes.push_back(std::move(index));
+
+        return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
+    }
+
+  Errors::RuntimeStatus Table::HeapUpdate(
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const Expressions::Expression *expression,
+    const vector<Value> & updates
+  ){
+        if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return {};
+
+        const auto& filename = this->database->GetFileName();
+
+        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
+
+        HashSet<column_index_t> updatedColumns;
+        for(const auto& update : updates)
+              updatedColumns.Add(update.GetColumnIndex());
+
+        for (const auto& extentId : tableExtentIds){
+          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+          const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+
+          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                      ? extentFirstPageId
+                                      : extentFirstPageId + 1;
+
+          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
+            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+              break;
+
+            auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
+
+            if (page->GetPageSize() == 0)
+              continue;
+
+            const auto* rows = page->GetDataRowsUnsafe();
+
+            std::vector<extent_id_t> allocatedExtents;
+
+            for(auto* row : *rows){
+
+              context.row = row;
+              const auto value = expression->Evaluate(context);
+              if(!value.GetBool())
+                  continue;
+
+                const auto result = this->HandleRowUpdate(page.Get(), row, properties, updates, updatedColumns);
+
+                if (result.code != Errors::RuntimeError::Ok)
+                  return result;
+            }
+          }
+        }
+
+        return {};
+    }
+
+    Errors::RuntimeStatus Table::HeapUpdate(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const Expressions::Expression *expression,
+      const vector<QueryPipeline::Statements::UpdateColumn *> &updates
+    ){
+        if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return {};
+
+        const auto& filename = this->database->GetFileName();
+
+        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
+
+        HashSet<column_index_t> updatedColumns;
+        for(const auto& update : updates)
+              updatedColumns.Add(update->name.index);
+
+        for (const auto& extentId : tableExtentIds){
+          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+          const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+
+          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                      ? extentFirstPageId
+                                      : extentFirstPageId + 1;
+
+          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
+            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+              break;
+
+            auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
+
+            if (page->GetPageSize() == 0)
+              continue;
+
+            const auto* rows = page->GetDataRowsUnsafe();
+
+            std::vector<extent_id_t> allocatedExtents;
+            extent_id_t startingExtentIndex = 0;
+
+            for(auto* row : *rows){
+              context.row = row;
+              const auto value = expression->Evaluate(context);
+              if(!value.GetBool())
+                  continue;
+
+                const auto result = this->HandleRowUpdate(page.Get(), row, properties, updates, updatedColumns);
+
+                if (result.code != Errors::RuntimeError::Ok)
+                  return result;
+            }
+          }
+        }
+
+        return {};
+    }
+
+    void Table::DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const{
+      const auto& filename = this->database->GetFileName();
+
+      const RowHeader* rowHeader = row->GetHeader();
+
+      for(const auto& block : row->GetData()){
+        const auto& columnIndex = block->GetColumnIndex();
+
+        if(!updatedColumns.Contains(columnIndex)
+          || !rowHeader->largeObjectBitMap->Get(columnIndex))
+          continue;
+
+        rowHeader->largeObjectBitMap->Set(columnIndex, false);
+
+        auto objectPointer = block->GetLargeObjectPointer();
+
+        auto largeObjectPage = Storage::StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, this);
+
+        auto* objectPtr = largeObjectPage->DeleteObject();
+
+        {
+          auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
+
+          MultiThreading::WriterGuard lock(&pfsPage->GetLatch());
+
+          pfsPage->SetPageMetaData(largeObjectPage.Get());
+          pfsPage->SetPageFreed(largeObjectPage->GetPageId());
+        }
+
+
+        while(objectPtr->nextPageId != 0){
+            auto nextLargeObjectPage = Storage::StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, this);
+
+            auto* prevObject = objectPtr;
+            objectPtr = nextLargeObjectPage->DeleteObject();
+
+            {
+              auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
+
+              MultiThreading::WriterGuard lock(&pfsPage->GetLatch());
+
+              pfsPage->SetPageMetaData(nextLargeObjectPage.Get());
+              pfsPage->SetPageFreed(nextLargeObjectPage->GetPageId());
+
+            }
+
+        }
+      }
+    }
+
+    void Table::ClusteredIndexScanUpdate(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const Expressions::Expression *expression,
+      const vector<Value> & updates
+    ){
+      const auto* tree = this->GetClusteredIndexedTree();
+
+      tree->IndexScanUpdate(properties, expression, updates);
+    }
+
+    Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const Expressions::Expression *expression,
+      const vector<QueryPipeline::Statements::UpdateColumn *> &updates
+    ){
+        const auto* tree = this->GetClusteredIndexedTree();
+
+        return (expression == nullptr)
+          ? tree->IndexScanUpdate(properties, updates)
+          : tree->IndexScanUpdate(properties, expression, updates);
+    }
+
+    Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
+        const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+        const Expressions::Expression* expression,
+        const DataTypes::Indexing::Key* minimumValue,
+        const DataTypes::Indexing::Key* maximumValue,
+        const vector<Value> & updates
+    ){
+        auto* tree = this->GetClusteredIndexedTree();
+
+        return (expression == nullptr)
+            ? tree->IndexSeekUpdate(properties, minimumValue, maximumValue, updates)
+            : tree->IndexSeekUpdate(properties, expression, minimumValue, maximumValue, updates);
+    }
+
+    string Table::GetFileName() const{ return this->database->GetFileName(); }
+
+    int Table::HandleRowOverflow(const Row *row)const{
+      auto* largestBlock = row->FindLargestVariableLengthColumn();
+
+      if(largestBlock == nullptr)
+        return -1;
+
+      auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->GetBlockSize());
+
+      int indexPos = 0;
+      overflowPage->InsertObject(largestBlock->GetBlockData(), largestBlock->GetBlockSize(), indexPos);
+
+      row->SetOverflowBitMapValue(largestBlock->GetColumnIndex(), true);
+
+      auto pfsPage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), overflowPage->GetPageId());
+
+      pfsPage->SetPageMetaData(overflowPage.Get());
+
+      const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
+      largestBlock->SetData(&ptr, sizeof(Pages::OverflowPointer));
+
+      return largestBlock->GetBlockSize();
+    }
+
+    void Table::DeleteOverflowedRowsFromPage(Row *row, const HashSet<column_index_t> & updatedColumns)const{
+      const auto& filename = this->database->GetFileName();
+
+      const RowHeader* rowHeader = row->GetHeader();
+
+      for(const auto& block : row->GetData()){
+        if(!updatedColumns.Contains(block->GetColumnIndex())
+          || !rowHeader->overflowBitMap->Get(block->GetColumnIndex()))
+            continue;
+
+        rowHeader->overflowBitMap->Set(block->GetColumnIndex(), false);
+
+        auto objectPointer = block->GetOverflowPointer();
+
+        auto overflowPage = Storage::StorageManager::Get().GetOverflowPage(filename, objectPointer.pageId, this);
+
+        const auto* overflowRow = overflowPage->DeleteObject(objectPointer.index);
+
+        auto pfsPage = Storage::StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
+
+        pfsPage->SetPageMetaData(overflowPage.Get());
+
+        delete overflowRow;
+      }
+    }
+
+    //create differrent one to handle clustered updates
+    Errors::RuntimeStatus Table::HandleRowUpdate(
+      Pages::Page *page,
+      Row *row,
+      const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+      const std::vector<Value> &updates,
+      const HashSet<column_index_t>& updatedColumns,
+      const bool &isHeap
+    ){
+        // this->DeleteLargeObjectFromPage(row, updatedColumns);
+        // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+
+        //copy row for old transactions
+        //this has the pointers of the old row to LOBS and overflow pages
+
+        Pages::RowVersionPointer oldVersionPointer;
+        Server::ServerInstance::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
+        row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
+        row->SetCurrentTransactionId(properties.snapshot.transactionId);
+
+        int diff = 0;
+        auto result = row->Update(updates, diff);
+
+        if (result.code != Errors::RuntimeError::Ok)
+          return result;
+
+        if(page->GetBytesLeft() - diff > 0){
+          page->UpdateBytesLeft();
+          return result;
+        }
+
+        this->InsertLargeObjectToPage(row);
+
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalRowSize()) > 0){
+          vector<extent_id_t> allocatedExtents;
+          extent_id_t startingExtentIndex = 0;
+
+          return this->InsertRow(row, allocatedExtents, startingExtentIndex);
+        }
+
+        while(page->GetBytesLeft() - diff < 0){
+          const int result = this->HandleRowOverflow(row);
+          if(result == -1)
+            break;
+
+          diff -= result;
+        }
+
+        return {};
+    }
+
+  Errors::RuntimeStatus Table::HandleRowUpdate(
+    Pages::Page *page,
+    Row *row,
+    const QueryPipeline::PhysicalPlan::PhysicalPlanExecutionProperties& properties,
+    const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
+    const HashSet<column_index_t> &updatedColumns,
+    const bool &isHeap){
+        // this->DeleteLargeObjectFromPage(row, updatedColumns);
+        // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+
+        Pages::RowVersionPointer oldVersionPointer;
+
+        Server::ServerInstance::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
+        row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
+        row->SetCurrentTransactionId(properties.snapshot.transactionId);
+
+        int diff = 0;
+        auto result = row->Update(updates, diff);
+
+        if(page->GetBytesLeft() - diff > 0){
+          page->UpdateBytesLeft();
+          return result;
+        }
+
+        this->InsertLargeObjectToPage(row);
+
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalRowSize()) > 0){
+          vector<extent_id_t> allocatedExtents;
+          extent_id_t startingExtentIndex = 0;
+
+          return this->InsertRow(row, allocatedExtents, startingExtentIndex);
+        }
+
+        while(page->GetBytesLeft() - diff < 0){
+          const int result = this->HandleRowOverflow(row);
+          if(result == -1)
+            break;
+
+          diff -= result;
+        }
+
+        return {};
+  }
+
+    void Table::InsertRowToPage(Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage, Pages::PageGuard<Pages::Page>& page, Row *row, const int & indexPosition)const{
+
+      while (row->GetTotalRowSize() > page->GetBytesLeft())
+        this->HandleRowOverflow(row);
+
+      page->InsertRow(row, indexPosition);
+      pageFreeSpacePage->SetPageMetaData(page.Get());
+    }
+
+    void Table::InsertRowToClusteredPage(Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage, Pages::Page* page, Row *row, const int & indexPosition)const{
+      for(const auto& column: this->columns){
+        if(!column->isColumnOverflowed())
+          continue;
+
+        this->HandleRowOverflow(row, column);
+      }
+
+      page->InsertRow(row, indexPosition);
+      pageFreeSpacePage->SetPageMetaData(page);
+    }
+
+    void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t &indexPos){
+
+        auto* clusteredTree = this->GetClusteredIndexedTree();
+
+        clusteredTree->InsertRowsToOtherTree(indexPos);
+    }
+
+    void Table::InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos){
+        if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+          return;
+
+        const auto& filename = this->database->GetFileName();
+
+        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+
+        vector<extent_id_t> tableExtentIds;
+        tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
+
+        const auto& indexedColumns = this->header.nonClusteredIndexes.at(indexPos).columns;
+
+        for (const auto& extentId : tableExtentIds){
+          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+
+          const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+
+          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                      ? extentFirstPageId
+                                      : extentFirstPageId + 1;
+
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          {
+            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+              break;
+
+            auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
+
+            if (page->GetPageSize() == 0)
+              continue;
+
+            const auto* rows = page->GetDataRowsUnsafe();
+
+            std::vector<extent_id_t> allocatedExtents;
+            extent_id_t startingExtentIndex = 0;
+
+            for (int i = 0; i < rows->size(); i++) {
+              const auto* row = rows->at(i);
+
+              Headers::RowIdentifier rowId(extentPageId, i);
+              const auto key = Database::CreateKey(indexedColumns, row, rowId);
+
+              this->NonClusteredIndexInsert(row, indexPos, rowId);
+            }
+          }
+        }
+    }
+
+    Errors::RuntimeStatus Table::NonClusteredIndexInsert(
+      const StorageTypes::Row *row,
+      const int & nonClusteredIndexId,
+      const Headers::RowIdentifier & data){
+
+      const auto& indexedColumns = this->header.nonClusteredIndexes.at(nonClusteredIndexId).columns;
+
+      auto* tree = this->GetNonClusteredIndexTree(nonClusteredIndexId);
+
+      const auto key = Database::CreateKey(indexedColumns, row, data);
+
+      int indexPosition = 0;
+      Errors::RuntimeStatus status;
+
+      auto node = tree->FindInsertNode(key, indexPosition, status);
+
+      if (status.code != Errors::RuntimeError::Ok)
+          return status;
+
+      auto* keys = node->GetKeysUnsafe();
+
+      keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
+
+      auto* rows = node->GetNonClusteredDataUnsafe();
+
+      rows->insert(rows->begin() + indexPosition, new Headers::RowIdentifier(data));
+
+      node->UpdatePageSize();
+      node->UpdateBytesLeft();
+
+      auto pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
+      pageFreeSpacePage->SetPageMetaData(node.Get());
+
+      return status;
+    }
+
+    Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const int &indexPos){
+        const auto tableType = this->GetTableType();
+
+        if (tableType == TableType::CLUSTERED) {
+          this->InsertExistingRowsToNonClusteredIndexByClusteredIndex(indexPos);
+          return {};
+        }
+
+        this->InsertExistingRowToNonClusteredIndexByHeap(indexPos);
+
+        return {};
+    }
+
+    int Table::HandleRowOverflow(Row *row, const Column *column)const{
+
+        auto& data = row->GetData();
+
+        if(data.size() < column->GetColumnIndex())
+          return -1;
+
+        auto* largestBlock = row->GetData().at(column->GetColumnIndex());
+
+        auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->GetBlockSize());
+
+        int indexPos = 0;
+        overflowPage->InsertObject(largestBlock->GetBlockData(), largestBlock->GetBlockSize(), indexPos);
+
+        row->SetOverflowBitMapValue(largestBlock->GetColumnIndex(), true);
+
+        const auto pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(overflowPage->GetPageId());
+
+        auto pfsPage = Storage::StorageManager::Get().GetPageFreeSpacePage(this->database->GetFileName(), pfsPageId);
+
+        pfsPage->SetPageMetaData(overflowPage.Get());
+
+        const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
+        largestBlock->SetData(&ptr, sizeof(Pages::OverflowPointer));
+
+        return largestBlock->GetBlockSize();
+    }
+
+    bool Table::IsColumnAutoComputedPrimaryKey(const Column *column) const{
+        return this->clusteredIndexColumnsCache.Contains(column->GetColumnId())
+          && this->clusteredIndexColumnsCache.Size() == 1;
+    }
+
+    void Table::PopulateAutoComputedColumns(Row *row)const{
+        int64_t outValue = 0;
+
+        for (auto* column: this->columns) {
+          const auto result = Table::PopulateColumnIdentity(row, column, outValue);
+
+          if (result == true)
+            continue;
+
+          Table::PopulateDefaultValues(row, column);
+        }
+    }
+
+    bool Table::PopulateColumnIdentity(Row *row, Column*& column, int64_t& outValue) {
+        if (!column->GenerateIdentityValue(outValue))
+          return false;
+
+        const auto& columnSize = column->GetColumnSize();
+
+        auto* block = new Block(&outValue, columnSize ,column);
+
+        row->InsertColumnData(block, column->GetColumnIndex());
+
+        return true;
+      }
+
+      void Table::PopulateDefaultValues(Row *row, Column*& column) {
+        const auto& defaultValue = column->GetDefaultValue();
+
+        if (defaultValue.columnId == Constants::INVALID_COLUMN_ID)
+          return;
+
+        auto* block = new Block(defaultValue.value.data(), defaultValue.value.size(), column);
+
+        row->InsertColumnData(block, column->GetColumnIndex());
+      }
+
+    void Table::GetColumnsHeaders()const{
+      const auto columnsHeaders = Server::ServerInstance::Get().SelectColumns(this->header.tableId);
+
+      if (this->header.tableId == 13) {
+        int val = 0;
+      }
+      if (columnsHeaders.empty())
+        return;
+
+      for (int i = 0;i < this->columns.size(); i++) {
+        auto& column = columns[i];
+
+        column->SetColumnId(columnsHeaders[i].id);
+      }
+    }
+
+    void Table::UpdateIdentityManagersIds() const{
+        const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+
+        if(identityHeaders.empty())
+          return;
+
+        for(const auto& column: this->columns){
+          for (const auto& identity: identityHeaders) {
+
+            if(column->GetColumnId() != identity.columnId)
+              continue;
+
+            column->SetIdentityManagerIds(this->header.tableId);
+            break;
+          }
+        }
+    }
+
+    void Table::GetIdentityColumns()const{
+      const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+
+      if(identityHeaders.empty())
+        return;
+
+      for(const auto& column: this->columns){
+        for (const auto& identity: identityHeaders) {
+
+          if(column->GetColumnId() != identity.columnId)
+            continue;
+
+          column->SetIdentity(identity);
+          break;
+        }
+      }
+    }
+
+    void Table::GetIdentityColumnById(const int32_t &columnId)const{
+        const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+
+        if (identityHeaders.empty())
+          return;
+
+        for(const auto& column: this->columns){
+
+          if (columnId != column->GetColumnId())
+            continue;
+
+          for (const auto& identity: identityHeaders) {
+            if(column->GetColumnId() != identity.columnId)
+              continue;
+
+            column->SetIdentity(identity);
+            break;
+          }
+        }
+    }
+
+    void Table::GetDefaultValuesHeaders() const{
+        for(const auto& column: this->columns) {
+          const auto systemHeader = Server::ServerInstance::Get().SelectDefaultValueByColumnId(column->GetColumnId());
+
+          if (systemHeader.columnId == Constants::INVALID_COLUMN_ID)
+            continue;
+
+          column->SetDefaultValue(systemHeader);
+        }
+    }
+
+    void Table::GetIndexes(){
+        Dictionary<int32_t, Column*> columnsDict;
+
+        for (auto& column: this->columns)
+          columnsDict.Add(column->GetColumnId(), column);
+
+        const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->header.tableId);
+
+        for (const auto& index: indexes) {
+          const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexId(index.id);
+
+          std::vector<column_index_t> indexColumnsIndices;
+          for (const auto& indexedColumn : indexedColumns)
+            indexColumnsIndices.emplace_back(columnsDict.Get(indexedColumn.columnId)->GetColumnIndex());
+
+
+          if (index.isClustered) {
+            this->header.clusteredIndex.columns = std::move(indexColumnsIndices);
+            continue;
+          }
+
+          Headers::Index tableIndex(indexColumnsIndices);
+
+          this->header.nonClusteredIndexes.push_back(std::move(tableIndex));
+        }
+    }
+
+    void Table::GetStatistics(){
+        static auto& server = Server::ServerInstance::Get();
+
+        this->header.statistics = server.SelectTableStatisticsById(this->header.tableId);
+
+        for (auto* column : this->columns) {
+          const auto& columnId = column->GetColumnId();
+          const auto& columnType = column->GetColumnType();
+
+          const auto columnStatistics = server.SelectColumnStatisticsById(columnId, columnType);
+          column->SetColumnStatistics(columnStatistics);
+
+          auto histograms = server.SelectColumnHistogramsByColumnId(columnId, columnType);
+          column->SetHistograms(histograms);
+        }
+    }
+
+    void Table::UpdateMasterDatabase() const{
+      for (const auto& column: this->columns)
+        column->UpdateMetadata();
+    }
+
+  void Table::UpdateColumnName(const Constants::column_index_t &index, const std::string &name)const{
+      auto* column = this->columns.at(index);
+
+      column->SetColumnName(name);
+  }
+
+  void Table::PopulateColumn(const Constants::column_index_t &index, const Value &defaultValue){
+      if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+        return;
+
+      if (this->GetTableType() == TableType::CLUSTERED) {
+        this->PopulateColumnByClusteredIndex(index, defaultValue);
+        return;
+      }
+
+      this->PopulateColumnByHeap(index, defaultValue);
+  }
+
+  void Table::PopulateColumnByClusteredIndex(const Constants::column_index_t &index, const Value &defaultValue){
+        const auto* tree = this->GetClusteredIndexedTree();
+
+        tree->InsertColumnToRow(index, defaultValue);
+  }
+//TODO add heap insert if row still cant remain in page if heap
+  void Table::HandleAddColumn(Pages::Page* page, Row *row, const Constants::column_index_t& index, const Value &defaultValue){
+        const auto& column = this->columns.at(index);
+
+        auto* block = new Block(defaultValue.GetRawData(), defaultValue.GetSize(), column);
+
+        int diff = row->InsertNewColumn(block);
+
+        if(page->GetBytesLeft() - diff > 0){
+          page->UpdateBytesLeft();
+          return;
+        }
+
+        this->InsertLargeObjectToPage(row);
+
+        // if(isHeap && (PAGE_SIZE - PageHeader::GetPageHeaderSize() - row->GetTotalRowSize()) > 0){
+        //   vector<extent_id_t> allocatedExtents;
+        //   extent_id_t startingExtentIndex = 0;
+        //
+        //   this->InsertRInsertRow(row, allocatedExtents, startingExtentIndex);
+        //
+        //   return;
+        // }
+
+        while(page->GetBytesLeft() - diff < 0){
+          const int result = this->HandleRowOverflow(row);
+
+          if(result == -1)
+            break;
+
+          diff -= result;
+        }
+  }
+
+  void Table::HandleRemoveColumn(Pages::Page* page, Row *row, const Constants::column_index_t &index){
+        auto& data = row->GetData();
+
+        data.erase(data.begin() + index);
+
+        page->UpdateBytesLeft();
+  }
+
+  void Table::PopulateColumnByHeap(const Constants::column_index_t &index, const Value &defaultValue){
+    const auto& filename = this->GetFileName();
+
+    const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+
+    std::vector<extent_id_t> allocatedExtents;
+    tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
+
+    for (const auto& extentId: allocatedExtents) {
+      const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+
+      const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                            ? extentFirstPageId
+                                            : extentFirstPageId + 1;
+
+      for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+      {
+          auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pageId);
+
+          if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
+            break;
+
+          auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
+
+          for (auto* row: *page->GetDataRowsUnsafe())
+            this->HandleAddColumn(page.Get(), row, index, defaultValue);
+
+          pageFreeSpacePage->SetPageMetaData(page.Get());
+        }
+    }
+  }
+
+  void Table::RemoveColumn(const Constants::column_index_t &index){
+    //add also last updated at deleted at etc...
+    const auto* removedColumn = this->columns.at(index);
+
+    const auto& server = Server::ServerInstance::Get();
+
+    //schema adjustments in master db change this as well
+    const std::vector<Value> removedColumnUpdates = {
+      Value(true, static_cast<column_index_t>(Server::SysColumns::IsDeleted)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::LastModifiedAt)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::DeletedAt)),
+    };
+
+    auto result = server.UpdateColumnById(removedColumn->GetColumnId(), removedColumnUpdates);
+
+    this->HandleRemoveColumn(removedColumn->GetColumnIndex());
+    this->columns.erase(this->columns.begin() + index);
+
+    for (int i = index; i < this->columns.size(); i++) {
+      const auto& column = this->columns[i];
+
+      column->SetColumnIndex(i);
+
+      const vector<Value> updates = {
+        Value(i, static_cast<column_index_t>(Server::SysColumns::OrdinalPosition))
+      };
+
+      //adjust in master db
+      result = server.UpdateColumnById(column->GetColumnId(), updates);
+    }
+
+    //adjust rows by heap or clustered
+    delete removedColumn;
+  }
+
+  void Table::HandleRemoveColumn(const Constants::column_index_t &index){
+    if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+      return;
+
+    if (this->GetTableType() == TableType::CLUSTERED) {
+      this->RemoveColumnByClusteredIndex(index);
+      return;
+    }
+
+    this->RemoveColumnByHeap(index);
+  }
+
+  void Table::RemoveColumnByClusteredIndex(const column_index_t &index){
+
+    const auto* tree = this->GetClusteredIndexedTree();
+
+    tree->RemoveColumnFromRow(index);
+  }
+
+  void Table::RemoveColumnByHeap(const column_index_t &index)const{
+    const auto& filename = this->GetFileName();
+
+    const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+
+    std::vector<extent_id_t> allocatedExtents;
+    tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
+
+    for (const auto& extentId: allocatedExtents) {
+      const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+
+      const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+                                            ? extentFirstPageId
+                                            : extentFirstPageId + 1;
+
+      for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+      {
+        auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pageId);
+
+        if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
+          break;
+
+        auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
+
+        for (auto* row: *page->GetDataRowsUnsafe())
+          Table::HandleRemoveColumn(page.Get(), row, index);
+
+        pageFreeSpacePage->SetPageMetaData(page.Get());
+      }
+    }
+  }
+
+  void Table::UpdateTableStatisticsFromRowInsert(const Row* row){
+        auto& stats = this->header.statistics;
+
+        stats.avgRowSize = std::ceil(
+            (stats.avgRowSize * stats.rowCount + row->GetTotalRowSize()) /
+            (stats.rowCount + 1)
+        );
+        stats.rowCount++;
+
+        Server::ServerInstance::Get().UpdateTableStatisticsById(
+          this->header.tableId,
+          stats.rowCount,
+          stats.avgRowSize
+        );
+
+        //TODO fix updating
+        for (auto* column : this->columns)
+          column->UpdateColumnStatistics(row);
+  }
+}
+
+ // namespace DatabaseEngine::StorageTypes

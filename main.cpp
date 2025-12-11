@@ -1,8 +1,8 @@
-﻿#include "src/Database/GarbageCollector/GarbageCollector.h"
-#include "src/QueryPipeline/Parser/Parser.h"
-#include "src/Server/Server.h"
-#include "src/Server/ConnectionManager/ConnectionManager.h"
-#include "src/Systemic/Functions/StringFunctions.h"
+﻿#include "src/Database/include/GarbageCollector.h"
+#include "src/QueryPipeline/include/Parser.h"
+#include "src/Server/include/Server.h"
+#include "src/Server/include/ConnectionManager.h"
+#include "src/Systemic/include/Functions/StringFunctions.h"
 
 #include <atomic>
 #include <chrono>
