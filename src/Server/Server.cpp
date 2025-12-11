@@ -403,7 +403,7 @@ namespace Server {
         //   );
 
         columnNameToIndex.Add(column.name, columnPos);
-        columnIdsDict.Add(column.name,columnResult.primaryKey.AsInt());
+        columnIdsDict.Add(column.name,columnResult.primaryKey.AsInt(1));
 
         columnPos++;
       }
