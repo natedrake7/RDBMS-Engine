@@ -1,6 +1,6 @@
-#include "../../include/Optimizer.h"
+#include "../include/Optimizer.h"
 
-#include "../../include/LogicalPlan.h"
+#include "../include/LogicalPlan.h"
 
 namespace QueryPipeline::Optimizer {
   SeekRange::SeekRange() {

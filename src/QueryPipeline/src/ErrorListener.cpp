@@ -1,4 +1,4 @@
-#include "../../include/ErrorListener.h"
+#include "../include/ErrorListener.h"
 
 
 namespace QueryPipeline {

@@ -1,14 +1,14 @@
-#include "../../include/Parser.h"
+#include "../include/Parser.h"
 #include <string>
 #include <vector>
 #include "SQLParser.h"
 #include <typeindex>
-#include "../../../Database/include/Managers/TransactionManager.h"
-#include "../../../Server/include/Server.h"
-#include "../../include/Cursor.h"
-#include "../../include/Visitor.h"
-#include "../../include/LogicalPlan.h"
-#include "../../include/ErrorListener.h"
+#include "../../Database/include/Managers/TransactionManager.h"
+#include "../../Server/include/Server.h"
+#include "../include/Cursor.h"
+#include "../include/Visitor.h"
+#include "../include/LogicalPlan.h"
+#include "../include/ErrorListener.h"
 #include <thread>
 
 #include <SQLBaseListener.h>

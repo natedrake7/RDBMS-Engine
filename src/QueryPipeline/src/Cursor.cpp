@@ -1,4 +1,4 @@
-#include "../../include/Cursor.h"
+#include "../include/Cursor.h"
 
 namespace QueryPipeline {
   Cursor::Cursor(

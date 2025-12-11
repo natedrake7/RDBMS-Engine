@@ -1,7 +1,7 @@
-#include "../../include/LogicalPlan.h"
-#include "../../../Server/include/Server.h"
-#include "../../include/Optimizer.h"
-#include "../../include/Statements.h"
+#include "../include/LogicalPlan.h"
+#include "../../Server/include/Server.h"
+#include "../include/Optimizer.h"
+#include "../include/Statements.h"
 
 #include <utility>
 

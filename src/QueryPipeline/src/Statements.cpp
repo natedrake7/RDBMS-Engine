@@ -1,12 +1,12 @@
-#include "../../include/Statements.h"
+#include "../include/Statements.h"
 
-#include "../../include/Constants.h"
-#include "../../../Database/include/Database.h"
-#include "../../../Systemic/include/Coercions.h"
-#include "../../../Systemic/include/Functions/StringFunctions.h"
-#include "../../../Server/include/Server.h"
-#include "../../include/LogicalPlan.h"
-#include "../../../Server/include/Server.Constants.h"
+#include "../include/Constants.h"
+#include "../../Database/include/Database.h"
+#include "../../Systemic/include/Coercions.h"
+#include "../../Systemic/include/Functions/StringFunctions.h"
+#include "../../Server/include/Server.h"
+#include "../include/LogicalPlan.h"
+#include "../../Server/include/Server.Constants.h"
 
 #include <iostream>
 #include <ranges>
