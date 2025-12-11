@@ -323,22 +323,56 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     const DataTypes::Guid& sessionId,
     Statements::DataSource *table,
     const AlterTableType& type,
-    Statements::AlterColumn *alterColumn,
-    Statements::NewColumn *addColumn,
-    Statements::DropColumn *dropColumn,
-    Statements::RenameColumn *renameColumn)
-    : LogicalPlan(sessionId), table(table), type(type) , alterColumn(alterColumn), dropColumn(dropColumn), renameColumn(renameColumn), addColumn(addColumn) {}
+    Statements::NewColumn *column
+  ): LogicalPlan(sessionId), table(table), type(type) {
+      this->column = {
+        .addColumn = column
+      };
+  }
+
+  LogicalAlterTable::LogicalAlterTable(
+    const DataTypes::Guid& sessionId,
+    Statements::DataSource *table,
+    const AlterTableType& type,
+    Statements::AlterColumn *column
+  ): LogicalPlan(sessionId), table(table), type(type) {
+      this->column = {
+        .alterColumn = column
+      };
+    }
+
+  LogicalAlterTable::LogicalAlterTable(
+    const DataTypes::Guid& sessionId,
+    Statements::DataSource *table,
+    const AlterTableType& type,
+    Statements::RenameColumn *column
+  ): LogicalPlan(sessionId), table(table), type(type) {
+      this->column = {
+        .renameColumn = column
+      };
+    }
+
+  LogicalAlterTable::LogicalAlterTable(
+    const DataTypes::Guid& sessionId,
+    Statements::DataSource *table,
+    const AlterTableType& type,
+    Statements::DropColumn *column
+  ): LogicalPlan(sessionId), table(table), type(type) {
+      this->column = {
+        .dropColumn = column
+      };
+    }
 
     PhysicalPlan::ExecutionNode * LogicalAlterTable::ToPhysical(){
       switch (this->type) {
-        case AlterTableType::AlterColumn:
-          return new PhysicalPlan::PhysicalAlterColumn(this->sessionId, this->table, this->alterColumn);
         case AlterTableType::AddColumn:
-          return new PhysicalPlan::PhysicalAddColumn(this->sessionId, this->table, this->addColumn);
-        case AlterTableType::DropColumn:
-          return new PhysicalPlan::PhysicalDropColumn(this->sessionId, this->table, this->dropColumn);
+          return new PhysicalPlan::PhysicalAddColumn(this->sessionId, this->table, this->column.addColumn);
+        case AlterTableType::AlterColumn:
+          return new PhysicalPlan::PhysicalAlterColumn(this->sessionId, this->table, this->column.alterColumn);
         case AlterTableType::RenameColumn:
-          return new PhysicalPlan::PhysicalRenameColumn(this->sessionId, this->table, this->renameColumn);
+          return new PhysicalPlan::PhysicalRenameColumn(this->sessionId, this->table, this->column.renameColumn);
+        case AlterTableType::DropColumn:
+          return new PhysicalPlan::PhysicalDropColumn(this->sessionId, this->table, this->column.dropColumn);
         default:
           return nullptr;
       }

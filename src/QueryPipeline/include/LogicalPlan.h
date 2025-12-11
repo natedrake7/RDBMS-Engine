@@ -228,19 +228,40 @@ namespace QueryPipeline {
       Statements::DataSource* table;
       Constants::AlterTableType type;
 
-      Statements::AlterColumn* alterColumn;
-      Statements::DropColumn* dropColumn;
-      Statements::RenameColumn* renameColumn;
-      Statements::NewColumn* addColumn;
+      union {
+        Statements::NewColumn* addColumn;
+        Statements::AlterColumn* alterColumn;
+        Statements::RenameColumn* renameColumn;
+        Statements::DropColumn* dropColumn;
+      } column;
 
       explicit LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource* table,
         const AlterTableType& type,
-        Statements::AlterColumn* alterColumn,
-        Statements::NewColumn* addColumn,
-        Statements::DropColumn* dropColumn,
-        Statements::RenameColumn* renameColumn);
+        Statements::NewColumn* column
+      );
+
+      explicit LogicalAlterTable(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource* table,
+        const AlterTableType& type,
+        Statements::AlterColumn* column
+      );
+
+      explicit LogicalAlterTable(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource* table,
+        const AlterTableType& type,
+        Statements::RenameColumn* column
+      );
+
+      explicit LogicalAlterTable(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource* table,
+        const AlterTableType& type,
+        Statements::DropColumn* column
+      );
 
       PhysicalPlan::ExecutionNode * ToPhysical() override;
   };

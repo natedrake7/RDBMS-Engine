@@ -16,11 +16,7 @@ namespace QueryPipeline::PhysicalPlan{
   ExecutionResult * PhysicalAddColumn::Execute(const ExecutionProperties& properties){
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
 
-    auto& server = Server::ServerInstance::Get();
-
-    const auto* session = server.GetSession(this->sessionId);
-
-    if (session == nullptr || session->user == nullptr)
+    if (this->session == nullptr || this->session->user == nullptr)
       return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
@@ -28,7 +24,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     //if add occurs in a different index pos chaos ensues
     const auto columnResult =
-        server.InsertColumnToMasterDb(
+        this->server->InsertColumnToMasterDb(
           properties,
           this->table->tableId,
           this->column->name.name,
@@ -39,7 +35,7 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->isNullable,
           this->column->index,
           false,
-          session->user->name
+          this->session->user->name
           );
 
       if (columnResult.code != Errors::RuntimeError::Ok) {
@@ -51,19 +47,25 @@ namespace QueryPipeline::PhysicalPlan{
 
     if (!this->column->defaultValue.IsNull()) {
       const auto value = this->column->defaultValue.GetString();
-      const auto defaultValueResult = server.InsertDefaultValuesToMasterDb(properties, columnResult.primaryKey.AsInt(1), this->column->defaultValue);
+
+      const auto defaultValueResult =
+          this->server->InsertDefaultValuesToMasterDb(
+            properties,
+            columnResult.primaryKey.AsInt(1),
+            this->column->defaultValue
+          );
     }
 
-    const auto* db = server.UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     auto* columnPtr = new DatabaseEngine::StorageTypes::Column(
-      this->column->name.name,
-      columnType,
-      this->column->type.size,
-      this->column->index,
-      this->column->isNullable
+        this->column->name.name,
+        columnType,
+        this->column->type.size,
+        this->column->index,
+        this->column->isNullable
     );
 
     columnPtr->SetColumnId(columnResult.primaryKey.AsInt(1));
@@ -88,11 +90,7 @@ namespace QueryPipeline::PhysicalPlan{
   ExecutionResult * PhysicalDropColumn::Execute(const ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
-    auto& server = Server::ServerInstance::Get();
-
-    const auto* session = server.GetSession(this->sessionId);
-
-    if (session == nullptr || session->user == nullptr)
+    if (this->session == nullptr || this->session->user == nullptr)
       return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
@@ -100,7 +98,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     //update master db set isDeleted to 1
     //remove it from table, remove it from rows. Adjust column indexes if need be.
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -120,27 +118,23 @@ namespace QueryPipeline::PhysicalPlan{
   ExecutionResult * PhysicalRenameColumn::Execute(const ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
-    auto& server = Server::ServerInstance::Get();
-
-    const auto* session = server.GetSession(this->sessionId);
-
-    if (session == nullptr || session->user == nullptr)
+    if (this->session == nullptr || this->session->user == nullptr)
       return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
-    const auto* db = server.UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const std::vector<Value> updates = {
       Value(this->column->newName.name, static_cast<Constants::column_index_t>(Server::SysColumns::Name)),
       Value(DataTypes::DateTime::Now(), static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedAt)),
-      Value(session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
+      Value(this->session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
     };
 
-    const auto _ = server.UpdateColumnById(this->column->columnId, updates);
+    const auto _ = this->server->UpdateColumnById(this->column->columnId, updates);
 
     tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
 
@@ -158,11 +152,7 @@ namespace QueryPipeline::PhysicalPlan{
   ExecutionResult * PhysicalAlterColumn::Execute(const ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
-    auto& server = Server::ServerInstance::Get();
-
-    const auto* session = server.GetSession(this->sessionId);
-
-    if (session == nullptr || session->user == nullptr)
+    if (this->session == nullptr || this->session->user == nullptr)
       return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
@@ -171,10 +161,10 @@ namespace QueryPipeline::PhysicalPlan{
     const std::vector<Value> updates = {
       Value(this->column->type.size, static_cast<Constants::column_index_t>(Server::SysColumns::RecordSize)),
       Value(DataTypes::DateTime::Now(), static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedAt)),
-      Value(session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
+      Value(this->session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
     };
 
-    const auto _ = server.UpdateColumnById(this->column->columnId, updates);
+    const auto _ = this->server->UpdateColumnById(this->column->columnId, updates);
 
     return result;
   }

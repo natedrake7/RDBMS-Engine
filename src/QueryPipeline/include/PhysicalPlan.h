@@ -9,6 +9,10 @@
 #include "../../Database/include/DataStorage/Row.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 
+namespace Network {
+  struct Session;
+}
+
 namespace QueryPipeline {
   class LogicalPlan;
 }
@@ -103,8 +107,11 @@ namespace QueryPipeline::PhysicalPlan{
   class ExecutionNode {
     protected:
       DataTypes::Guid sessionId;
+      Server::ServerInstance* server;
+      const Network::Session* session;
+
     public:
-      ExecutionNode() = default;
+      ExecutionNode();
       explicit ExecutionNode(const DataTypes::Guid& currentSessionId);
       virtual ~ExecutionNode() = default;
       virtual ExecutionResult* Execute(const ExecutionProperties& properties) = 0;
@@ -243,7 +250,7 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* child;
 
     public:
-      PhysicalDistinct(ExecutionNode* child);
+      explicit PhysicalDistinct(ExecutionNode* child);
       ~PhysicalDistinct()override;
       ExecutionResult* Execute(const ExecutionProperties& properties) override;
   };

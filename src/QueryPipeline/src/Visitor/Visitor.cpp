@@ -546,25 +546,25 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     const auto& action = context->alterTableAction();
 
     if (action->alterTableAddColumn()) {
-      statement->newColumn = std::any_cast<Statements::NewColumn*>(visit(action->alterTableAddColumn()));
+      statement->column.newColumn = std::any_cast<Statements::NewColumn*>(visit(action->alterTableAddColumn()));
       statement->type = AlterTableType::AddColumn;
       return statement;
     }
 
     if (action->alterTableModifyColumn()) {
-      statement->alterColumn = std::any_cast<Statements::AlterColumn*>(visit(action->alterTableModifyColumn()));
+      statement->column.alterColumn = std::any_cast<Statements::AlterColumn*>(visit(action->alterTableModifyColumn()));
       statement->type = AlterTableType::AlterColumn;
       return statement;
     }
 
     if (action->alterTableDropColumn()) {
-      statement->dropColumn = std::any_cast<Statements::DropColumn*>(visit(action->alterTableDropColumn()));
+      statement->column.dropColumn = std::any_cast<Statements::DropColumn*>(visit(action->alterTableDropColumn()));
       statement->type = AlterTableType::DropColumn;
       return statement;
     }
 
     if (action->alterTableRenameColumn()) {
-      statement->renameColumn = std::any_cast<Statements::RenameColumn*>(visit(action->alterTableRenameColumn()));
+      statement->column.renameColumn = std::any_cast<Statements::RenameColumn*>(visit(action->alterTableRenameColumn()));
       statement->type = AlterTableType::RenameColumn;
       return statement;
     }

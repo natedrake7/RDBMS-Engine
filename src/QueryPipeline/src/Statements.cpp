@@ -16,10 +16,11 @@ namespace QueryPipeline::Statements {
   Statement::Statement(){
     this->databaseId = Constants::INVALID_DATABASE_ID;
     this->table = nullptr;
+    this->server = &Server::ServerInstance::Get();
   }
 
-  Errors::ValidationStatus Statement::ValidateBase()const{
-    const auto* session = Server::ServerInstance::Get().GetSession(this->sessionId);
+  Errors::ValidationStatus Statement::CompileBase()const{
+    const auto* session = this->server->GetSession(this->sessionId);
 
     if (!session || !session->user || !session->user->role)
       return {Errors::ValidationError::Error, "Failed to get user session"};
@@ -34,20 +35,20 @@ namespace QueryPipeline::Statements {
     return {Errors::ValidationError::Ok, ""};
   }
 
-  Errors::ValidationStatus Statement::ValidateStatement(ParserValidationScope& validationScope){
-    auto result = this->ValidateBase();
+  Errors::ValidationStatus Statement::Compile(ParserValidationScope& validationScope){
+    auto result = this->CompileBase();
 
     if (!result.IsOk())
       return result;
 
-    return this->Validate(validationScope);
+    return this->CompileDerived(validationScope);
   }
 
    DeclareVariableStatement::DeclareVariableStatement() {
     this->expression = nullptr;
   }
 
-  Errors::ValidationStatus DeclareVariableStatement::Validate(ParserValidationScope& validationScope) {
+  Errors::ValidationStatus DeclareVariableStatement::CompileDerived(ParserValidationScope& validationScope) {
     const auto& type = this->variable.GetType();
 
     if (this->expression) {
@@ -85,11 +86,15 @@ namespace QueryPipeline::Statements {
     return new LogicalDeclareVariable(this->sessionId, this->variable, this->expression);
   }
 
+  void DeclareVariableStatement::CleanUp() {
+    delete this->expression;
+  }
+
    SetVariableStatement::SetVariableStatement() {
     this->expression = nullptr;
   }
 
-  Errors::ValidationStatus SetVariableStatement::Validate(ParserValidationScope& validationScope) {
+  Errors::ValidationStatus SetVariableStatement::CompileDerived(ParserValidationScope& validationScope) {
     const auto& type = this->variable.GetType();
 
     if (this->expression) {
@@ -127,7 +132,11 @@ namespace QueryPipeline::Statements {
     return new LogicalDeclareVariable(this->sessionId, this->variable, this->expression);
   }
 
-  Errors::ValidationStatus CreateUserStatement::Validate(ParserValidationScope& validationScope){
+  void SetVariableStatement::CleanUp() {
+    delete this->expression;
+  }
+
+  Errors::ValidationStatus CreateUserStatement::CompileDerived(ParserValidationScope& validationScope){
     if (this->username.empty())
       return {Errors::ValidationError::Error,  "username cannot be empty"};
 
@@ -137,16 +146,14 @@ namespace QueryPipeline::Statements {
     if (this->role.empty())
       return {Errors::ValidationError::Error,  "role cannot be empty"};
 
-    const auto& server = Server::ServerInstance::Get();
-
     ostringstream os;
-    if (server.UserExists(this->username)) {
+    if (this->server->UserExists(this->username)) {
       os << "User with username: " << this->username << " already exists.";
 
       return {Errors::ValidationError::Error,  os.str()};
     }
 
-    if (!server.RoleExists(this->role)) {
+    if (!this->server->RoleExists(this->role)) {
       os << "Role: " << this->role << " does not exist.";
 
       return {Errors::ValidationError::Error,  os.str()};
@@ -163,16 +170,16 @@ namespace QueryPipeline::Statements {
     return new LogicalCreateUser(this->sessionId, this->username, this->password, this->role);
   }
 
-  Errors::ValidationStatus GrantRoleStatement::Validate(ParserValidationScope& validationScope){
-    const auto& server = Server::ServerInstance::Get();
+  void CreateUserStatement::CleanUp(){ }
 
+  Errors::ValidationStatus GrantRoleStatement::CompileDerived(ParserValidationScope& validationScope){
     ostringstream os;
-    if (!server.UserExists(this->username)) {
+    if (!this->server->UserExists(this->username)) {
       os << "User: " << this->username << " does not exist.";
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    if (!server.RoleExists(this->role)) {
+    if (!this->server->RoleExists(this->role)) {
       os << "Role: " << this->role << " does not exist.";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -188,7 +195,9 @@ namespace QueryPipeline::Statements {
     return new LogicalGrantRole(this->sessionId, this->username, this->role);
   }
 
-  Errors::ValidationStatus DeleteStatement::Validate(ParserValidationScope& validationScope){
+  void GrantRoleStatement::CleanUp(){ }
+
+  Errors::ValidationStatus DeleteStatement::CompileDerived(ParserValidationScope& validationScope){
     auto result = this->table->Validate(this->databaseId);
 
     if (!result.IsOk())
@@ -197,7 +206,7 @@ namespace QueryPipeline::Statements {
     if (this->where.expression == nullptr)
       return {};
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->server->SelectColumnsToDictionary(this->table->tableId);
 
     return {};
     // return this->where.expression->Validate(columnsDict);
@@ -205,6 +214,11 @@ namespace QueryPipeline::Statements {
 
   LogicalPlan * DeleteStatement::ToLogical(){
     return new LogicalDelete(this->table, this->where.expression);
+  }
+
+  void DeleteStatement::CleanUp() {
+    delete this->table;
+    delete this->where.expression;
   }
 
   Security::Permission DeleteStatement::RequiredPermissions() const{
@@ -217,7 +231,7 @@ namespace QueryPipeline::Statements {
     this->expression = nullptr;
   }
 
-  Errors::ValidationStatus JoinStatement::Validate(ParserValidationScope& validationScope){
+  Errors::ValidationStatus JoinStatement::CompileDerived(ParserValidationScope& validationScope){
     return {};
   }
 
@@ -247,6 +261,11 @@ namespace QueryPipeline::Statements {
 
   Security::Permission JoinStatement::RequiredPermissions() const{
     return Server::ServerConstants::DB_READER_PERMISSIONS;
+  }
+
+  void JoinStatement::CleanUp() {
+    delete this->table;
+    delete this->expression;
   }
 
   CreateTableStatement::~CreateTableStatement() {
@@ -368,6 +387,7 @@ namespace QueryPipeline::Statements {
     this->schemaId = Constants::INVALID_SCHEMA_ID;
     this->ordinalPosition = Constants::INVALID_ORDINAL_POS;
     this->schema = "dbo";
+    this->server = &Server::ServerInstance::Get();
   }
 
   std::string DataSource::GetAlias() const{
@@ -382,8 +402,8 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus DataSource::Validate(const int32_t& selectedDatabaseId) {
     const auto tableHeader = (!this->database.empty())
-        ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
-        : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
+        ? this->server->SelectTable(this->database, this->name)
+        : this->server->SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id == Constants::INVALID_TABLE_ID){
       ostringstream os;
@@ -401,8 +421,8 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus DataSource::ValidateTableCreate(const int32_t &selectedDatabaseId){
     const auto tableHeader = (!this->database.empty())
-      ? Server::ServerInstance::Get().SelectTable(this->database, this->name)
-      : Server::ServerInstance::Get().SelectTable(selectedDatabaseId, this->name, this->schema);
+      ? this->server->SelectTable(this->database, this->name)
+      : this->server->SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id != Constants::INVALID_TABLE_ID){
       ostringstream os;
@@ -420,7 +440,7 @@ namespace QueryPipeline::Statements {
     this->constraint = nullptr;
   }
 
-  Errors::ValidationStatus CreateTableStatement::Validate(ParserValidationScope& validationScope){
+  Errors::ValidationStatus CreateTableStatement::CompileDerived(ParserValidationScope& validationScope){
     auto result = this->table->ValidateTableCreate(this->databaseId);
 
     if (!result.IsOk())
@@ -428,9 +448,8 @@ namespace QueryPipeline::Statements {
 
     ostringstream os;
 
-    const auto& schemasDict = Server::ServerInstance::Get().SelectSchemasToDictionary(this->databaseId);
+    const auto& schemasDict = this->server->SelectSchemasToDictionary(this->databaseId);
     Headers::SchemaHeader schemaHeader;
-
 
     if (!schemasDict.TryGetValue(Functions::String::Lower(this->table->schema), schemaHeader)) {
       os << "Schema: " << this->table->schema << "does not exist.";
@@ -513,6 +532,11 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
+  void CreateTableStatement::CleanUp() {
+    for (auto*& column : this->columns)
+      delete column;
+  }
+
   SelectStatement::SelectStatement(){
     this->top = Constants::INVALID_TOP;
     this->distinct = false;
@@ -520,7 +544,6 @@ namespace QueryPipeline::Statements {
   }
 
   SelectStatement::~SelectStatement(){
-      // delete this->table;
       delete this->orderBy;
 
       for (const auto* join : this->joins) {
@@ -568,12 +591,12 @@ namespace QueryPipeline::Statements {
   Errors::ValidationStatus SelectStatement::Compile(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
-    this->tableColumnsDictionary.Add(this->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId));
+    this->tableColumnsDictionary.Add(this->table->tableId, this->server->SelectColumnsToDictionary(this->table->tableId));
 
     //Add all the join tables to the dictionaries
     for (const auto& join: this->joins) {
       tableAliasesDictionary.Add(join->table->GetAlias(), join->table->tableId);
-      this->tableColumnsDictionary.Add(join->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(join->table->tableId));
+      this->tableColumnsDictionary.Add(join->table->tableId, this->server->SelectColumnsToDictionary(join->table->tableId));
     }
 
     auto statementValidationScope = StatementValidationScope(
@@ -665,7 +688,7 @@ namespace QueryPipeline::Statements {
       AssignColumnIndicesToExpression(columnIndicesDictionary, join->expression);
   }
 
-  Errors::ValidationStatus SelectStatement::Validate(ParserValidationScope& validationScope){
+  Errors::ValidationStatus SelectStatement::CompileDerived(ParserValidationScope& validationScope){
     if (!this->joins.empty() && this->table == nullptr) {
       ostringstream os;
       os << "Joins were specified but no calling table was not specified";
@@ -717,7 +740,7 @@ namespace QueryPipeline::Statements {
 
     for (const auto& tableId: joinOrder) {
       //TODO cache them at the beginning
-      const auto& columns = Server::ServerInstance::Get().SelectColumns(tableId);
+      const auto& columns = this->server->SelectColumns(tableId);
 
       for (const auto &column : columns) {
         if (columnIndicesDictionary.Contains(column.id))
@@ -759,12 +782,20 @@ namespace QueryPipeline::Statements {
     return current;
   }
 
+  void SelectStatement::CleanUp() {
+    for (auto*& resultExpr : this->results)
+      delete resultExpr;
+
+    delete this->table;
+    delete this->where.expression;
+  }
+
   Security::Permission SelectStatement::RequiredPermissions() const{
     return Server::ServerConstants::DB_READER_PERMISSIONS;
   }
 
-  Errors::ValidationStatus CreateDbStatement::Validate(ParserValidationScope& validationScope){
-    if (Server::ServerInstance::Get().DatabaseExists(this->name)) {
+  Errors::ValidationStatus CreateDbStatement::CompileDerived(ParserValidationScope& validationScope){
+    if (this->server->DatabaseExists(this->name)) {
       ostringstream os;
       os << "Database " + this->name + " already exists";
 
@@ -778,14 +809,16 @@ namespace QueryPipeline::Statements {
     return new LogicalCreateDatabase(this->sessionId, this->name);
   }
 
+  void CreateDbStatement::CleanUp(){}
+
   Security::Permission CreateDbStatement::RequiredPermissions() const{
     return Server::ServerConstants::ADMIN_PERMISSIONS;
   }
 
-   Errors::ValidationStatus DropDbStatement::Validate(ParserValidationScope& validationScope){
+   Errors::ValidationStatus DropDbStatement::CompileDerived(ParserValidationScope& validationScope){
     ostringstream os;
 
-    const auto database = Server::ServerInstance::Get().SelectDatabase(this->name);
+    const auto database = this->server->SelectDatabase(this->name);
 
     if (database.name.empty()) {
       os << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist";
@@ -808,8 +841,10 @@ namespace QueryPipeline::Statements {
     return Server::ServerConstants::ADMIN_PERMISSIONS;
   }
 
-  Errors::ValidationStatus UseDatabaseStatement::Validate(ParserValidationScope& validationScope){
-    const auto dbHeader = Server::ServerInstance::Get().SelectDatabase(this->name);
+  void DropDbStatement::CleanUp(){ }
+
+  Errors::ValidationStatus UseDatabaseStatement::CompileDerived(ParserValidationScope& validationScope){
+    const auto dbHeader = this->server->SelectDatabase(this->name);
 
     if (dbHeader.id == Constants::INVALID_DATABASE_ID) {
       ostringstream os;
@@ -826,6 +861,8 @@ namespace QueryPipeline::Statements {
   LogicalPlan * UseDatabaseStatement::ToLogical(){
     return new LogicalUseDatabase(this->sessionId, this->databaseId);
   }
+
+  void UseDatabaseStatement::CleanUp(){}
 
   Security::Permission UseDatabaseStatement::RequiredPermissions() const{
     return Server::ServerConstants::GUEST_PERMISSIONS;
@@ -925,7 +962,7 @@ namespace QueryPipeline::Statements {
 
     this->selectStatement->databaseId = this->databaseId;
 
-    auto selectStatus = this->selectStatement->Validate(validationScope);
+    auto selectStatus = this->selectStatement->CompileDerived(validationScope);
     if (!selectStatus.IsOk())
       return selectStatus;
 
@@ -970,7 +1007,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
   //TODO validate length of columns to match max record_size from master DB
-  Errors::ValidationStatus InsertStatement::Validate(ParserValidationScope& validationScope){
+  Errors::ValidationStatus InsertStatement::CompileDerived(ParserValidationScope& validationScope){
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "No table was specified"};
 
@@ -978,11 +1015,11 @@ namespace QueryPipeline::Statements {
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->server->SelectColumnsToDictionary(this->table->tableId);
 
     this->tableColumnsDictionary.Add(this->table->tableId, columnsDict);
 
-    const auto identityColumns = Server::ServerInstance::Get().SelectIdentityColumnsByTableIdToDictionary(this->table->tableId);
+    const auto identityColumns = this->server->SelectIdentityColumnsByTableIdToDictionary(this->table->tableId);
 
     //validate insert columns existance
     HashSet<int32_t> statementColumns;
@@ -1023,7 +1060,7 @@ namespace QueryPipeline::Statements {
         continue;
       }
 
-      const auto defaultValue = Server::ServerInstance::Get().SelectDefaultValueByColumnId(header.id);
+      const auto defaultValue = this->server->SelectDefaultValueByColumnId(header.id);
 
       if (defaultValue.columnId == Constants::INVALID_COLUMN_ID) {
         os << "Column " << columnName << " does not allow NULLS. Insert fails";
@@ -1047,12 +1084,16 @@ namespace QueryPipeline::Statements {
     return new QueryPipeline::LogicalInsert(this->table, this->values, logicalSelect, this->columnIndices);
   }
 
+  void InsertStatement::CleanUp() {
+    delete this->table;
+  }
+
   Security::Permission InsertStatement::RequiredPermissions() const{
     return Server::ServerConstants::DB_WRITER_PERMISSIONS;
   }
 
-  Errors::ValidationStatus CreateSchemaStatement::Validate(ParserValidationScope& validationScope){
-    if (Server::ServerInstance::Get().SchemaExists(this->databaseId, this->name)) {
+  Errors::ValidationStatus CreateSchemaStatement::CompileDerived(ParserValidationScope& validationScope){
+    if (this->server->SchemaExists(this->databaseId, this->name)) {
       ostringstream os;
       os << "Schema " << this->name << " already exists";
 
@@ -1069,6 +1110,8 @@ namespace QueryPipeline::Statements {
   Security::Permission CreateSchemaStatement::RequiredPermissions() const{
     return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
+
+  void CreateSchemaStatement::CleanUp(){}
 
   UpdateColumn::UpdateColumn(){
     this->value = nullptr;
@@ -1118,7 +1161,7 @@ namespace QueryPipeline::Statements {
   Errors::ValidationStatus UpdateStatement::ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
-    this->tableColumnsDictionary.Add(this->table->tableId, Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId));
+    this->tableColumnsDictionary.Add(this->table->tableId, this->server->SelectColumnsToDictionary(this->table->tableId));
 
     auto statementValidationScope = StatementValidationScope(
       tableAliasesDictionary,
@@ -1156,7 +1199,7 @@ namespace QueryPipeline::Statements {
   }
 
 
-Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& validationScope){
+Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& validationScope){
 
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "Table was not specified"};
@@ -1173,16 +1216,24 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return new QueryPipeline::LogicalUpdate(this->table, this->updates, this->where.expression);
   }
 
+  void UpdateStatement::CleanUp() {
+    for (auto*& update : this->updates)
+      delete update;
+
+    delete this->table;
+    delete this->where.expression;
+  }
+
   Security::Permission UpdateStatement::RequiredPermissions() const{
     return Server::ServerConstants::DB_WRITER_PERMISSIONS;
   }
 
-  Errors::ValidationStatus CreateIndexStatement::Validate(ParserValidationScope& validationScope){
+  Errors::ValidationStatus CreateIndexStatement::CompileDerived(ParserValidationScope& validationScope){
     auto tableStatus = this->table->Validate(this->databaseId);
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->server->SelectColumnsToDictionary(this->table->tableId);
 
     ostringstream os;
     for(auto& column: this->columns) {
@@ -1197,10 +1248,10 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
+    const auto indexes = this->server->SelectIndexes(this->table->tableId);
 
     for (const auto& index: indexes) {
-      const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexIdToDictionary(index.id);
+      const auto indexedColumns = this->server->SelectIndexColumnsByIndexIdToDictionary(index.id);
 
       if (index.name == this->name) {
         os << "Index with name: " << index.name << " already exists";
@@ -1217,43 +1268,50 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return new QueryPipeline::LogicalIndexCreate(this->sessionId, this->table, this->name, this->columnIndices);
   }
 
+  void CreateIndexStatement::CleanUp() {
+    delete this->table;
+  }
+
   Security::Permission CreateIndexStatement::RequiredPermissions() const{
     return Server::ServerConstants::DB_OWNER_PERMISSIONS;
   }
 
-  Errors::ValidationStatus AlterTableStatement::ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     ostringstream os;
-    if (headers.Contains(Functions::String::NormalizeString(this->newColumn->name.name))) {
-      os << "Column " << this->newColumn->name.name << " already exists on table: "<< this->table->GetFullName();
+
+    auto* newColumn = this->column.newColumn;
+
+    if (headers.Contains(Functions::String::NormalizeString(newColumn->name.name))) {
+      os << "Column " << newColumn->name.name << " already exists on table: "<< this->table->GetFullName();
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    if (!this->newColumn->isNullable
-      && this->newColumn->defaultValue.IsNull()) {
+    if (!newColumn->isNullable
+      && newColumn->defaultValue.IsNull()) {
       os << "Cannot insert default Value NULL when NOT NULL is specified";
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    this->newColumn->index = headers.size();
+    newColumn->index = headers.size();
 
     Constants::DataType columnType;
-    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(this->newColumn->type.name), columnType)) {
-      os << "Invalid Column Type " << this->newColumn->type.name;
+    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(newColumn->type.name), columnType)) {
+      os << "Invalid Column Type " << newColumn->type.name;
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    const auto recordSize = ColumnTypeSizes.Get(this->newColumn->type.name);
+    const auto recordSize = ColumnTypeSizes.Get(newColumn->type.name);
 
     if (recordSize != 0)
-      this->newColumn->type.size = recordSize;
+      newColumn->type.size = recordSize;
 
     if (columnType == DataType::Decimal) {
-      if (!this->newColumn->type.decimal.Validate()) {
+      if (!newColumn->type.decimal.Validate()) {
         os << "Decimal type requires precision and scale to be set correctly";
         return {Errors::ValidationError::Error, os.str()};
       }
 
-      this->newColumn->type.size = DataTypes::Decimal::Size(this->newColumn->type.decimal.precision);
+      newColumn->type.size = DataTypes::Decimal::Size(newColumn->type.decimal.precision);
     }
 
     //TODO Check this
@@ -1262,18 +1320,20 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
-
     ostringstream os;
-    if (!headers.TryGetValue(Functions::String::NormalizeString(this->alterColumn->name.name), header)) {
-      os << "Column " << this->alterColumn->name.name << " does not exist on table: " << this->table->GetFullName();
+
+    auto* alterColumn = this->column.alterColumn;
+
+    if (!headers.TryGetValue(Functions::String::NormalizeString(alterColumn->name.name), header)) {
+      os << "Column " << alterColumn->name.name << " does not exist on table: " << this->table->GetFullName();
       return {Errors::ValidationError::Error, os.str()};
     }
 
     Constants::DataType columnType;
-    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(this->alterColumn->type.name), columnType)) {
-      os << "Invalid Column Type " << this->alterColumn->type.name;
+    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(alterColumn->type.name), columnType)) {
+      os << "Invalid Column Type " << alterColumn->type.name;
       return {Errors::ValidationError::Error, os.str()};
     }
 
@@ -1281,39 +1341,41 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       && !PipelineConstants::ValidTableStringConversions.Contains(static_cast<Constants::DataType>(header.dataType)))
       || (PipelineConstants::ValidTableIntegerConversions.Contains(columnType)
         && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<Constants::DataType>(header.dataType)))){
-          os << "Cannot alter column " << this->alterColumn->name.name << " from type: "
+          os << "Cannot alter column " << alterColumn->name.name << " from type: "
                     << ColumnTypesToStringDictionary.Get(static_cast<Constants::DataType>(header.dataType))
-                    << "to type: " << this->alterColumn->type.name;
+                    << "to type: " << alterColumn->type.name;
 
         return {Errors::ValidationError::Error, os.str()};
     }
 
-    if (header.recordSize > this->alterColumn->type.size) {
-      os << "Cannot alter column " << this->alterColumn->type.name
-                << " with size " <<  header.recordSize << " to size: " << this->alterColumn->type.size
+    if (header.recordSize > alterColumn->type.size) {
+      os << "Cannot alter column " << alterColumn->type.name
+                << " with size " <<  header.recordSize << " to size: " << alterColumn->type.size
                 << std::endl
                 << "Use FORCE if potential data corruption is acceptable";
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    this->alterColumn->columnId = header.id;
+    alterColumn->columnId = header.id;
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     ostringstream os;
-
     Headers::ColumnHeader header;
-    if (!headers.TryGetValue(Functions::String::NormalizeString(this->dropColumn->name.name), header)) {
-      os << "Column " << this->dropColumn->name.name << " does not exist on table: " << this->table->GetFullName();
+
+    auto* dropColumn = this->column.dropColumn;
+
+    if (!headers.TryGetValue(Functions::String::NormalizeString(dropColumn->name.name), header)) {
+      os << "Column " << dropColumn->name.name << " does not exist on table: " << this->table->GetFullName();
       return {Errors::ValidationError::Error, os.str()};
     }
 
     //validate no index or constraint uses it
-    const auto constraints = Server::ServerInstance::Get().SelectConstraints(this->table->tableId);
+    const auto constraints = this->server->SelectConstraints(this->table->tableId);
 
     for (const auto& constraint: constraints) {
-      const auto columns = Server::ServerInstance::Get().SelectConstraintColumnsByConstraintIdToDictionary(constraint.constraintId);
+      const auto columns = this->server->SelectConstraintColumnsByConstraintIdToDictionary(constraint.constraintId);
 
       if (columns.Contains(header.id)) {
         os << "Cannot drop column: " << header.name << " as it is referenced by constraint: " << constraint.name;
@@ -1321,25 +1383,28 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
       }
     }
 
-    this->dropColumn->index = header.ordinalPosition;
+    dropColumn->index = header.ordinalPosition;
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
-    if (!headers.TryGetValue(Functions::String::NormalizeString(this->renameColumn->oldName.name), header)) {
+
+    auto* renameColumn = this->column.renameColumn;
+
+    if (!headers.TryGetValue(Functions::String::NormalizeString(renameColumn->oldName.name), header)) {
       ostringstream os;
-      os << "Column " << this->renameColumn->oldName.name << " does not exist on table: " << this->table->GetFullName();
+      os << "Column " << renameColumn->oldName.name << " does not exist on table: " << this->table->GetFullName();
       return {Errors::ValidationError::Error, os.str()};;
     }
 
-    this->renameColumn->columnId = header.id;
-    this->renameColumn->ordinalPosition = header.ordinalPosition;
+    renameColumn->columnId = header.id;
+    renameColumn->ordinalPosition = header.ordinalPosition;
 
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::Validate(ParserValidationScope& validationScope){
+  Errors::ValidationStatus AlterTableStatement::CompileDerived(ParserValidationScope& validationScope){
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "Table was not specified"};
 
@@ -1347,33 +1412,44 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = Server::ServerInstance::Get().SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->server->SelectColumnsToDictionary(this->table->tableId);
 
     //validate by type
     switch (this->type) {
       case AlterTableType::AddColumn:
-        return this->ValidateAddColumn(columnsDict);
+        return this->CompileAddColumn(columnsDict);
       case AlterTableType::AlterColumn:
-        return this->ValidateAlterColumn(columnsDict);
+        return this->CompileAlterColumn(columnsDict);
       case AlterTableType::DropColumn:
-        return this->ValidateDropColumn(columnsDict);
+        return this->CompileDropColumn(columnsDict);
       case AlterTableType::RenameColumn:
-        return this->ValidateRenameColumn(columnsDict);
+        return this->CompileRenameColumn(columnsDict);
       default:
         return {Errors::ValidationError::Error, "Unknown table type"};
     }
   }
 
   QueryPipeline::LogicalPlan * AlterTableStatement::ToLogical(){
-    return new LogicalAlterTable(
-      this->sessionId,
-      this->table,
-      this->type,
-      this->alterColumn,
-      this->newColumn,
-      this->dropColumn,
-      this->renameColumn
-    );
+    switch (this->type) {
+    case AlterTableType::AddColumn:
+      return new LogicalAlterTable(this->sessionId, this->table, this->type,this->column.newColumn);
+    case AlterTableType::AlterColumn:
+      return new LogicalAlterTable(this->sessionId, this->table, this->type,this->column.alterColumn);
+    case AlterTableType::RenameColumn:
+      return new LogicalAlterTable(this->sessionId, this->table, this->type,this->column.renameColumn);
+    case AlterTableType::DropColumn:
+      return new LogicalAlterTable(this->sessionId, this->table, this->type,this->column.dropColumn);
+    default:
+      return nullptr;
+    }
+  }
+
+  void AlterTableStatement::CleanUp() {
+    delete this->column.newColumn;
+    delete this->column.dropColumn;
+    delete this->column.alterColumn;
+    delete this->column.renameColumn;
+    delete this->table;
   }
 
   Security::Permission AlterTableStatement::RequiredPermissions() const{
@@ -1411,23 +1487,23 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     ){
 
     switch (expression->expressionType) {
-    case Expressions::ExpressionType::Binary:
-      return CompileBinaryExpression(validationScope, expression->AsBinary(), expression, statementValidationScope);
-    case Expressions::ExpressionType::Logical:
-      return CompileLogicalExpression(validationScope, expression->AsLogical(), expression, statementValidationScope);
-    case Expressions::ExpressionType::Branch:
-      return CompileBranchExpression(validationScope, expression->AsBranch(), expression, statementValidationScope);
-    case Expressions::ExpressionType::Function:
-      return CompileFunctionExpression(validationScope, expression->AsFunction(), expression, statementValidationScope);
-    case Expressions::ExpressionType::Column:
-      return CompileColumnExpression(expression->AsColumn(), statementValidationScope);
-    case Expressions::ExpressionType::Variable:
-      return CompileVariableExpression(validationScope, expression->AsVariable());
-    case Expressions::ExpressionType::Constant:
-      return CompileConstantExpression(expression->AsConstant());
-    case Expressions::ExpressionType::Expression:
-    default:
-      break;
+      case Expressions::ExpressionType::Binary:
+        return CompileBinaryExpression(validationScope, expression->AsBinary(), expression, statementValidationScope);
+      case Expressions::ExpressionType::Logical:
+        return CompileLogicalExpression(validationScope, expression->AsLogical(), expression, statementValidationScope);
+      case Expressions::ExpressionType::Branch:
+        return CompileBranchExpression(validationScope, expression->AsBranch(), expression, statementValidationScope);
+      case Expressions::ExpressionType::Function:
+        return CompileFunctionExpression(validationScope, expression->AsFunction(), expression, statementValidationScope);
+      case Expressions::ExpressionType::Column:
+        return CompileColumnExpression(expression->AsColumn(), statementValidationScope);
+      case Expressions::ExpressionType::Variable:
+        return CompileVariableExpression(validationScope, expression->AsVariable());
+      case Expressions::ExpressionType::Constant:
+        return CompileConstantExpression(expression->AsConstant());
+      case Expressions::ExpressionType::Expression:
+      default:
+        break;
     }
 
     return {Errors::ValidationError::Error, "Unknown expression"};
@@ -1898,7 +1974,6 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     const StatementValidationScope& statementValidationScope,
     SelectStatement* statement
   ){
-
     if (column->alias != Constants::WILDCARD)
       return {};
 
@@ -1909,26 +1984,10 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
     if (column->tableAlias.empty()) {
       statement->results.erase(statement->results.begin() + *statementValidationScope.indexPos);
 
-      int counter = 0; //insert after IndexPos, the position of the
-      for (const auto &[tableId, tableColumns] : statement->tableColumnsDictionary) {
-        for (const auto &header: tableColumns | views::values) {
-
-          auto* columnExpression = new Expressions::ColumnExpression(
-            header.name,
-            statement->table->GetAlias()
-          );
-
-          columnExpression->name = header.name;
-          columnExpression->columnId = header.id;
-          columnExpression->tableId = tableId;
-          columnExpression->index = header.ordinalPosition;
-
-          statement->results.insert(statement->results.begin() + *statementValidationScope.indexPos + counter, columnExpression);
-          counter++;
-        }
+      for (const auto &columnsDict : statement->tableColumnsDictionary | views::values) {
+        AssignColumnsFromWildCardExpression(columnsDict, column->tableAlias, statementValidationScope, statement->results);
+        *statementValidationScope.indexPos += static_cast<int>(columnsDict.size());
       }
-
-      *statementValidationScope.indexPos += counter;
 
       delete column;
       return {};
@@ -1943,29 +2002,38 @@ Errors::ValidationStatus UpdateStatement::Validate(ParserValidationScope& valida
         return {Errors::ValidationError::Error, os.str()};
       }
 
-
     //remove the wildcard
     statement->results.erase(statement->results.begin() + *statementValidationScope.indexPos);
-
-    int counter = 0; //insert after IndexPos, the position of the
-    for (const auto &header: statement->tableColumnsDictionary.Get(tableId) | views::values) {
-
-      auto* columnExpression = new Expressions::ColumnExpression(
-            header.name,
-            statement->table->GetAlias()
-      );
-
-      columnExpression->name = header.name;
-      columnExpression->columnId = header.id;
-      columnExpression->tableId = statement->table->tableId;
-
-      statement->results.insert(statement->results.begin() + *statementValidationScope.indexPos + counter, columnExpression);
-      counter++;
-    }
+    AssignColumnsFromWildCardExpression(statement->tableColumnsDictionary.Get(tableId), column->tableAlias, statementValidationScope, statement->results);
 
     delete column;
-
     return {};
+  }
+
+  void AssignColumnsFromWildCardExpression(
+    const Dictionary<std::string, Headers::ColumnHeader> &columnsDict,
+    const std::string& tableAlias,
+    const StatementValidationScope& statementValidationScope,
+    std::vector<Expressions::Expression*>& results
+  ) {
+        results.insert(results.begin() + *statementValidationScope.indexPos, columnsDict.size(), nullptr);
+        // results.resize(results.size() + columnsDict.size());
+        for (const auto &header: columnsDict | views::values) {
+
+          auto* columnExpression = new Expressions::ColumnExpression(
+            header.name,
+            tableAlias
+          );
+
+          columnExpression->name = header.name;
+          columnExpression->columnId = header.id;
+          columnExpression->tableId = header.tableId;
+          columnExpression->index = header.ordinalPosition;
+
+          const auto insertPos = *statementValidationScope.indexPos + header.ordinalPosition;
+
+          results[insertPos] = columnExpression;
+        }
   }
 
   void FoldExpression(Expressions::Expression *&expression) {

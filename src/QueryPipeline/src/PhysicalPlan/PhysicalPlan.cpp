@@ -37,8 +37,16 @@ namespace QueryPipeline::PhysicalPlan {
     this->variables = nullptr;
   }
 
-  ExecutionNode::ExecutionNode(const DataTypes::Guid &currentSessionId)
-    : sessionId(currentSessionId){}
+   ExecutionNode::ExecutionNode() {
+    this->server = &Server::ServerInstance::Get();
+    this->session = nullptr;
+  }
+
+  ExecutionNode::ExecutionNode(const DataTypes::Guid &currentSessionId){
+    this->sessionId = currentSessionId;
+    this->server = &Server::ServerInstance::Get();
+    this->session = this->server->GetSession(this->sessionId);
+  }
 
   PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
     : ExecutionNode(currentSessionId), variable(std::move(variable)), expression(expression){}
@@ -46,14 +54,12 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult * PhysicalDeclareVariable::Execute(const ExecutionProperties &properties) {
     auto* result = new ExecutionResult();
 
-    static auto& server = Server::ServerInstance::Get();
-
     const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant, properties.variables);
 
     auto value = this->expression->Evaluate(context);
     this->variable.SetValue(value);
 
-    if (!server.AddOrSetVariable(this->sessionId, this->variable)) {
+    if (!this->server->AddOrSetVariable(this->sessionId, this->variable)) {
       result->code = Errors::RuntimeError::Error;
       result->message = "Failed to add variable";
     }
@@ -70,9 +76,7 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult * PhysicalCreateUser::Execute(const ExecutionProperties& properties) {
     auto* result = new ExecutionResult();
 
-    auto& server = Server::ServerInstance::Get();
-
-    if (server.CreateUser(properties, this->username, this->password, this->roleName) == false) {
+    if (!this->server->CreateUser(properties, this->username, this->password, this->roleName)) {
       result->code = Errors::RuntimeError::Error;
       result->message = "Failed to create user";
     }
@@ -86,9 +90,7 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult * PhysicalGrantRole::Execute(const ExecutionProperties& properties) {
     auto* result = new ExecutionResult();
 
-    const auto& server = Server::ServerInstance::Get();
-
-    const auto* role = server.GetRole(this->roleName);
+    const auto* role = this->server->GetRole(this->roleName);
 
     if (role == nullptr) {
       result->code = Errors::RuntimeError::Error;
@@ -96,7 +98,7 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
     }
 
-    const auto grantRoleResult = server.GrantRole(this->sessionId, this->username, role);
+    const auto grantRoleResult = this->server->GrantRole(this->sessionId, this->username, role);
 
     result->code = grantRoleResult.code;
     result->message = grantRoleResult.message;
@@ -107,17 +109,13 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& name) : ExecutionNode(sessionId), dbName(std::move(name)){}
 
   ExecutionResult* PhysicalCreateDatabase::Execute(const ExecutionProperties& properties){
-    auto& server = Server::ServerInstance::Get();
-
-    const auto* session = server.GetSession(this->sessionId);
-
-    if (session == nullptr || session->user == nullptr)
+    if (this->session == nullptr || this->session->user == nullptr)
       return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
-    const auto result = server.InsertDbToMasterDb(properties, this->dbName, this->dbName + ".db", false, session->user->name);
+    const auto result = this->server->InsertDbToMasterDb(properties, this->dbName, this->dbName + ".db", false, this->session->user->name);
 
     const auto _ = Server::ServerInstance::Get().InsertSchemaToMasterDb(properties, result.primaryKey.AsInt(), "dbo");
 
@@ -132,7 +130,7 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult * PhysicalUseDatabase::Execute(const ExecutionProperties& properties) {
     auto* result = new ExecutionResult();
 
-    if (Server::ServerInstance::Get().UpdateSession(this->sessionId, this->databaseId)) {
+    if (this->server->UpdateSession(this->sessionId, this->databaseId)) {
       result->code = Errors::RuntimeError::Ok;
       result->message = "Database selected successfully";
 
@@ -149,17 +147,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   : ExecutionNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   ExecutionResult * PhysicalSchemaCreate::Execute(const ExecutionProperties& properties){
-    auto& server = Server::ServerInstance::Get();
-
-    const auto* session = server.GetSession(this->sessionId);
-
-    if (session == nullptr || session->user == nullptr)
+    if (this->session == nullptr || this->session->user == nullptr)
       return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
-    const auto insertResult = Server::ServerInstance::Get().InsertSchemaToMasterDb(properties, this->databaseId, this->schemaName, session->user->name);
+    const auto insertResult = this->server->InsertSchemaToMasterDb(properties, this->databaseId, this->schemaName, this->session->user->name);
 
     return new ExecutionResult{
       insertResult.code,
@@ -167,22 +161,21 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     };
   }
 
-  PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table): table(std::move(table)) {}
+  PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table): table(table) {}
 
   ExecutionResult* PhysicalTableScan::Execute(const ExecutionProperties& properties){
-      using namespace DatabaseEngine::StorageTypes;
-      const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    auto* result = new ExecutionResult();
 
-      const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
-      auto* result = new ExecutionResult();
+    const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-      result->columns = tablePtr->GetConstantColumns();
+    result->columns = tablePtr->GetConstantColumns();
 
-      tablePtr->HeapScan(properties, &result->rows, this->state);
+    tablePtr->HeapScan(properties, &result->rows, this->state);
 
-      return result;
-    }
+    return result;
+  }
 
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered)
     : table(table), expression(nullptr), isClustered(isClustered) {}
@@ -191,13 +184,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     : table(table), expression(expression), isClustered(isClustered) {}
 
   ExecutionResult * PhysicalIndexScan::Execute(const ExecutionProperties& properties){
-    using namespace DatabaseEngine::StorageTypes;
-
     auto* result = new ExecutionResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     result->columns = tablePtr->GetConstantColumns();
 
@@ -212,10 +203,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   PhysicalIndexSeek::PhysicalIndexSeek(Statements::DataSource* table, Value& minValue, Value& maxValue)
-    : table(std::move(table)), minValue(std::move(minValue)), maxValue(std::move(maxValue)) {}
+    : table(table), minValue(std::move(minValue)), maxValue(std::move(maxValue)) {}
 
   ExecutionResult* PhysicalIndexSeek::Execute(const ExecutionProperties& properties){
-
     auto* result = new ExecutionResult();
 
     const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
@@ -235,7 +225,6 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     return result;
   }
-
 
   ExecutionResult * PhysicalProject::ExecuteStatement(const ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
@@ -315,8 +304,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   ExecutionResult* PhysicalFilter::Execute(const ExecutionProperties& properties){
     auto* result = child->Execute(properties);
 
-    if(dynamic_cast<PhysicalIndexScan*>(child) != nullptr
-      || dynamic_cast<PhysicalIndexSeek*>(child) != nullptr)
+    if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
+      || dynamic_cast<PhysicalIndexSeek*>(this->child) != nullptr)
       return result;
 
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
@@ -449,11 +438,9 @@ PhysicalInsert::PhysicalInsert(
   }
 
   ExecutionResult* PhysicalInsert::Execute(const ExecutionProperties& properties){
-    using namespace DatabaseEngine::StorageTypes;
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     return (this->child != nullptr)
         ? this->InsertFromChild(tablePtr, properties)
@@ -491,9 +478,9 @@ PhysicalInsert::PhysicalInsert(
   ExecutionResult * PhysicalIndexScanDelete::Execute(const ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
-    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->ClusteredIndexScanDelete(properties, this->expression, state);
 
@@ -511,9 +498,9 @@ PhysicalInsert::PhysicalInsert(
   ExecutionResult * PhysicalIndexSeekDelete::Execute(const ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
-    DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->ClusteredIndexSeekDelete(properties, this->expression, this->state);
 
@@ -532,13 +519,11 @@ PhysicalInsert::PhysicalInsert(
   }
 
   ExecutionResult* PhysicalHeapUpdate::Execute(const ExecutionProperties& properties){
-    using namespace DatabaseEngine::StorageTypes;
-
     auto* result = new ExecutionResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const auto insertResult = tablePtr->HeapUpdate(properties, this->expression, this->updates);
 
@@ -560,13 +545,11 @@ PhysicalInsert::PhysicalInsert(
   }
 
   ExecutionResult* PhysicalIndexScanUpdate::Execute(const ExecutionProperties& properties){
-    using namespace DatabaseEngine::StorageTypes;
-
     auto* result = new ExecutionResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(this->table->databaseId);
 
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const auto updateResult = tablePtr->ClusteredIndexScanUpdate(properties, this->expression, this->updates);
 
@@ -588,11 +571,9 @@ PhysicalInsert::PhysicalInsert(
   }
 
   ExecutionResult* PhysicalIndexSeekUpdate::Execute(const ExecutionProperties& properties){
-    using namespace DatabaseEngine::StorageTypes;
+    const auto* db =this->server->UseDatabase(this->table->databaseId);
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
-
-    Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     DataTypes::Indexing::Key key;
 
@@ -621,18 +602,13 @@ PhysicalInsert::PhysicalInsert(
   }
 
   ExecutionResult* PhysicalTableCreate::Execute(const ExecutionProperties& properties){
-
-    auto& server = Server::ServerInstance::Get();
-
-    const auto* session = server.GetSession(this->sessionId);
-
-    if (session == nullptr || session->user == nullptr)
+    if (this->session == nullptr || this->session->user == nullptr)
       return new ExecutionResult{
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
       };
 
-    auto* db = server.UseDatabase(this->table->databaseId);
+    auto* db = this->server->UseDatabase(this->table->databaseId);
 
     vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
     columnsPtrs.reserve(columns.size());
@@ -646,19 +622,21 @@ PhysicalInsert::PhysicalInsert(
         column->isNullable
         ));
 
-    const auto& tables = server.SelectTables(this->table->databaseId);
+    const auto& tables = this->server->SelectTables(this->table->databaseId);
 
     const int16_t& index = static_cast<int16_t>(tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1);
 
-    const auto tableResult = server.InsertTableToMasterDb(
+    const auto tableResult = this->server->InsertTableToMasterDb(
         properties,
         this->table->databaseId,
         this->table->schemaId,
         this->table->name,
-        index
+        index,
+        false,
+        this->session->user->name
     );
 
-    const auto tableStatsResult = server.InsertTableStatisticsToMasterDb(
+    const auto tableStatsResult = this->server->InsertTableStatisticsToMasterDb(
       properties,
       tableResult.primaryKey.AsInt()
     );
@@ -669,7 +647,7 @@ PhysicalInsert::PhysicalInsert(
 
     for (const auto& column: this->columns) {
       const auto columnResult =
-          server.InsertColumnToMasterDb(
+          this->server->InsertColumnToMasterDb(
             properties,
             tableResult.primaryKey.AsInt(),
             column->name.name,
@@ -680,17 +658,17 @@ PhysicalInsert::PhysicalInsert(
             column->isNullable,
             column->index,
             false,
-            session->user->name
+            this->session->user->name
           );
 
       const auto columnId = columnResult.primaryKey.AsInt(1);
 
-      const auto columnStatsResult = server.InsertColumnStatisticsToMasterDb(properties, columnId);
+      const auto columnStatsResult = this->server->InsertColumnStatisticsToMasterDb(properties, columnId);
 
       //fixed 100 buckets for now
       for (int i = 0;i < Constants::NUMBER_OF_HISTOGRAM_BUCKETS; i++) {
         const auto histogramResult =
-            server.InsertColumnHistogramsToMasterDb(
+            this->server->InsertColumnHistogramsToMasterDb(
               properties,
               columnId,
               Value(nullptr, 0),
@@ -702,7 +680,7 @@ PhysicalInsert::PhysicalInsert(
       columnIdsDict.Add(column->index, columnResult.primaryKey.AsInt(1));
 
       if (!column->defaultValue.IsNull() || column->defaultValue.GetSize() != 0) {
-        const auto _ = server.InsertDefaultValuesToMasterDb(
+        const auto _ = this->server->InsertDefaultValuesToMasterDb(
           properties,
           columnResult.primaryKey.AsInt(1),
           column->defaultValue
@@ -713,7 +691,7 @@ PhysicalInsert::PhysicalInsert(
       if (column->identity == nullptr)
         continue;
 
-      const auto _ = server.InsertIdentityColumnToMasterDb(
+      const auto _ = this->server->InsertIdentityColumnToMasterDb(
           properties,
           tableResult.primaryKey.AsInt(),
           columnResult.primaryKey.AsInt(1),
@@ -743,36 +721,36 @@ PhysicalInsert::PhysicalInsert(
       return nullptr;
     }
 
-    const auto indexResult = server.InsertIndexToMasterDb(
+    const auto indexResult = this->server->InsertIndexToMasterDb(
          properties,
         tableResult.primaryKey.AsInt(),
         this->constraintName,
         true,
         false,
-        session->user->name
+        this->session->user->name
       );
 
     const auto indexId = indexResult.primaryKey.AsInt();
 
-    const auto constraintResult = server.InsertConstraintToMasterDb(
+    const auto constraintResult = this->server->InsertConstraintToMasterDb(
         properties,
       tableResult.primaryKey.AsInt(),
         this->constraintName,
         Headers::ConstraintType::PrimaryKey,
         false,
         &indexId,
-        session->user->name
+        this->session->user->name
       );
 
     for(int i = 0;i < primaryKeyColumnIds.size(); i++){
-      auto _ = server.InsertIndexColumnToMasterDb(
+      auto _ = this->server->InsertIndexColumnToMasterDb(
         properties,
         indexResult.primaryKey.AsInt(),
         primaryKeyColumnIds[i],
         this->primaryKey.columns[i],
         true);
 
-      _ = server.InsertConstraintColumnToMasterDb(
+      _ = this->server->InsertConstraintColumnToMasterDb(
           properties,
           constraintResult.primaryKey.AsInt(),
           primaryKeyColumnIds[i],
@@ -818,46 +796,52 @@ PhysicalInsert::PhysicalInsert(
   ExecutionResult * PhysicalIndexCreate::Execute(const ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
-    const auto* db = Server::ServerInstance::Get().UseDatabase(this->table->databaseId);
+    const auto* db =this->server->UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto columnsHeaders = Server::ServerInstance::Get().SelectColumns(this->table->tableId);
+    const auto columnsHeaders =this->server->SelectColumns(this->table->tableId);
 
-    const auto indexResult = Server::ServerInstance::Get().InsertIndexToMasterDb(
+    const auto indexResult =this->server->InsertIndexToMasterDb(
         properties,
         this->table->tableId,
         this->constraintName,
         false,
-        false);
+        false,
+        this->session->user->name
+    );
 
     const auto indexId = indexResult.primaryKey.AsInt();
 
-    const auto constraintResult = Server::ServerInstance::Get().InsertConstraintToMasterDb(\
+    const auto constraintResult =this->server->InsertConstraintToMasterDb(\
       properties,
       this->table->tableId,
       this->constraintName,
       Headers::ConstraintType::IndexKey,
       false,
-      &indexId);
+      &indexId,
+      this->session->user->name
+    );
 
     for (const auto& columnPos : this->columns) {
       const auto& header = columnsHeaders.at(columnPos);
 
       const auto indexColumnResult =
-        Server::ServerInstance::Get().InsertIndexColumnToMasterDb(
+       this->server->InsertIndexColumnToMasterDb(
              properties,
-            indexResult.primaryKey.AsInt(),
+            indexId,
             header.id,
             columnPos,
-            true);
+            true
+      );
 
       const auto constraintColumnResult =
-        Server::ServerInstance::Get().InsertConstraintColumnToMasterDb(
-              properties,
-            constraintResult.primaryKey.AsInt(),
-            header.id,
-        columnPos);
+         this->server->InsertConstraintColumnToMasterDb(
+                properties,
+              constraintResult.primaryKey.AsInt(),
+              header.id,
+          columnPos
+        );
     }
 
     const auto indexPos = tablePtr->CreateNonClusteredIndex(this->columns);

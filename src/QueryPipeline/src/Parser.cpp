@@ -120,6 +120,7 @@ namespace QueryPipeline
              Statements::Statement* statement = handler(query);
 
             if (session == nullptr) {
+                statement->CleanUp();
                 delete statement;
                 continue;
             }
@@ -133,11 +134,11 @@ namespace QueryPipeline
         return statements;
     }
 
-    void Parser::ClearQuery(const std::vector<Statements::Statement*>& statements, const LogicalPlan *logicalPlan) {
-         for (const auto* statement: statements)
+    void Parser::ClearQuery(const std::vector<Statements::Statement*>& statements) {
+        for (auto* statement: statements) {
+             statement->CleanUp();
              delete statement;
-
-        delete logicalPlan;
+         }
     }
 
     Parser::~Parser() = default;
@@ -171,7 +172,7 @@ namespace QueryPipeline
             statements = CreateStatement(response, sessionId);
         }
         catch (const exception& e) {
-            Parser::ClearQuery(statements, nullptr);
+            Parser::ClearQuery(statements);
 
             ostringstream os;
             os << "Parser exception: " << e.what();
@@ -184,8 +185,9 @@ namespace QueryPipeline
      }
 
     PhysicalPlan::ExecutionNode * Parser::BuildExecutionPlan(ParserResult &result, Statements::Statement *statement) {
-        auto validation = statement->ValidateStatement(result.validationScope);
+        auto validation = statement->Compile(result.validationScope);
         if (!validation.IsOk()) {
+
             result.status  = {true, validation.message};
             return nullptr;
         }
@@ -198,6 +200,8 @@ namespace QueryPipeline
         }
 
         auto* physicalPlan = logicalPlan->ToPhysical();
+
+        delete logicalPlan;
         if(physicalPlan == nullptr){
             result.status  = {true, "Unexpected error occurred during physical plan build"};
             return nullptr;
@@ -230,16 +234,14 @@ namespace QueryPipeline
         for (auto* statement: statements) {
             auto* physicalPlan = Parser::BuildExecutionPlan(result, statement);
 
-            if (result.status.hasError) {
+            if (result.status.hasError)
                 break;
-            }
 
             const auto snapshot = transactionManager.BeginTransaction(sessionId);
 
             std::cout   << "Executing transaction: " << snapshot.transactionId
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
-
 
             const PhysicalPlan::ExecutionProperties properties(snapshot,1000, session->variables);
 
@@ -252,7 +254,7 @@ namespace QueryPipeline
         }
 
         if (result.status.hasError)
-            Parser::ClearQuery(statements, nullptr);
+            Parser::ClearQuery(statements);
 
         return result;
     }

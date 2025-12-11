@@ -50,7 +50,7 @@ namespace QueryPipeline{
 
     class Parser{
         static std::vector<Statements::Statement*> CreateStatement(const std::any &queries, const DataTypes::Guid& sessionId);
-        static void ClearQuery(const std::vector<Statements::Statement*>& statements, const LogicalPlan* logicalPlan);
+        static void ClearQuery(const std::vector<Statements::Statement*>& statements);
 
         static std::vector<Statements::Statement*> Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
         static PhysicalPlan::ExecutionNode* BuildExecutionPlan(ParserResult& result, Statements::Statement* statement);

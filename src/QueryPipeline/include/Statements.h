@@ -10,7 +10,8 @@
 #include "../../Systemic/include/Headers.h"
 #include "Parser.h"
 
-namespace Headers {
+namespace Server {
+class ServerInstance;}namespace Headers {
   struct DefaultValuesHeader;
 }
 
@@ -145,6 +146,8 @@ namespace QueryPipeline::Statements {
     int32_t schemaId;
     int16_t ordinalPosition;
 
+    Server::ServerInstance* server;
+
     DataSource();
     [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
@@ -167,15 +170,19 @@ namespace QueryPipeline::Statements {
 
     DataSource* table;
     Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
+    Server::ServerInstance* server;
 
     Statement();
     virtual ~Statement() = default;
-    virtual Errors::ValidationStatus Validate(ParserValidationScope& validationScope) = 0;
-    virtual Security::Permission RequiredPermissions() const = 0;
-    Errors::ValidationStatus ValidateBase()const;
+    virtual Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) = 0;
 
-    Errors::ValidationStatus ValidateStatement(ParserValidationScope& validationScope);
+    virtual Security::Permission RequiredPermissions() const = 0;
+    Errors::ValidationStatus CompileBase()const;
+
+    Errors::ValidationStatus Compile(ParserValidationScope& validationScope);
     virtual QueryPipeline::LogicalPlan* ToLogical() = 0;
+
+    virtual void CleanUp() = 0;
   };
 
   struct DeclareVariableStatement final: public Statement {
@@ -184,10 +191,11 @@ namespace QueryPipeline::Statements {
     Expressions::Expression* expression;
 
     DeclareVariableStatement();
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
 
     QueryPipeline::LogicalPlan* ToLogical() override;
+    void CleanUp() override;
   };
 
   struct SetVariableStatement final: public Statement {
@@ -195,10 +203,11 @@ namespace QueryPipeline::Statements {
     Expressions::Expression* expression;
 
     SetVariableStatement();
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
 
     QueryPipeline::LogicalPlan* ToLogical() override;
+    void CleanUp() override;
   };
 
   struct CreateUserStatement final : public Statement {
@@ -210,9 +219,10 @@ namespace QueryPipeline::Statements {
       CreateUserStatement() = default;
       ~CreateUserStatement() override = default;
 
-      Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
+      Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
       Security::Permission RequiredPermissions() const override;
       QueryPipeline::LogicalPlan* ToLogical() override;
+      void CleanUp() override;
   };
 
   struct GrantRoleStatement final : public Statement {
@@ -221,17 +231,22 @@ namespace QueryPipeline::Statements {
 
     GrantRoleStatement() = default;
     ~GrantRoleStatement() override = default;
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
+
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
     QueryPipeline::LogicalPlan* ToLogical() override;
+    void CleanUp() override;
   };
 
   struct DeleteStatement final : Statement {
     WhereClause where;
+
     ~DeleteStatement() override = default;
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    QueryPipeline::LogicalPlan * ToLogical() override;
+
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
+    void CleanUp() override;
   };
 
   struct JoinStatement final : public Statement{
@@ -239,13 +254,14 @@ namespace QueryPipeline::Statements {
     Constants::JoinType type;
 
     JoinStatement();
-    [[nodiscard]]Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
+    [[nodiscard]]Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     [[nodiscard]]Errors::ValidationStatus Validate(const int32_t& databaseId);
 
     [[nodiscard]]bool IsRightJoin()const;
 
     QueryPipeline::LogicalPlan* ToLogical()override;
     Security::Permission RequiredPermissions() const override;
+    void CleanUp() override;
   };
 
   struct CreateTableStatement final: Statement {
@@ -256,9 +272,10 @@ namespace QueryPipeline::Statements {
     CreateTableStatement();
     ~CreateTableStatement() override;
 
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     QueryPipeline::LogicalPlan* ToLogical() override;
     Security::Permission RequiredPermissions() const override;
+    void CleanUp() override;
   };
 
   struct SelectStatement final : Statement{
@@ -286,33 +303,37 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] Errors::ValidationStatus CompileWhereClause(ParserValidationScope& validationScope, StatementValidationScope& statementValidationScope);
     void AssignColumnsToIndices(const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary)const;
 
-    [[nodiscard]] Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    [[nodiscard]] LogicalPlan* ToLogical() override;
+    [[nodiscard]] Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    [[nodiscard]] LogicalPlan* ToLogical() override;
+    void CleanUp() override;
   };
 
   struct CreateDbStatement final : Statement{
     std::string name;
 
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    LogicalPlan* ToLogical() override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    LogicalPlan* ToLogical() override;
+    void CleanUp() override;
   };
 
   struct DropDbStatement final : Statement{
     std::string name;
 
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    LogicalPlan* ToLogical() override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    LogicalPlan* ToLogical() override;
+    void CleanUp() override;
   };
 
   struct UseDatabaseStatement final : Statement {
     std::string name;
 
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    LogicalPlan* ToLogical() override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    LogicalPlan* ToLogical() override;
+    void CleanUp() override;
   };
 
   struct InsertStatement final : Statement{
@@ -328,20 +349,22 @@ namespace QueryPipeline::Statements {
     void InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header);
 
     [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName)const;
-    [[nodiscard]] bool HasSelectStatement() const;
     [[nodiscard]] Errors::ValidationStatus ValidateSelectStatement(ParserValidationScope& validationScope)const;
+    [[nodiscard]] bool HasSelectStatement() const;
     [[nodiscard]] Errors::ValidationStatus ResolveAliases(ParserValidationScope& validationScope);
-    [[nodiscard]] Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    [[nodiscard]] LogicalPlan* ToLogical() override;
+    [[nodiscard]] Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    [[nodiscard]] LogicalPlan* ToLogical() override;
+    void CleanUp() override;
   };
 
   struct CreateSchemaStatement final : Statement {
     std::string name;
 
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    QueryPipeline::LogicalPlan * ToLogical() override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
+    void CleanUp() override;
   };
 
   struct UpdateColumn{
@@ -358,39 +381,42 @@ namespace QueryPipeline::Statements {
 
     [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const UpdateColumn* update)const;
     Errors::ValidationStatus ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    QueryPipeline::LogicalPlan * ToLogical() override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
+    void CleanUp() override;
   };
 
   struct CreateIndexStatement final : Statement {
-    DataSource* table;
     std::string name;
     vector<std::string> columns;
     vector<column_index_t> columnIndices;
     bool isUnique;
 
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    QueryPipeline::LogicalPlan * ToLogical() override;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
+    void CleanUp() override;
   };
 
   struct AlterTableStatement final : Statement {
-    DataSource* table;
     Constants::AlterTableType type;
 
-    NewColumn* newColumn;
-    AlterColumn* alterColumn;
-    DropColumn* dropColumn;
-    RenameColumn* renameColumn;
+    union {
+      NewColumn* newColumn;
+      AlterColumn* alterColumn;
+      DropColumn* dropColumn;
+      RenameColumn* renameColumn;
+    } column;
 
-    [[nodiscard]] Errors::ValidationStatus ValidateAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus ValidateAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus ValidateDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus ValidateRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    Errors::ValidationStatus Validate(ParserValidationScope& validationScope) override;
-    QueryPipeline::LogicalPlan * ToLogical() override;
+    [[nodiscard]] Errors::ValidationStatus CompileAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
+    QueryPipeline::LogicalPlan * ToLogical() override;
+    void CleanUp() override;
   };
 
   /**
@@ -503,6 +529,13 @@ namespace QueryPipeline::Statements {
     const Expressions::ColumnExpression* column,
     const StatementValidationScope& statementValidationScope,
     SelectStatement *statement
+  );
+
+  static void AssignColumnsFromWildCardExpression(
+    const Dictionary<std::string, Headers::ColumnHeader> &columnsDict,
+    const std::string& tableAlias,
+    const StatementValidationScope& statementValidationScope,
+    std::vector<Expressions::Expression*>& results
   );
 
   /** @} End of Expression Compilation Functions */
