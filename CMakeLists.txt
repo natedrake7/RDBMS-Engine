@@ -64,43 +64,14 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/ResponseProtocol.cpp
         src/Systemic/src/Network/Protocols/QueryProtocol.cpp
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
-        src/Systemic/include/DataStructures/BitMap.h
-        src/Systemic/include/DataStructures/ByteMap.h
-        src/Systemic/include/Datatypes/Value.h
-        src/Systemic/include/Datatypes/DateTime.h
-        src/Systemic/include/Datatypes/Decimal.h
-        src/Systemic/include/Converter.h
-        src/Systemic/include/DataStructures/HashSet.h
-        src/Systemic/include/GroupCondition.h
-        src/Systemic/include/Network/ConnectionProtocol.h
-        src/Systemic/include/Network/AuthorizeProtocol.h
-        src/Systemic/include/Network/ResponseProtocol.h
-        src/Systemic/include/Network/QueryProtocol.h
-        src/Systemic/include/Network/QueryResponseProtocol.h
-        src/Systemic/include/Headers.h
-        src/Systemic/include/Functions/StringFunctions.h
-        src/Systemic/include/Datatypes/Guid.h
-        src/Systemic/include/Functions/DateFunctions.h
-        src/Systemic/include/Coercions.h
-        src/Systemic/include/Errors.h
-        src/Systemic/include/Key.h
-        src/Systemic/include/QueryResult.h
-        src/Systemic/include/Security/Session.h
-        src/Systemic/include/Security/Security.h
-        src/Systemic/include/Guards/ReadWriteMutex.h
-        src/Systemic/include/Guards/ReaderGuard.h
-        src/Systemic/include/Guards/WriterGuard.h
-        src/Systemic/include/Network/ConnectionHeader.h
-        src/Systemic/include/DataStructures/Vector.h
-        src/Systemic/include/DataStructures/SortedDictionary.h
-        src/Systemic/include/Datatypes/Variable.h
+        src/Systemic/src/DataTypes/Value.cpp
 )
 
-add_library(ExpressionsLibrary STATIC
-        src/Expressions/src/Expression.cpp
-        src/Expressions/include/Expression.h
-        src/Expressions/include/Expressions.Additional.h
-)
+target_include_directories(Systemic PUBLIC src/Systemic/include)
+
+add_library(ExpressionsLibrary STATIC src/Expressions/src/Expression.cpp)
+
+target_include_directories(ExpressionsLibrary PUBLIC src/Expressions/include)
 
 target_link_libraries(ExpressionsLibrary PRIVATE Systemic PRIVATE Database)
 
@@ -117,17 +88,10 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/PhysicalPlan/PhysicalPlan.AlterTable.cpp
         src/QueryPipeline/src/Statements.cpp
         src/QueryPipeline/src/ErrorListener.cpp
-        src/QueryPipeline/include/Parser.h
-        src/QueryPipeline/include/Visitor.h
-        src/QueryPipeline/include/Cursor.h
-        src/QueryPipeline/include/LogicalPlan.h
-        src/QueryPipeline/include/PhysicalPlan.h
-        src/QueryPipeline/include/Statements.h
-        src/QueryPipeline/include/ErrorListener.h
-        src/QueryPipeline/include/Constants.h
-        src/QueryPipeline/include/Optimizer.h
         ${ANTLR_SRC}
 )
+
+target_include_directories(QueryPipeline PUBLIC  src/QueryPipeline/include)
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
@@ -138,9 +102,7 @@ else()
 endif()
 
 # Include the generated parser and lexer files
-target_include_directories(QueryPipeline PRIVATE
-        ${GENERATED_DIR}
-)
+target_include_directories(QueryPipeline PRIVATE ${GENERATED_DIR})
 
 add_library(Database STATIC
         src/Database/src/Database.cpp
@@ -176,38 +138,9 @@ add_library(Database STATIC
         src/Database/src/Logger/Logger.Structures.cpp
         src/Database/src/GarbageCollector.cpp
         src/Database/src/VersionDatabase.cpp
-        src/Database/include/Database.h
-        src/Database/include/DataStorage/Table.h
-        src/Database/include/DataStorage/Row.h
-        src/Database/include/DataStorage/Block.h
-        src/Database/include/DataStorage/Column.h
-        src/Database/include/Constants.h
-        src/Database/include/Pages/HeaderPage.h
-        src/Database/include/Pages/LargeObjectPage.h
-        src/Database/include/Pages/IndexAllocationMapPage.h
-        src/Database/include/Pages/PageFreeSpacePage.h
-        src/Database/include/Pages/GlobalAllocationMapPage.h
-        src/Database/include/Pages/IndexPage.h
-        src/Database/include/Pages/Page.h
-        src/Database/include/BufferPool/FileManager.h
-        src/Database/include/BufferPool/StorageManager.h
-        src/Database/include/BTree.h
-        src/Database/include/Algorithms/Sort/SortingFunctions.h
-        src/Database/include/Algorithms/AggregateFunctions.h
-        src/Database/include/Algorithms/Sort/QuickSort.h
-        src/Database/include/Algorithms/Sort/MergeSort.h
-        src/Database/include/Managers/LockManager.h
-        src/Database/include/Pages/OverflowPage.h
-        src/Database/include/Logger/Logger.h
-        src/Database/include/Logger/CrashRecoveryLogger.h
-        src/Database/include/Logger/Logger.Structures.h
-        src/Database/include/Logger/WriteAheadLogger.h
-        src/Database/include/Managers/IdentityManager.h
-        src/Database/include/Pages/PageGuard.h
-        src/Database/include/Managers/TransactionManager.h
-        src/Database/include/GarbageCollector.h
-        src/Database/include/VersionDatabase.h
 )
+
+target_include_directories(Database PUBLIC src/Database/include)
 
 add_library(Server STATIC
         src/Server/src/ConnectionManager/ConnectionManager.cpp
@@ -216,15 +149,9 @@ add_library(Server STATIC
         src/Server/src/SessionManager/SessionManager.cpp
         src/Server/src/RoleManager/RoleManager.cpp
         src/Server/src/UserManager/UserManager.cpp
-        src/Server/include/ConnectionManager.h
-        src/Server/include/ThreadPool.h
-        src/Server/include/Server.h
-        src/Server/include/MasterDbColumns.h
-        src/Server/include/Server.Constants.h
-        src/Server/include/SessionManager.h
-        src/Server/include/RoleManager.h
-        src/Server/include/UserManager.h
 )
+
+target_include_directories(Server PUBLIC src/Server/include)
 
 target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE $<$<PLATFORM_ID:Windows>:ws2_32> PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
 

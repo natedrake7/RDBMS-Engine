@@ -59,29 +59,17 @@ class Value {
         ~Value();
 
         explicit Value(const void* data, const Constants::column_index_t& columnIndex = 0);
-
         explicit Value(const void* data, const int& size, const Constants::DataType& type);
-
         explicit Value(const unsigned char* data, const int& size, const Constants::DataType& type);
-        
         explicit Value(const bool& data, const Constants::column_index_t& columnIndex);
-        
         explicit Value(const int8_t& data, const Constants::column_index_t& columnIndex);
-        
         explicit Value(const int16_t& data, const Constants::column_index_t& columnIndex);
-        
         explicit Value(const int32_t& data, const Constants::column_index_t& columnIndex);
-        
         explicit Value(const int64_t& data, const Constants::column_index_t& columnIndex);
-        
         explicit Value(const string& data, const Constants::column_index_t& columnIndex, const bool& isIdentifier = false);
-        
         explicit Value(const u16string& data, const Constants::column_index_t& columnIndex);
-        
         explicit Value(const DataTypes::DateTime& data, const Constants::column_index_t& columnIndex);
-        
         explicit Value(const DataTypes::Decimal& data, const Constants::column_index_t& columnIndex);
-
         explicit Value(const DataTypes::Guid& data, const Constants::column_index_t& columnIndex);
 
         [[nodiscard]] bool IsNull() const;
@@ -91,23 +79,14 @@ class Value {
         [[nodiscard]] const Constants::DataType& GetType() const;
       
         void SetData(const bool& otherData);
-      
         void SetData(const int8_t& otherData);
-      
         void SetData(const int16_t& otherData);
-      
         void SetData(const int32_t& otherData);
-      
         void SetData(const int64_t& otherData);
-      
         void SetData(const string& otherData);
-      
         void SetData(const u16string& otherData);
-      
         void SetData(const DataTypes::Decimal& otherData);
-      
         void SetData(const DataTypes::DateTime& otherData);
-
         void SetData(const DataTypes::Guid& otherData);
 
         [[nodiscard]] const Constants::block_size_t& GetSize() const;
@@ -115,25 +94,15 @@ class Value {
         [[nodiscard]] const Constants::object_t* GetRawData() const;
         
         [[nodiscard]] bool GetBool()const;
-        
         [[nodiscard]] int8_t GetTinyInt()const;
-        
         [[nodiscard]] int16_t GetSmallInt()const;
-        
         [[nodiscard]] int32_t GetInt()const;
-        
         [[nodiscard]] int64_t GetBigInt()const;
-        
         [[nodiscard]] string GetString()const;
-        
         [[nodiscard]] u16string GetUnicodeString()const;
-        
         [[nodiscard]] DataTypes::Decimal GetDecimal()const;
-        
         [[nodiscard]] DataTypes::DateTime GetDateTime()const;
-        
         [[nodiscard]] time_t GetUnixTimeStamp() const;
-
         [[nodiscard]] DataTypes::Guid GetGuid()const;
 
         void SetColumnIndex(const Constants::column_index_t &otherIndex);
