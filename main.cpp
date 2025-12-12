@@ -1,5 +1,5 @@
 ﻿#include "src/DatabaseEngine/include/Schedulers/GarbageCollector.h"
-#include "src/Plugins/include/PluginManager.h"
+#include "src/Plugins/include/Plugin.h"
 #include "src/QueryPipeline/include/Parser.h"
 #include "src/Server/include/Server.h"
 #include "src/Server/include/ConnectionManager.h"
@@ -104,8 +104,9 @@ int main()
 
     auto& server = Network::Server::Get();
 
-    Plugins::Manager manager;
-    manager.LoadPlugin("plugins/Test.dll");
+    External::Plugin plugin;
+    plugin.Load("plugins/PluginLibrary.dll");
+    plugin.Execute("AddNumbers");
 
     return 0;
 

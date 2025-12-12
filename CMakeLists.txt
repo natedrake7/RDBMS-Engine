@@ -101,7 +101,7 @@ endif()
 target_include_directories(QueryPipeline PRIVATE ${GENERATED_DIR})
 
 add_library(PluginApi SHARED
-        src/Plugins/src/PluginManager.cpp
+        src/Plugins/src/Plugin.cpp
 )
 
 target_include_directories(PluginApi PUBLIC src/Plugins/include)

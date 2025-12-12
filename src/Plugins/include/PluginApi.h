@@ -23,9 +23,9 @@ extern "C" {
 }
 
 struct IHostAPI {
-  int version;
-
+  int api_version;
   void (*log)(int level, const char* message);
+  int (*register_scalar_function)(const char* name, udf_func_t fn, int min_args, int max_args, const char* help);
 };
 
 #ifdef __cplusplus

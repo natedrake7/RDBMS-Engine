@@ -1,4 +1,4 @@
-#include "../include/PluginManager.h"
+#include "../include/Plugin.h"
 
 #include "PluginApi.h"
 
@@ -11,8 +11,8 @@
 using LibHandle = void*;
 #endif
 
-namespace Plugins {
-  bool Manager::LoadPlugin(const char *path) {
+namespace External {
+  bool Plugin::Load(const char *path) {
     LibHandle handle;
 #ifdef _WIN32
     handle = LoadLibraryA(path);
@@ -52,14 +52,48 @@ namespace Plugins {
     return true;
   }
 
-  void Manager::Log(int level, const char *message){
+  void Plugin::Execute(const std::string &name) {
+    FunctionDescriptor descriptor;
+    if (!registry.TryGetValue(name, descriptor)) {
+      std::cerr << "[Plugin] Function not found: " << name << std::endl;
+      return;
+    }
+
+    PluginValue args[2];
+
+    args[0] = PluginValue{ .ctx = reinterpret_cast<void*>(10) };
+    args[1] = PluginValue{ .ctx =  reinterpret_cast<void*>(10) };
+
+    auto [ctx] = descriptor.fn(nullptr, 2, args);
+
+    std::cout << "[Plugin] Function " << name << " executed. Result ctx: " << reinterpret_cast<uintptr_t>(ctx) << std::endl;
+  }
+
+  void Plugin::Log(int level, const char *message){
     std::cout << "[Plugin Log]: " << message << std::endl;
   }
 
-  Manager::Manager() {
+  int Plugin::RegisterScalar(const char *name, const udf_func_t fn, const int min_args, const int max_args, const char *help) {
+      const auto strName = std::string(name);
+
+      auto functionDesc = FunctionDescriptor{
+          .fn = fn,
+          .min_args = min_args,
+          .max_args = max_args,
+          .help = std::string(help)
+      };
+
+      registry.Add(strName, std::move(functionDesc));
+
+      std::cout << "[Engine] Registered scalar function: " << strName << std::endl;
+      return 0;
+  }
+
+  Plugin::Plugin() {
     this->host = IHostAPI{
-        .version = 1,
-        .log = Manager::Log,
+        .api_version = 1,
+        .log = Plugin::Log,
+        .register_scalar_function = Plugin::RegisterScalar
     };
   }
 
