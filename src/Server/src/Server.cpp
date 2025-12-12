@@ -299,6 +299,262 @@ namespace Server {
       this->userManager.AddUser(result.primaryKey.AsInt(), admin, hashedPassword, role);
   }
 
+  Headers::DatabaseHeader ServerInstance::ToDatabaseHeader(const DatabaseEngine::StorageTypes::Row *row){
+    const auto& data = row->GetData();
+
+    return Headers::DatabaseHeader{
+      .id = data[static_cast<column_index_t>(SysDatabases::DatabaseId)]->GetInt(),
+      .name = data[static_cast<column_index_t>(SysDatabases::Name)]->GetString(),
+      .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)]->GetString(),
+      .isSystem = data[static_cast<column_index_t>(SysDatabases::IsSystem)]->GetBool(),
+    };
+  }
+
+  Headers::DatabaseHeader ServerInstance::ToDatabaseHeader(
+    const DatabaseEngine::StorageTypes::Row *row,
+    std::vector<Headers::TableHeader> &dbTables,
+    std::vector<Headers::SchemaHeader> &schemas
+  ) {
+    const auto& data = row->GetData();
+
+   return  Headers::DatabaseHeader{
+      .id = data[static_cast<column_index_t>(SysDatabases::DatabaseId)]->GetInt(),
+      .name = data[static_cast<column_index_t>(SysDatabases::Name)]->GetString(),
+      .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)]->GetString(),
+      .isSystem = data[static_cast<column_index_t>(SysDatabases::IsSystem)]->GetBool(),
+      .additionalInfo = {
+        .createdAt = data[static_cast<column_index_t>(SysDatabases::CreatedAt)]->GetDateTime(),
+        .lastModified = data[static_cast<column_index_t>(SysDatabases::LastModifiedAt)]->GetDateTime(),
+        .lastModifiedBy = data[static_cast<column_index_t>(SysDatabases::LastModifiedBy)]->GetString(),
+        .version = data[static_cast<column_index_t>(SysDatabases::Version)]->GetInt(),
+        .isDeleted = data[static_cast<column_index_t>(SysDatabases::IsDeleted)]->GetBool(),
+        .deletedAt = data[static_cast<column_index_t>(SysDatabases::DeletedAt)]->GetBlockData() == nullptr
+                  ? DataTypes::DateTime()
+                  : data[static_cast<column_index_t>(SysDatabases::DeletedAt)]->GetDateTime(),
+        },
+      .tables = std::move(dbTables),
+      .schemas = std::move(schemas)
+    };
+}
+
+  Headers::SchemaHeader ServerInstance::ToSchemaHeader(const DatabaseEngine::StorageTypes::Row *row){
+    const auto& data = row->GetData();
+
+    return Headers::SchemaHeader{
+      data[static_cast<column_index_t>(SysSchemas::SchemaId)]->GetInt(),
+      data[static_cast<column_index_t>(SysSchemas::DatabaseId)]->GetInt(),
+      data[static_cast<column_index_t>(SysSchemas::Name)]->GetString(),
+      data[static_cast<column_index_t>(SysSchemas::CreatedAt)]->GetDateTime(),
+      data[static_cast<column_index_t>(SysSchemas::LastModifiedAt)]->GetDateTime(),
+      data[static_cast<column_index_t>(SysSchemas::LastModifiedBy)]->GetString()
+    };
+  }
+
+  Headers::TableHeader ServerInstance::ToTableHeader(const DatabaseEngine::StorageTypes::Row *row) {
+    const auto& data = row->GetData();
+
+    return Headers::TableHeader{
+      data[static_cast<column_index_t>(SysTables::DatabaseId)]->GetInt(),
+      data[static_cast<column_index_t>(SysTables::TableId)]->GetInt(),
+      data[static_cast<column_index_t>(SysTables::SchemaId)]->GetInt(),
+      data[static_cast<column_index_t>(SysTables::Name)]->GetString(),
+      data[static_cast<column_index_t>(SysTables::OrdinalPosition)]->GetSmallInt(),
+      data[static_cast<column_index_t>(SysTables::IsSystemTable)]->GetBool(),
+      data[static_cast<column_index_t>(SysTables::CreatedAt)]->GetDateTime(),
+      data[static_cast<column_index_t>(SysTables::LastModifiedAt)]->GetDateTime(),
+      data[static_cast<column_index_t>(SysTables::LastModifiedBy)]->GetString()
+      };
+  }
+
+  Headers::IndexHeader ServerInstance::ToIndexHeader(const DatabaseEngine::StorageTypes::Row *row) {
+      const auto& data = row->GetData();
+
+      return Headers::IndexHeader{
+        .tableId = data[static_cast<column_index_t>(SysIndexes::TableId)]->GetInt(),
+        .id = data[static_cast<column_index_t>(SysIndexes::IndexId)]->GetInt(),
+        .name = data[static_cast<column_index_t>(SysIndexes::Name)]->GetString(),
+        .isClustered = data[static_cast<column_index_t>(SysIndexes::IsClustered)]->GetBool(),
+        .isDisabled = data[static_cast<column_index_t>(SysIndexes::IsDisabled)]->GetBool(),
+          .additionalInfo{
+          .createdAt = data[static_cast<column_index_t>(SysIndexes::CreatedAt)]->GetDateTime(),
+          .lastModified = data[static_cast<column_index_t>(SysIndexes::LastModifiedAt)]->GetDateTime(),
+          .lastModifiedBy = data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)]->GetString(),
+          .version = data[static_cast<column_index_t>(SysIndexes::Version)]->GetInt(),
+          .isDeleted = data[static_cast<column_index_t>(SysIndexes::IsDeleted)]->GetBool(),
+          .deletedAt = data[static_cast<column_index_t>(SysIndexes::DeletedAt)]->GetBlockData() == nullptr
+                ? DataTypes::DateTime()
+                : data[static_cast<column_index_t>(SysIndexes::DeletedAt)]->GetDateTime()
+          },
+    };
+  }
+
+  Headers::IndexColumnsHeader ServerInstance::ToIndexColumnsHeader(const DatabaseEngine::StorageTypes::Row *row) {
+    const auto& data = row->GetData();
+
+    return Headers::IndexColumnsHeader{
+      .indexId = data[static_cast<column_index_t>(SysIndexColumns::IndexId)]->GetInt(),
+      .columnId = data[static_cast<column_index_t>(SysIndexColumns::ColumnId)]->GetInt(),
+      .ordinalPosition = data[static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)]->GetSmallInt(),
+      .isIncluded = data[static_cast<column_index_t>(SysIndexColumns::IsIncluded)]->GetBool(),
+      .additionalInfo{
+        .version = data[static_cast<column_index_t>(SysIndexColumns::Version)]->GetInt(),
+        .isDeleted = data[static_cast<column_index_t>(SysIndexColumns::IsDeleted)]->GetBool(),
+        .deletedAt = data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)]->GetDateTime()
+      }
+    };
+  }
+
+  Headers::IdentityColumnsHeader ServerInstance::ToIdentityColumnsHeader(const DatabaseEngine::StorageTypes::Row *row) {
+    const auto& data = row->GetData();
+
+    return Headers::IdentityColumnsHeader{
+      .tableId = data[static_cast<column_index_t>(SysIdentityColumns::TableId)]->GetInt(),
+      .columnId = data[static_cast<column_index_t>(SysIdentityColumns::ColumnId)]->GetInt(),
+      .seedValue = data[static_cast<column_index_t>(SysIdentityColumns::SeedValue)]->GetInt(),
+      .increment = data[static_cast<column_index_t>(SysIdentityColumns::IncrementValue)]->GetInt(),
+      .lastValue = data[static_cast<column_index_t>(SysIdentityColumns::LastValue)]->GetBigInt(),
+      .isCached = data[static_cast<column_index_t>(SysIdentityColumns::IsCached)]->GetBool(),
+      .cacheBlock = data[static_cast<column_index_t>(SysIdentityColumns::CacheBlock)]->GetInt(),
+      .additionalInfo{
+        .version = data[static_cast<column_index_t>(SysIdentityColumns::Version)]->GetInt(),
+        .isDeleted = data[static_cast<column_index_t>(SysIdentityColumns::IsDeleted)]->GetBool(),
+        .deletedAt = data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)]->GetDateTime()
+      }
+    };
+  }
+
+  Headers::ConstraintsHeader ServerInstance::ToConstraintsHeader(
+    const DatabaseEngine::StorageTypes::Row *row,
+    std::vector<Headers::ConstraintsColumnsHeader> &constraintColumns,
+    Headers::IndexHeader &indexHeader
+  ) {
+    const auto& data = row->GetData();
+
+    return Headers::ConstraintsHeader{
+      .tableId = data[static_cast<column_index_t>(SysConstraints::TableId)]->GetInt(),
+      .constraintId = data[static_cast<column_index_t>(SysConstraints::ConstraintId)]->GetInt(),
+      .name = data[static_cast<column_index_t>(SysConstraints::Name)]->GetString(),
+      .type = static_cast<Headers::ConstraintType>(data[static_cast<column_index_t>(SysConstraints::Type)]->GetTinyInt()),
+      .isDisabled = data[static_cast<column_index_t>(SysConstraints::IsDisabled)]->GetBool(),
+      .indexId = indexHeader.id,
+      .index = std::move(indexHeader),
+      .columns = std::move(constraintColumns),
+      .additionalInfo{
+        .createdAt = data[static_cast<column_index_t>(SysConstraints::CreatedAt)]->GetDateTime(),
+        .lastModified = data[static_cast<column_index_t>(SysConstraints::LastModifiedAt)]->GetDateTime(),
+        .lastModifiedBy = data[static_cast<column_index_t>(SysConstraints::LastModifiedBy)]->GetString(),
+        .version = data[static_cast<column_index_t>(SysConstraints::Version)]->GetInt(),
+        .isDeleted = data[static_cast<column_index_t>(SysConstraints::IsDeleted)]->GetBool(),
+        .deletedAt = data[static_cast<column_index_t>(SysConstraints::DeletedAt)]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[static_cast<column_index_t>(SysConstraints::DeletedAt)]->GetDateTime() //might crash, is nullable
+      },
+    };
+  }
+
+  Headers::ConstraintsColumnsHeader ServerInstance::ToConstraintsColumnsHeader(const DatabaseEngine::StorageTypes::Row *row){
+    const auto& data = row->GetData();
+
+    return Headers::ConstraintsColumnsHeader{
+      .constraintId = data[static_cast<column_index_t>(SysConstraintColumns::ConstraintId)]->GetInt(),
+      .columnId = data[static_cast<column_index_t>(SysConstraintColumns::ColumnId)]->GetInt(),
+      .ordinalPosition = data[static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)]->GetInt(),
+      .additionalInfo{
+        .version = data[static_cast<column_index_t>(SysConstraintColumns::Version)]->GetInt(),
+        .isDeleted = data[static_cast<column_index_t>(SysConstraintColumns::IsDeleted)]->GetBool(),
+        .deletedAt = data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)]->GetDateTime()
+      },
+    };
+  }
+
+  Headers::DefaultValuesHeader ServerInstance::ToDefaultValuesHeader(const DatabaseEngine::StorageTypes::Row *row) {
+    const auto& data = row->GetData();
+
+    return Headers::DefaultValuesHeader{
+      .columnId = data[static_cast<column_index_t>(SysDefaultValues::ColumnId)]->GetInt(),
+      .value = data[static_cast<column_index_t>(SysDefaultValues::Value)]->GetString(),
+      .additionalInfo{
+        .version = data[static_cast<column_index_t>(SysDefaultValues::Version)]->GetInt(),
+        .isDeleted = data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)]->GetBool(),
+        .deletedAt = data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)]->GetBlockData() == nullptr
+              ? DataTypes::DateTime()
+              : data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)]->GetDateTime()
+      },
+    };
+  }
+
+  Headers::TableStatistics ServerInstance::ToTableStatistics(const DatabaseEngine::StorageTypes::Row *row) {
+    const auto& data = row->GetData();
+
+    return Headers::TableStatistics{
+      .tableId = data[static_cast<column_index_t>(SysTableStats::TableId)]->GetInt(),
+      .rowCount = data[static_cast<column_index_t>(SysTableStats::RowCount)]->GetBigInt(),
+      .avgRowSize = data[static_cast<column_index_t>(SysTableStats::AvgRowSize)]->GetInt()
+    };
+  }
+
+  Headers::ColumnStatistics ServerInstance::ToColumnStatistics(const DatabaseEngine::StorageTypes::Row *row, const DataType& columnType) {
+    const auto& data = row->GetData();
+
+    return Headers::ColumnStatistics{
+      .columnId = data[static_cast<column_index_t>(SysColumnStats::ColumnId)]->GetInt(),
+      .distinctCount = data[static_cast<column_index_t>(SysColumnStats::DistinctCount)]->GetBigInt(),
+      .min = Value(data[static_cast<column_index_t>(SysColumnStats::MinimumValue)]->GetBlockData(), data[static_cast<column_index_t>(SysColumnStats::MinimumValue)]->GetBlockSize(), columnType),
+      .max = Value(data[static_cast<column_index_t>(SysColumnStats::MaximumValue)]->GetBlockData(), data[static_cast<column_index_t>(SysColumnStats::MaximumValue)]->GetBlockSize(), columnType),
+      .nullCount = data[static_cast<column_index_t>(SysColumnStats::NullCount)]->GetBigInt()
+    };
+  }
+
+  Headers::ColumnHistograms ServerInstance::ToColumnHistograms(const DatabaseEngine::StorageTypes::Row *row, const DataType &columnType) {
+    const auto& data = row->GetData();
+
+    return Headers::ColumnHistograms{
+      .columnId = data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)]->GetInt(),
+      .histogramId = data[static_cast<column_index_t>(SysColumnHistograms::HistogramId)]->GetInt(),
+      .rangeStart = Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetBlockData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetBlockSize(), columnType),
+      .rangeEnd = Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetBlockData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetBlockSize(), columnType),
+      .rowCount = data[static_cast<column_index_t>(SysColumnHistograms::RowCount)]->GetInt(),
+      .distinctCount = data[static_cast<column_index_t>(SysColumnHistograms::DistinctCount)]->GetInt(),
+    };
+  }
+
+  Headers::ColumnHeader ServerInstance::ToColumnHeader(const DatabaseEngine::StorageTypes::Row *row) {
+      const auto& data = row->GetData();
+
+      return Headers::ColumnHeader{
+          .tableId = data[static_cast<column_index_t>(SysColumns::TableId)]->GetInt(),
+          .id = data[static_cast<column_index_t>(SysColumns::ColumnId)]->GetInt(),
+          .name = data[static_cast<column_index_t>(SysColumns::Name)]->GetString(),
+          .dataType = static_cast<uint8_t>(data[static_cast<column_index_t>(SysColumns::DataType)]->GetTinyInt()),
+          .recordSize = data[static_cast<column_index_t>(SysColumns::RecordSize)]->GetInt(),
+          .precision = data[static_cast<column_index_t>(SysColumns::Precision)]->GetBlockData() == nullptr
+              ? Constants::INVALID_DECIMAL_PRECISION
+              : data[static_cast<column_index_t>(SysColumns::Precision)]->GetTinyInt(),
+          .scale = data[static_cast<column_index_t>(SysColumns::Scale)]->GetBlockData() == nullptr
+              ? Constants::INVALID_DECIMAL_SCALE
+              : data[static_cast<column_index_t>(SysColumns::Scale)]->GetTinyInt(),
+          .isNullable = data[static_cast<column_index_t>(SysColumns::IsNullable)]->GetBool(),
+          .ordinalPosition = data[static_cast<column_index_t>(SysColumns::OrdinalPosition)]->GetSmallInt(),
+          .isSystem = data[static_cast<column_index_t>(SysColumns::IsSystemColumn)]->GetBool(),
+          .additionalInfo{
+            .createdAt = data[static_cast<column_index_t>(SysColumns::CreatedAt)]->GetDateTime(),
+            .lastModified = data[static_cast<column_index_t>(SysColumns::LastModifiedAt)]->GetDateTime(),
+            .lastModifiedBy = data[static_cast<column_index_t>(SysColumns::LastModifiedBy)]->GetString(),
+            .version = data[static_cast<column_index_t>(SysColumns::Version)]->GetInt(),
+            .isDeleted = data[static_cast<column_index_t>(SysColumns::IsDeleted)]->GetBool(),
+            .deletedAt = data[static_cast<column_index_t>(SysColumns::DeletedAt)]->GetBlockData() == nullptr
+                      ? DataTypes::DateTime::Now()
+                      : data[static_cast<column_index_t>(SysColumns::DeletedAt)]->GetDateTime(),
+            }
+      };
+  }
+
   ServerInstance & ServerInstance::Get(){
     static ServerInstance instance;
 
@@ -319,11 +575,15 @@ namespace Server {
       true
     );
 
+    const auto databaseId = dbInsertResult.primaryKey.AsInt();
+
     const auto schemaInsertResult = this->InsertSchemaToMasterDb(
       this->baseProperties,
-      dbInsertResult.primaryKey.AsInt(),
+      databaseId,
       "dbo"
     );
+
+    const auto schemaId = schemaInsertResult.primaryKey.AsInt(1);
 
     Dictionary<string, column_index_t> columnNameToIndex;
 
@@ -334,8 +594,8 @@ namespace Server {
       const auto tableResult =
         this->InsertTableToMasterDb(
             this->baseProperties,
-          dbInsertResult.primaryKey.AsInt(),
-          schemaInsertResult.primaryKey.AsInt(),
+          databaseId,
+          schemaId,
           table.name,
           static_cast<int16_t>(i),
           true
@@ -348,6 +608,7 @@ namespace Server {
       //   );
 
       int columnPos = 0;
+      const auto tableId = tableResult.primaryKey.AsInt(1);
 
       Dictionary<std::string, int32_t> columnIdsDict;
 
@@ -362,14 +623,10 @@ namespace Server {
 
         const auto& type = ColumnTypesDictionary.Get(normalizedColumnType);
 
-        if (counter == 15) {
-          int val = 0;
-        }
-
         const auto columnResult =
           this->InsertColumnToMasterDb(
               this->baseProperties,
-             tableResult.primaryKey.AsInt(),
+             tableId,
              column.name,
              type,
              columnSize,
@@ -383,11 +640,13 @@ namespace Server {
         if (columnResult.code != Errors::RuntimeError::Ok)
           std::cerr << columnResult.message << std::endl;
 
+        const auto columnId = columnResult.primaryKey.AsInt(1);
+
         if (column.hasIdentity)
           const auto _ = this->InsertIdentityColumnToMasterDb(
                 this->baseProperties,
-                columnResult.primaryKey.AsInt(0),
-                columnResult.primaryKey.AsInt(1),
+                tableId,
+                columnId,
                 1,
                 1,
                 1,
@@ -402,7 +661,7 @@ namespace Server {
         //   );
 
         columnNameToIndex.Add(column.name, columnPos);
-        columnIdsDict.Add(column.name,columnResult.primaryKey.AsInt(1));
+        columnIdsDict.Add(column.name,columnId);
 
         columnPos++;
       }
@@ -421,29 +680,27 @@ namespace Server {
       const auto indexResult =
         this->InsertIndexToMasterDb(
           this->baseProperties,
-          tableResult.primaryKey.AsInt(),
+          tableId,
           "PK" + _columns,
           true
       );
 
-      auto indexKey = indexResult.primaryKey.AsInt();
+      auto indexId = indexResult.primaryKey.AsInt(1);
 
       const auto constraintResult =
         this->InsertConstraintToMasterDb(
           this->baseProperties,
-          tableResult.primaryKey.AsInt(),
+          tableId,
           "PK" + _columns,
           Headers::ConstraintType::PrimaryKey,
           false,
-          &indexKey
+          &indexId
       );
 
       for(int j = 0;j < table.primaryKey.size(); j++){
-        // const auto& columnIndex = columnNameToIndex.Get(table.primaryKey[j]);
-
         auto _ = this->InsertIndexColumnToMasterDb(
             this->baseProperties,
-            indexResult.primaryKey.AsInt(),
+            indexId,
             columnIdsDict.Get(table.primaryKey[j]),
             static_cast<int16_t>(j),
             true
@@ -451,7 +708,7 @@ namespace Server {
 
         _ = this->InsertConstraintColumnToMasterDb(
           this->baseProperties,
-          constraintResult.primaryKey.AsInt(),
+          constraintResult.primaryKey.AsInt(1),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j)
         );
@@ -582,18 +839,16 @@ namespace Server {
       const auto currentDate = DataTypes::DateTime::Now();
 
       const vector<Value> fields = {
-        Value(dbName, 1),
-        Value(dbPath, 2),
-        Value(isSystem, 3),
-        Value(currentDate, 4),
-        Value(currentDate, 5),
-        Value(user, 6),
-        Value(version, 7),
-        Value(isDeleted, 8),
-        Value(nullptr, 9),
+        Value(dbName, static_cast<column_index_t>(SysDatabases::Name)),
+        Value(dbPath, static_cast<column_index_t>(SysDatabases::FilePath)),
+        Value(isSystem, static_cast<column_index_t>(SysDatabases::IsSystem)),
+        Value(currentDate, static_cast<column_index_t>(SysDatabases::CreatedAt)),
+        Value(currentDate, static_cast<column_index_t>(SysDatabases::LastModifiedAt)),
+        Value(user, static_cast<column_index_t>(SysDatabases::LastModifiedBy)),
+        Value(version, static_cast<column_index_t>(SysDatabases::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysDatabases::IsDeleted)),
+        Value::Null(static_cast<column_index_t>(SysDatabases::DeletedAt))
     };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(properties, fields);
 
@@ -608,22 +863,21 @@ namespace Server {
     const string &schemaName,
     const string &user,
     const int& version,
-    const bool& isDeleted) const{
+    const bool& isDeleted
+  ) const{
      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const vector<Value> fields = {
-        Value(databaseId, 1),
-        Value(schemaName, 2),
-        Value(currentDate, 3),
-        Value(currentDate, 4),
-        Value(user, 5),
-        Value(version, 6),
-        Value(isDeleted, 7),
-        Value(nullptr, 8),
+     const std::vector<Value> fields = {
+        Value(databaseId, static_cast<column_index_t>(SysSchemas::DatabaseId)),
+        Value(schemaName, static_cast<column_index_t>(SysSchemas::Name)),
+        Value(currentDate, static_cast<column_index_t>(SysSchemas::CreatedAt)),
+        Value(currentDate, static_cast<column_index_t>(SysSchemas::LastModifiedAt)),
+        Value(user, static_cast<column_index_t>(SysSchemas::LastModifiedBy)),
+        Value(version, static_cast<column_index_t>(SysSchemas::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysSchemas::IsDeleted)),
+        Value::Null(static_cast<column_index_t>(SysSchemas::DeletedAt)),
      };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(properties, fields);
 
@@ -647,21 +901,19 @@ namespace Server {
       DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysTables);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Value> fields = {
-        Value(databaseId, 1),
-        Value(schemaId, 2),
-        Value(tableName, 3),
-        Value(ordinalPosition, 4),
-        Value(isSystem, 5),
-        Value(currentDate, 6),
-        Value(currentDate, 7),
-        Value(user, 8),
-        Value(version, 9),
-        Value(isDeleted, 10),
-        Value(nullptr, 11),
+      const std::vector<Value> fields = {
+        Value(databaseId, static_cast<column_index_t>(SysTables::DatabaseId)),
+        Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)),
+        Value(tableName, static_cast<column_index_t>(SysTables::Name)),
+        Value(ordinalPosition, static_cast<column_index_t>(SysTables::OrdinalPosition)),
+        Value(isSystem, static_cast<column_index_t>(SysTables::IsSystemTable)),
+        Value(currentDate, static_cast<column_index_t>(SysTables::CreatedAt)),
+        Value(currentDate, static_cast<column_index_t>(SysTables::LastModifiedAt)),
+        Value(user, static_cast<column_index_t>(SysTables::LastModifiedBy)),
+        Value(version, static_cast<column_index_t>(SysTables::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysTables::IsDeleted)),
+        Value::Null(static_cast<column_index_t>(SysTables::DeletedAt)),
       };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
       const auto result = table->InsertRow(properties, fields);
 
@@ -694,8 +946,6 @@ namespace Server {
         Value(columnName, static_cast<column_index_t>(SysColumns::Name)),
         Value(static_cast<int8_t>(columnType), static_cast<column_index_t>(SysColumns::DataType)),
         Value(columnSize, static_cast<column_index_t>(SysColumns::RecordSize)),
-        Value(nullptr, static_cast<column_index_t>(SysColumns::Precision)),
-        Value(nullptr, static_cast<column_index_t>(SysColumns::Scale)),
         Value(isNullable, static_cast<column_index_t>(SysColumns::IsNullable)),
         Value(ordinalPosition, static_cast<column_index_t>(SysColumns::OrdinalPosition)),
         Value(isSystem, static_cast<column_index_t>(SysColumns::IsSystemColumn)),
@@ -704,12 +954,16 @@ namespace Server {
         Value(user, static_cast<column_index_t>(SysColumns::LastModifiedBy)),
         Value(version, static_cast<column_index_t>(SysColumns::Version)),
         Value(isDeleted, static_cast<column_index_t>(SysColumns::IsDeleted)),
-        Value(nullptr, static_cast<column_index_t>(SysColumns::DeletedAt)),
+        Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt)),
       };
 
       if (precision != Constants::INVALID_DECIMAL_PRECISION) {
-        fields[4] = Value(precision, 5);
-        fields[5] = Value(scale, 6);
+        fields.push_back(Value(precision, static_cast<column_index_t>(SysColumns::Precision)));
+        fields.push_back(Value(scale, static_cast<column_index_t>(SysColumns::Scale)));
+      }
+      else {
+        fields.push_back( Value::Null(static_cast<column_index_t>(SysColumns::Precision)));
+        fields.push_back(Value::Null(static_cast<column_index_t>(SysColumns::Scale)));
       }
 
       const auto result = table->InsertRow(properties, fields);
@@ -727,24 +981,23 @@ namespace Server {
     const bool &isDisabled,
     const string &user,
     const int& version,
-    const bool& isDeleted) const{
+    const bool& isDeleted
+  ) const{
      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const vector<Value> fields = {
-       Value(tableId, 1),
-       Value(indexName, 2),
-       Value(isClustered, 3),
-       Value(isDisabled, 4),
-       Value(currentDate, 5),
-       Value(currentDate, 6),
-       Value(user, 7),
-       Value(version, 8),
-       Value(isDeleted, 9),
-      Value(nullptr, 10),
+     const std::vector<Value> fields = {
+       Value(tableId, static_cast<column_index_t>(SysIndexes::TableId)),
+       Value(indexName, static_cast<column_index_t>(SysIndexes::Name)),
+       Value(isClustered, static_cast<column_index_t>(SysIndexes::IsClustered)),
+       Value(isDisabled, static_cast<column_index_t>(SysIndexes::IsDisabled)),
+       Value(currentDate, static_cast<column_index_t>(SysIndexes::CreatedAt)),
+       Value(currentDate, static_cast<column_index_t>(SysIndexes::LastModifiedAt)),
+       Value(user, static_cast<column_index_t>(SysIndexes::LastModifiedBy)),
+       Value(version, static_cast<column_index_t>(SysIndexes::Version)),
+       Value(isDeleted, static_cast<column_index_t>(SysIndexes::IsDeleted)),
+      Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt)),
      };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
       const auto result = table->InsertRow(properties, fields);
 
@@ -764,17 +1017,15 @@ namespace Server {
     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysIndexColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const vector<Value> fields = {
-      Value(indexId, 0),
-      Value(columnId, 1),
-      Value(ordinalPosition, 2),
-      Value(isIncluded, 3),
-      Value(version, 4),
-      Value(isDeleted, 5),
-      Value(nullptr, 6),
+    const std::vector<Value> fields = {
+      Value(indexId, static_cast<column_index_t>(SysIndexColumns::IndexId)),
+      Value(columnId, static_cast<column_index_t>(SysIndexColumns::ColumnId)),
+      Value(ordinalPosition, static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)),
+      Value(isIncluded, static_cast<column_index_t>(SysIndexColumns::IsIncluded)),
+      Value(version, static_cast<column_index_t>(SysIndexColumns::Version)),
+      Value(isDeleted, static_cast<column_index_t>(SysIndexColumns::IsDeleted)),
+      Value::Null(static_cast<column_index_t>(SysIndexColumns::DeletedAt)),
     };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(properties, fields);
 
@@ -795,27 +1046,28 @@ namespace Server {
       const bool& isDeleted
   ) const{
 
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
+      auto* table = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
+
       const auto currentDate = DataTypes::DateTime::Now();
 
-      vector<Value> fields = {
-          Value(tableId, 1),
-          Value(constraintName, 2),
-          Value(static_cast<int8_t>(constraintType), 3),
-          Value(isDisabled, 4),
-          Value(nullptr, 5),
-          Value(currentDate, 6),
-          Value(currentDate, 7),
-          Value(user, 8),
-          Value(version, 9),
-          Value(isDeleted, 10),
-          Value(nullptr, 11),
+      std::vector<Value> fields = {
+          Value(tableId, static_cast<column_index_t>(SysConstraints::TableId)),
+          Value(constraintName, static_cast<column_index_t>(SysConstraints::Name)),
+          Value(static_cast<int8_t>(constraintType), static_cast<column_index_t>(SysConstraints::Type)),
+          Value(isDisabled, static_cast<column_index_t>(SysConstraints::IsDisabled)),
+          Value(currentDate, static_cast<column_index_t>(SysConstraints::CreatedAt)),
+          Value(currentDate, static_cast<column_index_t>(SysConstraints::LastModifiedAt)),
+          Value(user, static_cast<column_index_t>(SysConstraints::LastModifiedBy)),
+          Value(version, static_cast<column_index_t>(SysConstraints::Version)),
+          Value(isDeleted, static_cast<column_index_t>(SysConstraints::IsDeleted)),
+          Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt)),
       };
 
-      if(constraintIndexId != nullptr)
-          fields.at(4).SetData(*constraintIndexId);
+      auto indexValue = (constraintIndexId != nullptr)
+          ? Value(*constraintIndexId, static_cast<column_index_t>(SysConstraints::IndexId))
+          : Value::Null(static_cast<column_index_t>(SysConstraints::IndexId));
 
-    // const auto transactionId = this->masterDb->StartLogTransaction();
+      fields.push_back(std::move(indexValue));
 
     const auto result = table->InsertRow(properties, fields);
 
@@ -830,21 +1082,20 @@ namespace Server {
     const int32_t & columnId,
     const int32_t & ordinalPosition,
     const int& version,
-    const bool& isDeleted) const{
+    const bool& isDeleted
+  ) const{
 
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysConstraintColumns);
+    auto* table = this->masterDb->OpenTable(MasterDbTables::SysConstraintColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const vector<Value> fields = {
-        Value(constraintId, 0),
-        Value(columnId, 1),
-        Value(ordinalPosition, 2),
-        Value(version, 3),
-        Value(isDeleted, 4),
-        Value(nullptr, 5),
+    const std::vector<Value> fields = {
+        Value(constraintId, static_cast<column_index_t>(SysConstraintColumns::ConstraintId)),
+        Value(columnId, static_cast<column_index_t>(SysConstraintColumns::ColumnId)),
+        Value(ordinalPosition, static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)),
+        Value(version, static_cast<column_index_t>(SysConstraintColumns::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysConstraintColumns::IsDeleted)),
+        Value::Null(static_cast<column_index_t>(SysConstraintColumns::DeletedAt)),
     };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(properties, fields);
 
@@ -866,23 +1117,21 @@ namespace Server {
       const bool& isDeleted
   ) const{
 
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
+      auto* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Value> fields = {
-        Value(tableId, 0),
-        Value(columnId, 1),
-        Value(seedValue, 2),
-        Value(increment, 3),
-        Value(lastValue, 4),
-        Value(isCached, 5),
-        Value(cacheBlock, 6),
-        Value(version, 7),
-        Value(isDeleted, 8),
-        Value(nullptr, 9),
+      const std::vector<Value> fields = {
+        Value(tableId, static_cast<column_index_t>(SysIdentityColumns::TableId)),
+        Value(columnId, static_cast<column_index_t>(SysIdentityColumns::ColumnId)),
+        Value(seedValue, static_cast<column_index_t>(SysIdentityColumns::SeedValue)),
+        Value(increment, static_cast<column_index_t>(SysIdentityColumns::IncrementValue)),
+        Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue)),
+        Value(isCached, static_cast<column_index_t>(SysIdentityColumns::IsCached)),
+        Value(cacheBlock, static_cast<column_index_t>(SysIdentityColumns::CacheBlock)),
+        Value(version, static_cast<column_index_t>(SysIdentityColumns::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysIdentityColumns::IsDeleted)),
+        Value::Null(static_cast<column_index_t>(SysIdentityColumns::DeletedAt)),
       };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(properties, fields);
 
@@ -898,18 +1147,19 @@ namespace Server {
     const int &version,
     const bool &isDeleted) const{
 
-      DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysDefaultValues);
+      auto* table = this->masterDb->OpenTable(MasterDbTables::SysDefaultValues);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Value> fields = {
-        Value(columnId, 0),
-        Value(std::string(reinterpret_cast<const char*>(value.GetRawData()), value.GetSize()), 1),
-        Value(version, 2),
-        Value(isDeleted, 3),
-        Value(nullptr, 4),
+      const std::vector<Value> fields = {
+        Value(columnId, static_cast<column_index_t>(SysDefaultValues::ColumnId)),
+        Value(
+      std::string(reinterpret_cast<const char*>(value.GetRawData()), value.GetSize()),
+           static_cast<column_index_t>(SysDefaultValues::Value)
+        ),
+        Value(version, static_cast<column_index_t>(SysDefaultValues::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysDefaultValues::IsDeleted)),
+        Value::Null(static_cast<column_index_t>(SysDefaultValues::DeletedAt)),
       };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
       const auto result = table->InsertRow(properties, fields);
 
@@ -922,9 +1172,7 @@ namespace Server {
     const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
     const int32_t &tableId,
     const int64_t& rowCount,
-    const int32_t& rowSize,
-    const int &version,
-    const bool &isDeleted
+    const int32_t& rowSize
   ) const{
 
     DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysTableStats);
@@ -960,8 +1208,8 @@ namespace Server {
     const std::vector<Value> fields = {
       Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)),
       Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
-      Value(nullptr, static_cast<column_index_t>(SysColumnStats::MinimumValue)),
-      Value(nullptr, static_cast<column_index_t>(SysColumnStats::MaximumValue)),
+      Value::Null(static_cast<column_index_t>(SysColumnStats::MinimumValue)),
+      Value::Null(static_cast<column_index_t>(SysColumnStats::MaximumValue)),
       Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount))
     };
 
@@ -1020,7 +1268,7 @@ namespace Server {
       Value(lastModifiedBy, static_cast<column_index_t>(SysRoles::LastModifiedBy)),
       Value(version, static_cast<column_index_t>(SysRoles::Version)),
       Value(isDeleted, static_cast<column_index_t>(SysRoles::IsDeleted)),
-      Value(nullptr, static_cast<column_index_t>(SysRoles::DeletedAt)),
+      Value::Null(static_cast<column_index_t>(SysRoles::DeletedAt)),
     };
 
     const auto result = table->InsertRow(properties, fields);
@@ -1040,7 +1288,7 @@ namespace Server {
     const bool &isDeleted
   ) const{
 
-    DatabaseEngine::StorageTypes::Table* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
+    auto* table = this->masterDb->OpenTable(MasterDbTables::SysUsers);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const std::string lastModifiedBy = "system";
@@ -1055,10 +1303,8 @@ namespace Server {
       Value(lastModifiedBy, static_cast<column_index_t>(SysUsers::LastModifiedBy)),
       Value(version, static_cast<column_index_t>(SysUsers::Version)),
       Value(isDeleted, static_cast<column_index_t>(SysUsers::IsDeleted)),
-      Value(nullptr, static_cast<column_index_t>(SysUsers::DeletedAt)),
+      Value::Null(static_cast<column_index_t>(SysUsers::DeletedAt)),
     };
-
-    // const auto transactionId = this->masterDb->StartLogTransaction();
 
     const auto result = table->InsertRow(properties, fields);
 
@@ -1114,15 +1360,13 @@ namespace Server {
 
       const auto& data = row->GetData();
 
-      const auto databaseId = data[0]->GetInt();
-
-      const auto& dbName = data[1]->GetString();
+      const auto databaseId = data[static_cast<column_index_t>(SysDatabases::DatabaseId)]->GetInt();
 
       auto schemas = this->SelectSchemas(databaseId);
 
-      auto dbTables = this->SelectTables(dbName);
+      auto tables = this->SelectTables(databaseId);
 
-      for (auto& table : dbTables) {
+      for (auto& table : tables) {
         table.columns = this->SelectColumns(table.id);
         table.statistics = this->SelectTableStatisticsById(table.id);
 
@@ -1141,24 +1385,7 @@ namespace Server {
         // table.identity = this->SelectIdentityColumnsByTableId(table.id);
       }
 
-      databasesHeaders.emplace_back(Headers::DatabaseHeader{
-        .id = databaseId,
-        .name = dbName,
-        .filepath = data[2]->GetString(),
-        .isSystem = data[3]->GetBool(),
-        .additionalInfo = {
-          .createdAt = data[4]->GetDateTime(),
-          .lastModified = data[5]->GetDateTime(),
-          .lastModifiedBy = data[6]->GetString(),
-          .version = data[7]->GetInt(),
-          .isDeleted = data[8]->GetBool(),
-          .deletedAt = data[9]->GetBlockData() == nullptr
-                    ? DataTypes::DateTime()
-                    : data[9]->GetDateTime(),
-        },
-        .tables = std::move(dbTables),
-        .schemas = std::move(schemas)
-      });
+      databasesHeaders.emplace_back(ServerInstance::ToDatabaseHeader(row, tables, schemas));
     }
 
     return databasesHeaders;
@@ -1170,13 +1397,10 @@ namespace Server {
       Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
       std::vector<const Row*> selectedDatabases;
 
-      DataTypes::Indexing::Key key;
-      key.InsertKey(DataTypes::Indexing::Key(dbName.data(), dbName.size(), DataType::String));
+      auto* columnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
+      auto* constantExpr = new Expressions::ConstantExpression(Value(dbName, static_cast<column_index_t>(SysDatabases::Name)));
 
-      auto* columnOperation = new Expressions::ColumnExpression(1);
-      auto* literaValue = new Expressions::ConstantExpression(Value(dbName, 1));
-
-      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
+      const Expressions::BinaryExpression binaryExpr(columnExpr, constantExpr, Expressions::BinaryOperator::Equal);
 
       sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
 
@@ -1184,29 +1408,20 @@ namespace Server {
   }
 
   Headers::DatabaseHeader ServerInstance::SelectDatabase(const std::string &name) const{
-    using namespace DatabaseEngine::StorageTypes;
+    auto* columnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
+    auto* constantExpr = new Expressions::ConstantExpression(Value(name, static_cast<column_index_t>(SysDatabases::Name)));
 
-    auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::ConstantExpression(Value(name, 1));
+    const Expressions::BinaryExpression binaryExpr(columnExpr, constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
-
-    Table* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
-    std::vector<const Row*> selectedDatabases;
+    auto* sysDatabases = this->masterDb->OpenTable(MasterDbTables::SysDatabases);
+    std::vector<const DatabaseEngine::StorageTypes::Row*> selectedDatabases;
 
     sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
 
     if (selectedDatabases.empty())
       return {};
 
-    const auto& data = selectedDatabases[0]->GetData();
-
-    return Headers::DatabaseHeader{
-      .id = data[0]->GetInt(),
-      .name = data[1]->GetString(),
-      .filepath = data[2]->GetString(),
-      .isSystem = data[3]->GetBool(),
-    };
+    return ServerInstance::ToDatabaseHeader(selectedDatabases[0]);
   }
 
   Headers::DatabaseHeader ServerInstance::SelectDatabaseById(const int32_t & databaseId) const{
@@ -1223,46 +1438,25 @@ namespace Server {
     if (selectedDatabases.empty())
       return {};
 
-    const auto& data = selectedDatabases[0]->GetData();
-
-    return Headers::DatabaseHeader{
-      .id = data[0]->GetInt(),
-      .name = data[1]->GetString(),
-      .filepath = data[2]->GetString(),
-      .isSystem = data[3]->GetBool(),
-    };
+    return ServerInstance::ToDatabaseHeader(selectedDatabases[0]);
   }
 
   vector<Headers::SchemaHeader> ServerInstance::SelectSchemas(const int32_t& databaseId) const{
-     using namespace DatabaseEngine::StorageTypes;
+     auto* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
+     std::vector<const DatabaseEngine::StorageTypes::Row*> selectedSchemas;
 
-     Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
-     std::vector<const Row*> selectedSchemas;
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::ConstantExpression(Value(databaseId, 1));
-
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
-
-    sysSchemas->ClusteredIndexScan(this->baseProperties, &selectedSchemas, &binaryExpr);
+    sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key);
 
     if (selectedSchemas.empty())
       return {};
 
     vector<Headers::SchemaHeader> schemas;
 
-    for (const auto& row : selectedSchemas) {
-      const auto& data = row->GetData();
-
-      schemas.emplace_back(Headers::SchemaHeader{
-        data[0]->GetInt(),
-        data[1]->GetInt(),
-        data[2]->GetString(),
-        data[3]->GetDateTime(),
-  data[4]->GetDateTime(),
-        data[5]->GetString()
-      });
-    }
+    for (const auto& row : selectedSchemas)
+      schemas.emplace_back(ServerInstance::ToSchemaHeader(row));
 
      return schemas;
   }
@@ -1278,123 +1472,56 @@ namespace Server {
     return selectedSchemas;
   }
 
-  bool ServerInstance::SchemaExists(const int32_t &databaseId, const std::string &schema) const{
-    using namespace DatabaseEngine::StorageTypes;
+  bool ServerInstance::SchemaExists(const int32_t &databaseId, const std::string &schema, int* schemaId) const{
+    std::vector<const DatabaseEngine::StorageTypes::Row*> selectedSchemas;
 
-    auto* leftColumnOperation = new Expressions::ColumnExpression(1);
-    auto* leftLiteraValue = new Expressions::ConstantExpression(Value(databaseId, 1));
+    auto* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
 
-    const auto binaryExpr = Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    // auto* rightColumnOperation = new Expressions::ColumnExpression(2);
-    // auto* rightLiteraValue = new Expressions::LiteralExpression(Value(schema, 2));
-    //
-    // auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::ExpressionOperator::Equal);
-    //
-    // const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::ExpressionType::And);
-
-    Table* sysSchemas = this->masterDb->OpenTable(MasterDbTables::SysSchemas);
-    std::vector<const Row*> selectedSchemas;
-
-    sysSchemas->ClusteredIndexScan(this->baseProperties, &selectedSchemas, &binaryExpr);
+    sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key);
 
     for (const auto& row : selectedSchemas) {
-      const auto& currentSchemaName = row->GetColumnByIndex(2);
+      const auto& currentSchemaName = row->GetColumnByIndex(static_cast<column_index_t>(SysSchemas::Name));
 
       if (Functions::String::Lower(currentSchemaName.GetString())
-          == Functions::String::Lower(schema))
+          == Functions::String::Lower(schema)) {
+
+        if (schemaId != nullptr)
+          *schemaId = row->GetColumnByIndex(static_cast<column_index_t>(SysSchemas::SchemaId)).GetInt();
+
         return true;
+      }
     }
 
     return false;
   }
 
   vector<Headers::TableHeader> ServerInstance::SelectTables(const string &dbName) const{
-    using namespace DatabaseEngine::StorageTypes;
-
     const auto databaseHeader = this->SelectDatabase(dbName);
 
-    auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::ConstantExpression(Value(databaseHeader.id, 1));
-
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
-
-    std::vector<const Row*> selectedTables;
-
-    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
-
-    sysTablesPtr->ClusteredIndexScan(this->baseProperties, &selectedTables, &binaryExpr);
-
-    if (selectedTables.empty())
-      return {};
-
-    vector<Headers::TableHeader> selectedTableHeaders;
-    selectedTableHeaders.reserve(selectedTables.size());
-
-    for (const auto& row : selectedTables) {
-      const auto& data = row->GetData();
-
-      selectedTableHeaders.emplace_back(
-          Headers::TableHeader{
-              data[0]->GetInt(),
-              data[1]->GetInt(),
-              data[2]->GetInt(),
-              data[3]->GetString(),
-              data[4]->GetSmallInt(),
-                data[5]->GetBool(),
-              data[6]->GetDateTime(),
-              data[7]->GetDateTime(),
-              data[8]->GetString()
-          }
-      );
-    }
-
-      ranges::sort(selectedTableHeaders,
-      [](const Headers::TableHeader& a, const Headers::TableHeader& b) {
-          return a.ordinalPosition < b.ordinalPosition;
-      }
-    );
-
-    return selectedTableHeaders;
+    return this->SelectTables(databaseHeader.id);
   }
 
-  vector<Headers::TableHeader> ServerInstance::SelectTables(const int32_t & databaseId) const{
-    using namespace DatabaseEngine::StorageTypes;
+  std::vector<Headers::TableHeader> ServerInstance::SelectTables(const int32_t & databaseId) const{
+    std::vector<const DatabaseEngine::StorageTypes::Row*> selectedTables;
 
-    auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::ConstantExpression(Value(databaseId, 1));
+    auto* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    std::vector<const Row*> selectedTables;
-
-    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
-
-    sysTablesPtr->ClusteredIndexScan(this->baseProperties, &selectedTables, &binaryExpr);
+    sysTablesPtr->ClusteredIndexSeek(this->baseProperties, &selectedTables, key);
 
     if (selectedTables.empty())
       return {};
 
-    vector<Headers::TableHeader> selectedTableHeaders;
+    std::vector<Headers::TableHeader> selectedTableHeaders;
     selectedTableHeaders.reserve(selectedTables.size());
 
-    for (const auto& row : selectedTables) {
-      const auto& data = row->GetData();
-
-      selectedTableHeaders.emplace_back(
-        Headers::TableHeader{
-            data[0]->GetInt(),
-            data[1]->GetInt(),
-            data[2]->GetInt(),
-            data[3]->GetString(),
-            data[4]->GetSmallInt(),
-              data[5]->GetBool(),
-            data[6]->GetDateTime(),
-            data[7]->GetDateTime(),
-            data[8]->GetString()
-        }
-      );
-    }
+    for (const auto& row : selectedTables)
+      selectedTableHeaders.emplace_back(ServerInstance::ToTableHeader(row));
 
     ranges::sort(selectedTableHeaders,
     [](const Headers::TableHeader& a, const Headers::TableHeader& b) {
@@ -1413,59 +1540,50 @@ namespace Server {
     return this->SelectTable(databaseHeader.id, tableName, ServerConstants::DEFAULT_SCHEMA_NAME.data());
   }
 
-  Headers::TableHeader ServerInstance::SelectTable(const int32_t &databaseId, const string &tableName, const std::string& schema) const{
-    using namespace DatabaseEngine::StorageTypes;
+  Headers::TableHeader ServerInstance::SelectTable(
+    const int32_t &databaseId,
+    const string &tableName,
+    const std::string& schema
+  ) const{
 
-    if (!this->SchemaExists(databaseId, schema) && !schema.empty())
+    int32_t schemaId = -1;
+    if (!this->SchemaExists(databaseId, schema, &schemaId) && !schema.empty())
       return {};
 
-    std::vector<const Row*> selectedTables;
-    Table* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
+    std::vector<const DatabaseEngine::StorageTypes::Row*> selectedTables;
+    auto* sysTablesPtr = this->masterDb->OpenTable(MasterDbTables::SysTables);
 
-    auto* leftColumnOperation = new Expressions::ColumnExpression(1);
-    auto* leftLiteraValue = new Expressions::ConstantExpression(Value(databaseId, 1));
+    auto* leftColumnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId));
+    auto* leftConstantExpr = new Expressions::ConstantExpression(Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)));
 
-    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::BinaryOperator::Equal);
+    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnExpr, leftConstantExpr, Expressions::BinaryOperator::Equal);
 
-    auto* rightColumnOperation = new Expressions::ColumnExpression(3);
-    auto* rightLiteraValue = new Expressions::ConstantExpression(Value(tableName, 3));
+    auto* rightColumnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::Name));
+    auto* rightConstantExpr = new Expressions::ConstantExpression(Value(tableName, static_cast<column_index_t>(SysTables::Name)));
 
-    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
+    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnExpr, rightConstantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
-    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::LogicalType::And);
+    const auto* logicalExpr = new Expressions::LogicalExpression(leftBinaryExpr, rightBinaryExpr, Expressions::LogicalType::And);
 
-    sysTablesPtr->ClusteredIndexScan(this->baseProperties, &selectedTables, &logicalExpr);
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
+
+    sysTablesPtr->ClusteredIndexSeek(this->baseProperties, &selectedTables, key, logicalExpr);
 
     if (selectedTables.empty())
       return {};
 
-    const auto& data = selectedTables[0]->GetData();
-
-    return  Headers::TableHeader{
-          data[0]->GetInt(),
-          data[1]->GetInt(),
-          data[2]->GetInt(),
-          data[3]->GetString(),
-          data[4]->GetSmallInt(),
-            data[5]->GetBool(),
-          data[6]->GetDateTime(),
-          data[7]->GetDateTime(),
-          data[8]->GetString()
-    };
+    return ServerInstance::ToTableHeader(selectedTables[0]);
   }
 
   vector<Headers::ConstraintsHeader> ServerInstance::SelectConstraints(const int32_t & tableId) const{
-    using namespace DatabaseEngine::StorageTypes;
+    std::vector<const DatabaseEngine::StorageTypes::Row*> selectedConstraints;
+    auto* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
 
-    std::vector<const Row*> selectedConstraints;
-    Table* constraintsTable = this->masterDb->OpenTable(MasterDbTables::SysConstraints);
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    auto* columnOperation = new Expressions::ColumnExpression(1);
-    auto* literaValue = new Expressions::ConstantExpression(Value(tableId, 1));
-
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
-
-    constraintsTable->ClusteredIndexScan(this->baseProperties, &selectedConstraints, &binaryExpr);
+    constraintsTable->ClusteredIndexSeek(this->baseProperties, &selectedConstraints, key);
 
     if (selectedConstraints.empty())
       return {};
@@ -1478,52 +1596,23 @@ namespace Server {
 
       auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0]->GetInt());
 
-      const auto indexId =(data[5]->GetBlockData() == nullptr)
+      const auto indexId =(data[static_cast<column_index_t>(SysConstraints::IndexId)]->GetBlockData() == nullptr)
               ? -1
-              : data[5]->GetInt();
+              : data[static_cast<column_index_t>(SysConstraints::IndexId)]->GetInt();
 
       Headers::IndexHeader index;
       if(indexId != -1)
         index = this->SelectIndexById(indexId);
 
-      selectedConstraintsHeader.emplace_back(
-        Headers::ConstraintsHeader{
-          .constraintId = data[0]->GetInt(),
-          .tableId = data[1]->GetInt(),
-          .name = data[2]->GetString(),
-          .type = static_cast<Headers::ConstraintType>(data[3]->GetTinyInt()),
-          .isDisabled = data[4]->GetBool(),
-          .indexId = indexId,
-          .index = std::move(index),
-          .columns = std::move(constraintColumns),
-          .additionalInfo{
-              .createdAt = data[6]->GetDateTime(),
-              .lastModified = data[7]->GetDateTime(),
-              .lastModifiedBy = data[8]->GetString(),
-              .version = data[9]->GetInt(),
-              .isDeleted = data[10]->GetBool(),
-              .deletedAt = data[11]->GetBlockData() == nullptr
-                    ? DataTypes::DateTime()
-                    : data[11]->GetDateTime() //might crash, is nullable
-          },
-        }
-      );
+      selectedConstraintsHeader.emplace_back(ServerInstance::ToConstraintsHeader(row, constraintColumns, index));
     }
-
-    ranges::sort(selectedConstraintsHeader,
-    [](const Headers::ConstraintsHeader& a, const Headers::ConstraintsHeader& b) {
-        return a.constraintId < b.constraintId;
-    }
-    );
 
     return selectedConstraintsHeader;
   }
 
   vector<Headers::ColumnHeader> ServerInstance::SelectColumns(const int32_t& tableId) const{
-    using namespace DatabaseEngine::StorageTypes;
-
-    std::vector<const Row*> selectedColumns;
-    Table* sysColumns = this->masterDb->OpenTable(MasterDbTables::SysColumns);
+    std::vector<const DatabaseEngine::StorageTypes::Row*> selectedColumns;
+    auto* sysColumns = this->masterDb->OpenTable(MasterDbTables::SysColumns);
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
@@ -1536,38 +1625,8 @@ namespace Server {
     vector<Headers::ColumnHeader> selectedColumnHeaders;
     selectedColumnHeaders.reserve(selectedColumns.size());
 
-    for (const auto& row : selectedColumns) {
-      const auto& data = row->GetData();
-
-      selectedColumnHeaders.emplace_back(
-        Headers::ColumnHeader{
-          .id = data[1]->GetInt(),
-          .tableId = data[0]->GetInt(),
-          .name = data[2]->GetString(),
-          .dataType = static_cast<uint8_t>(data[3]->GetTinyInt()),
-          .recordSize = data[4]->GetInt(),
-          .precision = data[5]->GetBlockData() == nullptr
-              ? Constants::INVALID_DECIMAL_PRECISION
-              : data[5]->GetTinyInt(),
-          .scale = data[6]->GetBlockData() == nullptr
-              ? Constants::INVALID_DECIMAL_SCALE
-              : data[6]->GetTinyInt(),
-          .isNullable = data[7]->GetBool(),
-          .ordinalPosition = data[8]->GetSmallInt(),
-          .isSystem = data[9]->GetBool(),
-          .additionalInfo{
-            .createdAt = data[10]->GetDateTime(),
-            .lastModified = data[11]->GetDateTime(),
-            .lastModifiedBy = data[12]->GetString(),
-            .version = data[13]->GetInt(),
-            .isDeleted = data[14]->GetBool(),
-            .deletedAt = data[15]->GetBlockData() == nullptr
-                      ? DataTypes::DateTime::Now()
-                      : data[15]->GetDateTime(),
-            }
-        }
-      );
-    }
+    for (const auto& row : selectedColumns)
+      selectedColumnHeaders.emplace_back(ServerInstance::ToColumnHeader(row));
 
     ranges::sort(selectedColumnHeaders,
         [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
@@ -1595,37 +1654,15 @@ namespace Server {
       Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysIndexes);
       std::vector<const Row*> selectedIndexes;
 
-      auto* columnOperation = new Expressions::ColumnExpression(1);
-      auto* literaValue = new Expressions::ConstantExpression(Value(tableId, 1));
+      DataTypes::Indexing::Key key;
+      key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-      const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
-
-      sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedIndexes, &binaryExpr);
+      sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key);
 
       vector<Headers::IndexHeader> selectedIndexHeaders;
 
-      for (const auto& row : selectedIndexes) {
-        const auto& data = row->GetData();
-
-        selectedIndexHeaders.emplace_back(
-        Headers::IndexHeader{
-          .id = data[0]->GetInt(),
-          .tableId = data[1]->GetInt(),
-          .name = data[2]->GetString(),
-          .isClustered = data[3]->GetBool(),
-          .isDisabled = data[4]->GetBool(),
-            .additionalInfo{
-            .createdAt = data[5]->GetDateTime(),
-            .lastModified = data[6]->GetDateTime(),
-            .lastModifiedBy = data[7]->GetString(),
-            .version = data[8]->GetInt(),
-            .isDeleted = data[9]->GetBool(),
-            .deletedAt = data[10]->GetBlockData() == nullptr
-                  ? DataTypes::DateTime()
-                  : data[10]->GetDateTime()
-            },
-        });
-      }
+      for (const auto& row : selectedIndexes)
+        selectedIndexHeaders.emplace_back(ServerInstance::ToIndexHeader(row));
 
       //get the clustered first
       ranges::sort(selectedIndexHeaders,
@@ -1654,26 +1691,10 @@ namespace Server {
 
     vector<Headers::IndexHeader> selectedIndexHeaders;
 
-    const auto& data = selectedIndexes.at(0)->GetData();
+    auto header = ServerInstance::ToIndexHeader(selectedIndexes.at(0));
+    header.columns = std::move(indexColumns);
 
-    return Headers::IndexHeader{
-      .id = data[0]->GetInt(),
-      .tableId = data[1]->GetInt(),
-      .name = data[2]->GetString(),
-      .isClustered = data[3]->GetBool(),
-      .isDisabled = data[4]->GetBool(),
-      .additionalInfo{
-        .createdAt = data[5]->GetDateTime(),
-        .lastModified = data[6]->GetDateTime(),
-        .lastModifiedBy = data[7]->GetString(),
-        .version = data[8]->GetInt(),
-        .isDeleted = data[9]->GetBool(),
-        .deletedAt = data[10]->GetBlockData() == nullptr
-              ? DataTypes::DateTime()
-              : data[10]->GetDateTime()
-      },
-      .columns = std::move(indexColumns),
-      };
+    return header;
   }
 
     vector<Headers::IndexColumnsHeader> ServerInstance::SelectIndexColumnsByIndexId(const int32_t & indexId) const{
@@ -1695,20 +1716,7 @@ namespace Server {
     for (const auto& row : rows) {
       const auto& data = row->GetData();
 
-      indexColumns.emplace_back(
-        Headers::IndexColumnsHeader{
-          .indexId = data[0]->GetInt(),
-          .columnId = data[1]->GetInt(),
-          .ordinalPosition = data[2]->GetSmallInt(),
-          .isIncluded = data[3]->GetBool(),
-          .additionalInfo{
-            .version = data[4]->GetInt(),
-            .isDeleted = data[5]->GetBool(),
-            .deletedAt = data[6]->GetBlockData() == nullptr
-                  ? DataTypes::DateTime()
-                  : data[6]->GetDateTime()
-          }
-        });
+      indexColumns.emplace_back(ServerInstance::ToIndexColumnsHeader(row));
     }
 
     //get them sorted by ordinal position
@@ -1747,27 +1755,8 @@ namespace Server {
 
       vector<Headers::IdentityColumnsHeader> columns;
 
-      for (const auto& row : rows) {
-        const auto& data = row->GetData();
-
-        columns.emplace_back(
-          Headers::IdentityColumnsHeader{
-            .tableId = data[0]->GetInt(),
-            .columnId = data[1]->GetInt(),
-            .seedValue = data[2]->GetInt(),
-            .increment = data[3]->GetInt(),
-            .lastValue = data[4]->GetBigInt(),
-            .isCached = data[5]->GetBool(),
-            .cacheBlock = data[6]->GetInt(),
-            .additionalInfo{
-              .version = data[7]->GetInt(),
-              .isDeleted = data[8]->GetBool(),
-              .deletedAt = data[9]->GetBlockData() == nullptr
-                    ? DataTypes::DateTime()
-                    : data[9]->GetDateTime()
-            }
-          });
-      }
+      for (const auto& row : rows)
+        columns.emplace_back(ServerInstance::ToIdentityColumnsHeader(row));
 
       //get them sorted by ordinal position
       ranges::sort(columns,
@@ -1805,24 +1794,8 @@ namespace Server {
 
     vector<Headers::ConstraintsColumnsHeader> constraintColumns;
 
-    for(const auto& row : rows){
-      const auto& data = row->GetData();
-
-      constraintColumns.emplace_back(
-          Headers::ConstraintsColumnsHeader{
-            .constraintId = data[0]->GetInt(),
-            .columnId = data[1]->GetInt(),
-            .ordinalPosition = data[2]->GetInt(),
-            .additionalInfo{
-              .version = data[3]->GetInt(),
-              .isDeleted = data[4]->GetBool(),
-              .deletedAt = data[5]->GetBlockData() == nullptr
-                    ? DataTypes::DateTime()
-                    : data[5]->GetDateTime()
-            },
-          }
-      );
-    }
+    for(const auto& row : rows)
+      constraintColumns.emplace_back(ServerInstance::ToConstraintsColumnsHeader(row));
 
     ranges::sort(constraintColumns,
       [](const Headers::ConstraintsColumnsHeader& a, const Headers::ConstraintsColumnsHeader& b) {
@@ -1858,44 +1831,22 @@ namespace Server {
     if(rows.empty())
       return {};
 
-    const auto& data = rows.at(0)->GetData();
-
-    return Headers::DefaultValuesHeader{
-      .columnId = data[0]->GetInt(),
-      .value = data[1]->GetString(),
-      .additionalInfo{
-        .version = data[2]->GetInt(),
-        .isDeleted = data[3]->GetBool(),
-        .deletedAt = data[4]->GetBlockData() == nullptr
-              ? DataTypes::DateTime()
-              : data[4]->GetDateTime()
-      },
-    };
+    return ServerInstance::ToDefaultValuesHeader(rows.at(0));
   }
 
   Headers::TableStatistics ServerInstance::SelectTableStatisticsById(const int32_t &tableId) const{
-    using namespace DatabaseEngine::StorageTypes;
+    auto* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysTableStats);
+    std::vector<const DatabaseEngine::StorageTypes::Row*> selectedStats;
 
-    Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysTableStats);
-    std::vector<const Row*> selectedStats;
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTableStats::TableId));
-    auto* literaValue = new Expressions::ConstantExpression(Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)));
-
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
-
-    sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedStats, &binaryExpr);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedStats, key);
 
     if (selectedStats.empty())
       return {};
 
-    const auto& data = selectedStats.front()->GetData();
-
-    return Headers::TableStatistics{
-      .tableId = data[0]->GetInt(),
-      .rowCount = data[1]->GetBigInt(),
-      .avgRowSize = data[2]->GetInt()
-    };
+    return ServerInstance::ToTableStatistics(selectedStats.front());
   }
 
   Headers::ColumnStatistics ServerInstance::SelectColumnStatisticsById(
@@ -1907,25 +1858,15 @@ namespace Server {
     Table* sysIndexes = this->masterDb->OpenTable(MasterDbTables::SysColumnStats);
     std::vector<const Row*> selectedStats;
 
-    auto* columnOperation = new Expressions::ColumnExpression(0);
-    auto* literaValue = new Expressions::ConstantExpression(Value(columnId, 0));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
-
-    sysIndexes->ClusteredIndexScan(this->baseProperties, &selectedStats, &binaryExpr);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedStats, key);
 
     if (selectedStats.empty())
       return {};
 
-    const auto& data = selectedStats.front()->GetData();
-
-    return Headers::ColumnStatistics{
-        .columnId = data[0]->GetInt(),
-        .distinctCount = data[1]->GetBigInt(),
-        .min = Value(data[2]->GetBlockData(), data[2]->GetBlockSize(), columnType),
-        .max = Value(data[3]->GetBlockData(), data[3]->GetBlockSize(), columnType),
-        .nullCount = data[4]->GetBigInt()
-      };
+    return ServerInstance::ToColumnStatistics(selectedStats.front(), columnType);
   }
 
   std::vector<Headers::ColumnHistograms> ServerInstance::SelectColumnHistogramsByColumnId(
@@ -1944,18 +1885,8 @@ namespace Server {
     std::vector<const DatabaseEngine::StorageTypes::Row*> rows;
     table->ClusteredIndexSeek(this->baseProperties, &rows, key);
 
-    for (const auto& row : rows) {
-      const auto& data = row->GetData();
-
-      result.emplace_back(Headers::ColumnHistograms{
-        .columnId = data[0]->GetInt(),
-        .histogramId = data[1]->GetInt(),
-        .rangeStart = Value(data[2]->GetBlockData(), data[2]->GetBlockSize(), columnType),
-        .rangeEnd = Value(data[3]->GetBlockData(), data[3]->GetBlockSize(), columnType),
-        .rowCount = data[4]->GetInt(),
-        .distinctCount = data[5]->GetInt(),
-      });
-    }
+    for (const auto& row : rows)
+      result.emplace_back(ServerInstance::ToColumnHistograms(row, columnType));
 
     return result;
   }
@@ -1963,17 +1894,17 @@ namespace Server {
   void ServerInstance::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const{
     auto* table = this->masterDb->OpenTable(MasterDbTables::SysIdentityColumns);
 
-    const vector<Value> updates{
-      Value(lastValue, 4)
+    const std::vector<Value> updates{
+      Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue))
     };
 
-    auto* leftColumnOperation = new Expressions::ColumnExpression(0);
-    auto* leftLiteraValue = new Expressions::ConstantExpression(Value(tableId, 0));
+    auto* leftColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysIdentityColumns::TableId));
+    auto* leftLiteraValue = new Expressions::ConstantExpression(Value(tableId, static_cast<column_index_t>(SysIdentityColumns::TableId)));
 
     auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::BinaryOperator::Equal);
 
-    auto* rightColumnOperation = new Expressions::ColumnExpression(1);
-    auto* rightLiteraValue = new Expressions::ConstantExpression(Value(columnId, 1));
+    auto* rightColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysIdentityColumns::ColumnId));
+    auto* rightLiteraValue = new Expressions::ConstantExpression(Value(columnId, static_cast<column_index_t>(SysIdentityColumns::ColumnId)));
 
     auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::BinaryOperator::Equal);
 

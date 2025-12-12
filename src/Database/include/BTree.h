@@ -141,6 +141,13 @@ namespace Indexing
             std::vector<const DatabaseEngine::StorageTypes::Row*>* result
         )const;
 
+        void IndexSeek(
+            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DataTypes::Indexing::Key &key,
+            std::vector<const DatabaseEngine::StorageTypes::Row*>* result,
+            const Expressions::Expression* expression
+        )const;
+
         void IndexScan(vector<DataTypes::Indexing::QueryData> &result)const;
 
         void IndexScan(

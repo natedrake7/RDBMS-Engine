@@ -72,6 +72,29 @@ namespace Server {
     void InsertSystemRoles(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties);
     void InsertSystemUsers(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties);
 
+    static Headers::DatabaseHeader ToDatabaseHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::DatabaseHeader ToDatabaseHeader(
+      const DatabaseEngine::StorageTypes::Row* row,
+      std::vector<Headers::TableHeader>& dbTables,
+      std::vector<Headers::SchemaHeader>& schemas
+    );
+    static Headers::SchemaHeader ToSchemaHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::TableHeader ToTableHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::ColumnHeader ToColumnHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::IndexHeader ToIndexHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::IndexColumnsHeader ToIndexColumnsHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::ConstraintsHeader ToConstraintsHeader(
+      const DatabaseEngine::StorageTypes::Row* row,
+      std::vector<Headers::ConstraintsColumnsHeader>& constraintColumns,
+      Headers::IndexHeader& indexHeader
+    );
+    static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::DefaultValuesHeader ToDefaultValuesHeader(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::TableStatistics ToTableStatistics(const DatabaseEngine::StorageTypes::Row* row);
+    static Headers::ColumnStatistics ToColumnStatistics(const DatabaseEngine::StorageTypes::Row* row, const DataType& columnType);
+    static Headers::ColumnHistograms ToColumnHistograms(const DatabaseEngine::StorageTypes::Row* row, const DataType& columnType);
+
   public:
     [[nodiscard]] static ServerInstance& Get();
     void Initialize(const std::string& configPath);
@@ -214,9 +237,7 @@ namespace Server {
       const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
       const int32_t& tableId,
       const int64_t& rowCount = 0,
-      const int32_t& rowSize = 0,
-      const int& version = 0,
-      const bool& isDeleted = false
+      const int32_t& rowSize = 0
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
@@ -266,7 +287,11 @@ namespace Server {
     [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const int32_t& databaseId) const;
     [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const int32_t& databaseId) const;
     [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const int32_t& databaseId) const;
-    [[nodiscard]] bool SchemaExists(const int32_t &databaseId, const std::string& schema) const;
+    [[nodiscard]] bool SchemaExists(
+      const int32_t &databaseId,
+      const std::string& schema,
+      int* schemaId = nullptr
+    ) const;
     [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const string& dbName) const;
     [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const int32_t & databaseId) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;

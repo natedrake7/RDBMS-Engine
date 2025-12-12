@@ -23,9 +23,16 @@ namespace DatabaseEngine::StorageTypes {
     void Table::ClusteredIndexSeek(
         const QueryPipeline::PhysicalPlan::ExecutionProperties &properties,
         std::vector<const Row *> *selectedRows,
-        const DataTypes::Indexing::Key &key
+        const DataTypes::Indexing::Key &key,
+        const Expressions::Expression* expression
     ) {
         const auto* tree = this->GetClusteredIndexedTree();
+
+        if (expression != nullptr) {
+            tree->IndexSeek(properties, key, selectedRows, expression);
+            return;
+        }
+
         tree->IndexSeek(properties, key, selectedRows);
     }
 

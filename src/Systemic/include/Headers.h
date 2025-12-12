@@ -47,8 +47,8 @@ namespace Headers {
   };
 
   struct IndexHeader {
-    int32_t id = -1;
     int32_t tableId;
+    int32_t id = -1;
     std::string name;
     bool isClustered;
     bool isDisabled;
@@ -66,8 +66,8 @@ namespace Headers {
   };
 
   struct ConstraintsHeader{
-    int32_t constraintId = Constants::INVALID_CONSTRAINT_ID;
     int32_t tableId;
+    int32_t constraintId = Constants::INVALID_CONSTRAINT_ID;
     std::string name;
     ConstraintType type;
     bool isDisabled;
@@ -114,8 +114,8 @@ namespace Headers {
   };
 
   struct ColumnHeader {
-    int32_t id = Constants::INVALID_COLUMN_ID;
     int32_t tableId;
+    int32_t id = Constants::INVALID_COLUMN_ID;
     std::string name;
     uint8_t dataType;
     int32_t recordSize;
@@ -132,8 +132,8 @@ namespace Headers {
   };
 
   struct TableHeader {
-    int32_t id = Constants::INVALID_TABLE_ID;
     int32_t databaseId;
+    int32_t id = Constants::INVALID_TABLE_ID;
     int32_t schemaId;
     std::string name;
     int16_t ordinalPosition;

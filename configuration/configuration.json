@@ -25,8 +25,8 @@
       "id": 2,
       "name": "sys_schemas",
       "columns": [
-        { "name": "schema_id", "type": "Int", "hasIdentity": true},
         { "name": "database_id", "type": "Int" },
+        { "name": "schema_id", "type": "Int", "hasIdentity": true},
         { "name": "name", "type": "String", "size": 100 },
         { "name": "created_at", "type": "DateTime" },
         { "name": "last_modified", "type": "DateTime" },
@@ -35,14 +35,14 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "primaryKey": ["schema_id"]
+      "primaryKey": ["database_id", "schema_id"]
     },
     {
       "id": 3,
       "name": "sys_tables",
       "columns": [
-        { "name": "table_id", "type": "Int", "hasIdentity": true},
         { "name": "database_id", "type": "Int" },
+        { "name": "table_id", "type": "Int", "hasIdentity": true},
         { "name": "schema_id", "type": "Int" },
         { "name": "name", "type": "String", "size": 100 },
         { "name": "ordinal_position", "type": "Int" },
@@ -54,7 +54,7 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "primaryKey": ["table_id"]
+      "primaryKey": ["database_id","table_id"]
     },
     {
       "id": 4,
@@ -83,8 +83,8 @@
       "id": 5,
       "name": "sys_indexes",
       "columns": [
-        { "name": "index_id", "type": "Int", "hasIdentity": true},
         { "name": "table_id", "type": "Int" },
+        { "name": "index_id", "type": "Int", "hasIdentity": true},
         { "name": "name", "type": "String", "size": 100 },
         { "name": "is_clustered", "type": "Bool" },
         { "name": "is_disabled", "type": "Bool" },
@@ -95,7 +95,7 @@
         { "name": "is_deleted", "type": "Bool", "default": 0 },
         { "name": "deleted_at", "type": "DateTime", "nullable": true }
       ],
-      "primaryKey": ["index_id"]
+      "primaryKey": ["table_id", "index_id"]
     },
     {
       "id": 6,
@@ -132,8 +132,8 @@
       "id": 8,
       "name": "sys_constraints",
       "columns": [
-        { "name": "constraint_id",        "type": "Int", "hasIdentity": true},
         { "name": "table_id",             "type": "Int" },
+        { "name": "constraint_id",        "type": "Int", "hasIdentity": true},
         { "name": "name",                 "type": "String", "size": 100 },
         { "name": "constraint_type",      "type": "TinyInt" },
         { "name": "is_disabled",          "type": "Bool" },
@@ -145,7 +145,7 @@
         { "name": "is_deleted",           "type": "Bool", "default": 0 },
         { "name": "deleted_at",           "type": "DateTime", "nullable": true }
       ],
-      "primaryKey": ["constraint_id"]
+      "primaryKey": ["table_id", "constraint_id"]
     },
     {
       "id": 9,

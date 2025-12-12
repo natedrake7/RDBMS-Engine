@@ -1064,18 +1064,58 @@ namespace Indexing
                 const auto& rowKey = keys->at(i);
 
                 if (key == *rowKey) {
-                    try {
-
                     const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
 
                     if (!visibleRow)
                         continue;
 
                     result->push_back(visibleRow);
-                    }
-                    catch (...) {
-                        std::cout << "Exception in IndexSeek" << std::endl;
-                    }
+                }
+
+                if (key < *rowKey)
+                    return;
+            }
+
+            const auto& nextNodeId = currentNode->GetNextPage();
+            if(nextNodeId == Constants::INVALID_PAGE_ID)
+                return;
+
+            currentNode = this->GetNode(nextNodeId);
+        }
+    }
+
+    void BTree::IndexSeek(
+        const QueryPipeline::PhysicalPlan::ExecutionProperties &properties,
+        const DataTypes::Indexing::Key &key,
+        std::vector<const DatabaseEngine::StorageTypes::Row *> *result,
+        const Expressions::Expression *expression
+    ) const {
+        if (this->indexPageId == INVALID_PAGE_ID)
+            return;
+
+        auto currentNode = this->SearchKey(key);
+
+        auto context = Expressions::EvaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+        while (true){
+            if (!currentNode.Get())
+                break;
+
+            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            for (int i = 0; i < keys->size(); i++){
+                const auto& rowKey = keys->at(i);
+
+                if (key == *rowKey) {
+                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                    context.row = visibleRow;
+                    if (!visibleRow || !expression->Evaluate(context).GetBool())
+                        continue;
+
+                    result->push_back(visibleRow);
                 }
 
                 if (key < *rowKey)

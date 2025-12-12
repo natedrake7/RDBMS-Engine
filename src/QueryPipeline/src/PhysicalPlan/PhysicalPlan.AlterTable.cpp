@@ -45,16 +45,18 @@ namespace QueryPipeline::PhysicalPlan{
         return result;
       }
 
-    if (!this->column->defaultValue.IsNull()) {
-      const auto value = this->column->defaultValue.GetString();
+      const auto columnId = columnResult.primaryKey.AsInt(1);
 
-      const auto defaultValueResult =
-          this->server->InsertDefaultValuesToMasterDb(
-            properties,
-            columnResult.primaryKey.AsInt(1),
-            this->column->defaultValue
-          );
-    }
+      if (!this->column->defaultValue.IsNull()) {
+        const auto value = this->column->defaultValue.GetString();
+
+        const auto defaultValueResult =
+            this->server->InsertDefaultValuesToMasterDb(
+              properties,
+              columnId,
+              this->column->defaultValue
+            );
+     }
 
     const auto* db = this->server->UseDatabase(this->table->databaseId);
 
@@ -68,10 +70,10 @@ namespace QueryPipeline::PhysicalPlan{
         this->column->isNullable
     );
 
-    columnPtr->SetColumnId(columnResult.primaryKey.AsInt(1));
+    columnPtr->SetColumnId(columnId);
 
     tablePtr->AddColumn(columnPtr);
-    tablePtr->GetIdentityColumnById(columnResult.primaryKey.AsInt(1));
+    tablePtr->GetIdentityColumnById(columnId);
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
     tablePtr->GetDefaultValuesHeaders();

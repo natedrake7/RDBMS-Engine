@@ -216,7 +216,8 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexSeek(
                 const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
-                const DataTypes::Indexing::Key& key
+                const DataTypes::Indexing::Key& key,
+                const Expressions::Expression* expression = nullptr
             );
 
             void ClusteredIndexScan(

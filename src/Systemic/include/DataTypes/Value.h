@@ -72,6 +72,8 @@ class Value {
         explicit Value(const DataTypes::Decimal& data, const Constants::column_index_t& columnIndex);
         explicit Value(const DataTypes::Guid& data, const Constants::column_index_t& columnIndex);
 
+        static Value Null(const Constants::column_index_t& columnIndex = 0);
+
         [[nodiscard]] bool IsNull() const;
         
         [[nodiscard]] const Constants::column_index_t& GetColumnIndex() const;

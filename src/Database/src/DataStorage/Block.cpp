@@ -83,14 +83,12 @@ namespace DatabaseEngine::StorageTypes {
         int8_t convertedValue;
 
         if (!Converter<int8_t>::TryStoi(val, convertedValue)) {
-            result.code = Errors::RuntimeError::Overflow;
-
             ostringstream ss;
 
             ss << "Value " << val << " out of range for TinyInt";
 
+            result.code = Errors::RuntimeError::Overflow;
             result.message = ss.str();
-
             return result;
         }
 
@@ -105,14 +103,12 @@ namespace DatabaseEngine::StorageTypes {
         int16_t convertedValue;
 
         if (!Converter<int16_t>::TryStoi(val, convertedValue)) {
-            result.code = Errors::RuntimeError::Overflow;
-
             ostringstream ss;
 
             ss << "Value " << val << " out of range for SmallInt";
 
+            result.code = Errors::RuntimeError::Overflow;
             result.message = ss.str();
-
             return result;
         }
 
@@ -127,14 +123,12 @@ namespace DatabaseEngine::StorageTypes {
         int32_t convertedValue;
 
         if (!Converter<int32_t>::TryStoi(val, convertedValue)) {
-            result.code = Errors::RuntimeError::Overflow;
-
             ostringstream ss;
 
             ss << "Value " << val << " out of range for Int";
 
+            result.code = Errors::RuntimeError::Overflow;
             result.message = ss.str();
-
             return result;
         }
 
@@ -148,13 +142,12 @@ namespace DatabaseEngine::StorageTypes {
         const auto val = value.GetBigInt();
 
         if (!Converter<int64_t>::TryStoi(val)) {
-            result.code = Errors::RuntimeError::Overflow;
-
             ostringstream ss;
 
             ss << "Value " << val << " out of range for BigInt";
 
             result.message = ss.str();
+            result.code = Errors::RuntimeError::Overflow;
             return result;
         }
 
@@ -169,8 +162,6 @@ namespace DatabaseEngine::StorageTypes {
         const auto& columnHeader = this->column->GetColumnHeader();
 
         if (!Converter<DataTypes::Decimal>::TryStoi(val, this->column->GetColumnSize())) {
-            result.code = Errors::RuntimeError::Overflow;
-
             ostringstream ss;
 
             ss  << "Value "
@@ -179,6 +170,7 @@ namespace DatabaseEngine::StorageTypes {
                 << columnHeader.scale << ")";
 
             result.message = ss.str();
+            result.code = Errors::RuntimeError::Overflow;
             return result;
         }
 
@@ -193,8 +185,6 @@ namespace DatabaseEngine::StorageTypes {
         const auto& columnHeader = this->column->GetColumnHeader();
 
         if (val.size() > columnHeader.recordSize) {
-            result.code = Errors::RuntimeError::Overflow;
-
             ostringstream ss;
 
             ss  << "Value "
@@ -202,6 +192,7 @@ namespace DatabaseEngine::StorageTypes {
                 << columnHeader.recordSize << ")";
 
             result.message = ss.str();
+            result.code = Errors::RuntimeError::Overflow;
             return result;
         }
 
@@ -239,14 +230,11 @@ namespace DatabaseEngine::StorageTypes {
         bool convertedValue;
 
         if (!Converter<bool>::TryStoi(val, convertedValue)) {
-            result.code = Errors::RuntimeError::Overflow;
-
             ostringstream ss;
-
-            ss << "Value " << val << " out of range for BigInt";
+            ss << "Value " << val << " out of range for Bool";
 
             result.message = ss.str();
-
+            result.code = Errors::RuntimeError::Overflow;
             return result;
         }
 

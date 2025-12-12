@@ -3,6 +3,47 @@
 
 
 namespace Server {
+
+  enum class SysDatabases : uint8_t {
+    DatabaseId = 0,
+    Name = 1,
+    FilePath = 2,
+    IsSystem = 3,
+    CreatedAt = 4,
+    LastModifiedAt = 5,
+    LastModifiedBy = 6,
+    Version = 7,
+    IsDeleted = 8,
+    DeletedAt = 9,
+  };
+
+  enum class SysSchemas : uint8_t {
+    DatabaseId = 0,
+    SchemaId = 1,
+    Name = 2,
+    CreatedAt = 3,
+    LastModifiedAt = 4,
+    LastModifiedBy = 5,
+    Version = 6,
+    IsDeleted = 7,
+    DeletedAt = 8,
+  };
+
+  enum class SysTables : uint8_t {
+    DatabaseId = 0,
+    TableId = 1,
+    SchemaId = 2,
+    Name = 3,
+    OrdinalPosition = 4,
+    IsSystemTable = 5,
+    CreatedAt = 6,
+    LastModifiedAt = 7,
+    LastModifiedBy = 8,
+    Version = 9,
+    IsDeleted = 10,
+    DeletedAt = 11,
+  };
+
   enum class SysColumns : uint16_t {
     TableId = 0,
     ColumnId = 1,
@@ -20,6 +61,75 @@ namespace Server {
     Version = 13,
     IsDeleted = 14,
     DeletedAt = 15,
+  };
+
+  enum class SysIndexes : uint8_t {
+    TableId = 0,
+    IndexId = 1,
+    Name = 2,
+    IsClustered = 3,
+    IsDisabled = 4,
+    CreatedAt = 5,
+    LastModifiedAt = 6,
+    LastModifiedBy = 7,
+    Version = 8,
+    IsDeleted = 9,
+    DeletedAt = 10,
+  };
+
+  enum class SysIndexColumns : uint8_t {
+    IndexId = 0,
+    ColumnId = 1,
+    OrdinalPosition = 2,
+    IsIncluded = 3,
+    Version = 4,
+    IsDeleted = 5,
+    DeletedAt = 6,
+  };
+
+  enum class SysConstraints : uint8_t {
+    TableId = 0,
+    ConstraintId = 1,
+    Name = 2,
+    Type = 3,
+    IsDisabled = 4,
+    IndexId = 5,
+    CreatedAt = 6,
+    LastModifiedAt = 7,
+    LastModifiedBy = 8,
+    Version = 9,
+    IsDeleted = 10,
+    DeletedAt = 11,
+  };
+
+  enum class SysConstraintColumns : uint8_t {
+    ConstraintId = 0,
+    ColumnId = 1,
+    OrdinalPosition = 2,
+    Version = 3,
+    IsDeleted = 4,
+    DeletedAt = 5,
+  };
+
+  enum class SysIdentityColumns : uint8_t {
+    TableId = 0,
+    ColumnId = 1,
+    SeedValue = 2,
+    IncrementValue = 3,
+    LastValue = 4,
+    IsCached = 5,
+    CacheBlock = 6,
+    Version = 7,
+    IsDeleted = 8,
+    DeletedAt = 9,
+  };
+
+  enum class SysDefaultValues : uint8_t {
+    ColumnId = 0,
+    Value = 1,
+    Version = 2,
+    IsDeleted = 3,
+    DeletedAt = 4,
   };
 
   enum class SysTableStats : uint8_t {

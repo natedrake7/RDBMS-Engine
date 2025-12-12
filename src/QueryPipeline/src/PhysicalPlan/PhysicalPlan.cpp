@@ -620,7 +620,7 @@ PhysicalInsert::PhysicalInsert(
         column->type.size,
         column->index,
         column->isNullable
-        ));
+      ));
 
     const auto& tables = this->server->SelectTables(this->table->databaseId);
 
@@ -636,12 +636,14 @@ PhysicalInsert::PhysicalInsert(
         this->session->user->name
     );
 
+    const auto tableId = tableResult.primaryKey.AsInt(1);
+
     const auto tableStatsResult = this->server->InsertTableStatisticsToMasterDb(
       properties,
-      tableResult.primaryKey.AsInt()
+      tableId
     );
 
-    auto* tablePtr = db->CreateTable(tableResult.primaryKey.AsInt(), index, columnsPtrs, &this->primaryKey);
+    auto* tablePtr = db->CreateTable(tableId, index, columnsPtrs, &this->primaryKey);
 
     Dictionary<int, int32_t> columnIdsDict;
 
@@ -649,7 +651,7 @@ PhysicalInsert::PhysicalInsert(
       const auto columnResult =
           this->server->InsertColumnToMasterDb(
             properties,
-            tableResult.primaryKey.AsInt(),
+            tableId,
             column->name.name,
             ColumnTypesDictionary.Get(Functions::String::NormalizeString(column->type.name)),
             column->type.size,
@@ -671,18 +673,18 @@ PhysicalInsert::PhysicalInsert(
             this->server->InsertColumnHistogramsToMasterDb(
               properties,
               columnId,
-              Value(nullptr, 0),
-              Value(nullptr, 0),
+              Value::Null(),
+              Value::Null(),
               0
             );
       }
 
-      columnIdsDict.Add(column->index, columnResult.primaryKey.AsInt(1));
+      columnIdsDict.Add(column->index, columnId);
 
       if (!column->defaultValue.IsNull() || column->defaultValue.GetSize() != 0) {
         const auto _ = this->server->InsertDefaultValuesToMasterDb(
           properties,
-          columnResult.primaryKey.AsInt(1),
+          columnId,
           column->defaultValue
         );
       }
@@ -693,8 +695,8 @@ PhysicalInsert::PhysicalInsert(
 
       const auto _ = this->server->InsertIdentityColumnToMasterDb(
           properties,
-          tableResult.primaryKey.AsInt(),
-          columnResult.primaryKey.AsInt(1),
+          tableId,
+          columnId,
           column->identity->seed,
           column->identity->incrementFactor,
           column->identity->seed,
@@ -723,14 +725,14 @@ PhysicalInsert::PhysicalInsert(
 
     const auto indexResult = this->server->InsertIndexToMasterDb(
          properties,
-        tableResult.primaryKey.AsInt(),
+        tableId,
         this->constraintName,
         true,
         false,
         this->session->user->name
       );
 
-    const auto indexId = indexResult.primaryKey.AsInt();
+    const auto indexId = indexResult.primaryKey.AsInt(1);
 
     const auto constraintResult = this->server->InsertConstraintToMasterDb(
         properties,
@@ -740,7 +742,9 @@ PhysicalInsert::PhysicalInsert(
         false,
         &indexId,
         this->session->user->name
-      );
+    );
+
+    const auto constraintId = constraintResult.primaryKey.AsInt(1);
 
     for(int i = 0;i < primaryKeyColumnIds.size(); i++){
       auto _ = this->server->InsertIndexColumnToMasterDb(
@@ -748,11 +752,13 @@ PhysicalInsert::PhysicalInsert(
         indexResult.primaryKey.AsInt(),
         primaryKeyColumnIds[i],
         this->primaryKey.columns[i],
-        true);
+        true
+      );
+
 
       _ = this->server->InsertConstraintColumnToMasterDb(
           properties,
-          constraintResult.primaryKey.AsInt(),
+          constraintId,
           primaryKeyColumnIds[i],
       this->primaryKey.columns[i]
         );
@@ -811,7 +817,7 @@ PhysicalInsert::PhysicalInsert(
         this->session->user->name
     );
 
-    const auto indexId = indexResult.primaryKey.AsInt();
+    const auto indexId = indexResult.primaryKey.AsInt(1);
 
     const auto constraintResult =this->server->InsertConstraintToMasterDb(\
       properties,
@@ -822,6 +828,8 @@ PhysicalInsert::PhysicalInsert(
       &indexId,
       this->session->user->name
     );
+
+    const auto constraintId = constraintResult.primaryKey.AsInt(1);
 
     for (const auto& columnPos : this->columns) {
       const auto& header = columnsHeaders.at(columnPos);
@@ -838,7 +846,7 @@ PhysicalInsert::PhysicalInsert(
       const auto constraintColumnResult =
          this->server->InsertConstraintColumnToMasterDb(
                 properties,
-              constraintResult.primaryKey.AsInt(),
+              constraintId,
               header.id,
           columnPos
         );

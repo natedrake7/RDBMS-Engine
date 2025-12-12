@@ -179,6 +179,8 @@ Value::Value(const u16string &data, const Constants::column_index_t &columnIndex
     this->type = Constants::DataType::UnicodeString;
 }
 
+Value Value::Null(const Constants::column_index_t &columnIndex) { return Value(nullptr, columnIndex); }
+
 Value::~Value() = default;
 
 bool Value::IsNull() const { return this->data == nullptr; }
