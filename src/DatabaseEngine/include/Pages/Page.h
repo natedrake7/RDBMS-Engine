@@ -2,8 +2,8 @@
 #include <vector>
 #include <string>
 #include "../Constants.h"
-#include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/Guards/ReadWriteMutex.h"
+#include "../../../Systemic/include/Constants.h"
 
 #include <atomic>
 
@@ -29,7 +29,7 @@ namespace Pages
         page_offset_t offset;
 
         RowVersionPointer() {
-            this->pageId = Constants::INVALID_PAGE_ID;
+            this->pageId = INVALID_PAGE_ID;
             this->offset = 0;
         }
     };

@@ -31,7 +31,7 @@ namespace Indexing
         this->degree = 0;
         this->keySize = 0;
         this->nonClusteredIndexId = -1;
-        this->indexPageId = Constants::INVALID_PAGE_INDEX_ID;
+        this->indexPageId = INVALID_PAGE_INDEX_ID;
         this->table = nullptr;
         this->database = nullptr;
         this->type = TreeType::NonClustered;
@@ -66,7 +66,7 @@ namespace Indexing
             computedKeySize += column->GetColumnSize();
         }
 
-        return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + Constants::ROW_ID_SIZE) * 2));
+        return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
     }
 
     int BTree::LowerBound(
@@ -116,7 +116,7 @@ namespace Indexing
 
     Pages::PageGuard<Pages::IndexPage> BTree::CreateRootPage(int& indexPosition) {
         //maybe root page is removed and need to be reopened
-        auto root = this->AllocateNewPage(Constants::INVALID_PAGE_ID);
+        auto root = this->AllocateNewPage(INVALID_PAGE_ID);
 
         {
             MultiThreading::WriterGuard lock(&root->GetLatch());
@@ -283,7 +283,7 @@ namespace Indexing
         Errors::RuntimeStatus& status
     ){
         //base case scenario
-        if (this->indexPageId == Constants::INVALID_PAGE_ID) {
+        if (this->indexPageId == INVALID_PAGE_ID) {
             auto root =  this->CreateRootPage(indexPosition);
 
             if(this->nonClusteredIndexId != -1)
@@ -384,7 +384,7 @@ namespace Indexing
             // for (int i = 0; i < keys->size(); i++)
             //     result.emplace_back(currentNode->dataPageId, i);
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             // previousNode = currentNode;
@@ -397,10 +397,10 @@ namespace Indexing
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
         DatabaseEngine::IndexState& state
     )const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
-        auto currentNode = state.pageId == Constants::INVALID_PAGE_ID
+        auto currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
@@ -426,7 +426,7 @@ namespace Indexing
                 }
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -439,7 +439,7 @@ namespace Indexing
         DatabaseEngine::IndexState& state,
         const Expressions::Expression *expression
     )const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         auto currentNode = state.pageId == INVALID_PAGE_ID
@@ -474,7 +474,7 @@ namespace Indexing
                 }
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID) {
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID) {
               return;
             }
 
@@ -487,7 +487,7 @@ namespace Indexing
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
         const Expressions::Expression *expression
     )const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
@@ -507,7 +507,7 @@ namespace Indexing
                 result->push_back(row);
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -518,7 +518,7 @@ namespace Indexing
         const DatabaseEngine::ExecutionProperties& properties,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result
     )const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
@@ -536,7 +536,7 @@ namespace Indexing
                 result->push_back(row);
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -549,7 +549,7 @@ namespace Indexing
         const int& rowsToSelect
     )const{
 
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         auto currentNode = state.pageId == INVALID_PAGE_ID
@@ -589,7 +589,7 @@ namespace Indexing
             //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
             // }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -597,7 +597,7 @@ namespace Indexing
     }
 
     void BTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression)const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
@@ -615,7 +615,7 @@ namespace Indexing
             //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
             // }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -655,7 +655,7 @@ namespace Indexing
                   return;
           }
 
-          if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+          if(currentNode->GetNextPage() == INVALID_PAGE_ID)
             return;
 
           currentNode = this->GetNode(currentNode->GetNextPage());
@@ -667,7 +667,7 @@ namespace Indexing
         const Expressions::Expression *expression,
         const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
     )const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return {};
 
         HashSet<column_index_t> updatedColumns;
@@ -694,7 +694,7 @@ namespace Indexing
                     return result;
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return {};
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -725,7 +725,7 @@ namespace Indexing
                     return result;
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return {};
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -751,7 +751,7 @@ namespace Indexing
                 this->table->NonClusteredIndexInsert(row, indexPos, Headers::RowIdentifier(currentNode->GetPageId(), i));
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -759,7 +759,7 @@ namespace Indexing
     }
 
     void BTree::InsertColumnToRow(const column_index_t& index, const Value &defaultValue)const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
@@ -769,7 +769,7 @@ namespace Indexing
             for(auto* row: *currentNode->GetDataRowsUnsafe())
                 this->table->HandleAddColumn(currentNode.Get(), row, index, defaultValue);
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -777,7 +777,7 @@ namespace Indexing
     }
 
     void BTree::RemoveColumnFromRow(const column_index_t &index)const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         auto root = this->GetNode(this->indexPageId);
@@ -789,7 +789,7 @@ namespace Indexing
             for(auto* row: *currentNode->GetDataRowsUnsafe())
                 DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode.Get(), row, index);
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -804,7 +804,7 @@ namespace Indexing
         const DataTypes::Indexing::Key* maxKey,
         const vector<Value> & updates
     )const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return {};
 
         HashSet<column_index_t> updatedColumns;
@@ -875,7 +875,7 @@ namespace Indexing
 //                return;
           }
 
-          if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+          if(currentNode->GetNextPage() == INVALID_PAGE_ID)
             return {};
 
           previousNode = currentNode;
@@ -891,7 +891,7 @@ namespace Indexing
         const DataTypes::Indexing::Key *maxKey,
         const vector<Value> &updates
     )const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return {};
 
         HashSet<column_index_t> updatedColumns;
@@ -947,7 +947,7 @@ namespace Indexing
                   return result;
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return {};
 
             previousNode = currentNode;
@@ -960,7 +960,7 @@ namespace Indexing
 
     //TODO fix non clusteredIndex Seek
     void BTree::IndexSeekRange(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const{
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         auto currentNode = this->SearchKey(minKey);
@@ -991,7 +991,7 @@ namespace Indexing
                     return;
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             previousNode = currentNode;
@@ -1035,7 +1035,7 @@ namespace Indexing
                     return;
             }
 
-            if(currentNode->GetNextPage() == Constants::INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(currentNode->GetNextPage());
@@ -1077,7 +1077,7 @@ namespace Indexing
             }
 
             const auto& nextNodeId = currentNode->GetNextPage();
-            if(nextNodeId == Constants::INVALID_PAGE_ID)
+            if(nextNodeId == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(nextNodeId);
@@ -1123,7 +1123,7 @@ namespace Indexing
             }
 
             const auto& nextNodeId = currentNode->GetNextPage();
-            if(nextNodeId == Constants::INVALID_PAGE_ID)
+            if(nextNodeId == INVALID_PAGE_ID)
                 return;
 
             currentNode = this->GetNode(nextNodeId);
@@ -1132,7 +1132,7 @@ namespace Indexing
 
     void BTree::SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const
     {
-        if (this->indexPageId == Constants::INVALID_PAGE_ID)
+        if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
         // auto currentNode = this->GetNode(this->indexPageId);
@@ -1186,7 +1186,7 @@ namespace Indexing
 
     void BTree::Remove(const DataTypes::Indexing::Key &key){
 
-      if (this->indexPageId == Constants::INVALID_PAGE_ID)
+      if (this->indexPageId == INVALID_PAGE_ID)
         return;
 
       vector<Pages::PageGuard<Pages::IndexPage>> ancestors;
@@ -1455,7 +1455,7 @@ namespace Indexing
               leftNode->SetNextPage(rightNode->GetNextPage());
 
 
-              if(rightNode->GetNextPage() != Constants::INVALID_PAGE_ID){
+              if(rightNode->GetNextPage() != INVALID_PAGE_ID){
                 auto nextNode = this->GetNode(rightNode->GetNextPage());
                 nextNode->SetPreviousPage(leftNode->GetPageId());
               }

@@ -10,11 +10,11 @@ namespace QueryPipeline {
       : sessionId(sessionId), databaseId(databaseId) {}
 
   LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId)
-    : sessionId(sessionId), databaseId(Constants::INVALID_DATABASE_ID) {}
+    : sessionId(sessionId), databaseId(INVALID_DATABASE_ID) {}
 
   LogicalPlan::LogicalPlan(){
       this->sessionId = DataTypes::Guid();
-      this->databaseId = Constants::INVALID_DATABASE_ID;
+      this->databaseId = INVALID_DATABASE_ID;
    }
 
   LogicalPlan::~LogicalPlan() = default;

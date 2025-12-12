@@ -633,7 +633,7 @@ namespace DatabaseEngine
 
             Pages::PageGuard<Pages::IndexAllocationMapPage> tableMapPage;
 
-            isFirstExtent = indexAllocationMapPageId == Constants::INVALID_PAGE_ID;
+            isFirstExtent = indexAllocationMapPageId == INVALID_PAGE_ID;
 
             if (isFirstExtent) {
                 tableMapPage = StorageManager::Get().CreateIndexAllocationMapPage(this->filename, tableId, newPageId, newExtentId);

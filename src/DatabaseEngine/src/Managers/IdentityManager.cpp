@@ -37,7 +37,7 @@ namespace DatabaseEngine::StorageTypes {
   }
 
   bool IdentityManager::TryGenerate(int64_t &value){
-    if (this->header.columnId == Constants::INVALID_COLUMN_ID)
+    if (this->header.columnId == INVALID_COLUMN_ID)
       return false;
 
     value = this->Generate();
@@ -50,13 +50,13 @@ namespace DatabaseEngine::StorageTypes {
   }
 
   void IdentityManager::UpdateMasterDb()const{
-    if (this->header.columnId == Constants::INVALID_COLUMN_ID)
+    if (this->header.columnId == INVALID_COLUMN_ID)
       return;
 
    SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, this->header.lastValue);
   }
 
-  bool IdentityManager::IsValid() const{ return this->header.columnId != Constants::INVALID_COLUMN_ID; }
+  bool IdentityManager::IsValid() const{ return this->header.columnId != INVALID_COLUMN_ID; }
 
   void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){
     this->header = newHeader;

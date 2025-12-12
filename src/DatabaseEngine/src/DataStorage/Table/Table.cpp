@@ -342,7 +342,7 @@ namespace DatabaseEngine::StorageTypes {
           const auto& column = this->columns.at(associatedColumnIndex);
 
           //ignore auto-computed columns even if specified
-          if (column->GetIdentity().columnId != Constants::INVALID_COLUMN_ID)
+          if (column->GetIdentity().columnId != INVALID_COLUMN_ID)
             continue;
 
           auto *block = new Block(column);
@@ -644,7 +644,7 @@ namespace DatabaseEngine::StorageTypes {
       ScanState& state
     )const
     {
-        if(this->header.indexAllocationMapPageId == Constants::INVALID_PAGE_ID)
+        if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
             return;
 
         const auto& filename = this->database->GetFileName();
@@ -1356,7 +1356,7 @@ namespace DatabaseEngine::StorageTypes {
       void Table::PopulateDefaultValues(Row *row, Column*& column) {
         const auto& defaultValue = column->GetDefaultValue();
 
-        if (defaultValue.columnId == Constants::INVALID_COLUMN_ID)
+        if (defaultValue.columnId == INVALID_COLUMN_ID)
           return;
 
         auto* block = new Block(defaultValue.value.data(), defaultValue.value.size(), column);
@@ -1447,7 +1447,7 @@ namespace DatabaseEngine::StorageTypes {
         for(const auto& column: this->columns) {
           const auto systemHeader = SystemCatalog::Get().SelectDefaultValueByColumnId(column->GetColumnId());
 
-          if (systemHeader.columnId == Constants::INVALID_COLUMN_ID)
+          if (systemHeader.columnId == INVALID_COLUMN_ID)
             continue;
 
           column->SetDefaultValue(systemHeader);

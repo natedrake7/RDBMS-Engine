@@ -848,7 +848,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     bool Row::IsDeleted(const Snapshot &snapshot) const{
-        return this->versionHeader.deletedTransactionId != Constants::FIRST_TRANSACTION_ID
+        return this->versionHeader.deletedTransactionId != FIRST_TRANSACTION_ID
                && this->versionHeader.deletedTransactionId < snapshot.maximumTransactionId
                && !snapshot.activeTransactionIds.Contains(this->versionHeader.deletedTransactionId)
                && this->versionHeader.deletedTransactionId != snapshot.transactionId;

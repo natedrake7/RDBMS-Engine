@@ -57,10 +57,10 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
   }
 
   LogEntry::LogEntry() {
-    this->transactionId = Constants::INVALID_TRANSACTION_ID;
-    this->logSequenceNumber = Constants::INVALID_LOG_SEQUENCE_NUMBER;
+    this->transactionId = INVALID_TRANSACTION_ID;
+    this->logSequenceNumber = INVALID_LOG_SEQUENCE_NUMBER;
     this->operation = OperationType::InvalidOperation;
-    this->tableOrdinalPosition = Constants::INVALID_TABLE_ORDINAL_POS;
+    this->tableOrdinalPosition = INVALID_TABLE_ORDINAL_POS;
 
     this->body = nullptr;
 
@@ -169,7 +169,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
       return false;
     }
 
-    if (this->tableOrdinalPosition == Constants::INVALID_TABLE_ORDINAL_POS) {
+    if (this->tableOrdinalPosition == INVALID_TABLE_ORDINAL_POS) {
       std::cerr << "Invalid table ordinal position on recovery log with Transaction ID: "
                   << this->transactionId << " and Log Sequence Number: "
                   << this->logSequenceNumber << std::endl;

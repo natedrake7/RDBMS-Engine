@@ -179,8 +179,8 @@ namespace DatabaseEngine {
              column.name,
              type,
              columnSize,
-             Constants::INVALID_DECIMAL_PRECISION,
-             Constants::INVALID_DECIMAL_SCALE,
+             INVALID_DECIMAL_PRECISION,
+             INVALID_DECIMAL_SCALE,
              column.nullable,
              columnPos,
              true
@@ -345,10 +345,10 @@ namespace DatabaseEngine {
           .dataType = static_cast<uint8_t>(data[static_cast<column_index_t>(SysColumns::DataType)]->GetTinyInt()),
           .recordSize = data[static_cast<column_index_t>(SysColumns::RecordSize)]->GetInt(),
           .precision = data[static_cast<column_index_t>(SysColumns::Precision)]->GetBlockData() == nullptr
-              ? Constants::INVALID_DECIMAL_PRECISION
+              ? INVALID_DECIMAL_PRECISION
               : data[static_cast<column_index_t>(SysColumns::Precision)]->GetTinyInt(),
           .scale = data[static_cast<column_index_t>(SysColumns::Scale)]->GetBlockData() == nullptr
-              ? Constants::INVALID_DECIMAL_SCALE
+              ? INVALID_DECIMAL_SCALE
               : data[static_cast<column_index_t>(SysColumns::Scale)]->GetTinyInt(),
           .isNullable = data[static_cast<column_index_t>(SysColumns::IsNullable)]->GetBool(),
           .ordinalPosition = data[static_cast<column_index_t>(SysColumns::OrdinalPosition)]->GetSmallInt(),
@@ -827,7 +827,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt)),
       };
 
-      if (precision != Constants::INVALID_DECIMAL_PRECISION) {
+      if (precision != INVALID_DECIMAL_PRECISION) {
         fields.push_back(Value(precision, static_cast<column_index_t>(SysColumns::Precision)));
         fields.push_back(Value(scale, static_cast<column_index_t>(SysColumns::Scale)));
       }
@@ -1715,7 +1715,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
   ) const {
 
     std::vector<Headers::ColumnHistograms> result;
-    result.reserve(Constants::NUMBER_OF_HISTOGRAM_BUCKETS);
+    result.reserve(NUMBER_OF_HISTOGRAM_BUCKETS);
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 

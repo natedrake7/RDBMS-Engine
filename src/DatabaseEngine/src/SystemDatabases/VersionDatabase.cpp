@@ -11,7 +11,7 @@ namespace DatabaseEngine {
  VersionDatabase::VersionDatabase(const std::string &filename){
    this->PopulateFilenames(filename);
 
-   this->lastUsedPageId = Constants::INVALID_PAGE_ID;
+   this->lastUsedPageId = INVALID_PAGE_ID;
    const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFilename);
 
    this->header = *headerPage->GetDatabaseHeader();
@@ -81,7 +81,7 @@ namespace DatabaseEngine {
     {
       MultiThreading::ReaderGuard lock(&this->lastUsedPageMutex);
 
-      if (this->lastUsedPageId == Constants::INVALID_PAGE_ID)
+      if (this->lastUsedPageId == INVALID_PAGE_ID)
         return {};
 
       pageId = this->lastUsedPageId;

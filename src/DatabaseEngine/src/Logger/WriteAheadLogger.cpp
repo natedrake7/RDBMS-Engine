@@ -150,7 +150,7 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
 
     if (result == 0) {
       //first insert failed no bytes were read
-      checkPoint.transactionId = Constants::INVALID_TRANSACTION_ID;
+      checkPoint.transactionId = INVALID_TRANSACTION_ID;
       return checkPoint;
     }
 

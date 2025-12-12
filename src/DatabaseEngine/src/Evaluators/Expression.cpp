@@ -120,8 +120,8 @@ namespace Expressions{
     this->alias = name;
     this->tableAlias = tableAlias;
 
-    this->tableId = Constants::INVALID_TABLE_ID;
-    this->columnId = Constants::INVALID_COLUMN_ID;
+    this->tableId = INVALID_TABLE_ID;
+    this->columnId = INVALID_COLUMN_ID;
     this->index = 0;
     this->size = 0;
     this->returnType = DataType::Unknown;
@@ -132,8 +132,8 @@ namespace Expressions{
     this->index = index;
     this->size = 0;
     this->returnType = DataType::Unknown;
-    this->tableId = Constants::INVALID_TABLE_ID;
-    this->columnId = Constants::INVALID_COLUMN_ID;
+    this->tableId = INVALID_TABLE_ID;
+    this->columnId = INVALID_COLUMN_ID;
     this->expressionType = ExpressionType::Column;
   }
 

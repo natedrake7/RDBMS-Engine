@@ -661,7 +661,7 @@ PhysicalInsert::PhysicalInsert(
       const auto columnStatsResult = this->catalog->InsertColumnStatisticsToMasterDb(properties, columnId);
 
       //fixed 100 buckets for now
-      for (int i = 0;i < Constants::NUMBER_OF_HISTOGRAM_BUCKETS; i++) {
+      for (int i = 0;i < NUMBER_OF_HISTOGRAM_BUCKETS; i++) {
         const auto histogramResult =
             this->catalog->InsertColumnHistogramsToMasterDb(
               properties,

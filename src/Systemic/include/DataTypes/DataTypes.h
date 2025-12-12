@@ -1,10 +1,8 @@
 #pragma once
 #include "DateTime.h"
-
 #include <cstdint>
-#include "../DataStructures/Dictionary.h"
-
 #include <string>
+#include "../DataStructures/Dictionary.h"
 
 typedef uint8_t byte_t;
 

@@ -1,9 +1,9 @@
 #pragma once
+#include "Constants.h"
 #include <string>
 #include "DataTypes/DateTime.h"
 #include <vector>
 #include <ostream>
-
 #include "DataTypes/Value.h"
 
 namespace Headers {
@@ -26,7 +26,7 @@ namespace Headers {
   };
 
   struct IndexColumnsHeader{
-    int32_t indexId = Constants::INVALID_INDEX_ID;
+    int32_t indexId = INVALID_INDEX_ID;
     int32_t columnId;
     int16_t ordinalPosition;
     bool isIncluded;
@@ -35,8 +35,8 @@ namespace Headers {
   };
 
   struct IdentityColumnsHeader{
-    int32_t tableId = Constants::INVALID_TABLE_ID;
-    int32_t columnId = Constants::INVALID_COLUMN_ID;
+    int32_t tableId = INVALID_TABLE_ID;
+    int32_t columnId = INVALID_COLUMN_ID;
     int32_t seedValue;
     int32_t increment;
     int64_t lastValue;
@@ -59,7 +59,7 @@ namespace Headers {
   };
 
   struct ConstraintsColumnsHeader{
-    int32_t constraintId = Constants::INVALID_CONSTRAINT_ID;
+    int32_t constraintId = INVALID_CONSTRAINT_ID;
     int32_t columnId;
     int32_t ordinalPosition;
     AuditInformation additionalInfo;
@@ -67,11 +67,11 @@ namespace Headers {
 
   struct ConstraintsHeader{
     int32_t tableId;
-    int32_t constraintId = Constants::INVALID_CONSTRAINT_ID;
+    int32_t constraintId = INVALID_CONSTRAINT_ID;
     std::string name;
     ConstraintType type;
     bool isDisabled;
-    int32_t indexId = Constants::INVALID_INDEX_ID;
+    int32_t indexId = INVALID_INDEX_ID;
     IndexHeader index;
     vector<ConstraintsColumnsHeader> columns;
 
@@ -79,7 +79,7 @@ namespace Headers {
   };
 
   struct DefaultValuesHeader {
-    int32_t columnId = Constants::INVALID_COLUMN_ID;
+    int32_t columnId = INVALID_COLUMN_ID;
     std::string value;
     //add size here
 
@@ -87,7 +87,7 @@ namespace Headers {
   };
 
   struct TableStatistics {
-    int32_t tableId = Constants::INVALID_TABLE_ID;
+    int32_t tableId = INVALID_TABLE_ID;
 
     int64_t rowCount = 0;
     int32_t avgRowSize = 0;
@@ -115,12 +115,12 @@ namespace Headers {
 
   struct ColumnHeader {
     int32_t tableId;
-    int32_t id = Constants::INVALID_COLUMN_ID;
+    int32_t id = INVALID_COLUMN_ID;
     std::string name;
     uint8_t dataType;
     int32_t recordSize;
-    int8_t precision = Constants::INVALID_DECIMAL_PRECISION;
-    int8_t scale = Constants::INVALID_DECIMAL_SCALE;
+    int8_t precision = INVALID_DECIMAL_PRECISION;
+    int8_t scale = INVALID_DECIMAL_SCALE;
     bool isNullable;
     int16_t ordinalPosition;
     bool isSystem;
@@ -133,7 +133,7 @@ namespace Headers {
 
   struct TableHeader {
     int32_t databaseId;
-    int32_t id = Constants::INVALID_TABLE_ID;
+    int32_t id = INVALID_TABLE_ID;
     int32_t schemaId;
     std::string name;
     int16_t ordinalPosition;
@@ -195,12 +195,12 @@ namespace Headers {
   };
 
   struct RowIdentifier {
-    uint32_t pageId = Constants::INVALID_PAGE_ID;
-    int32_t indexId = Constants::INVALID_PAGE_INDEX_ID;
+    uint32_t pageId = INVALID_PAGE_ID;
+    int32_t indexId = INVALID_PAGE_INDEX_ID;
 
     RowIdentifier() {
-      this->pageId = Constants::INVALID_PAGE_ID;
-      this->indexId = Constants::INVALID_PAGE_INDEX_ID;
+      this->pageId = INVALID_PAGE_ID;
+      this->indexId = INVALID_PAGE_INDEX_ID;
     }
 
     RowIdentifier(const uint32_t& pageId, const int32_t& indexId) {

@@ -15,7 +15,7 @@
 namespace QueryPipeline::Statements {
 
   Statement::Statement(){
-    this->databaseId = Constants::INVALID_DATABASE_ID;
+    this->databaseId = INVALID_DATABASE_ID;
     this->table = nullptr;
     this->server = &Network::Server::Get();
     this->catalog = &DatabaseEngine::SystemCatalog::Get();
@@ -294,8 +294,8 @@ namespace QueryPipeline::Statements {
   }
 
   DecimalType::DecimalType(){
-    this->precision = Constants::INVALID_DECIMAL_PRECISION;
-    this->scale = Constants::INVALID_DECIMAL_SCALE;
+    this->precision = INVALID_DECIMAL_PRECISION;
+    this->scale = INVALID_DECIMAL_SCALE;
   }
 
   DecimalType::DecimalType(const int8_t &precision, const int8_t &scale){
@@ -304,12 +304,12 @@ namespace QueryPipeline::Statements {
   }
 
   bool DecimalType::Validate() const{
-    if (this->precision == Constants::INVALID_DECIMAL_PRECISION
-      || this->scale == Constants::INVALID_DECIMAL_SCALE)
+    if (this->precision == INVALID_DECIMAL_PRECISION
+      || this->scale == INVALID_DECIMAL_SCALE)
       return false;
 
     return (
-      this->precision <= Constants::MAX_DECIMAL_PRECISION
+      this->precision <= MAX_DECIMAL_PRECISION
       && this->scale <= this->precision
     );
   }
@@ -384,10 +384,10 @@ namespace QueryPipeline::Statements {
   }
 
   DataSource::DataSource() {
-    this->databaseId = Constants::INVALID_DATABASE_ID;
-    this->tableId = Constants::INVALID_TABLE_ID;
-    this->schemaId = Constants::INVALID_SCHEMA_ID;
-    this->ordinalPosition = Constants::INVALID_ORDINAL_POS;
+    this->databaseId = INVALID_DATABASE_ID;
+    this->tableId = INVALID_TABLE_ID;
+    this->schemaId = INVALID_SCHEMA_ID;
+    this->ordinalPosition = INVALID_ORDINAL_POS;
     this->schema = "dbo";
     this->server = &Network::Server::Get();
     this->catalog = &DatabaseEngine::SystemCatalog::Get();
@@ -408,7 +408,7 @@ namespace QueryPipeline::Statements {
         ? this->catalog->SelectTable(this->database, this->name)
         : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
 
-    if (tableHeader.id == Constants::INVALID_TABLE_ID){
+    if (tableHeader.id == INVALID_TABLE_ID){
       ostringstream os;
 
       os << "Table " + this->GetFullName() + " does not exist";
@@ -427,7 +427,7 @@ namespace QueryPipeline::Statements {
       ? this->catalog->SelectTable(this->database, this->name)
       : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
 
-    if (tableHeader.id != Constants::INVALID_TABLE_ID){
+    if (tableHeader.id != INVALID_TABLE_ID){
       ostringstream os;
       os << "Table " + this->GetFullName() + " exists";
       return {Errors::ValidationError::Error, os.str()};
@@ -541,7 +541,7 @@ namespace QueryPipeline::Statements {
   }
 
   SelectStatement::SelectStatement(){
-    this->top = Constants::INVALID_TOP;
+    this->top = INVALID_TOP;
     this->distinct = false;
     this->orderBy = nullptr;
   }
@@ -569,7 +569,7 @@ namespace QueryPipeline::Statements {
     return dict;
   }
 
-   bool SelectStatement::HasTopStatement() const{ return this->top != Constants::INVALID_TOP; }
+   bool SelectStatement::HasTopStatement() const{ return this->top != INVALID_TOP; }
 
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
@@ -849,7 +849,7 @@ namespace QueryPipeline::Statements {
   Errors::ValidationStatus UseDatabaseStatement::CompileDerived(ParserValidationScope& validationScope){
     const auto dbHeader = this->catalog->SelectDatabase(this->name);
 
-    if (dbHeader.id == Constants::INVALID_DATABASE_ID) {
+    if (dbHeader.id == INVALID_DATABASE_ID) {
       ostringstream os;
 
       os << "Database " + this->name + " does not exist";
@@ -1065,7 +1065,7 @@ namespace QueryPipeline::Statements {
 
       const auto defaultValue = this->catalog->SelectDefaultValueByColumnId(header.id);
 
-      if (defaultValue.columnId == Constants::INVALID_COLUMN_ID) {
+      if (defaultValue.columnId == INVALID_COLUMN_ID) {
         os << "Column " << columnName << " does not allow NULLS. Insert fails";
         return {Errors::ValidationError::Error, os.str()};
       }
@@ -1778,7 +1778,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
       const StatementValidationScope& statementValidationScope
     ){
         //if wildcard ensure statement is of select statement type
-        if (column->alias == Constants::WILDCARD) {
+        if (column->alias == WILDCARD) {
           auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope.statement);
 
           if (selectStatement != nullptr)
@@ -1977,7 +1977,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     const StatementValidationScope& statementValidationScope,
     SelectStatement* statement
   ){
-    if (column->alias != Constants::WILDCARD)
+    if (column->alias != WILDCARD)
       return {};
 
     if (statementValidationScope.indexPos == nullptr)

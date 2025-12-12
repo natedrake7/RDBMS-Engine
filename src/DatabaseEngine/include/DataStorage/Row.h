@@ -32,11 +32,11 @@ namespace DatabaseEngine::StorageTypes
         Pages::RowVersionPointer olderVersionPointer;
 
         RowVersioningHeader() {
-            this->createdTransactionId = Constants::INVALID_TRANSACTION_ID;
+            this->createdTransactionId = INVALID_TRANSACTION_ID;
             this->deletedTransactionId = 0;
         }
 
-        [[nodiscard]] bool HasOlderVersion()const { return this->olderVersionPointer.pageId != Constants::INVALID_PAGE_ID; }
+        [[nodiscard]] bool HasOlderVersion()const { return this->olderVersionPointer.pageId != INVALID_PAGE_ID; }
     };
 
     struct RowHeader{
