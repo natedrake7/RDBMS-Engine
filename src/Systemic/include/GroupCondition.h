@@ -1,6 +1,6 @@
 #pragma once
-#include "../../Database/include/Constants.h"
-#include "../../Database/include/DataStorage/Column.h"
+#include "../../DatabaseEngine/include/Constants.h"
+#include "../../DatabaseEngine/include/DataStorage/Column.h"
 
 using namespace Constants;
 

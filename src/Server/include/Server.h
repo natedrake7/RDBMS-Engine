@@ -1,8 +1,8 @@
 #pragma once
 #include "../../Systemic/include/Headers.h"
 #include "../../Systemic/include/Errors.h"
-#include "../../Database/include/Database.h"
-#include "../../Database/include/SystemDatabases/VersionDatabase.h"
+#include "../../DatabaseEngine/include/Database.h"
+#include "../../DatabaseEngine/include/SystemDatabases/VersionDatabase.h"
 #include "../../Systemic/include/Security/Security.h"
 #include "RoleManager.h"
 #include "SessionManager.h"

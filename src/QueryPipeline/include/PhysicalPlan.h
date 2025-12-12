@@ -6,8 +6,8 @@
 #include "../../Systemic/include/Errors.h"
 #include "../../Systemic/include/QueryResult.h"
 #include "../../Systemic/include/Headers.h"
-#include "../../Database/include/DataStorage/Row.h"
-#include "../../Database/include/ExecutionProperties.h"
+#include "../../DatabaseEngine/include/DataStorage/Row.h"
+#include "../../DatabaseEngine/include/ExecutionProperties.h"
 
 namespace DatabaseEngine {
   struct ExecutionProperties;

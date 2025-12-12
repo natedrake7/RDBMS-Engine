@@ -2,12 +2,12 @@
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(DatabaseEngine)
+project(Database)
 
 set(BUILD_SHARED_LIBS ON)
 
 add_executable(
-        DatabaseEngine main.cpp
+        Database main.cpp
         Queries.h
 )
 
@@ -91,57 +91,57 @@ target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)
 add_dependencies(QueryPipeline GenerateSQLParser)
 
 if(WIN32)
-    target_link_libraries(QueryPipeline PRIVATE Database PRIVATE antlr4_shared)
+    target_link_libraries(QueryPipeline PRIVATE DatabaseEngine PRIVATE antlr4_shared)
 else()
-    target_link_libraries(QueryPipeline PRIVATE Database PRIVATE antlr4_static)
+    target_link_libraries(QueryPipeline PRIVATE DatabaseEngine PRIVATE antlr4_static)
 endif()
 
 # Include the generated parser and lexer files
 target_include_directories(QueryPipeline PRIVATE ${GENERATED_DIR})
 
-add_library(Database STATIC
-        src/Database/src/Database.cpp
-        src/Database/src/Database.IndexHandlers.cpp
-        src/Database/src/DataStorage/Table/Table.cpp
-        src/Database/src/DataStorage/Table/Table.AdditionalFunctions.cpp
-        src/Database/src/DataStorage/Table/Table.Indexes.cpp
-        src/Database/src/DataStorage/Table/Table.LargeOjects.cpp
-        src/Database/src/DataStorage/Row.cpp
-        src/Database/src/DataStorage/Block.cpp
-        src/Database/src/DataStorage/Column.cpp
-        src/Database/src/Pages/Page.cpp
-        src/Database/src/Pages/HeaderPage.cpp
-        src/Database/src/Pages/LargeObjectPage.cpp
-        src/Database/src/Pages/IndexAllocationMapPage.cpp
-        src/Database/src/Pages/PageFreeSpacePage.cpp
-        src/Database/src/Pages/GlobalAllocationMapPage.cpp
-        src/Database/src/Pages/IndexPage.cpp
-        src/Database/src/Pages/OverflowPage.cpp
-        src/Database/src/BufferPool/FileManager.cpp
-        src/Database/src/BufferPool/StorageManager.cpp
-        src/Database/src/BTree.cpp
-        src/Database/src/Algorithms/Sort/SortingFunctions.cpp
-        src/Database/src/Algorithms/AggregateFunctions.cpp
-        src/Database/src/Algorithms/Sort/QuickSort.cpp
-        src/Database/src/Algorithms/Sort/MergeSort.cpp
-        src/Database/src/Managers/IdentityManager.cpp
-        src/Database/src/Managers/LockManager.cpp
-        src/Database/src/Managers/TransactionManager.cpp
-        src/Database/src/Logger/Logger.cpp
-        src/Database/src/Logger/WriteAheadLogger.cpp
-        src/Database/src/Logger/CrashRecoveryLogger.cpp
-        src/Database/src/Logger/Logger.Structures.cpp
-        src/Database/src/Schedulers/GarbageCollector.cpp
-        src/Database/src/SystemDatabases/VersionDatabase.cpp
-        src/Database/include/Schedulers/StatisticsScheduler.h
-        src/Database/include/SystemDatabases/SystemCatalog.h
-        src/Database/src/SystemDatabases/SystemCatalog.cpp
-        src/Database/src/Evaluators/Expression.cpp
+add_library(DatabaseEngine STATIC
+        src/DatabaseEngine/src/Database.cpp
+        src/DatabaseEngine/src/Database.IndexHandlers.cpp
+        src/DatabaseEngine/src/DataStorage/Table/Table.cpp
+        src/DatabaseEngine/src/DataStorage/Table/Table.AdditionalFunctions.cpp
+        src/DatabaseEngine/src/DataStorage/Table/Table.Indexes.cpp
+        src/DatabaseEngine/src/DataStorage/Table/Table.LargeOjects.cpp
+        src/DatabaseEngine/src/DataStorage/Row.cpp
+        src/DatabaseEngine/src/DataStorage/Block.cpp
+        src/DatabaseEngine/src/DataStorage/Column.cpp
+        src/DatabaseEngine/src/Pages/Page.cpp
+        src/DatabaseEngine/src/Pages/HeaderPage.cpp
+        src/DatabaseEngine/src/Pages/LargeObjectPage.cpp
+        src/DatabaseEngine/src/Pages/IndexAllocationMapPage.cpp
+        src/DatabaseEngine/src/Pages/PageFreeSpacePage.cpp
+        src/DatabaseEngine/src/Pages/GlobalAllocationMapPage.cpp
+        src/DatabaseEngine/src/Pages/IndexPage.cpp
+        src/DatabaseEngine/src/Pages/OverflowPage.cpp
+        src/DatabaseEngine/src/BufferPool/FileManager.cpp
+        src/DatabaseEngine/src/BufferPool/StorageManager.cpp
+        src/DatabaseEngine/src/BTree.cpp
+        src/DatabaseEngine/src/Algorithms/Sort/SortingFunctions.cpp
+        src/DatabaseEngine/src/Algorithms/AggregateFunctions.cpp
+        src/DatabaseEngine/src/Algorithms/Sort/QuickSort.cpp
+        src/DatabaseEngine/src/Algorithms/Sort/MergeSort.cpp
+        src/DatabaseEngine/src/Managers/IdentityManager.cpp
+        src/DatabaseEngine/src/Managers/LockManager.cpp
+        src/DatabaseEngine/src/Managers/TransactionManager.cpp
+        src/DatabaseEngine/src/Logger/Logger.cpp
+        src/DatabaseEngine/src/Logger/WriteAheadLogger.cpp
+        src/DatabaseEngine/src/Logger/CrashRecoveryLogger.cpp
+        src/DatabaseEngine/src/Logger/Logger.Structures.cpp
+        src/DatabaseEngine/src/Schedulers/GarbageCollector.cpp
+        src/DatabaseEngine/src/SystemDatabases/VersionDatabase.cpp
+        src/DatabaseEngine/include/Schedulers/StatisticsScheduler.h
+        src/DatabaseEngine/include/SystemDatabases/SystemCatalog.h
+        src/DatabaseEngine/src/SystemDatabases/SystemCatalog.cpp
+        src/DatabaseEngine/src/Evaluators/Expression.cpp
 )
 
-target_include_directories(Database PUBLIC src/Database/include)
+target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)
 
-target_link_libraries(Database PRIVATE Systemic PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(DatabaseEngine PRIVATE Systemic PRIVATE nlohmann_json::nlohmann_json)
 
 add_library(Server STATIC
         src/Server/src/ConnectionManager/ConnectionManager.cpp
@@ -161,9 +161,9 @@ target_link_libraries(Server PRIVATE QueryPipeline PRIVATE $<$<PLATFORM_ID:Windo
          src/Client/src/ClientManager.cpp
          src/Client/include/client.h
          src/Client/include/ClientManager.h
-         src/Database/include/ExecutionProperties.h
+         src/DatabaseEngine/include/ExecutionProperties.h
  )
 
 target_link_libraries(Client PRIVATE Systemic $<$<PLATFORM_ID:Windows>:ws2_32> )
 
-target_link_libraries(DatabaseEngine PRIVATE Server)
+target_link_libraries(Database PRIVATE Server)

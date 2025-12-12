@@ -1,7 +1,7 @@
 #include "../include/LogicalPlan.h"
 #include "../include/Optimizer.h"
 #include "../include/Statements.h"
-#include "../../Database/include/SystemDatabases/SystemCatalog.h"
+#include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
 
 #include <utility>
 

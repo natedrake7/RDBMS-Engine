@@ -3,9 +3,9 @@
 
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include "../../Database/include/DataStorage/Block.h"
-#include "../../Database/include/Managers/TransactionManager.h"
-#include "../../Database/include/SystemDatabases/SystemCatalog.h"
+#include "../../DatabaseEngine/include/DataStorage/Block.h"
+#include "../../DatabaseEngine/include/Managers/TransactionManager.h"
+#include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
 
 #include <iostream>
 

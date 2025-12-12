@@ -1,4 +1,4 @@
-﻿#include "src/Database/include/Schedulers/GarbageCollector.h"
+﻿#include "src/DatabaseEngine/include/Schedulers/GarbageCollector.h"
 #include "src/QueryPipeline/include/Parser.h"
 #include "src/Server/include/Server.h"
 #include "src/Server/include/ConnectionManager.h"

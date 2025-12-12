@@ -1,12 +1,12 @@
 #include "../../include/PhysicalPlan.h"
 #include <utility>
-#include "../../../Database/include/Database.h"
-#include "../../../Database/include/SystemDatabases/SystemCatalog.h"
+#include "../../../DatabaseEngine/include/Database.h"
+#include "../../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
-#include "../../../Database/include/Algorithms/Sort/SortingFunctions.h"
-#include "../../../Database/include/DataStorage/Block.h"
-#include "../../../Database/include/ExecutionProperties.h"
+#include "../../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
+#include "../../../DatabaseEngine/include/DataStorage/Block.h"
+#include "../../../DatabaseEngine/include/ExecutionProperties.h"
 
 namespace QueryPipeline::PhysicalPlan {
   ExecutionResult::ExecutionResult(){
