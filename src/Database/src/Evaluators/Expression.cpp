@@ -1,10 +1,10 @@
-#include "../include/Expression.h"
+#include "../../include/Evaluators/Expression.h"
 
-#include "../../Systemic/include/Coercions.h"
-#include "../../Systemic/include/DataTypes/Value.h"
-#include "../../Systemic/include/QueryResult.h"
-#include "../../Systemic/include/Functions/StringFunctions.h"
-#include "../../Database/include/DataStorage/Row.h"
+#include "../../../Systemic/include/Coercions.h"
+#include "../../../Systemic/include/DataTypes/Value.h"
+#include "../../../Systemic/include/QueryResult.h"
+#include "../../../Systemic/include/Functions/StringFunctions.h"
+#include "../../include/DataStorage/Row.h"
 #include <iostream>
 
 namespace Expressions{

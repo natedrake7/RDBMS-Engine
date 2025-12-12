@@ -1,24 +1,12 @@
 #pragma once
-#include <string>
 #include "Expressions.Additional.h"
-#include "../../Systemic/include/QueryResult.h"
-#include "../../Systemic/include/DataTypes/Value.h"
-#include "../../Systemic/include/DataTypes/Variable.h"
+#include "../../../Systemic/include/QueryResult.h"
+#include "../../../Systemic/include/DataTypes/Value.h"
+#include "../../../Systemic/include/DataTypes/Variable.h"
+#include <string>
 
 namespace DatabaseEngine::StorageTypes {
   class Row;
-}
-
-namespace QueryPipeline::Statements {
-  struct ColumnName {
-    std::string name;
-    std::string alias;
-
-    int32_t tableId;
-    int32_t columnId;
-    column_index_t index;
-    DataType returnType;
-  };
 }
 
 namespace Expressions{

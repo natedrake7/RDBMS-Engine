@@ -70,12 +70,6 @@ add_library(Systemic SHARED
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)
 
-add_library(ExpressionsLibrary STATIC src/Expressions/src/Expression.cpp)
-
-target_include_directories(ExpressionsLibrary PUBLIC src/Expressions/include)
-
-target_link_libraries(ExpressionsLibrary PRIVATE Systemic PRIVATE Database)
-
 add_library(QueryPipeline STATIC
         src/QueryPipeline/src/Optimizer.cpp
         src/QueryPipeline/src/Parser.cpp
@@ -92,14 +86,14 @@ add_library(QueryPipeline STATIC
         ${ANTLR_SRC}
 )
 
-target_include_directories(QueryPipeline PUBLIC  src/QueryPipeline/include)
+target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)
 
 add_dependencies(QueryPipeline GenerateSQLParser)
 
 if(WIN32)
-    target_link_libraries(QueryPipeline PRIVATE ExpressionsLibrary PRIVATE Systemic PRIVATE antlr4_shared)
+    target_link_libraries(QueryPipeline PRIVATE Database PRIVATE antlr4_shared)
 else()
-    target_link_libraries(QueryPipeline PRIVATE ExpressionsLibrary PRIVATE Systemic PRIVATE antlr4_static)
+    target_link_libraries(QueryPipeline PRIVATE Database PRIVATE antlr4_static)
 endif()
 
 # Include the generated parser and lexer files
@@ -142,9 +136,12 @@ add_library(Database STATIC
         src/Database/include/Schedulers/StatisticsScheduler.h
         src/Database/include/SystemDatabases/SystemCatalog.h
         src/Database/src/SystemDatabases/SystemCatalog.cpp
+        src/Database/src/Evaluators/Expression.cpp
 )
 
 target_include_directories(Database PUBLIC src/Database/include)
+
+target_link_libraries(Database PRIVATE Systemic PRIVATE nlohmann_json::nlohmann_json)
 
 add_library(Server STATIC
         src/Server/src/ConnectionManager/ConnectionManager.cpp
@@ -157,9 +154,7 @@ add_library(Server STATIC
 
 target_include_directories(Server PUBLIC src/Server/include)
 
-target_link_libraries(Server PRIVATE QueryPipeline PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE $<$<PLATFORM_ID:Windows>:ws2_32> PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
-
-target_link_libraries(Database PRIVATE Systemic PRIVATE ExpressionsLibrary PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(Server PRIVATE QueryPipeline PRIVATE $<$<PLATFORM_ID:Windows>:ws2_32> PRIVATE unofficial::argon2::libargon2)
 
  add_executable(Client
          src/Client/src/client.cpp

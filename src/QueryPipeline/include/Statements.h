@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include "../../Database/include/Constants.h"
-#include "../../Expressions/include/Expression.h"
+#include "../../Database/include/Evaluators/Expression.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
 #include "../../Systemic/include/DataTypes/Guid.h"
 #include "../../Systemic/include/Security/Security.h"
@@ -11,8 +11,14 @@
 #include "Parser.h"
 
 namespace DatabaseEngine {
-class SystemCatalog;}namespace Network {
-class Server;}namespace Headers {
+  class SystemCatalog;
+}
+
+namespace Network {
+  class Server;
+}
+
+namespace Headers {
   struct DefaultValuesHeader;
 }
 
@@ -24,6 +30,16 @@ namespace QueryPipeline {
 namespace QueryPipeline::Statements {
 
   struct SelectStatement;
+
+  struct ColumnName {
+    std::string name;
+    std::string alias;
+
+    int32_t tableId;
+    int32_t columnId;
+    column_index_t index;
+    DataType returnType;
+  };
 
   struct StatementValidationScope {
     const Dictionary<std::string, table_id_t>* tableAliasesDictionary;
