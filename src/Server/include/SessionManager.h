@@ -4,7 +4,7 @@
 #include "../../Systemic/include/Guards/ReadWriteMutex.h"
 #include "../../Systemic/include/Security/Session.h"
 
-namespace Server::Sessions {
+namespace Network::Sessions {
   class SessionManager {
 
     Dictionary<DataTypes::Guid, Network::Session*> sessions;
@@ -26,7 +26,7 @@ namespace Server::Sessions {
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const DatabaseEngine::ExecutionProperties& properties,
       QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan)const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
   };

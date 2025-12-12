@@ -10,8 +10,9 @@
 #include "../../Systemic/include/Headers.h"
 #include "Parser.h"
 
-namespace Server {
-class ServerInstance;}namespace Headers {
+namespace DatabaseEngine {
+class SystemCatalog;}namespace Network {
+class Server;}namespace Headers {
   struct DefaultValuesHeader;
 }
 
@@ -103,7 +104,7 @@ namespace QueryPipeline::Statements {
     Statements::ColumnName name;
 
     int32_t columnId;
-    Constants::column_index_t index;
+    column_index_t index;
   };
 
   struct RenameColumn {
@@ -146,7 +147,8 @@ namespace QueryPipeline::Statements {
     int32_t schemaId;
     int16_t ordinalPosition;
 
-    Server::ServerInstance* server;
+    Network::Server* server;
+    DatabaseEngine::SystemCatalog* catalog;
 
     DataSource();
     [[nodiscard]] std::string GetAlias() const;
@@ -170,7 +172,8 @@ namespace QueryPipeline::Statements {
 
     DataSource* table;
     Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
-    Server::ServerInstance* server;
+    Network::Server* server;
+    DatabaseEngine::SystemCatalog* catalog;
 
     Statement();
     virtual ~Statement() = default;
@@ -292,7 +295,7 @@ namespace QueryPipeline::Statements {
     SelectStatement();
     ~SelectStatement() override;
 
-    [[nodiscard]] Dictionary<std::string, Constants::column_index_t> CreatePostProjectionIndicesDictionary()const;
+    [[nodiscard]] Dictionary<std::string, column_index_t> CreatePostProjectionIndicesDictionary()const;
 
     [[nodiscard]] bool HasTopStatement()const;
     [[nodiscard]] bool HasJoins()const;
@@ -301,7 +304,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] Errors::ValidationStatus CompileNoTableStatement(ParserValidationScope& validationScope);
     [[nodiscard]] Errors::ValidationStatus Compile(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     [[nodiscard]] Errors::ValidationStatus CompileWhereClause(ParserValidationScope& validationScope, StatementValidationScope& statementValidationScope);
-    void AssignColumnsToIndices(const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary)const;
+    void AssignColumnsToIndices(const Dictionary<int32_t, column_index_t> &columnIndicesDictionary)const;
 
     [[nodiscard]] Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;
@@ -592,32 +595,32 @@ static void AssignConstantToExpression(Expressions::Expression*& expression);
    * @{
    */
   static void AssignColumnIndicesToExpression(
-    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
     Expressions::Expression* expression
   );
 
   static void AssignColumnIndicesToBinaryExpression(
-    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
     const Expressions::BinaryExpression* expression
   );
 
   static void AssignColumnIndicesToLogicalExpression(
-    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
     const Expressions::LogicalExpression* expression
   );
 
   static void AssignColumnIndicesToBranchExpression(
-    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
     const Expressions::BranchExpression* expression
   );
 
   static void AssignColumnIndicesToFunctionExpression(
-    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
     const Expressions::FunctionExpression* expression
   );
 
   static void AssignColumnIndicesToColumnExpression(
-    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
     Expressions::ColumnExpression* expression
   );
 
@@ -669,32 +672,32 @@ static void AssignConstantToExpression(Expressions::Expression*& expression);
    */
 
   static void AssignPostProjectionIndicesToExpression(
-    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
     Expressions::Expression* expression
   );
 
   static void AssignPostProjectionIndicesToBinaryExpression(
-    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
     const Expressions::BinaryExpression* expression
   );
 
   static void AssignPostProjectionIndicesToLogicalExpression(
-    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
     const Expressions::LogicalExpression* expression
   );
 
   static void AssignPostProjectionIndicesToFunctionExpression(
-    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
     const Expressions::FunctionExpression* expression
   );
 
   static void AssignPostProjectionIndicesToBranchExpression(
-    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
     const Expressions::BranchExpression* expression
   );
 
   static void AssignPostProjectionIndicesToColumnExpression(
-    const Dictionary<std::string, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
     Expressions::ColumnExpression* expression
   );
 

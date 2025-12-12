@@ -1,11 +1,10 @@
 #pragma once
-#include "../../../Database/include/Constants.h"
 #include "../Functions/StringFunctions.h"
 #include "../../include/DataTypes/Value.h"
 
 class Variable {
   Value value;
-  Constants::DataType type;
+  DataType type;
 
   std::string name;
   std::string normalizedName;
@@ -15,7 +14,7 @@ class Variable {
       this->type = DataType::Unknown;
     }
 
-    Variable(Value& value, const Constants::DataType& type, std::string& name)
+    Variable(Value& value, const DataType& type, std::string& name)
       : value(std::move(value)), type(type), name(std::move(name)) {
       this->normalizedName = Functions::String::NormalizeString(this->name);
     }

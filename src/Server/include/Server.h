@@ -2,7 +2,7 @@
 #include "../../Systemic/include/Headers.h"
 #include "../../Systemic/include/Errors.h"
 #include "../../Database/include/Database.h"
-#include "../../Database/include/VersionDatabase.h"
+#include "../../Database/include/SystemDatabases/VersionDatabase.h"
 #include "../../Systemic/include/Security/Security.h"
 #include "RoleManager.h"
 #include "SessionManager.h"
@@ -12,97 +12,52 @@
 #include <vector>
 
 namespace DatabaseEngine {
-  class Database;
-
-  namespace StorageTypes {
-    class Row;
-  }
+  class SystemCatalog;
 }
 
-namespace Server {
-  enum MasterDbTables: uint8_t {
-    SysDatabases = 0,
-    SysSchemas = 1,
-    SysTables = 2,
-    SysColumns = 3,
-    SysIndexes = 4,
-    SysIdentityColumns = 5,
-    SysIndexColumns = 6,
-    SysConstraints = 7,
-    SysConstraintColumns = 8,
-    SysDefaultValues = 9,
-    SysTableStats = 10,
-    SysColumnStats = 11,
-    SysColumnHistograms = 12,
-    SysRoles = 13,
-    SysUsers = 14,
-  };
+namespace DatabaseEngine {
+  class Database;
 
-  class ServerInstance {
-    std::string sysDbName;
-    std::string sysDbPath;
+}
 
+namespace Network {
+  class Server {
     std::string versionDbName;
     std::string versionDbPath;
 
-    std::vector<Headers::sysTable> sysTables;
-    DatabaseEngine::Database* masterDb;
     DatabaseEngine::VersionDatabase *versionDb;
 
     Dictionary<int32_t, DatabaseEngine::Database*> databases;
+    DatabaseEngine::SystemCatalog* systemCatalog;
 
     Sessions::SessionManager sessionManager;
 
     Security::RoleManager roleManager;
     Security::UserManager userManager;
 
-    QueryPipeline::PhysicalPlan::ExecutionProperties baseProperties;
-
-    ServerInstance();
-    ~ServerInstance();
+    Server();
+    ~Server();
 
     void ReadConfiguration(const std::string& configPath);
-    bool CreateMasterDatabase();
     void CreateVersionDatabase();
-    [[nodiscard]] bool MasterDbExists()const;
     [[nodiscard]] bool VersionDbExists()const;
-    [[nodiscard]] std::vector<Security::Role> SelectRoles()const;
-    [[nodiscard]] std::vector<Security::User> SelectUsers()const;
 
-    void InsertSystemRoles(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties);
-    void InsertSystemUsers(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties);
-
-    static Headers::DatabaseHeader ToDatabaseHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::DatabaseHeader ToDatabaseHeader(
-      const DatabaseEngine::StorageTypes::Row* row,
-      std::vector<Headers::TableHeader>& dbTables,
-      std::vector<Headers::SchemaHeader>& schemas
-    );
-    static Headers::SchemaHeader ToSchemaHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::TableHeader ToTableHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::ColumnHeader ToColumnHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::IndexHeader ToIndexHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::IndexColumnsHeader ToIndexColumnsHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::ConstraintsHeader ToConstraintsHeader(
-      const DatabaseEngine::StorageTypes::Row* row,
-      std::vector<Headers::ConstraintsColumnsHeader>& constraintColumns,
-      Headers::IndexHeader& indexHeader
-    );
-    static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::DefaultValuesHeader ToDefaultValuesHeader(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::TableStatistics ToTableStatistics(const DatabaseEngine::StorageTypes::Row* row);
-    static Headers::ColumnStatistics ToColumnStatistics(const DatabaseEngine::StorageTypes::Row* row, const DataType& columnType);
-    static Headers::ColumnHistograms ToColumnHistograms(const DatabaseEngine::StorageTypes::Row* row, const DataType& columnType);
+    void CreateSystemRoles();
+    void CreateSystemUsers();
 
   public:
-    [[nodiscard]] static ServerInstance& Get();
+    [[nodiscard]] static Server& Get();
     void Initialize(const std::string& configPath);
 
     //Security Functions
     [[nodiscard]]Errors::RuntimeStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
     bool UserExists(const std::string& userName)const;
-    bool CreateUser(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties, const std::string& userName, const std::string& password, const std::string& roleName);
+    bool CreateUser(const DatabaseEngine::ExecutionProperties& properties, const std::string& userName, const std::string& password, const std::string& roleName);
+    Errors::RuntimeStatus UpdateUserById(
+      const DataTypes::Guid& callerSessionId,
+      const int32_t &userId,
+      const int32_t &roleId
+    )const;
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
 
     bool RoleExists(const std::string& role)const;
@@ -117,221 +72,10 @@ namespace Server {
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const DatabaseEngine::ExecutionProperties& properties,
       QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
     )const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
-
-    //MasterDB Insert Functions
-    [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const std::string& dbName,
-      const std::string& dbPath,
-      const bool& isSystem = false,
-      const std::string& user = "system",
-      const int& version = 0,
-      const bool& isDeleted = false
-  ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertSchemaToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const int32_t& databaseId,
-      const std::string& schemaName,
-      const std::string& user = "system",
-      const int& version = 0,
-      const bool& isDeleted = false
-  ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertTableToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const int32_t & databaseId,
-      const int32_t & schemaId,
-      const std::string& tableName,
-      const int16_t& ordinalPosition,
-      const bool& isSystem = false,
-      const std::string& user = "system",
-      const int& version = 0,
-      const bool& isDeleted = false
-  ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertColumnToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const int32_t & tableId,
-      const std::string& columnName,
-      const DataType& columnType,
-      const int& columnSize,
-      const int8_t& precision,
-      const int8_t& scale,
-      const bool& isNullable,
-      const int& ordinalPosition,
-      const bool& isSystem = false,
-      const std::string& user = "system",
-      const int& version = 0,
-      const bool& isDeleted = false
-  ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertIndexToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const int32_t & tableId,
-      const std::string &indexName,
-      const bool &isClustered,
-      const bool &isDisabled = false,
-      const std::string& user = "system",
-      const int& version = 0,
-      const bool& isDeleted = false
-  ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertIndexColumnToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-        const int32_t& indexId,
-        const int32_t& columnId,
-        const int16_t& ordinalPosition,
-        const bool& isIncluded,
-        const int& version = 0,
-        const bool& isDeleted = false
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertConstraintToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-        const int32_t& tableId,
-        const string& constraintName,
-        const Headers::ConstraintType& constraintType,
-        const bool& isDisabled,
-        const int32_t* constraintIndexId,
-        const std::string& user = "system",
-        const int& version = 0,
-        const bool& isDeleted = false
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertConstraintColumnToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-        const int32_t& constraintId,
-        const int32_t& columnId,
-        const int32_t& ordinalPosition,
-        const int& version = 0,
-        const bool& isDeleted = false
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertIdentityColumnToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-        const int32_t& tableId,
-        const int32_t& columnId,
-        const int32_t& seedValue,
-        const int32_t& increment,
-        const int32_t& lastValue,
-        const bool& isCached,
-        const int32_t& cacheBlock,
-        const int& version = 0,
-        const bool& isDeleted = false
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertDefaultValuesToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-        const int32_t& columnId,
-        const Value& value,
-        const int& version = 0,
-        const bool& isDeleted = false
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertTableStatisticsToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const int32_t& tableId,
-      const int64_t& rowCount = 0,
-      const int32_t& rowSize = 0
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const int32_t& columnId,
-      const int64_t& distinctCount = 0,
-      const int64_t& nullCount = 0
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertColumnHistogramsToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const int32_t& columnId,
-      const Value& min,
-      const Value& max,
-      const int64_t& distinctCount = 0
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertRoleToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const std::string& roleName,
-      const Security::Permission& permissions,
-      const bool& isSystem = true,
-      const int& version = 0,
-      const bool& isDeleted = false
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus InsertUserToMasterDb(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
-      const std::string& username,
-      const std::string& passwordHash,
-      const int32_t& roleId,
-      const bool& isActive = false,
-      const int& version = 0,
-      const bool& isDeleted = false
-    ) const;
-
-    [[nodiscard]] Errors::RuntimeStatus UpdateUserById(
-      const DataTypes::Guid& callerSessionId,
-      const int32_t& userId,
-      const int32_t& roleId
-    )const;
-
-    //MasterDB Select Functions
-    [[nodiscard]] std::vector<Headers::DatabaseHeader> GetCatalog()const;
-    [[nodiscard]] bool DatabaseExists(const string& dbName) const;
-    [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
-    [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const int32_t& databaseId) const;
-    [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const int32_t& databaseId) const;
-    [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const int32_t& databaseId) const;
-    [[nodiscard]] bool SchemaExists(
-      const int32_t &databaseId,
-      const std::string& schema,
-      int* schemaId = nullptr
-    ) const;
-    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const string& dbName) const;
-    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const int32_t & databaseId) const;
-    [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
-    [[nodiscard]] Headers::TableHeader SelectTable(const int32_t &databaseId, const string &tableName, const std::string& schema) const;
-    [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const int32_t& tableId) const;
-    [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(const int32_t& tableId) const;
-    [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const int32_t& tableId) const;
-    [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(const int32_t& tableId) const;
-    [[nodiscard]] Headers::IndexHeader SelectIndexById(const int32_t& indexId) const;
-    [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const int32_t& indexId) const;
-    [[nodiscard]] Dictionary<int32_t, Headers::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const int32_t& indexId) const;
-    [[nodiscard]] std::vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const int32_t& tableId) const;
-    [[nodiscard]] Dictionary<int32_t , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const int32_t& tableId) const;
-    [[nodiscard]] std::vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
-    [[nodiscard]] Dictionary<int32_t, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const int32_t& constraintId) const;
-    [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const int32_t& columnId) const;
-    [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const int32_t& tableId)const;
-    [[nodiscard]] Headers::ColumnStatistics SelectColumnStatisticsById(
-      const int32_t& columnId,
-      const Constants::DataType& columnType
-    )const;
-    [[nodiscard]] std::vector<Headers::ColumnHistograms> SelectColumnHistogramsByColumnId(
-      const int32_t& columnId,
-      const Constants::DataType& columnType
-    )const;
-    void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const;
-    void UpdateTableStatisticsById(
-      const int32_t& tableId,
-      const int64_t& rowCount,
-      const int32_t& rowSize
-    )const;
-    void UpdateColumnStatisticsById(
-      const int32_t& columnId,
-      const int64_t& distinctCount,
-      const int64_t& nullCount,
-      const Value& min,
-      const Value& max
-    )const;
-    [[nodiscard]]Errors::RuntimeStatus UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
-    [[nodiscard]] DatabaseEngine::Database* GetMasterDb()const;
 
     //Cursor Functions
     // QueryPipeline::Cursor* CreateCursor(QueryPipeline::PhysicalPlan::PhysicalOperator* plan);
@@ -340,8 +84,6 @@ namespace Server {
 
     void Shutdown();
     [[nodiscard]] DatabaseEngine::Database* UseDatabase(const int32_t & databaseId, const bool& isServerInitialization = false);
-    void UseMasterDb();
-
     DatabaseEngine::VersionDatabase* GetVersionDatabase()const;
     
   };

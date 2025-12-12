@@ -24,6 +24,7 @@ namespace Security {
         const std::string &passwordHash,
         const Security::Role* role
       );
+      [[nodiscard]] bool AddSystemUser(User* user);
       [[nodiscard]]bool RemoveUser(const std::string& name);
 
       bool GrantRole(const std::string& name, const Security::Role* role, int32_t& outUserId)const;

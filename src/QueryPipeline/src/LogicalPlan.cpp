@@ -1,7 +1,7 @@
 #include "../include/LogicalPlan.h"
-#include "../../Server/include/Server.h"
 #include "../include/Optimizer.h"
 #include "../include/Statements.h"
+#include "../../Database/include/SystemDatabases/SystemCatalog.h"
 
 #include <utility>
 
@@ -47,7 +47,7 @@ namespace QueryPipeline {
   : table(table), expression(expression) {}
 
   PhysicalPlan::ExecutionNode * LogicalTableScan::ToPhysical(){
-      auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
+      auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
 
       //if no indexes are available heap scan
       if (indexes.empty())
@@ -56,7 +56,7 @@ namespace QueryPipeline {
 
       if (this->expression != nullptr) {
         for (auto& index: indexes) {
-          index.columns = Server::ServerInstance::Get().SelectIndexColumnsByIndexId(index.id);
+          index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(index.id);
 
           auto results = Optimizer::AnalyzeTableScan(this, index.columns);
 
@@ -189,7 +189,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     : table(table), expression(expression) {}
 
   PhysicalPlan::ExecutionNode * LogicalDelete::ToPhysical(){
-    const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
+    const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
 
     //if no indexes are available heap scan
     if (indexes.empty())
@@ -204,7 +204,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     //   expression->GetColumns(expressionColumns);
 
     for (const auto& index: indexes) {
-        const auto indexHeader = Server::ServerInstance::Get().SelectIndexById(index.id);
+        const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(index.id);
 
           if (canIndexSeek) {
             for (const auto& column: index.columns) {
@@ -244,7 +244,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
   : table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalPlan::ExecutionNode* LogicalUpdate::ToPhysical(){
-      const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->table->tableId);
+      const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
 
       //if no indexes are available heap scan
       if (indexes.empty())
@@ -259,7 +259,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
       //   expression->GetColumns(expressionColumns);
 
       for (const auto& index: indexes) {
-          const auto indexHeader = Server::ServerInstance::Get().SelectIndexById(index.id);
+          const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(index.id);
 
             if (canIndexSeek) {
               for (const auto& column: indexHeader.columns) {

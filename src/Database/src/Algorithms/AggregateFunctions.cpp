@@ -6,10 +6,7 @@
 #include <limits>
 #include <stdexcept>
 
-using namespace DatabaseEngine::StorageTypes;
-using namespace Constants;
-
-void AggregateFunctions::SumByColumnType(long double& sum, const Block* block)
+void AggregateFunctions::SumByColumnType(long double& sum, const DatabaseEngine::StorageTypes::Block* block)
 {
     switch (block->GetColumnType())
     {
@@ -33,7 +30,7 @@ void AggregateFunctions::SumByColumnType(long double& sum, const Block* block)
     }
 }
 
-void AggregateFunctions::CompareMaxWithRow(long double &max, const Block *block)
+void AggregateFunctions::CompareMaxWithRow(long double &max, const DatabaseEngine::StorageTypes::Block *block)
 {
     switch (block->GetColumnType())
     {
@@ -114,7 +111,7 @@ void AggregateFunctions::CompareMinWithRow(long double &max, const DatabaseEngin
     }
 }
 
-long double AggregateFunctions::Average(const vector<Row*>& rows, const column_index_t& columnIndex, const long double* constantValue)
+long double AggregateFunctions::Average(const vector<DatabaseEngine::StorageTypes::Row*>& rows, const column_index_t& columnIndex, const long double* constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue ;
@@ -127,7 +124,7 @@ long double AggregateFunctions::Average(const vector<Row*>& rows, const column_i
     return sum / static_cast<long double>(rows.size());
 }
 
-uint64_t AggregateFunctions::Count(const vector<Row*>& rows, const column_index_t &columnIndex, const long double *constantValue)
+uint64_t AggregateFunctions::Count(const vector<DatabaseEngine::StorageTypes::Row*>& rows, const column_index_t &columnIndex, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return rows.size();
@@ -144,7 +141,7 @@ uint64_t AggregateFunctions::Count(const vector<Row*>& rows, const column_index_
     return count;
 }
 
-long double AggregateFunctions::Max(const vector<Row*> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
+long double AggregateFunctions::Max(const vector<DatabaseEngine::StorageTypes::Row*> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -166,7 +163,7 @@ long double AggregateFunctions::Max(const vector<Row*> &rows, const column_index
     return max;
 }
 
-long double AggregateFunctions::Min(const vector<Row*> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
+long double AggregateFunctions::Min(const vector<DatabaseEngine::StorageTypes::Row*> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -188,7 +185,7 @@ long double AggregateFunctions::Min(const vector<Row*> &rows, const column_index
     return min;
 }
 
-long double AggregateFunctions::Sum(const vector<Row*> &rows, const column_index_t &columnIndex, const long double *constantValue)
+long double AggregateFunctions::Sum(const vector<DatabaseEngine::StorageTypes::Row*> &rows, const column_index_t &columnIndex, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;

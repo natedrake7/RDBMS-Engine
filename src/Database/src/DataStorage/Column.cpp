@@ -1,7 +1,10 @@
 ﻿#include "../../include/DataStorage/Column.h"
+
+#include "../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../Server/include/Server.h"
 #include "../../include/DataStorage/Table.h"
+#include "Guards/WriterGuard.h"
 
 namespace DatabaseEngine::StorageTypes {
     
@@ -38,7 +41,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header.id = masterDbHeader.id;
         this->name = masterDbHeader.name;
         this->allowNulls = masterDbHeader.isNullable;
-        this->header.columnType = static_cast<Constants::DataType>(masterDbHeader.dataType);
+        this->header.columnType = static_cast<DataType>(masterDbHeader.dataType);
         this->header.recordSize = masterDbHeader.recordSize;
         this->header.columnIndex = masterDbHeader.ordinalPosition;
         this->table = table;
@@ -49,9 +52,7 @@ namespace DatabaseEngine::StorageTypes {
 
     const string& Column::GetColumnName() const{ return this->name; }
 
-    void Column::SetColumnName(const std::string &name){
-        this->name = name;
-    }
+    void Column::SetColumnName(const std::string &otherName){ this->name = otherName;}
 
     const DataType& Column::GetColumnType() const { return this->header.columnType; }
 
@@ -75,9 +76,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetColumnId(const int32_t &columnId){ this->header.id = columnId; }
 
-    void Column::SetIdentityManagerIds(const int32_t &tableId){
-        this->identityManager.SetHeaderIds(tableId, this->header.id);
-    }
+    void Column::SetIdentityManagerIds(const int32_t &tableId){ this->identityManager.SetHeaderIds(tableId, this->header.id); }
 
     const Headers::IdentityColumnsHeader & Column::GetIdentity()const { return this->identityManager.GetHeader(); }
 
@@ -99,10 +98,10 @@ namespace DatabaseEngine::StorageTypes {
     void Column::UpdateColumnStatistics(const Row *row){
         const auto& value = row->GetColumnByIndex(this->header.columnIndex);
 
-        if (value.IsNull()) {
+        MultiThreading::WriterGuard lock(&this->statisticsLatch);
+
+        if (value.IsNull())
             this->statistics.nullCount++;
-            return;
-        }
 
         this->statistics.nullCount = 1;
         this->statistics.distinctCount = 1;
@@ -113,7 +112,7 @@ namespace DatabaseEngine::StorageTypes {
         if ((value > this->statistics.max).GetBool())
             this->statistics.max = value;
 
-        Server::ServerInstance::Get().UpdateColumnStatisticsById(
+        SystemCatalog::Get().UpdateColumnStatisticsById(
             this->header.id,
             this->statistics.distinctCount,
             this->statistics.nullCount,

@@ -15,8 +15,8 @@ namespace DatabaseEngine {
     return instance;
   }
 
-  QueryPipeline::PhysicalPlan::Snapshot TransactionManager::BeginTransaction(const DataTypes::Guid& sessionId){
-    QueryPipeline::PhysicalPlan::Snapshot snapshot;
+  Snapshot TransactionManager::BeginTransaction(const DataTypes::Guid& sessionId){
+    Snapshot snapshot;
 
     {
       std::unique_lock<std::mutex> lock(this->transactionMutex);
@@ -43,19 +43,19 @@ namespace DatabaseEngine {
     return snapshot;
   }
 
-  void TransactionManager::SetTransactionId(const Constants::transaction_id_t &transactionId) {
+  void TransactionManager::SetTransactionId(const transaction_id_t &transactionId) {
     std::unique_lock<std::mutex> lock(this->transactionMutex);
 
     this->currentTransactionId = transactionId;
   }
 
-  void TransactionManager::CommitTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) {
+  void TransactionManager::CommitTransaction(const Snapshot& snapshot) {
     std::unique_lock<std::mutex> lock(this->dictionaryMutex);
 
     this->activeTransactions.Remove(snapshot.transactionId);
   }
 
-  void TransactionManager::RollbackTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot){
+  void TransactionManager::RollbackTransaction(const Snapshot& snapshot){
     {
       std::unique_lock<std::mutex> lock(this->dictionaryMutex);
 
@@ -65,7 +65,7 @@ namespace DatabaseEngine {
     //apply rollback mechanism
   }
 
-  Constants::transaction_id_t TransactionManager::GetOldestActiveTransactionId() {
+  transaction_id_t TransactionManager::GetOldestActiveTransactionId() {
     std::unique_lock<std::mutex> lock(this->dictionaryMutex);
 
     return this->activeTransactions.FirstOrDefault().transactionId;

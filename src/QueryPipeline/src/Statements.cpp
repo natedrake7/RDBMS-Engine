@@ -6,7 +6,8 @@
 #include "../../Systemic/include/Functions/StringFunctions.h"
 #include "../../Server/include/Server.h"
 #include "../include/LogicalPlan.h"
-#include "../../Server/include/Server.Constants.h"
+#include "../../Server/include/Constants.h"
+#include "../../Database/include/SystemDatabases/SystemCatalog.h"
 
 #include <iostream>
 #include <ranges>
@@ -16,7 +17,8 @@ namespace QueryPipeline::Statements {
   Statement::Statement(){
     this->databaseId = Constants::INVALID_DATABASE_ID;
     this->table = nullptr;
-    this->server = &Server::ServerInstance::Get();
+    this->server = &Network::Server::Get();
+    this->catalog = &DatabaseEngine::SystemCatalog::Get();
   }
 
   Errors::ValidationStatus Statement::CompileBase()const{
@@ -79,7 +81,7 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission DeclareVariableStatement::RequiredPermissions() const {
-    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   QueryPipeline::LogicalPlan * DeclareVariableStatement::ToLogical() {
@@ -125,7 +127,7 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission SetVariableStatement::RequiredPermissions() const {
-    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   QueryPipeline::LogicalPlan * SetVariableStatement::ToLogical() {
@@ -163,7 +165,7 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission CreateUserStatement::RequiredPermissions() const{
-      return Server::ServerConstants::ADMIN_PERMISSIONS;
+      return Constants::ADMIN_PERMISSIONS;
   }
 
   LogicalPlan* CreateUserStatement::ToLogical(){
@@ -188,7 +190,7 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission GrantRoleStatement::RequiredPermissions() const{
-    return Server::ServerConstants::ADMIN_PERMISSIONS;
+    return Constants::ADMIN_PERMISSIONS;
   }
 
   LogicalPlan * GrantRoleStatement::ToLogical(){
@@ -206,7 +208,7 @@ namespace QueryPipeline::Statements {
     if (this->where.expression == nullptr)
       return {};
 
-    const auto columnsDict = this->server->SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
 
     return {};
     // return this->where.expression->Validate(columnsDict);
@@ -222,7 +224,7 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission DeleteStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   JoinStatement::JoinStatement() {
@@ -260,7 +262,7 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission JoinStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_READER_PERMISSIONS;
+    return Constants::DB_READER_PERMISSIONS;
   }
 
   void JoinStatement::CleanUp() {
@@ -387,7 +389,8 @@ namespace QueryPipeline::Statements {
     this->schemaId = Constants::INVALID_SCHEMA_ID;
     this->ordinalPosition = Constants::INVALID_ORDINAL_POS;
     this->schema = "dbo";
-    this->server = &Server::ServerInstance::Get();
+    this->server = &Network::Server::Get();
+    this->catalog = &DatabaseEngine::SystemCatalog::Get();
   }
 
   std::string DataSource::GetAlias() const{
@@ -402,8 +405,8 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus DataSource::Validate(const int32_t& selectedDatabaseId) {
     const auto tableHeader = (!this->database.empty())
-        ? this->server->SelectTable(this->database, this->name)
-        : this->server->SelectTable(selectedDatabaseId, this->name, this->schema);
+        ? this->catalog->SelectTable(this->database, this->name)
+        : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id == Constants::INVALID_TABLE_ID){
       ostringstream os;
@@ -421,8 +424,8 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus DataSource::ValidateTableCreate(const int32_t &selectedDatabaseId){
     const auto tableHeader = (!this->database.empty())
-      ? this->server->SelectTable(this->database, this->name)
-      : this->server->SelectTable(selectedDatabaseId, this->name, this->schema);
+      ? this->catalog->SelectTable(this->database, this->name)
+      : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id != Constants::INVALID_TABLE_ID){
       ostringstream os;
@@ -448,7 +451,7 @@ namespace QueryPipeline::Statements {
 
     ostringstream os;
 
-    const auto& schemasDict = this->server->SelectSchemasToDictionary(this->databaseId);
+    const auto& schemasDict = this->catalog->SelectSchemasToDictionary(this->databaseId);
     Headers::SchemaHeader schemaHeader;
 
     if (!schemasDict.TryGetValue(Functions::String::Lower(this->table->schema), schemaHeader)) {
@@ -529,7 +532,7 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission CreateTableStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_OWNER_PERMISSIONS;
+    return Constants::DB_OWNER_PERMISSIONS;
   }
 
   void CreateTableStatement::CleanUp() {
@@ -551,8 +554,8 @@ namespace QueryPipeline::Statements {
       }
   }
 
-  Dictionary<std::string, Constants::column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
-    Dictionary<std::string, Constants::column_index_t> dict;
+  Dictionary<std::string, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
+    Dictionary<std::string, column_index_t> dict;
 
     for (int i = 0;i < this->results.size(); i++) {
       const auto& resultExpr = this->results[i];
@@ -591,12 +594,12 @@ namespace QueryPipeline::Statements {
   Errors::ValidationStatus SelectStatement::Compile(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
-    this->tableColumnsDictionary.Add(this->table->tableId, this->server->SelectColumnsToDictionary(this->table->tableId));
+    this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(this->table->tableId));
 
     //Add all the join tables to the dictionaries
     for (const auto& join: this->joins) {
       tableAliasesDictionary.Add(join->table->GetAlias(), join->table->tableId);
-      this->tableColumnsDictionary.Add(join->table->tableId, this->server->SelectColumnsToDictionary(join->table->tableId));
+      this->tableColumnsDictionary.Add(join->table->tableId, this->catalog->SelectColumnsToDictionary(join->table->tableId));
     }
 
     auto statementValidationScope = StatementValidationScope(
@@ -677,7 +680,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  void SelectStatement::AssignColumnsToIndices(const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary)const {
+  void SelectStatement::AssignColumnsToIndices(const Dictionary<int32_t, column_index_t> &columnIndicesDictionary)const {
     for (const auto& resultExpr : this->results)
       AssignColumnIndicesToExpression(columnIndicesDictionary, resultExpr);
 
@@ -703,7 +706,7 @@ namespace QueryPipeline::Statements {
     if (!tableResult.IsOk())
         return tableResult;
 
-    Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
+    Dictionary<std::string, table_id_t> aliasesDictionary;
 
     for (const auto& join: this->joins) {
       auto joinResult = join->Validate(this->databaseId);
@@ -735,12 +738,12 @@ namespace QueryPipeline::Statements {
       joinOrder.push_back(join->table->tableId);
     }
 
-    Dictionary<int32_t, Constants::column_index_t> columnIndicesDictionary;
-    Constants::column_index_t columnIndex = 0;
+    Dictionary<int32_t, column_index_t> columnIndicesDictionary;
+    column_index_t columnIndex = 0;
 
     for (const auto& tableId: joinOrder) {
       //TODO cache them at the beginning
-      const auto& columns = this->server->SelectColumns(tableId);
+      const auto& columns = this->catalog->SelectColumns(tableId);
 
       for (const auto &column : columns) {
         if (columnIndicesDictionary.Contains(column.id))
@@ -791,11 +794,11 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission SelectStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_READER_PERMISSIONS;
+    return Constants::DB_READER_PERMISSIONS;
   }
 
   Errors::ValidationStatus CreateDbStatement::CompileDerived(ParserValidationScope& validationScope){
-    if (this->server->DatabaseExists(this->name)) {
+    if (this->catalog->DatabaseExists(this->name)) {
       ostringstream os;
       os << "Database " + this->name + " already exists";
 
@@ -812,13 +815,13 @@ namespace QueryPipeline::Statements {
   void CreateDbStatement::CleanUp(){}
 
   Security::Permission CreateDbStatement::RequiredPermissions() const{
-    return Server::ServerConstants::ADMIN_PERMISSIONS;
+    return Constants::ADMIN_PERMISSIONS;
   }
 
    Errors::ValidationStatus DropDbStatement::CompileDerived(ParserValidationScope& validationScope){
     ostringstream os;
 
-    const auto database = this->server->SelectDatabase(this->name);
+    const auto database = this->catalog->SelectDatabase(this->name);
 
     if (database.name.empty()) {
       os << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist";
@@ -838,13 +841,13 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission DropDbStatement::RequiredPermissions() const{
-    return Server::ServerConstants::ADMIN_PERMISSIONS;
+    return Constants::ADMIN_PERMISSIONS;
   }
 
   void DropDbStatement::CleanUp(){ }
 
   Errors::ValidationStatus UseDatabaseStatement::CompileDerived(ParserValidationScope& validationScope){
-    const auto dbHeader = this->server->SelectDatabase(this->name);
+    const auto dbHeader = this->catalog->SelectDatabase(this->name);
 
     if (dbHeader.id == Constants::INVALID_DATABASE_ID) {
       ostringstream os;
@@ -865,7 +868,7 @@ namespace QueryPipeline::Statements {
   void UseDatabaseStatement::CleanUp(){}
 
   Security::Permission UseDatabaseStatement::RequiredPermissions() const{
-    return Server::ServerConstants::GUEST_PERMISSIONS;
+    return Constants::GUEST_PERMISSIONS;
   }
 
    InsertStatement::~InsertStatement(){
@@ -878,8 +881,8 @@ namespace QueryPipeline::Statements {
       .alias = header.name,
       .tableId = this->table->tableId,
       .columnId = header.id,
-      .index = static_cast<Constants::column_index_t>(header.ordinalPosition),
-      .returnType = static_cast<Constants::DataType>(header.dataType),
+      .index = static_cast<column_index_t>(header.ordinalPosition),
+      .returnType = static_cast<DataType>(header.dataType),
     });
 
     //Insert the default value
@@ -901,8 +904,8 @@ namespace QueryPipeline::Statements {
       .alias = header.name,
       .tableId = this->table->tableId,
       .columnId = header.id,
-      .index = static_cast<Constants::column_index_t>(header.ordinalPosition),
-      .returnType = static_cast<Constants::DataType>(header.dataType),
+      .index = static_cast<column_index_t>(header.ordinalPosition),
+      .returnType = static_cast<DataType>(header.dataType),
     });
 
     for (auto& [insertColumns] : this->values)
@@ -916,7 +919,7 @@ namespace QueryPipeline::Statements {
 
     const auto& columnHeader = columnsDictionary.Get(Functions::String::Lower(columnName));
 
-    const auto columnType = static_cast<Constants::DataType>(columnHeader.dataType);
+    const auto columnType = static_cast<DataType>(columnHeader.dataType);
 
     if (DataTypes::Coercions::IsCoercionAllowed(
       valueType,
@@ -1015,11 +1018,11 @@ namespace QueryPipeline::Statements {
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = this->server->SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
 
     this->tableColumnsDictionary.Add(this->table->tableId, columnsDict);
 
-    const auto identityColumns = this->server->SelectIdentityColumnsByTableIdToDictionary(this->table->tableId);
+    const auto identityColumns = this->catalog->SelectIdentityColumnsByTableIdToDictionary(this->table->tableId);
 
     //validate insert columns existance
     HashSet<int32_t> statementColumns;
@@ -1052,7 +1055,7 @@ namespace QueryPipeline::Statements {
         || statementColumns.Contains(header.id))
         continue;
 
-      this->columnIndices.emplace_back(static_cast<Constants::column_index_t>(header.ordinalPosition));
+      this->columnIndices.emplace_back(static_cast<column_index_t>(header.ordinalPosition));
 
       //Insert the null value
       if (header.isNullable) {
@@ -1060,7 +1063,7 @@ namespace QueryPipeline::Statements {
         continue;
       }
 
-      const auto defaultValue = this->server->SelectDefaultValueByColumnId(header.id);
+      const auto defaultValue = this->catalog->SelectDefaultValueByColumnId(header.id);
 
       if (defaultValue.columnId == Constants::INVALID_COLUMN_ID) {
         os << "Column " << columnName << " does not allow NULLS. Insert fails";
@@ -1089,11 +1092,11 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission InsertStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   Errors::ValidationStatus CreateSchemaStatement::CompileDerived(ParserValidationScope& validationScope){
-    if (this->server->SchemaExists(this->databaseId, this->name)) {
+    if (this->catalog->SchemaExists(this->databaseId, this->name)) {
       ostringstream os;
       os << "Schema " << this->name << " already exists";
 
@@ -1108,7 +1111,7 @@ namespace QueryPipeline::Statements {
   }
 
   Security::Permission CreateSchemaStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_OWNER_PERMISSIONS;
+    return Constants::DB_OWNER_PERMISSIONS;
   }
 
   void CreateSchemaStatement::CleanUp(){}
@@ -1161,7 +1164,7 @@ namespace QueryPipeline::Statements {
   Errors::ValidationStatus UpdateStatement::ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
-    this->tableColumnsDictionary.Add(this->table->tableId, this->server->SelectColumnsToDictionary(this->table->tableId));
+    this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(this->table->tableId));
 
     auto statementValidationScope = StatementValidationScope(
       tableAliasesDictionary,
@@ -1208,7 +1211,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    Dictionary<std::string, Constants::table_id_t> aliasesDictionary;
+    Dictionary<std::string, table_id_t> aliasesDictionary;
     return this->ResolveAliases(validationScope, aliasesDictionary);
   }
 
@@ -1225,7 +1228,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Security::Permission UpdateStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_WRITER_PERMISSIONS;
+    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   Errors::ValidationStatus CreateIndexStatement::CompileDerived(ParserValidationScope& validationScope){
@@ -1233,7 +1236,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = this->server->SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
 
     ostringstream os;
     for(auto& column: this->columns) {
@@ -1248,10 +1251,10 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    const auto indexes = this->server->SelectIndexes(this->table->tableId);
+    const auto indexes = this->catalog->SelectIndexes(this->table->tableId);
 
     for (const auto& index: indexes) {
-      const auto indexedColumns = this->server->SelectIndexColumnsByIndexIdToDictionary(index.id);
+      const auto indexedColumns = this->catalog->SelectIndexColumnsByIndexIdToDictionary(index.id);
 
       if (index.name == this->name) {
         os << "Index with name: " << index.name << " already exists";
@@ -1273,7 +1276,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Security::Permission CreateIndexStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_OWNER_PERMISSIONS;
+    return Constants::DB_OWNER_PERMISSIONS;
   }
 
   Errors::ValidationStatus AlterTableStatement::CompileAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
@@ -1294,7 +1297,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
 
     newColumn->index = headers.size();
 
-    Constants::DataType columnType;
+    DataType columnType;
     if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(newColumn->type.name), columnType)) {
       os << "Invalid Column Type " << newColumn->type.name;
       return {Errors::ValidationError::Error, os.str()};
@@ -1331,18 +1334,18 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    Constants::DataType columnType;
+    DataType columnType;
     if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(alterColumn->type.name), columnType)) {
       os << "Invalid Column Type " << alterColumn->type.name;
       return {Errors::ValidationError::Error, os.str()};
     }
 
     if ((PipelineConstants::ValidTableStringConversions.Contains(columnType)
-      && !PipelineConstants::ValidTableStringConversions.Contains(static_cast<Constants::DataType>(header.dataType)))
+      && !PipelineConstants::ValidTableStringConversions.Contains(static_cast<DataType>(header.dataType)))
       || (PipelineConstants::ValidTableIntegerConversions.Contains(columnType)
-        && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<Constants::DataType>(header.dataType)))){
+        && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<DataType>(header.dataType)))){
           os << "Cannot alter column " << alterColumn->name.name << " from type: "
-                    << ColumnTypesToStringDictionary.Get(static_cast<Constants::DataType>(header.dataType))
+                    << ColumnTypesToStringDictionary.Get(static_cast<DataType>(header.dataType))
                     << "to type: " << alterColumn->type.name;
 
         return {Errors::ValidationError::Error, os.str()};
@@ -1372,10 +1375,10 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     }
 
     //validate no index or constraint uses it
-    const auto constraints = this->server->SelectConstraints(this->table->tableId);
+    const auto constraints = this->catalog->SelectConstraints(this->table->tableId);
 
     for (const auto& constraint: constraints) {
-      const auto columns = this->server->SelectConstraintColumnsByConstraintIdToDictionary(constraint.constraintId);
+      const auto columns = this->catalog->SelectConstraintColumnsByConstraintIdToDictionary(constraint.constraintId);
 
       if (columns.Contains(header.id)) {
         os << "Cannot drop column: " << header.name << " as it is referenced by constraint: " << constraint.name;
@@ -1412,7 +1415,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = this->server->SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
 
     //validate by type
     switch (this->type) {
@@ -1453,7 +1456,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Security::Permission AlterTableStatement::RequiredPermissions() const{
-    return Server::ServerConstants::DB_OWNER_PERMISSIONS;
+    return Constants::DB_OWNER_PERMISSIONS;
   }
 
   Errors::ValidationStatus CompileExpression(ParserValidationScope& validationScope, Expressions::Expression*& expression){
@@ -1832,7 +1835,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
         column.tableId = key;
         column.columnId = columnHeader.id;
         column.index = columnHeader.ordinalPosition;
-        column.returnType = static_cast<Constants::DataType>(columnHeader.dataType);
+        column.returnType = static_cast<DataType>(columnHeader.dataType);
       }
     }
 
@@ -1873,7 +1876,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     }
 
     column->columnId = columnHeader.id;
-    column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
+    column->returnType = static_cast<DataType>(columnHeader.dataType);
     column->index = columnHeader.ordinalPosition;
 
     if (column->name.empty())
@@ -1903,7 +1906,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
       columnExistsOnStatement = true;
 
       column->columnId = columnHeader.id;
-      column->returnType = static_cast<Constants::DataType>(columnHeader.dataType);
+      column->returnType = static_cast<DataType>(columnHeader.dataType);
       column->index = columnHeader.ordinalPosition;
     }
 
@@ -2138,7 +2141,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignColumnIndicesToExpression(
-    const Dictionary<int32_t, Constants::column_index_t>& columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
     Expressions::Expression *expression
   ){
     switch (expression->expressionType) {
@@ -2166,7 +2169,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignColumnIndicesToBinaryExpression(
-    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t> &columnIndicesDictionary,
     const Expressions::BinaryExpression *expression
   ) {
     AssignColumnIndicesToExpression(columnIndicesDictionary, expression->left);
@@ -2174,7 +2177,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignColumnIndicesToLogicalExpression(
-    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t> &columnIndicesDictionary,
     const Expressions::LogicalExpression *expression
   ){
       AssignColumnIndicesToExpression(columnIndicesDictionary, expression->left);
@@ -2182,7 +2185,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignColumnIndicesToBranchExpression(
-    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t> &columnIndicesDictionary,
     const Expressions::BranchExpression *expression
   ) {
     for (const auto& argument : expression->arguments)
@@ -2199,7 +2202,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignColumnIndicesToFunctionExpression(
-    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t> &columnIndicesDictionary,
     const Expressions::FunctionExpression *expression
   ) {
     for (auto* childExpr : expression->arguments)
@@ -2207,7 +2210,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignColumnIndicesToColumnExpression(
-    const Dictionary<int32_t, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<int32_t, column_index_t> &columnIndicesDictionary,
     Expressions::ColumnExpression *expression
   ) {
     expression->index = columnIndicesDictionary.Get(expression->columnId);
@@ -2318,7 +2321,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignPostProjectionIndicesToExpression(
-    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
     Expressions::Expression *expression
   ){
     switch (expression->expressionType) {
@@ -2346,7 +2349,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignPostProjectionIndicesToBinaryExpression(
-    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
     const Expressions::BinaryExpression *expression
   ){
     AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
@@ -2354,7 +2357,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignPostProjectionIndicesToLogicalExpression(
-    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
     const Expressions::LogicalExpression *expression
   ){
     AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
@@ -2362,7 +2365,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignPostProjectionIndicesToFunctionExpression(
-    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
     const Expressions::FunctionExpression *expression
   ){
     for (auto* childExpr : expression->arguments)
@@ -2370,7 +2373,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignPostProjectionIndicesToBranchExpression(
-    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
     const Expressions::BranchExpression *expression
   ) {
     for (auto* argument : expression->arguments)
@@ -2387,7 +2390,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignPostProjectionIndicesToBranchExpression(
-    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
     Expressions::BranchExpression *expression
   ){
 
@@ -2405,7 +2408,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   void AssignPostProjectionIndicesToColumnExpression(
-    const Dictionary<std::string, Constants::column_index_t> &columnIndicesDictionary,
+    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
     Expressions::ColumnExpression *expression
   ) {
     expression->index = columnIndicesDictionary.Get(expression->alias);

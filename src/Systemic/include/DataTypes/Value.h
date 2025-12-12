@@ -1,6 +1,5 @@
 #pragma once
 #include <string>
-#include "../../../Database/include/Constants.h"
 #include "Decimal.h"
 
 namespace DataTypes {
@@ -20,10 +19,10 @@ static Dictionary<DataType, int> ColumnTypeRank{
 };
 
 class Value {
-    Constants::column_index_t columnIndex;
-    Constants::object_t* data;
-    Constants::block_size_t size;
-    Constants::DataType type;
+    column_index_t columnIndex;
+    object_t* data;
+    block_size_t size;
+    DataType type;
 
     [[nodiscard]] bool TryParseAsBool(bool& result)const;
     [[nodiscard]] bool TryParseAsBoolFromString(bool& result)const;
@@ -58,27 +57,27 @@ class Value {
         Value& operator=(Value&& other) noexcept;
         ~Value();
 
-        explicit Value(const void* data, const Constants::column_index_t& columnIndex = 0);
-        explicit Value(const void* data, const int& size, const Constants::DataType& type);
-        explicit Value(const unsigned char* data, const int& size, const Constants::DataType& type);
-        explicit Value(const bool& data, const Constants::column_index_t& columnIndex);
-        explicit Value(const int8_t& data, const Constants::column_index_t& columnIndex);
-        explicit Value(const int16_t& data, const Constants::column_index_t& columnIndex);
-        explicit Value(const int32_t& data, const Constants::column_index_t& columnIndex);
-        explicit Value(const int64_t& data, const Constants::column_index_t& columnIndex);
-        explicit Value(const string& data, const Constants::column_index_t& columnIndex, const bool& isIdentifier = false);
-        explicit Value(const u16string& data, const Constants::column_index_t& columnIndex);
-        explicit Value(const DataTypes::DateTime& data, const Constants::column_index_t& columnIndex);
-        explicit Value(const DataTypes::Decimal& data, const Constants::column_index_t& columnIndex);
-        explicit Value(const DataTypes::Guid& data, const Constants::column_index_t& columnIndex);
+        explicit Value(const void* data, const column_index_t& columnIndex = 0);
+        explicit Value(const void* data, const int& size, const DataType& type);
+        explicit Value(const unsigned char* data, const int& size, const DataType& type);
+        explicit Value(const bool& data, const column_index_t& columnIndex);
+        explicit Value(const int8_t& data, const column_index_t& columnIndex);
+        explicit Value(const int16_t& data, const column_index_t& columnIndex);
+        explicit Value(const int32_t& data, const column_index_t& columnIndex);
+        explicit Value(const int64_t& data, const column_index_t& columnIndex);
+        explicit Value(const string& data, const column_index_t& columnIndex, const bool& isIdentifier = false);
+        explicit Value(const u16string& data, const column_index_t& columnIndex);
+        explicit Value(const DataTypes::DateTime& data, const column_index_t& columnIndex);
+        explicit Value(const DataTypes::Decimal& data, const column_index_t& columnIndex);
+        explicit Value(const DataTypes::Guid& data, const column_index_t& columnIndex);
 
-        static Value Null(const Constants::column_index_t& columnIndex = 0);
+        static Value Null(const column_index_t& columnIndex = 0);
 
         [[nodiscard]] bool IsNull() const;
         
-        [[nodiscard]] const Constants::column_index_t& GetColumnIndex() const;
+        [[nodiscard]] const column_index_t& GetColumnIndex() const;
 
-        [[nodiscard]] const Constants::DataType& GetType() const;
+        [[nodiscard]] const DataType& GetType() const;
       
         void SetData(const bool& otherData);
         void SetData(const int8_t& otherData);
@@ -91,9 +90,9 @@ class Value {
         void SetData(const DataTypes::DateTime& otherData);
         void SetData(const DataTypes::Guid& otherData);
 
-        [[nodiscard]] const Constants::block_size_t& GetSize() const;
+        [[nodiscard]] const block_size_t& GetSize() const;
 
-        [[nodiscard]] const Constants::object_t* GetRawData() const;
+        [[nodiscard]] const object_t* GetRawData() const;
         
         [[nodiscard]] bool GetBool()const;
         [[nodiscard]] int8_t GetTinyInt()const;
@@ -107,13 +106,13 @@ class Value {
         [[nodiscard]] time_t GetUnixTimeStamp() const;
         [[nodiscard]] DataTypes::Guid GetGuid()const;
 
-        void SetColumnIndex(const Constants::column_index_t &otherIndex);
+        void SetColumnIndex(const column_index_t &otherIndex);
 
-        void SetType(const Constants::DataType &otherType);
+        void SetType(const DataType &otherType);
 
         void Deserialize(const std::vector<char>& buffer, uint32_t& offset);
 
-        static Constants::DataType PromoteType(const Constants::DataType& lhs, const Constants::DataType& rhs);
+        static DataType PromoteType(const DataType& lhs, const DataType& rhs);
 
         friend ostream& operator<<(ostream& os, const Value& field);
 

@@ -10,7 +10,7 @@
 
 namespace DatabaseEngine::StorageTypes {
     void Table::ClusteredIndexSeekRange(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const ExecutionProperties& properties,
         std::vector<const Row*> *selectedRows,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey
@@ -21,7 +21,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexSeek(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties &properties,
+        const ExecutionProperties &properties,
         std::vector<const Row *> *selectedRows,
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression
@@ -37,9 +37,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScan(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const ExecutionProperties& properties,
         std::vector<const Row*> *selectedRows,
-        QueryPipeline::PhysicalPlan::IndexState& state,
+        IndexState& state,
         const Expressions::Expression* expression
     ){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
@@ -56,7 +56,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScan(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const ExecutionProperties& properties,
         std::vector<const Row*> *selectedRows,
         const Expressions::Expression *expression
     ){
@@ -74,10 +74,10 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::NonClusteredIndexScan(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const ExecutionProperties& properties,
         std::vector<const Row*> *selectedRows,
         const int &indexPos,
-        QueryPipeline::PhysicalPlan::IndexState& state,
+        IndexState& state,
         const Expressions::Expression *expression
     ){
 

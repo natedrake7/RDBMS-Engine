@@ -17,7 +17,7 @@ namespace Pages
         this->pageType = PageType::DATA;
         this->pageId = INVALID_PAGE_ID;
         this->pageSize = 0;
-        this->bytesLeft = static_cast<Constants::page_size_t>(PAGE_SIZE - Constants::PAGE_HEADER_SIZE);
+        this->bytesLeft = static_cast<page_size_t>(PAGE_SIZE - Constants::PAGE_HEADER_SIZE);
     }
 
     PageHeader::~PageHeader() = default;

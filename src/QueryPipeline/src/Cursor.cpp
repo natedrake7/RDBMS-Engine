@@ -3,7 +3,7 @@
 namespace QueryPipeline {
   Cursor::Cursor(
     const PipelineConstants::cursor_id_t& cursorId,
-    const PhysicalPlan::ExecutionProperties& properties,
+    const DatabaseEngine::ExecutionProperties& properties,
     PhysicalPlan::ExecutionNode *plan
   ) : id(cursorId), properties(properties), hasMoreRows(true), plan(plan) {}
 
@@ -19,7 +19,7 @@ namespace QueryPipeline {
 
   const bool & Cursor::hasMore() const{ return this->hasMoreRows; }
 
-  const PhysicalPlan::Snapshot & Cursor::GetSnapshot() const{ return this->properties.snapshot; }
+  const DatabaseEngine::Snapshot& Cursor::GetSnapshot() const{ return this->properties.snapshot; }
 
   const PipelineConstants::cursor_id_t & Cursor::GetId() const{ return this->id; }
 

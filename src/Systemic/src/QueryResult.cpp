@@ -90,8 +90,8 @@ void QueryResult::Serialize(std::vector<char>& buffer) const{
     const auto size = value.GetSize();
     const auto type = value.GetType();
 
-    Vector::AppendToBuffer(buffer, &size, sizeof(Constants::block_size_t));
-    Vector::AppendToBuffer(buffer, &type, sizeof(Constants::DataType));
+    Vector::AppendToBuffer(buffer, &size, sizeof(block_size_t));
+    Vector::AppendToBuffer(buffer, &type, sizeof(DataType));
     Vector::AppendToBuffer(buffer, value.GetRawData(), size);
   }
 }

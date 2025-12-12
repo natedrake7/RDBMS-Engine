@@ -1,4 +1,4 @@
-﻿#include "src/Database/include/GarbageCollector.h"
+﻿#include "src/Database/include/Schedulers/GarbageCollector.h"
 #include "src/QueryPipeline/include/Parser.h"
 #include "src/Server/include/Server.h"
 #include "src/Server/include/ConnectionManager.h"
@@ -81,7 +81,7 @@ void shutdownClient(int signal) {
     serverRunning.store(false);
 
     cout << "Server shutting down..." << endl;
-    Server::ServerInstance::Get().Shutdown();
+    Network::Server::Get().Shutdown();
     exit(0);
 }
 
@@ -101,15 +101,15 @@ int main()
 
     // RegisterSignalHandlers();
 
-    auto& server = Server::ServerInstance::Get();
+    auto& server = Network::Server::Get();
 
     server.Initialize("configuration.json");
 
     serverRunning.store(true);
 
-    Server::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
+    Network::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
-    std::thread connectionThread(Server::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
+    std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
     //figue out issue
     // std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));

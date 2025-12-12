@@ -34,8 +34,8 @@ namespace DatabaseEngine::Logging {
   };
 
   struct CheckPoint {
-    Constants::transaction_id_t transactionId;
-    Constants::log_sequence_number_t logSequenceNumber;
+    transaction_id_t transactionId;
+    log_sequence_number_t logSequenceNumber;
     off_t logFileOffset; // Offset in the log file where the checkpoint is written
     uint32_t checkSum;
 
@@ -43,26 +43,28 @@ namespace DatabaseEngine::Logging {
     [[nodiscard]] uint32_t static CalculateCheckSum(const CheckPoint& checkpoint);
 
     CheckPoint();
-    CheckPoint(const Constants::transaction_id_t& transactionId,
-               const Constants::log_sequence_number_t& logSequenceNumber,
+    CheckPoint(const transaction_id_t& transactionId,
+               const log_sequence_number_t& logSequenceNumber,
                const off_t& logFileOffset);
   };
   struct LogEntry  {
 
-    Constants::transaction_id_t transactionId;
+    transaction_id_t transactionId;
     OperationType operation;
-    Constants::table_id_t tableOrdinalPosition; //in master db
+    table_id_t tableOrdinalPosition; //in master db
 
     LoggingStructures::LogEntryBody* body;
 
-    Constants::log_sequence_number_t logSequenceNumber; // Sequence number for the log entry
+    log_sequence_number_t logSequenceNumber; // Sequence number for the log entry
 
     LogEntry();
-    LogEntry(const Constants::transaction_id_t& transactionId,
-                const Constants::log_sequence_number_t& logSequenceNumber,
-                const OperationType& operation,
-                const Constants::table_id_t& tableOrdinalPosition,
-                LoggingStructures::LogEntryBody* body);
+    LogEntry(
+      const transaction_id_t& transactionId,
+      const log_sequence_number_t& logSequenceNumber,
+      const OperationType& operation,
+      const table_id_t& tableOrdinalPosition,
+      LoggingStructures::LogEntryBody* body
+    );
 
     ~LogEntry();
 
@@ -84,13 +86,13 @@ namespace DatabaseEngine::Logging {
     protected:
       int logFileDescriptor;
 
-      Constants::transaction_id_t currentTransactionId;
-      Dictionary<Constants::transaction_id_t, Constants::log_sequence_number_t> transactionLogSequenceNumbers;
+      transaction_id_t currentTransactionId;
+      Dictionary<transaction_id_t, log_sequence_number_t> transactionLogSequenceNumbers;
       std::mutex transactionLogMutex;
 
       void FlushLogDescriptor()const;
 
-      void SetCurrentTransactionId(const Constants::transaction_id_t& transactionId);
+      void SetCurrentTransactionId(const transaction_id_t& transactionId);
 
   public:
       explicit Logger(const std::string& logFilePath);
@@ -104,12 +106,12 @@ namespace DatabaseEngine::Logging {
       [[nodiscard]]CheckPoint Log(const LogEntry& logEntry)const;
 
       [[nodiscard]] LogEntry CreateLogEntry(
-            const Constants::transaction_id_t& transactionId,
+            const transaction_id_t& transactionId,
             const OperationType& operation,
-            const Constants::table_id_t& tableOrdinalPosition,
+            const table_id_t& tableOrdinalPosition,
             LoggingStructures::LogEntryBody* body);
 
-     [[nodiscard]] Constants::transaction_id_t StartTransaction();
+     [[nodiscard]] transaction_id_t StartTransaction();
 
     virtual std::vector<LogEntry>  RecoverLogs(const std::vector<StorageTypes::Table*>& tables);
   };

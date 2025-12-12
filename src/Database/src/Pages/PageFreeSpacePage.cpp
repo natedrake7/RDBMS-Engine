@@ -42,12 +42,12 @@ namespace Pages {
     }
 
     void PageFreeSpacePage::SetPageType(const page_id_t &pageId, const PageType &pageType)const {
-      this->pageMap->SetPageType(PageFreeSpacePage::GetPagePosition(pageId), static_cast<Constants::byte>(pageType));
+      this->pageMap->SetPageType(PageFreeSpacePage::GetPagePosition(pageId), static_cast<byte_t>(pageType));
     }
 
     void PageFreeSpacePage::SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft)
     {
-        const auto pageAllocationStatus = static_cast<Constants::byte>(bytesLeft * 7 / PAGE_SIZE);
+        const auto pageAllocationStatus = static_cast<byte_t>(bytesLeft * 7 / PAGE_SIZE);
 
         this->pageMap->SetFreeSpace(PageFreeSpacePage::GetPagePosition(pageId), pageAllocationStatus);
 
@@ -61,7 +61,7 @@ namespace Pages {
         return static_cast<PageType>(this->pageMap->GetPageType(PageFreeSpacePage::GetPagePosition(pageId)));
     }
 
-    Constants::byte PageFreeSpacePage::GetPageSizeCategory(const page_id_t &pageId) const {
+    byte_t PageFreeSpacePage::GetPageSizeCategory(const page_id_t &pageId) const {
       return this->pageMap->GetFreeSpace(PageFreeSpacePage::GetPagePosition(pageId));
     }
 

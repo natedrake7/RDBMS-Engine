@@ -114,6 +114,14 @@ namespace Security {
     return true;
   }
 
+  bool UserManager::AddSystemUser(User *user) {
+    MultiThreading::WriterGuard guard(&this->mutex);
+
+    this->users.Add(user->name, user);
+
+    return true;
+  }
+
   bool UserManager::RemoveUser(const std::string &name){
     MultiThreading::WriterGuard guard(&this->mutex);
 

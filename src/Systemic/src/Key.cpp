@@ -23,7 +23,7 @@ namespace DataTypes::Indexing{
         this->size = 0;
     }
 
-    Key::Key(const void *keyValue, const Constants::key_size_t &keySize, const Constants::DataType& keyType)
+    Key::Key(const void *keyValue, const key_size_t &keySize, const DataType& keyType)
     {
         this->value = Value(keyValue, keySize, keyType);
         this->indexKeyPosition = -1;

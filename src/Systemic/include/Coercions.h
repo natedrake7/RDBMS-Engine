@@ -87,7 +87,7 @@ namespace DataTypes{
             "false", "0", "no", "n", "off"
         };
 
-    [[nodiscard]] static constexpr CoercionType GetCoercionType(const Constants::DataType& fromType, const Constants::DataType& toType);
+    [[nodiscard]] static constexpr CoercionType GetCoercionType(const DataType& fromType, const DataType& toType);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value, bool& outVal);
 
@@ -108,7 +108,7 @@ namespace DataTypes{
 
 
     public:
-        [[nodiscard]] static bool IsCoercionAllowed(const Constants::DataType& fromType, const Constants::DataType& toType, const bool& explicitCast = false);
+        [[nodiscard]] static bool IsCoercionAllowed(const DataType& fromType, const DataType& toType, const bool& explicitCast = false);
 
         [[nodiscard]] static bool ToBool(const Value& value, const bool& explicitCast = false);
         [[nodiscard]] static int8_t ToTinyInt(const Value& value, const bool& explicitCast = false);
@@ -121,7 +121,7 @@ namespace DataTypes{
         [[nodiscard]] static DateTime ToDateTime(const Value& value, const bool& explicitCast = false);
         [[nodiscard]] static Decimal ToDecimal(const Value& value, const bool& explicitCast = false);
 
-        [[nodiscard]] static bool CanBeParsedToType(const Constants::DataType& toType, const Value& value);
+        [[nodiscard]] static bool CanBeParsedToType(const DataType& toType, const Value& value);
         static void DeduceIntegerType(Value& value);
 
     };

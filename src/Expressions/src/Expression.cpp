@@ -222,19 +222,19 @@ namespace Expressions{
     const auto rightType = this->right->GetReturnType();
 
     switch (Value::PromoteType(leftType, rightType)) {
-      case Constants::DataType::TinyInt:
-      case Constants::DataType::SmallInt:
-      case Constants::DataType::Int:
-      case Constants::DataType::BigInt:
-      case Constants::DataType::Decimal:
-      case Constants::DataType::String:
-      case Constants::DataType::UnicodeString:
-      case Constants::DataType::Bool:
+      case DataType::TinyInt:
+      case DataType::SmallInt:
+      case DataType::Int:
+      case DataType::BigInt:
+      case DataType::Decimal:
+      case DataType::String:
+      case DataType::UnicodeString:
+      case DataType::Bool:
         return true;
-      case Constants::DataType::DateTime:
-      case Constants::DataType::Guid:
-      case Constants::DataType::RowIdentifier:
-      case Constants::DataType::Unknown:
+      case DataType::DateTime:
+      case DataType::Guid:
+      case DataType::RowIdentifier:
+      case DataType::Unknown:
       default:
         return false;
     }
@@ -245,19 +245,19 @@ namespace Expressions{
     const auto rightType = this->right->GetReturnType();
 
     switch (Value::PromoteType(leftType, rightType)) {
-      case Constants::DataType::TinyInt:
-      case Constants::DataType::SmallInt:
-      case Constants::DataType::Int:
-      case Constants::DataType::BigInt:
-      case Constants::DataType::Decimal:
-      case Constants::DataType::Bool:
+      case DataType::TinyInt:
+      case DataType::SmallInt:
+      case DataType::Int:
+      case DataType::BigInt:
+      case DataType::Decimal:
+      case DataType::Bool:
         return true;
-      case Constants::DataType::String:
-      case Constants::DataType::UnicodeString:
-      case Constants::DataType::DateTime:
-      case Constants::DataType::Guid:
-      case Constants::DataType::RowIdentifier:
-      case Constants::DataType::Unknown:
+      case DataType::String:
+      case DataType::UnicodeString:
+      case DataType::DateTime:
+      case DataType::Guid:
+      case DataType::RowIdentifier:
+      case DataType::Unknown:
       default:
         return false;
     }
@@ -268,19 +268,19 @@ namespace Expressions{
     const auto rightType = this->right->GetReturnType();
 
     switch (Value::PromoteType(leftType, rightType)) {
-      case Constants::DataType::TinyInt:
-      case Constants::DataType::SmallInt:
-      case Constants::DataType::Int:
-      case Constants::DataType::BigInt:
-      case Constants::DataType::Decimal:
-      case Constants::DataType::Bool:
+      case DataType::TinyInt:
+      case DataType::SmallInt:
+      case DataType::Int:
+      case DataType::BigInt:
+      case DataType::Decimal:
+      case DataType::Bool:
         return true;
-      case Constants::DataType::String:
-      case Constants::DataType::UnicodeString:
-      case Constants::DataType::DateTime:
-      case Constants::DataType::Guid:
-      case Constants::DataType::RowIdentifier:
-      case Constants::DataType::Unknown:
+      case DataType::String:
+      case DataType::UnicodeString:
+      case DataType::DateTime:
+      case DataType::Guid:
+      case DataType::RowIdentifier:
+      case DataType::Unknown:
       default:
         return false;
     }
@@ -295,19 +295,19 @@ namespace Expressions{
     const auto rightType = this->right->GetReturnType();
 
     switch (Value::PromoteType(leftType, rightType)) {
-      case Constants::DataType::TinyInt:
-      case Constants::DataType::SmallInt:
-      case Constants::DataType::Int:
-      case Constants::DataType::BigInt:
-      case Constants::DataType::Bool:
-      case Constants::DataType::Decimal:
+      case DataType::TinyInt:
+      case DataType::SmallInt:
+      case DataType::Int:
+      case DataType::BigInt:
+      case DataType::Bool:
+      case DataType::Decimal:
         return true;
-      case Constants::DataType::String:
-      case Constants::DataType::UnicodeString:
-      case Constants::DataType::DateTime:
-      case Constants::DataType::Guid:
-      case Constants::DataType::RowIdentifier:
-      case Constants::DataType::Unknown:
+      case DataType::String:
+      case DataType::UnicodeString:
+      case DataType::DateTime:
+      case DataType::Guid:
+      case DataType::RowIdentifier:
+      case DataType::Unknown:
       default:
         return false;
     }
@@ -581,8 +581,8 @@ namespace Expressions{
     if (!DataTypes::Coercions::IsCoercionAllowed(returnType, expectedType, info.allowImplicitCast)) {
       errorMessage = "Function: " + info.name +
                      " expects argument " + std::to_string(index + 1) +
-                     " to be of type: " + Constants::ColumnTypesToStringDictionary.Get(expectedType) +
-                     ", but got type: " + Constants::ColumnTypesToStringDictionary.Get(returnType);
+                     " to be of type: " + ColumnTypesToStringDictionary.Get(expectedType) +
+                     ", but got type: " + ColumnTypesToStringDictionary.Get(returnType);
       return false;
     }
 
@@ -647,7 +647,7 @@ namespace Expressions{
     return true;
   }
 
-  Constants::DataType FunctionExpression::GetReturnType() const{
+  DataType FunctionExpression::GetReturnType() const{
     return FunctionInfoDictionary.Get(this->functionType).returnType;
   }
 

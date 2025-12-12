@@ -1,4 +1,6 @@
 #include "../../include/Managers/IdentityManager.h"
+
+#include "../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Guards/WriterGuard.h"
 
@@ -44,14 +46,14 @@ namespace DatabaseEngine::StorageTypes {
   }
 
   void IdentityManager::UpdateMasterDb(const int64_t &value) const{
-    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value + this->header.increment);
+   SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value + this->header.increment);
   }
 
   void IdentityManager::UpdateMasterDb()const{
     if (this->header.columnId == Constants::INVALID_COLUMN_ID)
       return;
 
-    Server::ServerInstance::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, this->header.lastValue);
+   SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, this->header.lastValue);
   }
 
   bool IdentityManager::IsValid() const{ return this->header.columnId != Constants::INVALID_COLUMN_ID; }

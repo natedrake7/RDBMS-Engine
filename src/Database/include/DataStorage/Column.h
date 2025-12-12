@@ -13,9 +13,9 @@ namespace DatabaseEngine::StorageTypes
     struct ColumnHeader
     {
         int32_t id;
-        Constants::DataType columnType;
-        Constants::column_index_t columnIndex;
-        Constants::row_size_t recordSize;
+        DataType columnType;
+        column_index_t columnIndex;
+        row_size_t recordSize;
         int8_t precision;
         int8_t scale;
 
@@ -26,7 +26,10 @@ namespace DatabaseEngine::StorageTypes
     {
         ColumnHeader header;
         IdentityManager identityManager;
+
+        MultiThreading::ReadWriteMutex statisticsLatch;
         Headers::ColumnStatistics statistics;
+
         std::vector<Headers::ColumnHistograms> histograms;
 
         std::string name;
@@ -37,15 +40,15 @@ namespace DatabaseEngine::StorageTypes
     public:
         Column(
             const std::string& columnName,
-            const Constants::DataType& type,
-            const Constants::row_size_t& recordSize,
-            const Constants::column_index_t& index,
+            const DataType& type,
+            const row_size_t& recordSize,
+            const column_index_t& index,
             const bool& allowNulls
         );
 
         Column(
             const Headers::sysColumn& header,
-            const Constants::column_index_t& tablePos ,
+            const column_index_t& tablePos ,
             const Table* table
         );
 
@@ -58,19 +61,19 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] const string& GetColumnName() const;
 
-        void SetColumnName(const std::string& name);
+        void SetColumnName(const std::string& otherName);
 
-        [[nodiscard]] const Constants::DataType &GetColumnType() const;
+        [[nodiscard]] const DataType &GetColumnType() const;
 
-        [[nodiscard]] const Constants::row_size_t &GetColumnSize() const;
+        [[nodiscard]] const row_size_t &GetColumnSize() const;
 
         [[nodiscard]] bool IsColumnNullable() const;
 
         [[nodiscard]] const bool &GetAllowNulls() const;
 
-        void SetColumnIndex(const Constants::column_index_t &columnIndex);
+        void SetColumnIndex(const column_index_t &columnIndex);
 
-        [[nodiscard]] const Constants::column_index_t &GetColumnIndex() const;
+        [[nodiscard]] const column_index_t &GetColumnIndex() const;
 
         [[nodiscard]] const ColumnHeader &GetColumnHeader() const;
 

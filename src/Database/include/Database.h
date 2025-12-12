@@ -93,8 +93,8 @@ public:
 
     [[nodiscard]] static Logging::CheckPoint LogRowInsert(
         StorageTypes::Row* row,
-        const Constants::transaction_id_t& transactionId,
-        const Constants::table_id_t& tableOrdinal
+        const transaction_id_t& transactionId,
+        const table_id_t& tableOrdinal
     );
 
     static string CreateDatabasePath(const std::string& dbName);
@@ -116,7 +116,7 @@ public:
 
     static page_id_t CalculateNextGamPageId(const page_id_t &currentGamPageId);
 
-    static Constants::byte GetObjectSizeToCategory(const row_size_t &size);
+    static byte_t GetObjectSizeToCategory(const row_size_t &size);
 
     StorageTypes::Table *CreateTable(
       const table_id_t &tableId,

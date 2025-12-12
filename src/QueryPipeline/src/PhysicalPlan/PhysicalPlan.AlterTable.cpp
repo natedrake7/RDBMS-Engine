@@ -1,7 +1,8 @@
+#include "../../../Database/include/CatalogColumns.h"
 #include "../../include/PhysicalPlan.h"
-#include "../../../Server/include/MasterDbColumns.h"
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
+#include "../../../Database/include/SystemDatabases/SystemCatalog.h"
 
 namespace QueryPipeline::PhysicalPlan{
 
@@ -13,7 +14,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult * PhysicalAddColumn::Execute(const ExecutionProperties& properties){
+  ExecutionResult * PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -24,7 +25,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     //if add occurs in a different index pos chaos ensues
     const auto columnResult =
-        this->server->InsertColumnToMasterDb(
+        this->catalog->InsertColumnToMasterDb(
           properties,
           this->table->tableId,
           this->column->name.name,
@@ -51,7 +52,7 @@ namespace QueryPipeline::PhysicalPlan{
         const auto value = this->column->defaultValue.GetString();
 
         const auto defaultValueResult =
-            this->server->InsertDefaultValuesToMasterDb(
+            this->catalog->InsertDefaultValuesToMasterDb(
               properties,
               columnId,
               this->column->defaultValue
@@ -89,7 +90,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult * PhysicalDropColumn::Execute(const ExecutionProperties& properties){
+  ExecutionResult * PhysicalDropColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -117,7 +118,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult * PhysicalRenameColumn::Execute(const ExecutionProperties& properties){
+  ExecutionResult * PhysicalRenameColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -131,12 +132,12 @@ namespace QueryPipeline::PhysicalPlan{
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const std::vector<Value> updates = {
-      Value(this->column->newName.name, static_cast<Constants::column_index_t>(Server::SysColumns::Name)),
-      Value(DataTypes::DateTime::Now(), static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedAt)),
-      Value(this->session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
+      Value(this->column->newName.name, static_cast<column_index_t>(DatabaseEngine::SysColumns::Name)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
+      Value(this->session->user->name, static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
     };
 
-    const auto _ = this->server->UpdateColumnById(this->column->columnId, updates);
+    const auto _ = this->catalog->UpdateColumnById(this->column->columnId, updates);
 
     tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
 
@@ -151,7 +152,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult * PhysicalAlterColumn::Execute(const ExecutionProperties& properties){
+  ExecutionResult * PhysicalAlterColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = new ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -161,12 +162,12 @@ namespace QueryPipeline::PhysicalPlan{
       };
 
     const std::vector<Value> updates = {
-      Value(this->column->type.size, static_cast<Constants::column_index_t>(Server::SysColumns::RecordSize)),
-      Value(DataTypes::DateTime::Now(), static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedAt)),
-      Value(this->session->user->name, static_cast<Constants::column_index_t>(Server::SysColumns::LastModifiedBy)),
+      Value(this->column->type.size, static_cast<column_index_t>(DatabaseEngine::SysColumns::RecordSize)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
+      Value(this->session->user->name, static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
     };
 
-    const auto _ = this->server->UpdateColumnById(this->column->columnId, updates);
+    const auto _ = this->catalog->UpdateColumnById(this->column->columnId, updates);
 
     return result;
   }

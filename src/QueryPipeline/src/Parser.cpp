@@ -108,7 +108,7 @@ namespace QueryPipeline
         std::vector<Statements::Statement*> statements;
 
         const auto castQueries = std::any_cast<std::vector<std::any>>(queries);
-        const auto* session = Server::ServerInstance::Get().GetSession(sessionId);
+        const auto* session = Network::Server::Get().GetSession(sessionId);
 
          for (const auto& query: castQueries) {
 
@@ -211,13 +211,13 @@ namespace QueryPipeline
     }
 
     void Parser::CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId) {
-        static const auto& server = Server::ServerInstance::Get();
+        static const auto& server = Network::Server::Get();
 
         const auto _ = server.CloseCursor(sessionId, cursorId);
     }
 
     ParserResult Parser::StartTransaction(const string &query, const DataTypes::Guid &sessionId){
-        static const auto& server = Server::ServerInstance::Get();
+        static const auto& server = Network::Server::Get();
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
         ParserResult result;
@@ -243,7 +243,7 @@ namespace QueryPipeline
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
 
-            const PhysicalPlan::ExecutionProperties properties(snapshot,1000, session->variables);
+            const DatabaseEngine::ExecutionProperties properties(snapshot,1000, session->variables);
 
             //for test
             // if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {

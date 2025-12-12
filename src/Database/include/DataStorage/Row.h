@@ -7,12 +7,8 @@
 #include "../Pages/LargeObjectPage.h"
 
 
-namespace QueryPipeline::PhysicalPlan {
+namespace DatabaseEngine {
     struct Snapshot;
-}
-
-namespace Server {
-    class ServerInstance;
 }
 
 namespace Pages {
@@ -30,8 +26,8 @@ namespace DatabaseEngine::StorageTypes
     class Block;
 
     struct RowVersioningHeader {
-        Constants::transaction_id_t createdTransactionId;
-        Constants::transaction_id_t deletedTransactionId;
+        transaction_id_t createdTransactionId;
+        transaction_id_t deletedTransactionId;
 
         Pages::RowVersionPointer olderVersionPointer;
 
@@ -78,7 +74,7 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] const Value& GetMaterializedValue(const int& indexPos)const;
         [[nodiscard]] const Value& Materialize(const int& indexPos)const;
 
-        bool IsDeleted(const QueryPipeline::PhysicalPlan::Snapshot& snapshot)const;
+        bool IsDeleted(const DatabaseEngine::Snapshot& snapshot)const;
 
     public:
         explicit Row(const Table &table);
@@ -161,15 +157,15 @@ namespace DatabaseEngine::StorageTypes
 
         friend std::ostream& operator<<(std::ostream& os, const Row& row);
 
-        void SetCurrentTransactionId(const Constants::transaction_id_t& transactionId);
+        void SetCurrentTransactionId(const transaction_id_t& transactionId);
 
-        void SetDeletedTransactionId(const Constants::transaction_id_t& transactionId);
+        void SetDeletedTransactionId(const transaction_id_t& transactionId);
 
         void SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset);
 
-        const Row* GetVisibleVersionForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const;
+        const Row* GetVisibleVersionForTransaction(const Snapshot& snapshot) const;
 
-        bool IsVisibleForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const;
+        bool IsVisibleForTransaction(const Snapshot& snapshot) const;
 
         const RowVersioningHeader& GetVersionHeader() const;
 
@@ -179,13 +175,13 @@ namespace DatabaseEngine::StorageTypes
 
         void Deserialize(const std::vector<char>* buffer, uint32_t& pos);
 
-        void ReadHeaderFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet);
+        void ReadHeaderFromDisk(const std::vector<char>& buffer, page_offset_t& offSet);
 
-        void ReadVersionHeaderFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet);
+        void ReadVersionHeaderFromDisk(const std::vector<char>& buffer, page_offset_t& offSet);
 
-        void ReadDataFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet, const std::vector<Column*>& columns);
+        void ReadDataFromDisk(const std::vector<char>& buffer, page_offset_t& offSet, const std::vector<Column*>& columns);
 
-        void ReadDataFromDisk(const std::vector<char>& buffer, Constants::page_offset_t& offSet);
+        void ReadDataFromDisk(const std::vector<char>& buffer, page_offset_t& offSet);
 
         void WriteHeaderToDisk(fstream* filePtr)const;
 

@@ -39,7 +39,7 @@ namespace QueryPipeline::Optimizer {
     bool canIndexSeek;
     SeekRange range;
 
-    std::vector<Constants::column_index_t> indexCoveredColumns;
+    std::vector<column_index_t> indexCoveredColumns;
 
     Expressions::Expression* expression;
 

@@ -1,4 +1,7 @@
 ﻿#include "../include/Database.h"
+
+#include "../include/SystemDatabases/SystemCatalog.h"
+
 #include <cstdint>
 #include <stdexcept>
 #include <vector>
@@ -109,12 +112,12 @@ namespace DatabaseEngine
         return currentGamPageId + NEXT_GAM_PAGE_ID_OFFSET;
     }
 
-    Constants::byte Database::GetObjectSizeToCategory(const row_size_t &size)
+    byte_t Database::GetObjectSizeToCategory(const row_size_t &size)
     {
       const float freeSpacePercentage = static_cast<float>(size) / PAGE_SIZE;
 
       // Direct mapping to 7levels (0-7)
-      return static_cast<Constants::byte>(freeSpacePercentage * 7);
+      return static_cast<byte_t>(freeSpacePercentage * 7);
     }
 
     page_id_t Database::CalculateFirstPageIdByExtentId(const extent_id_t &extentId)
@@ -173,7 +176,7 @@ namespace DatabaseEngine
     }
 
     Database::Database(const string &dbName, const bool& isServerInitialization) {
-        static auto& server = Server::ServerInstance::Get();
+        static auto& catalog = SystemCatalog::Get();
 
         this->PopulateFilenames(dbName);
 
@@ -185,7 +188,7 @@ namespace DatabaseEngine
             return;
 
         //query get from masterDb
-        const auto& masterDbData = server.SelectTables(dbName);
+        const auto& masterDbData = catalog.SelectTables(dbName);
         const auto& headerPageTables = headerPage->GetTablesFullHeaders();
 
         if (headerPageTables.size() != masterDbData.size())
@@ -254,8 +257,8 @@ namespace DatabaseEngine
 
     Logging::CheckPoint Database::LogRowInsert(
         StorageTypes::Row *row,
-        const Constants::transaction_id_t& transactionId,
-        const Constants::table_id_t& tableOrdinal
+        const transaction_id_t& transactionId,
+        const table_id_t& tableOrdinal
     ) {
         auto& logger =  Logging::WriteAheadLogger::Get();
 
@@ -287,9 +290,11 @@ namespace DatabaseEngine
     }
 
     void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader){
+        static auto& catalog = SystemCatalog::Get();
+
         auto *table = new Table(masterDbHeader, tableHeader, this);
 
-        const auto& masterDbColumns = Server::ServerInstance::Get().SelectColumns(masterDbHeader.id);
+        const auto& masterDbColumns = catalog.SelectColumns(masterDbHeader.id);
 
         for (const auto & masterDbColumn : masterDbColumns) {
             if (masterDbColumn.isSystem)
@@ -304,7 +309,7 @@ namespace DatabaseEngine
         table->GetIdentityColumns();
         table->GetIndexes();
         table->GetDefaultValuesHeaders();
-        table->GetStatistics();
+        table->RetrieveStatistics();
 
         this->tables.push_back(table);
     }
@@ -597,7 +602,7 @@ namespace DatabaseEngine
         bool isFirstExtent = false;
         {
             const auto* table = this->tables[tableId];
-            const Constants::page_id_t indexAllocationMapPageId = table->GetHeader().indexAllocationMapPageId;
+            const page_id_t indexAllocationMapPageId = table->GetHeader().indexAllocationMapPageId;
             MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
 
             auto gamPage = StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);

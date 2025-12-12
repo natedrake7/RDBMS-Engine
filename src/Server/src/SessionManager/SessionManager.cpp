@@ -5,7 +5,7 @@
 
 #include <ranges>
 
-namespace Server::Sessions {
+namespace Network::Sessions {
   SessionManager::SessionManager() = default;
 
   SessionManager::~SessionManager(){
@@ -83,7 +83,7 @@ namespace Server::Sessions {
 
   QueryPipeline::Cursor* SessionManager::CreateCursor(
     const DataTypes::Guid &id,
-    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+    const DatabaseEngine::ExecutionProperties& properties,
     QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
   )const{
     MultiThreading::WriterGuard guard(&this->mutex);

@@ -5,8 +5,9 @@
 
 namespace DataTypes{
   constexpr CoercionType Coercions::GetCoercionType(
-    const Constants::DataType &fromType,
-    const Constants::DataType &toType){
+    const DataType &fromType,
+    const DataType &toType
+  ){
     return Coercions::TypeCoercionMatrix[static_cast<int>(fromType)][static_cast<int>(toType)];
   }
 
@@ -432,7 +433,7 @@ int64_t Coercions::ToBigInt(const Value &value, const bool &explicitCast){
     }
   }
 
-  bool Coercions::CanBeParsedToType(const Constants::DataType &toType, const Value &value){
+  bool Coercions::CanBeParsedToType(const DataType &toType, const Value &value){
     const auto& valueType = value.GetType();
     const auto coercionType = GetCoercionType(valueType, toType);
 

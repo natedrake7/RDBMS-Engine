@@ -91,10 +91,10 @@ namespace Indexing
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchLeftMostLeafNode() const;
 
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetNode(const Constants::page_id_t& pageId) const;
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetNode(const page_id_t& pageId) const;
         [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, const TreeType& treeType, const int& nonClusteredId)const;
 
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> AllocateNewPage(const Constants::page_id_t& parentPageId);
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> AllocateNewPage(const page_id_t& parentPageId);
 
         void HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex);
         void HandleRootUnderflow();
@@ -112,7 +112,7 @@ namespace Indexing
         );
 
     public:
-        explicit BTree(DatabaseEngine::StorageTypes::Table *table, const Constants::page_id_t& indexPageId, const Constants::TreeType& treeType, const int& nonClusteredIndexId = -1);
+        explicit BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const Constants::TreeType& treeType, const int& nonClusteredIndexId = -1);
         BTree();
         ~BTree();
 
@@ -129,20 +129,20 @@ namespace Indexing
         )const;
 
         void IndexSeekRange(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &minKey,
             const DataTypes::Indexing::Key &maxKey,
             std::vector<const DatabaseEngine::StorageTypes::Row*>* result
         )const;
 
         void IndexSeek(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &key,
             std::vector<const DatabaseEngine::StorageTypes::Row*>* result
         )const;
 
         void IndexSeek(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &key,
             std::vector<const DatabaseEngine::StorageTypes::Row*>* result,
             const Expressions::Expression* expression
@@ -151,63 +151,63 @@ namespace Indexing
         void IndexScan(vector<DataTypes::Indexing::QueryData> &result)const;
 
         void IndexScan(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-            QueryPipeline::PhysicalPlan::IndexState& state
+            DatabaseEngine::IndexState& state
         )const;
 
         void IndexScan(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-            QueryPipeline::PhysicalPlan::IndexState& state,
+            DatabaseEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             std::vector<const DatabaseEngine::StorageTypes::Row*> *result
         )const;
 
         void IndexScan(
             vector<Headers::RowIdentifier>* result,
-            QueryPipeline::PhysicalPlan::IndexState& state,
+            DatabaseEngine::IndexState& state,
             const int& rowsToSelect
         )const;
 
         void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void IndexScanUpdate(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
             const vector<Value> & updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
             const vector<QueryPipeline::Statements::UpdateColumn*> & updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             const vector<QueryPipeline::Statements::UpdateColumn*> & updates
         )const;
 
         Errors::RuntimeStatus IndexSeekUpdate(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const vector<Value> & updates
         )const;
         Errors::RuntimeStatus IndexSeekUpdate(
-            const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const vector<Value> & updates
@@ -223,12 +223,12 @@ namespace Indexing
 
         void SetTreeType(const Constants::TreeType& treeType);
 
-        [[nodiscard]] const Constants::page_id_t& GetFirstIndexPageId() const;
+        [[nodiscard]] const page_id_t& GetFirstIndexPageId() const;
 
         void InsertRowsToOtherTree(const int& indexPos)const;
 
-        void InsertColumnToRow(const Constants::column_index_t& index, const Value& defaultValue)const;
+        void InsertColumnToRow(const column_index_t& index, const Value& defaultValue)const;
 
-        void RemoveColumnFromRow(const Constants::column_index_t& index)const;
+        void RemoveColumnFromRow(const column_index_t& index)const;
     };
 }

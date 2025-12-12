@@ -47,12 +47,12 @@ class SortingFunctions{
          [[nodiscard]] static bool CompareRowsAscending(
            const DatabaseEngine::StorageTypes::Row* firstRow,
            const DatabaseEngine::StorageTypes::Row* secondRow,
-           const Constants::column_index_t& columnIndex
+           const column_index_t& columnIndex
           );
          [[nodiscard]] static bool CompareRowsDescending(
            const DatabaseEngine::StorageTypes::Row* firstRow,
            const DatabaseEngine::StorageTypes::Row* secondRow,
-           const Constants::column_index_t& columnIndex
+           const column_index_t& columnIndex
           );
          static void OrderBy(
            std::vector<QueryResult>& rows,

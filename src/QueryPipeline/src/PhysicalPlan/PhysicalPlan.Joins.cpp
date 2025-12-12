@@ -14,7 +14,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
 
-  ExecutionResult * PhysicalNestedLoopInnerJoin::Execute(const ExecutionProperties& properties){
+  ExecutionResult * PhysicalNestedLoopInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = new PhysicalPlan::ExecutionResult();
 
     const auto* leftResult = this->left->Execute(properties);
@@ -52,7 +52,7 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  ExecutionResult * PhysicalNestedLoopLeftJoin::Execute(const ExecutionProperties& properties){
+  ExecutionResult * PhysicalNestedLoopLeftJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
       auto* result = new PhysicalPlan::ExecutionResult();
 
       const auto* leftResult = this->left->Execute(properties);
@@ -107,7 +107,7 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  ExecutionResult * PhysicalNestedLoopFullJoin::Execute(const ExecutionProperties& properties){
+  ExecutionResult * PhysicalNestedLoopFullJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
       auto* result = new PhysicalPlan::ExecutionResult();
 
       const auto* leftResult = this->left->Execute(properties);

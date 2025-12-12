@@ -47,8 +47,8 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
   }
 
   CheckPoint::CheckPoint(
-    const Constants::transaction_id_t &transactionId,
-    const Constants::log_sequence_number_t &logSequenceNumber,
+    const transaction_id_t &transactionId,
+    const log_sequence_number_t &logSequenceNumber,
     const off_t &logFileOffset){
     this->transactionId = transactionId;
     this->logSequenceNumber = logSequenceNumber;
@@ -67,11 +67,12 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
   }
 
   LogEntry::LogEntry(
-    const Constants::transaction_id_t &transactionId,
-    const Constants::log_sequence_number_t& logSequenceNumber,
+    const transaction_id_t &transactionId,
+    const log_sequence_number_t& logSequenceNumber,
     const OperationType &operation,
-    const Constants::table_id_t &tableOrdinalPosition,
-    LoggingStructures::LogEntryBody* body){
+    const table_id_t &tableOrdinalPosition,
+    LoggingStructures::LogEntryBody* body
+  ){
 
     this->transactionId = transactionId;
     this->logSequenceNumber = logSequenceNumber;
@@ -215,9 +216,9 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
   }
 
   LogEntry Logger::CreateLogEntry(
-      const Constants::transaction_id_t& transactionId,
+      const transaction_id_t& transactionId,
       const OperationType &operation,
-      const Constants::table_id_t& tableOrdinalPosition,
+      const table_id_t& tableOrdinalPosition,
       LoggingStructures::LogEntryBody* body) {
 
     log_sequence_number_t logSequenceNumber = 0;
@@ -236,7 +237,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     };
   }
 
-  Constants::transaction_id_t Logger::StartTransaction(){
+  transaction_id_t Logger::StartTransaction(){
     std::unique_lock<std::mutex> lock(this->transactionLogMutex);
 
     this->transactionLogSequenceNumbers.Add(this->currentTransactionId, 0);
@@ -248,7 +249,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     return {};
   }
 
-  void Logger::SetCurrentTransactionId(const Constants::transaction_id_t &transactionId){
+  void Logger::SetCurrentTransactionId(const transaction_id_t &transactionId){
     std::unique_lock<std::mutex> lock(this->transactionLogMutex);
 
     this->currentTransactionId = transactionId;

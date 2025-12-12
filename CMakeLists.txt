@@ -65,6 +65,7 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryProtocol.cpp
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
+        src/Systemic/include/DataTypes/DataTypes.h
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)
@@ -136,8 +137,11 @@ add_library(Database STATIC
         src/Database/src/Logger/WriteAheadLogger.cpp
         src/Database/src/Logger/CrashRecoveryLogger.cpp
         src/Database/src/Logger/Logger.Structures.cpp
-        src/Database/src/GarbageCollector.cpp
-        src/Database/src/VersionDatabase.cpp
+        src/Database/src/Schedulers/GarbageCollector.cpp
+        src/Database/src/SystemDatabases/VersionDatabase.cpp
+        src/Database/include/Schedulers/StatisticsScheduler.h
+        src/Database/include/SystemDatabases/SystemCatalog.h
+        src/Database/src/SystemDatabases/SystemCatalog.cpp
 )
 
 target_include_directories(Database PUBLIC src/Database/include)
@@ -153,18 +157,18 @@ add_library(Server STATIC
 
 target_include_directories(Server PUBLIC src/Server/include)
 
-target_link_libraries(Server PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE $<$<PLATFORM_ID:Windows>:ws2_32> PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
+target_link_libraries(Server PRIVATE QueryPipeline PRIVATE Database PRIVATE nlohmann_json::nlohmann_json PRIVATE $<$<PLATFORM_ID:Windows>:ws2_32> PRIVATE Systemic PRIVATE unofficial::argon2::libargon2)
 
-target_link_libraries(Database PRIVATE Systemic PRIVATE ExpressionsLibrary PRIVATE Server)
+target_link_libraries(Database PRIVATE Systemic PRIVATE ExpressionsLibrary PRIVATE nlohmann_json::nlohmann_json)
 
  add_executable(Client
          src/Client/src/client.cpp
          src/Client/src/ClientManager.cpp
          src/Client/include/client.h
          src/Client/include/ClientManager.h
+         src/Database/include/ExecutionProperties.h
  )
 
 target_link_libraries(Client PRIVATE Systemic $<$<PLATFORM_ID:Windows>:ws2_32> )
 
-target_link_libraries(DatabaseEngine
-                        PRIVATE Server Database Systemic QueryPipeline)
+target_link_libraries(DatabaseEngine PRIVATE Server)

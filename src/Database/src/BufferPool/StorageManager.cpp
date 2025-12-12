@@ -24,7 +24,7 @@ StorageManager::StorageManager()
   this->clockHand = 0;
 }
 
-std::string StorageManager::CreateKey(const std::string &filename, const Constants::page_id_t &pageId){
+std::string StorageManager::CreateKey(const std::string &filename, const page_id_t &pageId){
   return filename + to_string(pageId);
 }
 
@@ -47,8 +47,7 @@ StorageManager& StorageManager::Get()
   return storageManager;
 }
 
-void StorageManager::CreateFile(const string& fileName, const string& extension)
-{
+void StorageManager::CreateFile(const string& fileName, const string& extension)const{
   this->fileManager.CreateFile(fileName, extension);
 }
 
@@ -93,7 +92,7 @@ Pages::PageGuard<Pages::Page> StorageManager::CreatePage(const string& filename,
   return Pages::PageGuard<Pages::Page>(page);
 }
 
-Pages::PageGuard<Pages::Page> StorageManager::GetPage(const std::string &filename, const Constants::page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table){
+Pages::PageGuard<Pages::Page> StorageManager::GetPage(const std::string &filename, const page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table){
   return Pages::PageGuard<Pages::Page>(this->GetRawPage(filename, pageId, table));
 }
 
@@ -176,7 +175,7 @@ void StorageManager::RemovePageWithoutKeyDeletion(Pages::Page *page){
 }
 
 Pages::Page* StorageManager::OpenExtent(
-  const Constants::page_id_t& pageId,
+  const page_id_t& pageId,
   const string& filename,
   const extent_id_t &extentId,
   const DatabaseEngine::StorageTypes::Table *table
@@ -307,7 +306,7 @@ Pages::PageGuard<Pages::IndexPage> StorageManager::CreateIndexPage(const string&
   return Pages::PageGuard<Pages::IndexPage>(page);
 }
 
-void StorageManager::InsertPageToCache(Pages::Page *page, const std::string &filename, const Constants::page_id_t &pageId){
+void StorageManager::InsertPageToCache(Pages::Page *page, const std::string &filename, const page_id_t &pageId){
   MultiThreading::WriterGuard lock(&this->tableMutex);
 
   if (this->pageTable.size() >= MAX_NUMBER_OF_PAGES) {

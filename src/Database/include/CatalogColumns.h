@@ -1,8 +1,24 @@
 #pragma once
 #include <cstdint>
 
-
-namespace Server {
+namespace DatabaseEngine {
+  enum CatalogTables: uint8_t {
+    SysDatabases = 0,
+    SysSchemas = 1,
+    SysTables = 2,
+    SysColumns = 3,
+    SysIndexes = 4,
+    SysIdentityColumns = 5,
+    SysIndexColumns = 6,
+    SysConstraints = 7,
+    SysConstraintColumns = 8,
+    SysDefaultValues = 9,
+    SysTableStats = 10,
+    SysColumnStats = 11,
+    SysColumnHistograms = 12,
+    SysRoles = 13,
+    SysUsers = 14,
+  };
 
   enum class SysDatabases : uint8_t {
     DatabaseId = 0,

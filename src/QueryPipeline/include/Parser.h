@@ -21,7 +21,7 @@ namespace QueryPipeline{
     class Cursor;
 
     struct ParserValidationScope {
-        Dictionary<std::string, Constants::DataType> variables;
+        Dictionary<std::string, DataType> variables;
     };
 
     // struct StatementValidationScope {

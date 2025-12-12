@@ -12,14 +12,14 @@ namespace DataTypes::Indexing {
       Greater = 1,
     };
 
-    Constants::key_size_t size;
+    key_size_t size;
 
     Value value;
     vector<Key> subKeys;
 
 
     Key();
-    Key(const void *keyValue, const Constants::key_size_t &keySize, const Constants::DataType& keyType);
+    Key(const void *keyValue, const key_size_t &keySize, const DataType& keyType);
     explicit Key(const Value& field);
     explicit Key(Value& field);
 
@@ -59,11 +59,11 @@ namespace DataTypes::Indexing {
 
   struct QueryData
   {
-    Constants::page_id_t pageId;
-    Constants::page_offset_t indexPosition;
+    page_id_t pageId;
+    page_offset_t indexPosition;
 
     QueryData();
-    QueryData(const Constants::page_id_t &pageId, const Constants::page_offset_t &otherIndexPosition);
+    QueryData(const page_id_t &pageId, const page_offset_t &otherIndexPosition);
     ~QueryData();
   };
 }

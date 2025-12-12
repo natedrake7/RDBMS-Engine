@@ -1,11 +1,11 @@
-#include "../include/VersionDatabase.h"
+#include "../../include/SystemDatabases/VersionDatabase.h"
 
-#include "../include/Pages/HeaderPage.h"
-#include "../include/Pages/GlobalAllocationMapPage.h"
-#include "../include/Pages/PageFreeSpacePage.h"
-#include "../include/BufferPool/StorageManager.h"
-#include "../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../Systemic/include/Guards/WriterGuard.h"
+#include "../../include/Pages/HeaderPage.h"
+#include "../../include/Pages/GlobalAllocationMapPage.h"
+#include "../../include/Pages/PageFreeSpacePage.h"
+#include "../../include/BufferPool/StorageManager.h"
+#include "../../../Systemic/include/Guards/ReaderGuard.h"
+#include "../../../Systemic/include/Guards/WriterGuard.h"
 
 namespace DatabaseEngine {
  VersionDatabase::VersionDatabase(const std::string &filename){
@@ -73,10 +73,10 @@ namespace DatabaseEngine {
   }
 
   Pages::PageGuard<Pages::Page> VersionDatabase::TryGetLastUndoPage(
-    const DatabaseEngine::StorageTypes::Table *table,
+    const StorageTypes::Table *table,
     const row_size_t &size
   ) {
-    Constants::page_id_t pageId;
+    page_id_t pageId;
 
     {
       MultiThreading::ReaderGuard lock(&this->lastUsedPageMutex);
@@ -167,7 +167,7 @@ namespace DatabaseEngine {
   Errors::RuntimeStatus VersionDatabase::InsertRow(
     const StorageTypes::Row *row,
     Pages::RowVersionPointer& rowPointer,
-    const DatabaseEngine::StorageTypes::Table* table
+    const StorageTypes::Table* table
   ) {
    auto* oldRow = new StorageTypes::Row(row);
 
@@ -185,9 +185,9 @@ namespace DatabaseEngine {
  }
 
   const StorageTypes::Row * VersionDatabase::RetrieveRow(
-    const QueryPipeline::PhysicalPlan::Snapshot& snapshot,
+    const Snapshot& snapshot,
     const Pages::RowVersionPointer &rowPointer,
-    const DatabaseEngine::StorageTypes::Table *table
+    const StorageTypes::Table *table
   )const {
 
     const StorageTypes::Row* row = nullptr;
@@ -203,13 +203,13 @@ namespace DatabaseEngine {
     return row->GetVisibleVersionForTransaction(snapshot);
   }
 
-  std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const Constants::extent_id_t& startingExtentId) const {
+  std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t& startingExtentId) const {
     auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
 
     return gamPage->GetAllocatedExtents(startingExtentId);
   }
 
-  Constants::extent_id_t VersionDatabase::CleanupVersionedData(const Constants::transaction_id_t &transactionId, const Constants::extent_id_t& startingExtentId)const {
+  extent_id_t VersionDatabase::CleanupVersionedData(const transaction_id_t &transactionId, const extent_id_t& startingExtentId)const {
     const auto extents = this->GetAllocatedExtents(startingExtentId);
 
     for (const auto &extentId : extents){

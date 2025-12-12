@@ -12,8 +12,9 @@
 #include "../../include/DataStorage/Table.h"
 #include "../../include/DataStorage/Block.h"
 #include "../../include/DataStorage/Column.h"
-#include "../../../Server/include/Server.h"
 #include "../../include/Pages/LargeObjectPage.h"
+#include "../../include/Pages/OverflowPage.h"
+#include "../../Server/include/Server.h"
 
 namespace DatabaseEngine::StorageTypes {
     RowHeader::RowHeader()
@@ -450,7 +451,7 @@ namespace DatabaseEngine::StorageTypes {
 
     bool Row::GetOverflowBitMapValue(const bit_map_pos_t & position) const{ return this->header.overflowBitMap->Get(position); }
 
-    void Row::ReadHeaderFromDisk(const std::vector<char> &buffer, Constants::page_offset_t &offSet) {
+    void Row::ReadHeaderFromDisk(const std::vector<char> &buffer, page_offset_t &offSet) {
         memcpy(&this->header.tableId, buffer.data() + offSet, sizeof(table_id_t));
         offSet += sizeof(table_id_t);
         memcpy(&this->header.numberOfColumns, buffer.data() + offSet, sizeof(column_number_t));
@@ -461,7 +462,7 @@ namespace DatabaseEngine::StorageTypes {
         this->header.overflowBitMap->GetDataFromFile(buffer, offSet);
     }
 
-    void Row::ReadVersionHeaderFromDisk(const std::vector<char> &buffer, Constants::page_offset_t &offSet) {
+    void Row::ReadVersionHeaderFromDisk(const std::vector<char> &buffer, page_offset_t &offSet) {
         memcpy(&this->versionHeader.createdTransactionId, buffer.data() + offSet, sizeof(transaction_id_t));
         offSet += sizeof(transaction_id_t);
 
@@ -477,7 +478,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Row::ReadDataFromDisk(
         const std::vector<char> &buffer,
-        Constants::page_offset_t &offSet,
+        page_offset_t &offSet,
         const std::vector<Column*>& columns
     ) {
         for (int j = 0; j < columns.size(); j++)
@@ -507,7 +508,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Row::ReadDataFromDisk(const std::vector<char> &buffer, Constants::page_offset_t &offSet) {
+    void Row::ReadDataFromDisk(const std::vector<char> &buffer, page_offset_t &offSet) {
         for (int j = 0; j < this->header.numberOfColumns; j++)
         {
             if (this->header.nullBitMap->Get(j))
@@ -823,11 +824,11 @@ namespace DatabaseEngine::StorageTypes {
         return joinedRow;
     }
 
-    void Row::SetCurrentTransactionId(const Constants::transaction_id_t &transactionId){
+    void Row::SetCurrentTransactionId(const transaction_id_t &transactionId){
         this->versionHeader.createdTransactionId = transactionId;
     }
 
-    void Row::SetDeletedTransactionId(const Constants::transaction_id_t &transactionId) {
+    void Row::SetDeletedTransactionId(const transaction_id_t &transactionId) {
         this->versionHeader.deletedTransactionId = transactionId;
     }
 
@@ -836,24 +837,24 @@ namespace DatabaseEngine::StorageTypes {
         this->versionHeader.olderVersionPointer.offset = offset;
     }
 
-    const Row* Row::GetVisibleVersionForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const {
+    const Row* Row::GetVisibleVersionForTransaction(const Snapshot& snapshot) const {
        if (this->IsVisibleForTransaction(snapshot))
            return this;
 
         if (!this->versionHeader.HasOlderVersion())
             return nullptr;
 
-        return Server::ServerInstance::Get().GetVersionDatabase()->RetrieveRow(snapshot, this->versionHeader.olderVersionPointer, this->table);
+        return Network::Server::Get().GetVersionDatabase()->RetrieveRow(snapshot, this->versionHeader.olderVersionPointer, this->table);
     }
 
-    bool Row::IsDeleted(const QueryPipeline::PhysicalPlan::Snapshot &snapshot) const{
+    bool Row::IsDeleted(const Snapshot &snapshot) const{
         return this->versionHeader.deletedTransactionId != Constants::FIRST_TRANSACTION_ID
                && this->versionHeader.deletedTransactionId < snapshot.maximumTransactionId
                && !snapshot.activeTransactionIds.Contains(this->versionHeader.deletedTransactionId)
                && this->versionHeader.deletedTransactionId != snapshot.transactionId;
     }
 
-    bool Row::IsVisibleForTransaction(const QueryPipeline::PhysicalPlan::Snapshot& snapshot) const {
+    bool Row::IsVisibleForTransaction(const Snapshot& snapshot) const {
         if (snapshot.IsSystemTransaction())
             return true;
 

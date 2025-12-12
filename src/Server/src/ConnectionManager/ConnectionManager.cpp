@@ -6,7 +6,7 @@
 #include "../../../Systemic/include/Network/QueryProtocol.h"
 #include "../../../Systemic/include/Network/QueryResponseProtocol.h"
 #include "../../include/ThreadPool.h"
-#include "../../include/Server.Constants.h"
+#include "../../include/Constants.h"
 
 #include <atomic>
 #include <cstring>
@@ -27,15 +27,15 @@
   #include <unistd.h>
 #endif
 
-namespace Server {
+namespace Network {
   ConnectionParameters::ConnectionParameters() {
     this->hostName = "127.0.0.1";
     this->numberOfConnections = 20;
     this->timeoutTime = 10;
     this->port = 1433;
 
-    this->epollFileDescriptor = ServerConstants::INVALID_FILE_DESCRIPTOR;
-    this->serverSocket = ServerConstants::INVALID_FILE_DESCRIPTOR;
+    this->epollFileDescriptor = Constants::INVALID_FILE_DESCRIPTOR;
+    this->serverSocket = Constants::INVALID_FILE_DESCRIPTOR;
   }
 
   ConnectionParameters::ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime){
@@ -44,8 +44,8 @@ namespace Server {
     this->timeoutTime = timeoutTime;
     this->port = port;
 
-    this->epollFileDescriptor = ServerConstants::INVALID_FILE_DESCRIPTOR;
-    this->serverSocket = ServerConstants::INVALID_FILE_DESCRIPTOR;
+    this->epollFileDescriptor = Constants::INVALID_FILE_DESCRIPTOR;
+    this->serverSocket = Constants::INVALID_FILE_DESCRIPTOR;
   }
 
   void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning)
@@ -342,7 +342,7 @@ void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const
     Network::AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
-    auto& server = Server::ServerInstance::Get();
+    auto& server = Network::Server::Get();
 
     const auto* user = server.Authenticate(protocol.GetUsername(), protocol.GetPassword());
 

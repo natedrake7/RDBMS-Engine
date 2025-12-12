@@ -393,9 +393,9 @@ namespace Indexing
     }
 
     void BTree::IndexScan(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        QueryPipeline::PhysicalPlan::IndexState& state
+        DatabaseEngine::IndexState& state
     )const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
@@ -434,9 +434,9 @@ namespace Indexing
     }
 
     void BTree::IndexScan(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        QueryPipeline::PhysicalPlan::IndexState& state,
+        DatabaseEngine::IndexState& state,
         const Expressions::Expression *expression
     )const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
@@ -483,7 +483,7 @@ namespace Indexing
     }
 
     void BTree::IndexScan(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
         const Expressions::Expression *expression
     )const{
@@ -515,7 +515,7 @@ namespace Indexing
     }
 
     void BTree::IndexScan(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result
     )const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
@@ -545,7 +545,7 @@ namespace Indexing
 
     void BTree::IndexScan(
         vector<Headers::RowIdentifier> *result,
-        QueryPipeline::PhysicalPlan::IndexState& state,
+        DatabaseEngine::IndexState& state,
         const int& rowsToSelect
     )const{
 
@@ -623,7 +623,7 @@ namespace Indexing
     }
 
     void BTree::IndexScanUpdate(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         const Expressions::Expression *expression,
         const vector<Value> & updates
     )const{
@@ -663,7 +663,7 @@ namespace Indexing
     }
 
     Errors::RuntimeStatus BTree::IndexScanUpdate(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         const Expressions::Expression *expression,
         const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
     )const{
@@ -703,7 +703,7 @@ namespace Indexing
         return {};
     }
 
-    Errors::RuntimeStatus BTree::IndexScanUpdate(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties, const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
+    Errors::RuntimeStatus BTree::IndexScanUpdate(const DatabaseEngine::ExecutionProperties& properties, const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
         if (this->indexPageId == INVALID_PAGE_ID)
             return {};
 
@@ -758,7 +758,7 @@ namespace Indexing
         }
     }
 
-    void BTree::InsertColumnToRow(const Constants::column_index_t& index, const Value &defaultValue)const{
+    void BTree::InsertColumnToRow(const column_index_t& index, const Value &defaultValue)const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
@@ -776,7 +776,7 @@ namespace Indexing
         }
     }
 
-    void BTree::RemoveColumnFromRow(const Constants::column_index_t &index)const{
+    void BTree::RemoveColumnFromRow(const column_index_t &index)const{
         if (this->indexPageId == Constants::INVALID_PAGE_ID)
             return;
 
@@ -798,7 +798,7 @@ namespace Indexing
     }
 
     Errors::RuntimeStatus BTree::IndexSeekUpdate(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minKey,
         const DataTypes::Indexing::Key* maxKey,
@@ -886,7 +886,7 @@ namespace Indexing
     }
 
     Errors::RuntimeStatus BTree::IndexSeekUpdate(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key *minKey,
         const DataTypes::Indexing::Key *maxKey,
         const vector<Value> &updates
@@ -1000,7 +1000,7 @@ namespace Indexing
     }
 
     void BTree::IndexSeekRange(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
         std::vector<const DatabaseEngine::StorageTypes::Row*> *result
@@ -1043,7 +1043,7 @@ namespace Indexing
     }
 
     void BTree::IndexSeek(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties &properties,
+        const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
         std::vector<const DatabaseEngine::StorageTypes::Row *> *result
     ) const {
@@ -1085,7 +1085,7 @@ namespace Indexing
     }
 
     void BTree::IndexSeek(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties &properties,
+        const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
         std::vector<const DatabaseEngine::StorageTypes::Row *> *result,
         const Expressions::Expression *expression

@@ -2,13 +2,11 @@
 
 #include <cstdint>
 #include <cstddef>
-#include "../../Systemic/include/DataTypes/DateTime.h"
-#include "../../Systemic/include/DataStructures/Dictionary.h"
-
 #include <limits>
+#include "../../Systemic/include/DataTypes/DataTypes.h"
+#include "../../Systemic/include/Security/Security.h"
 
-namespace Constants
-{
+namespace Constants{
     constexpr std::string_view WRITE_AHEAD_LOG_FILE = "wal.log";
 
     constexpr size_t PAGE_SIZE = 8 * 1024;
@@ -30,27 +28,6 @@ namespace Constants
     constexpr int16_t INVALID_ORDINAL_POS = -1;
     constexpr int32_t INVALID_CONSTRAINT_ID = -1;
     constexpr int32_t INVALID_INDEX_ID = -1;
-
-    // table types
-    typedef uint16_t table_id_t;
-    typedef int32_t column_id_t;
-
-    // data types
-    typedef unsigned char object_t;
-
-    // extent types
-    typedef uint32_t extent_id_t;
-    typedef uint32_t extent_num_t;
-
-    // Page types
-    typedef uint32_t page_id_t;
-    typedef int16_t page_size_t;
-    typedef uint16_t page_offset_t;
-    typedef uint16_t large_page_index_t;
-
-    typedef uint32_t log_sequence_number_t;
-    typedef uint64_t transaction_id_t;
-
 
     constexpr transaction_id_t INVALID_LOG_SEQUENCE_NUMBER = std::numeric_limits<log_sequence_number_t>::max();
     constexpr table_id_t INVALID_TABLE_ORDINAL_POS = std::numeric_limits<table_id_t>::max();
@@ -93,8 +70,7 @@ namespace Constants
         MAX = 5
     };
 
-    enum class PageType : uint8_t
-    {
+    enum class PageType : uint8_t{
         DATA = 0,
         IAM = 1,
         LOB = 2,
@@ -106,73 +82,22 @@ namespace Constants
         UNDO = 8
     };
 
-    enum class PagePriority : uint8_t
-    {
+    enum class PagePriority : uint8_t{
         LOW = 0,
         MEDIUM = 1,
         HIGH = 2,
         SYSTEM = 3,
     };
 
-    enum class TableType : uint8_t
-    {
+    enum class TableType : uint8_t{
         HEAP = 0,
         CLUSTERED = 1,
     };
 
-    enum Operator: uint8_t{
-        OperatorNone = 0,
-        Equal = 1,
-        NotEqual = 2,
-        GreaterThan = 3,
-        LessThan = 4,
-        GreaterOrEqual = 5,
-        LessOrEqual = 6
-    };
-
-    enum ConditionType: uint8_t{
-        ConditionNone = 0,
-        And = 1,
-        Or = 2
-    };
-
-    enum TreeType : uint8_t 
-    {
+    enum TreeType : uint8_t {
         Clustered = 0,
         NonClustered = 1
     };
-
-
-    typedef uint8_t byte;
-
-    // block types
-    typedef uint16_t block_size_t;
-
-    // column types
-    typedef uint8_t column_index_t;
-
-    // record size
-    typedef uint32_t row_size_t;
-
-    // header literal size
-    typedef uint16_t header_literal_t;
-    typedef uint16_t row_header_size_t;
-
-    // number of column - table
-    typedef uint16_t column_number_t;
-    typedef uint16_t table_number_t;
-
-    // bit map constants
-    typedef uint16_t bit_map_size_t;
-    typedef uint16_t bit_map_pos_t;
-    typedef uint16_t byte_map_size_t;
-    typedef uint16_t byte_map_pos_t;
-
-    // decimal constants
-    typedef uint8_t fraction_index_t;
-
-    // B-tree constants
-    typedef uint16_t key_size_t;
 
     constexpr uint16_t OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
     constexpr uint16_t PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t) + sizeof(PageType);
@@ -198,23 +123,6 @@ namespace Constants
         Right = 2,
         Full = 3
     };
-
-    enum class DataType : uint8_t
-    {
-        TinyInt = 0,
-        SmallInt = 1,
-        Int = 2,
-        BigInt = 3,
-        Decimal = 4,
-        String = 5,
-        UnicodeString = 6,
-        Bool = 7,
-        DateTime = 8,
-        Guid = 9,
-        RowIdentifier = 10,
-        Unknown = 11
-    };
-
 
     enum class FunctionType : uint8_t {
         // -----------------------
@@ -292,46 +200,31 @@ namespace Constants
         NullIf = 121
     };
 
-    static Dictionary<string, block_size_t> ColumnTypeSizes = {
-        {"tinyint", sizeof(int8_t)},
-        {"smallint", sizeof(int16_t)},
-        {"int", sizeof(int32_t)},
-        {"bigint", sizeof(int64_t)},
-        {"datetime", DataTypes::DateTime::DateTimeSize()},
-        {"bool", sizeof(bool)},
-        {"string", 0},
-        {"decimal", 0},
-        {"unicodestring", 0},
-        {"guid", 16}
-        //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
-    };
+    static constexpr std::string_view DEFAULT_SCHEMA_NAME = "dbo";
+    static constexpr std::string_view ADMIN_NAME = "admin";
+    static constexpr std::string_view DB_OWNER_NAME = "db_owner";
+    static constexpr std::string_view DB_WRITER_NAME = "db_writer";
+    static constexpr std::string_view DB_READER_NAME = "db_reader";
+    static constexpr std::string_view GUEST_NAME = "guest";
 
-    static Dictionary<string, DataType> ColumnTypesDictionary = {
-        {"tinyint", DataType::TinyInt},
-        {"smallint", DataType::SmallInt},
-        {"int", DataType::Int},
-        {"bigint", DataType::BigInt},
-        {"datetime", DataType::DateTime},
-        {"bool", DataType::Bool},
-        {"string", DataType::String},
-        {"decimal", DataType::Decimal},
-        {"unicodestring", DataType::UnicodeString},
-        {"guid", DataType::Guid}
-        //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
-    };
+    static constexpr auto  ADMIN_PERMISSIONS = Security::Permission::ALL;
 
-    static Dictionary<DataType, string> ColumnTypesToStringDictionary = {
-        {DataType::TinyInt, "TinyInt"},
-        {DataType::SmallInt, "SmallInt"},
-        {DataType::Int, "Int"},
-        {DataType::BigInt, "BigInt"},
-        {DataType::DateTime, "DateTime"},
-        {DataType::Bool, "Bool"},
-        {DataType::String, "String"},
-        {DataType::Decimal, "Decimal"},
-        {DataType::UnicodeString, "Unicodestring"},
-        {DataType::Guid, "Guid"},
-        {DataType::Unknown, "Invalid"}
-        //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
-    };
+    static constexpr auto  GUEST_PERMISSIONS =
+      Security::Permission::NONE;
+
+    static constexpr Security::Permission DB_READER_PERMISSIONS =
+        Security::Permission::SELECT
+        | GUEST_PERMISSIONS;
+
+    static constexpr Security::Permission DB_WRITER_PERMISSIONS =
+        Security::Permission::INSERT
+        | Security::Permission::UPDATE
+        | Security::Permission::DELETE_PERMISSION
+        | DB_READER_PERMISSIONS;
+
+    static constexpr Security::Permission DB_OWNER_PERMISSIONS =
+        DB_WRITER_PERMISSIONS
+        | Security::Permission::CREATE
+        | Security::Permission::DROP
+        | Security::Permission::ALTER;
 }

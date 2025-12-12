@@ -27,14 +27,14 @@ namespace ByteMaps
         this->lastTrueIndex = bitMap->lastTrueIndex;
     }
 
-    BitMap::BitMap(const Constants::bit_map_size_t &size, const Constants::byte &defaultValue) : size(size)
+    BitMap::BitMap(const bit_map_size_t &size, const byte_t &defaultValue) : size(size)
     {
         this->data.resize((size + 7) / 8, defaultValue);
     }
 
     BitMap::~BitMap() = default;
 
-    void BitMap::Set(const Constants::bit_map_pos_t &position, const bool &value)
+    void BitMap::Set(const bit_map_pos_t &position, const bool &value)
     {
         if (position >= this->size)
             this->Resize(position + 1);
@@ -48,77 +48,77 @@ namespace ByteMaps
         data[position / 8] &= ~(1 << (position % 8)); // Clear the bit
     }
 
-    bool BitMap::Get(const Constants::bit_map_pos_t &position) const { return data[position / 8] & (1 << (position % 8)); }
+    bool BitMap::Get(const bit_map_pos_t &position) const { return data[position / 8] & (1 << (position % 8)); }
 
-    const Constants::bit_map_size_t &BitMap::GetSize() const { return this->size; }
+    const bit_map_size_t &BitMap::GetSize() const { return this->size; }
 
-    Constants::bit_map_size_t BitMap::GetSizeInBytes() const { return this->data.size() + sizeof(Constants::bit_map_size_t); }
+    bit_map_size_t BitMap::GetSizeInBytes() const { return this->data.size() + sizeof(bit_map_size_t); }
 
-    void BitMap::SetByte(const Constants::bit_map_pos_t &position, const Constants::byte &value)
+    void BitMap::SetByte(const bit_map_pos_t &position, const byte_t &value)
     {
         if (position < this->data.size())
             data[position] = value;
     }
 
-    void BitMap::GetDataFromFile(const vector<char> &buffer, Constants::page_offset_t &offset)
+    void BitMap::GetDataFromFile(const vector<char> &buffer, page_offset_t &offset)
     {
-        memcpy(&this->size, buffer.data() + offset, sizeof(Constants::bit_map_size_t));
-        offset += sizeof(Constants::bit_map_size_t);
+        memcpy(&this->size, buffer.data() + offset, sizeof(bit_map_size_t));
+        offset += sizeof(bit_map_size_t);
 
-        const Constants::bit_map_size_t &bytesToRead = (this->size + 7) / 8;
+        const bit_map_size_t &bytesToRead = (this->size + 7) / 8;
 
         if (this->data.empty())
             this->data.resize(bytesToRead);
 
-        for (Constants::bit_map_size_t i = 0; i < bytesToRead; i++)
+        for (bit_map_size_t i = 0; i < bytesToRead; i++)
         {
-            Constants::byte value;
-            memcpy(&value, buffer.data() + offset, sizeof(Constants::byte));
+            byte_t value;
+            memcpy(&value, buffer.data() + offset, sizeof(byte_t));
             this->SetByte(i, value);
 
-            offset += sizeof(Constants::byte);
+            offset += sizeof(byte_t);
         }
     }
 
     void BitMap::GetDataFromFile(const vector<char> &buffer, uint32_t &offset){
-        memcpy(&this->size, buffer.data() + offset, sizeof(Constants::bit_map_size_t));
-        offset += sizeof(Constants::bit_map_size_t);
+        memcpy(&this->size, buffer.data() + offset, sizeof(bit_map_size_t));
+        offset += sizeof(bit_map_size_t);
 
-        const Constants::bit_map_size_t &bytesToRead = (this->size + 7) / 8;
+        const bit_map_size_t &bytesToRead = (this->size + 7) / 8;
 
         if (this->data.empty())
             this->data.resize(bytesToRead);
 
-        for (Constants::bit_map_size_t i = 0; i < bytesToRead; i++)
+        for (bit_map_size_t i = 0; i < bytesToRead; i++)
         {
-            Constants::byte value;
-            memcpy(&value, buffer.data() + offset, sizeof(Constants::byte));
+            byte_t value;
+            memcpy(&value, buffer.data() + offset, sizeof(byte_t));
             this->SetByte(i, value);
 
-            offset += sizeof(Constants::byte);
+            offset += sizeof(byte_t);
         }
     }
 
     void BitMap::WriteDataToFile(fstream *filePtr)
     {
-        filePtr->write(reinterpret_cast<char *>(&this->size), sizeof(Constants::bit_map_size_t));
-        filePtr->write(reinterpret_cast<char *>(this->data.data()), this->data.size() * sizeof(Constants::byte));
+        filePtr->write(reinterpret_cast<char *>(&this->size), sizeof(bit_map_size_t));
+        filePtr->write(reinterpret_cast<char *>(this->data.data()), this->data.size() * sizeof(byte_t));
     }
 
     void BitMap::WriteDataToFile(std::vector<char>* buffer, uint32_t& pos)const
     {
-        memcpy(buffer->data() + pos, &this->size, sizeof(Constants::bit_map_size_t));
-        pos += sizeof(Constants::bit_map_size_t);
+        memcpy(buffer->data() + pos, &this->size, sizeof(bit_map_size_t));
+        pos += sizeof(bit_map_size_t);
 
-        memcpy(buffer->data() + pos, this->data.data(), this->data.size() * sizeof(Constants::byte));
-        pos += this->data.size() * sizeof(Constants::byte);
+        memcpy(buffer->data() + pos, this->data.data(), this->data.size() * sizeof(byte_t));
+        pos += this->data.size() * sizeof(byte_t);
     }
 
     void BitMap::WriteDataToProtocol(char *&data) const{
-        memcpy(data, &this->size, sizeof(Constants::bit_map_size_t));
-        data += sizeof(Constants::bit_map_size_t);
+        memcpy(data, &this->size, sizeof(bit_map_size_t));
+        data += sizeof(bit_map_size_t);
 
-        const int dataSize = this->data.size() * sizeof(Constants::byte);
+        const int dataSize = this->data.size() * sizeof(byte_t);
         
         memcpy(data, this->data.data(), dataSize);
         data += dataSize;
@@ -126,17 +126,17 @@ namespace ByteMaps
 
     void BitMap::Print() const
     {
-        for (Constants::bit_map_pos_t i = 0; i < size; i++)
+        for (bit_map_pos_t i = 0; i < size; i++)
             cout << this->Get(i);
 
         cout << endl;
     }
 
-    const vector<Constants::byte> &BitMap::GetData() const { return this->data; }
+    const vector<byte_t> &BitMap::GetData() const { return this->data; }
 
-    vector<Constants::byte> & BitMap::GetDataUnsafe(){ return this->data; }
+    vector<byte_t> & BitMap::GetDataUnsafe(){ return this->data; }
 
-    Constants::bit_map_size_t & BitMap::GetSizeUnsafe(){ return this->size; }
+    bit_map_size_t & BitMap::GetSizeUnsafe(){ return this->size; }
 
     BitMap &BitMap::operator=(const BitMap &bitMap)
     {
@@ -159,7 +159,7 @@ namespace ByteMaps
                 return indexValue;
         }
 
-        for (Constants::bit_map_size_t i = 0; i < this->size; i++)
+        for (bit_map_size_t i = 0; i < this->size; i++)
         {
             const bool hasValue = this->Get(i);
 
@@ -173,7 +173,7 @@ namespace ByteMaps
         return false;
     }
 
-    void BitMap::Resize(const Constants::bit_map_size_t &newSize)
+    void BitMap::Resize(const bit_map_size_t &newSize)
     {
         const uint16_t newByteCount = (newSize + 7) / 8;
         this->data.resize(newByteCount, 0);

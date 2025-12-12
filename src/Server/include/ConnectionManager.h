@@ -30,7 +30,7 @@
 
 using namespace std;
 
-namespace Server {
+namespace Network {
 
   struct ConnectionParameters {
     int port;

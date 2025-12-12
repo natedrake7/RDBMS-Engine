@@ -88,82 +88,82 @@ namespace Expressions {
         std::string name;
         int minArgs;
         int maxArgs;
-        std::vector<Constants::DataType> expectedTypes;
-        Constants::DataType returnType;
+        std::vector<DataType> expectedTypes;
+        DataType returnType;
         bool allowImplicitCast;
         bool additionalValidations;
     };
 
     static Dictionary<Constants::FunctionType, FunctionInfo> FunctionInfoDictionary{
         { Constants::FunctionType::GetDate,
-            {"GETDATE", 0, 0, {}, Constants::DataType::DateTime, false, false } },
+            {"GETDATE", 0, 0, {}, DataType::DateTime, false, false } },
 
         { Constants::FunctionType::NewGuid,
-            {"NEWID", 0, 0, {}, Constants::DataType::Guid, false, false } },
+            {"NEWID", 0, 0, {}, DataType::Guid, false, false } },
 
         { Constants::FunctionType::Concat,
-            {"CONCAT", 2, UNLIMITED_ARGS, {Constants::DataType::String}, Constants::DataType::String, true, false } },
+            {"CONCAT", 2, UNLIMITED_ARGS, {DataType::String}, DataType::String, true, false } },
 
         { Constants::FunctionType::Length,
-            {"LENGTH", 1, 1, {Constants::DataType::String}, Constants::DataType::Int, false, false } },
+            {"LENGTH", 1, 1, {DataType::String}, DataType::Int, false, false } },
 
         { Constants::FunctionType::AsciiValue,
-            {"ASCII", 1, 1, {Constants::DataType::String}, Constants::DataType::Int, false, false } },
+            {"ASCII", 1, 1, {DataType::String}, DataType::Int, false, false } },
 
         { Constants::FunctionType::Char,
-            {"CHAR", 1, 1, {Constants::DataType::Int}, Constants::DataType::String, false, false } },
+            {"CHAR", 1, 1, {DataType::Int}, DataType::String, false, false } },
 
         { Constants::FunctionType::CharIndex,
             {"CHARINDEX", 2, 3,
-                {Constants::DataType::String, Constants::DataType::String, Constants::DataType::Int},
-                Constants::DataType::Int, false, false } },
+                {DataType::String, DataType::String, DataType::Int},
+                DataType::Int, false, false } },
 
         { Constants::FunctionType::Lower,
-            {"LOWER", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false, false } },
+            {"LOWER", 1, 1, {DataType::String}, DataType::String, false, false } },
 
         { Constants::FunctionType::Upper,
-            {"UPPER", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false, false } },
+            {"UPPER", 1, 1, {DataType::String}, DataType::String, false, false } },
 
         { Constants::FunctionType::Trim,
-            {"TRIM", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false, false } },
+            {"TRIM", 1, 1, {DataType::String}, DataType::String, false, false } },
 
         { Constants::FunctionType::TrimLeft,
-            {"TRIMLEFT", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false, false } },
+            {"TRIMLEFT", 1, 1, {DataType::String}, DataType::String, false, false } },
 
         { Constants::FunctionType::TrimRight,
-            {"TRIMRIGHT", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false, false } },
+            {"TRIMRIGHT", 1, 1, {DataType::String}, DataType::String, false, false } },
 
         { Constants::FunctionType::Replace,
             {"REPLACE", 3, 3,
-                {Constants::DataType::String, Constants::DataType::String, Constants::DataType::String},
-                Constants::DataType::String, false, false } },
+                {DataType::String, DataType::String, DataType::String},
+                DataType::String, false, false } },
 
         { Constants::FunctionType::Substr,
             {"SUBSTR", 2, 3,
-                {Constants::DataType::String, Constants::DataType::Int, Constants::DataType::Int},
-                Constants::DataType::String, false, false } },
+                {DataType::String, DataType::Int, DataType::Int},
+                DataType::String, false, false } },
 
         { Constants::FunctionType::Left,
             {"LEFT", 2, 2,
-                {Constants::DataType::String, Constants::DataType::Int},
-                Constants::DataType::String, false, false } },
+                {DataType::String, DataType::Int},
+                DataType::String, false, false } },
 
         { Constants::FunctionType::Right,
             {"RIGHT", 2, 2,
-                {Constants::DataType::String, Constants::DataType::Int},
-                Constants::DataType::String, false, false } },
+                {DataType::String, DataType::Int},
+                DataType::String, false, false } },
 
         { Constants::FunctionType::Reverse,
-            {"REVERSE", 1, 1, {Constants::DataType::String}, Constants::DataType::String, false, false } },
+            {"REVERSE", 1, 1, {DataType::String}, DataType::String, false, false } },
 
         { Constants::FunctionType::Space,
-            {"SPACE", 1, 1, {Constants::DataType::Int}, Constants::DataType::String, false, false } },
+            {"SPACE", 1, 1, {DataType::Int}, DataType::String, false, false } },
 
         { Constants::FunctionType::NullIf,
-        {"NULLIF", 2, 2, {Constants::DataType::String, Constants::DataType::String}, Constants::DataType::String, false, true } },
+        {"NULLIF", 2, 2, {DataType::String, DataType::String}, DataType::String, false, true } },
 
         { Constants::FunctionType::Coalesce,
-        {"COALESCE", 2, UNLIMITED_ARGS, {Constants::DataType::String}, Constants::DataType::String, false, true } },
+        {"COALESCE", 2, UNLIMITED_ARGS, {DataType::String}, DataType::String, false, true } },
     };
 
 }

@@ -25,8 +25,8 @@ namespace DatabaseEngine::StorageTypes
 namespace Pages
 {
     struct RowVersionPointer {
-        Constants::page_id_t pageId;
-        Constants::page_offset_t offset;
+        page_id_t pageId;
+        page_offset_t offset;
 
         RowVersionPointer() {
             this->pageId = Constants::INVALID_PAGE_ID;
@@ -56,7 +56,7 @@ namespace Pages
 
         mutable MultiThreading::ReadWriteMutex latch;
 
-        Constants::log_sequence_number_t logSequenceNumber;
+        log_sequence_number_t logSequenceNumber;
 
         string filename;
         PageHeader header;

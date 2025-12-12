@@ -1,5 +1,5 @@
 #pragma once
-#include "Database.h"
+#include "../Database.h"
 #include <string>
 
 namespace DatabaseEngine{
@@ -45,15 +45,15 @@ namespace DatabaseEngine{
         const DatabaseEngine::StorageTypes::Table* table
       );
       const StorageTypes::Row* RetrieveRow(
-        const QueryPipeline::PhysicalPlan::Snapshot& snapshot,
+        const Snapshot& snapshot,
         const Pages::RowVersionPointer& rowPointer,
-        const DatabaseEngine::StorageTypes::Table* table
+        const StorageTypes::Table* table
       )const;
-      [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(const Constants::extent_id_t& startingExtentId)const;
+      [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(const extent_id_t& startingExtentId)const;
 
-      [[nodiscard]] Constants::extent_id_t CleanupVersionedData(
-        const Constants::transaction_id_t& transactionId,
-        const Constants::extent_id_t& startingExtentId = 0
+      [[nodiscard]] extent_id_t CleanupVersionedData(
+        const transaction_id_t& transactionId,
+        const extent_id_t& startingExtentId = 0
       )const;
   };
 }

@@ -5,6 +5,9 @@
 #include "../../../include/DataStorage/Column.h"
 #include "../../../include/DataStorage/Row.h"
 #include "../../../include/DataStorage/Table.h"
+
+#include "CatalogColumns.h"
+#include "../../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../include/Pages/Page.h"
 #include "../../../include/Pages/HeaderPage.h"
 #include "../../../include/Pages/LargeObjectPage.h"
@@ -17,7 +20,6 @@
 #include "../../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../../Systemic/include/Guards/WriterGuard.h"
 #include "../../../../QueryPipeline/include/Statements.h"
-#include "../../../../Server/include/MasterDbColumns.h"
 #include "../../../include/Database.h"
 
 #include <cmath>
@@ -163,7 +165,7 @@ namespace DatabaseEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    Errors::RuntimeStatus Table::InsertRow(const QueryPipeline::PhysicalPlan::ExecutionProperties& properties, const vector<Value> &inputData){
+    Errors::RuntimeStatus Table::InsertRow(const ExecutionProperties& properties, const vector<Value> &inputData){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
 
@@ -186,9 +188,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::InsertRow(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
       const vector<Value> &inputData,
-      const std::vector<Constants::column_index_t> &columnIndices
+      const std::vector<column_index_t> &columnIndices
     ){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
@@ -213,9 +215,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::InsertRow(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
       const vector<Expressions::Expression *> &inputData,
-      const std::vector<Constants::column_index_t> &columnIndices
+      const std::vector<column_index_t> &columnIndices
     ){
         extent_id_t startingExtentIndex = 0;
         vector<extent_id_t> extents;
@@ -268,7 +270,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
       std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
-        const Constants::transaction_id_t& transactionId,
+        const transaction_id_t& transactionId,
         const vector<Value>& inputData,
         Logging::CheckPoint* checkPoint
         )const
@@ -321,9 +323,9 @@ namespace DatabaseEngine::StorageTypes {
       }
 
       std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
-        const Constants::transaction_id_t &transactionId,
+        const transaction_id_t &transactionId,
         const std::vector<Value> &inputData,
-        const std::vector<Constants::column_index_t> &columnIndices,
+        const std::vector<column_index_t> &columnIndices,
         Logging::CheckPoint *checkPoint
       ) const{
         auto *row = new Row(*this);
@@ -345,7 +347,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto *block = new Block(column);
 
-          if (column->GetColumnType() >= Constants::DataType::Unknown)
+          if (column->GetColumnType() >= DataType::Unknown)
             throw invalid_argument("Table::InsertRow: Unsupported Column Type");
 
           if (input.IsNull())
@@ -380,9 +382,9 @@ namespace DatabaseEngine::StorageTypes {
       }
 
      std::tuple<Row*, Errors::RuntimeStatus> Table::CreateRow(
-        const Constants::transaction_id_t &transactionId,
+        const transaction_id_t &transactionId,
         const std::vector<Expressions::Expression *> &inputData,
-        const std::vector<Constants::column_index_t> &columnIndices,
+        const std::vector<column_index_t> &columnIndices,
         Logging::CheckPoint *checkPoint
       ) const{
         Errors::RuntimeStatus result;
@@ -458,7 +460,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
     void Table::HeapDelete(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
       const Expressions::Expression* expression
     ) const
     {
@@ -517,9 +519,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanDelete(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
         const Expressions::Expression *expression,
-        QueryPipeline::PhysicalPlan::IndexState& state
+        IndexState& state
     ){
         auto* tree = this->GetClusteredIndexedTree();
 
@@ -544,9 +546,9 @@ namespace DatabaseEngine::StorageTypes {
    }
 
   void Table::ClusteredIndexSeekDelete(
-    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+    const ExecutionProperties& properties,
     const Expressions::Expression *expression,
-    QueryPipeline::PhysicalPlan::IndexState &state
+    IndexState &state
   ){
 
   }
@@ -637,9 +639,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::HeapScan(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
       std::vector<const Row*> *result,
-      QueryPipeline::PhysicalPlan::ScanState& state
+      ScanState& state
     )const
     {
         if(this->header.indexAllocationMapPageId == Constants::INVALID_PAGE_ID)
@@ -758,7 +760,7 @@ namespace DatabaseEngine::StorageTypes {
       tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
       lastExtentIndex = allocatedExtents.size() - 1;
 
-      const Constants::byte rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
+      const auto rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
 
       for (const auto &extentId : allocatedExtents)
       {
@@ -776,7 +778,7 @@ namespace DatabaseEngine::StorageTypes {
               if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
                   break;
 
-              const Constants::byte pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(pageId);
+              const auto pageSizeCategory = pageFreeSpacePage->GetPageSizeCategory(pageId);
 
               // find potential candidate
               if (rowCategory <= pageSizeCategory)
@@ -802,7 +804,7 @@ namespace DatabaseEngine::StorageTypes {
       return {};
     }
 
-    int Table::CreateNonClusteredIndex(vector<Constants::column_index_t> &columnIndices){
+    int Table::CreateNonClusteredIndex(vector<column_index_t> &columnIndices){
         Headers::Index index;
         index.columns = std::move(columnIndices);
 
@@ -812,7 +814,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
   Errors::RuntimeStatus Table::HeapUpdate(
-    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+    const ExecutionProperties& properties,
     const Expressions::Expression *expression,
     const vector<Value> & updates
   ){
@@ -874,7 +876,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::HeapUpdate(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
       const Expressions::Expression *expression,
       const vector<QueryPipeline::Statements::UpdateColumn *> &updates
     ){
@@ -985,7 +987,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanUpdate(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
       const Expressions::Expression *expression,
       const vector<Value> & updates
     ){
@@ -995,7 +997,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
       const Expressions::Expression *expression,
       const vector<QueryPipeline::Statements::UpdateColumn *> &updates
     ){
@@ -1007,7 +1009,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
-        const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+        const ExecutionProperties& properties,
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
@@ -1075,7 +1077,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::HandleRowUpdate(
       Pages::Page *page,
       Row *row,
-      const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+      const ExecutionProperties& properties,
       const std::vector<Value> &updates,
       const HashSet<column_index_t>& updatedColumns,
       const bool &isHeap
@@ -1087,7 +1089,7 @@ namespace DatabaseEngine::StorageTypes {
         //this has the pointers of the old row to LOBS and overflow pages
 
         Pages::RowVersionPointer oldVersionPointer;
-        Server::ServerInstance::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
+        Network::Server::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
         row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
         row->SetCurrentTransactionId(properties.snapshot.transactionId);
 
@@ -1125,7 +1127,7 @@ namespace DatabaseEngine::StorageTypes {
   Errors::RuntimeStatus Table::HandleRowUpdate(
     Pages::Page *page,
     Row *row,
-    const QueryPipeline::PhysicalPlan::ExecutionProperties& properties,
+    const ExecutionProperties& properties,
     const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
     const HashSet<column_index_t> &updatedColumns,
     const bool &isHeap){
@@ -1134,7 +1136,7 @@ namespace DatabaseEngine::StorageTypes {
 
         Pages::RowVersionPointer oldVersionPointer;
 
-        Server::ServerInstance::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
+        Network::Server::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
         row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
         row->SetCurrentTransactionId(properties.snapshot.transactionId);
 
@@ -1363,7 +1365,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
     void Table::GetColumnsHeaders()const{
-      const auto columnsHeaders = Server::ServerInstance::Get().SelectColumns(this->header.tableId);
+      const auto columnsHeaders = SystemCatalog::Get().SelectColumns(this->header.tableId);
 
       if (this->header.tableId == 13) {
         int val = 0;
@@ -1379,7 +1381,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::UpdateIdentityManagersIds() const{
-        const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+        static auto& catalog = SystemCatalog::Get();
+
+        const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(this->header.tableId);
 
         if(identityHeaders.empty())
           return;
@@ -1397,7 +1401,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::GetIdentityColumns()const{
-      const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+      static auto& catalog = SystemCatalog::Get();
+
+      const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(this->header.tableId);
 
       if(identityHeaders.empty())
         return;
@@ -1415,7 +1421,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::GetIdentityColumnById(const int32_t &columnId)const{
-        const auto identityHeaders = Server::ServerInstance::Get().SelectIdentityColumnsByTableId(this->header.tableId);
+        static auto& catalog = SystemCatalog::Get();
+
+        const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(this->header.tableId);
 
         if (identityHeaders.empty())
           return;
@@ -1437,7 +1445,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::GetDefaultValuesHeaders() const{
         for(const auto& column: this->columns) {
-          const auto systemHeader = Server::ServerInstance::Get().SelectDefaultValueByColumnId(column->GetColumnId());
+          const auto systemHeader = SystemCatalog::Get().SelectDefaultValueByColumnId(column->GetColumnId());
 
           if (systemHeader.columnId == Constants::INVALID_COLUMN_ID)
             continue;
@@ -1452,10 +1460,10 @@ namespace DatabaseEngine::StorageTypes {
         for (auto& column: this->columns)
           columnsDict.Add(column->GetColumnId(), column);
 
-        const auto indexes = Server::ServerInstance::Get().SelectIndexes(this->header.tableId);
+        const auto indexes = SystemCatalog::Get().SelectIndexes(this->header.tableId);
 
         for (const auto& index: indexes) {
-          const auto indexedColumns = Server::ServerInstance::Get().SelectIndexColumnsByIndexId(index.id);
+          const auto indexedColumns = SystemCatalog::Get().SelectIndexColumnsByIndexId(index.id);
 
           std::vector<column_index_t> indexColumnsIndices;
           for (const auto& indexedColumn : indexedColumns)
@@ -1473,10 +1481,10 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::GetStatistics(){
-        static auto& server = Server::ServerInstance::Get();
+    void Table::RetrieveStatistics(){
+        static auto& server = SystemCatalog::Get();
 
-        this->header.statistics = server.SelectTableStatisticsById(this->header.tableId);
+        this->statistics = server.SelectTableStatisticsById(this->header.tableId);
 
         for (auto* column : this->columns) {
           const auto& columnId = column->GetColumnId();
@@ -1490,18 +1498,23 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
+    Headers::TableStatistics Table::GetStatistics() const {
+        MultiThreading::ReaderGuard lock(&this->statisticsLatch);
+        return this->statistics;
+    }
+
     void Table::UpdateMasterDatabase() const{
       for (const auto& column: this->columns)
         column->UpdateMetadata();
     }
 
-  void Table::UpdateColumnName(const Constants::column_index_t &index, const std::string &name)const{
+  void Table::UpdateColumnName(const column_index_t &index, const std::string &name)const{
       auto* column = this->columns.at(index);
 
       column->SetColumnName(name);
   }
 
-  void Table::PopulateColumn(const Constants::column_index_t &index, const Value &defaultValue){
+  void Table::PopulateColumn(const column_index_t &index, const Value &defaultValue){
       if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
         return;
 
@@ -1513,13 +1526,13 @@ namespace DatabaseEngine::StorageTypes {
       this->PopulateColumnByHeap(index, defaultValue);
   }
 
-  void Table::PopulateColumnByClusteredIndex(const Constants::column_index_t &index, const Value &defaultValue){
+  void Table::PopulateColumnByClusteredIndex(const column_index_t &index, const Value &defaultValue){
         const auto* tree = this->GetClusteredIndexedTree();
 
         tree->InsertColumnToRow(index, defaultValue);
   }
 //TODO add heap insert if row still cant remain in page if heap
-  void Table::HandleAddColumn(Pages::Page* page, Row *row, const Constants::column_index_t& index, const Value &defaultValue){
+  void Table::HandleAddColumn(Pages::Page* page, Row *row, const column_index_t& index, const Value &defaultValue){
         const auto& column = this->columns.at(index);
 
         auto* block = new Block(defaultValue.GetRawData(), defaultValue.GetSize(), column);
@@ -1552,7 +1565,7 @@ namespace DatabaseEngine::StorageTypes {
         }
   }
 
-  void Table::HandleRemoveColumn(Pages::Page* page, Row *row, const Constants::column_index_t &index){
+  void Table::HandleRemoveColumn(Pages::Page* page, Row *row, const column_index_t &index){
         auto& data = row->GetData();
 
         data.erase(data.begin() + index);
@@ -1560,7 +1573,7 @@ namespace DatabaseEngine::StorageTypes {
         page->UpdateBytesLeft();
   }
 
-  void Table::PopulateColumnByHeap(const Constants::column_index_t &index, const Value &defaultValue){
+  void Table::PopulateColumnByHeap(const column_index_t &index, const Value &defaultValue){
     const auto& filename = this->GetFileName();
 
     const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
@@ -1592,17 +1605,17 @@ namespace DatabaseEngine::StorageTypes {
     }
   }
 
-  void Table::RemoveColumn(const Constants::column_index_t &index){
+  void Table::RemoveColumn(const column_index_t &index){
     //add also last updated at deleted at etc...
     const auto* removedColumn = this->columns.at(index);
 
-    const auto& server = Server::ServerInstance::Get();
+    const auto& server = SystemCatalog::Get();
 
     //schema adjustments in master db change this as well
     const std::vector<Value> removedColumnUpdates = {
-      Value(true, static_cast<column_index_t>(Server::SysColumns::IsDeleted)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::LastModifiedAt)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(Server::SysColumns::DeletedAt)),
+      Value(true, static_cast<column_index_t>(DatabaseEngine::SysColumns::IsDeleted)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::DeletedAt)),
     };
 
     auto result = server.UpdateColumnById(removedColumn->GetColumnId(), removedColumnUpdates);
@@ -1616,7 +1629,7 @@ namespace DatabaseEngine::StorageTypes {
       column->SetColumnIndex(i);
 
       const vector<Value> updates = {
-        Value(i, static_cast<column_index_t>(Server::SysColumns::OrdinalPosition))
+        Value(i, static_cast<column_index_t>(DatabaseEngine::SysColumns::OrdinalPosition))
       };
 
       //adjust in master db
@@ -1627,7 +1640,7 @@ namespace DatabaseEngine::StorageTypes {
     delete removedColumn;
   }
 
-  void Table::HandleRemoveColumn(const Constants::column_index_t &index){
+  void Table::HandleRemoveColumn(const column_index_t &index){
     if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
       return;
 
@@ -1679,21 +1692,22 @@ namespace DatabaseEngine::StorageTypes {
   }
 
   void Table::UpdateTableStatisticsFromRowInsert(const Row* row){
-        auto& stats = this->header.statistics;
+        {
+          MultiThreading::WriterGuard lock(&this->statisticsLatch);
 
-        stats.avgRowSize = std::ceil(
-            (stats.avgRowSize * stats.rowCount + row->GetTotalRowSize()) /
-            (stats.rowCount + 1)
-        );
-        stats.rowCount++;
+          this->statistics.avgRowSize = std::ceil(
+              (this->statistics.avgRowSize * this->statistics.rowCount + row->GetTotalRowSize()) /
+              (this->statistics.rowCount + 1)
+          );
+          this->statistics.rowCount++;
 
-        Server::ServerInstance::Get().UpdateTableStatisticsById(
-          this->header.tableId,
-          stats.rowCount,
-          stats.avgRowSize
-        );
+          SystemCatalog::Get().UpdateTableStatisticsById(
+            this->header.tableId,
+            this->statistics.rowCount,
+            this->statistics.avgRowSize
+          );
+        }
 
-        //TODO fix updating
         for (auto* column : this->columns)
           column->UpdateColumnStatistics(row);
   }

@@ -11,7 +11,7 @@ Value::Value()
 {
     this->data = nullptr;
     this->size = 0;
-    this->type = Constants::DataType::Unknown;
+    this->type = DataType::Unknown;
     this->columnIndex = 0;
 }
 
@@ -25,7 +25,7 @@ Value::Value(const Value &copyVal){
         return;
     }
 
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, copyVal.data, this->size);
 }
 
@@ -61,25 +61,25 @@ Value & Value::operator=(Value &&other) noexcept{
     return *this;
 }
 
-Value::Value(const void *data, const Constants::column_index_t &columnIndex){
+Value::Value(const void *data, const column_index_t &columnIndex){
     this->data = nullptr;
     this->columnIndex = columnIndex;
     this->size = 0;
-    this->type = Constants::DataType::Unknown;
+    this->type = DataType::Unknown;
 }
 
-Value::Value(const void *data, const int &size, const Constants::DataType &type){
+Value::Value(const void *data, const int &size, const DataType &type){
     this->data = nullptr;
     this->size = size;
     this->type = type;
     this->columnIndex = 0;
 
-    this->data = new Constants::object_t[size];
+    this->data = new object_t[size];
     std::memcpy(this->data, data, size);
 }
 
-Value::Value(const unsigned char *data, const int &size, const Constants::DataType &type){
-    this->data = new Constants::object_t[size];
+Value::Value(const unsigned char *data, const int &size, const DataType &type){
+    this->data = new object_t[size];
     memcpy(this->data, data, size);
 
     this->size = size;
@@ -88,200 +88,200 @@ Value::Value(const unsigned char *data, const int &size, const Constants::DataTy
 }
 
 Value::Value(const bool &data, const column_index_t &columnIndex){
-    this->data = new Constants::object_t[sizeof(bool)];
+    this->data = new object_t[sizeof(bool)];
     memcpy(this->data, &data, sizeof(bool));
     
     this->size = sizeof(bool);
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::Bool;
+    this->type = DataType::Bool;
 }
 
 Value::Value(const int8_t &data, const column_index_t &columnIndex){
-    this->data = new Constants::object_t[sizeof(int8_t)];
+    this->data = new object_t[sizeof(int8_t)];
     memcpy(this->data, &data, sizeof(int8_t));
     
     this->size = sizeof(int8_t);
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::TinyInt;
+    this->type = DataType::TinyInt;
 }
 
 Value::Value(const int16_t &data, const column_index_t &columnIndex){
-    this->data = new Constants::object_t[sizeof(int16_t)];
+    this->data = new object_t[sizeof(int16_t)];
     memcpy(this->data, &data, sizeof(int16_t));
     
     this->size = sizeof(int16_t);
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::SmallInt;
+    this->type = DataType::SmallInt;
 }
 
 Value::Value(const int32_t &data, const column_index_t &columnIndex){
-    this->data = new Constants::object_t[sizeof(int32_t)];
+    this->data = new object_t[sizeof(int32_t)];
     memcpy(this->data, &data, sizeof(int32_t));
     
     this->size = sizeof(int32_t);
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::Int;
+    this->type = DataType::Int;
 }
 
 Value::Value(const int64_t &data, const column_index_t &columnIndex){
-    this->data = new Constants::object_t[sizeof(int64_t)];
+    this->data = new object_t[sizeof(int64_t)];
     memcpy(this->data, &data, sizeof(int64_t));
     
     this->size = sizeof(int64_t);
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::BigInt;
+    this->type = DataType::BigInt;
 }
 
 Value::Value(const DataTypes::DateTime &data, const column_index_t &columnIndex){
-    this->data = new Constants::object_t[DataTypes::DateTime::DateTimeSize()];
+    this->data = new object_t[DataTypes::DateTime::DateTimeSize()];
     memcpy(this->data, &data.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
     
     this->size = DataTypes::DateTime::DateTimeSize();
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::DateTime;
+    this->type = DataType::DateTime;
 }
 
 Value::Value(const DataTypes::Decimal &data, const column_index_t &columnIndex){
     this->size = data.GetRawDataSize();
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
 
     memcpy(this->data, data.GetRawData(), this->size);
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::Decimal;
+    this->type = DataType::Decimal;
 }
 
 Value::Value(const DataTypes::Guid &data, const column_index_t &columnIndex){
     this->size = data.Size();
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, data.GetData().data(), this->size);
 
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::Guid;
+    this->type = DataType::Guid;
 }
 
-Value::Value(const string &data, const Constants::column_index_t& columnIndex, const bool& isIdentifier)
+Value::Value(const string &data, const column_index_t& columnIndex, const bool& isIdentifier)
 {
     this->size = data.size();
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, data.data(), this->size);
     
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::String;
+    this->type = DataType::String;
 }
 
-Value::Value(const u16string &data, const Constants::column_index_t &columnIndex)
+Value::Value(const u16string &data, const column_index_t &columnIndex)
 {
     this->size = data.size();
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, data.data(), this->size);
     
     this->columnIndex = columnIndex;
-    this->type = Constants::DataType::UnicodeString;
+    this->type = DataType::UnicodeString;
 }
 
-Value Value::Null(const Constants::column_index_t &columnIndex) { return Value(nullptr, columnIndex); }
+Value Value::Null(const column_index_t &columnIndex) { return Value(nullptr, columnIndex); }
 
 Value::~Value() = default;
 
 bool Value::IsNull() const { return this->data == nullptr; }
 
-const Constants::column_index_t & Value::GetColumnIndex() const { return this->columnIndex;}
+const column_index_t & Value::GetColumnIndex() const { return this->columnIndex;}
 
 void Value::SetData(const bool &otherData){
     delete this->data;
     
-    this->data = new Constants::object_t[sizeof(bool)];
+    this->data = new object_t[sizeof(bool)];
     memcpy(this->data, &otherData, sizeof(bool));
     this->size = sizeof(bool);
 
-    this->type = Constants::DataType::Bool;
+    this->type = DataType::Bool;
 }
 
 void Value::SetData(const string &otherData) {
     delete this->data;
 
     this->size = otherData.size();
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, otherData.data(), this->size);
 
-    this->type = Constants::DataType::String;
+    this->type = DataType::String;
 }
 void Value::SetData(const u16string &otherData) {
     delete this->data;
     
     this->size = otherData.size();
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, otherData.data(), this->size);
 
-    this->type = Constants::DataType::UnicodeString;
+    this->type = DataType::UnicodeString;
 }
 void Value::SetData(const int8_t &otherData) {
     delete this->data;
     
-    this->data = new Constants::object_t[sizeof(int8_t)];
+    this->data = new object_t[sizeof(int8_t)];
     memcpy(this->data, &otherData, sizeof(int8_t));
     this->size = sizeof(int8_t);
 
-    this->type = Constants::DataType::TinyInt;
+    this->type = DataType::TinyInt;
 }
 
 void Value::SetData(const int16_t &otherData) {
     delete this->data;
     
-    this->data = new Constants::object_t[sizeof(int16_t)];
+    this->data = new object_t[sizeof(int16_t)];
     memcpy(this->data, &otherData, sizeof(int16_t));
     this->size = sizeof(int16_t);
 
-    this->type = Constants::DataType::SmallInt;
+    this->type = DataType::SmallInt;
 }
 void Value::SetData(const int32_t &otherData) {
     delete this->data;
     
-    this->data = new Constants::object_t[sizeof(int32_t)];
+    this->data = new object_t[sizeof(int32_t)];
     memcpy(this->data, &otherData, sizeof(int32_t));
     this->size = sizeof(int32_t);
 
-    this->type = Constants::DataType::Int;
+    this->type = DataType::Int;
 }
 void Value::SetData(const int64_t &otherData) {
     delete this->data;
     
-    this->data = new Constants::object_t[sizeof(int64_t)];
+    this->data = new object_t[sizeof(int64_t)];
     memcpy(this->data, &otherData, sizeof(int64_t));
     this->size = sizeof(int64_t);
 
-    this->type = Constants::DataType::BigInt;
+    this->type = DataType::BigInt;
 }
 void Value::SetData(const DataTypes::DateTime &otherData) {
     delete this->data;
     
-    this->data = new Constants::object_t[DataTypes::DateTime::DateTimeSize()];
+    this->data = new object_t[DataTypes::DateTime::DateTimeSize()];
     memcpy(this->data, &otherData.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
     
     this->size = DataTypes::DateTime::DateTimeSize();
 
-    this->type = Constants::DataType::DateTime;
+    this->type = DataType::DateTime;
 }
 
 void Value::SetData(const DataTypes::Guid &otherData){
     delete this->data;
 
     this->size = otherData.Size();
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, otherData.GetData().data(), this->size);
 
-    this->type = Constants::DataType::Guid;
+    this->type = DataType::Guid;
 }
 
 bool Value::TryParseAsBool(bool& result)const{
-    if (this->type == Constants::DataType::String || this->type == Constants::DataType::UnicodeString) {
+    if (this->type == DataType::String || this->type == DataType::UnicodeString) {
         return this->TryParseAsBoolFromString(result);
     }
 
-    if (this->type == Constants::DataType::BigInt
-        || this->type == Constants::DataType::TinyInt
-        || this->type == Constants::DataType::SmallInt
-        || this->type == Constants::DataType::Int) {
+    if (this->type == DataType::BigInt
+        || this->type == DataType::TinyInt
+        || this->type == DataType::SmallInt
+        || this->type == DataType::Int) {
         return this->TryParseAsBoolFromInt(result);
     }
 
@@ -350,13 +350,13 @@ void Value::SetData(const DataTypes::Decimal &otherData) {
     delete this->data;
     
     this->size = otherData.GetRawDataSize();
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, otherData.GetRawData(), this->size);
 
-    this->type = Constants::DataType::Decimal;
+    this->type = DataType::Decimal;
 }
 
-const Constants::object_t * Value::GetRawData() const{ return this->data; }
+const object_t * Value::GetRawData() const{ return this->data; }
 
 bool Value::GetBool() const {
     return DataTypes::Coercions::ToBool(*this);
@@ -400,27 +400,27 @@ DataTypes::Guid Value::GetGuid() const {
 
 time_t Value::GetUnixTimeStamp() const{ return *reinterpret_cast<time_t *>(this->data); }
 
-void Value::SetColumnIndex(const Constants::column_index_t &otherIndex) { this->columnIndex = otherIndex; }
+void Value::SetColumnIndex(const column_index_t &otherIndex) { this->columnIndex = otherIndex; }
 
-void Value::SetType(const Constants::DataType &otherType){ this->type = otherType; }
+void Value::SetType(const DataType &otherType){ this->type = otherType; }
 
 void Value::Deserialize(const std::vector<char> &buffer, uint32_t &offset){
-    memcpy(&this->size, buffer.data() + offset, sizeof(Constants::block_size_t));
-    offset += sizeof(Constants::block_size_t);
+    memcpy(&this->size, buffer.data() + offset, sizeof(block_size_t));
+    offset += sizeof(block_size_t);
 
-    memcpy(&this->type, buffer.data() + offset, sizeof(Constants::DataType));
-    offset += sizeof(Constants::DataType);
+    memcpy(&this->type, buffer.data() + offset, sizeof(DataType));
+    offset += sizeof(DataType);
 
     this->data = new object_t[this->size];
-    memcpy(this->data, buffer.data() + offset, sizeof(Constants::object_t) * this->size);
+    memcpy(this->data, buffer.data() + offset, sizeof(object_t) * this->size);
     offset += this->size;
 }
 
-const Constants::DataType & Value::GetType() const{ return this->type; }
+const DataType & Value::GetType() const{ return this->type; }
 
 const block_size_t& Value::GetSize() const{ return this->size; }
 
-Constants::DataType Value::PromoteType(const Constants::DataType &lhs, const Constants::DataType &rhs){
+DataType Value::PromoteType(const DataType &lhs, const DataType &rhs){
     return  ColumnTypeRank.Get(lhs) > ColumnTypeRank.Get(rhs) ? lhs : rhs;
 }
 
@@ -431,32 +431,32 @@ ostream & operator<<(ostream& os, const Value &field){
     }
 
     switch (field.type){
-        case Constants::DataType::TinyInt:
+        case DataType::TinyInt:
             os << field.GetTinyInt();
             break;
-        case Constants::DataType::SmallInt:
+        case DataType::SmallInt:
             os << field.GetSmallInt();
             break;
-        case Constants::DataType::Int:
+        case DataType::Int:
             os << field.GetInt();
             break;
-        case Constants::DataType::BigInt:
+        case DataType::BigInt:
             os << field.GetBigInt();
             break;
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             os << field.GetDecimal();
             break;
-        case Constants::DataType::String:
-        case Constants::DataType::UnicodeString:
+        case DataType::String:
+        case DataType::UnicodeString:
             os << field.GetString();
             break;
-        case Constants::DataType::Bool:
+        case DataType::Bool:
             os << field.GetBool();
             break;
-        case Constants::DataType::DateTime:
+        case DataType::DateTime:
             os << field.GetDateTime();
             break;
-        case Constants::DataType::Guid:
+        case DataType::Guid:
             os << field.GetGuid();
             break;
         default:
@@ -478,7 +478,7 @@ Value& Value::operator=(const Value &rhs){
         return *this;
     }
 
-    this->data = new Constants::object_t[this->size];
+    this->data = new object_t[this->size];
     memcpy(this->data, rhs.data, this->size);
 
     return *this;
@@ -627,25 +627,25 @@ std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs,
 //TODO implement operations by dataType
 Value operator+(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt: {
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt: {
             auto value = Value::PerformBigIntAddition(lhs.GetBigInt(), rhs.GetBigInt());
             DataTypes::Coercions::DeduceIntegerType(value);
             return value;
         }
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             return Value::PerformDecimalAddition(lhs.GetDecimal(), rhs.GetDecimal());
-        case Constants::DataType::String:
-        case Constants::DataType::UnicodeString:
+        case DataType::String:
+        case DataType::UnicodeString:
                 return Value::PerformStringAddition(lhs.GetString(), rhs.GetString());
-        case Constants::DataType::Bool:
+        case DataType::Bool:
                 return Value(lhs.GetBool() + rhs.GetBool(), 0);
-        case Constants::DataType::DateTime:
-        case Constants::DataType::Guid:
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -661,23 +661,23 @@ Value& Value::operator+=(const Value &rhs){
 
 Value operator-(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt: {
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt: {
             auto value = Value::PerformBigIntSubtraction(lhs.GetBigInt(), rhs.GetBigInt());
             DataTypes::Coercions::DeduceIntegerType(value);
             return value;
         }
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             return Value::PerformDecimalSubtraction(lhs.GetDecimal(), rhs.GetDecimal());
-        case Constants::DataType::String:
-        case Constants::DataType::UnicodeString:
-        case Constants::DataType::Bool:
-        case Constants::DataType::DateTime:
-        case Constants::DataType::Guid:
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::String:
+        case DataType::UnicodeString:
+        case DataType::Bool:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -692,24 +692,24 @@ Value operator/(const Value &lhs, const Value &rhs){
 
 Value operator*(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt: {
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt: {
             auto value = Value(lhs.GetBigInt() * rhs.GetBigInt(), 0);
             DataTypes::Coercions::DeduceIntegerType(value);
             return value;
         }
-        case Constants::DataType::Bool:
+        case DataType::Bool:
             return Value(lhs.GetBool() * rhs.GetBool(), 0);
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             return Value(lhs.GetDecimal() * rhs.GetDecimal(), 0);
-        case Constants::DataType::String:
-        case Constants::DataType::UnicodeString:
-        case Constants::DataType::DateTime:
-        case Constants::DataType::Guid:
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::String:
+        case DataType::UnicodeString:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -725,25 +725,25 @@ Value operator<(const Value &lhs, const Value &rhs){
         return output;
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt:
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
             return Value(lhs.GetBigInt() < rhs.GetBigInt(), 0);
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             return Value(lhs.GetDecimal() < rhs.GetDecimal(), 0);
-        case Constants::DataType::String:
+        case DataType::String:
             return Value(lhs.GetString() < rhs.GetString(), 0);
-        case Constants::DataType::UnicodeString:
+        case DataType::UnicodeString:
             return Value(lhs.GetUnicodeString() < rhs.GetUnicodeString(), 0);
-        case Constants::DataType::Bool:
+        case DataType::Bool:
             return Value(lhs.GetBool() < rhs.GetBool(), 0);
-        case Constants::DataType::DateTime:
+        case DataType::DateTime:
             return Value(lhs.GetDateTime() < rhs.GetDateTime(), 0);
-        case Constants::DataType::Guid:
+        case DataType::Guid:
             return Value(lhs.GetGuid() < rhs.GetGuid(), 0);
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -764,25 +764,25 @@ Value operator<=(const Value &lhs, const Value &rhs){
         return Value(true, 0);
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt:
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
             return Value(lhs.GetBigInt() <= rhs.GetBigInt(), 0);
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             return Value(lhs.GetDecimal() <= rhs.GetDecimal(), 0);
-        case Constants::DataType::String:
+        case DataType::String:
             return Value(lhs.GetString() <= rhs.GetString(), 0);
-        case Constants::DataType::UnicodeString:
+        case DataType::UnicodeString:
             return Value(lhs.GetUnicodeString() <= rhs.GetUnicodeString(), 0);
-        case Constants::DataType::Bool:
+        case DataType::Bool:
             return Value(lhs.GetBool() <= rhs.GetBool(), 0);
-        case Constants::DataType::DateTime:
+        case DataType::DateTime:
             return Value(lhs.GetDateTime() <= rhs.GetDateTime(), 0);
-        case Constants::DataType::Guid:
+        case DataType::Guid:
             return Value(lhs.GetGuid() <= rhs.GetGuid(), 0);
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -798,29 +798,29 @@ Value operator>=(const Value &lhs, const Value &rhs){
         return Value(true, 0);
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt: {
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt: {
             const auto left = lhs.GetBigInt();
             const auto right = rhs.GetBigInt();
 
             return Value(left >= right, 0);
         }
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             return Value(lhs.GetDecimal() >= rhs.GetDecimal(), 0);
-        case Constants::DataType::String:
+        case DataType::String:
             return Value(lhs.GetString() >= rhs.GetString(), 0);
-        case Constants::DataType::UnicodeString:
+        case DataType::UnicodeString:
             return Value(lhs.GetUnicodeString() >= rhs.GetUnicodeString(), 0);
-        case Constants::DataType::Bool:
+        case DataType::Bool:
             return Value(lhs.GetBool() >= rhs.GetBool(), 0);
-        case Constants::DataType::DateTime:
+        case DataType::DateTime:
             return Value(lhs.GetDateTime() >= rhs.GetDateTime(), 0);
-        case Constants::DataType::Guid:
+        case DataType::Guid:
             return Value(lhs.GetGuid() >= rhs.GetGuid(), 0);
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -836,28 +836,28 @@ Value operator==(const Value &lhs, const Value &rhs){
         return output;
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt: {
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt: {
             auto value = Value(lhs.GetBigInt() == rhs.GetBigInt(), 0);
             DataTypes::Coercions::DeduceIntegerType(value);
             return value;
         }
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             return Value(lhs.GetDecimal() == rhs.GetDecimal(), 0);
-        case Constants::DataType::String:
+        case DataType::String:
             return Value(lhs.GetString() == rhs.GetString(), 0);
-        case Constants::DataType::UnicodeString:
+        case DataType::UnicodeString:
             return Value(lhs.GetUnicodeString() == rhs.GetUnicodeString(), 0);
-        case Constants::DataType::Bool:
+        case DataType::Bool:
             return Value(lhs.GetBool() == rhs.GetBool(), 0);
-        case Constants::DataType::DateTime:
+        case DataType::DateTime:
             return Value(lhs.GetDateTime() == rhs.GetDateTime(), 0);
-        case Constants::DataType::Guid:
+        case DataType::Guid:
             return Value(lhs.GetGuid() == rhs.GetGuid(), 0);
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -874,28 +874,28 @@ Value operator!=(const Value &lhs, const Value &rhs){
         return output;
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt: {
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt: {
             auto value = Value(lhs.GetBigInt() != rhs.GetBigInt(), 0);
             DataTypes::Coercions::DeduceIntegerType(value);
             return value;
         }
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             return Value(lhs.GetDecimal() != rhs.GetDecimal(), 0);
-        case Constants::DataType::String:
+        case DataType::String:
             return Value(lhs.GetString() != rhs.GetString(), 0);
-        case Constants::DataType::UnicodeString:
+        case DataType::UnicodeString:
             return Value(lhs.GetUnicodeString() != rhs.GetUnicodeString(), 0);
-        case Constants::DataType::Bool:
+        case DataType::Bool:
             return Value(lhs.GetBool() != rhs.GetBool(), 0);
-        case Constants::DataType::DateTime:
+        case DataType::DateTime:
             return Value(lhs.GetDateTime() != rhs.GetDateTime(), 0);
-        case Constants::DataType::Guid:
+        case DataType::Guid:
             return Value(lhs.GetGuid() != rhs.GetGuid(), 0);
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)
@@ -907,24 +907,24 @@ Value operator!=(const Value &lhs, const Value &rhs){
 
 Value operator%(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-        case Constants::DataType::TinyInt:
-        case Constants::DataType::SmallInt:
-        case Constants::DataType::Int:
-        case Constants::DataType::BigInt: {
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt: {
             auto value = Value(lhs.GetBigInt() % rhs.GetBigInt(), 0);
             DataTypes::Coercions::DeduceIntegerType(value);
             return value;
         }
-        case Constants::DataType::Bool:
+        case DataType::Bool:
             return Value(lhs.GetBool() % rhs.GetBool(), 0);
-        case Constants::DataType::Decimal:
+        case DataType::Decimal:
             // return Field(lhs.GetDecimal() % rhs.GetDecimal(), 0);
-        case Constants::DataType::String:
-        case Constants::DataType::UnicodeString:
-        case Constants::DataType::DateTime:
-        case Constants::DataType::Guid:
-        case Constants::DataType::RowIdentifier:
-        case Constants::DataType::Unknown:
+        case DataType::String:
+        case DataType::UnicodeString:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
         default:
             throw std::invalid_argument("Left Operand has type: "
                 + ColumnTypesToStringDictionary.Get(lhs.type)

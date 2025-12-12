@@ -43,14 +43,14 @@ namespace DataTypes {
             }
         }
 
-        const Constants::byte signAndFractionPoint = (isPositive << 7) | (fractionIndex & 0x7F);
+        const byte_t signAndFractionPoint = (isPositive << 7) | (fractionIndex & 0x7F);
 
         this->bytes.push_back(signAndFractionPoint);
 
 
         for (int i = 0; i < copiedValue.size(); i+= 2)
         {
-            Constants::byte val = 0;
+            byte_t val = 0;
 
             val |= (copiedValue[i] - '0') << 4;
 
@@ -68,11 +68,11 @@ namespace DataTypes {
         //fraction index is always at a fixed position
         constexpr fraction_index_t fractionIndex = 2;
 
-        constexpr Constants::byte signAndFractionPoint = (isPositive << 7) | (fractionIndex & 0x7F);
+        constexpr byte_t signAndFractionPoint = (isPositive << 7) | (fractionIndex & 0x7F);
 
         this->bytes.push_back(signAndFractionPoint);
 
-        Constants::byte val = 0;
+        byte_t val = 0;
 
         val |= (value ? 1 : 0);
 
@@ -98,12 +98,12 @@ namespace DataTypes {
         this->InitializeFromInteger<int64_t>(value);
     }
 
-    Decimal::Decimal(const Constants::byte* data, const int& dataSize)
+    Decimal::Decimal(const byte_t* data, const int& dataSize)
     {
         this->bytes = std::vector(data, data + dataSize);
     }
 
-    Decimal::Decimal(const vector<Constants::byte> &value)
+    Decimal::Decimal(const vector<byte_t> &value)
     {
         this->bytes = value;
     }
@@ -113,7 +113,7 @@ namespace DataTypes {
 
     bool Decimal::IsPositive() const { return ( this->bytes.at(0) >> 7 ) & 0x01; }
 
-    fraction_index_t Decimal::GetFractionIndex() const { return static_cast<Constants::fraction_index_t>(this->bytes.at(0) & 0x7F); }
+    fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->bytes.at(0) & 0x7F); }
 
     string Decimal::ToString() const
     {
@@ -139,13 +139,13 @@ namespace DataTypes {
         return result;
     }
 
-    const Constants::byte* Decimal::GetRawData() const { return this->bytes.data(); }
+    const byte_t* Decimal::GetRawData() const { return this->bytes.data(); }
 
     int Decimal::GetRawDataSize() const { return this->bytes.size(); }
 
-    const vector<Constants::byte>& Decimal::GetData() const { return this->bytes; }
+    const vector<byte_t>& Decimal::GetData() const { return this->bytes; }
 
-    Constants::byte Decimal::CreateSignAndFractionByte(
+    byte_t Decimal::CreateSignAndFractionByte(
         const bool& isPositive,
         const fraction_index_t& fractionIndex) {
         return (isPositive << 7) | (fractionIndex & 0x7F);
@@ -318,7 +318,7 @@ namespace DataTypes {
         return !(left > right);
     }
 
-    int Decimal::CompareDecimalsWithoutSign(const std::vector<Constants::byte>& leftData, const std::vector<Constants::byte>& rightData)
+    int Decimal::CompareDecimalsWithoutSign(const std::vector<byte_t>& leftData, const std::vector<byte_t>& rightData)
     {
         for (int i = 1; i < leftData.size(); i++)
         {
@@ -347,7 +347,7 @@ namespace DataTypes {
         return 0;
     }
 
-    std::vector<int> Decimal::Unpack(const vector<Constants::byte> &bytes){
+    std::vector<int> Decimal::Unpack(const vector<byte_t> &bytes){
         std::vector<int> digits;
 
         for (int i = 1; i < bytes.size(); i++) {
@@ -377,12 +377,12 @@ namespace DataTypes {
         return result;
     }
 
-    std::vector<Constants::byte> Decimal::Pack(
+    std::vector<byte_t> Decimal::Pack(
         const std::vector<int> &digits,
         const bool& isPositive,
         const fraction_index_t& fractionIndex
     ){
-        std::vector<Constants::byte> out;
+        std::vector<byte_t> out;
         out.push_back(Decimal::CreateSignAndFractionByte(isPositive, fractionIndex));
 
         for (int i = 0; i < digits.size(); i += 2) {
@@ -409,11 +409,11 @@ namespace DataTypes {
     }
 
     Decimal Decimal::Add(
-        const std::vector<Constants::byte> &left,
-        const std::vector<Constants::byte> &right,
+        const std::vector<byte_t> &left,
+        const std::vector<byte_t> &right,
         const fraction_index_t &fractionIndex,
         const bool &isPositive){
-        std::vector<Constants::byte> result;
+        std::vector<byte_t> result;
         int carry = 0;
 
         for (int i = left.size() - 1; i > 0; i--) {
@@ -435,7 +435,7 @@ namespace DataTypes {
             sumHigh %= 10;
 
             // Pack result back into byte
-            Constants::byte packedByte = (sumHigh << 4) | sumLow;
+            byte_t packedByte = (sumHigh << 4) | sumLow;
             result.push_back(packedByte);
         }
 
@@ -449,8 +449,8 @@ namespace DataTypes {
     }
 
     void Decimal::PadFractionalParts(
-        std::vector<Constants::byte> &left,
-        std::vector<Constants::byte> &right,
+        std::vector<byte_t> &left,
+        std::vector<byte_t> &right,
         fraction_index_t &leftFractionIndex,
         fraction_index_t &rightFractionIndex
     ){
@@ -474,8 +474,8 @@ namespace DataTypes {
     }
 
     void Decimal::PadNonFractionalParts(
-        std::vector<Constants::byte> &left,
-        std::vector<Constants::byte> &right,
+        std::vector<byte_t> &left,
+        std::vector<byte_t> &right,
         fraction_index_t &leftFractionIndex,
         fraction_index_t &rightFractionIndex){
 
@@ -486,23 +486,23 @@ namespace DataTypes {
         // Pad left with leading zeros if needed
         if (leftNonFracSize < maxNonFracSize) {
             left.insert(left.begin() + 1, maxNonFracSize - leftNonFracSize, 0x00);
-            leftFractionIndex += static_cast<Constants::fraction_index_t>((maxNonFracSize - leftNonFracSize) * 2);
+            leftFractionIndex += static_cast<fraction_index_t>((maxNonFracSize - leftNonFracSize) * 2);
         }
 
         // Pad right with leading zeros if needed
         if (rightNonFracSize < maxNonFracSize) {
             right.insert(right.begin() + 1, maxNonFracSize - rightNonFracSize, 0x00);
-            rightFractionIndex += static_cast<Constants::fraction_index_t>((maxNonFracSize - rightNonFracSize) * 2);
+            rightFractionIndex += static_cast<fraction_index_t>((maxNonFracSize - rightNonFracSize) * 2);
         }
     }
 
     Decimal Decimal::Subtract(
-        const std::vector<Constants::byte> &left,
-        const std::vector<Constants::byte> &right,
+        const std::vector<byte_t> &left,
+        const std::vector<byte_t> &right,
         const fraction_index_t& fractionIndex,
         const bool &isPositive
     ){
-        std::vector<Constants::byte> result;
+        std::vector<byte_t> result;
         int carry = 0;
 
         for (int i = left.size() - 1; i > 0; i--) {
@@ -524,7 +524,7 @@ namespace DataTypes {
             sumHigh %= 10;
 
             // Pack result back into byte
-            Constants::byte packedByte = (sumHigh << 4) | sumLow;
+            byte_t packedByte = (sumHigh << 4) | sumLow;
             result.push_back(packedByte);
         }
 
@@ -538,8 +538,8 @@ namespace DataTypes {
     }
 
     Decimal Decimal::Multiply(
-        const std::vector<Constants::byte> &left,
-        const std::vector<Constants::byte> &right,
+        const std::vector<byte_t> &left,
+        const std::vector<byte_t> &right,
         fraction_index_t &fractionIndex,
         const bool &isPositive
     ){
@@ -558,8 +558,8 @@ namespace DataTypes {
     }
 
     Decimal Decimal::Divide(
-        const std::vector<Constants::byte> &left,
-        const std::vector<Constants::byte> &right,
+        const std::vector<byte_t> &left,
+        const std::vector<byte_t> &right,
         fraction_index_t &fractionIndex,
         const bool &isPositive){
     }
@@ -576,7 +576,7 @@ namespace DataTypes {
             return;
 
         digits.erase(digits.begin(), digits.begin() + leadingZeros);
-        fractionIndex -= static_cast<Constants::fraction_index_t>(leadingZeros);
+        fractionIndex -= static_cast<fraction_index_t>(leadingZeros);
     }
 
     void Decimal::TrimTrailingZeros(
@@ -605,7 +605,7 @@ namespace DataTypes {
             digits.push_back(0);
     }
 
-    bool Decimal::IsGreaterMagnitude(const std::vector<Constants::byte> &left, const std::vector<Constants::byte> &right){
+    bool Decimal::IsGreaterMagnitude(const std::vector<byte_t> &left, const std::vector<byte_t> &right){
         for (size_t i = 1; i < left.size(); i++) {
             if (left[i] == right[i])
                 continue;
