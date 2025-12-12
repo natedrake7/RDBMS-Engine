@@ -6,7 +6,7 @@
 #include "../../../include/DataStorage/Row.h"
 #include "../../../include/DataStorage/Table.h"
 
-#include "CatalogColumns.h"
+#include "../../../include/SystemDatabases/CatalogSchema.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../include/Pages/Page.h"
 #include "../../../include/Pages/HeaderPage.h"

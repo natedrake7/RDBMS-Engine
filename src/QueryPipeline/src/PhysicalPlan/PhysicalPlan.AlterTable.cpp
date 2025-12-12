@@ -1,4 +1,4 @@
-#include "../../../Database/include/CatalogColumns.h"
+#include "../../../Database/include/SystemDatabases/CatalogSchema.h"
 #include "../../include/PhysicalPlan.h"
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"

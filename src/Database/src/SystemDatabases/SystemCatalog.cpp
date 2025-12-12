@@ -1,6 +1,6 @@
 #include "../../include/SystemDatabases/SystemCatalog.h"
 
-#include "CatalogColumns.h"
+#include "../../include/SystemDatabases/CatalogSchema.h"
 #include "../../include/Database.h"
 #include "../../include/DataStorage/Block.h"
 
@@ -1832,7 +1832,4 @@ void SystemCatalog::UpdateTableStatisticsById(
 
    return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
  }
-
-
-
 }
