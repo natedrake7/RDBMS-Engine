@@ -133,8 +133,6 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Logger/Logger.Structures.cpp
         src/DatabaseEngine/src/Schedulers/GarbageCollector.cpp
         src/DatabaseEngine/src/SystemDatabases/VersionDatabase.cpp
-        src/DatabaseEngine/include/Schedulers/StatisticsScheduler.h
-        src/DatabaseEngine/include/SystemDatabases/SystemCatalog.h
         src/DatabaseEngine/src/SystemDatabases/SystemCatalog.cpp
         src/DatabaseEngine/src/Evaluators/Expression.cpp
 )
@@ -159,10 +157,9 @@ target_link_libraries(Server PRIVATE QueryPipeline PRIVATE $<$<PLATFORM_ID:Windo
  add_executable(Client
          src/Client/src/client.cpp
          src/Client/src/ClientManager.cpp
-         src/Client/include/client.h
-         src/Client/include/ClientManager.h
-         src/DatabaseEngine/include/ExecutionProperties.h
- )
+)
+
+target_include_directories(Client PUBLIC src/Client/include)
 
 target_link_libraries(Client PRIVATE Systemic $<$<PLATFORM_ID:Windows>:ws2_32> )
 
