@@ -100,6 +100,12 @@ endif()
 # Include the generated parser and lexer files
 target_include_directories(QueryPipeline PRIVATE ${GENERATED_DIR})
 
+add_library(PluginApi SHARED
+        src/Plugins/src/PluginManager.cpp
+)
+
+target_include_directories(PluginApi PUBLIC src/Plugins/include)
+
 add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Database.cpp
         src/DatabaseEngine/src/Database.IndexHandlers.cpp
@@ -140,7 +146,11 @@ add_library(DatabaseEngine STATIC
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)
 
-target_link_libraries(DatabaseEngine PRIVATE Systemic PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(DatabaseEngine
+        PRIVATE Systemic
+        PRIVATE nlohmann_json::nlohmann_json
+        PRIVATE PluginApi
+)
 
 add_library(Server STATIC
         src/Server/src/ConnectionManager/ConnectionManager.cpp
