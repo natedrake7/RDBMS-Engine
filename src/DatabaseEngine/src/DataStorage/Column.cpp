@@ -88,37 +88,18 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetIsOverflowed(const bool & isOverflow){ this->isOverflowed = isOverflow; }
 
-    void Column::SetColumnStatistics(const Headers::ColumnStatistics &stats){ this-> statistics = stats;}
+    void Column::SetColumnStatistics(const Headers::ColumnStatistics &stats) {
+        MultiThreading::WriterGuard lock(&this->statisticsLatch);
+        this->statistics = stats;
+    }
 
     void Column::SetHistograms(std::vector<Headers::ColumnHistograms> &otherHistograms) {
         this->histograms = std::move(otherHistograms);
     }
 
 //compute distinct count too
-    void Column::UpdateColumnStatistics(const Row *row){
-        const auto& value = row->GetColumnByIndex(this->header.columnIndex);
+    void Column::UpdateColumnStatistics(){
 
-        MultiThreading::WriterGuard lock(&this->statisticsLatch);
-
-        if (value.IsNull())
-            this->statistics.nullCount++;
-
-        this->statistics.nullCount = 1;
-        this->statistics.distinctCount = 1;
-
-        if ((value < this->statistics.min).GetBool())
-            this->statistics.min = value;
-
-        if ((value > this->statistics.max).GetBool())
-            this->statistics.max = value;
-
-        SystemCatalog::Get().UpdateColumnStatisticsById(
-            this->header.id,
-            this->statistics.distinctCount,
-            this->statistics.nullCount,
-            this->statistics.min,
-            this->statistics.max
-        );
     }
 
     bool Column::GenerateIdentityValue(int64_t& value){

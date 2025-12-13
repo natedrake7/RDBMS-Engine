@@ -495,7 +495,7 @@ namespace DatabaseEngine {
     return Headers::TableStatistics{
       .tableId = data[static_cast<column_index_t>(SysTableStats::TableId)]->GetInt(),
       .rowCount = data[static_cast<column_index_t>(SysTableStats::RowCount)]->GetBigInt(),
-      .avgRowSize = data[static_cast<column_index_t>(SysTableStats::AvgRowSize)]->GetInt()
+      .averageRowSize = data[static_cast<column_index_t>(SysTableStats::AvgRowSize)]->GetInt()
     };
   }
 

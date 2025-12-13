@@ -6,6 +6,8 @@
 #include "../../DatabaseEngine/include/DataStorage/Block.h"
 #include "../../DatabaseEngine/include/Managers/TransactionManager.h"
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
+#include "../../Systemic/include/Guards/ReaderGuard.h"
+#include "../../Systemic/include/Guards/WriterGuard.h"
 
 #include <iostream>
 
@@ -71,6 +73,7 @@ namespace Network {
 
     auto* user = this->systemCatalog->InsertSystemUsers(hashedPassword, defaultRole->id);
 
+    user->role = defaultRole;
     const auto _ = this->userManager.AddSystemUser(user);
   }
 
@@ -239,12 +242,19 @@ namespace Network {
     if (databaseId == 1)
       return this->systemCatalog->GetDatabase();
 
+    MultiThreading::ReaderGuard lock(&this->databasesLatch);
+
     if (this->databases.TryGetValue(databaseId, db))
       return db;
 
     const auto dbHeader = this->systemCatalog->SelectDatabaseById(databaseId);
 
+    MultiThreading::WriterGuard::Promote(&this->databasesLatch, lock);
+
     db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
+
+    if (this->databases.TryGetValue(databaseId, db))
+      return db;
 
     // for (const auto& log : db->RecoverLogs()) {
     //   std::cout << log << std::endl;
@@ -252,10 +262,16 @@ namespace Network {
     // db->GetIdentityColumns();
 
     //master db id
+
     this->databases.Add(databaseId, db);
+
 
     return db;
   }
 
   DatabaseEngine::VersionDatabase * Server::GetVersionDatabase() const{ return this->versionDb; }
+
+  const Dictionary<int32_t, DatabaseEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
+
+  MultiThreading::ReadWriteMutex & Server::GetDatabasesLatch(){ return this->databasesLatch; }
 }

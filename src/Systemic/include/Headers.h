@@ -90,7 +90,7 @@ namespace Headers {
     int32_t tableId = INVALID_TABLE_ID;
 
     int64_t rowCount = 0;
-    int32_t avgRowSize = 0;
+    int32_t averageRowSize = 0;
   };
 
   struct ColumnStatistics {

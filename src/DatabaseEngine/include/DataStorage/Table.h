@@ -75,7 +75,7 @@ namespace DatabaseEngine::StorageTypes
         mutable MultiThreading::ReadWriteMutex statisticsLatch;
         Headers::TableStatistics statistics;
 
-        vector<Column *> columns;
+        std::vector<Column *> columns;
         DatabaseEngine::Database *database;
 
         HashSet<column_id_t> clusteredIndexColumnsCache;
@@ -308,6 +308,8 @@ namespace DatabaseEngine::StorageTypes
             void Truncate();
 
             void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
+
+            page_id_t GetIndexAllocationMapPageId()const;
 
             [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;
 

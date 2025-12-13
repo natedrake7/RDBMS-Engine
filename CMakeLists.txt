@@ -142,6 +142,7 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/SystemDatabases/VersionDatabase.cpp
         src/DatabaseEngine/src/SystemDatabases/SystemCatalog.cpp
         src/DatabaseEngine/src/Evaluators/Expression.cpp
+        src/DatabaseEngine/src/Schedulers/StatisticsScheduler.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

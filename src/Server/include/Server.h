@@ -28,6 +28,8 @@ namespace Network {
     DatabaseEngine::VersionDatabase *versionDb;
 
     Dictionary<int32_t, DatabaseEngine::Database*> databases;
+    MultiThreading::ReadWriteMutex databasesLatch;
+
     DatabaseEngine::SystemCatalog* systemCatalog;
 
     Sessions::SessionManager sessionManager;
@@ -85,6 +87,9 @@ namespace Network {
     void Shutdown();
     [[nodiscard]] DatabaseEngine::Database* UseDatabase(const int32_t & databaseId, const bool& isServerInitialization = false);
     DatabaseEngine::VersionDatabase* GetVersionDatabase()const;
+
+    const Dictionary<int32_t, DatabaseEngine::Database*>& GetDatabases()const;
+    MultiThreading::ReadWriteMutex& GetDatabasesLatch();
     
   };
 }

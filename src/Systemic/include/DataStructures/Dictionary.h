@@ -1,5 +1,6 @@
 #pragma once
 #include <unordered_map>
+#include <vector>
 
 template<typename Key, typename Value>
 class Dictionary : public std::unordered_map<Key, Value>
@@ -68,5 +69,14 @@ class Dictionary : public std::unordered_map<Key, Value>
         Value Get(const Key& key) const
         {
             return this->at(key);
+        }
+
+        std::vector<Value> ToVector() const
+        {
+            std::vector<Value> values;
+            for (const auto& pair : *this)
+                values.push_back(pair.second);
+
+            return values;
         }
 };

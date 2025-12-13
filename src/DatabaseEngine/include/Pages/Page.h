@@ -118,7 +118,7 @@ namespace Pages
         void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
         [[nodiscard]] const DatabaseEngine::StorageTypes::Row* GetRow(const int& indexPosition)const;
 
-        [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsUnsafe();
+        [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsNoLock();
 
         void IncreasePinCount();
         void DecreasePinCount();

@@ -499,7 +499,7 @@ namespace DatabaseEngine::StorageTypes {
 
             auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
 
-            const auto* rows = page->GetDataRowsUnsafe();
+            const auto* rows = page->GetDataRowsNoLock();
 
             for (int i = 0; i < rows->size(); i++) {
               const auto& row = rows->at(i);
@@ -562,6 +562,8 @@ namespace DatabaseEngine::StorageTypes {
     {
         this->header.indexAllocationMapPageId = indexAllocationMapPageId;
     }
+
+    page_id_t Table::GetIndexAllocationMapPageId() const{ return this->header.indexAllocationMapPageId; }
 
     bool Table::IsColumnNullable(const column_index_t &columnIndex) const
     {
@@ -681,7 +683,7 @@ namespace DatabaseEngine::StorageTypes {
             state.extentId = extentId;
             state.lastFetchedRowId.pageId = extentPageId;
 
-            const auto* pageRows = page->GetDataRowsUnsafe();
+            const auto* pageRows = page->GetDataRowsNoLock();
 
             for (int i = state.GetNextKeyIndex(); i < page->GetPageSize(); i++) {
               const auto* pageRow = (*pageRows)[i];
@@ -853,7 +855,7 @@ namespace DatabaseEngine::StorageTypes {
             if (page->GetPageSize() == 0)
               continue;
 
-            const auto* rows = page->GetDataRowsUnsafe();
+            const auto* rows = page->GetDataRowsNoLock();
 
             std::vector<extent_id_t> allocatedExtents;
 
@@ -914,7 +916,7 @@ namespace DatabaseEngine::StorageTypes {
             if (page->GetPageSize() == 0)
               continue;
 
-            const auto* rows = page->GetDataRowsUnsafe();
+            const auto* rows = page->GetDataRowsNoLock();
 
             std::vector<extent_id_t> allocatedExtents;
             extent_id_t startingExtentIndex = 0;
@@ -1228,7 +1230,7 @@ namespace DatabaseEngine::StorageTypes {
             if (page->GetPageSize() == 0)
               continue;
 
-            const auto* rows = page->GetDataRowsUnsafe();
+            const auto* rows = page->GetDataRowsNoLock();
 
             std::vector<extent_id_t> allocatedExtents;
             extent_id_t startingExtentIndex = 0;
@@ -1482,18 +1484,21 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::RetrieveStatistics(){
-        static auto& server = SystemCatalog::Get();
+        static auto& catalog = SystemCatalog::Get();
 
-        this->statistics = server.SelectTableStatisticsById(this->header.tableId);
+        {
+          MultiThreading::WriterGuard lock(&this->statisticsLatch);
+          this->statistics = catalog.SelectTableStatisticsById(this->header.tableId);
+        }
 
-        for (auto* column : this->columns) {
+        for (const auto& column : this->columns) {
           const auto& columnId = column->GetColumnId();
           const auto& columnType = column->GetColumnType();
 
-          const auto columnStatistics = server.SelectColumnStatisticsById(columnId, columnType);
+          const auto columnStatistics = catalog.SelectColumnStatisticsById(columnId, columnType);
           column->SetColumnStatistics(columnStatistics);
 
-          auto histograms = server.SelectColumnHistogramsByColumnId(columnId, columnType);
+          auto histograms = catalog.SelectColumnHistogramsByColumnId(columnId, columnType);
           column->SetHistograms(histograms);
         }
     }
@@ -1597,7 +1602,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
 
-          for (auto* row: *page->GetDataRowsUnsafe())
+          for (auto* row: *page->GetDataRowsNoLock())
             this->HandleAddColumn(page.Get(), row, index, defaultValue);
 
           pageFreeSpacePage->SetPageMetaData(page.Get());
@@ -1683,7 +1688,7 @@ namespace DatabaseEngine::StorageTypes {
 
         auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
 
-        for (auto* row: *page->GetDataRowsUnsafe())
+        for (auto* row: *page->GetDataRowsNoLock())
           Table::HandleRemoveColumn(page.Get(), row, index);
 
         pageFreeSpacePage->SetPageMetaData(page.Get());
@@ -1695,21 +1700,15 @@ namespace DatabaseEngine::StorageTypes {
         {
           MultiThreading::WriterGuard lock(&this->statisticsLatch);
 
-          this->statistics.avgRowSize = std::ceil(
-              (this->statistics.avgRowSize * this->statistics.rowCount + row->GetTotalRowSize()) /
-              (this->statistics.rowCount + 1)
-          );
           this->statistics.rowCount++;
-
-          SystemCatalog::Get().UpdateTableStatisticsById(
-            this->header.tableId,
-            this->statistics.rowCount,
-            this->statistics.avgRowSize
+          this->statistics.averageRowSize = std::ceil(
+              (this->statistics.averageRowSize * this->statistics.rowCount + row->GetTotalRowSize()) /
+              static_cast<float>(this->statistics.rowCount)
           );
         }
 
-        for (auto* column : this->columns)
-          column->UpdateColumnStatistics(row);
+        // for (auto* column : this->columns)
+        //   column->UpdateColumnStatistics();
   }
 }
 

@@ -279,7 +279,7 @@ namespace Pages
 
     const Row * Page::GetRow(const int &indexPosition)const { return this->rows.at(indexPosition); }
 
-    vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsUnsafe() { return &this->rows; }
+    vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsNoLock() { return &this->rows; }
 
     void Page::IncreasePinCount() {
         this->pinCount.fetch_add(1, std::memory_order_relaxed);

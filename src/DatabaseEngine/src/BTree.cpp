@@ -196,9 +196,9 @@ namespace Indexing
         childKeys->resize(this->degree);
 
         if (this->type == TreeType::Clustered) {
-            auto* childRows = child->GetDataRowsUnsafe();
+            auto* childRows = child->GetDataRowsNoLock();
 
-            auto* newChildRows = newChild->GetDataRowsUnsafe();
+            auto* newChildRows = newChild->GetDataRowsNoLock();
 
             newChildRows->assign(childRows->begin() + this->degree, childRows->end());
             childRows->resize(this->degree);
@@ -408,7 +408,7 @@ namespace Indexing
         {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
-            const auto* rows = currentNode->GetDataRowsUnsafe();
+            const auto* rows = currentNode->GetDataRowsNoLock();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
                 const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
@@ -452,7 +452,7 @@ namespace Indexing
         {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
-            const auto* rows = currentNode->GetDataRowsUnsafe();
+            const auto* rows = currentNode->GetDataRowsNoLock();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
                 const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
@@ -497,7 +497,7 @@ namespace Indexing
         {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
-            for (const auto* pageRow : *currentNode->GetDataRowsUnsafe()) {
+            for (const auto* pageRow : *currentNode->GetDataRowsNoLock()) {
                 auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
                 context.row = row;
@@ -527,7 +527,7 @@ namespace Indexing
         {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
-            for (const auto& pageRow : *currentNode->GetDataRowsUnsafe()) {
+            for (const auto& pageRow : *currentNode->GetDataRowsNoLock()) {
                 auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
 
                 if (!row)
@@ -642,7 +642,7 @@ namespace Indexing
         {
             MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
-            for(auto* row: *currentNode->GetDataRowsUnsafe()){
+            for(auto* row: *currentNode->GetDataRowsNoLock()){
 
                 context.row = row;
                 const auto value = expression->Evaluate(context);
@@ -681,7 +681,7 @@ namespace Indexing
         {
             MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
-            for(auto* row: *currentNode->GetDataRowsUnsafe()){
+            for(auto* row: *currentNode->GetDataRowsNoLock()){
                 context.row = row;
 
                 const auto value = expression->Evaluate(context);
@@ -718,7 +718,7 @@ namespace Indexing
         {
             MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
-            for(auto* row: *currentNode->GetDataRowsUnsafe()) {
+            for(auto* row: *currentNode->GetDataRowsNoLock()) {
                 const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
@@ -743,7 +743,7 @@ namespace Indexing
 
         while (currentNode.Get())
         {
-            const auto* rows = currentNode->GetDataRowsUnsafe();
+            const auto* rows = currentNode->GetDataRowsNoLock();
 
             for (int i = 0;i < rows->size(); i++) {
                 const auto* row = rows->at(i);
@@ -766,7 +766,7 @@ namespace Indexing
 
         while (currentNode.Get())
         {
-            for(auto* row: *currentNode->GetDataRowsUnsafe())
+            for(auto* row: *currentNode->GetDataRowsNoLock())
                 this->table->HandleAddColumn(currentNode.Get(), row, index, defaultValue);
 
             if(currentNode->GetNextPage() == INVALID_PAGE_ID)
@@ -786,7 +786,7 @@ namespace Indexing
 
         while (currentNode.Get())
         {
-            for(auto* row: *currentNode->GetDataRowsUnsafe())
+            for(auto* row: *currentNode->GetDataRowsNoLock())
                 DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode.Get(), row, index);
 
             if(currentNode->GetNextPage() == INVALID_PAGE_ID)
@@ -832,7 +832,7 @@ namespace Indexing
 
                 // Check if the last key in the previous node is within the range
                 if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
-                    const auto* previousRows = previousNode->GetDataRowsUnsafe();
+                    const auto* previousRows = previousNode->GetDataRowsNoLock();
 
                     const auto* row = previousRows->at(previousRows->size() - 1);
 
@@ -849,7 +849,7 @@ namespace Indexing
             else if(maxKey < keys->at(0))
                return {};
 
-          const auto* rows = currentNode->GetDataRowsUnsafe();
+          const auto* rows = currentNode->GetDataRowsNoLock();
 
           for (int i = 0; i < keys->size(); i++)
           {
@@ -918,7 +918,7 @@ namespace Indexing
 
                     // Check if the last key in the previous node is within the range
                     if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
-                        const auto* previousRows = previousNode->GetDataRowsUnsafe();
+                        const auto* previousRows = previousNode->GetDataRowsNoLock();
 
                         const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), properties, updates, updatedColumns, false);
 
@@ -930,7 +930,7 @@ namespace Indexing
                     return {};
             }
 
-            const auto* rows = currentNode->GetDataRowsUnsafe();
+            const auto* rows = currentNode->GetDataRowsNoLock();
 
             for (int i = 0; i < keys->size(); i++){
                 const auto &key = keys->at(i);
@@ -1214,7 +1214,7 @@ namespace Indexing
         nonClusteredData->erase(nonClusteredData->begin() + keyIndex);
       }
       else{
-            auto* rows = currentNode->GetDataRowsUnsafe();
+            auto* rows = currentNode->GetDataRowsNoLock();
             const auto* row = rows->at(keyIndex);
 
             rows->erase(rows->begin() + keyIndex);
@@ -1319,8 +1319,8 @@ namespace Indexing
              if (this->type == TreeType::Clustered) {
 
               //insert last child from left sibling to the current page
-              auto* nodeRows = node->GetDataRowsUnsafe();
-              auto* siblingRows = sibling->GetDataRowsUnsafe();
+              auto* nodeRows = node->GetDataRowsNoLock();
+              auto* siblingRows = sibling->GetDataRowsNoLock();
 
               if (!siblingRows->empty()) {
                    nodeRows->push_back(siblingRows->back());
@@ -1380,8 +1380,8 @@ namespace Indexing
              nodeKeys->insert(nodeKeys->begin(), siblingKeys->front());
 
              if (this->type == TreeType::Clustered) {
-                 vector<DatabaseEngine::StorageTypes::Row*>* nodeRows = node->GetDataRowsUnsafe();
-                 vector<DatabaseEngine::StorageTypes::Row*>* siblingRows = sibling->GetDataRowsUnsafe();
+                 vector<DatabaseEngine::StorageTypes::Row*>* nodeRows = node->GetDataRowsNoLock();
+                 vector<DatabaseEngine::StorageTypes::Row*>* siblingRows = sibling->GetDataRowsNoLock();
 
                  if (!siblingRows->empty()) {
                      nodeRows->push_back(siblingRows->front());
@@ -1438,8 +1438,8 @@ namespace Indexing
               leftNodeKeys->insert(leftNodeKeys->end(), rightNodeKeys->begin(), rightNodeKeys->end());
 
              if (this->type == TreeType::Clustered) {
-                auto* leftNodeRows = leftNode->GetDataRowsUnsafe();
-                auto* rightNodeRows = rightNode->GetDataRowsUnsafe();
+                auto* leftNodeRows = leftNode->GetDataRowsNoLock();
+                auto* rightNodeRows = rightNode->GetDataRowsNoLock();
 
                 leftNodeRows->insert(leftNodeRows->end(), rightNodeRows->begin(), rightNodeRows->end());
                 rightNodeRows->clear();

@@ -1,4 +1,5 @@
 ﻿#include "src/DatabaseEngine/include/Schedulers/GarbageCollector.h"
+#include "src/DatabaseEngine/include/Schedulers/StatisticsScheduler.h"
 #include "src/Plugins/include/Plugin.h"
 #include "src/QueryPipeline/include/Parser.h"
 #include "src/Server/include/Server.h"
@@ -104,11 +105,11 @@ int main()
 
     auto& server = Network::Server::Get();
 
-    External::Plugin plugin;
-    plugin.Load("plugins/PluginLibrary.dll");
-    plugin.Execute("AddNumbers");
-
-    return 0;
+    // External::Plugin plugin;
+    // plugin.Load("plugins/PluginLibrary.dll");
+    // External::Plugin::Execute("AddNumbers");
+    //
+    // return 0;
 
     server.Initialize("configuration.json");
 
@@ -120,6 +121,13 @@ int main()
 
     //figue out issue
     // std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
+
+    std::thread statisticsThread(
+        DatabaseEngine::StatisticsScheduler::Start,
+        std::ref(serverRunning),
+        std::ref(server.GetDatabases()),
+        std::ref(server.GetDatabasesLatch())
+    );
 
     const auto* user = server.Authenticate("admin", "admin");
 
@@ -150,6 +158,7 @@ int main()
     serverRunning.store(false, std::memory_order_relaxed);
 
     connectionThread.join();
+    statisticsThread.join();
     // garbageCollectorThread.join();
 
     server.Shutdown();

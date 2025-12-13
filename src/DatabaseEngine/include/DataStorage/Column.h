@@ -101,7 +101,7 @@ namespace DatabaseEngine::StorageTypes
 
         void SetHistograms(std::vector<Headers::ColumnHistograms>& otherHistograms);
 
-        void UpdateColumnStatistics(const StorageTypes::Row* row);
+        void UpdateColumnStatistics();
 
         [[nodiscard]] bool GenerateIdentityValue(int64_t& value);
 

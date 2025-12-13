@@ -851,6 +851,8 @@ namespace DatabaseEngine
                 table->UpdateMasterDatabase();
     }
 
+    const std::vector<StorageTypes::Table *> & Database::GetTables() const{ return this->tables; }
+
     string Database::GetSystemFilename() const{ return this->systemFilename;}
 
     DatabaseHeader::DatabaseHeader()

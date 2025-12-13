@@ -200,6 +200,8 @@ public:
     void GetTableHeaders()const;
 
     void UpdateMasterDatabase()const;
+
+    const std::vector<StorageTypes::Table*>& GetTables() const;
 };
 
 void CreateDatabase(const string &dbName);
