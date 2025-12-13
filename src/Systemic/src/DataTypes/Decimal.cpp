@@ -658,6 +658,26 @@ namespace DataTypes {
     int Decimal::Size(const int &precision){
         return precision / 2 + 1 + 1; //+1 for sign and fraction index, +1 for alignment
     }
+
+    Decimal & Decimal::operator=(const int8_t &right){
+        *this = Decimal(right);
+        return *this;
+    }
+
+    Decimal & Decimal::operator=(const int16_t &right){
+        *this = Decimal(right);
+        return *this;
+    }
+
+    Decimal & Decimal::operator=(const int32_t &right){
+        *this = Decimal(right);
+        return *this;
+    }
+
+    Decimal & Decimal::operator=(const int64_t &right){
+        *this = Decimal(right);
+        return *this;
+    }
 }
 
 

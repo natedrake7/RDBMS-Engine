@@ -18,6 +18,7 @@ namespace DatabaseEngine {
     SysColumnHistograms = 12,
     SysRoles = 13,
     SysUsers = 14,
+    SysIndexStats = 15,
   };
 
   enum class SysDatabases : uint8_t {
@@ -151,7 +152,9 @@ namespace DatabaseEngine {
   enum class SysTableStats : uint8_t {
     TableId = 0,
     RowCount = 1,
-    AvgRowSize = 2
+    AvgRowSize = 2,
+    PageCount = 3,
+    LastUpdatedAt = 4
   };
 
   enum class SysColumnStats : uint8_t {
@@ -196,6 +199,14 @@ namespace DatabaseEngine {
     Version = 8,
     IsDeleted = 9,
     DeletedAt = 10,
+  };
+
+  enum class SysIndexStats : uint8_t {
+    IndexId = 0,
+    LeafPages = 1,
+    Depth = 2,
+    AverageFragmentation = 3,
+    LastUpdated = 4
   };
 }
 

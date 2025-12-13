@@ -137,6 +137,12 @@ namespace DataTypes {
         friend bool operator>(const Decimal& left, const Decimal& right);
         friend bool operator<(const Decimal& left, const Decimal& right);
         friend bool operator<=(const Decimal& left, const Decimal& right);
+
+        Decimal& operator=(const int8_t& right);
+        Decimal& operator=(const int16_t& right);
+        Decimal& operator=(const int32_t& right);
+        Decimal& operator=(const int64_t& right);
+
     };
 // Specialization
 }

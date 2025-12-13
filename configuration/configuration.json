@@ -178,7 +178,8 @@
       "columns": [
         { "name": "table_id",             "type": "Int" },
         { "name": "row_count",            "type": "BigInt", "default": 0 },
-        { "name": "avg_record_size",      "type": "Int",    "default": 0 }
+        { "name": "avg_record_size",      "type": "Int",    "default": 0 },
+        { "name": "page_count",           "type": "Int",    "default": 0 }
       ],
       "primaryKey": ["table_id"]
     },
@@ -202,8 +203,8 @@
         { "name": "histogram_id",         "type": "Int",    "hasIdentity": true },
         { "name": "range_start",          "type": "String", "size": 200, "nullable": true },
         { "name": "range_end",            "type": "String", "size": 200, "nullable": true },
-        { "name": "row_count",            "type": "Int", "default":  0},
-        { "name": "distinct_count",       "type": "Int", "default": 0 }
+        { "name": "row_count",            "type": "Int",    "default":  0},
+        { "name": "distinct_count",       "type": "Int",    "default": 0 }
       ],
       "primaryKey": ["column_id", "histogram_id"]
     },
@@ -241,6 +242,19 @@
         { "name": "deleted_at",                   "type": "DateTime", "nullable": true }
       ],
       "primaryKey": ["user_id"]
+    },
+    {
+      "id": 16,
+      "name": "sys_index_stats",
+      "columns": [
+        { "name": "index_id",                     "type": "Int" },
+        { "name": "leaf_pages",                   "type": "Int",      "default": 0 },
+        { "name": "depth",                        "type": "TinyInt",  "default": 0 },
+        { "name": "avg_fragmentation",            "type": "Decimal",  "size": 4 },
+        { "name": "last_updated",                 "type": "DateTime" }
+      ],
+      "primaryKey": ["index_id"]
     }
+
   ]
 }

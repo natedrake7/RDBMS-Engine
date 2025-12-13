@@ -91,6 +91,7 @@ namespace Headers {
 
     int64_t rowCount = 0;
     int32_t averageRowSize = 0;
+    int32_t pageCount = 0;
 
     DataTypes::DateTime lastModified = DataTypes::DateTime::Now();
   };
@@ -113,6 +114,14 @@ namespace Headers {
 
     int32_t rowCount;
     int32_t distinctCount;
+  };
+
+  struct IndexStatistics {
+    int32_t indexId;
+    int32_t leafPages;
+    int8_t depth;
+    DataTypes::Decimal averageFragmentation;
+    DataTypes::DateTime lastUpdated;
   };
 
   struct ColumnHeader {

@@ -1042,18 +1042,18 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const ExecutionProperties& properties,
     const int32_t &tableId,
     const int64_t& rowCount,
-    const int32_t& rowSize
+    const int32_t& rowSize,
+    const int32_t& pageCount
   ) const{
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
-    const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::string lastModifiedBy = "system";
-
-    const vector<Value> fields = {
+    const std::vector fields = {
       Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)),
       Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
-      Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize))
+      Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
+      Value(pageCount, static_cast<column_index_t>(SysTableStats::PageCount)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt)),
     };
 
     const auto result = table->InsertRow(properties, fields);
@@ -1071,11 +1071,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   ) const{
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
-    const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::string lastModifiedBy = "system";
-
-    const std::vector<Value> fields = {
+    const std::vector fields = {
       Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)),
       Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
       Value::Null(static_cast<column_index_t>(SysColumnStats::MinimumValue)),
@@ -1113,6 +1110,31 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     std::cout << "Inserted histogram Bucket for column: " << columnId << std::endl;
 
     return result;
+  }
+
+  Errors::RuntimeStatus SystemCatalog::InsertIndexStatisticsToMasterDb(
+    const ExecutionProperties &properties,
+    const int32_t &indexId,
+    const int64_t &leafPages,
+    const int8_t &depth,
+    const DataTypes::Decimal &averageFragmentation
+  ) const{
+
+   auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
+
+   const std::vector fields = {
+     Value(indexId, static_cast<column_index_t>(SysIndexStats::IndexId)),
+     Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
+     Value(depth, static_cast<column_index_t>(SysIndexStats::Depth)),
+     Value(averageFragmentation, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
+     Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated)),
+   };
+
+   const auto result = table->InsertRow(properties, fields);
+
+   std::cout << "Inserted index statistics for index: " << indexId << std::endl;
+
+   return result;
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertRoleToMasterDb(

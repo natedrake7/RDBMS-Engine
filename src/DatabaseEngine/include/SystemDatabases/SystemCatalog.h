@@ -187,7 +187,8 @@ namespace DatabaseEngine {
       const ExecutionProperties& properties,
       const int32_t& tableId,
       const int64_t& rowCount = 0,
-      const int32_t& rowSize = 0
+      const int32_t& rowSize = 0,
+      const int32_t& pageCount = 0
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
@@ -203,6 +204,14 @@ namespace DatabaseEngine {
       const Value& min,
       const Value& max,
       const int64_t& distinctCount = 0
+    ) const;
+
+    [[nodiscard]] Errors::RuntimeStatus InsertIndexStatisticsToMasterDb(
+      const ExecutionProperties& properties,
+      const int32_t& indexId,
+      const int64_t& leafPages = 0,
+      const int8_t& depth = 0,
+      const DataTypes::Decimal& averageFragmentation = DataTypes::Decimal(0)
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertRoleToMasterDb(
