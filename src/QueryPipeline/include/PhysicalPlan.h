@@ -39,6 +39,8 @@ namespace QueryPipeline::PhysicalPlan{
       std::string message;
       Errors::RuntimeError code;
 
+      bool canFetchMore;
+
       ExecutionResult();
       ExecutionResult(const Errors::RuntimeError& code, const std::string& message);
       ~ExecutionResult();

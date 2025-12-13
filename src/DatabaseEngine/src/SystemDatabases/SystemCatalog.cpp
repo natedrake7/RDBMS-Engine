@@ -1693,15 +1693,13 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     const int32_t& columnId,
     const DataType& columnType
   ) const{
-    using namespace StorageTypes;
-
-    Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
-    std::vector<const Row*> selectedStats;
+    auto* sysColumnStats = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
+    std::vector<const StorageTypes::Row*> selectedStats;
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedStats, key);
+    sysColumnStats->ClusteredIndexSeek(this->baseProperties, &selectedStats, key);
 
     if (selectedStats.empty())
       return {};

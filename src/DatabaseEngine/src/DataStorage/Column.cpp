@@ -88,20 +88,6 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetIsOverflowed(const bool & isOverflow){ this->isOverflowed = isOverflow; }
 
-    void Column::SetColumnStatistics(const Headers::ColumnStatistics &stats) {
-        MultiThreading::WriterGuard lock(&this->statisticsLatch);
-        this->statistics = stats;
-    }
-
-    void Column::SetHistograms(std::vector<Headers::ColumnHistograms> &otherHistograms) {
-        this->histograms = std::move(otherHistograms);
-    }
-
-//compute distinct count too
-    void Column::UpdateColumnStatistics(){
-
-    }
-
     bool Column::GenerateIdentityValue(int64_t& value){
         return this->identityManager.TryGenerate(value);
     }

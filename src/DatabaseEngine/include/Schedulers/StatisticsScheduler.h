@@ -12,6 +12,7 @@ namespace MultiThreading {
 }
 
 namespace DatabaseEngine {
+  class StatisticsManager;
   class SystemCatalog;
   class Database;
 
@@ -23,12 +24,16 @@ namespace DatabaseEngine {
     const Dictionary<int32_t, Database*>* databasesDictionary;
     MultiThreading::ReadWriteMutex* latch;
     SystemCatalog* catalog;
+    StatisticsManager* statsManager;
 
     [[nodiscard]] std::vector<Database *> GetDatabases()const;
 
-    void UpdateDatabaseStatistics(const Database* database);
+    static int EstimateRowsPerPage(const int& totalRows, const int& allocatedPagesPerExtent);
+    static int EstimateAllocatedPagesPerExtent(const int& allocatedPagesPerExtent, const int& numberOfExtents);
+
+    void UpdateDatabaseStatistics(const Database* database)const;
     void UpdateTableStatistics(
-      StorageTypes::Table* table,
+      const StorageTypes::Table* table,
       const std::string& systemFilename,
       const std::string& filename
     )const;
@@ -42,9 +47,14 @@ namespace DatabaseEngine {
       const std::vector<Headers::ColumnStatistics>& columnStatistics
     )const;
 
+    void UpdateCache(
+      const Headers::TableStatistics& tableStatistics,
+      const std::vector<Headers::ColumnStatistics>& columnStatistics
+    )const;
+
     public:
       StatisticsScheduler(const Dictionary<int32_t, Database*>& databasesDictionary, MultiThreading::ReadWriteMutex& latch);
-      void UpdateStatistics();
+      void UpdateStatistics()const;
       static void Start(
         const std::atomic<bool> &isServerRunning,
         const Dictionary<int32_t, Database*> &databasesDictionary,

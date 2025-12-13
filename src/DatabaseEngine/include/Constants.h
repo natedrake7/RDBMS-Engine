@@ -83,6 +83,8 @@ namespace Constants{
     constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;
     constexpr page_id_t HEADER_PAGE_ID = 0;
 
+    constexpr int32_t CATALOG_ID = 1;
+
     constexpr page_id_t NEXT_GAM_PAGE_ID_OFFSET = (GAM_NUMBER_OF_PAGES + PAGE_FREE_SPACE_SIZE - 1) / PAGE_FREE_SPACE_SIZE + 1;
 
     constexpr row_header_size_t ROW_VERSION_HEADER_SIZE = 2 * sizeof(transaction_id_t) + sizeof(page_id_t) + sizeof(page_offset_t);

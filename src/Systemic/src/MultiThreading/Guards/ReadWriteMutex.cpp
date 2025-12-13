@@ -34,7 +34,7 @@ void ReadWriteMutex::UniqueLock(){
    this->writerActive = true;
 }
 void ReadWriteMutex::UniqueUnlock(){
-   std::unique_lock<std::mutex> lk(mutex);
+   std::unique_lock<std::mutex> lk(this->mutex);
    this->writerActive = false;
    // Prefer waking a writer first to avoid writer starvation
    if (this->writersWaiting > 0) {
@@ -45,8 +45,35 @@ void ReadWriteMutex::UniqueUnlock(){
   this->readersCV.notify_all();
 }
 
+bool ReadWriteMutex::SharedTryLock(){
+   std::unique_lock<std::mutex> lk(this->mutex);
+
+   if (this->writerActive || this->writersWaiting > 0)
+     return false;
+
+   // Wait while a writer is active OR writers waiting and we prefer writers
+   this->readersCV.wait(lk, [this](){ return !this->writerActive && this->writersWaiting == 0; });
+   this->readers++;
+
+   return true;
+}
+
+bool ReadWriteMutex::UniqueTryLock(){
+   std::unique_lock<std::mutex> lk(this->mutex);
+
+   if (this->writerActive || this->writersWaiting > 0 || this->readers > 0)
+     return false;
+
+   this->writersWaiting++;
+   this->writersCV.wait(lk, [this](){ return !this->writerActive && this->readers == 0; });
+   this->writersWaiting--;
+   this->writerActive = true;
+
+   return true;
+}
+
 void ReadWriteMutex::PromoteLock(){
-   std::unique_lock<std::mutex> lk(mutex);
+   std::unique_lock<std::mutex> lk(this->mutex);
 
    this->readers--;
    this->writersWaiting++;

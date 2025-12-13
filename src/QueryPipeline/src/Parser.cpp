@@ -243,7 +243,7 @@ namespace QueryPipeline
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
 
-            const DatabaseEngine::ExecutionProperties properties(snapshot,1000, session->variables);
+            const DatabaseEngine::ExecutionProperties properties(snapshot, 10000, session->variables);
 
             //for test
             // if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {

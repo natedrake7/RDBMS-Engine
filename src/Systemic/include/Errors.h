@@ -24,6 +24,7 @@ namespace Errors {
   struct RuntimeStatus {
     RuntimeError code;
     std::string message;
+
     DataTypes::Indexing::Key primaryKey;
 
     RuntimeStatus() {

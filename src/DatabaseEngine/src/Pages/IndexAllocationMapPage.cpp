@@ -72,26 +72,25 @@ namespace Pages {
             return;
 
         MultiThreading::ReaderGuard lock(&this->latch);
-        for (extent_id_t id = startingExtentIndex; id < this->ownedExtents->GetSize(); id++)
-        {
+        for (extent_id_t id = startingExtentIndex; id < this->lastAllocatedExtentId; id++){
             if (this->ownedExtents->Get(id))
                 allocatedExtents->push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + id);
         }
     }
 
-    extent_id_t IndexAllocationMapPage::GetLastAllocatedExtent() const
-    {
-        const page_id_t globalAllocationMapPageId = DatabaseEngine::Database::GetGamAssociatedPage(this->header.pageId);
-
-        extent_id_t lastAllocatedExtent = 0;
-        for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
-        {
-            if (this->ownedExtents->Get(id))
-                lastAllocatedExtent = id;
-        }
-
-        return IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + lastAllocatedExtent;
-    }
+    // extent_id_t IndexAllocationMapPage::GetLastAllocatedExtent() const
+    // {
+    //     const page_id_t globalAllocationMapPageId = DatabaseEngine::Database::GetGamAssociatedPage(this->header.pageId);
+    //
+    //     extent_id_t lastAllocatedExtent = 0;
+    //     for (extent_id_t id = 0; id < this->ownedExtents->GetSize(); id++)
+    //     {
+    //         if (this->ownedExtents->Get(id))
+    //             lastAllocatedExtent = id;
+    //     }
+    //
+    //     return IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId) + lastAllocatedExtent;
+    // }
 
     void IndexAllocationMapPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet,fstream *filePtr)
     {

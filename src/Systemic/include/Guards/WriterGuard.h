@@ -19,6 +19,9 @@ namespace MultiThreading {
 
       void SetMutex(ReadWriteMutex* mtx);
       static WriterGuard Promote(ReadWriteMutex* mtx, ReaderGuard& readGuard);
+      static WriterGuard TryLock(ReadWriteMutex* mtx, bool& isSuccessful);
+
+      void DisableMutex();
 
       void Release()const;
   };

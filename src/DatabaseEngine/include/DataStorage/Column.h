@@ -27,11 +27,6 @@ namespace DatabaseEngine::StorageTypes
         ColumnHeader header;
         IdentityManager identityManager;
 
-        MultiThreading::ReadWriteMutex statisticsLatch;
-        Headers::ColumnStatistics statistics;
-
-        std::vector<Headers::ColumnHistograms> histograms;
-
         std::string name;
         const Table *table;
         bool allowNulls;
@@ -96,12 +91,6 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] const Headers::DefaultValuesHeader &GetDefaultValue() const;
 
         void SetIsOverflowed(const bool &isOverflow);
-
-        void SetColumnStatistics(const Headers::ColumnStatistics& stats);
-
-        void SetHistograms(std::vector<Headers::ColumnHistograms>& otherHistograms);
-
-        void UpdateColumnStatistics();
 
         [[nodiscard]] bool GenerateIdentityValue(int64_t& value);
 

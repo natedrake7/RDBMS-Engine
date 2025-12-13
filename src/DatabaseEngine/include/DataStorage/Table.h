@@ -72,9 +72,6 @@ namespace DatabaseEngine::StorageTypes
     {
         TableHeader header;
 
-        mutable MultiThreading::ReadWriteMutex statisticsLatch;
-        Headers::TableStatistics statistics;
-
         std::vector<Column *> columns;
         DatabaseEngine::Database *database;
 
@@ -97,12 +94,19 @@ namespace DatabaseEngine::StorageTypes
             void InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
             void RecursiveInsertToLargePage(Row *&row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::LargeDataObject **previousDataObject);
 
-            static void CheckAndInsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
+            static void InsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex);
             static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);
 
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetIndexFromDisk(const page_id_t& indexPageId) const;
+
+            [[nodiscard]] std::tuple<Row*, Errors::RuntimeStatus> BatchCreateRow(
+              const transaction_id_t& transactionId,
+              const vector<Value>& inputData,
+              const std::vector<column_index_t> &columnIndices,
+              Logging::CheckPoint* checkPoint
+            )const;
 
             [[nodiscard]] std::tuple<Row*, Errors::RuntimeStatus> CreateRow(
                 const transaction_id_t& transactionId,
@@ -139,8 +143,6 @@ namespace DatabaseEngine::StorageTypes
 
             void RemoveColumnByHeap(const column_index_t& index)const;
 
-            void UpdateTableStatisticsFromRowInsert(const Row* row);
-
         public:
             Table(
               const table_id_t &tableId,
@@ -162,6 +164,12 @@ namespace DatabaseEngine::StorageTypes
                 const int& ordinalPosition);
 
             ~Table();
+
+            Errors::RuntimeStatus BatchInsert(
+                const ExecutionProperties& properties,
+                const std::vector<QueryResult>& input,
+                const std::vector<column_index_t>& columnIndices
+            );
 
             Errors::RuntimeStatus InsertRow(const ExecutionProperties& properties, const vector<Value> &inputData);
 
@@ -388,10 +396,6 @@ namespace DatabaseEngine::StorageTypes
             void GetIdentityColumnById(const int32_t& columnId)const;
 
             void GetIndexes();
-
-            void RetrieveStatistics();
-
-            [[nodiscard]] Headers::TableStatistics GetStatistics() const;
 
             void UpdateMasterDatabase() const;
 

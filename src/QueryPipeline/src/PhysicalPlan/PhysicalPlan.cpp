@@ -11,11 +11,13 @@
 namespace QueryPipeline::PhysicalPlan {
   ExecutionResult::ExecutionResult(){
     this->code = Errors::RuntimeError::Ok;
+    this->canFetchMore = false;
   }
 
   ExecutionResult::ExecutionResult(const Errors::RuntimeError &code, const std::string &message) {
     this->code = code;
     this->message = message;
+    this->canFetchMore = false;
   }
 
   ExecutionResult::~ExecutionResult(){
@@ -167,6 +169,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     tablePtr->HeapScan(properties, &result->rows, this->state);
 
+    result->canFetchMore = this->state.canFetchMore;
     return result;
   }
 
@@ -192,6 +195,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     tablePtr->NonClusteredIndexScan(properties, &result->rows, 0, this->state, this->expression);
 
+    result->canFetchMore = this->state.canFetchMore;
     return result;
   }
 
@@ -378,19 +382,26 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   ExecutionResult* PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties)const{
-    auto* result = this->child->Execute(properties);
+    ExecutionResult* result = nullptr;
+    bool canFetchMore = true;
+    int rowCount = 0;
 
-    for (auto& row : result->results) {
-      const auto insertResult = tablePtr->InsertRow(properties, row.GetData(), this->columnsIndices);
+    while (canFetchMore) {
+      result = this->child->Execute(properties);
+
+      auto insertResult = tablePtr->BatchInsert(properties, result->results, this->columnsIndices);
 
       if (insertResult.code != Errors::RuntimeError::Ok) {
         result->message = insertResult.message;
         result->code = insertResult.code;
         return result;
       }
+
+      canFetchMore = result->canFetchMore;
+      rowCount += result->results.size();
     }
 
-    result->message = "Rows inserted: " + std::to_string(result->results.size());
+    result->message = "Rows inserted: " + std::to_string(rowCount);
     result->code = Errors::RuntimeError::Ok;
     return result;
   }
@@ -660,18 +671,6 @@ PhysicalInsert::PhysicalInsert(
 
       const auto columnStatsResult = this->catalog->InsertColumnStatisticsToMasterDb(properties, columnId);
 
-      //fixed 100 buckets for now
-      for (int i = 0;i < NUMBER_OF_HISTOGRAM_BUCKETS; i++) {
-        const auto histogramResult =
-            this->catalog->InsertColumnHistogramsToMasterDb(
-              properties,
-              columnId,
-              Value::Null(),
-              Value::Null(),
-              0
-            );
-      }
-
       columnIdsDict.Add(column->index, columnId);
 
       if (!column->defaultValue.IsNull() || column->defaultValue.GetSize() != 0) {
@@ -712,7 +711,6 @@ PhysicalInsert::PhysicalInsert(
     if (primaryKeyColumnIds.empty()) {
       tablePtr->GetColumnsHeaders();
       tablePtr->GetIdentityColumns();
-      tablePtr->RetrieveStatistics();
       return nullptr;
     }
 
@@ -759,7 +757,6 @@ PhysicalInsert::PhysicalInsert(
 
     tablePtr->GetColumnsHeaders();
     tablePtr->GetIdentityColumns();
-    tablePtr->RetrieveStatistics();
 
     return nullptr;
   }

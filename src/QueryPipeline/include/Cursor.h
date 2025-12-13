@@ -7,7 +7,7 @@ namespace QueryPipeline {
     PipelineConstants::cursor_id_t id;
     DatabaseEngine::ExecutionProperties properties;
 
-    bool hasMoreRows;
+    bool canFetchMore;
 
     PhysicalPlan::ExecutionNode* plan;
 
@@ -16,7 +16,7 @@ namespace QueryPipeline {
     ~Cursor();
 
     [[nodiscard]] PhysicalPlan::ExecutionResult* fetchNextBatch();
-    [[nodiscard]] const bool& hasMore()const;
+    [[nodiscard]] const bool& canFetch()const;
     [[nodiscard]] const DatabaseEngine::Snapshot& GetSnapshot()const;
     [[nodiscard]] const PipelineConstants::cursor_id_t& GetId()const;
   };

@@ -8,6 +8,7 @@
 #include "../include/LogicalPlan.h"
 #include "../../Server/include/Constants.h"
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
+#include "Managers/StatisticsManager.h"
 
 #include <iostream>
 #include <ranges>
@@ -723,6 +724,8 @@ namespace QueryPipeline::Statements {
 
     LogicalPlan* current = new LogicalTableScan(this->table, !this->HasJoins() ? this->where.expression : nullptr);
 
+    const auto tableStats = DatabaseEngine::StatisticsManager::Get().GetTableStatistics(this->table->tableId);
+
     //join re orders take place here
     std::vector<table_id_t> joinOrder;
     joinOrder.reserve(this->joins.size() + 1);
@@ -956,7 +959,6 @@ namespace QueryPipeline::Statements {
   bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
   Errors::ValidationStatus InsertStatement::ValidateSelectStatement(ParserValidationScope& validationScope)const{
-
     if (this->selectStatement == nullptr)
       return {};
 

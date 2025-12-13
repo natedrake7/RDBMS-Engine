@@ -4,6 +4,7 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include "../../DatabaseEngine/include/DataStorage/Block.h"
+#include "../../DatabaseEngine/include/Logger/WriteAheadLogger.h"
 #include "../../DatabaseEngine/include/Managers/TransactionManager.h"
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
 #include "../../Systemic/include/Guards/ReaderGuard.h"
@@ -94,6 +95,9 @@ namespace Network {
       this->CreateSystemUsers();
       return;
     }
+
+    const auto lastCheckpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
+    DatabaseEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
 
     for (const auto& role : this->systemCatalog->SelectRoles())
       const auto _ = this->roleManager.AddRole(role.name, new Security::Role(role));
@@ -239,7 +243,7 @@ namespace Network {
   DatabaseEngine::Database* Server::UseDatabase(const int32_t & databaseId, const bool& isServerInitialization){
     DatabaseEngine::Database *db = nullptr;
 
-    if (databaseId == 1)
+    if (databaseId == CATALOG_ID)
       return this->systemCatalog->GetDatabase();
 
     MultiThreading::ReaderGuard lock(&this->databasesLatch);
@@ -255,11 +259,6 @@ namespace Network {
 
     if (this->databases.TryGetValue(databaseId, db))
       return db;
-
-    // for (const auto& log : db->RecoverLogs()) {
-    //   std::cout << log << std::endl;
-    // }
-    // db->GetIdentityColumns();
 
     //master db id
 

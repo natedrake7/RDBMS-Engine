@@ -5,19 +5,19 @@ namespace QueryPipeline {
     const PipelineConstants::cursor_id_t& cursorId,
     const DatabaseEngine::ExecutionProperties& properties,
     PhysicalPlan::ExecutionNode *plan
-  ) : id(cursorId), properties(properties), hasMoreRows(true), plan(plan) {}
+  ) : id(cursorId), properties(properties), canFetchMore(true), plan(plan) {}
 
   Cursor::~Cursor(){ delete this->plan; }
 
    PhysicalPlan::ExecutionResult* Cursor::fetchNextBatch(){
     auto* result = this->plan->Execute(this->properties);
 
-    this->hasMoreRows = result != nullptr && result->rows.size() == properties.batchSize;
+    this->canFetchMore = result->canFetchMore;
 
     return result;
   }
 
-  const bool & Cursor::hasMore() const{ return this->hasMoreRows; }
+  const bool & Cursor::canFetch() const{ return this->canFetchMore; }
 
   const DatabaseEngine::Snapshot& Cursor::GetSnapshot() const{ return this->properties.snapshot; }
 

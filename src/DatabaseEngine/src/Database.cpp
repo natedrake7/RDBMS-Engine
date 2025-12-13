@@ -260,7 +260,7 @@ namespace DatabaseEngine
         const transaction_id_t& transactionId,
         const table_id_t& tableOrdinal
     ) {
-        auto& logger =  Logging::WriteAheadLogger::Get();
+        static auto& logger = Logging::WriteAheadLogger::Get();
 
         const auto logEntry = logger.CreateLogEntry(
             transactionId,
@@ -309,13 +309,11 @@ namespace DatabaseEngine
         table->GetIdentityColumns();
         table->GetIndexes();
         table->GetDefaultValuesHeaders();
-        table->RetrieveStatistics();
 
         this->tables.push_back(table);
     }
 
-    void Database::CreateTable(const Headers::sysTable &sysHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey, const int& ordinalPosition)
-    {
+    void Database::CreateTable(const Headers::sysTable &sysHeader, const TableHeader &tableHeader, const Headers::Index& primaryKey, const int& ordinalPosition){
         this->tables.push_back(new Table(sysHeader, tableHeader, primaryKey, this, ordinalPosition));
     }
 
@@ -583,8 +581,7 @@ namespace DatabaseEngine
 
         this->AllocateNewExtent(lowerLimit, newPageId, newExtentId, tableOrdinalPosition);
 
-        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++)
-        {
+        for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
             auto indexPage = StorageManager::Get().CreateIndexPage(this->filename, pageId);
             indexPage->SetTreeId(treeId);
 

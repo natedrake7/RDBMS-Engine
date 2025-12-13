@@ -28,15 +28,14 @@ namespace Pages {
 
     extent_id_t GlobalAllocationMapPage::AllocateExtent()
     {
-        for (extent_id_t extentId = this->lastAllocatedExtentId; extentId < this->extentsMap->GetSize(); extentId++)
-        {
+        for (extent_id_t extentId = this->lastAllocatedExtentId; extentId < this->extentsMap->GetSize(); extentId++){
             if (this->extentsMap->Get(extentId))
             {
                 this->lastAllocatedExtentId = extentId;
                 this->extentsMap->Set(extentId, false);
             
                 this->isDirty = true;
-                return extentId + (this->header.pageId - 2) * GAM_PAGE_SIZE;
+                return extentId + (this->header.pageId - 2) * Constants::GAM_PAGE_SIZE;
             }
         }
 

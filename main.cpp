@@ -77,6 +77,8 @@
 //store or available values by operation type and by operation prededence(on each subquery) find
 //the 2 or 1 values that matter(range query should have 1 min 1 max if equality exists it has precedence)
 
+//implement clean bulk insert functionality
+
 std::atomic<bool> serverRunning{false};
 
 void shutdownClient(int signal) {
@@ -178,7 +180,7 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
     bool hasError = false;
 
     for (auto* cursor : parserResult.cursors) {
-        while (cursor->hasMore()) {
+        while (cursor->canFetch()) {
             auto batchResult = QueryPipeline::Parser::Execute(cursor);
 
             if (batchResult.status.hasError) {

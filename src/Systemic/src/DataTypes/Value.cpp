@@ -320,6 +320,10 @@ Value Value::EqualsIgnoreOrdinalCase(const Value &lhs, const Value &rhs){
     );
 }
 
+int64_t Value::Hash() const {
+    return static_cast<int64_t>(0);
+}
+
 bool Value::TryParseAsBoolFromInt(bool& result)const{
     const auto intData = this->GetBigInt();
 

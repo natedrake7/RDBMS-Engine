@@ -7,6 +7,8 @@
 #include "../include/DataStorage/Table.h"
 #include "../include/BufferPool/StorageManager.h"
 #include "../include/DataStorage/Block.h"
+#include "Guards/ReaderGuard.h"
+#include "Guards/WriterGuard.h"
 
 using namespace Pages;
 using namespace DatabaseEngine::StorageTypes;
@@ -58,6 +60,8 @@ namespace DatabaseEngine {
         if(indexPageId == INVALID_PAGE_ID)
         {
             auto newIndexPage = this->CreateIndexPage(table, tableHeader.ordinalPosition, indexId);
+
+            MultiThreading::WriterGuard indexPageLock(&newIndexPage->GetLatch());
             
             newIndexPage->SetTreeType(isNonClusteredIndex 
                                     ? TreeType::NonClustered 
@@ -71,38 +75,53 @@ namespace DatabaseEngine {
             tableHeader.indexAllocationMapPageId,
             table
         );
-        
-        vector<extent_id_t> allocatedExtents;
-        indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents);
 
-        for(const auto& extentId: allocatedExtents)
-        {
-            const page_id_t firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+        std::vector<extent_id_t> allocatedExtents;
+        indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentIdByPageId(indexPageId));
 
-            for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++)
-            {
-                const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextIndexPageId);
+        for(const auto& extentId: allocatedExtents){
+            const auto firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId);
 
-                if (pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
-                    continue;
+            for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++){
+                {
+                    const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextIndexPageId);
 
-                //page is free
-                if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
-                    continue;
+                    MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage->GetLatch());
+
+                    if (pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
+                        continue;
+
+                    //page is free
+                    if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
+                        continue;
+                }
 
                 auto indexPage = StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, table);
 
-                if(!indexPage->isEmpty())
+                if (!indexPage.IsValid())
                     continue;
 
-                indexPage->SetTreeType(isNonClusteredIndex 
-                                        ? TreeType::NonClustered 
+                bool successfulLock = false;
+                auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage->GetLatch(), successfulLock);
+
+                if (!successfulLock)
+                    continue;
+
+                if(!successfulLock || !indexPage->isEmpty())
+                    continue;
+
+                auto writerLock = MultiThreading::WriterGuard::Promote(&indexPage->GetLatch(), readerGuard);
+
+                indexPage->SetTreeType(isNonClusteredIndex
+                                        ? TreeType::NonClustered
                                         : TreeType::Clustered);
                 return indexPage;
             }
         }
 
         auto newIndexPage = this->CreateIndexPage(table, tableHeader.ordinalPosition, indexId);
+
+        MultiThreading::WriterGuard indexPageLock(&newIndexPage->GetLatch());
             
         newIndexPage->SetTreeType(isNonClusteredIndex 
                                 ? TreeType::NonClustered 

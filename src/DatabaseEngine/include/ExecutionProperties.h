@@ -10,8 +10,11 @@ namespace DatabaseEngine {
       extent_id_t extentId;
       Headers::RowIdentifier lastFetchedRowId;
 
+      bool canFetchMore;
+
       ScanState(){
         this->extentId = 0;
+        this->canFetchMore = false;
       }
 
       [[nodiscard]] int GetNextKeyIndex()const {
@@ -31,9 +34,12 @@ namespace DatabaseEngine {
     page_id_t pageId;
     int32_t lastFetchedKeyIndex;
 
+    bool canFetchMore;
+
     IndexState() {
       this->pageId = INVALID_PAGE_ID;
       this->lastFetchedKeyIndex = INVALID_PAGE_INDEX_ID;
+      this->canFetchMore = false;
     }
 
     [[nodiscard]] int GetNextKeyIndex()const {

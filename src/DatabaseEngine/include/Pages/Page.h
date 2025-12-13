@@ -11,11 +11,7 @@ namespace Expressions {
     class Expression;
 }
 
-using namespace std;
-using namespace Constants;
-
-namespace DatabaseEngine::StorageTypes
-{
+namespace DatabaseEngine::StorageTypes{
     class Column;
     class Block;
     class Row;
@@ -39,14 +35,13 @@ namespace Pages
         page_id_t pageId;
         page_size_t pageSize;
         page_size_t bytesLeft;
-        PageType pageType;
+        Constants::PageType pageType;
 
         PageHeader();
         ~PageHeader();
     };
 
-    class Page
-    {
+    class Page{
     protected:
 
         bool isDirty;
@@ -114,7 +109,7 @@ namespace Pages
             const int32_t& startingPosition = 0) const;
 
         [[nodiscard]] page_size_t GetPageSize() const;
-        [[nodiscard]] const PageType &GetPageType() const;
+        [[nodiscard]] const Constants::PageType &GetPageType() const;
         void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
         [[nodiscard]] const DatabaseEngine::StorageTypes::Row* GetRow(const int& indexPosition)const;
 

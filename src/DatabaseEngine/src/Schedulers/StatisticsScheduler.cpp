@@ -4,12 +4,14 @@
 #include "BufferPool/StorageManager.h"
 #include "DataStructures/Dictionary.h"
 #include "Guards/ReaderGuard.h"
+#include "Managers/StatisticsManager.h"
 #include "Pages/IndexAllocationMapPage.h"
 #include "Pages/PageFreeSpacePage.h"
 #include "SystemDatabases/SystemCatalog.h"
 
 #include <cmath>
 #include <cstdint>
+#include <iostream>
 
 namespace DatabaseEngine {
 
@@ -18,13 +20,36 @@ namespace DatabaseEngine {
    return this->databasesDictionary->ToVector();
  }
 
-  void StatisticsScheduler::UpdateDatabaseStatistics(const Database *database) {
-   for (const auto& table : database->GetTables())
+ int StatisticsScheduler::EstimateRowsPerPage(const int& totalRows, const int& allocatedPagesPerExtent) {
+  return (allocatedPagesPerExtent == 0)
+    ? 0
+    : static_cast<int>(std::ceil(static_cast<float>(totalRows) / static_cast<float>(allocatedPagesPerExtent)));
+ }
+
+ int StatisticsScheduler::EstimateAllocatedPagesPerExtent(const int& allocatedPagesPerExtent, const int& numberOfExtents) {
+  return (numberOfExtents == 0)
+     ? 0
+     : static_cast<int>(std::ceil(static_cast<float>(allocatedPagesPerExtent) / static_cast<float>(numberOfExtents)));
+ }
+
+  void StatisticsScheduler::UpdateDatabaseStatistics(const Database *database)const {
+   for (const auto& table : database->GetTables()) {
+     const auto cacheStats = this->statsManager->GetTableStatistics(table->GetTableId());
+
+     auto currentTime = DataTypes::DateTime::Now();
+     currentTime.AddMinutes(-10); // Update stats if older than 10 minutes test for production grade this should be dynamic
+
+     if (currentTime <= cacheStats.lastModified)
+      continue;
+
+     std::cout << "Updating statistics for table: " << cacheStats.tableId << std::endl;
+
      this->UpdateTableStatistics(table, database->GetSystemFilename(), database->GetFileName());
+   }
  }
 
  void StatisticsScheduler::UpdateTableStatistics(
-  StorageTypes::Table *table,
+  const StorageTypes::Table *table,
   const std::string& systemFilename,
   const std::string& filename
  )const {
@@ -100,19 +125,23 @@ namespace DatabaseEngine {
    }
   }
 
-  averageRowsPerPage = (allocatedPagesPerExtent == 0)
-     ? 0
-     : std::ceil(averageRowsPerPage / static_cast<float>(allocatedPagesPerExtent));
+  averageRowsPerPage = StatisticsScheduler::EstimateRowsPerPage(averageRowsPerPage, allocatedPagesPerExtent);
+  const auto numberOfExtents = static_cast<int>(extents.size());
 
-  const int averageAllocatedPagesPerExtent = (extents.size() == 0)
-     ? 0
-     : std::ceil(allocatedPagesPerExtent / static_cast<float>(extents.size()));
+  const auto averageAllocatedPagesPerExtent = StatisticsScheduler::EstimateAllocatedPagesPerExtent(
+   allocatedPagesPerExtent,
+   numberOfExtents
+  );
 
-  tableStatistics.averageRowSize = std::ceil(tableStatistics.averageRowSize / static_cast<float>(sampleRowCount));
-  tableStatistics.rowCount = extents.size() * averageAllocatedPagesPerExtent * averageRowsPerPage;
+  tableStatistics.averageRowSize = std::ceil(
+   static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(sampleRowCount)
+  );
+  tableStatistics.rowCount = numberOfExtents * averageAllocatedPagesPerExtent * averageRowsPerPage;
 
+  tableStatistics.lastModified = DataTypes::DateTime::Now();
+  //Update catalog
+  this->UpdateCache(tableStatistics, columnStatistics);
   this->UpdateCatalogStatistics(tableStatistics, columnStatistics);
-  table->RetrieveStatistics();
  }
 
  void StatisticsScheduler::UpdateColumnStatistics(
@@ -158,6 +187,13 @@ namespace DatabaseEngine {
   }
  }
 
+ void StatisticsScheduler::UpdateCache(
+  const Headers::TableStatistics &tableStatistics,
+  const std::vector<Headers::ColumnStatistics> &columnStatistics
+ ) const {
+  this->statsManager->Update(tableStatistics, columnStatistics);
+ }
+
  StatisticsScheduler::StatisticsScheduler(
    const Dictionary<int32_t, Database *> &databasesDictionary,
    MultiThreading::ReadWriteMutex &latch
@@ -165,13 +201,11 @@ namespace DatabaseEngine {
     this->databasesDictionary = &databasesDictionary;
     this->latch = &latch;
     this->catalog = &SystemCatalog::Get();
+    this->statsManager = &StatisticsManager::Get();
  }
 
- void StatisticsScheduler::UpdateStatistics() {
-   const auto databases = this->GetDatabases();
-
-
-   for (const auto& database : databases)
+ void StatisticsScheduler::UpdateStatistics()const {
+   for (const auto& database : this->GetDatabases())
      this->UpdateDatabaseStatistics(database);
  }
 
@@ -180,19 +214,14 @@ namespace DatabaseEngine {
   const Dictionary<int32_t, Database*> &databasesDictionary,
   MultiThreading::ReadWriteMutex &latch
   ){
-   std::this_thread::sleep_for(10000ms);
+   const StatisticsScheduler scheduler(databasesDictionary, latch);
 
-   StatisticsScheduler scheduler(databasesDictionary, latch);
-
+   std::cout << "Statistics Scheduler started." << std::endl;
 
    while (isServerRunning) {
-    scheduler.UpdateStatistics();
-    break;
-
     std::this_thread::sleep_for(10000ms);
+    scheduler.UpdateStatistics();
    }
-
-  //select * from MoviesDb.dbo.Actors
  }
 
 

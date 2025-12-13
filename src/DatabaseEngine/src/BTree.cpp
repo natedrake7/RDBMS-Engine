@@ -404,8 +404,8 @@ namespace Indexing
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
-        while (currentNode.Get())
-        {
+        state.canFetchMore = false;
+        while (currentNode.Get()){
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
 
             const auto* rows = currentNode->GetDataRowsNoLock();
@@ -422,12 +422,15 @@ namespace Indexing
                     state.pageId = currentNode->GetPageId();
                     state.lastFetchedKeyIndex = i;
 
+                    state.canFetchMore = true;
                     return;
                 }
             }
 
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID) {
+                state.canFetchMore = false;
                 return;
+            }
 
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
@@ -448,6 +451,7 @@ namespace Indexing
 
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
+        state.canFetchMore = false;
         while (currentNode.Get())
         {
             MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
@@ -469,13 +473,15 @@ namespace Indexing
                 if (result->size() == properties.batchSize) {
                     state.lastFetchedKeyIndex = i;
                     state.pageId = currentNode->GetPageId();
+                    state.canFetchMore = true;
 
                     return;
                 }
             }
 
             if(currentNode->GetNextPage() == INVALID_PAGE_ID) {
-              return;
+                state.canFetchMore = false;
+                return;
             }
 
             currentNode = this->GetNode(currentNode->GetNextPage());

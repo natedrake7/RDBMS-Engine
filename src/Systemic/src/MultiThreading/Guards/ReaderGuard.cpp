@@ -3,6 +3,10 @@
 
 namespace MultiThreading {
 
+ReaderGuard::ReaderGuard(){
+  this->mutex = nullptr;
+}
+
 ReaderGuard::ReaderGuard(ReadWriteMutex* mtx){
   this->mutex = mtx;
   this->mutex->SharedLock();
@@ -13,6 +17,40 @@ ReaderGuard::~ReaderGuard(){
     return;
 
   this->mutex->SharedUnlock();
+}
+
+ReaderGuard & ReaderGuard::operator=(ReaderGuard &&other) noexcept{
+  if (this == &other)
+    return *this;
+
+  this->mutex = other.mutex;
+  other.mutex = nullptr;
+
+  return *this;
+}
+
+ReaderGuard::ReaderGuard(ReaderGuard &&other) noexcept{
+  if (this == &other)
+    return;
+
+  this->mutex = other.mutex;
+  other.mutex = nullptr;
+}
+
+ReaderGuard ReaderGuard::TryLock(ReadWriteMutex *mtx, bool& isSuccessful){
+  auto guard = ReaderGuard();
+
+  guard.SetMutex(mtx);
+
+  isSuccessful = mtx->SharedTryLock();
+  if (!isSuccessful)
+    guard.DisableMutex();
+
+  return guard;
+}
+
+void ReaderGuard::SetMutex(ReadWriteMutex *mtx){
+  this->mutex = mtx;
 }
 
 void ReaderGuard::Release()const{

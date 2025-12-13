@@ -132,4 +132,6 @@ class Value {
 
         [[nodiscard]] bool ParseAsBoolFromString()const;
         [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);
+
+        [[nodiscard]] int64_t Hash()const;
 };

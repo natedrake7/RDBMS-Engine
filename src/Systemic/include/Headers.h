@@ -91,6 +91,8 @@ namespace Headers {
 
     int64_t rowCount = 0;
     int32_t averageRowSize = 0;
+
+    DataTypes::DateTime lastModified = DataTypes::DateTime::Now();
   };
 
   struct ColumnStatistics {

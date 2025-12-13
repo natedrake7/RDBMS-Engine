@@ -54,6 +54,22 @@ namespace MultiThreading {
     return guard;
   }
 
+  WriterGuard WriterGuard::TryLock(ReadWriteMutex *mtx, bool& isSuccessful) {
+    auto guard = WriterGuard();
+
+    guard.SetMutex(mtx);
+
+    isSuccessful = mtx->UniqueTryLock();
+    if (!isSuccessful)
+      guard.DisableMutex();
+
+    return guard;
+  }
+
+  void WriterGuard::DisableMutex() {
+    this->mutex = nullptr;
+  }
+
   void WriterGuard::Release()const {
     this->mutex->UniqueUnlock();
   }
