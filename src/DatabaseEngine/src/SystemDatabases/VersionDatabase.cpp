@@ -171,7 +171,7 @@ namespace DatabaseEngine {
   ) {
    auto* oldRow = new StorageTypes::Row(row);
 
-   auto page = this->GetLastUndoPage(table, row->GetTotalRowSize());
+   auto page = this->GetLastUndoPage(table, row->GetTotalSize());
 
    MultiThreading::WriterGuard lock(&page->GetLatch());
 
@@ -213,7 +213,7 @@ namespace DatabaseEngine {
     const auto extents = this->GetAllocatedExtents(startingExtentId);
 
     for (const auto &extentId : extents){
-      const page_id_t firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+      const auto firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId * EXTENT_SIZE);
 
       bool isExtentEmpty = true;
       for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++){
@@ -230,12 +230,13 @@ namespace DatabaseEngine {
 
         MultiThreading::WriterGuard pageLatch(&page->GetLatch());
 
-        for (int i = 0; i < page->GetPageSize(); i++) {
-          const auto* row = page->GetRow(i);
+        const auto* rows = page->GetDataRowsNoLock();
 
-          const auto& versionHeader = row->GetVersionHeader();
+        for (int i = 0; i < rows->size(); i++) {
+          const auto& versionHeader = rows->at(i)->GetVersionHeader();
 
-          if (versionHeader.createdTransactionId <= transactionId) {
+          if (transactionId == FIRST_TRANSACTION_ID
+            || versionHeader.createdTransactionId <= transactionId) {
             page->Delete(i);
             i--;
           }

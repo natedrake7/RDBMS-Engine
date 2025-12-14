@@ -297,7 +297,7 @@ namespace DatabaseEngine {
         .lastModifiedBy = data[static_cast<column_index_t>(SysDatabases::LastModifiedBy)]->GetString(),
         .version = data[static_cast<column_index_t>(SysDatabases::Version)]->GetInt(),
         .isDeleted = data[static_cast<column_index_t>(SysDatabases::IsDeleted)]->GetBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysDatabases::DeletedAt)]->GetBlockData() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysDatabases::DeletedAt)]->GetRawData() == nullptr
                   ? DataTypes::DateTime()
                   : data[static_cast<column_index_t>(SysDatabases::DeletedAt)]->GetDateTime(),
         },
@@ -344,10 +344,10 @@ namespace DatabaseEngine {
           .name = data[static_cast<column_index_t>(SysColumns::Name)]->GetString(),
           .dataType = static_cast<uint8_t>(data[static_cast<column_index_t>(SysColumns::DataType)]->GetTinyInt()),
           .recordSize = data[static_cast<column_index_t>(SysColumns::RecordSize)]->GetInt(),
-          .precision = data[static_cast<column_index_t>(SysColumns::Precision)]->GetBlockData() == nullptr
+          .precision = data[static_cast<column_index_t>(SysColumns::Precision)]->GetRawData() == nullptr
               ? INVALID_DECIMAL_PRECISION
               : data[static_cast<column_index_t>(SysColumns::Precision)]->GetTinyInt(),
-          .scale = data[static_cast<column_index_t>(SysColumns::Scale)]->GetBlockData() == nullptr
+          .scale = data[static_cast<column_index_t>(SysColumns::Scale)]->GetRawData() == nullptr
               ? INVALID_DECIMAL_SCALE
               : data[static_cast<column_index_t>(SysColumns::Scale)]->GetTinyInt(),
           .isNullable = data[static_cast<column_index_t>(SysColumns::IsNullable)]->GetBool(),
@@ -359,7 +359,7 @@ namespace DatabaseEngine {
             .lastModifiedBy = data[static_cast<column_index_t>(SysColumns::LastModifiedBy)]->GetString(),
             .version = data[static_cast<column_index_t>(SysColumns::Version)]->GetInt(),
             .isDeleted = data[static_cast<column_index_t>(SysColumns::IsDeleted)]->GetBool(),
-            .deletedAt = data[static_cast<column_index_t>(SysColumns::DeletedAt)]->GetBlockData() == nullptr
+            .deletedAt = data[static_cast<column_index_t>(SysColumns::DeletedAt)]->GetRawData() == nullptr
                       ? DataTypes::DateTime::Now()
                       : data[static_cast<column_index_t>(SysColumns::DeletedAt)]->GetDateTime(),
             }
@@ -381,7 +381,7 @@ namespace DatabaseEngine {
           .lastModifiedBy = data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)]->GetString(),
           .version = data[static_cast<column_index_t>(SysIndexes::Version)]->GetInt(),
           .isDeleted = data[static_cast<column_index_t>(SysIndexes::IsDeleted)]->GetBool(),
-          .deletedAt = data[static_cast<column_index_t>(SysIndexes::DeletedAt)]->GetBlockData() == nullptr
+          .deletedAt = data[static_cast<column_index_t>(SysIndexes::DeletedAt)]->GetRawData() == nullptr
                 ? DataTypes::DateTime()
                 : data[static_cast<column_index_t>(SysIndexes::DeletedAt)]->GetDateTime()
           },
@@ -399,7 +399,7 @@ namespace DatabaseEngine {
       .additionalInfo{
         .version = data[static_cast<column_index_t>(SysIndexColumns::Version)]->GetInt(),
         .isDeleted = data[static_cast<column_index_t>(SysIndexColumns::IsDeleted)]->GetBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)]->GetBlockData() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)]->GetRawData() == nullptr
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)]->GetDateTime()
       }
@@ -420,7 +420,7 @@ namespace DatabaseEngine {
       .additionalInfo{
         .version = data[static_cast<column_index_t>(SysIdentityColumns::Version)]->GetInt(),
         .isDeleted = data[static_cast<column_index_t>(SysIdentityColumns::IsDeleted)]->GetBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)]->GetBlockData() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)]->GetRawData() == nullptr
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)]->GetDateTime()
       }
@@ -449,7 +449,7 @@ namespace DatabaseEngine {
         .lastModifiedBy = data[static_cast<column_index_t>(SysConstraints::LastModifiedBy)]->GetString(),
         .version = data[static_cast<column_index_t>(SysConstraints::Version)]->GetInt(),
         .isDeleted = data[static_cast<column_index_t>(SysConstraints::IsDeleted)]->GetBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysConstraints::DeletedAt)]->GetBlockData() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysConstraints::DeletedAt)]->GetRawData() == nullptr
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysConstraints::DeletedAt)]->GetDateTime() //might crash, is nullable
       },
@@ -466,7 +466,7 @@ namespace DatabaseEngine {
       .additionalInfo{
         .version = data[static_cast<column_index_t>(SysConstraintColumns::Version)]->GetInt(),
         .isDeleted = data[static_cast<column_index_t>(SysConstraintColumns::IsDeleted)]->GetBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)]->GetBlockData() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)]->GetRawData() == nullptr
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)]->GetDateTime()
       },
@@ -482,7 +482,7 @@ namespace DatabaseEngine {
       .additionalInfo{
         .version = data[static_cast<column_index_t>(SysDefaultValues::Version)]->GetInt(),
         .isDeleted = data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)]->GetBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)]->GetBlockData() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)]->GetRawData() == nullptr
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)]->GetDateTime()
       },
@@ -492,10 +492,12 @@ namespace DatabaseEngine {
   Headers::TableStatistics SystemCatalog::ToTableStatistics(const StorageTypes::Row *row) {
     const auto& data = row->GetData();
 
-    return Headers::TableStatistics{
-      .tableId = data[static_cast<column_index_t>(SysTableStats::TableId)]->GetInt(),
-      .rowCount = data[static_cast<column_index_t>(SysTableStats::RowCount)]->GetBigInt(),
-      .averageRowSize = data[static_cast<column_index_t>(SysTableStats::AvgRowSize)]->GetInt()
+    return {
+      data[static_cast<column_index_t>(SysTableStats::TableId)]->GetInt(),
+      data[static_cast<column_index_t>(SysTableStats::RowCount)]->GetBigInt(),
+      data[static_cast<column_index_t>(SysTableStats::AvgRowSize)]->GetInt(),
+      data[static_cast<column_index_t>(SysTableStats::PageCount)]->GetInt(),
+      data[static_cast<column_index_t>(SysTableStats::LastUpdatedAt)]->GetDateTime()
     };
   }
 
@@ -505,8 +507,8 @@ namespace DatabaseEngine {
     return Headers::ColumnStatistics{
       .columnId = data[static_cast<column_index_t>(SysColumnStats::ColumnId)]->GetInt(),
       .distinctCount = data[static_cast<column_index_t>(SysColumnStats::DistinctCount)]->GetBigInt(),
-      .min = Value(data[static_cast<column_index_t>(SysColumnStats::MinimumValue)]->GetBlockData(), data[static_cast<column_index_t>(SysColumnStats::MinimumValue)]->GetBlockSize(), columnType),
-      .max = Value(data[static_cast<column_index_t>(SysColumnStats::MaximumValue)]->GetBlockData(), data[static_cast<column_index_t>(SysColumnStats::MaximumValue)]->GetBlockSize(), columnType),
+      .min = Value(data[static_cast<column_index_t>(SysColumnStats::MinimumValue)]->GetRawData(), data[static_cast<column_index_t>(SysColumnStats::MinimumValue)]->GetSize(), columnType),
+      .max = Value(data[static_cast<column_index_t>(SysColumnStats::MaximumValue)]->GetRawData(), data[static_cast<column_index_t>(SysColumnStats::MaximumValue)]->GetSize(), columnType),
       .nullCount = data[static_cast<column_index_t>(SysColumnStats::NullCount)]->GetBigInt()
     };
   }
@@ -517,8 +519,8 @@ namespace DatabaseEngine {
     return Headers::ColumnHistograms{
       .columnId = data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)]->GetInt(),
       .histogramId = data[static_cast<column_index_t>(SysColumnHistograms::HistogramId)]->GetInt(),
-      .rangeStart = Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetBlockData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetBlockSize(), columnType),
-      .rangeEnd = Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetBlockData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetBlockSize(), columnType),
+      .rangeStart = Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetRawData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetSize(), columnType),
+      .rangeEnd = Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetRawData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetSize(), columnType),
       .rowCount = data[static_cast<column_index_t>(SysColumnHistograms::RowCount)]->GetInt(),
       .distinctCount = data[static_cast<column_index_t>(SysColumnHistograms::DistinctCount)]->GetInt(),
     };
@@ -546,6 +548,8 @@ namespace DatabaseEngine {
  }
 
   void SystemCatalog::Shutdown(){
+   this->masterDb->UpdateMasterDatabase();
+
    delete this->masterDb;
    this->masterDb = nullptr;
  }
@@ -1458,7 +1462,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
 
       auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0]->GetInt());
 
-      const auto indexId =(data[static_cast<column_index_t>(SysConstraints::IndexId)]->GetBlockData() == nullptr)
+      const auto indexId =(data[static_cast<column_index_t>(SysConstraints::IndexId)]->GetRawData() == nullptr)
               ? -1
               : data[static_cast<column_index_t>(SysConstraints::IndexId)]->GetInt();
 
@@ -1758,41 +1762,33 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
       Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue))
     };
 
-    auto* leftColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysIdentityColumns::TableId));
-    auto* leftLiteraValue = new Expressions::ConstantExpression(Value(tableId, static_cast<column_index_t>(SysIdentityColumns::TableId)));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnOperation, leftLiteraValue, Expressions::BinaryOperator::Equal);
-
-    auto* rightColumnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysIdentityColumns::ColumnId));
-    auto* rightLiteraValue = new Expressions::ConstantExpression(Value(columnId, static_cast<column_index_t>(SysIdentityColumns::ColumnId)));
-
-    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnOperation, rightLiteraValue, Expressions::BinaryOperator::Equal);
-
-    const Expressions::LogicalExpression logicalExpr(leftBinaryExpr, rightBinaryExpr, Expressions::LogicalType::And);
-
-    table->ClusteredIndexScanUpdate(this->baseProperties, &logicalExpr, updates);
+    const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
   }
 
 void SystemCatalog::UpdateTableStatisticsById(
     const int32_t &tableId,
     const int64_t& rowCount,
-    const int32_t& rowSize
+    const int32_t& rowSize,
+    const int32_t& pageCount
   ) const{
-    using namespace StorageTypes;
 
-    const std::vector<Value> updates = {
+    const std::vector updates = {
       Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
-      Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize))
+      Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
+      Value(pageCount, static_cast<column_index_t>(SysTableStats::PageCount)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
     };
 
-    Table* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
+    auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
 
-    auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTableStats::TableId));
-    auto* literaValue = new Expressions::ConstantExpression(Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literaValue, Expressions::BinaryOperator::Equal);
-
-    table->ClusteredIndexScanUpdate(this->baseProperties, &binaryExpr, updates);
+    const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
   }
 
   void SystemCatalog::UpdateColumnStatisticsById(
@@ -1802,23 +1798,19 @@ void SystemCatalog::UpdateTableStatisticsById(
     const Value& min,
     const Value& max
   ) const{
-    using namespace StorageTypes;
-
-    const std::vector<Value> updates = {
+    const std::vector updates = {
       Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
       Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount)),
       Value(std::string(reinterpret_cast<const char*>(min.GetRawData()), min.GetSize()), static_cast<column_index_t>(SysColumnStats::MinimumValue)),
       Value(std::string(reinterpret_cast<const char*>(max.GetRawData()), max.GetSize()), static_cast<column_index_t>(SysColumnStats::MaximumValue))
     };
 
-    Table* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
+    auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
 
-    auto* columnOperation = new Expressions::ColumnExpression(static_cast<column_index_t>(SysColumnStats::ColumnId));
-    auto* literalValue = new Expressions::ConstantExpression(Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)));
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    const Expressions::BinaryExpression binaryExpr(columnOperation, literalValue, Expressions::BinaryOperator::Equal);
-
-    table->ClusteredIndexScanUpdate(this->baseProperties, &binaryExpr, updates);
+    const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
   }
 
   Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
@@ -1829,7 +1821,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
+    return table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
   }
 
   Errors::RuntimeStatus SystemCatalog::UpdateUserById(
@@ -1850,6 +1842,6 @@ void SystemCatalog::UpdateTableStatisticsById(
    DataTypes::Indexing::Key key;
    key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int));
 
-   return table->ClusteredIndexSeekUpdate(this->baseProperties, nullptr, &key, &key, updates);
+   return table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
  }
 }

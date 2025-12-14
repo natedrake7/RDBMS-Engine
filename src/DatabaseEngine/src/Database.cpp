@@ -409,7 +409,7 @@ namespace DatabaseEngine
         uint16_t rowCount = 0;
         for (const auto &row : rows)
         {
-            row.PrintRow();
+            row.Print();
             rowCount++;
         }
 
@@ -421,7 +421,7 @@ namespace DatabaseEngine
         uint16_t rowCount = 0;
         for (const auto &row : rows)
         {
-            row->PrintRow();
+            row->Print();
             rowCount++;
         }
 

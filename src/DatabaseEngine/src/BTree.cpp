@@ -636,11 +636,6 @@ namespace Indexing
         if (this->indexPageId == INVALID_PAGE_ID)
             return;
 
-        HashSet<column_index_t> updatedColumns;
-
-        for(const auto& update : updates)
-          updatedColumns.Add(update.GetColumnIndex());
-
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
@@ -655,7 +650,7 @@ namespace Indexing
                 if(!value.GetBool())
                   continue;
 
-            const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
+            const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, false);
 
               if (result.code != Errors::RuntimeError::Ok)
                   return;
@@ -726,6 +721,50 @@ namespace Indexing
 
             for(auto* row: *currentNode->GetDataRowsNoLock()) {
                 const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
+
+                if (result.code != Errors::RuntimeError::Ok)
+                    return result;
+            }
+
+            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
+                return {};
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        return {};
+    }
+
+    Errors::RuntimeStatus BTree::IndexSeekUpdate(
+        const DatabaseEngine::ExecutionProperties &properties,
+        const DataTypes::Indexing::Key &key,
+        const std::vector<Value> &updates
+    ) const {
+        if (this->indexPageId == INVALID_PAGE_ID)
+            return {};
+
+        auto currentNode = this->SearchKey(key);
+
+        while (currentNode.Get()) {
+            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            for (int i = 0; i < keys->size(); i++) {
+                const auto &currentKey = keys->at(i);
+
+                if (key != *currentKey || key < *currentKey)
+                    continue;
+
+                const auto* rows = currentNode->GetDataRowsNoLock();
+
+                const auto result = this->table->HandleRowUpdate(
+                    currentNode.Get(),
+                    rows->at(i),
+                    properties,
+                    updates,
+                    false
+                );
 
                 if (result.code != Errors::RuntimeError::Ok)
                     return result;
@@ -818,73 +857,43 @@ namespace Indexing
             updatedColumns.Add(update.GetColumnIndex());
 
         auto currentNode = this->SearchKey(*minKey);
-        Pages::PageGuard<Pages::IndexPage> previousNode;
 
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-        while (true)
+        while (currentNode.Get())
         {
-            if (currentNode.Get() == nullptr)
-                break;
-
             MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
             const auto* keys = currentNode->GetKeysUnsafe();
 
-            if (previousNode.Get() && maxKey >= keys->at(0))
-            {
-                MultiThreading::WriterGuard previousNodeLock(&previousNode->GetLatch());
+            const auto* rows = currentNode->GetDataRowsNoLock();
 
-                const auto* previousKeys = previousNode->GetKeysUnsafe();
+              for (int i = 0; i < keys->size(); i++)
+              {
+                const auto &key = keys->at(i);
 
-                // Check if the last key in the previous node is within the range
-                if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
-                    const auto* previousRows = previousNode->GetDataRowsNoLock();
+                if (*minKey > *key)
+                    continue;
 
-                    const auto* row = previousRows->at(previousRows->size() - 1);
+                if (*maxKey < *key)
+                    break;
 
-                    context.row = row;
-                    const auto value = expression->Evaluate(context);
-                    if(value.GetBool()) {
-                        const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), properties, updates, updatedColumns, false);
+                  context.row = rows->at(i);
+                  const auto value = expression->Evaluate(context);
+                  if(!value.GetBool())
+                    continue;
 
-                        if (result.code != Errors::RuntimeError::Ok)
-                            return result;
-                    }
-                }
-            }
-            else if(maxKey < keys->at(0))
-               return {};
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, false);
 
-          const auto* rows = currentNode->GetDataRowsNoLock();
+                if (result.code != Errors::RuntimeError::Ok)
+                  return result;
 
-          for (int i = 0; i < keys->size(); i++)
-          {
-            const auto &key = keys->at(i);
-
-            if (*minKey > *key)
-                continue;
-
-            if (*maxKey < *key)
-                break;
-
-              context.row = rows->at(i);
-              const auto value = expression->Evaluate(context);
-              if(!value.GetBool())
-                continue;
-
-            const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, updatedColumns, false);
-
-            if (result.code != Errors::RuntimeError::Ok)
-              return result;
-
-//            if (maxKey < *key && !previousNode)
-//                return;
-          }
+    //            if (maxKey < *key && !previousNode)
+    //                return;
+              }
 
           if(currentNode->GetNextPage() == INVALID_PAGE_ID)
             return {};
 
-          previousNode = currentNode;
           currentNode = this->GetNode(currentNode->GetNextPage());
         }
 
@@ -895,46 +904,17 @@ namespace Indexing
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key *minKey,
         const DataTypes::Indexing::Key *maxKey,
-        const vector<Value> &updates
+        const std::vector<Value> &updates
     )const{
         if (this->indexPageId == INVALID_PAGE_ID)
             return {};
 
-        HashSet<column_index_t> updatedColumns;
-        for(const auto& update : updates)
-            updatedColumns.Add(update.GetColumnIndex());
-
         auto currentNode = this->SearchKey(*minKey);
-        Pages::PageGuard<Pages::IndexPage> previousNode;
 
         while (currentNode.Get()){
-            if (currentNode.Get() == nullptr)
-                break;
-
             MultiThreading::WriterGuard lock(&currentNode->GetLatch());
 
             const auto* keys = currentNode->GetKeysUnsafe();
-
-            if (previousNode.Get())
-            {
-                if (maxKey >= keys->at(0)) {
-                    MultiThreading::WriterGuard previousNodeLock(&previousNode->GetLatch());
-
-                    const auto* previousKeys = previousNode->GetKeysUnsafe();
-
-                    // Check if the last key in the previous node is within the range
-                    if (maxKey >= previousKeys->at(previousKeys->size() - 1)) {
-                        const auto* previousRows = previousNode->GetDataRowsNoLock();
-
-                        const auto result = this->table->HandleRowUpdate(previousNode.Get(), previousRows->at(previousRows->size() - 1), properties, updates, updatedColumns, false);
-
-                        if (result.code != Errors::RuntimeError::Ok)
-                            return result;
-                    }
-                }
-                else if(maxKey < keys->at(0))
-                    return {};
-            }
 
             const auto* rows = currentNode->GetDataRowsNoLock();
 
@@ -947,7 +927,7 @@ namespace Indexing
                 if (*maxKey < *key)
                     break;
 
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, updatedColumns, false);
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
                   return result;
@@ -956,7 +936,6 @@ namespace Indexing
             if(currentNode->GetNextPage() == INVALID_PAGE_ID)
                 return {};
 
-            previousNode = currentNode;
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
 

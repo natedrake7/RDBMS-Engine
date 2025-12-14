@@ -39,8 +39,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
     {
         case DataType::TinyInt:
         {
-            const auto& firstBlockData = *reinterpret_cast<const int8_t*>(firstBlock->GetBlockData());
-            const auto& secondBlockData = *reinterpret_cast<const int8_t*>(secondBlock->GetBlockData());
+            const auto& firstBlockData = *reinterpret_cast<const int8_t*>(firstBlock->GetRawData());
+            const auto& secondBlockData = *reinterpret_cast<const int8_t*>(secondBlock->GetRawData());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -48,8 +48,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::SmallInt:
         {
-            const auto& firstBlockData = *reinterpret_cast<const int16_t*>(firstBlock->GetBlockData());
-            const auto& secondBlockData = *reinterpret_cast<const int16_t*>(secondBlock->GetBlockData());
+            const auto& firstBlockData = *reinterpret_cast<const int16_t*>(firstBlock->GetRawData());
+            const auto& secondBlockData = *reinterpret_cast<const int16_t*>(secondBlock->GetRawData());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -57,8 +57,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::Int:
         {
-            const auto& firstBlockData = *reinterpret_cast<const int32_t*>(firstBlock->GetBlockData());
-            const auto& secondBlockData = *reinterpret_cast<const int32_t*>(secondBlock->GetBlockData());
+            const auto& firstBlockData = *reinterpret_cast<const int32_t*>(firstBlock->GetRawData());
+            const auto& secondBlockData = *reinterpret_cast<const int32_t*>(secondBlock->GetRawData());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -66,8 +66,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::BigInt:
         {
-            const auto& firstBlockData = *reinterpret_cast<const int64_t*>(firstBlock->GetBlockData());
-            const auto& secondBlockData = *reinterpret_cast<const int64_t*>(secondBlock->GetBlockData());
+            const auto& firstBlockData = *reinterpret_cast<const int64_t*>(firstBlock->GetRawData());
+            const auto& secondBlockData = *reinterpret_cast<const int64_t*>(secondBlock->GetRawData());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -80,8 +80,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::DateTime:
         {
-            const auto& firstBlockData = *reinterpret_cast<const time_t*>(firstBlock->GetBlockData());
-            const auto& secondBlockData = *reinterpret_cast<const time_t*>(secondBlock->GetBlockData());
+            const auto& firstBlockData = *reinterpret_cast<const time_t*>(firstBlock->GetRawData());
+            const auto& secondBlockData = *reinterpret_cast<const time_t*>(secondBlock->GetRawData());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -98,13 +98,13 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::String:
         {
-            const auto& firstBlockDataSize = firstBlock->GetBlockSize();
-            const auto& secondBlockDataSize = secondBlock->GetBlockSize();
+            const auto& firstBlockDataSize = firstBlock->GetSize();
+            const auto& secondBlockDataSize = secondBlock->GetSize();
             
             if (firstBlockDataSize < secondBlockDataSize) return 1;
             if (firstBlockDataSize > secondBlockDataSize) return -1;
 
-            const int result = memcmp(firstBlock->GetBlockData(), secondBlock->GetBlockData(), firstBlockDataSize);
+            const int result = memcmp(firstBlock->GetRawData(), secondBlock->GetRawData(), firstBlockDataSize);
 
             if (result > 0) return 1;
             if (result < 0) return -1;
@@ -113,9 +113,9 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         case DataType::Guid:
         {
             //both guids are 16 bytes in memory
-            const auto& dataSize = firstBlock->GetBlockSize();
+            const auto& dataSize = firstBlock->GetSize();
 
-            const int result = memcmp(firstBlock->GetBlockData(), secondBlock->GetBlockData(), dataSize);
+            const int result = memcmp(firstBlock->GetRawData(), secondBlock->GetRawData(), dataSize);
 
             if (result > 0) return 1;
             if (result < 0) return -1;
@@ -241,7 +241,7 @@ string SortingFunctions::CreateGroupByKey(const Row* row, const vector<GroupCond
     {
         const auto& block = rowData[condition.GetColumnIndex()];
         
-        hashKey.append(reinterpret_cast<const char*>(block->GetBlockData()), block->GetBlockSize());
+        hashKey.append(reinterpret_cast<const char*>(block->GetRawData()), block->GetSize());
     }
 
     return hashKey;

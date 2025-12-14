@@ -31,7 +31,7 @@ namespace DatabaseEngine::LoggingStructures {
     this->row->Deserialize(buffer, pos);
   }
 
-  int RowInsertBody::GetSize() const{ return static_cast<int>(this->row->GetTotalRowSize()); }
+  int RowInsertBody::GetSize() const{ return static_cast<int>(this->row->GetTotalSize()); }
 
   std::ostream& RowInsertBody::Print(std::ostream& os)const{
     os << *this->row << std::endl;
@@ -68,7 +68,7 @@ namespace DatabaseEngine::LoggingStructures {
       this->newRow->Deserialize(buffer, pos);
    }
 
-   int RowUpdateBody::GetSize() const{ return static_cast<int>(this->oldRow->GetTotalRowSize() + this->newRow->GetTotalRowSize()); }
+   int RowUpdateBody::GetSize() const{ return static_cast<int>(this->oldRow->GetTotalSize() + this->newRow->GetTotalSize()); }
 
     std::ostream & RowUpdateBody::Print(std::ostream &os) const{
         os << *this->oldRow << std::endl;
@@ -100,7 +100,7 @@ namespace DatabaseEngine::LoggingStructures {
       this->row->Deserialize(buffer, pos);
     }
 
-   int RowDeleteBody::GetSize() const{ return static_cast<int>(this->row->GetTotalRowSize()); }
+   int RowDeleteBody::GetSize() const{ return static_cast<int>(this->row->GetTotalSize()); }
 
     std::ostream & RowDeleteBody::Print(std::ostream &os) const{
       os << *this->row << std::endl;

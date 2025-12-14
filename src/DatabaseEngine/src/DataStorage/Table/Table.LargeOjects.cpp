@@ -26,7 +26,7 @@ namespace DatabaseEngine::StorageTypes {
 
             page_offset_t offset = 0;
 
-            block_size_t remainingBlockSize = rowData[largeBlockIndex]->GetBlockSize();
+            block_size_t remainingBlockSize = rowData[largeBlockIndex]->GetSize();
 
             RecursiveInsertToLargePage(row, offset, largeBlockIndex, remainingBlockSize,
                                     true, nullptr);
@@ -45,7 +45,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto &pageSize = largeDataPage->GetBytesLeft();
 
-        const auto &data = row->GetData()[columnIndex]->GetBlockData();
+        const auto &data = row->GetData()[columnIndex]->GetRawData();
 
         if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize)
         {

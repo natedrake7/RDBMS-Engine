@@ -24,7 +24,7 @@ namespace DatabaseEngine {
         for (const auto &columnId : indexedColumns)
         {
             const auto &keyBlock = row->GetData()[columnId];
-            key.InsertKey(DataTypes::Indexing::Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
+            key.InsertKey(DataTypes::Indexing::Key(keyBlock->GetRawData(), keyBlock->GetSize(), keyBlock->GetColumnType()));
         }
 
         return key;
@@ -35,7 +35,7 @@ namespace DatabaseEngine {
         for (const auto &columnId : indexedColumns)
         {
             const auto &keyBlock = row->GetData()[columnId];
-            key.InsertKey(DataTypes::Indexing::Key(keyBlock->GetBlockData(), keyBlock->GetBlockSize(), keyBlock->GetColumnType()));
+            key.InsertKey(DataTypes::Indexing::Key(keyBlock->GetRawData(), keyBlock->GetSize(), keyBlock->GetColumnType()));
         }
 
         key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier));

@@ -311,7 +311,14 @@ namespace DatabaseEngine::StorageTypes
                 const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
-                const vector<Value> &updates);
+                const vector<Value> &updates
+            );
+
+            [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
+                const ExecutionProperties& properties,
+                const DataTypes::Indexing::Key& key,
+                const std::vector<Value> &updates
+            );
 
             void Truncate();
 
@@ -371,7 +378,6 @@ namespace DatabaseEngine::StorageTypes
                 Row *row,
                 const ExecutionProperties& properties,
                 const std::vector<Value> &updates,
-                const HashSet<column_index_t>& updatedColumns,
                 const bool &isHeap = true
             );
 

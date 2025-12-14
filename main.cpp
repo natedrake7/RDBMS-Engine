@@ -122,7 +122,7 @@ int main()
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
     //figue out issue
-    // std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
+    std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
     std::thread statisticsThread(
         DatabaseEngine::StatisticsScheduler::Start,
@@ -161,7 +161,7 @@ int main()
 
     connectionThread.join();
     statisticsThread.join();
-    // garbageCollectorThread.join();
+    garbageCollectorThread.join();
 
     server.Shutdown();
     return 0;

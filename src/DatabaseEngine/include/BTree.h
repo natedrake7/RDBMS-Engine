@@ -201,6 +201,12 @@ namespace Indexing
 
         Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
+            const DataTypes::Indexing::Key& key,
+            const std::vector<Value> & updates
+        )const;
+
+        Errors::RuntimeStatus IndexSeekUpdate(
+            const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,

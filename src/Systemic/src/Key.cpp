@@ -18,46 +18,33 @@ namespace DataTypes::Indexing{
 
     Key::Key()
     {
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
+        this->value = Value::Null();
         this->size = 0;
     }
 
     Key::Key(const void *keyValue, const key_size_t &keySize, const DataType& keyType)
     {
         this->value = Value(keyValue, keySize, keyType);
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
-
         this->size = keySize;
     }
 
     Key::Key(const Value &field){
         this->value = field;
-
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
         this->size = this->value.GetSize();
     }
 
     Key::Key(Value &field) {
         this->value = std::move(field);
-
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
         this->size = this->value.GetSize();
     }
 
     Key::Key(const vector<Key> &subKeys)
     {
         this->size = 0;
-        for (const auto &key : subKeys)
-        {
+        for (const auto &key : subKeys){
             this->subKeys.push_back(key);
             this->size += key.size;
         }
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
     }
 
     Key::~Key() = default;
@@ -72,12 +59,6 @@ namespace DataTypes::Indexing{
         }
 
         this->subKeys = otherKey.subKeys;
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
-
-        //key is not composite
-        // memcpy(this->value, otherKey.value, otherKey.size);
-
     }
 
     Key::Key(const Key *&otherKey) {
@@ -89,8 +70,6 @@ namespace DataTypes::Indexing{
         }
 
         this->subKeys = otherKey->subKeys;
-        this->indexKeyPosition = -1;
-        this->currentSearchKeyPosition = -1;
     }
 
     // Key::Key(Key &&other) noexcept {

@@ -12,7 +12,7 @@ namespace QueryPipeline {
    PhysicalPlan::ExecutionResult* Cursor::fetchNextBatch(){
     auto* result = this->plan->Execute(this->properties);
 
-    this->canFetchMore = result->canFetchMore;
+    this->canFetchMore = result != nullptr && result->canFetchMore;
 
     return result;
   }

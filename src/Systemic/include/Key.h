@@ -15,19 +15,18 @@ namespace DataTypes::Indexing {
     key_size_t size;
 
     Value value;
-    vector<Key> subKeys;
+    std::vector<Key> subKeys;
 
 
     Key();
     Key(const void *keyValue, const key_size_t &keySize, const DataType& keyType);
     explicit Key(const Value& field);
     explicit Key(Value& field);
-
     explicit Key(const std::vector<Key>& subKeys);
+    explicit Key(const Key*& otherKey);
+    Key(const Key &otherKey);
     ~Key();
 
-    Key(const Key &otherKey);
-    explicit Key(const Key*& otherKey);
     // Key(Key&& other)noexcept;
 
     bool operator==(const Key& otherKey) const;
@@ -49,10 +48,6 @@ namespace DataTypes::Indexing {
     static ComparisonResult CompareSubKeys(const Key& firstKey, const Key& otherKey);
     [[nodiscard]] int32_t AsInt(const int& pos = 0)const;
     [[nodiscard]] int64_t AsBigInt(const int& pos = 0)const;
-
-    //key comparison index used only on queries and not on key saveon db
-    int indexKeyPosition = -1;
-    int currentSearchKeyPosition = -1;
 
     friend std::ostream& operator<<(std::ostream& os, const Key& key);
   };

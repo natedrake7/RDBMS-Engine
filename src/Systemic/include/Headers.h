@@ -87,13 +87,36 @@ namespace Headers {
   };
 
   struct TableStatistics {
-    int32_t tableId = INVALID_TABLE_ID;
+    int32_t tableId ;
 
-    int64_t rowCount = 0;
-    int32_t averageRowSize = 0;
-    int32_t pageCount = 0;
+    int64_t rowCount;
+    int32_t averageRowSize;
+    int32_t pageCount;
 
-    DataTypes::DateTime lastModified = DataTypes::DateTime::Now();
+    DataTypes::DateTime lastModified;
+
+    TableStatistics() {
+      this->tableId = INVALID_TABLE_ID;
+      this->rowCount = 0;
+      this->averageRowSize = 0;
+      this->pageCount = 0;
+      this->lastModified = DataTypes::DateTime::Now();
+    }
+
+    explicit TableStatistics(const int32_t& tableId)
+      : tableId(tableId),rowCount(0),averageRowSize(0), pageCount(0), lastModified(DataTypes::DateTime::Now()) {}
+
+    TableStatistics(
+      const int32_t& tableId,
+      const int64_t& rowCount,
+      const int32_t& averageRowSize,
+      const int32_t& pageCount,
+      const DataTypes::DateTime& lastModified
+    ) : tableId(tableId),
+        rowCount(rowCount),
+        averageRowSize(averageRowSize),
+        pageCount(pageCount),
+        lastModified(lastModified) {}
   };
 
   struct ColumnStatistics {

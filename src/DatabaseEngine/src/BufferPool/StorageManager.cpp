@@ -192,9 +192,9 @@ Pages::Page* StorageManager::OpenExtent(
   // read page from disk, call this->fileManager
   auto *file = this->fileManager.GetFile(filename);
 
-  const page_id_t firstExtentPageId = DatabaseEngine::Database::CalculateFirstPageIdByExtentId(extentId);
+  const auto firstExtentPageId = DatabaseEngine::Database::CalculateFirstPageIdByExtentId(extentId);
 
-  const streampos extentOffset = firstExtentPageId * PAGE_SIZE;
+  const auto  extentOffset = static_cast<streampos>(firstExtentPageId * PAGE_SIZE);
 
   std::vector<char> buffer(EXTENT_BYTE_SIZE);
 

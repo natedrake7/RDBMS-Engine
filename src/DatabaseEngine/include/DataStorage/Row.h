@@ -63,7 +63,7 @@ namespace DatabaseEngine::StorageTypes
         RowHeader header;
         RowVersioningHeader versionHeader;
 
-        std::vector<Block *> data;
+        std::vector<Block*> data;
 
         mutable std::vector<CachedValue> cache;
         const Table *table;
@@ -74,7 +74,7 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] const Value& GetMaterializedValue(const int& indexPos)const;
         [[nodiscard]] const Value& Materialize(const int& indexPos)const;
 
-        bool IsDeleted(const DatabaseEngine::Snapshot& snapshot)const;
+        bool IsDeleted(const Snapshot& snapshot)const;
 
     public:
         explicit Row(const Table &table);
@@ -113,7 +113,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] std::vector<Block *> &GetData();
 
-        void PrintRow() const;
+        void Print() const;
 
         [[nodiscard]] std::vector<column_index_t> GetLargeBlocks()const;
 
@@ -133,9 +133,9 @@ namespace DatabaseEngine::StorageTypes
 
         RowHeader* GetHeader();
 
-        [[nodiscard]] row_size_t GetTotalRowSize() const;
+        [[nodiscard]] row_size_t GetTotalSize() const;
 
-        [[nodiscard]] row_header_size_t GetRowHeaderSize() const;
+        [[nodiscard]] row_header_size_t GetHeaderSize() const;
 
         [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<Value> & updates, int& diff)const;
 

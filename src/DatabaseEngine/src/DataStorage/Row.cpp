@@ -93,7 +93,7 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         //base scenario
-        value = Value(dataBlock->GetBlockData(), dataBlock->GetBlockSize(), dataBlock->GetColumnType());
+        value = Value(dataBlock->GetRawData(), dataBlock->GetSize(), dataBlock->GetColumnType());
         return value;
     }
 
@@ -211,7 +211,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Row::InsertColumnAtEnd(Block *block) {
-        this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
+        this->header.nullBitMap->Set(this->data.size(), block->GetRawData() == nullptr);
         this->header.largeObjectBitMap->Set(this->data.size(), false);
         this->header.overflowBitMap->Set(this->data.size(), false);
 
@@ -220,9 +220,9 @@ namespace DatabaseEngine::StorageTypes {
 
     int Row::InsertNewColumn(Block* block)
     {
-        const auto oldSize = this->GetTotalRowSize();
+        const auto oldSize = this->GetTotalSize();
 
-        this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
+        this->header.nullBitMap->Set(this->data.size(), block->GetRawData() == nullptr);
         this->header.largeObjectBitMap->Set(this->data.size(), false);
         this->header.overflowBitMap->Set(this->data.size(), false);
 
@@ -230,7 +230,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->header.numberOfColumns = static_cast<column_number_t>(this->data.size());
 
-        const auto newSize = this->GetTotalRowSize();
+        const auto newSize = this->GetTotalSize();
 
         const auto diff = static_cast<int>(newSize) - static_cast<int>(oldSize);
 
@@ -238,9 +238,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     int Row::InsertNewColumnAtBeginning(Block *block){
-        const auto oldSize = this->GetTotalRowSize();
+        const auto oldSize = this->GetTotalSize();
 
-        this->header.nullBitMap->Set(this->data.size(), block->GetBlockData() == nullptr);
+        this->header.nullBitMap->Set(this->data.size(), block->GetRawData() == nullptr);
         this->header.largeObjectBitMap->Set(this->data.size(), false);
         this->header.overflowBitMap->Set(this->data.size(), false);
 
@@ -248,7 +248,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->header.numberOfColumns = static_cast<column_number_t>(this->data.size());
 
-        const auto newSize = this->GetTotalRowSize();
+        const auto newSize = this->GetTotalSize();
 
         const auto diff = static_cast<int>(newSize) - static_cast<int>(oldSize);
 
@@ -269,12 +269,12 @@ namespace DatabaseEngine::StorageTypes {
 
     vector<Block *> &Row::GetData() { return this->data; }
 
-    void Row::PrintRow() const{
+    void Row::Print() const{
         for(size_t i = 0; i < this->data.size(); i++)
         {
             const DataType columnType = this->data[i]->GetColumnType();
-            const object_t* blockData = this->data[i]->GetBlockData();
-            const block_size_t& blockSize = this->data[i]->GetBlockSize();
+            const object_t* blockData = this->data[i]->GetRawData();
+            const block_size_t& blockSize = this->data[i]->GetSize();
 
             if(blockData == nullptr
                 || blockSize == 0)
@@ -358,7 +358,7 @@ namespace DatabaseEngine::StorageTypes {
         vector<column_index_t> largeBlocksIndexes;
         for(const auto& block : this->data)
         {
-            if(block->GetBlockSize() >= LARGE_DATA_OBJECT_SIZE)
+            if(block->GetSize() >= LARGE_DATA_OBJECT_SIZE)
                 largeBlocksIndexes.push_back(block->GetColumnIndex());
         }
 
@@ -386,7 +386,7 @@ namespace DatabaseEngine::StorageTypes {
 
             const page_size_t nextObjectSize = object->objectSize;
 
-            unsigned char* prevValue = buffer;
+            const unsigned char* prevValue = buffer;
 
             buffer = new unsigned char[currentObjectSize + nextObjectSize];
 
@@ -559,30 +559,30 @@ namespace DatabaseEngine::StorageTypes {
 
             const auto& block = this->data[i];
 
-            const auto dataSize = block->GetBlockSize();
+            const auto dataSize = block->GetSize();
 
             filePtr->write(reinterpret_cast<const char *>(&dataSize), sizeof(block_size_t));
-            filePtr->write(reinterpret_cast<const char *>(block->GetBlockData()), dataSize);
+            filePtr->write(reinterpret_cast<const char *>(block->GetRawData()), dataSize);
         }
     }
 
     RowHeader* Row::GetHeader() { return &this->header; }
 
-    row_size_t Row::GetTotalRowSize() const
+    row_size_t Row::GetTotalSize() const
     {
-        row_size_t currentRowSize = this->GetRowHeaderSize();
+        row_size_t currentRowSize = this->GetHeaderSize();
 
         for(const auto& block: this->data) {
             if (block == nullptr)
                 continue;
 
-            currentRowSize += block->GetBlockSize() + sizeof(block_size_t);
+            currentRowSize += block->GetSize() + sizeof(block_size_t);
         }
 
         return currentRowSize;
     }
 
-    row_header_size_t Row::GetRowHeaderSize() const
+    row_header_size_t Row::GetHeaderSize() const
     {
         row_header_size_t rowHeaderSize = sizeof(row_size_t);
         rowHeaderSize += sizeof(size_t);
@@ -601,7 +601,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Row::Update( const vector<Value> & updates, int& diff)const{
-        const auto prevRowSize = this->GetTotalRowSize();
+        const auto prevRowSize = this->GetTotalSize();
 
         for (const auto & value : updates){
             const column_index_t &associatedColumnIndex = value.GetColumnIndex();
@@ -626,7 +626,7 @@ namespace DatabaseEngine::StorageTypes {
                 return result;
         }
 
-        const auto rowSize = this->GetRowHeaderSize();
+        const auto rowSize = this->GetHeaderSize();
 
         diff = static_cast<int>(rowSize - prevRowSize);
 
@@ -634,7 +634,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff)const{
-        const auto prevRowSize = this->GetTotalRowSize();
+        const auto prevRowSize = this->GetTotalSize();
 
         Expressions::EvaluationContext context(this);
         for (const auto & update : updates)
@@ -663,7 +663,7 @@ namespace DatabaseEngine::StorageTypes {
                 return result;
         }
 
-        const auto rowSize = this->GetRowHeaderSize();
+        const auto rowSize = this->GetHeaderSize();
         diff = static_cast<int>(rowSize - prevRowSize);
 
         return {};
@@ -683,11 +683,11 @@ namespace DatabaseEngine::StorageTypes {
               && this->header.largeObjectBitMap->Get(columnIndex))
               continue;
 
-            if(block->GetBlockSize() <= size)
+            if(block->GetSize() <= size)
               continue;
 
             largestColumn = block;
-            size = block->GetBlockSize();
+            size = block->GetSize();
         }
 
       return largestColumn;
@@ -702,7 +702,7 @@ namespace DatabaseEngine::StorageTypes {
         if (this->header.largeObjectBitMap->Get(block->GetColumnIndex()))
         {
             Pages::DataObjectPointer objectPointer;
-            memcpy(&objectPointer, block->GetBlockData(), sizeof(Pages::DataObjectPointer));
+            memcpy(&objectPointer, block->GetRawData(), sizeof(Pages::DataObjectPointer));
 
             uint32_t objectSize;
             unsigned char *largeValue = this->GetLargeObjectValue(objectPointer, &objectSize);
@@ -712,7 +712,7 @@ namespace DatabaseEngine::StorageTypes {
         }
         else if(this->header.overflowBitMap->Get(block->GetColumnIndex())){
             Pages::OverflowPointer overflowPointer;
-            memcpy(&overflowPointer, block->GetBlockData(), sizeof(Pages::OverflowPointer));
+            memcpy(&overflowPointer, block->GetRawData(), sizeof(Pages::OverflowPointer));
 
           const auto* largeValue = this->GetOverflowValue(overflowPointer);
           blockCopy->SetData(largeValue->object, largeValue->objectSize);
@@ -747,12 +747,12 @@ namespace DatabaseEngine::StorageTypes {
                 continue;
             }
 
-            const auto& dataSize = block->GetBlockSize();
+            const auto& dataSize = block->GetSize();
 
             memcpy(buffer->data() + pos, &dataSize, sizeof(block_size_t));
             pos += sizeof(block_size_t);
 
-            memcpy(buffer->data() + pos, block->GetBlockData(), dataSize);
+            memcpy(buffer->data() + pos, block->GetRawData(), dataSize);
             pos += dataSize;
 
             columnIndex++;
@@ -878,8 +878,8 @@ namespace DatabaseEngine::StorageTypes {
         for(size_t i = 0; i < row.data.size(); i++)
         {
             const DataType columnType = row.data[i]->GetColumnType();
-            const object_t* blockData = row.data[i]->GetBlockData();
-            const block_size_t& blockSize = row.data[i]->GetBlockSize();
+            const object_t* blockData = row.data[i]->GetRawData();
+            const block_size_t& blockSize = row.data[i]->GetSize();
 
             if(blockData == nullptr)
             {

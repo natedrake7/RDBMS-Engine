@@ -285,9 +285,9 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    object_t* Block::GetBlockData() const { return this->data; }
+    object_t* Block::GetRawData() const { return this->data; }
 
-    block_size_t Block::GetBlockSize() const { return this->size; }
+    block_size_t Block::GetSize() const { return this->size; }
 
     bool Block::GetBool() const { return *reinterpret_cast<bool*>(this->data); }
 
@@ -324,113 +324,87 @@ namespace DatabaseEngine::StorageTypes {
 
     bool Block::GetIsNull() const{ return this->data == nullptr; }
 
-    void Block::SetColumn(const Column* column) { this->column = column; };
-
-    void Block::PrintBlockData() const
-    {
-        if(this->data == nullptr)
-            return;
-
-        const DataType columnType = this->column->GetColumnType();
-
-        if (columnType == DataType::TinyInt)
-            cout << *reinterpret_cast<const int8_t*>(this->data);
-        else if (columnType == DataType::SmallInt)
-            cout << *reinterpret_cast<const int16_t*>(this->data);
-        else if(columnType == DataType::Int)
-            cout << *reinterpret_cast<const int32_t*>(this->data);
-        else if (columnType == DataType::BigInt)
-            cout << *reinterpret_cast<const int64_t*>(this->data);
-        else if(columnType == DataType::String)
-        {
-            // uint64_t hashKey;
-            // memcpy(&hashKey, this->data, sizeof(uint64_t));
-            // // const uint64_t hashKey = reinterpret_cast<const uint64_t>(this->data);
-            // cout << db->GetStringByHashKey(hashKey);
-        }
-
-        cout << " || ";
-    }
+    void Block::SetColumn(const Column* otherColumn) { this->column = otherColumn; };
 }
 
-bool operator!=(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
-    return !(block == field);
-}
-
-//Tiny Int Comparison -> string, bool, unicodeString, decimal
-
-bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
-    if (field.IsNull()
-        || block.GetBlockData() == nullptr)
-        return block.GetBlockData() == nullptr;
-
-    switch (block.GetColumnType()){
-        case DataType::TinyInt:
-            return block.GetTinyInt() == field.GetTinyInt();
-        case DataType::SmallInt:
-            return block.GetSmallInt() == field.GetSmallInt();
-        case DataType::Int:
-            return block.GetInt() == field.GetInt();
-        case DataType::BigInt:
-            return block.GetBigInt() == field.GetBigInt();
-        case DataType::Decimal:
-            return block.GetDecimal() == field.GetDecimal();
-        case DataType::String:
-            return block.GetString() == field.GetString();
-        case DataType::UnicodeString:
-            return block.GetUnicodeString() == field.GetUnicodeString();
-        case DataType::Bool:
-            return block.GetBool() == field.GetBool();
-        case DataType::DateTime:
-            return block.GetDateTime() == field.GetDateTime();
-        case DataType::Guid:
-            return block.GetGuid() == field.GetGuid();
-        case DataType::Unknown:
-        default:
-            throw invalid_argument("invalid column type");
-    }
-}
-
-bool operator>=(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
-    return !(block < field);
-}
-
-bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
-    return !(block > field);
-}
-
-bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
-    if (field.IsNull()
-        || block.GetBlockData() == nullptr)
-        return block.GetBlockData() != nullptr;
-
-    switch (block.GetColumnType()){
-        case DataType::TinyInt:
-            return block.GetTinyInt() > field.GetTinyInt();
-        case DataType::SmallInt:
-            return block.GetSmallInt() > field.GetSmallInt();
-        case DataType::Int:
-            return block.GetInt() > field.GetInt();
-        case DataType::BigInt:
-            return block.GetBigInt() > field.GetBigInt();
-        case DataType::Decimal:
-            return block.GetDecimal() > field.GetDecimal();
-        case DataType::String:
-            return block.GetString() > field.GetString();
-        case DataType::UnicodeString:
-            return block.GetUnicodeString() > field.GetUnicodeString();
-        case DataType::Bool:
-            return block.GetBool() > field.GetBool();
-        case DataType::DateTime:
-            return block.GetDateTime() >  field.GetDateTime();
-        case DataType::Guid:
-            return block.GetGuid() > field.GetGuid();
-        case DataType::Unknown:
-        default:
-            throw invalid_argument("invalid column type");
-    }
-}
-
-bool operator<(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
-    return block <= field;
-}
+// bool operator!=(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
+//     return !(block == field);
+// }
+//
+// //Tiny Int Comparison -> string, bool, unicodeString, decimal
+//
+// bool operator==(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
+//     if (field.IsNull()
+//         || block.GetRawData() == nullptr)
+//         return block.GetRawData() == nullptr;
+//
+//     switch (block.GetColumnType()){
+//         case DataType::TinyInt:
+//             return block.GetTinyInt() == field.GetTinyInt();
+//         case DataType::SmallInt:
+//             return block.GetSmallInt() == field.GetSmallInt();
+//         case DataType::Int:
+//             return block.GetInt() == field.GetInt();
+//         case DataType::BigInt:
+//             return block.GetBigInt() == field.GetBigInt();
+//         case DataType::Decimal:
+//             return block.GetDecimal() == field.GetDecimal();
+//         case DataType::String:
+//             return block.GetString() == field.GetString();
+//         case DataType::UnicodeString:
+//             return block.GetUnicodeString() == field.GetUnicodeString();
+//         case DataType::Bool:
+//             return block.GetBool() == field.GetBool();
+//         case DataType::DateTime:
+//             return block.GetDateTime() == field.GetDateTime();
+//         case DataType::Guid:
+//             return block.GetGuid() == field.GetGuid();
+//         case DataType::Unknown:
+//         default:
+//             throw invalid_argument("invalid column type");
+//     }
+// }
+//
+// bool operator>=(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
+//     return !(block < field);
+// }
+//
+// bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
+//     return !(block > field);
+// }
+//
+// bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
+//     if (field.IsNull()
+//         || block.GetRawData() == nullptr)
+//         return block.GetRawData() != nullptr;
+//
+//     switch (block.GetColumnType()){
+//         case DataType::TinyInt:
+//             return block.GetTinyInt() > field.GetTinyInt();
+//         case DataType::SmallInt:
+//             return block.GetSmallInt() > field.GetSmallInt();
+//         case DataType::Int:
+//             return block.GetInt() > field.GetInt();
+//         case DataType::BigInt:
+//             return block.GetBigInt() > field.GetBigInt();
+//         case DataType::Decimal:
+//             return block.GetDecimal() > field.GetDecimal();
+//         case DataType::String:
+//             return block.GetString() > field.GetString();
+//         case DataType::UnicodeString:
+//             return block.GetUnicodeString() > field.GetUnicodeString();
+//         case DataType::Bool:
+//             return block.GetBool() > field.GetBool();
+//         case DataType::DateTime:
+//             return block.GetDateTime() >  field.GetDateTime();
+//         case DataType::Guid:
+//             return block.GetGuid() > field.GetGuid();
+//         case DataType::Unknown:
+//         default:
+//             throw invalid_argument("invalid column type");
+//     }
+// }
+//
+// bool operator<(const DatabaseEngine::StorageTypes::Block &block, const Value &field){
+//     return block <= field;
+// }

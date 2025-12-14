@@ -64,11 +64,8 @@ namespace DatabaseEngine {
   iamPage->GetAllocatedExtents(&extents, 0);
 
   int estimatedRowCount = 1000;
-  Headers::TableStatistics tableStatistics = {
-   .tableId = table->GetTableId(),
-   .rowCount = 0,
-   .averageRowSize = 0
-  };
+
+  auto tableStatistics = Headers::TableStatistics(table->GetTableId());
 
   std::vector<Headers::ColumnStatistics> columnStatistics;
   for (const auto& column : table->GetColumns()) {
@@ -114,7 +111,7 @@ namespace DatabaseEngine {
     allocatedPagesPerExtent++;
 
     for (const auto& row : *page->GetDataRowsNoLock()) {
-      tableStatistics.averageRowSize += row->GetTotalRowSize();
+      tableStatistics.averageRowSize += row->GetTotalSize();
       sampleRowCount++;
 
       for (int j = 0; j < columnStatistics.size(); j++) {
@@ -173,7 +170,8 @@ namespace DatabaseEngine {
   this->catalog->UpdateTableStatisticsById(
     tableStatistics.tableId,
     tableStatistics.rowCount,
-    tableStatistics.averageRowSize
+    tableStatistics.averageRowSize,
+    tableStatistics.pageCount
   );
 
   for (const auto& colStats : columnStatistics) {

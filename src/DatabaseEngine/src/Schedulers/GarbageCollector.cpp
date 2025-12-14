@@ -10,17 +10,14 @@ namespace DatabaseEngine {
     auto& transactionManager = TransactionManager::Get();
     const auto* versionDatabase = Network::Server::Get().GetVersionDatabase();
 
-    page_id_t lastScannedPageId = 0;
     extent_id_t lastScannedExtentId = 0;
 
-    std::this_thread::sleep_for(10000ms);
     while (isServerRunning) {
+      std::this_thread::sleep_for(20000ms);
       const auto oldestTransactionId = transactionManager.GetOldestActiveTransactionId();
-
       lastScannedExtentId = versionDatabase->CleanupVersionedData(oldestTransactionId, lastScannedExtentId);
-
-      std::this_thread::sleep_for(10000ms);
     }
   }
-
+//CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT NOT NULL)
+//insert into dbo.aCTORS(Name, Age) VALUES('Kostas', 10)
 }

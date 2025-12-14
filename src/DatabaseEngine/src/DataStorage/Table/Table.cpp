@@ -304,7 +304,7 @@ namespace DatabaseEngine::StorageTypes {
 
       void Table::InsertRowToPage(Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage, Pages::PageGuard<Pages::Page>& page, Row *row, const int & indexPosition)const{
 
-      while (row->GetTotalRowSize() > page->GetBytesLeft())
+      while (row->GetTotalSize() > page->GetBytesLeft())
         this->HandleRowOverflow(row);
 
       page->InsertRow(row, indexPosition);
@@ -916,7 +916,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const{
       const auto& filename = this->database->GetFileName();
 
-      while(row->GetTotalRowSize() > Constants::PAGE_SIZE_WITHOUT_HEADER)
+      while(row->GetTotalSize() > Constants::PAGE_SIZE_WITHOUT_HEADER)
         this->HandleRowOverflow(row);
 
       if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
@@ -934,7 +934,7 @@ namespace DatabaseEngine::StorageTypes {
       tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
       lastExtentIndex = allocatedExtents.size() - 1;
 
-      const auto rowCategory = Database::GetObjectSizeToCategory(row->GetTotalRowSize());
+      const auto rowCategory = Database::GetObjectSizeToCategory(row->GetTotalSize());
 
       for (const auto &extentId : allocatedExtents)
       {
@@ -959,7 +959,7 @@ namespace DatabaseEngine::StorageTypes {
               {
                   auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
 
-                  if (row->GetTotalRowSize() > page->GetBytesLeft())
+                  if (row->GetTotalSize() > page->GetBytesLeft())
                       continue;
 
                   page->InsertRow(row, &rowId->indexId);
@@ -1087,10 +1087,6 @@ namespace DatabaseEngine::StorageTypes {
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
 
-        HashSet<column_index_t> updatedColumns;
-        for(const auto& update : updates)
-              updatedColumns.Add(update.GetColumnIndex());
-
         for (const auto& extentId : tableExtentIds){
           const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
@@ -1123,7 +1119,7 @@ namespace DatabaseEngine::StorageTypes {
               if(!value.GetBool())
                   continue;
 
-                const auto result = this->HandleRowUpdate(page.Get(), row, properties, updates, updatedColumns);
+                const auto result = this->HandleRowUpdate(page.Get(), row, properties, updates);
 
                 if (result.code != Errors::RuntimeError::Ok)
                   return result;
@@ -1198,17 +1194,16 @@ namespace DatabaseEngine::StorageTypes {
     void Table::ClusteredIndexScanUpdate(
       const ExecutionProperties& properties,
       const Expressions::Expression *expression,
-      const vector<Value> & updates
+      const std::vector<Value> & updates
     ){
       const auto* tree = this->GetClusteredIndexedTree();
-
       tree->IndexScanUpdate(properties, expression, updates);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
       const ExecutionProperties& properties,
       const Expressions::Expression *expression,
-      const vector<QueryPipeline::Statements::UpdateColumn *> &updates
+      const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -1224,12 +1219,21 @@ namespace DatabaseEngine::StorageTypes {
         const DataTypes::Indexing::Key* maximumValue,
         const vector<Value> & updates
     ){
-        auto* tree = this->GetClusteredIndexedTree();
+        const auto* tree = this->GetClusteredIndexedTree();
 
         return (expression == nullptr)
             ? tree->IndexSeekUpdate(properties, minimumValue, maximumValue, updates)
             : tree->IndexSeekUpdate(properties, expression, minimumValue, maximumValue, updates);
     }
+
+    Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
+      const ExecutionProperties &properties,
+      const DataTypes::Indexing::Key &key,
+      const std::vector<Value> &updates
+    ) {
+        const auto* tree = this->GetClusteredIndexedTree();
+        return tree->IndexSeekUpdate(properties, key, updates);
+      }
 
     void Table::Truncate()
     {
@@ -1339,10 +1343,10 @@ namespace DatabaseEngine::StorageTypes {
       if(largestBlock == nullptr)
         return -1;
 
-      auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->GetBlockSize());
+      auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->GetSize());
 
       int indexPos = 0;
-      overflowPage->InsertObject(largestBlock->GetBlockData(), largestBlock->GetBlockSize(), indexPos);
+      overflowPage->InsertObject(largestBlock->GetRawData(), largestBlock->GetSize(), indexPos);
 
       row->SetOverflowBitMapValue(largestBlock->GetColumnIndex(), true);
 
@@ -1353,7 +1357,7 @@ namespace DatabaseEngine::StorageTypes {
       const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
       largestBlock->SetData(&ptr, sizeof(Pages::OverflowPointer));
 
-      return largestBlock->GetBlockSize();
+      return largestBlock->GetSize();
     }
 
       int Table::HandleRowOverflow(Row *row, const Column *column)const{
@@ -1365,10 +1369,10 @@ namespace DatabaseEngine::StorageTypes {
 
         auto* largestBlock = row->GetData().at(column->GetColumnIndex());
 
-        auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->GetBlockSize());
+        auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->GetSize());
 
         int indexPos = 0;
-        overflowPage->InsertObject(largestBlock->GetBlockData(), largestBlock->GetBlockSize(), indexPos);
+        overflowPage->InsertObject(largestBlock->GetRawData(), largestBlock->GetSize(), indexPos);
 
         row->SetOverflowBitMapValue(largestBlock->GetColumnIndex(), true);
 
@@ -1381,7 +1385,7 @@ namespace DatabaseEngine::StorageTypes {
         const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
         largestBlock->SetData(&ptr, sizeof(Pages::OverflowPointer));
 
-        return largestBlock->GetBlockSize();
+        return largestBlock->GetSize();
     }
 
     //create differrent one to handle clustered updates
@@ -1390,7 +1394,6 @@ namespace DatabaseEngine::StorageTypes {
       Row *row,
       const ExecutionProperties& properties,
       const std::vector<Value> &updates,
-      const HashSet<column_index_t>& updatedColumns,
       const bool &isHeap
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
@@ -1417,7 +1420,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalRowSize()) > 0){
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalSize()) > 0){
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 
@@ -1461,7 +1464,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalRowSize()) > 0){
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalSize()) > 0){
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 

@@ -275,7 +275,8 @@ namespace DatabaseEngine {
     void UpdateTableStatisticsById(
       const int32_t& tableId,
       const int64_t& rowCount,
-      const int32_t& rowSize
+      const int32_t& rowSize,
+      const int32_t& pageCount
     )const;
     void UpdateColumnStatisticsById(
       const int32_t& columnId,

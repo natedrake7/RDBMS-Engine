@@ -69,32 +69,21 @@ namespace DatabaseEngine::StorageTypes {
 
         [[nodiscard]] Errors::RuntimeStatus SetData(const Value& value);
 
-        [[nodiscard]] object_t* GetBlockData() const;
+        [[nodiscard]] object_t* GetRawData() const;
 
-        [[nodiscard]] block_size_t GetBlockSize() const;
+        [[nodiscard]] block_size_t GetSize() const;
 
         [[nodiscard]] bool GetBool() const;
-        
         [[nodiscard]] int8_t GetTinyInt() const;
-
         [[nodiscard]] int16_t GetSmallInt() const;
-
         [[nodiscard]] int32_t GetInt() const;
-
         [[nodiscard]] int64_t GetBigInt() const;
-
         [[nodiscard]] string GetString() const;
-
         [[nodiscard]] u16string GetUnicodeString() const;
-
         [[nodiscard]] DataTypes::Decimal GetDecimal() const;
-
         [[nodiscard]] DataTypes::DateTime GetDateTime() const;
-
         [[nodiscard]] DataTypes::Guid GetGuid() const;
-
         [[nodiscard]] Pages::DataObjectPointer GetLargeObjectPointer() const;
-
         [[nodiscard]] Pages::OverflowPointer GetOverflowPointer() const;
         
         [[nodiscard]] const column_index_t& GetColumnIndex() const;
@@ -107,9 +96,7 @@ namespace DatabaseEngine::StorageTypes {
 
         [[nodiscard]] bool GetIsNull() const;
 
-        void SetColumn(const Column* column);
-
-        void PrintBlockData() const;
+        void SetColumn(const Column* otherColumn);
     };
 
     template <typename T> void Block::CopyToBuffer(const T &value){
@@ -149,9 +136,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 }
 
-bool operator==(const DatabaseEngine::StorageTypes::Block& block, const Value& field);
-bool operator!=(const DatabaseEngine::StorageTypes::Block& block, const Value& field);
-bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
-bool operator<(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
-bool operator>=(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
-bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
+// bool operator==(const DatabaseEngine::StorageTypes::Block& block, const Value& field);
+// bool operator!=(const DatabaseEngine::StorageTypes::Block& block, const Value& field);
+// bool operator>(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
+// bool operator<(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
+// bool operator>=(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
+// bool operator<=(const DatabaseEngine::StorageTypes::Block &block, const Value &field);
