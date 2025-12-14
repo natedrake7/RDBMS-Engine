@@ -133,7 +133,7 @@ Pages::Page* StorageManager::EvictPage() {
       continue;
     }
 
-    MultiThreading::WriterGuard pageLock(&page->GetLatch());
+    MultiThreading::WriterGuard pageLock(&page->Latch());
 
       if (page->HasSecondChance()) {
         page->SetHasSecondChanceUnsafe(false);
@@ -233,7 +233,7 @@ Pages::Page* StorageManager::OpenExtent(
     }
 
     {
-      MultiThreading::WriterGuard pageLock(&page->GetLatch());
+      MultiThreading::WriterGuard pageLock(&page->Latch());
 
       page->ReadFromDisk(buffer, table, offSet, file);
       page->SetFileName(filename);

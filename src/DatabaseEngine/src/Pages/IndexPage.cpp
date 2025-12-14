@@ -59,7 +59,7 @@ IndexPage::~IndexPage()
 void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr)
 {
     this->ReadAdditionalHeaderFromFile(data, offSet);
-    const vector<DataType> indexedColumnTypes = table->GetColumnTypeByTreeId(this->additionalHeader.treeId);
+    const auto indexedColumnTypes = table->GetColumnTypeByTreeId(this->additionalHeader.treeId);
 
     uint16_t numOfKeys = 0;
     memcpy(&numOfKeys, data.data() + offSet, sizeof(uint16_t));
@@ -68,8 +68,7 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
     for (int i = 0;i < numOfKeys; i++) {
         auto* key = new DataTypes::Indexing::Key();
 
-        for (int j = 0; j < this->additionalHeader.numberOfSubKeys; j++)
-        {
+        for (int j = 0; j < this->additionalHeader.numberOfSubKeys; j++){
             key_size_t keySize;
             memcpy(&keySize, data.data() + offSet, sizeof(key_size_t));
             offSet += sizeof(key_size_t);
@@ -78,7 +77,11 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
             memcpy(keyValue.data(), data.data() + offSet, keySize);
             offSet += keySize;
 
-            key->InsertKey(DataTypes::Indexing::Key(keyValue.data(), keySize, j < indexedColumnTypes.size() ? indexedColumnTypes[j] : DataType::RowIdentifier));
+            const auto dataType = j < indexedColumnTypes.size()
+                    ? indexedColumnTypes[j]
+                    : DataType::RowIdentifier;
+
+            key->InsertKey(DataTypes::Indexing::Key(keyValue.data(), keySize, dataType));
         }
 
         this->keys.push_back(key);
@@ -95,7 +98,6 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
         this->children.resize(numberOfChildren);
 
         memcpy(this->children.data(), data.data() + offSet, numberOfChildren * sizeof(page_id_t));
-
         return;
     }
 
@@ -109,6 +111,8 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
     const auto& columns = table->GetColumns();
 
     if (this->additionalHeader.treeType == TreeType::Clustered) {
+        this->rows.reserve(this->header.pageSize);
+
         for (int i = 0;i < this->header.pageSize; i++) {
             auto* row = Page::ReadRowFromDisk(data, table, offSet, columns);
 
@@ -117,6 +121,8 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
 
         return;
     }
+
+    this->nonClusteredData.reserve(this->header.pageSize);
 
     for (int i = 0;i < this->header.pageSize; i++) {
         auto* item = new Headers::RowIdentifier();
@@ -193,7 +199,7 @@ void IndexPage::UpdateBytesLeft()
 
     if (this->additionalHeader.treeType == TreeType::Clustered) {
         for (const auto& row: this->rows)
-            this->header.bytesLeft -= row->GetTotalSize();
+            this->header.bytesLeft -= row->TotalSize();
     }
     else
         this->header.bytesLeft -= this->nonClusteredData.size() * (sizeof(page_id_t) + sizeof(page_offset_t));
@@ -205,7 +211,7 @@ void IndexPage::UpdateBytesLeft()
 
 vector<DataTypes::Indexing::Key*>* IndexPage::GetKeysUnsafe(){ return &this->keys; }
 
-vector<Headers::RowIdentifier *> * IndexPage::GetNonClusteredDataUnsafe(){ return &this->nonClusteredData; }
+vector<Headers::RowIdentifier *> * IndexPage::NonClusteredDataNoLock(){ return &this->nonClusteredData; }
 
 vector<page_id_t> * IndexPage::GetChildren(){ return &this->children; }
 
@@ -264,6 +270,10 @@ void IndexPage::SetNextPage(const page_id_t &nextPage){ this->nextNode = nextPag
 const page_id_t & IndexPage::GetPreviousPage()const{ return this->previousNode; }
 
 const page_id_t & IndexPage::GetNextPage()const{ return this->nextNode; }
+
+bool IndexPage::HasRightSibling() const{ return this->nextNode != INVALID_PAGE_ID; }
+
+bool IndexPage::HasLeftSibling() const{ return this->previousNode != INVALID_PAGE_ID; }
 
 void IndexPage::UpdatePageSize()
 {

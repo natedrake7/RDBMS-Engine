@@ -11,64 +11,12 @@
 #include "../include/Database.h"
 #include "../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../Systemic/include/Guards/WriterGuard.h"
+#include "Schedulers/StatisticsScheduler.h"
+
+#include <cmath>
 
 namespace Indexing
 {
-    BTree::BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
-    {
-        //handle degree here correctly based on indexed columns
-        this->keySize = table->CalculateIndexKeySize(nonClusteredIndexId);
-        this->degree = BTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
-        this->indexPageId = indexPageId;
-        this->type = treeType;
-        this->database = table->GetDatabase();
-        this->nonClusteredIndexId = nonClusteredIndexId;
-        this->table = table;
-    }
-
-    BTree::BTree()
-    {
-        this->degree = 0;
-        this->keySize = 0;
-        this->nonClusteredIndexId = -1;
-        this->indexPageId = INVALID_PAGE_INDEX_ID;
-        this->table = nullptr;
-        this->database = nullptr;
-        this->type = TreeType::NonClustered;
-    }
-
-    BTree::~BTree() = default;
-
-    int BTree::CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, const TreeType& treeType, const int& nonClusteredId)const
-    {
-        if(treeType == TreeType::Clustered){
-          auto rowSize = otherTable->GetMaximumRowSize();
-          int calculatedDegree = static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
-
-          while(calculatedDegree < 2){
-            rowSize = otherTable->ReduceMaximumRowSize();
-
-            calculatedDegree = static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
-          }
-
-          return calculatedDegree;
-        }
-
-        const vector<DatabaseEngine::StorageTypes::Column*>& columns = otherTable->GetColumns();
-
-        const auto& index = otherTable->GetNonClusteredIndexes(nonClusteredId);
-
-        int computedKeySize = 0;
-        for(const auto& columnPos: index.columns)
-        {
-            const DatabaseEngine::StorageTypes::Column* column = columns.at(columnPos);
-
-            computedKeySize += column->GetColumnSize();
-        }
-
-        return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
-    }
-
     int BTree::LowerBound(
         const std::vector<DataTypes::Indexing::Key *> *keys,
         const DataTypes::Indexing::Key &key
@@ -119,7 +67,7 @@ namespace Indexing
         auto root = this->AllocateNewPage(INVALID_PAGE_ID);
 
         {
-            MultiThreading::WriterGuard lock(&root->GetLatch());
+            MultiThreading::WriterGuard lock(&root->Latch());
 
             root->SetIsRoot(true);
             root->SetIsLeaf(true);
@@ -136,13 +84,13 @@ namespace Indexing
         {
             auto newRoot = this->AllocateNewPage(this->indexPageId);
 
-            MultiThreading::WriterGuard newRootLock(&newRoot->GetLatch());
+            MultiThreading::WriterGuard newRootLock(&newRoot->Latch());
 
             newRoot->SetIsRoot(true);
             newRoot->SetIsLeaf(false);
             newRoot->SetTreeType(this->type);
 
-            auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root->GetLatch(), rootLock);
+            auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root->Latch(), rootLock);
 
             newRoot->InsertChild(root->GetPageId());
             root->SetIsRoot(false);
@@ -166,8 +114,8 @@ namespace Indexing
         Pages::PageGuard<Pages::IndexPage>& child,
         MultiThreading::ReaderGuard& childReadLock
     ){
-        auto parentLock = MultiThreading::WriterGuard::Promote(&parent->GetLatch(), parentReadLock);
-        auto childLock = MultiThreading::WriterGuard::Promote(&child->GetLatch(), childReadLock);
+        auto parentLock = MultiThreading::WriterGuard::Promote(&parent->Latch(), parentReadLock);
+        auto childLock = MultiThreading::WriterGuard::Promote(&child->Latch(), childReadLock);
 
         this->SplitChildNoLock(parent, index, child);
     }
@@ -196,17 +144,17 @@ namespace Indexing
         childKeys->resize(this->degree);
 
         if (this->type == TreeType::Clustered) {
-            auto* childRows = child->GetDataRowsNoLock();
+            auto* childRows = child->DataRowsNoLock();
 
-            auto* newChildRows = newChild->GetDataRowsNoLock();
+            auto* newChildRows = newChild->DataRowsNoLock();
 
             newChildRows->assign(childRows->begin() + this->degree, childRows->end());
             childRows->resize(this->degree);
         }
         else{
-            auto* childRows = child->GetNonClusteredDataUnsafe();
+            auto* childRows = child->NonClusteredDataNoLock();
 
-            auto* newChildRows = newChild->GetNonClusteredDataUnsafe();
+            auto* newChildRows = newChild->NonClusteredDataNoLock();
 
             newChildRows->assign(childRows->begin() + this->degree, childRows->end());
             childRows->resize(this->degree);
@@ -257,7 +205,7 @@ namespace Indexing
     ) {
         auto newChild = this->AllocateNewPage(parent->GetPageId());
 
-        MultiThreading::WriterGuard newChildLock(&newChild->GetLatch());
+        MultiThreading::WriterGuard newChildLock(&newChild->Latch());
 
         newChild->SetIsLeaf(child->IsLeaf());
         newChild->SetIsRoot(false);
@@ -277,35 +225,6 @@ namespace Indexing
         newChild->UpdatePageSize();
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::FindInsertNode(
-        const DataTypes::Indexing::Key &key,
-        int &indexPosition,
-        Errors::RuntimeStatus& status
-    ){
-        //base case scenario
-        if (this->indexPageId == INVALID_PAGE_ID) {
-            auto root =  this->CreateRootPage(indexPosition);
-
-            if(this->nonClusteredIndexId != -1)
-                this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
-            else
-                this->table->SetClusteredIndexPageId(this->indexPageId);
-
-            return root;
-        }
-
-        auto root = this->GetNode(this->indexPageId);
-
-        {
-            MultiThreading::ReaderGuard rootLock(&root->GetLatch());
-
-            if (root->GetKeysUnsafe()->size() == 2 * this->degree - 1) // root is full,
-                this->SplitRoot(root, rootLock);
-        }
-
-        return this->GetNonFullNode(root, key, indexPosition, status);
-    }
-
     Pages::PageGuard<Pages::IndexPage> BTree::GetNonFullNode(
         Pages::PageGuard<Pages::IndexPage>& parent,
         const DataTypes::Indexing::Key &key,
@@ -314,7 +233,7 @@ namespace Indexing
     ){
         Pages::PageGuard<Pages::IndexPage> intermediateNode;
         {
-            MultiThreading::ReaderGuard parentLock(&parent->GetLatch());
+            MultiThreading::ReaderGuard parentLock(&parent->Latch());
 
             const auto* parentKeys = parent->GetKeysUnsafe();
             if (parent->IsLeaf())
@@ -328,7 +247,7 @@ namespace Indexing
 
             auto child = this->GetNode(childId);
 
-            MultiThreading::ReaderGuard childLock(&child->GetLatch());
+            MultiThreading::ReaderGuard childLock(&child->Latch());
 
             const auto* childKeys = child->GetKeysUnsafe();
 
@@ -336,7 +255,7 @@ namespace Indexing
                 this->SplitChild(parent, parentLock, childIndex, child, childLock);
 
                 //split child will break the lock and we need to reacquire it
-                MultiThreading::ReaderGuard newParentLock(&parent->GetLatch());
+                MultiThreading::ReaderGuard newParentLock(&parent->Latch());
 
                 if (key > *parentKeys->at(childIndex))
                     childIndex++;
@@ -369,855 +288,111 @@ namespace Indexing
         return node;
     }
 
-    void BTree::IndexScan(vector<DataTypes::Indexing::QueryData> &result)const
+    Pages::PageGuard<Pages::IndexPage> BTree::SearchKey(const DataTypes::Indexing::Key &key) const
     {
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
+        auto currentNode = this->GetNode(this->indexPageId);
 
-        auto currentNode = this->SearchLeftMostLeafNode();
-        Pages::PageGuard<Pages::IndexPage> previousNode;
+        while (true) {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-        while (currentNode.Get())
-        {
-            // auto* keys = currentNode->GetKeysUnsafe();
+            if (currentNode->IsLeaf())
+                return currentNode;
 
-            // for (int i = 0; i < keys->size(); i++)
-            //     result.emplace_back(currentNode->dataPageId, i);
+            const auto* keys = currentNode->GetKeysUnsafe();
 
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
+            const auto index = BTree::PartialLowerBound(keys, key);
 
-            // previousNode = currentNode;
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode->GetChildren()->at(index));
         }
     }
 
-    void BTree::IndexScan(
-        const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        DatabaseEngine::IndexState& state
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
+    Pages::PageGuard<Pages::IndexPage> BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::PageGuard<Pages::IndexPage>> & ancestors) const{
+      auto currentNode = this->GetNode(this->indexPageId);
 
-        auto currentNode = state.pageId == INVALID_PAGE_ID
-                                ? this->SearchLeftMostLeafNode()
-                                : this->GetNode(state.pageId);
+      while (!currentNode->IsLeaf())
+      {
+        const auto* keys = currentNode->GetKeysUnsafe();
 
-        state.canFetchMore = false;
-        while (currentNode.Get()){
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+        const auto iterator = ranges::lower_bound(*keys, &key);
+        //
+        // const int index = iterator - keys->begin();
+        const auto index = BTree::LowerBound(keys, key);
 
-            const auto* rows = currentNode->GetDataRowsNoLock();
+        ancestors.push_back(std::move(currentNode));
 
-            for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
-                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
-
-                if (!row)
-                    continue;
-
-                result->push_back(row);
-
-                if (result->size() == properties.batchSize) {
-                    state.pageId = currentNode->GetPageId();
-                    state.lastFetchedKeyIndex = i;
-
-                    state.canFetchMore = true;
-                    return;
-                }
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID) {
-                state.canFetchMore = false;
-                return;
-            }
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-    }
-
-    void BTree::IndexScan(
-        const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        DatabaseEngine::IndexState& state,
-        const Expressions::Expression *expression
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = state.pageId == INVALID_PAGE_ID
-                                ? this->SearchLeftMostLeafNode()
-                                : this->GetNode(state.pageId);
-
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-
-        state.canFetchMore = false;
-        while (currentNode.Get())
-        {
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
-
-            const auto* rows = currentNode->GetDataRowsNoLock();
-
-            for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
-                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
-
-                if (!row)
-                    continue;
-
-                context.row = row;
-                if(!expression->Evaluate(context).GetBool())
-                    continue;
-
-                result->push_back(row);
-
-                if (result->size() == properties.batchSize) {
-                    state.lastFetchedKeyIndex = i;
-                    state.pageId = currentNode->GetPageId();
-                    state.canFetchMore = true;
-
-                    return;
-                }
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID) {
-                state.canFetchMore = false;
-                return;
-            }
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
+        currentNode = std::move(this->GetNode(currentNode->GetChildren()->at(index)));
       }
+
+      return currentNode;
     }
 
-    void BTree::IndexScan(
-        const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
-        const Expressions::Expression *expression
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
+    Pages::PageGuard<Pages::IndexPage> BTree::SearchLeftMostLeafNode() const{
+        auto currentNode = this->GetNode(this->indexPageId);
 
-        auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        while (true) {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-        while (currentNode.Get())
-        {
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+            if (currentNode->IsLeaf())
+                return currentNode;
 
-            for (const auto* pageRow : *currentNode->GetDataRowsNoLock()) {
-                auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
-
-                context.row = row;
-                if(!row || !expression->Evaluate(context).GetBool())
-                    continue;
-
-                result->push_back(row);
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode->GetChildren()->at(0));
         }
     }
 
-    void BTree::IndexScan(
-        const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
+    Pages::PageGuard<Pages::IndexPage> BTree::SearchLeftMostLeafNode(int8_t &depth) const{
+        auto currentNode = this->GetNode(this->indexPageId);
 
-        auto currentNode = this->SearchLeftMostLeafNode();
+        while (true) {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-        while (currentNode.Get())
-        {
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+            depth++;
 
-            for (const auto& pageRow : *currentNode->GetDataRowsNoLock()) {
-                auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
+            if (currentNode->IsLeaf())
+                return currentNode;
 
-                if (!row)
-                    continue;
-
-                result->push_back(row);
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode->GetChildren()->at(0));
         }
     }
 
-    void BTree::IndexScan(
-        vector<Headers::RowIdentifier> *result,
-        DatabaseEngine::IndexState& state,
-        const int& rowsToSelect
-    )const{
-
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = state.pageId == INVALID_PAGE_ID
-                        ? this->SearchLeftMostLeafNode()
-                        : this->GetNode(state.pageId);
-
-        const int startingPosition = state.GetNextKeyIndex();
-
-        while (currentNode.Get())
-        {
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
-
-            const auto* rowIds = currentNode->GetNonClusteredDataUnsafe();
-
-            for (int i = startingPosition; i < rowIds->size(); i++) {
-                const auto* rowId = rowIds->at(i);
-
-                result->emplace_back(rowId->pageId, rowId->indexId);
-
-                state.pageId = rowId->pageId;
-                state.lastFetchedKeyIndex = i;
-
-                if (result->size() == rowsToSelect)
-                    return;
-            }
-
-
-
-            // for(auto* row: *currentNode->GetDataRowsUnsafe()){
-            //     if(!row->Evaluate(expression))
-            //         continue;
-            //
-            //     const RowHeader *rowHeader = row->GetHeader();
-            //
-            //     vector<Block *> copyBlocks = row->GetBlockCopies();
-            //
-            //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
-            // }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
+    Pages::PageGuard<Pages::IndexPage> BTree::GetNode(const page_id_t& pageId) const{
+        return Storage::StorageManager::Get().GetIndexPage(this->database->GetFileName(), pageId, this->table);
     }
 
-    void BTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression)const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
+    int BTree::CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, const TreeType& treeType, const int& nonClusteredId)const
+    {
+        if(treeType == TreeType::Clustered){
+          auto rowSize = otherTable->GetMaximumRowSize();
+          int calculatedDegree = static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
 
-        auto currentNode = this->SearchLeftMostLeafNode();
+          while(calculatedDegree < 2){
+            rowSize = otherTable->ReduceMaximumRowSize();
 
-        while (currentNode.Get())
-        {
-            // for(auto* row: *currentNode->GetDataRowsUnsafe()){
-            //     if(!row->Evaluate(expression))
-            //         continue;
-            //
-            //     const RowHeader *rowHeader = row->GetHeader();
-            //
-            //     vector<Block *> copyBlocks = row->GetBlockCopies();
-            //
-            //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
-            // }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-    }
-
-    void BTree::IndexScanUpdate(
-        const DatabaseEngine::ExecutionProperties& properties,
-        const Expressions::Expression *expression,
-        const vector<Value> & updates
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-
-        while (currentNode.Get())
-        {
-            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
-
-            for(auto* row: *currentNode->GetDataRowsNoLock()){
-
-                context.row = row;
-                const auto value = expression->Evaluate(context);
-                if(!value.GetBool())
-                  continue;
-
-            const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, false);
-
-              if (result.code != Errors::RuntimeError::Ok)
-                  return;
+            calculatedDegree = static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
           }
 
-          if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-            return;
-
-          currentNode = this->GetNode(currentNode->GetNextPage());
+          return calculatedDegree;
         }
-    }
 
-    Errors::RuntimeStatus BTree::IndexScanUpdate(
-        const DatabaseEngine::ExecutionProperties& properties,
-        const Expressions::Expression *expression,
-        const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return {};
+        const vector<DatabaseEngine::StorageTypes::Column*>& columns = otherTable->GetColumns();
 
-        HashSet<column_index_t> updatedColumns;
-        for(const auto& update : updates)
-            updatedColumns.Add(update->name.index);
+        const auto& index = otherTable->GetNonClusteredIndexes(nonClusteredId);
 
-        auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-
-        while (currentNode.Get())
+        int computedKeySize = 0;
+        for(const auto& columnPos: index.columns)
         {
-            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
+            const DatabaseEngine::StorageTypes::Column* column = columns.at(columnPos);
 
-            for(auto* row: *currentNode->GetDataRowsNoLock()){
-                context.row = row;
-
-                const auto value = expression->Evaluate(context);
-                if(!value.GetBool())
-                    continue;
-
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
-
-                if (result.code != Errors::RuntimeError::Ok)
-                    return result;
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return {};
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            computedKeySize += column->GetColumnSize();
         }
 
-        return {};
+        return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
     }
 
-    Errors::RuntimeStatus BTree::IndexScanUpdate(const DatabaseEngine::ExecutionProperties& properties, const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return {};
-
-        HashSet<column_index_t> updatedColumns;
-
-        for(const auto& update : updates)
-            updatedColumns.Add(update->name.index);
-
-        auto currentNode = this->SearchLeftMostLeafNode();
-
-        while (currentNode.Get())
-        {
-            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
-
-            for(auto* row: *currentNode->GetDataRowsNoLock()) {
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
-
-                if (result.code != Errors::RuntimeError::Ok)
-                    return result;
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return {};
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-
-        return {};
+    Pages::PageGuard<Pages::IndexPage> BTree::AllocateNewPage(const page_id_t& parentPageId){
+        return this->database->FindOrAllocateNextIndexPage(this->table, parentPageId, this->nonClusteredIndexId);
     }
 
-    Errors::RuntimeStatus BTree::IndexSeekUpdate(
-        const DatabaseEngine::ExecutionProperties &properties,
-        const DataTypes::Indexing::Key &key,
-        const std::vector<Value> &updates
-    ) const {
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return {};
-
-        auto currentNode = this->SearchKey(key);
-
-        while (currentNode.Get()) {
-            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
-
-            const auto* keys = currentNode->GetKeysUnsafe();
-
-            for (int i = 0; i < keys->size(); i++) {
-                const auto &currentKey = keys->at(i);
-
-                if (key != *currentKey || key < *currentKey)
-                    continue;
-
-                const auto* rows = currentNode->GetDataRowsNoLock();
-
-                const auto result = this->table->HandleRowUpdate(
-                    currentNode.Get(),
-                    rows->at(i),
-                    properties,
-                    updates,
-                    false
-                );
-
-                if (result.code != Errors::RuntimeError::Ok)
-                    return result;
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return {};
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-
-        return {};
-    }
-
-//escalate to table lock
-    void BTree::InsertRowsToOtherTree(const int& indexPos)const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = this->SearchLeftMostLeafNode();
-
-        while (currentNode.Get())
-        {
-            const auto* rows = currentNode->GetDataRowsNoLock();
-
-            for (int i = 0;i < rows->size(); i++) {
-                const auto* row = rows->at(i);
-
-                this->table->NonClusteredIndexInsert(row, indexPos, Headers::RowIdentifier(currentNode->GetPageId(), i));
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-    }
-
-    void BTree::InsertColumnToRow(const column_index_t& index, const Value &defaultValue)const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = this->SearchLeftMostLeafNode();
-
-        while (currentNode.Get())
-        {
-            for(auto* row: *currentNode->GetDataRowsNoLock())
-                this->table->HandleAddColumn(currentNode.Get(), row, index, defaultValue);
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-    }
-
-    void BTree::RemoveColumnFromRow(const column_index_t &index)const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto root = this->GetNode(this->indexPageId);
-
-        auto currentNode = this->SearchLeftMostLeafNode();
-
-        while (currentNode.Get())
-        {
-            for(auto* row: *currentNode->GetDataRowsNoLock())
-                DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode.Get(), row, index);
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-
-    }
-
-    Errors::RuntimeStatus BTree::IndexSeekUpdate(
-        const DatabaseEngine::ExecutionProperties& properties,
-        const Expressions::Expression* expression,
-        const DataTypes::Indexing::Key* minKey,
-        const DataTypes::Indexing::Key* maxKey,
-        const vector<Value> & updates
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return {};
-
-        HashSet<column_index_t> updatedColumns;
-        for(const auto& update : updates)
-            updatedColumns.Add(update.GetColumnIndex());
-
-        auto currentNode = this->SearchKey(*minKey);
-
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-        while (currentNode.Get())
-        {
-            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
-
-            const auto* keys = currentNode->GetKeysUnsafe();
-
-            const auto* rows = currentNode->GetDataRowsNoLock();
-
-              for (int i = 0; i < keys->size(); i++)
-              {
-                const auto &key = keys->at(i);
-
-                if (*minKey > *key)
-                    continue;
-
-                if (*maxKey < *key)
-                    break;
-
-                  context.row = rows->at(i);
-                  const auto value = expression->Evaluate(context);
-                  if(!value.GetBool())
-                    continue;
-
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, false);
-
-                if (result.code != Errors::RuntimeError::Ok)
-                  return result;
-
-    //            if (maxKey < *key && !previousNode)
-    //                return;
-              }
-
-          if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-            return {};
-
-          currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-
-        return {};
-    }
-
-    Errors::RuntimeStatus BTree::IndexSeekUpdate(
-        const DatabaseEngine::ExecutionProperties& properties,
-        const DataTypes::Indexing::Key *minKey,
-        const DataTypes::Indexing::Key *maxKey,
-        const std::vector<Value> &updates
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return {};
-
-        auto currentNode = this->SearchKey(*minKey);
-
-        while (currentNode.Get()){
-            MultiThreading::WriterGuard lock(&currentNode->GetLatch());
-
-            const auto* keys = currentNode->GetKeysUnsafe();
-
-            const auto* rows = currentNode->GetDataRowsNoLock();
-
-            for (int i = 0; i < keys->size(); i++){
-                const auto &key = keys->at(i);
-
-                if (*minKey > *key)
-                    continue;
-
-                if (*maxKey < *key)
-                    break;
-
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, false);
-
-                if (result.code != Errors::RuntimeError::Ok)
-                  return result;
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return {};
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-
-        return {};
-    }
-
-
-    //TODO fix non clusteredIndex Seek
-    void BTree::IndexSeekRange(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = this->SearchKey(minKey);
-        Pages::PageGuard<Pages::IndexPage> previousNode;
-
-        while (currentNode.Get())
-        {
-            auto* keys = currentNode->GetKeysUnsafe();
-
-            if (previousNode.Get() && maxKey >= *keys->at(0))
-            {
-                // auto* previousKeys = previousNode->GetKeysUnsafe();
-
-                // Check if the last key in the previous node is within the range
-                // if (maxKey >= *previousKeys->at(previousKeys->size() - 1))
-                //     result.emplace_back(previousNode->dataPageId, previousNode->keys.size());
-            }
-
-            for (const auto* key : *keys)
-            {
-                if (minKey <= *key && maxKey >= *key)
-                {
-                    // result.emplace_back(currentNode->dataPageId, i);
-                    continue;
-                }
-
-                if (maxKey < *key)
-                    return;
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            previousNode = currentNode;
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-    }
-
-    void BTree::IndexSeekRange(
-        const DatabaseEngine::ExecutionProperties& properties,
-        const DataTypes::Indexing::Key &minKey,
-        const DataTypes::Indexing::Key &maxKey,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result
-    )const{
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = this->SearchKey(minKey);
-
-        while (true){
-            if (!currentNode.Get())
-                break;
-
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
-
-            const auto* keys = currentNode->GetKeysUnsafe();
-
-            for (int i = 0; i < keys->size(); i++){
-                const auto &key = keys->at(i);
-
-                if (key->InClosedRange(minKey, maxKey)){
-                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
-
-                    if (!visibleRow)
-                        continue;
-
-                    result->push_back(visibleRow);
-                    continue;
-                }
-
-                if (maxKey < *key)
-                    return;
-            }
-
-            if(currentNode->GetNextPage() == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-    }
-
-    void BTree::IndexSeek(
-        const DatabaseEngine::ExecutionProperties &properties,
-        const DataTypes::Indexing::Key &key,
-        std::vector<const DatabaseEngine::StorageTypes::Row *> *result
-    ) const {
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = this->SearchKey(key);
-
-        while (true){
-            if (!currentNode.Get())
-                break;
-
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
-
-            const auto* keys = currentNode->GetKeysUnsafe();
-
-            for (int i = 0; i < keys->size(); i++){
-                const auto& rowKey = keys->at(i);
-
-                if (key == *rowKey) {
-                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
-
-                    if (!visibleRow)
-                        continue;
-
-                    result->push_back(visibleRow);
-                }
-
-                if (key < *rowKey)
-                    return;
-            }
-
-            const auto& nextNodeId = currentNode->GetNextPage();
-            if(nextNodeId == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(nextNodeId);
-        }
-    }
-
-    void BTree::IndexSeek(
-        const DatabaseEngine::ExecutionProperties &properties,
-        const DataTypes::Indexing::Key &key,
-        std::vector<const DatabaseEngine::StorageTypes::Row *> *result,
-        const Expressions::Expression *expression
-    ) const {
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        auto currentNode = this->SearchKey(key);
-
-        auto context = Expressions::EvaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-
-        while (true){
-            if (!currentNode.Get())
-                break;
-
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
-
-            const auto* keys = currentNode->GetKeysUnsafe();
-
-            for (int i = 0; i < keys->size(); i++){
-                const auto& rowKey = keys->at(i);
-
-                if (key == *rowKey) {
-                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
-
-                    context.row = visibleRow;
-                    if (!visibleRow || !expression->Evaluate(context).GetBool())
-                        continue;
-
-                    result->push_back(visibleRow);
-                }
-
-                if (key < *rowKey)
-                    return;
-            }
-
-            const auto& nextNodeId = currentNode->GetNextPage();
-            if(nextNodeId == INVALID_PAGE_ID)
-                return;
-
-            currentNode = this->GetNode(nextNodeId);
-        }
-    }
-
-    void BTree::SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const
-    {
-        if (this->indexPageId == INVALID_PAGE_ID)
-            return;
-
-        // auto currentNode = this->GetNode(this->indexPageId);
-        //
-        // while (!currentNode->IsLeaf())
-        // {
-        //     auto* keys = currentNode->GetKeysUnsafe();
-        //
-        //     const auto iterator = ranges::lower_bound(*keys, &key);
-        //
-        //     const int index = iterator - keys->begin();
-        //
-        //     auto* children = currentNode->GetChildren();
-        //
-        //     currentNode = this->GetNode(children->at(index));
-        // }
-
-        auto currentNode = this->SearchKey(key);
-
-        Pages::PageGuard<Pages::IndexPage> previousNode;
-        while (true)
-        {
-            if (currentNode.Get() == nullptr)
-                return;
-
-            // MultiThreading::ReaderGuard
-            auto* keys = currentNode->GetKeysUnsafe();
-
-            if (previousNode.Get() && key <= *keys->at(0))
-            {
-                // result.pageId = previousNode->dataPageId;
-                // result.indexPosition = previousNode->keys.size();
-                return;
-            }
-
-            for (int i = 0; i < keys->size(); i++)
-            {
-                if (key == *keys->at(i))
-                {
-
-                    // result.pageId = currentNode->dataPageId;
-                    // result.indexPosition = i;
-                    return;
-                }
-            }
-
-            previousNode = currentNode;
-            currentNode = this->GetNode(currentNode->GetNextPage());
-        }
-    }
-
-    void BTree::Remove(const DataTypes::Indexing::Key &key){
-
-      if (this->indexPageId == INVALID_PAGE_ID)
-        return;
-
-      vector<Pages::PageGuard<Pages::IndexPage>> ancestors;
-      auto currentNode = std::move(this->SearchKeyWithAncestors(key, ancestors));
-
-      auto* keys = currentNode->GetKeysUnsafe();
-
-      int keyIndex = -1;
-
-      for (int i = 0; i < keys->size(); i++) {
-        if (*keys->at(i) == key) {
-          keyIndex = i;
-          break;
-        }
-      }
-
-      if (keyIndex == -1)
-        return;
-
-      keys->erase(keys->begin() + keyIndex);
-
-      if (this->type == TreeType::NonClustered){
-        auto* nonClusteredData = currentNode->GetNonClusteredDataUnsafe();
-
-        nonClusteredData->erase(nonClusteredData->begin() + keyIndex);
-      }
-      else{
-            auto* rows = currentNode->GetDataRowsNoLock();
-            const auto* row = rows->at(keyIndex);
-
-            rows->erase(rows->begin() + keyIndex);
-
-            delete row;
-      }
-
-      currentNode->UpdatePageSize();
-      currentNode->UpdateBytesLeft();
-
-      if (keys->size() >= (degree - 1 ) / 2)
-        return;
-
-      int parentIndex = ancestors.size() - 1;
-      this->HandleUnderflow(currentNode, ancestors, parentIndex);
-   }
-
-   void BTree::HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex) {
+    void BTree::HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex) {
         if (node->IsRoot()) {
            this->HandleRootUnderflow();
            return;
@@ -1304,8 +479,8 @@ namespace Indexing
              if (this->type == TreeType::Clustered) {
 
               //insert last child from left sibling to the current page
-              auto* nodeRows = node->GetDataRowsNoLock();
-              auto* siblingRows = sibling->GetDataRowsNoLock();
+              auto* nodeRows = node->DataRowsNoLock();
+              auto* siblingRows = sibling->DataRowsNoLock();
 
               if (!siblingRows->empty()) {
                    nodeRows->push_back(siblingRows->back());
@@ -1313,8 +488,8 @@ namespace Indexing
                }
              }
              else {
-              auto* nodeNonClusteredData = node->GetNonClusteredDataUnsafe();
-              auto* siblingNonClusteredData = sibling->GetNonClusteredDataUnsafe();
+              auto* nodeNonClusteredData = node->NonClusteredDataNoLock();
+              auto* siblingNonClusteredData = sibling->NonClusteredDataNoLock();
 
               if(!siblingNonClusteredData->empty()){
                 nodeNonClusteredData->insert(nodeNonClusteredData->begin(), siblingNonClusteredData->back());
@@ -1365,8 +540,8 @@ namespace Indexing
              nodeKeys->insert(nodeKeys->begin(), siblingKeys->front());
 
              if (this->type == TreeType::Clustered) {
-                 vector<DatabaseEngine::StorageTypes::Row*>* nodeRows = node->GetDataRowsNoLock();
-                 vector<DatabaseEngine::StorageTypes::Row*>* siblingRows = sibling->GetDataRowsNoLock();
+                 vector<DatabaseEngine::StorageTypes::Row*>* nodeRows = node->DataRowsNoLock();
+                 vector<DatabaseEngine::StorageTypes::Row*>* siblingRows = sibling->DataRowsNoLock();
 
                  if (!siblingRows->empty()) {
                      nodeRows->push_back(siblingRows->front());
@@ -1374,8 +549,8 @@ namespace Indexing
                  }
              }
              else {
-              auto* nodeNonClusteredData = node->GetNonClusteredDataUnsafe();
-              auto* siblingNonClusteredData = sibling->GetNonClusteredDataUnsafe();
+              auto* nodeNonClusteredData = node->NonClusteredDataNoLock();
+              auto* siblingNonClusteredData = sibling->NonClusteredDataNoLock();
 
               if(!siblingNonClusteredData->empty()){
                 nodeNonClusteredData->push_back(siblingNonClusteredData->front());
@@ -1423,15 +598,15 @@ namespace Indexing
               leftNodeKeys->insert(leftNodeKeys->end(), rightNodeKeys->begin(), rightNodeKeys->end());
 
              if (this->type == TreeType::Clustered) {
-                auto* leftNodeRows = leftNode->GetDataRowsNoLock();
-                auto* rightNodeRows = rightNode->GetDataRowsNoLock();
+                auto* leftNodeRows = leftNode->DataRowsNoLock();
+                auto* rightNodeRows = rightNode->DataRowsNoLock();
 
                 leftNodeRows->insert(leftNodeRows->end(), rightNodeRows->begin(), rightNodeRows->end());
                 rightNodeRows->clear();
              }
              else {
-                auto* leftNodeNonClusteredData = leftNode->GetNonClusteredDataUnsafe();
-                auto* rightNodeNonClusteredData = rightNode->GetNonClusteredDataUnsafe();
+                auto* leftNodeNonClusteredData = leftNode->NonClusteredDataNoLock();
+                auto* rightNodeNonClusteredData = rightNode->NonClusteredDataNoLock();
 
                 leftNodeNonClusteredData->insert(leftNodeNonClusteredData->end(), rightNodeNonClusteredData->begin(), rightNodeNonClusteredData->end());
                 leftNodeNonClusteredData->clear();
@@ -1480,6 +655,845 @@ namespace Indexing
          delete rightNode.Get();
     }
 
+    BTree::BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
+    {
+        //handle degree here correctly based on indexed columns
+        this->keySize = table->CalculateIndexKeySize(nonClusteredIndexId);
+        this->degree = BTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
+        this->indexPageId = indexPageId;
+        this->type = treeType;
+        this->database = table->GetDatabase();
+        this->nonClusteredIndexId = nonClusteredIndexId;
+        this->table = table;
+    }
+
+    BTree::BTree()
+    {
+        this->degree = 0;
+        this->keySize = 0;
+        this->nonClusteredIndexId = -1;
+        this->indexPageId = INVALID_PAGE_INDEX_ID;
+        this->table = nullptr;
+        this->database = nullptr;
+        this->type = TreeType::NonClustered;
+    }
+
+    BTree::~BTree() = default;
+
+    Pages::PageGuard<Pages::IndexPage> BTree::FindInsertNode(
+        const DataTypes::Indexing::Key &key,
+        int &indexPosition,
+        Errors::RuntimeStatus& status
+    ){
+        //base case scenario
+        if (this->IsEmpty()) {
+            auto root =  this->CreateRootPage(indexPosition);
+
+            if(this->nonClusteredIndexId != -1)
+                this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
+            else
+                this->table->SetClusteredIndexPageId(this->indexPageId);
+
+            return root;
+        }
+
+        auto root = this->GetNode(this->indexPageId);
+
+        {
+            MultiThreading::ReaderGuard rootLock(&root->Latch());
+
+            if (root->GetKeysUnsafe()->size() == 2 * this->degree - 1) // root is full,
+                this->SplitRoot(root, rootLock);
+        }
+
+        return this->GetNonFullNode(root, key, indexPosition, status);
+    }
+
+    //TODO fix non clusteredIndex Seek
+    void BTree::IndexSeekRange(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchKey(minKey);
+        Pages::PageGuard<Pages::IndexPage> previousNode;
+
+        while (currentNode.Get())
+        {
+            auto* keys = currentNode->GetKeysUnsafe();
+
+            if (previousNode.Get() && maxKey >= *keys->at(0))
+            {
+                // auto* previousKeys = previousNode->GetKeysUnsafe();
+
+                // Check if the last key in the previous node is within the range
+                // if (maxKey >= *previousKeys->at(previousKeys->size() - 1))
+                //     result.emplace_back(previousNode->dataPageId, previousNode->keys.size());
+            }
+
+            for (const auto* key : *keys)
+            {
+                if (minKey <= *key && maxKey >= *key)
+                {
+                    // result.emplace_back(currentNode->dataPageId, i);
+                    continue;
+                }
+
+                if (maxKey < *key)
+                    return;
+            }
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            previousNode = currentNode;
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+void BTree::IndexSeekRange(
+        const DatabaseEngine::ExecutionProperties& properties,
+        const DataTypes::Indexing::Key &minKey,
+        const DataTypes::Indexing::Key &maxKey,
+        std::vector<const DatabaseEngine::StorageTypes::Row*> *result
+    )const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchKey(minKey);
+
+        while (true){
+            if (!currentNode.Get())
+                break;
+
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            for (int i = 0; i < keys->size(); i++){
+                const auto &key = keys->at(i);
+
+                if (key->InClosedRange(minKey, maxKey)){
+                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                    if (!visibleRow)
+                        continue;
+
+                    result->push_back(visibleRow);
+                    continue;
+                }
+
+                if (maxKey < *key)
+                    return;
+            }
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::IndexSeek(
+        const DatabaseEngine::ExecutionProperties &properties,
+        const DataTypes::Indexing::Key &key,
+        std::vector<const DatabaseEngine::StorageTypes::Row *> *result
+    ) const {
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchKey(key);
+
+        while (true){
+            if (!currentNode.Get())
+                break;
+
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            for (int i = 0; i < keys->size(); i++){
+                const auto& rowKey = keys->at(i);
+
+                if (key == *rowKey) {
+                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                    if (!visibleRow)
+                        continue;
+
+                    result->push_back(visibleRow);
+                }
+
+                if (key < *rowKey)
+                    return;
+            }
+
+            const auto& nextNodeId = currentNode->GetNextPage();
+            if(nextNodeId == INVALID_PAGE_ID)
+                return;
+
+            currentNode = this->GetNode(nextNodeId);
+        }
+    }
+
+    void BTree::IndexSeek(
+        const DatabaseEngine::ExecutionProperties &properties,
+        const DataTypes::Indexing::Key &key,
+        std::vector<const DatabaseEngine::StorageTypes::Row *> *result,
+        const Expressions::Expression *expression
+    ) const {
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchKey(key);
+
+        auto context = Expressions::EvaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+        while (true){
+            if (!currentNode.Get())
+                break;
+
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            for (int i = 0; i < keys->size(); i++){
+                const auto& rowKey = keys->at(i);
+
+                if (key == *rowKey) {
+                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                    context.row = visibleRow;
+                    if (!visibleRow || !expression->Evaluate(context).GetBool())
+                        continue;
+
+                    result->push_back(visibleRow);
+                }
+
+                if (key < *rowKey)
+                    return;
+            }
+
+            const auto& nextNodeId = currentNode->GetNextPage();
+            if(nextNodeId == INVALID_PAGE_ID)
+                return;
+
+            currentNode = this->GetNode(nextNodeId);
+        }
+    }
+
+    void BTree::IndexScan(vector<DataTypes::Indexing::QueryData> &result)const
+    {
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchLeftMostLeafNode();
+        Pages::PageGuard<Pages::IndexPage> previousNode;
+
+        while (currentNode.Get())
+        {
+            // auto* keys = currentNode->GetKeysUnsafe();
+
+            // for (int i = 0; i < keys->size(); i++)
+            //     result.emplace_back(currentNode->dataPageId, i);
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            // previousNode = currentNode;
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::IndexScan(
+        const DatabaseEngine::ExecutionProperties& properties,
+        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+        DatabaseEngine::IndexState& state
+    )const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = state.pageId == INVALID_PAGE_ID
+                                ? this->SearchLeftMostLeafNode()
+                                : this->GetNode(state.pageId);
+
+        state.canFetchMore = false;
+        while (currentNode.Get()){
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            const auto* rows = currentNode->DataRowsNoLock();
+
+            for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
+                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                if (!row)
+                    continue;
+
+                result->push_back(row);
+
+                if (result->size() == properties.batchSize) {
+                    state.pageId = currentNode->GetPageId();
+                    state.lastFetchedKeyIndex = i;
+
+                    state.canFetchMore = true;
+                    return;
+                }
+            }
+
+            if(!currentNode->HasRightSibling()) {
+                state.canFetchMore = false;
+                return;
+            }
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::IndexScan(
+        const DatabaseEngine::ExecutionProperties& properties,
+        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+        DatabaseEngine::IndexState& state,
+        const Expressions::Expression *expression
+    )const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = state.pageId == INVALID_PAGE_ID
+                                ? this->SearchLeftMostLeafNode()
+                                : this->GetNode(state.pageId);
+
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+        state.canFetchMore = false;
+        while (currentNode.Get())
+        {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            const auto* rows = currentNode->DataRowsNoLock();
+
+            for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
+                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                if (!row)
+                    continue;
+
+                context.row = row;
+                if(!expression->Evaluate(context).GetBool())
+                    continue;
+
+                result->push_back(row);
+
+                if (result->size() == properties.batchSize) {
+                    state.lastFetchedKeyIndex = i;
+                    state.pageId = currentNode->GetPageId();
+                    state.canFetchMore = true;
+
+                    return;
+                }
+            }
+
+            if(!currentNode->HasRightSibling()) {
+                state.canFetchMore = false;
+                return;
+            }
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+      }
+    }
+
+
+    void BTree::IndexScan(
+        const DatabaseEngine::ExecutionProperties& properties,
+        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+        const Expressions::Expression *expression
+    )const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchLeftMostLeafNode();
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+        while (currentNode.Get())
+        {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            for (const auto* pageRow : *currentNode->DataRowsNoLock()) {
+                auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
+
+                context.row = row;
+                if(!row || !expression->Evaluate(context).GetBool())
+                    continue;
+
+                result->push_back(row);
+            }
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::IndexScan(
+        const DatabaseEngine::ExecutionProperties& properties,
+        std::vector<const DatabaseEngine::StorageTypes::Row*> *result
+    )const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode.Get())
+        {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            for (const auto& pageRow : *currentNode->DataRowsNoLock()) {
+                auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
+
+                if (!row)
+                    continue;
+
+                result->push_back(row);
+            }
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::IndexScan(
+        vector<Headers::RowIdentifier> *result,
+        DatabaseEngine::IndexState& state,
+        const int& rowsToSelect
+    )const{
+
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = state.pageId == INVALID_PAGE_ID
+                        ? this->SearchLeftMostLeafNode()
+                        : this->GetNode(state.pageId);
+
+        const int startingPosition = state.GetNextKeyIndex();
+
+        while (currentNode.Get())
+        {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            const auto* rowIds = currentNode->NonClusteredDataNoLock();
+
+            for (int i = startingPosition; i < rowIds->size(); i++) {
+                const auto* rowId = rowIds->at(i);
+
+                result->emplace_back(rowId->pageId, rowId->indexId);
+
+                state.pageId = rowId->pageId;
+                state.lastFetchedKeyIndex = i;
+
+                if (result->size() == rowsToSelect)
+                    return;
+            }
+
+
+
+            // for(auto* row: *currentNode->GetDataRowsUnsafe()){
+            //     if(!row->Evaluate(expression))
+            //         continue;
+            //
+            //     const RowHeader *rowHeader = row->GetHeader();
+            //
+            //     vector<Block *> copyBlocks = row->GetBlockCopies();
+            //
+            //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
+            // }
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression)const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode.Get())
+        {
+            // for(auto* row: *currentNode->GetDataRowsUnsafe()){
+            //     if(!row->Evaluate(expression))
+            //         continue;
+            //
+            //     const RowHeader *rowHeader = row->GetHeader();
+            //
+            //     vector<Block *> copyBlocks = row->GetBlockCopies();
+            //
+            //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
+            // }
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::IndexScanUpdate(
+        const DatabaseEngine::ExecutionProperties& properties,
+        const Expressions::Expression *expression,
+        const vector<Value> & updates
+    )const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchLeftMostLeafNode();
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+        while (currentNode.Get())
+        {
+            MultiThreading::WriterGuard lock(&currentNode->Latch());
+
+            for(auto* row: *currentNode->DataRowsNoLock()){
+
+                context.row = row;
+                const auto value = expression->Evaluate(context);
+                if(!value.GetBool())
+                  continue;
+
+            const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, false);
+
+              if (result.code != Errors::RuntimeError::Ok)
+                  return;
+          }
+
+          if(!currentNode->HasRightSibling())
+            return;
+
+          currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    Errors::RuntimeStatus BTree::IndexScanUpdate(
+        const DatabaseEngine::ExecutionProperties& properties,
+        const Expressions::Expression *expression,
+        const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
+    )const{
+        if (this->IsEmpty())
+            return {};
+
+        HashSet<column_index_t> updatedColumns;
+        for(const auto& update : updates)
+            updatedColumns.Add(update->name.index);
+
+        auto currentNode = this->SearchLeftMostLeafNode();
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+        while (currentNode.Get())
+        {
+            MultiThreading::WriterGuard lock(&currentNode->Latch());
+
+            for(auto* row: *currentNode->DataRowsNoLock()){
+                context.row = row;
+
+                const auto value = expression->Evaluate(context);
+                if(!value.GetBool())
+                    continue;
+
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
+
+                if (result.code != Errors::RuntimeError::Ok)
+                    return result;
+            }
+
+            if(!currentNode->HasRightSibling())
+                return {};
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        return {};
+    }
+
+   Errors::RuntimeStatus BTree::IndexScanUpdate(const DatabaseEngine::ExecutionProperties& properties, const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
+        if (this->IsEmpty())
+            return {};
+
+        HashSet<column_index_t> updatedColumns;
+
+        for(const auto& update : updates)
+            updatedColumns.Add(update->name.index);
+
+        auto currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode.Get())
+        {
+            MultiThreading::WriterGuard lock(&currentNode->Latch());
+
+            for(auto* row: *currentNode->DataRowsNoLock()) {
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
+
+                if (result.code != Errors::RuntimeError::Ok)
+                    return result;
+            }
+
+            if(!currentNode->HasRightSibling())
+                return {};
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        return {};
+    }
+
+    Errors::RuntimeStatus BTree::IndexSeekUpdate(
+        const DatabaseEngine::ExecutionProperties &properties,
+        const DataTypes::Indexing::Key &key,
+        const std::vector<Value> &updates
+    ) const {
+        if (this->IsEmpty())
+            return {};
+
+        auto currentNode = this->SearchKey(key);
+
+        while (currentNode.Get()) {
+            MultiThreading::WriterGuard lock(&currentNode->Latch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            for (int i = 0; i < keys->size(); i++) {
+                const auto &currentKey = keys->at(i);
+
+                if (key != *currentKey || key < *currentKey)
+                    continue;
+
+                const auto* rows = currentNode->DataRowsNoLock();
+
+                const auto result = this->table->HandleRowUpdate(
+                    currentNode.Get(),
+                    rows->at(i),
+                    properties,
+                    updates,
+                    false
+                );
+
+                if (result.code != Errors::RuntimeError::Ok)
+                    return result;
+            }
+
+            if(!currentNode->HasRightSibling())
+                return {};
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        return {};
+    }
+
+    Errors::RuntimeStatus BTree::IndexSeekUpdate(
+        const DatabaseEngine::ExecutionProperties& properties,
+        const Expressions::Expression* expression,
+        const DataTypes::Indexing::Key* minKey,
+        const DataTypes::Indexing::Key* maxKey,
+        const vector<Value> & updates
+    )const{
+        if (this->IsEmpty())
+            return {};
+
+        HashSet<column_index_t> updatedColumns;
+        for(const auto& update : updates)
+            updatedColumns.Add(update.GetColumnIndex());
+
+        auto currentNode = this->SearchKey(*minKey);
+
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        while (currentNode.Get())
+        {
+            MultiThreading::WriterGuard lock(&currentNode->Latch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            const auto* rows = currentNode->DataRowsNoLock();
+
+              for (int i = 0; i < keys->size(); i++)
+              {
+                const auto &key = keys->at(i);
+
+                if (*minKey > *key)
+                    continue;
+
+                if (*maxKey < *key)
+                    break;
+
+                  context.row = rows->at(i);
+                  const auto value = expression->Evaluate(context);
+                  if(!value.GetBool())
+                    continue;
+
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, false);
+
+                if (result.code != Errors::RuntimeError::Ok)
+                  return result;
+
+    //            if (maxKey < *key && !previousNode)
+    //                return;
+              }
+
+          if(!currentNode->HasRightSibling())
+            return {};
+
+          currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        return {};
+    }
+
+    Errors::RuntimeStatus BTree::IndexSeekUpdate(
+        const DatabaseEngine::ExecutionProperties& properties,
+        const DataTypes::Indexing::Key *minKey,
+        const DataTypes::Indexing::Key *maxKey,
+        const std::vector<Value> &updates
+    )const{
+        if (this->IsEmpty())
+            return {};
+
+        auto currentNode = this->SearchKey(*minKey);
+
+        while (currentNode.Get()){
+            MultiThreading::WriterGuard lock(&currentNode->Latch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            const auto* rows = currentNode->DataRowsNoLock();
+
+            for (int i = 0; i < keys->size(); i++){
+                const auto &key = keys->at(i);
+
+                if (*minKey > *key)
+                    continue;
+
+                if (*maxKey < *key)
+                    break;
+
+                const auto result = this->table->HandleRowUpdate(currentNode.Get(), rows->at(i), properties, updates, false);
+
+                if (result.code != Errors::RuntimeError::Ok)
+                  return result;
+            }
+
+            if(!currentNode->HasRightSibling())
+                return {};
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        return {};
+    }
+
+    void BTree::SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const
+    {
+        if (this->IsEmpty())
+            return;
+
+        // auto currentNode = this->GetNode(this->indexPageId);
+        //
+        // while (!currentNode->IsLeaf())
+        // {
+        //     auto* keys = currentNode->GetKeysUnsafe();
+        //
+        //     const auto iterator = ranges::lower_bound(*keys, &key);
+        //
+        //     const int index = iterator - keys->begin();
+        //
+        //     auto* children = currentNode->GetChildren();
+        //
+        //     currentNode = this->GetNode(children->at(index));
+        // }
+
+        auto currentNode = this->SearchKey(key);
+
+        Pages::PageGuard<Pages::IndexPage> previousNode;
+        while (true)
+        {
+            if (currentNode.Get() == nullptr)
+                return;
+
+            // MultiThreading::ReaderGuard
+            auto* keys = currentNode->GetKeysUnsafe();
+
+            if (previousNode.Get() && key <= *keys->at(0))
+            {
+                // result.pageId = previousNode->dataPageId;
+                // result.indexPosition = previousNode->keys.size();
+                return;
+            }
+
+            for (int i = 0; i < keys->size(); i++)
+            {
+                if (key == *keys->at(i))
+                {
+
+                    // result.pageId = currentNode->dataPageId;
+                    // result.indexPosition = i;
+                    return;
+                }
+            }
+
+            previousNode = currentNode;
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::Remove(const DataTypes::Indexing::Key &key){
+
+      if (this->IsEmpty())
+        return;
+
+      vector<Pages::PageGuard<Pages::IndexPage>> ancestors;
+      auto currentNode = std::move(this->SearchKeyWithAncestors(key, ancestors));
+
+      auto* keys = currentNode->GetKeysUnsafe();
+
+      int keyIndex = -1;
+
+      for (int i = 0; i < keys->size(); i++) {
+        if (*keys->at(i) == key) {
+          keyIndex = i;
+          break;
+        }
+      }
+
+      if (keyIndex == -1)
+        return;
+
+      keys->erase(keys->begin() + keyIndex);
+
+      if (this->type == TreeType::NonClustered){
+        auto* nonClusteredData = currentNode->NonClusteredDataNoLock();
+
+        nonClusteredData->erase(nonClusteredData->begin() + keyIndex);
+      }
+      else{
+            auto* rows = currentNode->DataRowsNoLock();
+            const auto* row = rows->at(keyIndex);
+
+            rows->erase(rows->begin() + keyIndex);
+
+            delete row;
+      }
+
+      currentNode->UpdatePageSize();
+      currentNode->UpdateBytesLeft();
+
+      if (keys->size() >= (degree - 1 ) / 2)
+        return;
+
+      int parentIndex = ancestors.size() - 1;
+      this->HandleUnderflow(currentNode, ancestors, parentIndex);
+   }
+
     void BTree::SetBranchingFactor(const int &branchingFactor) { this->degree = branchingFactor; }
 
     const int &BTree::GetBranchingFactor() const { return this->degree; }
@@ -1488,62 +1502,108 @@ namespace Indexing
 
     const page_id_t & BTree::GetFirstIndexPageId() const { return this->indexPageId; }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::SearchKey(const DataTypes::Indexing::Key &key) const
-    {
-        auto currentNode = this->GetNode(this->indexPageId);
+    //escalate to table lock
+    void BTree::InsertRowsToOtherTree(const int& indexPos)const{
+        if (this->IsEmpty())
+            return;
 
-        while (true) {
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-            if (currentNode->IsLeaf())
-                return currentNode;
+        while (currentNode.Get())
+        {
+            const auto* rows = currentNode->DataRowsNoLock();
 
-            const auto* keys = currentNode->GetKeysUnsafe();
+            for (int i = 0;i < rows->size(); i++) {
+                const auto* row = rows->at(i);
 
-            const auto index = BTree::PartialLowerBound(keys, key);
+                this->table->NonClusteredIndexInsert(row, indexPos, Headers::RowIdentifier(currentNode->GetPageId(), i));
+            }
 
-            currentNode = this->GetNode(currentNode->GetChildren()->at(index));
+            if(!currentNode->HasRightSibling())
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
         }
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::PageGuard<Pages::IndexPage>> & ancestors) const{
-      auto currentNode = this->GetNode(this->indexPageId);
+  void BTree::InsertColumnToRow(const column_index_t& index, const Value &defaultValue)const{
+        if (this->IsEmpty())
+            return;
 
-      while (!currentNode->IsLeaf())
-      {
-        const auto* keys = currentNode->GetKeysUnsafe();
+        auto currentNode = this->SearchLeftMostLeafNode();
 
-        const auto iterator = ranges::lower_bound(*keys, &key);
-        //
-        // const int index = iterator - keys->begin();
-        const auto index = BTree::LowerBound(keys, key);
+        while (currentNode.Get())
+        {
+            for(auto* row: *currentNode->DataRowsNoLock())
+                this->table->HandleAddColumn(currentNode.Get(), row, index, defaultValue);
 
-        ancestors.push_back(std::move(currentNode));
+            if(!currentNode->HasRightSibling())
+                return;
 
-        currentNode = std::move(this->GetNode(currentNode->GetChildren()->at(index)));
-      }
-
-      return currentNode;
-    }
-
-  Pages::PageGuard<Pages::IndexPage> BTree::SearchLeftMostLeafNode() const{
-        auto currentNode = this->GetNode(this->indexPageId);
-
-        while (true) {
-            MultiThreading::ReaderGuard lock(&currentNode->GetLatch());
-
-            if (currentNode->IsLeaf())
-                return currentNode;
-
-            currentNode = this->GetNode(currentNode->GetChildren()->at(0));
+            currentNode = this->GetNode(currentNode->GetNextPage());
         }
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::AllocateNewPage(const page_id_t& parentPageId){
-        return this->database->FindOrAllocateNextIndexPage(this->table, parentPageId, this->nonClusteredIndexId);
+    void BTree::RemoveColumnFromRow(const column_index_t &index)const{
+        if (this->IsEmpty())
+            return;
+
+        auto root = this->GetNode(this->indexPageId);
+
+        auto currentNode = this->SearchLeftMostLeafNode();
+
+        while (currentNode.Get())
+        {
+            for(auto* row: *currentNode->DataRowsNoLock())
+                DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode.Get(), row, index);
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::GetNode(const page_id_t& pageId) const{
-        return Storage::StorageManager::Get().GetIndexPage(this->database->GetFileName(), pageId, this->table);
+    bool BTree::IsEmpty() const{ return this->indexPageId == INVALID_PAGE_ID; }
+
+    void BTree::CalculateIndexStatistics(
+        Headers::IndexStatistics& indexStatistics,
+        Headers::TableStatistics& tableStatistics,
+        std::vector<Headers::ColumnStatistics>& columnStatistics
+    ) const {
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchLeftMostLeafNode(indexStatistics.depth);
+
+        while (currentNode.Get()) {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            tableStatistics.pageCount++;
+            indexStatistics.leafPages++;
+
+            if (this->type == TreeType::Clustered){
+                const auto* rows = currentNode->DataRowsNoLock();
+                tableStatistics.rowCount += rows->size();
+
+                for (int i = 0; i < rows->size(); i++) {
+                    const auto& row = rows->at(i);
+                    tableStatistics.averageRowSize += row->TotalSize();
+
+                    for (int j = 0; j < columnStatistics.size(); j++) {
+                        const auto& value = row->GetColumnByIndex(j);
+                        DatabaseEngine::StatisticsScheduler::UpdateColumnStatistics(columnStatistics[j], value);
+                    }
+                }
+            }
+
+            if(!currentNode->HasRightSibling())
+                break;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        tableStatistics.averageRowSize = static_cast<int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
     }
 }

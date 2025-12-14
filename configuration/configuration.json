@@ -248,13 +248,14 @@
       "id": 16,
       "name": "sys_index_stats",
       "columns": [
+        { "name": "table_id",                     "type": "Int" },
         { "name": "index_id",                     "type": "Int" },
         { "name": "leaf_pages",                   "type": "Int",      "default": 0 },
         { "name": "depth",                        "type": "TinyInt",  "default": 0 },
         { "name": "avg_fragmentation",            "type": "Decimal",  "size": 4 },
-        { "name": "last_modified_at",                 "type": "DateTime" }
+        { "name": "last_modified_at",             "type": "DateTime" }
       ],
-      "primaryKey": ["index_id"]
+      "primaryKey": ["table_id", "index_id"]
     }
 
   ]

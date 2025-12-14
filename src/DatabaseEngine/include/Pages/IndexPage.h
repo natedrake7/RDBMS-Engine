@@ -70,7 +70,7 @@ namespace Pages {
 
 			[[nodiscard]] vector<DataTypes::Indexing::Key*>* GetKeysUnsafe();
 
-			[[nodiscard]] vector<Headers::RowIdentifier*>* GetNonClusteredDataUnsafe();
+			[[nodiscard]] vector<Headers::RowIdentifier*>* NonClusteredDataNoLock();
 
 			[[nodiscard]] vector<page_id_t>* GetChildren();
 
@@ -95,6 +95,10 @@ namespace Pages {
 			[[nodiscard]] const page_id_t& GetPreviousPage()const;
 
 			[[nodiscard]] const page_id_t& GetNextPage()const;
+
+			[[nodiscard]] bool HasRightSibling() const;
+
+			[[nodiscard]] bool HasLeftSibling() const;
 
 			void UpdateBytesLeft() override;
 

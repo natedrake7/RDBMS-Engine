@@ -33,23 +33,37 @@ namespace DatabaseEngine {
 
     void UpdateDatabaseStatistics(const Database* database)const;
     void UpdateTableStatistics(
-      const StorageTypes::Table* table,
+      StorageTypes::Table* table,
       const std::string& systemFilename,
       const std::string& filename
     )const;
-    static void UpdateColumnStatistics(
-      Headers::ColumnStatistics& columnStatistics,
-      const Value& value
+
+    [[nodiscard]] static bool UpdateIndexStatistics(
+      StorageTypes::Table* table,
+      Headers::IndexStatistics& indexStatistics,
+      Headers::TableStatistics& tableStatistics,
+      std::vector<Headers::ColumnStatistics>& columnStatistics
+    );
+
+    static void UpdateHeapStatistics(
+      const StorageTypes::Table* table,
+      const page_id_t& iamPageId,
+      const std::string& systemFilename,
+      const std::string& filename,
+      Headers::TableStatistics& tableStatistics,
+      std::vector<Headers::ColumnStatistics>& columnStatistics
     );
 
     void UpdateCatalogStatistics(
       const Headers::TableStatistics& tableStatistics,
-      const std::vector<Headers::ColumnStatistics>& columnStatistics
+      const std::vector<Headers::ColumnStatistics>& columnStatistics,
+      const std::vector<Headers::IndexStatistics>& indexStatistics
     )const;
 
     void UpdateCache(
       const Headers::TableStatistics& tableStatistics,
-      const std::vector<Headers::ColumnStatistics>& columnStatistics
+      const std::vector<Headers::ColumnStatistics>& columnStatistics,
+      const std::vector<Headers::IndexStatistics> &indexStatistics
     )const;
 
     public:
@@ -60,5 +74,10 @@ namespace DatabaseEngine {
         const Dictionary<int32_t, Database*> &databasesDictionary,
         MultiThreading::ReadWriteMutex &latch
       );
+
+    static void UpdateColumnStatistics(
+      Headers::ColumnStatistics& columnStatistics,
+      const Value& value
+    );
   };
 }

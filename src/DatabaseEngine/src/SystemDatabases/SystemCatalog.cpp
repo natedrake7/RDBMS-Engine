@@ -526,6 +526,19 @@ namespace DatabaseEngine {
     };
   }
 
+  Headers::IndexStatistics SystemCatalog::ToIndexStatistics(const DatabaseEngine::StorageTypes::Row *row) {
+   const auto& data = row->GetData();
+
+   return {
+    data[static_cast<column_index_t>(SysIndexStats::TableId)]->GetInt(),
+    data[static_cast<column_index_t>(SysIndexStats::IndexId)]->GetInt(),
+    data[static_cast<column_index_t>(SysIndexStats::LeafPages)]->GetInt(),
+    data[static_cast<column_index_t>(SysIndexStats::Depth)]->GetTinyInt(),
+    data[static_cast<column_index_t>(SysIndexStats::AverageFragmentation)]->GetDecimal(),
+    data[static_cast<column_index_t>(SysIndexStats::LastUpdated)]->GetDateTime(),
+   };
+ }
+
   SystemCatalog & SystemCatalog::Get() {
    static SystemCatalog instance;
    return instance;
@@ -1118,6 +1131,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertIndexStatisticsToMasterDb(
     const ExecutionProperties &properties,
+    const int32_t& tableId,
     const int32_t &indexId,
     const int64_t &leafPages,
     const int8_t &depth,
@@ -1127,6 +1141,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
    auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
    const std::vector fields = {
+     Value(tableId, static_cast<column_index_t>(SysIndexStats::TableId)),
      Value(indexId, static_cast<column_index_t>(SysIndexStats::IndexId)),
      Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
      Value(depth, static_cast<column_index_t>(SysIndexStats::Depth)),
@@ -1755,6 +1770,23 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return result;
   }
 
+  std::vector<Headers::IndexStatistics> SystemCatalog::SelectIndexStatisticsByTableId(const int32_t &tableId) const {
+   std::vector<Headers::IndexStatistics> result;
+
+   auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
+
+   DataTypes::Indexing::Key key;
+   key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+
+   std::vector<const StorageTypes::Row*> rows;
+   table->ClusteredIndexSeek(this->baseProperties, &rows, key);
+
+   for (const auto& row : rows)
+     result.emplace_back(SystemCatalog::ToIndexStatistics(row));
+
+   return result;
+ }
+
   void SystemCatalog::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const{
     auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
 
@@ -1812,6 +1844,29 @@ void SystemCatalog::UpdateTableStatisticsById(
 
     const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
   }
+
+  void SystemCatalog::UpdateIndexStatisticsById(
+    const int32_t &tableId,
+    const int32_t &indexId,
+    const int64_t &leafPages,
+    const int8_t &depth,
+    const DataTypes::Decimal &averageFragmentation
+  ) const {
+   const std::vector updates = {
+     Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
+     Value(depth, static_cast<column_index_t>(SysIndexStats::Depth)),
+     Value(averageFragmentation, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
+     Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated)),
+   };
+
+   auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
+
+   DataTypes::Indexing::Key key;
+   key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+   key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
+
+   const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
+ }
 
   Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
     using namespace StorageTypes;

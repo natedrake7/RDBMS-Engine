@@ -133,7 +133,7 @@ namespace DatabaseEngine::StorageTypes
 
         RowHeader* GetHeader();
 
-        [[nodiscard]] row_size_t GetTotalSize() const;
+        [[nodiscard]] row_size_t TotalSize() const;
 
         [[nodiscard]] row_header_size_t GetHeaderSize() const;
 

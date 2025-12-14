@@ -202,11 +202,12 @@ namespace DatabaseEngine {
   };
 
   enum class SysIndexStats : uint8_t {
-    IndexId = 0,
-    LeafPages = 1,
-    Depth = 2,
-    AverageFragmentation = 3,
-    LastUpdated = 4
+    TableId = 0,
+    IndexId = 1,
+    LeafPages = 2,
+    Depth = 3,
+    AverageFragmentation = 4,
+    LastUpdated = 5
   };
 }
 

@@ -220,7 +220,7 @@ namespace DatabaseEngine::StorageTypes {
 
     int Row::InsertNewColumn(Block* block)
     {
-        const auto oldSize = this->GetTotalSize();
+        const auto oldSize = this->TotalSize();
 
         this->header.nullBitMap->Set(this->data.size(), block->GetRawData() == nullptr);
         this->header.largeObjectBitMap->Set(this->data.size(), false);
@@ -230,7 +230,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->header.numberOfColumns = static_cast<column_number_t>(this->data.size());
 
-        const auto newSize = this->GetTotalSize();
+        const auto newSize = this->TotalSize();
 
         const auto diff = static_cast<int>(newSize) - static_cast<int>(oldSize);
 
@@ -238,7 +238,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     int Row::InsertNewColumnAtBeginning(Block *block){
-        const auto oldSize = this->GetTotalSize();
+        const auto oldSize = this->TotalSize();
 
         this->header.nullBitMap->Set(this->data.size(), block->GetRawData() == nullptr);
         this->header.largeObjectBitMap->Set(this->data.size(), false);
@@ -248,7 +248,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->header.numberOfColumns = static_cast<column_number_t>(this->data.size());
 
-        const auto newSize = this->GetTotalSize();
+        const auto newSize = this->TotalSize();
 
         const auto diff = static_cast<int>(newSize) - static_cast<int>(oldSize);
 
@@ -568,7 +568,7 @@ namespace DatabaseEngine::StorageTypes {
 
     RowHeader* Row::GetHeader() { return &this->header; }
 
-    row_size_t Row::GetTotalSize() const
+    row_size_t Row::TotalSize() const
     {
         row_size_t currentRowSize = this->GetHeaderSize();
 
@@ -601,7 +601,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Row::Update( const vector<Value> & updates, int& diff)const{
-        const auto prevRowSize = this->GetTotalSize();
+        const auto prevRowSize = this->TotalSize();
 
         for (const auto & value : updates){
             const column_index_t &associatedColumnIndex = value.GetColumnIndex();
@@ -634,7 +634,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff)const{
-        const auto prevRowSize = this->GetTotalSize();
+        const auto prevRowSize = this->TotalSize();
 
         Expressions::EvaluationContext context(this);
         for (const auto & update : updates)

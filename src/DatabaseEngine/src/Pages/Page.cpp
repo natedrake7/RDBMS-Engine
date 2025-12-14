@@ -65,14 +65,14 @@ namespace Pages
         if(indexPosition != nullptr)
             *indexPosition = this->rows.size() - 1;
 
-        this->header.bytesLeft -= row->GetTotalSize();
+        this->header.bytesLeft -= row->TotalSize();
         this->header.pageSize++;
         this->isDirty = true;
     }
 
     void Page::InsertRow(Row *row, const int& indexPosition){
         this->rows.insert(this->rows.begin() + indexPosition, row);
-        this->header.bytesLeft -= row->GetTotalSize();
+        this->header.bytesLeft -= row->TotalSize();
         this->header.pageSize++;
         this->isDirty = true;
     }
@@ -214,7 +214,7 @@ namespace Pages
         this->header.bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
 
         for (const auto &row : this->rows)
-            this->header.bytesLeft -= row->GetTotalSize();
+            this->header.bytesLeft -= row->TotalSize();
 
         this->header.pageSize = this->rows.size();
         this->isDirty = true;
@@ -279,7 +279,7 @@ namespace Pages
 
     const Row * Page::GetRow(const int &indexPosition)const { return this->rows.at(indexPosition); }
 
-    vector<DatabaseEngine::StorageTypes::Row *>* Page::GetDataRowsNoLock() { return &this->rows; }
+    vector<DatabaseEngine::StorageTypes::Row *>* Page::DataRowsNoLock() { return &this->rows; }
 
     void Page::IncreasePinCount() {
         this->pinCount.fetch_add(1, std::memory_order_relaxed);
@@ -321,7 +321,7 @@ namespace Pages
         this->latch.SharedUnlock();
     }
 
-    MultiThreading::ReadWriteMutex & Page::GetLatch() const {
+    MultiThreading::ReadWriteMutex & Page::Latch() const {
         return this->latch;
     }
 }

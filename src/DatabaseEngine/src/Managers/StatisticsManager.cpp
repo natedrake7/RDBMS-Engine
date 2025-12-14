@@ -25,10 +25,7 @@ namespace DatabaseEngine {
 
     auto writerLock = MultiThreading::WriterGuard::Promote(&this->tableStatisticsLatch, lock);
 
-    if (this->tableStatisticsCache.TryGetValue(tableId, stats))
-      return stats;
-
-    this->tableStatisticsCache.Add(tableId, catalogStats);
+    this->tableStatisticsCache.ForceAdd(tableId, catalogStats);
 
     return catalogStats;
   }
@@ -47,16 +44,34 @@ namespace DatabaseEngine {
 
     auto writerLock = MultiThreading::WriterGuard::Promote(&this->columnStatisticsLatch, lock);
 
-    if (this->columnStatisticsCache.TryGetValue(columnId, stats))
-      return stats;
-
-    this->columnStatisticsCache.Add(columnId, catalogStats);
+    this->columnStatisticsCache.ForceAdd(columnId, catalogStats);
 
     return catalogStats;
   }
+
+  std::vector<Headers::IndexStatistics> StatisticsManager::GetIndexStatistics(const int32_t &tableId) {
+    MultiThreading::ReaderGuard lock(&this->indexStatisticsLatch);
+
+    std::vector<Headers::IndexStatistics> stats;
+    if (this->indexStatisticsCache.TryGetValue(tableId, stats))
+      return stats;
+
+    auto catalogStats = SystemCatalog::Get().SelectIndexStatisticsByTableId(tableId);
+
+    if (catalogStats.empty())
+      return stats;
+
+    auto writerLock = MultiThreading::WriterGuard::Promote(&this->indexStatisticsLatch, lock);
+
+    this->indexStatisticsCache.ForceAdd(tableId, catalogStats);
+
+    return catalogStats;
+  }
+
   void StatisticsManager::Update(
     const Headers::TableStatistics &tableStatistics,
-    const std::vector<Headers::ColumnStatistics> &columnStatistics
+    const std::vector<Headers::ColumnStatistics> &columnStatistics,
+    const std::vector<Headers::IndexStatistics>& indexStatistics
   ) {
     {
       MultiThreading::WriterGuard lock(&this->tableStatisticsLatch);
@@ -67,7 +82,13 @@ namespace DatabaseEngine {
       MultiThreading::WriterGuard lock(&this->columnStatisticsLatch);
       for (const auto& colStats : columnStatistics)
         this->columnStatisticsCache.ForceAdd(colStats.columnId, colStats);
-  }
+    }
+
+    {
+      MultiThreading::WriterGuard lock(&this->indexStatisticsLatch);
+      if (!indexStatistics.empty())
+        this->indexStatisticsCache.ForceAdd(tableStatistics.tableId, indexStatistics);
+    }
 }
 
 }

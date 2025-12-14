@@ -21,10 +21,8 @@ namespace Pages{
     class IndexPage;
 }
 
-namespace Indexing
-{
-    class BTree final
-    {
+namespace Indexing{
+    class BTree final{
         page_id_t indexPageId;
 
         int degree;
@@ -90,6 +88,7 @@ namespace Indexing
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKey(const DataTypes::Indexing::Key &key) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchLeftMostLeafNode() const;
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchLeftMostLeafNode(int8_t& depth) const;
 
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetNode(const page_id_t& pageId) const;
         [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, const TreeType& treeType, const int& nonClusteredId)const;
@@ -236,5 +235,13 @@ namespace Indexing
         void InsertColumnToRow(const column_index_t& index, const Value& defaultValue)const;
 
         void RemoveColumnFromRow(const column_index_t& index)const;
+
+        [[nodiscard]] bool IsEmpty()const;
+
+        void CalculateIndexStatistics(
+            Headers::IndexStatistics& indexStatistics,
+            Headers::TableStatistics& tableStatistics,
+            std::vector<Headers::ColumnStatistics>& columnStatistics
+        )const;
     };
 }

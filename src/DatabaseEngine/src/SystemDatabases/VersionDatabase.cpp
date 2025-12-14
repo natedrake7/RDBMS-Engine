@@ -89,7 +89,7 @@ namespace DatabaseEngine {
 
     auto lastUsedPage = Storage::StorageManager::Get().GetPage(this->filename, pageId, table);
 
-    MultiThreading::ReaderGuard lastUsedPageLatch(&lastUsedPage->GetLatch());
+    MultiThreading::ReaderGuard lastUsedPageLatch(&lastUsedPage->Latch());
 
     if (lastUsedPage->GetBytesLeft() >= size)
       return lastUsedPage;
@@ -111,7 +111,7 @@ namespace DatabaseEngine {
      for (page_id_t pageId = newPageId; pageId < newPageId + EXTENT_SIZE; pageId++){
        auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
-       MultiThreading::WriterGuard lock(&pageFreeSpacePage->GetLatch());
+       MultiThreading::WriterGuard lock(&pageFreeSpacePage->Latch());
 
        auto undoPage = Storage::StorageManager::Get().CreatePage(this->filename, pageId);
 
@@ -138,7 +138,7 @@ namespace DatabaseEngine {
             const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
             const auto pageFreeSpace = Storage::StorageManager::Get().GetPageFreeSpacePage(this->systemFilename, correspondingPfsPageId);
 
-            MultiThreading::ReaderGuard pfsLock(&pageFreeSpace->GetLatch());
+            MultiThreading::ReaderGuard pfsLock(&pageFreeSpace->Latch());
 
             const auto categorySize = Database::GetObjectSizeToCategory(size);
 
@@ -148,7 +148,7 @@ namespace DatabaseEngine {
 
          auto undoPage = Storage::StorageManager::Get().GetPage(this->filename, pageId, table);
 
-         MultiThreading::ReaderGuard undoLatch(&undoPage->GetLatch());
+         MultiThreading::ReaderGuard undoLatch(&undoPage->Latch());
 
          if (undoPage->GetBytesLeft() >= size) {
            {
@@ -171,9 +171,9 @@ namespace DatabaseEngine {
   ) {
    auto* oldRow = new StorageTypes::Row(row);
 
-   auto page = this->GetLastUndoPage(table, row->GetTotalSize());
+   auto page = this->GetLastUndoPage(table, row->TotalSize());
 
-   MultiThreading::WriterGuard lock(&page->GetLatch());
+   MultiThreading::WriterGuard lock(&page->Latch());
 
    int offset = 0;
    page->InsertRow(oldRow, &offset);
@@ -195,7 +195,7 @@ namespace DatabaseEngine {
     {
       auto page = Storage::StorageManager::Get().GetPage(this->filename, rowPointer.pageId, table);
 
-      MultiThreading::ReaderGuard lock(&page->GetLatch());
+      MultiThreading::ReaderGuard lock(&page->Latch());
 
       row = page->GetRow(rowPointer.offset);
     }
@@ -220,7 +220,7 @@ namespace DatabaseEngine {
         auto pfsPage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
         {
-          MultiThreading::ReaderGuard pfsReaderLock(&pfsPage->GetLatch());
+          MultiThreading::ReaderGuard pfsReaderLock(&pfsPage->Latch());
 
           if (!pfsPage->IsPageAllocated(pageId))
             continue;
@@ -228,9 +228,9 @@ namespace DatabaseEngine {
 
         auto page = Storage::StorageManager::Get().GetPage(this->filename, pageId, nullptr);
 
-        MultiThreading::WriterGuard pageLatch(&page->GetLatch());
+        MultiThreading::WriterGuard pageLatch(&page->Latch());
 
-        const auto* rows = page->GetDataRowsNoLock();
+        const auto* rows = page->DataRowsNoLock();
 
         for (int i = 0; i < rows->size(); i++) {
           const auto& versionHeader = rows->at(i)->GetVersionHeader();
@@ -243,7 +243,7 @@ namespace DatabaseEngine {
         }
 
         if (page->GetPageSize() == 0) {
-          MultiThreading::WriterGuard pfsWriterLock(&pfsPage->GetLatch());
+          MultiThreading::WriterGuard pfsWriterLock(&pfsPage->Latch());
           pfsPage->SetPageFreed(pageId);
 
           continue;
@@ -255,7 +255,7 @@ namespace DatabaseEngine {
       if (isExtentEmpty) {
         auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
 
-        MultiThreading::WriterGuard gamLock(&gamPage->GetLatch());
+        MultiThreading::WriterGuard gamLock(&gamPage->Latch());
 
         gamPage->DeallocateExtent(extentId);
       }

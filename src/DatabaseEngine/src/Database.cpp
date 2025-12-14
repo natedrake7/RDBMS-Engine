@@ -527,7 +527,7 @@ namespace DatabaseEngine
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
             auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
-            MultiThreading::WriterGuard lock(&pageFreeSpacePage->GetLatch());
+            MultiThreading::WriterGuard lock(&pageFreeSpacePage->Latch());
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateOverflowPage(this->filename, pageId).Get());
         }
 
@@ -545,7 +545,7 @@ namespace DatabaseEngine
 
             auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
-            MultiThreading::WriterGuard lock(&pageFreeSpacePage->GetLatch());
+            MultiThreading::WriterGuard lock(&pageFreeSpacePage->Latch());
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreatePage(this->filename, pageId).Get());
         }
 
@@ -562,7 +562,7 @@ namespace DatabaseEngine
         for (page_id_t pageId = lowerLimit; pageId < newPageId + EXTENT_SIZE; pageId++){
             auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
-            MultiThreading::WriterGuard lock(&pageFreeSpacePage->GetLatch());
+            MultiThreading::WriterGuard lock(&pageFreeSpacePage->Latch());
 
             pageFreeSpacePage->SetPageMetaData(StorageManager::Get().CreateLargeDataPage(this->filename, pageId).Get());
         }
@@ -587,7 +587,7 @@ namespace DatabaseEngine
 
             auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
-            MultiThreading::WriterGuard lock(&pageFreeSpacePage->GetLatch());
+            MultiThreading::WriterGuard lock(&pageFreeSpacePage->Latch());
             pageFreeSpacePage->SetPageMetaData(indexPage.Get());
         }
 
@@ -619,7 +619,7 @@ namespace DatabaseEngine
 
                 auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextTableMapPage->GetPageId());
 
-                MultiThreading::WriterGuard pageIdLock(&pageFreeSpacePage->GetLatch());
+                MultiThreading::WriterGuard pageIdLock(&pageFreeSpacePage->Latch());
 
                 pageFreeSpacePage->SetPageMetaData(nextTableMapPage.Get());
             }
@@ -638,7 +638,7 @@ namespace DatabaseEngine
                 {
                     auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, tableMapPage->GetPageId());
 
-                    MultiThreading::WriterGuard pageIdLock(&pageFreeSpacePage->GetLatch());
+                    MultiThreading::WriterGuard pageIdLock(&pageFreeSpacePage->Latch());
                     pageFreeSpacePage->SetPageMetaData(tableMapPage.Get());
 
                 }
@@ -648,7 +648,7 @@ namespace DatabaseEngine
             else
                 tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, table);
 
-            MultiThreading::WriterGuard tableMapLock(&tableMapPage->GetLatch());
+            MultiThreading::WriterGuard tableMapLock(&tableMapPage->Latch());
 
             tableMapPage->SetAllocatedExtent(newExtentId, gamPage.Get());
         }

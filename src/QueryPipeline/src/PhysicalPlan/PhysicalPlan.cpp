@@ -190,6 +190,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     if (this->isClustered) {
       tablePtr->ClusteredIndexScan(properties, &result->rows, this->state, this->expression);
+      result->canFetchMore = this->state.canFetchMore;
       return result;
     }
 
@@ -755,6 +756,12 @@ PhysicalInsert::PhysicalInsert(
         );
     }
 
+    const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
+      properties,
+      tableId,
+      indexId
+    );
+
     tablePtr->GetColumnsHeaders();
     tablePtr->GetIdentityColumns();
 
@@ -841,6 +848,12 @@ PhysicalInsert::PhysicalInsert(
           columnPos
         );
     }
+
+    const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
+      properties,
+      this->table->tableId,
+      indexId
+    );
 
     const auto indexPos = tablePtr->CreateNonClusteredIndex(this->columns);
 

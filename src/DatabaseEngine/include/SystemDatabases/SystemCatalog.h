@@ -56,6 +56,7 @@ namespace DatabaseEngine {
     static Headers::TableStatistics ToTableStatistics(const DatabaseEngine::StorageTypes::Row* row);
     static Headers::ColumnStatistics ToColumnStatistics(const DatabaseEngine::StorageTypes::Row* row, const DataType& columnType);
     static Headers::ColumnHistograms ToColumnHistograms(const DatabaseEngine::StorageTypes::Row* row, const DataType& columnType);
+    static Headers::IndexStatistics ToIndexStatistics(const DatabaseEngine::StorageTypes::Row* row);
 
     public:
       static SystemCatalog& Get();
@@ -208,6 +209,7 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexStatisticsToMasterDb(
       const ExecutionProperties& properties,
+      const int32_t& tableId,
       const int32_t& indexId,
       const int64_t& leafPages = 0,
       const int8_t& depth = 0,
@@ -270,6 +272,7 @@ namespace DatabaseEngine {
       const int32_t& columnId,
       const DataType& columnType
     )const;
+    [[nodiscard]] std::vector<Headers::IndexStatistics> SelectIndexStatisticsByTableId(const int32_t& tableId)const;
 
     void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const;
     void UpdateTableStatisticsById(
@@ -284,6 +287,13 @@ namespace DatabaseEngine {
       const int64_t& nullCount,
       const Value& min,
       const Value& max
+    )const;
+    void UpdateIndexStatisticsById(
+      const int32_t& tableId,
+      const int32_t& indexId,
+      const int64_t& leafPages,
+      const int8_t& depth,
+      const DataTypes::Decimal& averageFragmentation
     )const;
     [[nodiscard]]Errors::RuntimeStatus UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
 

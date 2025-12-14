@@ -332,7 +332,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] const table_id_t &GetTableId() const;
 
-            [[nodiscard]] TableType GetTableType() const;
+            [[nodiscard]] TableType GetType() const;
 
             [[nodiscard]] bool IsClustered()const;
 

@@ -78,6 +78,8 @@
 //the 2 or 1 values that matter(range query should have 1 min 1 max if equality exists it has precedence)
 
 //implement clean bulk insert functionality
+//improve page split factor on indexes to be more compact and void multiple pages split
+//check heap insert (add locks)
 
 std::atomic<bool> serverRunning{false};
 

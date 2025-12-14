@@ -137,7 +137,7 @@ namespace DatabaseEngine::StorageTypes {
 
         row->SetCurrentTransactionId(transactionId);
 
-        // *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
 
         return std::make_tuple(row, Errors::RuntimeStatus());
       }
@@ -304,7 +304,7 @@ namespace DatabaseEngine::StorageTypes {
 
       void Table::InsertRowToPage(Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage, Pages::PageGuard<Pages::Page>& page, Row *row, const int & indexPosition)const{
 
-      while (row->GetTotalSize() > page->GetBytesLeft())
+      while (row->TotalSize() > page->GetBytesLeft())
         this->HandleRowOverflow(row);
 
       page->InsertRow(row, indexPosition);
@@ -386,7 +386,7 @@ namespace DatabaseEngine::StorageTypes {
             if (page->GetPageSize() == 0)
               continue;
 
-            const auto* rows = page->GetDataRowsNoLock();
+            const auto* rows = page->DataRowsNoLock();
 
             std::vector<extent_id_t> allocatedExtents;
             extent_id_t startingExtentIndex = 0;
@@ -434,7 +434,7 @@ namespace DatabaseEngine::StorageTypes {
 
         auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
 
-        for (auto* row: *page->GetDataRowsNoLock())
+        for (auto* row: *page->DataRowsNoLock())
           Table::HandleRemoveColumn(page.Get(), row, index);
 
         pageFreeSpacePage->SetPageMetaData(page.Get());
@@ -533,6 +533,7 @@ namespace DatabaseEngine::StorageTypes {
         std::vector<Row*> rows;
         Logging::CheckPoint checkPoint;
         for (const auto& insertedRow : input) {
+          //TODO implement better to avoid multiple loggings
           auto [row, status] = this->BatchCreateRow(properties.snapshot.transactionId, insertedRow.GetData(), columnIndices, &checkPoint);
 
           if (status.code != Errors::RuntimeError::Ok)
@@ -680,7 +681,7 @@ namespace DatabaseEngine::StorageTypes {
         {
           auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
 
-          MultiThreading::WriterGuard lock(&pfsPage->GetLatch());
+          MultiThreading::WriterGuard lock(&pfsPage->Latch());
 
           pfsPage->SetPageMetaData(largeObjectPage.Get());
           pfsPage->SetPageFreed(largeObjectPage->GetPageId());
@@ -696,7 +697,7 @@ namespace DatabaseEngine::StorageTypes {
             {
               auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
 
-              MultiThreading::WriterGuard lock(&pfsPage->GetLatch());
+              MultiThreading::WriterGuard lock(&pfsPage->Latch());
 
               pfsPage->SetPageMetaData(nextLargeObjectPage.Get());
               pfsPage->SetPageFreed(nextLargeObjectPage->GetPageId());
@@ -778,7 +779,7 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-          MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage->GetLatch());
+          MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage->Latch());
 
           for (page_id_t extentPageId = state.GetPageId(extentStartingPageId); extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
           {
@@ -787,7 +788,7 @@ namespace DatabaseEngine::StorageTypes {
 
             auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
 
-            MultiThreading::ReaderGuard lock(&page->GetLatch());
+            MultiThreading::ReaderGuard lock(&page->Latch());
 
             if (page->GetPageSize() == 0)
               continue;
@@ -796,7 +797,7 @@ namespace DatabaseEngine::StorageTypes {
             state.extentId = extentId;
             state.lastFetchedRowId.pageId = extentPageId;
 
-            const auto* pageRows = page->GetDataRowsNoLock();
+            const auto* pageRows = page->DataRowsNoLock();
 
             for (int i = state.GetNextKeyIndex(); i < page->GetPageSize(); i++) {
               const auto* pageRow = (*pageRows)[i];
@@ -859,7 +860,7 @@ namespace DatabaseEngine::StorageTypes {
 
             auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
 
-            const auto* rows = page->GetDataRowsNoLock();
+            const auto* rows = page->DataRowsNoLock();
 
             for (int i = 0; i < rows->size(); i++) {
               const auto& row = rows->at(i);
@@ -916,7 +917,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const{
       const auto& filename = this->database->GetFileName();
 
-      while(row->GetTotalSize() > Constants::PAGE_SIZE_WITHOUT_HEADER)
+      while(row->TotalSize() > Constants::PAGE_SIZE_WITHOUT_HEADER)
         this->HandleRowOverflow(row);
 
       if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
@@ -934,7 +935,7 @@ namespace DatabaseEngine::StorageTypes {
       tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
       lastExtentIndex = allocatedExtents.size() - 1;
 
-      const auto rowCategory = Database::GetObjectSizeToCategory(row->GetTotalSize());
+      const auto rowCategory = Database::GetObjectSizeToCategory(row->TotalSize());
 
       for (const auto &extentId : allocatedExtents)
       {
@@ -959,7 +960,7 @@ namespace DatabaseEngine::StorageTypes {
               {
                   auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
 
-                  if (row->GetTotalSize() > page->GetBytesLeft())
+                  if (row->TotalSize() > page->GetBytesLeft())
                       continue;
 
                   page->InsertRow(row, &rowId->indexId);
@@ -972,7 +973,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
       auto newPage = this->database->CreateDataPage(this->header.ordinalPosition);
-      newPage->InsertRow(row, rowId->indexId);
+      newPage->InsertRow(row, &rowId->indexId);
       rowId->pageId = newPage->GetPageId();
 
       return {};
@@ -994,8 +995,8 @@ namespace DatabaseEngine::StorageTypes {
 
       auto pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
 
-      MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage->GetLatch());
-      MultiThreading::WriterGuard pageLock(&node->GetLatch());
+      MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage->Latch());
+      MultiThreading::WriterGuard pageLock(&node->Latch());
 
       // should never fail
       this->InsertRowToClusteredPage(pageFreeSpacePage, node.Get(), row, indexPosition);
@@ -1037,7 +1038,7 @@ namespace DatabaseEngine::StorageTypes {
 
       keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
 
-      auto* rows = node->GetNonClusteredDataUnsafe();
+      auto* rows = node->NonClusteredDataNoLock();
 
       rows->insert(rows->begin() + indexPosition, new Headers::RowIdentifier(data));
 
@@ -1051,7 +1052,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const int &indexPos){
-        const auto tableType = this->GetTableType();
+        const auto tableType = this->GetType();
 
         if (tableType == TableType::CLUSTERED) {
           this->InsertExistingRowsToNonClusteredIndexByClusteredIndex(indexPos);
@@ -1108,7 +1109,7 @@ namespace DatabaseEngine::StorageTypes {
             if (page->GetPageSize() == 0)
               continue;
 
-            const auto* rows = page->GetDataRowsNoLock();
+            const auto* rows = page->DataRowsNoLock();
 
             std::vector<extent_id_t> allocatedExtents;
 
@@ -1169,7 +1170,7 @@ namespace DatabaseEngine::StorageTypes {
             if (page->GetPageSize() == 0)
               continue;
 
-            const auto* rows = page->GetDataRowsNoLock();
+            const auto* rows = page->DataRowsNoLock();
 
             std::vector<extent_id_t> allocatedExtents;
             extent_id_t startingExtentIndex = 0;
@@ -1256,8 +1257,7 @@ namespace DatabaseEngine::StorageTypes {
 
     const table_id_t &Table::GetTableId() const { return this->header.tableId; }
 
-    TableType Table::GetTableType() const
-    {
+    TableType Table::GetType() const{
         return !this->header.clusteredIndex.columns.empty()
                     ? TableType::CLUSTERED
                     : TableType::HEAP;
@@ -1420,7 +1420,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalSize()) > 0){
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0){
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 
@@ -1464,7 +1464,7 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->GetTotalSize()) > 0){
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0){
           vector<extent_id_t> allocatedExtents;
           extent_id_t startingExtentIndex = 0;
 
@@ -1613,7 +1613,7 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
       if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
         return;
 
-      if (this->GetTableType() == TableType::CLUSTERED) {
+      if (this->GetType() == TableType::CLUSTERED) {
         this->PopulateColumnByClusteredIndex(index, defaultValue);
         return;
       }
@@ -1651,7 +1651,7 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
 
           auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
 
-          for (auto* row: *page->GetDataRowsNoLock())
+          for (auto* row: *page->DataRowsNoLock())
             this->HandleAddColumn(page.Get(), row, index, defaultValue);
 
           pageFreeSpacePage->SetPageMetaData(page.Get());
@@ -1740,7 +1740,7 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
     if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
       return;
 
-    if (this->GetTableType() == TableType::CLUSTERED) {
+    if (this->GetType() == TableType::CLUSTERED) {
       this->RemoveColumnByClusteredIndex(index);
       return;
     }

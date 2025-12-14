@@ -140,11 +140,50 @@ namespace Headers {
   };
 
   struct IndexStatistics {
+    int32_t tableId;
     int32_t indexId;
     int32_t leafPages;
     int8_t depth;
     DataTypes::Decimal averageFragmentation;
     DataTypes::DateTime lastUpdated;
+
+    IndexStatistics() {
+      this->tableId = INVALID_TABLE_ID;
+      this->indexId = INVALID_INDEX_ID;
+      this->leafPages = 0;
+      this->depth = 0;
+      this->averageFragmentation = DataTypes::Decimal(0);
+      this->lastUpdated = DataTypes::DateTime::Now();
+    }
+
+    IndexStatistics(
+      const int32_t& tableId,
+      const int32_t& indexId
+    ) : IndexStatistics() {
+      this->tableId = tableId;
+      this->indexId = indexId;
+    }
+
+    IndexStatistics(
+      const int32_t& tableId,
+      const int32_t& indexId,
+      const int32_t& leafPages,
+      const int8_t& depth,
+      const DataTypes::Decimal& averageFragmentation,
+      const DataTypes::DateTime& lastUpdated
+    )
+      : tableId(tableId),
+        indexId(indexId),
+        leafPages(leafPages),
+        depth(depth),
+        averageFragmentation(averageFragmentation),
+        lastUpdated(lastUpdated) {}
+
+    void Reset() {
+      this->depth = 0;
+      this->leafPages = 0;
+      this->averageFragmentation = DataTypes::Decimal(0);
+    }
   };
 
   struct ColumnHeader {
@@ -229,8 +268,8 @@ namespace Headers {
   };
 
   struct RowIdentifier {
-    uint32_t pageId = INVALID_PAGE_ID;
-    int32_t indexId = INVALID_PAGE_INDEX_ID;
+    page_id_t pageId;
+    int32_t indexId;
 
     RowIdentifier() {
       this->pageId = INVALID_PAGE_ID;

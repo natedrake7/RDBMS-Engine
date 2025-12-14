@@ -113,7 +113,7 @@ namespace Pages
         void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
         [[nodiscard]] const DatabaseEngine::StorageTypes::Row* GetRow(const int& indexPosition)const;
 
-        [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *GetDataRowsNoLock();
+        [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *DataRowsNoLock();
 
         void IncreasePinCount();
         void DecreasePinCount();
@@ -129,6 +129,6 @@ namespace Pages
         void UniqueUnlock()const;
         void SharedUnlock()const;
 
-        [[nodiscard]] MultiThreading::ReadWriteMutex& GetLatch() const;
+        [[nodiscard]] MultiThreading::ReadWriteMutex& Latch() const;
     };
 }

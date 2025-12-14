@@ -49,7 +49,7 @@ namespace DatabaseEngine {
  }
 
  void StatisticsScheduler::UpdateTableStatistics(
-  const StorageTypes::Table *table,
+  StorageTypes::Table *table,
   const std::string& systemFilename,
   const std::string& filename
  )const {
@@ -57,13 +57,6 @@ namespace DatabaseEngine {
 
   if (iamPageId == INVALID_PAGE_ID)
    return;
-
-  const auto iamPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(table->GetFileName(), iamPageId, table);
-
-  std::vector<extent_id_t> extents;
-  iamPage->GetAllocatedExtents(&extents, 0);
-
-  int estimatedRowCount = 1000;
 
   auto tableStatistics = Headers::TableStatistics(table->GetTableId());
 
@@ -79,6 +72,72 @@ namespace DatabaseEngine {
    });
   }
 
+  auto indexStatistics = StatisticsManager::Get().GetIndexStatistics(tableStatistics.tableId);
+
+  bool clusteredIndexUpdated = false;
+  for (auto& indexStats : indexStatistics) {
+   const auto result = StatisticsScheduler::UpdateIndexStatistics(
+     table,
+     indexStats,
+     tableStatistics,
+     columnStatistics
+    );
+
+    if (result)
+     clusteredIndexUpdated = true;
+  }
+
+  if (!clusteredIndexUpdated)
+   StatisticsScheduler::UpdateHeapStatistics(
+    table,
+    iamPageId,
+    systemFilename,
+    filename,
+    tableStatistics,
+    columnStatistics
+   );
+
+  //Update catalog
+  this->UpdateCache(tableStatistics, columnStatistics, indexStatistics);
+  this->UpdateCatalogStatistics(tableStatistics, columnStatistics, indexStatistics);
+ }
+
+ bool StatisticsScheduler::UpdateIndexStatistics(
+  StorageTypes::Table *table,
+  Headers::IndexStatistics& indexStatistics,
+  Headers::TableStatistics& tableStatistics,
+  std::vector<Headers::ColumnStatistics>& columnStatistics
+ )  {
+  indexStatistics.Reset();
+
+  if (table->IsClustered()) {
+    const auto* tree = table->GetClusteredIndexedTree();
+    tree->CalculateIndexStatistics(indexStatistics, tableStatistics, columnStatistics);
+   return true;
+  }
+
+  //TODO
+  //get non clustered trees
+
+  return false;
+ }
+
+ void StatisticsScheduler::UpdateHeapStatistics(
+  const StorageTypes::Table *table,
+  const page_id_t& iamPageId,
+  const std::string& systemFilename,
+  const std::string& filename,
+  Headers::TableStatistics &tableStatistics,
+  std::vector<Headers::ColumnStatistics> &columnStatistics
+ ) {
+
+  const auto iamPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(table->GetFileName(), iamPageId, table);
+
+  std::vector<extent_id_t> extents;
+  iamPage->GetAllocatedExtents(&extents, 0);
+
+  int estimatedRowCount = 1000;
+
   int sampleRowCount = 0;
   int averageRowsPerPage = 0;
   int allocatedPagesPerExtent = 0;
@@ -91,27 +150,34 @@ namespace DatabaseEngine {
                                ? extentFirstPageId
                                : extentFirstPageId + 1;
 
-   MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage->GetLatch());
+   bool successfulPfsLock = false;
+   auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage->Latch(), successfulPfsLock);
 
    for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
-    const auto pageType = pageFreeSpacePage->GetPageType(extentPageId);
+    if (successfulPfsLock) {
+     const auto pageType = pageFreeSpacePage->GetPageType(extentPageId);
 
-    if (pageType != PageType::DATA && pageType != PageType::INDEX)
-     break;
+     if (pageType != PageType::DATA && pageType != PageType::INDEX)
+      break;
+    }
 
     auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, table);
 
-    MultiThreading::ReaderGuard lock(&page->GetLatch());
+    bool successfulLock = false;
+    auto lock = MultiThreading::ReaderGuard::TryLock(&page->Latch(), successfulLock);
+    if (!successfulLock)
+     continue;
 
     const auto pageSize = page->GetPageSize();
-    if (pageSize == 0)
+    const auto fallBackPageType = page->GetPageType();
+    if (pageSize == 0 || (fallBackPageType != PageType::INDEX && fallBackPageType != PageType::DATA))
      continue;
 
     averageRowsPerPage += pageSize;
     allocatedPagesPerExtent++;
 
-    for (const auto& row : *page->GetDataRowsNoLock()) {
-      tableStatistics.averageRowSize += row->GetTotalSize();
+    for (const auto& row : *page->DataRowsNoLock()) {
+      tableStatistics.averageRowSize += row->TotalSize();
       sampleRowCount++;
 
       for (int j = 0; j < columnStatistics.size(); j++) {
@@ -134,37 +200,14 @@ namespace DatabaseEngine {
    static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(sampleRowCount)
   );
   tableStatistics.rowCount = numberOfExtents * averageAllocatedPagesPerExtent * averageRowsPerPage;
-
+  tableStatistics.pageCount = numberOfExtents * averageAllocatedPagesPerExtent;
   tableStatistics.lastModified = DataTypes::DateTime::Now();
-  //Update catalog
-  this->UpdateCache(tableStatistics, columnStatistics);
-  this->UpdateCatalogStatistics(tableStatistics, columnStatistics);
- }
-
- void StatisticsScheduler::UpdateColumnStatistics(
-  Headers::ColumnStatistics &columnStatistics,
-  const Value &value
- ) {
-  if (value.IsNull()) {
-   columnStatistics.nullCount++;
-   return;
-  }
-
-  // Update distinct count - simplistic approach
-  columnStatistics.distinctCount++; // In real scenario, use a hash set or similar structure
-
-  // Update min
-  if (columnStatistics.min.IsNull() || (value < columnStatistics.min).GetBool())
-   columnStatistics.min = value;
-
-  // Update max
-  if (columnStatistics.max.IsNull() || (value > columnStatistics.max).GetBool())
-   columnStatistics.max = value;
  }
 
  void StatisticsScheduler::UpdateCatalogStatistics(
   const Headers::TableStatistics &tableStatistics,
-  const std::vector<Headers::ColumnStatistics> &columnStatistics
+  const std::vector<Headers::ColumnStatistics> &columnStatistics,
+  const std::vector<Headers::IndexStatistics>& indexStatistics
  )const {
 
   this->catalog->UpdateTableStatisticsById(
@@ -183,13 +226,24 @@ namespace DatabaseEngine {
      colStats.max
    );
   }
+
+  for (const auto& indexStats : indexStatistics) {
+   this->catalog->UpdateIndexStatisticsById(
+     tableStatistics.tableId,
+     indexStats.indexId,
+     indexStats.leafPages,
+     indexStats.depth,
+     indexStats.averageFragmentation
+   );
+  }
  }
 
  void StatisticsScheduler::UpdateCache(
   const Headers::TableStatistics &tableStatistics,
-  const std::vector<Headers::ColumnStatistics> &columnStatistics
+  const std::vector<Headers::ColumnStatistics> &columnStatistics,
+  const std::vector<Headers::IndexStatistics> &indexStatistics
  ) const {
-  this->statsManager->Update(tableStatistics, columnStatistics);
+  this->statsManager->Update(tableStatistics, columnStatistics, indexStatistics);
  }
 
  StatisticsScheduler::StatisticsScheduler(
@@ -220,6 +274,27 @@ namespace DatabaseEngine {
     std::this_thread::sleep_for(10000ms);
     scheduler.UpdateStatistics();
    }
+ }
+
+ void StatisticsScheduler::UpdateColumnStatistics(
+  Headers::ColumnStatistics &columnStatistics,
+  const Value &value
+ ) {
+  if (value.IsNull()) {
+   columnStatistics.nullCount++;
+   return;
+  }
+
+  // Update distinct count - simplistic approach
+  columnStatistics.distinctCount++; // In real scenario, use a hash set or similar structure
+
+  // Update min
+  if (columnStatistics.min.IsNull() || (value < columnStatistics.min).GetBool())
+   columnStatistics.min = value;
+
+  // Update max
+  if (columnStatistics.max.IsNull() || (value > columnStatistics.max).GetBool())
+   columnStatistics.max = value;
  }
 
 

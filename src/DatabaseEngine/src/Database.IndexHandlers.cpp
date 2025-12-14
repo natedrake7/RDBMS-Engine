@@ -61,7 +61,7 @@ namespace DatabaseEngine {
         {
             auto newIndexPage = this->CreateIndexPage(table, tableHeader.ordinalPosition, indexId);
 
-            MultiThreading::WriterGuard indexPageLock(&newIndexPage->GetLatch());
+            MultiThreading::WriterGuard indexPageLock(&newIndexPage->Latch());
             
             newIndexPage->SetTreeType(isNonClusteredIndex 
                                     ? TreeType::NonClustered 
@@ -86,7 +86,7 @@ namespace DatabaseEngine {
                 {
                     const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextIndexPageId);
 
-                    MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage->GetLatch());
+                    MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage->Latch());
 
                     if (pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
                         continue;
@@ -102,7 +102,7 @@ namespace DatabaseEngine {
                     continue;
 
                 bool successfulLock = false;
-                auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage->GetLatch(), successfulLock);
+                auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage->Latch(), successfulLock);
 
                 if (!successfulLock)
                     continue;
@@ -110,7 +110,7 @@ namespace DatabaseEngine {
                 if(!successfulLock || !indexPage->isEmpty())
                     continue;
 
-                auto writerLock = MultiThreading::WriterGuard::Promote(&indexPage->GetLatch(), readerGuard);
+                auto writerLock = MultiThreading::WriterGuard::Promote(&indexPage->Latch(), readerGuard);
 
                 indexPage->SetTreeType(isNonClusteredIndex
                                         ? TreeType::NonClustered
@@ -121,7 +121,7 @@ namespace DatabaseEngine {
 
         auto newIndexPage = this->CreateIndexPage(table, tableHeader.ordinalPosition, indexId);
 
-        MultiThreading::WriterGuard indexPageLock(&newIndexPage->GetLatch());
+        MultiThreading::WriterGuard indexPageLock(&newIndexPage->Latch());
             
         newIndexPage->SetTreeType(isNonClusteredIndex 
                                 ? TreeType::NonClustered 

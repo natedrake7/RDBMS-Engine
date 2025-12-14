@@ -93,7 +93,7 @@ namespace DatabaseEngine::StorageTypes {
           for (const auto& rowId : rowIds) {
             const auto page = Storage::StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
-            MultiThreading::ReaderGuard lock(&page->GetLatch());
+            MultiThreading::ReaderGuard lock(&page->Latch());
 
             auto* pageRow = page->GetRow(rowId.indexId);
 
@@ -112,7 +112,7 @@ namespace DatabaseEngine::StorageTypes {
         for (const auto& rowId : rowIds) {
             const auto page = Storage::StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
-            MultiThreading::ReaderGuard lock(&page->GetLatch());
+            MultiThreading::ReaderGuard lock(&page->Latch());
 
             auto* pageRow = page->GetRow(rowId.indexId);
 
@@ -156,8 +156,7 @@ namespace DatabaseEngine::StorageTypes {
             return keySize;
     }
 
-    Indexing::BTree* Table::GetClusteredIndexedTree()
-    {
+    Indexing::BTree* Table::GetClusteredIndexedTree(){
         if(this->clusteredIndexedTree != nullptr)
             return this->clusteredIndexedTree;
 
@@ -171,8 +170,7 @@ namespace DatabaseEngine::StorageTypes {
         return this->clusteredIndexedTree;
     }
 
-    Indexing::BTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId)
-    {
+    Indexing::BTree * Table::GetNonClusteredIndexTree(const int & nonClusteredIndexId){
         const auto numOfIndexes = this->header.nonClusteredIndexes.size();
 
         if(this->nonClusteredIndexedTrees.empty())
