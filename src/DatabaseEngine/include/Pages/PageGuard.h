@@ -39,7 +39,6 @@ namespace Pages{
         if (this == &other)
           return *this;
 
-        this->Release();
         this->_page = other._page;
         other._page = nullptr;
 
@@ -47,11 +46,14 @@ namespace Pages{
       }
 
     // Copy assignment operator
-      PageGuard& operator=(const PageGuard& other) noexcept {
-        if (this != &other) {
-          this->Release();
-          this->_page = other._page;
-        }
+      PageGuard& operator=(const PageGuard& other) {
+        if (this == &other)
+          return *this;
+
+        this->_page = other._page;
+
+        if (this->_page)
+            _page->IncreasePinCount();
 
         return *this;
       }

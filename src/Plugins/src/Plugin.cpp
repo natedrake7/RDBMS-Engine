@@ -28,13 +28,13 @@ namespace External {
     }
 
 #else
-    handle = dlopen(path.c_str(), RTLD_NOW);
+    handle = dlopen(path, RTLD_NOW);
     if (!handle) {
       std::cerr << "[Plugin] Failed to load: " << path << " (" << dlerror() << ")" << std::endl;
       return false;
     }
 
-    auto PluginInitFn = (int(*)(const HostAPI*))dlsym(handle, "PluginInit");
+    const auto pluginInitFunction = reinterpret_cast<int(*)(const IHostAPI*)>(dlsym(handle, "PluginInit"));
     char* err = dlerror();
     if (err != nullptr) {
       std::cerr << "[Plugin] PluginInit not found in: " << path << " (" << err << ")" << std::endl;

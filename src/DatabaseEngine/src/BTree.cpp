@@ -235,14 +235,15 @@ namespace Indexing
         Errors::RuntimeStatus& status
     ){
         Pages::PageGuard<Pages::IndexPage> intermediateNode;
-        bool redistributed = false;
-
         {
             MultiThreading::ReaderGuard parentLock(&parent->Latch());
 
             const auto* parentKeys = parent->GetKeysUnsafe();
-            if (parent->IsLeaf())
-                return BTree::GetNonFullLeafNode(parent, parentKeys, key, indexPosition, status);
+
+            if (parent->IsLeaf()) {
+                indexPosition = BTree::GetLeafNodeInsertPosition(parentKeys, key, status);
+                return parent;
+            }
 
             auto childIndex = BTree::LowerBound(parentKeys, key);
 
@@ -257,9 +258,7 @@ namespace Indexing
             const auto* childKeys = child->GetKeysUnsafe();
 
             if (childKeys->size() == 2 * this->degree - 1){
-                redistributed = this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex);
-
-                if (!redistributed) {
+                if (!this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex)) {
                     // Redistribution failed, must split
                     this->SplitChild(parent, parentLock, childIndex, child, childLock, pagesToAllocate);
 
@@ -272,21 +271,19 @@ namespace Indexing
 
                     intermediateNode = this->GetNode(parentChildren->at(childIndex));
                 }
+                else
+                    intermediateNode = std::move(parent);
             }
             else
-                intermediateNode = this->GetNode(parentChildren->at(childIndex));
+                intermediateNode = std::move(child);
         }  // All locks released here
 
-        return redistributed
-            ? this->GetNonFullNode(parent, key, pagesToAllocate, indexPosition, status)
-            : this->GetNonFullNode(intermediateNode, key, pagesToAllocate, indexPosition, status);
+        return this->GetNonFullNode(intermediateNode, key, pagesToAllocate, indexPosition, status);
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::GetNonFullLeafNode(
-        Pages::PageGuard<Pages::IndexPage> &node,
+    int BTree::GetLeafNodeInsertPosition(
         const std::vector<DataTypes::Indexing::Key*>*& parentKeys,
         const DataTypes::Indexing::Key &key,
-        int &indexPosition,
         Errors::RuntimeStatus &status
     ) {
         const auto indexPos = BTree::LowerBound(parentKeys, key);
@@ -294,11 +291,10 @@ namespace Indexing
         if (BTree::IsDuplicateKey(parentKeys, key, indexPos))
         {
             BTree::CreateDuplicateKeyError(status, key);
-            return node;
+            return -1;
         }
 
-        indexPosition = indexPos;
-        return node;
+        return indexPos;
     }
 
     Pages::PageGuard<Pages::IndexPage> BTree::SearchKey(const DataTypes::Indexing::Key &key) const
@@ -660,9 +656,6 @@ namespace Indexing
         MultiThreading::ReaderGuard &childLock,
         MultiThreading::ReaderGuard &siblingLock
     )const {
-        MultiThreading::WriterGuard::Promote(&child->Latch(), childLock);
-        MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
-
         auto* siblingKeys = sibling->GetKeysUnsafe();
         auto* childKeys = child->GetKeysUnsafe();
 
@@ -675,6 +668,9 @@ namespace Indexing
         if (keysToMove <= 0)
             return false;
 
+        MultiThreading::WriterGuard::Promote(&child->Latch(), childLock);
+        MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
+
         auto* childRows = child->DataRowsNoLock();
         auto* siblingRows = sibling->DataRowsNoLock();
 
@@ -682,18 +678,22 @@ namespace Indexing
         auto* siblingNonClusteredData = sibling->NonClusteredDataNoLock();
 
         // Move exactly keysToMove keys from child to sibling
-        for (int i = 0; i < keysToMove; i++) {
-            siblingKeys->push_back(childKeys->front());
-            childKeys->erase(childKeys->begin());
+        const auto srcKeyEnd = childKeys->begin() + keysToMove;
 
-            if (this->type == TreeType::Clustered) {
-                siblingRows->push_back(childRows->front());
-                childRows->erase(childRows->begin());
-            }
-            else {
-                siblingNonClusteredData->push_back(childNonClusteredData->front());
-                childNonClusteredData->erase(childNonClusteredData->begin());
-            }
+        siblingKeys->insert(siblingKeys->end(), childKeys->begin(), srcKeyEnd);
+        childKeys->erase(childKeys->begin(), srcKeyEnd);
+
+        if (this->type == TreeType::Clustered) {
+            const auto srcEnd = childRows->begin() + keysToMove;
+
+            siblingRows->insert(siblingRows->end(), childRows->begin(), srcEnd);
+            childRows->erase(childRows->begin(), srcEnd);
+        }
+        else {
+            const auto srcEnd = childNonClusteredData->begin() + keysToMove;
+
+            siblingNonClusteredData->insert(siblingNonClusteredData->end(), childNonClusteredData->begin(), srcEnd);
+            childNonClusteredData->erase(childNonClusteredData->begin(), srcEnd);
         }
 
         child->UpdateBytesLeft();
@@ -711,9 +711,6 @@ namespace Indexing
         MultiThreading::ReaderGuard &childLock,
         MultiThreading::ReaderGuard &siblingLock
     )const {
-        MultiThreading::WriterGuard::Promote(&child->Latch(), childLock);
-        MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
-
         auto* siblingKeys = sibling->GetKeysUnsafe();
         auto* childKeys = child->GetKeysUnsafe();
 
@@ -726,8 +723,8 @@ namespace Indexing
         if (keysToMove <= 0)
             return false;
 
-        std::cout << "Redistributing " << keysToMove << " keys from child (has " << childKeys->size()
-                  << ") to right sibling (has " << siblingKeys->size() << "). Total: " << totalKeys << std::endl;
+        MultiThreading::WriterGuard::Promote(&child->Latch(), childLock);
+        MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
 
         auto* childRows = child->DataRowsNoLock();
         auto* siblingRows = sibling->DataRowsNoLock();
@@ -735,25 +732,23 @@ namespace Indexing
         auto* childNonClusteredData = child->NonClusteredDataNoLock();
         auto* siblingNonClusteredData = sibling->NonClusteredDataNoLock();
 
-        // Move exactly keysToMove keys from end of child to beginning of sibling
-        for (int i = 0; i < keysToMove; i++) {
-            siblingKeys->insert(siblingKeys->begin(), childKeys->back());
-            childKeys->pop_back();
+        if (this->type == TreeType::Clustered) {
+            const auto srcBegin = childRows->end() - keysToMove;
 
-            std::cout << "  Moving key: " << *siblingKeys->front() << std::endl;
+            siblingRows->insert(siblingRows->begin(), srcBegin, childRows->end());
+            childRows->erase(srcBegin, childRows->end());
+        }
+        else {
+            const auto srcBegin = childNonClusteredData->end() - keysToMove;
 
-            if (this->type == TreeType::Clustered) {
-                siblingRows->insert(siblingRows->begin(), childRows->back());
-                childRows->pop_back();
-            }
-            else {
-                siblingNonClusteredData->insert(siblingNonClusteredData->begin(), childNonClusteredData->back());
-                childNonClusteredData->pop_back();
-            }
+            siblingNonClusteredData->insert(siblingNonClusteredData->begin(), srcBegin, childNonClusteredData->end());
+            childNonClusteredData->erase(srcBegin, childNonClusteredData->end());
         }
 
-        std::cout << "After redistribution: child has " << childKeys->size()
-                  << " keys, right sibling has " << siblingKeys->size() << " keys" << std::endl;
+        const auto keySrcBegin = childKeys->end() - keysToMove;
+
+        siblingKeys->insert(siblingKeys->begin(), keySrcBegin, childKeys->end());
+        childKeys->erase(keySrcBegin, childKeys->end());
 
         child->UpdateBytesLeft();
         sibling->UpdateBytesLeft();
@@ -995,8 +990,6 @@ void BTree::IndexSeekRange(
 
             for (int i = 0; i < keys->size(); i++){
                 const auto& rowKey = keys->at(i);
-
-                std::cout << "Comparing key: " << *rowKey << " with search key: " << key << std::endl;
 
                 if (key == *rowKey) {
                     const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
@@ -1768,11 +1761,10 @@ void BTree::IndexSeekRange(
 
             if (this->type == TreeType::Clustered){
                 const auto* rows = currentNode->DataRowsNoLock();
-                tableStatistics.rowCount += rows->size();
+                tableStatistics.rowCount += static_cast<int>(rows->size());
 
-                for (int i = 0; i < rows->size(); i++) {
-                    const auto& row = rows->at(i);
-                    tableStatistics.averageRowSize += row->TotalSize();
+                for (const auto& row : *rows) {
+                    tableStatistics.averageRowSize += static_cast<int>(row->TotalSize());
 
                     for (int j = 0; j < columnStatistics.size(); j++) {
                         const auto& value = row->GetColumnByIndex(j);

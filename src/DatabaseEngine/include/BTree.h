@@ -84,11 +84,9 @@ namespace Indexing{
             Errors::RuntimeStatus& status
         );
 
-        static Pages::PageGuard<Pages::IndexPage> GetNonFullLeafNode(
-            Pages::PageGuard<Pages::IndexPage>& node,
+        static int GetLeafNodeInsertPosition(
             const std::vector<DataTypes::Indexing::Key*>*& parentKeys,
             const DataTypes::Indexing::Key &key,
-            int& indexPosition,
             Errors::RuntimeStatus& status
         );
 
