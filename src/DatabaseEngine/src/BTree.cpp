@@ -235,6 +235,8 @@ namespace Indexing
         Errors::RuntimeStatus& status
     ){
         Pages::PageGuard<Pages::IndexPage> intermediateNode;
+        bool redistributed = false;
+
         {
             MultiThreading::ReaderGuard parentLock(&parent->Latch());
 
@@ -255,21 +257,29 @@ namespace Indexing
             const auto* childKeys = child->GetKeysUnsafe();
 
             if (childKeys->size() == 2 * this->degree - 1){
-                this->SplitChild(parent, parentLock, childIndex, child, childLock, pagesToAllocate);
+                redistributed = this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex);
 
-                //split child will break the lock and we need to reacquire it
-                MultiThreading::ReaderGuard newParentLock(&parent->Latch());
+                if (!redistributed) {
+                    // Redistribution failed, must split
+                    this->SplitChild(parent, parentLock, childIndex, child, childLock, pagesToAllocate);
 
-                if (key > *parentKeys->at(childIndex))
-                    childIndex++;
+                    //split child will break the lock and we need to reacquire it
+                    MultiThreading::ReaderGuard newParentLock(&parent->Latch());
 
-                intermediateNode = this->GetNode(parentChildren->at(childIndex));
+                    // After split, check which child the key belongs to
+                    if (key > *parentKeys->at(childIndex))
+                        childIndex++;
+
+                    intermediateNode = this->GetNode(parentChildren->at(childIndex));
+                }
             }
             else
                 intermediateNode = this->GetNode(parentChildren->at(childIndex));
-        }
+        }  // All locks released here
 
-        return this->GetNonFullNode(intermediateNode, key, pagesToAllocate, indexPosition, status);
+        return redistributed
+            ? this->GetNonFullNode(parent, key, pagesToAllocate, indexPosition, status)
+            : this->GetNonFullNode(intermediateNode, key, pagesToAllocate, indexPosition, status);
     }
 
     Pages::PageGuard<Pages::IndexPage> BTree::GetNonFullLeafNode(
@@ -316,9 +326,6 @@ namespace Indexing
       {
         const auto* keys = currentNode->GetKeysUnsafe();
 
-        const auto iterator = ranges::lower_bound(*keys, &key);
-        //
-        // const int index = iterator - keys->begin();
         const auto index = BTree::LowerBound(keys, key);
 
         ancestors.push_back(std::move(currentNode));
@@ -586,6 +593,177 @@ namespace Indexing
         return true;
     }
 
+    bool BTree::TryRedistributeLeaf(
+        Pages::PageGuard<Pages::IndexPage> &parent,
+        MultiThreading::ReaderGuard &parentLock,
+        Pages::PageGuard<Pages::IndexPage> &child,
+        MultiThreading::ReaderGuard &childLock,
+        const int& childIndex
+    )const {
+        if (!child->IsLeaf())
+            return {};
+
+        if (child->HasLeftSibling()) {
+            auto sibling = this->GetNode(child->GetPreviousPage());
+
+            MultiThreading::ReaderGuard siblingLock(&sibling->Latch());
+
+            if (sibling->GetKeysUnsafe()->size() < 2 * this->degree - 1
+                && this->TryRedistributeLeafWithLeftSibling(child, sibling, childLock, siblingLock)) {
+
+                // Update parent separator key between left sibling and child
+                auto parentWriteLock = MultiThreading::WriterGuard::Promote(&parent->Latch(), parentLock);
+
+                auto* parentKeys = parent->GetKeysUnsafe();
+                const auto* childKeys = child->GetKeysUnsafe();
+
+                if (childIndex > 0) {
+                    delete (*parentKeys)[childIndex - 1];
+                    const auto* firstChildKey = childKeys->at(0);
+
+                    parentKeys->at(childIndex - 1) = new DataTypes::Indexing::Key(firstChildKey);
+                }
+                return true;
+            }
+        }
+
+        if (child->HasRightSibling()) {
+            auto sibling = this->GetNode(child->GetNextPage());
+
+            MultiThreading::ReaderGuard siblingLock(&sibling->Latch());
+
+            if (sibling->GetKeysUnsafe()->size() < 2 * this->degree - 1
+                && this->TryRedistributeLeafWithRightSibling(child, sibling, childLock, siblingLock)) {
+
+                // Update parent separator key between child and right sibling
+                auto parentWriteLock = MultiThreading::WriterGuard::Promote(&parent->Latch(), parentLock);
+                auto* parentKeys = parent->GetKeysUnsafe();
+                auto* siblingKeys = sibling->GetKeysUnsafe();
+
+                if (childIndex > 0) {
+                    delete (*parentKeys)[childIndex];
+                    const auto* firstSiblingKey = siblingKeys->at(0);
+
+                    parentKeys->at(childIndex) = new DataTypes::Indexing::Key(firstSiblingKey);
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool BTree::TryRedistributeLeafWithLeftSibling(
+        Pages::PageGuard<Pages::IndexPage> &child,
+        Pages::PageGuard<Pages::IndexPage> &sibling,
+        MultiThreading::ReaderGuard &childLock,
+        MultiThreading::ReaderGuard &siblingLock
+    )const {
+        MultiThreading::WriterGuard::Promote(&child->Latch(), childLock);
+        MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
+
+        auto* siblingKeys = sibling->GetKeysUnsafe();
+        auto* childKeys = child->GetKeysUnsafe();
+
+        // Calculate balanced distribution
+        const int totalKeys = static_cast<int>(siblingKeys->size() + childKeys->size());
+        const int targetSiblingKeys = totalKeys / 2;
+        const int keysToMove = targetSiblingKeys - static_cast<int>(siblingKeys->size());
+
+        // Only redistribute if we actually need to move keys
+        if (keysToMove <= 0)
+            return false;
+
+        auto* childRows = child->DataRowsNoLock();
+        auto* siblingRows = sibling->DataRowsNoLock();
+
+        auto* childNonClusteredData = child->NonClusteredDataNoLock();
+        auto* siblingNonClusteredData = sibling->NonClusteredDataNoLock();
+
+        // Move exactly keysToMove keys from child to sibling
+        for (int i = 0; i < keysToMove; i++) {
+            siblingKeys->push_back(childKeys->front());
+            childKeys->erase(childKeys->begin());
+
+            if (this->type == TreeType::Clustered) {
+                siblingRows->push_back(childRows->front());
+                childRows->erase(childRows->begin());
+            }
+            else {
+                siblingNonClusteredData->push_back(childNonClusteredData->front());
+                childNonClusteredData->erase(childNonClusteredData->begin());
+            }
+        }
+
+        child->UpdateBytesLeft();
+        sibling->UpdateBytesLeft();
+
+        child->UpdatePageSize();
+        sibling->UpdatePageSize();
+
+        return true;
+    }
+
+    bool BTree::TryRedistributeLeafWithRightSibling(
+        Pages::PageGuard<Pages::IndexPage> &child,
+        Pages::PageGuard<Pages::IndexPage> &sibling,
+        MultiThreading::ReaderGuard &childLock,
+        MultiThreading::ReaderGuard &siblingLock
+    )const {
+        MultiThreading::WriterGuard::Promote(&child->Latch(), childLock);
+        MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
+
+        auto* siblingKeys = sibling->GetKeysUnsafe();
+        auto* childKeys = child->GetKeysUnsafe();
+
+        // Calculate balanced distribution
+        const int totalKeys = static_cast<int>(siblingKeys->size() + childKeys->size());
+        const int targetChildKeys = totalKeys / 2;
+        const int keysToMove = static_cast<int>(childKeys->size()) - targetChildKeys;
+
+        // Only redistribute if we actually need to move keys
+        if (keysToMove <= 0)
+            return false;
+
+        std::cout << "Redistributing " << keysToMove << " keys from child (has " << childKeys->size()
+                  << ") to right sibling (has " << siblingKeys->size() << "). Total: " << totalKeys << std::endl;
+
+        auto* childRows = child->DataRowsNoLock();
+        auto* siblingRows = sibling->DataRowsNoLock();
+
+        auto* childNonClusteredData = child->NonClusteredDataNoLock();
+        auto* siblingNonClusteredData = sibling->NonClusteredDataNoLock();
+
+        // Move exactly keysToMove keys from end of child to beginning of sibling
+        for (int i = 0; i < keysToMove; i++) {
+            siblingKeys->insert(siblingKeys->begin(), childKeys->back());
+            childKeys->pop_back();
+
+            std::cout << "  Moving key: " << *siblingKeys->front() << std::endl;
+
+            if (this->type == TreeType::Clustered) {
+                siblingRows->insert(siblingRows->begin(), childRows->back());
+                childRows->pop_back();
+            }
+            else {
+                siblingNonClusteredData->insert(siblingNonClusteredData->begin(), childNonClusteredData->back());
+                childNonClusteredData->pop_back();
+            }
+        }
+
+        std::cout << "After redistribution: child has " << childKeys->size()
+                  << " keys, right sibling has " << siblingKeys->size() << " keys" << std::endl;
+
+        child->UpdateBytesLeft();
+        sibling->UpdateBytesLeft();
+
+        child->UpdatePageSize();
+        sibling->UpdatePageSize();
+
+        return true;
+    }
+
     void BTree::MergeNodes(
        Pages::PageGuard<Pages::IndexPage>& leftNode,
        Pages::PageGuard<Pages::IndexPage>& rightNode,
@@ -817,6 +995,8 @@ void BTree::IndexSeekRange(
 
             for (int i = 0; i < keys->size(); i++){
                 const auto& rowKey = keys->at(i);
+
+                std::cout << "Comparing key: " << *rowKey << " with search key: " << key << std::endl;
 
                 if (key == *rowKey) {
                     const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
@@ -1608,5 +1788,5 @@ void BTree::IndexSeekRange(
         }
 
         tableStatistics.averageRowSize = static_cast<int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
-    }
+}
 }

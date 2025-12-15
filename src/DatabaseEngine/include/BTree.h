@@ -108,6 +108,29 @@ namespace Indexing{
         bool TryBorrowFromLeftSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int& index)const;
         bool TryBorrowFromRightSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int& index)const;
 
+        // Leaf redistribution methods for improved space utilization
+        [[nodiscard]] bool TryRedistributeLeaf(
+            Pages::PageGuard<Pages::IndexPage>& parent,
+            MultiThreading::ReaderGuard& parentLock,
+            Pages::PageGuard<Pages::IndexPage>& child,
+            MultiThreading::ReaderGuard& childLock,
+            const int& childIndex
+        )const;
+
+        [[nodiscard]] bool TryRedistributeLeafWithLeftSibling(
+            Pages::PageGuard<Pages::IndexPage>& child,
+            Pages::PageGuard<Pages::IndexPage>& sibling,
+            MultiThreading::ReaderGuard& childLock,
+            MultiThreading::ReaderGuard& siblingLock
+        )const;
+
+        [[nodiscard]] bool TryRedistributeLeafWithRightSibling(
+            Pages::PageGuard<Pages::IndexPage>& child,
+            Pages::PageGuard<Pages::IndexPage>& sibling,
+            MultiThreading::ReaderGuard& childLock,
+            MultiThreading::ReaderGuard& siblingLock
+        )const;
+
         void MergeNodes(
             Pages::PageGuard<Pages::IndexPage>& leftNode,
             Pages::PageGuard<Pages::IndexPage>& rightNode,

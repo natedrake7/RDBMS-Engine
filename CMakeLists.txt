@@ -19,7 +19,7 @@ find_package(unofficial-argon2 CONFIG REQUIRED)
 
 # === ANTLR Setup ===
 if(WIN32)
-    set(ANTLR_JAR_PATH "${CMAKE_SOURCE_DIR}/External/ANTLR/antlr4_complete.jar")
+    set(ANTLR_JAR_PATH "${CMAKE_SOURCE_DIR}/external/ANTLR/antlr4_complete.jar")
 else ()
     set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.1-complete.jar")
 endif()
