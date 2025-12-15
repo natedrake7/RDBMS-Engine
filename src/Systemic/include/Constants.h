@@ -17,6 +17,7 @@ constexpr transaction_id_t INVALID_LOG_SEQUENCE_NUMBER = std::numeric_limits<log
 constexpr table_id_t INVALID_TABLE_ORDINAL_POS = std::numeric_limits<table_id_t>::max();
 constexpr transaction_id_t INVALID_TRANSACTION_ID = std::numeric_limits<transaction_id_t>::max();
 constexpr page_id_t INVALID_PAGE_ID = std::numeric_limits<page_id_t>::max();
+constexpr extent_id_t INVALID_EXTENT_ID = std::numeric_limits<extent_id_t>::max();
 constexpr int32_t INVALID_PAGE_INDEX_ID = -1;
 constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(int32_t);
 

@@ -48,7 +48,7 @@ namespace Constants{
         METADATA = 4,
         GAM = 5,
         FREESPACE = 6,
-        OVERFLOW = 7,
+        OVERFLOWTYPE = 7,
         UNDO = 8
     };
 

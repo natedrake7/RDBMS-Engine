@@ -34,14 +34,25 @@ namespace Pages {
         delete this->ownedExtents;
     }
 
-    void IndexAllocationMapPage::SetAllocatedExtent(const extent_id_t &extentId, const GlobalAllocationMapPage* globalAllocationMapPage)
+    extent_id_t IndexAllocationMapPage::SetExtentsAllocated(
+        const std::vector<extent_id_t>& extentIds,
+        const page_id_t& globalAllocationMapPageId
+    )
     {
-        const extent_id_t bitMapId = extentId - ((globalAllocationMapPage->GetPageId() - 2) * GAM_PAGE_SIZE );
-        this->ownedExtents->Set(bitMapId, true);
+        for (const auto& extentId : extentIds){
+            const extent_id_t bitMapId = extentId - IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
-        this->lastAllocatedExtentId = bitMapId;
+            if (bitMapId >= this->ownedExtents->GetSize())
+                return extentId;
 
-        this->isDirty = true;
+            this->ownedExtents->Set(bitMapId, true);
+
+
+            this->lastAllocatedExtentId = bitMapId;
+            this->isDirty = true;
+        }
+
+        return INVALID_EXTENT_ID;
     }
 
     void IndexAllocationMapPage::SetDeallocatedExtent(const extent_id_t &extentId)

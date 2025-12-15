@@ -107,7 +107,7 @@ int main()
 
     // RegisterSignalHandlers();
 
-    auto& server = Network::Server::Get();
+    static auto& server = Network::Server::Get();
 
     // External::Plugin plugin;
     // plugin.Load("plugins/PluginLibrary.dll");

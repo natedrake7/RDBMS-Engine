@@ -857,7 +857,8 @@ PhysicalInsert::PhysicalInsert(
 
     const auto indexPos = tablePtr->CreateNonClusteredIndex(this->columns);
 
-    tablePtr->NonClusteredIndexInsertExistingRows(indexPos);
+    const auto pages = 1;
+    tablePtr->NonClusteredIndexInsertExistingRows(indexPos, pages);
 
     //if there are rows in the table update the index
     //do stuff here

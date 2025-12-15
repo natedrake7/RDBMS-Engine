@@ -63,7 +63,7 @@ Pages::Page *StorageManager::GetRawPage(
       return this->frames[frame];
   }
 
-  const auto extentId = DatabaseEngine::Database::CalculateExtentIdByPageId(pageId);
+  const auto extentId = DatabaseEngine::Database::CalculateExtentId(pageId);
 
   //cache miss
   return this->OpenExtent(pageId, filename, extentId, table);
@@ -192,7 +192,7 @@ Pages::Page* StorageManager::OpenExtent(
   // read page from disk, call this->fileManager
   auto *file = this->fileManager.GetFile(filename);
 
-  const auto firstExtentPageId = DatabaseEngine::Database::CalculateFirstPageIdByExtentId(extentId);
+  const auto firstExtentPageId = DatabaseEngine::Database::CalculateExtentFirstPageId(extentId);
 
   const auto  extentOffset = static_cast<streampos>(firstExtentPageId * PAGE_SIZE);
 
@@ -431,7 +431,7 @@ bool StorageManager::AllocateMemoryBasedOnPageType(Pages::Page **page, const Pag
     case PageType::INDEX:
       *page = new Pages::IndexPage(pageHeader);
       break;
-    case PageType::OVERFLOW:
+    case PageType::OVERFLOWTYPE:
       *page = new Pages::OverflowPage(pageHeader);
       break;
     default:

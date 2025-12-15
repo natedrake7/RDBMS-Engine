@@ -2,6 +2,7 @@
 #include "../../../Systemic/include/DataStructures/BitMap.h"
 #include "../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../include/Pages/IndexAllocationMapPage.h"
+#include "Guards/WriterGuard.h"
 
 namespace Pages {
     GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t& pageId) : Page(pageId)
@@ -14,8 +15,7 @@ namespace Pages {
         this->priority = Constants::PagePriority::SYSTEM;
 
     }
-    GlobalAllocationMapPage::GlobalAllocationMapPage(const PageHeader& pageHeader) : Page(pageHeader)
-    {
+    GlobalAllocationMapPage::GlobalAllocationMapPage(const PageHeader& pageHeader) : Page(pageHeader){
         this->extentsMap = new ByteMaps::BitMap();
         this->lastAllocatedExtentId = 0;
         this->priority = Constants::PagePriority::SYSTEM;
@@ -26,24 +26,29 @@ namespace Pages {
         delete this->extentsMap;
     }
 
-    extent_id_t GlobalAllocationMapPage::AllocateExtent()
-    {
+    int GlobalAllocationMapPage::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const int& numberOfExtents){
+        int allocatedExtents = 0;
+
         for (extent_id_t extentId = this->lastAllocatedExtentId; extentId < this->extentsMap->GetSize(); extentId++){
-            if (this->extentsMap->Get(extentId))
-            {
-                this->lastAllocatedExtentId = extentId;
-                this->extentsMap->Set(extentId, false);
-            
-                this->isDirty = true;
-                return extentId + (this->header.pageId - 2) * Constants::GAM_PAGE_SIZE;
-            }
+            if (allocatedExtents == numberOfExtents)
+                break;
+
+            if (!this->extentsMap ->Get(extentId))
+                continue;
+
+            this->lastAllocatedExtentId = extentId;
+            this->extentsMap->Set(extentId, false);
+            this->isDirty = true;
+
+            allocatedExtents++;
+
+            extents.push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(this->header.pageId) + extentId);
         }
 
-        return 0;
+        return allocatedExtents;
     }
 
-    void GlobalAllocationMapPage::DeallocateExtent(const extent_id_t& extentId)
-    {
+    void GlobalAllocationMapPage::DeallocateExtent(const extent_id_t& extentId){
         this->extentsMap->Set(extentId, true);
 
         this->isDirty = true;
@@ -65,7 +70,6 @@ namespace Pages {
 
         return !this->extentsMap->Get(extentsMap->GetSize() - 1);
     }
-
 //Locks Latch
     std::vector<extent_id_t> GlobalAllocationMapPage::GetAllocatedExtents(const extent_id_t& startingIndex) const {
         std::vector<extent_id_t> allocatedExtents;
@@ -77,8 +81,7 @@ namespace Pages {
 
         allocatedExtents.reserve(this->extentsMap->GetSize() - startingIndex);
 
-        for (extent_id_t id = startingIndex; id < this->extentsMap->GetSize(); id++)
-        {
+        for (extent_id_t id = startingIndex; id < this->extentsMap->GetSize(); id++){
             if (!this->extentsMap->Get(id))
                 allocatedExtents.push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(this->header.pageId) + id);
         }

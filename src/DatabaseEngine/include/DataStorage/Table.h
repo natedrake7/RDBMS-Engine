@@ -135,9 +135,9 @@ namespace DatabaseEngine::StorageTypes
 
             static void PopulateDefaultValues(Row* row, Column*& column);
 
-            void InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t& indexPos);
+            void InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t& indexPos, const int& pagesToAllocate);
 
-            void InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos);
+            void InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos, const int& pagesToAllocate);
 
             void RemoveColumnByClusteredIndex(const column_index_t& index);
 
@@ -148,20 +148,21 @@ namespace DatabaseEngine::StorageTypes
               const table_id_t &tableId,
               const int& ordinalPosition,
               const vector<Column *> &columns,
-              DatabaseEngine::Database *database,
+              Database *database,
               const Headers::Index* clusteredIndex = nullptr,
               const vector<Headers::Index> *nonClusteredIndexes = nullptr);
 
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
 
-            Table(const std::string& tableName, const TableHeader &tableHeader, DatabaseEngine::Database *database);
+            Table(const std::string& tableName, const TableHeader &tableHeader, Database *database);
 
             Table(
                 const Headers::sysTable& systemHeader,
                 const TableHeader &tableHeader,
                 const Headers::Index& primaryKey,
-                DatabaseEngine::Database *database,
-                const int& ordinalPosition);
+                Database *database,
+                const int& ordinalPosition
+            );
 
             ~Table();
 
@@ -185,7 +186,7 @@ namespace DatabaseEngine::StorageTypes
                 const std::vector<column_index_t>& columnIndices
             );
 
-            Errors::RuntimeStatus InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex);
+            Errors::RuntimeStatus InsertRow(Row* row, const int& pagesToAllocate);
 
             void DeleteLargeObjectFromPage(Row *row, const HashSet<column_index_t>& updatedColumns)const;
 
@@ -269,16 +270,29 @@ namespace DatabaseEngine::StorageTypes
                 IndexState& state
             );
 
-            Errors::RuntimeStatus HeapInsert(vector<extent_id_t> &allocatedExtents, extent_id_t &lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const;
+            Errors::RuntimeStatus HeapInsert(
+                Row *row,
+                const int& pagesToAllocate,
+                Headers::RowIdentifier* rowId
+            )const;
 
-            Errors::RuntimeStatus ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId);
+            Errors::RuntimeStatus ClusteredIndexInsert(
+                Row *row,
+                const int& pagesToAllocate,
+                Headers::RowIdentifier* rowId
+            );
 
             Errors::RuntimeStatus NonClusteredIndexInsert(
-                const StorageTypes::Row *row,
+                const Row *row,
                 const int& nonClusteredIndexId,
-                const Headers::RowIdentifier& data);
+                const int& pagesToAllocate,
+                const Headers::RowIdentifier& data
+            );
 
-            Errors::RuntimeStatus NonClusteredIndexInsertExistingRows(const int& indexPos);
+            Errors::RuntimeStatus NonClusteredIndexInsertExistingRows(
+                const int& indexPos,
+                const int& pagesToAllocate
+            );
 
             int CreateNonClusteredIndex(vector<column_index_t>& columnIndices);
 

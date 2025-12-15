@@ -347,14 +347,14 @@ namespace DatabaseEngine::StorageTypes {
         row->InsertColumnData(block, column->GetColumnIndex());
       }
 
-      void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t &indexPos){
+      void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t &indexPos, const int& pagesToAllocate){
 
-        auto* clusteredTree = this->GetClusteredIndexedTree();
+        const auto* clusteredTree = this->GetClusteredIndexedTree();
 
-        clusteredTree->InsertRowsToOtherTree(indexPos);
+        clusteredTree->InsertRowsToOtherTree(indexPos, pagesToAllocate);
     }
 
-      void Table::InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos){
+      void Table::InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos, const int& pagesToAllocate){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -397,7 +397,7 @@ namespace DatabaseEngine::StorageTypes {
               Headers::RowIdentifier rowId(extentPageId, i);
               const auto key = Database::CreateKey(indexedColumns, row, rowId);
 
-              this->NonClusteredIndexInsert(row, indexPos, rowId);
+              this->NonClusteredIndexInsert(row, indexPos, pagesToAllocate, rowId);
             }
           }
         }
@@ -419,7 +419,7 @@ namespace DatabaseEngine::StorageTypes {
     tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
 
     for (const auto& extentId: allocatedExtents) {
-      const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+      const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
 
       const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                             ? extentFirstPageId
@@ -532,6 +532,7 @@ namespace DatabaseEngine::StorageTypes {
       ) {
         std::vector<Row*> rows;
         Logging::CheckPoint checkPoint;
+        int pagesNeeded = 0;
         for (const auto& insertedRow : input) {
           //TODO implement better to avoid multiple loggings
           auto [row, status] = this->BatchCreateRow(properties.snapshot.transactionId, insertedRow.GetData(), columnIndices, &checkPoint);
@@ -540,13 +541,20 @@ namespace DatabaseEngine::StorageTypes {
             return status;
 
           rows.push_back(row);
+          pagesNeeded += row->TotalSize();
         }
 
-        std::vector<extent_id_t> extents;
-        extent_id_t startingExtentIndex = 0;
+        if (this->IsClustered())
+          pagesNeeded /= INDEX_PAGE_DEFAULT_SIZE;
+        else
+          pagesNeeded /= PAGE_SIZE_WITHOUT_HEADER;
+
+        if (pagesNeeded == 0)
+          pagesNeeded = 1;
+
 
         for (const auto& row : rows) {
-          auto result = this->InsertRow(row, extents, startingExtentIndex);
+          auto result = this->InsertRow(row, pagesNeeded);
 
           if (result.code != Errors::RuntimeError::Ok)
             return result;
@@ -558,9 +566,6 @@ namespace DatabaseEngine::StorageTypes {
       }
 
     Errors::RuntimeStatus Table::InsertRow(const ExecutionProperties& properties, const std::vector<Value> &inputData){
-        extent_id_t startingExtentIndex = 0;
-        vector<extent_id_t> extents;
-
         Logging::CheckPoint checkPoint;
 
         auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, &checkPoint);
@@ -568,7 +573,7 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != Errors::RuntimeError::Ok)
           return result;
 
-        result = this->InsertRow(row, extents, startingExtentIndex);
+        result = this->InsertRow(row, 1);
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -584,9 +589,6 @@ namespace DatabaseEngine::StorageTypes {
       const vector<Value> &inputData,
       const std::vector<column_index_t> &columnIndices
     ){
-        extent_id_t startingExtentIndex = 0;
-        vector<extent_id_t> extents;
-
         Logging::CheckPoint checkPoint;
 
         auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &checkPoint);
@@ -594,7 +596,7 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != Errors::RuntimeError::Ok)
           return result;
 
-        result =  this->InsertRow(row, extents, startingExtentIndex);
+        result =  this->InsertRow(row, 1);
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -611,9 +613,6 @@ namespace DatabaseEngine::StorageTypes {
       const vector<Expressions::Expression *> &inputData,
       const std::vector<column_index_t> &columnIndices
     ){
-        extent_id_t startingExtentIndex = 0;
-        vector<extent_id_t> extents;
-
         Logging::CheckPoint checkPoint;
 
         auto[row,result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &checkPoint);
@@ -621,7 +620,7 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != Errors::RuntimeError::Ok)
           return result;
 
-        result = this->InsertRow(row, extents, startingExtentIndex);
+        result = this->InsertRow(row, 1);
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -634,22 +633,21 @@ namespace DatabaseEngine::StorageTypes {
 
     }
 
-    Errors::RuntimeStatus Table::InsertRow(Row* row, vector<extent_id_t> &allocatedExtents, extent_id_t &startingExtentIndex)
-      {
+    Errors::RuntimeStatus Table::InsertRow(Row* row, const int& pagesToAllocate){
         this->InsertLargeObjectToPage(row);
 
         //row_id
         Headers::RowIdentifier rowId;
         auto status = this->IsClustered()
-            ? this->ClusteredIndexInsert(row, &rowId)
-            : this->HeapInsert(allocatedExtents, startingExtentIndex, row, &rowId);
+            ? this->ClusteredIndexInsert(row, pagesToAllocate, &rowId)
+            : this->HeapInsert(row, pagesToAllocate, &rowId);
 
         if (status.code != Errors::RuntimeError::Ok)
             return status;
 
         //insert to NonClustered Indexes
         for (int i = 0; i < this->header.nonClusteredIndexes.size(); i++) {
-            status = this->NonClusteredIndexInsert(row, i, rowId);
+            status = this->NonClusteredIndexInsert(row, i, pagesToAllocate, rowId);
 
             if (status.code != Errors::RuntimeError::Ok)
                 return status;
@@ -914,7 +912,11 @@ namespace DatabaseEngine::StorageTypes {
 
   }
 
-    Errors::RuntimeStatus Table::HeapInsert(vector<extent_id_t> & allocatedExtents, extent_id_t & lastExtentIndex, Row *row, Headers::RowIdentifier* rowId)const{
+    Errors::RuntimeStatus Table::HeapInsert(
+      Row *row,
+      const int& pagesToAllocate,
+      Headers::RowIdentifier* rowId
+    )const{
       const auto& filename = this->database->GetFileName();
 
       while(row->TotalSize() > Constants::PAGE_SIZE_WITHOUT_HEADER)
@@ -922,7 +924,9 @@ namespace DatabaseEngine::StorageTypes {
 
       if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
       {
-          auto newPage = this->database->CreateDataPage(this->header.ordinalPosition);
+          auto newPage = this->database->CreateDataPage(this->header.ordinalPosition, pagesToAllocate);
+
+          MultiThreading::WriterGuard pageLock(&newPage->Latch());
 
           newPage->InsertRow(row, &rowId->indexId);
           rowId->pageId = newPage->GetPageId();
@@ -932,14 +936,14 @@ namespace DatabaseEngine::StorageTypes {
 
       const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
-      tableMapPage->GetAllocatedExtents(&allocatedExtents, lastExtentIndex);
-      lastExtentIndex = allocatedExtents.size() - 1;
+      std::vector<extent_id_t> tableExtentIds;
+      tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
 
       const auto rowCategory = Database::GetObjectSizeToCategory(row->TotalSize());
 
-      for (const auto &extentId : allocatedExtents)
+      for (const auto &extentId : tableExtentIds)
       {
-          const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+          const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
 
           const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                                 ? extentFirstPageId
@@ -950,6 +954,8 @@ namespace DatabaseEngine::StorageTypes {
 
               auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pageId);
 
+              MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage->Latch());
+
               if (pageFreeSpacePage->GetPageType(pageId) != PageType::DATA)
                   break;
 
@@ -959,6 +965,8 @@ namespace DatabaseEngine::StorageTypes {
               if (rowCategory <= pageSizeCategory)
               {
                   auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
+
+                  MultiThreading::WriterGuard pageLock(&page->Latch());
 
                   if (row->TotalSize() > page->GetBytesLeft())
                       continue;
@@ -972,14 +980,21 @@ namespace DatabaseEngine::StorageTypes {
           }
       }
 
-      auto newPage = this->database->CreateDataPage(this->header.ordinalPosition);
+      auto newPage = this->database->CreateDataPage(this->header.ordinalPosition, pagesToAllocate);
+
+      MultiThreading::WriterGuard pageLock(&newPage->Latch());
+
       newPage->InsertRow(row, &rowId->indexId);
       rowId->pageId = newPage->GetPageId();
 
       return {};
     }
 
-  Errors::RuntimeStatus Table::ClusteredIndexInsert(Row *row, Headers::RowIdentifier* rowId){
+  Errors::RuntimeStatus Table::ClusteredIndexInsert(
+    Row *row,
+    const int& pagesToAllocate,
+    Headers::RowIdentifier* rowId
+  ){
       auto* tree = this->GetClusteredIndexedTree();
 
       const auto key = Database::CreateKey(this->GetClusteredIndex(), row);
@@ -988,7 +1003,7 @@ namespace DatabaseEngine::StorageTypes {
 
       Errors::RuntimeStatus status;
 
-      auto node = tree->FindInsertNode(key, indexPosition, status);
+      auto node = tree->FindInsertNode(key, pagesToAllocate, indexPosition, status);
 
       if (status.code != Errors::RuntimeError::Ok)
          return status;
@@ -1016,9 +1031,11 @@ namespace DatabaseEngine::StorageTypes {
      }
 
     Errors::RuntimeStatus Table::NonClusteredIndexInsert(
-      const StorageTypes::Row *row,
+      const Row *row,
       const int & nonClusteredIndexId,
-      const Headers::RowIdentifier & data){
+      const int& pagesToAllocate,
+      const Headers::RowIdentifier & data
+    ){
 
       const auto& indexedColumns = this->header.nonClusteredIndexes.at(nonClusteredIndexId).columns;
 
@@ -1029,7 +1046,7 @@ namespace DatabaseEngine::StorageTypes {
       int indexPosition = 0;
       Errors::RuntimeStatus status;
 
-      auto node = tree->FindInsertNode(key, indexPosition, status);
+      auto node = tree->FindInsertNode(key, pagesToAllocate, indexPosition, status);
 
       if (status.code != Errors::RuntimeError::Ok)
           return status;
@@ -1051,16 +1068,13 @@ namespace DatabaseEngine::StorageTypes {
       return status;
     }
 
-    Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const int &indexPos){
-        const auto tableType = this->GetType();
-
-        if (tableType == TableType::CLUSTERED) {
-          this->InsertExistingRowsToNonClusteredIndexByClusteredIndex(indexPos);
+    Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const int &indexPos, const int& pagesToAllocate){
+        if (this->GetType() == TableType::CLUSTERED) {
+          this->InsertExistingRowsToNonClusteredIndexByClusteredIndex(indexPos, pagesToAllocate);
           return {};
         }
 
-        this->InsertExistingRowToNonClusteredIndexByHeap(indexPos);
-
+        this->InsertExistingRowToNonClusteredIndexByHeap(indexPos, pagesToAllocate);
         return {};
     }
 
@@ -1420,12 +1434,8 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0){
-          vector<extent_id_t> allocatedExtents;
-          extent_id_t startingExtentIndex = 0;
-
-          return this->InsertRow(row, allocatedExtents, startingExtentIndex);
-        }
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0)
+          return this->InsertRow(row, 1);
 
         while(page->GetBytesLeft() - diff < 0){
           const int result = this->HandleRowOverflow(row);
@@ -1464,12 +1474,8 @@ namespace DatabaseEngine::StorageTypes {
 
         this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0){
-          vector<extent_id_t> allocatedExtents;
-          extent_id_t startingExtentIndex = 0;
-
-          return this->InsertRow(row, allocatedExtents, startingExtentIndex);
-        }
+        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0)
+          return this->InsertRow(row, 1);
 
         while(page->GetBytesLeft() - diff < 0){
           const int result = this->HandleRowOverflow(row);
@@ -1496,9 +1502,6 @@ namespace DatabaseEngine::StorageTypes {
     void Table::GetColumnsHeaders()const{
       const auto columnsHeaders = SystemCatalog::Get().SelectColumns(this->header.tableId);
 
-      if (this->header.tableId == 13) {
-        int val = 0;
-      }
       if (columnsHeaders.empty())
         return;
 
@@ -1636,7 +1639,7 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
     tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
 
     for (const auto& extentId: allocatedExtents) {
-      const page_id_t extentFirstPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+      const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
 
       const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                             ? extentFirstPageId

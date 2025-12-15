@@ -35,7 +35,7 @@ namespace Indexing
         for (int i = 0; i < keys->size(); i++) {
             const auto &currentKey = (*keys)[i];
 
-            if (currentKey->PartialGreaterThan(key))
+            if (key <= *currentKey)
                 return i;
         }
 
@@ -62,9 +62,9 @@ namespace Indexing
         status.message = os.str();
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::CreateRootPage(int& indexPosition) {
+    Pages::PageGuard<Pages::IndexPage> BTree::CreateRootPage(int& indexPosition, const int& pagesToAllocate) {
         //maybe root page is removed and need to be reopened
-        auto root = this->AllocateNewPage(INVALID_PAGE_ID);
+        auto root = this->AllocateNewPage(INVALID_PAGE_ID, pagesToAllocate);
 
         {
             MultiThreading::WriterGuard lock(&root->Latch());
@@ -80,9 +80,9 @@ namespace Indexing
         return root;
     }
 
-    void BTree::SplitRoot(Pages::PageGuard<Pages::IndexPage>& root, MultiThreading::ReaderGuard& rootLock) {
+    void BTree::SplitRoot(Pages::PageGuard<Pages::IndexPage>& root, MultiThreading::ReaderGuard& rootLock, const int& pagesToAllocate) {
         {
-            auto newRoot = this->AllocateNewPage(this->indexPageId);
+            auto newRoot = this->AllocateNewPage(this->indexPageId, pagesToAllocate);
 
             MultiThreading::WriterGuard newRootLock(&newRoot->Latch());
 
@@ -96,7 +96,7 @@ namespace Indexing
             root->SetIsRoot(false);
             this->indexPageId = newRoot->GetPageId();
 
-            this->SplitChildNoLock(newRoot, 0, root);
+            this->SplitChildNoLock(newRoot, 0, root, pagesToAllocate);
             root = newRoot;
         }
 
@@ -112,12 +112,13 @@ namespace Indexing
         MultiThreading::ReaderGuard& parentReadLock,
         const int &index,
         Pages::PageGuard<Pages::IndexPage>& child,
-        MultiThreading::ReaderGuard& childReadLock
+        MultiThreading::ReaderGuard& childReadLock,
+        const int& pagesToAllocate
     ){
         auto parentLock = MultiThreading::WriterGuard::Promote(&parent->Latch(), parentReadLock);
         auto childLock = MultiThreading::WriterGuard::Promote(&child->Latch(), childReadLock);
 
-        this->SplitChildNoLock(parent, index, child);
+        this->SplitChildNoLock(parent, index, child, pagesToAllocate);
     }
 
     void BTree::SplitLeafNoLock(
@@ -201,9 +202,10 @@ namespace Indexing
     void BTree::SplitChildNoLock(
         Pages::PageGuard<Pages::IndexPage> &parent,
         const int &index,
-        Pages::PageGuard<Pages::IndexPage> &child
+        Pages::PageGuard<Pages::IndexPage> &child,
+        const int& pagesToAllocate
     ) {
-        auto newChild = this->AllocateNewPage(parent->GetPageId());
+        auto newChild = this->AllocateNewPage(parent->GetPageId(), pagesToAllocate);
 
         MultiThreading::WriterGuard newChildLock(&newChild->Latch());
 
@@ -228,6 +230,7 @@ namespace Indexing
     Pages::PageGuard<Pages::IndexPage> BTree::GetNonFullNode(
         Pages::PageGuard<Pages::IndexPage>& parent,
         const DataTypes::Indexing::Key &key,
+        const int& pagesToAllocate,
         int& indexPosition,
         Errors::RuntimeStatus& status
     ){
@@ -252,7 +255,7 @@ namespace Indexing
             const auto* childKeys = child->GetKeysUnsafe();
 
             if (childKeys->size() == 2 * this->degree - 1){
-                this->SplitChild(parent, parentLock, childIndex, child, childLock);
+                this->SplitChild(parent, parentLock, childIndex, child, childLock, pagesToAllocate);
 
                 //split child will break the lock and we need to reacquire it
                 MultiThreading::ReaderGuard newParentLock(&parent->Latch());
@@ -266,7 +269,7 @@ namespace Indexing
                 intermediateNode = this->GetNode(parentChildren->at(childIndex));
         }
 
-        return this->GetNonFullNode(intermediateNode, key, indexPosition, status);
+        return this->GetNonFullNode(intermediateNode, key, pagesToAllocate, indexPosition, status);
     }
 
     Pages::PageGuard<Pages::IndexPage> BTree::GetNonFullLeafNode(
@@ -388,8 +391,8 @@ namespace Indexing
         return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::AllocateNewPage(const page_id_t& parentPageId){
-        return this->database->FindOrAllocateNextIndexPage(this->table, parentPageId, this->nonClusteredIndexId);
+    Pages::PageGuard<Pages::IndexPage> BTree::AllocateNewPage(const page_id_t& parentPageId, const int& pagesToAllocate){
+        return this->database->FindOrAllocateNextIndexPage(this->table, parentPageId, pagesToAllocate, this->nonClusteredIndexId);
     }
 
     void BTree::HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex) {
@@ -682,12 +685,13 @@ namespace Indexing
 
     Pages::PageGuard<Pages::IndexPage> BTree::FindInsertNode(
         const DataTypes::Indexing::Key &key,
+        const int& pagesToAllocate,
         int &indexPosition,
         Errors::RuntimeStatus& status
     ){
         //base case scenario
         if (this->IsEmpty()) {
-            auto root =  this->CreateRootPage(indexPosition);
+            auto root =  this->CreateRootPage(indexPosition, pagesToAllocate);
 
             if(this->nonClusteredIndexId != -1)
                 this->table->SetNonClusteredIndexPageId(this->indexPageId, this->nonClusteredIndexId);
@@ -703,10 +707,10 @@ namespace Indexing
             MultiThreading::ReaderGuard rootLock(&root->Latch());
 
             if (root->GetKeysUnsafe()->size() == 2 * this->degree - 1) // root is full,
-                this->SplitRoot(root, rootLock);
+                this->SplitRoot(root, rootLock, pagesToAllocate);
         }
 
-        return this->GetNonFullNode(root, key, indexPosition, status);
+        return this->GetNonFullNode(root, key, pagesToAllocate, indexPosition, status);
     }
 
     //TODO fix non clusteredIndex Seek
@@ -1503,20 +1507,19 @@ void BTree::IndexSeekRange(
     const page_id_t & BTree::GetFirstIndexPageId() const { return this->indexPageId; }
 
     //escalate to table lock
-    void BTree::InsertRowsToOtherTree(const int& indexPos)const{
+    void BTree::InsertRowsToOtherTree(const int& indexPos, const int& pagesToAllocate)const{
         if (this->IsEmpty())
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode.Get())
-        {
+        while (currentNode.Get()){
             const auto* rows = currentNode->DataRowsNoLock();
 
             for (int i = 0;i < rows->size(); i++) {
                 const auto* row = rows->at(i);
 
-                this->table->NonClusteredIndexInsert(row, indexPos, Headers::RowIdentifier(currentNode->GetPageId(), i));
+                this->table->NonClusteredIndexInsert(row, indexPos, pagesToAllocate, Headers::RowIdentifier(currentNode->GetPageId(), i));
             }
 
             if(!currentNode->HasRightSibling())

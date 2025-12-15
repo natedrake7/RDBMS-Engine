@@ -7,6 +7,7 @@
 #include "../../../include/Pages/LargeObjectPage.h"
 #include "../../../include/BufferPool/StorageManager.h"
 #include "../../../include/Pages/Page.h"
+#include "../../../include/Pages/PageFreeSpacePage.h"
 
 namespace DatabaseEngine::StorageTypes {
     void Table::InsertLargeObjectToPage(Row *row) 
@@ -51,7 +52,11 @@ namespace DatabaseEngine::StorageTypes {
         {
             largeDataPage->InsertObject(data + offset, remainingBlockSize);
 
-            this->database->SetPageMetaDataToPfs(largeDataPage.Get());
+            const auto pfsPageId = Database::GetPfsAssociatedPage(largeDataPage->GetPageId());
+
+            auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pfsPageId);
+
+            pfsPage->SetPageMetaData(largeDataPage.Get());
 
             Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion,largeDataPage->GetPageId(),columnIndex);
 
@@ -71,7 +76,11 @@ namespace DatabaseEngine::StorageTypes {
         Pages::LargeDataObject *dataObject = largeDataPage->InsertObject(
             data + offset, bytesToBeInserted);
 
-        this->database->SetPageMetaDataToPfs(largeDataPage.Get());
+        const auto pfsPageId = Database::GetPfsAssociatedPage(largeDataPage->GetPageId());
+
+        auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pfsPageId);
+
+        pfsPage->SetPageMetaData(largeDataPage.Get());
 
         if (previousDataObject != nullptr) 
             (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
@@ -84,12 +93,11 @@ namespace DatabaseEngine::StorageTypes {
         Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion,largeDataPage->GetPageId(),columnIndex);
     }
 
-    Pages::PageGuard<Pages::LargeObjectPage> Table::GetOrCreateLargeDataPage() const
-    {
+    Pages::PageGuard<Pages::LargeObjectPage> Table::GetOrCreateLargeDataPage() const{
         auto largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId);
 
-        return (largeDataPage.Get() == nullptr)
-                    ? this->database->CreateLargeDataPage(this->header.tableId)
+        return !largeDataPage.IsValid()
+                    ? this->database->CreateLargeDataPage(this->header.tableId, 1)
                     : largeDataPage;
     }
 

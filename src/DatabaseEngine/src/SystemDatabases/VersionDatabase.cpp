@@ -52,9 +52,14 @@ namespace DatabaseEngine {
         this->header.lastGamPageId = gamPage->GetPageId();
       }
 
+      std::vector<extent_id_t> extents;
+
+      MultiThreading::WriterGuard gamPageLock(&gamPage->Latch());
       // Step 3: allocate an extent from the current (or new) GAM page
-      newExtentId = gamPage->AllocateExtent();
-      newPageId   = Database::CalculateFirstPageIdByExtentId(newExtentId);
+      const auto allocatedExtentsCount = gamPage->AllocateExtentsNoLock(extents, 1);
+
+      newExtentId = extents.front();
+      newPageId   = Database::CalculateExtentFirstPageId(newExtentId);
     }
 
     // Step 4: ensure PFS page exists
@@ -72,7 +77,7 @@ namespace DatabaseEngine {
     return true;
   }
 
-  Pages::PageGuard<Pages::Page> VersionDatabase::TryGetLastUndoPage(
+  Pages::PageGuard<> VersionDatabase::TryGetLastUndoPage(
     const StorageTypes::Table *table,
     const row_size_t &size
   ) {
@@ -130,7 +135,7 @@ namespace DatabaseEngine {
 
     for (const auto &extentId : gamPage->GetAllocatedExtents())
     {
-      const page_id_t firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+      const page_id_t firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
       for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++)
       {
@@ -213,7 +218,7 @@ namespace DatabaseEngine {
     const auto extents = this->GetAllocatedExtents(startingExtentId);
 
     for (const auto &extentId : extents){
-      const auto firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId * EXTENT_SIZE);
+      const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId * EXTENT_SIZE);
 
       bool isExtentEmpty = true;
       for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++){

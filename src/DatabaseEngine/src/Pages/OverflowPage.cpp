@@ -13,11 +13,11 @@ namespace Pages {
   OverflowPage::OverflowPage(const PageHeader & pageHeader): Page(pageHeader){}
 
   OverflowPage::OverflowPage(){
-      this->header.pageType = PageType::OVERFLOW;
+      this->header.pageType = PageType::OVERFLOWTYPE;
   }
 
   OverflowPage::OverflowPage(const page_id_t & pageId, const bool & isPageCreation): Page(pageId,isPageCreation){
-    this->header.pageType = PageType::OVERFLOW;
+    this->header.pageType = PageType::OVERFLOWTYPE;
   }
 
   OverflowRow* OverflowPage::GetObject(const page_offset_t & index)const{ return this->data.at(index); }

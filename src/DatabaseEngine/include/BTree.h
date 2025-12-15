@@ -43,16 +43,17 @@ namespace Indexing{
         );
         static void CreateDuplicateKeyError(Errors::RuntimeStatus& status, const DataTypes::Indexing::Key &key);
 
-        Pages::PageGuard<Pages::IndexPage> CreateRootPage(int& indexPosition);
+        Pages::PageGuard<Pages::IndexPage> CreateRootPage(int& indexPosition, const int& pagesToAllocate);
 
-        void SplitRoot(Pages::PageGuard<Pages::IndexPage>& root, MultiThreading::ReaderGuard& rootLock);
+        void SplitRoot(Pages::PageGuard<Pages::IndexPage>& root, MultiThreading::ReaderGuard& rootLock, const int& pagesToAllocate);
 
         void SplitChild(
             Pages::PageGuard<Pages::IndexPage>& parent,
             MultiThreading::ReaderGuard& parentReadLock,
             const int &index,
             Pages::PageGuard<Pages::IndexPage>& child,
-            MultiThreading::ReaderGuard& childReadLock
+            MultiThreading::ReaderGuard& childReadLock,
+            const int& pagesToAllocate
         );
 
         void SplitLeafNoLock(
@@ -69,10 +70,16 @@ namespace Indexing{
             const int& index
         )const;
 
-        void SplitChildNoLock(Pages::PageGuard<Pages::IndexPage>& parent, const int &index, Pages::PageGuard<Pages::IndexPage>& child);
+        void SplitChildNoLock(
+            Pages::PageGuard<Pages::IndexPage>& parent,
+            const int &index,
+            Pages::PageGuard<Pages::IndexPage>& child,
+            const int& pagesToAllocate
+        );
         Pages::PageGuard<Pages::IndexPage> GetNonFullNode(
             Pages::PageGuard<Pages::IndexPage>& parent,
             const DataTypes::Indexing::Key &key,
+            const int& pagesToAllocate,
             int& indexPosition,
             Errors::RuntimeStatus& status
         );
@@ -93,7 +100,7 @@ namespace Indexing{
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetNode(const page_id_t& pageId) const;
         [[nodiscard]] int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, const TreeType& treeType, const int& nonClusteredId)const;
 
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> AllocateNewPage(const page_id_t& parentPageId);
+        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> AllocateNewPage(const page_id_t& parentPageId, const int& pagesToAllocate);
 
         void HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex);
         void HandleRootUnderflow();
@@ -117,6 +124,7 @@ namespace Indexing{
 
         Pages::PageGuard<Pages::IndexPage> FindInsertNode(
             const DataTypes::Indexing::Key &key,
+            const int& pagesToAllocate,
             int &indexPosition,
             Errors::RuntimeStatus& status
         );
@@ -230,7 +238,7 @@ namespace Indexing{
 
         [[nodiscard]] const page_id_t& GetFirstIndexPageId() const;
 
-        void InsertRowsToOtherTree(const int& indexPos)const;
+        void InsertRowsToOtherTree(const int& indexPos, const int& pagesToAllocate)const;
 
         void InsertColumnToRow(const column_index_t& index, const Value& defaultValue)const;
 

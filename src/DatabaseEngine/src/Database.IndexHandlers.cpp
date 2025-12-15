@@ -43,9 +43,10 @@ namespace DatabaseEngine {
         return key;
     }
 
-	Pages::PageGuard<Pages::IndexPage> Database::FindOrAllocateNextIndexPage(
+	PageGuard<IndexPage> Database::FindOrAllocateNextIndexPage(
 	    Table*& table,
 	    const page_id_t &indexPageId,
+	    const int& pagesToAllocate,
 	    const int& nonClusteredIndexId
 	)
     {
@@ -57,18 +58,12 @@ namespace DatabaseEngine {
                                 ? nonClusteredIndexId
                                 : 0;
 
+        const auto treeType = isNonClusteredIndex
+                                    ? TreeType::NonClustered
+                                    : TreeType::Clustered;
+
         if(indexPageId == INVALID_PAGE_ID)
-        {
-            auto newIndexPage = this->CreateIndexPage(table, tableHeader.ordinalPosition, indexId);
-
-            MultiThreading::WriterGuard indexPageLock(&newIndexPage->Latch());
-            
-            newIndexPage->SetTreeType(isNonClusteredIndex 
-                                    ? TreeType::NonClustered 
-                                    : TreeType::Clustered);
-
-            return newIndexPage;
-        }
+            return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
 
         const auto indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(
             this->filename,
@@ -77,10 +72,10 @@ namespace DatabaseEngine {
         );
 
         std::vector<extent_id_t> allocatedExtents;
-        indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentIdByPageId(indexPageId));
+        indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentId(indexPageId));
 
         for(const auto& extentId: allocatedExtents){
-            const auto firstExtentPageId = Database::CalculateFirstPageIdByExtentId(extentId);
+            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++){
                 {
@@ -104,29 +99,13 @@ namespace DatabaseEngine {
                 bool successfulLock = false;
                 auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage->Latch(), successfulLock);
 
-                if (!successfulLock)
-                    continue;
-
                 if(!successfulLock || !indexPage->isEmpty())
                     continue;
 
-                auto writerLock = MultiThreading::WriterGuard::Promote(&indexPage->Latch(), readerGuard);
-
-                indexPage->SetTreeType(isNonClusteredIndex
-                                        ? TreeType::NonClustered
-                                        : TreeType::Clustered);
                 return indexPage;
             }
         }
 
-        auto newIndexPage = this->CreateIndexPage(table, tableHeader.ordinalPosition, indexId);
-
-        MultiThreading::WriterGuard indexPageLock(&newIndexPage->Latch());
-            
-        newIndexPage->SetTreeType(isNonClusteredIndex 
-                                ? TreeType::NonClustered 
-                                : TreeType::Clustered);
-
-        return newIndexPage;
+        return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
     }
 }

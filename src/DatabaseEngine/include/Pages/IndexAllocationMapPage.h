@@ -32,7 +32,10 @@ namespace Pages {
         IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId);
         IndexAllocationMapPage(const PageHeader& pageHeader, const extent_id_t& startingExtentId, const table_id_t& tableId);
         ~IndexAllocationMapPage() override;
-        void SetAllocatedExtent(const extent_id_t &extentId, const GlobalAllocationMapPage* globalAllocationMapPage);
+        extent_id_t SetExtentsAllocated(
+            const std::vector<extent_id_t>& extentIds,
+            const page_id_t& globalAllocationMapPageId
+        );
         void SetDeallocatedExtent(const extent_id_t& extentId);
         void GetAllocatedExtents(vector<extent_id_t>* allocatedExtents) const;
         void GetAllocatedExtents(vector<extent_id_t>* allocatedExtents, const extent_id_t& startingExtentIndex) const;
