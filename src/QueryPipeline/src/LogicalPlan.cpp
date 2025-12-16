@@ -1,4 +1,7 @@
 #include "../include/LogicalPlan.h"
+
+#include <iostream>
+
 #include "../include/Optimizer.h"
 #include "../include/Statements.h"
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
@@ -53,7 +56,6 @@ namespace QueryPipeline {
       if (indexes.empty())
         return new PhysicalPlan::PhysicalTableScan(this->table);
 
-
       if (this->expression != nullptr) {
         for (auto& index: indexes) {
           index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(index.id);
@@ -65,10 +67,6 @@ namespace QueryPipeline {
             auto& result = results[0];
             return new PhysicalPlan::PhysicalIndexSeek(this->table, result.range.start, result.range.end);
           }
-
-          // for (auto& result : results) {
-          //   auto* seekStatement = new PhysicalPlan::PhysicalIndexSeek(this->table, result.range.start, result.range.end);
-          // }
         }
       }
 

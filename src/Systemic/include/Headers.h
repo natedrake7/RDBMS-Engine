@@ -137,6 +137,37 @@ namespace Headers {
 
     int32_t rowCount;
     int32_t distinctCount;
+
+    ColumnHistograms(
+      const int32_t& columnId,
+      const Value& rangeStart,
+      const Value& rangeEnd,
+      const int32_t& rowCount,
+      const int32_t& distinctCount
+    )
+      : columnId(columnId),
+        rangeStart(rangeStart),
+        rangeEnd(rangeEnd),
+        rowCount(rowCount),
+        distinctCount(distinctCount)
+    {
+      this->histogramId = INVALID_HISTOGRAM_ID;
+    }
+
+    ColumnHistograms(
+      const int32_t& columnId,
+      const int32_t& histogramId,
+      const Value& rangeStart,
+      const Value& rangeEnd,
+      const int32_t& rowCount,
+      const int32_t& distinctCount
+    )
+      : columnId(columnId),
+        histogramId(histogramId),
+        rangeStart(rangeStart),
+        rangeEnd(rangeEnd),
+        rowCount(rowCount),
+        distinctCount(distinctCount){}
   };
 
   struct IndexStatistics {

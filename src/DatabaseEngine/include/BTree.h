@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "../../Systemic/include/DataTypes/Value.h"
 #include "../../Systemic/include/Key.h"
+#include "../../Systemic/include/DataStructures/SortedDictionary.h"
 
 #include <vector>
 #include "Constants.h"
@@ -9,8 +10,12 @@
 #include "Pages/PageGuard.h"
 #include "DataStorage/Row.h"
 
+namespace Statistics {
+    struct ValueFrequency;
+}
+
 namespace MultiThreading {
-class ReaderGuard;
+    class ReaderGuard;
 }
 
 namespace DatabaseEngine{
@@ -138,6 +143,14 @@ namespace Indexing{
             int& parentIndex
         );
 
+        void CalculateClusteredStatistics(
+            Pages::PageGuard<Pages::IndexPage>& currentNode,
+            Headers::IndexStatistics& indexStatistics,
+            Headers::TableStatistics& tableStatistics,
+            std::vector<Headers::ColumnStatistics>& columnStatistics,
+            Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
+        )const;
+
     public:
         explicit BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const Constants::TreeType& treeType, const int& nonClusteredIndexId = -1);
         BTree();
@@ -227,7 +240,7 @@ namespace Indexing{
             const vector<QueryPipeline::Statements::UpdateColumn*> & updates
         )const;
 
-        Errors::RuntimeStatus IndexSeekUpdate(
+        [[nodiscard]] Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& key,
             const std::vector<Value> & updates
@@ -270,7 +283,8 @@ namespace Indexing{
         void CalculateIndexStatistics(
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
-            std::vector<Headers::ColumnStatistics>& columnStatistics
+            std::vector<Headers::ColumnStatistics>& columnStatistics,
+            Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
         )const;
     };
 }

@@ -14,7 +14,6 @@
 #include <iostream>
 
 namespace DatabaseEngine {
-
  std::vector<Database *> StatisticsScheduler::GetDatabases()const {
    MultiThreading::ReaderGuard lock(this->latch);
    return this->databasesDictionary->ToVector();
@@ -32,7 +31,62 @@ namespace DatabaseEngine {
      : static_cast<int>(std::ceil(static_cast<float>(allocatedPagesPerExtent) / static_cast<float>(numberOfExtents)));
  }
 
-  void StatisticsScheduler::UpdateDatabaseStatistics(const Database *database)const {
+ bool StatisticsScheduler::GenerateColumnHistograms(
+  const SortedDictionary<Value, int64_t, ValueComparator>& sortedValues,
+  std::vector<Headers::ColumnHistograms>& histograms,
+  const Headers::ColumnStatistics& columnStatistics,
+  const int64_t& totalRows
+  ) {
+
+  if (totalRows < 10000)
+   return false;
+
+   const auto rowsPerBucket = static_cast<int>(std::ceil(static_cast<float>(totalRows) / static_cast<float>(NUMBER_OF_HISTOGRAM_BUCKETS)));
+   int currentBucketRows = 0;
+
+   Value bucketStart = sortedValues.begin()->first;
+   const auto& lastValue = sortedValues.rbegin()->first;
+
+   int counter = 0;
+   int distinctCountPerBucket = 0;
+   const bool newHistograms = histograms.empty();
+   for (const auto& [value, freq] : sortedValues) {
+     currentBucketRows += freq;
+     distinctCountPerBucket++;
+
+    if (currentBucketRows < rowsPerBucket && (value != lastValue).GetBool())
+      continue;
+
+      if (newHistograms){
+        auto histogram = Headers::ColumnHistograms(
+            columnStatistics.columnId,
+            bucketStart,
+    value,
+   currentBucketRows,
+           distinctCountPerBucket
+        );
+        histograms.push_back(std::move(histogram));
+      }
+      else
+      {
+        auto& histogram = histograms[counter];
+
+        histogram.rangeStart = bucketStart;
+        histogram.rangeEnd = value;
+        histogram.rowCount = currentBucketRows;
+        histogram.distinctCount = currentBucketRows;
+      }
+
+      counter++;
+      distinctCountPerBucket = 0;
+      bucketStart = value;
+      currentBucketRows = 0;
+   }
+
+   return true;
+ }
+
+ void StatisticsScheduler::UpdateDatabaseStatistics(const Database *database)const {
    for (const auto& table : database->GetTables()) {
      const auto cacheStats = this->statsManager->GetTableStatistics(table->GetTableId());
 
@@ -60,16 +114,25 @@ namespace DatabaseEngine {
 
   auto tableStatistics = Headers::TableStatistics(table->GetTableId());
 
+  Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>> sortedValues;
+  Dictionary<int32_t, std::vector<Headers::ColumnHistograms>> columnHistogramsDictionary;;
   std::vector<Headers::ColumnStatistics> columnStatistics;
+
   for (const auto& column : table->GetColumns()) {
+   const auto& columnId = column->GetColumnId();
+
    columnStatistics.emplace_back(
     Headers::ColumnStatistics{
-     .columnId = column->GetColumnId(),
+     .columnId = columnId,
      .distinctCount = 0,
      .min = Value::Null(),
      .max = Value::Null(),
      .nullCount = 0,
    });
+
+   sortedValues.Add(columnId, {});
+   auto histograms = this->catalog->SelectColumnHistogramsByColumnId(columnId, column->GetColumnType());
+   columnHistogramsDictionary.Add(columnId, std::move(histograms));
   }
 
   auto indexStatistics = StatisticsManager::Get().GetIndexStatistics(tableStatistics.tableId);
@@ -80,7 +143,8 @@ namespace DatabaseEngine {
      table,
      indexStats,
      tableStatistics,
-     columnStatistics
+     columnStatistics,
+     sortedValues
     );
 
     if (result)
@@ -94,26 +158,45 @@ namespace DatabaseEngine {
     systemFilename,
     filename,
     tableStatistics,
-    columnStatistics
+    columnStatistics,
+    sortedValues
    );
+
+  for (const auto& column : columnStatistics){
+    const auto& columnId = column.columnId;
+
+    StatisticsScheduler::GenerateColumnHistograms(
+      sortedValues[columnId],
+      columnHistogramsDictionary[columnId],
+      column,
+      tableStatistics.rowCount
+     );
+
+  }
 
   //Update catalog
   this->UpdateCache(tableStatistics, columnStatistics, indexStatistics);
-  this->UpdateCatalogStatistics(tableStatistics, columnStatistics, indexStatistics);
+  this->UpdateCatalogStatistics(tableStatistics, columnStatistics, indexStatistics, columnHistogramsDictionary);
  }
 
  bool StatisticsScheduler::UpdateIndexStatistics(
   StorageTypes::Table *table,
   Headers::IndexStatistics& indexStatistics,
   Headers::TableStatistics& tableStatistics,
-  std::vector<Headers::ColumnStatistics>& columnStatistics
+  std::vector<Headers::ColumnStatistics>& columnStatistics,
+  Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
  )  {
   indexStatistics.Reset();
 
   if (table->IsClustered()) {
     const auto* tree = table->GetClusteredIndexedTree();
-    tree->CalculateIndexStatistics(indexStatistics, tableStatistics, columnStatistics);
-   return true;
+    tree->CalculateIndexStatistics(
+     indexStatistics,
+     tableStatistics,
+     columnStatistics,
+     sortedValues
+    );
+    return true;
   }
 
   //TODO
@@ -128,7 +211,8 @@ namespace DatabaseEngine {
   const std::string& systemFilename,
   const std::string& filename,
   Headers::TableStatistics &tableStatistics,
-  std::vector<Headers::ColumnStatistics> &columnStatistics
+  std::vector<Headers::ColumnStatistics> &columnStatistics,
+  Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
  ) {
 
   const auto iamPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(table->GetFileName(), iamPageId, table);
@@ -154,12 +238,9 @@ namespace DatabaseEngine {
    auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage->Latch(), successfulPfsLock);
 
    for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
-    if (successfulPfsLock) {
-     const auto pageType = pageFreeSpacePage->GetPageType(extentPageId);
-
-     if (pageType != PageType::DATA && pageType != PageType::INDEX)
+     if (successfulPfsLock
+      && pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
       break;
-    }
 
     auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, table);
 
@@ -180,9 +261,15 @@ namespace DatabaseEngine {
       tableStatistics.averageRowSize += row->TotalSize();
       sampleRowCount++;
 
-      for (int j = 0; j < columnStatistics.size(); j++) {
+      for (int j = 0; j < columnStatistics.size(); j++){
+       auto& columnStats = columnStatistics[j];
        const auto& value = row->GetColumnByIndex(j);
-       StatisticsScheduler::UpdateColumnStatistics(columnStatistics[j], value);
+
+       StatisticsScheduler::UpdateColumnStatistics(
+        columnStats,
+        value,
+        sortedValues[columnStats.columnId]
+       );
       }
     }
    }
@@ -207,7 +294,8 @@ namespace DatabaseEngine {
  void StatisticsScheduler::UpdateCatalogStatistics(
   const Headers::TableStatistics &tableStatistics,
   const std::vector<Headers::ColumnStatistics> &columnStatistics,
-  const std::vector<Headers::IndexStatistics>& indexStatistics
+  const std::vector<Headers::IndexStatistics>& indexStatistics,
+  const Dictionary<int32_t, std::vector<Headers::ColumnHistograms>> &columnHistogramsDictionary
  )const {
 
   this->catalog->UpdateTableStatisticsById(
@@ -235,6 +323,30 @@ namespace DatabaseEngine {
      indexStats.depth,
      indexStats.averageFragmentation
    );
+  }
+
+  if (tableStatistics.rowCount < 10000)
+   return;
+
+  for (const auto& [columnId, histograms] : columnHistogramsDictionary) {
+   for (const auto& histogram : histograms)
+   {
+    auto res = (histogram.histogramId == INVALID_HISTOGRAM_ID)
+       ? this->catalog->InsertColumnHistogramsToMasterDb(
+           columnId,
+       histogram.rangeStart,
+      histogram.rangeEnd,
+          histogram.rowCount,
+          histogram.distinctCount
+        )
+      : this->catalog->UpdateHistogramBucket(
+          columnId, histogram.histogramId,
+          histogram.rangeStart,
+          histogram.rangeEnd,
+          histogram.rowCount,
+          histogram.distinctCount
+         );
+   }
   }
  }
 
@@ -278,7 +390,8 @@ namespace DatabaseEngine {
 
  void StatisticsScheduler::UpdateColumnStatistics(
   Headers::ColumnStatistics &columnStatistics,
-  const Value &value
+  const Value &value,
+  SortedDictionary<Value, int64_t, ValueComparator>& sortedValues
  ) {
   if (value.IsNull()) {
    columnStatistics.nullCount++;
@@ -295,7 +408,11 @@ namespace DatabaseEngine {
   // Update max
   if (columnStatistics.max.IsNull() || (value > columnStatistics.max).GetBool())
    columnStatistics.max = value;
+
+  int64_t frequency = 0;
+  if (!sortedValues.TryGetValue(value, frequency))
+   sortedValues.Add(value, 1);
+  else
+   sortedValues.Update(value, frequency + 1);
  }
-
-
 }

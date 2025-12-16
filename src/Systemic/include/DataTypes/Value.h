@@ -135,3 +135,10 @@ class Value {
 
         [[nodiscard]] int64_t Hash()const;
 };
+
+struct ValueComparator {
+    bool operator()(const Value& a, const Value& b) const {
+        return (a < b).GetBool();
+    }
+};
+

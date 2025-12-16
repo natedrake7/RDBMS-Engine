@@ -8,6 +8,7 @@ constexpr int32_t NUMBER_OF_HISTOGRAM_BUCKETS = 100;
 constexpr int32_t INVALID_DATABASE_ID = -1;
 constexpr int32_t INVALID_TABLE_ID = -1;
 constexpr int32_t INVALID_COLUMN_ID = -1;
+constexpr int32_t INVALID_HISTOGRAM_ID = -1;
 constexpr int32_t INVALID_SCHEMA_ID = -1;
 constexpr int16_t INVALID_ORDINAL_POS = -1;
 constexpr int32_t INVALID_CONSTRAINT_ID = -1;

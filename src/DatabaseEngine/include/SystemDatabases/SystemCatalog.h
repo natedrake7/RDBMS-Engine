@@ -200,11 +200,11 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnHistogramsToMasterDb(
-      const ExecutionProperties& properties,
       const int32_t& columnId,
       const Value& min,
       const Value& max,
-      const int64_t& distinctCount = 0
+      const int32_t& rowCount,
+      const int64_t& distinctCount
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexStatisticsToMasterDb(
@@ -295,6 +295,14 @@ namespace DatabaseEngine {
       const int8_t& depth,
       const DataTypes::Decimal& averageFragmentation
     )const;
+    [[nodiscard]] Errors::RuntimeStatus UpdateHistogramBucket(
+      const int32_t& columnId,
+      const int32_t& histogramId,
+      const Value& min,
+      const Value& max,
+      const int32_t& rowCount,
+      const int64_t& distinctCount
+    ) const;
     [[nodiscard]]Errors::RuntimeStatus UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
 
     [[nodiscard]] Errors::RuntimeStatus UpdateUserById(

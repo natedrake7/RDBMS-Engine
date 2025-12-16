@@ -1,11 +1,20 @@
 #pragma once
 #include "../../Systemic/include/Headers.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
-
+#include "../../Systemic/include/DataStructures/SortedDictionary.h"
 #include <atomic>
 #include <cstdint>
 #include <string>
 #include <vector>
+
+
+namespace Statistics {
+  struct ValueFrequency;
+}
+
+namespace DatabaseEngine::StorageTypes {
+  class Column;
+}
 
 namespace MultiThreading {
   class ReadWriteMutex;
@@ -31,6 +40,13 @@ namespace DatabaseEngine {
     static int EstimateRowsPerPage(const int& totalRows, const int& allocatedPagesPerExtent);
     static int EstimateAllocatedPagesPerExtent(const int& allocatedPagesPerExtent, const int& numberOfExtents);
 
+    static bool GenerateColumnHistograms(
+      const SortedDictionary<Value, int64_t, ValueComparator>& sortedValues,
+      std::vector<Headers::ColumnHistograms>& histograms,
+      const Headers::ColumnStatistics& columnStatistics,
+      const int64_t& totalRows
+    );
+
     void UpdateDatabaseStatistics(const Database* database)const;
     void UpdateTableStatistics(
       StorageTypes::Table* table,
@@ -42,7 +58,8 @@ namespace DatabaseEngine {
       StorageTypes::Table* table,
       Headers::IndexStatistics& indexStatistics,
       Headers::TableStatistics& tableStatistics,
-      std::vector<Headers::ColumnStatistics>& columnStatistics
+      std::vector<Headers::ColumnStatistics>& columnStatistics,
+      Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
     );
 
     static void UpdateHeapStatistics(
@@ -51,13 +68,15 @@ namespace DatabaseEngine {
       const std::string& systemFilename,
       const std::string& filename,
       Headers::TableStatistics& tableStatistics,
-      std::vector<Headers::ColumnStatistics>& columnStatistics
+      std::vector<Headers::ColumnStatistics>& columnStatistics,
+      Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
     );
 
     void UpdateCatalogStatistics(
       const Headers::TableStatistics& tableStatistics,
       const std::vector<Headers::ColumnStatistics>& columnStatistics,
-      const std::vector<Headers::IndexStatistics>& indexStatistics
+      const std::vector<Headers::IndexStatistics>& indexStatistics,
+      const Dictionary<int32_t, std::vector<Headers::ColumnHistograms>> &columnHistogramsDictionary
     )const;
 
     void UpdateCache(
@@ -77,7 +96,8 @@ namespace DatabaseEngine {
 
     static void UpdateColumnStatistics(
       Headers::ColumnStatistics& columnStatistics,
-      const Value& value
+      const Value& value,
+      SortedDictionary<Value, int64_t, ValueComparator>& sortedValues
     );
   };
 }

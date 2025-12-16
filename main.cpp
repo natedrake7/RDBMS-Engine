@@ -61,7 +61,7 @@
 //create tempDB to store row versions and invoke it at each call
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 //TODO add priority in pages to store system pages indefinetely and decrease second chance count
-//TODO add page wrapper to handle page pin counts and locks releases etc
+//TODO add page wrapper to handle page pin counts and locks releases etcE
 //TODO add commits and rollbacks.
 //Also update row version pointers on commit to point to the latest version and not have to traverse the linked list on each select
 //TODO add isolation levels (read uncommitted, read committed, repeatable read, serializable)

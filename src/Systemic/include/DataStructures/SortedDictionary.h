@@ -1,13 +1,13 @@
 #pragma once
 #include <map>
 
-template<typename Key, typename Value>
-class SortedDictionary : public std::map<Key, Value>
+template<typename Key, typename Value, typename Comparator = std::less<Key>>
+class SortedDictionary : public std::map<Key, Value, Comparator>
 {
 public:
-  SortedDictionary() : std::map<Key, Value>() {}
+  SortedDictionary() : std::map<Key, Value, Comparator>() {}
 
-  SortedDictionary(const std::initializer_list<std::pair<const Key, Value>>& values) : std::map<Key, Value>(values) {}
+  SortedDictionary(const std::initializer_list<std::pair<const Key, Value>>& values) : std::map<Key, Value, Comparator>(values) {}
 
   bool TryGetValue(const Key& key, Value& value) const
   {

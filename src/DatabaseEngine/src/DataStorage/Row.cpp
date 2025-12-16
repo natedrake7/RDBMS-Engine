@@ -724,7 +724,7 @@ namespace DatabaseEngine::StorageTypes {
     return copyBlocks;
   }
 
-    const Value& Row::GetColumnByIndex(const int &indexPos) const{
+    Value Row::GetColumnByIndex(const int &indexPos) const{
         return (this->IsBlockMaterialized(indexPos))
                 ? this->GetMaterializedValue(indexPos)
                 : this->Materialize(indexPos);

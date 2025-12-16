@@ -42,7 +42,12 @@ add_custom_target(
         DEPENDS ${GENERATED_DIR}/SQLParser.cpp
 )
 
-file(GLOB ANTLR_SRC "${GENERATED_DIR}/*.cpp")
+set(ANTLR_SRC
+    ${GENERATED_DIR}/SQLParser.cpp
+    ${GENERATED_DIR}/SQLLexer.cpp
+    ${GENERATED_DIR}/SQLBaseVisitor.cpp
+    ${GENERATED_DIR}/SQLVisitor.cpp
+)
 
 add_library(Systemic SHARED
         src/Systemic/src/MultiThreading/Guards/ReadWriteMutex.cpp

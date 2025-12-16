@@ -516,14 +516,14 @@ namespace DatabaseEngine {
   Headers::ColumnHistograms SystemCatalog::ToColumnHistograms(const StorageTypes::Row *row, const DataType &columnType) {
     const auto& data = row->GetData();
 
-    return Headers::ColumnHistograms{
-      .columnId = data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)]->GetInt(),
-      .histogramId = data[static_cast<column_index_t>(SysColumnHistograms::HistogramId)]->GetInt(),
-      .rangeStart = Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetRawData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetSize(), columnType),
-      .rangeEnd = Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetRawData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetSize(), columnType),
-      .rowCount = data[static_cast<column_index_t>(SysColumnHistograms::RowCount)]->GetInt(),
-      .distinctCount = data[static_cast<column_index_t>(SysColumnHistograms::DistinctCount)]->GetInt(),
-    };
+    return Headers::ColumnHistograms(
+      data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)]->GetInt(),
+       data[static_cast<column_index_t>(SysColumnHistograms::HistogramId)]->GetInt(),
+      Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetRawData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetSize(), columnType),
+      Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetRawData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetSize(), columnType),
+      data[static_cast<column_index_t>(SysColumnHistograms::RowCount)]->GetInt(),
+      data[static_cast<column_index_t>(SysColumnHistograms::DistinctCount)]->GetInt()
+    );
   }
 
   Headers::IndexStatistics SystemCatalog::ToIndexStatistics(const DatabaseEngine::StorageTypes::Row *row) {
@@ -1105,24 +1105,24 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertColumnHistogramsToMasterDb(
-    const ExecutionProperties &properties,
     const int32_t &columnId,
     const Value &min,
     const Value &max,
+    const int32_t& rowCount,
     const int64_t &distinctCount
   ) const {
 
-    const std::vector<Value> fields = {
+    const std::vector fields = {
       Value(columnId, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
       Value(std::string(reinterpret_cast<const char*>(min.GetRawData()), min.GetSize()), static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
       Value(std::string(reinterpret_cast<const char*>(max.GetRawData()), max.GetSize()), static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
-      Value(0, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
+      Value(rowCount, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
       Value(distinctCount, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
     };
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-    const auto result = table->InsertRow(properties, fields);
+    const auto result = table->InsertRow(this->baseProperties, fields);
 
     std::cout << "Inserted histogram Bucket for column: " << columnId << std::endl;
 
@@ -1867,6 +1867,34 @@ void SystemCatalog::UpdateTableStatisticsById(
 
    const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
  }
+
+  Errors::RuntimeStatus SystemCatalog::UpdateHistogramBucket(
+    const int32_t& columnId,
+    const int32_t& histogramId,
+    const Value& min,
+    const Value& max,
+    const int32_t& rowCount,
+    const int64_t& distinctCount
+  ) const{
+     const std::vector fields = {
+       Value(std::string(reinterpret_cast<const char*>(min.GetRawData()), min.GetSize()), static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
+       Value(std::string(reinterpret_cast<const char*>(max.GetRawData()), max.GetSize()), static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
+       Value(rowCount, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
+       Value(distinctCount, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
+     };
+
+    auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
+
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int));
+
+    const auto result = table->ClusteredIndexSeekUpdate(this->baseProperties, key, fields);
+
+    std::cout << "Updated histogram Bucket for column: " << columnId << " and id: " << histogramId << std::endl;
+
+    return result;
+  }
 
   Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
     using namespace StorageTypes;

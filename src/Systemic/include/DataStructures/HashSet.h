@@ -2,17 +2,15 @@
 #include <unordered_set>
 #include <vector>
 
-using namespace std;
-
 template <typename T>
-class HashSet : public unordered_set<T>
+class HashSet : public std::unordered_set<T>
 {
     public:
-        HashSet() : unordered_set<T>() {}
+        HashSet() : std::unordered_set<T>() {}
         
-        HashSet(const initializer_list<T>& values) : unordered_set<T>(values) {}
+        HashSet(const std::initializer_list<T>& values) : std::unordered_set<T>(values) {}
         
-        explicit HashSet(const vector<T>& values) : unordered_set<T>(values.begin(), values.end()) {}
+        explicit HashSet(const std::vector<T>& values) : std::unordered_set<T>(values.begin(), values.end()) {}
         
         bool TryGetValue(const T& key, T& value)
         {

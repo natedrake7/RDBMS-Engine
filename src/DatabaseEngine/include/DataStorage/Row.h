@@ -145,7 +145,7 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] std::vector<Block*> GetBlockCopies() const;
 
-        [[nodiscard]] const Value& GetColumnByIndex(const int& indexPos) const;
+        [[nodiscard]] Value GetColumnByIndex(const int& indexPos) const;
 
         [[nodiscard]] Row* Join(const Row* row) const;
 

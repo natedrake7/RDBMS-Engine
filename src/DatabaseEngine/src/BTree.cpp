@@ -12,7 +12,6 @@
 #include "../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../Systemic/include/Guards/WriterGuard.h"
 #include "Schedulers/StatisticsScheduler.h"
-
 #include <cmath>
 
 namespace Indexing
@@ -829,6 +828,46 @@ namespace Indexing
           }
 
          delete rightNode.Get();
+    }
+
+    void BTree::CalculateClusteredStatistics(
+        Pages::PageGuard<Pages::IndexPage>& currentNode,
+        Headers::IndexStatistics& indexStatistics,
+        Headers::TableStatistics& tableStatistics,
+        std::vector<Headers::ColumnStatistics>& columnStatistics,
+        Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
+    ) const{
+        while (currentNode.Get()) {
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            tableStatistics.pageCount++;
+            indexStatistics.leafPages++;
+
+            const auto* rows = currentNode->DataRowsNoLock();
+            tableStatistics.rowCount += static_cast<int>(rows->size());
+
+            for (const auto& row : *rows) {
+                tableStatistics.averageRowSize += static_cast<int>(row->TotalSize());
+
+                for (int j = 0; j < columnStatistics.size(); j++) {
+                    auto& columnStats = columnStatistics[j];
+                    const auto& value = row->GetColumnByIndex(j);
+
+                    DatabaseEngine::StatisticsScheduler::UpdateColumnStatistics(
+                        columnStats,
+                        value,
+                        sortedValues[columnStats.columnId]
+                    );
+                }
+            }
+
+            if(!currentNode->HasRightSibling())
+                break;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+
+        tableStatistics.averageRowSize = static_cast<int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
     }
 
     BTree::BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
@@ -1746,39 +1785,23 @@ void BTree::IndexSeekRange(
     void BTree::CalculateIndexStatistics(
         Headers::IndexStatistics& indexStatistics,
         Headers::TableStatistics& tableStatistics,
-        std::vector<Headers::ColumnStatistics>& columnStatistics
+        std::vector<Headers::ColumnStatistics>& columnStatistics,
+        Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
     ) const {
         if (this->IsEmpty())
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode(indexStatistics.depth);
 
-        while (currentNode.Get()) {
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
-
-            tableStatistics.pageCount++;
-            indexStatistics.leafPages++;
-
-            if (this->type == TreeType::Clustered){
-                const auto* rows = currentNode->DataRowsNoLock();
-                tableStatistics.rowCount += static_cast<int>(rows->size());
-
-                for (const auto& row : *rows) {
-                    tableStatistics.averageRowSize += static_cast<int>(row->TotalSize());
-
-                    for (int j = 0; j < columnStatistics.size(); j++) {
-                        const auto& value = row->GetColumnByIndex(j);
-                        DatabaseEngine::StatisticsScheduler::UpdateColumnStatistics(columnStatistics[j], value);
-                    }
-                }
-            }
-
-            if(!currentNode->HasRightSibling())
-                break;
-
-            currentNode = this->GetNode(currentNode->GetNextPage());
+        if (this->type == TreeType::Clustered){
+            this->CalculateClusteredStatistics(
+                currentNode,
+                indexStatistics,
+                tableStatistics,
+                columnStatistics,
+                sortedValues
+            );
+            return;
         }
-
-        tableStatistics.averageRowSize = static_cast<int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
-}
+    }
 }
