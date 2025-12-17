@@ -6,12 +6,11 @@
 #include "../../Systemic/include/Functions/StringFunctions.h"
 #include "../../Server/include/Server.h"
 #include "../include/LogicalPlan.h"
-#include "../../Server/include/Constants.h"
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
-#include "Managers/StatisticsManager.h"
-
 #include <iostream>
 #include <ranges>
+
+#include "Optimizer.h"
 
 namespace QueryPipeline::Statements {
 
@@ -85,7 +84,7 @@ namespace QueryPipeline::Statements {
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
-  QueryPipeline::LogicalPlan * DeclareVariableStatement::ToLogical() {
+  LogicalPlan * DeclareVariableStatement::ToLogical() {
     return new LogicalDeclareVariable(this->sessionId, this->variable, this->expression);
   }
 
@@ -131,7 +130,7 @@ namespace QueryPipeline::Statements {
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
-  QueryPipeline::LogicalPlan * SetVariableStatement::ToLogical() {
+  LogicalPlan * SetVariableStatement::ToLogical() {
     return new LogicalDeclareVariable(this->sessionId, this->variable, this->expression);
   }
 
@@ -251,15 +250,12 @@ namespace QueryPipeline::Statements {
     return this->type == JoinType::Right;
   }
 
-  QueryPipeline::LogicalPlan * JoinStatement::ToLogical(){
+  bool JoinStatement::IsInnerJoin() const{
+    return this->type == JoinType::Inner;
+  }
+
+  LogicalPlan * JoinStatement::ToLogical(){
     return new LogicalTableScan(this->table, nullptr);
-    // return new LogicalJoin(
-    //     this->databaseId,
-    //     // new LogicalTableScan(),
-    //     // this->joinType,
-    //     // this->table2,
-    //     // this->on.expression
-    // );
   }
 
   Security::Permission JoinStatement::RequiredPermissions() const{
@@ -278,7 +274,7 @@ namespace QueryPipeline::Statements {
           delete column;
   }
 
-  // QueryPipeline::LogicalPlan * JoinStatement::ToLogical(){
+  // LogicalPlan * JoinStatement::ToLogical(){
   //   return new LogicalJoin(this->table, this->joinType, this->table2, this->on.expression);
   // }
 
@@ -570,7 +566,7 @@ namespace QueryPipeline::Statements {
     return dict;
   }
 
-   bool SelectStatement::HasTopStatement() const{ return this->top != INVALID_TOP; }
+  bool SelectStatement::HasTopStatement() const{ return this->top != INVALID_TOP; }
 
   bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
 
@@ -681,7 +677,48 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  void SelectStatement::AssignColumnsToIndices(const Dictionary<int32_t, column_index_t> &columnIndicesDictionary)const {
+  LogicalPlan* SelectStatement::BuildTableScanPlan(DataSource* table, const PredicatePushDownResult& predicatesResult){
+    return new LogicalTableScan(table, predicatesResult.PushDownFilter(table->tableId));
+  }
+
+  LogicalPlan* SelectStatement::BuildJoinsPlan(
+    const JoinOrderAnalyzeResult& joinReorderResult,
+    const PredicatePushDownResult& predicatesResult
+  ) const{
+    auto* current = this->BuildTableScanPlan(this->table, predicatesResult);
+
+    for (const auto& join : joinReorderResult.orderedJoins){
+      auto* right = this->BuildTableScanPlan(join->table, predicatesResult);
+      current = new LogicalJoin(current, right, join->expression, join->type);
+    }
+
+    return current;
+  }
+
+  Dictionary<int32_t, column_index_t> SelectStatement::BuildColumnsIndicesDictionary(const std::vector<table_id_t>& joinOrder) const{
+    Dictionary<int32_t, column_index_t> result;
+    column_index_t columnIndex = 0;
+
+    for (const auto& tableId: joinOrder) {
+      //TODO cache them at the beginning
+      const auto& columns = this->catalog->SelectColumns(tableId);
+
+      for (const auto &column : columns) {
+        if (result.Contains(column.id))
+          continue;
+
+        result.Add(column.id, columnIndex + column.ordinalPosition);
+      }
+
+      columnIndex += columns.size();
+    }
+
+    return result;
+  }
+
+  void SelectStatement::AssignColumnsToIndices(const std::vector<table_id_t>& order)const {
+    const auto columnIndicesDictionary = this->BuildColumnsIndicesDictionary(order);
+
     for (const auto& resultExpr : this->results)
       AssignColumnIndicesToExpression(columnIndicesDictionary, resultExpr);
 
@@ -690,6 +727,19 @@ namespace QueryPipeline::Statements {
 
     for (const auto* join : this->joins)
       AssignColumnIndicesToExpression(columnIndicesDictionary, join->expression);
+  }
+
+  void SelectStatement::BuildOrderByStatement(
+    LogicalPlan*& current,
+    const Dictionary<std::string, column_index_t>& postProjectionIndicesDictionary
+  ) const{
+    if(this->orderBy == nullptr)
+      return;
+
+    for (const auto& column : this->orderBy->columns)
+      AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
+
+    current = new LogicalOrder(current, this->orderBy->columns);
   }
 
   Errors::ValidationStatus SelectStatement::CompileDerived(ParserValidationScope& validationScope){
@@ -722,62 +772,24 @@ namespace QueryPipeline::Statements {
     if (this->IsConstant())
       return new LogicalProject(nullptr, this->results, this->columnHeaders);
 
-    LogicalPlan* current = new LogicalTableScan(this->table, !this->HasJoins() ? this->where.expression : nullptr);
+    const auto joinReorderResult = Optimizer::DetermineJoinOrder(this);
+    const auto predicatesResult = Optimizer::PushDownPredicates(
+      joinReorderResult.order,
+      this->where.expression,
+      joinReorderResult.orderedJoins
+    );
 
-    const auto tableStats = DatabaseEngine::StatisticsManager::Get().GetTableStatistics(this->table->tableId);
+    this->AssignColumnsToIndices(joinReorderResult.order);
+    auto* current = this->BuildJoinsPlan(joinReorderResult, predicatesResult);
 
-    //join re orders take place here
-    std::vector<table_id_t> joinOrder;
-    joinOrder.reserve(this->joins.size() + 1);
-
-    //needs to re adjust pointers for right join -> left join change.
-    joinOrder.push_back(this->table->tableId);
-    for (const auto* join : this->joins) {
-      if (join->IsRightJoin()) {
-        joinOrder.insert(joinOrder.begin(), join->table->tableId);
-        continue;
-      }
-
-      joinOrder.push_back(join->table->tableId);
-    }
-
-    Dictionary<int32_t, column_index_t> columnIndicesDictionary;
-    column_index_t columnIndex = 0;
-
-    for (const auto& tableId: joinOrder) {
-      //TODO cache them at the beginning
-      const auto& columns = this->catalog->SelectColumns(tableId);
-
-      for (const auto &column : columns) {
-        if (columnIndicesDictionary.Contains(column.id))
-          continue;
-
-        columnIndicesDictionary.Add(column.id, columnIndex + column.ordinalPosition);
-      }
-
-      columnIndex += columns.size();
-    }
-
-    this->AssignColumnsToIndices(columnIndicesDictionary);
-
-    //here create logical joins with the expressions
-    //re order here
-    for (const auto& join : this->joins)
-      current = new LogicalJoin(current, join->ToLogical(), join->expression, join->type);
-
-    if (this->where.expression != nullptr)
-      current = new LogicalFilter(current, this->where.expression);
+    if (predicatesResult.remainingPredicate != nullptr)
+      current = new LogicalFilter(current, predicatesResult.remainingPredicate);
 
     const auto postProjectionIndicesDictionary = this->CreatePostProjectionIndicesDictionary();
 
     current = new LogicalProject(current, this->results, this->columnHeaders);
 
-    if(this->orderBy != nullptr) {
-      for (const auto& column : this->orderBy->columns)
-        AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
-
-      current = new LogicalOrder(current, this->orderBy->columns);
-    }
+    this->BuildOrderByStatement(current, postProjectionIndicesDictionary);
 
     if (this->distinct)
       current = new LogicalDistinct(current);
@@ -1108,7 +1120,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  QueryPipeline::LogicalPlan * CreateSchemaStatement::ToLogical(){
+  LogicalPlan * CreateSchemaStatement::ToLogical(){
     return new LogicalSchemaCreate(this->sessionId, this->databaseId, this->name);
   }
 
@@ -1217,7 +1229,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     return this->ResolveAliases(validationScope, aliasesDictionary);
   }
 
-  QueryPipeline::LogicalPlan* UpdateStatement::ToLogical(){
+  LogicalPlan* UpdateStatement::ToLogical(){
     return new QueryPipeline::LogicalUpdate(this->table, this->updates, this->where.expression);
   }
 
@@ -1269,7 +1281,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     return {};
   }
 
-  QueryPipeline::LogicalPlan * CreateIndexStatement::ToLogical(){
+  LogicalPlan * CreateIndexStatement::ToLogical(){
     return new QueryPipeline::LogicalIndexCreate(this->sessionId, this->table, this->name, this->columnIndices);
   }
 
@@ -1434,7 +1446,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     }
   }
 
-  QueryPipeline::LogicalPlan * AlterTableStatement::ToLogical(){
+  LogicalPlan * AlterTableStatement::ToLogical(){
     switch (this->type) {
     case AlterTableType::AddColumn:
       return new LogicalAlterTable(this->sessionId, this->table, this->type,this->column.newColumn);

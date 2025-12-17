@@ -91,7 +91,7 @@ namespace DatabaseEngine {
      const auto cacheStats = this->statsManager->GetTableStatistics(table->GetTableId());
 
      auto currentTime = DataTypes::DateTime::Now();
-     currentTime.AddMinutes(-10); // Update stats if older than 10 minutes test for production grade this should be dynamic
+     currentTime.AddMinutes(-60); // Update stats if older than 10 minutes test for production grade this should be dynamic
 
      if (currentTime <= cacheStats.lastModified)
       continue;

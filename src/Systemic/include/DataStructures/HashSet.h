@@ -39,5 +39,9 @@ class HashSet : public std::unordered_set<T>
             this->insert(key);
         }
 
+        std::vector<T> ToVector() const{
+            return std::vector<T>(this->begin(), this->end());
+        }
+
         [[nodiscard]] size_t Size()const { return this->size(); }
 };

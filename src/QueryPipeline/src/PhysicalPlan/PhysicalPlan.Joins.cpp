@@ -1,6 +1,37 @@
 #include "../../include/PhysicalPlan.h"
 
 namespace QueryPipeline::PhysicalPlan {
+  ExecutionResult* PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
+    const DatabaseEngine::ExecutionProperties& properties,
+    const ExecutionResult* leftResult
+  ) const
+  {
+    auto* result = new ExecutionResult();
+
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
+    bool canFetchMore = true;
+
+    while (canFetchMore){
+      const auto* rightResult = this->right->Execute(properties);
+      canFetchMore = rightResult->canFetchMore;
+
+      for (const auto* outerRow: leftResult->rows) {
+        for (const auto* innerRow: rightResult->rows) {
+
+          context.outerRow = outerRow;
+          context.innerRow = innerRow;
+          if (!this->joinCondition->Evaluate(context).GetBool())
+            continue;
+
+          result->rows.push_back(outerRow->Join(innerRow));
+        }
+      }
+
+      delete rightResult;
+    }
+
+    return result;
+  }
 
   PhysicalNestedLoopInnerJoin::PhysicalNestedLoopInnerJoin(
     ExecutionNode* left,
@@ -15,29 +46,13 @@ namespace QueryPipeline::PhysicalPlan {
 
 
   ExecutionResult * PhysicalNestedLoopInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new PhysicalPlan::ExecutionResult();
-
     const auto* leftResult = this->left->Execute(properties);
-    const auto* rightResult = this->right->Execute(properties);
 
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
+    auto * result = this->ExecuteBatchJoin(properties, leftResult);
 
-    //create new row
-    for (const auto* outerRow: leftResult->rows) {
-      for (const auto* innerRow: rightResult->rows) {
-
-        context.outerRow = outerRow;
-        context.innerRow = innerRow;
-        if (!this->joinCondition->Evaluate(context).GetBool())
-          continue;
-
-        result->rows.push_back(outerRow->Join(innerRow));
-      }
-    }
+    result->canFetchMore = leftResult->canFetchMore;
 
     delete leftResult;
-    delete rightResult;
-
     return result;
   }
 
@@ -53,7 +68,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionResult * PhysicalNestedLoopLeftJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-      auto* result = new PhysicalPlan::ExecutionResult();
+      auto* result = new ExecutionResult();
 
       const auto* leftResult = this->left->Execute(properties);
       const auto* rightResult = this->right->Execute(properties);

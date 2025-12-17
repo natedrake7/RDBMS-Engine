@@ -170,6 +170,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     tablePtr->HeapScan(properties, &result->rows, this->state);
 
     result->canFetchMore = this->state.canFetchMore;
+
+    if (result->canFetchMore == false)
+      this->state.Reset();
+
     return result;
   }
 
@@ -191,12 +195,19 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     if (this->isClustered) {
       tablePtr->ClusteredIndexScan(properties, &result->rows, this->state, this->expression);
       result->canFetchMore = this->state.canFetchMore;
+
+      if (result->canFetchMore == false)
+        this->state.Reset();
+
       return result;
     }
 
     tablePtr->NonClusteredIndexScan(properties, &result->rows, 0, this->state, this->expression);
 
     result->canFetchMore = this->state.canFetchMore;
+    if (result->canFetchMore == false)
+      this->state.Reset();
+
     return result;
   }
 
@@ -219,7 +230,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     maxKey.InsertKey(DataTypes::Indexing::Key(this->maxValue));
 
     //select if to use clustered or non clustered index here
-    tablePtr->ClusteredIndexSeekRange(properties, &result->rows,minKey, maxKey);
+    tablePtr->ClusteredIndexSeekRange(properties, &result->rows, minKey, maxKey);
 
     return result;
   }

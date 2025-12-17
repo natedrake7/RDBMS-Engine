@@ -10,6 +10,11 @@
 #include "../../Systemic/include/Headers.h"
 #include "Parser.h"
 
+namespace QueryPipeline {
+  struct JoinOrderAnalyzeResult;
+  struct PredicatePushDownResult;
+}
+
 namespace DatabaseEngine {
   class SystemCatalog;
 }
@@ -277,6 +282,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]]Errors::ValidationStatus Validate(const int32_t& databaseId);
 
     [[nodiscard]]bool IsRightJoin()const;
+    [[nodiscard]]bool IsInnerJoin()const;
 
     QueryPipeline::LogicalPlan* ToLogical()override;
     Security::Permission RequiredPermissions() const override;
@@ -320,7 +326,17 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] Errors::ValidationStatus CompileNoTableStatement(ParserValidationScope& validationScope);
     [[nodiscard]] Errors::ValidationStatus Compile(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     [[nodiscard]] Errors::ValidationStatus CompileWhereClause(ParserValidationScope& validationScope, StatementValidationScope& statementValidationScope);
-    void AssignColumnsToIndices(const Dictionary<int32_t, column_index_t> &columnIndicesDictionary)const;
+    [[nodiscard]] static LogicalPlan* BuildTableScanPlan(
+      DataSource* table,
+      const PredicatePushDownResult& predicatesResult
+    );
+    LogicalPlan* BuildJoinsPlan(
+      const JoinOrderAnalyzeResult& joinReorderResult,
+      const PredicatePushDownResult& predicatesResult
+    ) const;
+    [[nodiscard]] Dictionary<int32_t, column_index_t> BuildColumnsIndicesDictionary(const std::vector<table_id_t>& joinOrder)const;
+    void AssignColumnsToIndices(const std::vector<table_id_t>& order)const;
+    void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<std::string, column_index_t>& postProjectionIndicesDictionary) const;
 
     [[nodiscard]] Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     Security::Permission RequiredPermissions() const override;

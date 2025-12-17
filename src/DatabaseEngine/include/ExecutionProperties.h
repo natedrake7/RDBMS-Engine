@@ -28,6 +28,13 @@ namespace DatabaseEngine {
             ? extentFirstPageId
             : this->lastFetchedRowId.pageId;
       }
+
+    void Reset(){
+        this->extentId = 0;
+        this->lastFetchedRowId.indexId = INVALID_PAGE_INDEX_ID;
+        this->lastFetchedRowId.pageId = INVALID_PAGE_ID;
+        this->canFetchMore = false;
+    }
   };
 
   struct IndexState {
@@ -46,6 +53,12 @@ namespace DatabaseEngine {
       return this->lastFetchedKeyIndex == INVALID_PAGE_INDEX_ID
         ? 0
         : this->lastFetchedKeyIndex + 1;
+    }
+
+    void Reset(){
+      this->pageId = INVALID_PAGE_ID;
+      this->lastFetchedKeyIndex = INVALID_PAGE_INDEX_ID;
+      this->canFetchMore = false;
     }
   };
 

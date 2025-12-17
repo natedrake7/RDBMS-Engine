@@ -111,7 +111,8 @@ namespace QueryPipeline {
    LogicalPlan *left,
    LogicalPlan *right,
    Expressions::Expression *condition,
-   const JoinType &type)
+   const JoinType &type
+  )
    : left(left), right(right), condition(condition), type(type) {}
 
   LogicalJoin::~LogicalJoin(){

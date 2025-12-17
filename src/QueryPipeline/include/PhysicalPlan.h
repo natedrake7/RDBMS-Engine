@@ -373,6 +373,8 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* right;
     Expressions::Expression* joinCondition;
 
+    ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
+
     public:
       PhysicalNestedLoopInnerJoin(
         ExecutionNode* left,

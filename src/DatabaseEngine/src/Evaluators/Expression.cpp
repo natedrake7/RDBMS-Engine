@@ -83,6 +83,10 @@ namespace Expressions{
       this->variables = nullptr;
    }
 
+  Expression::Expression(){
+    this->expressionType = ExpressionType::Expression;
+  }
+
   bool Expression::IsBinary() const{ return this->expressionType == ExpressionType::Binary; }
   bool Expression::IsLogical() const{ return this->expressionType == ExpressionType::Logical; }
   bool Expression::IsConstant() const{ return this->expressionType == ExpressionType::Constant; }

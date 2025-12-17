@@ -32,9 +32,14 @@ class Dictionary : public std::unordered_map<Key, Value>
             this->erase(key);
         }
 
-        void Add(const Key& key, const Value& value) 
+        void Add(const Key& key, const Value& value)
         {
             this->insert(std::make_pair(key, value));
+        }
+
+        void Add(const Key& key, Value&& value)
+        {
+            this->insert(std::make_pair(key, std::move(value)));
         }
 
         void ForceAdd(const Key& key, const Value& value) {
@@ -42,6 +47,13 @@ class Dictionary : public std::unordered_map<Key, Value>
                 this->Remove(key);
 
             this->Add(key, value);
+        }
+
+        void ForceAdd(const Key& key, Value&& value) {
+            if (this->Contains(key))
+                this->Remove(key);
+
+            this->Add(key, std::move(value));
         }
 
         void Update(const Key& key, const Value& value)
@@ -52,6 +64,14 @@ class Dictionary : public std::unordered_map<Key, Value>
             this->at(key) = value;
         }
 
+        void Update(const Key& key, Value&& value)
+        {
+            if (!this->Contains(key))
+                return;
+
+            this->at(key) = std::move(value);
+        }
+
         void AddOrUpdate(const Key& key, const Value& value) {
             if (!this->Contains(key)) {
                 this->Add(key, value);
@@ -59,6 +79,15 @@ class Dictionary : public std::unordered_map<Key, Value>
             }
 
             this->Update(key, value);
+        }
+
+        void AddOrUpdate(const Key& key, Value&& value) {
+            if (!this->Contains(key)) {
+                this->Add(key, std::move(value));
+                return;
+            }
+
+            this->Update(key, std::move(value));
         }
 
         Value& Get(const Key& key)
@@ -78,5 +107,12 @@ class Dictionary : public std::unordered_map<Key, Value>
                 values.push_back(pair.second);
 
             return values;
+        }
+
+        static Dictionary FromVector(const std::vector<Key>& items, const Value& defaultValue) {
+            Dictionary dict;
+            for (const auto& item : items)
+                dict.Add(item, defaultValue);
+            return dict;
         }
 };

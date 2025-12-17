@@ -51,7 +51,7 @@ namespace Expressions{
       std::string name;
 
       virtual ~Expression() = default;
-      Expression() = default;
+      Expression();
 
       [[nodiscard]] virtual Value Evaluate(const EvaluationContext& context) const = 0;
       [[nodiscard]] virtual DataType GetReturnType() const = 0;
