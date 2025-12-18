@@ -81,7 +81,7 @@ namespace QueryPipeline {
       if (tableStats.rowCount < PipelineConstants::SMALL_TABLE)
         return new PhysicalPlan::PhysicalTableScan(this->table, this->expression);
 
-      auto result = Optimizer::DetermineIndexSeekAnalyze(indexes, this->expression);
+      auto result = Optimizer::DetermineIndexSeekAnalyze(indexes, this->expression, tableStats);
 
       //scan the first index
       if (!result.canSeek)

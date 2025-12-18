@@ -1,5 +1,6 @@
 #include "../include/Optimizer.h"
 
+#include "CostEstimator.h"
 #include "../include/LogicalPlan.h"
 #include "Managers/StatisticsManager.h"
 #include "SystemDatabases/SystemCatalog.h"
@@ -462,22 +463,26 @@ namespace QueryPipeline {
 
    Range Optimizer::DetermineIndexSeekAnalyze(
     std::vector<Headers::IndexHeader>& indexes,
-    Expressions::Expression* expression
+    Expressions::Expression* expression,
+    const Headers::TableStatistics& tableStatistics
   ){
     std::vector<IndexCandidate> candidates;
 
     for (auto& index : indexes) {
-      index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexById(index.id).columns;
+      index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(index.id);
 
       auto [analyzeResults, conjunctions] = Optimizer::AnalyzeTableScan(index, expression);
 
       IndexCandidate candidate;
 
+      const auto& firstIndexColumn = index.columns.front();
+      const auto& columnStats = DatabaseEngine::StatisticsManager::Get().GetColumnStatistics(firstIndexColumn.columnId, DataType::Int);
+
       candidate.header = index;
       candidate.analyzeInfo = std::move(analyzeResults);
       candidate.conjunctions = std::move(conjunctions);
       candidate.matchingColumns = static_cast<int>(candidate.analyzeInfo.size());
-      candidate.estimatedCost = 0.0;
+      candidate.estimatedCost = CostEstimator::EstimateCost(candidate.analyzeInfo, columnStats, tableStatistics);
 
       candidates.push_back(candidate);
     }

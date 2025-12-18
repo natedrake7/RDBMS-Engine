@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <cstdint>
 #include <vector>
 
 class Value;
@@ -20,11 +21,11 @@ namespace QueryPipeline{
     struct IndexSeekColumnAnalysisResults;
 
 
-    class SelectivityEstimator final{
+    class CostEstimator final{
         struct HistogramSelectivityEstimate{
             int previousRows;
             int bucketSize;
-            int totalRows;
+            int64_t totalRows;
             int bucketIndex;
             const Value* value;
 
@@ -70,16 +71,28 @@ namespace QueryPipeline{
             const Headers::ColumnStatistics& columnStats,
             const DataType& columnType
         );
-    public:
+
+        [[nodiscard]] static double EstimateSelectivityForSmallTable(
+            const SeekRange& range,
+            const Headers::TableStatistics& tableStats,
+            const Headers::ColumnStatistics& columnStats
+        );
+
         [[nodiscard]] static double EstimateSelectivity(
-            const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
-            const Headers::IndexHeader& index,
+            const SeekRange& range,
+            const Headers::ColumnStatistics& columnStats,
             const Headers::TableStatistics& tableStats
         );
 
         [[nodiscard]] static double EstimateRangeSelectivity(
             const SeekRange& range,
             const Headers::ColumnStatistics& columnStats
+        );
+    public:
+        [[nodiscard]] static double EstimateCost(
+            const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
+            const Headers::ColumnStatistics& columnStats,
+            const Headers::TableStatistics& tableStats
         );
     };
 }

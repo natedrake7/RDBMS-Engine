@@ -81,6 +81,10 @@
 //improve page split factor on indexes to be more compact and void multiple pages split
 //check heap insert (add locks)
 
+//TODO improve cost estimation and statistics collection
+//TODO implement better query optimization techniques (dynamic programming, genetic algorithms, simulated annealing)
+//TODO implement parallel query execution and distributed databases
+
 std::atomic<bool> serverRunning{false};
 
 void shutdownClient(int signal) {

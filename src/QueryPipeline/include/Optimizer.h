@@ -239,7 +239,8 @@ namespace QueryPipeline {
 
       [[nodiscard]] static Range DetermineIndexSeekAnalyze(
         std::vector<Headers::IndexHeader>& indexes,
-        Expressions::Expression* expression
+        Expressions::Expression* expression,
+        const Headers::TableStatistics& tableStatistics
       );
   };
 
