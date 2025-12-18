@@ -21,8 +21,6 @@ namespace DataTypes {
 
   Guid::~Guid() = default;
 
-  int Guid::Size() const{ return static_cast<int>(this->data.size()); }
-
   std::array<uint8_t, GUID_SIZE>& Guid::GetDataUnsafe(){ return this->data; }
 
   const std::array<uint8_t, GUID_SIZE> & Guid::GetData() const{ return this->data; }
@@ -141,5 +139,14 @@ namespace DataTypes {
     }
 
     return Guid(data);
+  }
+
+  long double Guid::Interpolate() const{
+    uint64_t result = 0;
+
+    for (int i = 0; i < 8; i++)
+      result = (result << 8) | static_cast<uint64_t>(this->data[i]);
+
+    return static_cast<long double>(result);
   }
 }

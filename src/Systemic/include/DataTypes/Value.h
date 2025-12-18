@@ -46,6 +46,8 @@ class Value {
     static std::tuple<bool, Value> PerformNullEqualityComparison(const Value& lhs, const Value& rhs);
     static std::tuple<bool, Value> PerformNullInEqualityComparison(const Value& lhs, const Value& rhs);
 
+    long double InterpolateString() const;
+
     public:
         Value();
         Value(const Value& copyVal);
@@ -107,13 +109,10 @@ class Value {
         [[nodiscard]] DataTypes::Guid GetGuid()const;
 
         void SetColumnIndex(const column_index_t &otherIndex);
-
         void SetType(const DataType &otherType);
-
         void Deserialize(const std::vector<char>& buffer, uint32_t& offset);
 
         static DataType PromoteType(const DataType& lhs, const DataType& rhs);
-
         friend ostream& operator<<(ostream& os, const Value& field);
 
         Value& operator=(const Value& rhs);
@@ -134,6 +133,7 @@ class Value {
         [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);
 
         [[nodiscard]] int64_t Hash()const;
+        [[nodiscard]] long double Interpolate()const;
 };
 
 struct ValueComparator {

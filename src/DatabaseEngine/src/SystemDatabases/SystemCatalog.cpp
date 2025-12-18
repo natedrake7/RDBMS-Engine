@@ -572,7 +572,8 @@ namespace DatabaseEngine {
 
    std::vector<const StorageTypes::Row*> selectedDatabases;
 
-   sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases);
+   IndexState state;
+   sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, state, nullptr);
 
    vector<Headers::DatabaseHeader> databasesHeaders;
 
@@ -1231,7 +1232,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysRoles);
 
-   table->ClusteredIndexScan(this->baseProperties, &rows);
+   IndexState state;
+   table->ClusteredIndexScan(this->baseProperties, &rows, state, nullptr);
 
    for (const auto& row : rows) {
      const auto& data = row->GetData();
@@ -1254,7 +1256,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
 
-   table->ClusteredIndexScan(this->baseProperties, &rows);
+   IndexState state;
+   table->ClusteredIndexScan(this->baseProperties, &rows, state, nullptr);
 
    for (const auto& row : rows) {
      const auto& data = row->GetData();
@@ -1314,7 +1317,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
   DataTypes::Indexing::Key key;
   key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-  sysDatabases->ClusteredIndexSeek(this->baseProperties, &selectedDatabases, key);
+  sysDatabases->ClusteredIndexSeek(this->baseProperties, &selectedDatabases, key, nullptr);
 
   if (selectedDatabases.empty())
     return {};
@@ -1329,7 +1332,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key);
+    sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key, nullptr);
 
     if (selectedSchemas.empty())
       return {};
@@ -1361,7 +1364,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key);
+    sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key, nullptr);
 
     for (const auto& row : selectedSchemas) {
       const auto& currentSchemaName = row->GetColumnByIndex(static_cast<column_index_t>(SysSchemas::Name));
@@ -1393,7 +1396,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    sysTablesPtr->ClusteredIndexSeek(this->baseProperties, &selectedTables, key);
+    sysTablesPtr->ClusteredIndexSeek(this->baseProperties, &selectedTables, key, nullptr);
 
     if (selectedTables.empty())
       return {};
@@ -1464,7 +1467,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    constraintsTable->ClusteredIndexSeek(this->baseProperties, &selectedConstraints, key);
+    constraintsTable->ClusteredIndexSeek(this->baseProperties, &selectedConstraints, key, nullptr);
 
     if (selectedConstraints.empty())
       return {};
@@ -1498,7 +1501,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    sysColumns->ClusteredIndexSeek(this->baseProperties, &selectedColumns, key);
+    sysColumns->ClusteredIndexSeek(this->baseProperties, &selectedColumns, key, nullptr);
 
     if (selectedColumns.empty())
       return {};
@@ -1538,7 +1541,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
       DataTypes::Indexing::Key key;
       key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-      sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key);
+      sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key, nullptr);
 
       vector<Headers::IndexHeader> selectedIndexHeaders;
 
@@ -1563,7 +1566,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key, nullptr);
 
     if(selectedIndexes.empty())
       return {};
@@ -1587,18 +1590,15 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
     if(rows.empty())
       return {};
 
     vector<Headers::IndexColumnsHeader> indexColumns;
 
-    for (const auto& row : rows) {
-      const auto& data = row->GetData();
-
+    for (const auto& row : rows)
       indexColumns.emplace_back(SystemCatalog::ToIndexColumnsHeader(row));
-    }
 
     //get them sorted by ordinal position
     ranges::sort(indexColumns,
@@ -1629,7 +1629,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
       DataTypes::Indexing::Key key;
       key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-      table->ClusteredIndexSeek(this->baseProperties, &rows, key);
+      table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
       if(rows.empty())
         return {};
@@ -1668,7 +1668,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
     if(rows.empty())
       return {};
@@ -1707,7 +1707,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    sysValues->ClusteredIndexSeek(this->baseProperties, &rows, key);
+    sysValues->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
     if(rows.empty())
       return {};
@@ -1722,7 +1722,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedStats, key);
+    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedStats, key, nullptr);
 
     if (selectedStats.empty())
       return {};
@@ -1740,7 +1740,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    sysColumnStats->ClusteredIndexSeek(this->baseProperties, &selectedStats, key);
+    sysColumnStats->ClusteredIndexSeek(this->baseProperties, &selectedStats, key, nullptr);
 
     if (selectedStats.empty())
       return {};
@@ -1762,7 +1762,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
     std::vector<const StorageTypes::Row*> rows;
-    table->ClusteredIndexSeek(this->baseProperties, &rows, key);
+    table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
     for (const auto& row : rows)
       result.emplace_back(SystemCatalog::ToColumnHistograms(row, columnType));
@@ -1779,7 +1779,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
    std::vector<const StorageTypes::Row*> rows;
-   table->ClusteredIndexSeek(this->baseProperties, &rows, key);
+   table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
    for (const auto& row : rows)
      result.emplace_back(SystemCatalog::ToIndexStatistics(row));

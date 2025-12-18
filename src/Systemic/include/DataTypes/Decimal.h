@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../../../DatabaseEngine/include/Constants.h"
+#include "../../../DatabaseEngine/include/PipelineConstants.h"
 #include <string>
 #include <vector>
 #include <limits>
@@ -119,6 +119,7 @@ namespace DataTypes {
         [[nodiscard]] const vector<byte_t>& GetData() const;
 
         [[nodiscard]] static int Size(const int& precision);
+        [[nodiscard]] double ToDouble() const;
 
         friend ostream& operator<<(ostream& os, const Decimal& decimal);
 

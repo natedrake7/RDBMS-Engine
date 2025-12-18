@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../Constants.h"
+#include "../PipelineConstants.h"
 #include "Page.h"
 
 #include <iosfwd>

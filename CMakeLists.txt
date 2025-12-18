@@ -90,6 +90,7 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/Statements.cpp
         src/QueryPipeline/src/ErrorListener.cpp
         ${ANTLR_SRC}
+        src/QueryPipeline/src/SelectivityEstimator.cpp
 )
 
 target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)

@@ -1,5 +1,7 @@
 #include "../../include/DataTypes/Value.h"
 
+#include <cmath>
+
 #include "../../include/Coercions.h"
 #include "../../include/Converter.h"
 #include "../../include/Functions/StringFunctions.h"
@@ -324,6 +326,34 @@ int64_t Value::Hash() const {
     return static_cast<int64_t>(0);
 }
 
+long double Value::Interpolate() const{
+    switch (this->type){
+        case DataType::TinyInt:
+            return this->GetTinyInt();
+        case DataType::SmallInt:
+            return this->GetSmallInt();
+        case DataType::Int:
+            return this->GetInt();
+        case DataType::BigInt:
+            return this->GetBigInt();
+        case DataType::Decimal:
+            return this->GetDecimal().ToDouble();
+        case DataType::String:
+        case DataType::UnicodeString:
+            return this->InterpolateString();
+        case DataType::Bool:
+            return this->GetBool();
+        case DataType::DateTime:
+            return this->GetDateTime().GetUnixTimeStamp();
+        case DataType::Guid:
+            return this->GetGuid().Interpolate();
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+            throw std::runtime_error("Value::Interpolate() called with unknown type");
+    }
+}
+
 bool Value::TryParseAsBoolFromInt(bool& result)const{
     const auto intData = this->GetBigInt();
 
@@ -626,6 +656,24 @@ std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs,
         return std::make_tuple(true, Value(true, 0));
 
     return std::make_tuple(false, Value(nullptr, 0));
+}
+
+long double Value::InterpolateString() const{
+    const auto str = this->GetString();
+
+    constexpr auto MAX_PREFIX_LEN = 8;  // Use first 8 characters
+    constexpr double BASE = 256.0;        // ASCII character set
+
+    const auto length = std::min(str.length(), static_cast<size_t>(MAX_PREFIX_LEN));
+
+    long double result = 0.0;
+    for (int i = 0;i < length; i++){
+        const auto charValue = static_cast<unsigned char>(str[i]);
+        const auto weight = std::pow(BASE, MAX_PREFIX_LEN - i - 1);
+        result += charValue * weight;
+    }
+
+    return result;
 }
 
 //TODO implement operations by dataType

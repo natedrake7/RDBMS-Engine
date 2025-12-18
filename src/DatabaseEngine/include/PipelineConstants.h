@@ -89,13 +89,6 @@ namespace Constants{
 
     constexpr row_header_size_t ROW_VERSION_HEADER_SIZE = 2 * sizeof(transaction_id_t) + sizeof(page_id_t) + sizeof(page_offset_t);
 
-    enum class JoinType : uint8_t {
-        Inner = 0,
-        Left = 1,
-        Right = 2,
-        Full = 3
-    };
-
     enum class FunctionType : uint8_t {
         // -----------------------
         // Date/Time Functions

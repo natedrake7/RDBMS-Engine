@@ -34,3 +34,10 @@ constexpr int MAX_DECIMAL_PRECISION = 38;
 constexpr int MAX_DECIMAL_SCALE = 38;
 
 constexpr int64_t INVALID_TOP = -1;
+
+enum class JoinType : uint8_t {
+    Inner = 0,
+    Left = 1,
+    Right = 2,
+    Full = 3
+};

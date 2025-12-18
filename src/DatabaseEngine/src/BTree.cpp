@@ -966,7 +966,7 @@ namespace Indexing
         }
     }
 
-void BTree::IndexSeekRange(
+    void BTree::IndexSeekRange(
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
@@ -977,10 +977,7 @@ void BTree::IndexSeekRange(
 
         auto currentNode = this->SearchKey(minKey);
 
-        while (true){
-            if (!currentNode.Get())
-                break;
-
+        while (currentNode.Get()){
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             const auto* keys = currentNode->GetKeysUnsafe();
@@ -992,6 +989,50 @@ void BTree::IndexSeekRange(
                     const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
 
                     if (!visibleRow)
+                        continue;
+
+                    result->push_back(visibleRow);
+                    continue;
+                }
+
+                if (maxKey < *key)
+                    return;
+            }
+
+            if(!currentNode->HasRightSibling())
+                return;
+
+            currentNode = this->GetNode(currentNode->GetNextPage());
+        }
+    }
+
+    void BTree::IndexSeekRange(
+        const DatabaseEngine::ExecutionProperties& properties,
+        const DataTypes::Indexing::Key& minKey,
+        const DataTypes::Indexing::Key& maxKey,
+        std::vector<const DatabaseEngine::StorageTypes::Row*>* result,
+        const Expressions::Expression* expression
+    ) const{
+        if (this->IsEmpty())
+            return;
+
+        auto currentNode = this->SearchKey(minKey);
+
+        while (currentNode.Get()){
+            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+
+            const auto* keys = currentNode->GetKeysUnsafe();
+
+            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+
+            for (int i = 0; i < keys->size(); i++){
+                const auto &key = keys->at(i);
+
+                if (key->InClosedRange(minKey, maxKey)){
+                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+
+                    context.row = visibleRow;
+                    if (!visibleRow || !expression->Evaluate(context).GetBool())
                         continue;
 
                     result->push_back(visibleRow);

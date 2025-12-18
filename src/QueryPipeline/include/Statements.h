@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "../../DatabaseEngine/include/Constants.h"
+#include "../../DatabaseEngine/include/PipelineConstants.h"
 #include "../../DatabaseEngine/include/Evaluators/Expression.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
 #include "../../Systemic/include/DataTypes/Guid.h"
@@ -200,7 +200,7 @@ namespace QueryPipeline::Statements {
     virtual ~Statement() = default;
     virtual Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) = 0;
 
-    virtual Security::Permission RequiredPermissions() const = 0;
+    virtual constexpr Security::Permission RequiredPermissions()const = 0;
     Errors::ValidationStatus CompileBase()const;
 
     Errors::ValidationStatus Compile(ParserValidationScope& validationScope);
@@ -209,32 +209,32 @@ namespace QueryPipeline::Statements {
     virtual void CleanUp() = 0;
   };
 
-  struct DeclareVariableStatement final: public Statement {
+  struct DeclareVariableStatement final: Statement {
     Variable variable;
 
     Expressions::Expression* expression;
 
     DeclareVariableStatement();
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
 
     QueryPipeline::LogicalPlan* ToLogical() override;
     void CleanUp() override;
   };
 
-  struct SetVariableStatement final: public Statement {
+  struct SetVariableStatement final: Statement {
     Variable variable;
     Expressions::Expression* expression;
 
     SetVariableStatement();
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
 
     QueryPipeline::LogicalPlan* ToLogical() override;
     void CleanUp() override;
   };
 
-  struct CreateUserStatement final : public Statement {
+  struct CreateUserStatement final: Statement {
       std::string username;
       std::string password;
 
@@ -244,12 +244,12 @@ namespace QueryPipeline::Statements {
       ~CreateUserStatement() override = default;
 
       Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-      Security::Permission RequiredPermissions() const override;
+      constexpr Security::Permission RequiredPermissions()const override;
       QueryPipeline::LogicalPlan* ToLogical() override;
       void CleanUp() override;
   };
 
-  struct GrantRoleStatement final : public Statement {
+  struct GrantRoleStatement final : Statement {
     std::string username;
     std::string role;
 
@@ -257,7 +257,7 @@ namespace QueryPipeline::Statements {
     ~GrantRoleStatement() override = default;
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     QueryPipeline::LogicalPlan* ToLogical() override;
     void CleanUp() override;
   };
@@ -268,14 +268,14 @@ namespace QueryPipeline::Statements {
     ~DeleteStatement() override = default;
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     void CleanUp() override;
   };
 
-  struct JoinStatement final : public Statement{
+  struct JoinStatement final : Statement{
     Expressions::Expression* expression;
-    Constants::JoinType type;
+    JoinType type;
 
     JoinStatement();
     [[nodiscard]]Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
@@ -283,9 +283,10 @@ namespace QueryPipeline::Statements {
 
     [[nodiscard]]bool IsRightJoin()const;
     [[nodiscard]]bool IsInnerJoin()const;
+    [[nodiscard]]bool IsFullOuterJoin()const;
 
     QueryPipeline::LogicalPlan* ToLogical()override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     void CleanUp() override;
   };
 
@@ -299,11 +300,11 @@ namespace QueryPipeline::Statements {
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
     QueryPipeline::LogicalPlan* ToLogical() override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     void CleanUp() override;
   };
 
-  struct SelectStatement final : Statement{
+  struct SelectStatement final: Statement{
     int64_t top;
     bool distinct;
     std::vector<Expressions::Expression*> results;
@@ -339,7 +340,7 @@ namespace QueryPipeline::Statements {
     void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<std::string, column_index_t>& postProjectionIndicesDictionary) const;
 
     [[nodiscard]] Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     [[nodiscard]] LogicalPlan* ToLogical() override;
     void CleanUp() override;
   };
@@ -348,7 +349,7 @@ namespace QueryPipeline::Statements {
     std::string name;
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     LogicalPlan* ToLogical() override;
     void CleanUp() override;
   };
@@ -357,7 +358,7 @@ namespace QueryPipeline::Statements {
     std::string name;
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     LogicalPlan* ToLogical() override;
     void CleanUp() override;
   };
@@ -366,7 +367,7 @@ namespace QueryPipeline::Statements {
     std::string name;
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     LogicalPlan* ToLogical() override;
     void CleanUp() override;
   };
@@ -388,7 +389,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool HasSelectStatement() const;
     [[nodiscard]] Errors::ValidationStatus ResolveAliases(ParserValidationScope& validationScope);
     [[nodiscard]] Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     [[nodiscard]] LogicalPlan* ToLogical() override;
     void CleanUp() override;
   };
@@ -397,7 +398,7 @@ namespace QueryPipeline::Statements {
     std::string name;
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     void CleanUp() override;
   };
@@ -417,7 +418,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const UpdateColumn* update)const;
     Errors::ValidationStatus ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     void CleanUp() override;
   };
@@ -429,7 +430,7 @@ namespace QueryPipeline::Statements {
     bool isUnique;
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     void CleanUp() override;
   };
@@ -449,7 +450,7 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] Errors::ValidationStatus CompileDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    Security::Permission RequiredPermissions() const override;
+    constexpr Security::Permission RequiredPermissions()const override;
     QueryPipeline::LogicalPlan * ToLogical() override;
     void CleanUp() override;
   };

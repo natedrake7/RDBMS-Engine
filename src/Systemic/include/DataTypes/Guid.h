@@ -14,7 +14,6 @@ namespace DataTypes {
       Guid(const unsigned char* data, const int& size);
       explicit Guid(const std::array<uint8_t, GUID_SIZE>& data);
       ~Guid();
-      [[nodiscard]] int Size() const;
       [[nodiscard]] std::array<uint8_t, GUID_SIZE>& GetDataUnsafe();
       [[nodiscard]] const std::array<uint8_t, GUID_SIZE>& GetData() const;
 
@@ -26,7 +25,10 @@ namespace DataTypes {
       static Guid NewGuid();
       static Guid Empty();
       static Guid FromString(const std::string& str);
-      constexpr static int GuidSize() { return GUID_SIZE; };
+
+      long double Interpolate() const;
+
+      constexpr static int Size() { return GUID_SIZE; };
   };
 
   bool operator==(const Guid& guid1, const Guid& guid2);

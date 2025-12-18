@@ -4,7 +4,7 @@
 #include "../../Systemic/include/DataStructures/SortedDictionary.h"
 
 #include <vector>
-#include "Constants.h"
+#include "PipelineConstants.h"
 #include "../../QueryPipeline/include/PhysicalPlan.h"
 
 #include "Pages/PageGuard.h"
@@ -174,6 +174,14 @@ namespace Indexing{
             const DataTypes::Indexing::Key &minKey,
             const DataTypes::Indexing::Key &maxKey,
             std::vector<const DatabaseEngine::StorageTypes::Row*>* result
+        )const;
+
+        void IndexSeekRange(
+            const DatabaseEngine::ExecutionProperties& properties,
+            const DataTypes::Indexing::Key &minKey,
+            const DataTypes::Indexing::Key &maxKey,
+            std::vector<const DatabaseEngine::StorageTypes::Row*>* result,
+            const Expressions::Expression* expression
         )const;
 
         void IndexSeek(

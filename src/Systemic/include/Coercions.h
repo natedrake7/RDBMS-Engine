@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include "../../DatabaseEngine/include/Constants.h"
+#include "../../DatabaseEngine/include/PipelineConstants.h"
 #include "DataTypes/Value.h"
 #include "DataStructures/HashSet.h"
 #include "DataTypes/Guid.h"

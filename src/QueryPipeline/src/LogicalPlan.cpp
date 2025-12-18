@@ -8,6 +8,9 @@
 
 #include <utility>
 
+#include "PipelineConstants.h"
+#include "Managers/StatisticsManager.h"
+
 namespace QueryPipeline {
   LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId, const int32_t &databaseId)
       : sessionId(sessionId), databaseId(databaseId) {}
@@ -46,36 +49,48 @@ namespace QueryPipeline {
          this->columnsHeaders
     );
   }
+
+  bool LogicalTableScan::HasPredicate() const{
+    return this->expression != nullptr;
+  }
+
   LogicalTableScan::LogicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
   : table(table), expression(expression) {}
 
   PhysicalPlan::ExecutionNode * LogicalTableScan::ToPhysical(){
       auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
 
-      //if no indexes are available heap scan
+      // If no indexes are available, use heap scan
       if (indexes.empty())
-        return new PhysicalPlan::PhysicalTableScan(this->table);
+        return new PhysicalPlan::PhysicalTableScan(this->table, this->expression);
 
-      if (this->expression != nullptr) {
-        for (auto& index: indexes) {
-          index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(index.id);
+      // If no filter expression, choose the best index for scanning
+      if (!this->HasPredicate()) {
+        const auto& firstIndex = indexes.front();
 
-          auto results = Optimizer::AnalyzeTableScan(this, index.columns);
+        if (firstIndex.isClustered)
+          return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, true);
 
-          //baseCase
-          if (results.size() == 1) {
-            auto& result = results[0];
-            return new PhysicalPlan::PhysicalIndexSeek(this->table, result.range.start, result.range.end);
-          }
-        }
+        // Otherwise use heap scan
+        return new PhysicalPlan::PhysicalTableScan(this->table, this->expression);
       }
 
-      //if expression is complex defer from index seek
-      for (const auto& index: indexes) {
-        return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, index.isClustered);
-      }
+      const auto tableStats = DatabaseEngine::StatisticsManager::Get().GetTableStatistics(this->table->tableId);
 
-    return new PhysicalPlan::PhysicalTableScan(this->table);
+    //Small table use heap Scan
+      if (tableStats.rowCount < PipelineConstants::SMALL_TABLE)
+        return new PhysicalPlan::PhysicalTableScan(this->table, this->expression);
+
+      auto result = Optimizer::DetermineIndexSeekAnalyze(indexes, this->expression);
+
+      //scan the first index
+      if (!result.canSeek)
+        return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, indexes.front().isClustered);
+
+      if (result.hasRange)
+        return new PhysicalPlan::PhysicalIndexSeekRange(this->table, result.start, result.end, result.remainingPredicate);
+
+      return new PhysicalPlan::PhysicalIndexSeek(this->table, result.start, result.remainingPredicate);
   }
 
    LogicalCreateUser::LogicalCreateUser(const DataTypes::Guid& sessionId, std::string& username, std::string& password, std::string& role)
@@ -131,7 +146,7 @@ namespace QueryPipeline {
       case JoinType::Left:
         return new PhysicalPlan::PhysicalNestedLoopLeftJoin(
           left->ToPhysical(),
-       right->ToPhysical(),
+          right->ToPhysical(),
         this->condition
         );
       case JoinType::Right:

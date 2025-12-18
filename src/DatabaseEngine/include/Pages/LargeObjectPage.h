@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <fstream>
 #include <vector>
-#include "../Constants.h"
+#include "../PipelineConstants.h"
 #include "Page.h"
 
 using namespace Constants;

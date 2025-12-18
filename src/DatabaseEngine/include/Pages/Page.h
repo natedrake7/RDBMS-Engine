@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
-#include "../Constants.h"
+#include "../PipelineConstants.h"
 #include "../../../Systemic/include/Guards/ReadWriteMutex.h"
 #include "../../../Systemic/include/Constants.h"
 

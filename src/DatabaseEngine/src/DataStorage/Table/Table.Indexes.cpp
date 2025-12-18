@@ -1,4 +1,4 @@
-#include "../../../include/Constants.h"
+#include "../../../include/PipelineConstants.h"
 
 #include "../../../include/DataStorage/Table.h"
 #include "../../../include/DataStorage/Column.h"
@@ -13,9 +13,15 @@ namespace DatabaseEngine::StorageTypes {
         const ExecutionProperties& properties,
         std::vector<const Row*> *selectedRows,
         const DataTypes::Indexing::Key& minKey,
-        const DataTypes::Indexing::Key& maxKey
+        const DataTypes::Indexing::Key& maxKey,
+        const Expressions::Expression* expression
     ){
         const auto* tree = this->GetClusteredIndexedTree();
+
+        if (expression != nullptr) {
+            tree->IndexSeekRange(properties, minKey, maxKey, selectedRows, expression);
+            return;
+        }
 
         tree->IndexSeekRange(properties, minKey, maxKey, selectedRows);
     }

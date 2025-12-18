@@ -1,11 +1,13 @@
 #pragma once
-#include "../../DatabaseEngine/include/Constants.h"
+#include "../../DatabaseEngine/include/PipelineConstants.h"
 #include "../../DatabaseEngine/include/Evaluators/Expression.h"
 #include "../../Systemic/include/DataTypes/Value.h"
 #include <vector>
 
 #include "../../Systemic/include/Constants.h"
+#include "../../Systemic/include/Key.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
+#include "../../Systemic/include/Headers.h"
 
 namespace QueryPipeline::Statements {
   struct JoinStatement;
@@ -27,12 +29,24 @@ namespace Expressions {
 }
 
 namespace QueryPipeline {
+  struct Range{
+    DataTypes::Indexing::Key start;
+    DataTypes::Indexing::Key end;
+
+    bool hasRange;
+    bool canSeek;
+    Expressions::Expression* remainingPredicate;
+
+    Range();
+  };
+
   struct SeekRange {
     Value start;
     Value end;
 
     bool startInclusive;
     bool endInclusive;
+    bool hasRange;
 
     SeekRange();
     SeekRange(
@@ -41,18 +55,43 @@ namespace QueryPipeline {
       const bool& includeStart,
       const bool& includeEnd
     );
+
+    [[nodiscard]] bool HasStart() const;
+    [[nodiscard]] bool HasEnd() const;
   };
 
-  struct IndexSeekAnalyzeResults {
+  struct IndexSeekColumnAnalysisResults {
     bool canIndexSeek;
+    bool needsParameterBinding;
     SeekRange range;
-
-    std::vector<column_index_t> indexCoveredColumns;
 
     Expressions::Expression* expression;
 
-    IndexSeekAnalyzeResults();
-    explicit IndexSeekAnalyzeResults(Expressions::Expression* otherExpr);
+    IndexSeekColumnAnalysisResults();
+    explicit IndexSeekColumnAnalysisResults(Expressions::Expression* otherExpr);
+  };
+
+  struct IndexSeekAnalysisResult{
+    std::vector<IndexSeekColumnAnalysisResults> analyzeResults;
+    std::vector<Expressions::Expression*> conjunctions;
+  };
+
+  struct IndexCandidate{
+    Headers::IndexHeader header;
+    std::vector<IndexSeekColumnAnalysisResults> analyzeInfo;
+    std::vector<Expressions::Expression*> conjunctions;
+    double estimatedCost;
+    int matchingColumns;
+
+    bool operator()(const IndexCandidate& lhs, const IndexCandidate& rhs) const{
+      if (lhs.matchingColumns != rhs.matchingColumns)
+        return lhs.matchingColumns > rhs.matchingColumns;
+
+      if (std::abs(lhs.estimatedCost - rhs.estimatedCost) > 0.01)
+        return lhs.estimatedCost < rhs.estimatedCost;
+
+      return lhs.header.isClustered && !rhs.header.isClustered;
+    }
   };
 
   struct JoinOrderAnalyzeResult{
@@ -124,31 +163,6 @@ namespace QueryPipeline {
   };
 
   class Optimizer final{
-      [[nodiscard]] static bool Analyze(
-        const Expressions::ColumnExpression* columnExpression,
-        const Expressions::Expression* otherExpression,
-        const Expressions::BinaryOperator& operation,
-        const std::vector<Headers::IndexColumnsHeader>& indexColumns,
-        std::vector<IndexSeekAnalyzeResults>& results
-      );
-
-      [[nodiscard]] static bool Analyze(
-        const Expressions::BinaryExpression* expression,
-        const std::vector<Headers::IndexColumnsHeader>& indexColumns,
-        std::vector<IndexSeekAnalyzeResults>& results
-      );
-
-      [[nodiscard]] static bool Analyze(
-        const Expressions::LogicalExpression* expression,
-        const std::vector<Headers::IndexColumnsHeader>& indexColumns,
-        std::vector<IndexSeekAnalyzeResults>& results
-      );
-      [[nodiscard]] static bool Analyze(
-        Expressions::Expression* expression,
-        const std::vector<Headers::IndexColumnsHeader>& indexColumns,
-        std::vector<IndexSeekAnalyzeResults>& results
-      );
-
       static void SplitConjunctions(
         Expressions::Expression* expression,
         std::vector<Expressions::Expression*>& conjunctions
@@ -172,18 +186,60 @@ namespace QueryPipeline {
         Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary
       );
 
-    public:
-
-      [[nodiscard]] static std::vector<IndexSeekAnalyzeResults> AnalyzeTableScan(
-        const LogicalTableScan* plan,
-        const std::vector<Headers::IndexColumnsHeader> &indexColumns
+      static void AnalyzeTableScan(
+        Expressions::Expression* baseExpression,
+        const Expressions::BinaryExpression* expression,
+        Dictionary<column_id_t, std::vector<Expressions::Expression*>>& columnPredicatesDictionary
       );
 
+      static void DetermineCanSeekOnEquality(
+        const Value& predicateValue,
+        SeekRange& range,
+        bool& canSeek
+      );
+
+      static void DetermineCanSeekOnGreaterThan(
+        const Value& predicateValue,
+        SeekRange& range,
+        bool& canSeek,
+        const bool& inclusive
+      );
+
+      static void DetermineCanSeekOnLessThan(
+        const Value& predicateValue,
+        SeekRange& range,
+        bool& canSeek,
+        const bool& inclusive
+      );
+
+      static void DetermineSeekRange(
+        const Expressions::BinaryExpression* expression,
+        const Value& predicateValue,
+        SeekRange& range,
+        bool& canSeek
+      );
+
+      static IndexSeekAnalysisResult AnalyzeTableScan(
+        const Headers::IndexHeader& index,
+        Expressions::Expression* expression
+      );
+
+      static Range BuildSeekKeys(
+        const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
+        std::vector<Expressions::Expression*>& conjunctions
+      );
+
+    public:
       [[nodiscard]] static JoinOrderAnalyzeResult DetermineJoinOrder(Statements::SelectStatement* statement);
       [[nodiscard]] static PredicatePushDownResult PushDownPredicates(
         const std::vector<table_id_t>& tables,
         Expressions::Expression* expression,
         const std::vector<Statements::JoinStatement*>& joins
+      );
+
+      [[nodiscard]] static Range DetermineIndexSeekAnalyze(
+        std::vector<Headers::IndexHeader>& indexes,
+        Expressions::Expression* expression
       );
   };
 

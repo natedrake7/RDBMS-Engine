@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "../../../include/Constants.h"
+#include "../../../include/PipelineConstants.h"
 #include "../../../../Systemic/include/DataTypes/SortCondition.h"
 
 namespace QueryPipeline::Statements {

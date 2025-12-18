@@ -81,6 +81,8 @@ namespace QueryPipeline {
   };
 
   class LogicalTableScan final : public LogicalPlan {
+    [[nodiscard]] bool HasPredicate()const;
+
     public:
       Statements::DataSource* table;
       Expressions::Expression* expression;

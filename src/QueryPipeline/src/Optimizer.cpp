@@ -2,11 +2,19 @@
 
 #include "../include/LogicalPlan.h"
 #include "Managers/StatisticsManager.h"
+#include "SystemDatabases/SystemCatalog.h"
 
 namespace QueryPipeline {
+  Range::Range(){
+    this->hasRange = false;
+    this->canSeek = false;
+    this->remainingPredicate = nullptr;
+  }
+
   SeekRange::SeekRange() {
     this->endInclusive = false;
     this->startInclusive = false;
+    this->hasRange = false;
   }
 
   SeekRange::SeekRange(
@@ -19,124 +27,27 @@ namespace QueryPipeline {
     this->end = otherEnd;
     this->startInclusive = includeStart;
     this->endInclusive = includeEnd;
+    this->hasRange = (this->start < this->end).GetBool();
   }
 
-  IndexSeekAnalyzeResults::IndexSeekAnalyzeResults() {
+  bool SeekRange::HasStart() const{ return !this->start.IsNull(); }
+
+  bool SeekRange::HasEnd() const{ return !this->end.IsNull(); }
+
+  IndexSeekColumnAnalysisResults::IndexSeekColumnAnalysisResults() {
     this->expression = nullptr;
     this->canIndexSeek = false;
+    this->needsParameterBinding = false;
   }
 
-  IndexSeekAnalyzeResults::IndexSeekAnalyzeResults(Expressions::Expression *otherExpr) {
+  IndexSeekColumnAnalysisResults::IndexSeekColumnAnalysisResults(Expressions::Expression *otherExpr) {
     this->expression = otherExpr;
     this->canIndexSeek = false;
+    this->needsParameterBinding = false;
   }
 
   JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(){
     this->isReordered = false;
-  }
-
-  bool Optimizer::Analyze(
-    const Expressions::ColumnExpression *columnExpression,
-    const Expressions::Expression* otherExpression,
-    const Expressions::BinaryOperator& operation,
-    const std::vector<Headers::IndexColumnsHeader> &indexColumns,
-    std::vector<IndexSeekAnalyzeResults> &results
-  ) {
-    //can use index seek
-    if (columnExpression->columnId != indexColumns[0].columnId)
-      return false;
-
-    if (otherExpression->IsConstant()) {
-      auto* constantExpr = otherExpression->AsConstant();
-
-      const auto includeStart =
-        operation == Expressions::BinaryOperator::GreaterEqual
-        || operation == Expressions::BinaryOperator::LessEqual
-        ||  operation == Expressions::BinaryOperator::Equal;
-
-      auto result = IndexSeekAnalyzeResults();
-
-      result.canIndexSeek = true;
-      result.range = SeekRange(constantExpr->value, constantExpr->value, includeStart, includeStart);
-      results.emplace_back(result);
-
-      return true;
-    }
-
-    return false;
-  }
-
-  bool Optimizer::Analyze(
-    const Expressions::BinaryExpression *expression,
-    const std::vector<Headers::IndexColumnsHeader> &indexColumns,
-    std::vector<IndexSeekAnalyzeResults> &results
-  ){
-    switch (expression->operation) {
-    case Expressions::BinaryOperator::Equal:
-    case Expressions::BinaryOperator::Greater:
-    case Expressions::BinaryOperator::GreaterEqual:
-    case Expressions::BinaryOperator::Less:
-    case Expressions::BinaryOperator::LessEqual: {
-      if (expression->left->IsColumn()) {
-        return Analyze(expression->left->AsColumn(), expression->right, expression->operation, indexColumns, results);
-      }
-      if (expression->right->IsColumn()) {
-        return Analyze(expression->left->AsColumn(), expression->right, expression->operation, indexColumns, results);
-      }
-
-      break;
-    }
-    case Expressions::BinaryOperator::EqualIgnoreOrdinalCase:
-    case Expressions::BinaryOperator::NotEqual:
-    case Expressions::BinaryOperator::Add:
-    case Expressions::BinaryOperator::Subtract:
-    case Expressions::BinaryOperator::Multiply:
-    case Expressions::BinaryOperator::Divide:
-    case Expressions::BinaryOperator::Modulo:
-    default:
-      break;
-    }
-
-    return false;
-  }
-
-  bool Optimizer::Analyze(
-    const Expressions::LogicalExpression *expression,
-    const std::vector<Headers::IndexColumnsHeader> &indexColumns,
-    std::vector<IndexSeekAnalyzeResults> &results
-  ){
-    if (expression->IsAnd()) {
-      return Analyze(expression->left, indexColumns, results)
-        && Analyze(expression->right, indexColumns, results);
-    }
-
-    if (expression->IsOr()) {
-      return Analyze(expression->left, indexColumns, results)
-        && Analyze(expression->right, indexColumns, results);
-    }
-
-    return false;
-  }
-
-  bool Optimizer::Analyze(
-    Expressions::Expression *expression,
-    const std::vector<Headers::IndexColumnsHeader> &indexColumns,
-    std::vector<IndexSeekAnalyzeResults> &results
-  ){
-    switch (expression->expressionType) {
-    case Expressions::ExpressionType::Binary:
-      return Analyze(expression->AsBinary(), indexColumns, results);
-    case Expressions::ExpressionType::Logical:
-      return Analyze(expression->AsLogical(), indexColumns, results);
-    case Expressions::ExpressionType::Expression:
-    case Expressions::ExpressionType::Column:
-    case Expressions::ExpressionType::Constant:
-    case Expressions::ExpressionType::Variable:
-    case Expressions::ExpressionType::Branch:
-    case Expressions::ExpressionType::Function:
-    default:
-      return false;
-    }
   }
 
   void Optimizer::SplitConjunctions(Expressions::Expression* expression, std::vector<Expressions::Expression*>& conjunctions){
@@ -230,15 +141,207 @@ namespace QueryPipeline {
     }
   }
 
-  std::vector<IndexSeekAnalyzeResults> Optimizer::AnalyzeTableScan(
-    const LogicalTableScan *plan,
-    const std::vector<Headers::IndexColumnsHeader> &indexColumns
+  void Optimizer::AnalyzeTableScan(
+    Expressions::Expression* baseExpression,
+    const Expressions::BinaryExpression* expression,
+    Dictionary<column_id_t, std::vector<Expressions::Expression*>>& columnPredicatesDictionary
   ){
-    std::vector<IndexSeekAnalyzeResults> results;
+    if (expression->left->IsColumn()
+      && (expression->right->IsConstant() || expression->right->IsVariable()))
+    {
+      const auto* columnExpr = expression->left->AsColumn();
+      columnPredicatesDictionary[columnExpr->columnId].push_back(baseExpression);
+      return;
+    }
 
-    const auto _ = Analyze(plan->expression, indexColumns, results);
+    if (expression->right->IsColumn()
+      && (expression->left->IsConstant() || expression->left->IsVariable()))
+    {
+      const auto* columnExpr = expression->right->AsColumn();
+      columnPredicatesDictionary[columnExpr->columnId].push_back(baseExpression);
+    }
+  }
 
-    return results;
+  void Optimizer::DetermineCanSeekOnEquality(
+    const Value& predicateValue,
+    SeekRange& range,
+    bool& canSeek
+  ){
+    range.start = predicateValue;
+    range.end = predicateValue;
+    range.hasRange = false;
+    canSeek = true;
+  }
+
+  void Optimizer::DetermineCanSeekOnGreaterThan(
+    const Value& predicateValue,
+    SeekRange& range,
+    bool& canSeek,
+    const bool& inclusive
+  ){
+    if ((predicateValue <= range.start).GetBool() && range.hasRange)
+      return;
+
+    range.start = predicateValue;
+    range.startInclusive = inclusive;
+    canSeek = true;
+    range.hasRange = true;
+  }
+
+  void Optimizer::DetermineCanSeekOnLessThan(
+    const Value& predicateValue,
+    SeekRange& range,
+    bool& canSeek,
+    const bool& inclusive
+  ){
+
+    if ((predicateValue >= range.end).GetBool() && range.hasRange)
+      return;
+
+    range.end = predicateValue;
+    range.endInclusive = inclusive;
+    range.hasRange = true;
+    canSeek = true;
+  }
+
+  void Optimizer::DetermineSeekRange(
+    const Expressions::BinaryExpression* expression,
+    const Value& predicateValue,
+    SeekRange& range,
+    bool& canSeek
+  ){
+    switch (expression->operation){
+      case Expressions::BinaryOperator::Equal:
+        Optimizer::DetermineCanSeekOnEquality(predicateValue, range, canSeek);
+        break;
+      case Expressions::BinaryOperator::Greater:
+        Optimizer::DetermineCanSeekOnGreaterThan(predicateValue, range, canSeek, false);
+        break;
+      case Expressions::BinaryOperator::GreaterEqual:
+        Optimizer::DetermineCanSeekOnGreaterThan(predicateValue, range, canSeek, true);
+        break;
+      case Expressions::BinaryOperator::Less:
+        Optimizer::DetermineCanSeekOnLessThan(predicateValue, range, canSeek, false);
+        break;
+      case Expressions::BinaryOperator::LessEqual:
+        Optimizer::DetermineCanSeekOnLessThan(predicateValue, range, canSeek, true);
+        break;
+      case Expressions::BinaryOperator::NotEqual:
+      case Expressions::BinaryOperator::Add:
+      case Expressions::BinaryOperator::Subtract:
+      case Expressions::BinaryOperator::Multiply:
+      case Expressions::BinaryOperator::Divide:
+      case Expressions::BinaryOperator::Modulo:
+      case Expressions::BinaryOperator::EqualIgnoreOrdinalCase:
+      default:
+        canSeek = false;
+        break;
+    }
+  }
+
+  IndexSeekAnalysisResult Optimizer::AnalyzeTableScan(
+    const Headers::IndexHeader& index,
+    Expressions::Expression* expression
+  ){
+
+    IndexSeekAnalysisResult result;
+
+    if (expression == nullptr)
+      return result;
+
+    Optimizer::SplitConjunctions(expression, result.conjunctions);
+
+    Dictionary<column_id_t, std::vector<Expressions::Expression*>> columnPredicates;
+    for (const auto& column : index.columns)
+      columnPredicates.Add(column.columnId, {});
+
+    for (auto*& condition: result.conjunctions){
+      if (!condition->IsBinary())
+        continue;
+
+      Optimizer::AnalyzeTableScan(condition, condition->AsBinary(), columnPredicates);
+    }
+
+    for (const auto& column : index.columns) {
+      std::vector<Expressions::Expression*> predicates;
+      if (!columnPredicates.TryGetValue(column.columnId, predicates))
+        break;
+
+      IndexSeekColumnAnalysisResults analyzeResult;
+      analyzeResult.canIndexSeek = true;
+
+      for (auto*& predicate : predicates) {
+        if (!predicate->IsBinary())
+          continue;
+
+        Value value;
+        const auto* binaryExpr = predicate->AsBinary();
+        auto* valueExpression = binaryExpr->left->IsColumn()
+          ? binaryExpr->right
+          : binaryExpr->left;
+
+        if (valueExpression->IsConstant()){
+          Optimizer::DetermineSeekRange(
+            binaryExpr,
+            valueExpression->AsConstant()->value,
+            analyzeResult.range,
+            analyzeResult.canIndexSeek
+          );
+          continue;
+        }
+
+        if (valueExpression->IsVariable()){
+          analyzeResult.expression = valueExpression;
+          analyzeResult.needsParameterBinding = true;
+        }
+      }
+
+      if (!analyzeResult.canIndexSeek)
+        break;
+
+      result.analyzeResults.push_back(analyzeResult);
+    }
+
+    return result;
+  }
+
+  Range Optimizer::BuildSeekKeys(
+    const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
+    std::vector<Expressions::Expression*>& conjunctions
+  ){
+    Range range;
+    bool canSeek = true;
+    int counter = 0;
+    for (const auto& info : analyzeResults){
+      range.start.InsertKey(DataTypes::Indexing::Key(info.range.start));
+      range.end.InsertKey(DataTypes::Indexing::Key(info.range.end));
+
+      for (auto*& expression : conjunctions) {
+        if (expression != info.expression)
+          continue;
+
+        expression = nullptr;
+        break;
+      }
+
+      if (counter == 0)
+        canSeek = info.range.HasStart() && info.range.HasEnd();
+
+      counter++;
+    }
+
+    for (auto*& expression : conjunctions) {
+      if (expression == nullptr)
+        continue;
+
+      Optimizer::CombineExpressionsWithAnd(range.remainingPredicate, expression);
+    }
+
+
+    range.hasRange = range.start < range.end;
+    range.canSeek = canSeek;
+
+    return range;
   }
 
   JoinOrderAnalyzeResult Optimizer::DetermineJoinOrder(Statements::SelectStatement* statement){
@@ -341,14 +444,64 @@ namespace QueryPipeline {
 
     Optimizer::ProcessPredicate(expression, result.remainingPredicate, result.tablePredicatesDictionary);
     for (const auto& join : joins) {
-      if (!join->IsInnerJoin())
+      // Cannot push down predicates for FULL OUTER JOIN as it would break semantics
+      // (unmatched rows from both sides must be preserved with NULLs)
+      if (join->IsFullOuterJoin())
         continue;
 
+      // For INNER, LEFT, and RIGHT joins, we can safely push down predicates
+      // LEFT JOIN: filters left table (always scanned) and right table (only matching rows matter)
+      // RIGHT JOIN: filters right table (always scanned) and left table (only matching rows matter)
       Expressions::Expression* joinRemainingPredicate = nullptr;
       Optimizer::ProcessPredicate(join->expression, joinRemainingPredicate, result.tablePredicatesDictionary);
       join->expression = joinRemainingPredicate;
     }
 
     return result;
+  }
+
+   Range Optimizer::DetermineIndexSeekAnalyze(
+    std::vector<Headers::IndexHeader>& indexes,
+    Expressions::Expression* expression
+  ){
+    std::vector<IndexCandidate> candidates;
+
+    for (auto& index : indexes) {
+      index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexById(index.id).columns;
+
+      auto [analyzeResults, conjunctions] = Optimizer::AnalyzeTableScan(index, expression);
+
+      IndexCandidate candidate;
+
+      candidate.header = index;
+      candidate.analyzeInfo = std::move(analyzeResults);
+      candidate.conjunctions = std::move(conjunctions);
+      candidate.matchingColumns = static_cast<int>(candidate.analyzeInfo.size());
+      candidate.estimatedCost = 0.0;
+
+      candidates.push_back(candidate);
+    }
+
+    if (candidates.empty())
+      return {};
+
+    for (auto& candidate : candidates){
+      bool isPerfectSeek = true;
+      for (const auto& info : candidate.analyzeInfo){
+        if (info.canIndexSeek && !info.range.hasRange)
+          continue;
+
+        isPerfectSeek = false;
+        break;
+      }
+
+      if (isPerfectSeek && candidate.header.isClustered)
+        return Optimizer::BuildSeekKeys(candidate.analyzeInfo, candidate.conjunctions);
+    }
+
+    ranges::sort(candidates, IndexCandidate());
+
+    auto& candidate = candidates[0];
+    return Optimizer::BuildSeekKeys(candidate.analyzeInfo, candidate.conjunctions);
   }
 }

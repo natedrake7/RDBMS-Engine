@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <string>
 #include <vector>
-#include "../Constants.h"
+#include "../PipelineConstants.h"
 #include "../../../Systemic/include/Headers.h"
 #include "../BTree.h"
 #include "../Logger/Logger.h"
@@ -216,27 +216,28 @@ namespace DatabaseEngine::StorageTypes
                 const ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 const DataTypes::Indexing::Key& minKey,
-                const DataTypes::Indexing::Key& maxKey
+                const DataTypes::Indexing::Key& maxKey,
+                const Expressions::Expression* expression
             );
 
             void ClusteredIndexSeek(
                 const ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 const DataTypes::Indexing::Key& key,
-                const Expressions::Expression* expression = nullptr
+                const Expressions::Expression* expression
             );
 
             void ClusteredIndexScan(
                 const ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
                 IndexState& state,
-                const Expressions::Expression* expression = nullptr
+                const Expressions::Expression* expression
             );
 
             void ClusteredIndexScan(
                 const ExecutionProperties& properties,
                 std::vector<const Row*> *selectedRows,
-                const Expressions::Expression* expression = nullptr
+                const Expressions::Expression* expression
             );
 
             void NonClusteredIndexScan(
@@ -244,7 +245,7 @@ namespace DatabaseEngine::StorageTypes
                 std::vector<const Row*> *selectedRows,
                 const int& indexPos,
                 IndexState& state,
-                const Expressions::Expression* expression = nullptr
+                const Expressions::Expression* expression
             );
 
             void HeapScan(

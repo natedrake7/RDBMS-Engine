@@ -11,7 +11,7 @@
 #include "../include/Pages/IndexAllocationMapPage.h"
 #include "../include/Pages/IndexPage.h"
 #include "../include/Pages/LargeObjectPage.h"
-#include "../include/Constants.h"
+#include "../include/PipelineConstants.h"
 #include "../include/DataStorage/Table.h"
 #include "../include/DataStorage/Column.h"
 #include "../include/DataStorage/Row.h"

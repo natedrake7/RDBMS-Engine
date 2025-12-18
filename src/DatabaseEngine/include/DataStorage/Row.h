@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <vector>
-#include "../Constants.h"
+#include "../PipelineConstants.h"
 #include "../../../QueryPipeline/include/Statements.h"
 #include "../../../Systemic/include/Errors.h"
 #include "../Pages/Page.h"

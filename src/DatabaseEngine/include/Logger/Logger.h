@@ -1,5 +1,5 @@
 #pragma once
-#include "../Constants.h"
+#include "../PipelineConstants.h"
 #include "../DataStorage/Row.h"
 #include "Logger.Structures.h"
 #include "../../../Systemic/include/DataStructures/HashSet.h"

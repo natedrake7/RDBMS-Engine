@@ -659,6 +659,10 @@ namespace DataTypes {
         return precision / 2 + 1 + 1; //+1 for sign and fraction index, +1 for alignment
     }
 
+    double Decimal::ToDouble() const{
+        return std::stod(this->ToString());
+    }
+
     Decimal & Decimal::operator=(const int8_t &right){
         *this = Decimal(right);
         return *this;

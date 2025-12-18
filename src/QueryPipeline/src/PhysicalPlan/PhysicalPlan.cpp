@@ -156,7 +156,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     };
   }
 
-  PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table): table(table) {}
+  PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
+    : table(table), expression(expression) {}
+
+  PhysicalTableScan::~PhysicalTableScan(){
+    delete this->table;
+    delete this->expression;
+  }
 
   ExecutionResult* PhysicalTableScan::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = new ExecutionResult();
@@ -182,6 +188,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource *table, Expressions::Expression *expression, const bool & isClustered)
     : table(table), expression(expression), isClustered(isClustered) {}
+
+  PhysicalIndexScan::~PhysicalIndexScan(){
+    delete this->table;
+    delete this->expression;
+  }
 
   ExecutionResult * PhysicalIndexScan::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = new ExecutionResult();
@@ -211,8 +222,16 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  PhysicalIndexSeek::PhysicalIndexSeek(Statements::DataSource* table, Value& minValue, Value& maxValue)
-    : table(table), minValue(std::move(minValue)), maxValue(std::move(maxValue)) {}
+  PhysicalIndexSeek::PhysicalIndexSeek(
+    Statements::DataSource* table,
+    DataTypes::Indexing::Key& key,
+    Expressions::Expression* expression
+  ) : table(table), expression(expression), key(std::move(key)) {}
+
+  PhysicalIndexSeek::~PhysicalIndexSeek(){
+    delete this->table;
+    delete this->expression;
+  }
 
   ExecutionResult* PhysicalIndexSeek::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = new ExecutionResult();
@@ -223,14 +242,36 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     result->columns = tablePtr->GetConstantColumns();
 
-    DataTypes::Indexing::Key minKey;
-    minKey.InsertKey(DataTypes::Indexing::Key(this->minValue));
+    //select if to use clustered or non clustered index here
+    tablePtr->ClusteredIndexSeek(properties, &result->rows, this->key, this->expression);
 
-    DataTypes::Indexing::Key maxKey;
-    maxKey.InsertKey(DataTypes::Indexing::Key(this->maxValue));
+    return result;
+  }
+
+  PhysicalIndexSeekRange::PhysicalIndexSeekRange(
+    Statements::DataSource* table,
+    DataTypes::Indexing::Key& minKey,
+    DataTypes::Indexing::Key& maxKey,
+    Expressions::Expression* expression
+  )
+    : table(table), expression(expression), minKey(std::move(minKey)), maxKey(std::move(maxKey)) {}
+
+  PhysicalIndexSeekRange::~PhysicalIndexSeekRange(){
+    delete this->table;
+    delete this->expression;
+  }
+
+  ExecutionResult* PhysicalIndexSeekRange::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    auto* result = new ExecutionResult();
+
+    const auto* db = Network::Server::Get().UseDatabase(this->table->databaseId);
+
+    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+    result->columns = tablePtr->GetConstantColumns();
 
     //select if to use clustered or non clustered index here
-    tablePtr->ClusteredIndexSeekRange(properties, &result->rows, minKey, maxKey);
+    tablePtr->ClusteredIndexSeekRange(properties, &result->rows, this->minKey, this->maxKey, this->expression);
 
     return result;
   }
@@ -314,7 +355,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     auto* result = child->Execute(properties);
 
     if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
-      || dynamic_cast<PhysicalIndexSeek*>(this->child) != nullptr)
+      || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr)
       return result;
 
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);

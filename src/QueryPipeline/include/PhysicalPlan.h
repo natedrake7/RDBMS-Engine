@@ -122,11 +122,12 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalTableScan final : public ExecutionNode{
     Statements::DataSource* table;
+    Expressions::Expression* expression;
     DatabaseEngine::ScanState state;
 
     public:
-      explicit PhysicalTableScan(Statements::DataSource* table);
-      ~PhysicalTableScan()override = default;
+      explicit PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression);
+      ~PhysicalTableScan()override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
@@ -139,18 +140,39 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     explicit PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered = false);
     explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, const bool& isClustered = false);
-    ~PhysicalIndexScan()override = default;
+    ~PhysicalIndexScan()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
   class PhysicalIndexSeek final : public ExecutionNode{
     Statements::DataSource* table;
-    Value minValue;
-    Value maxValue;
+    Expressions::Expression* expression;
+    DataTypes::Indexing::Key key;
+
+  public:
+    explicit PhysicalIndexSeek(
+      Statements::DataSource* table,
+      DataTypes::Indexing::Key& key,
+      Expressions::Expression* expression
+    );
+    ~PhysicalIndexSeek()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
+  class PhysicalIndexSeekRange final : public ExecutionNode{
+    Statements::DataSource* table;
+    Expressions::Expression* expression;
+    DataTypes::Indexing::Key minKey;
+    DataTypes::Indexing::Key maxKey;
 
     public:
-      explicit PhysicalIndexSeek(Statements::DataSource* table, Value& minValue, Value& maxValue);
-      ~PhysicalIndexSeek()override = default;
+      explicit PhysicalIndexSeekRange(
+        Statements::DataSource* table,
+        DataTypes::Indexing::Key& minKey,
+        DataTypes::Indexing::Key& maxKey,
+        Expressions::Expression* expression
+      );
+      ~PhysicalIndexSeekRange()override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 

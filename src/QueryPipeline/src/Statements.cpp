@@ -1,6 +1,6 @@
 #include "../include/Statements.h"
 
-#include "../include/Constants.h"
+#include "../include/PipelineConstants.h"
 #include "../../DatabaseEngine/include/Database.h"
 #include "../../Systemic/include/Coercions.h"
 #include "../../Systemic/include/Functions/StringFunctions.h"
@@ -80,7 +80,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Security::Permission DeclareVariableStatement::RequiredPermissions() const {
+  constexpr Security::Permission DeclareVariableStatement::RequiredPermissions()const {
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
@@ -126,7 +126,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Security::Permission SetVariableStatement::RequiredPermissions() const {
+  constexpr Security::Permission SetVariableStatement::RequiredPermissions() const {
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
@@ -164,7 +164,7 @@ namespace QueryPipeline::Statements {
     return {Errors::ValidationError::Ok,  ""};
   }
 
-  Security::Permission CreateUserStatement::RequiredPermissions() const{
+  constexpr Security::Permission CreateUserStatement::RequiredPermissions() const{
       return Constants::ADMIN_PERMISSIONS;
   }
 
@@ -189,7 +189,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Security::Permission GrantRoleStatement::RequiredPermissions() const{
+  constexpr Security::Permission GrantRoleStatement::RequiredPermissions() const{
     return Constants::ADMIN_PERMISSIONS;
   }
 
@@ -223,12 +223,12 @@ namespace QueryPipeline::Statements {
     delete this->where.expression;
   }
 
-  Security::Permission DeleteStatement::RequiredPermissions() const{
+  constexpr Security::Permission DeleteStatement::RequiredPermissions() const{
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
   JoinStatement::JoinStatement() {
-    this->type = Constants::JoinType::Inner;
+    this->type = JoinType::Inner;
     this->table = nullptr;
     this->expression = nullptr;
   }
@@ -254,11 +254,15 @@ namespace QueryPipeline::Statements {
     return this->type == JoinType::Inner;
   }
 
+  bool JoinStatement::IsFullOuterJoin() const{
+    return this->type == JoinType::Full;
+  }
+
   LogicalPlan * JoinStatement::ToLogical(){
     return new LogicalTableScan(this->table, nullptr);
   }
 
-  Security::Permission JoinStatement::RequiredPermissions() const{
+  constexpr Security::Permission JoinStatement::RequiredPermissions() const{
     return Constants::DB_READER_PERMISSIONS;
   }
 
@@ -528,7 +532,7 @@ namespace QueryPipeline::Statements {
     return new LogicalTableCreate(this->sessionId, this->table, this->columns, this->primaryKey, constraintName);
   }
 
-  Security::Permission CreateTableStatement::RequiredPermissions() const{
+  constexpr Security::Permission CreateTableStatement::RequiredPermissions() const{
     return Constants::DB_OWNER_PERMISSIONS;
   }
 
@@ -808,7 +812,7 @@ namespace QueryPipeline::Statements {
     delete this->where.expression;
   }
 
-  Security::Permission SelectStatement::RequiredPermissions() const{
+  constexpr Security::Permission SelectStatement::RequiredPermissions() const{
     return Constants::DB_READER_PERMISSIONS;
   }
 
@@ -829,7 +833,7 @@ namespace QueryPipeline::Statements {
 
   void CreateDbStatement::CleanUp(){}
 
-  Security::Permission CreateDbStatement::RequiredPermissions() const{
+  constexpr Security::Permission CreateDbStatement::RequiredPermissions() const{
     return Constants::ADMIN_PERMISSIONS;
   }
 
@@ -855,7 +859,7 @@ namespace QueryPipeline::Statements {
     return nullptr;
   }
 
-  Security::Permission DropDbStatement::RequiredPermissions() const{
+  constexpr Security::Permission DropDbStatement::RequiredPermissions() const{
     return Constants::ADMIN_PERMISSIONS;
   }
 
@@ -882,7 +886,7 @@ namespace QueryPipeline::Statements {
 
   void UseDatabaseStatement::CleanUp(){}
 
-  Security::Permission UseDatabaseStatement::RequiredPermissions() const{
+  constexpr Security::Permission UseDatabaseStatement::RequiredPermissions() const{
     return Constants::GUEST_PERMISSIONS;
   }
 
@@ -1105,7 +1109,7 @@ namespace QueryPipeline::Statements {
     delete this->table;
   }
 
-  Security::Permission InsertStatement::RequiredPermissions() const{
+  constexpr Security::Permission InsertStatement::RequiredPermissions() const{
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
@@ -1124,7 +1128,7 @@ namespace QueryPipeline::Statements {
     return new LogicalSchemaCreate(this->sessionId, this->databaseId, this->name);
   }
 
-  Security::Permission CreateSchemaStatement::RequiredPermissions() const{
+  constexpr Security::Permission CreateSchemaStatement::RequiredPermissions() const{
     return Constants::DB_OWNER_PERMISSIONS;
   }
 
@@ -1241,7 +1245,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     delete this->where.expression;
   }
 
-  Security::Permission UpdateStatement::RequiredPermissions() const{
+  constexpr Security::Permission UpdateStatement::RequiredPermissions() const{
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
@@ -1289,7 +1293,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     delete this->table;
   }
 
-  Security::Permission CreateIndexStatement::RequiredPermissions() const{
+  constexpr Security::Permission CreateIndexStatement::RequiredPermissions() const{
     return Constants::DB_OWNER_PERMISSIONS;
   }
 
@@ -1469,7 +1473,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     delete this->table;
   }
 
-  Security::Permission AlterTableStatement::RequiredPermissions() const{
+  constexpr Security::Permission AlterTableStatement::RequiredPermissions() const{
     return Constants::DB_OWNER_PERMISSIONS;
   }
 
@@ -1913,12 +1917,13 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
         continue;
 
       if (columnExistsOnStatement) {
-        os << column->alias << " is ambigious";
+        os << column->alias << " is ambiguous";
         return {Errors::ValidationError::Error, os.str()};
       }
 
       columnExistsOnStatement = true;
 
+      column->tableId = columnHeader.tableId;
       column->columnId = columnHeader.id;
       column->returnType = static_cast<DataType>(columnHeader.dataType);
       column->index = columnHeader.ordinalPosition;

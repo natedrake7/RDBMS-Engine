@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../Constants.h"
+#include "../PipelineConstants.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataTypes/Guid.h"
 #include "../../../Systemic/include/Errors.h"
