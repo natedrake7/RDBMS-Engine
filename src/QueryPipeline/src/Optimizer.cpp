@@ -482,7 +482,7 @@ namespace QueryPipeline {
       candidate.analyzeInfo = std::move(analyzeResults);
       candidate.conjunctions = std::move(conjunctions);
       candidate.matchingColumns = static_cast<int>(candidate.analyzeInfo.size());
-      candidate.estimatedCost = CostEstimator::EstimateCost(candidate.analyzeInfo, columnStats, tableStatistics);
+      candidate.estimatedCost = CostEstimator::EstimateCost(index, candidate.analyzeInfo, columnStats, tableStatistics);
 
       candidates.push_back(candidate);
     }
