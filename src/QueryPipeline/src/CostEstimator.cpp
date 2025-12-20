@@ -114,12 +114,15 @@ namespace QueryPipeline{
 
         const auto averageRowsPerBucket = static_cast<double>(tableStats.rowCount) / static_cast<double>(NUMBER_OF_HISTOGRAM_BUCKETS);
 
+        //is equality
         if (!range.hasRange){
-            const auto bucketIndex = CostEstimator::FindBucketForValue(histograms, range.start);
-
-            const auto& bucket = histograms[bucketIndex];
-
-            return CostEstimator::EstimateEqualSelectivityByHistograms(range, bucket);
+            return static_cast<double>(1.0 / static_cast<long double>(columnStats.distinctCount));
+            //
+            // const auto bucketIndex = CostEstimator::FindBucketForValue(histograms, range.start);
+            //
+            // const auto& bucket = histograms[bucketIndex];
+            //
+            // return CostEstimator::EstimateEqualSelectivityByHistograms(range, bucket);
         }
 
         if (hasStart && hasEnd){
@@ -174,7 +177,7 @@ namespace QueryPipeline{
             info.bucketIndex = bucketIndex;
             info.bucketSize = static_cast<int>(averageRowsPerBucket);
             info.totalRows = tableStats.rowCount;
-            info.value = &range.start;
+            info.value = &range.end;
             info.CalculatePreviousRows();
 
             return CostEstimator::EstimateRangeEndSelectivityByHistograms(bucket, info);
