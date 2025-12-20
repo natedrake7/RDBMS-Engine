@@ -13,7 +13,9 @@ namespace QueryPipeline::PipelineConstants {
 
   static constexpr double RANDOM_PAGE_COST = 4.0;
   static constexpr double SEQUENTIAL_PAGE_COST = 1.0;
-  static constexpr double CPU_COST = 0.01;
+  static constexpr double CPU_COST_PER_ROW = 0.01;
+  static constexpr double LOOKUP_COST_PER_ROW = RANDOM_PAGE_COST;
+  static constexpr double INDEX_SEEK_COST = 0.1;
 
   static Dictionary<std::string, JoinType> JoinTypeDictionary{
     {"inner", JoinType::Inner},

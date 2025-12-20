@@ -1,8 +1,10 @@
 ﻿#include "../include/CostEstimator.h"
 
+#include <cmath>
 #include "Optimizer.h"
 #include "PipelineConstants.h"
 #include "../../Systemic/include/Headers.h"
+#include "Managers/StatisticsManager.h"
 #include "SystemDatabases/SystemCatalog.h"
 
 namespace QueryPipeline{
@@ -219,6 +221,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateCost(
+        const Headers::IndexHeader& indexHeader,
         const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
         const Headers::ColumnStatistics& columnStats,
         const Headers::TableStatistics& tableStats
@@ -230,15 +233,34 @@ namespace QueryPipeline{
         const auto& firstIndexColumnResult = analyzeResults.front();
         const auto& range = firstIndexColumnResult.range;
 
+        //get indexStats and account for the depth of the tree in the cost
+        const auto indexStats = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(indexHeader.id);
+
+        //TODO fix make sure index stats are available and cached by better key
+        const Headers::IndexStatistics* indexStatistic = nullptr;
+        for (const auto& stats : indexStats){
+            if (stats.indexId != indexHeader.id)
+                continue;
+
+            indexStatistic = &stats;
+            break;
+        }
+
+        if (indexStatistic == nullptr)
+            return 1.0;
+
         const auto selectivity = CostEstimator::EstimateSelectivity(range, columnStats, tableStats);
 
         const auto estimatedRows = static_cast<double>(tableStats.rowCount) * selectivity;
 
-        auto cost = estimatedRows * PipelineConstants::CPU_COST;
+        auto cost = indexStatistic->depth * PipelineConstants::SEQUENTIAL_PAGE_COST;
 
         cost += estimatedRows * PipelineConstants::SEQUENTIAL_PAGE_COST;
 
-        cost += estimatedRows * PipelineConstants::RANDOM_PAGE_COST;
+        if (!indexHeader.isClustered)
+            cost += estimatedRows * PipelineConstants::RANDOM_PAGE_COST;
+
+        cost += estimatedRows * PipelineConstants::CPU_COST_PER_ROW;
 
         return cost;
     }

@@ -90,6 +90,7 @@ namespace QueryPipeline{
         );
     public:
         [[nodiscard]] static double EstimateCost(
+            const Headers::IndexHeader& indexHeader,
             const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
             const Headers::ColumnStatistics& columnStats,
             const Headers::TableStatistics& tableStats
