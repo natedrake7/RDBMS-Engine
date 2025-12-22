@@ -77,11 +77,11 @@ namespace QueryPipeline {
 
       const auto tableStats = DatabaseEngine::StatisticsManager::Get().GetTableStatistics(this->table->tableId);
 
-    //Small table use heap Scan
+      //Small table use heap Scan
       if (tableStats.rowCount < PipelineConstants::SMALL_TABLE)
         return new PhysicalPlan::PhysicalTableScan(this->table, this->expression);
 
-      auto result = Optimizer::DetermineIndexSeekAnalyze(indexes, this->expression, tableStats);
+      auto result = Optimizer::PerformIndexAnalysis(indexes, this->expression, tableStats);
 
       //scan the first index
       if (!result.canSeek)

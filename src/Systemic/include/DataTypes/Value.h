@@ -44,9 +44,13 @@ class Value {
     static Value PerformDecimalSubtraction(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
 
     static std::tuple<bool, Value> PerformNullEqualityComparison(const Value& lhs, const Value& rhs);
+    static std::tuple<bool, Value> PerformNullGreaterComparison(const Value& lhs, const Value& rhs);
+    static std::tuple<bool, Value> PerformNullGreaterEqualComparison(const Value& lhs, const Value& rhs);
+    static std::tuple<bool, Value> PerformNullLessComparison(const Value& lhs, const Value& rhs);
+    static std::tuple<bool, Value> PerformNullLessEqualComparison(const Value& lhs, const Value& rhs);
     static std::tuple<bool, Value> PerformNullInEqualityComparison(const Value& lhs, const Value& rhs);
 
-    long double InterpolateString() const;
+    [[nodiscard]] long double InterpolateString() const;
 
     public:
         Value();

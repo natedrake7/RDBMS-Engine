@@ -13,13 +13,11 @@ namespace QueryPipeline{
         this->bucketIndex = 0;
         this->bucketSize = 0;
         this->previousRows = 0;
-        this->totalRows = 0;
+        this->totalTableRows = 0;
     }
 
     void CostEstimator::HistogramSelectivityEstimate::CalculatePreviousRows(){
-        this->previousRows = this->bucketIndex > 0
-            ? this->bucketSize * (this->bucketIndex - 1)
-            : 0;
+        this->previousRows = this->bucketSize * this->bucketIndex;
     }
 
     double CostEstimator::InterpolateBucket(const Headers::ColumnHistograms& bucket, const Value& value){
@@ -70,9 +68,9 @@ namespace QueryPipeline{
     ){
         const auto fraction = CostEstimator::InterpolateBucket(histogram, *info.value);
 
-        const auto inBucketTouchedRows = info.bucketSize * (1.0 - fraction);
+        const auto nonTouchedBucketRows = info.bucketSize * fraction;
 
-        return inBucketTouchedRows + (info.totalRows - info.previousRows) / static_cast<double>(info.totalRows);
+        return (info.totalTableRows - nonTouchedBucketRows - info.previousRows) / static_cast<double>(info.totalTableRows);
     }
 
     double CostEstimator::EstimateRangeEndSelectivityByHistograms(
@@ -83,7 +81,7 @@ namespace QueryPipeline{
 
         const auto inBucketTouchedRows = info.bucketSize * fraction;
 
-        return (inBucketTouchedRows + info.previousRows) / static_cast<double>(info.totalRows);
+        return (inBucketTouchedRows + info.previousRows) / static_cast<double>(info.totalTableRows);
     }
 
     double CostEstimator::EstimateRangeSelectivityByHistograms(
@@ -92,11 +90,15 @@ namespace QueryPipeline{
         const Headers::ColumnHistograms& endHistogram,
         const HistogramSelectivityEstimate& endInfo
     ){
-        const auto rangeStartEstimatedRows = CostEstimator::EstimateRangeStartSelectivityByHistograms(startHistogram, startInfo);
+        const auto fractionStart = CostEstimator::InterpolateBucket(startHistogram, *startInfo.value);
+        const auto rowsBeforeStart = startInfo.previousRows + (startInfo.bucketSize * fractionStart);
 
-        const auto rangeEndEstimatedRows = CostEstimator::EstimateRangeEndSelectivityByHistograms(endHistogram, endInfo);
+        const auto fractionEnd = CostEstimator::InterpolateBucket(endHistogram, *endInfo.value);
+        const auto rowsBeforeEnd = endInfo.previousRows + (endInfo.bucketSize * fractionEnd);
 
-        return rangeEndEstimatedRows - rangeStartEstimatedRows;
+        const auto selectivity = (startInfo.totalTableRows - rowsBeforeStart - rowsBeforeEnd) / static_cast<double>(startInfo.totalTableRows);
+
+        return std::max(0.0, selectivity);
     }
 
     double CostEstimator::EstimateSelectivityByHistograms(
@@ -132,14 +134,14 @@ namespace QueryPipeline{
             auto startInfo = HistogramSelectivityEstimate();
             startInfo.bucketIndex = startBucketIndex;
             startInfo.bucketSize = static_cast<int>(averageRowsPerBucket);
-            startInfo.totalRows = tableStats.rowCount;
+            startInfo.totalTableRows = tableStats.rowCount;
             startInfo.value = &range.start;
             startInfo.CalculatePreviousRows();
 
             auto endInfo = HistogramSelectivityEstimate();
             endInfo.bucketIndex = endBucketIndex;
             endInfo.bucketSize = static_cast<int>(averageRowsPerBucket);
-            endInfo.totalRows = tableStats.rowCount;
+            endInfo.totalTableRows = tableStats.rowCount;
             endInfo.value = &range.end;
             endInfo.CalculatePreviousRows();
 
@@ -155,7 +157,7 @@ namespace QueryPipeline{
             auto info = HistogramSelectivityEstimate();
             info.bucketIndex = bucketIndex;
             info.bucketSize = static_cast<int>(averageRowsPerBucket);
-            info.totalRows = tableStats.rowCount;
+            info.totalTableRows = tableStats.rowCount;
             info.value = &range.start;
             info.CalculatePreviousRows();
 
@@ -170,7 +172,7 @@ namespace QueryPipeline{
             auto info = HistogramSelectivityEstimate();
             info.bucketIndex = bucketIndex;
             info.bucketSize = static_cast<int>(averageRowsPerBucket);
-            info.totalRows = tableStats.rowCount;
+            info.totalTableRows = tableStats.rowCount;
             info.value = &range.end;
             info.CalculatePreviousRows();
 

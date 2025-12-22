@@ -648,6 +648,70 @@ std::tuple<bool, Value> Value::PerformNullEqualityComparison(const Value &lhs, c
     return std::make_tuple(false, Value(nullptr, 0));
 }
 
+std::tuple<bool, Value> Value::PerformNullGreaterComparison(const Value& lhs, const Value& rhs){
+    const auto& isLeftNull = lhs.IsNull();
+    const auto& isRightNull = rhs.IsNull();
+
+    if (isLeftNull && isRightNull)
+        return std::make_tuple(true, Value(false, 0));
+
+    if (isLeftNull && !isRightNull)
+        return std::make_tuple(true, Value(false, 0));
+
+    if (!isLeftNull && isRightNull)
+        return std::make_tuple(true, Value(true, 0));
+
+    return std::make_tuple(false, Value::Null());
+}
+
+std::tuple<bool, Value> Value::PerformNullGreaterEqualComparison(const Value& lhs, const Value& rhs){
+    const auto& isLeftNull = lhs.IsNull();
+    const auto& isRightNull = rhs.IsNull();
+
+    if (isLeftNull && isRightNull)
+        return std::make_tuple(true, Value(true, 0));
+
+    if (isLeftNull && !isRightNull)
+        return std::make_tuple(true, Value(false, 0));
+
+    if (!isLeftNull && isRightNull)
+        return std::make_tuple(true, Value(true, 0));
+
+    return std::make_tuple(false, Value::Null());
+}
+
+std::tuple<bool, Value> Value::PerformNullLessComparison(const Value& lhs, const Value& rhs){
+    const auto& isLeftNull = lhs.IsNull();
+    const auto& isRightNull = rhs.IsNull();
+
+    if (isLeftNull && isRightNull)
+        return std::make_tuple(true, Value(false, 0));
+
+    if (isLeftNull && !isRightNull)
+        return std::make_tuple(true, Value(true, 0));
+
+    if (!isLeftNull && isRightNull)
+        return std::make_tuple(true, Value(false, 0));
+
+    return std::make_tuple(false, Value::Null());
+}
+
+std::tuple<bool, Value> Value::PerformNullLessEqualComparison(const Value& lhs, const Value& rhs){
+    const auto& isLeftNull = lhs.IsNull();
+    const auto& isRightNull = rhs.IsNull();
+
+    if (isLeftNull && isRightNull)
+        return std::make_tuple(true, Value(true, 0));
+
+    if (isLeftNull && !isRightNull)
+        return std::make_tuple(true, Value(true, 0));
+
+    if (!isLeftNull && isRightNull)
+        return std::make_tuple(true, Value(false, 0));
+
+    return std::make_tuple(false, Value::Null());
+}
+
 std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs, const Value &rhs){
     if (lhs.IsNull())
         return std::make_tuple(true, Value(!rhs.IsNull(), 0));
@@ -772,7 +836,7 @@ Value operator*(const Value &lhs, const Value &rhs){
 }
 
 Value operator<(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, output] = Value::PerformNullInEqualityComparison(lhs, rhs);
+    const auto& [returnOutput, output] = Value::PerformNullLessComparison(lhs, rhs);
     if (returnOutput)
         return output;
 
@@ -811,9 +875,9 @@ Value operator>(const Value &lhs, const Value &rhs){
 }
 
 Value operator<=(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, _] = Value::PerformNullEqualityComparison(lhs, rhs);
+    const auto& [returnOutput, value] = Value::PerformNullLessEqualComparison(lhs, rhs);
     if (returnOutput)
-        return Value(true, 0);
+        return value;
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
@@ -845,9 +909,9 @@ Value operator<=(const Value &lhs, const Value &rhs){
 }
 
 Value operator>=(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, _] = Value::PerformNullEqualityComparison(lhs, rhs);
+    const auto& [returnOutput, value] = Value::PerformNullGreaterEqualComparison(lhs, rhs);
     if (returnOutput)
-        return Value(true, 0);
+        return value;
 
     switch (Value::PromoteType(lhs.type, rhs.type)) {
         case DataType::TinyInt:
@@ -921,7 +985,6 @@ Value operator==(const Value &lhs, const Value &rhs){
 
 Value operator!=(const Value &lhs, const Value &rhs){
     const auto& [returnOutput, output] = Value::PerformNullInEqualityComparison(lhs, rhs);
-
     if (returnOutput)
         return output;
 

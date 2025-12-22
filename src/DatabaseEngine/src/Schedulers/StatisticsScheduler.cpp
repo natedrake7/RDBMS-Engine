@@ -41,47 +41,47 @@ namespace DatabaseEngine {
   if (totalRows < 10000)
    return false;
 
-   const auto rowsPerBucket = static_cast<int>(std::ceil(static_cast<float>(totalRows) / static_cast<float>(NUMBER_OF_HISTOGRAM_BUCKETS)));
-   int currentBucketRows = 0;
+  const auto rowsPerBucket = static_cast<int>(std::ceil(static_cast<float>(totalRows) / static_cast<float>(NUMBER_OF_HISTOGRAM_BUCKETS)));
+  int currentBucketRows = 0;
 
-   Value bucketStart = sortedValues.begin()->first;
-   const auto& lastValue = sortedValues.rbegin()->first;
+  Value bucketStart = sortedValues.begin()->first;
+  const auto& lastValue = sortedValues.rbegin()->first;
 
-   int counter = 0;
-   int distinctCountPerBucket = 0;
-   const bool newHistograms = histograms.empty();
-   for (const auto& [value, freq] : sortedValues) {
-     currentBucketRows += freq;
-     distinctCountPerBucket++;
+  int counter = 0;
+  int distinctCountPerBucket = 0;
+  for (const auto& [value, freq] : sortedValues) {
+    currentBucketRows += freq;
+    distinctCountPerBucket++;
 
     if (currentBucketRows < rowsPerBucket && (value != lastValue).GetBool())
-      continue;
+     continue;
 
-      if (newHistograms){
-        auto histogram = Headers::ColumnHistograms(
-            columnStatistics.columnId,
-            bucketStart,
-    value,
-   currentBucketRows,
-           distinctCountPerBucket
-        );
-        histograms.push_back(std::move(histogram));
-      }
-      else
-      {
-        auto& histogram = histograms[counter];
+   //insert
+    if (histograms.size() <= counter){
+      auto histogram = Headers::ColumnHistograms(
+          columnStatistics.columnId,
+          bucketStart,
+  value,
+ currentBucketRows,
+         distinctCountPerBucket
+      );
+      histograms.push_back(std::move(histogram));
+    } //or update
+    else
+    {
+      auto& histogram = histograms[counter];
 
-        histogram.rangeStart = bucketStart;
-        histogram.rangeEnd = value;
-        histogram.rowCount = currentBucketRows;
-        histogram.distinctCount = currentBucketRows;
-      }
+      histogram.rangeStart = bucketStart;
+      histogram.rangeEnd = value;
+      histogram.rowCount = currentBucketRows;
+      histogram.distinctCount = currentBucketRows;
+    }
 
-      counter++;
-      distinctCountPerBucket = 0;
-      bucketStart = value;
-      currentBucketRows = 0;
-   }
+    counter++;
+    distinctCountPerBucket = 0;
+    bucketStart = value;
+    currentBucketRows = 0;
+  }
 
    return true;
  }

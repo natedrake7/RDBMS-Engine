@@ -239,7 +239,7 @@ namespace QueryPipeline {
         const std::vector<Statements::JoinStatement*>& joins
       );
 
-      [[nodiscard]] static Range DetermineIndexSeekAnalyze(
+      [[nodiscard]] static Range PerformIndexAnalysis(
         std::vector<Headers::IndexHeader>& indexes,
         Expressions::Expression* expression,
         const Headers::TableStatistics& tableStatistics

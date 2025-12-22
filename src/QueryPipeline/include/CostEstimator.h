@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "../../Systemic/include/DataTypes/DataTypes.h"
+
 class Value;
 namespace Headers {
     struct ColumnHistograms;
@@ -20,12 +22,11 @@ namespace QueryPipeline{
     struct SeekRange;
     struct IndexSeekColumnAnalysisResults;
 
-
     class CostEstimator final{
         struct HistogramSelectivityEstimate{
             int previousRows;
             int bucketSize;
-            int64_t totalRows;
+            BigInt totalTableRows;
             int bucketIndex;
             const Value* value;
 

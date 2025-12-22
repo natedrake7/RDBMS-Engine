@@ -182,8 +182,10 @@ namespace QueryPipeline {
     bool& canSeek,
     const bool& inclusive
   ){
-    if ((predicateValue <= range.start).GetBool() && range.hasRange)
-      return;
+    if ((predicateValue <= range.start).GetBool()
+      && !range.start.IsNull()
+      && range.hasRange
+    ) return;
 
     range.start = predicateValue;
     range.startInclusive = inclusive;
@@ -197,9 +199,10 @@ namespace QueryPipeline {
     bool& canSeek,
     const bool& inclusive
   ){
-
-    if ((predicateValue >= range.end).GetBool() && range.hasRange)
-      return;
+    if ((predicateValue >= range.end).GetBool()
+      && !range.end.IsNull()
+      && range.hasRange
+    ) return;
 
     range.end = predicateValue;
     range.endInclusive = inclusive;
@@ -476,7 +479,7 @@ namespace QueryPipeline {
     return result;
   }
 
-   Range Optimizer::DetermineIndexSeekAnalyze(
+   Range Optimizer::PerformIndexAnalysis(
     std::vector<Headers::IndexHeader>& indexes,
     Expressions::Expression* expression,
     const Headers::TableStatistics& tableStatistics
