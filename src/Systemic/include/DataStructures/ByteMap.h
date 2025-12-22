@@ -2,8 +2,6 @@
 #include <vector>
 #include "../../../DatabaseEngine/include/PipelineConstants.h"
 
-using namespace std;
-
 namespace ByteMaps {
 
     static constexpr byte_t ALLOCATION_MASK = 0x80;  // bit 7
@@ -13,7 +11,7 @@ namespace ByteMaps {
     static constexpr int TYPE_SHIFT = 3;  // shift left 3 to reach bits 3–6
 
     class ByteMap {
-        vector<byte_t> data;
+        std::vector<byte_t> data;
 
     protected:
         void CheckIndex(const byte_map_pos_t& pos) const;
@@ -32,8 +30,8 @@ namespace ByteMaps {
         void SetFreeSpace(const byte_map_pos_t& pos, const byte_t& percentage);
         [[nodiscard]] page_size_t GetFreeSpace(const byte_map_pos_t& pos) const;
 
-        void GetDataFromFile(const vector<char> &otherData, page_offset_t &offset, const page_size_t& byteMapSize);
-        void WriteDataToFile(fstream* filePtr);
+        void GetDataFromFile(const std::vector<char> &otherData, page_offset_t &offset, const page_size_t& byteMapSize);
+        void WriteDataToFile(fstream* filePtr) const;
         void Print() const;
 
         void SetByte(const byte_map_pos_t& position, const byte_t& value);

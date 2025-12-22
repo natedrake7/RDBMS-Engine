@@ -4,6 +4,12 @@
 #include <string>
 #include "../DataStructures/Dictionary.h"
 
+typedef uint8_t UnsignedTinyInt;
+typedef int8_t TinyInt;
+typedef int16_t SmallInt;
+typedef int32_t Int;
+typedef int64_t BigInt;
+
 typedef uint8_t byte_t;
 
 // block types

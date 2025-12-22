@@ -11,7 +11,7 @@ namespace DatabaseEngine {
     return instance;
   }
 
-  Headers::TableStatistics StatisticsManager::GetTableStatistics(const int32_t &tableId) {
+  Headers::TableStatistics StatisticsManager::GetTableStatistics(const Int &tableId) {
     MultiThreading::ReaderGuard lock(&this->tableStatisticsLatch);
 
     Headers::TableStatistics stats;
@@ -30,14 +30,19 @@ namespace DatabaseEngine {
     return catalogStats;
   }
 
-  Headers::ColumnStatistics StatisticsManager::GetColumnStatistics(const int32_t &columnId, const DataType& type) {
+  Headers::ColumnStatistics StatisticsManager::GetColumnStatistics(
+    const Int& tableId,
+    const Int &columnId
+  ) {
     MultiThreading::ReaderGuard lock(&this->columnStatisticsLatch);
 
     Headers::ColumnStatistics stats;
     if (this->columnStatisticsCache.TryGetValue(columnId, stats))
       return stats;
 
-    auto catalogStats = SystemCatalog::Get().SelectColumnStatisticsById(columnId, type);
+    auto columnHeader = SystemCatalog::Get().SelectColumnById(tableId, columnId);
+
+    auto catalogStats = SystemCatalog::Get().SelectColumnStatisticsById(columnId, static_cast<DataType>(columnHeader.dataType));
 
     if (catalogStats.columnId == INVALID_TABLE_ID)
       return stats;
@@ -49,7 +54,7 @@ namespace DatabaseEngine {
     return catalogStats;
   }
 
-  std::vector<Headers::IndexStatistics> StatisticsManager::GetIndexStatistics(const int32_t &tableId) {
+  std::vector<Headers::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int &tableId) {
     MultiThreading::ReaderGuard lock(&this->indexStatisticsLatch);
 
     std::vector<Headers::IndexStatistics> stats;

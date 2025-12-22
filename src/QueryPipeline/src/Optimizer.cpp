@@ -450,9 +450,6 @@ namespace QueryPipeline {
       if (join->IsFullOuterJoin())
         continue;
 
-      // For INNER, LEFT, and RIGHT joins, we can safely push down predicates
-      // LEFT JOIN: filters left table (always scanned) and right table (only matching rows matter)
-      // RIGHT JOIN: filters right table (always scanned) and left table (only matching rows matter)
       Expressions::Expression* joinRemainingPredicate = nullptr;
       Optimizer::ProcessPredicate(join->expression, joinRemainingPredicate, result.tablePredicatesDictionary);
       join->expression = joinRemainingPredicate;
@@ -476,7 +473,7 @@ namespace QueryPipeline {
       IndexCandidate candidate;
 
       const auto& firstIndexColumn = index.columns.front();
-      const auto& columnStats = DatabaseEngine::StatisticsManager::Get().GetColumnStatistics(firstIndexColumn.columnId, DataType::Int);
+      const auto& columnStats = DatabaseEngine::StatisticsManager::Get().GetColumnStatistics(tableStatistics.tableId, firstIndexColumn.columnId);
 
       candidate.header = index;
       candidate.analyzeInfo = std::move(analyzeResults);

@@ -17,42 +17,10 @@ using json = nlohmann::json;
 namespace Network {
    Server::Server(){
      this->systemCatalog = nullptr;
-     this->versionDb = nullptr;
+     this->versionDatabase = nullptr;
   }
 
   Server::~Server() = default;
-
-  void Server::ReadConfiguration(const std::string &configPath){
-    std::ifstream file(configPath);
-
-    if (!file.is_open())
-      throw std::runtime_error("System Tables file: " + configPath + " could not be opened");
-
-    json jsonFile;
-
-    try {
-      file >> jsonFile;
-    }
-    catch (std::exception &e)
-    {
-      throw std::runtime_error(e.what());
-    }
-
-    this->versionDbName = jsonFile.at("version_db_name");
-    this->versionDbPath = jsonFile.at("version_db_path");
-  }
-
-  void Server::CreateVersionDatabase() {
-    if (this->VersionDbExists()) {
-      this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
-      return;
-    }
-
-    DatabaseEngine::CreateDatabase(this->versionDbName);
-    this->versionDb = new DatabaseEngine::VersionDatabase(this->versionDbName);
-  }
-
-  bool Server::VersionDbExists() const{ return std::filesystem::exists(this->versionDbPath); }
 
   void Server::CreateSystemRoles() {
     const auto roles = this->systemCatalog->InsertSystemRoles();
@@ -85,9 +53,8 @@ namespace Network {
   }
 
   void Server::Initialize(const string &configPath){
-    this->ReadConfiguration(configPath);
-
-    this->CreateVersionDatabase();
+    this->versionDatabase = &DatabaseEngine::VersionDatabase::Get();
+    this->versionDatabase->Initialize(configPath);
 
     this->systemCatalog = &DatabaseEngine::SystemCatalog::Get();
     if (this->systemCatalog->Initialize(configPath)){
@@ -114,7 +81,7 @@ namespace Network {
     const std::string &username,
     const Security::Role *role
   )const{
-    int32_t userId = -1;
+    Int userId = -1;
 
     if (!this->userManager.GrantRole(username, role, userId))
       return {
@@ -127,8 +94,8 @@ namespace Network {
 
   Errors::RuntimeStatus Server::UpdateUserById(
     const DataTypes::Guid& callerSessionId,
-    const int32_t &userId,
-    const int32_t &roleId
+    const Int &userId,
+    const Int &roleId
   )const{
 
       const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
@@ -210,7 +177,7 @@ namespace Network {
     return this->sessionManager.CloseSession(key);
   }
 
-  bool Server::UpdateSession(const DataTypes::Guid &key, const int32_t &databaseId)const{
+  bool Server::UpdateSession(const DataTypes::Guid &key, const Int &databaseId)const{
     return this->sessionManager.UpdateSession(key, databaseId);
   }
 
@@ -237,10 +204,10 @@ namespace Network {
     }
 
     this->systemCatalog->Shutdown();
-    delete this->versionDb;
+    // this->versionDatabase->
   }
 
-  DatabaseEngine::Database* Server::UseDatabase(const int32_t & databaseId, const bool& isServerInitialization){
+  DatabaseEngine::Database* Server::UseDatabase(const Int & databaseId, const bool& isServerInitialization){
     DatabaseEngine::Database *db = nullptr;
 
     if (databaseId == CATALOG_ID)
@@ -268,9 +235,7 @@ namespace Network {
     return db;
   }
 
-  DatabaseEngine::VersionDatabase * Server::GetVersionDatabase() const{ return this->versionDb; }
-
-  const Dictionary<int32_t, DatabaseEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
+  const Dictionary<Int, DatabaseEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
 
   MultiThreading::ReadWriteMutex & Server::GetDatabasesLatch(){ return this->databasesLatch; }
 }

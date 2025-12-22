@@ -119,7 +119,7 @@ namespace QueryPipeline::PhysicalPlan {
     return new ExecutionResult();
   }
 
-  PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const int32_t &databaseId)
+  PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const Int &databaseId)
     : sessionId(sessionId), databaseId(databaseId){}
 
   ExecutionResult * PhysicalUseDatabase::Execute(const DatabaseEngine::ExecutionProperties& properties) {
@@ -138,7 +138,7 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string &schemaName)
+PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int& databaseId, std::string &schemaName)
   : ExecutionNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   ExecutionResult * PhysicalSchemaCreate::Execute(const DatabaseEngine::ExecutionProperties& properties){
@@ -702,7 +702,7 @@ PhysicalInsert::PhysicalInsert(
 
     auto* tablePtr = db->CreateTable(tableId, index, columnsPtrs, &this->primaryKey);
 
-    Dictionary<int, int32_t> columnIdsDict;
+    Dictionary<int, Int> columnIdsDict;
 
     for (const auto& column: this->columns) {
       const auto columnResult =
@@ -752,7 +752,7 @@ PhysicalInsert::PhysicalInsert(
 
     const bool isConstraintEmpty = this->constraintName.empty();
 
-    std::vector<int32_t> primaryKeyColumnIds;
+    std::vector<Int> primaryKeyColumnIds;
 
     for (const auto& column: this->primaryKey.columns) {
       if (isConstraintEmpty)

@@ -159,7 +159,7 @@ namespace DatabaseEngine {
       int columnPos = 0;
       const auto tableId = tableResult.primaryKey.AsInt(1);
 
-      Dictionary<std::string, int32_t> columnIdsDict;
+      Dictionary<std::string, Int> columnIdsDict;
 
       for (auto& column: table.columns) {
         counter++;
@@ -516,14 +516,14 @@ namespace DatabaseEngine {
   Headers::ColumnHistograms SystemCatalog::ToColumnHistograms(const StorageTypes::Row *row, const DataType &columnType) {
     const auto& data = row->GetData();
 
-    return Headers::ColumnHistograms(
+    return Headers::ColumnHistograms{
       data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)]->GetInt(),
        data[static_cast<column_index_t>(SysColumnHistograms::HistogramId)]->GetInt(),
       Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetRawData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)]->GetSize(), columnType),
       Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetRawData(), data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)]->GetSize(), columnType),
       data[static_cast<column_index_t>(SysColumnHistograms::RowCount)]->GetInt(),
       data[static_cast<column_index_t>(SysColumnHistograms::DistinctCount)]->GetInt()
-    );
+    };
   }
 
   Headers::IndexStatistics SystemCatalog::ToIndexStatistics(const DatabaseEngine::StorageTypes::Row *row) {
@@ -692,7 +692,7 @@ namespace DatabaseEngine {
    return roles;
   }
 
-  Security::User* SystemCatalog::InsertSystemUsers(const std::string& hashedPassword, const int32_t& defaultRoleId)const{
+  Security::User* SystemCatalog::InsertSystemUsers(const std::string& hashedPassword, const Int& defaultRoleId)const{
     const auto admin = std::string(Constants::ADMIN_NAME);
 
     const auto result =
@@ -747,7 +747,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus  SystemCatalog::InsertSchemaToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t &databaseId,
+    const Int &databaseId,
     const string &schemaName,
     const string &user,
     const int& version,
@@ -776,8 +776,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus  SystemCatalog::InsertTableToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t & databaseId,
-    const int32_t & schemaId,
+    const Int & databaseId,
+    const Int & schemaId,
     const string& tableName,
     const int16_t& ordinalPosition,
     const bool& isSystem,
@@ -812,7 +812,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertColumnToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t & tableId,
+    const Int & tableId,
     const string &columnName,
     const DataType &columnType,
     const int &columnSize,
@@ -863,7 +863,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus  SystemCatalog::InsertIndexToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t & tableId,
+    const Int & tableId,
     const string &indexName,
     const bool &isClustered,
     const bool &isDisabled,
@@ -896,8 +896,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertIndexColumnToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t & indexId,
-    const int32_t & columnId,
+    const Int & indexId,
+    const Int & columnId,
     const int16_t & ordinalPosition,
     const bool & isIncluded,
     const int& version,
@@ -924,11 +924,11 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertConstraintToMasterDb(
       const ExecutionProperties& properties,
-      const int32_t & tableId,
+      const Int & tableId,
       const string & constraintName,
       const Headers::ConstraintType & constraintType,
       const bool & isDisabled,
-      const int32_t *constraintIndexId,
+      const Int *constraintIndexId,
       const string & user,
       const int& version,
       const bool& isDeleted
@@ -966,9 +966,9 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertConstraintColumnToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t & constraintId,
-    const int32_t & columnId,
-    const int32_t & ordinalPosition,
+    const Int & constraintId,
+    const Int & columnId,
+    const Int & ordinalPosition,
     const int& version,
     const bool& isDeleted
   ) const{
@@ -994,13 +994,13 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertIdentityColumnToMasterDb(
       const ExecutionProperties& properties,
-      const int32_t & tableId,
-      const int32_t & columnId,
-      const int32_t & seedValue,
-      const int32_t & increment,
-      const int32_t & lastValue,
+      const Int & tableId,
+      const Int & columnId,
+      const Int & seedValue,
+      const Int & increment,
+      const Int & lastValue,
       const bool & isCached,
-      const int32_t & cacheBlock,
+      const Int & cacheBlock,
       const int& version,
       const bool& isDeleted
   ) const{
@@ -1030,7 +1030,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertDefaultValuesToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t &columnId,
+    const Int &columnId,
     const Value &value,
     const int &version,
     const bool &isDeleted) const{
@@ -1058,10 +1058,10 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertTableStatisticsToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t &tableId,
+    const Int &tableId,
     const int64_t& rowCount,
-    const int32_t& rowSize,
-    const int32_t& pageCount
+    const Int& rowSize,
+    const Int& pageCount
   ) const{
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
@@ -1083,7 +1083,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertColumnStatisticsToMasterDb(
     const ExecutionProperties& properties,
-    const int32_t &columnId,
+    const Int &columnId,
     const int64_t &distinctCount,
     const int64_t &nullCount
   ) const{
@@ -1106,10 +1106,10 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertColumnHistogramsToMasterDb(
-    const int32_t &columnId,
+    const Int &columnId,
     const Value &min,
     const Value &max,
-    const int32_t& rowCount,
+    const Int& rowCount,
     const int64_t &distinctCount
   ) const {
 
@@ -1132,8 +1132,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertIndexStatisticsToMasterDb(
     const ExecutionProperties &properties,
-    const int32_t& tableId,
-    const int32_t &indexId,
+    const Int& tableId,
+    const Int &indexId,
     const int64_t &leafPages,
     const int8_t &depth,
     const DataTypes::Decimal &averageFragmentation
@@ -1194,7 +1194,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const ExecutionProperties& properties,
     const std::string &username,
     const std::string &passwordHash,
-    const int32_t &roleId,
+    const Int &roleId,
     const bool& isActive,
     const int &version,
     const bool &isDeleted
@@ -1308,7 +1308,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabase(const std::string &name) c
   return SystemCatalog::ToDatabaseHeader(selectedDatabases[0]);
 }
 
-Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databaseId) const{
+Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int & databaseId) const{
   using namespace StorageTypes;
 
   Table* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
@@ -1325,7 +1325,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
   return SystemCatalog::ToDatabaseHeader(selectedDatabases[0]);
 }
 
-  vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const int32_t& databaseId) const{
+  vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int& databaseId) const{
      auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
      std::vector<const StorageTypes::Row*> selectedSchemas;
 
@@ -1345,7 +1345,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
      return schemas;
   }
 
-  Dictionary<std::string, Headers::SchemaHeader> SystemCatalog::SelectSchemasToDictionary(const int32_t &databaseId) const{
+  Dictionary<std::string, Headers::SchemaHeader> SystemCatalog::SelectSchemasToDictionary(const Int &databaseId) const{
     const auto& schemas = this->SelectSchemas(databaseId);
 
     Dictionary<string, Headers::SchemaHeader> selectedSchemas;
@@ -1356,7 +1356,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return selectedSchemas;
   }
 
-  bool SystemCatalog::SchemaExists(const int32_t &databaseId, const std::string &schema, int* schemaId) const{
+  bool SystemCatalog::SchemaExists(const Int &databaseId, const std::string &schema, int* schemaId) const{
     std::vector<const StorageTypes::Row*> selectedSchemas;
 
     auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
@@ -1388,7 +1388,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return this->SelectTables(databaseHeader.id);
   }
 
-  std::vector<Headers::TableHeader> SystemCatalog::SelectTables(const int32_t & databaseId) const{
+  std::vector<Headers::TableHeader> SystemCatalog::SelectTables(const Int & databaseId) const{
     std::vector<const StorageTypes::Row*> selectedTables;
 
     auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
@@ -1425,12 +1425,12 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
   }
 
   Headers::TableHeader SystemCatalog::SelectTable(
-    const int32_t &databaseId,
+    const Int &databaseId,
     const string &tableName,
     const std::string& schema
   ) const{
 
-    int32_t schemaId = -1;
+    Int schemaId = -1;
     if (!this->SchemaExists(databaseId, schema, &schemaId) && !schema.empty())
       return {};
 
@@ -1460,7 +1460,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return SystemCatalog::ToTableHeader(selectedTables[0]);
   }
 
-  vector<Headers::ConstraintsHeader> SystemCatalog::SelectConstraints(const int32_t & tableId) const{
+  vector<Headers::ConstraintsHeader> SystemCatalog::SelectConstraints(const Int & tableId) const{
     std::vector<const StorageTypes::Row*> selectedConstraints;
     auto* constraintsTable = this->masterDb->OpenTable(CatalogTables::SysConstraints);
 
@@ -1494,7 +1494,23 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return selectedConstraintsHeader;
   }
 
-  vector<Headers::ColumnHeader> SystemCatalog::SelectColumns(const int32_t& tableId) const{
+  Headers::ColumnHeader SystemCatalog::SelectColumnById(const Int& tableId, const Int& columnId) const{
+    std::vector<const StorageTypes::Row*> selectedColumns;
+    auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
+
+    DataTypes::Indexing::Key key;
+    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+
+    sysColumns->ClusteredIndexSeek(this->baseProperties, &selectedColumns, key, nullptr);
+
+    if (selectedColumns.empty())
+      return {};
+
+    return SystemCatalog::ToColumnHeader(selectedColumns.front());
+  }
+
+  vector<Headers::ColumnHeader> SystemCatalog::SelectColumns(const Int& tableId) const{
     std::vector<const StorageTypes::Row*> selectedColumns;
     auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
@@ -1521,7 +1537,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
      return selectedColumnHeaders;
   }
 
-  Dictionary<string, Headers::ColumnHeader> SystemCatalog::SelectColumnsToDictionary(const int32_t& tableId) const{
+  Dictionary<string, Headers::ColumnHeader> SystemCatalog::SelectColumnsToDictionary(const Int& tableId) const{
       const auto columns = this->SelectColumns(tableId);
 
       Dictionary<string, Headers::ColumnHeader> selectedColumns;
@@ -1532,7 +1548,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
       return selectedColumns;
     }
 
-  vector<Headers::IndexHeader> SystemCatalog::SelectIndexes(const int32_t& tableId) const{
+  vector<Headers::IndexHeader> SystemCatalog::SelectIndexes(const Int& tableId) const{
       using namespace StorageTypes;
 
       Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
@@ -1557,7 +1573,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
       return selectedIndexHeaders;
   }
 
-  Headers::IndexHeader SystemCatalog::SelectIndexById(const int32_t & indexId) const{
+  Headers::IndexHeader SystemCatalog::SelectIndexById(const Int & indexId) const{
     using namespace StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
@@ -1581,7 +1597,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return header;
   }
 
-    vector<Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexId(const int32_t & indexId) const{
+    vector<Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexId(const Int & indexId) const{
     using namespace StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
@@ -1609,10 +1625,10 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return indexColumns;
   }
 
-  Dictionary<int32_t, Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexIdToDictionary(const int32_t &indexId) const{
+  Dictionary<Int, Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexIdToDictionary(const Int &indexId) const{
     const auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
 
-    Dictionary<int32_t, Headers::IndexColumnsHeader> indexColumnsDict;
+    Dictionary<Int, Headers::IndexColumnsHeader> indexColumnsDict;
 
     for (const auto& indexColumn : indexColumns)
       indexColumnsDict.Add(indexColumn.columnId, indexColumn);
@@ -1620,7 +1636,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return indexColumnsDict;
   }
 
-  vector<Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableId(const int32_t & tableId) const{
+  vector<Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableId(const Int & tableId) const{
       using namespace StorageTypes;
 
       Table* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
@@ -1648,10 +1664,10 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
       return columns;
   }
 
-  Dictionary<int32_t , Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableIdToDictionary(const int32_t & tableId) const{
+  Dictionary<Int , Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableIdToDictionary(const Int & tableId) const{
     const auto columns = this->SelectIdentityColumnsByTableId(tableId);
 
-    Dictionary<int32_t, Headers::IdentityColumnsHeader> dict;
+    Dictionary<Int, Headers::IdentityColumnsHeader> dict;
 
     for(const auto& column : columns)
         dict.Add(column.columnId, column);
@@ -1659,7 +1675,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return dict;
   }
 
-  vector<Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintId(const int32_t & constraintId) const{
+  vector<Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintId(const Int & constraintId) const{
     using namespace StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
@@ -1687,10 +1703,10 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return constraintColumns;
   }
 
-  Dictionary<int32_t, Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintIdToDictionary(const int32_t &constraintId) const{
+  Dictionary<Int, Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintIdToDictionary(const Int &constraintId) const{
     const auto columns = this->SelectConstraintColumnsByConstraintId(constraintId);
 
-    Dictionary<int32_t, Headers::ConstraintsColumnsHeader> constraintColumns;
+    Dictionary<Int, Headers::ConstraintsColumnsHeader> constraintColumns;
 
     for (const auto& constraint: columns)
       constraintColumns.Add(constraint.columnId, constraint);
@@ -1698,7 +1714,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return constraintColumns;
   }
 
-  Headers::DefaultValuesHeader SystemCatalog::SelectDefaultValueByColumnId(const int32_t &columnId) const{
+  Headers::DefaultValuesHeader SystemCatalog::SelectDefaultValueByColumnId(const Int &columnId) const{
     using namespace StorageTypes;
 
     Table* sysValues = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
@@ -1715,7 +1731,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return SystemCatalog::ToDefaultValuesHeader(rows.at(0));
   }
 
-  Headers::TableStatistics SystemCatalog::SelectTableStatisticsById(const int32_t &tableId) const{
+  Headers::TableStatistics SystemCatalog::SelectTableStatisticsById(const Int &tableId) const{
     auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysTableStats);
     std::vector<const StorageTypes::Row*> selectedStats;
 
@@ -1731,7 +1747,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
   }
 
   Headers::ColumnStatistics SystemCatalog::SelectColumnStatisticsById(
-    const int32_t& columnId,
+    const Int& columnId,
     const DataType& columnType
   ) const{
     auto* sysColumnStats = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
@@ -1749,7 +1765,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
   }
 
   std::vector<Headers::ColumnHistograms> SystemCatalog::SelectColumnHistogramsByColumnId(
-    const int32_t &columnId,
+    const Int &columnId,
     const DataType& columnType
   ) const {
 
@@ -1770,7 +1786,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
     return result;
   }
 
-  std::vector<Headers::IndexStatistics> SystemCatalog::SelectIndexStatisticsByTableId(const int32_t &tableId) const {
+  std::vector<Headers::IndexStatistics> SystemCatalog::SelectIndexStatisticsByTableId(const Int &tableId) const {
    std::vector<Headers::IndexStatistics> result;
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
@@ -1787,7 +1803,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
    return result;
  }
 
-  void SystemCatalog::UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const{
+  void SystemCatalog::UpdateIdentityByColumnId(const Int & tableId, const Int& columnId, const int64_t& lastValue)const{
     auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
 
     const std::vector<Value> updates{
@@ -1802,10 +1818,10 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const int32_t & databa
   }
 
 void SystemCatalog::UpdateTableStatisticsById(
-    const int32_t &tableId,
+    const Int &tableId,
     const int64_t& rowCount,
-    const int32_t& rowSize,
-    const int32_t& pageCount
+    const Int& rowSize,
+    const Int& pageCount
   ) const{
 
     const std::vector updates = {
@@ -1824,7 +1840,7 @@ void SystemCatalog::UpdateTableStatisticsById(
   }
 
   void SystemCatalog::UpdateColumnStatisticsById(
-    const int32_t &columnId,
+    const Int &columnId,
     const int64_t& distinctCount,
     const int64_t& nullCount,
     const Value& min,
@@ -1846,8 +1862,8 @@ void SystemCatalog::UpdateTableStatisticsById(
   }
 
   void SystemCatalog::UpdateIndexStatisticsById(
-    const int32_t &tableId,
-    const int32_t &indexId,
+    const Int &tableId,
+    const Int &indexId,
     const int64_t &leafPages,
     const int8_t &depth,
     const DataTypes::Decimal &averageFragmentation
@@ -1869,11 +1885,11 @@ void SystemCatalog::UpdateTableStatisticsById(
  }
 
   Errors::RuntimeStatus SystemCatalog::UpdateHistogramBucket(
-    const int32_t& columnId,
-    const int32_t& histogramId,
+    const Int& columnId,
+    const Int& histogramId,
     const Value& min,
     const Value& max,
-    const int32_t& rowCount,
+    const Int& rowCount,
     const int64_t& distinctCount
   ) const{
      const std::vector fields = {
@@ -1896,7 +1912,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     return result;
   }
 
-  Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const int32_t &columnId, const std::vector<Value> &updates) const{
+  Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const Int &columnId, const std::vector<Value> &updates) const{
     using namespace StorageTypes;
 
     Table* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
@@ -1909,8 +1925,8 @@ void SystemCatalog::UpdateTableStatisticsById(
 
   Errors::RuntimeStatus SystemCatalog::UpdateUserById(
     const std::string& username,
-    const int32_t &userId,
-    const int32_t &roleId
+    const Int &userId,
+    const Int &roleId
   ) const {
    auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
 

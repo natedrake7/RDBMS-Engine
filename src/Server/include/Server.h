@@ -22,15 +22,12 @@ namespace DatabaseEngine {
 
 namespace Network {
   class Server {
-    std::string versionDbName;
-    std::string versionDbPath;
 
-    DatabaseEngine::VersionDatabase *versionDb;
-
-    Dictionary<int32_t, DatabaseEngine::Database*> databases;
+    Dictionary<Int, DatabaseEngine::Database*> databases;
     MultiThreading::ReadWriteMutex databasesLatch;
 
     DatabaseEngine::SystemCatalog* systemCatalog;
+    DatabaseEngine::VersionDatabase *versionDatabase;
 
     Sessions::SessionManager sessionManager;
 
@@ -40,16 +37,13 @@ namespace Network {
     Server();
     ~Server();
 
-    void ReadConfiguration(const std::string& configPath);
-    void CreateVersionDatabase();
-    [[nodiscard]] bool VersionDbExists()const;
-
     void CreateSystemRoles();
     void CreateSystemUsers();
 
   public:
     [[nodiscard]] static Server& Get();
     void Initialize(const std::string& configPath);
+    void Shutdown();
 
     //Security Functions
     [[nodiscard]]Errors::RuntimeStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
@@ -57,8 +51,8 @@ namespace Network {
     bool CreateUser(const DatabaseEngine::ExecutionProperties& properties, const std::string& userName, const std::string& password, const std::string& roleName);
     Errors::RuntimeStatus UpdateUserById(
       const DataTypes::Guid& callerSessionId,
-      const int32_t &userId,
-      const int32_t &roleId
+      const Int &userId,
+      const Int &roleId
     )const;
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
 
@@ -69,7 +63,7 @@ namespace Network {
     [[nodiscard]] const Network::Session* CreateSession(const Security::User* user);
     [[nodiscard]] const Network::Session* GetSession(const DataTypes::Guid& key)const;
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& key);
-    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const int32_t& databaseId)const;
+    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const Int& databaseId)const;
     [[nodiscard]] bool AddOrSetVariable(const DataTypes::Guid& sessionId, const Variable& variable)const;
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
@@ -84,11 +78,8 @@ namespace Network {
     // QueryPipeline::Cursor* GetCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
     // void DeleteCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
 
-    void Shutdown();
-    [[nodiscard]] DatabaseEngine::Database* UseDatabase(const int32_t & databaseId, const bool& isServerInitialization = false);
-    DatabaseEngine::VersionDatabase* GetVersionDatabase()const;
-
-    const Dictionary<int32_t, DatabaseEngine::Database*>& GetDatabases()const;
+    [[nodiscard]] DatabaseEngine::Database* UseDatabase(const Int & databaseId, const bool& isServerInitialization = false);
+    const Dictionary<Int, DatabaseEngine::Database*>& GetDatabases()const;
     MultiThreading::ReadWriteMutex& GetDatabasesLatch();
     
   };

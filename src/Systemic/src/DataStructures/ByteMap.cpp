@@ -81,7 +81,7 @@ namespace ByteMaps {
             data[position] = value;
     }
 
-    void ByteMap::GetDataFromFile(const vector<char> &otherData, page_offset_t &offset, const page_size_t& byteMapSize)
+    void ByteMap::GetDataFromFile(const std::vector<char> &otherData, page_offset_t &offset, const page_size_t& byteMapSize)
     {
         for (bit_map_size_t i = 0; i < byteMapSize; i++)
         {
@@ -93,7 +93,7 @@ namespace ByteMaps {
         }
     }
 
-    void ByteMap::WriteDataToFile(fstream *filePtr)
+    void ByteMap::WriteDataToFile(fstream *filePtr) const
     {
         filePtr->write(reinterpret_cast<const char*>(this->data.data()), this->data.size() * sizeof(byte_t));
     }

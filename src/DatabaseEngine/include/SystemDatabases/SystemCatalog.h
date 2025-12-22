@@ -15,11 +15,6 @@ namespace DatabaseEngine {
     SystemCatalog();
     ~SystemCatalog();
 
-    SystemCatalog(SystemCatalog const&) = delete;
-    void operator=(SystemCatalog const&) = delete;
-    SystemCatalog(SystemCatalog&&) = delete;
-    void operator=(SystemCatalog&&) = delete;
-
     Database* masterDb;
 
     std::string sysDbName;
@@ -59,6 +54,11 @@ namespace DatabaseEngine {
     static Headers::IndexStatistics ToIndexStatistics(const DatabaseEngine::StorageTypes::Row* row);
 
     public:
+      SystemCatalog(SystemCatalog const&) = delete;
+      void operator=(SystemCatalog const&) = delete;
+      SystemCatalog(SystemCatalog&&) = delete;
+      void operator=(SystemCatalog&&) = delete;
+
       static SystemCatalog& Get();
 
       Database* GetDatabase()const;
@@ -71,7 +71,7 @@ namespace DatabaseEngine {
       std::vector<Security::Role*> InsertSystemRoles()const;
       Security::User* InsertSystemUsers(
         const std::string& hashedPassword,
-        const int32_t& defaultRoleId
+        const Int& defaultRoleId
       )const;
 
       [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(
@@ -86,7 +86,7 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertSchemaToMasterDb(
         const ExecutionProperties& properties,
-        const int32_t& databaseId,
+        const Int& databaseId,
         const std::string& schemaName,
         const std::string& user = "system",
         const int& version = 0,
@@ -95,8 +95,8 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertTableToMasterDb(
         const ExecutionProperties& properties,
-        const int32_t & databaseId,
-        const int32_t & schemaId,
+        const Int & databaseId,
+        const Int & schemaId,
         const std::string& tableName,
         const int16_t& ordinalPosition,
         const bool& isSystem = false,
@@ -107,12 +107,12 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnToMasterDb(
         const ExecutionProperties& properties,
-        const int32_t & tableId,
+        const Int & tableId,
         const std::string& columnName,
         const DataType& columnType,
         const int& columnSize,
-        const int8_t& precision,
-        const int8_t& scale,
+        const TinyInt& precision,
+        const TinyInt& scale,
         const bool& isNullable,
         const int& ordinalPosition,
         const bool& isSystem = false,
@@ -123,7 +123,7 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexToMasterDb(
         const ExecutionProperties& properties,
-        const int32_t & tableId,
+        const Int & tableId,
         const std::string &indexName,
         const bool &isClustered,
         const bool &isDisabled = false,
@@ -134,8 +134,8 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexColumnToMasterDb(
       const ExecutionProperties& properties,
-        const int32_t& indexId,
-        const int32_t& columnId,
+        const Int& indexId,
+        const Int& columnId,
         const int16_t& ordinalPosition,
         const bool& isIncluded,
         const int& version = 0,
@@ -144,11 +144,11 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertConstraintToMasterDb(
       const ExecutionProperties& properties,
-        const int32_t& tableId,
+        const Int& tableId,
         const string& constraintName,
         const Headers::ConstraintType& constraintType,
         const bool& isDisabled,
-        const int32_t* constraintIndexId,
+        const Int* constraintIndexId,
         const std::string& user = "system",
         const int& version = 0,
         const bool& isDeleted = false
@@ -156,29 +156,29 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertConstraintColumnToMasterDb(
       const ExecutionProperties& properties,
-        const int32_t& constraintId,
-        const int32_t& columnId,
-        const int32_t& ordinalPosition,
+        const Int& constraintId,
+        const Int& columnId,
+        const Int& ordinalPosition,
         const int& version = 0,
         const bool& isDeleted = false
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIdentityColumnToMasterDb(
       const ExecutionProperties& properties,
-        const int32_t& tableId,
-        const int32_t& columnId,
-        const int32_t& seedValue,
-        const int32_t& increment,
-        const int32_t& lastValue,
+        const Int& tableId,
+        const Int& columnId,
+        const Int& seedValue,
+        const Int& increment,
+        const Int& lastValue,
         const bool& isCached,
-        const int32_t& cacheBlock,
+        const Int& cacheBlock,
         const int& version = 0,
         const bool& isDeleted = false
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertDefaultValuesToMasterDb(
       const ExecutionProperties& properties,
-        const int32_t& columnId,
+        const Int& columnId,
         const Value& value,
         const int& version = 0,
         const bool& isDeleted = false
@@ -186,33 +186,33 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertTableStatisticsToMasterDb(
       const ExecutionProperties& properties,
-      const int32_t& tableId,
-      const int64_t& rowCount = 0,
-      const int32_t& rowSize = 0,
-      const int32_t& pageCount = 0
+      const Int& tableId,
+      const BigInt& rowCount = 0,
+      const Int& rowSize = 0,
+      const Int& pageCount = 0
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
       const ExecutionProperties& properties,
-      const int32_t& columnId,
-      const int64_t& distinctCount = 0,
-      const int64_t& nullCount = 0
+      const Int& columnId,
+      const BigInt& distinctCount = 0,
+      const BigInt& nullCount = 0
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnHistogramsToMasterDb(
-      const int32_t& columnId,
+      const Int& columnId,
       const Value& min,
       const Value& max,
-      const int32_t& rowCount,
-      const int64_t& distinctCount
+      const Int& rowCount,
+      const BigInt& distinctCount
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexStatisticsToMasterDb(
       const ExecutionProperties& properties,
-      const int32_t& tableId,
-      const int32_t& indexId,
-      const int64_t& leafPages = 0,
-      const int8_t& depth = 0,
+      const Int& tableId,
+      const Int& indexId,
+      const BigInt& leafPages = 0,
+      const TinyInt& depth = 0,
       const DataTypes::Decimal& averageFragmentation = DataTypes::Decimal(0)
     ) const;
 
@@ -229,7 +229,7 @@ namespace DatabaseEngine {
       const ExecutionProperties& properties,
       const std::string& username,
       const std::string& passwordHash,
-      const int32_t& roleId,
+      const Int& roleId,
       const bool& isActive = false,
       const int& version = 0,
       const bool& isDeleted = false
@@ -239,76 +239,77 @@ namespace DatabaseEngine {
     [[nodiscard]] std::vector<Security::User> SelectUsers()const;
     [[nodiscard]] bool DatabaseExists(const string& dbName) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
-    [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const int32_t& databaseId) const;
-    [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const int32_t& databaseId) const;
-    [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const int32_t& databaseId) const;
+    [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const Int& databaseId) const;
+    [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const Int& databaseId) const;
+    [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const Int& databaseId) const;
     [[nodiscard]] bool SchemaExists(
-      const int32_t &databaseId,
+      const Int &databaseId,
       const std::string& schema,
       int* schemaId = nullptr
     ) const;
     [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const string& dbName) const;
-    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const int32_t & databaseId) const;
+    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const Int & databaseId) const;
     [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
-    [[nodiscard]] Headers::TableHeader SelectTable(const int32_t &databaseId, const string &tableName, const std::string& schema) const;
-    [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const int32_t& tableId) const;
-    [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(const int32_t& tableId) const;
-    [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const int32_t& tableId) const;
-    [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(const int32_t& tableId) const;
-    [[nodiscard]] Headers::IndexHeader SelectIndexById(const int32_t& indexId) const;
-    [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const int32_t& indexId) const;
-    [[nodiscard]] Dictionary<int32_t, Headers::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const int32_t& indexId) const;
-    [[nodiscard]] std::vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const int32_t& tableId) const;
-    [[nodiscard]] Dictionary<int32_t , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const int32_t& tableId) const;
-    [[nodiscard]] std::vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const int32_t& constraintId) const;
-    [[nodiscard]] Dictionary<int32_t, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const int32_t& constraintId) const;
-    [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const int32_t& columnId) const;
-    [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const int32_t& tableId)const;
+    [[nodiscard]] Headers::TableHeader SelectTable(const Int &databaseId, const string &tableName, const std::string& schema) const;
+    [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const Int& tableId) const;
+    [[nodiscard]] Headers::ColumnHeader SelectColumnById(const Int& tableId, const Int& columnId) const;
+    [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(const Int& tableId) const;
+    [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(const Int& tableId) const;
+    [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(const Int& tableId) const;
+    [[nodiscard]] Headers::IndexHeader SelectIndexById(const Int& indexId) const;
+    [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const Int& indexId) const;
+    [[nodiscard]] Dictionary<Int, Headers::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const Int& indexId) const;
+    [[nodiscard]] std::vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const Int& tableId) const;
+    [[nodiscard]] Dictionary<Int , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const Int& tableId) const;
+    [[nodiscard]] std::vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const Int& constraintId) const;
+    [[nodiscard]] Dictionary<Int, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const Int& constraintId) const;
+    [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const Int& columnId) const;
+    [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const Int& tableId)const;
     [[nodiscard]] Headers::ColumnStatistics SelectColumnStatisticsById(
-      const int32_t& columnId,
+      const Int& columnId,
       const DataType& columnType
     )const;
     [[nodiscard]] std::vector<Headers::ColumnHistograms> SelectColumnHistogramsByColumnId(
-      const int32_t& columnId,
+      const Int& columnId,
       const DataType& columnType
     )const;
-    [[nodiscard]] std::vector<Headers::IndexStatistics> SelectIndexStatisticsByTableId(const int32_t& tableId)const;
+    [[nodiscard]] std::vector<Headers::IndexStatistics> SelectIndexStatisticsByTableId(const Int& tableId)const;
 
-    void UpdateIdentityByColumnId(const int32_t & tableId, const int32_t& columnId, const int64_t& lastValue)const;
+    void UpdateIdentityByColumnId(const Int & tableId, const Int& columnId, const BigInt& lastValue)const;
     void UpdateTableStatisticsById(
-      const int32_t& tableId,
-      const int64_t& rowCount,
-      const int32_t& rowSize,
-      const int32_t& pageCount
+      const Int& tableId,
+      const BigInt& rowCount,
+      const Int& rowSize,
+      const Int& pageCount
     )const;
     void UpdateColumnStatisticsById(
-      const int32_t& columnId,
-      const int64_t& distinctCount,
-      const int64_t& nullCount,
+      const Int& columnId,
+      const BigInt& distinctCount,
+      const BigInt& nullCount,
       const Value& min,
       const Value& max
     )const;
     void UpdateIndexStatisticsById(
-      const int32_t& tableId,
-      const int32_t& indexId,
-      const int64_t& leafPages,
-      const int8_t& depth,
+      const Int& tableId,
+      const Int& indexId,
+      const BigInt& leafPages,
+      const TinyInt& depth,
       const DataTypes::Decimal& averageFragmentation
     )const;
     [[nodiscard]] Errors::RuntimeStatus UpdateHistogramBucket(
-      const int32_t& columnId,
-      const int32_t& histogramId,
+      const Int& columnId,
+      const Int& histogramId,
       const Value& min,
       const Value& max,
-      const int32_t& rowCount,
-      const int64_t& distinctCount
+      const Int& rowCount,
+      const BigInt& distinctCount
     ) const;
-    [[nodiscard]]Errors::RuntimeStatus UpdateColumnById(const int32_t& columnId, const std::vector<Value>& updates)const;
+    [[nodiscard]]Errors::RuntimeStatus UpdateColumnById(const Int& columnId, const std::vector<Value>& updates)const;
 
     [[nodiscard]] Errors::RuntimeStatus UpdateUserById(
       const std::string& username,
-      const int32_t &userId,
-      const int32_t &roleId
+      const Int &userId,
+      const Int &roleId
     )const;
 
   };

@@ -2,13 +2,10 @@
 #include <vector>
 #include "../../../DatabaseEngine/include/PipelineConstants.h"
 
-namespace ByteMaps
-{
-    class BitMap
-    {
+namespace ByteMaps{
+    class BitMap{
         std::vector<byte_t> data;
         bit_map_size_t size;
-        bit_map_pos_t lastTrueIndex;
 
     protected:
         void Resize(const bit_map_size_t &newSize);
@@ -40,7 +37,5 @@ namespace ByteMaps
         [[nodiscard]] bit_map_size_t& GetSizeUnsafe();
 
         BitMap &operator=(const BitMap &bitMap);
-
-         bool HasAtLeastOneEntry();
     };
 }

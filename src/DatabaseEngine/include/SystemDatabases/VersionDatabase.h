@@ -3,7 +3,6 @@
 #include <string>
 
 namespace DatabaseEngine{
-
   class VersionDatabase {
     DatabaseHeader header;
     std::string name;
@@ -19,7 +18,7 @@ namespace DatabaseEngine{
 
     static string CreateDatabasePath(const string & dbName);
 
-    void PopulateFilenames(const std::string& dbName);
+    void PopulateFilenames();
     void WriteHeaderToFile()const;
 
     bool AllocateNewExtent(
@@ -35,9 +34,22 @@ namespace DatabaseEngine{
     Pages::PageGuard<Pages::Page> CreateUndoPage();
     Pages::PageGuard<Pages::Page> GetLastUndoPage(const DatabaseEngine::StorageTypes::Table* table, const row_size_t &size);
 
+    VersionDatabase();
+    ~VersionDatabase();
+
+    void ReadConfiguration(const std::string& configPath);
+
+    [[nodiscard]] bool VersionDatabaseExists()const;
+
     public:
-      explicit VersionDatabase(const std::string& filename);
-      ~VersionDatabase();
+      VersionDatabase(VersionDatabase const&) = delete;
+      void operator=(VersionDatabase const&) = delete;
+      VersionDatabase(VersionDatabase&&) = delete;
+      void operator=(VersionDatabase&&) = delete;
+
+      static VersionDatabase& Get();
+
+      void Initialize(const std::string& configPath);
 
       Errors::RuntimeStatus InsertRow(
         const StorageTypes::Row *row,

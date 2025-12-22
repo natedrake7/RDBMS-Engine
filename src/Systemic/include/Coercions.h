@@ -6,7 +6,7 @@
 #include "DataTypes/Guid.h"
 
 namespace DataTypes{
-    enum class CoercionType : uint8_t {
+    enum class CoercionType : UnsignedTinyInt {
         Implicit = 0,   // Allowed automatically (safe)
         Explicit = 1,    // Allowed but requires CAST
         None = 2      // Not allowed

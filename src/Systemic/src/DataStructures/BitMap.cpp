@@ -11,20 +11,17 @@ namespace ByteMaps
     BitMap::BitMap()
     {
         this->size = 0;
-        this->lastTrueIndex = 0;
     }
 
     BitMap::BitMap(const BitMap &bitMap)
     {
         this->size = bitMap.size;
         this->data = bitMap.data;
-        this->lastTrueIndex = bitMap.lastTrueIndex;
     }
 
     BitMap::BitMap(const BitMap *bitMap){
         this->size = bitMap->size;
         this->data = bitMap->data;
-        this->lastTrueIndex = bitMap->lastTrueIndex;
     }
 
     BitMap::BitMap(const bit_map_size_t &size, const byte_t &defaultValue) : size(size)
@@ -147,30 +144,6 @@ namespace ByteMaps
         this->size = bitMap.GetSize();
 
         return *this;
-    }
-
-     bool BitMap::HasAtLeastOneEntry()
-    {
-        if (this->lastTrueIndex < this->size)
-        {
-            const bool indexValue = this->Get(this->lastTrueIndex);
-
-            if (indexValue)
-                return indexValue;
-        }
-
-        for (bit_map_size_t i = 0; i < this->size; i++)
-        {
-            const bool hasValue = this->Get(i);
-
-            if (hasValue)
-            {
-                this->lastTrueIndex = i;
-                return true;
-            }
-        }
-
-        return false;
     }
 
     void BitMap::Resize(const bit_map_size_t &newSize)

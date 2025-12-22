@@ -844,7 +844,7 @@ namespace DatabaseEngine::StorageTypes {
         if (!this->versionHeader.HasOlderVersion())
             return nullptr;
 
-        return Network::Server::Get().GetVersionDatabase()->RetrieveRow(snapshot, this->versionHeader.olderVersionPointer, this->table);
+        return VersionDatabase::Get().RetrieveRow(snapshot, this->versionHeader.olderVersionPointer, this->table);
     }
 
     bool Row::IsDeleted(const Snapshot &snapshot) const{

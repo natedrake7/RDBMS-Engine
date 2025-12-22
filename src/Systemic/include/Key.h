@@ -4,9 +4,8 @@
 #include "DataTypes/Value.h"
 
 namespace DataTypes::Indexing {
-  struct Key
-  {
-    enum class ComparisonResult : int8_t {
+  struct Key{
+    enum class ComparisonResult : TinyInt {
       Less = -1,
       Equal = 0,
       Greater = 1,
@@ -16,7 +15,6 @@ namespace DataTypes::Indexing {
 
     Value value;
     std::vector<Key> subKeys;
-
 
     Key();
     Key(const void *keyValue, const key_size_t &keySize, const DataType& keyType);
@@ -46,14 +44,13 @@ namespace DataTypes::Indexing {
     void InsertKey(const Key &otherKey);
 
     static ComparisonResult CompareSubKeys(const Key& firstKey, const Key& otherKey);
-    [[nodiscard]] int32_t AsInt(const int& pos = 0)const;
-    [[nodiscard]] int64_t AsBigInt(const int& pos = 0)const;
+    [[nodiscard]] Int AsInt(const Int& pos = 0)const;
+    [[nodiscard]] BigInt AsBigInt(const Int& pos = 0)const;
 
     friend std::ostream& operator<<(std::ostream& os, const Key& key);
   };
 
-  struct QueryData
-  {
+  struct QueryData{
     page_id_t pageId;
     page_offset_t indexPosition;
 

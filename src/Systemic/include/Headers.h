@@ -7,7 +7,7 @@
 #include "DataTypes/Value.h"
 
 namespace Headers {
-  enum ConstraintType: uint8_t {
+  enum ConstraintType: UnsignedTinyInt {
     PrimaryKey = 0,
     ForeignKey = 1,
     Unique = 2,
@@ -20,35 +20,35 @@ namespace Headers {
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastModified;
     std::string lastModifiedBy;
-    int32_t version;
+    Int version;
     bool isDeleted;
     DataTypes::DateTime deletedAt;
   };
 
   struct IndexColumnsHeader{
-    int32_t indexId = INVALID_INDEX_ID;
-    int32_t columnId;
-    int16_t ordinalPosition;
+    Int indexId = INVALID_INDEX_ID;
+    Int columnId;
+    SmallInt ordinalPosition;
     bool isIncluded;
 
     AuditInformation additionalInfo;
   };
 
   struct IdentityColumnsHeader{
-    int32_t tableId = INVALID_TABLE_ID;
-    int32_t columnId = INVALID_COLUMN_ID;
-    int32_t seedValue;
-    int32_t increment;
-    int64_t lastValue;
+    Int tableId = INVALID_TABLE_ID;
+    Int columnId = INVALID_COLUMN_ID;
+    Int seedValue;
+    Int increment;
+    BigInt lastValue;
 
     bool isCached;
-    int32_t cacheBlock;
+    Int cacheBlock;
     AuditInformation additionalInfo;
   };
 
   struct IndexHeader {
-    int32_t tableId;
-    int32_t id = -1;
+    Int tableId;
+    Int id = -1;
     std::string name;
     bool isClustered;
     bool isDisabled;
@@ -59,19 +59,19 @@ namespace Headers {
   };
 
   struct ConstraintsColumnsHeader{
-    int32_t constraintId = INVALID_CONSTRAINT_ID;
-    int32_t columnId;
-    int32_t ordinalPosition;
+    Int constraintId = INVALID_CONSTRAINT_ID;
+    Int columnId;
+    Int ordinalPosition;
     AuditInformation additionalInfo;
   };
 
   struct ConstraintsHeader{
-    int32_t tableId;
-    int32_t constraintId = INVALID_CONSTRAINT_ID;
+    Int tableId;
+    Int constraintId = INVALID_CONSTRAINT_ID;
     std::string name;
     ConstraintType type;
     bool isDisabled;
-    int32_t indexId = INVALID_INDEX_ID;
+    Int indexId = INVALID_INDEX_ID;
     IndexHeader index;
     vector<ConstraintsColumnsHeader> columns;
 
@@ -79,7 +79,7 @@ namespace Headers {
   };
 
   struct DefaultValuesHeader {
-    int32_t columnId = INVALID_COLUMN_ID;
+    Int columnId = INVALID_COLUMN_ID;
     std::string value;
     //add size here
 
@@ -87,11 +87,11 @@ namespace Headers {
   };
 
   struct TableStatistics {
-    int32_t tableId ;
+    Int tableId ;
 
-    int64_t rowCount;
-    int32_t averageRowSize;
-    int32_t pageCount;
+    BigInt rowCount;
+    Int averageRowSize;
+    Int pageCount;
 
     DataTypes::DateTime lastModified;
 
@@ -103,14 +103,14 @@ namespace Headers {
       this->lastModified = DataTypes::DateTime::Now();
     }
 
-    explicit TableStatistics(const int32_t& tableId)
+    explicit TableStatistics(const Int& tableId)
       : tableId(tableId),rowCount(0),averageRowSize(0), pageCount(0), lastModified(DataTypes::DateTime::Now()) {}
 
     TableStatistics(
-      const int32_t& tableId,
-      const int64_t& rowCount,
-      const int32_t& averageRowSize,
-      const int32_t& pageCount,
+      const Int& tableId,
+      const BigInt& rowCount,
+      const Int& averageRowSize,
+      const Int& pageCount,
       const DataTypes::DateTime& lastModified
     ) : tableId(tableId),
         rowCount(rowCount),
@@ -120,30 +120,30 @@ namespace Headers {
   };
 
   struct ColumnStatistics {
-    int32_t columnId;
+    Int columnId;
 
-    int64_t distinctCount;
+    BigInt distinctCount;
     Value min;
     Value max;
-    int64_t nullCount;
+    BigInt nullCount;
   };
 
   struct ColumnHistograms {
-    int32_t columnId;
-    int32_t histogramId;
+    Int columnId;
+    Int histogramId;
 
     Value rangeStart;
     Value rangeEnd;
 
-    int32_t rowCount;
-    int32_t distinctCount;
+    Int rowCount;
+    Int distinctCount;
 
     ColumnHistograms(
-      const int32_t& columnId,
+      const Int& columnId,
       const Value& rangeStart,
       const Value& rangeEnd,
-      const int32_t& rowCount,
-      const int32_t& distinctCount
+      const Int& rowCount,
+      const Int& distinctCount
     )
       : columnId(columnId),
         rangeStart(rangeStart),
@@ -155,12 +155,12 @@ namespace Headers {
     }
 
     ColumnHistograms(
-      const int32_t& columnId,
-      const int32_t& histogramId,
+      const Int& columnId,
+      const Int& histogramId,
       const Value& rangeStart,
       const Value& rangeEnd,
-      const int32_t& rowCount,
-      const int32_t& distinctCount
+      const Int& rowCount,
+      const Int& distinctCount
     )
       : columnId(columnId),
         histogramId(histogramId),
@@ -171,10 +171,10 @@ namespace Headers {
   };
 
   struct IndexStatistics {
-    int32_t tableId;
-    int32_t indexId;
-    int32_t leafPages;
-    int8_t depth;
+    Int tableId;
+    Int indexId;
+    Int leafPages;
+    TinyInt depth;
     DataTypes::Decimal averageFragmentation;
     DataTypes::DateTime lastUpdated;
 
@@ -188,18 +188,18 @@ namespace Headers {
     }
 
     IndexStatistics(
-      const int32_t& tableId,
-      const int32_t& indexId
+      const Int& tableId,
+      const Int& indexId
     ) : IndexStatistics() {
       this->tableId = tableId;
       this->indexId = indexId;
     }
 
     IndexStatistics(
-      const int32_t& tableId,
-      const int32_t& indexId,
-      const int32_t& leafPages,
-      const int8_t& depth,
+      const Int& tableId,
+      const Int& indexId,
+      const Int& leafPages,
+      const TinyInt& depth,
       const DataTypes::Decimal& averageFragmentation,
       const DataTypes::DateTime& lastUpdated
     )
@@ -218,15 +218,15 @@ namespace Headers {
   };
 
   struct ColumnHeader {
-    int32_t tableId;
-    int32_t id = INVALID_COLUMN_ID;
+    Int tableId;
+    Int id = INVALID_COLUMN_ID;
     std::string name;
-    uint8_t dataType;
-    int32_t recordSize;
-    int8_t precision = INVALID_DECIMAL_PRECISION;
-    int8_t scale = INVALID_DECIMAL_SCALE;
+    UnsignedTinyInt dataType;
+    Int recordSize;
+    TinyInt precision = INVALID_DECIMAL_PRECISION;
+    TinyInt scale = INVALID_DECIMAL_SCALE;
     bool isNullable;
-    int16_t ordinalPosition;
+    SmallInt ordinalPosition;
     bool isSystem;
 
     IdentityColumnsHeader identity;
@@ -236,11 +236,11 @@ namespace Headers {
   };
 
   struct TableHeader {
-    int32_t databaseId;
-    int32_t id = INVALID_TABLE_ID;
-    int32_t schemaId;
+    Int databaseId;
+    Int id = INVALID_TABLE_ID;
+    Int schemaId;
     std::string name;
-    int16_t ordinalPosition;
+    SmallInt ordinalPosition;
     bool isSystem;
 
     AuditInformation additionalInfo;
@@ -254,14 +254,14 @@ namespace Headers {
   };
 
   struct SchemaHeader {
-    int32_t id = -1;
-    int32_t databaseId;
+    Int id = -1;
+    Int databaseId;
     std::string name;
     AuditInformation additionalInfo;
   };
 
   struct DatabaseHeader {
-    int32_t id = -1;
+    Int id = -1;
     std::string name;
     std::string filepath;
     bool isSystem;
@@ -274,7 +274,7 @@ namespace Headers {
   struct sysColumn {
     string name;
     string type;
-    int32_t id;
+    Int id;
     int size = 0;
     int _default = 0;
     bool nullable = false;
@@ -283,16 +283,16 @@ namespace Headers {
 
   struct sysTable {
     string name;
-    int32_t id;
+    Int id;
     bool hasIdentity;
     std::vector<sysColumn> columns;
     std::vector<string> primaryKey;
   };
 
   struct Index{
-    vector<uint8_t> columns;
+    vector<UnsignedTinyInt> columns;
 
-    explicit Index(vector<uint8_t>& columns)
+    explicit Index(vector<UnsignedTinyInt>& columns)
       : columns(std::move(columns)) {}
 
     Index() = default;
@@ -300,14 +300,14 @@ namespace Headers {
 
   struct RowIdentifier {
     page_id_t pageId;
-    int32_t indexId;
+    Int indexId;
 
     RowIdentifier() {
       this->pageId = INVALID_PAGE_ID;
       this->indexId = INVALID_PAGE_INDEX_ID;
     }
 
-    RowIdentifier(const uint32_t& pageId, const int32_t& indexId) {
+    RowIdentifier(const Int& pageId, const Int& indexId) {
       this->pageId = pageId;
       this->indexId = indexId;
     }

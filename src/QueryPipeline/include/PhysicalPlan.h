@@ -102,20 +102,20 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalUseDatabase final : public ExecutionNode{
     DataTypes::Guid sessionId;
-    int32_t databaseId;
+    Int databaseId;
 
     public:
-      explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, const int32_t& databaseId);
+      explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, const Int& databaseId);
       ~PhysicalUseDatabase() override = default;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
   class PhysicalSchemaCreate final : public ExecutionNode{
     std::string schemaName;
-    int32_t databaseId;
+    Int databaseId;
 
     public:
-      explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string& schemaName);
+      explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int& databaseId, std::string& schemaName);
       ~PhysicalSchemaCreate() override = default;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };

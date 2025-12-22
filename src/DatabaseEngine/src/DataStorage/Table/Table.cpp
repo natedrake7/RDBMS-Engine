@@ -1416,8 +1416,10 @@ namespace DatabaseEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
 
+        static auto& versionDatabase = VersionDatabase::Get();
+
         Pages::RowVersionPointer oldVersionPointer;
-        Network::Server::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
+        versionDatabase.InsertRow(row, oldVersionPointer, this);
         row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
         row->SetCurrentTransactionId(properties.snapshot.transactionId);
 
@@ -1458,9 +1460,11 @@ namespace DatabaseEngine::StorageTypes {
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
 
+        static auto& versionDatabase = VersionDatabase::Get();
+
         Pages::RowVersionPointer oldVersionPointer;
 
-        Network::Server::Get().GetVersionDatabase()->InsertRow(row, oldVersionPointer, this);
+        versionDatabase.InsertRow(row, oldVersionPointer, this);
         row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
         row->SetCurrentTransactionId(properties.snapshot.transactionId);
 

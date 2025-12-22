@@ -7,26 +7,62 @@
 #include "../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../Systemic/include/Guards/WriterGuard.h"
 
+#include <nlohmann/json.hpp>
+
 namespace DatabaseEngine {
- VersionDatabase::VersionDatabase(const std::string &filename){
-   this->PopulateFilenames(filename);
+  VersionDatabase& VersionDatabase::Get(){
+    static VersionDatabase instance;
+    return instance;
+  }
 
-   this->lastUsedPageId = INVALID_PAGE_ID;
-   const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFilename);
+  void VersionDatabase::Initialize(const std::string& configPath){
+    this->ReadConfiguration(configPath);
+    this->PopulateFilenames();
 
-   this->header = *headerPage->GetDatabaseHeader();
- }
+    if (!this->VersionDatabaseExists())
+      DatabaseEngine::CreateDatabase(this->name);
+
+    this->lastUsedPageId = INVALID_PAGE_ID;
+    const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFilename);
+
+    this->header = *headerPage->GetDatabaseHeader();
+  }
+
+ VersionDatabase::VersionDatabase() = default;
 
   VersionDatabase::~VersionDatabase() = default;
 
+  void VersionDatabase::ReadConfiguration(const string& configPath){
+    std::ifstream file(configPath);
+
+    if (!file.is_open())
+      throw std::runtime_error("System Tables file: " + configPath + " could not be opened");
+
+    nlohmann::json jsonFile;
+
+    try {
+      file >> jsonFile;
+    }
+    catch (std::exception &e)
+    {
+      throw std::runtime_error(e.what());
+    }
+
+    this->name = jsonFile.at("version_db_name");
+    this->filename = jsonFile.at("version_db_path");
+  }
+
+  bool VersionDatabase::VersionDatabaseExists() const{
+    return std::filesystem::exists(this->filename);
+  }
+
   string VersionDatabase::CreateDatabasePath(const string & dbName){ return dbName + "/" + dbName; }
 
-  void VersionDatabase::PopulateFilenames(const std::string& dbName){
-     const auto& path = Database::CreateDatabasePath(dbName);
+  void VersionDatabase::PopulateFilenames(){
+     const auto& path = Database::CreateDatabasePath(this->name);
 
      this->filename = path + ".db";
      this->fileExtension = ".db";
-     this->name = dbName;
      this->systemFilename = path + "_sys" + ".db";
    }
 
