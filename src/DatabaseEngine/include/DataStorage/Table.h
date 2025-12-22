@@ -435,5 +435,7 @@ namespace DatabaseEngine::StorageTypes
             void RemoveColumn(const column_index_t& index);
 
             void HandleRemoveColumn(const column_index_t& index);
+
+            void Rollback(const Snapshot& snapshot, const Headers::RowIdentifier& rowId) const;
     };
 }

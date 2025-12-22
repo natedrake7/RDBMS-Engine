@@ -7,8 +7,6 @@
 #include "Guards/WriterGuard.h"
 
 namespace DatabaseEngine::StorageTypes {
-    
-
      Column::Column(const std::string& columnName, const DataType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls)
     {
         this->name = columnName;

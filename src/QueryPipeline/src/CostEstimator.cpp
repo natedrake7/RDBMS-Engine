@@ -102,14 +102,13 @@ namespace QueryPipeline{
     double CostEstimator::EstimateSelectivityByHistograms(
         const SeekRange& range,
         const Headers::TableStatistics& tableStats,
-        const Headers::ColumnStatistics& columnStats,
-        const DataType& columnType
+        const Headers::ColumnStatistics& columnStats
     ){
         static const auto& catalog = DatabaseEngine::SystemCatalog::Get();
-        const auto histograms = catalog.SelectColumnHistogramsByColumnId(columnStats.columnId, columnType);
+        const auto histograms = catalog.SelectColumnHistogramsByColumnId(tableStats.tableId, columnStats.columnId);
 
         if (histograms.empty())
-            return 1.0;
+            return CostEstimator::EstimateSelectivityForSmallTable(range, columnStats);
 
         const auto hasStart = range.HasStart();
         const auto hasEnd = range.HasEnd();
@@ -117,15 +116,8 @@ namespace QueryPipeline{
         const auto averageRowsPerBucket = static_cast<double>(tableStats.rowCount) / static_cast<double>(NUMBER_OF_HISTOGRAM_BUCKETS);
 
         //is equality
-        if (!range.hasRange){
+        if (!range.hasRange)
             return static_cast<double>(1.0 / static_cast<long double>(columnStats.distinctCount));
-            //
-            // const auto bucketIndex = CostEstimator::FindBucketForValue(histograms, range.start);
-            //
-            // const auto& bucket = histograms[bucketIndex];
-            //
-            // return CostEstimator::EstimateEqualSelectivityByHistograms(range, bucket);
-        }
 
         if (hasStart && hasEnd){
             const auto startBucketIndex = CostEstimator::FindBucketForValue(histograms, range.start);
@@ -190,10 +182,49 @@ namespace QueryPipeline{
 
     double CostEstimator::EstimateSelectivityForSmallTable(
         const SeekRange& range,
-        const Headers::TableStatistics& tableStats,
         const Headers::ColumnStatistics& columnStats
     ){
-        return 0.5;
+        if (!range.hasRange)
+            return static_cast<double>(1.0 / static_cast<long double>(columnStats.distinctCount));
+
+        const auto hasStart = range.HasStart();
+        const auto hasEnd = range.HasEnd();
+
+        //is equality
+        if (!range.hasRange)
+            return static_cast<double>(1.0 / static_cast<long double>(columnStats.distinctCount));
+
+        const auto minInterpolated = columnStats.min.Interpolate();
+        const auto maxInterpolated = columnStats.max.Interpolate();
+        const auto totalRange = maxInterpolated - minInterpolated;
+
+        //fallback for edge cases (min = max)
+        if (totalRange <= 0.0)
+            return 0.5;
+
+        if (hasStart && hasEnd){
+            const auto startInterpolated = range.start.Interpolate();
+            const auto endInterpolated = range.end.Interpolate();
+
+            const auto rangeSize = endInterpolated - startInterpolated;
+            return std::clamp(static_cast<double>(rangeSize / totalRange), 0.0, 1.0);
+        }
+
+        if (hasStart){
+            const auto startInterpolated = range.start.Interpolate();
+            const auto touchedRange = maxInterpolated - startInterpolated;
+
+            return std::clamp(static_cast<double>(touchedRange / totalRange), 0.0, 1.0);
+        }
+
+        if (hasEnd) {
+            const auto endInterpolated = range.end.Interpolate();
+            const auto touchedRange = endInterpolated - minInterpolated;
+
+            return std::clamp(static_cast<double>(touchedRange / totalRange), 0.0, 1.0);
+        }
+
+        return 1.0;
     }
 
     double CostEstimator::EstimateSelectivity(
@@ -202,36 +233,25 @@ namespace QueryPipeline{
         const Headers::TableStatistics& tableStats
     ){
         if (tableStats.rowCount <= PipelineConstants::SMALL_TABLE)
-            return CostEstimator::EstimateSelectivityForSmallTable(range, tableStats, columnStats);
+            return CostEstimator::EstimateSelectivityForSmallTable(range, columnStats);
 
         //todo pass column type here.
         return CostEstimator::EstimateSelectivityByHistograms(
             range,
             tableStats,
-            columnStats,
-            DataType::Int
+            columnStats
         );
     }
 
-    double CostEstimator::EstimateRangeSelectivity(
-        const SeekRange& range,
-        const Headers::ColumnStatistics& columnStats
-    ){
-        return 0.0;
-    }
-
-    double CostEstimator::EstimateCost(
+    double CostEstimator::EstimateIndexCost(
         const Headers::IndexHeader& indexHeader,
         const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
-        const Headers::ColumnStatistics& columnStats,
         const Headers::TableStatistics& tableStats
     ){
+
         //if empty default to full scan
         if (analyzeResults.empty())
             return 1.0;
-
-        const auto& firstIndexColumnResult = analyzeResults.front();
-        const auto& range = firstIndexColumnResult.range;
 
         //get indexStats and account for the depth of the tree in the cost
         const auto indexStats = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(indexHeader.id);
@@ -249,9 +269,17 @@ namespace QueryPipeline{
         if (indexStatistic == nullptr)
             return 1.0;
 
-        const auto selectivity = CostEstimator::EstimateSelectivity(range, columnStats, tableStats);
+        double combinedSelectivity = 1.0;
 
-        const auto estimatedRows = static_cast<double>(tableStats.rowCount) * selectivity;
+        for (const auto& info : analyzeResults){
+            const auto& columnStats = DatabaseEngine::StatisticsManager::Get().GetColumnStatistics(tableStats.tableId, info.columnId);
+
+            const auto selectivity = CostEstimator::EstimateSelectivity(info.range, columnStats, tableStats);
+
+            combinedSelectivity *= selectivity;
+        }
+
+        const auto estimatedRows = static_cast<double>(tableStats.rowCount) * combinedSelectivity;
 
         auto cost = indexStatistic->depth * PipelineConstants::SEQUENTIAL_PAGE_COST;
 
@@ -261,6 +289,15 @@ namespace QueryPipeline{
             cost += estimatedRows * PipelineConstants::RANDOM_PAGE_COST;
 
         cost += estimatedRows * PipelineConstants::CPU_COST_PER_ROW;
+
+
+
+
+
+
+
+
+
 
         return cost;
     }

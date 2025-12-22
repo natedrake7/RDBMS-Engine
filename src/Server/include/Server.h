@@ -12,6 +12,10 @@
 #include <vector>
 
 namespace DatabaseEngine {
+  class TemporaryDatabase;
+}
+
+namespace DatabaseEngine {
   class SystemCatalog;
 }
 
@@ -26,6 +30,7 @@ namespace Network {
     Dictionary<Int, DatabaseEngine::Database*> databases;
     MultiThreading::ReadWriteMutex databasesLatch;
 
+    DatabaseEngine::TemporaryDatabase* temporaryDatabase;
     DatabaseEngine::SystemCatalog* systemCatalog;
     DatabaseEngine::VersionDatabase *versionDatabase;
 

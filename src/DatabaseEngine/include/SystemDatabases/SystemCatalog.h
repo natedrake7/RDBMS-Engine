@@ -270,8 +270,8 @@ namespace DatabaseEngine {
       const DataType& columnType
     )const;
     [[nodiscard]] std::vector<Headers::ColumnHistograms> SelectColumnHistogramsByColumnId(
-      const Int& columnId,
-      const DataType& columnType
+      const Int& tableId,
+      const Int& columnId
     )const;
     [[nodiscard]] std::vector<Headers::IndexStatistics> SelectIndexStatisticsByTableId(const Int& tableId)const;
 

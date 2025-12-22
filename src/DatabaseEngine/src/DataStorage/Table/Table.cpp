@@ -1754,6 +1754,46 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
 
     this->RemoveColumnByHeap(index);
   }
-}
 
- // namespace DatabaseEngine::StorageTypes
+  void Table::Rollback(const Snapshot& snapshot, const Headers::RowIdentifier& rowId) const{
+        auto page = Storage::StorageManager::Get().GetPage(this->database->GetFileName(), rowId.pageId, this);
+
+        MultiThreading::WriterGuard guard(&page->Latch());
+
+        auto* rows = page->DataRowsNoLock();
+
+        auto*& row = rows->at(rowId.indexId);
+
+        const auto& versionHeader = row->GetVersionHeader();
+
+        if (versionHeader.olderVersionPointer.pageId == INVALID_PAGE_ID){
+          //if insert remove indexes too
+          //row did not exist previously mark it as invisible and delete it later
+          row->SetDeletedTransactionId(0);
+          return;
+        }
+
+        static auto& versionDatabase = VersionDatabase::Get();
+
+        const auto* versionRow = versionDatabase.RetrieveRow(snapshot, versionHeader.olderVersionPointer, this);
+
+        const auto& rowData = row->GetData();
+        auto& prevRowData = versionRow->GetData();
+
+        for (Int i = 0;i < rowData.size(); i++){
+          const auto& data = rowData[i];
+
+          auto& prevData = prevRowData[i];
+
+          data->SetData(prevData->GetRawData(), prevData->GetSize());
+        }
+
+        const auto& prevRowVersionHeader = versionRow->GetVersionHeader();
+
+        row->SetOlderVersionPointer(prevRowVersionHeader.olderVersionPointer.pageId, prevRowVersionHeader.olderVersionPointer.offset);
+        row->SetCurrentTransactionId(prevRowVersionHeader.createdTransactionId);
+        row->SetDeletedTransactionId(prevRowVersionHeader.deletedTransactionId);
+
+        page->UpdateBytesLeft();
+  }
+}

@@ -39,12 +39,14 @@ namespace QueryPipeline {
     this->expression = nullptr;
     this->canIndexSeek = false;
     this->needsParameterBinding = false;
+    this->columnId = INVALID_COLUMN_ID;
   }
 
   IndexSeekColumnAnalysisResults::IndexSeekColumnAnalysisResults(Expressions::Expression *otherExpr) {
     this->expression = otherExpr;
     this->canIndexSeek = false;
     this->needsParameterBinding = false;
+    this->columnId = INVALID_COLUMN_ID;
   }
 
   JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(){
@@ -227,13 +229,6 @@ namespace QueryPipeline {
       case Expressions::BinaryOperator::LessEqual:
         Optimizer::DetermineCanSeekOnLessThan(predicateValue, range, canSeek, true);
         break;
-      case Expressions::BinaryOperator::NotEqual:
-      case Expressions::BinaryOperator::Add:
-      case Expressions::BinaryOperator::Subtract:
-      case Expressions::BinaryOperator::Multiply:
-      case Expressions::BinaryOperator::Divide:
-      case Expressions::BinaryOperator::Modulo:
-      case Expressions::BinaryOperator::EqualIgnoreOrdinalCase:
       default:
         canSeek = false;
         break;
@@ -244,7 +239,6 @@ namespace QueryPipeline {
     const Headers::IndexHeader& index,
     Expressions::Expression* expression
   ){
-
     IndexSeekAnalysisResult result;
 
     if (expression == nullptr)
@@ -277,23 +271,48 @@ namespace QueryPipeline {
 
         Value value;
         const auto* binaryExpr = predicate->AsBinary();
-        auto* valueExpression = binaryExpr->left->IsColumn()
-          ? binaryExpr->right
-          : binaryExpr->left;
 
-        if (valueExpression->IsConstant()){
-          Optimizer::DetermineSeekRange(
-            binaryExpr,
-            valueExpression->AsConstant()->value,
+        if (binaryExpr->left->IsColumn()){
+          const auto* columnExpr = binaryExpr->left->AsColumn();
+
+          if (binaryExpr->right->IsConstant()){
+            const auto* constantExpr = binaryExpr->right->AsConstant();
+
+            Optimizer::DetermineSeekRange(
+              binaryExpr,
+              constantExpr->value,
             analyzeResult.range,
             analyzeResult.canIndexSeek
-          );
+            );
+          }
+          else if (binaryExpr->right->IsVariable()){
+            analyzeResult.expression = binaryExpr->right;
+            analyzeResult.needsParameterBinding = true;
+          }
+
+          analyzeResult.columnId = columnExpr->columnId;
           continue;
         }
 
-        if (valueExpression->IsVariable()){
-          analyzeResult.expression = valueExpression;
-          analyzeResult.needsParameterBinding = true;
+        if (binaryExpr->right->IsColumn()){
+          const auto* columnExpr = binaryExpr->right->AsColumn();
+
+          if (binaryExpr->left->IsConstant()){
+            const auto* constantExpr = binaryExpr->left->AsConstant();
+
+            Optimizer::DetermineSeekRange(
+              binaryExpr,
+              constantExpr->value,
+            analyzeResult.range,
+            analyzeResult.canIndexSeek
+            );
+          }
+          else if (binaryExpr->left->IsVariable()){
+            analyzeResult.expression = binaryExpr->left;
+            analyzeResult.needsParameterBinding = true;
+          }
+
+          analyzeResult.columnId = columnExpr->columnId;
         }
       }
 
@@ -337,7 +356,6 @@ namespace QueryPipeline {
 
       Optimizer::CombineExpressionsWithAnd(range.remainingPredicate, expression);
     }
-
 
     range.hasRange = range.start < range.end;
     range.canSeek = canSeek;
@@ -472,14 +490,11 @@ namespace QueryPipeline {
 
       IndexCandidate candidate;
 
-      const auto& firstIndexColumn = index.columns.front();
-      const auto& columnStats = DatabaseEngine::StatisticsManager::Get().GetColumnStatistics(tableStatistics.tableId, firstIndexColumn.columnId);
-
       candidate.header = index;
       candidate.analyzeInfo = std::move(analyzeResults);
       candidate.conjunctions = std::move(conjunctions);
       candidate.matchingColumns = static_cast<int>(candidate.analyzeInfo.size());
-      candidate.estimatedCost = CostEstimator::EstimateCost(index, candidate.analyzeInfo, columnStats, tableStatistics);
+      candidate.estimatedCost = CostEstimator::EstimateIndexCost(index, candidate.analyzeInfo, tableStatistics);
 
       candidates.push_back(candidate);
     }

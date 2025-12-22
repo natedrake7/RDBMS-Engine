@@ -63,7 +63,9 @@ namespace QueryPipeline {
   struct IndexSeekColumnAnalysisResults {
     bool canIndexSeek;
     bool needsParameterBinding;
+    Int columnId;
     SeekRange range;
+
 
     Expressions::Expression* expression;
 

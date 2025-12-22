@@ -14,8 +14,7 @@ namespace DatabaseEngine::Logging {
       static WriteAheadLogger& Get();
 
       void LogCheckPoint(CheckPoint& checkPoint)const;
-      std::vector<LogEntry>  RecoverLogs(const std::vector<StorageTypes::Table*>& tables)override;
+      std::vector<LogEntry> RecoverLogs(const std::vector<StorageTypes::Table*>& tables)override;
       [[nodiscard]] CheckPoint RecoverLastCheckPoint() const;
-
   };
 }

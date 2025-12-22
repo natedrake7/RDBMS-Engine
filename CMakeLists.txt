@@ -116,9 +116,9 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Database.cpp
         src/DatabaseEngine/src/Database.IndexHandlers.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.cpp
-        src/DatabaseEngine/src/DataStorage/Table/Table.AdditionalFunctions.cpp
+        src/DatabaseEngine/src/DataStorage/Table/Table.Additional.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.Indexes.cpp
-        src/DatabaseEngine/src/DataStorage/Table/Table.LargeOjects.cpp
+        src/DatabaseEngine/src/DataStorage/Table/Table.LargeObjects.cpp
         src/DatabaseEngine/src/DataStorage/Row.cpp
         src/DatabaseEngine/src/DataStorage/Block.cpp
         src/DatabaseEngine/src/DataStorage/Column.cpp
@@ -151,6 +151,9 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Schedulers/StatisticsScheduler.cpp
         src/DatabaseEngine/include/Managers/StatisticsManager.h
         src/DatabaseEngine/src/Managers/StatisticsManager.cpp
+        src/DatabaseEngine/src/SystemDatabases/TemporaryDatabase.cpp
+        src/DatabaseEngine/include/Logger/UndoLogger.h
+        src/DatabaseEngine/src/Logger/UndoLogger.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

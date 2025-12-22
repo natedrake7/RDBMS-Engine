@@ -3,6 +3,8 @@
   "db_path": "masterDb/masterDb.db",
   "version_db_name": "versionDb",
   "version_db_path": "versionDb/versionDb.db",
+  "temp_db_name": "tempDb",
+  "temp_db_path": "tempDb/tempDb.db",
   "tables": [
     {
       "id": 1,

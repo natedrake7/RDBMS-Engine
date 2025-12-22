@@ -68,13 +68,11 @@ namespace QueryPipeline{
         [[nodiscard]] static double EstimateSelectivityByHistograms(
             const SeekRange& range,
             const Headers::TableStatistics& tableStats,
-            const Headers::ColumnStatistics& columnStats,
-            const DataType& columnType
+            const Headers::ColumnStatistics& columnStats
         );
 
         [[nodiscard]] static double EstimateSelectivityForSmallTable(
             const SeekRange& range,
-            const Headers::TableStatistics& tableStats,
             const Headers::ColumnStatistics& columnStats
         );
 
@@ -84,15 +82,10 @@ namespace QueryPipeline{
             const Headers::TableStatistics& tableStats
         );
 
-        [[nodiscard]] static double EstimateRangeSelectivity(
-            const SeekRange& range,
-            const Headers::ColumnStatistics& columnStats
-        );
     public:
-        [[nodiscard]] static double EstimateCost(
+        [[nodiscard]] static double EstimateIndexCost(
             const Headers::IndexHeader& indexHeader,
             const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
-            const Headers::ColumnStatistics& columnStats,
             const Headers::TableStatistics& tableStats
         );
     };

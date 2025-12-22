@@ -10,8 +10,7 @@
 #include "../../../include/Pages/PageFreeSpacePage.h"
 
 namespace DatabaseEngine::StorageTypes {
-    void Table::InsertLargeObjectToPage(Row *row) 
-    {
+    void Table::InsertLargeObjectToPage(Row *row) {
         const vector<column_index_t> largeBlockIndexes = row->GetLargeBlocks();
 
         if (largeBlockIndexes.empty())
@@ -101,14 +100,17 @@ namespace DatabaseEngine::StorageTypes {
                     : largeDataPage;
     }
 
-    void Table::LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId)
-    {
+    void Table::LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId){
         if (dataObject != nullptr) 
             dataObject->nextPageId = lastLargePageId;
     }
 
-    void Table::InsertLargeDataObjectPointerToRow(Row *row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const
-    {
+    void Table::InsertLargeDataObjectPointerToRow(
+        Row *row,
+        const bool &isFirstRecursion,
+        const page_id_t &lastLargePageId,
+        const column_index_t &largeBlockIndex
+    ) const{
         if (!isFirstRecursion)
             return;
 
@@ -122,7 +124,6 @@ namespace DatabaseEngine::StorageTypes {
 
     Pages::PageGuard<Pages::LargeObjectPage> Table::GetLargeDataPage(const page_id_t &pageId) const {
       return Storage::StorageManager::Get().GetLargeDataPage(this->database->GetFileName(), pageId, this);
-//      return this->database->GetLargeDataPage(pageId, this->header.tableId);
     }
 
     Pages::PageGuard<Pages::OverflowPage> Table::GetOverflowPage(const page_id_t & pageId) const{

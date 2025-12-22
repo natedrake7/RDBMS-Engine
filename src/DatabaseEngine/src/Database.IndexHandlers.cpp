@@ -8,17 +8,9 @@
 #include "../include/BufferPool/StorageManager.h"
 #include "../include/DataStorage/Block.h"
 #include "Guards/ReaderGuard.h"
-#include "Guards/WriterGuard.h"
-
-using namespace Pages;
-using namespace DatabaseEngine::StorageTypes;
-using namespace Storage;
-using namespace Indexing;
-using namespace std;
-using namespace ByteMaps;
 
 namespace DatabaseEngine {
-    DataTypes::Indexing::Key Database::CreateKey(const vector<column_index_t>& indexedColumns, const Row* row)
+    DataTypes::Indexing::Key Database::CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row)
     {
         DataTypes::Indexing::Key key;
         for (const auto &columnId : indexedColumns)
@@ -43,8 +35,8 @@ namespace DatabaseEngine {
         return key;
     }
 
-	PageGuard<IndexPage> Database::FindOrAllocateNextIndexPage(
-	    Table*& table,
+   Pages::PageGuard<Pages::IndexPage> Database::FindOrAllocateNextIndexPage(
+        StorageTypes::Table*& table,
 	    const page_id_t &indexPageId,
 	    const int& pagesToAllocate,
 	    const int& nonClusteredIndexId
@@ -65,7 +57,7 @@ namespace DatabaseEngine {
         if(indexPageId == INVALID_PAGE_ID)
             return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
 
-        const auto indexAllocationMapPage = StorageManager::Get().GetIndexAllocationMapPage(
+        const auto indexAllocationMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(
             this->filename,
             tableHeader.indexAllocationMapPageId,
             table
@@ -91,7 +83,7 @@ namespace DatabaseEngine {
                         continue;
                 }
 
-                auto indexPage = StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, table);
+                auto indexPage = Storage::StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, table);
 
                 if (!indexPage.IsValid())
                     continue;

@@ -131,7 +131,7 @@ namespace DatabaseEngine {
    });
 
    sortedValues.Add(columnId, {});
-   auto histograms = this->catalog->SelectColumnHistogramsByColumnId(columnId, column->GetColumnType());
+   auto histograms = this->catalog->SelectColumnHistogramsByColumnId(tableStatistics.tableId, columnId);
    columnHistogramsDictionary.Add(columnId, std::move(histograms));
   }
 

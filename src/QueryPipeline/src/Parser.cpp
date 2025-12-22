@@ -280,7 +280,7 @@ namespace QueryPipeline
         return result;
     }
 
-    void Parser::CommitTransaction(const DataTypes::Guid& sessionId, const QueryPipeline::Cursor* cursor) {
+    void Parser::CommitTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor) {
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
         transactionManager.CommitTransaction(cursor->GetSnapshot());
@@ -288,7 +288,7 @@ namespace QueryPipeline
         Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }
 
-    void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const QueryPipeline::Cursor* cursor) {
+    void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const Cursor* cursor) {
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
         transactionManager.RollbackTransaction(cursor->GetSnapshot());

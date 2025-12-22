@@ -1,23 +1,20 @@
 #include "../include/Server.h"
-#include "../../Systemic/include/Converter.h"
-
-#include <fstream>
-#include <nlohmann/json.hpp>
 #include "../../DatabaseEngine/include/DataStorage/Block.h"
 #include "../../DatabaseEngine/include/Logger/WriteAheadLogger.h"
 #include "../../DatabaseEngine/include/Managers/TransactionManager.h"
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
+#include "../../DatabaseEngine/include/SystemDatabases/TemporaryDatabase.h"
 #include "../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../Systemic/include/Guards/WriterGuard.h"
 
 #include <iostream>
-
-using json = nlohmann::json;
+#include <ranges>
 
 namespace Network {
    Server::Server(){
-     this->systemCatalog = nullptr;
-     this->versionDatabase = nullptr;
+    this->temporaryDatabase = nullptr;
+    this->systemCatalog = nullptr;
+    this->versionDatabase = nullptr;
   }
 
   Server::~Server() = default;
@@ -53,6 +50,9 @@ namespace Network {
   }
 
   void Server::Initialize(const string &configPath){
+    this->temporaryDatabase = &DatabaseEngine::TemporaryDatabase::Get();
+    this->temporaryDatabase->Initialize(configPath);
+
     this->versionDatabase = &DatabaseEngine::VersionDatabase::Get();
     this->versionDatabase->Initialize(configPath);
 
@@ -203,6 +203,7 @@ namespace Network {
       delete database;
     }
 
+    this->temporaryDatabase->Shutdown();
     this->systemCatalog->Shutdown();
     // this->versionDatabase->
   }

@@ -2,8 +2,10 @@
 
 #include <ranges>
 
+#include "../../../Server/include/Server.h"
+
 namespace DatabaseEngine {
-   TransactionManager::TransactionManager(){
+  TransactionManager::TransactionManager(){
     this->currentTransactionId = 0;
   }
 
@@ -19,48 +21,59 @@ namespace DatabaseEngine {
     Snapshot snapshot;
 
     {
-      std::unique_lock<std::mutex> lock(this->transactionMutex);
+      std::unique_lock lock(this->transactionMutex);
 
       snapshot.maximumTransactionId = this->currentTransactionId;
       snapshot.transactionId = this->currentTransactionId++;
     }
 
     {
-      std::unique_lock<std::mutex> lock(this->dictionaryMutex);
+      std::unique_lock lock(this->dictionaryMutex);
 
       snapshot.minimumTransactionId = this->activeTransactions.FirstOrDefault().transactionId;
 
-      for (const auto &[activeTransactionId, _] : this->activeTransactions | views::values)
+      for (const auto &[activeTransactionId, _, modifications] : this->activeTransactions | views::values)
         snapshot.activeTransactionIds.Add(activeTransactionId);
 
-      this->activeTransactions.Add(snapshot.transactionId,
-        TransactionInfo{
-          snapshot.transactionId,
-          sessionId
-      });
+      this->activeTransactions.Add(snapshot.transactionId, TransactionInfo(
+            snapshot.transactionId,
+            sessionId
+        ));
     }
 
     return snapshot;
   }
 
   void TransactionManager::SetTransactionId(const transaction_id_t &transactionId) {
-    std::unique_lock<std::mutex> lock(this->transactionMutex);
+    std::unique_lock lock(this->transactionMutex);
 
     this->currentTransactionId = transactionId;
   }
 
   void TransactionManager::CommitTransaction(const Snapshot& snapshot) {
-    std::unique_lock<std::mutex> lock(this->dictionaryMutex);
+    std::unique_lock lock(this->dictionaryMutex);
 
     this->activeTransactions.Remove(snapshot.transactionId);
   }
 
   void TransactionManager::RollbackTransaction(const Snapshot& snapshot){
+    TransactionInfo transactionInfo;
+
     {
-      std::unique_lock<std::mutex> lock(this->dictionaryMutex);
+      std::unique_lock lock(this->dictionaryMutex);
+
+      transactionInfo = std::move(this->activeTransactions.Get(snapshot.transactionId));
 
       this->activeTransactions.Remove(snapshot.transactionId);
     }
+
+    static auto& server = Network::Server::Get();
+    const auto* db = server.UseDatabase(transactionInfo.modificationInfo.databaseId);
+    const auto* table = db->OpenTableById(transactionInfo.modificationInfo.tableId);
+
+    //TODO track index keys along with rids to rollback index entries as well
+    for (const auto& rowId : transactionInfo.modificationInfo.rows)
+      table->Rollback(snapshot, rowId);
 
     //apply rollback mechanism
   }

@@ -2,12 +2,12 @@
 
 #include <cstdint>
 #include <cstddef>
-#include <limits>
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/Security/Security.h"
 
 namespace Constants{
     constexpr std::string_view WRITE_AHEAD_LOG_FILE = "wal.log";
+    constexpr std::string_view UNDO_LOG_FILE = "undo.log";
 
     constexpr size_t PAGE_SIZE = 8 * 1024;
     constexpr size_t MAX_NUMBER_OF_PAGES = 10000;

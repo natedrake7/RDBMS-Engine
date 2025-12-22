@@ -5,12 +5,18 @@
 #include "../../../Systemic/include/DataStructures/SortedDictionary.h"
 
 namespace DatabaseEngine {
+struct ModificationInfo {
+  Int databaseId;
+  Int tableId;
+  std::vector<Headers::RowIdentifier> rows;
+};
 
 struct TransactionInfo {
   transaction_id_t transactionId;
-
-  const DataTypes::Guid sessionId;
+  DataTypes::Guid sessionId;
+  ModificationInfo modificationInfo;
 };
+
 
 class TransactionManager {
   std::mutex transactionMutex;

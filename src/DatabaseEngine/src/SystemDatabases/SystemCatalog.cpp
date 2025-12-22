@@ -1765,9 +1765,11 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int & databaseId
   }
 
   std::vector<Headers::ColumnHistograms> SystemCatalog::SelectColumnHistogramsByColumnId(
-    const Int &columnId,
-    const DataType& columnType
+    const Int& tableId,
+    const Int& columnId
   ) const {
+
+    auto columnHeader = this->SelectColumnById(tableId, columnId);
 
     std::vector<Headers::ColumnHistograms> result;
     result.reserve(NUMBER_OF_HISTOGRAM_BUCKETS);
@@ -1781,7 +1783,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int & databaseId
     table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
     for (const auto& row : rows)
-      result.emplace_back(SystemCatalog::ToColumnHistograms(row, columnType));
+      result.emplace_back(SystemCatalog::ToColumnHistograms(row, static_cast<DataType>(columnHeader.dataType)));
 
     return result;
   }
