@@ -40,8 +40,8 @@ namespace QueryPipeline::Statements {
     std::string name;
     std::string alias;
 
-    int32_t tableId;
-    int32_t columnId;
+    Int tableId;
+    Int columnId;
     column_index_t index;
     DataType returnType;
   };
@@ -117,14 +117,14 @@ namespace QueryPipeline::Statements {
     Statements::ColumnName name;
     ColumnType type;
 
-    int32_t columnId;
+    Int columnId;
     column_index_t index;
   };
 
   struct DropColumn {
     Statements::ColumnName name;
 
-    int32_t columnId;
+    Int columnId;
     column_index_t index;
   };
 
@@ -133,7 +133,7 @@ namespace QueryPipeline::Statements {
     Statements::ColumnName newName;
 
     column_index_t ordinalPosition;
-    int32_t columnId;
+    Int columnId;
   };
 
   struct PrimaryKeyConstraint {
@@ -163,9 +163,9 @@ namespace QueryPipeline::Statements {
     std::string name;
     std::string alias;
 
-    int32_t databaseId;
-    int32_t tableId;
-    int32_t schemaId;
+    Int databaseId;
+    Int tableId;
+    Int schemaId;
     int16_t ordinalPosition;
 
     Network::Server* server;
@@ -174,8 +174,8 @@ namespace QueryPipeline::Statements {
     DataSource();
     [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
-    [[nodiscard]] Errors::ValidationStatus Validate(const int32_t& selectedDatabaseId);
-    [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const int32_t& selectedDatabaseId);
+    [[nodiscard]] Errors::ValidationStatus Validate(const Int& selectedDatabaseId);
+    [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const Int& selectedDatabaseId);
   };
 
   struct SubQuery : DataSource {
@@ -189,10 +189,10 @@ namespace QueryPipeline::Statements {
   struct Statement {
     DataTypes::Guid sessionId;
 
-    int32_t databaseId;
+    Int databaseId;
 
     DataSource* table;
-    Dictionary<int32_t, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
+    Dictionary<Int, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
     Network::Server* server;
     DatabaseEngine::SystemCatalog* catalog;
 
@@ -279,7 +279,7 @@ namespace QueryPipeline::Statements {
 
     JoinStatement();
     [[nodiscard]]Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    [[nodiscard]]Errors::ValidationStatus Validate(const int32_t& databaseId);
+    [[nodiscard]]Errors::ValidationStatus Validate(const Int& databaseId);
 
     [[nodiscard]]bool IsRightJoin()const;
     [[nodiscard]]bool IsInnerJoin()const;
@@ -335,7 +335,7 @@ namespace QueryPipeline::Statements {
       const JoinOrderAnalyzeResult& joinReorderResult,
       const PredicatePushDownResult& predicatesResult
     ) const;
-    [[nodiscard]] Dictionary<int32_t, column_index_t> BuildColumnsIndicesDictionary(const std::vector<table_id_t>& joinOrder)const;
+    [[nodiscard]] Dictionary<Int, column_index_t> BuildColumnsIndicesDictionary(const std::vector<table_id_t>& joinOrder)const;
     void AssignColumnsToIndices(const std::vector<table_id_t>& order)const;
     void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<std::string, column_index_t>& postProjectionIndicesDictionary) const;
 
@@ -628,32 +628,32 @@ static void AssignConstantToExpression(Expressions::Expression*& expression);
    * @{
    */
   static void AssignColumnIndicesToExpression(
-    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
+    const Dictionary<Int, column_index_t>& columnIndicesDictionary,
     Expressions::Expression* expression
   );
 
   static void AssignColumnIndicesToBinaryExpression(
-    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
+    const Dictionary<Int, column_index_t>& columnIndicesDictionary,
     const Expressions::BinaryExpression* expression
   );
 
   static void AssignColumnIndicesToLogicalExpression(
-    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
+    const Dictionary<Int, column_index_t>& columnIndicesDictionary,
     const Expressions::LogicalExpression* expression
   );
 
   static void AssignColumnIndicesToBranchExpression(
-    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
+    const Dictionary<Int, column_index_t>& columnIndicesDictionary,
     const Expressions::BranchExpression* expression
   );
 
   static void AssignColumnIndicesToFunctionExpression(
-    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
+    const Dictionary<Int, column_index_t>& columnIndicesDictionary,
     const Expressions::FunctionExpression* expression
   );
 
   static void AssignColumnIndicesToColumnExpression(
-    const Dictionary<int32_t, column_index_t>& columnIndicesDictionary,
+    const Dictionary<Int, column_index_t>& columnIndicesDictionary,
     Expressions::ColumnExpression* expression
   );
 

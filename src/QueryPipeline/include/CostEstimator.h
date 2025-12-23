@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include <cstdint>
 #include <vector>
 
 #include "../../Systemic/include/DataTypes/DataTypes.h"
+#include "Evaluators/Expression.h"
 
 class Value;
 namespace Headers {
@@ -19,6 +19,7 @@ namespace Headers {
 }
 
 namespace QueryPipeline{
+    struct IndexCandidate;
     struct SeekRange;
     struct IndexSeekColumnAnalysisResults;
 
@@ -33,6 +34,31 @@ namespace QueryPipeline{
             HistogramSelectivityEstimate();
             void CalculatePreviousRows();
         };
+
+        static constexpr Int DEFAULT_EXPRESSION_COMPLEXITY = 0;
+        static constexpr Int CONSTANT_EXPRESSION_COMPLEXITY = 0;
+        static constexpr Int ADDITION_EXPRESSION_COMPLEXITY = 3;
+        static constexpr Int MULTIPLICATION_EXPRESSION_COMPLEXITY = 2;
+        static constexpr Int DIVISION_EXPRESSION_COMPLEXITY = 5;
+        static constexpr Int EQUALITY_EXPRESSION_COMPLEXITY = 2;
+        static constexpr Int FUNCTION_EXPRESSION_COMPLEXITY = 10;
+        static constexpr Int LOGICAL_AND_EXPRESSION_COMPLEXITY = 2;
+        static constexpr Int BRANCH_EXPRESSION_COMPLEXITY = 8;
+
+
+        static constexpr double INTEGER_COMPARISON_COST = 1.0;
+        static constexpr double DECIMAL_COMPARISON_COST = 1.5;
+        static constexpr double STRING_COMPARISON_COST = 5.0;
+        static constexpr double DEFAULT_COMPARISON_COST = 0.0;
+
+
+        [[nodiscard]] static Int EstimateExpressionComplexity(const Expressions::Expression* expression);
+        [[nodiscard]] static Int EstimateBinaryExpressionComplexity(const Expressions::BinaryExpression* binaryExpr);
+        [[nodiscard]] static Int EstimateOperationComplexity(const Expressions::BinaryOperator& binaryExpr);
+        [[nodiscard]] static Int EstimateLogicalExpressionComplexity(const Expressions::LogicalExpression* logicalExpr);
+        [[nodiscard]] static Int EstimateFunctionExpressionComplexity(const Expressions::FunctionExpression* functionExpr);
+        [[nodiscard]] static Int EstimateBranchExpressionComplexity(const Expressions::BranchExpression* branchExpr);
+        [[nodiscard]] static double EstimateExpressionComparisonCost(const Expressions::Expression* expression);
 
         [[nodiscard]] static double InterpolateBucket(
             const Headers::ColumnHistograms& bucket,
@@ -84,10 +110,25 @@ namespace QueryPipeline{
         );
 
     public:
-        [[nodiscard]] static double EstimateIndexCost(
-            const Headers::IndexHeader& indexHeader,
-            const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
+        static void EstimateIndexCost(
+            IndexCandidate& candidate,
             const Headers::TableStatistics& tableStats
+        );
+
+        [[nodiscard]] static double EstimateFilterCost(
+            const Expressions::Expression* filterExpression,
+            const BigInt& inputRows,
+            const double& selectivity
+        );
+
+        [[nodiscard]] static double EstimateProjectionCost(
+            const std::vector<Expressions::Expression*>& projections,
+            const BigInt& inputRows
+        );
+
+        [[nodiscard]] static double EstimateSortCost(
+            const BigInt& inputRows,
+            const std::vector<Expressions::Expression*>& sortExpressions
         );
     };
 }

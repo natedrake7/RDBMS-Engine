@@ -1,11 +1,34 @@
 #include "../include/Optimizer.h"
 
 #include "CostEstimator.h"
+#include "PipelineConstants.h"
 #include "../include/LogicalPlan.h"
 #include "Managers/StatisticsManager.h"
 #include "SystemDatabases/SystemCatalog.h"
 
 namespace QueryPipeline {
+  JoinAlgorithmAnalysisResult::JoinAlgorithmAnalysisResult(){
+    this->algorithm = PipelineConstants::JoinAlgorithm::NestedLoopJoin;
+    this->remainingPredicate = nullptr;
+  }
+
+  JoinAlgorithmAnalysisResult::JoinAlgorithmAnalysisResult(const PipelineConstants::JoinAlgorithm& algorithm){
+    this->algorithm = algorithm;
+    this->remainingPredicate = nullptr;
+  }
+
+  JoinAlgorithmAnalysisResult::JoinAlgorithmAnalysisResult(
+    const PipelineConstants::JoinAlgorithm& algorithm,
+    Expressions::Expression* expression,
+    std::vector<column_index_t>& leftKeyColumns,
+    std::vector<column_index_t>& rightKeyColumns
+  ){
+    this->remainingPredicate = expression;
+    this->algorithm = algorithm;
+    this->leftKeyColumns = std::move(leftKeyColumns);
+    this->rightKeyColumns = std::move(rightKeyColumns);
+  }
+
   Range::Range(){
     this->hasRange = false;
     this->canSeek = false;
@@ -54,6 +77,9 @@ namespace QueryPipeline {
   }
 
   void Optimizer::SplitConjunctions(Expressions::Expression* expression, std::vector<Expressions::Expression*>& conjunctions){
+    if (expression == nullptr)
+      return;
+
     if (!expression->IsLogical()){
       conjunctions.push_back(expression);
       return;
@@ -77,15 +103,15 @@ namespace QueryPipeline {
   void Optimizer::GetInvolvedTables(const Expressions::Expression* expression, HashSet<table_id_t>& involvedTables){
     if (expression->IsBinary()){
       const auto* binaryExpr = expression->AsBinary();
-      GetInvolvedTables(binaryExpr->left, involvedTables);
-      GetInvolvedTables(binaryExpr->right, involvedTables);
+      Optimizer::GetInvolvedTables(binaryExpr->left, involvedTables);
+      Optimizer::GetInvolvedTables(binaryExpr->right, involvedTables);
       return;
     }
 
     if (expression->IsLogical()){
       const auto* logicalExpr = expression->AsLogical();
-      GetInvolvedTables(logicalExpr->left, involvedTables);
-      GetInvolvedTables(logicalExpr->right, involvedTables);
+      Optimizer::GetInvolvedTables(logicalExpr->left, involvedTables);
+      Optimizer::GetInvolvedTables(logicalExpr->right, involvedTables);
       return;
     }
 
@@ -108,7 +134,6 @@ namespace QueryPipeline {
     Expressions::Expression*& baseExpression,
     Expressions::Expression* newExpression
   ){
-
     if (baseExpression == nullptr){
         baseExpression = newExpression;
         return;
@@ -238,22 +263,17 @@ namespace QueryPipeline {
     }
   }
 
-  IndexSeekAnalysisResult Optimizer::AnalyzeTableScan(
+  std::vector<IndexSeekColumnAnalysisResults> Optimizer::AnalyzeTableScan(
     const Headers::IndexHeader& index,
-    Expressions::Expression* expression
+    const std::vector<Expressions::Expression*>& conjunctions
   ){
-    IndexSeekAnalysisResult result;
-
-    if (expression == nullptr)
-      return result;
-
-    Optimizer::SplitConjunctions(expression, result.conjunctions);
+    std::vector<IndexSeekColumnAnalysisResults> result;
 
     Dictionary<column_id_t, std::vector<Expressions::Expression*>> columnPredicates;
     for (const auto& column : index.columns)
       columnPredicates.Add(column.columnId, {});
 
-    for (auto*& condition: result.conjunctions){
+    for (auto& condition : conjunctions){
       if (!condition->IsBinary())
         continue;
 
@@ -322,7 +342,7 @@ namespace QueryPipeline {
       if (!analyzeResult.canIndexSeek)
         break;
 
-      result.analyzeResults.push_back(analyzeResult);
+      result.push_back(analyzeResult);
     }
 
     return result;
@@ -364,6 +384,113 @@ namespace QueryPipeline {
     range.canSeek = canSeek;
 
     return range;
+  }
+
+  void Optimizer::ProcessJoinCondition(
+    Expressions::Expression* expression,
+    std::vector<JoinConditionInfo>& conditionsInfo,
+    bool& isEqualityJoin
+  ){
+    if (!expression->IsBinary())
+      return;
+
+    const auto* binaryExpr = expression->AsBinary();
+    if (!binaryExpr->left->IsColumn() || !binaryExpr->right->IsColumn())
+      return;
+
+    JoinConditionInfo info;
+
+    const auto* leftColumnExpr = binaryExpr->left->AsColumn();
+    const auto* rightColumnExpr = binaryExpr->right->AsColumn();
+
+    isEqualityJoin = !isEqualityJoin && (binaryExpr->operation == Expressions::BinaryOperator::Equal);
+    info.leftColumnId = leftColumnExpr->columnId;
+    info.leftColumnIndex = leftColumnExpr->index;
+
+    info.rightColumnId = rightColumnExpr->columnId;
+    info.rightColumnIndex = rightColumnExpr->index;
+
+    info.expression = expression;
+
+    conditionsInfo.push_back(info);
+  }
+
+  std::vector<Int> Optimizer::CheckPredicatesSorting(
+    const Headers::TableStatistics& tableStats,
+    const std::vector<JoinConditionInfo>& joinConditions,
+    const bool& isLeftTable
+  ){
+    const auto indexes = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(tableStats.tableId);
+
+    if (indexes.empty())
+      return {};
+
+    std::vector<Int> bestMatch;
+    for (const auto& index : indexes){
+      const auto columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(index.indexId);
+
+      std::vector<Int> matches;
+      for (const auto& column : columns){
+
+        for (int i = 0;i < joinConditions.size();i++){
+          const auto& joinCondition = joinConditions[i];
+
+          const auto columnId = isLeftTable
+                ? joinCondition.leftColumnId
+                : joinCondition.rightColumnId;
+
+          if (column.columnId == columnId){
+            matches.push_back(i);
+            continue;
+          }
+
+          break;
+        }
+
+        if (bestMatch.size() < matches.size())
+          bestMatch = std::move(matches);
+      }
+    }
+
+    return bestMatch;
+  }
+
+  JoinAlgorithmAnalysisResult Optimizer::CreateMergeJoinKeys(
+    const std::vector<JoinConditionInfo>& conditionsInfo,
+    const std::vector<Int>& leftKeyColumns,
+    const std::vector<Int>& rightKeyColumns
+  ){
+    JoinAlgorithmAnalysisResult result(PipelineConstants::JoinAlgorithm::MergeJoin);
+
+    const auto leftSize = leftKeyColumns.size();
+    const auto rightSize = rightKeyColumns.size();
+
+    const auto min = std::min(leftSize, rightSize);
+
+    for (int i = 0;i < min;i++){
+      const auto& joinCondition = conditionsInfo[leftKeyColumns[i]];
+
+      result.leftKeyColumns.push_back(joinCondition.leftColumnIndex);
+      result.rightKeyColumns.push_back(joinCondition.rightColumnIndex);
+    }
+
+    if (leftSize > min){
+      for (int i = min;i < leftSize;i++){
+        const auto& joinCondition = conditionsInfo[leftKeyColumns[i]];
+        Optimizer::CombineExpressionsWithAnd(result.remainingPredicate, joinCondition.expression);
+      }
+
+      return result;
+    }
+
+    if (rightSize > min){
+      for (int i = min;i < rightSize;i++){
+        const auto& joinCondition = conditionsInfo[rightKeyColumns[i]];
+        Optimizer::CombineExpressionsWithAnd(result.remainingPredicate, joinCondition.expression);
+      }
+    }
+
+    return result;
   }
 
   JoinOrderAnalyzeResult Optimizer::DetermineJoinOrder(Statements::SelectStatement* statement){
@@ -485,19 +612,23 @@ namespace QueryPipeline {
     const Headers::TableStatistics& tableStatistics
   ){
     std::vector<IndexCandidate> candidates;
+    candidates.reserve(indexes.size());
+
+    std::vector<Expressions::Expression*> conjunctions;
+    Optimizer::SplitConjunctions(expression, conjunctions);
 
     for (auto& index : indexes) {
       index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(index.id);
 
-      auto [analyzeResults, conjunctions] = Optimizer::AnalyzeTableScan(index, expression);
+      auto analyzeResults = Optimizer::AnalyzeTableScan(index, conjunctions);
 
       IndexCandidate candidate;
 
-      candidate.header = index;
+      candidate.header = &index;
       candidate.analyzeInfo = std::move(analyzeResults);
-      candidate.conjunctions = std::move(conjunctions);
+      candidate.conjunctions = &conjunctions;
       candidate.matchingColumns = static_cast<int>(candidate.analyzeInfo.size());
-      candidate.estimatedCost = CostEstimator::EstimateIndexCost(index, candidate.analyzeInfo, tableStatistics);
+      CostEstimator::EstimateIndexCost(candidate, tableStatistics);
 
       candidates.push_back(candidate);
     }
@@ -515,13 +646,58 @@ namespace QueryPipeline {
         break;
       }
 
-      if (isPerfectSeek && candidate.header.isClustered)
-        return Optimizer::BuildSeekKeys(candidate.analyzeInfo, candidate.conjunctions);
+      if (isPerfectSeek && candidate.header->isClustered)
+        return Optimizer::BuildSeekKeys(candidate.analyzeInfo, conjunctions);
     }
 
     ranges::sort(candidates, IndexCandidate());
 
-    auto& candidate = candidates[0];
-    return Optimizer::BuildSeekKeys(candidate.analyzeInfo, candidate.conjunctions);
+    const auto& candidate = candidates[0];
+    return Optimizer::BuildSeekKeys(candidate.analyzeInfo, conjunctions);
+  }
+
+   JoinAlgorithmAnalysisResult Optimizer::ChooseJoinAlgorithm(
+      const Int& leftTableId,
+      const Int& rightTableId,
+      Expressions::Expression* joinCondition
+    ){
+      //if left or right table is a subquery or derived table, use nested loop join
+      if (leftTableId == INVALID_TABLE_ID || rightTableId == INVALID_TABLE_ID)
+        return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::NestedLoopJoin);
+
+      static auto& statisticsManager = DatabaseEngine::StatisticsManager::Get();
+
+      const auto leftInfo = statisticsManager.GetTableStatistics(leftTableId);
+      const auto rightInfo = statisticsManager.GetTableStatistics(rightTableId);
+
+      std::vector<Expressions::Expression*> conjunctions;
+      SplitConjunctions(joinCondition, conjunctions);
+
+      std::vector<JoinConditionInfo> conditionsInfo;
+      bool isEqualityJoin = false;
+      for (const auto& conjunction : conjunctions)
+        Optimizer::ProcessJoinCondition(conjunction, conditionsInfo, isEqualityJoin);
+
+      if (!isEqualityJoin)
+        return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::NestedLoopJoin);
+
+      if (leftInfo.rowCount < PipelineConstants::SMALL_TABLE
+          && rightInfo.rowCount < PipelineConstants::SMALL_TABLE)
+        return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::NestedLoopJoin);
+
+      const auto leftBestMatch = Optimizer::CheckPredicatesSorting(leftInfo, conditionsInfo, true);
+      const auto rightBestMatch = Optimizer::CheckPredicatesSorting(rightInfo, conditionsInfo, false);
+
+      if (!leftBestMatch.empty() && !rightBestMatch.empty()){
+
+        //expression should be consumed by the best index as keys will be used match
+        return Optimizer::CreateMergeJoinKeys(conditionsInfo, leftBestMatch, rightBestMatch);
+      }
+
+    if (leftInfo.rowCount > PipelineConstants::HASH_JOIN_THRESHOLD
+      || rightInfo.rowCount > PipelineConstants::HASH_JOIN_THRESHOLD)
+      return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::HashJoin);
+
+    return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::NestedLoopJoin);
   }
 }

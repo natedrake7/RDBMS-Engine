@@ -181,8 +181,7 @@ namespace DataTypes::Indexing{
         return ComparisonResult::Equal;
     }
 
-    Key::ComparisonResult Key::CompareSubKeys(const Key& firstKey, const Key& otherKey)
-    {
+    Key::ComparisonResult Key::CompareSubKeys(const Key& firstKey, const Key& otherKey){
         if (firstKey == otherKey)
             return ComparisonResult::Equal;
 

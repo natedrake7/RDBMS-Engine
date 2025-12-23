@@ -20,6 +20,120 @@ namespace QueryPipeline{
         this->previousRows = this->bucketSize * this->bucketIndex;
     }
 
+    Int CostEstimator::EstimateExpressionComplexity(const Expressions::Expression* expression){
+        if (expression == nullptr)
+            return CostEstimator::DEFAULT_EXPRESSION_COMPLEXITY;
+
+        switch (expression->expressionType) {
+            case Expressions::ExpressionType::Column:
+            case Expressions::ExpressionType::Constant:
+            case Expressions::ExpressionType::Variable:
+                return CostEstimator::CONSTANT_EXPRESSION_COMPLEXITY;
+            case Expressions::ExpressionType::Binary:
+                return CostEstimator::EstimateBinaryExpressionComplexity(expression->AsBinary());
+            case Expressions::ExpressionType::Logical:
+                return CostEstimator::EstimateLogicalExpressionComplexity(expression->AsLogical());
+            case Expressions::ExpressionType::Branch:
+                return CostEstimator::EstimateBranchExpressionComplexity(expression->AsBranch());
+            case Expressions::ExpressionType::Function:
+                return CostEstimator::EstimateFunctionExpressionComplexity(expression->AsFunction());
+            default:
+                return 0;
+        }
+    }
+
+    Int CostEstimator::EstimateBinaryExpressionComplexity(const Expressions::BinaryExpression* binaryExpr){
+        const auto leftCost = CostEstimator::EstimateExpressionComplexity(binaryExpr->left);
+        const auto rightCost = CostEstimator::EstimateExpressionComplexity(binaryExpr->right);
+
+        const auto operationCost = CostEstimator::EstimateOperationComplexity(binaryExpr->operation);
+
+        return leftCost + rightCost + operationCost;
+    }
+
+    Int CostEstimator::EstimateOperationComplexity(const Expressions::BinaryOperator& binaryExpr){
+        switch (binaryExpr) {
+            case Expressions::BinaryOperator::Add:
+            case Expressions::BinaryOperator::Subtract:
+                return CostEstimator::ADDITION_EXPRESSION_COMPLEXITY;
+            case Expressions::BinaryOperator::Multiply:
+                return CostEstimator::MULTIPLICATION_EXPRESSION_COMPLEXITY;
+            case Expressions::BinaryOperator::Divide:
+            case Expressions::BinaryOperator::Modulo:
+                return CostEstimator::DIVISION_EXPRESSION_COMPLEXITY;
+            case Expressions::BinaryOperator::Equal:
+            case Expressions::BinaryOperator::NotEqual:
+            case Expressions::BinaryOperator::Less:
+            case Expressions::BinaryOperator::LessEqual:
+            case Expressions::BinaryOperator::Greater:
+            case Expressions::BinaryOperator::GreaterEqual:
+                return CostEstimator::EQUALITY_EXPRESSION_COMPLEXITY;
+            default:
+                return 3;
+        }
+    }
+
+    Int CostEstimator::EstimateLogicalExpressionComplexity(const Expressions::LogicalExpression* logicalExpr){
+        switch (logicalExpr->logicalType){
+            case Expressions::LogicalType::And:
+            case Expressions::LogicalType::Or:
+                return CostEstimator::LOGICAL_AND_EXPRESSION_COMPLEXITY
+                    + CostEstimator::EstimateExpressionComplexity(logicalExpr->left)
+                    + CostEstimator::EstimateExpressionComplexity(logicalExpr->right);
+            // case Expressions::LogicalType::Not:
+            //     return 1 + CostEstimator::EstimateExpressionComplexity(logicalExpr->left);
+            default:
+                return 0;
+        }
+    }
+
+    Int CostEstimator::EstimateFunctionExpressionComplexity(const Expressions::FunctionExpression* functionExpr){
+        Int cost = CostEstimator::FUNCTION_EXPRESSION_COMPLEXITY;
+
+        for (const auto& argument: functionExpr->arguments)
+            cost += CostEstimator::EstimateExpressionComplexity(argument);
+
+        return cost;
+    }
+
+    Int CostEstimator::EstimateBranchExpressionComplexity(const Expressions::BranchExpression* branchExpr){
+        Int cost = CostEstimator::BRANCH_EXPRESSION_COMPLEXITY;
+
+        for (const auto& argument: branchExpr->arguments)
+            cost += CostEstimator::EstimateExpressionComplexity(argument);
+
+        for (const auto& branch: branchExpr->branches)
+            cost += CostEstimator::EstimateExpressionComplexity(branch);
+
+        for (const auto& result: branchExpr->results)
+            cost += CostEstimator::EstimateExpressionComplexity(result);
+
+        if (branchExpr->baseCase != nullptr)
+            cost += CostEstimator::EstimateExpressionComplexity(branchExpr->baseCase);
+
+        return cost;
+    }
+
+    double CostEstimator::EstimateExpressionComparisonCost(const Expressions::Expression* expression){
+        switch (expression->GetReturnType()) {
+            case DataType::TinyInt:
+            case DataType::SmallInt:
+            case DataType::Int:
+            case DataType::BigInt:
+            case DataType::Bool:
+            case DataType::DateTime:
+                return CostEstimator::INTEGER_COMPARISON_COST;
+            case DataType::Decimal:
+                return CostEstimator::DECIMAL_COMPARISON_COST;
+            case DataType::String:
+            case DataType::UnicodeString:
+            case DataType::Guid:
+                return CostEstimator::STRING_COMPARISON_COST;
+            default:
+                return CostEstimator::DECIMAL_COMPARISON_COST;
+        }
+    }
+
     double CostEstimator::InterpolateBucket(const Headers::ColumnHistograms& bucket, const Value& value){
         const auto minInterpolated = bucket.rangeStart.Interpolate();
         const auto maxInterpolated = bucket.rangeEnd.Interpolate();
@@ -70,7 +184,7 @@ namespace QueryPipeline{
 
         const auto nonTouchedBucketRows = info.bucketSize * fraction;
 
-        return (info.totalTableRows - nonTouchedBucketRows - info.previousRows) / static_cast<double>(info.totalTableRows);
+        return (static_cast<double>(info.totalTableRows) - nonTouchedBucketRows - info.previousRows) / static_cast<double>(info.totalTableRows);
     }
 
     double CostEstimator::EstimateRangeEndSelectivityByHistograms(
@@ -245,35 +359,36 @@ namespace QueryPipeline{
         );
     }
 
-    double CostEstimator::EstimateIndexCost(
-        const Headers::IndexHeader& indexHeader,
-        const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
+    void CostEstimator::EstimateIndexCost(
+        IndexCandidate& candidate,
         const Headers::TableStatistics& tableStats
     ){
-
         //if empty default to full scan
-        if (analyzeResults.empty())
-            return 1.0;
+        if (candidate.analyzeInfo.empty()){
+            candidate.estimatedCost = 1.0;
+            return;
+        }
 
         //get indexStats and account for the depth of the tree in the cost
-        const auto indexStats = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(indexHeader.id);
+        const auto indexStats = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(candidate.header->id);
 
         //TODO fix make sure index stats are available and cached by better key
         const Headers::IndexStatistics* indexStatistic = nullptr;
         for (const auto& stats : indexStats){
-            if (stats.indexId != indexHeader.id)
+            if (stats.indexId != candidate.header->id)
                 continue;
 
             indexStatistic = &stats;
             break;
         }
 
-        if (indexStatistic == nullptr)
-            return 1.0;
+        if (indexStatistic == nullptr){
+            candidate.estimatedCost = 1.0;
+            return;
+        }
 
         double combinedSelectivity = 1.0;
-
-        for (const auto& info : analyzeResults){
+        for (const auto& info : candidate.analyzeInfo){
             const auto& columnStats = DatabaseEngine::StatisticsManager::Get().GetColumnStatistics(tableStats.tableId, info.columnId);
 
             const auto selectivity = CostEstimator::EstimateSelectivity(info.range, columnStats, tableStats);
@@ -287,20 +402,60 @@ namespace QueryPipeline{
 
         cost += estimatedRows * PipelineConstants::SEQUENTIAL_PAGE_COST;
 
-        if (!indexHeader.isClustered)
+        if (!candidate.header->isClustered)
             cost += estimatedRows * PipelineConstants::RANDOM_PAGE_COST;
 
         cost += estimatedRows * PipelineConstants::CPU_COST_PER_ROW;
 
+        candidate.estimatedCost = cost;
+    }
 
+    double CostEstimator::EstimateFilterCost(
+        const Expressions::Expression* filterExpression,
+        const BigInt& inputRows,
+        const double& selectivity
+    ){
+        const auto expressionComplexity = CostEstimator::EstimateExpressionComplexity(filterExpression);
 
+        const auto cpuCost = static_cast<double>(expressionComplexity) * PipelineConstants::CPU_COST_PER_ROW * static_cast<double>(inputRows);
 
+        const auto ioCost = static_cast<double>(inputRows) * selectivity;
 
+        return cpuCost + ioCost;
+    }
 
+    double CostEstimator::EstimateProjectionCost(
+        const std::vector<Expressions::Expression*>& projections,
+        const BigInt& inputRows
+    ) {
+        Int totalExpressionComplexity = 0;
 
+        for (const auto& expression : projections)
+            totalExpressionComplexity += CostEstimator::EstimateExpressionComplexity(expression);
 
+        return static_cast<double>(totalExpressionComplexity) * PipelineConstants::CPU_COST_PER_ROW * static_cast<double>(inputRows);
+    }
 
+    double CostEstimator::EstimateSortCost(
+        const BigInt& inputRows,
+        const std::vector<Expressions::Expression*>& sortExpressions
+    ){
+        if (inputRows <= 1) return 0.0;
 
-        return cost;
+        const auto castRows = static_cast<double>(inputRows);
+
+        const auto comparison = castRows * std::log2(castRows);
+
+        Int totalExpressionComplexity = 0;
+        for (const auto& expression : sortExpressions){
+            totalExpressionComplexity += CostEstimator::EstimateExpressionComplexity(expression);
+            totalExpressionComplexity += CostEstimator::EstimateExpressionComparisonCost(expression);
+        }
+
+        const auto sortCost = static_cast<double>(totalExpressionComplexity) * comparison * PipelineConstants::CPU_COST_PER_COMPARISON;
+
+        const auto materializationCost = castRows * static_cast<double>(sortExpressions.size()) * PipelineConstants::CPU_COST_PER_ROW;
+
+        return sortCost + materializationCost;
     }
 }

@@ -126,9 +126,12 @@ namespace QueryPipeline {
    LogicalPlan *left,
    LogicalPlan *right,
    Expressions::Expression *condition,
-   const JoinType &type
-  )
-   : left(left), right(right), condition(condition), type(type) {}
+   const JoinType &type,
+   const Int &leftTableId,
+    const Int &rightTableId
+  ) : leftTableId(leftTableId), rightTableId(rightTableId),
+      left(left), right(right),
+      condition(condition), type(type){}
 
   LogicalJoin::~LogicalJoin(){
     delete this->left;
@@ -136,6 +139,12 @@ namespace QueryPipeline {
   }
 
   PhysicalPlan::ExecutionNode * LogicalJoin::ToPhysical(){
+    auto analysisResult = Optimizer::ChooseJoinAlgorithm(
+      this->leftTableId,
+      this->rightTableId,
+      this->condition
+    );
+
     switch (this->type) {
       case JoinType::Inner:
         return new PhysicalPlan::PhysicalNestedLoopInnerJoin(

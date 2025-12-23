@@ -407,6 +407,28 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
+  class PhysicalMergeInnerJoin final : public ExecutionNode {
+    ExecutionNode* left;
+    ExecutionNode* right;
+    Expressions::Expression* joinCondition;
+
+    std::vector<column_index_t> leftKeyColumns;
+    std::vector<column_index_t> rightKeyColumns;
+
+    ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
+
+  public:
+    PhysicalMergeInnerJoin(
+      ExecutionNode* left,
+      ExecutionNode* right,
+      Expressions::Expression* joinCondition,
+      std::vector<column_index_t>& leftKeyColumns,
+      std::vector<column_index_t>& rightKeyColumns
+    );
+    ~PhysicalMergeInnerJoin()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
   class PhysicalNestedLoopLeftJoin final : public ExecutionNode {
     ExecutionNode* left;
     ExecutionNode* right;

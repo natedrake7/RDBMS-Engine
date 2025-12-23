@@ -1,3 +1,4 @@
+#include "Database.h"
 #include "../../include/PhysicalPlan.h"
 
 namespace QueryPipeline::PhysicalPlan {
@@ -49,6 +50,92 @@ namespace QueryPipeline::PhysicalPlan {
     const auto* leftResult = this->left->Execute(properties);
 
     auto * result = this->ExecuteBatchJoin(properties, leftResult);
+
+    result->canFetchMore = leftResult->canFetchMore;
+
+    delete leftResult;
+    return result;
+  }
+
+  ExecutionResult* PhysicalMergeInnerJoin::ExecuteBatchJoin(
+    const DatabaseEngine::ExecutionProperties& properties,
+    const ExecutionResult* leftResult
+  ) const
+  {
+    using compOp = DataTypes::Indexing::Key::ComparisonResult;
+
+    auto* result = new ExecutionResult();
+
+    Expressions::EvaluationContext context(
+      Expressions::EvaluationContext::EvaluationContextType::Join,
+      properties.variables
+    );
+
+    bool canFetchMore = true;
+    const ExecutionResult* rightResult = nullptr;
+
+    while (canFetchMore){
+      rightResult = this->right->Execute(properties);
+      canFetchMore = rightResult->canFetchMore;
+
+      Int leftIndex = 0;
+      Int rightIndex = 0;
+
+      const auto leftRowsSize = leftResult->rows.size();
+      const auto rightRowsSize = rightResult->rows.size();
+
+      for (leftIndex = 0;leftIndex < leftResult->rows.size();leftIndex++){
+        const auto& outerRow = leftResult->rows[leftIndex];
+        const auto& innerRow = rightResult->rows[rightIndex];
+
+        const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, outerRow);
+        const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, innerRow);
+
+        const auto comparison = leftKey.CompareCompositeKeys(rightKey);
+
+        if (comparison == compOp::Less)
+          continue;
+
+        if (comparison == compOp::Greater){
+          rightIndex++;
+          continue;
+        }
+
+        result->rows.push_back(outerRow->Join(innerRow));
+
+        if (rightIndex >= rightRowsSize && leftIndex < leftRowsSize
+          && canFetchMore){
+          delete rightResult;
+          rightResult = this->right->Execute(properties);
+          rightIndex = 0;
+        }
+      }
+
+      delete rightResult;
+    }
+
+    return result;
+  }
+
+  PhysicalMergeInnerJoin::PhysicalMergeInnerJoin(
+    ExecutionNode* left,
+    ExecutionNode* right,
+    Expressions::Expression* joinCondition,
+    std::vector<column_index_t>& leftKeyColumns,
+    std::vector<column_index_t>& rightKeyColumns
+  ) : left(left), right(right), joinCondition(joinCondition),
+      leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)){}
+
+  PhysicalMergeInnerJoin::~PhysicalMergeInnerJoin(){
+    delete this->left;
+    delete this->right;
+    delete this->joinCondition;
+  }
+
+  ExecutionResult* PhysicalMergeInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    const auto* leftResult = this->left->Execute(properties);
+
+    auto* result = this->ExecuteBatchJoin(properties, leftResult);
 
     result->canFetchMore = leftResult->canFetchMore;
 

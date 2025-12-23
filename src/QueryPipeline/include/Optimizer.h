@@ -19,6 +19,10 @@ namespace Headers {
 }
 
 namespace QueryPipeline {
+  namespace PipelineConstants {
+    enum class JoinAlgorithm : UnsignedTinyInt;
+  }
+
   class LogicalTableScan;
 }
 
@@ -29,6 +33,40 @@ namespace Expressions {
 }
 
 namespace QueryPipeline {
+  struct JoinConditionInfo{
+    Int leftColumnId;
+    column_index_t leftColumnIndex;
+
+    Int rightColumnId;
+    column_index_t rightColumnIndex;
+
+    bool isEqualityJoin;
+    Expressions::Expression* expression;
+  };
+
+  struct JoinAlgorithmAnalysisResult{
+    PipelineConstants::JoinAlgorithm algorithm;
+
+    std::vector<column_index_t> leftKeyColumns;
+    std::vector<column_index_t> rightKeyColumns;
+
+    Expressions::Expression* remainingPredicate;
+
+    JoinAlgorithmAnalysisResult();
+    explicit JoinAlgorithmAnalysisResult(const PipelineConstants::JoinAlgorithm& algorithm);
+    JoinAlgorithmAnalysisResult(
+      const PipelineConstants::JoinAlgorithm& algorithm,
+      Expressions::Expression* expression,
+      std::vector<column_index_t>& leftKeyColumns,
+      std::vector<column_index_t>& rightKeyColumns
+    );
+  };
+
+  struct JoinAlgorithmInfo{
+    std::vector<JoinConditionInfo> joinConditions;
+    Expressions::Expression* remainingPredicate;
+  };
+
   struct Range{
     DataTypes::Indexing::Key start;
     DataTypes::Indexing::Key end;
@@ -66,7 +104,6 @@ namespace QueryPipeline {
     Int columnId;
     SeekRange range;
 
-
     Expressions::Expression* expression;
 
     IndexSeekColumnAnalysisResults();
@@ -79,9 +116,9 @@ namespace QueryPipeline {
   };
 
   struct IndexCandidate{
-    Headers::IndexHeader header;
+    Headers::IndexHeader* header;
     std::vector<IndexSeekColumnAnalysisResults> analyzeInfo;
-    std::vector<Expressions::Expression*> conjunctions;
+    std::vector<Expressions::Expression*>* conjunctions;
     double estimatedCost;
     int matchingColumns;
 
@@ -92,7 +129,7 @@ namespace QueryPipeline {
       if (std::abs(lhs.estimatedCost - rhs.estimatedCost) > 0.01)
         return lhs.estimatedCost < rhs.estimatedCost;
 
-      return lhs.header.isClustered && !rhs.header.isClustered;
+      return lhs.header->isClustered && !rhs.header->isClustered;
     }
   };
 
@@ -221,14 +258,32 @@ namespace QueryPipeline {
         bool& canSeek
       );
 
-      static IndexSeekAnalysisResult AnalyzeTableScan(
+      static std::vector<IndexSeekColumnAnalysisResults> AnalyzeTableScan(
         const Headers::IndexHeader& index,
-        Expressions::Expression* expression
+        const std::vector<Expressions::Expression*>& conjunctions
       );
 
       static Range BuildSeekKeys(
         const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
         std::vector<Expressions::Expression*>& conjunctions
+      );
+
+      static void ProcessJoinCondition(
+        Expressions::Expression* expression,
+        std::vector<JoinConditionInfo>& conditionsInfo,
+        bool& isEqualityJoin
+      );
+
+      [[nodiscard]] static std::vector<Int> CheckPredicatesSorting(
+        const Headers::TableStatistics& tableStats,
+        const std::vector<JoinConditionInfo>& joinConditions,
+        const bool& isLeftTable
+      );
+
+      static JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
+        const std::vector<JoinConditionInfo>& conditionsInfo,
+        const std::vector<Int>& leftKeyColumns,
+        const std::vector<Int>& rightKeyColumns
       );
 
     public:
@@ -243,6 +298,12 @@ namespace QueryPipeline {
         std::vector<Headers::IndexHeader>& indexes,
         Expressions::Expression* expression,
         const Headers::TableStatistics& tableStatistics
+      );
+
+      [[nodiscard]] static JoinAlgorithmAnalysisResult ChooseJoinAlgorithm(
+        const Int& leftTableId,
+        const Int& rightTableId,
+        Expressions::Expression* joinCondition
       );
   };
 

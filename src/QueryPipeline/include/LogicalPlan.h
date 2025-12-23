@@ -95,15 +95,20 @@ namespace QueryPipeline {
 
   class LogicalJoin final : public LogicalPlan {
     public:
-    LogicalPlan* left;
-    LogicalPlan* right;
-    Expressions::Expression* condition;
-    JoinType type;
+      Int leftTableId;
+      Int rightTableId;
+
+      LogicalPlan* left;
+      LogicalPlan* right;
+      Expressions::Expression* condition;
+      JoinType type;
     LogicalJoin(
       LogicalPlan* left,
       LogicalPlan* right,
       Expressions::Expression* condition,
-      const JoinType& type
+      const JoinType& type,
+      const Int& leftTableId,
+      const Int& rightTableId
     );
 
     ~LogicalJoin() override;
