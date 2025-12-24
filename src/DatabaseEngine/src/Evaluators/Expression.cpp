@@ -147,22 +147,20 @@ namespace Expressions{
 
   Value ColumnExpression::Evaluate(const EvaluationContext& context) const{
     switch (context.type) {
-    case EvaluationContext::EvaluationContextType::SingleRow:
-      return context.row->GetColumnByIndex(this->index);
-    case EvaluationContext::EvaluationContextType::MaterializedRow:
-      return context.materializedRow.GetData().at(this->index);
-    case EvaluationContext::EvaluationContextType::Join: {
-      const auto& outerRowData = context.outerRow->GetData();
-
-      //figure out index assignment
-      return this->index < outerRowData.size()
-          ? context.outerRow->GetColumnByIndex(this->index)
-          : context.innerRow->GetColumnByIndex(this->index - outerRowData.size());
-    }
-    case EvaluationContext::EvaluationContextType::Constant:
-    case EvaluationContext::EvaluationContextType::Aggregate:
-    case EvaluationContext::EvaluationContextType::Window:
-      break;
+      case EvaluationContext::EvaluationContextType::SingleRow:
+        return context.row->GetColumnByIndex(this->index);
+      case EvaluationContext::EvaluationContextType::MaterializedRow:
+        return context.materializedRow.GetColumnAt(this->index);
+      case EvaluationContext::EvaluationContextType::Join: {
+        const auto& outerRowData = context.outerRow->GetData();
+        return this->index < outerRowData.size()
+            ? context.outerRow->GetColumnByIndex(this->index)
+            : context.innerRow->GetColumnByIndex(this->index - outerRowData.size());
+      }
+      case EvaluationContext::EvaluationContextType::Constant:
+      case EvaluationContext::EvaluationContextType::Aggregate:
+      case EvaluationContext::EvaluationContextType::Window:
+        break;
     }
 
     return {};

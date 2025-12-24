@@ -63,6 +63,10 @@ void QueryResult::Print() const{
 
 const std::vector<Value> & QueryResult::GetData()const{ return this->data; }
 
+Value QueryResult::GetColumnAt(const int& columnPos) const{
+  return this->data.at(columnPos);
+}
+
 int QueryResult::GetSize() const{ return this->data.size(); }
 
 void QueryResult::SetColumnIndex(const int &columnPos, const int32_t &columnIndex){

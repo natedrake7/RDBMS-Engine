@@ -34,9 +34,11 @@ namespace Expressions {
 
 namespace QueryPipeline {
   struct JoinConditionInfo{
+    Int leftTableId;
     Int leftColumnId;
     column_index_t leftColumnIndex;
 
+    Int rightTableId;
     Int rightColumnId;
     column_index_t rightColumnIndex;
 
@@ -258,6 +260,14 @@ namespace QueryPipeline {
         bool& canSeek
       );
 
+
+      static void AnalyzeTableScan(
+        IndexSeekColumnAnalysisResults& analyzeResult,
+        Expressions::BinaryExpression* binaryExpr,
+        const Expressions::ColumnExpression* columnExpr,
+        Expressions::Expression* otherExpression
+      );
+
       static std::vector<IndexSeekColumnAnalysisResults> AnalyzeTableScan(
         const Headers::IndexHeader& index,
         const std::vector<Expressions::Expression*>& conjunctions
@@ -276,14 +286,15 @@ namespace QueryPipeline {
 
       [[nodiscard]] static std::vector<Int> CheckPredicatesSorting(
         const Headers::TableStatistics& tableStats,
-        const std::vector<JoinConditionInfo>& joinConditions,
-        const bool& isLeftTable
+        const std::vector<JoinConditionInfo>& joinConditions
       );
 
       static JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
         const std::vector<JoinConditionInfo>& conditionsInfo,
         const std::vector<Int>& leftKeyColumns,
-        const std::vector<Int>& rightKeyColumns
+        const std::vector<Int>& rightKeyColumns,
+        const Int& leftTableId,
+        const Int& rightTableId
       );
 
     public:

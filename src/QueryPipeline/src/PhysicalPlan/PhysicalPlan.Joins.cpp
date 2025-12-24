@@ -62,7 +62,7 @@ namespace QueryPipeline::PhysicalPlan {
     const ExecutionResult* leftResult
   ) const
   {
-    using compOp = DataTypes::Indexing::Key::ComparisonResult;
+    using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
 
     auto* result = new ExecutionResult();
 
@@ -71,48 +71,50 @@ namespace QueryPipeline::PhysicalPlan {
       properties.variables
     );
 
-    bool canFetchMore = true;
-    const ExecutionResult* rightResult = nullptr;
+    const auto* rightResult = this->right->Execute(properties);
 
-    while (canFetchMore){
-      rightResult = this->right->Execute(properties);
-      canFetchMore = rightResult->canFetchMore;
+    Int leftIndex = 0;
+    Int rightIndex = 0;
 
-      Int leftIndex = 0;
-      Int rightIndex = 0;
+    const auto leftRowsCount = leftResult->rows.size();
+    const auto rightRowsCount = rightResult->rows.size();
 
-      const auto leftRowsSize = leftResult->rows.size();
-      const auto rightRowsSize = rightResult->rows.size();
+    const auto outerRowSize = leftResult->columns.size();
 
-      for (leftIndex = 0;leftIndex < leftResult->rows.size();leftIndex++){
-        const auto& outerRow = leftResult->rows[leftIndex];
-        const auto& innerRow = rightResult->rows[rightIndex];
+    while (leftIndex < leftRowsCount && rightIndex < rightRowsCount){
+      const auto& outerRow = leftResult->rows[leftIndex];
+      const auto& innerRow = rightResult->rows[rightIndex];
 
-        const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, outerRow);
-        const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, innerRow);
+      const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, outerRow);
+      const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, innerRow, outerRowSize);
 
-        const auto comparison = leftKey.CompareCompositeKeys(rightKey);
+      const auto comparison = leftKey.CompareCompositeKeys(rightKey);
 
-        if (comparison == compOp::Less)
-          continue;
-
-        if (comparison == compOp::Greater){
-          rightIndex++;
-          continue;
-        }
-
-        result->rows.push_back(outerRow->Join(innerRow));
-
-        if (rightIndex >= rightRowsSize && leftIndex < leftRowsSize
-          && canFetchMore){
-          delete rightResult;
-          rightResult = this->right->Execute(properties);
-          rightIndex = 0;
-        }
+      if (comparison == CompOperator::Less){
+        leftIndex++;
+        continue;
       }
 
-      delete rightResult;
+      if (comparison == CompOperator::Greater){
+        rightIndex++;
+        continue;
+      }
+
+      result->rows.push_back(outerRow->Join(innerRow));
+      rightIndex++;
+
+      if (rightIndex >= rightRowsCount
+          && leftIndex < leftRowsCount
+          && rightResult->canFetchMore
+      ){
+        delete rightResult;
+        rightResult = this->right->Execute(properties);
+        rightIndex = 0;
+      }
     }
+
+    delete rightResult;
+    result->canFetchMore = leftResult->canFetchMore;
 
     return result;
   }

@@ -263,6 +263,33 @@ namespace QueryPipeline {
     }
   }
 
+  void Optimizer::AnalyzeTableScan(
+    IndexSeekColumnAnalysisResults& analyzeResult,
+    Expressions::BinaryExpression* binaryExpr,
+    const Expressions::ColumnExpression* columnExpr,
+    Expressions::Expression* otherExpression
+  ){
+    if (otherExpression->IsConstant()){
+        const auto* constantExpr = otherExpression->AsConstant();
+
+        Optimizer::DetermineSeekRange(
+          binaryExpr,
+          constantExpr->value,
+        analyzeResult.range,
+        analyzeResult.canIndexSeek
+        );
+      }
+      else if (binaryExpr->right->IsVariable()){
+        analyzeResult.expression = binaryExpr->right;
+        analyzeResult.needsParameterBinding = true;
+
+        analyzeResult.expression = binaryExpr;
+      }
+
+      analyzeResult.columnId = columnExpr->columnId;
+      analyzeResult.expression = binaryExpr;
+  }
+
   std::vector<IndexSeekColumnAnalysisResults> Optimizer::AnalyzeTableScan(
     const Headers::IndexHeader& index,
     const std::vector<Expressions::Expression*>& conjunctions
@@ -293,50 +320,15 @@ namespace QueryPipeline {
           continue;
 
         Value value;
-        const auto* binaryExpr = predicate->AsBinary();
+        auto* binaryExpr = predicate->AsBinary();
 
         if (binaryExpr->left->IsColumn()){
-          const auto* columnExpr = binaryExpr->left->AsColumn();
-
-          if (binaryExpr->right->IsConstant()){
-            const auto* constantExpr = binaryExpr->right->AsConstant();
-
-            Optimizer::DetermineSeekRange(
-              binaryExpr,
-              constantExpr->value,
-            analyzeResult.range,
-            analyzeResult.canIndexSeek
-            );
-          }
-          else if (binaryExpr->right->IsVariable()){
-            analyzeResult.expression = binaryExpr->right;
-            analyzeResult.needsParameterBinding = true;
-          }
-
-          analyzeResult.columnId = columnExpr->columnId;
+          Optimizer::AnalyzeTableScan(analyzeResult, binaryExpr, binaryExpr->left->AsColumn(), binaryExpr->right);
           continue;
         }
 
-        if (binaryExpr->right->IsColumn()){
-          const auto* columnExpr = binaryExpr->right->AsColumn();
-
-          if (binaryExpr->left->IsConstant()){
-            const auto* constantExpr = binaryExpr->left->AsConstant();
-
-            Optimizer::DetermineSeekRange(
-              binaryExpr,
-              constantExpr->value,
-            analyzeResult.range,
-            analyzeResult.canIndexSeek
-            );
-          }
-          else if (binaryExpr->left->IsVariable()){
-            analyzeResult.expression = binaryExpr->left;
-            analyzeResult.needsParameterBinding = true;
-          }
-
-          analyzeResult.columnId = columnExpr->columnId;
-        }
+        if (binaryExpr->right->IsColumn())
+          Optimizer::AnalyzeTableScan(analyzeResult, binaryExpr, binaryExpr->right->AsColumn(), binaryExpr->left);
       }
 
       if (!analyzeResult.canIndexSeek)
@@ -363,6 +355,9 @@ namespace QueryPipeline {
         if (expression != info.expression)
           continue;
 
+
+        //if expression is used in range, remove it from conjunctions
+        delete expression;
         expression = nullptr;
         break;
       }
@@ -406,9 +401,11 @@ namespace QueryPipeline {
     isEqualityJoin = !isEqualityJoin && (binaryExpr->operation == Expressions::BinaryOperator::Equal);
     info.leftColumnId = leftColumnExpr->columnId;
     info.leftColumnIndex = leftColumnExpr->index;
+    info.leftTableId = leftColumnExpr->tableId;
 
     info.rightColumnId = rightColumnExpr->columnId;
     info.rightColumnIndex = rightColumnExpr->index;
+    info.rightTableId = rightColumnExpr->tableId;
 
     info.expression = expression;
 
@@ -417,8 +414,7 @@ namespace QueryPipeline {
 
   std::vector<Int> Optimizer::CheckPredicatesSorting(
     const Headers::TableStatistics& tableStats,
-    const std::vector<JoinConditionInfo>& joinConditions,
-    const bool& isLeftTable
+    const std::vector<JoinConditionInfo>& joinConditions
   ){
     const auto indexes = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(tableStats.tableId);
 
@@ -435,9 +431,9 @@ namespace QueryPipeline {
         for (int i = 0;i < joinConditions.size();i++){
           const auto& joinCondition = joinConditions[i];
 
-          const auto columnId = isLeftTable
-                ? joinCondition.leftColumnId
-                : joinCondition.rightColumnId;
+          const auto columnId = (joinCondition.leftTableId == tableStats.tableId)
+                  ? joinCondition.leftColumnId
+                  : joinCondition.rightColumnId;
 
           if (column.columnId == columnId){
             matches.push_back(i);
@@ -458,7 +454,9 @@ namespace QueryPipeline {
   JoinAlgorithmAnalysisResult Optimizer::CreateMergeJoinKeys(
     const std::vector<JoinConditionInfo>& conditionsInfo,
     const std::vector<Int>& leftKeyColumns,
-    const std::vector<Int>& rightKeyColumns
+    const std::vector<Int>& rightKeyColumns,
+    const Int& leftTableId,
+    const Int& rightTableId
   ){
     JoinAlgorithmAnalysisResult result(PipelineConstants::JoinAlgorithm::MergeJoin);
 
@@ -470,8 +468,16 @@ namespace QueryPipeline {
     for (int i = 0;i < min;i++){
       const auto& joinCondition = conditionsInfo[leftKeyColumns[i]];
 
-      result.leftKeyColumns.push_back(joinCondition.leftColumnIndex);
-      result.rightKeyColumns.push_back(joinCondition.rightColumnIndex);
+      const auto leftExprIndex = (joinCondition.leftTableId == leftTableId)
+          ? joinCondition.leftColumnIndex
+          : joinCondition.rightColumnIndex;
+
+      const auto rightExprIndex = (joinCondition.leftTableId == rightTableId)
+          ? joinCondition.leftColumnIndex
+          : joinCondition.rightColumnIndex;
+
+      result.leftKeyColumns.push_back(leftExprIndex);
+      result.rightKeyColumns.push_back(rightExprIndex);
     }
 
     if (leftSize > min){
@@ -685,13 +691,19 @@ namespace QueryPipeline {
           && rightInfo.rowCount < PipelineConstants::SMALL_TABLE)
         return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::NestedLoopJoin);
 
-      const auto leftBestMatch = Optimizer::CheckPredicatesSorting(leftInfo, conditionsInfo, true);
-      const auto rightBestMatch = Optimizer::CheckPredicatesSorting(rightInfo, conditionsInfo, false);
+      const auto leftBestMatch = Optimizer::CheckPredicatesSorting(leftInfo, conditionsInfo);
+      const auto rightBestMatch = Optimizer::CheckPredicatesSorting(rightInfo, conditionsInfo);
 
       if (!leftBestMatch.empty() && !rightBestMatch.empty()){
 
         //expression should be consumed by the best index as keys will be used match
-        return Optimizer::CreateMergeJoinKeys(conditionsInfo, leftBestMatch, rightBestMatch);
+        return Optimizer::CreateMergeJoinKeys(
+          conditionsInfo,
+          leftBestMatch,
+          rightBestMatch,
+          leftInfo.tableId,
+          rightInfo.tableId
+        );
       }
 
     if (leftInfo.rowCount > PipelineConstants::HASH_JOIN_THRESHOLD

@@ -105,7 +105,16 @@ public:
 
     static string CreateDatabasePath(const std::string& dbName);
 
-    [[nodiscard]] static DataTypes::Indexing::Key CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row);
+    [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
+      const vector<column_index_t>& indexedColumns,
+      const StorageTypes::Row* row
+    );
+
+    [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
+      const vector<column_index_t>& indexedColumns,
+      const StorageTypes::Row* row,
+      const Int& offSet
+    );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
         const vector<column_index_t>& indexedColumns,

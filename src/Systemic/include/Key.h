@@ -23,6 +23,9 @@ namespace DataTypes::Indexing {
     explicit Key(const std::vector<Key>& subKeys);
     explicit Key(const Key*& otherKey);
     Key(const Key &otherKey);
+    Key(Key&& otherKey) noexcept;
+    Key& operator=(Key&& otherKey) noexcept;
+    Key& operator=(const Key& otherKey);
     ~Key();
 
     // Key(Key&& other)noexcept;

@@ -61,6 +61,37 @@ namespace DataTypes::Indexing{
         this->subKeys = otherKey.subKeys;
     }
 
+    Key::Key(Key&& otherKey) noexcept{
+        if (this == &otherKey)
+            return;
+
+        this->size = otherKey.size;
+        this->subKeys = std::move(otherKey.subKeys);
+        this->value = std::move(otherKey.value);
+    }
+
+    Key& Key::operator=(Key&& otherKey) noexcept{
+        if (this == &otherKey)
+            return *this;
+
+        this->size = otherKey.size;
+        this->subKeys = std::move(otherKey.subKeys);
+        this->value = std::move(otherKey.value);
+
+        return *this;
+    }
+
+    Key& Key::operator=(const Key& otherKey){
+        if (this == &otherKey)
+            return *this;
+
+        this->size = otherKey.size;
+        this->subKeys = otherKey.subKeys;
+        this->value = otherKey.value;
+
+        return *this;
+    }
+
     Key::Key(const Key *&otherKey) {
         this->size = otherKey->size;
 

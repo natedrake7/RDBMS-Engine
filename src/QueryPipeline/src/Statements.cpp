@@ -691,10 +691,10 @@ namespace QueryPipeline::Statements {
   ) const{
 
     const auto leftTableId = this->table->tableId;
-    auto* current = this->BuildTableScanPlan(this->table, predicatesResult);
+    auto* current = SelectStatement::BuildTableScanPlan(this->table, predicatesResult);
 
     for (const auto& join : joinReorderResult.orderedJoins){
-      auto* right = this->BuildTableScanPlan(join->table, predicatesResult);
+      auto* right = SelectStatement::BuildTableScanPlan(join->table, predicatesResult);
       current = new LogicalJoin(current, right, join->expression, join->type, leftTableId, join->table->tableId);
     }
 

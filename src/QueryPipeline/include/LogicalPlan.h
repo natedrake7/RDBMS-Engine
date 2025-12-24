@@ -3,6 +3,8 @@
 #include "PhysicalPlan.h"
 
 namespace QueryPipeline {
+  struct JoinAlgorithmAnalysisResult;
+
   class LogicalPlan {
     public:
       DataTypes::Guid sessionId;
@@ -94,6 +96,11 @@ namespace QueryPipeline {
   };
 
   class LogicalJoin final : public LogicalPlan {
+    PhysicalPlan::ExecutionNode* CreateInnerJoinPhysicalPlan(JoinAlgorithmAnalysisResult& analysis) const;
+    PhysicalPlan::ExecutionNode* CreateLeftJoinPhysicalPlan(JoinAlgorithmAnalysisResult& analysis) const;
+    PhysicalPlan::ExecutionNode* CreateRightJoinPhysicalPlan(JoinAlgorithmAnalysisResult& analysis) const;
+    PhysicalPlan::ExecutionNode* CreateFullJoinPhysicalPlan(JoinAlgorithmAnalysisResult& analysis) const;
+
     public:
       Int leftTableId;
       Int rightTableId;
