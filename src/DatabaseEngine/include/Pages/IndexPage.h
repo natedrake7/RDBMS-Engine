@@ -38,7 +38,7 @@ namespace Pages {
 		std::vector<DataTypes::Indexing::Key*> keys;
 
 		//leaf
-		std::vector<Headers::RowIdentifier*> nonClusteredData;
+		std::vector<Headers::RowIdentifier> nonClusteredData;
 
 		//internal node
 		std::vector<page_id_t> children;
@@ -61,7 +61,7 @@ namespace Pages {
 			void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
 			void WriteToDisk(fstream *filePtr) override;
 
-                        void MarkEmpty();
+            void MarkEmpty();
 
 			void SetTreeType(const TreeType& treeType);
 			void SetTreeId(const page_id_t& treeId);
@@ -70,7 +70,7 @@ namespace Pages {
 
 			[[nodiscard]] vector<DataTypes::Indexing::Key*>* GetKeysUnsafe();
 
-			[[nodiscard]] vector<Headers::RowIdentifier*>* NonClusteredDataNoLock();
+			[[nodiscard]] vector<Headers::RowIdentifier>* NonClusteredDataNoLock();
 
 			[[nodiscard]] vector<page_id_t>* GetChildren();
 

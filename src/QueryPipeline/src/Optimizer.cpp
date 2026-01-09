@@ -517,12 +517,14 @@ namespace QueryPipeline {
     //optimize by using hasIndex bool on tableStats to avoid lookups
     const auto baseSourceIndexStats = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(statement->table->tableId);
 
+    //base table info
     infoVector.emplace_back(
       statement->table->tableId,
       baseSourceStats.rowCount,
       !baseSourceIndexStats.empty()
     );
 
+    //each join info
     for (const auto& join : statement->joins) {
       if (join->IsRightJoin()){
         result.order.insert(result.order.begin(), join->table->tableId);
@@ -550,8 +552,9 @@ namespace QueryPipeline {
     ranges::sort(infoVector, JoinOrderAnalyzeInfo());
 
     auto* baseSource = statement->table;
-
     Statements::JoinStatement* reorderedJoin = nullptr;
+
+    const auto preReorderSize = result.orderedJoins.size();
 
     for (int i = 0;i < infoVector.size(); i++){
       auto& info = infoVector[i];
@@ -562,19 +565,20 @@ namespace QueryPipeline {
         baseSource = statement->table;
 
         reorderedJoin = info.joinStatement;
-        result.order.push_back(info.tableId);
-        result.orderedJoins.push_back(nullptr);
+
+        result.order.insert(result.order.end() - preReorderSize, info.tableId);
+        result.orderedJoins.insert(result.orderedJoins.end() - preReorderSize, nullptr);
         continue;
       }
 
-      result.order.push_back(info.tableId);
+      result.order.insert(result.order.end() - preReorderSize, info.tableId);
 
       if (info.joinStatement == nullptr){
-        result.orderedJoins.push_back(reorderedJoin);
+        result.orderedJoins.insert(result.orderedJoins.end() - preReorderSize, reorderedJoin);
         continue;
       }
 
-      result.orderedJoins.push_back(info.joinStatement);
+      result.orderedJoins.insert(result.orderedJoins.end() - preReorderSize, info.joinStatement);
     }
 
     //remove the first which is always null

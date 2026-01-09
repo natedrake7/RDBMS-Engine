@@ -62,16 +62,14 @@ namespace QueryPipeline::PhysicalPlan{
       explicit ExecutionNode(const DataTypes::Guid& currentSessionId);
       virtual ~ExecutionNode() = default;
       virtual ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) = 0;
+      virtual void UpdateScanState(const Headers::RowIdentifier& rowId);
   };
 
-  class PhysicalDeclareVariable final : public ExecutionNode {
-    Variable variable;
-    Expressions::Expression* expression;
-
-    public:
-      explicit PhysicalDeclareVariable(const DataTypes::Guid& currentSessionId, Variable& variable, Expressions::Expression* expression);
-      ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties)override;
-  };
+  /**
+   * @name Catalog Altering Classes
+   * Classes that alter system catalog such as creating users, databases, schemas, etc.
+   * @{
+   */
 
   class PhysicalCreateUser final : public ExecutionNode {
     std::string username;
@@ -120,6 +118,95 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
+  class PhysicalTableCreate final : public ExecutionNode{
+    Statements::DataSource*  table;
+    std::string constraintName;
+    std::vector<Statements::NewColumn*> columns;
+    Headers::Index primaryKey;
+
+  public:
+    PhysicalTableCreate(
+      const DataTypes::Guid& sessionId,
+      Statements::DataSource*  table,
+      std::vector<Statements::NewColumn*>& columns,
+      Headers::Index& primaryKey,
+      std::string& constraintName
+    );
+    ~PhysicalTableCreate()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
+  class PhysicalIndexCreate final : public ExecutionNode {
+    Statements::DataSource* table;
+    std::string constraintName;
+    std::vector<column_index_t> columns;
+
+  public:
+    PhysicalIndexCreate(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource*  table,
+        std::string& constraintName,
+        vector<column_index_t>& columns
+    );
+    ExecutionResult * Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
+  /** @} End of Catalog Altering Classes */
+
+  /**
+  * @name Table Alter Classes
+  * Classes that alter tables such as add column, drop column, rename column, etc.
+  * @{
+  */
+
+  class PhysicalAddColumn final : public ExecutionNode {
+    Statements::DataSource* table;
+    Statements::NewColumn* column;
+
+  public:
+    PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::NewColumn* column);
+    ~PhysicalAddColumn()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
+  class PhysicalDropColumn final : public ExecutionNode {
+    Statements::DataSource* table;
+    Statements::DropColumn* column;
+
+  public:
+    PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::DropColumn* column);
+    ~PhysicalDropColumn()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
+  class PhysicalRenameColumn final : public ExecutionNode {
+    Statements::DataSource* table;
+    Statements::RenameColumn* column;
+
+  public:
+    PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::RenameColumn* column);
+    ~PhysicalRenameColumn()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
+  class PhysicalAlterColumn final : public ExecutionNode {
+    Statements::DataSource* table;
+    Statements::AlterColumn* column;
+
+  public:
+    PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::AlterColumn* column);
+    ~PhysicalAlterColumn()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
+  /** @} End of Table Alter Classes */
+
+  /**
+ * @name Table Scan Classes
+ * Classes that scan tables such as table scan, index scan, index seek, etc.
+ * @{
+ */
+
   class PhysicalTableScan final : public ExecutionNode{
     Statements::DataSource* table;
     Expressions::Expression* expression;
@@ -129,6 +216,7 @@ namespace QueryPipeline::PhysicalPlan{
       explicit PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression);
       ~PhysicalTableScan()override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      void UpdateScanState(const Headers::RowIdentifier& rowId) override;
   };
 
   class PhysicalIndexScan final : public ExecutionNode{
@@ -142,6 +230,7 @@ namespace QueryPipeline::PhysicalPlan{
     explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, const bool& isClustered = false);
     ~PhysicalIndexScan()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    void UpdateScanState(const Headers::RowIdentifier& rowId) override;
   };
 
   class PhysicalIndexSeek final : public ExecutionNode{
@@ -176,6 +265,14 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
+  /** @} End of Table Scan Classes */
+
+  /**
+  * @name Select Processing Classes
+  * Classes that process data retrieved from scans such as projection, filtering, top, distinct, etc.
+  * @{
+  */
+
   class PhysicalProject final : public ExecutionNode{
     std::vector<Expressions::Expression*> resultExpressions;
     std::vector<Headers::ColumnHeader> columnHeaders;
@@ -192,6 +289,7 @@ namespace QueryPipeline::PhysicalPlan{
         std::vector<Headers::ColumnHeader>& columnHeaders);
       ~PhysicalProject() override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      void UpdateScanState(const Headers::RowIdentifier& rowId) override;
   };
 
   class PhysicalFilter final : public ExecutionNode{
@@ -202,6 +300,7 @@ namespace QueryPipeline::PhysicalPlan{
       PhysicalFilter(ExecutionNode* child, Expressions::Expression* filter);
       ~PhysicalFilter() override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      void UpdateScanState(const Headers::RowIdentifier& rowId) override;
   };
 
   class PhysicalTop final : public ExecutionNode {
@@ -213,6 +312,7 @@ namespace QueryPipeline::PhysicalPlan{
       ~PhysicalTop() override;
 
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    void UpdateScanState(const Headers::RowIdentifier& rowId) override;
   };
 
   class PhysicalDistinct final : public ExecutionNode {
@@ -222,7 +322,26 @@ namespace QueryPipeline::PhysicalPlan{
       explicit PhysicalDistinct(ExecutionNode* child);
       ~PhysicalDistinct()override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      void UpdateScanState(const Headers::RowIdentifier& rowId) override;
   };
+
+  class PhysicalOrderBy final : public ExecutionNode{
+    ExecutionNode* child;
+    std::vector<Statements::OrderColumn*> expressions;
+  public:
+    PhysicalOrderBy(ExecutionNode* child, std::vector<Statements::OrderColumn*>& expressions);
+    ~PhysicalOrderBy()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    void UpdateScanState(const Headers::RowIdentifier& rowId) override;
+  };
+
+  /** @} End of Select Processing Classes */
+
+  /**
+  * @name Insert and Update Classes
+  * Classes that modify data such as insert, update, delete, etc.
+  * @{
+  */
 
   class PhysicalInsert final : public ExecutionNode{
     Statements::DataSource* table;
@@ -242,38 +361,6 @@ namespace QueryPipeline::PhysicalPlan{
       std::vector<column_index_t>& columnsIndices
     );
     ~PhysicalInsert()override;
-    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-  };
-
-  class PhysicalHeapDelete final : public ExecutionNode{
-    Statements::DataSource* table;
-    Expressions::Expression* expression;
-
-  public:
-    PhysicalHeapDelete(Statements::DataSource* table, Expressions::Expression* expression);
-    ~PhysicalHeapDelete()override;
-    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-  };
-
-  class PhysicalIndexScanDelete final : public ExecutionNode{
-    Statements::DataSource* table;
-    Expressions::Expression* expression;
-    DatabaseEngine::IndexState state;
-
-  public:
-    PhysicalIndexScanDelete(Statements::DataSource* table, Expressions::Expression* expression);
-    ~PhysicalIndexScanDelete()override;
-    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-  };
-
-  class PhysicalIndexSeekDelete final : public ExecutionNode{
-    Statements::DataSource* table;
-    Expressions::Expression* expression;
-    DatabaseEngine::IndexState state;
-
-  public:
-    PhysicalIndexSeekDelete(Statements::DataSource* table, Expressions::Expression* expression);
-    ~PhysicalIndexSeekDelete()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
@@ -310,90 +397,50 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
-  class PhysicalTableCreate final : public ExecutionNode{
-      Statements::DataSource*  table;
-      std::string constraintName;
-      std::vector<Statements::NewColumn*> columns;
-      Headers::Index primaryKey;
+  class PhysicalHeapDelete final : public ExecutionNode{
+    Statements::DataSource* table;
+    Expressions::Expression* expression;
 
-    public:
-      PhysicalTableCreate(
-        const DataTypes::Guid& sessionId,
-        Statements::DataSource*  table,
-        std::vector<Statements::NewColumn*>& columns,
-        Headers::Index& primaryKey,
-        std::string& constraintName);
-      ~PhysicalTableCreate()override;
-      ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-  };
-
-  class PhysicalOrderBy final : public ExecutionNode{
-    ExecutionNode* child;
-    std::vector<Statements::OrderColumn*> expressions;
   public:
-    PhysicalOrderBy(ExecutionNode* child, std::vector<Statements::OrderColumn*>& expressions);
-    ~PhysicalOrderBy()override;
+    PhysicalHeapDelete(Statements::DataSource* table, Expressions::Expression* expression);
+    ~PhysicalHeapDelete()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
-  class PhysicalIndexCreate final : public ExecutionNode {
+  class PhysicalIndexScanDelete final : public ExecutionNode{
     Statements::DataSource* table;
-    std::string constraintName;
-    std::vector<column_index_t> columns;
+    Expressions::Expression* expression;
+    DatabaseEngine::IndexState state;
 
-    public:
-    PhysicalIndexCreate(
-        const DataTypes::Guid& sessionId,
-        Statements::DataSource*  table,
-        std::string& constraintName,
-        vector<column_index_t>& columns);
-    ExecutionResult * Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  public:
+    PhysicalIndexScanDelete(Statements::DataSource* table, Expressions::Expression* expression);
+    ~PhysicalIndexScanDelete()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
-  class PhysicalAddColumn final : public ExecutionNode {
+  class PhysicalIndexSeekDelete final : public ExecutionNode{
     Statements::DataSource* table;
-    Statements::NewColumn* column;
+    Expressions::Expression* expression;
+    DatabaseEngine::IndexState state;
 
-    public:
-      PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::NewColumn* column);
-      ~PhysicalAddColumn()override;
-      ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  public:
+    PhysicalIndexSeekDelete(Statements::DataSource* table, Expressions::Expression* expression);
+    ~PhysicalIndexSeekDelete()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
-  class PhysicalDropColumn final : public ExecutionNode {
-    Statements::DataSource* table;
-    Statements::DropColumn* column;
+  /** @} End of Insert and Update Classes */
 
-    public:
-      PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::DropColumn* column);
-      ~PhysicalDropColumn()override;
-      ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-  };
+  /**
+  * @name Join Classes
+  * Classes that perform joins such as nested loop join, merge join, hash join, etc.
+  * @{
+  */
 
-  class PhysicalRenameColumn final : public ExecutionNode {
-    Statements::DataSource* table;
-    Statements::RenameColumn* column;
-
-    public:
-      PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::RenameColumn* column);
-      ~PhysicalRenameColumn()override;
-      ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-  };
-
-  class PhysicalAlterColumn final : public ExecutionNode {
-    Statements::DataSource* table;
-    Statements::AlterColumn* column;
-
-    public:
-      PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::AlterColumn* column);
-      ~PhysicalAlterColumn()override;
-      ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-  };
-
-  class PhysicalNestedLoopInnerJoin final : public ExecutionNode {
+    class PhysicalNestedLoopInnerJoin final : public ExecutionNode {
     ExecutionNode* left;
     ExecutionNode* right;
-    Expressions::Expression* joinCondition;
+    Expressions::Expression* expression;
 
     ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
 
@@ -410,7 +457,7 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalMergeInnerJoin final : public ExecutionNode {
     ExecutionNode* left;
     ExecutionNode* right;
-    Expressions::Expression* joinCondition;
+    Expressions::Expression* expression;
 
     std::vector<column_index_t> leftKeyColumns;
     std::vector<column_index_t> rightKeyColumns;
@@ -421,7 +468,7 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalMergeInnerJoin(
       ExecutionNode* left,
       ExecutionNode* right,
-      Expressions::Expression* joinCondition,
+      Expressions::Expression* expression,
       std::vector<column_index_t>& leftKeyColumns,
       std::vector<column_index_t>& rightKeyColumns
     );
@@ -429,16 +476,62 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
+  class PhysicalMergeLeftJoin final : public ExecutionNode {
+    ExecutionNode* left;
+    ExecutionNode* right;
+    Expressions::Expression* expression;
+
+    std::vector<column_index_t> leftKeyColumns;
+    std::vector<column_index_t> rightKeyColumns;
+
+    ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
+
+    public:
+      PhysicalMergeLeftJoin(
+        ExecutionNode* left,
+        ExecutionNode* right,
+        Expressions::Expression* expression,
+        std::vector<column_index_t>& leftKeyColumns,
+        std::vector<column_index_t>& rightKeyColumns
+      );
+
+      ~PhysicalMergeLeftJoin()override;
+      ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
+  class PhysicalMergeFullJoin final : public ExecutionNode {
+    ExecutionNode* left;
+    ExecutionNode* right;
+    Expressions::Expression* expression;
+
+    std::vector<column_index_t> leftKeyColumns;
+    std::vector<column_index_t> rightKeyColumns;
+
+    ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
+
+  public:
+    PhysicalMergeFullJoin(
+      ExecutionNode* left,
+      ExecutionNode* right,
+      Expressions::Expression* expression,
+      std::vector<column_index_t>& leftKeyColumns,
+      std::vector<column_index_t>& rightKeyColumns
+    );
+
+    ~PhysicalMergeFullJoin()override;
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+  };
+
   class PhysicalNestedLoopLeftJoin final : public ExecutionNode {
     ExecutionNode* left;
     ExecutionNode* right;
-    Expressions::Expression* joinCondition;
+    Expressions::Expression* expression;
 
   public:
     PhysicalNestedLoopLeftJoin(
       ExecutionNode* left,
       ExecutionNode* right,
-      Expressions::Expression* joinCondition
+      Expressions::Expression* expression
     );
     ~PhysicalNestedLoopLeftJoin()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
@@ -458,4 +551,23 @@ namespace QueryPipeline::PhysicalPlan{
     ~PhysicalNestedLoopFullJoin()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
+
+  /** @} End of Join Classes */
+
+  /**
+  * @name Variable Classes
+  * Classes that declare and update session variables
+  * @{
+  */
+
+  class PhysicalDeclareVariable final : public ExecutionNode {
+    Variable variable;
+    Expressions::Expression* expression;
+
+  public:
+    explicit PhysicalDeclareVariable(const DataTypes::Guid& currentSessionId, Variable& variable, Expressions::Expression* expression);
+    ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties)override;
+  };
+
+  /** @} End of Variable Classes */
 }

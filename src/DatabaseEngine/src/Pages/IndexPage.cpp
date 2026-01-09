@@ -47,17 +47,17 @@ IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader) {
     this->previousNode = INVALID_PAGE_ID;
 }
 
-IndexPage::~IndexPage() 
-{
-    for (const auto& data: this->nonClusteredData)
-        delete data;
-
-    for (const auto& key : keys)
+IndexPage::~IndexPage() {
+    for (const auto& key : this->keys)
         delete key;
 }
 
-void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr)
-{
+void IndexPage::ReadFromDisk(
+    const std::vector<char> &data,
+    const DatabaseEngine::StorageTypes::Table *table,
+    page_offset_t &offSet,
+    fstream *filePtr
+){
     this->ReadAdditionalHeaderFromFile(data, offSet);
     const auto indexedColumnTypes = table->GetColumnTypeByTreeId(this->additionalHeader.treeId);
 
@@ -114,7 +114,7 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
         this->rows.reserve(this->header.pageSize);
 
         for (int i = 0;i < this->header.pageSize; i++) {
-            auto* row = Page::ReadRowFromDisk(data, table, offSet, columns);
+            auto* row = Page::ReadRowFromDisk(data, table, offSet, this->header.pageId, i);
 
             this->rows.push_back(row);
         }
@@ -125,12 +125,12 @@ void IndexPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::Sto
     this->nonClusteredData.reserve(this->header.pageSize);
 
     for (int i = 0;i < this->header.pageSize; i++) {
-        auto* item = new Headers::RowIdentifier();
+        auto item = Headers::RowIdentifier();
 
-        memcpy(item, data.data() + offSet, sizeof(Headers::RowIdentifier));
+        memcpy(&item, data.data() + offSet, sizeof(Headers::RowIdentifier));
         offSet += sizeof(Headers::RowIdentifier);
 
-        this->nonClusteredData.push_back(item);
+        this->nonClusteredData.push_back(std::move(item));
     }
 }
 
@@ -174,7 +174,7 @@ void IndexPage::WriteToDisk(fstream *filePtr){
     }
 
     for (const auto& data : this->nonClusteredData)
-        filePtr->write(reinterpret_cast<const char*>(data), sizeof(Headers::RowIdentifier));
+        filePtr->write(reinterpret_cast<const char*>(&data), sizeof(Headers::RowIdentifier));
 }
 
 void IndexPage::SetTreeType(const TreeType & treeType) { this->additionalHeader.treeType = treeType; }
@@ -211,7 +211,7 @@ void IndexPage::UpdateBytesLeft()
 
 vector<DataTypes::Indexing::Key*>* IndexPage::GetKeysUnsafe(){ return &this->keys; }
 
-vector<Headers::RowIdentifier *> * IndexPage::NonClusteredDataNoLock(){ return &this->nonClusteredData; }
+vector<Headers::RowIdentifier> * IndexPage::NonClusteredDataNoLock(){ return &this->nonClusteredData; }
 
 vector<page_id_t> * IndexPage::GetChildren(){ return &this->children; }
 
@@ -295,9 +295,6 @@ void IndexPage::MarkEmpty(){
 
   this->keys.clear();
 
-  for(const auto& nonClusteredData : this->nonClusteredData)
-    delete nonClusteredData;
-
   this->nonClusteredData.clear();
 
   for(const auto& row : this->rows)
@@ -312,8 +309,7 @@ void IndexPage::MarkEmpty(){
   this->isDirty = true;
 }
 
-IndexPageAdditionalHeader::IndexPageAdditionalHeader()
-{
+IndexPageAdditionalHeader::IndexPageAdditionalHeader(){
     this->treeId = 0;
     this->treeType = TreeType::NonClustered;
     this->numberOfSubKeys = 0;

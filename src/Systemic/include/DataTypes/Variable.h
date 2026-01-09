@@ -21,7 +21,7 @@ class Variable {
 
     Variable(Variable&& other)noexcept {
       this->value = std::move(other.value);
-      this->type = std::move(other.type);
+      this->type = other.type;
       this->name = std::move(other.name);
       this->normalizedName = std::move(other.normalizedName);
 
@@ -43,7 +43,7 @@ class Variable {
         return *this;
 
       this->value = std::move(other.value);
-      this->type = std::move(other.type);
+      this->type = other.type;
       this->name = std::move(other.name);
       this->normalizedName = std::move(other.normalizedName);
 
@@ -56,9 +56,9 @@ class Variable {
     }
 
     Variable& operator=(const Variable& other) {
-      this->value = std::move(other.value);
-      this->type = std::move(other.type);
-      this->name = std::move(other.name);
+      this->value = other.value;
+      this->type = other.type;
+      this->name = other.name;
 
       return *this;
     }

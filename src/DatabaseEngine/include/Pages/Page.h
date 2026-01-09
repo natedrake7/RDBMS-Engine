@@ -59,15 +59,18 @@ namespace Pages
         vector<DatabaseEngine::StorageTypes::Row *> rows;
         void WritePageHeaderToDisk(fstream *filePtr) const;
         static DatabaseEngine::StorageTypes::Row* ReadRowFromDisk(
-            const vector<char>& data,
+            const std::vector<char>& data,
             const DatabaseEngine::StorageTypes::Table *table,
             page_offset_t &offSet,
-            const vector<DatabaseEngine::StorageTypes::Column*>& columns
+            const page_id_t& pageId,
+            const Int& indexId
         );
 
         static DatabaseEngine::StorageTypes::Row* ReadRowFromDisk(
             const vector<char>& data,
-            page_offset_t &offSet
+            page_offset_t &offSet,
+            const page_id_t& pageId,
+            const Int& indexId
         );
 
         static void WriteRowToDisk(fstream* filePtr, const DatabaseEngine::StorageTypes::Row* row);

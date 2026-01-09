@@ -1057,7 +1057,7 @@ namespace DatabaseEngine::StorageTypes {
 
       auto* rows = node->NonClusteredDataNoLock();
 
-      rows->insert(rows->begin() + indexPosition, new Headers::RowIdentifier(data));
+      rows->insert(rows->begin() + indexPosition, data);
 
       node->UpdatePageSize();
       node->UpdateBytesLeft();

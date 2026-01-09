@@ -140,25 +140,28 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
     const auto fileSize = lseek(this->checkPointFileDescriptor, 0, SEEK_END);
     if (fileSize < CheckPoint::Size()) {
       // File too small, no valid checkpoint
+      std::cerr << "No valid checkpoint was found from log file" << std::endl;
       return checkPoint;
     }
 
-    ::lseek(this->checkPointFileDescriptor, static_cast<long>(fileSize - CheckPoint::Size()), SEEK_SET);
-
-    // ::lseek(this->checkPointFileDescriptor, 0, SEEK_SET);
-    const auto result = ::read(this->checkPointFileDescriptor, &checkPoint, CheckPoint::Size());
-
-    if (result == 0) {
-      //first insert failed no bytes were read
-      checkPoint.transactionId = INVALID_TRANSACTION_ID;
+    const auto seekResult = lseek(this->checkPointFileDescriptor, static_cast<off_t>(-CheckPoint::Size()), SEEK_END);
+    if (seekResult < 0){
+      perror("Failed to seek in checkpoint file");
       return checkPoint;
     }
 
-    if (result < 0 || result != CheckPoint::Size()) {
+    const auto result = read(this->checkPointFileDescriptor, &checkPoint, CheckPoint::Size());
+
+    // if (result == 0) {
+    //   //first insert failed no bytes were read
+    //   perror("Failed to read from checkpoint file");
+    //   checkPoint.transactionId = INVALID_TRANSACTION_ID;
+    //   return checkPoint;
+    // }
+
+    if (result < 0) {
       std::cerr << "Failed to read checkpoint from checkpoint file" << std::endl;
-      // perror("Failed to read from checkpoint file");
-
-      // throw std::runtime_error("Failed to recover last checkpoint");
+      perror("Failed to read from checkpoint file");
     }
 
     // if (CheckPoint::CalculateCheckSum(checkPoint) != checkPoint.checkSum) {

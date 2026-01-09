@@ -43,6 +43,8 @@ namespace QueryPipeline::PhysicalPlan {
     this->session = this->server->GetSession(this->sessionId);
   }
 
+  void ExecutionNode::UpdateScanState(const Headers::RowIdentifier& rowId){ }
+
   PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
     : ExecutionNode(currentSessionId), variable(std::move(variable)), expression(expression){}
 
@@ -183,6 +185,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
+  void PhysicalTableScan::UpdateScanState(const Headers::RowIdentifier& rowId){
+    this->state.lastFetchedRowId = rowId;
+  }
+
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered)
     : table(table), expression(nullptr), isClustered(isClustered) {}
 
@@ -220,6 +226,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       this->state.Reset();
 
     return result;
+  }
+
+  void PhysicalIndexScan::UpdateScanState(const Headers::RowIdentifier& rowId){
+    this->state.pageId = rowId.pageId;
+    this->state.lastFetchedKeyIndex = rowId.indexId;
   }
 
   PhysicalIndexSeek::PhysicalIndexSeek(
@@ -343,6 +354,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         : this->ExecuteStatement(properties);
   }
 
+  void PhysicalProject::UpdateScanState(const Headers::RowIdentifier& rowId){
+    this->child->UpdateScanState(rowId);
+  }
+
   PhysicalFilter::PhysicalFilter(ExecutionNode *child, Expressions::Expression* filter)
         : filter(filter) , child(child) {}
 
@@ -374,6 +389,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
+  void PhysicalFilter::UpdateScanState(const Headers::RowIdentifier& rowId){
+    this->child->UpdateScanState(rowId);
+  }
+
   PhysicalTop::PhysicalTop(ExecutionNode* child, const int64_t& top)
     : top(top), child(child){}
 
@@ -390,6 +409,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     result->results.erase(result->results.begin() + this->top, result->results.end());
 
     return result;
+  }
+
+  void PhysicalTop::UpdateScanState(const Headers::RowIdentifier& rowId){
+    this->child->UpdateScanState(rowId);
   }
 
   PhysicalDistinct::PhysicalDistinct(ExecutionNode *child)
@@ -432,6 +455,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     result->results = std::move(results);
 
     return result;
+  }
+
+  void PhysicalDistinct::UpdateScanState(const Headers::RowIdentifier& rowId){
+    this->child->UpdateScanState(rowId);
   }
 
   ExecutionResult* PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties)const{
@@ -839,6 +866,10 @@ PhysicalInsert::PhysicalInsert(
     SortingFunctions::OrderBy(result->results, this->expressions);
 
     return result;
+  }
+
+  void PhysicalOrderBy::UpdateScanState(const Headers::RowIdentifier& rowId){
+    this->child->UpdateScanState(rowId);
   }
 
   PhysicalIndexCreate::PhysicalIndexCreate(

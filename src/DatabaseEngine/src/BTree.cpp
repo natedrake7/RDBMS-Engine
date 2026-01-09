@@ -1341,11 +1341,11 @@ namespace Indexing
             const auto* rowIds = currentNode->NonClusteredDataNoLock();
 
             for (int i = startingPosition; i < rowIds->size(); i++) {
-                const auto* rowId = rowIds->at(i);
+                const auto& rowId = rowIds->at(i);
 
-                result->emplace_back(rowId->pageId, rowId->indexId);
+                result->emplace_back(rowId.pageId, rowId.indexId);
 
-                state.pageId = rowId->pageId;
+                state.pageId = rowId.pageId;
                 state.lastFetchedKeyIndex = i;
 
                 if (result->size() == rowsToSelect)

@@ -869,6 +869,15 @@ namespace DatabaseEngine::StorageTypes {
         return !this->IsDeleted(snapshot);
     }
 
+    void Row::SetId(const page_id_t& pageId, const Int& indexId){
+        this->Id.pageId = pageId;
+        this->Id.indexId = indexId;
+    }
+
+    const Headers::RowIdentifier& Row::GetId() const{
+        return this->Id;
+    }
+
     const RowVersioningHeader & Row::GetVersionHeader() const { return this->versionHeader; }
 
     const bool & Row::IsCopy() const{ return this->isCopy; }

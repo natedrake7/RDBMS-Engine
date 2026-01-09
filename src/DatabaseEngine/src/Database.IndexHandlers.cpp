@@ -37,10 +37,9 @@ namespace DatabaseEngine {
 
     DataTypes::Indexing::Key Database::CreateKey(const vector<column_index_t> &indexedColumns, const StorageTypes::Row *row, const Headers::RowIdentifier &rowId){
         DataTypes::Indexing::Key key;
-        for (const auto &columnId : indexedColumns)
-        {
-            const auto &keyBlock = row->GetData()[columnId];
-            key.InsertKey(DataTypes::Indexing::Key(keyBlock->GetRawData(), keyBlock->GetSize(), keyBlock->GetColumnType()));
+        for (const auto &columnId : indexedColumns){
+            auto data = row->GetColumnByIndex(columnId);
+            key.InsertKey(DataTypes::Indexing::Key(data));
         }
 
         key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier));

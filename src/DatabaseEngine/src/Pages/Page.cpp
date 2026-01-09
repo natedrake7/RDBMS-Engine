@@ -80,20 +80,26 @@ namespace Pages
     void Page::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr){
         if (table == nullptr) {
             for (int i = 0; i < this->header.pageSize; i++)
-                this->rows.push_back(Page::ReadRowFromDisk(data, offSet));
-
+                this->rows.push_back(Page::ReadRowFromDisk(data, offSet, this->header.pageId, i));
             return;
         }
 
-        const auto &columns = table->GetColumns();
-
         for (int i = 0; i < this->header.pageSize; i++)
-            this->rows.push_back(Page::ReadRowFromDisk(data, table, offSet, columns));
+            this->rows.push_back(Page::ReadRowFromDisk(data, table, offSet, this->header.pageId, i));
     }
 
-    Row* Page::ReadRowFromDisk(const vector<char>& data, const Table *table, page_offset_t &offSet, const vector<Column*>& columns){
+    Row* Page::ReadRowFromDisk(
+        const std::vector<char>& data,
+        const Table *table,
+        page_offset_t &offSet,
+        const page_id_t& pageId,
+        const Int& indexId
+    ){
         auto*  row = new Row(*table);
 
+        const auto& columns = table->GetColumns();
+
+        row->SetId(pageId, indexId);
         row->ReadHeaderFromDisk(data, offSet);
         row->ReadVersionHeaderFromDisk(data, offSet);
         row->ReadDataFromDisk(data, offSet, columns);
@@ -101,9 +107,15 @@ namespace Pages
         return row;
     }
 
-    DatabaseEngine::StorageTypes::Row * Page::ReadRowFromDisk(const vector<char> &data, page_offset_t &offSet) {
+    Row * Page::ReadRowFromDisk(
+        const vector<char> &data,
+        page_offset_t &offSet,
+        const page_id_t& pageId,
+        const Int& indexId
+    ){
         auto*  row = new Row();
 
+        row->SetId(pageId, indexId);
         row->ReadHeaderFromDisk(data, offSet);
         row->ReadVersionHeaderFromDisk(data, offSet);
         row->ReadDataFromDisk(data, offSet);

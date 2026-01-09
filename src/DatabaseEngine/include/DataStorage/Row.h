@@ -61,6 +61,7 @@ namespace DatabaseEngine::StorageTypes
 
     class Row{
         RowHeader header;
+        Headers::RowIdentifier Id;
         RowVersioningHeader versionHeader;
 
         std::vector<Block*> data;
@@ -166,6 +167,10 @@ namespace DatabaseEngine::StorageTypes
         const Row* GetVisibleVersionForTransaction(const Snapshot& snapshot) const;
 
         bool IsVisibleForTransaction(const Snapshot& snapshot) const;
+
+        void SetId(const page_id_t& pageId, const Int& indexId);
+
+        [[nodiscard]] const Headers::RowIdentifier& GetId() const;
 
         const RowVersioningHeader& GetVersionHeader() const;
 

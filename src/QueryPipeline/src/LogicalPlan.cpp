@@ -112,12 +112,12 @@ namespace QueryPipeline {
 
     auto result = Optimizer::PerformIndexAnalysis(indexes, this->expression, tableStats);
 
-    //scan the first index
-    if (!result.canSeek)
-      return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, indexes.front().isClustered);
-
     if (result.hasRange)
       return new PhysicalPlan::PhysicalIndexSeekRange(this->table, result.start, result.end, result.remainingPredicate);
+
+    //scan the first index
+    if (!result.canSeek)
+      return new PhysicalPlan::PhysicalIndexScan(this->table, result.remainingPredicate, indexes.front().isClustered);
 
     return new PhysicalPlan::PhysicalIndexSeek(this->table, result.start, result.remainingPredicate);
   }
@@ -148,12 +148,19 @@ namespace QueryPipeline {
     switch (analysis.algorithm) {
       case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
       case PipelineConstants::JoinAlgorithm::HashJoin:
-      case PipelineConstants::JoinAlgorithm::MergeJoin:
       return new PhysicalPlan::PhysicalNestedLoopLeftJoin(
         left->ToPhysical(),
    right->ToPhysical(),
         analysis.remainingPredicate
       );
+      case PipelineConstants::JoinAlgorithm::MergeJoin:
+        return new PhysicalPlan::PhysicalMergeLeftJoin(
+          left->ToPhysical(),
+          right->ToPhysical(),
+          analysis.remainingPredicate,
+          analysis.leftKeyColumns,
+          analysis.rightKeyColumns
+        );
     }
 
      throw std::runtime_error("LogicalJoin::ToPhysical(): Unknown Join Algorithm");
@@ -163,11 +170,18 @@ namespace QueryPipeline {
     switch (analysis.algorithm) {
     case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
     case PipelineConstants::JoinAlgorithm::HashJoin:
-    case PipelineConstants::JoinAlgorithm::MergeJoin:
       return new PhysicalPlan::PhysicalNestedLoopLeftJoin(
         right->ToPhysical(),
         left->ToPhysical(),
         analysis.remainingPredicate
+      );
+    case PipelineConstants::JoinAlgorithm::MergeJoin:
+      return new PhysicalPlan::PhysicalMergeLeftJoin(
+        right->ToPhysical(),
+        left->ToPhysical(),
+          analysis.remainingPredicate,
+        analysis.leftKeyColumns,
+        analysis.rightKeyColumns
       );
     }
 
@@ -178,12 +192,19 @@ namespace QueryPipeline {
     switch (analysis.algorithm) {
       case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
       case PipelineConstants::JoinAlgorithm::HashJoin:
+        return new PhysicalPlan::PhysicalNestedLoopFullJoin(
+          left->ToPhysical(),
+          right->ToPhysical(),
+          analysis.remainingPredicate
+        );
       case PipelineConstants::JoinAlgorithm::MergeJoin:
-      return new PhysicalPlan::PhysicalNestedLoopFullJoin(
-        left->ToPhysical(),
+        return new PhysicalPlan::PhysicalMergeFullJoin(
+          left->ToPhysical(),
         right->ToPhysical(),
-        analysis.remainingPredicate
-      );
+            analysis.remainingPredicate,
+          analysis.leftKeyColumns,
+          analysis.rightKeyColumns
+        );
     }
 
      throw std::runtime_error("LogicalJoin::ToPhysical(): Unknown Join Algorithm");
