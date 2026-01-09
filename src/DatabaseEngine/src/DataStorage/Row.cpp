@@ -633,12 +633,14 @@ namespace DatabaseEngine::StorageTypes {
         return {};
     }
 
-    Errors::RuntimeStatus Row::Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates, int& diff)const{
+    Errors::RuntimeStatus Row::Update(
+        const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates,
+        int& diff
+    )const{
         const auto prevRowSize = this->TotalSize();
 
         Expressions::EvaluationContext context(this);
-        for (const auto & update : updates)
-        {
+        for (const auto & update : updates){
             const auto value = update->value->Evaluate(context);
 
             const column_index_t &associatedColumnIndex = update->name.index;
@@ -796,8 +798,8 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    Row* Row::Join(const Row *row)const{
-        auto* joinedRow = new Row(this);
+    Pointer<Row> Row::Join(const Pointer<Row>& row)const{
+        auto joinedRow = Pointer(new Row(this));
 
         for (const auto* block : row->GetData())
             joinedRow->InsertNewColumn(new Block(block));
@@ -805,8 +807,8 @@ namespace DatabaseEngine::StorageTypes {
         return joinedRow;
     }
 
-    Row* Row::LeftJoin(const std::vector<const Column*>& innerTableColumns) const{
-        auto* joinedRow = new Row(this);
+    Pointer<Row> Row::LeftJoin(const std::vector<const Column*>& innerTableColumns) const{
+        auto joinedRow = Pointer(new Row(this));
 
         for (const auto& column : innerTableColumns)
             joinedRow->InsertNewColumn(new Block(column));
@@ -815,8 +817,8 @@ namespace DatabaseEngine::StorageTypes {
 
     }
 
-    Row * Row::RightJoin(const std::vector<const Column *> &innerTableColumns) const{
-        auto* joinedRow = new Row(innerTableColumns);
+    Pointer<Row> Row::RightJoin(const std::vector<const Column *> &innerTableColumns) const{
+        auto joinedRow = Pointer(new Row(innerTableColumns));
 
         for (const auto& block : this->data)
             joinedRow->InsertNewColumn(new Block(block));
@@ -837,14 +839,16 @@ namespace DatabaseEngine::StorageTypes {
         this->versionHeader.olderVersionPointer.offset = offset;
     }
 
-    const Row* Row::GetVisibleVersionForTransaction(const Snapshot& snapshot) const {
-       if (this->IsVisibleForTransaction(snapshot))
-           return this;
+    Pointer<Row> Row::GetVisibleVersionForTransaction(const Pointer<Row>& pageRow, const Snapshot& snapshot) {
+       if (pageRow->IsVisibleForTransaction(snapshot))
+           return pageRow;
 
-        if (!this->versionHeader.HasOlderVersion())
-            return nullptr;
+        if (!pageRow->HasOlderVersion())
+            return {};
 
-        return VersionDatabase::Get().RetrieveRow(snapshot, this->versionHeader.olderVersionPointer, this->table);
+        const auto& versionHeader = pageRow->GetVersionHeader();
+
+        return VersionDatabase::Get().RetrieveRow(snapshot, versionHeader.olderVersionPointer, pageRow->GetTable());
     }
 
     bool Row::IsDeleted(const Snapshot &snapshot) const{
@@ -879,6 +883,14 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     const RowVersioningHeader & Row::GetVersionHeader() const { return this->versionHeader; }
+
+    bool Row::HasOlderVersion() const{
+        return this->versionHeader.HasOlderVersion();
+    }
+
+    const Table* Row::GetTable() const{
+        return this->table;
+    }
 
     const bool & Row::IsCopy() const{ return this->isCopy; }
 

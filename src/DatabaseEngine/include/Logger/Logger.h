@@ -76,7 +76,7 @@ namespace DatabaseEngine::Logging {
 
     [[nodiscard]] bool ValidateIntegrity()const;
 
-    [[nodiscard]] StorageTypes::Row* GetRow()const;
+    [[nodiscard]] Pointer<StorageTypes::Row> GetRow()const;
 
     friend ostream& operator<<(ostream& stream, const LogEntry& logEntry);
   };

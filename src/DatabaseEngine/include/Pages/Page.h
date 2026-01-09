@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include "../PipelineConstants.h"
+#include "../../../Systemic/include/DataTypes/Pointer.h"
 #include "../../../Systemic/include/Guards/ReadWriteMutex.h"
 #include "../../../Systemic/include/Constants.h"
 
@@ -56,9 +57,10 @@ namespace Pages
         string filename;
         PageHeader header;
 
-        vector<DatabaseEngine::StorageTypes::Row *> rows;
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> rows;
+
         void WritePageHeaderToDisk(fstream *filePtr) const;
-        static DatabaseEngine::StorageTypes::Row* ReadRowFromDisk(
+        static Pointer<DatabaseEngine::StorageTypes::Row> ReadRowFromDisk(
             const std::vector<char>& data,
             const DatabaseEngine::StorageTypes::Table *table,
             page_offset_t &offSet,
@@ -66,14 +68,14 @@ namespace Pages
             const Int& indexId
         );
 
-        static DatabaseEngine::StorageTypes::Row* ReadRowFromDisk(
+        static Pointer<DatabaseEngine::StorageTypes::Row> ReadRowFromDisk(
             const vector<char>& data,
             page_offset_t &offSet,
             const page_id_t& pageId,
             const Int& indexId
         );
 
-        static void WriteRowToDisk(fstream* filePtr, const DatabaseEngine::StorageTypes::Row* row);
+        static void WriteRowToDisk(fstream* filePtr, const Pointer<DatabaseEngine::StorageTypes::Row>& row);
 
     public:
         explicit Page(const page_id_t &pageId, const bool &isPageCreation = false);
@@ -81,8 +83,8 @@ namespace Pages
         explicit Page(const PageHeader &pageHeader);
         virtual ~Page();
 
-        void InsertRow(DatabaseEngine::StorageTypes::Row *row, int* indexPosition = nullptr);
-        void InsertRow(DatabaseEngine::StorageTypes::Row *row, const int& indexPosition);
+        void InsertRow(Pointer<DatabaseEngine::StorageTypes::Row>& row, int* indexPosition = nullptr);
+        void InsertRow(Pointer<DatabaseEngine::StorageTypes::Row>& row, const int& indexPosition);
 
         virtual void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
         virtual void WriteToDisk(fstream *filePtr);
@@ -107,16 +109,16 @@ namespace Pages
         [[nodiscard]] const log_sequence_number_t &GetLogSequenceNumber() const;
 
         int GetRows(
-            std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
             const size_t &rowsToSelect,
             const int32_t& startingPosition = 0) const;
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const Constants::PageType &GetPageType() const;
         void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
-        [[nodiscard]] const DatabaseEngine::StorageTypes::Row* GetRow(const int& indexPosition)const;
+        [[nodiscard]] const Pointer<DatabaseEngine::StorageTypes::Row>& GetRow(const int& indexPosition)const;
 
-        [[nodiscard]] vector<DatabaseEngine::StorageTypes::Row *> *DataRowsNoLock();
+        [[nodiscard]] std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *DataRowsNoLock();
 
         void IncreasePinCount();
         void DecreasePinCount();

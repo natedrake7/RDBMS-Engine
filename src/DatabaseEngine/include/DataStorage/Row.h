@@ -148,11 +148,11 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] Value GetColumnByIndex(const int& indexPos) const;
 
-        [[nodiscard]] Row* Join(const Row* row) const;
+        [[nodiscard]] Pointer<Row> Join(const Pointer<Row>& row) const;
 
-        [[nodiscard]] Row* LeftJoin(const std::vector<const Column*>& innerTableColumns) const;
+        [[nodiscard]] Pointer<Row> LeftJoin(const std::vector<const Column*>& innerTableColumns) const;
 
-        [[nodiscard]] Row* RightJoin(const std::vector<const Column*>& innerTableColumns) const;
+        [[nodiscard]] Pointer<Row> RightJoin(const std::vector<const Column*>& innerTableColumns) const;
 
         [[nodiscard]] const bool& IsCopy()const;
 
@@ -164,7 +164,7 @@ namespace DatabaseEngine::StorageTypes
 
         void SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset);
 
-        const Row* GetVisibleVersionForTransaction(const Snapshot& snapshot) const;
+        static Pointer<Row> GetVisibleVersionForTransaction(const Pointer<Row>& pageRow, const Snapshot& snapshot);
 
         bool IsVisibleForTransaction(const Snapshot& snapshot) const;
 
@@ -173,6 +173,10 @@ namespace DatabaseEngine::StorageTypes
         [[nodiscard]] const Headers::RowIdentifier& GetId() const;
 
         const RowVersioningHeader& GetVersionHeader() const;
+
+        bool HasOlderVersion()const;
+
+        const Table* GetTable()const;
 
         //Getters Setters Serializers etc
 

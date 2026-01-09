@@ -98,7 +98,7 @@ public:
     static void LogCheckPoint(Logging::CheckPoint& checkPoint);
 
     [[nodiscard]] static Logging::CheckPoint LogRowInsert(
-        StorageTypes::Row* row,
+        Pointer<StorageTypes::Row>& row,
         const transaction_id_t& transactionId,
         const table_id_t& tableOrdinal
     );
@@ -107,18 +107,18 @@ public:
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
       const vector<column_index_t>& indexedColumns,
-      const StorageTypes::Row* row
+      const Pointer<StorageTypes::Row>& row
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
       const vector<column_index_t>& indexedColumns,
-      const StorageTypes::Row* row,
+      const Pointer<StorageTypes::Row>& row,
       const Int& offSet
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
         const vector<column_index_t>& indexedColumns,
-        const StorageTypes::Row* row,
+        const Pointer<StorageTypes::Row>& row,
         const Headers::RowIdentifier& rowId);
 
     [[nodiscard]] static Pages::PageGuard<Pages::PageFreeSpacePage> GetAssociatedPfsPage(const string& filename, const page_id_t& pageId);

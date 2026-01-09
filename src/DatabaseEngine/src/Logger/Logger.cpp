@@ -188,7 +188,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     return true;
   }
 
-  StorageTypes::Row * LogEntry::GetRow() const{ return this->body->GetLastRowStatus(); }
+  Pointer<StorageTypes::Row> LogEntry::GetRow() const{ return this->body->GetLastRowStatus(); }
 
   void Logger::FlushLogDescriptor()const{
     #ifdef _WIN32

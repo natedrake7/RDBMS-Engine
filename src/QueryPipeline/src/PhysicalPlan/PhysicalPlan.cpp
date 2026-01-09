@@ -20,11 +20,7 @@ namespace QueryPipeline::PhysicalPlan {
     this->canFetchMore = false;
   }
 
-  ExecutionResult::~ExecutionResult(){
-    for (const auto* row: this->rows)
-      if (row->IsCopy())
-        delete row;
-  }
+  ExecutionResult::~ExecutionResult() = default;
 
   bool ExecutionResult::IsOk() const {
     return this->code == Errors::RuntimeError::Ok;
@@ -295,11 +291,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-    for (const auto* row: result->rows) {
+    for (const auto& row: result->rows) {
       QueryResult resultRow;
 
       for (const auto& expression : this->resultExpressions) {
-        context.row = row;
+        context.row = row.Get();
         auto field = expression->Evaluate(context);
         resultRow.AddColumn(field);
       }
@@ -375,10 +371,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-    std::vector<const DatabaseEngine::StorageTypes::Row*> filteredRows;
-    for (const auto* row : result->rows) {
+    std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> filteredRows;
+    for (const auto& row : result->rows) {
+      context.row = row.Get();
 
-      context.row = row;
       if (!this->filter->Evaluate(context).GetBool())
         continue;
 

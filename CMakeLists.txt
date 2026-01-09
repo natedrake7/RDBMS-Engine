@@ -72,6 +72,7 @@ add_library(Systemic SHARED
         src/Systemic/src/DataTypes/Value.cpp
         src/Systemic/include/DataTypes/DataTypes.h
         src/Systemic/include/Constants.h
+        src/Systemic/include/DataTypes/Pointer.h
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)

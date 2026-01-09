@@ -10,11 +10,9 @@ namespace DatabaseEngine::LoggingStructures {
     return logEntry.Print(os);
   }
 
-   RowInsertBody::RowInsertBody(){
-     this->row = nullptr;
-  }
+   RowInsertBody::RowInsertBody(){}
 
-  RowInsertBody::RowInsertBody(StorageTypes::Row *row){
+  RowInsertBody::RowInsertBody(const Pointer<StorageTypes::Row>& row){
    this->row = row;
   }
 
@@ -26,7 +24,7 @@ namespace DatabaseEngine::LoggingStructures {
     const std::vector<char> *buffer,
     uint32_t &pos,
     const StorageTypes::Table* table){
-    this->row = new StorageTypes::Row(*table);
+    this->row = Pointer(new StorageTypes::Row(*table));
 
     this->row->Deserialize(buffer, pos);
   }
@@ -38,7 +36,7 @@ namespace DatabaseEngine::LoggingStructures {
     return os;
   }
 
-  StorageTypes::Row * RowInsertBody::GetLastRowStatus() const{ return this->row; }
+  const Pointer<StorageTypes::Row>& RowInsertBody::GetLastRowStatus() const{ return this->row; }
 
   RowUpdateBody::RowUpdateBody(){
     this->oldRow = nullptr;
@@ -77,7 +75,7 @@ namespace DatabaseEngine::LoggingStructures {
         return os;
     }
 
-    StorageTypes::Row * RowUpdateBody::GetLastRowStatus() const{ return this->newRow; }
+    const Pointer<StorageTypes::Row>& RowUpdateBody::GetLastRowStatus() const{ return {}; }
 
     RowDeleteBody::RowDeleteBody(){
        this->row = nullptr;
@@ -107,7 +105,7 @@ namespace DatabaseEngine::LoggingStructures {
       return os;
     }
 
-    StorageTypes::Row * RowDeleteBody::GetLastRowStatus() const{ return nullptr; }
+    const Pointer<StorageTypes::Row>& RowDeleteBody::GetLastRowStatus() const{ return {}; }
 
    TableCreateBody::TableCreateBody() = default;
 
@@ -142,5 +140,5 @@ namespace DatabaseEngine::LoggingStructures {
       return os;
   }
 
-  StorageTypes::Row * TableCreateBody::GetLastRowStatus() const{ return nullptr; }
+  const Pointer<StorageTypes::Row>& TableCreateBody::GetLastRowStatus() const{ return {}; }
 }

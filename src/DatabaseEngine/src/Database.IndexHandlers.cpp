@@ -10,7 +10,10 @@
 #include "Guards/ReaderGuard.h"
 
 namespace DatabaseEngine {
-    DataTypes::Indexing::Key Database::CreateKey(const vector<column_index_t>& indexedColumns, const StorageTypes::Row* row)
+    DataTypes::Indexing::Key Database::CreateKey(
+        const std::vector<column_index_t>& indexedColumns,
+        const Pointer<StorageTypes::Row>& row
+    )
     {
         DataTypes::Indexing::Key key;
         for (const auto &columnId : indexedColumns){
@@ -22,8 +25,8 @@ namespace DatabaseEngine {
     }
 
     DataTypes::Indexing::Key Database::CreateKey(
-        const vector<column_index_t>& indexedColumns,
-        const StorageTypes::Row* row,
+        const std::vector<column_index_t>& indexedColumns,
+        const Pointer<StorageTypes::Row>& row,
         const Int& offSet
     ){
         DataTypes::Indexing::Key key;
@@ -35,7 +38,11 @@ namespace DatabaseEngine {
         return key;
     }
 
-    DataTypes::Indexing::Key Database::CreateKey(const vector<column_index_t> &indexedColumns, const StorageTypes::Row *row, const Headers::RowIdentifier &rowId){
+    DataTypes::Indexing::Key Database::CreateKey(
+        const std::vector<column_index_t> &indexedColumns,
+        const Pointer<StorageTypes::Row>& row,
+        const Headers::RowIdentifier &rowId
+    ){
         DataTypes::Indexing::Key key;
         for (const auto &columnId : indexedColumns){
             auto data = row->GetColumnByIndex(columnId);

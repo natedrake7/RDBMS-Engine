@@ -9,20 +9,20 @@ namespace DatabaseEngine::LoggingStructures {
     virtual void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) = 0;
     [[nodiscard]] virtual int GetSize() const = 0;
     [[nodiscard]] virtual std::ostream& Print(std::ostream& os) const = 0;
-    [[nodiscard]] virtual StorageTypes::Row* GetLastRowStatus() const = 0;
+    [[nodiscard]] virtual const Pointer<StorageTypes::Row>& GetLastRowStatus() const = 0;
 
     friend std::ostream& operator<<(std::ostream& os, const LogEntryBody& logEntry);
   };
 
   struct RowInsertBody final: public LogEntryBody {
-    StorageTypes::Row* row;
+    Pointer<StorageTypes::Row> row;
     RowInsertBody();
-    explicit RowInsertBody(StorageTypes::Row* row);
+    explicit RowInsertBody(const Pointer<StorageTypes::Row>& row);
     void Serialize(std::vector<char>* buffer, uint32_t& pos)override;
     void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
-    [[nodiscard]] StorageTypes::Row* GetLastRowStatus() const override;
+    [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
   };
 
   struct RowUpdateBody final: public LogEntryBody {
@@ -34,7 +34,7 @@ namespace DatabaseEngine::LoggingStructures {
     void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
-    [[nodiscard]] StorageTypes::Row* GetLastRowStatus() const override;
+    [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
   };
 
   struct RowDeleteBody final: public LogEntryBody {
@@ -45,7 +45,7 @@ namespace DatabaseEngine::LoggingStructures {
     void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
-    [[nodiscard]] StorageTypes::Row* GetLastRowStatus() const override;
+    [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
   };
 
   struct TableCreateBody final: public LogEntryBody {
@@ -57,6 +57,6 @@ namespace DatabaseEngine::LoggingStructures {
     void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
-    [[nodiscard]] StorageTypes::Row* GetLastRowStatus() const override;
+    [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
   };
 }

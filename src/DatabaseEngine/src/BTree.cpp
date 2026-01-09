@@ -545,8 +545,8 @@ namespace Indexing
              nodeKeys->insert(nodeKeys->begin(), siblingKeys->front());
 
              if (this->type == TreeType::Clustered) {
-                 vector<DatabaseEngine::StorageTypes::Row*>* nodeRows = node->DataRowsNoLock();
-                 vector<DatabaseEngine::StorageTypes::Row*>* siblingRows = sibling->DataRowsNoLock();
+                 auto* nodeRows = node->DataRowsNoLock();
+                 auto* siblingRows = sibling->DataRowsNoLock();
 
                  if (!siblingRows->empty()) {
                      nodeRows->push_back(siblingRows->front());
@@ -970,7 +970,7 @@ namespace Indexing
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result
     )const{
         if (this->IsEmpty())
             return;
@@ -986,12 +986,12 @@ namespace Indexing
                 const auto &key = keys->at(i);
 
                 if (key->InClosedRange(minKey, maxKey)){
-                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+                    auto visibleRow = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(currentNode->GetRow(i), properties.snapshot);
 
-                    if (!visibleRow)
+                    if (!visibleRow.Get())
                         continue;
 
-                    result->push_back(visibleRow);
+                    result->push_back(std::move(visibleRow));
                     continue;
                 }
 
@@ -1010,7 +1010,7 @@ namespace Indexing
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
-        std::vector<const DatabaseEngine::StorageTypes::Row*>* result,
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1029,13 +1029,13 @@ namespace Indexing
                 const auto &key = keys->at(i);
 
                 if (key->InClosedRange(minKey, maxKey)){
-                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+                    auto visibleRow = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(currentNode->GetRow(i), properties.snapshot);
 
-                    context.row = visibleRow;
-                    if (!visibleRow || !expression->Evaluate(context).GetBool())
+                    context.row = visibleRow.Get();
+                    if (!visibleRow.Get() || !expression->Evaluate(context).GetBool())
                         continue;
 
-                    result->push_back(visibleRow);
+                    result->push_back(std::move(visibleRow));
                     continue;
                 }
 
@@ -1053,7 +1053,7 @@ namespace Indexing
     void BTree::IndexSeek(
         const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
-        std::vector<const DatabaseEngine::StorageTypes::Row *> *result
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result
     ) const {
         if (this->IsEmpty())
             return;
@@ -1072,12 +1072,12 @@ namespace Indexing
                 const auto& rowKey = keys->at(i);
 
                 if (key == *rowKey) {
-                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+                    auto visibleRow = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(currentNode->GetRow(i), properties.snapshot);
 
-                    if (!visibleRow)
+                    if (!visibleRow.Get())
                         continue;
 
-                    result->push_back(visibleRow);
+                    result->push_back(std::move(visibleRow));
                 }
 
                 if (key < *rowKey)
@@ -1095,7 +1095,7 @@ namespace Indexing
     void BTree::IndexSeek(
         const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
-        std::vector<const DatabaseEngine::StorageTypes::Row *> *result,
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
         const Expressions::Expression *expression
     ) const {
         if (this->IsEmpty())
@@ -1117,13 +1117,13 @@ namespace Indexing
                 const auto& rowKey = keys->at(i);
 
                 if (key == *rowKey) {
-                    const auto* visibleRow = currentNode->GetRow(i)->GetVisibleVersionForTransaction(properties.snapshot);
+                    auto visibleRow = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(currentNode->GetRow(i), properties.snapshot);
 
-                    context.row = visibleRow;
-                    if (!visibleRow || !expression->Evaluate(context).GetBool())
+                    context.row = visibleRow.Get();
+                    if (!visibleRow.Get() || !expression->Evaluate(context).GetBool())
                         continue;
 
-                    result->push_back(visibleRow);
+                    result->push_back(std::move(visibleRow));
                 }
 
                 if (key < *rowKey)
@@ -1163,7 +1163,7 @@ namespace Indexing
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
         DatabaseEngine::IndexState& state
     )const{
         if (this->IsEmpty())
@@ -1180,12 +1180,12 @@ namespace Indexing
             const auto* rows = currentNode->DataRowsNoLock();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
-                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
+                auto row = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(currentNode->GetRow(i), properties.snapshot);
 
-                if (!row)
+                if (!row.Get())
                     continue;
 
-                result->push_back(row);
+                result->push_back(std::move(row));
 
                 if (result->size() == properties.batchSize) {
                     state.pageId = currentNode->GetPageId();
@@ -1207,7 +1207,7 @@ namespace Indexing
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
         DatabaseEngine::IndexState& state,
         const Expressions::Expression *expression
     )const{
@@ -1228,16 +1228,16 @@ namespace Indexing
             const auto* rows = currentNode->DataRowsNoLock();
 
             for (int i = state.GetNextKeyIndex(); i < rows->size(); i++) {
-                const auto* row = rows->at(i)->GetVisibleVersionForTransaction(properties.snapshot);
+                auto row = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(currentNode->GetRow(i), properties.snapshot);
 
-                if (!row)
+                if (!row.Get())
                     continue;
 
-                context.row = row;
+                context.row = row.Get();
                 if(!expression->Evaluate(context).GetBool())
                     continue;
 
-                result->push_back(row);
+                result->push_back(std::move(row));
 
                 if (result->size() == properties.batchSize) {
                     state.lastFetchedKeyIndex = i;
@@ -1260,7 +1260,7 @@ namespace Indexing
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result,
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
         const Expressions::Expression *expression
     )const{
         if (this->IsEmpty())
@@ -1273,14 +1273,14 @@ namespace Indexing
         {
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-            for (const auto* pageRow : *currentNode->DataRowsNoLock()) {
-                auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
+            for (const auto& pageRow : *currentNode->DataRowsNoLock()) {
+                auto row = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(pageRow, properties.snapshot);
 
-                context.row = row;
-                if(!row || !expression->Evaluate(context).GetBool())
+                context.row = row.Get();
+                if(!row.Get() || !expression->Evaluate(context).GetBool())
                     continue;
 
-                result->push_back(row);
+                result->push_back(std::move(row));
             }
 
             if(!currentNode->HasRightSibling())
@@ -1292,7 +1292,7 @@ namespace Indexing
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<const DatabaseEngine::StorageTypes::Row*> *result
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result
     )const{
         if (this->IsEmpty())
             return;
@@ -1304,12 +1304,12 @@ namespace Indexing
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (const auto& pageRow : *currentNode->DataRowsNoLock()) {
-                auto* row = pageRow->GetVisibleVersionForTransaction(properties.snapshot);
+                auto row = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(pageRow, properties.snapshot);
 
-                if (!row)
+                if (!row.Get())
                     continue;
 
-                result->push_back(row);
+                result->push_back(std::move(row));
             }
 
             if(!currentNode->HasRightSibling())
@@ -1413,9 +1413,9 @@ namespace Indexing
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for(auto* row: *currentNode->DataRowsNoLock()){
+            for(auto& row: *currentNode->DataRowsNoLock()){
 
-                context.row = row;
+                context.row = row.Get();
                 const auto value = expression->Evaluate(context);
                 if(!value.GetBool())
                   continue;
@@ -1452,8 +1452,8 @@ namespace Indexing
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for(auto* row: *currentNode->DataRowsNoLock()){
-                context.row = row;
+            for(auto& row: *currentNode->DataRowsNoLock()){
+                context.row = row.Get();
 
                 const auto value = expression->Evaluate(context);
                 if(!value.GetBool())
@@ -1489,7 +1489,7 @@ namespace Indexing
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for(auto* row: *currentNode->DataRowsNoLock()) {
+            for(auto& row: *currentNode->DataRowsNoLock()) {
                 const auto result = this->table->HandleRowUpdate(currentNode.Get(), row, properties, updates, updatedColumns, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
@@ -1526,7 +1526,7 @@ namespace Indexing
                 if (key != *currentKey || key < *currentKey)
                     continue;
 
-                const auto* rows = currentNode->DataRowsNoLock();
+                auto* rows = currentNode->DataRowsNoLock();
 
                 const auto result = this->table->HandleRowUpdate(
                     currentNode.Get(),
@@ -1572,7 +1572,7 @@ namespace Indexing
 
             const auto* keys = currentNode->GetKeysUnsafe();
 
-            const auto* rows = currentNode->DataRowsNoLock();
+            auto* rows = currentNode->DataRowsNoLock();
 
               for (int i = 0; i < keys->size(); i++)
               {
@@ -1584,7 +1584,7 @@ namespace Indexing
                 if (*maxKey < *key)
                     break;
 
-                  context.row = rows->at(i);
+                  context.row = rows->at(i).Get();
                   const auto value = expression->Evaluate(context);
                   if(!value.GetBool())
                     continue;
@@ -1623,7 +1623,7 @@ namespace Indexing
 
             const auto* keys = currentNode->GetKeysUnsafe();
 
-            const auto* rows = currentNode->DataRowsNoLock();
+            auto* rows = currentNode->DataRowsNoLock();
 
             for (int i = 0; i < keys->size(); i++){
                 const auto &key = keys->at(i);
@@ -1734,11 +1734,7 @@ namespace Indexing
       }
       else{
             auto* rows = currentNode->DataRowsNoLock();
-            const auto* row = rows->at(keyIndex);
-
             rows->erase(rows->begin() + keyIndex);
-
-            delete row;
       }
 
       currentNode->UpdatePageSize();
@@ -1770,7 +1766,7 @@ namespace Indexing
             const auto* rows = currentNode->DataRowsNoLock();
 
             for (int i = 0;i < rows->size(); i++) {
-                const auto* row = rows->at(i);
+                const auto& row = rows->at(i);
 
                 this->table->NonClusteredIndexInsert(row, indexPos, pagesToAllocate, Headers::RowIdentifier(currentNode->GetPageId(), i));
             }
@@ -1790,7 +1786,7 @@ namespace Indexing
 
         while (currentNode.Get())
         {
-            for(auto* row: *currentNode->DataRowsNoLock())
+            for(auto& row: *currentNode->DataRowsNoLock())
                 this->table->HandleAddColumn(currentNode.Get(), row, index, defaultValue);
 
             if(!currentNode->HasRightSibling())
@@ -1810,7 +1806,7 @@ namespace Indexing
 
         while (currentNode.Get())
         {
-            for(auto* row: *currentNode->DataRowsNoLock())
+            for(auto& row: *currentNode->DataRowsNoLock())
                 DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode.Get(), row, index);
 
             if(!currentNode->HasRightSibling())

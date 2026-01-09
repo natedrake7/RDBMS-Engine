@@ -216,7 +216,7 @@ namespace DatabaseEngine
         if (Logging::RowAffectedOperationTypes.Contains(logEntry.operation)) {
             auto* table = this->tables.at(logEntry.tableOrdinalPosition);
 
-            auto* row = logEntry.GetRow();
+            auto row = logEntry.GetRow();
 
             if (logEntry.operation == Logging::OperationType::DeleteRow) {
                 //handle row delete trickier, need to identify whether to use pk or not (heap delete)
@@ -239,7 +239,7 @@ namespace DatabaseEngine
     }
 
     Logging::CheckPoint Database::LogRowInsert(
-        StorageTypes::Row *row,
+        Pointer<StorageTypes::Row>& row,
         const transaction_id_t& transactionId,
         const table_id_t& tableOrdinal
     ) {

@@ -114,9 +114,9 @@ void IndexPage::ReadFromDisk(
         this->rows.reserve(this->header.pageSize);
 
         for (int i = 0;i < this->header.pageSize; i++) {
-            auto* row = Page::ReadRowFromDisk(data, table, offSet, this->header.pageId, i);
+            auto row = Page::ReadRowFromDisk(data, table, offSet, this->header.pageId, i);
 
-            this->rows.push_back(row);
+            this->rows.push_back(std::move(row));
         }
 
         return;
@@ -296,9 +296,6 @@ void IndexPage::MarkEmpty(){
   this->keys.clear();
 
   this->nonClusteredData.clear();
-
-  for(const auto& row : this->rows)
-    delete row;
 
   this->rows.clear();
 

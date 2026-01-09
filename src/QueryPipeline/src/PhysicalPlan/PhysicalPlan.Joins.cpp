@@ -16,11 +16,11 @@ namespace QueryPipeline::PhysicalPlan {
       const auto* rightResult = this->right->Execute(properties);
       canFetchMore = rightResult->canFetchMore;
 
-      for (const auto* outerRow: leftResult->rows) {
-        for (const auto* innerRow: rightResult->rows) {
+      for (const auto& outerRow: leftResult->rows) {
+        for (const auto& innerRow: rightResult->rows) {
 
-          context.outerRow = outerRow;
-          context.innerRow = innerRow;
+          context.outerRow = outerRow.Get();
+          context.innerRow = innerRow.Get();
           if (!this->expression->Evaluate(context).GetBool())
             continue;
 
@@ -375,20 +375,20 @@ namespace QueryPipeline::PhysicalPlan {
 
       Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
       //create new row
-      for (const auto* outerRow: leftResult->rows) {
+      for (const auto& outerRow: leftResult->rows) {
 
         bool hasMatched = false;
-        for (const auto* innerRow: rightResult->rows) {
+        for (const auto& innerRow: rightResult->rows) {
 
-          context.outerRow = outerRow;
-          context.innerRow = innerRow;
+          context.outerRow = outerRow.Get();
+          context.innerRow = innerRow.Get();
 
           if (!this->expression->Evaluate(context).GetBool())
             continue;
 
-          const auto* joinedRow = outerRow->Join(innerRow);
+          auto joinedRow = outerRow->Join(innerRow);
 
-          result->rows.push_back(joinedRow);
+          result->rows.push_back(std::move(joinedRow));
 
           hasMatched = true;
         }
@@ -435,11 +435,11 @@ namespace QueryPipeline::PhysicalPlan {
 
       for (int i = 0;i < leftResult->rows.size();i++) {
         for (int j = 0;j < rightResult->rows.size();j++) {
-          const auto* outerRow = leftResult->rows[i];
-          const auto* innerRow = rightResult->rows[j];
+          const auto& outerRow = leftResult->rows[i];
+          const auto& innerRow = rightResult->rows[j];
 
-          context.outerRow = outerRow;
-          context.innerRow = innerRow;
+          context.outerRow = outerRow.Get();
+          context.innerRow = innerRow.Get();
 
           if (!this->joinCondition->Evaluate(context).GetBool())
             continue;
@@ -454,7 +454,7 @@ namespace QueryPipeline::PhysicalPlan {
         if (leftMatched[i])
           continue;
 
-        const auto* outerRow = leftResult->rows[i];
+        const auto& outerRow = leftResult->rows[i];
 
         result->rows.push_back(outerRow->LeftJoin(rightResult->columns));
       }
@@ -463,7 +463,7 @@ namespace QueryPipeline::PhysicalPlan {
         if (rightMatched[i])
           continue;
 
-        const auto* innerRow = rightResult->rows[i];
+        const auto& innerRow = rightResult->rows[i];
 
         result->rows.push_back(innerRow->RightJoin(rightResult->columns));
       }

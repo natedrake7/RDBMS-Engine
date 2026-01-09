@@ -17,7 +17,7 @@ namespace DatabaseEngine::StorageTypes{
 
     const page_id_t & Table::GetNonClusteredIndexPageId(const int & indexPosition) const { return this->header.nonClusteredIndexPageIds.at(indexPosition); }
 
-    void Table::InsertNullValues(Block *&block, Row *&row, const column_index_t &associatedColumnIndex)
+    void Table::InsertNullValues(Block *&block, Pointer<Row>& row, const column_index_t &associatedColumnIndex)
     {
         block->SetData(nullptr, 0);
         row->SetNullBitMapValue(associatedColumnIndex, true);

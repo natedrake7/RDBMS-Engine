@@ -3,6 +3,7 @@
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataTypes/Variable.h"
+#include "../../../Systemic/include/DataTypes/Pointer.h"
 #include <string>
 
 namespace DatabaseEngine::StorageTypes {
@@ -40,9 +41,9 @@ namespace Expressions{
 
     EvaluationContext();
     explicit EvaluationContext(const EvaluationContextType& type, const Dictionary<std::string, Variable>* variables);
-    explicit EvaluationContext(const DatabaseEngine::StorageTypes::Row* row);
+    explicit EvaluationContext(const DatabaseEngine::StorageTypes::Row*  row);
     explicit EvaluationContext(const QueryResult& row);
-    EvaluationContext(const DatabaseEngine::StorageTypes::Row* outerRow, const DatabaseEngine::StorageTypes::Row* innerRow);
+    EvaluationContext(const DatabaseEngine::StorageTypes::Row*  outerRow, const DatabaseEngine::StorageTypes::Row*  innerRow);
   };
 
   class Expression {

@@ -53,21 +53,21 @@ namespace Expressions{
 
   EvaluationContext::EvaluationContext() {
     this->type = EvaluationContextType::Constant;
+    this->variables = nullptr;
     this->row = nullptr;
     this->outerRow = nullptr;
     this->innerRow = nullptr;
-    this->variables = nullptr;
   }
 
   EvaluationContext::EvaluationContext(const EvaluationContextType &type, const Dictionary<std::string, Variable>* variables) {
       this->type = type;
-      this->variables = variables;
       this->row = nullptr;
       this->outerRow = nullptr;
       this->innerRow = nullptr;
+      this->variables = variables;
    }
 
-  EvaluationContext::EvaluationContext(const DatabaseEngine::StorageTypes::Row *row){
+  EvaluationContext::EvaluationContext(const DatabaseEngine::StorageTypes::Row* row){
       this->type = EvaluationContextType::SingleRow;
       this->row = row;
       this->outerRow = nullptr;
@@ -75,11 +75,11 @@ namespace Expressions{
       this->variables = nullptr;
   }
 
-  EvaluationContext::EvaluationContext(const DatabaseEngine::StorageTypes::Row *outerRow, const DatabaseEngine::StorageTypes::Row *innerRow) {
+  EvaluationContext::EvaluationContext(const DatabaseEngine::StorageTypes::Row* outerRow, const DatabaseEngine::StorageTypes::Row* innerRow) {
       this->type = EvaluationContextType::Join;
+      this->row = nullptr;
       this->outerRow = outerRow;
       this->innerRow = innerRow;
-      this->row = nullptr;
       this->variables = nullptr;
    }
 
@@ -113,9 +113,6 @@ namespace Expressions{
 
   EvaluationContext::EvaluationContext(const QueryResult &row) {
       this->type = EvaluationContextType::MaterializedRow;
-      this->row = nullptr;
-      this->outerRow = nullptr;
-      this->innerRow = nullptr;
       this->materializedRow = row;
       this->variables = nullptr;
    }

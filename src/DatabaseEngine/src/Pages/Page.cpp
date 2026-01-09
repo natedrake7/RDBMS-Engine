@@ -1,14 +1,7 @@
 #include "../../include/Pages/Page.h"
 #include "../../include/Database.h"
-#include "../../include/Pages/LargeObjectPage.h"
-#include "../../../Systemic/include/DataStructures/BitMap.h"
-#include "../../../Systemic/include/Guards/WriterGuard.h"
 #include "../../include/DataStorage/Block.h"
 #include "../../include/BufferPool/StorageManager.h"
-
-#include <cstring>
-
-using namespace DatabaseEngine::StorageTypes;
 
 namespace Pages
 {
@@ -55,29 +48,31 @@ namespace Pages
 
     Page::~Page()
     {
-        for (const auto &row : this->rows)
-            delete row;
+        // for (const auto &row : this->rows)
+        //     delete row;
     }
 
-    void Page::InsertRow(Row *row, int* indexPosition){
-        this->rows.push_back(row);
+    void Page::InsertRow(Pointer<DatabaseEngine::StorageTypes::Row>& row, int* indexPosition){
+        this->rows.push_back(std::move(row));
+
+        const auto indexPos = this->rows.size() - 1;
         
         if(indexPosition != nullptr)
-            *indexPosition = this->rows.size() - 1;
+            *indexPosition = indexPos;
 
-        this->header.bytesLeft -= row->TotalSize();
+        this->header.bytesLeft -= this->rows.at(indexPos)->TotalSize();
         this->header.pageSize++;
         this->isDirty = true;
     }
 
-    void Page::InsertRow(Row *row, const int& indexPosition){
-        this->rows.insert(this->rows.begin() + indexPosition, row);
-        this->header.bytesLeft -= row->TotalSize();
+    void Page::InsertRow(Pointer<DatabaseEngine::StorageTypes::Row>& row, const int& indexPosition){
+        this->rows.insert(this->rows.begin() + indexPosition, std::move(row));
+        this->header.bytesLeft -= this->rows.at(indexPosition)->TotalSize();
         this->header.pageSize++;
         this->isDirty = true;
     }
 
-    void Page::ReadFromDisk(const vector<char> &data, const Table *table, page_offset_t &offSet, fstream *filePtr){
+    void Page::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr){
         if (table == nullptr) {
             for (int i = 0; i < this->header.pageSize; i++)
                 this->rows.push_back(Page::ReadRowFromDisk(data, offSet, this->header.pageId, i));
@@ -88,14 +83,14 @@ namespace Pages
             this->rows.push_back(Page::ReadRowFromDisk(data, table, offSet, this->header.pageId, i));
     }
 
-    Row* Page::ReadRowFromDisk(
+    Pointer<DatabaseEngine::StorageTypes::Row> Page::ReadRowFromDisk(
         const std::vector<char>& data,
-        const Table *table,
+        const DatabaseEngine::StorageTypes::Table *table,
         page_offset_t &offSet,
         const page_id_t& pageId,
         const Int& indexId
     ){
-        auto*  row = new Row(*table);
+        auto row = Pointer(new DatabaseEngine::StorageTypes::Row(* table));
 
         const auto& columns = table->GetColumns();
 
@@ -107,13 +102,13 @@ namespace Pages
         return row;
     }
 
-    Row * Page::ReadRowFromDisk(
+    Pointer<DatabaseEngine::StorageTypes::Row> Page::ReadRowFromDisk(
         const vector<char> &data,
         page_offset_t &offSet,
         const page_id_t& pageId,
         const Int& indexId
     ){
-        auto*  row = new Row();
+        auto row = Pointer(new DatabaseEngine::StorageTypes::Row());
 
         row->SetId(pageId, indexId);
         row->ReadHeaderFromDisk(data, offSet);
@@ -123,7 +118,7 @@ namespace Pages
         return row;
     }
 
-    void Page::WriteRowToDisk(fstream* filePtr, const Row* row){
+    void Page::WriteRowToDisk(fstream* filePtr, const Pointer<DatabaseEngine::StorageTypes::Row>& row){
         row->WriteHeaderToDisk(filePtr);
         row->WriteVersionHeaderToDisk(filePtr);
         row->WriteDataToDisk(filePtr);
@@ -204,11 +199,7 @@ namespace Pages
     // }
 
     void Page::Delete(const int &indexPosition) {
-        const auto* row = this->rows[indexPosition];
-
         this->rows.erase(this->rows.begin() + indexPosition);
-
-        delete row;
 
         this->UpdateBytesLeft();
         this->isDirty = true;
@@ -260,7 +251,7 @@ namespace Pages
     const PageType &Page::GetPageType() const { return this->header.pageType; }
 
     int Page::GetRows(
-        std::vector<const Row*> *result,
+        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
         const size_t &rowsToSelect,
         const int32_t& startingPosition
     ) const
@@ -278,20 +269,20 @@ namespace Pages
         return static_cast<int>(this->rows.size() - 1);
     }
 
-    void Page::GetRowByIndex(vector<Row>* rows, const Table &table, const int &indexPosition) const
+    void Page::GetRowByIndex(std::vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const
     {
         const auto &row = this->rows[indexPosition];
 
-        const RowHeader *rowHeader = row->GetHeader();
+        const DatabaseEngine::StorageTypes::RowHeader *rowHeader = row->GetHeader();
 
-        vector<Block *> copyBlocks = row->GetBlockCopies();
+        std::vector<DatabaseEngine::StorageTypes::Block *> copyBlocks = row->GetBlockCopies();
 
         rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
     }
 
-    const Row * Page::GetRow(const int &indexPosition)const { return this->rows.at(indexPosition); }
+    const Pointer<DatabaseEngine::StorageTypes::Row>& Page::GetRow(const int &indexPosition)const { return this->rows.at(indexPosition); }
 
-    vector<DatabaseEngine::StorageTypes::Row *>* Page::DataRowsNoLock() { return &this->rows; }
+    std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>* Page::DataRowsNoLock() { return &this->rows; }
 
     void Page::IncreasePinCount() {
         this->pinCount.fetch_add(1, std::memory_order_relaxed);
