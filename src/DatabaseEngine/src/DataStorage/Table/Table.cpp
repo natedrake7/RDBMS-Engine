@@ -94,15 +94,18 @@ namespace DatabaseEngine::StorageTypes {
         return false;
       }
 
-      std::tuple<Pointer<Row>, Errors::RuntimeStatus> Table::BatchCreateRow(
+      Errors::RuntimeStatus Table::BatchCreateRow(
+        Pointer<Row>& rowPtr,
         const transaction_id_t &transactionId,
         const vector<Value> &inputData,
         const std::vector<column_index_t> &columnIndices,
         Logging::CheckPoint *checkPoint
       ) const{
-        auto row = Pointer(new Row(*this));
 
-        this->PopulateAutoComputedColumns(row);
+        auto* row = new Row(*this);
+        rowPtr = Pointer(row);
+
+        this->PopulateAutoComputedColumns(rowPtr);
 
         for (int i = 0;i < inputData.size(); i++) {
           const auto& input = inputData[i];
@@ -119,36 +122,37 @@ namespace DatabaseEngine::StorageTypes {
 
           if (input.IsNull())
           {
-            Table::InsertNullValues(block, row, associatedColumnIndex);
+            Table::InsertNullValues(block, rowPtr, associatedColumnIndex);
             continue;
           }
 
-          const auto dataInsertResult = block->SetData(input);
+          const auto insertResult = block->SetData(input);
 
-          if (dataInsertResult.code != Errors::RuntimeError::Ok) {
+          if (insertResult.code != Errors::RuntimeError::Ok) {
             delete block;
-            return std::make_tuple(Pointer<Row>(), dataInsertResult);
+            return insertResult;
           }
 
           row->InsertColumnData(block, associatedColumnIndex);
         }
 
         row->SetCurrentTransactionId(transactionId);
+        *checkPoint = Database::LogRowInsert(rowPtr, transactionId, this->header.ordinalPosition);
 
-        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
-
-        return std::make_tuple(row, Errors::RuntimeStatus());
+        return {};
       }
 
-      std::tuple<Pointer<Row>, Errors::RuntimeStatus> Table::CreateRow(
+      Errors::RuntimeStatus Table::CreateRow(
+        Pointer<Row>& rowPtr,
         const transaction_id_t& transactionId,
-        const vector<Value>& inputData,
+        const std::vector<Value>& inputData,
         Logging::CheckPoint* checkPoint
         )const
       {
-        auto row = Pointer(new Row(*this));
+        auto* row = new Row(*this);
+        rowPtr = Pointer(row);
 
-        this->PopulateAutoComputedColumns(row);
+        this->PopulateAutoComputedColumns(rowPtr);
 
         for(const auto& input : inputData){
 
@@ -164,15 +168,15 @@ namespace DatabaseEngine::StorageTypes {
 
           if (input.IsNull())
           {
-            Table::InsertNullValues(block, row, associatedColumnIndex);
+            Table::InsertNullValues(block, rowPtr, associatedColumnIndex);
             continue;
           }
 
-          const auto dataInsertResult = block->SetData(input);
+          const auto insertResult = block->SetData(input);
 
-          if (dataInsertResult.code != Errors::RuntimeError::Ok) {
+          if (insertResult.code != Errors::RuntimeError::Ok) {
             delete block;
-            return std::make_tuple(Pointer<Row>(), dataInsertResult);
+            return insertResult;
           }
 
           row->InsertColumnData(block, associatedColumnIndex);
@@ -180,29 +184,23 @@ namespace DatabaseEngine::StorageTypes {
 
         row->SetCurrentTransactionId(transactionId);
 
-        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        *checkPoint = Database::LogRowInsert(rowPtr, transactionId, this->header.ordinalPosition);
 
-        return std::make_tuple(
-            row,
-          Errors::RuntimeStatus(
-            Errors::RuntimeError::Ok,
-      ""
-            )
-        );
+        return {};
       }
 
-      std::tuple<Pointer<Row>, Errors::RuntimeStatus> Table::CreateRow(
+      Errors::RuntimeStatus Table::CreateRow(
+        Pointer<Row>& rowPtr,
         const transaction_id_t &transactionId,
         const std::vector<Value> &inputData,
         const std::vector<column_index_t> &columnIndices,
         Logging::CheckPoint *checkPoint
       ) const{
-        auto row = Pointer(new Row(*this));
+        auto* row = new Row(*this);
+        rowPtr = Pointer(row);
 
-        this->PopulateAutoComputedColumns(row);
+        this->PopulateAutoComputedColumns(rowPtr);
 
-        //TODO
-        //handle default values if no value is selected
         for (int i = 0;i < inputData.size(); i++) {
           const auto& input = inputData[i];
 
@@ -218,7 +216,7 @@ namespace DatabaseEngine::StorageTypes {
 
           if (input.IsNull())
           {
-            Table::InsertNullValues(block, row, associatedColumnIndex);
+            Table::InsertNullValues(block, rowPtr, associatedColumnIndex);
             continue;
           }
 
@@ -226,7 +224,7 @@ namespace DatabaseEngine::StorageTypes {
 
           if (result.code != Errors::RuntimeError::Ok) {
             delete block;
-            return std::make_tuple(Pointer<Row>(), result);
+            return result;
           }
 
           row->InsertColumnData(block, associatedColumnIndex);
@@ -234,18 +232,13 @@ namespace DatabaseEngine::StorageTypes {
 
         row->SetCurrentTransactionId(transactionId);
 
-        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        *checkPoint = Database::LogRowInsert(rowPtr, transactionId, this->header.ordinalPosition);
 
-        return std::make_tuple(
-        row,
-          Errors::RuntimeStatus(
-            Errors::RuntimeError::Ok,
-            ""
-            )
-        );
+        return {};
       }
 
-      std::tuple<Pointer<Row>, Errors::RuntimeStatus> Table::CreateRow(
+      Errors::RuntimeStatus Table::CreateRow(
+        Pointer<Row>& rowPtr,
         const transaction_id_t &transactionId,
         const std::vector<Expressions::Expression *> &inputData,
         const std::vector<column_index_t> &columnIndices,
@@ -253,9 +246,11 @@ namespace DatabaseEngine::StorageTypes {
       ) const{
         Errors::RuntimeStatus result;
 
-        auto row = Pointer(new Row(*this));
+        auto* row = new Row(*this);
 
-        this->PopulateAutoComputedColumns(row);
+        rowPtr = Pointer(row);
+
+        this->PopulateAutoComputedColumns(rowPtr);
         result.message = "Row created successfully";
 
         for (int i = 0;i < inputData.size(); i++) {
@@ -273,15 +268,15 @@ namespace DatabaseEngine::StorageTypes {
 
           if (input.IsNull())
           {
-            Table::InsertNullValues(block, row, associatedColumnIndex);
+            Table::InsertNullValues(block, rowPtr, associatedColumnIndex);
             continue;
           }
 
-          const auto dataInsertResult = block->SetData(input);
+          const auto insertResult = block->SetData(input);
 
-          if (dataInsertResult.code != Errors::RuntimeError::Ok) {
+          if (insertResult.code != Errors::RuntimeError::Ok) {
             delete block;
-            return std::make_tuple(Pointer<Row>(), dataInsertResult);
+            return insertResult;
           }
 
           row->InsertColumnData(block, associatedColumnIndex);
@@ -289,9 +284,9 @@ namespace DatabaseEngine::StorageTypes {
 
         row->SetCurrentTransactionId(transactionId);
 
-        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
+        *checkPoint = Database::LogRowInsert(rowPtr, transactionId, this->header.ordinalPosition);
 
-        return std::make_tuple(row,result);
+        return result;
       }
 
       void Table::InsertRowToPage(
@@ -527,17 +522,22 @@ namespace DatabaseEngine::StorageTypes {
         const std::vector<column_index_t> &columnIndices
       ) {
         std::vector<Pointer<Row>> rows;
+        rows.reserve(input.size());
+
         Logging::CheckPoint checkPoint;
         int pagesNeeded = 0;
+
         for (const auto& insertedRow : input) {
+
+          auto row = Pointer<Row>();
           //TODO implement better to avoid multiple loggings
-          auto [row, status] = this->BatchCreateRow(properties.snapshot.transactionId, insertedRow.GetData(), columnIndices, &checkPoint);
+          auto status = this->BatchCreateRow(row, properties.snapshot.transactionId, insertedRow.GetData(), columnIndices, &checkPoint);
 
           if (status.code != Errors::RuntimeError::Ok)
             return status;
 
-          rows.push_back(row);
           pagesNeeded += row->TotalSize();
+          rows.push_back(std::move(row));
         }
 
         if (this->IsClustered())
@@ -564,7 +564,13 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::InsertRow(const ExecutionProperties& properties, const std::vector<Value> &inputData){
         Logging::CheckPoint checkPoint;
 
-        auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, &checkPoint);
+        auto row = Pointer<Row>();
+        auto result = this->CreateRow(
+          row,
+          properties.snapshot.transactionId,
+          inputData,
+          &checkPoint
+        );
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -587,7 +593,14 @@ namespace DatabaseEngine::StorageTypes {
     ){
         Logging::CheckPoint checkPoint;
 
-        auto [row, result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &checkPoint);
+        auto row = Pointer<Row>();
+        auto result = this->CreateRow(
+          row,
+          properties.snapshot.transactionId,
+          inputData,
+          columnIndices,
+          &checkPoint
+        );
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;
@@ -611,7 +624,14 @@ namespace DatabaseEngine::StorageTypes {
     ){
         Logging::CheckPoint checkPoint;
 
-        auto[row,result] = this->CreateRow(properties.snapshot.transactionId, inputData, columnIndices, &checkPoint);
+        auto row = Pointer<Row>();
+        auto result = this->CreateRow(
+          row,
+          properties.snapshot.transactionId,
+          inputData,
+          columnIndices,
+          &checkPoint
+        );
 
         if (result.code != Errors::RuntimeError::Ok)
           return result;

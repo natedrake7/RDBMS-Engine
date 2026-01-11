@@ -22,16 +22,16 @@ class Pointer{
         if (this->IsOwner())
             delete this->_ptr;
 
-        if (this->_ownerPtr != nullptr){
+        if (this->_ownerPtr != nullptr)
             this->_ownerPtr->DecreaseReference();
-        }
     }
 
     Pointer(const Pointer& other){
         this->_ptr = other._ptr;
         this->_ownerPtr = &other;
+        this->references = 0;
 
-        this->references = other.IncreaseReference();
+        this->_ownerPtr->IncreaseReference();
     }
 
     Pointer& operator=(const Pointer& other){
@@ -43,7 +43,7 @@ class Pointer{
 
         this->_ptr = other._ptr;
         this->_ownerPtr = &other;
-        this->references = other.IncreaseReference();
+        this->_ownerPtr->IncreaseReference();
 
         return *this;
     }
@@ -76,10 +76,9 @@ class Pointer{
         return *this;
     }
 
-    int IncreaseReference() const {
+    void IncreaseReference() const {
         MultiThreading::WriterGuard guard(&this->_referencesMutex);
         this->references += 1;
-        return this->references;
     }
 
     void DecreaseReference() const{
@@ -88,6 +87,9 @@ class Pointer{
     }
 
     int GetReference() const{
+        if (this->_ownerPtr != nullptr)
+            return this->_ownerPtr->GetReference();
+
         MultiThreading::ReaderGuard guard(&this->_referencesMutex);
         return this->references;
     }

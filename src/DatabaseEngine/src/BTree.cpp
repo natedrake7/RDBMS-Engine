@@ -148,7 +148,12 @@ namespace Indexing
 
             auto* newChildRows = newChild->DataRowsNoLock();
 
-            newChildRows->assign(childRows->begin() + this->degree, childRows->end());
+            const auto rowCount = childRows->size() - this->degree;
+            newChildRows->reserve(rowCount);
+
+            for (int i = this->degree; i < childRows->size(); i++)
+                newChildRows->push_back(std::move(childRows->at(i)));
+
             childRows->resize(this->degree);
         }
         else{
@@ -684,8 +689,12 @@ namespace Indexing
 
         if (this->type == TreeType::Clustered) {
             const auto srcEnd = childRows->begin() + keysToMove;
+            //
+            // siblingRows->insert(siblingRows->end(), childRows->begin(), srcEnd);
 
-            siblingRows->insert(siblingRows->end(), childRows->begin(), srcEnd);
+            for (int i = 0; i < keysToMove; i++)
+                siblingRows->push_back(std::move(childRows->at(i)));
+
             childRows->erase(childRows->begin(), srcEnd);
         }
         else {
@@ -733,8 +742,12 @@ namespace Indexing
 
         if (this->type == TreeType::Clustered) {
             const auto srcBegin = childRows->end() - keysToMove;
+            const auto index = childRows->size() - keysToMove;
 
-            siblingRows->insert(siblingRows->begin(), srcBegin, childRows->end());
+            for (int i = index; i < childRows->size(); i++)
+                siblingRows->insert(siblingRows->begin(), std::move(childRows->at(i)));
+
+            // siblingRows->insert(siblingRows->begin(), srcBegin, childRows->end());
             childRows->erase(srcBegin, childRows->end());
         }
         else {

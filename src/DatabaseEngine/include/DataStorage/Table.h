@@ -101,27 +101,31 @@ namespace DatabaseEngine::StorageTypes
             void GetNonClusteredIndexFromDisk(const int& indexId) const;
             [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetIndexFromDisk(const page_id_t& indexPageId) const;
 
-            [[nodiscard]] std::tuple<Pointer<Row>, Errors::RuntimeStatus> BatchCreateRow(
-              const transaction_id_t& transactionId,
-              const vector<Value>& inputData,
-              const std::vector<column_index_t> &columnIndices,
-              Logging::CheckPoint* checkPoint
+            [[nodiscard]] Errors::RuntimeStatus BatchCreateRow(
+                Pointer<Row>& rowPtr,
+                const transaction_id_t& transactionId,
+                const vector<Value>& inputData,
+                const std::vector<column_index_t> &columnIndices,
+                Logging::CheckPoint* checkPoint
             )const;
 
-            [[nodiscard]] std::tuple<Pointer<Row>, Errors::RuntimeStatus> CreateRow(
+            [[nodiscard]] Errors::RuntimeStatus CreateRow(
+                Pointer<Row>& rowPtr,
                 const transaction_id_t& transactionId,
                 const vector<Value>& inputData,
                 Logging::CheckPoint* checkPoint
             )const;
 
-            [[nodiscard]] std::tuple<Pointer<Row>, Errors::RuntimeStatus> CreateRow(
+            [[nodiscard]] Errors::RuntimeStatus CreateRow(
+                Pointer<Row>& rowPtr,
                 const transaction_id_t& transactionId,
                 const std::vector<Value>& inputData,
                 const std::vector<column_index_t>& columnIndices,
                 Logging::CheckPoint* checkPoint
             )const;
 
-            [[nodiscard]] std::tuple<Pointer<Row>, Errors::RuntimeStatus> CreateRow(
+            [[nodiscard]] Errors::RuntimeStatus CreateRow(
+                Pointer<Row>& rowPtr,
                 const transaction_id_t& transactionId,
                 const std::vector<Expressions::Expression*>& inputData,
                 const std::vector<column_index_t>& columnIndices,
