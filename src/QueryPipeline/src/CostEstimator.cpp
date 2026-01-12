@@ -1,8 +1,9 @@
 ﻿#include "../include/CostEstimator.h"
 
 #include <cmath>
+
+#include "DatabaseConstants.h"
 #include "Optimizer.h"
-#include "PipelineConstants.h"
 #include "../../Systemic/include/Headers.h"
 #include "Managers/StatisticsManager.h"
 #include "SystemDatabases/SystemCatalog.h"

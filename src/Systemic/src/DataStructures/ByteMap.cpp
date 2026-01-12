@@ -3,6 +3,8 @@
 #include <cstring>
 #include <fstream>
 
+#include "DataTypes/DataTypes.h"
+
 namespace ByteMaps {
     ByteMap::ByteMap() = default;
 

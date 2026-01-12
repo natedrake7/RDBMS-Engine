@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include <cstdint>
 #include <vector>
-#include "../../include/PipelineConstants.h"
+#include "DataTypes/DataTypes.h"
+
 
 using namespace std;
 

@@ -3,7 +3,7 @@
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/Headers.h"
-#include "PipelineConstants.h"
+#include "DatabaseConstants.h"
 
 namespace DatabaseEngine {
   struct ScanState {

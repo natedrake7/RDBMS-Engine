@@ -70,9 +70,6 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryProtocol.cpp
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
-        src/Systemic/include/DataTypes/DataTypes.h
-        src/Systemic/include/Constants.h
-        src/Systemic/include/DataTypes/Pointer.h
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)
@@ -90,8 +87,8 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/PhysicalPlan/PhysicalPlan.AlterTable.cpp
         src/QueryPipeline/src/Statements.cpp
         src/QueryPipeline/src/ErrorListener.cpp
-        ${ANTLR_SRC}
         src/QueryPipeline/src/CostEstimator.cpp
+        ${ANTLR_SRC}
 )
 
 target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)

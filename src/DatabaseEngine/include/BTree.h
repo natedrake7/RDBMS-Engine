@@ -4,7 +4,7 @@
 #include "../../Systemic/include/DataStructures/SortedDictionary.h"
 
 #include <vector>
-#include "PipelineConstants.h"
+#include "DatabaseConstants.h"
 #include "../../QueryPipeline/include/PhysicalPlan.h"
 
 #include "Pages/PageGuard.h"

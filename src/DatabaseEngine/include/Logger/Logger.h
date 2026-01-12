@@ -1,5 +1,5 @@
 #pragma once
-#include "../PipelineConstants.h"
+#include "../DatabaseConstants.h"
 #include "../DataStorage/Row.h"
 #include "Logger.Structures.h"
 #include "../../../Systemic/include/DataStructures/HashSet.h"
@@ -7,7 +7,6 @@
 #include <mutex>
 
 namespace DatabaseEngine::Logging {
-
   enum OperationType : uint8_t{
     InvalidOperation = 0,
     InsertRow = 1,
@@ -39,7 +38,12 @@ namespace DatabaseEngine::Logging {
     off_t logFileOffset; // Offset in the log file where the checkpoint is written
     uint32_t checkSum;
 
-    static constexpr uint32_t Size();
+    static constexpr uint32_t Size(){
+      return sizeof(transaction_id_t) +
+           sizeof(log_sequence_number_t) +
+           sizeof(off_t) +
+           sizeof(uint32_t);
+    }
     [[nodiscard]] uint32_t static CalculateCheckSum(const CheckPoint& checkpoint);
 
     CheckPoint();
@@ -69,7 +73,12 @@ namespace DatabaseEngine::Logging {
     ~LogEntry();
 
     [[nodiscard]] int GetSize()const;
-    [[nodiscard]] constexpr int GetStaticDataSize()const;
+    [[nodiscard]] static constexpr int GetStaticDataSize(){
+      return sizeof(transaction_id_t) +
+          sizeof(log_sequence_number_t) +
+          sizeof(OperationType) +
+          sizeof(table_id_t);
+    }
     void DeserializeHeader(const std::vector<char>& buffer, uint32_t& pos);
     void Serialize(std::vector<char>* buffer)const;
     void AllocateBody();

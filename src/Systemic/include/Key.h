@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "../../DatabaseEngine/include/PipelineConstants.h"
+#include "../../DatabaseEngine/include/DatabaseConstants.h"
 #include "DataTypes/Value.h"
 
 namespace DataTypes::Indexing {

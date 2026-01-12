@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include "../../../include/PipelineConstants.h"
 #include "../../../../Systemic/include/DataTypes/SortCondition.h"
 
 namespace QueryPipeline::Statements {
@@ -17,11 +16,8 @@ namespace DatabaseEngine::StorageTypes {
     class Row;
 }
 
-using namespace Constants;
-using namespace std;
-
 class MergeSort {
-        static void Merge(vector<QueryResult>& rows, const int& left, const int& mid, const int& right, const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions);
+        static void Merge(std::vector<QueryResult>& rows, const int& left, const int& mid, const int& right, const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions);
     public:
-        static void Sort(vector<QueryResult>& rows, const int& left, const int& right, const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions);
+        static void Sort(std::vector<QueryResult>& rows, const int& left, const int& right, const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions);
 };

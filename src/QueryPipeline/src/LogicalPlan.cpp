@@ -1,15 +1,13 @@
 #include "../include/LogicalPlan.h"
-
-#include <iostream>
-
+#include "Managers/StatisticsManager.h"
 #include "../include/Optimizer.h"
 #include "../include/Statements.h"
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
 
 #include <utility>
 
-#include "PipelineConstants.h"
-#include "Managers/StatisticsManager.h"
+#include "DatabaseConstants.h"
+
 
 namespace QueryPipeline {
   LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId, const int32_t &databaseId)

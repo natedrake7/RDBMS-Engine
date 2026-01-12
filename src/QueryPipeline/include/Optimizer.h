@@ -1,5 +1,4 @@
 #pragma once
-#include "../../DatabaseEngine/include/PipelineConstants.h"
 #include "../../DatabaseEngine/include/Evaluators/Expression.h"
 #include "../../Systemic/include/DataTypes/Value.h"
 #include <vector>

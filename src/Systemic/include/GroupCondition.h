@@ -1,5 +1,5 @@
 #pragma once
-#include "../../DatabaseEngine/include/PipelineConstants.h"
+#include "../../DatabaseEngine/include/DatabaseConstants.h"
 #include "../../DatabaseEngine/include/DataStorage/Column.h"
 
 using namespace Constants;

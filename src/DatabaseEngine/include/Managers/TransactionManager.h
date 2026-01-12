@@ -1,6 +1,6 @@
 #pragma once
 #include <mutex>
-#include "../PipelineConstants.h"
+#include "../DatabaseConstants.h"
 #include "../../../QueryPipeline/include/PhysicalPlan.h"
 #include "../../../Systemic/include/DataStructures/SortedDictionary.h"
 

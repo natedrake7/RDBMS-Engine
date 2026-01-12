@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include "../../../Systemic/include/DataStructures/Dictionary.h"
-#include "../PipelineConstants.h"
+#include "../DatabaseConstants.h"
 
 #include <functional>
 #define UNLIMITED_ARGS (-1)

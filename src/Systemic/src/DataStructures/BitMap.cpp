@@ -2,8 +2,6 @@
 #include <cstring>
 #include <iostream>
 
-#include "../../../DatabaseEngine/include/PipelineConstants.h"
-
 #include <fstream>
 
 namespace ByteMaps

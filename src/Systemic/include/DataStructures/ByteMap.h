@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <vector>
-#include "../../../DatabaseEngine/include/PipelineConstants.h"
+#include "DataTypes/DataTypes.h"
 
 namespace ByteMaps {
 

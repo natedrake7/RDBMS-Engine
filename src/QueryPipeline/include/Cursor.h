@@ -1,5 +1,5 @@
 #pragma once
-#include "PipelineConstants.h"
+#include "DatabaseConstants.h"
 #include "PhysicalPlan.h"
 
 namespace QueryPipeline {

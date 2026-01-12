@@ -2,7 +2,7 @@
 #include "../../../include/Algorithms/Sort/MergeSort.h"
 #include "../../../include/Algorithms/Sort/SortingFunctions.h"
 
-void MergeSort::Merge(vector<QueryResult> &rows, const int &left, const int &mid, const int &right, const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions)
+void MergeSort::Merge(std::vector<QueryResult> &rows, const int &left, const int &mid, const int &right, const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions)
 {
     int i, j;
     const int n1 = mid - left + 1;
@@ -50,7 +50,7 @@ void MergeSort::Merge(vector<QueryResult> &rows, const int &left, const int &mid
     }
 }
 
-void MergeSort::Sort(vector<QueryResult> &rows, const int &left, const int &right, const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions)
+void MergeSort::Sort(std::vector<QueryResult> &rows, const int &left, const int &right, const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions)
 {
     if(left >= right)
         return;

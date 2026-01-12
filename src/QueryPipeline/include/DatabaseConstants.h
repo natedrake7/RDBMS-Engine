@@ -1,7 +1,7 @@
 #pragma once
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
-#include "../../DatabaseEngine/include/PipelineConstants.h"
+#include "../../DatabaseEngine/include/DatabaseConstants.h"
 #include "../../Systemic/include/Constants.h"
 
 namespace QueryPipeline::PipelineConstants {

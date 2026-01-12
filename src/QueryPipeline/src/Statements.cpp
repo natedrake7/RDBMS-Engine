@@ -1,6 +1,5 @@
 #include "../include/Statements.h"
 
-#include "../include/PipelineConstants.h"
 #include "../../DatabaseEngine/include/Database.h"
 #include "../../Systemic/include/Coercions.h"
 #include "../../Systemic/include/Functions/StringFunctions.h"

@@ -90,13 +90,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     return this->GetStaticDataSize() + ((this->body != nullptr) ? this->body->GetSize() : 0);
   }
 
-  constexpr int LogEntry::GetStaticDataSize()const {
-    return  sizeof(this->transactionId) +
-            sizeof(this->logSequenceNumber) +
-            sizeof(this->operation) +
-            sizeof(this->tableOrdinalPosition);
-  }
-
   void LogEntry::DeserializeHeader(const std::vector<char> &buffer, uint32_t &pos){
       memcpy(&this->transactionId, buffer.data() + pos, sizeof(this->transactionId));
       pos += sizeof(this->transactionId);
@@ -253,13 +246,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     std::unique_lock<std::mutex> lock(this->transactionLogMutex);
 
     this->currentTransactionId = transactionId;
-  }
-
- constexpr uint32_t CheckPoint::Size() {
-    return sizeof(transaction_id_t) +
-           sizeof(log_sequence_number_t) +
-           sizeof(off_t) +
-           sizeof(uint32_t);
   }
 
   ostream & operator<<(ostream &stream, const LogEntry &logEntry){

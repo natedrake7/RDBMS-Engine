@@ -2,7 +2,7 @@
 #include "../../../../Systemic/include/DataStructures/BitMap.h"
 #include "../../../include/DataStorage/Block.h"
 #include "../../../include/DataStorage/Row.h"
-#include "../../../include/PipelineConstants.h"
+#include "../../../include/DatabaseConstants.h"
 #include "../../../include/Database.h"
 #include "../../../include/Pages/LargeObjectPage.h"
 #include "../../../include/BufferPool/StorageManager.h"

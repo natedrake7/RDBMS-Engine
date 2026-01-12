@@ -1,7 +1,7 @@
 #include "../include/Optimizer.h"
 
 #include "CostEstimator.h"
-#include "PipelineConstants.h"
+#include "DatabaseConstants.h"
 #include "../include/LogicalPlan.h"
 #include "Managers/StatisticsManager.h"
 #include "SystemDatabases/SystemCatalog.h"
