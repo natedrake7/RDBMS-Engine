@@ -263,6 +263,11 @@ namespace DatabaseEngine::StorageTypes
                 ScanState& state
             )const;
 
+            void TemporaryDatabaseHeapScan(
+                std::vector<Pointer<Row>> *result,
+                ScanState& state
+            )const;
+
             void HeapDelete(
                 const ExecutionProperties& properties,
                 const Expressions::Expression* expression

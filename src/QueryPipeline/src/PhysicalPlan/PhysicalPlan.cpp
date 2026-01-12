@@ -7,6 +7,7 @@
 #include "../../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
 #include "../../../DatabaseEngine/include/DataStorage/Block.h"
 #include "../../../DatabaseEngine/include/ExecutionProperties.h"
+#include "SystemDatabases/TemporaryDatabase.h"
 
 namespace QueryPipeline::PhysicalPlan {
   ExecutionResult::ExecutionResult(){
@@ -30,6 +31,7 @@ namespace QueryPipeline::PhysicalPlan {
     this->catalog = &DatabaseEngine::SystemCatalog::Get();
     this->server = &Network::Server::Get();
     this->session = nullptr;
+    this->temporaryTableId = INVALID_TABLE_ID;
   }
 
   ExecutionNode::ExecutionNode(const DataTypes::Guid &currentSessionId){
@@ -37,6 +39,7 @@ namespace QueryPipeline::PhysicalPlan {
     this->catalog = &DatabaseEngine::SystemCatalog::Get();
     this->server = &Network::Server::Get();
     this->session = this->server->GetSession(this->sessionId);
+    this->temporaryTableId = INVALID_TABLE_ID;
   }
 
   void ExecutionNode::UpdateScanState(const Headers::RowIdentifier& rowId){ }
@@ -857,7 +860,55 @@ PhysicalInsert::PhysicalInsert(
   }
 
   ExecutionResult* PhysicalOrderBy::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
+
     auto* result = this->child->Execute(properties);
+
+    if (result->canFetchMore){
+      //insert to temp db and continue
+      auto* table = (this->temporaryTableId == INVALID_TABLE_ID)
+          ? tempDb.CreateTable()
+          : tempDb.OpenTable(this->temporaryTableId);
+
+      //table ordinal and table id are the same rn
+      this->temporaryTableId = table->GetTableId();
+
+      const auto& columns = table->GetColumns();
+      std::vector<column_index_t> columnIndices;
+      columnIndices.reserve(columns.size());
+
+      for (column_index_t i = 0; i < columns.size(); i++){
+        const auto& column = columns[i];
+        columnIndices.push_back(column->GetColumnIndex());
+      }
+
+      const auto batchResult = table->BatchInsert(properties, result->results, columnIndices);
+
+      result->code = batchResult.code;
+      result->message = batchResult.message;
+
+      return result;
+    }
+
+    //fetch from temp db if exists
+    if (this->temporaryTableId != INVALID_TABLE_ID) {
+      const auto* table = tempDb.OpenTable(this->temporaryTableId);
+
+      result->rows.clear();
+
+      DatabaseEngine::ScanState scanState;
+      scanState.Reset();
+      table->TemporaryDatabaseHeapScan(&result->rows, scanState);
+
+      //reset temp table id
+      this->temporaryTableId = INVALID_TABLE_ID;
+
+      result->results.reserve(result->rows.size());
+      for (const auto& row: result->rows){
+        auto resultRow = row->AsQueryResult();
+        result->results.push_back(std::move(resultRow));
+      }
+    }
 
     SortingFunctions::OrderBy(result->results, this->expressions);
 

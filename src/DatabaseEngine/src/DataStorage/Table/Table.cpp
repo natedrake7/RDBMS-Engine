@@ -437,7 +437,7 @@ namespace DatabaseEngine::StorageTypes {
         const table_id_t &tableId,
         const int& ordinalPosition,
         const vector<Column *> &columns,
-        DatabaseEngine::Database *database,
+        Database *database,
         const Headers::Index* clusteredIndex,
         const vector<Headers::Index> *nonClusteredIndexes)
       {
@@ -815,7 +815,7 @@ namespace DatabaseEngine::StorageTypes {
 
             for (int i = state.GetNextKeyIndex(); i < page->GetPageSize(); i++) {
               const auto& pageRow = (*pageRows)[i];
-              auto row = DatabaseEngine::StorageTypes::Row::GetVisibleVersionForTransaction(pageRow, properties.snapshot);
+              auto row = Row::GetVisibleVersionForTransaction(pageRow, properties.snapshot);
 
               if (!row.Get())
                 continue;
@@ -831,6 +831,10 @@ namespace DatabaseEngine::StorageTypes {
             }
           }
         }
+    }
+
+    void Table::TemporaryDatabaseHeapScan(std::vector<Pointer<Row>>* result, ScanState& state) const{
+        this->HeapScan({}, result, state);
     }
 
     void Table::HeapDelete(

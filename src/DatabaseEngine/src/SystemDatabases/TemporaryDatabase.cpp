@@ -40,6 +40,10 @@ namespace DatabaseEngine {
         std::filesystem::remove_all(this->name + "/");
     }
 
+    int TemporaryDatabase::GetNextOrdinalPosition(){
+        return this->currentOrdinalPosition.fetch_add(1, std::memory_order_relaxed);
+    }
+
     TemporaryDatabase& TemporaryDatabase::Get(){
         static TemporaryDatabase instance;
         return instance;
@@ -54,6 +58,30 @@ namespace DatabaseEngine {
         CreateDatabase(this->name);
 
         this->db = new Database(this->name, true);
+    }
+
+    StorageTypes::Table* TemporaryDatabase::CreateTable(){
+        const auto ordinalPosition = this->GetNextOrdinalPosition();
+
+        const std::vector columns = {
+            new StorageTypes::Column(
+                "col1",
+                DataType::Int,
+                sizeof(int),
+                0,
+                false
+            )
+        };
+
+        return this->db->CreateTable(
+            ordinalPosition,
+            ordinalPosition,
+            columns
+        );
+    }
+
+    StorageTypes::Table* TemporaryDatabase::OpenTable(const Int& tableId) const{
+        return this->db->OpenTable(tableId);
     }
 
     void TemporaryDatabase::Shutdown(){

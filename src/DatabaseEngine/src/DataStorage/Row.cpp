@@ -566,6 +566,17 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
+    QueryResult Row::AsQueryResult() const{
+        QueryResult result;
+
+        for (int i = 0;i < this->data.size(); i++){
+            auto value = this->GetColumnByIndex(i);
+            result.AddColumn(value);
+        }
+
+        return result;
+    }
+
     RowHeader* Row::GetHeader() { return &this->header; }
 
     row_size_t Row::TotalSize() const

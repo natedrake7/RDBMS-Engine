@@ -197,5 +197,7 @@ namespace DatabaseEngine::StorageTypes
         void WriteVersionHeaderToDisk(fstream* filePtr)const;
 
         void WriteDataToDisk(fstream* filePtr)const;
+
+        QueryResult AsQueryResult()const;
     };
 }

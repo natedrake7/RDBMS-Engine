@@ -85,6 +85,8 @@
 //TODO implement better query optimization techniques (dynamic programming, genetic algorithms, simulated annealing)
 //TODO implement parallel query execution and distributed databases
 
+//verify temp db flow implementation.
+
 std::atomic<bool> serverRunning{false};
 
 void shutdownClient(int signal) {

@@ -146,13 +146,16 @@ public:
       const Headers::sysTable& sysHeader,
       const StorageTypes::TableHeader &tableHeader,
       const Headers::Index& primaryKey,
-      const int& ordinalPosition);
+      const int& ordinalPosition
+    );
+
+    static void InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns);
 
 //    [[nodiscard]] StorageTypes::Table *OpenTable(const string& schemaName, const string &tableName) const;
 
     [[nodiscard]] StorageTypes::Table *OpenTable(const table_id_t& tableId) const;
 
-    [[nodiscard]] StorageTypes::Table *OpenTableById(const table_id_t& tableId) const;
+    // [[nodiscard]] StorageTypes::Table *OpenTableById(const table_id_t& tableId) const;
 
     void DeleteTable(const string& tableName);
 

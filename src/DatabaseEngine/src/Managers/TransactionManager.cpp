@@ -69,11 +69,11 @@ namespace DatabaseEngine {
 
     static auto& server = Network::Server::Get();
     const auto* db = server.UseDatabase(transactionInfo.modificationInfo.databaseId);
-    const auto* table = db->OpenTableById(transactionInfo.modificationInfo.tableId);
+    // const auto* table = db->OpenTableById(transactionInfo.modificationInfo.tableId);
 
     //TODO track index keys along with rids to rollback index entries as well
-    for (const auto& rowId : transactionInfo.modificationInfo.rows)
-      table->Rollback(snapshot, rowId);
+    // for (const auto& rowId : transactionInfo.modificationInfo.rows)
+    //   table->Rollback(snapshot, rowId);
 
     //apply rollback mechanism
   }

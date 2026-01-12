@@ -300,7 +300,13 @@ namespace DatabaseEngine
         this->tables.push_back(new StorageTypes::Table(sysHeader, tableHeader, primaryKey, this, ordinalPosition));
     }
 
-//    Table *Database::OpenTable(const string& schemaName, const string &tableName) const
+    void Database::InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns){
+        HashSet<string> schemaNamesSet;
+
+
+    }
+
+    //    Table *Database::OpenTable(const string& schemaName, const string &tableName) const
 //    {
 //        for (const auto &table : this->tables)
 //        {
@@ -316,9 +322,9 @@ namespace DatabaseEngine
         return this->tables.at(tableId);
     }
 
-    StorageTypes::Table * Database::OpenTableById(const table_id_t &tableId) const{
-        return this->tables.at(this->tableIdsDictionary.Get(tableId));
-    }
+    // StorageTypes::Table * Database::OpenTableById(const table_id_t &tableId) const{
+    //     return this->tables.at(this->tableIdsDictionary.Get(tableId));
+    // }
 
     void Database::DeleteTable(const string& tableName)
     {
@@ -539,14 +545,19 @@ namespace DatabaseEngine
         const table_id_t &tableId,
         const int& pagesToAllocate
     ) {
-        page_id_t lowerLimit = 0;
+        page_id_t lowerLimit = INVALID_PAGE_ID;
 
         const auto extents = this->AllocateNewExtents(pagesToAllocate, tableId, lowerLimit);
 
         Pages::PageGuard<> page;
-        for (const auto& extentId : extents) {
-            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
+        bool firstExtent = true;
+        for (const auto& extentId : extents) {
+            const auto firstExtentPageId = (lowerLimit != INVALID_PAGE_ID) && firstExtent
+                            ? lowerLimit + 1
+                            : Database::CalculateExtentFirstPageId(extentId);
+
+            firstExtent = false;
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++){
 
                 auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);

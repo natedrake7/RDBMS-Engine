@@ -57,6 +57,8 @@ namespace QueryPipeline::PhysicalPlan{
 
       const Network::Session* session;
 
+      Int temporaryTableId;
+
     public:
       ExecutionNode();
       explicit ExecutionNode(const DataTypes::Guid& currentSessionId);
