@@ -123,3 +123,57 @@ bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
 
   return true;
 }
+
+ostream& operator<<(std::ostream& os, const QueryResult& result){
+  for (int i = 0; i < result.data.size(); ++i) {
+    const auto& column = result.data[i];
+
+    if(column.GetRawData() == nullptr
+      || column.GetSize() == 0)
+    {
+      os   << "NULL"
+                  << ((i == result.data.size() - 1) ? "\n" : " || ");
+      continue;
+    }
+
+    switch (column.GetType()){
+      case DataType::TinyInt:
+        os << static_cast<int16_t>(column.GetTinyInt());
+        break;
+      case DataType::SmallInt:
+        os << column.GetSmallInt();
+        break;
+      case DataType::Int:
+        os << column.GetInt();
+        break;
+      case DataType::BigInt:
+        os << column.GetBigInt();
+        break;
+      case DataType::Decimal:
+        os << column.GetDecimal();
+        break;
+      case DataType::String:
+        os << column.GetString();
+        break;
+      case DataType::UnicodeString:
+        //TODO
+        os << column.GetString();
+        break;
+      case DataType::Bool:
+        os << (column.GetBool() ? "TRUE" : "FALSE");
+        break;
+      case DataType::DateTime:
+        os << column.GetDateTime();
+        break;
+      case DataType::Guid:
+        os << column.GetGuid();
+        break;
+      default:
+        break;
+    }
+
+    os << ((i == result.data.size() - 1) ? "\n" : " || ");
+  }
+
+  return os;
+}

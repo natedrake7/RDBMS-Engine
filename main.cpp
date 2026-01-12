@@ -185,6 +185,7 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
 
     bool hasError = false;
 
+    auto count = 0;
     for (auto* cursor : parserResult.cursors) {
         while (cursor->canFetch()) {
             auto batchResult = QueryPipeline::Parser::Execute(cursor);
@@ -195,13 +196,14 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
                 break;
             }
 
+            count += static_cast<int>(batchResult.rows.size());
             for (const auto& column : batchResult.columns)
                 std::cout << column << " || ";
 
             std::cout << std::endl;
 
             for (const auto& row: batchResult.rows)
-                row.Print();
+                std::cout << row;
         }
 
         if (hasError) {
@@ -215,6 +217,8 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
     const auto end = std::chrono::high_resolution_clock::now();
 
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
+
+    std::cout << "Rows affected: " << count << std::endl;
 
     std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
 }

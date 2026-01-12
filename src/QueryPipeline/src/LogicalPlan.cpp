@@ -92,9 +92,8 @@ namespace QueryPipeline {
       return new PhysicalPlan::PhysicalTableScan(this->table, this->expression);
 
     // If no filter expression, choose the best index for scanning
+    const auto& firstIndex = indexes.front();
     if (!this->HasPredicate()) {
-      const auto& firstIndex = indexes.front();
-
       if (firstIndex.isClustered)
         return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, true);
 
@@ -104,10 +103,15 @@ namespace QueryPipeline {
 
     const auto tableStats = DatabaseEngine::StatisticsManager::Get().GetTableStatistics(this->table->tableId);
 
-    //Small table use heap Scan
-    if (tableStats.rowCount < PipelineConstants::SMALL_TABLE)
-      return new PhysicalPlan::PhysicalTableScan(this->table, this->expression);
+    //no table stats yet, or small table
+    if (tableStats.tableId == INVALID_TABLE_ID || tableStats.rowCount < PipelineConstants::SMALL_TABLE){
+      if (firstIndex.isClustered)
+        return new PhysicalPlan::PhysicalIndexScan(this->table, this->expression, true);
 
+      return new PhysicalPlan::PhysicalTableScan(this->table, this->expression);
+    }
+
+    //else use optimizer to choose index seek/scan
     auto result = Optimizer::PerformIndexAnalysis(indexes, this->expression, tableStats);
 
     if (result.hasRange)

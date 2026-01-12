@@ -23,4 +23,5 @@ public:
   void Deserialize(const std::vector<char>& buffer, uint32_t& offset, const int& dataSize);
 
   friend bool operator==(const QueryResult& lhs, const QueryResult& rhs);
+  friend ostream& operator<<(std::ostream& os, const QueryResult& result);
 };
