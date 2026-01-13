@@ -33,6 +33,35 @@ AggregateResults::AggregateResults()
     this->count = 0;
 }
 
+MergeElement& MergeElement::operator=(const MergeElement& other){
+    this->value = other.value;
+    this->batchId = other.batchId;
+
+    return *this;
+}
+
+MergeElement& MergeElement::operator=(MergeElement&& other){
+    this->value = std::move(other.value);
+    this->batchId = other.batchId;
+
+    return *this;
+}
+
+MergeElement::MergeElement(const QueryResult& value, const Int& batchId){
+    this->value = value;
+    this->batchId = batchId;
+}
+
+MergeElement::MergeElement(const MergeElement& other){
+    this->value = other.value;
+    this->batchId = other.batchId;
+}
+
+MergeElement::MergeElement(MergeElement&& other){
+    this->value = std::move(other.value);
+    this->batchId = other.batchId;
+}
+
 int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Block *&secondBlock)
 {
     switch (firstBlock->GetColumnType())
@@ -126,8 +155,11 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
     }
 }
 
-bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResult& secondRow, const vector<QueryPipeline::Statements::OrderColumn*> &sortConditions)
-{
+bool SortingFunctions::CompareRows(
+    const QueryResult& firstRow,
+    const QueryResult& secondRow,
+    const vector<QueryPipeline::Statements::OrderColumn*> &sortConditions
+){
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::MaterializedRow, {});
     for (const auto& condition : sortConditions)
     {
@@ -157,8 +189,7 @@ bool SortingFunctions::CompareRows(const QueryResult& firstRow, const QueryResul
     return false;
 }
 
-void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<QueryPipeline::Statements::OrderColumn*> &conditions)
-{
+void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<QueryPipeline::Statements::OrderColumn*> &conditions){
     if(rows.empty())
         return;
 
@@ -230,6 +261,17 @@ unordered_map<string, AggregateResults> SortingFunctions::GroupBy(const vector<R
     }
 
     return groupedResults;
+}
+
+MergeComparator::MergeComparator(const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions)
+    : sortConditions(sortConditions){}
+
+bool MergeComparator::operator()(const MergeElement& first, const MergeElement& second) const{
+    return SortingFunctions::CompareRows(
+        first.value,
+        second.value,
+        *this->sortConditions
+    );
 }
 
 string SortingFunctions::CreateGroupByKey(const Row* row, const vector<GroupCondition> &sortConditions)

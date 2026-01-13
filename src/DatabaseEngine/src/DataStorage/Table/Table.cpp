@@ -785,9 +785,9 @@ namespace DatabaseEngine::StorageTypes {
 
         state.canFetchMore = false;
         for (const auto& extentId : tableExtentIds){
-          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-          const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+          const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
           const auto extentStartingPageId = (tableMapPage->GetPageId() != extentFirstPageId)
                                       ? extentFirstPageId
@@ -795,8 +795,7 @@ namespace DatabaseEngine::StorageTypes {
 
           MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage->Latch());
 
-          for (page_id_t extentPageId = state.GetPageId(extentStartingPageId); extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
-          {
+          for (page_id_t extentPageId = state.GetPageId(extentStartingPageId); extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
             if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
               break;
 
@@ -828,13 +827,23 @@ namespace DatabaseEngine::StorageTypes {
                 state.canFetchMore = true;
                 return;
               }
+
+              //if can fetch more in current batch reset index
+              state.lastFetchedRowId.indexId = INVALID_INDEX_ID;
             }
           }
         }
     }
 
-    void Table::TemporaryDatabaseHeapScan(std::vector<Pointer<Row>>* result, ScanState& state) const{
-        this->HeapScan({}, result, state);
+    void Table::TemporaryDatabaseHeapScan(
+      std::vector<Pointer<Row>>* result,
+      ScanState& state,
+      const int& batchSize
+    ) const{
+        auto properties = ExecutionProperties();
+        properties.batchSize = batchSize;
+
+        this->HeapScan(properties, result, state);
     }
 
     void Table::HeapDelete(

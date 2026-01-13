@@ -8,6 +8,10 @@
 #include "../../Systemic/include/Headers.h"
 #include "../../DatabaseEngine/include/DataStorage/Row.h"
 #include "../../DatabaseEngine/include/ExecutionProperties.h"
+#include "../../Systemic/include/DataStructures/PriorityQueue.h"
+#include "../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
+
+struct MergeElement;
 
 namespace DatabaseEngine {
   struct ExecutionProperties;
@@ -63,8 +67,19 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionNode();
       explicit ExecutionNode(const DataTypes::Guid& currentSessionId);
       virtual ~ExecutionNode() = default;
+      void InsertToTemporaryDatabase(const std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>& rows);
+      void InsertPostProjectionResultsToTemporaryDatabase(
+        const DatabaseEngine::ExecutionProperties& properties,
+        ExecutionResult*& result
+      );
+      [[nodiscard]] ExecutionResult* StreamFromTemporaryDatabase(
+        const DatabaseEngine::ExecutionProperties& properties,
+        DatabaseEngine::ScanState& state
+      ) const;
       virtual ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) = 0;
       virtual void UpdateScanState(const Headers::RowIdentifier& rowId);
+
+      [[nodiscard]] bool UsesExternalStorage() const;
   };
 
   /**
@@ -330,6 +345,9 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalOrderBy final : public ExecutionNode{
     ExecutionNode* child;
     std::vector<Statements::OrderColumn*> expressions;
+
+    PriorityQueue<MergeElement, MergeComparator> priorityQueue;
+
   public:
     PhysicalOrderBy(ExecutionNode* child, std::vector<Statements::OrderColumn*>& expressions);
     ~PhysicalOrderBy()override;

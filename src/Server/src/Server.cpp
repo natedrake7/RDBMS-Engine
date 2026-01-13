@@ -223,15 +223,12 @@ namespace Network {
 
     MultiThreading::WriterGuard::Promote(&this->databasesLatch, lock);
 
-    db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
-
     if (this->databases.TryGetValue(databaseId, db))
       return db;
 
-    //master db id
+    db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
 
     this->databases.Add(databaseId, db);
-
 
     return db;
   }

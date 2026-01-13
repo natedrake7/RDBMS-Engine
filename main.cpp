@@ -5,6 +5,7 @@
 #include "src/Server/include/Server.h"
 #include "src/Server/include/ConnectionManager.h"
 #include "src/Systemic/include/Functions/StringFunctions.h"
+#include "main.h"
 
 #include <atomic>
 #include <chrono>
@@ -87,31 +88,12 @@
 
 //verify temp db flow implementation.
 
-std::atomic<bool> serverRunning{false};
-
-void shutdownClient(int signal) {
-    serverRunning.store(false);
-
-    cout << "Server shutting down..." << endl;
-    Network::Server::Get().Shutdown();
-    exit(0);
-}
-
-void RegisterSignalHandlers()
-{
-    signal(SIGINT, shutdownClient);   // Ctrl+C
-    signal(SIGTERM, shutdownClient);  // kill command
-    signal(SIGABRT, shutdownClient);  // abort()
-}
-
-void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId);
-
 int main()
 {
     //Get table stats
     //SELECT TOP(1) TS.table_id AS ID, T.name AS Name, TS.row_count AS RowCount, TS.avg_record_size AS RowSize FROM masterDb.dbo.sys_table_stats AS TS INNER JOIN masterDb.dbo.sys_tables AS T ON T.table_id = TS.table_id AS TS ORDER BY ID DESC
 
-    // RegisterSignalHandlers();
+    RegisterSignalHandlers();
 
     static auto& server = Network::Server::Get();
 
@@ -121,15 +103,10 @@ int main()
     //
     // return 0;
 
-    server.Initialize("configuration.json");
-
-    serverRunning.store(true);
-
     Network::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
-    //figue out issue
     std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
     std::thread statisticsThread(
@@ -138,6 +115,10 @@ int main()
         std::ref(server.GetDatabases()),
         std::ref(server.GetDatabasesLatch())
     );
+
+    server.Initialize("configuration.json");
+
+    serverRunning.store(true);
 
     const auto* user = server.Authenticate("admin", "admin");
 
@@ -166,6 +147,7 @@ int main()
     // const auto& databases = server.GetCatalog();
 
     serverRunning.store(false, std::memory_order_relaxed);
+
 
     connectionThread.join();
     statisticsThread.join();
@@ -223,4 +205,18 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
     std::cout << "Rows affected: " << count << std::endl;
 
     std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
+}
+
+void shutdownClient(int signal) {
+    serverRunning.store(false, std::memory_order_relaxed);
+
+    cout << "Server shutting down..." << endl;
+    Network::Server::Get().Shutdown();
+    exit(0);
+}
+
+void RegisterSignalHandlers(){
+    signal(SIGINT, shutdownClient);   // Ctrl+C
+    signal(SIGTERM, shutdownClient);  // kill command
+    signal(SIGABRT, shutdownClient);  // abort()
 }

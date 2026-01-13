@@ -24,6 +24,17 @@ typedef struct AggregateResults {
     AggregateResults();
 } AggregateResults;
 
+struct MergeElement{
+    QueryResult value;
+    Int batchId;
+
+    MergeElement(const QueryResult& value, const Int& batchId);
+    MergeElement(const MergeElement& other);
+    MergeElement(MergeElement&& other);
+    MergeElement& operator=(const MergeElement& other);
+    MergeElement& operator=(MergeElement&& other);
+};
+
 class SortingFunctions{
          [[nodiscard]] static int CompareBlockByDataType(
            const DatabaseEngine::StorageTypes::Block*& firstBlock,
@@ -62,4 +73,17 @@ class SortingFunctions{
            const std::vector<DatabaseEngine::StorageTypes::Row*>& rows,
            const std::vector<GroupCondition>& sortConditions
           );
+};
+
+class MergeComparator final{
+    const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
+
+    public:
+        explicit MergeComparator(
+          const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions
+        );
+        bool operator()(
+          const MergeElement& first,
+          const MergeElement& second
+         ) const;
 };

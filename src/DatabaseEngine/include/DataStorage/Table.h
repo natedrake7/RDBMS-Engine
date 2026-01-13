@@ -265,7 +265,8 @@ namespace DatabaseEngine::StorageTypes
 
             void TemporaryDatabaseHeapScan(
                 std::vector<Pointer<Row>> *result,
-                ScanState& state
+                ScanState& state,
+                const int& batchSize
             )const;
 
             void HeapDelete(

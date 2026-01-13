@@ -27,7 +27,7 @@ namespace QueryPipeline::PhysicalPlan {
     return this->code == Errors::RuntimeError::Ok;
   }
 
-   ExecutionNode::ExecutionNode() {
+  ExecutionNode::ExecutionNode() {
     this->catalog = &DatabaseEngine::SystemCatalog::Get();
     this->server = &Network::Server::Get();
     this->session = nullptr;
@@ -42,7 +42,66 @@ namespace QueryPipeline::PhysicalPlan {
     this->temporaryTableId = INVALID_TABLE_ID;
   }
 
+  void ExecutionNode::InsertToTemporaryDatabase(
+    const std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>& rows){
+
+  }
+
+  void ExecutionNode::InsertPostProjectionResultsToTemporaryDatabase(
+    const DatabaseEngine::ExecutionProperties& properties,
+    ExecutionResult*& result
+  ){
+    static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
+
+    auto* table = (this->temporaryTableId == INVALID_TABLE_ID)
+          ? tempDb.CreateTable()
+          : tempDb.OpenTable(this->temporaryTableId);
+
+    //table ordinal and table id are the same rn
+    this->temporaryTableId = table->GetTableId();
+
+    const auto& columns = table->GetColumns();
+    std::vector<column_index_t> columnIndices;
+    columnIndices.reserve(columns.size());
+
+    for (const auto& column : columns)
+      columnIndices.push_back(column->GetColumnIndex());
+
+    const auto batchResult = table->BatchInsert(properties, result->results, columnIndices);
+
+    result->code = batchResult.code;
+    result->message = batchResult.message;
+  }
+
+  ExecutionResult* ExecutionNode::StreamFromTemporaryDatabase(
+    const DatabaseEngine::ExecutionProperties& properties,
+    DatabaseEngine::ScanState& state
+  ) const
+  {
+    static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
+
+    if (this->temporaryTableId == INVALID_TABLE_ID)
+      return nullptr;
+
+    const auto* table = tempDb.OpenTable(this->temporaryTableId);
+
+    auto* result = new ExecutionResult();
+    table->TemporaryDatabaseHeapScan(&result->rows, state, properties.batchSize);
+
+    result->results.reserve(result->rows.size());
+
+    for (const auto& row: result->rows){
+      auto resultRow = row->AsQueryResult();
+      result->results.push_back(std::move(resultRow));
+    }
+
+    return result;
+  }
+
+
   void ExecutionNode::UpdateScanState(const Headers::RowIdentifier& rowId){ }
+
+  bool ExecutionNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
   PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
     : ExecutionNode(currentSessionId), variable(std::move(variable)), expression(expression){}
@@ -848,8 +907,10 @@ PhysicalInsert::PhysicalInsert(
 
   PhysicalOrderBy::PhysicalOrderBy(
       ExecutionNode *child,
-      std::vector<Statements::OrderColumn*>& expressions)
-    : child(child), expressions(std::move(expressions)){}
+      std::vector<Statements::OrderColumn*>& expressions
+  ) : child(child),
+      expressions(std::move(expressions)),
+      priorityQueue(MergeComparator(&this->expressions)) {}
 
   PhysicalOrderBy::~PhysicalOrderBy(){
     for (const auto* column : this->expressions) {
@@ -860,57 +921,59 @@ PhysicalInsert::PhysicalInsert(
   }
 
   ExecutionResult* PhysicalOrderBy::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
-
     auto* result = this->child->Execute(properties);
 
-    if (result->canFetchMore){
-      //insert to temp db and continue
-      auto* table = (this->temporaryTableId == INVALID_TABLE_ID)
-          ? tempDb.CreateTable()
-          : tempDb.OpenTable(this->temporaryTableId);
+    //if external storage is need to order query
+    if (result->canFetchMore || this->UsesExternalStorage()){
+      //sort results and then insert to temp db
+      SortingFunctions::OrderBy(result->results, this->expressions);
 
-      //table ordinal and table id are the same rn
-      this->temporaryTableId = table->GetTableId();
+      //store pos in tempdb here
+      auto element = MergeElement(
+        result->results.front(),
+         0
+      );
 
-      const auto& columns = table->GetColumns();
-      std::vector<column_index_t> columnIndices;
-      columnIndices.reserve(columns.size());
+      this->priorityQueue.Add(std::move(element));
 
-      for (column_index_t i = 0; i < columns.size(); i++){
-        const auto& column = columns[i];
-        columnIndices.push_back(column->GetColumnIndex());
-      }
+      this->InsertPostProjectionResultsToTemporaryDatabase(properties, result);
 
-      const auto batchResult = table->BatchInsert(properties, result->results, columnIndices);
+      //if there are more results to fetch return
+      if (result->canFetchMore)
+        return result;
+    }
 
-      result->code = batchResult.code;
-      result->message = batchResult.message;
-
+    //if query does not need external storage just sort and return
+    if (!result->canFetchMore && !this->UsesExternalStorage()){
+      SortingFunctions::OrderBy(result->results, this->expressions);
       return result;
     }
 
-    //fetch from temp db if exists
-    if (this->temporaryTableId != INVALID_TABLE_ID) {
-      const auto* table = tempDb.OpenTable(this->temporaryTableId);
+    //TODO fix external sort
+    std::vector<QueryResult> lastFetchedBatch;
+    while (!this->priorityQueue.Empty()){
+      auto& top = this->priorityQueue.Top();
+      this->priorityQueue.Remove();
 
-      result->rows.clear();
+      result->results.push_back(std::move(top.value));
 
-      DatabaseEngine::ScanState scanState;
-      scanState.Reset();
-      table->TemporaryDatabaseHeapScan(&result->rows, scanState);
+      auto state = DatabaseEngine::ScanState();
 
-      //reset temp table id
-      this->temporaryTableId = INVALID_TABLE_ID;
+      auto* batchResult = this->StreamFromTemporaryDatabase(properties, state);
 
-      result->results.reserve(result->rows.size());
-      for (const auto& row: result->rows){
-        auto resultRow = row->AsQueryResult();
-        result->results.push_back(std::move(resultRow));
-      }
+      lastFetchedBatch = std::move(batchResult->results);
+
+      delete batchResult;
+
+      lastFetchedBatch.erase(lastFetchedBatch.begin());
+
+      auto mergeElement = MergeElement(
+      lastFetchedBatch.front(),
+        0
+      );
+
+      this->priorityQueue.Add(std::move(mergeElement));
     }
-
-    SortingFunctions::OrderBy(result->results, this->expressions);
 
     return result;
   }

@@ -9,6 +9,7 @@ set(BUILD_SHARED_LIBS ON)
 add_executable(
         Database main.cpp
         Queries.h
+        main.h
 )
 
 # Set this to the directory containing antlr4-runtimeConfig.cmake or antlr4-runtime-config.cmake
@@ -70,6 +71,7 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryProtocol.cpp
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
+        src/Systemic/include/DataStructures/PriorityQueue.h
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)
@@ -147,10 +149,8 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/SystemDatabases/SystemCatalog.cpp
         src/DatabaseEngine/src/Evaluators/Expression.cpp
         src/DatabaseEngine/src/Schedulers/StatisticsScheduler.cpp
-        src/DatabaseEngine/include/Managers/StatisticsManager.h
         src/DatabaseEngine/src/Managers/StatisticsManager.cpp
         src/DatabaseEngine/src/SystemDatabases/TemporaryDatabase.cpp
-        src/DatabaseEngine/include/Logger/UndoLogger.h
         src/DatabaseEngine/src/Logger/UndoLogger.cpp
 )
 
