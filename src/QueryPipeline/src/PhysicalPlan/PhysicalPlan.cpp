@@ -909,6 +909,10 @@ PhysicalInsert::PhysicalInsert(
     return nullptr;
   }
 
+  bool PhysicalOrderBy::CanBeSortedInMemory(const bool& canFetchMore) const{
+    return !canFetchMore && !this->UsesExternalStorage();
+  }
+
   PhysicalOrderBy::PhysicalOrderBy(
       ExecutionNode *child,
       std::vector<Statements::OrderColumn*>& expressions
@@ -927,71 +931,70 @@ PhysicalInsert::PhysicalInsert(
   ExecutionResult* PhysicalOrderBy::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
 
-    //if external storage is need to order query
-    if (result->canFetchMore || this->UsesExternalStorage()){
-      //sort results and then insert to temp db
-      SortingFunctions::OrderBy(result->results, this->expressions);
-
-      //store pos in tempdb here
-      auto element = MergeElement(
-        result->results.front(),
-         this->priorityQueue.Size()
-      );
-
-      Headers::RowIdentifier rowId;
-      this->InsertPostProjectionResultsToTemporaryDatabase(properties, result, rowId);
-
-      element.rowId = rowId;
-      this->priorityQueue.Add(std::move(element));
-
-      //if there are more results to fetch return
-      if (result->canFetchMore)
+    // Case 1: In-memory sort (no external storage needed)
+    if (!result->canFetchMore && !this->UsesExternalStorage()){
+        SortingFunctions::OrderBy(result->results, this->expressions);
         return result;
     }
 
-    //if query does not need external storage just sort and return
-    if (!result->canFetchMore && !this->UsesExternalStorage()){
-      SortingFunctions::OrderBy(result->results, this->expressions);
-      return result;
+    // Case 2: Build phase - collect and sort batches
+    while (result->canFetchMore || (result->canFetchMore == false && this->priorityQueue.Empty())) {
+        SortingFunctions::OrderBy(result->results, this->expressions);
+
+        Headers::RowIdentifier rowId;
+        this->InsertPostProjectionResultsToTemporaryDatabase(properties, result, rowId);
+
+        auto element = MergeElement(
+            result->results.front(),
+            static_cast<int>(this->priorityQueue.Size()),
+            rowId
+        );
+
+        this->priorityQueue.Add(std::move(element));
+
+        if (!result->canFetchMore)
+            break;
+
+        result = this->child->Execute(properties);
     }
 
-    //TODO fix external sort
-    std::vector<QueryResult> lastFetchedBatch;
-    Int lastFetchedBatchIndex = -1;
+    // Case 3: Merge phase - k-way merge
+    result->results.clear();
+
+    std::vector<std::vector<QueryResult>> batches;
+    batches.resize(this->priorityQueue.Size());
+
     while (!this->priorityQueue.Empty()){
-      auto& top = this->priorityQueue.Top();
-      this->priorityQueue.Remove();
+        auto top = this->priorityQueue.Top();
+        this->priorityQueue.Remove();
 
-      result->results.push_back(std::move(top.value));
+        result->results.push_back(std::move(top.value));
 
-      auto state = DatabaseEngine::ScanState();
-      state.lastFetchedRowId = top.rowId;
-      state.extentId = DatabaseEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
+        const auto batchId = top.batchId;
 
-      if (lastFetchedBatchIndex != top.batchId)
-      {
-        auto* batchResult = this->StreamFromTemporaryDatabase(properties, state);
+        // Lazy load batch if needed
+        if (batches[batchId].empty()) {
+            auto state = DatabaseEngine::ScanState();
+            state.lastFetchedRowId = top.rowId;
+            state.extentId = DatabaseEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
 
-        lastFetchedBatch = std::move(batchResult->results);
-        lastFetchedBatchIndex = top.batchId;
+            auto* batchResult = this->StreamFromTemporaryDatabase(properties, state);
+            batches[batchId] = std::move(batchResult->results);
+            delete batchResult;
+        }
 
-        delete batchResult;
-      }
+        // Remove consumed element
+        batches[batchId].erase(batches[batchId].begin());
 
-      if (lastFetchedBatch.empty())
-        continue;
-
-      lastFetchedBatch.erase(lastFetchedBatch.begin());
-
-      if (lastFetchedBatch.empty())
-        continue;
-
-      auto mergeElement = MergeElement(
-      lastFetchedBatch.front(),
-        lastFetchedBatchIndex
-      );
-
-      this->priorityQueue.Add(std::move(mergeElement));
+        // Add next element from same batch if available
+        if (!batches[batchId].empty()) {
+            auto nextElement = MergeElement(
+                batches[batchId].front(),
+                batchId,
+                top.rowId // Update with proper next rowId if needed
+            );
+            this->priorityQueue.Add(std::move(nextElement));
+        }
     }
 
     return result;
@@ -1028,7 +1031,7 @@ PhysicalInsert::PhysicalInsert(
 
     const auto indexId = indexResult.primaryKey.AsInt(1);
 
-    const auto constraintResult =this->catalog->InsertConstraintToMasterDb(\
+    const auto constraintResult =this->catalog->InsertConstraintToMasterDb(
       properties,
       this->table->tableId,
       this->constraintName,

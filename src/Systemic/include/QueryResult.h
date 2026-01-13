@@ -22,6 +22,11 @@ public:
   void Serialize(std::vector<char>& buffer)const;
   void Deserialize(const std::vector<char>& buffer, uint32_t& offset, const int& dataSize);
 
+  QueryResult(const QueryResult& other);
+  QueryResult(QueryResult&& other) noexcept;
+  QueryResult& operator=(const QueryResult& other);
+  QueryResult& operator=(QueryResult&& other) noexcept;
+
   friend bool operator==(const QueryResult& lhs, const QueryResult& rhs);
   friend ostream& operator<<(std::ostream& os, const QueryResult& result);
 };

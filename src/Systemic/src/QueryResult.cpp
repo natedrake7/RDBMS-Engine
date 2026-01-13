@@ -112,6 +112,30 @@ void QueryResult::Deserialize(const std::vector<char> &buffer, uint32_t &offset,
   }
 }
 
+QueryResult::QueryResult(const QueryResult& other){
+  this->data = other.data;
+}
+
+QueryResult::QueryResult(QueryResult&& other) noexcept{
+  this->data = std::move(other.data);
+}
+
+QueryResult& QueryResult::operator=(const QueryResult& other){
+  if (this == &other)
+    return *this;
+
+  this->data = other.data;
+  return *this;
+}
+
+QueryResult& QueryResult::operator=(QueryResult&& other) noexcept{
+  if (this == &other)
+    return *this;
+
+  this->data = std::move(other.data);
+  return *this;
+}
+
 bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
   if (lhs.GetSize() != rhs.GetSize())
     return false;

@@ -349,6 +349,8 @@ namespace QueryPipeline::PhysicalPlan{
 
     PriorityQueue<MergeElement, MergeComparator> priorityQueue;
 
+    [[nodiscard]] bool CanBeSortedInMemory(const bool& canFetchMore)const;
+
   public:
     PhysicalOrderBy(ExecutionNode* child, std::vector<Statements::OrderColumn*>& expressions);
     ~PhysicalOrderBy()override;

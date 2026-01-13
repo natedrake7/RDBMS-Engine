@@ -33,15 +33,9 @@ AggregateResults::AggregateResults()
     this->count = 0;
 }
 
-MergeElement& MergeElement::operator=(const MergeElement& other){
-    this->value = other.value;
-    this->batchId = other.batchId;
-    this->rowId = other.rowId;
+MergeElement& MergeElement::operator=(const MergeElement& other)= default;
 
-    return *this;
-}
-
-MergeElement& MergeElement::operator=(MergeElement&& other){
+MergeElement& MergeElement::operator=(MergeElement&& other) noexcept {
     this->value = std::move(other.value);
     this->batchId = other.batchId;
     this->rowId = other.rowId;
@@ -54,13 +48,16 @@ MergeElement::MergeElement(const QueryResult& value, const Int& batchId){
     this->batchId = batchId;
 }
 
+MergeElement::MergeElement(QueryResult& value, const int& batchId, Headers::RowIdentifier& rowId)
+    : value(std::move(value)), rowId(rowId), batchId(batchId) {}
+
 MergeElement::MergeElement(const MergeElement& other){
     this->value = other.value;
     this->batchId = other.batchId;
     this->rowId = other.rowId;
 }
 
-MergeElement::MergeElement(MergeElement&& other){
+MergeElement::MergeElement(MergeElement&& other) noexcept {
     this->value = std::move(other.value);
     this->batchId = other.batchId;
     this->rowId = other.rowId;

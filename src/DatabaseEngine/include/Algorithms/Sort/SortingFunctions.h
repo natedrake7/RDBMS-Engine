@@ -30,10 +30,11 @@ struct MergeElement{
     Int batchId;
 
     MergeElement(const QueryResult& value, const Int& batchId);
+    MergeElement(QueryResult& value, const int& batchId, Headers::RowIdentifier& rowId);
     MergeElement(const MergeElement& other);
-    MergeElement(MergeElement&& other);
+    MergeElement(MergeElement&& other) noexcept;
     MergeElement& operator=(const MergeElement& other);
-    MergeElement& operator=(MergeElement&& other);
+    MergeElement& operator=(MergeElement&& other) noexcept;
 };
 
 class SortingFunctions{
