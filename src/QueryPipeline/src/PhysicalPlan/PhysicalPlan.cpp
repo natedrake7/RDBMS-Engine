@@ -49,7 +49,8 @@ namespace QueryPipeline::PhysicalPlan {
 
   void ExecutionNode::InsertPostProjectionResultsToTemporaryDatabase(
     const DatabaseEngine::ExecutionProperties& properties,
-    ExecutionResult*& result
+    ExecutionResult*& result,
+    Headers::RowIdentifier& firstRowId
   ){
     static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
 
@@ -69,6 +70,8 @@ namespace QueryPipeline::PhysicalPlan {
 
     const auto batchResult = table->BatchInsert(properties, result->results, columnIndices);
 
+    firstRowId = batchResult.rowId;
+
     result->code = batchResult.code;
     result->message = batchResult.message;
   }
@@ -80,12 +83,13 @@ namespace QueryPipeline::PhysicalPlan {
   {
     static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
 
+    auto* result = new ExecutionResult();
+
     if (this->temporaryTableId == INVALID_TABLE_ID)
-      return nullptr;
+      return result;
 
     const auto* table = tempDb.OpenTable(this->temporaryTableId);
 
-    auto* result = new ExecutionResult();
     table->TemporaryDatabaseHeapScan(&result->rows, state, properties.batchSize);
 
     result->results.reserve(result->rows.size());
@@ -931,12 +935,14 @@ PhysicalInsert::PhysicalInsert(
       //store pos in tempdb here
       auto element = MergeElement(
         result->results.front(),
-         0
+         this->priorityQueue.Size()
       );
 
-      this->priorityQueue.Add(std::move(element));
+      Headers::RowIdentifier rowId;
+      this->InsertPostProjectionResultsToTemporaryDatabase(properties, result, rowId);
 
-      this->InsertPostProjectionResultsToTemporaryDatabase(properties, result);
+      element.rowId = rowId;
+      this->priorityQueue.Add(std::move(element));
 
       //if there are more results to fetch return
       if (result->canFetchMore)
@@ -951,6 +957,7 @@ PhysicalInsert::PhysicalInsert(
 
     //TODO fix external sort
     std::vector<QueryResult> lastFetchedBatch;
+    Int lastFetchedBatchIndex = -1;
     while (!this->priorityQueue.Empty()){
       auto& top = this->priorityQueue.Top();
       this->priorityQueue.Remove();
@@ -958,18 +965,30 @@ PhysicalInsert::PhysicalInsert(
       result->results.push_back(std::move(top.value));
 
       auto state = DatabaseEngine::ScanState();
+      state.lastFetchedRowId = top.rowId;
+      state.extentId = DatabaseEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
 
-      auto* batchResult = this->StreamFromTemporaryDatabase(properties, state);
+      if (lastFetchedBatchIndex != top.batchId)
+      {
+        auto* batchResult = this->StreamFromTemporaryDatabase(properties, state);
 
-      lastFetchedBatch = std::move(batchResult->results);
+        lastFetchedBatch = std::move(batchResult->results);
+        lastFetchedBatchIndex = top.batchId;
 
-      delete batchResult;
+        delete batchResult;
+      }
+
+      if (lastFetchedBatch.empty())
+        continue;
 
       lastFetchedBatch.erase(lastFetchedBatch.begin());
 
+      if (lastFetchedBatch.empty())
+        continue;
+
       auto mergeElement = MergeElement(
       lastFetchedBatch.front(),
-        0
+        lastFetchedBatchIndex
       );
 
       this->priorityQueue.Add(std::move(mergeElement));

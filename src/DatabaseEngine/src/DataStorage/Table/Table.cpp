@@ -549,16 +549,24 @@ namespace DatabaseEngine::StorageTypes {
           pagesNeeded = 1;
 
 
-        for (auto& row : rows) {
+        Headers::RowIdentifier rowId;
+        for (int i = 0;i < rows.size(); i++){
+          auto& row = rows[i];
+
           auto result = this->InsertRow(row, pagesNeeded);
 
           if (result.code != Errors::RuntimeError::Ok)
             return result;
+
+          if (i == 0)
+            rowId = result.rowId;
         }
 
         Database::LogCheckPoint(checkPoint);
 
-        return {};
+        Errors::RuntimeStatus status;
+        status.rowId = rowId;
+        return status;
       }
 
     Errors::RuntimeStatus Table::InsertRow(const ExecutionProperties& properties, const std::vector<Value> &inputData){
@@ -669,6 +677,7 @@ namespace DatabaseEngine::StorageTypes {
                 return status;
         }
 
+        status.rowId = rowId;
         return status;
       }
 

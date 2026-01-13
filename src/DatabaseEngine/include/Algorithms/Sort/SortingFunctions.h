@@ -26,6 +26,7 @@ typedef struct AggregateResults {
 
 struct MergeElement{
     QueryResult value;
+    Headers::RowIdentifier rowId;
     Int batchId;
 
     MergeElement(const QueryResult& value, const Int& batchId);

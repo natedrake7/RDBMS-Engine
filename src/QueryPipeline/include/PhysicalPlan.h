@@ -70,7 +70,8 @@ namespace QueryPipeline::PhysicalPlan{
       void InsertToTemporaryDatabase(const std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>& rows);
       void InsertPostProjectionResultsToTemporaryDatabase(
         const DatabaseEngine::ExecutionProperties& properties,
-        ExecutionResult*& result
+        ExecutionResult*& result,
+        Headers::RowIdentifier& firstRowId
       );
       [[nodiscard]] ExecutionResult* StreamFromTemporaryDatabase(
         const DatabaseEngine::ExecutionProperties& properties,

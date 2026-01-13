@@ -1,6 +1,8 @@
 #pragma once
 #include <cstdint>
 #include <string>
+
+#include "Headers.h"
 #include "Key.h"
 
 namespace Errors {
@@ -26,6 +28,7 @@ namespace Errors {
     std::string message;
 
     DataTypes::Indexing::Key primaryKey;
+    Headers::RowIdentifier rowId;
 
     RuntimeStatus() {
       this->code = RuntimeError::Ok;

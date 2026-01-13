@@ -36,6 +36,7 @@ AggregateResults::AggregateResults()
 MergeElement& MergeElement::operator=(const MergeElement& other){
     this->value = other.value;
     this->batchId = other.batchId;
+    this->rowId = other.rowId;
 
     return *this;
 }
@@ -43,6 +44,7 @@ MergeElement& MergeElement::operator=(const MergeElement& other){
 MergeElement& MergeElement::operator=(MergeElement&& other){
     this->value = std::move(other.value);
     this->batchId = other.batchId;
+    this->rowId = other.rowId;
 
     return *this;
 }
@@ -55,11 +57,13 @@ MergeElement::MergeElement(const QueryResult& value, const Int& batchId){
 MergeElement::MergeElement(const MergeElement& other){
     this->value = other.value;
     this->batchId = other.batchId;
+    this->rowId = other.rowId;
 }
 
 MergeElement::MergeElement(MergeElement&& other){
     this->value = std::move(other.value);
     this->batchId = other.batchId;
+    this->rowId = other.rowId;
 }
 
 int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Block *&secondBlock)
