@@ -106,7 +106,8 @@ namespace DatabaseEngine::StorageTypes
                 const transaction_id_t& transactionId,
                 const vector<Value>& inputData,
                 const std::vector<column_index_t> &columnIndices,
-                Logging::CheckPoint* checkPoint
+                std::vector<char>& buffer,
+                uint32_t& bufferOffset
             )const;
 
             [[nodiscard]] Errors::RuntimeStatus CreateRow(

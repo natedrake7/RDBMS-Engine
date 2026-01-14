@@ -15,6 +15,7 @@ namespace DatabaseEngine::Logging {
     CreateTable = 4,
     AlterTable = 5,
     DropTable = 6,
+    BatchInsertRow = 7,
     //etc...
   };
 
@@ -23,7 +24,8 @@ namespace DatabaseEngine::Logging {
     { OperationType::InsertRow, "Insert Row"},
     { OperationType::UpdateRow, "Update Row"},
     { OperationType::DeleteRow, "Delete Row"},
-    { OperationType::CreateTable, "Create Table"}
+    { OperationType::CreateTable, "Create Table"},
+    { OperationType::BatchInsertRow, "Batch Insert Row"}
   };
 
   static const HashSet<OperationType> RowAffectedOperationTypes = {
@@ -52,12 +54,12 @@ namespace DatabaseEngine::Logging {
                const off_t& logFileOffset);
   };
   struct LogEntry  {
-
     transaction_id_t transactionId;
     OperationType operation;
     table_id_t tableOrdinalPosition; //in master db
 
-    LoggingStructures::LogEntryBody* body;
+    // LoggingStructures::LogEntryBody* body;
+    std::vector<char> body;
 
     log_sequence_number_t logSequenceNumber; // Sequence number for the log entry
 
@@ -67,10 +69,11 @@ namespace DatabaseEngine::Logging {
       const log_sequence_number_t& logSequenceNumber,
       const OperationType& operation,
       const table_id_t& tableOrdinalPosition,
-      LoggingStructures::LogEntryBody* body
+      std::vector<char>& body
+      // LoggingStructures::LogEntryBody* body
     );
 
-    ~LogEntry();
+    // ~LogEntry();
 
     [[nodiscard]] int GetSize()const;
     [[nodiscard]] static constexpr int GetStaticDataSize(){
@@ -81,11 +84,11 @@ namespace DatabaseEngine::Logging {
     }
     void DeserializeHeader(const std::vector<char>& buffer, uint32_t& pos);
     void Serialize(std::vector<char>* buffer)const;
-    void AllocateBody();
+    // void AllocateBody();
 
     [[nodiscard]] bool ValidateIntegrity()const;
 
-    [[nodiscard]] Pointer<StorageTypes::Row> GetRow()const;
+    // [[nodiscard]] Pointer<StorageTypes::Row> GetRow()const;
 
     friend ostream& operator<<(ostream& stream, const LogEntry& logEntry);
   };
@@ -114,11 +117,12 @@ namespace DatabaseEngine::Logging {
 
       [[nodiscard]]CheckPoint Log(const LogEntry& logEntry)const;
 
-      [[nodiscard]] LogEntry CreateLogEntry(
+      [[nodiscard]]LogEntry CreateLogEntry(
             const transaction_id_t& transactionId,
             const OperationType& operation,
             const table_id_t& tableOrdinalPosition,
-            LoggingStructures::LogEntryBody* body);
+            std::vector<char>& body
+      );
 
      [[nodiscard]] transaction_id_t StartTransaction();
 

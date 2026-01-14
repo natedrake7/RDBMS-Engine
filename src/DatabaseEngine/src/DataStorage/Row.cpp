@@ -15,6 +15,7 @@
 #include "../../include/Pages/LargeObjectPage.h"
 #include "../../include/Pages/OverflowPage.h"
 #include "../../Server/include/Server.h"
+#include "DataStructures/Vector.h"
 
 namespace DatabaseEngine::StorageTypes {
     RowHeader::RowHeader()

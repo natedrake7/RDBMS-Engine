@@ -99,12 +99,12 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
           break;
         }
 
-        logEntry.AllocateBody();
+        // logEntry.AllocateBody();
 
-        if (logEntry.body == nullptr)
-          continue;
-
-        logEntry.body->Deserialize(&buffer, pos, tables.at(logEntry.tableOrdinalPosition));
+        // if (logEntry.body == nullptr)
+        //   continue;
+        //
+        // logEntry.body->Deserialize(&buffer, pos, tables.at(logEntry.tableOrdinalPosition));
 
         // ReSharper disable once CppDFAConstantConditions
         if (logEntry.transactionId == INVALID_TRANSACTION_ID) {

@@ -99,7 +99,8 @@ namespace DatabaseEngine::StorageTypes {
         const transaction_id_t &transactionId,
         const vector<Value> &inputData,
         const std::vector<column_index_t> &columnIndices,
-        Logging::CheckPoint *checkPoint
+        std::vector<char>& buffer,
+        uint32_t& bufferOffset
       ) const{
 
         auto* row = new Row(*this);
@@ -136,8 +137,10 @@ namespace DatabaseEngine::StorageTypes {
           row->InsertColumnData(block, associatedColumnIndex);
         }
 
+        buffer.resize(buffer.size() + row->TotalSize());
+
+        row->Serialize(&buffer, bufferOffset);
         row->SetCurrentTransactionId(transactionId);
-        *checkPoint = Database::LogRowInsert(rowPtr, transactionId, this->header.ordinalPosition);
 
         return {};
       }
@@ -524,21 +527,30 @@ namespace DatabaseEngine::StorageTypes {
         std::vector<Pointer<Row>> rows;
         rows.reserve(input.size());
 
-        Logging::CheckPoint checkPoint;
-        int pagesNeeded = 0;
+        Int pagesNeeded = 0;
 
+        std::vector<char> buffer;
+        uint32_t pos = 0;
         for (const auto& insertedRow : input) {
-
           auto row = Pointer<Row>();
           //TODO implement better to avoid multiple loggings
-          auto status = this->BatchCreateRow(row, properties.snapshot.transactionId, insertedRow.GetData(), columnIndices, &checkPoint);
+          auto status = this->BatchCreateRow(
+            row,
+            properties.snapshot.transactionId,
+            insertedRow.GetData(),
+            columnIndices,
+            buffer,
+            pos
+          );
 
           if (status.code != Errors::RuntimeError::Ok)
             return status;
 
-          pagesNeeded += row->TotalSize();
+          pagesNeeded += static_cast<Int>(row->TotalSize());
           rows.push_back(std::move(row));
         }
+
+        auto checkPoint = Database::LogRowBatchInsert(buffer, properties.snapshot.transactionId, this->header.ordinalPosition);
 
         if (this->IsClustered())
           pagesNeeded /= INDEX_PAGE_DEFAULT_SIZE;
@@ -547,7 +559,6 @@ namespace DatabaseEngine::StorageTypes {
 
         if (pagesNeeded == 0)
           pagesNeeded = 1;
-
 
         Headers::RowIdentifier rowId;
         for (int i = 0;i < rows.size(); i++){

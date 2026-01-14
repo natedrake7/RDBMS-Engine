@@ -61,9 +61,6 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     this->logSequenceNumber = INVALID_LOG_SEQUENCE_NUMBER;
     this->operation = OperationType::InvalidOperation;
     this->tableOrdinalPosition = INVALID_TABLE_ORDINAL_POS;
-
-    this->body = nullptr;
-
   }
 
   LogEntry::LogEntry(
@@ -71,7 +68,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     const log_sequence_number_t& logSequenceNumber,
     const OperationType &operation,
     const table_id_t &tableOrdinalPosition,
-    LoggingStructures::LogEntryBody* body
+    std::vector<char>& body
   ){
 
     this->transactionId = transactionId;
@@ -79,15 +76,15 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     this->operation = operation;
     this->tableOrdinalPosition = tableOrdinalPosition;
 
-    this->body = body;
+    this->body = std::move(body);
   }
 
-  LogEntry::~LogEntry(){
-    delete this->body;
-  }
+  // LogEntry::~LogEntry(){
+  //   delete this->body;
+  // }
 
   int LogEntry::GetSize()const{
-    return this->GetStaticDataSize() + ((this->body != nullptr) ? this->body->GetSize() : 0);
+    return this->GetStaticDataSize() + this->body.size();
   }
 
   void LogEntry::DeserializeHeader(const std::vector<char> &buffer, uint32_t &pos){
@@ -122,31 +119,33 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     memcpy(buffer->data() + pos, &this->tableOrdinalPosition, sizeof(this->tableOrdinalPosition));
     pos += sizeof(this->tableOrdinalPosition);
 
-    this->body->Serialize(buffer, pos);
+    buffer->insert(buffer->end(), this->body.begin(), this->body.end());
+
+    // this->body->Serialize(buffer, pos);
   }
 
-  void LogEntry::AllocateBody(){
-    switch (this->operation) {
-      case InsertRow:
-        this->body = new LoggingStructures::RowInsertBody();
-        break;
-      case UpdateRow:
-        this->body = new LoggingStructures::RowUpdateBody();
-        break;
-      case DeleteRow:
-        this->body = new LoggingStructures::RowDeleteBody();
-        break;
-      case CreateTable:
-        this->body = new LoggingStructures::TableCreateBody();
-        break;
-      case InvalidOperation:
-      default:
-        this->body = nullptr;
-        std::cerr << "Unknown operation type: " << OperationTypeToString.Get(this->operation)
-                  << " . Log recovery cannot proceed." << std::endl;
-        break;
-    }
-  }
+  // void LogEntry::AllocateBody(){
+  //   switch (this->operation) {
+  //     case InsertRow:
+  //       this->body = new LoggingStructures::RowInsertBody();
+  //       break;
+  //     case UpdateRow:
+  //       this->body = new LoggingStructures::RowUpdateBody();
+  //       break;
+  //     case DeleteRow:
+  //       this->body = new LoggingStructures::RowDeleteBody();
+  //       break;
+  //     case CreateTable:
+  //       this->body = new LoggingStructures::TableCreateBody();
+  //       break;
+  //     case InvalidOperation:
+  //     default:
+  //       this->body = nullptr;
+  //       std::cerr << "Unknown operation type: " << OperationTypeToString.Get(this->operation)
+  //                 << " . Log recovery cannot proceed." << std::endl;
+  //       break;
+  //   }
+  // }
 
   bool LogEntry::ValidateIntegrity() const{
     if (this->transactionId == INVALID_TRANSACTION_ID) {
@@ -181,7 +180,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     return true;
   }
 
-  Pointer<StorageTypes::Row> LogEntry::GetRow() const{ return this->body->GetLastRowStatus(); }
+  // Pointer<StorageTypes::Row> LogEntry::GetRow() const{ return this->body->GetLastRowStatus(); }
 
   void Logger::FlushLogDescriptor()const{
     #ifdef _WIN32
@@ -212,8 +211,8 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
       const transaction_id_t& transactionId,
       const OperationType &operation,
       const table_id_t& tableOrdinalPosition,
-      LoggingStructures::LogEntryBody* body) {
-
+      std::vector<char>& body
+  ) {
     log_sequence_number_t logSequenceNumber = 0;
 
     if (this->transactionLogSequenceNumbers.TryGetValue(transactionId, logSequenceNumber))
@@ -253,7 +252,8 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     stream << "Transaction ID: " << logEntry.transactionId << " "
           << " Log Sequence Number: " << logEntry.logSequenceNumber << std::endl;
 
-    return logEntry.body->Print(stream);
+    return stream;
+    // return logEntry.body->Print(stream);
   }
 
 

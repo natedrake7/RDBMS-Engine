@@ -132,5 +132,5 @@ namespace DatabaseEngine::StorageTypes {
 
     const Headers::Index& Table::GetNonClusteredIndexes(const int& indexPos) const { return this->header.nonClusteredIndexes.at(indexPos); }
 
-    const vector<column_index_t> & Table::GetClusteredIndex() const { return this->header.clusteredIndex.columns; }
+    const std::vector<column_index_t> & Table::GetClusteredIndex() const { return this->header.clusteredIndex.columns; }
 }

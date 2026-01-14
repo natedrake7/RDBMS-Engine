@@ -97,12 +97,12 @@ namespace DatabaseEngine::Logging{
           break;
         }
 
-        logEntry.AllocateBody();
-
-        if (logEntry.body == nullptr)
-          continue;
-
-        logEntry.body->Deserialize(&buffer, pos, tables.at(logEntry.tableOrdinalPosition));
+        // logEntry.AllocateBody();
+        //
+        // if (logEntry.body == nullptr)
+        //   continue;
+        //
+        // logEntry.body->Deserialize(&buffer, pos, tables.at(logEntry.tableOrdinalPosition));
 
         // ReSharper disable once CppDFAConstantConditions
         if (logEntry.transactionId == INVALID_TRANSACTION_ID) {

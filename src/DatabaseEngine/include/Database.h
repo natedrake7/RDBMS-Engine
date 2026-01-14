@@ -98,9 +98,15 @@ public:
     static void LogCheckPoint(Logging::CheckPoint& checkPoint);
 
     [[nodiscard]] static Logging::CheckPoint LogRowInsert(
-        Pointer<StorageTypes::Row>& row,
+        const Pointer<StorageTypes::Row>& row,
         const transaction_id_t& transactionId,
         const table_id_t& tableOrdinal
+    );
+
+    [[nodiscard]] static Logging::CheckPoint LogRowBatchInsert(
+      std::vector<char>& buffer,
+      const transaction_id_t& transactionId,
+      const table_id_t& tableOrdinal
     );
 
     static string CreateDatabasePath(const std::string& dbName);

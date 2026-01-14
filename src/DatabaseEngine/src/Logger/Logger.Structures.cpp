@@ -36,6 +36,20 @@ namespace DatabaseEngine::LoggingStructures {
     return os;
   }
 
+  BatchRowInsertBody::BatchRowInsertBody(){
+    this->rows = nullptr;
+  }
+
+  BatchRowInsertBody::BatchRowInsertBody(const std::vector<Pointer<StorageTypes::Row>>& rows){
+    this->rows = &rows;
+  }
+
+  void BatchRowInsertBody::Serialize(std::vector<char>* buffer, uint32_t& pos){
+    for (const auto& row : *this->rows){
+      row->Serialize(buffer, pos);
+    }
+  }
+
   const Pointer<StorageTypes::Row>& RowInsertBody::GetLastRowStatus() const{ return this->row; }
 
   RowUpdateBody::RowUpdateBody(){

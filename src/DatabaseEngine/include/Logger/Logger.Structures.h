@@ -14,7 +14,7 @@ namespace DatabaseEngine::LoggingStructures {
     friend std::ostream& operator<<(std::ostream& os, const LogEntryBody& logEntry);
   };
 
-  struct RowInsertBody final: public LogEntryBody {
+  struct RowInsertBody final: LogEntryBody {
     Pointer<StorageTypes::Row> row;
     RowInsertBody();
     explicit RowInsertBody(const Pointer<StorageTypes::Row>& row);
@@ -25,7 +25,20 @@ namespace DatabaseEngine::LoggingStructures {
     [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
   };
 
-  struct RowUpdateBody final: public LogEntryBody {
+  struct BatchRowInsertBody final: LogEntryBody {
+    const std::vector<Pointer<StorageTypes::Row>>* rows;
+    BatchRowInsertBody();
+
+    explicit BatchRowInsertBody(const std::vector<Pointer<StorageTypes::Row>>& rows);
+
+    void Serialize(std::vector<char>* buffer, uint32_t& pos)override;
+    void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
+    [[nodiscard]] int GetSize() const override;
+    [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
+    [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
+  };
+
+  struct RowUpdateBody final: LogEntryBody {
     StorageTypes::Row* oldRow;
     StorageTypes::Row* newRow;
     RowUpdateBody();
@@ -37,7 +50,7 @@ namespace DatabaseEngine::LoggingStructures {
     [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
   };
 
-  struct RowDeleteBody final: public LogEntryBody {
+  struct RowDeleteBody final: LogEntryBody {
     StorageTypes::Row* row;
     RowDeleteBody();
     explicit RowDeleteBody(StorageTypes::Row* row);
@@ -48,7 +61,7 @@ namespace DatabaseEngine::LoggingStructures {
     [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
   };
 
-  struct TableCreateBody final: public LogEntryBody {
+  struct TableCreateBody final: LogEntryBody {
     std::string query;
 
     explicit TableCreateBody();

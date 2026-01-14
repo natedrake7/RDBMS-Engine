@@ -216,14 +216,14 @@ namespace DatabaseEngine
         if (Logging::RowAffectedOperationTypes.Contains(logEntry.operation)) {
             auto* table = this->tables.at(logEntry.tableOrdinalPosition);
 
-            auto row = logEntry.GetRow();
+            // auto row = logEntry.GetRow();
 
             if (logEntry.operation == Logging::OperationType::DeleteRow) {
                 //handle row delete trickier, need to identify whether to use pk or not (heap delete)
                 return;
             }
 
-            table->InsertRow(row, 1);
+            // table->InsertRow(row, 1);
         }
 
         //Data structure affected changes from here down.
@@ -239,17 +239,38 @@ namespace DatabaseEngine
     }
 
     Logging::CheckPoint Database::LogRowInsert(
-        Pointer<StorageTypes::Row>& row,
+        const Pointer<StorageTypes::Row>& row,
         const transaction_id_t& transactionId,
         const table_id_t& tableOrdinal
     ) {
+        static auto& logger = Logging::WriteAheadLogger::Get();
+
+        std::vector<char> buffer(row->TotalSize());
+        uint32_t pos = 0;
+        row->Serialize(&buffer, pos);
+
+        const auto logEntry = logger.CreateLogEntry(
+            transactionId,
+            Logging::OperationType::InsertRow,
+            tableOrdinal,
+            buffer
+        );
+
+        return logger.Log(logEntry);
+    }
+
+    Logging::CheckPoint Database::LogRowBatchInsert(
+        std::vector<char>& buffer,
+        const transaction_id_t& transactionId,
+        const table_id_t& tableOrdinal
+    ){
         static auto& logger = Logging::WriteAheadLogger::Get();
 
         const auto logEntry = logger.CreateLogEntry(
             transactionId,
             Logging::OperationType::InsertRow,
             tableOrdinal,
-            new LoggingStructures::RowInsertBody(row)
+            buffer
         );
 
         return logger.Log(logEntry);
