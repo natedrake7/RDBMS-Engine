@@ -3,11 +3,7 @@
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataTypes/Guid.h"
 #include "../../../Systemic/include/Errors.h"
-
 #include <cstring>
-
-using namespace std;
-using namespace Constants;
 
 namespace DatabaseEngine {
     class Database;
@@ -101,37 +97,37 @@ namespace DatabaseEngine::StorageTypes {
 
     template <typename T> void Block::CopyToBuffer(const T &value){
         this->size = sizeof(T);
-        this->data = new object_t[this->size];
+        this->data = static_cast<object_t*>(std::malloc(this->size));
         std::memcpy(this->data, &value, this->size);
     }
 
     void Block::CopyToBuffer(const std::string &src) {
         this->size = src.size();
-        this->data = new object_t[this->size];
+        this->data = static_cast<object_t*>(std::malloc(this->size));
         std::memcpy(this->data, src.data(), this->size);
     }
 
     void Block::CopyToBuffer(const std::u16string &src){
         this->size = src.size();
-        this->data = new object_t[this->size];
+        this->data = static_cast<object_t*>(std::malloc(this->size));
         std::memcpy(this->data, src.data(), this->size);
     }
 
     void Block::CopyToBuffer(const DataTypes::Decimal &src){
         this->size = src.GetRawDataSize();
-        this->data = new object_t[this->size];
+        this->data = static_cast<object_t*>(std::malloc(this->size));
         std::memcpy(this->data, src.GetRawData(), this->size);
     }
 
     void Block::CopyToBuffer(const DataTypes::Guid &src){
-        this->size = src.Size();
-        this->data = new object_t[this->size];
+        this->size = DataTypes::Guid::Size();
+        this->data = static_cast<object_t*>(std::malloc(this->size));
         std::memcpy(this->data, src.GetData().data(), this->size);
     }
 
     void Block::CopyToBuffer(const DataTypes::DateTime &src){
-        this->size = DataTypes::DateTime::DateTimeSize();
-        this->data = new object_t[this->size];
+        this->size = DataTypes::DateTime::Size();
+        this->data = static_cast<object_t*>(std::malloc(this->size));
         std::memcpy(this->data, &src.GetUnixTimeStamp(), this->size);
     }
 }

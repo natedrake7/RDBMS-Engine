@@ -44,13 +44,13 @@ namespace DatabaseEngine::StorageTypes {
 
     Block::~Block()
     {
-        delete this->data;
+        std::free(this->data);
         this->data = nullptr;
     }
 
     void Block::SetData(const void* inputData, const block_size_t& inputSize)
     {
-        delete this->data;
+        std::free(this->data);
         this->data = nullptr;
 
         if (inputData == nullptr)
@@ -66,7 +66,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Block::SetData(const Value &value){
-        delete this->data;
+        std::free(this->data);
         this->data = nullptr;
 
         if (value.IsNull()) {
@@ -318,7 +318,6 @@ namespace DatabaseEngine::StorageTypes {
     const row_size_t& Block::GetColumnSize() const { return this->column->GetColumnSize(); }
 
     const DataType & Block::GetColumnType() const { return this->column->GetColumnType(); }
-
 
     const Column * Block::GetColumn() const{ return this->column; }
 

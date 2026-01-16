@@ -72,6 +72,9 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
         src/Systemic/include/DataStructures/PriorityQueue.h
+        src/Systemic/include/Memory/Allocator.h
+        src/Systemic/src/Memory/Allocator.cpp
+        src/Systemic/include/DataTypes/PackedByte.h
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)

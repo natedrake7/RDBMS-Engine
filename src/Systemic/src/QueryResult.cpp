@@ -69,6 +69,17 @@ Value QueryResult::GetColumnAt(const int& columnPos) const{
 
 int QueryResult::GetSize() const{ return this->data.size(); }
 
+Int QueryResult::GetByteSize() const{
+  Int totalSize = 0;
+  for (const auto& value : this->data) {
+    totalSize += sizeof(block_size_t); //size of block
+    totalSize += sizeof(DataType); //type of block
+    totalSize += value.GetSize(); //data size
+  }
+
+  return totalSize;
+}
+
 void QueryResult::SetColumnIndex(const int &columnPos, const int32_t &columnIndex){
   if (columnPos >= this->data.size())
     return;

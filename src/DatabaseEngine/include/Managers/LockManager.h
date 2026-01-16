@@ -24,7 +24,7 @@ namespace DatabaseEngine::Lock {
   };
 
   struct Lock{
-    shared_mutex mutex;
+    std::shared_mutex mutex;
 
     LockType type;
     Resource resource;
@@ -34,11 +34,11 @@ namespace DatabaseEngine::Lock {
     LockManager() = default;
     ~LockManager();
 
-    Dictionary<string, Lock*> resources;
+    Dictionary<std::string, Lock*> resources;
     std::shared_mutex locksMutex;
 
     static void LockResourceByType(Lock* lock);
-    std::shared_ptr<Pages::Page> GetPagePointer(const string& key, Pages::Page *page);
+    std::shared_ptr<Pages::Page> GetPagePointer(const std::string& key, Pages::Page *page);
 
   public:
     LockManager(const LockManager&) = delete;
@@ -54,7 +54,7 @@ namespace DatabaseEngine::Lock {
 
     void Release(const std::string& key);
 
-    std::shared_ptr<Pages::Page> GetPage(const string& filename, const page_id_t & pageId, const ResourceType& resourceType, const LockType& lockType);
+    std::shared_ptr<Pages::Page> GetPage(const std::string& filename, const page_id_t & pageId, const ResourceType& resourceType, const LockType& lockType);
 //    std::shared_ptr<Pages::Page> GetLargeObjectPage(const string& filename, const page_id_t & pageId);
 //    std::shared_ptr<Pages::Page> GetIndexPage(const string& filename, const page_id_t & pageId);
 //    std::shared_ptr<Pages::Page> GetHeaderPage(const string& filename, const page_id_t & pageId);

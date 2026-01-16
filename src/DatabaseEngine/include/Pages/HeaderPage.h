@@ -14,8 +14,7 @@ namespace DatabaseEngine {
 }
 
 namespace Pages {
-    class HeaderPage final : public Page
-    {
+    class HeaderPage final : public Page{
         DatabaseEngine::DatabaseHeader* databaseHeader;
         std::vector<DatabaseEngine::StorageTypes::TableHeader> tablesHeaders;
 

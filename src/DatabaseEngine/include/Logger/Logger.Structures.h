@@ -5,8 +5,8 @@
 namespace DatabaseEngine::LoggingStructures {
   struct LogEntryBody {
     virtual ~LogEntryBody() = default;
-    virtual void Serialize(std::vector<char>* buffer, uint32_t& pos) = 0;
-    virtual void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) = 0;
+    virtual void Serialize(std::vector<char>* buffer, page_offset_t& pos) = 0;
+    virtual void Deserialize(const std::vector<char>* buffer, page_offset_t& pos, const StorageTypes::Table* table) = 0;
     [[nodiscard]] virtual int GetSize() const = 0;
     [[nodiscard]] virtual std::ostream& Print(std::ostream& os) const = 0;
     [[nodiscard]] virtual const Pointer<StorageTypes::Row>& GetLastRowStatus() const = 0;
@@ -18,8 +18,8 @@ namespace DatabaseEngine::LoggingStructures {
     Pointer<StorageTypes::Row> row;
     RowInsertBody();
     explicit RowInsertBody(const Pointer<StorageTypes::Row>& row);
-    void Serialize(std::vector<char>* buffer, uint32_t& pos)override;
-    void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
+    void Serialize(std::vector<char>* buffer, page_offset_t& pos)override;
+    void Deserialize(const std::vector<char>* buffer, page_offset_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
     [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
@@ -31,8 +31,8 @@ namespace DatabaseEngine::LoggingStructures {
 
     explicit BatchRowInsertBody(const std::vector<Pointer<StorageTypes::Row>>& rows);
 
-    void Serialize(std::vector<char>* buffer, uint32_t& pos)override;
-    void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
+    void Serialize(std::vector<char>* buffer, page_offset_t& pos)override;
+    void Deserialize(const std::vector<char>* buffer, page_offset_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
     [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
@@ -43,8 +43,8 @@ namespace DatabaseEngine::LoggingStructures {
     StorageTypes::Row* newRow;
     RowUpdateBody();
     RowUpdateBody(StorageTypes::Row* oldRow, StorageTypes::Row* newRow);
-    void Serialize(std::vector<char>* buffer, uint32_t& pos)override;
-    void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
+    void Serialize(std::vector<char>* buffer, page_offset_t& pos)override;
+    void Deserialize(const std::vector<char>* buffer, page_offset_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
     [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
@@ -54,8 +54,8 @@ namespace DatabaseEngine::LoggingStructures {
     StorageTypes::Row* row;
     RowDeleteBody();
     explicit RowDeleteBody(StorageTypes::Row* row);
-    void Serialize(std::vector<char>* buffer, uint32_t& pos)override;
-    void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
+    void Serialize(std::vector<char>* buffer, page_offset_t& pos)override;
+    void Deserialize(const std::vector<char>* buffer, page_offset_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
     [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;
@@ -66,8 +66,8 @@ namespace DatabaseEngine::LoggingStructures {
 
     explicit TableCreateBody();
     explicit TableCreateBody(const std::string& query);
-    void Serialize(std::vector<char>* buffer, uint32_t& pos)override;
-    void Deserialize(const std::vector<char>* buffer, uint32_t& pos, const StorageTypes::Table* table) override;
+    void Serialize(std::vector<char>* buffer, page_offset_t& pos)override;
+    void Deserialize(const std::vector<char>* buffer, page_offset_t& pos, const StorageTypes::Table* table) override;
     [[nodiscard]] int GetSize() const override;
     [[nodiscard]] std::ostream& Print(std::ostream& os)const override;
     [[nodiscard]] const Pointer<StorageTypes::Row>& GetLastRowStatus() const override;

@@ -10,7 +10,7 @@
 #include "../../../include/Pages/PageFreeSpacePage.h"
 
 namespace DatabaseEngine::StorageTypes {
-    void Table::InsertLargeObjectToPage(Pointer<Row>& row) {
+    void Table::InsertLargeObjectToPage(Row* row) {
         const vector<column_index_t> largeBlockIndexes = row->GetLargeBlocks();
 
         if (largeBlockIndexes.empty())
@@ -34,7 +34,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::RecursiveInsertToLargePage(
-        Pointer<Row>& row,
+        Row* row,
         page_offset_t &offset,
         const column_index_t &columnIndex,
         block_size_t &remainingBlockSize,
@@ -106,7 +106,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::InsertLargeDataObjectPointerToRow(
-        Pointer<Row>& row,
+        Row* row,
         const bool &isFirstRecursion,
         const page_id_t &lastLargePageId,
         const column_index_t &largeBlockIndex

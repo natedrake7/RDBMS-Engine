@@ -29,29 +29,29 @@ namespace DatabaseEngine {
     void CreateCatalogDatabase();
     void StoreSystemTablesToCatalog()const;
 
-    static Headers::DatabaseHeader ToDatabaseHeader(const Pointer<StorageTypes::Row>& row);
+    static Headers::DatabaseHeader ToDatabaseHeader(const StorageTypes::Row& row);
     static Headers::DatabaseHeader ToDatabaseHeader(
-      const Pointer<StorageTypes::Row>& row,
+      const StorageTypes::Row& row,
       std::vector<Headers::TableHeader>& dbTables,
       std::vector<Headers::SchemaHeader>& schemas
     );
-    static Headers::SchemaHeader ToSchemaHeader(const Pointer<StorageTypes::Row>& row);
-    static Headers::TableHeader ToTableHeader(const Pointer<StorageTypes::Row>& row);
-    static Headers::ColumnHeader ToColumnHeader(const Pointer<StorageTypes::Row>& row);
-    static Headers::IndexHeader ToIndexHeader(const Pointer<StorageTypes::Row>& row);
-    static Headers::IndexColumnsHeader ToIndexColumnsHeader(const Pointer<StorageTypes::Row>& row);
-    static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const Pointer<StorageTypes::Row>& row);
+    static Headers::SchemaHeader ToSchemaHeader(const StorageTypes::Row& row);
+    static Headers::TableHeader ToTableHeader(const StorageTypes::Row& row);
+    static Headers::ColumnHeader ToColumnHeader(const StorageTypes::Row& row);
+    static Headers::IndexHeader ToIndexHeader(const StorageTypes::Row& row);
+    static Headers::IndexColumnsHeader ToIndexColumnsHeader(const StorageTypes::Row& row);
+    static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const StorageTypes::Row& row);
     static Headers::ConstraintsHeader ToConstraintsHeader(
-      const Pointer<StorageTypes::Row>& row,
+      const StorageTypes::Row& row,
       std::vector<Headers::ConstraintsColumnsHeader>& constraintColumns,
       Headers::IndexHeader& indexHeader
     );
-    static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const Pointer<StorageTypes::Row>& row);
-    static Headers::DefaultValuesHeader ToDefaultValuesHeader(const Pointer<StorageTypes::Row>& row);
-    static Headers::TableStatistics ToTableStatistics(const Pointer<StorageTypes::Row>& row);
-    static Headers::ColumnStatistics ToColumnStatistics(const Pointer<StorageTypes::Row>& row, const DataType& columnType);
-    static Headers::ColumnHistograms ToColumnHistograms(const Pointer<StorageTypes::Row>& row, const DataType& columnType);
-    static Headers::IndexStatistics ToIndexStatistics(const Pointer<StorageTypes::Row>& row);
+    static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const StorageTypes::Row& row);
+    static Headers::DefaultValuesHeader ToDefaultValuesHeader(const StorageTypes::Row& row);
+    static Headers::TableStatistics ToTableStatistics(const StorageTypes::Row& row);
+    static Headers::ColumnStatistics ToColumnStatistics(const StorageTypes::Row& row, const DataType& columnType);
+    static Headers::ColumnHistograms ToColumnHistograms(const StorageTypes::Row& row, const DataType& columnType);
+    static Headers::IndexStatistics ToIndexStatistics(const StorageTypes::Row& row);
 
     public:
       SystemCatalog(SystemCatalog const&) = delete;

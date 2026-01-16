@@ -73,7 +73,7 @@ namespace DatabaseEngine::StorageTypes
         TableHeader header;
 
         std::vector<Column *> columns;
-        DatabaseEngine::Database *database;
+        Database *database;
 
         HashSet<column_id_t> clusteredIndexColumnsCache;
 
@@ -86,15 +86,15 @@ namespace DatabaseEngine::StorageTypes
 
             bool IsColumnAutoComputedPrimaryKey(const Column* column) const;
 
-            void PopulateAutoComputedColumns(Pointer<Row>& row)const;
+            void PopulateAutoComputedColumns(Row*& row)const;
 
             [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetOrCreateLargeDataPage() const;
 
             static void LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t &lastLargePageId);
-            void InsertLargeDataObjectPointerToRow(Pointer<Row>& row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
-            void RecursiveInsertToLargePage(Pointer<Row>& row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::LargeDataObject **previousDataObject);
+            void InsertLargeDataObjectPointerToRow(Row* row, const bool &isFirstRecursion, const page_id_t &lastLargePageId, const column_index_t &largeBlockIndex) const;
+            void RecursiveInsertToLargePage(Row* row, page_offset_t &offset, const column_index_t &columnIndex, block_size_t &remainingBlockSize, const bool &isFirstRecursion, Pages::LargeDataObject **previousDataObject);
 
-            static void InsertNullValues(Block *&block, Pointer<Row>& row, const column_index_t &associatedColumnIndex);
+            static void InsertNullValues(Block *&block, Row* row, const column_index_t &columnIndex);
             static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);
 
             void GetClusteredIndexFromDisk() const;
@@ -102,23 +102,23 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetIndexFromDisk(const page_id_t& indexPageId) const;
 
             [[nodiscard]] Errors::RuntimeStatus BatchCreateRow(
-                Pointer<Row>& rowPtr,
+                Row*& rowPtr,
                 const transaction_id_t& transactionId,
                 const vector<Value>& inputData,
                 const std::vector<column_index_t> &columnIndices,
                 std::vector<char>& buffer,
-                uint32_t& bufferOffset
+                page_offset_t& bufferOffset
             )const;
 
             [[nodiscard]] Errors::RuntimeStatus CreateRow(
-                Pointer<Row>& rowPtr,
+                Row*& row,
                 const transaction_id_t& transactionId,
                 const vector<Value>& inputData,
                 Logging::CheckPoint* checkPoint
             )const;
 
             [[nodiscard]] Errors::RuntimeStatus CreateRow(
-                Pointer<Row>& rowPtr,
+                Row*& row,
                 const transaction_id_t& transactionId,
                 const std::vector<Value>& inputData,
                 const std::vector<column_index_t>& columnIndices,
@@ -126,7 +126,7 @@ namespace DatabaseEngine::StorageTypes
             )const;
 
             [[nodiscard]] Errors::RuntimeStatus CreateRow(
-                Pointer<Row>& rowPtr,
+                Row*& row,
                 const transaction_id_t& transactionId,
                 const std::vector<Expressions::Expression*>& inputData,
                 const std::vector<column_index_t>& columnIndices,
@@ -136,14 +136,20 @@ namespace DatabaseEngine::StorageTypes
             void InsertRowToPage(
                 Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage,
                 Pages::PageGuard<>& page,
-                Pointer<Row>& row,
+                Row*& row,
                 const int &indexPosition
             )const;
-            void InsertRowToClusteredPage(Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage, Pages::Page* page, Pointer<Row>& row, const int &indexPosition)const;
+            // void InsertRowToClusteredPage(
+            //     Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage,
+            //     Pages::IndexPage* page,
+            //     const DataTypes::Indexing::Key &key,
+            //     Row* row,
+            //     const int &indexPosition
+            // )const;
 
-            static bool PopulateColumnIdentity(Pointer<Row>& row, Column*& column, int64_t& outValue);
+            static bool PopulateColumnIdentity(Row*& row, Column*& column, int64_t& outValue);
 
-            static void PopulateDefaultValues(Pointer<Row>& row, Column*& column);
+            static void PopulateDefaultValues(Row*& row, Column*& column);
 
             void InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t& indexPos, const int& pagesToAllocate);
 
@@ -196,11 +202,11 @@ namespace DatabaseEngine::StorageTypes
                 const std::vector<column_index_t>& columnIndices
             );
 
-            Errors::RuntimeStatus InsertRow(Pointer<Row>& row, const int& pagesToAllocate);
+            Errors::RuntimeStatus InsertRow(Row*& row, const int& pagesToAllocate);
 
-            void DeleteLargeObjectFromPage(Pointer<Row>& row, const HashSet<column_index_t>& updatedColumns)const;
+            void DeleteLargeObjectFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns)const;
 
-            void DeleteOverflowedRowsFromPage(Pointer<Row>& row, const HashSet<column_index_t>& updatedColumns)const;
+            void DeleteOverflowedRowsFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns)const;
 
             string GetSchema();
 
@@ -224,7 +230,7 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexSeekRange(
                 const ExecutionProperties& properties,
-                std::vector<Pointer<Row>> *selectedRows,
+                std::vector<Row> *selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression
@@ -232,27 +238,27 @@ namespace DatabaseEngine::StorageTypes
 
             void ClusteredIndexSeek(
                 const ExecutionProperties& properties,
-                std::vector<Pointer<Row>> *selectedRows,
+                std::vector<Row> *selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
 
             void ClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Pointer<Row>> *selectedRows,
+                std::vector<Row> *selectedRows,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
 
             void ClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Pointer<Row>> *selectedRows,
+                std::vector<Row> *selectedRows,
                 const Expressions::Expression* expression
             );
 
             void NonClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Pointer<Row>> *selectedRows,
+                std::vector<Row> *selectedRows,
                 const int& indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
@@ -260,12 +266,12 @@ namespace DatabaseEngine::StorageTypes
 
             void HeapScan(
                 const ExecutionProperties& properties,
-                std::vector<Pointer<Row>> *result,
+                std::vector<Row> *result,
                 ScanState& state
             )const;
 
             void TemporaryDatabaseHeapScan(
-                std::vector<Pointer<Row>> *result,
+                std::vector<Row> *result,
                 ScanState& state,
                 const int& batchSize
             )const;
@@ -287,20 +293,12 @@ namespace DatabaseEngine::StorageTypes
                 IndexState& state
             );
 
-            Errors::RuntimeStatus HeapInsert(
-                Pointer<Row>& row,
-                const int& pagesToAllocate,
-                Headers::RowIdentifier* rowId
-            )const;
+            Errors::RuntimeStatus HeapInsert(Row*& row, const int& pagesToAllocate)const;
 
-            Errors::RuntimeStatus ClusteredIndexInsert(
-                Pointer<Row>& row,
-                const int& pagesToAllocate,
-                Headers::RowIdentifier* rowId
-            );
+            Errors::RuntimeStatus ClusteredIndexInsert(Row*& row, const int& pagesToAllocate);
 
             Errors::RuntimeStatus NonClusteredIndexInsert(
-                const Pointer<Row>& row,
+                const StorageTypes::Row* row,
                 const int& nonClusteredIndexId,
                 const int& pagesToAllocate,
                 const Headers::RowIdentifier& data
@@ -397,16 +395,16 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] vector<DataType> GetColumnTypeByTreeId(const uint8_t& treeId) const;
 
-            int HandleRowOverflow(const Pointer<Row>& row)const;
+            int HandleRowOverflow(const StorageTypes::Row* row)const;
 
-            int HandleRowOverflow(Pointer<Row>& row, const Column* column)const;
+            int HandleRowOverflow(Row*& row, const Column* column)const;
 
-            void InsertLargeObjectToPage(Pointer<Row>& row);
+            void InsertLargeObjectToPage(Row* row);
 
             [[nodiscard]]
             Errors::RuntimeStatus HandleRowUpdate(
                 Pages::Page *page,
-                Pointer<Row>& row,
+                Row* row,
                 const ExecutionProperties& properties,
                 const std::vector<Value> &updates,
                 const bool &isHeap = true
@@ -415,7 +413,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]]
             Errors::RuntimeStatus  HandleRowUpdate(
                 Pages::Page *page,
-                Pointer<Row>& row,
+                Row* row,
                 const ExecutionProperties& properties,
                 const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates,
                 const HashSet<column_index_t>& updatedColumns,
@@ -444,9 +442,9 @@ namespace DatabaseEngine::StorageTypes
 
             void PopulateColumnByHeap(const column_index_t& index, const Value& defaultValue);
 
-            void HandleAddColumn(Pages::Page* page, Pointer<Row>& row, const column_index_t& index, const Value& defaultValue);
+            void HandleAddColumn(Pages::Page* page, Row* row, const column_index_t& index, const Value& defaultValue);
 
-            static void HandleRemoveColumn(Pages::Page* page, Pointer<Row>& row, const column_index_t& index);
+            static void HandleRemoveColumn(Pages::Page* page, Row* row, const column_index_t& index);
 
             void RemoveColumn(const column_index_t& index);
 

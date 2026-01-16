@@ -36,7 +36,7 @@ namespace QueryPipeline::PhysicalPlan{
 
       std::vector<const DatabaseEngine::StorageTypes::Column*> columns;
 
-      std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> rows;
+      std::vector<DatabaseEngine::StorageTypes::Row> rows;
 
       std::vector<QueryResult> results;
 

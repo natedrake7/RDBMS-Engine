@@ -54,14 +54,18 @@ namespace Pages {
         this->isDirty = true;
     }
 
-    void GlobalAllocationMapPage::WriteToDisk(fstream *filePtr)
+    void GlobalAllocationMapPage::WriteToDisk(std::fstream *filePtr)
     {
         this->WritePageHeaderToDisk(filePtr);
         this->extentsMap->WriteDataToFile(filePtr);
     }
 
-    void GlobalAllocationMapPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr)
-    {
+    void GlobalAllocationMapPage::ReadFromDisk(
+        const std::vector<char> &data,
+        const DatabaseEngine::StorageTypes::Table *table,
+        page_offset_t &offSet,
+        std::fstream *filePtr
+    ){
         this->extentsMap->GetDataFromFile(data, offSet);
     }
 

@@ -9,7 +9,7 @@ namespace ByteMaps {
 namespace Pages {
     class GlobalAllocationMapPage;
     
-    typedef struct IndexAllocationPageAdditionalHeader {
+    struct IndexAllocationPageAdditionalHeader {
         table_id_t tableId;
         extent_id_t startingExtentId;
         page_id_t nextPageId;
@@ -17,7 +17,7 @@ namespace Pages {
         IndexAllocationPageAdditionalHeader();
         IndexAllocationPageAdditionalHeader(const table_id_t& tableId, const extent_id_t& extentId, const page_id_t& nextPageId);
         ~IndexAllocationPageAdditionalHeader();
-    }IndexAllocationPageAdditionalHeader;
+    };
 
     class IndexAllocationMapPage final : public Page{
         ByteMaps::BitMap* ownedExtents;
@@ -25,8 +25,8 @@ namespace Pages {
         uint16_t lastAllocatedExtentId;
 
     protected:
-        void GetAdditionalHeaderFromFile(const vector<char> &data, page_offset_t &offSet);
-        void WriteAdditionalHeaderToFile(fstream* filePtr)const;
+        void GetAdditionalHeaderFromFile(const std::vector<char> &data, page_offset_t &offSet);
+        void WriteAdditionalHeaderToFile(std::fstream* filePtr)const;
 
     public:
         IndexAllocationMapPage(const table_id_t& tableId, const page_id_t& pageId, const extent_id_t& startingExtentId);
@@ -37,11 +37,11 @@ namespace Pages {
             const page_id_t& globalAllocationMapPageId
         );
         void SetDeallocatedExtent(const extent_id_t& extentId);
-        void GetAllocatedExtents(vector<extent_id_t>* allocatedExtents) const;
-        void GetAllocatedExtents(vector<extent_id_t>* allocatedExtents, const extent_id_t& startingExtentIndex) const;
+        void GetAllocatedExtents(std::vector<extent_id_t>* allocatedExtents) const;
+        void GetAllocatedExtents(std::vector<extent_id_t>* allocatedExtents, const extent_id_t& startingExtentIndex) const;
         // [[nodiscard]] extent_id_t GetLastAllocatedExtent() const;
-        void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
-        void WriteToDisk(fstream* filePtr) override;
+        void ReadFromDisk(const std::vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, std::fstream* filePtr) override;
+        void WriteToDisk(std::fstream* filePtr) override;
         void SetNextPageId(const page_id_t& nextPageId);
         const page_id_t& GetNextPageId() const;
         static page_id_t CalculatePageIdOffsetByGamPageId(const page_id_t& globalAllocationMapPageId);

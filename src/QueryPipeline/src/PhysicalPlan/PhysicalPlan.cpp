@@ -95,7 +95,7 @@ namespace QueryPipeline::PhysicalPlan {
     result->results.reserve(result->rows.size());
 
     for (const auto& row: result->rows){
-      auto resultRow = row->AsQueryResult();
+      auto resultRow = row.AsQueryResult();
       result->results.push_back(std::move(resultRow));
     }
 
@@ -361,7 +361,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       QueryResult resultRow;
 
       for (const auto& expression : this->resultExpressions) {
-        context.row = row.Get();
+        context.row = &row;
         auto field = expression->Evaluate(context);
         resultRow.AddColumn(field);
       }
@@ -437,14 +437,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-    std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> filteredRows;
-    for (const auto& row : result->rows) {
-      context.row = row.Get();
+    std::vector<DatabaseEngine::StorageTypes::Row> filteredRows;
+    for (auto& row : result->rows) {
+      context.row = &row;
 
       if (!this->filter->Evaluate(context).GetBool())
         continue;
 
-      filteredRows.push_back(row);
+      filteredRows.push_back(std::move(row));
     }
 
     result->rows = std::move(filteredRows);

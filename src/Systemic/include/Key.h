@@ -21,14 +21,13 @@ namespace DataTypes::Indexing {
     explicit Key(const Value& field);
     explicit Key(Value& field);
     explicit Key(const std::vector<Key>& subKeys);
+    explicit Key(std::vector<Key>& subKeys);
     explicit Key(const Key*& otherKey);
     Key(const Key &otherKey);
     Key(Key&& otherKey) noexcept;
     Key& operator=(Key&& otherKey) noexcept;
     Key& operator=(const Key& otherKey);
     ~Key();
-
-    // Key(Key&& other)noexcept;
 
     bool operator==(const Key& otherKey) const;
     bool operator>(const Key& otherKey) const;
@@ -49,6 +48,21 @@ namespace DataTypes::Indexing {
     static ComparisonResult CompareSubKeys(const Key& firstKey, const Key& otherKey);
     [[nodiscard]] Int AsInt(const Int& pos = 0)const;
     [[nodiscard]] BigInt AsBigInt(const Int& pos = 0)const;
+
+    key_size_t CalculateSize()const;
+
+    void Serialize(object_t*& buffer, page_offset_t& offset) const;
+    static Key DeserializeNonComposite(
+      const object_t* buffer,
+      page_offset_t& offset,
+      const DataType& type
+    );
+    static Key Deserialize(
+      const object_t* buffer,
+      page_offset_t& offset,
+      const UnsignedTinyInt& numberOfSubKeys,
+      const std::array<DataType, MAX_NUMBER_OF_SUB_KEYS>& keyTypes
+    );
 
     friend std::ostream& operator<<(std::ostream& os, const Key& key);
   };

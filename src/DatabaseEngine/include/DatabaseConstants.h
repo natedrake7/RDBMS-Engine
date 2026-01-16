@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include "../../Systemic/include/DataTypes/DataTypes.h"
+#include "../../Systemic/include/DataTypes/PackedByte.h"
 #include "../../Systemic/include/Security/Security.h"
 
 namespace Constants{
@@ -76,8 +77,11 @@ namespace Constants{
     constexpr uint16_t PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - 7;
     constexpr uint16_t NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
     constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
-    constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(page_id_t) + sizeof(TreeType) + sizeof(uint8_t) + 3 * sizeof(bool) + sizeof(uint16_t);
-    constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
+    constexpr page_size_t INDEX_PAGE_SIBLINGS_SIZE = 2 * sizeof(page_id_t);
+	static constexpr UnsignedTinyInt MAX_NUMBER_OF_SUB_KEYS = 7;
+
+    constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(page_id_t) + PackedByte::Size + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);
+    constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE - INDEX_PAGE_SIBLINGS_SIZE;
 
     constexpr uint16_t GAM_PAGE_SIZE = 64000;
     constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;

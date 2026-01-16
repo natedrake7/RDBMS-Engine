@@ -20,8 +20,8 @@ namespace Pages {
         ~GlobalAllocationMapPage() override;
         int AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const int& numberOfExtents);
         void DeallocateExtent(const extent_id_t& extentId);
-        void WriteToDisk(fstream *filePtr) override;
-        void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
+        void WriteToDisk(std::fstream *filePtr) override;
+        void ReadFromDisk(const std::vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, std::fstream* filePtr) override;
         [[nodiscard]] bool IsFull() const;
         std::vector<extent_id_t> GetAllocatedExtents(const extent_id_t& startingIndex = 0) const;
     };

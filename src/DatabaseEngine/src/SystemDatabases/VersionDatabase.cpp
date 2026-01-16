@@ -206,20 +206,18 @@ namespace DatabaseEngine {
   }
 
   Errors::RuntimeStatus VersionDatabase::InsertRow(
-    const Pointer<StorageTypes::Row>& row,
+    const StorageTypes::Row* row,
     Pages::RowVersionPointer& rowPointer,
     const StorageTypes::Table* table
   ) {
-    auto* oldRow = new StorageTypes::Row(row.Get());
-
-    auto OldRowPtr = Pointer(oldRow);
+    auto* oldRow = new StorageTypes::Row(row);
 
     auto page = this->GetLastUndoPage(table, row->TotalSize());
 
      MultiThreading::WriterGuard lock(&page->Latch());
 
      int offset = 0;
-     page->InsertRow(OldRowPtr, &offset);
+     page->InsertRow(oldRow, &offset);
 
      rowPointer.pageId = page->GetPageId();
      rowPointer.offset = offset;
@@ -227,23 +225,23 @@ namespace DatabaseEngine {
      return {};
  }
 
-  Pointer<StorageTypes::Row> VersionDatabase::RetrieveRow(
+  StorageTypes::Row VersionDatabase::RetrieveRow(
     const Snapshot& snapshot,
     const Pages::RowVersionPointer &rowPointer,
     const StorageTypes::Table *table
   )const {
 
-    Pointer<StorageTypes::Row> row;
+    StorageTypes::Row row;
 
     {
       auto page = Storage::StorageManager::Get().GetPage(this->filename, rowPointer.pageId, table);
 
       MultiThreading::ReaderGuard lock(&page->Latch());
 
-      row = page->GetRow(rowPointer.offset);
+      // row = page->GetRow(rowPointer.offset);
     }
 
-    return row->GetVisibleVersionForTransaction(row, snapshot);
+    return row.GetVisibleVersionForTransaction(snapshot);
   }
 
   std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t& startingExtentId) const {
@@ -273,10 +271,9 @@ namespace DatabaseEngine {
 
         MultiThreading::WriterGuard pageLatch(&page->Latch());
 
-        const auto* rows = page->DataRowsNoLock();
-
-        for (int i = 0; i < rows->size(); i++) {
-          const auto& versionHeader = rows->at(i)->GetVersionHeader();
+        for (int i = 0; i < page->GetPageSize(); i++) {
+          auto row = page->GetRow(nullptr, i);
+          const auto& versionHeader = row.GetVersionHeader();
 
           if (transactionId == FIRST_TRANSACTION_ID
             || versionHeader.createdTransactionId <= transactionId) {

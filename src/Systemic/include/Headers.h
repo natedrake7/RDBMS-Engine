@@ -318,6 +318,10 @@ namespace Headers {
     }
 
     ~RowIdentifier() = default;
+
+    [[nodiscard]] inline bool IsInvalid() const{
+      return this->pageId == INVALID_PAGE_ID && this->indexId == INVALID_PAGE_INDEX_ID;
+    }
   };
 
   inline std::ostream& operator<<(std::ostream& os, const RowIdentifier& rowId) {

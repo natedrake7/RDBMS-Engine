@@ -87,13 +87,66 @@
 //TODO implement parallel query execution and distributed databases
 
 //verify temp db flow implementation.
+//verify page implementation
 
 int main()
 {
     //Get table stats
     //SELECT TOP(1) TS.table_id AS ID, T.name AS Name, TS.row_count AS RowCount, TS.avg_record_size AS RowSize FROM masterDb.dbo.sys_table_stats AS TS INNER JOIN masterDb.dbo.sys_tables AS T ON T.table_id = TS.table_id AS TS ORDER BY ID DESC
 
-    RegisterSignalHandlers();
+    // auto page = Pages::IndexPage(0, true, {DataType::Int});
+    //
+    // page.SetNumberOfKeys(1);
+    //
+    // auto column = DatabaseEngine::StorageTypes::Column("", DataType::Int, 4, 0, false);
+    // auto strColumn = DatabaseEngine::StorageTypes::Column("", DataType::String, 40, 0, false);
+    // auto dateColumn = DatabaseEngine::StorageTypes::Column("", DataType::DateTime, 40, 0, false);
+    //
+    // const std::vector columns = { &column, &strColumn, &dateColumn };
+    // auto table = DatabaseEngine::StorageTypes::Table(0 , 0, columns, nullptr);
+    //
+    // auto key = DataTypes::Indexing::Key();
+    // key.InsertKey(DataTypes::Indexing::Key(Value(10)));
+    //
+    // auto* row = new DatabaseEngine::StorageTypes::Row(table);
+    //
+    // auto* block = new DatabaseEngine::StorageTypes::Block(&column);
+    // auto res = block->SetData(Value(10));
+    //
+    // auto* strBlock = new DatabaseEngine::StorageTypes::Block(&strColumn);
+    // res = strBlock->SetData(Value(std::string("Hello World")));
+    //
+    // auto* dateBlock = new DatabaseEngine::StorageTypes::Block(&dateColumn);
+    //
+    // DataTypes::DateTime date;
+    // res = dateBlock->SetData(Value(date));
+    //
+    // std::cout << date << std::endl;
+    //
+    // row->InsertColumnData(block, 0);
+    // row->InsertColumnData(strBlock, 1);
+    // row->InsertColumnData(dateBlock, 2);
+    //
+    // page.InsertChild(1, nullptr, 0);
+    // page.InsertChild(2, &key, 1);
+    //
+    // const auto firstPage = page.GetChild(0);
+    // const auto secondPage = page.GetChild(1);
+    //
+    // // auto newKey = page.GetKey(0);
+    // // std::cout << newKey << std::endl;
+    //
+    // // auto page_row = page.GetRow(&table, 0);
+    // // std::cout << page_row << std::endl;
+    // //
+    // // page_row = page.GetRow(&table, 1);
+    // // std::cout << page_row << std::endl;
+    // //
+    // // page_row = page.GetRow(&table, 2);
+    // // std::cout << page_row << std::endl;
+    //
+    // return 0;
+    // RegisterSignalHandlers();
 
     static auto& server = Network::Server::Get();
 

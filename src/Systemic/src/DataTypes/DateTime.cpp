@@ -3,78 +3,70 @@
 #include <chrono>
 #include <cmath>
 
-namespace DataTypes
-{
-	DateTime::DateTime()
-	{
+namespace DataTypes{
+	DateTime::DateTime(){
 		const auto timePoint = std::chrono::system_clock::now();
-		this->timeStamp = chrono::duration_cast<chrono::milliseconds>(timePoint.time_since_epoch()).count();
+		this->timeStamp = std::chrono::duration_cast<std::chrono::milliseconds>(timePoint.time_since_epoch()).count();
 	}
 
-	DateTime::DateTime(const int64_t &timestamp)
-	{
+	DateTime::DateTime(const int64_t &timestamp){
 		this->timeStamp = timestamp;
 	}
 
 	DateTime::~DateTime() = default;
 
-	int DateTime::GetYears() const
-	{
-		const auto timePoint = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+	int DateTime::GetYears() const{
+		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
 		// Convert to sys_days (floor to days)
-		const auto dp = floor<chrono::days>(timePoint);
+		const auto dp = floor<std::chrono::days>(timePoint);
 
 		// Convert to calendar year_month_day
-		const chrono::year_month_day ymd{dp};
+		const std::chrono::year_month_day ymd{dp};
 
 		return static_cast<int>(ymd.year());
 	}
 
-	unsigned int DateTime::GetMonths() const
-	{
-		const auto timePoint = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+	unsigned int DateTime::GetMonths() const{
+		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
 		// Convert to sys_days (floor to days)
-		const auto dp = floor<chrono::days>(timePoint);
+		const auto dp = floor<std::chrono::days>(timePoint);
 
 		// Convert to calendar year_month_day
-		const chrono::year_month_day ymd{dp};
+		const std::chrono::year_month_day ymd{dp};
 
 		return static_cast<unsigned int>(ymd.month());
 	}
 
-	unsigned int  DateTime::GetDays() const
-	{
-		const auto timePoint = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+	unsigned int  DateTime::GetDays() const{
+		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
 		// Convert to sys_days (floor to days)
-		const auto dp = floor<chrono::days>(timePoint);
+		const auto dp = floor<std::chrono::days>(timePoint);
 
 		// Convert to calendar year_month_day
-		const chrono::year_month_day ymd{dp};
+		const std::chrono::year_month_day ymd{dp};
 
 		return static_cast<unsigned int>(ymd.day());
 	}
 
-	long DateTime::GetHours() const
-	{
-		const auto timePoint = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+	long DateTime::GetHours() const{
+		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
 		// Convert to sys_days (floor to days)
-		const auto dp = floor<chrono::days>(timePoint);
+		const auto dp = floor<std::chrono::days>(timePoint);
 
 		const auto time_since_midnight = timePoint - dp; // duration since midnight
 
 		return duration_cast<std::chrono::hours>(time_since_midnight).count();
 	}
 
-	long DateTime::GetMinutes() const
-	{
-		const auto timePoint = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+	long DateTime::GetMinutes() const{
+		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
 		// Convert to sys_days (floor to days)
-		const auto dp = floor<chrono::days>(timePoint);
+		const auto dp = floor<std::chrono::days>(timePoint);
 
 		const auto time_since_midnight = timePoint - dp; // duration since midnight
 
@@ -83,12 +75,11 @@ namespace DataTypes
 		return duration_cast<std::chrono::minutes>(time_since_midnight - hours).count();
 	}
 
-	long DateTime::GetSeconds() const
-	{
-		const auto timePoint = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+	long DateTime::GetSeconds() const{
+		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
 		// Convert to sys_days (floor to days)
-		const auto dp = floor<chrono::days>(timePoint);
+		const auto dp = floor<std::chrono::days>(timePoint);
 
 		const auto time_since_midnight = timePoint - dp; // duration since midnight
 
@@ -98,10 +89,10 @@ namespace DataTypes
 	}
 
 	long DateTime::GetMilliseconds() const{
-		const auto timePoint = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
 		// Convert to sys_days (floor to days)
-		const auto dp = floor<chrono::days>(timePoint);
+		const auto dp = floor<std::chrono::days>(timePoint);
 
 		const auto time_since_midnight = timePoint - dp; // duration since midnight
 
@@ -111,83 +102,81 @@ namespace DataTypes
 	}
 
 	void DateTime::AddSeconds(const int& seconds) {
-		auto tp = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+		auto tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
-		tp += chrono::seconds(seconds);
+		tp += std::chrono::seconds(seconds);
 
-		this->timeStamp = duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
+		this->timeStamp = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 	}
 
 	void DateTime::AddWeeks(const int& weeks) {
-		auto tp = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+		auto tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
-		tp += chrono::days(7 * weeks);
+		tp += std::chrono::days(7 * weeks);
 
-		this->timeStamp = duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
+		this->timeStamp = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 	}
 
 	void DateTime::AddDays(const int& days) {
-		auto tp = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+		auto tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
-		tp += chrono::days(days);
+		tp += std::chrono::days(days);
 
-		this->timeStamp = duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
+		this->timeStamp = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 	}
 
 	void DateTime::AddHours(const int& hours) {
-		auto tp = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+		auto tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
-		tp += chrono::hours(hours);
+		tp += std::chrono::hours(hours);
 
-		this->timeStamp = duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
+		this->timeStamp = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 	}
 
 	void DateTime::AddMinutes(const int& minutes) {
-		auto tp = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+		auto tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
-		tp += chrono::minutes(minutes);
+		tp += std::chrono::minutes(minutes);
 
-		this->timeStamp = duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
+		this->timeStamp = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 	}
 
 
 	void DateTime::AddMonths(const int &months){
 
-		auto tp = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+		auto tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
-		const auto dp = floor<chrono::days>(tp);               // floor to whole days
+		const auto dp = floor<std::chrono::days>(tp);               // floor to whole days
 
-		chrono::year_month_day ymd{dp};
+		std::chrono::year_month_day ymd{dp};
 
-		ymd += chrono::months{months};                   // add months
+		ymd += std::chrono::months{months};                   // add months
 
-		tp = chrono::sys_days(ymd) + (tp - dp);
+		tp = std::chrono::sys_days(ymd) + (tp - dp);
 
-		this->timeStamp = duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
+		this->timeStamp = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 	}
 
 	void DateTime::AddYears(const int& years) {
-		auto tp = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
-		const auto dp = floor<chrono::days>(tp);
+		auto tp = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
+		const auto dp = floor<std::chrono::days>(tp);
 
-		chrono::year_month_day ymd{dp};
-		ymd += chrono::years{years};                            // add years
+		std::chrono::year_month_day ymd{dp};
+		ymd += std::chrono::years{years};                            // add years
 
-		tp = chrono::sys_days(ymd) + (tp - dp);          // keep the time-of-day
+		tp = std::chrono::sys_days(ymd) + (tp - dp);          // keep the time-of-day
 
-		this->timeStamp = duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
+		this->timeStamp = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 	}
 
 	DateTime DateTime::Now() { return {}; }
 
-	int DateTime::DateTimeSize() { return sizeof(int64_t); }
-
-	bool DateTime::FromString(DateTime& outVal, const string &date, const string &format)
+	bool DateTime::FromString(DateTime& outVal, const std::string &date, const std::string &format)
 	{
-		chrono::system_clock::time_point tp;
+		std::chrono::system_clock::time_point tp;
 
 		if (!format.empty()) {
-			istringstream ss(date);
+			std::istringstream ss(date);
 
 			ss >> std::chrono::parse(format, tp);
 
@@ -197,7 +186,7 @@ namespace DataTypes
 		else {
 			bool parsedDate = false;
 			for (const auto& validFormat: DateTimeFormats) {
-				istringstream ss(date);
+				std::istringstream ss(date);
 
 				ss >> std::chrono::parse(validFormat, tp);
 
@@ -211,20 +200,20 @@ namespace DataTypes
 				return false;
 		}
 
-		const auto millis = duration_cast<chrono::milliseconds>(tp.time_since_epoch()).count();
+		const auto millis = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 
 		outVal = DateTime(millis);
 
 		return true;
 	}
 
-	bool DateTime::FromString(const string &date)
+	bool DateTime::FromString(const std::string &date)
 	{
-		chrono::system_clock::time_point tp;
+		std::chrono::system_clock::time_point tp;
 
 		bool parsedDate = false;
 		for (const auto& validFormat: DateTimeFormats) {
-			istringstream ss(date);
+			std::istringstream ss(date);
 
 			ss >> std::chrono::parse(validFormat, tp);
 
@@ -240,9 +229,9 @@ namespace DataTypes
 		return true;
 	}
 
-	string DateTime::ToString(const string &format) const
+	std::string DateTime::ToString(const std::string &format) const
 	{
-		const auto timePoint = chrono::system_clock::time_point(chrono::milliseconds(this->timeStamp));
+		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 
 #ifdef _WIN32
 		return std::format("{:%Y-%m-%d %H:%M:%S%OS}", timePoint);
@@ -274,10 +263,10 @@ namespace DataTypes
 	void DateTime::ValidateDate(const int year, const int month, const int day, const int hour, const int minute, const int second)
 	{
 		if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 || hour < 0 || hour >= 24 || minute < 0 || minute >= 60 || second < 0 || second >= 60)
-			throw invalid_argument("Invalid date/time components.");
+			throw std::invalid_argument("Invalid date/time components.");
 	}
 
-	ostream & operator<<(ostream &os, const DateTime &datetime){
+	std::ostream & operator<<(std::ostream &os, const DateTime &datetime){
 		os << datetime.ToString();
 		return os;
 	}

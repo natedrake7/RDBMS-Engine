@@ -2,8 +2,6 @@
 
 #include <chrono>
 #include <string>
-using namespace std;
-
 namespace DataTypes {
 	constexpr uint32_t SECONDS_PER_MINUTE = 60;
 	constexpr uint32_t SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
@@ -66,16 +64,16 @@ namespace DataTypes {
 		void AddYears(const int& years);
 
 		static DateTime Now();
-		static bool FromString(DateTime& outVal, const string& date, const string& format = "");
-		static bool FromString(const string& date);
-		static int DateTimeSize();
+		static bool FromString(DateTime& outVal, const std::string& date, const std::string& format = "");
+		static bool FromString(const std::string& date);
+		inline static constexpr int Size(){ return sizeof(int64_t); }
 
-		[[nodiscard]] string ToString(const string& format = "%Y-%m-%d %H:%M:%S%OS") const;
+		[[nodiscard]] std::string ToString(const std::string& format = "%Y-%m-%d %H:%M:%S%OS") const;
 		[[nodiscard]] const int64_t& GetUnixTimeStamp()const;
 
 		static bool ValidateDate(const DateTime& datetime);
 
-		friend ostream& operator<<(ostream& os, const DateTime& datetime);
+		friend std::ostream& operator<<(std::ostream& os, const DateTime& datetime);
 	};
 }
 

@@ -47,6 +47,11 @@ namespace DataTypes::Indexing{
         }
     }
 
+    Key::Key(std::vector<Key>& subKeys){
+        this->subKeys = std::move(subKeys);
+        this->size = this->CalculateSize();
+    }
+
     Key::~Key() = default;
 
     Key::Key(const Key &otherKey)
@@ -240,6 +245,67 @@ namespace DataTypes::Indexing{
             throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
 
         return this->subKeys.at(pos).value.GetBigInt();
+    }
+
+    key_size_t Key::CalculateSize()const{
+        if (this->subKeys.empty())
+            return this->value.GetSize() + sizeof(key_size_t);
+
+        key_size_t currentSize = 0;
+        for (const auto& key : this->subKeys)
+            currentSize += key.CalculateSize();
+
+        return currentSize;
+    }
+
+    void Key::Serialize(object_t*& buffer, page_offset_t& offset) const{
+        if (subKeys.empty()){
+            const auto valueSize = this->value.GetSize();
+            memcpy(buffer + offset, &valueSize, sizeof(key_size_t));
+            offset += sizeof(key_size_t);
+
+            memcpy(buffer + offset, this->value.GetRawData(), valueSize);
+            offset += valueSize;
+            return;
+        }
+
+        for (const auto& key : this->subKeys)
+            key.Serialize(buffer, offset);
+    }
+
+    Key Key::DeserializeNonComposite(
+        const object_t* buffer,
+        page_offset_t& offset,
+        const DataType& type
+    ) {
+        key_size_t valueSize = 0;
+        memcpy(&valueSize, buffer + offset, sizeof(key_size_t));
+        offset += sizeof(key_size_t);
+
+        auto* valueData = std::malloc(valueSize);
+        memcpy(valueData, buffer + offset, valueSize);
+        offset += valueSize;
+
+        Value value(valueData, valueSize, type);
+        std::free(valueData);
+
+        return Key(value);
+    }
+
+    Key Key::Deserialize(
+        const object_t* buffer,
+        page_offset_t& offset,
+        const UnsignedTinyInt& numberOfSubKeys,
+        const std::array<DataType, MAX_NUMBER_OF_SUB_KEYS>& keyTypes
+    ){
+        std::vector<Key> subKeys;
+        subKeys.reserve(numberOfSubKeys);
+        for (key_size_t i = 0; i < numberOfSubKeys; i++){
+            auto subKey = Key::DeserializeNonComposite(buffer, offset, keyTypes[i]);
+            subKeys.push_back(std::move(subKey));
+        }
+
+        return Key(subKeys);
     }
 
     std::ostream & operator<<(std::ostream &os, const Key &key){

@@ -10,7 +10,7 @@
 namespace DatabaseEngine::StorageTypes {
     void Table::ClusteredIndexSeekRange(
         const ExecutionProperties& properties,
-        std::vector<Pointer<Row>> *selectedRows,
+        std::vector<Row> *selectedRows,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
         const Expressions::Expression* expression
@@ -27,7 +27,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexSeek(
         const ExecutionProperties &properties,
-        std::vector<Pointer<Row>> *selectedRows,
+        std::vector<Row> *selectedRows,
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression
     ) {
@@ -43,7 +43,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Pointer<Row>> *selectedRows,
+        std::vector<Row> *selectedRows,
         IndexState& state,
         const Expressions::Expression* expression
     ){
@@ -62,7 +62,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Pointer<Row>> *selectedRows,
+        std::vector<Row> *selectedRows,
         const Expressions::Expression *expression
     ){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
@@ -80,7 +80,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::NonClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Pointer<Row>> *selectedRows,
+        std::vector<Row> *selectedRows,
         const int &indexPos,
         IndexState& state,
         const Expressions::Expression *expression
@@ -100,12 +100,12 @@ namespace DatabaseEngine::StorageTypes {
 
             MultiThreading::ReaderGuard lock(&page->Latch());
 
-            const auto& pageRow = page->GetRow(rowId.indexId);
+            const auto& pageRow = page->GetRow(this, rowId.indexId);
 
-            const auto& row = Row::GetVisibleVersionForTransaction(pageRow, properties.snapshot);
+            const auto& row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
 
-            context.row = row.Get();
-            if (!row.Get() || !expression->Evaluate(context).GetBool())
+            context.row = &row;
+            if (row.IsInvalid() || !expression->Evaluate(context).GetBool())
               continue;
 
             selectedRows->push_back(row);
@@ -119,11 +119,11 @@ namespace DatabaseEngine::StorageTypes {
 
             MultiThreading::ReaderGuard lock(&page->Latch());
 
-            const auto& pageRow = page->GetRow(rowId.indexId);
+            const auto& pageRow = page->GetRow(this, rowId.indexId);
 
-            const auto& row = Row::GetVisibleVersionForTransaction(pageRow, properties.snapshot);
+            const auto& row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
 
-            if (!row.Get())
+            if (row.IsInvalid())
                 continue;
 
             selectedRows->push_back(row);

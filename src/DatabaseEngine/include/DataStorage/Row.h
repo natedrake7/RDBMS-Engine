@@ -86,15 +86,16 @@ namespace DatabaseEngine::StorageTypes
             const ByteMaps::BitMap* nullBitMap
         );
 
+        //constructors
+        explicit Row();
+        explicit Row(const Row* row);
+        Row(const Row &copyRow);
+        Row(Row &&otherRow)noexcept;
         explicit Row(const std::vector<const Column*>& columns);
 
-        Row(const Row &copyRow);
-
-        explicit Row(const Row* row);
-
-        explicit Row();
-
+        //assignment operators
         Row& operator=(const Row &copyRow);
+        Row& operator=(Row &&otherRow) noexcept;
 
         ~Row();
 
@@ -148,11 +149,11 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] Value GetColumnByIndex(const int& indexPos) const;
 
-        [[nodiscard]] Pointer<Row> Join(const Pointer<Row>& row) const;
+        [[nodiscard]] Row Join(const Row* row) const;
 
-        [[nodiscard]] Pointer<Row> LeftJoin(const std::vector<const Column*>& innerTableColumns) const;
+        [[nodiscard]] Row LeftJoin(const std::vector<const Column*>& innerTableColumns) const;
 
-        [[nodiscard]] Pointer<Row> RightJoin(const std::vector<const Column*>& innerTableColumns) const;
+        [[nodiscard]] Row RightJoin(const std::vector<const Column*>& innerTableColumns) const;
 
         [[nodiscard]] const bool& IsCopy()const;
 
@@ -164,7 +165,7 @@ namespace DatabaseEngine::StorageTypes
 
         void SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset);
 
-        static Pointer<Row> GetVisibleVersionForTransaction(const Pointer<Row>& pageRow, const Snapshot& snapshot);
+        [[nodiscard]] Row GetVisibleVersionForTransaction(const Snapshot& snapshot)const;
 
         bool IsVisibleForTransaction(const Snapshot& snapshot) const;
 
@@ -180,17 +181,19 @@ namespace DatabaseEngine::StorageTypes
 
         //Getters Setters Serializers etc
 
-        void Serialize(std::vector<char>* buffer, uint32_t& pos)const;
+        void Serialize(std::vector<char>* buffer, page_offset_t& pos)const;
 
-        void Deserialize(const std::vector<char>* buffer, uint32_t& pos);
+        void Serialize(object_t*& buffer, page_offset_t &offSet)const;
 
-        void ReadHeaderFromDisk(const std::vector<char>& buffer, page_offset_t& offSet);
+        void Deserialize(const std::vector<char>* buffer, page_offset_t& pos);
 
-        void ReadVersionHeaderFromDisk(const std::vector<char>& buffer, page_offset_t& offSet);
+        void ReadHeaderFromDisk(const object_t* buffer, page_offset_t &offSet);
 
-        void ReadDataFromDisk(const std::vector<char>& buffer, page_offset_t& offSet, const std::vector<Column*>& columns);
+        void ReadVersionHeaderFromDisk(const object_t* buffer, page_offset_t &offSet);
 
-        void ReadDataFromDisk(const std::vector<char>& buffer, page_offset_t& offSet);
+        void ReadDataFromDisk(const object_t* buffer, page_offset_t &offSet, const std::vector<Column*>& columns);
+
+        void ReadDataFromDisk(const object_t*& buffer, page_offset_t &offSet);
 
         void WriteHeaderToDisk(fstream* filePtr)const;
 
@@ -199,5 +202,7 @@ namespace DatabaseEngine::StorageTypes
         void WriteDataToDisk(fstream* filePtr)const;
 
         QueryResult AsQueryResult()const;
+
+        [[nodiscard]] bool IsInvalid()const;
     };
 }

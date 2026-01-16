@@ -16,6 +16,7 @@ public:
   [[nodiscard]] const std::vector<Value>& GetData()const;
   [[nodiscard]] Value GetColumnAt(const int& columnPos)const;
   [[nodiscard]] int GetSize()const;
+  [[nodiscard]] Int GetByteSize()const;
   void SetColumnIndex(const int& columnPos, const int32_t & columnIndex);
   [[nodiscard]] int64_t ComputeHash()const;
 

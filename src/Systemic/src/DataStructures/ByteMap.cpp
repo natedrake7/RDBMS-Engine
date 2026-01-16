@@ -95,7 +95,7 @@ namespace ByteMaps {
         }
     }
 
-    void ByteMap::WriteDataToFile(fstream *filePtr) const
+    void ByteMap::WriteDataToFile(std::fstream *filePtr) const
     {
         filePtr->write(reinterpret_cast<const char*>(this->data.data()), this->data.size() * sizeof(byte_t));
     }

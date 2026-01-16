@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "../DatabaseConstants.h"
 #include "Page.h"
 
 namespace DatabaseEngine::StorageTypes {
@@ -26,8 +27,8 @@ namespace Pages {
         [[nodiscard]] bool IsPageAllocated(const page_id_t& pageId) const;
         [[nodiscard]] Constants::PageType GetPageType(const page_id_t& pageId) const;
         [[nodiscard]] byte_t GetPageSizeCategory(const page_id_t& pageId) const;
-        void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr) override;
-        void WriteToDisk(fstream *filePtr) override;
+        void ReadFromDisk(const std::vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, std::fstream *filePtr) override;
+        void WriteToDisk(std::fstream *filePtr) override;
         void SetPageMetaData(const Page* page);
         void SetPageAllocated(const page_id_t& pageId)const;
         void SetPageAllocationStatus(const page_id_t &pageId, const page_size_t& bytesLeft);

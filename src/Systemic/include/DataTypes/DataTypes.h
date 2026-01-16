@@ -5,6 +5,9 @@
 #include "../DataStructures/Dictionary.h"
 
 typedef uint8_t UnsignedTinyInt;
+typedef uint16_t UnsignedSmallInt;
+typedef uint32_t UnsignedInt;
+typedef uint64_t UnsignedBigInt;
 typedef int8_t TinyInt;
 typedef int16_t SmallInt;
 typedef int32_t Int;
@@ -61,8 +64,7 @@ typedef uint16_t large_page_index_t;
 typedef uint32_t log_sequence_number_t;
 typedef uint64_t transaction_id_t;
 
-enum class DataType : uint8_t
-{
+enum class DataType : uint8_t{
   TinyInt = 0,
   SmallInt = 1,
   Int = 2,
@@ -82,7 +84,7 @@ static Dictionary<std::string, block_size_t> ColumnTypeSizes = {
   {"smallint", sizeof(int16_t)},
   {"int", sizeof(int32_t)},
   {"bigint", sizeof(int64_t)},
-  {"datetime", DataTypes::DateTime::DateTimeSize()},
+  {"datetime", DataTypes::DateTime::Size()},
   {"bool", sizeof(bool)},
   {"string", 0},
   {"decimal", 0},
@@ -91,7 +93,7 @@ static Dictionary<std::string, block_size_t> ColumnTypeSizes = {
   //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
 };
 
-static Dictionary<string, DataType> ColumnTypesDictionary = {
+static Dictionary<std::string, DataType> ColumnTypesDictionary = {
   {"tinyint", DataType::TinyInt},
   {"smallint", DataType::SmallInt},
   {"int", DataType::Int},
@@ -105,7 +107,7 @@ static Dictionary<string, DataType> ColumnTypesDictionary = {
   //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
 };
 
-static Dictionary<DataType, string> ColumnTypesToStringDictionary = {
+static Dictionary<DataType, std::string> ColumnTypesToStringDictionary = {
   {DataType::TinyInt, "TinyInt"},
   {DataType::SmallInt, "SmallInt"},
   {DataType::Int, "Int"},

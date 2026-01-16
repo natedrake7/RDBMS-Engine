@@ -74,15 +74,17 @@ namespace Pages {
         this->isDirty = true;
     }
 
-    void PageFreeSpacePage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet,fstream *filePtr)
-    {
+    void PageFreeSpacePage::ReadFromDisk(
+        const std::vector<char> &data,
+        const DatabaseEngine::StorageTypes::Table *table,
+        page_offset_t &offSet,
+        std::fstream *filePtr
+    ){
         this->pageMap->GetDataFromFile(data, offSet, this->header.pageSize);
     }
 
-    void PageFreeSpacePage::WriteToDisk(fstream *filePtr)
-    {
+    void PageFreeSpacePage::WriteToDisk(std::fstream *filePtr){
         this->WritePageHeaderToDisk(filePtr);
-
         this->pageMap->WriteDataToFile(filePtr);
     }
 

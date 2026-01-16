@@ -12,7 +12,7 @@
 namespace DatabaseEngine {
     DataTypes::Indexing::Key Database::CreateKey(
         const std::vector<column_index_t>& indexedColumns,
-        const Pointer<StorageTypes::Row>& row
+        const StorageTypes::Row* row
     )
     {
         DataTypes::Indexing::Key key;
@@ -26,7 +26,7 @@ namespace DatabaseEngine {
 
     DataTypes::Indexing::Key Database::CreateKey(
         const std::vector<column_index_t>& indexedColumns,
-        const Pointer<StorageTypes::Row>& row,
+        const StorageTypes::Row* row,
         const Int& offSet
     ){
         DataTypes::Indexing::Key key;
@@ -40,7 +40,7 @@ namespace DatabaseEngine {
 
     DataTypes::Indexing::Key Database::CreateKey(
         const std::vector<column_index_t> &indexedColumns,
-        const Pointer<StorageTypes::Row>& row,
+        const StorageTypes::Row* row,
         const Headers::RowIdentifier &rowId
     ){
         DataTypes::Indexing::Key key;

@@ -66,16 +66,16 @@ class Value {
         explicit Value(const void* data, const column_index_t& columnIndex = 0);
         explicit Value(const void* data, const int& size, const DataType& type);
         explicit Value(const unsigned char* data, const int& size, const DataType& type);
-        explicit Value(const bool& data, const column_index_t& columnIndex);
-        explicit Value(const int8_t& data, const column_index_t& columnIndex);
-        explicit Value(const int16_t& data, const column_index_t& columnIndex);
-        explicit Value(const int32_t& data, const column_index_t& columnIndex);
-        explicit Value(const int64_t& data, const column_index_t& columnIndex);
-        explicit Value(const string& data, const column_index_t& columnIndex, const bool& isIdentifier = false);
-        explicit Value(const u16string& data, const column_index_t& columnIndex);
-        explicit Value(const DataTypes::DateTime& data, const column_index_t& columnIndex);
-        explicit Value(const DataTypes::Decimal& data, const column_index_t& columnIndex);
-        explicit Value(const DataTypes::Guid& data, const column_index_t& columnIndex);
+        explicit Value(const bool& data, const column_index_t& columnIndex= 0);
+        explicit Value(const int8_t& data, const column_index_t& columnIndex= 0);
+        explicit Value(const int16_t& data, const column_index_t& columnIndex= 0);
+        explicit Value(const int32_t& data, const column_index_t& columnIndex= 0);
+        explicit Value(const int64_t& data, const column_index_t& columnIndex= 0);
+        explicit Value(const string& data, const column_index_t& columnIndex= 0, const bool& isIdentifier = false);
+        explicit Value(const u16string& data, const column_index_t& columnIndex= 0);
+        explicit Value(const DataTypes::DateTime& data, const column_index_t& columnIndex= 0);
+        explicit Value(const DataTypes::Decimal& data, const column_index_t& columnIndex= 0);
+        explicit Value(const DataTypes::Guid& data, const column_index_t& columnIndex= 0);
 
         static Value Null(const column_index_t& columnIndex = 0);
 

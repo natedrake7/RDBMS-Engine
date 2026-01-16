@@ -10,6 +10,10 @@
 #include "Pages/PageGuard.h"
 #include "DataStorage/Row.h"
 
+namespace Pages{
+    struct LeafNodeTuple;
+}
+
 namespace Statistics {
     struct ValueFrequency;
 }
@@ -28,7 +32,7 @@ namespace Pages{
 
 namespace Indexing{
     class BTree final{
-        page_id_t indexPageId;
+        page_id_t rootPageId;
 
         int degree;
         int keySize;
@@ -39,14 +43,14 @@ namespace Indexing{
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
-        static int LowerBound(const std::vector<DataTypes::Indexing::Key*>* keys, const DataTypes::Indexing::Key &key);
-        static int PartialLowerBound(const std::vector<DataTypes::Indexing::Key*>* keys, const DataTypes::Indexing::Key &key);
+        static int LowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key &key);
+        static int PartialLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key &key);
         static bool IsDuplicateKey(
             const std::vector<DataTypes::Indexing::Key*>* keys,
             const DataTypes::Indexing::Key &key,
             const int& indexPos
         );
-        static void CreateDuplicateKeyError(Errors::RuntimeStatus& status, const DataTypes::Indexing::Key &key);
+        static Errors::RuntimeStatus CreateDuplicateKeyError(const DataTypes::Indexing::Key &key);
 
         Pages::PageGuard<Pages::IndexPage> CreateRootPage(int& indexPosition, const int& pagesToAllocate);
 
@@ -81,19 +85,18 @@ namespace Indexing{
             Pages::PageGuard<Pages::IndexPage>& child,
             const int& pagesToAllocate
         );
-        Pages::PageGuard<Pages::IndexPage> GetNonFullNode(
+        Errors::RuntimeStatus InsertToNonFullNode(
             Pages::PageGuard<Pages::IndexPage>& parent,
-            const DataTypes::Indexing::Key &key,
+            const Pages::LeafNodeTuple& tuple,
             const int& pagesToAllocate,
-            int& indexPosition,
-            Errors::RuntimeStatus& status
+            int& indexPosition
         );
 
-        static int GetLeafNodeInsertPosition(
-            const std::vector<DataTypes::Indexing::Key*>*& parentKeys,
-            const DataTypes::Indexing::Key &key,
-            Errors::RuntimeStatus& status
-        );
+        Errors::RuntimeStatus InsertToNode(
+            Pages::PageGuard<Pages::IndexPage> &parent,
+            const Pages::LeafNodeTuple& tuple,
+            int& indexPosition
+        ) const;
 
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKey(const DataTypes::Indexing::Key &key) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key &key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;
@@ -151,16 +154,17 @@ namespace Indexing{
             Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
         )const;
 
+        void UpdatePfsPage(Pages::PageGuard<Pages::IndexPage>& node)const;
+
     public:
         explicit BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const Constants::TreeType& treeType, const int& nonClusteredIndexId = -1);
         BTree();
         ~BTree();
 
-        Pages::PageGuard<Pages::IndexPage> FindInsertNode(
-            const DataTypes::Indexing::Key &key,
+        Errors::RuntimeStatus InsertRow(
+            const Pages::LeafNodeTuple& tuple,
             const int& pagesToAllocate,
-            int &indexPosition,
-            Errors::RuntimeStatus& status
+            int &indexPosition
         );
 
         void IndexSeekRange(
@@ -173,27 +177,27 @@ namespace Indexing{
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &minKey,
             const DataTypes::Indexing::Key &maxKey,
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>* result
+            std::vector<DatabaseEngine::StorageTypes::Row>* result
         )const;
 
         void IndexSeekRange(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &minKey,
             const DataTypes::Indexing::Key &maxKey,
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>* result,
+            std::vector<DatabaseEngine::StorageTypes::Row>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexSeek(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &key,
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>* result
+            std::vector<DatabaseEngine::StorageTypes::Row>* result
         )const;
 
         void IndexSeek(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key &key,
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>* result,
+            std::vector<DatabaseEngine::StorageTypes::Row>* result,
             const Expressions::Expression* expression
         )const;
 
@@ -201,26 +205,26 @@ namespace Indexing{
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
+            std::vector<DatabaseEngine::StorageTypes::Row> *result,
             DatabaseEngine::IndexState& state
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
+            std::vector<DatabaseEngine::StorageTypes::Row> *result,
             DatabaseEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
+            std::vector<DatabaseEngine::StorageTypes::Row> *result,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result
+            std::vector<DatabaseEngine::StorageTypes::Row> *result
         )const;
 
         void IndexScan(

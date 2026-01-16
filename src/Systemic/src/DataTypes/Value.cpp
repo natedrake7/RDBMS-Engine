@@ -135,10 +135,10 @@ Value::Value(const int64_t &data, const column_index_t &columnIndex){
 }
 
 Value::Value(const DataTypes::DateTime &data, const column_index_t &columnIndex){
-    this->data = new object_t[DataTypes::DateTime::DateTimeSize()];
-    memcpy(this->data, &data.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
+    this->data = new object_t[DataTypes::DateTime::Size()];
+    memcpy(this->data, &data.GetUnixTimeStamp(), DataTypes::DateTime::Size());
     
-    this->size = DataTypes::DateTime::DateTimeSize();
+    this->size = DataTypes::DateTime::Size();
     this->columnIndex = columnIndex;
     this->type = DataType::DateTime;
 }
@@ -257,10 +257,10 @@ void Value::SetData(const int64_t &otherData) {
 void Value::SetData(const DataTypes::DateTime &otherData) {
     delete this->data;
     
-    this->data = new object_t[DataTypes::DateTime::DateTimeSize()];
-    memcpy(this->data, &otherData.GetUnixTimeStamp(), DataTypes::DateTime::DateTimeSize());
+    this->data = new object_t[DataTypes::DateTime::Size()];
+    memcpy(this->data, &otherData.GetUnixTimeStamp(), DataTypes::DateTime::Size());
     
-    this->size = DataTypes::DateTime::DateTimeSize();
+    this->size = DataTypes::DateTime::Size();
 
     this->type = DataType::DateTime;
 }

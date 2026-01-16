@@ -31,7 +31,7 @@ namespace ByteMaps {
         [[nodiscard]] page_size_t GetFreeSpace(const byte_map_pos_t& pos) const;
 
         void GetDataFromFile(const std::vector<char> &otherData, page_offset_t &offset, const page_size_t& byteMapSize);
-        void WriteDataToFile(fstream* filePtr) const;
+        void WriteDataToFile(std::fstream* filePtr) const;
         void Print() const;
 
         void SetByte(const byte_map_pos_t& position, const byte_t& value);

@@ -206,8 +206,8 @@ Pages::Page* StorageManager::OpenExtent(
 
   const auto &bytesRead = file->gcount();
 
-  for (int i = 0; i < Constants::EXTENT_SIZE; i++){
-    offSet = i * Constants::PAGE_SIZE;
+  for (int i = 0; i < EXTENT_SIZE; i++){
+    offSet = i * PAGE_SIZE;
 
     if (bytesRead < offSet)
       break;
@@ -222,7 +222,7 @@ Pages::Page* StorageManager::OpenExtent(
       this->RemovePage(victim);
     }
 
-    const Pages::PageHeader pageHeader = StorageManager::GetPageHeaderFromFile(buffer, offSet);
+    const auto pageHeader = StorageManager::GetPageHeaderFromFile(buffer, offSet);
 
     Pages::Page *page = nullptr;
 
@@ -407,8 +407,7 @@ void StorageManager::AllocateMemoryBasedOnSystemPageType(Pages::Page **page, con
 
 bool StorageManager::AllocateMemoryBasedOnPageType(Pages::Page **page, const Pages::PageHeader &pageHeader)
 {
-  switch (pageHeader.pageType) 
-  {
+  switch (pageHeader.pageType) {
     case PageType::FREESPACE:
       *page = new Pages::PageFreeSpacePage(pageHeader);
       break;
@@ -448,7 +447,6 @@ Pages::PageHeader StorageManager::GetPageHeaderFromFile(
   offSet += sizeof(page_id_t);
 
   memcpy(&pageHeader.pageSize, data.data() + offSet, sizeof(page_size_t));
-
   offSet += sizeof(page_size_t);
 
   memcpy(&pageHeader.bytesLeft, data.data() + offSet, sizeof(page_size_t));

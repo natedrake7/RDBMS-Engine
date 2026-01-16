@@ -19,8 +19,27 @@ namespace DatabaseEngine::StorageTypes{
     class Table;
 }
 
-namespace Pages
-{
+namespace Pages{
+    struct SlotDirectory{
+        UnsignedSmallInt offset;
+        UnsignedSmallInt size;
+        // UnsignedTinyInt flags : 1;
+
+        static constexpr UnsignedTinyInt FLAG_IS_VALID = 0X00;
+        static constexpr UnsignedTinyInt FLAG_IS_DELETED = 0X01;
+        static constexpr UnsignedTinyInt Size = 4;
+
+         SlotDirectory(
+            const UnsignedSmallInt& offset,
+            const UnsignedSmallInt& size,
+            const UnsignedTinyInt& flags = FLAG_IS_VALID
+        ){
+            this->offset = offset;
+            this->size = size;
+            // this->flags = flags;
+        }
+    };
+
     struct RowVersionPointer {
         page_id_t pageId;
         page_offset_t offset;
@@ -31,8 +50,7 @@ namespace Pages
         }
     };
 
-    struct PageHeader
-    {
+    struct PageHeader{
         page_id_t pageId;
         page_size_t pageSize;
         page_size_t bytesLeft;
@@ -44,7 +62,6 @@ namespace Pages
 
     class Page{
     protected:
-
         bool isDirty;
         std::atomic<int> pinCount;
         std::atomic<Constants::PagePriority> priority;
@@ -54,52 +71,65 @@ namespace Pages
 
         log_sequence_number_t logSequenceNumber;
 
-        string filename;
+        std::string filename;
+
+        //persisted to disk
         PageHeader header;
+        object_t* data;
 
-        std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> rows;
+        void WritePageHeaderToDisk(std::fstream *filePtr) const;
+        [[nodiscard]] page_offset_t NewRowOffset()const;
+        [[nodiscard]] Int SlotDirectoryOffSet(const Int& indexPosition) const;
+        [[nodiscard]] Int SlotDirectoriesToMoveOffSet(const Int& indexPosition, const Int& slotToMove) const;
 
-        void WritePageHeaderToDisk(fstream *filePtr) const;
-        static Pointer<DatabaseEngine::StorageTypes::Row> ReadRowFromDisk(
-            const std::vector<char>& data,
-            const DatabaseEngine::StorageTypes::Table *table,
-            page_offset_t &offSet,
-            const page_id_t& pageId,
+        [[nodiscard]] Int RawDataSize()const;
+
+        static void WriteRowToDisk(std::fstream* filePtr, const Pointer<DatabaseEngine::StorageTypes::Row>& row);
+
+        SlotDirectory GetSlotDirectory(const int& indexPosition) const;
+        DatabaseEngine::StorageTypes::Row MaterializeRow(
+            const DatabaseEngine::StorageTypes::Table* table,
             const Int& indexId
-        );
+        ) const;
+        void UpdateSlotDirectory(const SlotDirectory& slotDirectory, const int& indexPosition) const;
 
-        static Pointer<DatabaseEngine::StorageTypes::Row> ReadRowFromDisk(
-            const vector<char>& data,
-            page_offset_t &offSet,
-            const page_id_t& pageId,
-            const Int& indexId
-        );
+        void InsertNewSlot(const SlotDirectory& slotDirectory) const;
 
-        static void WriteRowToDisk(fstream* filePtr, const Pointer<DatabaseEngine::StorageTypes::Row>& row);
+        bool IndexOutOfBounds(const int& indexPosition) const;
+
+        void AdjustSlotDirectories(const int& indexPosition, const page_offset_t& offset, const int& slotSize) const;
 
     public:
         explicit Page(const page_id_t &pageId, const bool &isPageCreation = false);
+        explicit Page(const page_id_t &pageId, const page_size_t& size, const bool &isPageCreation = false);
         explicit Page();
         explicit Page(const PageHeader &pageHeader);
         virtual ~Page();
 
-        void InsertRow(Pointer<DatabaseEngine::StorageTypes::Row>& row, int* indexPosition = nullptr);
-        void InsertRow(Pointer<DatabaseEngine::StorageTypes::Row>& row, const int& indexPosition);
+        void InsertFirstRow(DatabaseEngine::StorageTypes::Row*& row);
+        void InsertRow(DatabaseEngine::StorageTypes::Row*& row, int* indexPosition = nullptr);
+        void InsertRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition);
 
-        virtual void ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, fstream *filePtr);
-        virtual void WriteToDisk(fstream *filePtr);
+
+        virtual void ReadFromDisk(
+            const std::vector<char> &buffer,
+            const DatabaseEngine::StorageTypes::Table *table,
+            page_offset_t &offSet,
+            std::fstream *filePtr
+        );
+        virtual void WriteToDisk(std::fstream *filePtr);
 
         // void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
         // void Delete(const Expressions::Expression* expression);
         void Delete(const int& indexPosition);
 
-        void SetFileName(const string &filename);
+        void SetFileName(const std::string &filename);
         void SetPageId(const page_id_t &pageId);
         virtual void UpdatePageSize();
         virtual void UpdateBytesLeft();
         void UpdateBytesLeft(const row_size_t& previousRowSize, const row_size_t& currentRowSize);
 
-        [[nodiscard]] const string &GetFileName() const;
+        [[nodiscard]] const std::string &GetFileName() const;
         [[nodiscard]] const page_id_t &GetPageId() const;
         [[nodiscard]] const bool &IsDirty() const;
         [[nodiscard]] const page_size_t &GetBytesLeft() const;
@@ -108,17 +138,9 @@ namespace Pages
         void SetLogSequenceNumber(const log_sequence_number_t &logSequenceNumber);
         [[nodiscard]] const log_sequence_number_t &GetLogSequenceNumber() const;
 
-        int GetRows(
-            std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
-            const size_t &rowsToSelect,
-            const int32_t& startingPosition = 0) const;
-
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const Constants::PageType &GetPageType() const;
-        void GetRowByIndex(vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const;
-        [[nodiscard]] const Pointer<DatabaseEngine::StorageTypes::Row>& GetRow(const int& indexPosition)const;
-
-        [[nodiscard]] std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *DataRowsNoLock();
+        [[nodiscard]] DatabaseEngine::StorageTypes::Row GetRow(const DatabaseEngine::StorageTypes::Table* table, const int& indexPosition)const;
 
         void IncreasePinCount();
         void DecreasePinCount();

@@ -239,14 +239,14 @@ namespace DatabaseEngine
     }
 
     Logging::CheckPoint Database::LogRowInsert(
-        const Pointer<StorageTypes::Row>& row,
+        const StorageTypes::Row* row,
         const transaction_id_t& transactionId,
         const table_id_t& tableOrdinal
     ) {
         static auto& logger = Logging::WriteAheadLogger::Get();
 
         std::vector<char> buffer(row->TotalSize());
-        uint32_t pos = 0;
+        page_offset_t pos = 0;
         row->Serialize(&buffer, pos);
 
         const auto logEntry = logger.CreateLogEntry(
@@ -629,13 +629,15 @@ namespace DatabaseEngine
         const int& pageCount,
         const TreeType& treeType,
         const page_id_t& treeId
-    )
-    {
+    ){
         page_id_t lowerLimit = 0;
 
         const auto extentsToAllocate =  static_cast<int>(std::ceil(static_cast<float>(pageCount) / EXTENT_SIZE));
 
         const auto extents = this->AllocateNewExtents(extentsToAllocate, tableOrdinalPosition, lowerLimit);
+
+        const auto& table = this->tables.at(tableOrdinalPosition);
+        const auto indexedColumnDatatypes = table->GetColumnTypeByTreeId(treeType);
 
         Pages::PageGuard<Pages::IndexPage> page;
         for (const auto& extentId : extents) {
@@ -661,6 +663,8 @@ namespace DatabaseEngine
 
                 indexPage->SetTreeId(parentPageId);
                 indexPage->SetTreeType(treeType);
+                indexPage->SetKeyTypes(indexedColumnDatatypes);
+                indexPage->SetSubKeys(indexedColumnDatatypes.size());
             }
         }
 
