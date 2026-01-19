@@ -22,7 +22,7 @@ typedef uint16_t block_size_t;
 typedef uint8_t column_index_t;
 
 // record size
-typedef uint32_t row_size_t;
+typedef uint16_t row_size_t;
 
 // header literal size
 typedef uint16_t header_literal_t;

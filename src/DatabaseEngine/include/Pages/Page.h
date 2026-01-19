@@ -104,12 +104,14 @@ namespace Pages{
         explicit Page(const page_id_t &pageId, const page_size_t& size, const bool &isPageCreation = false);
         explicit Page();
         explicit Page(const PageHeader &pageHeader);
+        Page(const PageHeader &pageHeader, const page_size_t& size);
         virtual ~Page();
 
         void InsertFirstRow(DatabaseEngine::StorageTypes::Row*& row);
         void InsertRow(DatabaseEngine::StorageTypes::Row*& row, int* indexPosition = nullptr);
         void InsertRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition);
 
+        void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition);
 
         virtual void ReadFromDisk(
             const std::vector<char> &buffer,
@@ -123,7 +125,7 @@ namespace Pages{
         // void Delete(const Expressions::Expression* expression);
         void Delete(const int& indexPosition);
 
-        void SetFileName(const std::string &filename);
+        void SetFileName(const std::string &otherFilename);
         void SetPageId(const page_id_t &pageId);
         virtual void UpdatePageSize();
         virtual void UpdateBytesLeft();

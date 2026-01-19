@@ -407,6 +407,7 @@ namespace DatabaseEngine::StorageTypes
                 Row* row,
                 const ExecutionProperties& properties,
                 const std::vector<Value> &updates,
+                const int& indexPosition,
                 const bool &isHeap = true
             );
 
@@ -417,6 +418,7 @@ namespace DatabaseEngine::StorageTypes
                 const ExecutionProperties& properties,
                 const std::vector<QueryPipeline::Statements::UpdateColumn*> &updates,
                 const HashSet<column_index_t>& updatedColumns,
+                const int& indexPosition,
                 const bool &isHeap = true
             );
 

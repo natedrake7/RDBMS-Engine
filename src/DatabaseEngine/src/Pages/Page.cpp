@@ -175,6 +175,16 @@ namespace Pages{
         this->data = static_cast<object_t*>(std::malloc(PAGE_SIZE_WITHOUT_HEADER));
     }
 
+    Page::Page(const PageHeader& pageHeader, const page_size_t& size){
+        this->header = pageHeader;
+        this->isDirty = false;
+        this->pinCount = 0;
+        this->hasSecondChance = true;
+        this->logSequenceNumber = 0;
+        this->priority = PagePriority::LOW;
+        this->data = static_cast<object_t*>(std::malloc(size));
+    }
+
     Page::~Page(){
         std::free(this->data);
         this->data = nullptr;
@@ -249,6 +259,40 @@ namespace Pages{
         this->AdjustSlotDirectories(indexPosition, offSetCopy, slotSize);
 
         this->header.bytesLeft -= (slotSize + SlotDirectory::Size);
+        this->header.pageSize++;
+        this->isDirty = true;
+    }
+
+    void Page::UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition){
+        if (this->IndexOutOfBounds(indexPosition))
+            throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
+
+        const auto slot = this->GetSlotDirectory(indexPosition);
+
+        const auto previousRowSize = slot.size;
+        const auto currentRowSize = row->TotalSize();
+
+        const auto sizeDiff = static_cast<int>(currentRowSize) - static_cast<int>(previousRowSize);
+
+        //if new row size is less than or equal to previous row size, update in place
+        if (sizeDiff <= 0){
+            page_offset_t pos = slot.offset;
+            row->Serialize(this->data, pos);
+            return;
+        }
+
+        //insert new row at the end
+        auto nextOffset = this->NewRowOffset();
+        const auto offSetCopy = nextOffset;
+
+        row->Serialize(this->data, nextOffset);
+
+        //update slot directory
+        const auto newSlot = SlotDirectory(offSetCopy, currentRowSize);
+        this->UpdateSlotDirectory(newSlot, indexPosition);
+
+        //update bytes left
+        this->header.bytesLeft -= (sizeDiff + SlotDirectory::Size);
         this->header.pageSize++;
         this->isDirty = true;
     }
@@ -336,7 +380,7 @@ namespace Pages{
         this->header.pageSize--;
     }
 
-    void Page::SetFileName(const std::string &filename) { this->filename = filename; }
+    void Page::SetFileName(const std::string &otherFilename) { this->filename = otherFilename; }
 
     void Page::SetPageId(const page_id_t &pageId) { this->header.pageId = pageId; }
 

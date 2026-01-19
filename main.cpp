@@ -89,6 +89,8 @@
 //verify temp db flow implementation.
 //verify page implementation
 
+//VERFIY Page write to disk and read implementation
+
 int main()
 {
     //Get table stats

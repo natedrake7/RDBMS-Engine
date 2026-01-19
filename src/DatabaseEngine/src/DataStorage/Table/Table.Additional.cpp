@@ -6,8 +6,7 @@ namespace DatabaseEngine::StorageTypes{
 
     Database * Table::GetDatabase() const { return this->database; }
 
-    void Table::SetClusteredIndexPageId(const page_id_t &indexPageId) 
-    {
+    void Table::SetClusteredIndexPageId(const page_id_t &indexPageId) {
         this->header.clusteredIndexPageId = indexPageId;
     }
 

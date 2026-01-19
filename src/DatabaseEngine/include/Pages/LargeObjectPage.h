@@ -31,8 +31,7 @@ namespace Pages {
 
     };
     
-    class LargeObjectPage final : public Page
-    {
+    class LargeObjectPage final : public Page{
         LargeDataObject* data;
 
     public:

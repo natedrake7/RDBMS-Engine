@@ -17,14 +17,24 @@
 #include "Pages/PageFreeSpacePage.h"
 
 namespace Indexing{
-    int BTree::LowerBound(
+    void BTree::AssignLeavesConnections(
+        Pages::PageGuard<Pages::IndexPage>& child,
+        Pages::PageGuard<Pages::IndexPage>& newChild
+    ){
+        newChild->SetNextPage(child->GetNextPage());
+        newChild->SetPreviousPage(child->GetPageId());
+
+        child->SetNextPage(newChild->GetPageId());
+    }
+
+    int BTree::LeafLowerBound(
         const Pages::PageGuard<Pages::IndexPage>& page,
-        const DataTypes::Indexing::Key &key
-    )
-    {
+        const DataTypes::Indexing::Key& key
+    ){
         const auto numberOfKeys = page->NumberOfKeys();
+
         for (int i = 0; i < numberOfKeys; i++) {
-            const auto tupleKey = page->GetKey( i);
+            const auto tupleKey = page->GetKey(i);
 
             if (tupleKey == key){
                 std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page->GetPageId() << std::endl;
@@ -38,10 +48,10 @@ namespace Indexing{
         return numberOfKeys;
     }
 
-    int BTree::PartialLowerBound(
+    int BTree::LeafPartialLowerBound(
         const Pages::PageGuard<Pages::IndexPage>& page,
-        const DataTypes::Indexing::Key &key
-    ) {
+        const DataTypes::Indexing::Key& key
+    ){
         const auto numberOfKeys = page->NumberOfKeys();
 
         for (int i = 0; i < numberOfKeys; i++) {
@@ -52,6 +62,61 @@ namespace Indexing{
         }
 
         return numberOfKeys;
+    }
+
+    int BTree::InternalNodeLowerBound(
+        const Pages::PageGuard<Pages::IndexPage>& page,
+        const DataTypes::Indexing::Key& key
+    ){
+        const auto numberOfKeys = page->NumberOfKeys();
+
+        for (int i = 0; i < numberOfKeys; i++) {
+            const auto tupleKey = page->GetKey(i + 1);
+
+            if (tupleKey == key){
+                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page->GetPageId() << std::endl;
+                return -1;
+            }
+
+            if (tupleKey > key)
+                return i;
+        }
+
+        return numberOfKeys;
+    }
+
+    int BTree::InternalNodePartialLowerBound(
+        const Pages::PageGuard<Pages::IndexPage>& page,
+        const DataTypes::Indexing::Key& key
+    ){
+        const auto numberOfKeys = page->NumberOfKeys();
+
+        for (int i = 0; i < numberOfKeys; i++) {
+            const auto pageKey = page->GetKey(i + 1);
+
+            if (key <= pageKey)
+                return i;
+        }
+
+        return numberOfKeys;
+    }
+
+    int BTree::LowerBound(
+        const Pages::PageGuard<Pages::IndexPage>& page,
+        const DataTypes::Indexing::Key &key
+    ){
+        return (page->IsLeaf())
+            ? BTree::LeafLowerBound(page, key)
+            : BTree::InternalNodeLowerBound(page, key);
+    }
+
+    int BTree::PartialLowerBound(
+        const Pages::PageGuard<Pages::IndexPage>& page,
+        const DataTypes::Indexing::Key &key
+    ) {
+        return (page->IsLeaf())
+            ? BTree::LeafPartialLowerBound(page, key)
+            : BTree::InternalNodePartialLowerBound(page, key);
     }
 
     bool BTree::IsDuplicateKey(
@@ -137,35 +202,39 @@ namespace Indexing{
         const int& index
     )const {
         // Move the middle key from the child to the parent
-        const auto childKey = child->GetKey(this->degree - 1);
+        const auto childKey = child->GetKey(this->degree);
+
+        std::cout << "Promoting key: " << childKey << std::endl;
+
         parent->InsertChild(newChild->GetPageId(), &childKey, index + 1);
 
         // Assign the second half of the child's keys to the new child
         if (this->type == TreeType::Clustered) {
             for (int i = this->degree; i < child->GetPageSize(); i++){
                 auto tuple = child->GetLeafTuple(this->table, i);
+
+                std::cout << "Moving tuple with key: " << tuple.key << " to new leaf node " << newChild->GetPageId() << std::endl;
+                std::cout << tuple.row << std::endl;
                 newChild->InsertTuple(tuple);
             }
 
             child->Resize(this->degree);
-        }
-        else{
-            // for (int i = this->degree; i < child->GetPageSize(); i++){
-            //     auto rowId = child->GetLeafTuple(this->table, i).row;
-            //     newChild->InsertTuple(LeafNodeTuple{child->GetKey(i), rowId});
-            // }
-            // auto* childRows = child->NonClusteredDataNoLock();
-            //
-            // auto* newChildRows = newChild->NonClusteredDataNoLock();
-            //
-            // newChildRows->assign(childRows->begin() + this->degree, childRows->end());
-            // childRows->resize(this->degree);
+            BTree::AssignLeavesConnections(child, newChild);
+            return;
         }
 
-        newChild->SetNextPage(child->GetNextPage());
-        newChild->SetPreviousPage(child->GetPageId());
+        // for (int i = this->degree; i < child->GetPageSize(); i++){
+        //     auto rowId = child->GetLeafTuple(this->table, i).row;
+        //     newChild->InsertTuple(LeafNodeTuple{child->GetKey(i), rowId});
+        // }
+        // auto* childRows = child->NonClusteredDataNoLock();
+        //
+        // auto* newChildRows = newChild->NonClusteredDataNoLock();
+        //
+        // newChildRows->assign(childRows->begin() + this->degree, childRows->end());
+        // childRows->resize(this->degree);
 
-        child->SetNextPage(newChild->GetPageId());
+        BTree::AssignLeavesConnections(child, newChild);
     }
 
     void BTree::SplitInternalNodeNoLock(
@@ -175,20 +244,20 @@ namespace Indexing{
         const int& index
     ) const {
         const auto childKey = child->GetKey(this->degree - 1);
+
+        std::cout << "Promoting key: " << childKey << std::endl;
         parent->InsertChild(newChild->GetPageId(), &childKey, index + 1);
 
         const auto middleChild = child->GetChild(this->degree);
         newChild->InsertChild(middleChild);
 
-        for (int i = this->degree + 1; i < child->GetPageSize(); i++){
-            auto childId = child->GetChild(i);
-            auto key = child->GetKey(i);
-
-            newChild->InsertChild(childId, &key);
+        for (int i = this->degree; i < child->GetPageSize(); i++){
+            auto tuple = child->GetInternalNodeTuple(i);
+            newChild->InsertChild(tuple.pageId, &tuple.key);
         }
 
         //resize child
-        child->Resize(this->degree);
+        child->Resize(this->degree - 1);
     }
 
     void BTree::SplitChildNoLock(
@@ -205,18 +274,12 @@ namespace Indexing{
         newChild->SetIsRoot(false);
         newChild->SetTreeType(this->type);
 
-        if (child->IsLeaf())
+        if (child->IsLeaf()){
             this->SplitLeafNoLock(parent, child, newChild, index);
-        else
-            this->SplitInternalNodeNoLock(parent, child, newChild, index);
+            return;
+        }
 
-        // parent->UpdateBytesLeft();
-        // child->UpdateBytesLeft();
-        // newChild->UpdateBytesLeft();
-        //
-        // parent->UpdatePageSize();
-        // child->UpdatePageSize();
-        // newChild->UpdatePageSize();
+        this->SplitInternalNodeNoLock(parent, child, newChild, index);
     }
 
     Errors::RuntimeStatus BTree::InsertToNonFullNode(
@@ -1062,6 +1125,8 @@ namespace Indexing{
             for (int i = 0; i < currentNode->NumberOfKeys(); i++){
                 auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
 
+                std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
+                std::cout << "Row: " << row << std::endl;
                 if (key == tupleKey){
                     auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
 
@@ -1402,15 +1467,22 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int i = 0;i < currentNode->GetPageSize();i++){
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
+            for (int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
+                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
                 context.row = &tuple.row;
                 const auto value = expression->Evaluate(context);
                 if(!value.GetBool())
                     continue;
 
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), &tuple.row, properties, updates, false);
+                const auto result = this->table->HandleRowUpdate(
+                    currentNode.Get(),
+                    &tuple.row,
+                    properties,
+                    updates,
+                    indexPosition,
+                    false
+                );
 
                 if (result.code != Errors::RuntimeError::Ok)
                     return;
@@ -1512,8 +1584,8 @@ namespace Indexing{
         while (currentNode.Get()) {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int i = 0;i < currentNode->NumberOfKeys(); i++){
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
+            for (int indexPosition = 0;indexPosition < currentNode->NumberOfKeys(); indexPosition++){
+                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
                 if (key != tuple.key || key < tuple.key)
                     continue;
 
@@ -1522,6 +1594,7 @@ namespace Indexing{
                     &tuple.row,
                     properties,
                     updates,
+                    indexPosition,
                     false
                 );
 
@@ -1559,9 +1632,8 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-              for (int i = 0; i < currentNode->NumberOfKeys(); i++)
-              {
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
+              for (int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
+                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
                 if (*minKey > tuple.key)
                     continue;
@@ -1574,7 +1646,14 @@ namespace Indexing{
                   if(!value.GetBool())
                     continue;
 
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), &tuple.row, properties, updates, false);
+                const auto result = this->table->HandleRowUpdate(
+                    currentNode.Get(),
+                    &tuple.row,
+                    properties,
+                    updates,
+                    indexPosition,
+                    false
+                );
 
                 if (result.code != Errors::RuntimeError::Ok)
                   return result;
@@ -1603,8 +1682,8 @@ namespace Indexing{
         while (currentNode.Get()){
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
+            for (int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
+                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
                 if (*minKey > tuple.key)
                     continue;
@@ -1612,7 +1691,14 @@ namespace Indexing{
                 if (*maxKey < tuple.key)
                     break;
 
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), &tuple.row, properties, updates, false);
+                const auto result = this->table->HandleRowUpdate(
+                    currentNode.Get(),
+                    &tuple.row,
+                    properties,
+                    updates,
+                    indexPosition,
+                    false
+                );
 
                 if (result.code != Errors::RuntimeError::Ok)
                   return result;

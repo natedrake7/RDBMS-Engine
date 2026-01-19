@@ -10,14 +10,23 @@ void IndexPage::WriteAdditionalHeaderToDisk(fstream * filePtr) const
 {
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.treeId), sizeof(page_id_t));
     filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.flags._data), PackedByte::Size);
+    filePtr->write(reinterpret_cast<const char*>(this->additionalHeader.keyTypes.data()), MAX_NUMBER_OF_SUB_KEYS * sizeof(DataType));
+    filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.previousNode), sizeof(page_id_t));
+    filePtr->write(reinterpret_cast<const char*>(&this->additionalHeader.nextNode), sizeof(page_id_t));
 }
 
 void IndexPage::ReadAdditionalHeaderFromDisk(const vector<char>& data, page_offset_t & offSet)
 {
-    memcpy(&this->additionalHeader.treeId, data.data() + offSet, sizeof(page_id_t));
+    std::memcpy(&this->additionalHeader.treeId, data.data() + offSet, sizeof(page_id_t));
     offSet += sizeof(page_id_t);
-    memcpy(&this->additionalHeader.flags, data.data() + offSet, PackedByte::Size);
+    std::memcpy(&this->additionalHeader.flags, data.data() + offSet, PackedByte::Size);
     offSet += PackedByte::Size;
+    std::memcpy(&this->additionalHeader.keyTypes, data.data() + offSet, MAX_NUMBER_OF_SUB_KEYS * sizeof(DataType));
+    offSet += MAX_NUMBER_OF_SUB_KEYS * sizeof(DataType);
+    std::memcpy(&this->additionalHeader.previousNode, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
+    std::memcpy(&this->additionalHeader.nextNode, data.data() + offSet, sizeof(page_id_t));
+    offSet += sizeof(page_id_t);
 }
 
 void IndexPage::InsertFirstTuple(const LeafNodeTuple& tuple){
@@ -127,16 +136,13 @@ IndexPage::IndexPage(
 ) : Page(pageId, INDEX_PAGE_DEFAULT_SIZE, isPageCreation)
 {
     this->header.pageType = PageType::INDEX;
-    this->nextNode = INVALID_PAGE_ID;
-    this->previousNode = INVALID_PAGE_ID;
     this->header.bytesLeft  = Constants::INDEX_PAGE_DEFAULT_SIZE;
     this->additionalHeader.keyTypes = keyTypes;
+    this->additionalHeader.previousNode = INVALID_PAGE_ID;
+    this->additionalHeader.nextNode = INVALID_PAGE_ID;
 }
 
-IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader) {
-    this->nextNode = INVALID_PAGE_ID;
-    this->previousNode = INVALID_PAGE_ID;
-}
+IndexPage::IndexPage(const PageHeader &pageHeader) : Page(pageHeader, INDEX_PAGE_DEFAULT_SIZE) {}
 
 void IndexPage::ReadFromDisk(
     const std::vector<char> &data,
@@ -145,7 +151,7 @@ void IndexPage::ReadFromDisk(
     fstream *filePtr
 ){
     this->ReadAdditionalHeaderFromDisk(data, offSet);
-    std::memcpy(&this->data, data.data() + offSet, INDEX_PAGE_DEFAULT_SIZE);
+    std::memcpy(this->data, data.data() + offSet, INDEX_PAGE_DEFAULT_SIZE);
     offSet += INDEX_PAGE_DEFAULT_SIZE;
 }
 
@@ -153,7 +159,8 @@ void IndexPage::WriteToDisk(fstream *filePtr){
     this->WritePageHeaderToDisk(filePtr);
     this->WriteAdditionalHeaderToDisk(filePtr);
 
-    filePtr->write(reinterpret_cast<const char*>(&this->data), INDEX_PAGE_DEFAULT_SIZE);
+
+    filePtr->write(reinterpret_cast<const char*>(this->data), INDEX_PAGE_DEFAULT_SIZE);
 }
 
 void IndexPage::SetTreeType(const TreeType & treeType) { this->additionalHeader.SetTreeType(treeType); }
@@ -239,17 +246,17 @@ void IndexPage::InsertChild(const page_id_t &child){
     this->InsertFirstChild(child);
 }
 
-void IndexPage::SetPreviousPage(const page_id_t &previousPage){ this->previousNode = previousPage; }
+void IndexPage::SetPreviousPage(const page_id_t &previousPage){ this->additionalHeader.previousNode = previousPage; }
 
-void IndexPage::SetNextPage(const page_id_t &nextPage){ this->nextNode = nextPage; }
+void IndexPage::SetNextPage(const page_id_t &nextPage){ this->additionalHeader.nextNode = nextPage; }
 
-const page_id_t & IndexPage::GetPreviousPage()const{ return this->previousNode; }
+const page_id_t & IndexPage::GetPreviousPage()const{ return this->additionalHeader.previousNode; }
 
-const page_id_t & IndexPage::GetNextPage()const{ return this->nextNode; }
+const page_id_t & IndexPage::GetNextPage()const{ return this->additionalHeader.nextNode; }
 
-bool IndexPage::HasRightSibling() const{ return this->nextNode != INVALID_PAGE_ID; }
+bool IndexPage::HasRightSibling() const{ return this->additionalHeader.nextNode != INVALID_PAGE_ID; }
 
-bool IndexPage::HasLeftSibling() const{ return this->previousNode != INVALID_PAGE_ID; }
+bool IndexPage::HasLeftSibling() const{ return this->additionalHeader.previousNode != INVALID_PAGE_ID; }
 
 void IndexPage::InsertKey(const DataTypes::Indexing::Key& key, const int& indexPosition){
     if (this->IndexOutOfBounds(indexPosition)){

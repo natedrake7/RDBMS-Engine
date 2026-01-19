@@ -50,6 +50,9 @@ namespace Pages {
 		PackedByte flags;
 		page_id_t treeId;
 
+		page_id_t previousNode;
+		page_id_t nextNode;
+
 		Constants::TreeType GetTreeType() const;
 		bool IsLeaf() const;
 		bool IsRoot() const;
@@ -99,11 +102,6 @@ namespace Pages {
 
 	class IndexPage final : public Page {
 		IndexPageAdditionalHeader additionalHeader;
-
-		//only leaf
-		page_id_t previousNode;
-		page_id_t nextNode;
-
 		protected:
 			void WriteAdditionalHeaderToDisk(std::fstream* filePtr) const;
 			void ReadAdditionalHeaderFromDisk(const std::vector<char>& data, page_offset_t &offSet);

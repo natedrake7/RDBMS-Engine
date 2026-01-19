@@ -6,6 +6,8 @@
 #include "../../../include/DataStorage/Row.h"
 #include "../../../include/DataStorage/Table.h"
 
+#include <assert.h>
+
 #include "../../../include/SystemDatabases/CatalogSchema.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../include/Pages/Page.h"
@@ -504,21 +506,20 @@ namespace DatabaseEngine::StorageTypes {
         this->PopulateClusteredIndexCache(this->header.clusteredIndex);
       }
 
-      Table::~Table()
-      {
-        // delete this->clusteredIndexedTree;
-        //
-        // for (const auto & nonClusteredIndexedTree : this->nonClusteredIndexedTrees) {
-        //   this->header.nonClusteredIndexPageIds.push_back(nonClusteredIndexedTree->GetFirstIndexPageId());
-        //     delete nonClusteredIndexedTree;
-        // }
-        //
-        // auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->database->GetSystemFilename());
-        //
-        // headerPage->SetTableHeader(this);
-        //
-        // for (const auto &column : columns)
-        //     delete column;
+      Table::~Table(){
+        delete this->clusteredIndexedTree;
+
+        for (const auto & nonClusteredIndexedTree : this->nonClusteredIndexedTrees) {
+          this->header.nonClusteredIndexPageIds.push_back(nonClusteredIndexedTree->GetFirstIndexPageId());
+            delete nonClusteredIndexedTree;
+        }
+
+        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->database->GetSystemFilename());
+
+        headerPage->SetTableHeader(this);
+
+        for (const auto &column : columns)
+            delete column;
       }
 
     Errors::RuntimeStatus Table::BatchInsert(
@@ -1458,6 +1459,7 @@ namespace DatabaseEngine::StorageTypes {
       Row* row,
       const ExecutionProperties& properties,
       const std::vector<Value> &updates,
+      const int& indexPosition,
       const bool &isHeap
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
@@ -1479,10 +1481,10 @@ namespace DatabaseEngine::StorageTypes {
         if (result.code != Errors::RuntimeError::Ok)
           return result;
 
-        if(page->GetBytesLeft() - diff > 0){
-          page->UpdateBytesLeft();
-          return result;
-        }
+        // if(page->GetBytesLeft() - diff > 0){
+        //   page->UpdateBytesLeft();
+        //   return result;
+        // }
 
         this->InsertLargeObjectToPage(row);
 
@@ -1490,12 +1492,14 @@ namespace DatabaseEngine::StorageTypes {
           return this->InsertRow(row, 1);
 
         while(page->GetBytesLeft() - diff < 0){
-          const int result = this->HandleRowOverflow(row);
-          if(result == -1)
+          const auto overflowResult = this->HandleRowOverflow(row);
+          if(overflowResult == -1)
             break;
 
-          diff -= result;
+          diff -= overflowResult;
         }
+
+        page->UpdateRow(row, indexPosition);
 
         return {};
     }
@@ -1506,6 +1510,7 @@ namespace DatabaseEngine::StorageTypes {
       const ExecutionProperties& properties,
       const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
       const HashSet<column_index_t> &updatedColumns,
+      const int& indexPosition,
       const bool &isHeap
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
@@ -1555,29 +1560,30 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::GetColumnsHeaders()const{
-      const auto columnsHeaders = SystemCatalog::Get().SelectColumns(this->header.tableId);
+      const auto headers = SystemCatalog::Get().SelectColumns(this->header.tableId);
 
-      if (columnsHeaders.empty())
+      assert(headers.size() == this->columns.size());
+
+      if (headers.empty())
         return;
 
       for (int i = 0;i < this->columns.size(); i++) {
         auto& column = columns[i];
 
-        column->SetColumnId(columnsHeaders[i].id);
+        column->SetColumnId(headers[i].id);
       }
     }
 
     void Table::UpdateIdentityManagersIds() const{
         static auto& catalog = SystemCatalog::Get();
 
-        const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(this->header.tableId);
+        const auto headers = catalog.SelectIdentityColumnsByTableId(this->header.tableId);
 
-        if(identityHeaders.empty())
+        if(headers.empty())
           return;
 
         for(const auto& column: this->columns){
-          for (const auto& identity: identityHeaders) {
-
+          for (const auto& identity: headers) {
             if(column->GetColumnId() != identity.columnId)
               continue;
 

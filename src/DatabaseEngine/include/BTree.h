@@ -43,6 +43,17 @@ namespace Indexing{
         DatabaseEngine::Database* database;
         DatabaseEngine::StorageTypes::Table* table;
 
+        static void AssignLeavesConnections(
+            Pages::PageGuard<Pages::IndexPage>& child,
+            Pages::PageGuard<Pages::IndexPage>& newChild
+        );
+
+        static int LeafLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key &key);
+        static int LeafPartialLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key &key);
+
+        static int InternalNodeLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key &key);
+        static int InternalNodePartialLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key &key);
+
         static int LowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key &key);
         static int PartialLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key &key);
         static bool IsDuplicateKey(
