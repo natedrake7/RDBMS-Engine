@@ -7,7 +7,7 @@
 namespace Pages {
     GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t& pageId) : Page(pageId)
     {
-        this->header.pageType = Constants::PageType::GAM;
+        this->header.type = Constants::PageType::GAM;
         this->extentsMap = new ByteMaps::BitMap(Constants::EXTENT_BIT_MAP_SIZE, 0xFF);
         this->header.bytesLeft = 0;
         this->isDirty = true;

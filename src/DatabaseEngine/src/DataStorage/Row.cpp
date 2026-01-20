@@ -664,7 +664,7 @@ namespace DatabaseEngine::StorageTypes {
             if (block->GetIsNull())
                 this->SetNullBitMapValue(associatedColumnIndex, false);
 
-            const auto result = block->SetData(value);
+            auto result = block->SetData(value);
             if (result.code != Errors::RuntimeError::Ok)
                 return result;
         }
@@ -703,7 +703,7 @@ namespace DatabaseEngine::StorageTypes {
             if (block->GetIsNull())
                 this->SetNullBitMapValue(associatedColumnIndex, false);
 
-            const auto result = block->SetData(value);
+            auto result = block->SetData(value);
             if (result.code != Errors::RuntimeError::Ok)
                 return result;
         }

@@ -13,11 +13,11 @@ namespace Pages {
   OverflowPage::OverflowPage(const PageHeader & pageHeader): Page(pageHeader){}
 
   OverflowPage::OverflowPage(){
-      this->header.pageType = PageType::OVERFLOWTYPE;
+      this->header.type = PageType::OVERFLOWTYPE;
   }
 
   OverflowPage::OverflowPage(const page_id_t & pageId, const bool & isPageCreation): Page(pageId,isPageCreation){
-    this->header.pageType = PageType::OVERFLOWTYPE;
+    this->header.type = PageType::OVERFLOWTYPE;
   }
 
   OverflowRow* OverflowPage::GetObject(const page_offset_t & index)const{ return this->data.at(index); }
@@ -46,7 +46,7 @@ namespace Pages {
     this->data.push_back(row);
 
     indexPos = this->data.size() - 1;
-    this->header.pageSize++;
+    this->header.size++;
     this->UpdateBytesLeft();
 
     return row;
@@ -78,7 +78,7 @@ namespace Pages {
   }
 
   void OverflowPage::ReadFromDisk(const vector<char> & data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t & offSet, fstream *filePtr){
-     for(int i = 0;i < this->header.pageSize; i++){
+     for(int i = 0;i < this->header.size; i++){
         auto* row = new OverflowRow();
 
         memcpy(&row->objectSize, data.data() + offSet, sizeof(page_size_t));

@@ -13,7 +13,7 @@ namespace Pages {
         this->header.bytesLeft -= (sizeof(table_id_t) + sizeof(extent_id_t));
         this->ownedExtents = new ByteMaps::BitMap(GAM_PAGE_SIZE);
         this->isDirty = true;
-        this->header.pageType = PageType::IAM;
+        this->header.type = PageType::IAM;
         this->header.bytesLeft = 0;
         this->priority = Constants::PagePriority::SYSTEM;
         this->lastAllocatedExtentId = 0;

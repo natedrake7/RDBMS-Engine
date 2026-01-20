@@ -209,20 +209,19 @@ namespace DatabaseEngine {
     const StorageTypes::Row* row,
     Pages::RowVersionPointer& rowPointer,
     const StorageTypes::Table* table
-  ) {
+  ){
     auto* oldRow = new StorageTypes::Row(row);
 
     auto page = this->GetLastUndoPage(table, row->TotalSize());
 
-     MultiThreading::WriterGuard lock(&page->Latch());
+    MultiThreading::WriterGuard lock(&page->Latch());
 
-     int offset = 0;
-     page->InsertRow(oldRow, &offset);
+    const auto indexPosition = page->InsertRow(oldRow);
 
-     rowPointer.pageId = page->GetPageId();
-     rowPointer.offset = offset;
+    rowPointer.pageId = page->GetPageId();
+    rowPointer.offset = indexPosition;
 
-     return {};
+    return {};
  }
 
   StorageTypes::Row VersionDatabase::RetrieveRow(

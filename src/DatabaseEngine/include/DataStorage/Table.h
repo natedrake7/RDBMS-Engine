@@ -81,7 +81,6 @@ namespace DatabaseEngine::StorageTypes
         vector<Indexing::BTree*> nonClusteredIndexedTrees;
 
         protected:
-
             void PopulateClusteredIndexCache(const Headers::Index& index);
 
             bool IsColumnAutoComputedPrimaryKey(const Column* column) const;
@@ -158,6 +157,8 @@ namespace DatabaseEngine::StorageTypes
             void RemoveColumnByClusteredIndex(const column_index_t& index);
 
             void RemoveColumnByHeap(const column_index_t& index)const;
+
+            void InsertToVersionDatabase(Row*& row, const transaction_id_t& transactionId) const;
 
         public:
             Table(
@@ -395,14 +396,14 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] vector<DataType> GetColumnTypeByTreeId(const uint8_t& treeId) const;
 
-            int HandleRowOverflow(const StorageTypes::Row* row)const;
+            int HandleRowOverflow(const Row* row)const;
 
             int HandleRowOverflow(Row*& row, const Column* column)const;
 
             void InsertLargeObjectToPage(Row* row);
 
             [[nodiscard]]
-            Errors::RuntimeStatus HandleRowUpdate(
+            Errors::RuntimeStatus UpdateRowNoLock(
                 Pages::Page *page,
                 Row* row,
                 const ExecutionProperties& properties,
@@ -412,7 +413,7 @@ namespace DatabaseEngine::StorageTypes
             );
 
             [[nodiscard]]
-            Errors::RuntimeStatus  HandleRowUpdate(
+            Errors::RuntimeStatus UpdateRowNoLock(
                 Pages::Page *page,
                 Row* row,
                 const ExecutionProperties& properties,

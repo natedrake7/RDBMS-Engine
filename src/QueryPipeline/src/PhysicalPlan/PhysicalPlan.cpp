@@ -749,10 +749,10 @@ PhysicalInsert::PhysicalInsert(
 
   ExecutionResult* PhysicalTableCreate::Execute(const DatabaseEngine::ExecutionProperties& properties){
     if (this->session == nullptr || this->session->user == nullptr)
-      return new ExecutionResult{
+      return new ExecutionResult(
         Errors::RuntimeError::Error,
         "Failed to retrieve user session"
-      };
+      );
 
     auto* db =  this->server->UseDatabase(this->table->databaseId);
 
@@ -845,7 +845,9 @@ PhysicalInsert::PhysicalInsert(
 
     for (const auto& column: this->primaryKey.columns) {
       if (isConstraintEmpty)
-        this->constraintName += this->constraintName.empty() ? "PK_" + this->columns[column]->name.name :"_" + this->columns[column]->name.name;
+        this->constraintName += this->constraintName.empty()
+          ? "PK_" + this->columns[column]->name.name
+          : "_" + this->columns[column]->name.name;
 
       primaryKeyColumnIds.push_back(columnIdsDict.Get(column));
     }

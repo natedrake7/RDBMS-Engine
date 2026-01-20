@@ -24,8 +24,6 @@
 #include "../../../../QueryPipeline/include/Statements.h"
 #include "../../../include/Database.h"
 
-#include <stdexcept>
-
 #include "Memory/Allocator.h"
 
 namespace DatabaseEngine::StorageTypes {
@@ -131,7 +129,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const auto insertResult = block->SetData(input);
+          auto insertResult = block->SetData(input);
 
           if (insertResult.code != Errors::RuntimeError::Ok) {
             delete block;
@@ -177,7 +175,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const auto insertResult = block->SetData(input);
+          auto insertResult = block->SetData(input);
 
           if (insertResult.code != Errors::RuntimeError::Ok) {
             delete block;
@@ -224,7 +222,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const auto result = block->SetData(input);
+          auto result = block->SetData(input);
 
           if (result.code != Errors::RuntimeError::Ok) {
             delete block;
@@ -274,7 +272,7 @@ namespace DatabaseEngine::StorageTypes {
             continue;
           }
 
-          const auto insertResult = block->SetData(input);
+          auto insertResult = block->SetData(input);
 
           if (insertResult.code != Errors::RuntimeError::Ok) {
             delete block;
@@ -440,7 +438,16 @@ namespace DatabaseEngine::StorageTypes {
     }
   }
 
-      Table::Table(
+     void Table::InsertToVersionDatabase(Row*& row, const transaction_id_t& transactionId) const{
+        static auto& versionDatabase = VersionDatabase::Get();
+
+        Pages::RowVersionPointer oldVersionPointer;
+        versionDatabase.InsertRow(row, oldVersionPointer, this);
+        row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
+        row->SetCurrentTransactionId(transactionId);
+     }
+
+     Table::Table(
         const table_id_t &tableId,
         const int& ordinalPosition,
         const vector<Column *> &columns,
@@ -986,7 +993,7 @@ namespace DatabaseEngine::StorageTypes {
 
           MultiThreading::WriterGuard pageLock(&newPage->Latch());
 
-          newPage->InsertRow(row, &status.rowId.indexId);
+          status.rowId.indexId = newPage->InsertRow(row);
           status.rowId.pageId = newPage->GetPageId();
 
           return status;
@@ -1029,7 +1036,7 @@ namespace DatabaseEngine::StorageTypes {
                   if (row->TotalSize() > page->GetBytesLeft())
                       continue;
 
-                  page->InsertRow(row, &status.rowId.indexId);
+                  status.rowId.indexId = page->InsertRow(row);
                   pageFreeSpacePage->SetPageMetaData(page.Get());
 
                   status.rowId.pageId = pageId;
@@ -1042,7 +1049,7 @@ namespace DatabaseEngine::StorageTypes {
 
       MultiThreading::WriterGuard pageLock(&newPage->Latch());
 
-      newPage->InsertRow(row, &status.rowId.indexId);
+      status.rowId.indexId = newPage->InsertRow(row);
       status.rowId.pageId = newPage->GetPageId();
 
       return status;
@@ -1403,7 +1410,7 @@ namespace DatabaseEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    int Table::HandleRowOverflow(const StorageTypes::Row* row)const{
+    int Table::HandleRowOverflow(const Row* row)const{
       auto* largestBlock = row->FindLargestVariableLengthColumn();
 
       if(largestBlock == nullptr)
@@ -1416,7 +1423,7 @@ namespace DatabaseEngine::StorageTypes {
 
       row->SetOverflowBitMapValue(largestBlock->GetColumnIndex(), true);
 
-      auto pfsPage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), overflowPage->GetPageId());
+      auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), overflowPage->GetPageId());
 
       pfsPage->SetPageMetaData(overflowPage.Get());
 
@@ -1426,7 +1433,7 @@ namespace DatabaseEngine::StorageTypes {
       return largestBlock->GetSize();
     }
 
-      int Table::HandleRowOverflow( Row*& row, const Column *column)const{
+      int Table::HandleRowOverflow(Row*& row, const Column *column)const{
         auto& data = row->GetData();
 
         if(data.size() < column->GetColumnIndex())
@@ -1454,7 +1461,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     //create differrent one to handle clustered updates
-    Errors::RuntimeStatus Table::HandleRowUpdate(
+    Errors::RuntimeStatus Table::UpdateRowNoLock(
       Pages::Page *page,
       Row* row,
       const ExecutionProperties& properties,
@@ -1468,12 +1475,7 @@ namespace DatabaseEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
 
-        static auto& versionDatabase = VersionDatabase::Get();
-
-        Pages::RowVersionPointer oldVersionPointer;
-        versionDatabase.InsertRow(row, oldVersionPointer, this);
-        row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
-        row->SetCurrentTransactionId(properties.snapshot.transactionId);
+        // this->InsertToVersionDatabase(row, properties.snapshot.transactionId);
 
         int diff = 0;
         auto result = row->Update(updates, diff);
@@ -1486,27 +1488,27 @@ namespace DatabaseEngine::StorageTypes {
         //   return result;
         // }
 
-        this->InsertLargeObjectToPage(row);
+        // this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0)
-          return this->InsertRow(row, 1);
-
-        while(page->GetBytesLeft() - diff < 0){
-          const auto overflowResult = this->HandleRowOverflow(row);
-          if(overflowResult == -1)
-            break;
-
-          diff -= overflowResult;
-        }
+        // if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0)
+        //   return this->InsertRow(row, 1);
+        //
+        // while(page->GetBytesLeft() - diff < 0){
+        //   const auto overflowResult = this->HandleRowOverflow(row);
+        //   if(overflowResult == -1)
+        //     break;
+        //
+        //   diff -= overflowResult;
+        // }
 
         page->UpdateRow(row, indexPosition);
 
         return {};
     }
 
-    Errors::RuntimeStatus Table::HandleRowUpdate(
+    Errors::RuntimeStatus Table::UpdateRowNoLock(
       Pages::Page *page,
-       Row* row,
+      Row* row,
       const ExecutionProperties& properties,
       const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates,
       const HashSet<column_index_t> &updatedColumns,
@@ -1516,34 +1518,30 @@ namespace DatabaseEngine::StorageTypes {
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
 
-        static auto& versionDatabase = VersionDatabase::Get();
-
-        Pages::RowVersionPointer oldVersionPointer;
-
-        versionDatabase.InsertRow(row, oldVersionPointer, this);
-        row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
-        row->SetCurrentTransactionId(properties.snapshot.transactionId);
+        // this->InsertToVersionDatabase(row, properties.snapshot.transactionId);
 
         int diff = 0;
         auto result = row->Update(updates, diff);
 
-        if(page->GetBytesLeft() - diff > 0){
-          page->UpdateBytesLeft();
-          return result;
-        }
+        // if(page->GetBytesLeft() - diff > 0){
+        //   page->UpdateBytesLeft();
+        //   return result;
+        // }
 
-        this->InsertLargeObjectToPage(row);
+        // this->InsertLargeObjectToPage(row);
 
-        if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0)
-          return this->InsertRow(row, 1);
+        // if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0)
+        //   return this->InsertRow(row, 1);
+        //
+        // while(page->GetBytesLeft() - diff < 0){
+        //   const auto overflowResult = this->HandleRowOverflow(row);
+        //   if(overflowResult == -1)
+        //     break;
+        //
+        //   diff -= overflowResult;
+        // }
 
-        while(page->GetBytesLeft() - diff < 0){
-          const int result = this->HandleRowOverflow(row);
-          if(result == -1)
-            break;
-
-          diff -= result;
-        }
+        page->UpdateRow(row, indexPosition);
 
         return {};
   }

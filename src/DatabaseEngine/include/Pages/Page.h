@@ -29,6 +29,11 @@ namespace Pages{
         static constexpr UnsignedTinyInt FLAG_IS_DELETED = 0X01;
         static constexpr UnsignedTinyInt Size = 4;
 
+        SlotDirectory(){
+            this->offset = 0;
+            this->size = 0;
+            // this->flags = FLAG_IS_VALID;
+        }
          SlotDirectory(
             const UnsignedSmallInt& offset,
             const UnsignedSmallInt& size,
@@ -37,6 +42,29 @@ namespace Pages{
             this->offset = offset;
             this->size = size;
             // this->flags = flags;
+        }
+
+        [[nodiscard]] bool IsDefault() const{
+            return this->offset == 0 && this->size == 0;
+        }
+
+
+    };
+
+    struct SlotDirectoryDefragment{
+        Int indexPosition;
+        SlotDirectory slotDirectory;
+
+        SlotDirectoryDefragment(
+            const SlotDirectory& slotDirectory,
+            const Int& indexPosition
+        ){
+            this->slotDirectory = slotDirectory;
+            this->indexPosition = indexPosition;
+        }
+
+        static bool OrderAscendingByOffSet(const SlotDirectoryDefragment& lhs, const SlotDirectoryDefragment& rhs){
+            return lhs.slotDirectory.offset < rhs.slotDirectory.offset;
         }
     };
 
@@ -52,9 +80,9 @@ namespace Pages{
 
     struct PageHeader{
         page_id_t pageId;
-        page_size_t pageSize;
+        page_size_t size;
         page_size_t bytesLeft;
-        Constants::PageType pageType;
+        Constants::PageType type;
 
         PageHeader();
         ~PageHeader();
@@ -108,10 +136,10 @@ namespace Pages{
         virtual ~Page();
 
         void InsertFirstRow(DatabaseEngine::StorageTypes::Row*& row);
-        void InsertRow(DatabaseEngine::StorageTypes::Row*& row, int* indexPosition = nullptr);
+        Int InsertRow(DatabaseEngine::StorageTypes::Row*& row);
         void InsertRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition);
 
-        void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition);
+        virtual void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition);
 
         virtual void ReadFromDisk(
             const std::vector<char> &buffer,
@@ -137,12 +165,14 @@ namespace Pages{
         [[nodiscard]] const page_size_t &GetBytesLeft() const;
         void SetDirty();
 
-        void SetLogSequenceNumber(const log_sequence_number_t &logSequenceNumber);
+        void SetLogSequenceNumber(const log_sequence_number_t &lsn);
         [[nodiscard]] const log_sequence_number_t &GetLogSequenceNumber() const;
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] const Constants::PageType &GetPageType() const;
         [[nodiscard]] DatabaseEngine::StorageTypes::Row GetRow(const DatabaseEngine::StorageTypes::Table* table, const int& indexPosition)const;
+
+        void Defragment() const;
 
         void IncreasePinCount();
         void DecreasePinCount();

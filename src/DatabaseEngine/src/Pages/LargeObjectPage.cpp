@@ -30,14 +30,14 @@ namespace Pages {
 
     LargeObjectPage::LargeObjectPage(const page_id_t& pageId, const bool& isPageCreation) : Page(pageId, isPageCreation)
     {
-        this->header.pageType = PageType::LOB;
+        this->header.type = PageType::LOB;
         this->data = nullptr;
     }
 
     LargeObjectPage::LargeObjectPage() : Page()
     {
         this->isDirty = false;
-        this->header.pageType = PageType::LOB;
+        this->header.type = PageType::LOB;
         this->data = nullptr;
     }
 
@@ -52,7 +52,7 @@ namespace Pages {
 
     void LargeObjectPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t& offSet, fstream* filePtr)
     {
-      if(this->header.pageSize == 0)
+      if(this->header.size == 0)
         return;
 
       this->data = new LargeDataObject();
@@ -72,7 +72,7 @@ namespace Pages {
     {
         this->WritePageHeaderToDisk(filePtr);
 
-        if(this->header.pageSize == 0)
+        if(this->header.size == 0)
           return;
 
         filePtr->write(reinterpret_cast<const char*>(&this->data->objectSize), sizeof(page_size_t));
@@ -89,7 +89,7 @@ namespace Pages {
         memcpy(this->data->object, object, this->data->objectSize);
 
         this->header.bytesLeft -= (size + OBJECT_METADATA_SIZE_T);
-        this->header.pageSize = 1;
+        this->header.size = 1;
         this->isDirty = true;
 
         return this->data;
@@ -99,7 +99,7 @@ namespace Pages {
 
     LargeDataObject* LargeObjectPage::DeleteObject(){
       this->header.bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
-      this->header.pageSize = 0;
+      this->header.size = 0;
 
       this->isDirty = true;
 

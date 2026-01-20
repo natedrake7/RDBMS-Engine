@@ -9,7 +9,7 @@ namespace Pages
     {
         this->databaseHeader = new DatabaseEngine::DatabaseHeader();
         this->isDirty = true;
-        this->header.pageType = Constants::PageType::METADATA;
+        this->header.type = Constants::PageType::METADATA;
         this->priority = Constants::PagePriority::SYSTEM;
     }
 
@@ -17,7 +17,7 @@ namespace Pages
     {
         this->databaseHeader = new DatabaseEngine::DatabaseHeader();
         this->isDirty = true;
-        this->header.pageType = Constants::PageType::METADATA;
+        this->header.type = Constants::PageType::METADATA;
         this->priority = Constants::PagePriority::SYSTEM;
     }
 

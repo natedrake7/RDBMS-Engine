@@ -46,8 +46,8 @@ namespace QueryPipeline::Statements {
   }
 
    DeclareVariableStatement::DeclareVariableStatement() {
-    this->expression = nullptr;
-  }
+     this->expression = nullptr;
+   }
 
   Errors::ValidationStatus DeclareVariableStatement::CompileDerived(ParserValidationScope& validationScope) {
     const auto& type = this->variable.GetType();
@@ -63,9 +63,9 @@ namespace QueryPipeline::Statements {
         ostringstream os;
 
         os  << "Cannot convert from: "
-            << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
-            << " to type: " << ColumnTypesToStringDictionary.Get(type)
-            << " safely";
+          << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
+          << " to type: " << ColumnTypesToStringDictionary.Get(type)
+          << " safely";
 
         return {Errors::ValidationError::Error, os.str()};
       }
@@ -92,8 +92,8 @@ namespace QueryPipeline::Statements {
   }
 
    SetVariableStatement::SetVariableStatement() {
-    this->expression = nullptr;
-  }
+     this->expression = nullptr;
+   }
 
   Errors::ValidationStatus SetVariableStatement::CompileDerived(ParserValidationScope& validationScope) {
     const auto& type = this->variable.GetType();
@@ -109,9 +109,9 @@ namespace QueryPipeline::Statements {
         ostringstream os;
 
         os  << "Cannot convert from: "
-            << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
-            << " to type: " << ColumnTypesToStringDictionary.Get(type)
-            << " safely";
+          << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
+          << " to type: " << ColumnTypesToStringDictionary.Get(type)
+          << " safely";
 
         return {Errors::ValidationError::Error, os.str()};
       }
@@ -164,7 +164,7 @@ namespace QueryPipeline::Statements {
   }
 
   constexpr Security::Permission CreateUserStatement::RequiredPermissions() const{
-      return Constants::ADMIN_PERMISSIONS;
+    return Constants::ADMIN_PERMISSIONS;
   }
 
   LogicalPlan* CreateUserStatement::ToLogical(){
@@ -213,6 +213,10 @@ namespace QueryPipeline::Statements {
     // return this->where.expression->Validate(columnsDict);
   }
 
+  constexpr Security::Permission DeleteStatement::RequiredPermissions() const{
+    return Constants::DB_WRITER_PERMISSIONS;
+  }
+
   LogicalPlan * DeleteStatement::ToLogical(){
     return new LogicalDelete(this->table, this->where.expression);
   }
@@ -220,10 +224,6 @@ namespace QueryPipeline::Statements {
   void DeleteStatement::CleanUp() {
     delete this->table;
     delete this->where.expression;
-  }
-
-  constexpr Security::Permission DeleteStatement::RequiredPermissions() const{
-    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   JoinStatement::JoinStatement() {
@@ -268,13 +268,6 @@ namespace QueryPipeline::Statements {
   void JoinStatement::CleanUp() {
     delete this->table;
     delete this->expression;
-  }
-
-  CreateTableStatement::~CreateTableStatement() {
-      delete this->constraint;
-
-      for(const auto& column : this->columns)
-          delete column;
   }
 
   // LogicalPlan * JoinStatement::ToLogical(){
@@ -352,8 +345,8 @@ namespace QueryPipeline::Statements {
 
   bool WhereClause::IsValid() const{
     return (this->expression == nullptr)
-        || this->expression->IsLogical()
-        || this->expression->IsBinary();
+      || this->expression->IsLogical()
+      || this->expression->IsBinary();
   }
 
   OrderByStatement::~OrderByStatement(){
@@ -395,8 +388,8 @@ namespace QueryPipeline::Statements {
 
   std::string DataSource::GetAlias() const{
     return this->alias.empty()
-        ? this->GetFullName()
-          : this->alias;
+             ? this->GetFullName()
+             : this->alias;
   }
 
   std::string DataSource::GetFullName() const {
@@ -405,8 +398,8 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus DataSource::Validate(const int32_t& selectedDatabaseId) {
     const auto tableHeader = (!this->database.empty())
-        ? this->catalog->SelectTable(this->database, this->name)
-        : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
+                               ? this->catalog->SelectTable(this->database, this->name)
+                               : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id == INVALID_TABLE_ID){
       ostringstream os;
@@ -424,8 +417,8 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus DataSource::ValidateTableCreate(const int32_t &selectedDatabaseId){
     const auto tableHeader = (!this->database.empty())
-      ? this->catalog->SelectTable(this->database, this->name)
-      : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
+                               ? this->catalog->SelectTable(this->database, this->name)
+                               : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id != INVALID_TABLE_ID){
       ostringstream os;
@@ -443,77 +436,105 @@ namespace QueryPipeline::Statements {
     this->constraint = nullptr;
   }
 
-  Errors::ValidationStatus CreateTableStatement::CompileDerived(ParserValidationScope& validationScope){
-    auto result = this->table->ValidateTableCreate(this->databaseId);
+  CreateTableStatement::~CreateTableStatement() {
+    delete this->constraint;
 
-    if (!result.IsOk())
-      return result;
+    for(const auto& column : this->columns)
+      delete column;
+  }
 
-    ostringstream os;
-
+  Errors::ValidationStatus CreateTableStatement::CompileSchema(ParserValidationScope& validationScope) const{
     const auto& schemasDict = this->catalog->SelectSchemasToDictionary(this->databaseId);
     Headers::SchemaHeader schemaHeader;
 
     if (!schemasDict.TryGetValue(Functions::String::Lower(this->table->schema), schemaHeader)) {
+      ostringstream os;
       os << "Schema: " << this->table->schema << "does not exist.";
       return {Errors::ValidationError::Error, os.str()};
     }
 
     this->table->schemaId = schemaHeader.id;
+    return {};
+  }
 
-    column_index_t tablePosition = 0;
+  Errors::ValidationStatus CreateTableStatement::CompileColumnExpression(
+    NewColumn*& column,
+    Dictionary<string, column_index_t>& columnNamesToIndexes,
+    bool& primaryKeyFound,
+    column_index_t& index
+  ){
+    UnsignedSmallInt columnSize;
+    ostringstream os;
+
+    if (!ColumnTypeSizes.TryGetValue(column->type.name, columnSize)) {
+      os << "Column Type: " + column->type.name + " does not exist";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    if (columnSize != 0)
+      column->type.size = columnSize;
+
+    const auto& dataType = ColumnTypesDictionary.Get(column->type.name);
+
+    if (dataType == DataType::Decimal) {
+      if (!column->type.decimal.Validate()) {
+        os << "Decimal type requires precision and scale to be set correctly";
+        return {Errors::ValidationError::Error, os.str()};
+      }
+
+      column->type.size = DataTypes::Decimal::Size(column->type.decimal.precision);
+    }
+
+    column->index = index++;
+
+    columnNamesToIndexes.Add(column->name.name, column->index);
+
+    if(column->isPrimaryKey && primaryKeyFound){
+      os << "Cannot have multiple primary keys defined. Consider declaring a composite key";
+      return {Errors::ValidationError::Error, os.str()};
+    }
+
+    if(column->HasIdentity()) {
+      auto result = column->identity->Validate();
+
+      if (!result.IsOk())
+        return result;
+    }
+
+    if (column->isPrimaryKey) {
+      this->primaryKey.push_back(column->index);
+      primaryKeyFound = true;
+    }
+
+    return {};
+  }
+
+  Errors::ValidationStatus CreateTableStatement::CompileDerived(ParserValidationScope& validationScope){
+    auto result = this->table->ValidateTableCreate(this->databaseId);
+    if (!result.IsOk())
+      return result;
+
+    result = this->CompileSchema(validationScope);
+    if (!result.IsOk())
+      return result;
+
+    column_index_t indexPosition = 0;
     bool primaryKeyFound = false;
     Dictionary<string, column_index_t> columnNamesToIndexes;
 
-    for (const auto& column: this->columns) {
-      uint16_t columnSize;
-
-      if (!ColumnTypeSizes.TryGetValue(column->type.name, columnSize)) {
-        os << "Column Type: " + column->type.name + " does not exist";
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      if (columnSize != 0)
-        column->type.size = columnSize;
-
-      const auto& dataType = ColumnTypesDictionary.Get(column->type.name);
-
-      if (dataType == DataType::Decimal) {
-        if (!column->type.decimal.Validate()) {
-          os << "Decimal type requires precision and scale to be set correctly";
-          return {Errors::ValidationError::Error, os.str()};
-        }
-
-        column->type.size = DataTypes::Decimal::Size(column->type.decimal.precision);
-      }
-
-      column->index = tablePosition++;
-
-      columnNamesToIndexes.Add(column->name.name, column->index);
-
-      if(column->isPrimaryKey && primaryKeyFound){
-        os << "Cannot have multiple primary keys defined. Consider declaring a composite key";
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      if (column->isPrimaryKey) {
-        this->primaryKey.push_back(column->index);
-        primaryKeyFound = true;
-
-        //store the pointer if found, else let it be null
-        if(column->HasIdentity()) {
-          auto identityResult = column->identity->Validate();
-
-          if (!identityResult.IsOk())
-            return identityResult;
-        }
-      }
-    }
+    for (auto& column: this->columns)
+      this->CompileColumnExpression(
+        column,
+        columnNamesToIndexes,
+        primaryKeyFound,
+        indexPosition
+      );
 
     if (this->constraint == nullptr)
       return {};
 
     if (primaryKeyFound) {
+      ostringstream os;
       os << "Cannot have a primary key and a constraint declared";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -547,11 +568,11 @@ namespace QueryPipeline::Statements {
   }
 
   SelectStatement::~SelectStatement(){
-      delete this->orderBy;
+    delete this->orderBy;
 
-      for (const auto* join : this->joins) {
-        delete join;
-      }
+    for (const auto* join : this->joins) {
+      delete join;
+    }
   }
 
   Dictionary<std::string, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
@@ -760,7 +781,7 @@ namespace QueryPipeline::Statements {
 
     auto tableResult = this->table->Validate(this->databaseId);
     if (!tableResult.IsOk())
-        return tableResult;
+      return tableResult;
 
     Dictionary<std::string, table_id_t> aliasesDictionary;
 
@@ -771,6 +792,10 @@ namespace QueryPipeline::Statements {
     }
 
     return this->Compile(validationScope, aliasesDictionary);
+  }
+
+  constexpr Security::Permission SelectStatement::RequiredPermissions() const{
+    return Constants::DB_READER_PERMISSIONS;
   }
 
   LogicalPlan * SelectStatement::ToLogical(){
@@ -813,10 +838,6 @@ namespace QueryPipeline::Statements {
     delete this->where.expression;
   }
 
-  constexpr Security::Permission SelectStatement::RequiredPermissions() const{
-    return Constants::DB_READER_PERMISSIONS;
-  }
-
   Errors::ValidationStatus CreateDbStatement::CompileDerived(ParserValidationScope& validationScope){
     if (this->catalog->DatabaseExists(this->name)) {
       ostringstream os;
@@ -828,40 +849,40 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
+  constexpr Security::Permission CreateDbStatement::RequiredPermissions() const{
+    return Constants::ADMIN_PERMISSIONS;
+  }
+
   LogicalPlan * CreateDbStatement::ToLogical(){
     return new LogicalCreateDatabase(this->sessionId, this->name);
   }
 
   void CreateDbStatement::CleanUp(){}
 
-  constexpr Security::Permission CreateDbStatement::RequiredPermissions() const{
-    return Constants::ADMIN_PERMISSIONS;
-  }
-
    Errors::ValidationStatus DropDbStatement::CompileDerived(ParserValidationScope& validationScope){
-    ostringstream os;
+     ostringstream os;
 
-    const auto database = this->catalog->SelectDatabase(this->name);
+     const auto database = this->catalog->SelectDatabase(this->name);
 
-    if (database.name.empty()) {
-      os << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist";
-      return {Errors::ValidationError::Error, os.str()};
-    }
+     if (database.name.empty()) {
+       os << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist";
+       return {Errors::ValidationError::Error, os.str()};
+     }
 
-    if (database.isSystem) {
-      os << "Cannot drop: " << this->name << ". Database" << this->name << " is a system database";
-      return {Errors::ValidationError::Error, os.str()};
-    }
+     if (database.isSystem) {
+       os << "Cannot drop: " << this->name << ". Database" << this->name << " is a system database";
+       return {Errors::ValidationError::Error, os.str()};
+     }
 
-    return {};
-  }
-  
-  LogicalPlan * DropDbStatement::ToLogical(){
-    return nullptr;
-  }
+     return {};
+   }
 
   constexpr Security::Permission DropDbStatement::RequiredPermissions() const{
     return Constants::ADMIN_PERMISSIONS;
+  }
+
+  LogicalPlan * DropDbStatement::ToLogical(){
+    return nullptr;
   }
 
   void DropDbStatement::CleanUp(){ }
@@ -881,19 +902,19 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
+  constexpr Security::Permission UseDatabaseStatement::RequiredPermissions() const{
+    return Constants::GUEST_PERMISSIONS;
+  }
+
   LogicalPlan * UseDatabaseStatement::ToLogical(){
     return new LogicalUseDatabase(this->sessionId, this->databaseId);
   }
 
   void UseDatabaseStatement::CleanUp(){}
 
-  constexpr Security::Permission UseDatabaseStatement::RequiredPermissions() const{
-    return Constants::GUEST_PERMISSIONS;
-  }
-
    InsertStatement::~InsertStatement(){
-    delete this->selectStatement;
-  }
+     delete this->selectStatement;
+   }
 
   void InsertStatement::InsertDefaultValuesForMissingColumns(const Headers::ColumnHeader &header, const Headers::DefaultValuesHeader& defaultValue){
     this->columns.emplace_back(ColumnName{
@@ -910,11 +931,11 @@ namespace QueryPipeline::Statements {
       const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
 
       insertColumns.emplace_back(
-          new Expressions::ConstantExpression(Value(
-            data,
-            static_cast<int>(defaultValue.value.size()),
-            static_cast<DataType>(header.dataType)
-          )));
+        new Expressions::ConstantExpression(Value(
+          data,
+          static_cast<int>(defaultValue.value.size()),
+          static_cast<DataType>(header.dataType)
+        )));
     }
   }
 
@@ -943,8 +964,8 @@ namespace QueryPipeline::Statements {
 
     if (DataTypes::Coercions::IsCoercionAllowed(
       valueType,
-        columnType
-      ))
+      columnType
+    ))
       return {};
 
     ostringstream os;
@@ -966,14 +987,12 @@ namespace QueryPipeline::Statements {
     }
 
     os << "Cannot update column " << columnHeader.name << " of type "
-              << ColumnTypesToStringDictionary.Get(columnType)
-              << " with value of type "
-              << ColumnTypesToStringDictionary.Get(valueType);
+      << ColumnTypesToStringDictionary.Get(columnType)
+      << " with value of type "
+      << ColumnTypesToStringDictionary.Get(valueType);
 
     return {Errors::ValidationError::Error, os.str()};
   }
-
-  bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
   Errors::ValidationStatus InsertStatement::ValidateSelectStatement(ParserValidationScope& validationScope)const{
     if (this->selectStatement == nullptr)
@@ -998,6 +1017,8 @@ namespace QueryPipeline::Statements {
 
     return {};
   }
+
+  bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
   Errors::ValidationStatus InsertStatement::ResolveAliases(ParserValidationScope& validationScope){
     Dictionary<std::string, table_id_t> tableAliasesDictionary{
@@ -1067,7 +1088,7 @@ namespace QueryPipeline::Statements {
 
       this->columnIndices.emplace_back(header.ordinalPosition);
     }
-    
+
     for (const auto&[columnName, header]:  columnsDict) {
       if (header.isSystem
         || identityColumns.Contains(header.id)
@@ -1093,25 +1114,25 @@ namespace QueryPipeline::Statements {
     }
 
     return (this->HasSelectStatement())
-      ? this->ValidateSelectStatement(validationScope)
-      : this->ResolveAliases(validationScope);
+             ? this->ValidateSelectStatement(validationScope)
+             : this->ResolveAliases(validationScope);
+  }
+
+  constexpr Security::Permission InsertStatement::RequiredPermissions() const{
+    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   LogicalPlan* InsertStatement::ToLogical() {
 
     auto* logicalSelect = this->HasSelectStatement()
-        ? this->selectStatement->ToLogical()
-        : nullptr;
+                            ? this->selectStatement->ToLogical()
+                            : nullptr;
 
     return new QueryPipeline::LogicalInsert(this->table, this->values, logicalSelect, this->columnIndices);
   }
 
   void InsertStatement::CleanUp() {
     delete this->table;
-  }
-
-  constexpr Security::Permission InsertStatement::RequiredPermissions() const{
-    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   Errors::ValidationStatus CreateSchemaStatement::CompileDerived(ParserValidationScope& validationScope){
@@ -1125,12 +1146,12 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  LogicalPlan * CreateSchemaStatement::ToLogical(){
-    return new LogicalSchemaCreate(this->sessionId, this->databaseId, this->name);
-  }
-
   constexpr Security::Permission CreateSchemaStatement::RequiredPermissions() const{
     return Constants::DB_OWNER_PERMISSIONS;
+  }
+
+  LogicalPlan * CreateSchemaStatement::ToLogical(){
+    return new LogicalSchemaCreate(this->sessionId, this->databaseId, this->name);
   }
 
   void CreateSchemaStatement::CleanUp(){}
@@ -1150,9 +1171,9 @@ namespace QueryPipeline::Statements {
     const auto valueType = update->value->GetReturnType();
 
     if (DataTypes::Coercions::IsCoercionAllowed(
-      valueType,
+        valueType,
         update->name.returnType)
-        )
+    )
       return {};
 
     if (update->value->IsConstant()) {
@@ -1173,9 +1194,9 @@ namespace QueryPipeline::Statements {
     }
 
     os << "Cannot update column " << update->name.name << " of type "
-              << ColumnTypesToStringDictionary.Get(update->name.returnType)
-              << " with value of type "
-              << ColumnTypesToStringDictionary.Get(valueType);
+      << ColumnTypesToStringDictionary.Get(update->name.returnType)
+      << " with value of type "
+      << ColumnTypesToStringDictionary.Get(valueType);
 
     return {Errors::ValidationError::Error, os.str()};
   }
@@ -1200,7 +1221,7 @@ namespace QueryPipeline::Statements {
 
       auto expressionStatus = CompileExpression(validationScope, statementValidationScope, update->value);
       if (!expressionStatus.IsOk())
-          return expressionStatus;
+        return expressionStatus;
 
       auto returnTypeResult = this->ValidateReturnType(update);
       if (!returnTypeResult.IsOk())
@@ -1223,15 +1244,19 @@ namespace QueryPipeline::Statements {
 
 Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& validationScope){
 
-    if (this->table == nullptr)
-      return {Errors::ValidationError::Error, "Table was not specified"};
+  if (this->table == nullptr)
+    return {Errors::ValidationError::Error, "Table was not specified"};
 
-    auto tableStatus = this->table->Validate(this->databaseId);
-    if (!tableStatus.IsOk())
-      return tableStatus;
+  auto tableStatus = this->table->Validate(this->databaseId);
+  if (!tableStatus.IsOk())
+    return tableStatus;
 
-    Dictionary<std::string, table_id_t> aliasesDictionary;
-    return this->ResolveAliases(validationScope, aliasesDictionary);
+  Dictionary<std::string, table_id_t> aliasesDictionary;
+  return this->ResolveAliases(validationScope, aliasesDictionary);
+}
+
+  constexpr Security::Permission UpdateStatement::RequiredPermissions() const{
+    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   LogicalPlan* UpdateStatement::ToLogical(){
@@ -1244,10 +1269,6 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
 
     delete this->table;
     delete this->where.expression;
-  }
-
-  constexpr Security::Permission UpdateStatement::RequiredPermissions() const{
-    return Constants::DB_WRITER_PERMISSIONS;
   }
 
   Errors::ValidationStatus CreateIndexStatement::CompileDerived(ParserValidationScope& validationScope){
@@ -1286,16 +1307,16 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     return {};
   }
 
+  constexpr Security::Permission CreateIndexStatement::RequiredPermissions() const{
+    return Constants::DB_OWNER_PERMISSIONS;
+  }
+
   LogicalPlan * CreateIndexStatement::ToLogical(){
     return new QueryPipeline::LogicalIndexCreate(this->sessionId, this->table, this->name, this->columnIndices);
   }
 
   void CreateIndexStatement::CleanUp() {
     delete this->table;
-  }
-
-  constexpr Security::Permission CreateIndexStatement::RequiredPermissions() const{
-    return Constants::DB_OWNER_PERMISSIONS;
   }
 
   Errors::ValidationStatus AlterTableStatement::CompileAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
@@ -1360,21 +1381,21 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     }
 
     if ((PipelineConstants::ValidTableStringConversions.Contains(columnType)
-      && !PipelineConstants::ValidTableStringConversions.Contains(static_cast<DataType>(header.dataType)))
+        && !PipelineConstants::ValidTableStringConversions.Contains(static_cast<DataType>(header.dataType)))
       || (PipelineConstants::ValidTableIntegerConversions.Contains(columnType)
         && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<DataType>(header.dataType)))){
-          os << "Cannot alter column " << alterColumn->name.name << " from type: "
-                    << ColumnTypesToStringDictionary.Get(static_cast<DataType>(header.dataType))
-                    << "to type: " << alterColumn->type.name;
+      os << "Cannot alter column " << alterColumn->name.name << " from type: "
+        << ColumnTypesToStringDictionary.Get(static_cast<DataType>(header.dataType))
+        << "to type: " << alterColumn->type.name;
 
-        return {Errors::ValidationError::Error, os.str()};
+      return {Errors::ValidationError::Error, os.str()};
     }
 
     if (header.recordSize > alterColumn->type.size) {
       os << "Cannot alter column " << alterColumn->type.name
-                << " with size " <<  header.recordSize << " to size: " << alterColumn->type.size
-                << std::endl
-                << "Use FORCE if potential data corruption is acceptable";
+        << " with size " <<  header.recordSize << " to size: " << alterColumn->type.size
+        << std::endl
+        << "Use FORCE if potential data corruption is acceptable";
       return {Errors::ValidationError::Error, os.str()};
     }
 
@@ -1438,17 +1459,21 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
 
     //validate by type
     switch (this->type) {
-      case AlterTableType::AddColumn:
-        return this->CompileAddColumn(columnsDict);
-      case AlterTableType::AlterColumn:
-        return this->CompileAlterColumn(columnsDict);
-      case AlterTableType::DropColumn:
-        return this->CompileDropColumn(columnsDict);
-      case AlterTableType::RenameColumn:
-        return this->CompileRenameColumn(columnsDict);
-      default:
-        return {Errors::ValidationError::Error, "Unknown table type"};
+    case AlterTableType::AddColumn:
+      return this->CompileAddColumn(columnsDict);
+    case AlterTableType::AlterColumn:
+      return this->CompileAlterColumn(columnsDict);
+    case AlterTableType::DropColumn:
+      return this->CompileDropColumn(columnsDict);
+    case AlterTableType::RenameColumn:
+      return this->CompileRenameColumn(columnsDict);
+    default:
+      return {Errors::ValidationError::Error, "Unknown table type"};
     }
+  }
+
+  constexpr Security::Permission AlterTableStatement::RequiredPermissions() const{
+    return Constants::DB_OWNER_PERMISSIONS;
   }
 
   LogicalPlan * AlterTableStatement::ToLogical(){
@@ -1474,58 +1499,54 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     delete this->table;
   }
 
-  constexpr Security::Permission AlterTableStatement::RequiredPermissions() const{
-    return Constants::DB_OWNER_PERMISSIONS;
-  }
-
   Errors::ValidationStatus CompileExpression(ParserValidationScope& validationScope, Expressions::Expression*& expression){
     switch (expression->expressionType) {
-      case Expressions::ExpressionType::Binary:
-        return CompileBinaryExpression(validationScope, expression->AsBinary(), expression);
-      case Expressions::ExpressionType::Logical:
-        return CompileLogicalExpression(validationScope, expression->AsLogical(), expression);
-      case Expressions::ExpressionType::Branch:
-        return CompileBranchExpression(validationScope, expression->AsBranch(), expression);
-      case Expressions::ExpressionType::Function:
-        return CompileFunctionExpression(validationScope, expression->AsFunction(), expression);
-      case Expressions::ExpressionType::Column:
-        return CompileColumnExpression(expression->AsColumn());
-      case Expressions::ExpressionType::Variable:
-        return CompileVariableExpression(validationScope, expression->AsVariable());
-      case Expressions::ExpressionType::Constant:
-        return CompileConstantExpression(expression->AsConstant());
-      case Expressions::ExpressionType::Expression:
-      default:
-        break;
+    case Expressions::ExpressionType::Binary:
+      return CompileBinaryExpression(validationScope, expression->AsBinary(), expression);
+    case Expressions::ExpressionType::Logical:
+      return CompileLogicalExpression(validationScope, expression->AsLogical(), expression);
+    case Expressions::ExpressionType::Branch:
+      return CompileBranchExpression(validationScope, expression->AsBranch(), expression);
+    case Expressions::ExpressionType::Function:
+      return CompileFunctionExpression(validationScope, expression->AsFunction(), expression);
+    case Expressions::ExpressionType::Column:
+      return CompileColumnExpression(expression->AsColumn());
+    case Expressions::ExpressionType::Variable:
+      return CompileVariableExpression(validationScope, expression->AsVariable());
+    case Expressions::ExpressionType::Constant:
+      return CompileConstantExpression(expression->AsConstant());
+    case Expressions::ExpressionType::Expression:
+    default:
+      break;
     }
 
     return {Errors::ValidationError::Error, "Unknown expression"};
   }
 
   Errors::ValidationStatus CompileExpression(
-      ParserValidationScope& validationScope,
-      StatementValidationScope& statementValidationScope,
-      Expressions::Expression*& expression
-    ){
+    ParserValidationScope& validationScope,
+    StatementValidationScope& statementValidationScope,
+    Expressions::Expression*& expression
+  ){
 
     switch (expression->expressionType) {
-      case Expressions::ExpressionType::Binary:
-        return CompileBinaryExpression(validationScope, expression->AsBinary(), expression, statementValidationScope);
-      case Expressions::ExpressionType::Logical:
-        return CompileLogicalExpression(validationScope, expression->AsLogical(), expression, statementValidationScope);
-      case Expressions::ExpressionType::Branch:
-        return CompileBranchExpression(validationScope, expression->AsBranch(), expression, statementValidationScope);
-      case Expressions::ExpressionType::Function:
-        return CompileFunctionExpression(validationScope, expression->AsFunction(), expression, statementValidationScope);
-      case Expressions::ExpressionType::Column:
-        return CompileColumnExpression(expression->AsColumn(), statementValidationScope);
-      case Expressions::ExpressionType::Variable:
-        return CompileVariableExpression(validationScope, expression->AsVariable());
-      case Expressions::ExpressionType::Constant:
-        return CompileConstantExpression(expression->AsConstant());
-      case Expressions::ExpressionType::Expression:
-      default:
-        break;
+    case Expressions::ExpressionType::Binary:
+      return CompileBinaryExpression(validationScope, expression->AsBinary(), expression, statementValidationScope);
+    case Expressions::ExpressionType::Logical:
+      return CompileLogicalExpression(validationScope, expression->AsLogical(), expression, statementValidationScope);
+    case Expressions::ExpressionType::Branch:
+      return CompileBranchExpression(validationScope, expression->AsBranch(), expression, statementValidationScope);
+    case Expressions::ExpressionType::Function:
+      return CompileFunctionExpression(validationScope, expression->AsFunction(), expression, statementValidationScope);
+    case Expressions::ExpressionType::Column:
+      return CompileColumnExpression(expression->AsColumn(), statementValidationScope);
+    case Expressions::ExpressionType::Variable:
+      return CompileVariableExpression(validationScope, expression->AsVariable());
+    case Expressions::ExpressionType::Constant:
+      return CompileConstantExpression(expression->AsConstant());
+    case Expressions::ExpressionType::Expression:
+    default:
+      break;
     }
 
     return {Errors::ValidationError::Error, "Unknown expression"};
@@ -1537,7 +1558,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     Expressions::Expression *&expression
   ) {
     auto result = CompileExpression(validationScope, binaryExpr->left)
-                && CompileExpression(validationScope, binaryExpr->right);
+      && CompileExpression(validationScope, binaryExpr->right);
 
     if (!result.IsOk())
       return result;
@@ -1556,9 +1577,9 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     if (!binaryExpr->ValidateOperation()) {
       ostringstream os;
       os  << "Invalid operation between datatypes: "
-          << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
-          << " and "
-          << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+        << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
+        << " and "
+        << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
 
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -1574,7 +1595,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     StatementValidationScope& statementValidationScope
   ) {
     auto result = CompileExpression(validationScope, statementValidationScope, binaryExpr->left)
-          && CompileExpression(validationScope, statementValidationScope, binaryExpr->right);
+      && CompileExpression(validationScope, statementValidationScope, binaryExpr->right);
 
     if (!result.IsOk())
       return result;
@@ -1592,9 +1613,9 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     if (!binaryExpr->ValidateOperation()) {
       ostringstream os;
       os  << "Invalid operation between datatypes: "
-          << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
-          << " and "
-          << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+        << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
+        << " and "
+        << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
 
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -1610,7 +1631,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   ) {
     //validate type
     auto result = CompileExpression(validationScope, logicalExpr->left)
-            && CompileExpression(validationScope, logicalExpr->right);
+      && CompileExpression(validationScope, logicalExpr->right);
 
     if (!result.IsOk())
       return result;
@@ -1625,13 +1646,13 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Errors::ValidationStatus CompileLogicalExpression(
-      ParserValidationScope& validationScope,
-      Expressions::LogicalExpression* logicalExpr,
-      Expressions::Expression*& expression,
-      StatementValidationScope& statementValidationScope
-    ) {
+    ParserValidationScope& validationScope,
+    Expressions::LogicalExpression* logicalExpr,
+    Expressions::Expression*& expression,
+    StatementValidationScope& statementValidationScope
+  ) {
     auto result = CompileExpression(validationScope, statementValidationScope, logicalExpr->left)
-                    && CompileExpression(validationScope, statementValidationScope, logicalExpr->right);
+      && CompileExpression(validationScope, statementValidationScope, logicalExpr->right);
 
     if (!result.IsOk())
       return result;
@@ -1707,8 +1728,8 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
         ostringstream os;
 
         os  << "Expression of type: "
-            << ColumnTypesToStringDictionary.Get(branch->GetReturnType())
-            << " cannot be used as a branching condition";
+          << ColumnTypesToStringDictionary.Get(branch->GetReturnType())
+          << " cannot be used as a branching condition";
 
         return {Errors::ValidationError::Error, os.str()};
       }
@@ -1785,30 +1806,30 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Errors::ValidationStatus CompileColumnExpression(const Expressions::ColumnExpression *columnExpr){
-      ostringstream os;
+    ostringstream os;
 
-      os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
+    os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
 
-      return {Errors::ValidationError::Error, os.str()};
-}
+    return {Errors::ValidationError::Error, os.str()};
+  }
 
   Errors::ValidationStatus CompileColumnExpression(
-      Expressions::ColumnExpression* column,
-      const StatementValidationScope& statementValidationScope
-    ){
-        //if wildcard ensure statement is of select statement type
-        if (column->alias == WILDCARD) {
-          auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope.statement);
+    Expressions::ColumnExpression* column,
+    const StatementValidationScope& statementValidationScope
+  ){
+    //if wildcard ensure statement is of select statement type
+    if (column->alias == WILDCARD) {
+      auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope.statement);
 
-          if (selectStatement != nullptr)
-            return CompileWildcard(column, statementValidationScope, selectStatement);
+      if (selectStatement != nullptr)
+        return CompileWildcard(column, statementValidationScope, selectStatement);
 
-          return {Errors::ValidationError::Error, ""};
-        }
+      return {Errors::ValidationError::Error, ""};
+    }
 
-       return column->HasTableAlias()
-            ? CompileColumnWhenTableAliasExists(column, statementValidationScope)
-            : CompileColumnWhenNoTableAliasExists(column, statementValidationScope);
+    return column->HasTableAlias()
+             ? CompileColumnWhenTableAliasExists(column, statementValidationScope)
+             : CompileColumnWhenNoTableAliasExists(column, statementValidationScope);
   }
 
   Errors::ValidationStatus CompileVariableExpression(
@@ -1867,8 +1888,8 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Errors::ValidationStatus CompileConstantExpression(Expressions::ConstantExpression* literalExpr){
-      DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
-      return {};
+    DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
+    return {};
   }
 
   Errors::ValidationStatus CompileColumnWhenTableAliasExists(
@@ -1948,14 +1969,14 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
 
     if (leftColumn == nullptr && rightColumn == nullptr)
       return DataTypes::Coercions::IsCoercionAllowed(left->GetReturnType(), right->GetReturnType()) ||
-           DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), left->GetReturnType());
+        DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), left->GetReturnType());
 
     if (leftColumn != nullptr && rightColumn == nullptr) {
       const auto* constantExpr = right->AsConstant();
 
       if (constantExpr != nullptr
         && (constantExpr->value.IsNull()
-        || DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), constantExpr->value)))
+          || DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), constantExpr->value)))
         return true;
 
       return DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), leftColumn->GetReturnType());
@@ -1973,7 +1994,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
 
     if (leftColumn != nullptr && rightColumn != nullptr)
       return DataTypes::Coercions::IsCoercionAllowed(leftColumn->GetReturnType(), rightColumn->GetReturnType()) ||
-             DataTypes::Coercions::IsCoercionAllowed(rightColumn->GetReturnType(), leftColumn->GetReturnType());
+        DataTypes::Coercions::IsCoercionAllowed(rightColumn->GetReturnType(), leftColumn->GetReturnType());
 
     return true;
   }
@@ -2020,10 +2041,10 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     table_id_t tableId = 0;
     if (!column->tableAlias.empty()
       && !statementValidationScope.tableAliasesDictionary->TryGetValue(column->tableAlias, tableId)) {
-        ostringstream os;
-        os << "Alias " << column->tableAlias << " does on exist on statement";
-        return {Errors::ValidationError::Error, os.str()};
-      }
+      ostringstream os;
+      os << "Alias " << column->tableAlias << " does on exist on statement";
+      return {Errors::ValidationError::Error, os.str()};
+    }
 
     //remove the wildcard
     statement->results.erase(statement->results.begin() + *statementValidationScope.indexPos);
@@ -2039,45 +2060,45 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     const StatementValidationScope& statementValidationScope,
     std::vector<Expressions::Expression*>& results
   ) {
-        results.insert(results.begin() + *statementValidationScope.indexPos, columnsDict.size(), nullptr);
-        // results.resize(results.size() + columnsDict.size());
-        for (const auto &header: columnsDict | views::values) {
+    results.insert(results.begin() + *statementValidationScope.indexPos, columnsDict.size(), nullptr);
+    // results.resize(results.size() + columnsDict.size());
+    for (const auto &header: columnsDict | views::values) {
 
-          auto* columnExpression = new Expressions::ColumnExpression(
-            header.name,
-            tableAlias
-          );
+      auto* columnExpression = new Expressions::ColumnExpression(
+        header.name,
+        tableAlias
+      );
 
-          columnExpression->name = header.name;
-          columnExpression->columnId = header.id;
-          columnExpression->tableId = header.tableId;
-          columnExpression->index = header.ordinalPosition;
+      columnExpression->name = header.name;
+      columnExpression->columnId = header.id;
+      columnExpression->tableId = header.tableId;
+      columnExpression->index = header.ordinalPosition;
 
-          const auto insertPos = *statementValidationScope.indexPos + header.ordinalPosition;
+      const auto insertPos = *statementValidationScope.indexPos + header.ordinalPosition;
 
-          results[insertPos] = columnExpression;
-        }
+      results[insertPos] = columnExpression;
+    }
   }
 
   void FoldExpression(Expressions::Expression *&expression) {
     switch (expression->expressionType) {
-      case Expressions::ExpressionType::Binary:
-        FoldExpression(expression->AsBinary(), expression);
-        break;
-      case Expressions::ExpressionType::Logical:
-        FoldExpression(expression->AsLogical(), expression);
-        break;
-      case Expressions::ExpressionType::Branch:
-        FoldExpression(expression->AsBranch(), expression);
-        break;
-      case Expressions::ExpressionType::Function:
-        FoldExpression(expression->AsFunction(), expression);
-        break;
-      case Expressions::ExpressionType::Expression:
-      case Expressions::ExpressionType::Column:
-      case Expressions::ExpressionType::Constant:
-      case Expressions::ExpressionType::Variable:
-        break;
+    case Expressions::ExpressionType::Binary:
+      FoldExpression(expression->AsBinary(), expression);
+      break;
+    case Expressions::ExpressionType::Logical:
+      FoldExpression(expression->AsLogical(), expression);
+      break;
+    case Expressions::ExpressionType::Branch:
+      FoldExpression(expression->AsBranch(), expression);
+      break;
+    case Expressions::ExpressionType::Function:
+      FoldExpression(expression->AsFunction(), expression);
+      break;
+    case Expressions::ExpressionType::Expression:
+    case Expressions::ExpressionType::Column:
+    case Expressions::ExpressionType::Constant:
+    case Expressions::ExpressionType::Variable:
+      break;
     }
   }
 
@@ -2200,8 +2221,8 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     const Dictionary<int32_t, column_index_t> &columnIndicesDictionary,
     const Expressions::LogicalExpression *expression
   ){
-      AssignColumnIndicesToExpression(columnIndicesDictionary, expression->left);
-      AssignColumnIndicesToExpression(columnIndicesDictionary, expression->right);
+    AssignColumnIndicesToExpression(columnIndicesDictionary, expression->left);
+    AssignColumnIndicesToExpression(columnIndicesDictionary, expression->right);
   }
 
   void AssignColumnIndicesToBranchExpression(
@@ -2241,21 +2262,21 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
   ){
     switch (expression->expressionType) {
-      case Expressions::ExpressionType::Binary:
-        return CompilePostProjectionBinaryExpression(expression->AsBinary(), postProjectionAliases);
-      case Expressions::ExpressionType::Logical:
-        return CompilePostProjectionLogicalExpression(expression->AsLogical(), postProjectionAliases);
-      case Expressions::ExpressionType::Branch:
-        return CompilePostProjectionBranchExpression(expression->AsBranch(), postProjectionAliases);
-      case Expressions::ExpressionType::Function:
-        return CompilePostProjectionFunctionExpression(expression->AsFunction(), postProjectionAliases);
-      case Expressions::ExpressionType::Column:
-        return CompilePostProjectionColumnExpression(expression->AsColumn(), postProjectionAliases);
-      case Expressions::ExpressionType::Variable:
-      case Expressions::ExpressionType::Constant:
-      case Expressions::ExpressionType::Expression:
-      default:
-        break;
+    case Expressions::ExpressionType::Binary:
+      return CompilePostProjectionBinaryExpression(expression->AsBinary(), postProjectionAliases);
+    case Expressions::ExpressionType::Logical:
+      return CompilePostProjectionLogicalExpression(expression->AsLogical(), postProjectionAliases);
+    case Expressions::ExpressionType::Branch:
+      return CompilePostProjectionBranchExpression(expression->AsBranch(), postProjectionAliases);
+    case Expressions::ExpressionType::Function:
+      return CompilePostProjectionFunctionExpression(expression->AsFunction(), postProjectionAliases);
+    case Expressions::ExpressionType::Column:
+      return CompilePostProjectionColumnExpression(expression->AsColumn(), postProjectionAliases);
+    case Expressions::ExpressionType::Variable:
+    case Expressions::ExpressionType::Constant:
+    case Expressions::ExpressionType::Expression:
+    default:
+      break;
     }
 
     return {};
@@ -2264,7 +2285,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   Errors::ValidationStatus CompilePostProjectionColumnExpression(
     Expressions::ColumnExpression *column,
     const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
-    ){
+  ){
     const Expressions::Expression* expression;
     if (!postProjectionAliases.TryGetValue(column->alias, expression)) {
       ostringstream os;
@@ -2282,7 +2303,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
   ){
     return CompilePostProjectionExpression(expression->left, postProjectionAliases)
-    && CompilePostProjectionExpression(expression->right, postProjectionAliases);
+      && CompilePostProjectionExpression(expression->right, postProjectionAliases);
   }
 
   Errors::ValidationStatus CompilePostProjectionLogicalExpression(
@@ -2290,7 +2311,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
   ){
     return CompilePostProjectionExpression(expression->left, postProjectionAliases)
-    && CompilePostProjectionExpression(expression->right, postProjectionAliases);
+      && CompilePostProjectionExpression(expression->right, postProjectionAliases);
   }
 
   Errors::ValidationStatus CompilePostProjectionFunctionExpression(
@@ -2345,25 +2366,25 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     Expressions::Expression *expression
   ){
     switch (expression->expressionType) {
-      case Expressions::ExpressionType::Binary:
-        AssignPostProjectionIndicesToBinaryExpression(columnIndicesDictionary, expression->AsBinary());
-        break;
-      case Expressions::ExpressionType::Logical:
-        AssignPostProjectionIndicesToLogicalExpression(columnIndicesDictionary, expression->AsLogical());
-        break;
-      case Expressions::ExpressionType::Branch:
-        AssignPostProjectionIndicesToBranchExpression(columnIndicesDictionary, expression->AsBranch());
-        break;
-      case Expressions::ExpressionType::Function:
-        AssignPostProjectionIndicesToFunctionExpression(columnIndicesDictionary, expression->AsFunction());
-        break;
-      case Expressions::ExpressionType::Column:
-        AssignPostProjectionIndicesToColumnExpression(columnIndicesDictionary, expression->AsColumn());
-        break;
-      case Expressions::ExpressionType::Expression:
-      case Expressions::ExpressionType::Constant:
-      case Expressions::ExpressionType::Variable:
-      default:
+    case Expressions::ExpressionType::Binary:
+      AssignPostProjectionIndicesToBinaryExpression(columnIndicesDictionary, expression->AsBinary());
+      break;
+    case Expressions::ExpressionType::Logical:
+      AssignPostProjectionIndicesToLogicalExpression(columnIndicesDictionary, expression->AsLogical());
+      break;
+    case Expressions::ExpressionType::Branch:
+      AssignPostProjectionIndicesToBranchExpression(columnIndicesDictionary, expression->AsBranch());
+      break;
+    case Expressions::ExpressionType::Function:
+      AssignPostProjectionIndicesToFunctionExpression(columnIndicesDictionary, expression->AsFunction());
+      break;
+    case Expressions::ExpressionType::Column:
+      AssignPostProjectionIndicesToColumnExpression(columnIndicesDictionary, expression->AsColumn());
+      break;
+    case Expressions::ExpressionType::Expression:
+    case Expressions::ExpressionType::Constant:
+    case Expressions::ExpressionType::Variable:
+    default:
       break;
     }
   }

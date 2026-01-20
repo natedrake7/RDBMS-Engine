@@ -738,7 +738,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysDatabases::DeletedAt))
     };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted database: "<< dbName << " to master db" << endl;
 
@@ -767,7 +767,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysSchemas::DeletedAt)),
      };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted schema: "<< schemaName << " to master db" << endl;
 
@@ -803,7 +803,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysTables::DeletedAt)),
       };
 
-      const auto result = table->InsertRow(properties, fields);
+      auto result = table->InsertRow(properties, fields);
 
       cout << "Inserted table: "<< tableName << " to master db" << endl;
 
@@ -854,7 +854,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         fields.push_back(Value::Null(static_cast<column_index_t>(SysColumns::Scale)));
       }
 
-      const auto result = table->InsertRow(properties, fields);
+      auto result = table->InsertRow(properties, fields);
 
       cout << "Inserted column: "<< columnName << " to master db" << endl;
 
@@ -887,7 +887,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt)),
      };
 
-      const auto result = table->InsertRow(properties, fields);
+      auto result = table->InsertRow(properties, fields);
 
       cout << "Inserted index: "<< indexName << " to master db" << endl;
 
@@ -915,7 +915,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysIndexColumns::DeletedAt)),
     };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted index column to master db" << endl;
 
@@ -957,7 +957,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
       fields.push_back(std::move(indexValue));
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
 
@@ -985,7 +985,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysConstraintColumns::DeletedAt)),
     };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted constraint column to master db" << endl;
 
@@ -1021,7 +1021,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysIdentityColumns::DeletedAt)),
       };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     cout << "Inserted identity column to master db" << endl;
 
@@ -1049,7 +1049,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysDefaultValues::DeletedAt)),
       };
 
-      const auto result = table->InsertRow(properties, fields);
+      auto result = table->InsertRow(properties, fields);
 
       std::cout << "Inserted default value " << value << " to master db" << std::endl;
 
@@ -1074,7 +1074,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt)),
     };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     std::cout << "Inserted table stats for table with id: " << tableId << std::endl;
 
@@ -1098,7 +1098,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount))
     };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     std::cout << "Inserted column stats for column with id: " << columnId << std::endl;
 
@@ -1123,7 +1123,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-    const auto result = table->InsertRow(this->baseProperties, fields);
+    auto result = table->InsertRow(this->baseProperties, fields);
 
     std::cout << "Inserted histogram Bucket for column: " << columnId << std::endl;
 
@@ -1150,7 +1150,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated)),
    };
 
-   const auto result = table->InsertRow(properties, fields);
+   auto result = table->InsertRow(properties, fields);
 
    std::cout << "Inserted index statistics for index: " << indexId << std::endl;
 
@@ -1183,7 +1183,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysRoles::DeletedAt)),
     };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     std::cout << "Inserted Role " << roleName << std::endl;
 
@@ -1218,7 +1218,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysUsers::DeletedAt)),
     };
 
-    const auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(properties, fields);
 
     std::cout << "Inserted User " << username << std::endl;
 
@@ -1808,7 +1808,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int & databaseId
   void SystemCatalog::UpdateIdentityByColumnId(const Int & tableId, const Int& columnId, const int64_t& lastValue)const{
     auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
 
-    const std::vector<Value> updates{
+    const std::vector updates{
       Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue))
     };
 
@@ -1907,7 +1907,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
     key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int));
 
-    const auto result = table->ClusteredIndexSeekUpdate(this->baseProperties, key, fields);
+    auto result = table->ClusteredIndexSeekUpdate(this->baseProperties, key, fields);
 
     std::cout << "Updated histogram Bucket for column: " << columnId << " and id: " << histogramId << std::endl;
 
@@ -1917,7 +1917,7 @@ void SystemCatalog::UpdateTableStatisticsById(
   Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const Int &columnId, const std::vector<Value> &updates) const{
     using namespace StorageTypes;
 
-    Table* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
+    auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
@@ -1934,7 +1934,7 @@ void SystemCatalog::UpdateTableStatisticsById(
 
    const auto currentDate = DataTypes::DateTime::Now();
 
-   const std::vector<Value> updates = {
+   const std::vector updates = {
      Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
      Value(currentDate, static_cast<column_index_t>(SysUsers::LastModifiedAt)),
      Value(username, static_cast<column_index_t>(SysUsers::LastModifiedBy))

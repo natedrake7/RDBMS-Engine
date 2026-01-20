@@ -382,7 +382,7 @@ Pages::PageGuard<Pages::GlobalAllocationMapPage> StorageManager::GetGlobalAlloca
 
 void StorageManager::AllocateMemoryBasedOnSystemPageType(Pages::Page **page, const Pages::PageHeader &pageHeader)
 {
-  switch (pageHeader.pageType) 
+  switch (pageHeader.type) 
   {
     case PageType::GAM:
       *page = new Pages::GlobalAllocationMapPage(pageHeader);
@@ -407,7 +407,7 @@ void StorageManager::AllocateMemoryBasedOnSystemPageType(Pages::Page **page, con
 
 bool StorageManager::AllocateMemoryBasedOnPageType(Pages::Page **page, const Pages::PageHeader &pageHeader)
 {
-  switch (pageHeader.pageType) {
+  switch (pageHeader.type) {
     case PageType::FREESPACE:
       *page = new Pages::PageFreeSpacePage(pageHeader);
       break;
@@ -446,13 +446,13 @@ Pages::PageHeader StorageManager::GetPageHeaderFromFile(
   memcpy(&pageHeader.pageId, data.data() + offSet, sizeof(page_id_t));
   offSet += sizeof(page_id_t);
 
-  memcpy(&pageHeader.pageSize, data.data() + offSet, sizeof(page_size_t));
+  memcpy(&pageHeader.size, data.data() + offSet, sizeof(page_size_t));
   offSet += sizeof(page_size_t);
 
   memcpy(&pageHeader.bytesLeft, data.data() + offSet, sizeof(page_size_t));
   offSet += sizeof(page_size_t);
 
-  memcpy(&pageHeader.pageType, data.data() + offSet, sizeof(PageType));
+  memcpy(&pageHeader.type, data.data() + offSet, sizeof(PageType));
   offSet += sizeof(PageType);
 
   return pageHeader;

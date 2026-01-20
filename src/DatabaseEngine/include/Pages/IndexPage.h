@@ -113,6 +113,8 @@ namespace Pages {
 
 			void InsertFirstChild(const page_id_t& child);
 
+			DataTypes::Indexing::Key GetKey(page_offset_t& offSet) const;
+
 		public:
 			IndexPage(const page_id_t &pageId, const bool &isPageCreation, const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes = {});
 			explicit IndexPage(const PageHeader &pageHeader);
@@ -158,6 +160,8 @@ namespace Pages {
 
 			void InsertTuple(const LeafNodeTuple& tuple);
 			void InsertTuple(const LeafNodeTuple& tuple, const int& indexPosition);
+
+			void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition) override;
 
 			DataTypes::Indexing::Key GetKey(const int& indexPosition) const;
 			LeafNodeTuple GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, const int& indexPosition) const;

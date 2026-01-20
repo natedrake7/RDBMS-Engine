@@ -25,11 +25,16 @@ namespace DatabaseEngine::StorageTypes {
             rowHeader->largeObjectBitMap->Set(largeBlockIndex, true);
 
             page_offset_t offset = 0;
-
             block_size_t remainingBlockSize = rowData[largeBlockIndex]->GetSize();
 
-            RecursiveInsertToLargePage(row, offset, largeBlockIndex, remainingBlockSize,
-                                    true, nullptr);
+            this->RecursiveInsertToLargePage(
+                row,
+                offset,
+                largeBlockIndex,
+                remainingBlockSize,
+                true,
+                nullptr
+            );
         }
     }
 

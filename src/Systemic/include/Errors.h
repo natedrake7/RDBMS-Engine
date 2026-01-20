@@ -41,6 +41,27 @@ namespace Errors {
       this->message = message;
       this->primaryKey = DataTypes::Indexing::Key();
     }
+
+    RuntimeStatus(RuntimeStatus&& other) noexcept {
+      this->code = other.code;
+      this->message = std::move(other.message);
+      this->primaryKey = std::move(other.primaryKey);
+      this->rowId = other.rowId;
+    }
+
+    RuntimeStatus& operator=(RuntimeStatus&& other) noexcept{
+      if (this == &other)
+        return *this;
+
+      this->code = other.code;
+      this->message = std::move(other.message);
+      this->primaryKey = std::move(other.primaryKey);
+      this->rowId = other.rowId;
+
+      return *this;
+    }
+
+    [[nodiscard]] bool IsOk()const { return this->code == RuntimeError::Ok;}
   };
 
   enum class ValidationError : uint8_t {

@@ -204,17 +204,12 @@ namespace Indexing{
         // Move the middle key from the child to the parent
         const auto childKey = child->GetKey(this->degree);
 
-        std::cout << "Promoting key: " << childKey << std::endl;
-
         parent->InsertChild(newChild->GetPageId(), &childKey, index + 1);
 
         // Assign the second half of the child's keys to the new child
         if (this->type == TreeType::Clustered) {
             for (int i = this->degree; i < child->GetPageSize(); i++){
                 auto tuple = child->GetLeafTuple(this->table, i);
-
-                std::cout << "Moving tuple with key: " << tuple.key << " to new leaf node " << newChild->GetPageId() << std::endl;
-                std::cout << tuple.row << std::endl;
                 newChild->InsertTuple(tuple);
             }
 
@@ -245,7 +240,6 @@ namespace Indexing{
     ) const {
         const auto childKey = child->GetKey(this->degree - 1);
 
-        std::cout << "Promoting key: " << childKey << std::endl;
         parent->InsertChild(newChild->GetPageId(), &childKey, index + 1);
 
         const auto middleChild = child->GetChild(this->degree);
@@ -1122,11 +1116,12 @@ namespace Indexing{
         while (currentNode.Get()){
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
+            const auto numKeys = currentNode->NumberOfKeys();
             for (int i = 0; i < currentNode->NumberOfKeys(); i++){
                 auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
 
-                std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
-                std::cout << "Row: " << row << std::endl;
+                // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
+                // std::cout << "Row: " << row << std::endl;
                 if (key == tupleKey){
                     auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
 
@@ -1475,7 +1470,7 @@ namespace Indexing{
                 if(!value.GetBool())
                     continue;
 
-                const auto result = this->table->HandleRowUpdate(
+                const auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
                     &tuple.row,
                     properties,
@@ -1523,7 +1518,15 @@ namespace Indexing{
                 if(!value.GetBool())
                     continue;
 
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), &tuple.row, properties, updates, updatedColumns, false);
+                auto result = this->table->UpdateRowNoLock(
+                    currentNode.Get(),
+                    &tuple.row,
+                    properties,
+                    updates,
+                    updatedColumns,
+                    i,
+                    false
+                );
 
                 if (result.code != Errors::RuntimeError::Ok)
                     return result;
@@ -1556,7 +1559,7 @@ namespace Indexing{
             for (int i = 0;i < currentNode->GetPageSize();i++){
                 auto tuple = currentNode->GetLeafTuple(this->table, i);
 
-                const auto result = this->table->HandleRowUpdate(currentNode.Get(), &tuple.row, properties, updates, updatedColumns, false);
+                auto result = this->table->UpdateRowNoLock(currentNode.Get(), &tuple.row, properties, updates, updatedColumns, false);
 
                 if (result.code != Errors::RuntimeError::Ok)
                   return result;
@@ -1589,7 +1592,7 @@ namespace Indexing{
                 if (key != tuple.key || key < tuple.key)
                     continue;
 
-                const auto result = this->table->HandleRowUpdate(
+                auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
                     &tuple.row,
                     properties,
@@ -1646,7 +1649,7 @@ namespace Indexing{
                   if(!value.GetBool())
                     continue;
 
-                const auto result = this->table->HandleRowUpdate(
+                auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
                     &tuple.row,
                     properties,
@@ -1691,7 +1694,7 @@ namespace Indexing{
                 if (*maxKey < tuple.key)
                     break;
 
-                const auto result = this->table->HandleRowUpdate(
+                auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
                     &tuple.row,
                     properties,

@@ -8,16 +8,16 @@ namespace Pages {
     }
 
     PageFreeSpacePage::PageFreeSpacePage(const PageHeader &pageHeader) : Page(pageHeader){
-        this->pageMap = new ByteMaps::ByteMap(this->header.pageSize);
+        this->pageMap = new ByteMaps::ByteMap(this->header.size);
         this->priority = Constants::PagePriority::SYSTEM;
     }
 
     PageFreeSpacePage::PageFreeSpacePage(const page_id_t &pageId) : Page(pageId, true){
         this->header.bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
         this->pageMap = new ByteMaps::ByteMap(Constants::PAGE_FREE_SPACE_SIZE);
-        this->header.pageSize = Constants::PAGE_FREE_SPACE_SIZE;
+        this->header.size = Constants::PAGE_FREE_SPACE_SIZE;
         this->header.bytesLeft = 0;
-        this->header.pageType = Constants::PageType::FREESPACE;
+        this->header.type = Constants::PageType::FREESPACE;
         this->priority = Constants::PagePriority::SYSTEM;
     }
 
@@ -52,7 +52,7 @@ namespace Pages {
         this->isDirty = true;
     }
 
-    bool PageFreeSpacePage::IsFull() const { return this->pageMap->IsAllocated(this->header.pageSize - 1); }
+    bool PageFreeSpacePage::IsFull() const { return this->pageMap->IsAllocated(this->header.size - 1); }
 
     Constants::PageType PageFreeSpacePage::GetPageType(const page_id_t &pageId) const {
 
@@ -80,7 +80,7 @@ namespace Pages {
         page_offset_t &offSet,
         std::fstream *filePtr
     ){
-        this->pageMap->GetDataFromFile(data, offSet, this->header.pageSize);
+        this->pageMap->GetDataFromFile(data, offSet, this->header.size);
     }
 
     void PageFreeSpacePage::WriteToDisk(std::fstream *filePtr){
