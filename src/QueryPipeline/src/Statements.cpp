@@ -950,7 +950,7 @@ namespace QueryPipeline::Statements {
     });
 
     for (auto& [insertColumns] : this->values)
-      insertColumns.emplace_back(new Expressions::ConstantExpression(Value(nullptr, header.ordinalPosition)));
+      insertColumns.emplace_back(new Expressions::ConstantExpression(Value::Null()));
   }
 
   Errors::ValidationStatus InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName) const{
@@ -2153,7 +2153,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
         return;
 
       const auto value = branch->AsConstant()->Evaluate({});
-      if (value.GetBool()) {
+      if (value.AsBool()) {
         PropagateExpression(expression, castExpr->results[i]);
         FoldExpression(expression);
         return;
@@ -2474,7 +2474,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
       return;
 
     if(DataTypes::Coercions::CanBeParsedToType(DataType::Bool, left->value)
-      && left->value.GetBool() == false) {
+      && left->value.AsBool() == false) {
       PropagateExpression(expression, leftExpr);
       return;
       }

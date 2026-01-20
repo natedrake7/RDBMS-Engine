@@ -10,20 +10,18 @@ namespace DatabaseEngine::StorageTypes
     class Block;
     class Row;
 
-    struct ColumnHeader
-    {
-        int32_t id;
+    struct ColumnHeader{
+        Int id;
         DataType columnType;
         column_index_t columnIndex;
         row_size_t recordSize;
-        int8_t precision;
-        int8_t scale;
+        TinyInt precision;
+        TinyInt scale;
 
         Headers::DefaultValuesHeader defaultValue;
     };
 
-    class Column
-    {
+    class Column{
         ColumnHeader header;
         IdentityManager identityManager;
 
@@ -35,15 +33,15 @@ namespace DatabaseEngine::StorageTypes
     public:
         Column(
             const std::string& columnName,
-            const DataType& type,
-            const row_size_t& recordSize,
-            const column_index_t& index,
-            const bool& allowNulls
+            DataType type,
+            row_size_t recordSize,
+            column_index_t index,
+            bool allowNulls
         );
 
         Column(
             const Headers::sysColumn& header,
-            const column_index_t& tablePos ,
+            column_index_t ordinalPosition,
             const Table* table
         );
 
@@ -54,33 +52,33 @@ namespace DatabaseEngine::StorageTypes
 
         ~Column();
 
-        [[nodiscard]] const string& GetColumnName() const;
+        [[nodiscard]] const std::string& GetColumnName() const;
 
         void SetColumnName(const std::string& otherName);
 
-        [[nodiscard]] const DataType &GetColumnType() const;
+        [[nodiscard]] DataType GetColumnType() const;
 
-        [[nodiscard]] const row_size_t &GetColumnSize() const;
+        [[nodiscard]] row_size_t GetColumnSize() const;
 
         [[nodiscard]] bool IsColumnNullable() const;
 
-        [[nodiscard]] const bool &GetAllowNulls() const;
+        [[nodiscard]] bool GetAllowNulls() const;
 
-        void SetColumnIndex(const column_index_t &columnIndex);
+        void SetColumnIndex(column_index_t columnIndex);
 
-        [[nodiscard]] const column_index_t &GetColumnIndex() const;
+        [[nodiscard]] column_index_t GetColumnIndex() const;
 
-        [[nodiscard]] const ColumnHeader &GetColumnHeader() const;
+        [[nodiscard]] const ColumnHeader& GetColumnHeader() const;
 
         [[nodiscard]] bool isColumnLOB() const;
 
         [[nodiscard]] bool isColumnOverflowed() const;
 
-        [[nodiscard]] const int32_t& GetColumnId() const;
+        [[nodiscard]] Int GetColumnId() const;
 
-        void SetColumnId(const int32_t &columnId);
+        void SetColumnId(Int columnId);
 
-        void SetIdentityManagerIds(const int32_t& tableId);
+        void SetIdentityManagerIds(Int tableId);
 
         [[nodiscard]] const Headers::IdentityColumnsHeader&  GetIdentity()const;
 
@@ -90,9 +88,9 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] const Headers::DefaultValuesHeader &GetDefaultValue() const;
 
-        void SetIsOverflowed(const bool &isOverflow);
+        void SetIsOverflowed(bool isOverflow);
 
-        [[nodiscard]] bool GenerateIdentityValue(int64_t& value);
+        [[nodiscard]] bool GenerateIdentityValue(BigInt& value);
 
         void UpdateMetadata()const;
 

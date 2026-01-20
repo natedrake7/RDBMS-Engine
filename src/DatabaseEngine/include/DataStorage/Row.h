@@ -66,14 +66,14 @@ namespace DatabaseEngine::StorageTypes
 
         std::vector<Block*> data;
 
-        mutable std::vector<CachedValue> cache;
+        // mutable std::vector<CachedValue> cache;
         const Table *table;
 
         bool isCopy;
 
-        [[nodiscard]] bool IsBlockMaterialized(const int& indexPos)const;
-        [[nodiscard]] const Value& GetMaterializedValue(const int& indexPos)const;
-        [[nodiscard]] const Value& Materialize(const int& indexPos)const;
+        // [[nodiscard]] bool IsBlockMaterialized(const int& indexPos)const;
+        // [[nodiscard]] const Value& GetMaterializedValue(const int& indexPos)const;
+        [[nodiscard]] Value Materialize(Int indexPos)const;
 
         bool IsDeleted(const Snapshot& snapshot)const;
 
@@ -99,15 +99,15 @@ namespace DatabaseEngine::StorageTypes
 
         ~Row();
 
-        void InsertColumnData(Block *block, const column_index_t &columnIndex);
+        void InsertColumnData(Block *block, column_index_t columnIndex);
 
         //used by versionDb
         void InsertColumnAtEnd(Block* block);
 
         //primarily used by the join operation
-        [[nodiscard]] int InsertNewColumn(Block* block);
+        Int InsertNewColumn(Block* block);
 
-        [[nodiscard]] int InsertNewColumnAtBeginning(Block* block);
+        Int InsertNewColumnAtBeginning(Block* block);
 
         void UpdateColumnData(Block *block);
 
@@ -119,19 +119,19 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] std::vector<column_index_t> GetLargeBlocks()const;
 
-        unsigned char *GetLargeObjectValue(const Pages::DataObjectPointer &objectPointer, uint32_t *objectSize) const;
+        unsigned char *GetLargeObjectValue(const Pages::DataObjectPointer &objectPointer, UnsignedInt *objectSize) const;
 
         [[nodiscard]] Block* GetLargeObject(const Pages::DataObjectPointer &objectPointer, const Column* column)const;
 
         [[nodiscard]] Pages::OverflowRow* GetOverflowValue(const Pages::OverflowPointer &objectPointer) const;
 
-        void SetNullBitMapValue(const bit_map_pos_t &position, const bool &value) const;
+        void SetNullBitMapValue(bit_map_pos_t position, bool value) const;
 
-        void SetOverflowBitMapValue(const bit_map_pos_t &position, const bool &value) const;
+        void SetOverflowBitMapValue(bit_map_pos_t position, bool value) const;
 
-        [[nodiscard]] bool GetNullBitMapValue(const bit_map_pos_t &position) const;
+        [[nodiscard]] bool GetNullBitMapValue(bit_map_pos_t position) const;
 
-        [[nodiscard]] bool GetOverflowBitMapValue(const bit_map_pos_t &position) const;
+        [[nodiscard]] bool GetOverflowBitMapValue(bit_map_pos_t position) const;
 
         RowHeader* GetHeader();
 
@@ -147,29 +147,29 @@ namespace DatabaseEngine::StorageTypes
 
         [[nodiscard]] std::vector<Block*> GetBlockCopies() const;
 
-        [[nodiscard]] Value GetColumnByIndex(const int& indexPos) const;
+        [[nodiscard]] Value GetColumnByIndex(Int indexPos) const;
 
-        [[nodiscard]] Row Join(const Row* row) const;
+        void Join(const Row* row);
 
-        [[nodiscard]] Row LeftJoin(const std::vector<const Column*>& innerTableColumns) const;
+        void LeftJoin(const std::vector<const Column*>& innerTableColumns);
 
-        [[nodiscard]] Row RightJoin(const std::vector<const Column*>& innerTableColumns) const;
+        void RightJoin(const std::vector<const Column*>& innerTableColumns);
 
         [[nodiscard]] const bool& IsCopy()const;
 
         friend std::ostream& operator<<(std::ostream& os, const Row& row);
 
-        void SetCurrentTransactionId(const transaction_id_t& transactionId);
+        void SetCurrentTransactionId(transaction_id_t transactionId);
 
-        void SetDeletedTransactionId(const transaction_id_t& transactionId);
+        void SetDeletedTransactionId(transaction_id_t transactionId);
 
-        void SetOlderVersionPointer(const page_id_t& pageId, const page_offset_t& offset);
+        void SetOlderVersionPointer(page_id_t pageId, page_offset_t offset);
 
         [[nodiscard]] Row GetVisibleVersionForTransaction(const Snapshot& snapshot)const;
 
         bool IsVisibleForTransaction(const Snapshot& snapshot) const;
 
-        void SetId(const page_id_t& pageId, const Int& indexId);
+        void SetId(page_id_t pageId, Int indexId);
 
         [[nodiscard]] const Headers::RowIdentifier& GetId() const;
 

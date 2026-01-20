@@ -309,10 +309,10 @@ namespace DatabaseEngine
 
         //TODO
         //maybe add in a single function
-        table->GetColumnsHeaders();
-        table->GetIdentityColumns();
-        table->GetIndexes();
-        table->GetDefaultValuesHeaders();
+        table->RetrieveColumnHeadersFromCatalog();
+        table->RetrieveIdentityColumnsFromCatalog();
+        table->RetrieveIndexesFromCatalog();
+        table->RetrieveDefaultValuesFromCatalog();
 
         this->tables.push_back(table);
     }
@@ -950,27 +950,27 @@ namespace DatabaseEngine
 
     void Database::GetIdentityColumns()const{
             for(const auto& table: this->tables)
-                table->GetIdentityColumns();
+                table->RetrieveIdentityColumnsFromCatalog();
     }
 
     void Database::UpdateIdentityManagersIds()const{
         for(const auto& table: this->tables)
-            table->UpdateIdentityManagersIds();
+            table->UpdateCatalogIdentityColumns();
     }
 
     void Database::GetColumnsHeaders() const{
             for (const auto& table : this->tables)
-                table->GetColumnsHeaders();
+                table->RetrieveColumnHeadersFromCatalog();
     }
 
     void Database::GetDefaultValues() const{
             for (const auto& table : this->tables)
-                table->GetDefaultValuesHeaders();
+                table->RetrieveDefaultValuesFromCatalog();
     }
 
     void Database::GetIndexes() const{
             for (const auto& table : this->tables)
-                table->GetIndexes();
+                table->RetrieveIndexesFromCatalog();
     }
 
     void Database::GetTableHeaders() const{
@@ -978,7 +978,7 @@ namespace DatabaseEngine
 
     void Database::UpdateMasterDatabase()const{
             for(const auto& table: this->tables)
-                table->UpdateMasterDatabase();
+                table->UpdateSystemCatalog();
     }
 
     const std::vector<StorageTypes::Table *> & Database::GetTables() const{ return this->tables; }

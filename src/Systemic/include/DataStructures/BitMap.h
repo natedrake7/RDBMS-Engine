@@ -14,14 +14,14 @@ namespace ByteMaps{
         BitMap();
         BitMap(const BitMap &bitMap);
         explicit BitMap(const BitMap *bitMap);
-        explicit BitMap(const bit_map_size_t &size, const byte_t &defaultValue = 0);
+        explicit BitMap(bit_map_size_t size, byte_t defaultValue = 0);
         ~BitMap();
 
-        void Set(const bit_map_pos_t &position, const bool &value);
-        void SetByte(const bit_map_pos_t &position, const byte_t &value);
+        void Set(bit_map_pos_t position, bool value);
+        void SetByte(bit_map_pos_t position, byte_t value);
 
-        [[nodiscard]] bool Get(const bit_map_pos_t &position) const;
-        [[nodiscard]] const bit_map_size_t &GetSize() const;
+        [[nodiscard]] bool Get(bit_map_pos_t position) const;
+        [[nodiscard]] bit_map_size_t GetSize() const;
         [[nodiscard]] bit_map_size_t GetSizeInBytes() const;
 
         void GetDataFromFile(const object_t*& buffer, page_offset_t &offset);
@@ -35,7 +35,7 @@ namespace ByteMaps{
         [[nodiscard]] const std::vector<byte_t> &GetData() const;
         [[nodiscard]] std::vector<byte_t>& GetDataUnsafe();
 
-        [[nodiscard]] bit_map_size_t& GetSizeUnsafe();
+        [[nodiscard]] bit_map_size_t GetSizeUnsafe() const;
 
         BitMap &operator=(const BitMap &bitMap);
     };

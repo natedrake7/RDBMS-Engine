@@ -5,18 +5,22 @@
 
 #include "DataTypes/DataTypes.h"
 
-namespace ByteMaps {
-    ByteMap::ByteMap() = default;
+namespace ByteMaps
+{
+    void ByteMap::CheckIndex(const byte_map_pos_t pos) const{
+        if (pos >= data.size())
+            throw std::out_of_range("Page index out of range.");
+    }
 
-    ByteMap::ByteMap(const byte_map_size_t &size)
-    {
+    ByteMap::ByteMap(const byte_map_size_t size){
         this->data.resize(size, 0);
     }
 
+    ByteMap::ByteMap() = default;
+
     ByteMap::~ByteMap() = default;
 
-    void ByteMap::SetPageIsAllocated(const byte_map_pos_t &pos, const bool& isAllocated)
-    {
+    void ByteMap::SetPageIsAllocated(const byte_map_pos_t pos, const bool isAllocated){
         this->CheckIndex(pos);
         if (isAllocated)
         {
@@ -27,22 +31,13 @@ namespace ByteMaps {
         data[pos] &= ~ALLOCATION_MASK; // Clear bit 0
     }
 
-    bool ByteMap::IsAllocated(const byte_map_pos_t& pos) const
-    {
+    bool ByteMap::IsAllocated(const byte_map_pos_t pos) const{
         this->CheckIndex(pos);
-
         return (data[pos] & ALLOCATION_MASK) != 0;
     }
 
-    void ByteMap::CheckIndex(const byte_map_pos_t& pos) const
-    {
-        if (pos >= data.size())
-            throw std::out_of_range("Page index out of range.");
-    }
-
     // Set the page type (bits 1-2)
-    void ByteMap::SetPageType(const byte_map_pos_t& pos, const byte_t& type)
-    {
+    void ByteMap::SetPageType(const byte_map_pos_t pos, const byte_t type){
         this->CheckIndex(pos);
 
         if (type > 0x0F)  // 4 bits → max 15
@@ -53,37 +48,29 @@ namespace ByteMaps {
     }
 
     // Get the page type (bits 1-2)
-    byte_t ByteMap::GetPageType(const byte_map_pos_t& pos) const
-    {
-      this->CheckIndex(pos);
-      return (data[pos] & TYPE_MASK) >> TYPE_SHIFT; // Extract bits 1-3
+    byte_t ByteMap::GetPageType(const byte_map_pos_t pos) const{
+        this->CheckIndex(pos);
+        return (data[pos] & TYPE_MASK) >> TYPE_SHIFT; // Extract bits 1-3
     }
 
     // Set the free space percentage (bits 5-7)
-    void ByteMap::SetFreeSpace(const byte_map_pos_t& pos, const byte_t& percentage)
-    {
-      this->CheckIndex(pos);
+    void ByteMap::SetFreeSpace(const byte_map_pos_t pos, const byte_t percentage){
+        this->CheckIndex(pos);
 
-      if (percentage > 7) // 3 bits
-          throw std::invalid_argument("Free space percentage must be between 0 and 7.");
+        if (percentage > 7) // 3 bits
+            throw std::invalid_argument("Free space percentage must be between 0 and 7.");
 
-      data[pos] = (data[pos] & ~SIZE_MASK) | (percentage & SIZE_MASK);
+        data[pos] = (data[pos] & ~SIZE_MASK) | (percentage & SIZE_MASK);
     }
 
     // Get the free space percentage (bits 3-7)
-    page_size_t ByteMap::GetFreeSpace(const byte_map_pos_t& pos) const
+    page_size_t ByteMap::GetFreeSpace(const byte_map_pos_t pos) const
     {
-      this->CheckIndex(pos);
-      return static_cast<page_size_t>(data[pos] & SIZE_MASK); // Extract bits 4-8
+        this->CheckIndex(pos);
+        return static_cast<page_size_t>(data[pos] & SIZE_MASK); // Extract bits 4-8
     }
 
-    void ByteMap::SetByte(const byte_map_pos_t &position, const byte_t &value)
-    {
-        if (position < this->data.size())
-            data[position] = value;
-    }
-
-    void ByteMap::GetDataFromFile(const std::vector<char> &otherData, page_offset_t &offset, const page_size_t& byteMapSize)
+    void ByteMap::GetDataFromFile(const std::vector<char> &otherData, page_offset_t &offset, const page_size_t byteMapSize)
     {
         for (bit_map_size_t i = 0; i < byteMapSize; i++)
         {
@@ -104,5 +91,11 @@ namespace ByteMaps {
     {
         for (byte_map_pos_t i = 0; i < data.size(); i++)
             printf("Page %d: 0x%02X\n", i,  data[i]);
+    }
+
+    void ByteMap::SetByte(const byte_map_pos_t position, const byte_t value)
+    {
+        if (position < this->data.size())
+            data[position] = value;
     }
 }

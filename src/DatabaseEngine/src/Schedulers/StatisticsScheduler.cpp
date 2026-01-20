@@ -53,7 +53,7 @@ namespace DatabaseEngine {
     currentBucketRows += freq;
     distinctCountPerBucket++;
 
-    if (currentBucketRows < rowsPerBucket && (value != lastValue).GetBool())
+    if (currentBucketRows < rowsPerBucket && (value != lastValue).AsBool())
      continue;
 
    //insert
@@ -404,11 +404,11 @@ namespace DatabaseEngine {
   columnStatistics.distinctCount++; // In real scenario, use a hash set or similar structure
 
   // Update min
-  if (columnStatistics.min.IsNull() || (value < columnStatistics.min).GetBool())
+  if (columnStatistics.min.IsNull() || (value < columnStatistics.min).AsBool())
    columnStatistics.min = value;
 
   // Update max
-  if (columnStatistics.max.IsNull() || (value > columnStatistics.max).GetBool())
+  if (columnStatistics.max.IsNull() || (value > columnStatistics.max).AsBool())
    columnStatistics.max = value;
 
   int64_t frequency = 0;

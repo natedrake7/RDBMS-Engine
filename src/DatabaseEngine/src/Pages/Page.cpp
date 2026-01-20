@@ -23,7 +23,7 @@ namespace Pages{
         filePtr->write(reinterpret_cast<const char *>(&this->header.type), sizeof(PageType));
     }
 
-    page_offset_t Page::NewRowOffset() const{
+    page_offset_t Page::NewInsertOffset() const{
         const auto defaultSize = this->header.type == PageType::DATA
                                      ? PAGE_SIZE_WITHOUT_HEADER
                                      : INDEX_PAGE_DEFAULT_SIZE;
@@ -208,7 +208,7 @@ namespace Pages{
 
         const auto rowSize = row->TotalSize();
 
-        auto nextOffset = this->NewRowOffset();
+        auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
         row->Serialize(this->data, nextOffset);
 
@@ -228,7 +228,7 @@ namespace Pages{
             return;
         }
 
-        auto nextOffset = this->NewRowOffset();
+        auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
 
         row->Serialize(this->data, nextOffset);
@@ -260,7 +260,7 @@ namespace Pages{
         }
 
         //insert new row at the end
-        auto nextOffset = this->NewRowOffset();
+        auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
 
         row->Serialize(this->data, nextOffset);
@@ -270,8 +270,7 @@ namespace Pages{
         this->UpdateSlotDirectory(newSlot, indexPosition);
 
         //update bytes left
-        this->header.bytesLeft -= (sizeDiff + SlotDirectory::Size);
-        this->header.size++;
+        this->header.bytesLeft -= sizeDiff;
         this->isDirty = true;
     }
 

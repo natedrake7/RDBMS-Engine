@@ -441,7 +441,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     for (auto& row : result->rows) {
       context.row = &row;
 
-      if (!this->filter->Evaluate(context).GetBool())
+      if (!this->filter->Evaluate(context).AsBool())
         continue;
 
       filteredRows.push_back(std::move(row));
@@ -815,7 +815,7 @@ PhysicalInsert::PhysicalInsert(
 
       columnIdsDict.Add(column->index, columnId);
 
-      if (!column->defaultValue.IsNull() || column->defaultValue.GetSize() != 0) {
+      if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
         const auto _ = this->catalog->InsertDefaultValuesToMasterDb(
           properties,
           columnId,
@@ -853,8 +853,8 @@ PhysicalInsert::PhysicalInsert(
     }
 
     if (primaryKeyColumnIds.empty()) {
-      tablePtr->GetColumnsHeaders();
-      tablePtr->GetIdentityColumns();
+      tablePtr->RetrieveColumnHeadersFromCatalog();
+      tablePtr->RetrieveIdentityColumnsFromCatalog();
       return nullptr;
     }
 
@@ -905,8 +905,8 @@ PhysicalInsert::PhysicalInsert(
       indexId
     );
 
-    tablePtr->GetColumnsHeaders();
-    tablePtr->GetIdentityColumns();
+    tablePtr->RetrieveColumnHeadersFromCatalog();
+    tablePtr->RetrieveIdentityColumnsFromCatalog();
 
     return nullptr;
   }

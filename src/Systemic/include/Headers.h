@@ -73,7 +73,7 @@ namespace Headers {
     bool isDisabled;
     Int indexId = INVALID_INDEX_ID;
     IndexHeader index;
-    vector<ConstraintsColumnsHeader> columns;
+    std::vector<ConstraintsColumnsHeader> columns;
 
     AuditInformation additionalInfo;
   };
@@ -247,10 +247,10 @@ namespace Headers {
 
     TableStatistics statistics;
 
-    vector<ColumnHeader> columns;
-    vector<ConstraintsHeader> constraints;
+    std::vector<ColumnHeader> columns;
+    std::vector<ConstraintsHeader> constraints;
 
-    vector<IdentityColumnsHeader> identity;
+    std::vector<IdentityColumnsHeader> identity;
   };
 
   struct SchemaHeader {
@@ -272,8 +272,8 @@ namespace Headers {
   };
 
   struct sysColumn {
-    string name;
-    string type;
+    std::string name;
+    std::string type;
     Int id;
     int size = 0;
     int _default = 0;
@@ -282,17 +282,17 @@ namespace Headers {
   };
 
   struct sysTable {
-    string name;
+    std::string name;
     Int id;
     bool hasIdentity;
     std::vector<sysColumn> columns;
-    std::vector<string> primaryKey;
+    std::vector<std::string> primaryKey;
   };
 
   struct Index{
-    vector<UnsignedTinyInt> columns;
+    std::vector<UnsignedTinyInt> columns;
 
-    explicit Index(vector<UnsignedTinyInt>& columns)
+    explicit Index(std::vector<UnsignedTinyInt>& columns)
       : columns(std::move(columns)) {}
 
     Index() = default;

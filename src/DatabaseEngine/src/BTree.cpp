@@ -1085,7 +1085,7 @@ namespace Indexing{
                     auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
 
                     context.row = &visibleRow;
-                    if (visibleRow.IsInvalid() || !expression->Evaluate(context).GetBool())
+                    if (visibleRow.IsInvalid() || !expression->Evaluate(context).AsBool())
                         continue;
 
                     result->push_back(std::move(visibleRow));
@@ -1170,7 +1170,7 @@ namespace Indexing{
                     auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
 
                     context.row = &visibleRow;
-                    if (visibleRow.IsInvalid() || !expression->Evaluate(context).GetBool())
+                    if (visibleRow.IsInvalid() || !expression->Evaluate(context).AsBool())
                         continue;
 
                     result->push_back(std::move(visibleRow));
@@ -1281,7 +1281,7 @@ namespace Indexing{
                 auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
 
                 context.row = &row;
-                if (row.IsInvalid() || !expression->Evaluate(context).GetBool())
+                if (row.IsInvalid() || !expression->Evaluate(context).AsBool())
                     continue;
 
                 result->push_back(std::move(row));
@@ -1325,7 +1325,7 @@ namespace Indexing{
                 auto row = tuple.row.GetVisibleVersionForTransaction(properties.snapshot);
 
                 context.row = &row;
-                if(row.IsInvalid() || !expression->Evaluate(context).GetBool())
+                if(row.IsInvalid() || !expression->Evaluate(context).AsBool())
                     continue;
 
                 result->push_back(std::move(row));
@@ -1467,7 +1467,7 @@ namespace Indexing{
 
                 context.row = &tuple.row;
                 const auto value = expression->Evaluate(context);
-                if(!value.GetBool())
+                if(!value.AsBool())
                     continue;
 
                 const auto result = this->table->UpdateRowNoLock(
@@ -1515,7 +1515,7 @@ namespace Indexing{
                 context.row = &tuple.row;
 
                 const auto value = expression->Evaluate(context);
-                if(!value.GetBool())
+                if(!value.AsBool())
                     continue;
 
                 auto result = this->table->UpdateRowNoLock(
@@ -1556,10 +1556,18 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int i = 0;i < currentNode->GetPageSize();i++){
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
+            for (int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
+                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
-                auto result = this->table->UpdateRowNoLock(currentNode.Get(), &tuple.row, properties, updates, updatedColumns, false);
+                auto result = this->table->UpdateRowNoLock(
+                    currentNode.Get(),
+                    &tuple.row,
+                    properties,
+                    updates,
+                    updatedColumns,
+                    indexPosition,
+                    false
+                );
 
                 if (result.code != Errors::RuntimeError::Ok)
                   return result;
@@ -1646,7 +1654,7 @@ namespace Indexing{
 
                   context.row = &tuple.row;
                   const auto value = expression->Evaluate(context);
-                  if(!value.GetBool())
+                  if(!value.AsBool())
                     continue;
 
                 auto result = this->table->UpdateRowNoLock(

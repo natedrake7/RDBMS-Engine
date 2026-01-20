@@ -60,7 +60,7 @@ namespace QueryPipeline{
       .identity = key,
       .defaultValue =  context->defaultValue()
               ? std::any_cast<Value>(visit(context->defaultValue()))
-              : Value(nullptr),
+              : Value::Null(),
       .isPrimaryKey = isPrimaryKey,
       .isNullable = isNullable,
     };

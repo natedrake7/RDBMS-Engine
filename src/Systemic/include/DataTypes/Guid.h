@@ -2,20 +2,21 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include "DataTypes.h"
 
 namespace DataTypes {
-  constexpr int GUID_SIZE = 16;
+  constexpr Int GUID_SIZE = 16;
 
   class Guid {
-    std::array<uint8_t, GUID_SIZE> data{};
+    std::array<UnsignedTinyInt, GUID_SIZE> data;
 
     public:
       Guid();
-      Guid(const unsigned char* data, const int& size);
-      explicit Guid(const std::array<uint8_t, GUID_SIZE>& data);
+      Guid(const unsigned char* data, Int size);
+      explicit Guid(const std::array<UnsignedTinyInt, GUID_SIZE>& data);
       ~Guid();
-      [[nodiscard]] std::array<uint8_t, GUID_SIZE>& GetDataUnsafe();
-      [[nodiscard]] const std::array<uint8_t, GUID_SIZE>& GetData() const;
+      [[nodiscard]] std::array<UnsignedTinyInt, GUID_SIZE>& GetDataUnsafe();
+      [[nodiscard]] const std::array<UnsignedTinyInt, GUID_SIZE>& GetData() const;
 
       [[nodiscard]] std::string ToString() const;
       static Guid Parse(const std::string& str);
@@ -28,7 +29,7 @@ namespace DataTypes {
 
       long double Interpolate() const;
 
-      constexpr static int Size() { return GUID_SIZE; };
+      constexpr static Int Size() { return GUID_SIZE; };
   };
 
   bool operator==(const Guid& guid1, const Guid& guid2);
@@ -46,7 +47,7 @@ template<>
 
       if constexpr (requires { guid.GetData(); }) {
         for (const auto byte : guid.GetData()) {
-          result ^= std::hash<uint8_t>{}(byte)
+          result ^= std::hash<UnsignedTinyInt>{}(byte)
                     + 0x9e3779b97f4a7c15ULL + (result << 6) + (result >> 2);
         }
       }

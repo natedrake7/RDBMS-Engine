@@ -51,7 +51,7 @@ void IndexPage::InsertTuple(const LeafNodeTuple& tuple){
     }
 
     const auto rowSize = tuple.row.TotalSize();
-    auto nextOffset = this->NewRowOffset();
+    auto nextOffset = this->NewInsertOffset();
     const auto offSetCopy = nextOffset;
 
     tuple.key.Serialize(this->data, nextOffset);
@@ -83,7 +83,7 @@ void IndexPage::InsertKey(const DataTypes::Indexing::Key& key){
         return;
     }
 
-    auto nextOffset = this->NewRowOffset();
+    auto nextOffset = this->NewInsertOffset();
     const auto offSetCopy = nextOffset;
 
     key.Serialize(this->data, nextOffset);
@@ -97,7 +97,7 @@ void IndexPage::InsertKey(const DataTypes::Indexing::Key& key){
 }
 
 void IndexPage::InsertFirstChild(const page_id_t& child){
-    const auto nextOffset = this->NewRowOffset();
+    const auto nextOffset = this->NewInsertOffset();
 
     std::memcpy(this->data + nextOffset, &child, sizeof(page_id_t));
 
@@ -124,7 +124,7 @@ void IndexPage::InsertChild(const page_id_t& child, const DataTypes::Indexing::K
         return;
     }
 
-    auto nextOffset = this->NewRowOffset();
+    auto nextOffset = this->NewInsertOffset();
     const auto offSetCopy = nextOffset;
 
     key->Serialize(this->data, nextOffset);
@@ -237,7 +237,7 @@ void IndexPage::InsertChild(
         return;
     }
 
-    auto nextOffset = this->NewRowOffset();
+    auto nextOffset = this->NewInsertOffset();
     const auto offSetCopy = nextOffset;
 
     key->Serialize(this->data, nextOffset);
@@ -273,7 +273,7 @@ void IndexPage::InsertKey(const DataTypes::Indexing::Key& key, const int& indexP
         return;
     }
 
-    auto nextOffset = this->NewRowOffset();
+    auto nextOffset = this->NewInsertOffset();
     const auto offSetCopy = nextOffset;
 
     key.Serialize(this->data, nextOffset);
@@ -291,7 +291,7 @@ void IndexPage::InsertTuple(const LeafNodeTuple& tuple, const int& indexPosition
         return;
     }
 
-    auto nextOffset = this->NewRowOffset();
+    auto nextOffset = this->NewInsertOffset();
     const auto offSetCopy = nextOffset;
 
     tuple.key.Serialize(this->data, nextOffset);
@@ -329,7 +329,7 @@ void IndexPage::UpdateRow(
     }
 
     //insert new row at the end
-    auto nextOffset = this->NewRowOffset();
+    auto nextOffset = this->NewInsertOffset();
     auto offSetCopy = nextOffset;
 
     //if next row cant fit in the remaining space, we need to compact the page
@@ -337,7 +337,7 @@ void IndexPage::UpdateRow(
     if (this->header.bytesLeft - totalSize < 0){
         this->Defragment();
 
-        nextOffset = this->NewRowOffset();
+        nextOffset = this->NewInsertOffset();
         offSetCopy = nextOffset;
     }
 
@@ -349,8 +349,7 @@ void IndexPage::UpdateRow(
     this->UpdateSlotDirectory(newSlot, indexPosition);
 
     //update bytes left
-    this->header.bytesLeft -= (sizeDiff + SlotDirectory::Size);
-    this->header.size++;
+    this->header.bytesLeft -= sizeDiff;
     this->isDirty = true;
 }
 

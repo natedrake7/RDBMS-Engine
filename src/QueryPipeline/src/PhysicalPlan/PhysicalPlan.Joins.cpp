@@ -4,7 +4,7 @@
 namespace QueryPipeline::PhysicalPlan {
   ExecutionResult* PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    const ExecutionResult* leftResult
+    ExecutionResult* leftResult
   ) const
   {
     auto* result = new ExecutionResult();
@@ -13,18 +13,19 @@ namespace QueryPipeline::PhysicalPlan {
     bool canFetchMore = true;
 
     while (canFetchMore){
-      const auto* rightResult = this->right->Execute(properties);
+      auto* rightResult = this->right->Execute(properties);
       canFetchMore = rightResult->canFetchMore;
 
-      for (const auto& outerRow: leftResult->rows) {
-        for (const auto& innerRow: rightResult->rows) {
+      for (auto& outerRow: leftResult->rows) {
+        for (auto& innerRow: rightResult->rows) {
 
           context.outerRow = &outerRow;
           context.innerRow = &innerRow;
-          if (!this->expression->Evaluate(context).GetBool())
+          if (!this->expression->Evaluate(context).AsBool())
             continue;
 
-          result->rows.push_back(outerRow.Join(&innerRow));
+          outerRow.Join(&innerRow);
+          result->rows.push_back(outerRow);
         }
       }
 
@@ -47,9 +48,9 @@ namespace QueryPipeline::PhysicalPlan {
 
 
   ExecutionResult * PhysicalNestedLoopInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    const auto* leftResult = this->left->Execute(properties);
+    auto* leftResult = this->left->Execute(properties);
 
-    auto * result = this->ExecuteBatchJoin(properties, leftResult);
+    auto* result = this->ExecuteBatchJoin(properties, leftResult);
 
     result->canFetchMore = leftResult->canFetchMore;
 
@@ -59,7 +60,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult* PhysicalMergeInnerJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    const ExecutionResult* leftResult
+    ExecutionResult* leftResult
   ) const
   {
     using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
@@ -71,7 +72,7 @@ namespace QueryPipeline::PhysicalPlan {
       properties.variables
     );
 
-    const auto* rightResult = this->right->Execute(properties);
+    auto* rightResult = this->right->Execute(properties);
 
     Int leftIndex = 0;
     Int rightIndex = 0;
@@ -82,7 +83,7 @@ namespace QueryPipeline::PhysicalPlan {
     const auto outerRowSize = static_cast<Int>(leftResult->columns.size());
 
     while (leftIndex < leftRowsCount){
-      const auto& outerRow = leftResult->rows[leftIndex];
+      auto& outerRow = leftResult->rows[leftIndex];
       const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
 
       while (rightIndex < rightRowsCount){
@@ -100,7 +101,9 @@ namespace QueryPipeline::PhysicalPlan {
           continue;
         }
 
-        result->rows.push_back(outerRow.Join(&innerRow));
+        outerRow.Join(&innerRow);
+        result->rows.push_back(outerRow);
+
         rightIndex++;
       }
 
@@ -143,7 +146,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionResult* PhysicalMergeInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    const auto* leftResult = this->left->Execute(properties);
+    auto* leftResult = this->left->Execute(properties);
 
     auto* result = this->ExecuteBatchJoin(properties, leftResult);
 
@@ -155,7 +158,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult* PhysicalMergeLeftJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    const ExecutionResult* leftResult
+    ExecutionResult* leftResult
   ) const{
     using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
 
@@ -166,7 +169,7 @@ namespace QueryPipeline::PhysicalPlan {
       properties.variables
     );
 
-    const auto* rightResult = this->right->Execute(properties);
+    auto* rightResult = this->right->Execute(properties);
 
     Int leftIndex = 0;
     Int rightIndex = 0;
@@ -177,13 +180,13 @@ namespace QueryPipeline::PhysicalPlan {
     const auto outerRowSize = static_cast<Int>(leftResult->columns.size());
 
     while (leftIndex < leftRowsCount){
-      const auto& outerRow = leftResult->rows[leftIndex];
+      auto& outerRow = leftResult->rows[leftIndex];
       const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
 
       bool hasMatch = false;
 
       while (rightIndex < rightRowsCount){
-        const auto& innerRow = rightResult->rows[rightIndex];
+        auto& innerRow = rightResult->rows[rightIndex];
 
         const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
 
@@ -198,7 +201,10 @@ namespace QueryPipeline::PhysicalPlan {
         }
 
         hasMatch = true;
-        result->rows.push_back(outerRow.Join(&innerRow));
+
+        outerRow.Join(&innerRow);
+        result->rows.push_back(outerRow);
+
         rightIndex++;
       }
 
@@ -211,8 +217,10 @@ namespace QueryPipeline::PhysicalPlan {
         rightIndex = 0;
       }
 
-      if (!hasMatch)
-        result->rows.push_back(outerRow.LeftJoin(rightResult->columns));
+      if (!hasMatch){
+        outerRow.LeftJoin(rightResult->columns);
+        result->rows.push_back(outerRow);
+      }
 
       leftIndex++;
     }
@@ -244,7 +252,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionResult* PhysicalMergeLeftJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    const auto* leftResult = this->left->Execute(properties);
+    auto* leftResult = this->left->Execute(properties);
 
     auto* result = this->ExecuteBatchJoin(properties, leftResult);
 
@@ -256,7 +264,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult* PhysicalMergeFullJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    const ExecutionResult* leftResult
+    ExecutionResult* leftResult
   ) const{
     using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
 
@@ -267,7 +275,7 @@ namespace QueryPipeline::PhysicalPlan {
       properties.variables
     );
 
-    const auto* rightResult = this->right->Execute(properties);
+    auto* rightResult = this->right->Execute(properties);
 
     Int leftIndex = 0;
     Int rightIndex = 0;
@@ -278,13 +286,13 @@ namespace QueryPipeline::PhysicalPlan {
     const auto outerRowSize = static_cast<Int>(leftResult->columns.size());
 
     while (leftIndex < leftRowsCount){
-      const auto& outerRow = leftResult->rows[leftIndex];
+      auto& outerRow = leftResult->rows[leftIndex];
       const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
 
       bool hasMatch = false;
 
       while (rightIndex < rightRowsCount){
-        const auto& innerRow = rightResult->rows[rightIndex];
+        auto& innerRow = rightResult->rows[rightIndex];
 
         const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
 
@@ -294,13 +302,16 @@ namespace QueryPipeline::PhysicalPlan {
           break;
 
         if (comparison == CompOperator::Greater){
-          result->rows.push_back(innerRow.RightJoin(leftResult->columns));
+          innerRow.RightJoin(leftResult->columns);
+          result->rows.push_back(innerRow);
           rightIndex++;
           continue;
         }
 
         hasMatch = true;
-        result->rows.push_back(outerRow.Join(&innerRow));
+
+        outerRow.Join(&innerRow);
+        result->rows.push_back(outerRow);
         rightIndex++;
       }
 
@@ -313,8 +324,10 @@ namespace QueryPipeline::PhysicalPlan {
         rightIndex = 0;
       }
 
-      if (!hasMatch)
-        result->rows.push_back(outerRow.LeftJoin(rightResult->columns));
+      if (!hasMatch){
+        outerRow.LeftJoin(rightResult->columns);
+        result->rows.push_back(outerRow);
+      }
 
       leftIndex++;
     }
@@ -346,7 +359,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionResult* PhysicalMergeFullJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    const auto* leftResult = this->left->Execute(properties);
+    auto* leftResult = this->left->Execute(properties);
 
     auto* result = this->ExecuteBatchJoin(properties, leftResult);
 
@@ -370,31 +383,31 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult * PhysicalNestedLoopLeftJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
       auto* result = new ExecutionResult();
 
-      const auto* leftResult = this->left->Execute(properties);
-      const auto* rightResult = this->right->Execute(properties);
+      auto* leftResult = this->left->Execute(properties);
+      auto* rightResult = this->right->Execute(properties);
 
       Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
       //create new row
-      for (const auto& outerRow: leftResult->rows) {
+      for (auto& outerRow: leftResult->rows) {
 
         bool hasMatched = false;
-        for (const auto& innerRow: rightResult->rows) {
+        for (auto& innerRow: rightResult->rows) {
 
           context.outerRow = &outerRow;
           context.innerRow = &innerRow;
 
-          if (!this->expression->Evaluate(context).GetBool())
+          if (!this->expression->Evaluate(context).AsBool())
             continue;
 
-          auto joinedRow = outerRow.Join(&innerRow);
-
-          result->rows.push_back(std::move(joinedRow));
-
+          outerRow.Join(&innerRow);
+          result->rows.push_back(outerRow);
           hasMatched = true;
         }
 
-        if (!hasMatched)
-          result->rows.push_back(outerRow.LeftJoin(rightResult->columns));
+        if (!hasMatched){
+          outerRow.LeftJoin(rightResult->columns);
+          result->rows.push_back(outerRow);
+        }
       }
 
       result->columns.reserve(leftResult->columns.size() + rightResult->columns.size());
@@ -425,8 +438,8 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult * PhysicalNestedLoopFullJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
       auto* result = new ExecutionResult();
 
-      const auto* leftResult = this->left->Execute(properties);
-      const auto* rightResult = this->right->Execute(properties);
+      auto* leftResult = this->left->Execute(properties);
+      auto* rightResult = this->right->Execute(properties);
 
       std::vector leftMatched(leftResult->rows.size(), false);
       std::vector rightMatched(rightResult->rows.size(), false);
@@ -435,16 +448,17 @@ namespace QueryPipeline::PhysicalPlan {
 
       for (int i = 0;i < leftResult->rows.size();i++) {
         for (int j = 0;j < rightResult->rows.size();j++) {
-          const auto& outerRow = leftResult->rows[i];
-          const auto& innerRow = rightResult->rows[j];
+          auto& outerRow = leftResult->rows[i];
+          auto& innerRow = rightResult->rows[j];
 
           context.outerRow = &outerRow;
           context.innerRow = &innerRow;
 
-          if (!this->joinCondition->Evaluate(context).GetBool())
+          if (!this->joinCondition->Evaluate(context).AsBool())
             continue;
 
-          result->rows.push_back(outerRow.Join(&innerRow));
+          outerRow.Join(&innerRow);
+          result->rows.push_back(outerRow);
           leftMatched[i] = true;
           rightMatched[j] = true;
         }
@@ -454,18 +468,18 @@ namespace QueryPipeline::PhysicalPlan {
         if (leftMatched[i])
           continue;
 
-        const auto& outerRow = leftResult->rows[i];
-
-        result->rows.push_back(outerRow.LeftJoin(rightResult->columns));
+        auto& outerRow = leftResult->rows[i];
+        outerRow.LeftJoin(rightResult->columns);
+        result->rows.push_back(outerRow);
       }
 
       for (int i = 0;i < rightResult->rows.size(); i++) {
         if (rightMatched[i])
           continue;
 
-        const auto& innerRow = rightResult->rows[i];
-
-        result->rows.push_back(innerRow.RightJoin(rightResult->columns));
+        auto& innerRow = rightResult->rows[i];
+        innerRow.RightJoin(rightResult->columns);
+        result->rows.push_back(innerRow);
       }
 
 

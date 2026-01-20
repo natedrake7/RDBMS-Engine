@@ -8,19 +8,19 @@
 
 void AggregateFunctions::SumByColumnType(long double& sum, const DatabaseEngine::StorageTypes::Block* block)
 {
-    switch (block->GetColumnType())
+    switch (block->ColumnType())
     {
         case DataType::TinyInt:
-            sum += block->GetTinyInt();
+            sum += block->AsTinyInt();
             break;
         case DataType::SmallInt:
-            sum += block->GetSmallInt();
+            sum += block->AsSmallInt();
             break;
         case DataType::Int:
-            sum += block->GetInt();
+            sum += block->AsInt();
             break;
         case DataType::BigInt:
-            sum += block->GetBigInt();
+            sum += block->AsBigInt();
             break;
         case DataType::Decimal:
             //implement support for decimal class operations
@@ -32,11 +32,11 @@ void AggregateFunctions::SumByColumnType(long double& sum, const DatabaseEngine:
 
 void AggregateFunctions::CompareMaxWithRow(long double &max, const DatabaseEngine::StorageTypes::Block *block)
 {
-    switch (block->GetColumnType())
+    switch (block->ColumnType())
     {
         case DataType::TinyInt:
         {
-            const auto& castData = block->GetTinyInt();
+            const auto& castData = block->AsTinyInt();
             if (max < castData)
                 max = castData;
             break;
@@ -44,21 +44,21 @@ void AggregateFunctions::CompareMaxWithRow(long double &max, const DatabaseEngin
 
         case DataType::SmallInt:
         {
-            const auto& castData = block->GetSmallInt();
+            const auto& castData = block->AsSmallInt();
             if (max < castData)
                 max = castData;
             break;
         }
         case DataType::Int:
         {
-            const auto& castData = block->GetInt();
+            const auto& castData = block->AsInt();
             if (max < castData)
                 max = castData;
             break;
         }
         case DataType::BigInt:
         {
-            const auto& castData = block->GetBigInt();
+            const auto& castData = block->AsBigInt();
             if (max < castData)
                 max = castData;
             break;
@@ -72,11 +72,11 @@ void AggregateFunctions::CompareMaxWithRow(long double &max, const DatabaseEngin
 
 void AggregateFunctions::CompareMinWithRow(long double &max, const DatabaseEngine::StorageTypes::Block *block)
 {
-    switch (block->GetColumnType())
+    switch (block->ColumnType())
     {
         case DataType::TinyInt:
         {
-            const auto& castData = block->GetTinyInt();
+            const auto& castData = block->AsTinyInt();
             if (max > castData)
                 max = castData;
             break;
@@ -84,21 +84,21 @@ void AggregateFunctions::CompareMinWithRow(long double &max, const DatabaseEngin
 
         case DataType::SmallInt:
         {
-            const auto& castData = block->GetSmallInt();
+            const auto& castData = block->AsSmallInt();
             if (max > castData)
                 max = castData;
             break;
         }
         case DataType::Int:
         {
-            const auto& castData = block->GetInt();
+            const auto& castData = block->AsInt();
             if (max > castData)
                 max = castData;
             break;
         }
         case DataType::BigInt:
         {
-            const auto& castData = block->GetBigInt();
+            const auto& castData = block->AsBigInt();
             if (max > castData)
                 max = castData;
             break;

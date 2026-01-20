@@ -4,6 +4,8 @@
 #include "../../include/ErrorListener.h"
 #include "../../include/Statements.h"
 
+#include <vector>
+
 namespace QueryPipeline {
   antlrcpp::Any SQLVisitorImplementation::visitSqlStatement(SQLParser::SqlStatementContext *context)  {
     std::vector<std::any> statements;
@@ -199,7 +201,7 @@ namespace QueryPipeline {
     }
 
     if (context->NULL_())
-      return Value(nullptr, 0);
+      return Value::Null();
 
     if (context->TRUE())
       return Value(true, 0);
@@ -234,7 +236,7 @@ namespace QueryPipeline {
   }
 
   antlrcpp::Any SQLVisitorImplementation::visitLiteralValueList(SQLParser::LiteralValueListContext *context){
-    vector<Value> values;
+    std::vector<Value> values;
     
     for (const auto& literalValue : context->literalValue())
        values.emplace_back(std::any_cast<Value>(visit(literalValue)));
@@ -491,7 +493,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
     return update;
 }
   antlrcpp::Any SQLVisitorImplementation::visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context){
-    vector<Statements::UpdateColumn*> columns;
+    std::vector<Statements::UpdateColumn*> columns;
 
     for(const auto& updateColumn : context->updateColumn())
       columns.push_back(std::any_cast<Statements::UpdateColumn*>(visit(updateColumn)));
@@ -612,7 +614,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       statement->expression = expression;
     }
 
-    statement->variable.SetValue(Value(nullptr, 0));
+    statement->variable.SetValue(Value::Null());
 
     auto name = std::any_cast<std::string>(visit(context->variableName()));
 
@@ -652,7 +654,7 @@ antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext
       statement->expression = expression;
     }
 
-    statement->variable.SetValue(Value(nullptr, 0));
+    statement->variable.SetValue(Value::Null());
 
     auto name = std::any_cast<std::string>(visit(context->variableName()));
 

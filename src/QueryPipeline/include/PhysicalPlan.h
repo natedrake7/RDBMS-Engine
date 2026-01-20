@@ -465,7 +465,10 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* right;
     Expressions::Expression* expression;
 
-    ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
+    ExecutionResult* ExecuteBatchJoin(
+      const DatabaseEngine::ExecutionProperties& properties,
+      ExecutionResult* leftResult
+    ) const;
 
     public:
       PhysicalNestedLoopInnerJoin(
@@ -485,7 +488,10 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<column_index_t> leftKeyColumns;
     std::vector<column_index_t> rightKeyColumns;
 
-    ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
+    ExecutionResult* ExecuteBatchJoin(
+      const DatabaseEngine::ExecutionProperties& properties,
+      ExecutionResult* leftResult
+    ) const;
 
   public:
     PhysicalMergeInnerJoin(
@@ -507,7 +513,10 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<column_index_t> leftKeyColumns;
     std::vector<column_index_t> rightKeyColumns;
 
-    ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
+    ExecutionResult* ExecuteBatchJoin(
+      const DatabaseEngine::ExecutionProperties& properties,
+      ExecutionResult* leftResult
+    ) const;
 
     public:
       PhysicalMergeLeftJoin(
@@ -530,7 +539,10 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<column_index_t> leftKeyColumns;
     std::vector<column_index_t> rightKeyColumns;
 
-    ExecutionResult* ExecuteBatchJoin(const DatabaseEngine::ExecutionProperties& properties, const ExecutionResult* leftResult) const;
+    ExecutionResult* ExecuteBatchJoin(
+      const DatabaseEngine::ExecutionProperties& properties,
+      ExecutionResult* leftResult
+    ) const;
 
   public:
     PhysicalMergeFullJoin(

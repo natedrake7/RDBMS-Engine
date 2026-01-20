@@ -106,7 +106,7 @@ namespace Pages{
         object_t* data;
 
         void WritePageHeaderToDisk(std::fstream *filePtr) const;
-        [[nodiscard]] page_offset_t NewRowOffset()const;
+        [[nodiscard]] page_offset_t NewInsertOffset()const;
         [[nodiscard]] Int SlotDirectoryOffSet(const Int& indexPosition) const;
         [[nodiscard]] Int SlotDirectoriesToMoveOffSet(const Int& indexPosition, const Int& slotToMove) const;
 

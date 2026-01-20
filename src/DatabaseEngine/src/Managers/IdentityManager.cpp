@@ -6,57 +6,39 @@
 
 
 namespace DatabaseEngine::StorageTypes {
-  IdentityManager::IdentityManager() {
-    this->startingValue = 0;
-  }
-
-   IdentityManager::~IdentityManager() = default;
-
-  void IdentityManager::SetHeaderIds(const int32_t &tableId, const int32_t &columnId){
-    this->header.tableId = tableId;
-    this->header.columnId = columnId;
-  }
-
   int64_t IdentityManager::Generate(){
     bool updateMasterDb = false;
 
     MultiThreading::WriterGuard guard(&this->mutex);
 
-      const auto value = this->header.lastValue;
+    const auto value = this->header.lastValue;
 
-      this->header.lastValue += this->header.increment;
+    this->header.lastValue += this->header.increment;
 
-      updateMasterDb = value >= (this->startingValue + this->header.cacheBlock);
+    updateMasterDb = value >= (this->startingValue + this->header.cacheBlock);
 
-      if (updateMasterDb) {
-        this->startingValue = value;
-        this->UpdateMasterDb(value);
-      }
+    if (updateMasterDb) {
+      this->startingValue = value;
+      this->UpdateMasterDb(value);
+    }
 
     return value;
   }
 
-  bool IdentityManager::TryGenerate(int64_t &value){
-    if (this->header.columnId == INVALID_COLUMN_ID)
-      return false;
+   void IdentityManager::UpdateMasterDb(const BigInt value) const{
+     SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value + this->header.increment);
+   }
 
-    value = this->Generate();
-
-    return true;
+  IdentityManager::IdentityManager() {
+    this->startingValue = 0;
   }
 
-  void IdentityManager::UpdateMasterDb(const int64_t &value) const{
-   SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value + this->header.increment);
+  IdentityManager::~IdentityManager() = default;
+
+  void IdentityManager::SetHeaderIds(const Int tableId, const Int columnId){
+    this->header.tableId = tableId;
+    this->header.columnId = columnId;
   }
-
-  void IdentityManager::UpdateMasterDb()const{
-    if (this->header.columnId == INVALID_COLUMN_ID)
-      return;
-
-   SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, this->header.lastValue);
-  }
-
-  bool IdentityManager::IsValid() const{ return this->header.columnId != INVALID_COLUMN_ID; }
 
   void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){
     this->header = newHeader;
@@ -66,4 +48,22 @@ namespace DatabaseEngine::StorageTypes {
   const Headers::IdentityColumnsHeader & IdentityManager::GetHeader() const{
     return this->header;
   }
+
+  bool IdentityManager::TryGenerate(BigInt& value){
+    if (this->header.columnId == INVALID_COLUMN_ID)
+      return false;
+
+    value = this->Generate();
+
+    return true;
+  }
+
+  void IdentityManager::UpdateMasterDb()const{
+    if (this->header.columnId == INVALID_COLUMN_ID)
+      return;
+
+    SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, this->header.lastValue);
+  }
+
+  bool IdentityManager::IsValid() const{ return this->header.columnId != INVALID_COLUMN_ID; }
 }

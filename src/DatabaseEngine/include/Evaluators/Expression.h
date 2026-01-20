@@ -20,7 +20,7 @@ namespace Expressions{
   class BranchExpression;
 
   struct EvaluationContext {
-    enum class EvaluationContextType {
+    enum class EvaluationContextType : UnsignedTinyInt {
       Constant = 0,
       SingleRow = 1,
       MaterializedRow = 2,
@@ -40,7 +40,7 @@ namespace Expressions{
     const Dictionary<std::string, Variable>* variables;
 
     EvaluationContext();
-    explicit EvaluationContext(const EvaluationContextType& type, const Dictionary<std::string, Variable>* variables);
+    explicit EvaluationContext(EvaluationContextType type, const Dictionary<std::string, Variable>* variables);
     explicit EvaluationContext(const DatabaseEngine::StorageTypes::Row*  row);
     explicit EvaluationContext(const QueryResult& row);
     EvaluationContext(const DatabaseEngine::StorageTypes::Row*  outerRow, const DatabaseEngine::StorageTypes::Row*  innerRow);
@@ -95,7 +95,7 @@ namespace Expressions{
       block_size_t size;
 
       ColumnExpression(const std::string& name, const std::string& tableAlias);
-      explicit ColumnExpression(const column_index_t& index);
+      explicit ColumnExpression(column_index_t index);
       ~ColumnExpression()override = default;
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
@@ -128,7 +128,7 @@ namespace Expressions{
 
       BinaryOperator operation;
 
-      BinaryExpression(Expression* left, Expression* right, const BinaryOperator& operation);
+      BinaryExpression(Expression* left, Expression* right, BinaryOperator operation);
       ~BinaryExpression()override;
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
@@ -144,19 +144,18 @@ namespace Expressions{
     [[nodiscard]] static bool ValidateReturnType(
       const FunctionInfo& info,
       std::string& errorMessage,
-      const DataType& expectedType,
-      const DataType& returnType,
-      const int& index
+      DataType expectedType,
+      DataType returnType,
+      Int index
     );
-    static void ConstructInvalidCastMessage(std::string& errorMessage, const DataType& fromType, const DataType& toType);
+    static void ConstructInvalidCastMessage(std::string& errorMessage, DataType fromType, DataType toType);
     bool PerformAdditionalValidations(std::string& errorMessage)const;
 
     public:
       std::vector<Expression*> arguments;
+      FunctionType functionType;
 
-      Constants::FunctionType functionType;
-
-      FunctionExpression(const Constants::FunctionType& functionType, std::vector<Expression*>& arguments);
+      FunctionExpression(FunctionType functionType, std::vector<Expression*>& arguments);
       ~FunctionExpression()override;
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
@@ -231,7 +230,7 @@ namespace Expressions{
 
         Expression* baseCase;
 
-        explicit BranchExpression(const BranchType& type);
+        explicit BranchExpression(BranchType type);
         ~BranchExpression()override;
         [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
         [[nodiscard]]DataType GetReturnType() const override;

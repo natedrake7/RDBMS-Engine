@@ -13,8 +13,8 @@ namespace DataTypes {
     this->data = std::array<uint8_t, GUID_SIZE>{0};
   }
 
-  Guid::Guid(const unsigned char *data, const int &size){
-    memcpy(this->data.data(), data, size);
+  Guid::Guid(const unsigned char *data, const Int size){
+    std::memcpy(this->data.data(), data, size);
   }
 
   Guid::Guid(const std::array<uint8_t, 16> &data) : data(data){}

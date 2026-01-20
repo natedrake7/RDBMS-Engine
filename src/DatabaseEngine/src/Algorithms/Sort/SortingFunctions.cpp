@@ -65,12 +65,12 @@ MergeElement::MergeElement(MergeElement&& other) noexcept {
 
 int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Block *&secondBlock)
 {
-    switch (firstBlock->GetColumnType())
+    switch (firstBlock->ColumnType())
     {
         case DataType::TinyInt:
         {
-            const auto& firstBlockData = *reinterpret_cast<const int8_t*>(firstBlock->GetRawData());
-            const auto& secondBlockData = *reinterpret_cast<const int8_t*>(secondBlock->GetRawData());
+            const auto& firstBlockData = *reinterpret_cast<const int8_t*>(firstBlock->Data());
+            const auto& secondBlockData = *reinterpret_cast<const int8_t*>(secondBlock->Data());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -78,8 +78,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::SmallInt:
         {
-            const auto& firstBlockData = *reinterpret_cast<const int16_t*>(firstBlock->GetRawData());
-            const auto& secondBlockData = *reinterpret_cast<const int16_t*>(secondBlock->GetRawData());
+            const auto& firstBlockData = *reinterpret_cast<const int16_t*>(firstBlock->Data());
+            const auto& secondBlockData = *reinterpret_cast<const int16_t*>(secondBlock->Data());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -87,8 +87,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::Int:
         {
-            const auto& firstBlockData = *reinterpret_cast<const int32_t*>(firstBlock->GetRawData());
-            const auto& secondBlockData = *reinterpret_cast<const int32_t*>(secondBlock->GetRawData());
+            const auto& firstBlockData = *reinterpret_cast<const int32_t*>(firstBlock->Data());
+            const auto& secondBlockData = *reinterpret_cast<const int32_t*>(secondBlock->Data());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -96,8 +96,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::BigInt:
         {
-            const auto& firstBlockData = *reinterpret_cast<const int64_t*>(firstBlock->GetRawData());
-            const auto& secondBlockData = *reinterpret_cast<const int64_t*>(secondBlock->GetRawData());
+            const auto& firstBlockData = *reinterpret_cast<const int64_t*>(firstBlock->Data());
+            const auto& secondBlockData = *reinterpret_cast<const int64_t*>(secondBlock->Data());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -110,8 +110,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::DateTime:
         {
-            const auto& firstBlockData = *reinterpret_cast<const time_t*>(firstBlock->GetRawData());
-            const auto& secondBlockData = *reinterpret_cast<const time_t*>(secondBlock->GetRawData());
+            const auto& firstBlockData = *reinterpret_cast<const time_t*>(firstBlock->Data());
+            const auto& secondBlockData = *reinterpret_cast<const time_t*>(secondBlock->Data());
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -119,8 +119,8 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::Bool:
         {
-            const auto& firstBlockData = firstBlock->GetBool();
-            const auto& secondBlockData = secondBlock->GetBool();
+            const auto& firstBlockData = firstBlock->AsBool();
+            const auto& secondBlockData = secondBlock->AsBool();
 
             if (firstBlockData < secondBlockData) return 1;
             if (firstBlockData > secondBlockData) return -1;
@@ -128,13 +128,13 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         }
         case DataType::String:
         {
-            const auto& firstBlockDataSize = firstBlock->GetSize();
-            const auto& secondBlockDataSize = secondBlock->GetSize();
+            const auto& firstBlockDataSize = firstBlock->Size();
+            const auto& secondBlockDataSize = secondBlock->Size();
             
             if (firstBlockDataSize < secondBlockDataSize) return 1;
             if (firstBlockDataSize > secondBlockDataSize) return -1;
 
-            const int result = memcmp(firstBlock->GetRawData(), secondBlock->GetRawData(), firstBlockDataSize);
+            const int result = memcmp(firstBlock->Data(), secondBlock->Data(), firstBlockDataSize);
 
             if (result > 0) return 1;
             if (result < 0) return -1;
@@ -143,9 +143,9 @@ int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Blo
         case DataType::Guid:
         {
             //both guids are 16 bytes in memory
-            const auto& dataSize = firstBlock->GetSize();
+            const auto& dataSize = firstBlock->Size();
 
-            const int result = memcmp(firstBlock->GetRawData(), secondBlock->GetRawData(), dataSize);
+            const int result = memcmp(firstBlock->Data(), secondBlock->Data(), dataSize);
 
             if (result > 0) return 1;
             if (result < 0) return -1;
@@ -174,9 +174,9 @@ bool SortingFunctions::CompareRows(
         // const int result = SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);
         int result = 0;
 
-        if ((firstValue < secondValue).GetBool())
+        if ((firstValue < secondValue).AsBool())
             result = 1;
-        if ((firstValue > secondValue).GetBool())
+        if ((firstValue > secondValue).AsBool())
             result = -1;
 
         if(result == 0)
@@ -284,7 +284,7 @@ string SortingFunctions::CreateGroupByKey(const Row* row, const vector<GroupCond
     {
         const auto& block = rowData[condition.GetColumnIndex()];
         
-        hashKey.append(reinterpret_cast<const char*>(block->GetRawData()), block->GetSize());
+        hashKey.append(reinterpret_cast<const char*>(block->Data()), block->Size());
     }
 
     return hashKey;

@@ -4,30 +4,29 @@
 #include <vector>
 #include <limits>
 
-using namespace std;
 using namespace Constants;
 
 namespace DataTypes {
     class Decimal final {
-        vector<byte_t> bytes;
+        std::vector<byte_t> bytes;
 
     protected:
         template <typename T>
-        void InitializeFromInteger(const T& value);
+        void InitializeFromInteger(T value);
 
-        static std::vector<int> Unpack(const vector<byte_t>& bytes);
-        static std::vector<int> MultiplyDigits(const std::vector<int>& leftDigits, const std::vector<int>& rightDigits);
+        static std::vector<Int> Unpack(const std::vector<byte_t>& bytes);
+        static std::vector<Int> MultiplyDigits(const std::vector<Int>& leftDigits, const std::vector<Int>& rightDigits);
         static std::vector<byte_t> Pack(
-            const std::vector<int>& digits,
-            const bool& isPositive,
-            const fraction_index_t& fractionIndex
+            const std::vector<Int>& digits,
+            bool isPositive,
+            fraction_index_t fractionIndex
         );
 
-        static fraction_index_t GetFractionIndex(const string& value);
+        static fraction_index_t GetFractionIndex(const std::string& value);
 
         static fraction_index_t DetermineResultFractionIndex(
-            const fraction_index_t& leftFractionIndex,
-            const fraction_index_t& rightFractionIndex
+            fraction_index_t leftFractionIndex,
+            fraction_index_t rightFractionIndex
         );
         static int CompareDecimalsWithoutSign(
             const std::vector<byte_t>& leftData,
@@ -37,8 +36,8 @@ namespace DataTypes {
         static Decimal Add(
             const std::vector<byte_t>& left,
             const std::vector<byte_t>& right,
-            const fraction_index_t& fractionIndex,
-            const bool& isPositive
+            fraction_index_t fractionIndex,
+            bool isPositive
         );
 
         static void PadFractionalParts(
@@ -58,80 +57,80 @@ namespace DataTypes {
         static Decimal Subtract(
             const std::vector<byte_t>& left,
             const std::vector<byte_t>& right,
-            const fraction_index_t& fractionIndex,
-            const bool& isPositive
+            fraction_index_t fractionIndex,
+            bool isPositive
         );
 
         static Decimal Multiply(
             const std::vector<byte_t>& left,
             const std::vector<byte_t>& right,
             fraction_index_t& fractionIndex,
-            const bool& isPositive
+            bool isPositive
         );
 
         static Decimal Divide(
             const std::vector<byte_t>& left,
             const std::vector<byte_t>& right,
             fraction_index_t& fractionIndex,
-            const bool& isPositive
+            bool isPositive
         );
 
         static void TrimLeadingZeros(
-            std::vector<int>& digits,
+            std::vector<Int>& digits,
             fraction_index_t& fractionIndex
         );
 
         static void TrimTrailingZeros(
-            std::vector<int>& digits,
-            const fraction_index_t& fractionIndex
+            std::vector<Int>& digits,
+            fraction_index_t fractionIndex
         );
 
         static void PadDecimalParts(
-            std::vector<int>& digits,
+            std::vector<Int>& digits,
             fraction_index_t& fractionIndex
         );
 
-        [[nodiscard]] static byte_t CreateSignAndFractionByte(const bool& isPositive, const fraction_index_t& fractionIndex) ;
+        [[nodiscard]] static byte_t CreateSignAndFractionByte(bool isPositive, fraction_index_t fractionIndex) ;
 
         [[nodiscard]] static bool IsGreaterMagnitude(const std::vector<byte_t>& left, const std::vector<byte_t>& right);
 
     public:
         Decimal();
-        explicit Decimal(const string& value);
-        explicit Decimal(const byte_t* data, const int& dataSize);
-        explicit Decimal(const vector<byte_t>& value);
-        explicit Decimal(const bool& value);
-        explicit Decimal(const int8_t& value);
-        explicit Decimal(const int16_t& value);
-        explicit Decimal(const int32_t& value);
-        explicit Decimal(const int64_t& value);
+        explicit Decimal(const std::string& value);
+        explicit Decimal(const byte_t* data, Int dataSize);
+        explicit Decimal(const std::vector<byte_t>& value);
+        explicit Decimal(bool value);
+        explicit Decimal(TinyInt value);
+        explicit Decimal(SmallInt value);
+        explicit Decimal(Int value);
+        explicit Decimal(BigInt value);
         ~Decimal();
 
 
         [[nodiscard]] bool IsPositive() const;
         [[nodiscard]] fraction_index_t GetFractionIndex() const;
-        [[nodiscard]] string ToString() const;
+        [[nodiscard]] std::string ToString() const;
 
         [[nodiscard]] const byte_t* GetRawData() const;
 
-        [[nodiscard]] int GetRawDataSize() const;
+        [[nodiscard]] Int GetRawDataSize() const;
 
-        [[nodiscard]] const vector<byte_t>& GetData() const;
+        [[nodiscard]] const std::vector<byte_t>& GetData() const;
 
-        [[nodiscard]] static int Size(const int& precision);
+        [[nodiscard]] static Int Size(Int precision);
         [[nodiscard]] double ToDouble() const;
 
-        friend ostream& operator<<(ostream& os, const Decimal& decimal);
+        friend std::ostream& operator<<(std::ostream& os, const Decimal& decimal);
 
         friend Decimal operator+(const Decimal& left, const Decimal& right);
         friend Decimal operator-(const Decimal& left, const Decimal& right);
         friend Decimal operator*(const Decimal& left, const Decimal& right);
         friend Decimal operator/(const Decimal& left, const Decimal& right);
 
-        friend Decimal operator+(const Decimal& left, const int64_t& right);
-        friend Decimal operator-(const Decimal& left, const int64_t& right);
-        friend Decimal operator*(const Decimal& left, const int64_t& right);
-        friend Decimal operator/(const Decimal& left, const int64_t& right);
+        friend Decimal operator+(const Decimal& left, BigInt right);
+        friend Decimal operator-(const Decimal& left, BigInt right);
+        friend Decimal operator*(const Decimal& left, BigInt right);
+        friend Decimal operator/(const Decimal& left, BigInt right);
 
         friend bool operator==(const Decimal& left, const Decimal& right);
         friend bool operator>=(const Decimal& left, const Decimal& right);
@@ -139,10 +138,10 @@ namespace DataTypes {
         friend bool operator<(const Decimal& left, const Decimal& right);
         friend bool operator<=(const Decimal& left, const Decimal& right);
 
-        Decimal& operator=(const int8_t& right);
-        Decimal& operator=(const int16_t& right);
-        Decimal& operator=(const int32_t& right);
-        Decimal& operator=(const int64_t& right);
+        Decimal& operator=(TinyInt right);
+        Decimal& operator=(SmallInt right);
+        Decimal& operator=(Int right);
+        Decimal& operator=(BigInt right);
 
     };
 // Specialization

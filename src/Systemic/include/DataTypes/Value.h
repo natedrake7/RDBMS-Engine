@@ -24,23 +24,23 @@ class Value {
     block_size_t size;
     DataType type;
 
-    [[nodiscard]] bool TryParseAsBool(bool& result)const;
-    [[nodiscard]] bool TryParseAsBoolFromString(bool& result)const;
-    [[nodiscard]] bool TryParseAsBoolFromInt(bool& result)const;
+    [[nodiscard]] bool TryParseAsBool()const;
+    [[nodiscard]] bool TryParseAsBoolFromString()const;
+    [[nodiscard]] bool TryParseAsBoolFromInt()const;
     [[nodiscard]] bool TryParseDate();
 
-    static Value PerformTinyIntAddition(const int8_t& lhs, const int8_t& rhs);
-    static Value PerformSmallIntAddition(const int16_t& lhs, const int16_t& rhs);
-    static Value PerformIntAddition(const int32_t& lhs, const int32_t& rhs);
-    static Value PerformBigIntAddition(const int64_t& lhs, const int64_t &rhs);
-    static Value PerformStringAddition(const string& lhs, const string& rhs);
+    static Value PerformTinyIntAddition(TinyInt lhs, TinyInt rhs);
+    static Value PerformSmallIntAddition(SmallInt lhs, SmallInt rhs);
+    static Value PerformIntAddition(Int lhs, Int rhs);
+    static Value PerformBigIntAddition(BigInt lhs, BigInt rhs);
+    static Value PerformStringAddition(const std::string& lhs, const std::string& rhs);
     static Value PerformDecimalAddition(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
 
 
-    static Value PerformTinyIntSubtraction(const int8_t& lhs, const int8_t& rhs);
-    static Value PerformSmallIntSubtraction(const int16_t& lhs, const int16_t& rhs);
-    static Value PerformIntSubtraction(const int32_t& lhs, const int32_t& rhs);
-    static Value PerformBigIntSubtraction(const int64_t& lhs, const int64_t &rhs);
+    static Value PerformTinyIntSubtraction(TinyInt lhs, TinyInt rhs);
+    static Value PerformSmallIntSubtraction(SmallInt lhs, SmallInt rhs);
+    static Value PerformIntSubtraction(Int lhs, Int rhs);
+    static Value PerformBigIntSubtraction(BigInt lhs, BigInt rhs);
     static Value PerformDecimalSubtraction(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
 
     static std::tuple<bool, Value> PerformNullEqualityComparison(const Value& lhs, const Value& rhs);
@@ -53,7 +53,6 @@ class Value {
     [[nodiscard]] long double InterpolateString() const;
 
     public:
-        Value();
         Value(const Value& copyVal);
 
         //Move Constructor
@@ -63,61 +62,56 @@ class Value {
         Value& operator=(Value&& other) noexcept;
         ~Value();
 
-        explicit Value(const void* data, const column_index_t& columnIndex = 0);
+        explicit Value(column_index_t index = 0);
         explicit Value(const void* data, const int& size, const DataType& type);
         explicit Value(const unsigned char* data, const int& size, const DataType& type);
-        explicit Value(const bool& data, const column_index_t& columnIndex= 0);
-        explicit Value(const int8_t& data, const column_index_t& columnIndex= 0);
-        explicit Value(const int16_t& data, const column_index_t& columnIndex= 0);
-        explicit Value(const int32_t& data, const column_index_t& columnIndex= 0);
-        explicit Value(const int64_t& data, const column_index_t& columnIndex= 0);
-        explicit Value(const string& data, const column_index_t& columnIndex= 0, const bool& isIdentifier = false);
-        explicit Value(const u16string& data, const column_index_t& columnIndex= 0);
-        explicit Value(const DataTypes::DateTime& data, const column_index_t& columnIndex= 0);
-        explicit Value(const DataTypes::Decimal& data, const column_index_t& columnIndex= 0);
-        explicit Value(const DataTypes::Guid& data, const column_index_t& columnIndex= 0);
+        explicit Value(bool data, column_index_t index = 0);
+        explicit Value(TinyInt data, column_index_t index = 0);
+        explicit Value(SmallInt data, column_index_t index = 0);
+        explicit Value(Int data, column_index_t index = 0);
+        explicit Value(BigInt data, column_index_t index = 0);
+        explicit Value(const std::string& data, column_index_t index = 0);
+        explicit Value(const DataTypes::DateTime& data, column_index_t index = 0);
+        explicit Value(const DataTypes::Decimal& data, column_index_t index = 0);
+        explicit Value(const DataTypes::Guid& data, column_index_t index = 0);
 
-        static Value Null(const column_index_t& columnIndex = 0);
+        static Value Null(column_index_t columnIndex = 0);
 
         [[nodiscard]] bool IsNull() const;
-        
-        [[nodiscard]] const column_index_t& GetColumnIndex() const;
-
-        [[nodiscard]] const DataType& GetType() const;
+        [[nodiscard]] column_index_t GetColumnIndex() const;
+        [[nodiscard]] DataType GetType() const;
       
-        void SetData(const bool& otherData);
-        void SetData(const int8_t& otherData);
-        void SetData(const int16_t& otherData);
-        void SetData(const int32_t& otherData);
-        void SetData(const int64_t& otherData);
-        void SetData(const string& otherData);
-        void SetData(const u16string& otherData);
+        void SetData(bool otherData);
+        void SetData(TinyInt otherData);
+        void SetData(SmallInt otherData);
+        void SetData(Int otherData);
+        void SetData(BigInt otherData);
+        void SetData(const std::string& otherData);
         void SetData(const DataTypes::Decimal& otherData);
         void SetData(const DataTypes::DateTime& otherData);
         void SetData(const DataTypes::Guid& otherData);
 
-        [[nodiscard]] const block_size_t& GetSize() const;
-
-        [[nodiscard]] const object_t* GetRawData() const;
+        [[nodiscard]] block_size_t Size() const;
+        [[nodiscard]] const object_t* Data() const;
         
-        [[nodiscard]] bool GetBool()const;
-        [[nodiscard]] int8_t GetTinyInt()const;
-        [[nodiscard]] int16_t GetSmallInt()const;
-        [[nodiscard]] int32_t GetInt()const;
-        [[nodiscard]] int64_t GetBigInt()const;
-        [[nodiscard]] string GetString()const;
-        [[nodiscard]] u16string GetUnicodeString()const;
-        [[nodiscard]] DataTypes::Decimal GetDecimal()const;
-        [[nodiscard]] DataTypes::DateTime GetDateTime()const;
-        [[nodiscard]] time_t GetUnixTimeStamp() const;
-        [[nodiscard]] DataTypes::Guid GetGuid()const;
+        [[nodiscard]] bool AsBool()const;
+        [[nodiscard]] TinyInt AsTinyInt()const;
+        [[nodiscard]] SmallInt AsSmallInt()const;
+        [[nodiscard]] Int AsInt()const;
+        [[nodiscard]] BigInt AsBigInt()const;
+        [[nodiscard]] std::string AsString()const;
+        [[nodiscard]] std::u16string AsUnicodeString()const;
+        [[nodiscard]] DataTypes::Decimal AsDecimal()const;
+        [[nodiscard]] DataTypes::DateTime AsDateTime()const;
+        [[nodiscard]] time_t AsUnixTimeStamp() const;
+        [[nodiscard]] DataTypes::Guid AsGuid()const;
 
-        void SetColumnIndex(const column_index_t &otherIndex);
-        void SetType(const DataType &otherType);
-        void Deserialize(const std::vector<char>& buffer, uint32_t& offset);
+        void SetColumnIndex(column_index_t otherIndex);
+        void SetType(DataType otherType);
+        void Deserialize(const std::vector<char>& buffer, UnsignedInt& offset);
 
-        static DataType PromoteType(const DataType& lhs, const DataType& rhs);
-        friend ostream& operator<<(ostream& os, const Value& field);
+        static DataType PromoteType(DataType lhs, DataType rhs);
+        friend std::ostream& operator<<(std::ostream& os, const Value& field);
 
         Value& operator=(const Value& rhs);
         friend Value operator+(const Value& lhs, const Value& rhs);
@@ -136,13 +130,13 @@ class Value {
         [[nodiscard]] bool ParseAsBoolFromString()const;
         [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);
 
-        [[nodiscard]] int64_t Hash()const;
+        [[nodiscard]] BigInt Hash()const;
         [[nodiscard]] long double Interpolate()const;
 };
 
 struct ValueComparator {
     bool operator()(const Value& a, const Value& b) const {
-        return (a < b).GetBool();
+        return (a < b).AsBool();
     }
 };
 

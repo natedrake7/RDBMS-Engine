@@ -20,13 +20,14 @@ namespace ByteMaps
         this->data = bitMap->data;
     }
 
-    BitMap::BitMap(const bit_map_size_t &size, const byte_t &defaultValue) : size(size){
+    BitMap::BitMap(const bit_map_size_t size, const byte_t defaultValue){
+        this->size = size;
         this->data.resize((size + 7) / 8, defaultValue);
     }
 
     BitMap::~BitMap() = default;
 
-    void BitMap::Set(const bit_map_pos_t &position, const bool &value){
+    void BitMap::Set(const bit_map_pos_t position, const bool value){
         if (position >= this->size)
             this->Resize(position + 1);
 
@@ -39,13 +40,13 @@ namespace ByteMaps
         data[position / 8] &= ~(1 << (position % 8)); // Clear the bit
     }
 
-    bool BitMap::Get(const bit_map_pos_t &position) const { return data[position / 8] & (1 << (position % 8)); }
+    bool BitMap::Get(const bit_map_pos_t position) const { return data[position / 8] & (1 << (position % 8)); }
 
-    const bit_map_size_t &BitMap::GetSize() const { return this->size; }
+    bit_map_size_t BitMap::GetSize() const { return this->size; }
 
     bit_map_size_t BitMap::GetSizeInBytes() const { return this->data.size() + sizeof(bit_map_size_t); }
 
-    void BitMap::SetByte(const bit_map_pos_t &position, const byte_t &value){
+    void BitMap::SetByte(const bit_map_pos_t position, const byte_t value){
         if (position < this->data.size())
             data[position] = value;
     }
@@ -128,11 +129,11 @@ namespace ByteMaps
         std::cout << std::endl;
     }
 
-    const std::vector<byte_t> &BitMap::GetData() const { return this->data; }
+    const std::vector<byte_t>& BitMap::GetData() const { return this->data; }
 
-    std::vector<byte_t> & BitMap::GetDataUnsafe(){ return this->data; }
+    std::vector<byte_t>& BitMap::GetDataUnsafe(){ return this->data; }
 
-    bit_map_size_t & BitMap::GetSizeUnsafe(){ return this->size; }
+    bit_map_size_t BitMap::GetSizeUnsafe() const { return this->size; }
 
     BitMap &BitMap::operator=(const BitMap &bitMap){
         if (&bitMap == this)

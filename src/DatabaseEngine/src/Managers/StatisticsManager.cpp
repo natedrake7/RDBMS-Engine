@@ -11,7 +11,7 @@ namespace DatabaseEngine {
     return instance;
   }
 
-  Headers::TableStatistics StatisticsManager::GetTableStatistics(const Int &tableId) {
+  Headers::TableStatistics StatisticsManager::GetTableStatistics(const Int tableId) {
     MultiThreading::ReaderGuard lock(&this->tableStatisticsLatch);
 
     Headers::TableStatistics stats;
@@ -31,8 +31,8 @@ namespace DatabaseEngine {
   }
 
   Headers::ColumnStatistics StatisticsManager::GetColumnStatistics(
-    const Int& tableId,
-    const Int &columnId
+    const Int tableId,
+    const Int columnId
   ) {
     MultiThreading::ReaderGuard lock(&this->columnStatisticsLatch);
 
@@ -54,7 +54,7 @@ namespace DatabaseEngine {
     return catalogStats;
   }
 
-  std::vector<Headers::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int &tableId) {
+  std::vector<Headers::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int tableId) {
     MultiThreading::ReaderGuard lock(&this->indexStatisticsLatch);
 
     std::vector<Headers::IndexStatistics> stats;

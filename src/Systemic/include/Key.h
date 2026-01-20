@@ -17,7 +17,7 @@ namespace DataTypes::Indexing {
     std::vector<Key> subKeys;
 
     Key();
-    Key(const void *keyValue, const key_size_t &keySize, const DataType& keyType);
+    Key(const void *keyValue, key_size_t keySize, DataType keyType);
     explicit Key(const Value& field);
     explicit Key(Value& field);
     explicit Key(const std::vector<Key>& subKeys);
@@ -46,8 +46,8 @@ namespace DataTypes::Indexing {
     void InsertKey(const Key &otherKey);
 
     static ComparisonResult CompareSubKeys(const Key& firstKey, const Key& otherKey);
-    [[nodiscard]] Int AsInt(const Int& pos = 0)const;
-    [[nodiscard]] BigInt AsBigInt(const Int& pos = 0)const;
+    [[nodiscard]] Int AsInt(Int pos = 0)const;
+    [[nodiscard]] BigInt AsBigInt(Int pos = 0)const;
 
     key_size_t CalculateSize()const;
 
@@ -55,7 +55,7 @@ namespace DataTypes::Indexing {
     static Key DeserializeNonComposite(
       const object_t* buffer,
       page_offset_t& offset,
-      const DataType& type
+      DataType type
     );
     static Key Deserialize(
       const object_t* buffer,

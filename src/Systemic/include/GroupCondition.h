@@ -15,7 +15,13 @@ class GroupCondition {
     
 
     public:
-        GroupCondition(const column_index_t& columnIndex, const DataType& columnType, const AggregateFunction& aggregateFunction = NONE, const bool& isColumnIndexed = false, const long double* constantValue = nullptr);
+        GroupCondition(
+            const column_index_t& columnIndex,
+            const DataType& columnType,
+            const AggregateFunction& aggregateFunction = NONE,
+            const bool& isColumnIndexed = false,
+            const long double* constantValue = nullptr
+        );
         ~GroupCondition();
         [[nodiscard]] const DataType& GetColumnType() const;
         [[nodiscard]] const column_index_t& GetColumnIndex() const;

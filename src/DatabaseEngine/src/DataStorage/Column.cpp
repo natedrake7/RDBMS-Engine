@@ -7,8 +7,13 @@
 #include "Guards/WriterGuard.h"
 
 namespace DatabaseEngine::StorageTypes {
-     Column::Column(const std::string& columnName, const DataType& type, const row_size_t&  recordSize, const column_index_t& index, const bool& allowNulls)
-    {
+     Column::Column(
+         const std::string& columnName,
+         const DataType type,
+         const row_size_t recordSize,
+         const column_index_t index,
+         const bool allowNulls
+    ){
         this->name = columnName;
         this->header.recordSize = recordSize;
         this->allowNulls = allowNulls;
@@ -18,8 +23,11 @@ namespace DatabaseEngine::StorageTypes {
         this->isOverflowed = false;
     }
 
-    Column::Column(const Headers::sysColumn& header, const column_index_t& tablePos , const Table* table)
-    {
+    Column::Column(
+        const Headers::sysColumn& header,
+        const column_index_t ordinalPosition ,
+        const Table* table
+    ){
         const auto normalizedType = Functions::String::NormalizeString(header.type);
 
         this->name = header.name;
@@ -29,13 +37,12 @@ namespace DatabaseEngine::StorageTypes {
         const auto size = ColumnTypeSizes.Get(normalizedType);
 
         this->header.recordSize = size == 0 ? header.size : size;
-        this->header.columnIndex = tablePos;
+        this->header.columnIndex = ordinalPosition;
         this->table = table;
         this->isOverflowed = false;
     }
 
-    Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table)
-    {
+    Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table){
         this->header.id = masterDbHeader.id;
         this->name = masterDbHeader.name;
         this->allowNulls = masterDbHeader.isNullable;
@@ -52,17 +59,17 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetColumnName(const std::string &otherName){ this->name = otherName;}
 
-    const DataType& Column::GetColumnType() const { return this->header.columnType; }
+    DataType Column::GetColumnType() const { return this->header.columnType; }
 
-    const row_size_t& Column::GetColumnSize() const { return this->header.recordSize; }
+    row_size_t Column::GetColumnSize() const { return this->header.recordSize; }
 
     bool Column::IsColumnNullable() const { return this->table->IsColumnNullable(this->header.columnIndex); }
 
-    const bool& Column::GetAllowNulls() const { return this->allowNulls; }
+    bool Column::GetAllowNulls() const { return this->allowNulls; }
 
-    void Column::SetColumnIndex(const column_index_t& columnIndex) { this->header.columnIndex = columnIndex; }
+    void Column::SetColumnIndex(const column_index_t columnIndex) { this->header.columnIndex = columnIndex; }
 
-    const column_index_t& Column::GetColumnIndex() const { return this->header.columnIndex; }
+    column_index_t Column::GetColumnIndex() const { return this->header.columnIndex; }
 
     const ColumnHeader& Column::GetColumnHeader() const { return this->header; }
 
@@ -70,11 +77,11 @@ namespace DatabaseEngine::StorageTypes {
 
     bool Column::isColumnOverflowed() const{ return this->isOverflowed; }
 
-    const int32_t& Column::GetColumnId() const{ return this->header.id; }
+    Int Column::GetColumnId() const{ return this->header.id; }
 
-    void Column::SetColumnId(const int32_t &columnId){ this->header.id = columnId; }
+    void Column::SetColumnId(const Int columnId){ this->header.id = columnId; }
 
-    void Column::SetIdentityManagerIds(const int32_t &tableId){ this->identityManager.SetHeaderIds(tableId, this->header.id); }
+    void Column::SetIdentityManagerIds(const Int tableId){ this->identityManager.SetHeaderIds(tableId, this->header.id); }
 
     const Headers::IdentityColumnsHeader & Column::GetIdentity()const { return this->identityManager.GetHeader(); }
 
@@ -84,9 +91,9 @@ namespace DatabaseEngine::StorageTypes {
 
     const Headers::DefaultValuesHeader & Column::GetDefaultValue() const{ return this->header.defaultValue; }
 
-    void Column::SetIsOverflowed(const bool & isOverflow){ this->isOverflowed = isOverflow; }
+    void Column::SetIsOverflowed(const bool isOverflow){ this->isOverflowed = isOverflow; }
 
-    bool Column::GenerateIdentityValue(int64_t& value){
+    bool Column::GenerateIdentityValue(BigInt& value){
         return this->identityManager.TryGenerate(value);
     }
 

@@ -138,7 +138,7 @@ namespace QueryPipeline::Statements {
 
   struct PrimaryKeyConstraint {
     std::string name;
-    vector<ColumnName> columns;
+    std::vector<ColumnName> columns;
   };
 
   struct WhereClause{
@@ -290,7 +290,7 @@ namespace QueryPipeline::Statements {
   struct CreateTableStatement final: Statement {
     std::vector<NewColumn*> columns;
     PrimaryKeyConstraint* constraint;
-    vector<column_index_t> primaryKey;
+    std::vector<column_index_t> primaryKey;
 
     CreateTableStatement();
     ~CreateTableStatement() override;
@@ -298,7 +298,7 @@ namespace QueryPipeline::Statements {
     Errors::ValidationStatus CompileSchema(ParserValidationScope& validationScope) const;
     Errors::ValidationStatus CompileColumnExpression(
       NewColumn*& column,
-      Dictionary<string, column_index_t>& columnNamesToIndexes,
+      Dictionary<std::string, column_index_t>& columnNamesToIndexes,
       bool& primaryKeyFound,
       column_index_t& index
     );
@@ -426,8 +426,8 @@ namespace QueryPipeline::Statements {
 
   struct CreateIndexStatement final : Statement {
     std::string name;
-    vector<std::string> columns;
-    vector<column_index_t> columnIndices;
+    std::vector<std::string> columns;
+    std::vector<column_index_t> columnIndices;
     bool isUnique;
 
     Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;

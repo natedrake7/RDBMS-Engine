@@ -16,30 +16,27 @@ namespace DataTypes::Indexing{
 
    QueryData::~QueryData() = default;
 
-    Key::Key()
-    {
+    Key::Key(){
         this->value = Value::Null();
         this->size = 0;
     }
 
-    Key::Key(const void *keyValue, const key_size_t &keySize, const DataType& keyType)
-    {
+    Key::Key(const void *keyValue, const key_size_t keySize, const DataType keyType){
         this->value = Value(keyValue, keySize, keyType);
         this->size = keySize;
     }
 
     Key::Key(const Value &field){
         this->value = field;
-        this->size = this->value.GetSize();
+        this->size = this->value.Size();
     }
 
     Key::Key(Value &field) {
         this->value = std::move(field);
-        this->size = this->value.GetSize();
+        this->size = this->value.Size();
     }
 
-    Key::Key(const vector<Key> &subKeys)
-    {
+    Key::Key(const std::vector<Key> &subKeys){
         this->size = 0;
         for (const auto &key : subKeys){
             this->subKeys.push_back(key);
@@ -54,8 +51,7 @@ namespace DataTypes::Indexing{
 
     Key::~Key() = default;
 
-    Key::Key(const Key &otherKey)
-    {
+    Key::Key(const Key &otherKey){
         this->size = otherKey.size;
 
         if(otherKey.subKeys.empty()){
@@ -128,11 +124,14 @@ namespace DataTypes::Indexing{
     //     other.subKeys.clear();
     // }
 
-    void Key::InsertKey(const Key &otherKey)
+    bool Key::operator==(const Key& otherKey) const
     {
-        this->size += (otherKey.size + sizeof(key_size_t));
+        if(!this->subKeys.empty())
+            return this->CompareCompositeKeys(otherKey) == Key::ComparisonResult::Equal;
 
-        this->subKeys.push_back(otherKey);
+        const auto result = this->value == otherKey.value;
+
+        return result.AsBool();
     }
 
     bool Key::operator>(const Key& otherKey) const
@@ -142,7 +141,7 @@ namespace DataTypes::Indexing{
 
         const auto result = this->value > otherKey.value;
 
-        return result.GetBool();
+        return result.AsBool();
     }
 
     bool Key::operator<(const Key& otherKey) const
@@ -162,7 +161,7 @@ namespace DataTypes::Indexing{
 
         const auto result = this->value >= otherKey.value;
 
-        return result.GetBool();
+        return result.AsBool();
     }
 
     bool Key::InClosedRange(const Key &minKey, const Key &maxKey) const { return minKey <= *this && maxKey >= *this; }
@@ -217,6 +216,13 @@ namespace DataTypes::Indexing{
         return ComparisonResult::Equal;
     }
 
+    void Key::InsertKey(const Key &otherKey)
+    {
+        this->size += (otherKey.size + sizeof(key_size_t));
+
+        this->subKeys.push_back(otherKey);
+    }
+
     Key::ComparisonResult Key::CompareSubKeys(const Key& firstKey, const Key& otherKey){
         if (firstKey == otherKey)
             return ComparisonResult::Equal;
@@ -227,29 +233,29 @@ namespace DataTypes::Indexing{
         return ComparisonResult::Greater;
     }
 
-    int32_t Key::AsInt(const int& pos)const{
+    Int Key::AsInt(const Int pos)const{
         if (subKeys.empty())
             throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
 
         if (subKeys.size() < pos)
             throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
 
-        return this->subKeys.at(pos).value.GetInt();
+        return this->subKeys.at(pos).value.AsInt();
     }
 
-    int64_t Key::AsBigInt(const int& pos) const{
+    BigInt Key::AsBigInt(const Int pos) const{
         if (subKeys.empty())
             throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
 
         if (subKeys.size() < pos)
             throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
 
-        return this->subKeys.at(pos).value.GetBigInt();
+        return this->subKeys.at(pos).value.AsBigInt();
     }
 
     key_size_t Key::CalculateSize()const{
         if (this->subKeys.empty())
-            return this->value.GetSize() + sizeof(key_size_t);
+            return this->value.Size() + sizeof(key_size_t);
 
         key_size_t currentSize = 0;
         for (const auto& key : this->subKeys)
@@ -260,11 +266,11 @@ namespace DataTypes::Indexing{
 
     void Key::Serialize(object_t*& buffer, page_offset_t& offset) const{
         if (subKeys.empty()){
-            const auto valueSize = this->value.GetSize();
+            const auto valueSize = this->value.Size();
             memcpy(buffer + offset, &valueSize, sizeof(key_size_t));
             offset += sizeof(key_size_t);
 
-            memcpy(buffer + offset, this->value.GetRawData(), valueSize);
+            memcpy(buffer + offset, this->value.Data(), valueSize);
             offset += valueSize;
             return;
         }
@@ -276,7 +282,7 @@ namespace DataTypes::Indexing{
     Key Key::DeserializeNonComposite(
         const object_t* buffer,
         page_offset_t& offset,
-        const DataType& type
+        const DataType type
     ) {
         key_size_t valueSize = 0;
         memcpy(&valueSize, buffer + offset, sizeof(key_size_t));
@@ -329,16 +335,6 @@ namespace DataTypes::Indexing{
 
         os << key.value;
         return os;
-    }
-
-    bool Key::operator==(const Key& otherKey) const
-    {
-        if(!this->subKeys.empty())
-            return this->CompareCompositeKeys(otherKey) == Key::ComparisonResult::Equal;
-
-        const auto result = this->value == otherKey.value;
-
-        return result.GetBool();
     }
 
 }

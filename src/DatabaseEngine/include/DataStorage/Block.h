@@ -29,7 +29,7 @@ namespace DatabaseEngine::StorageTypes {
         Errors::RuntimeStatus SetDataByType(const Value& value);
 
         template <typename T>
-        void CopyToBuffer(const T& value);
+        void CopyToBuffer(T value);
         inline void CopyToBuffer(const std::string& src);
         inline void CopyToBuffer(const std::u16string& src);
         inline void CopyToBuffer(const DataTypes::Decimal& src);
@@ -50,52 +50,43 @@ namespace DatabaseEngine::StorageTypes {
 
     public:
         explicit Block();
-
         explicit Block(const Column* column);
-
         explicit Block(const Block* block);
 
-        Block(const void* data, const block_size_t& size, const Column* column);
-
-        Block(object_t* data, const block_size_t& size, const Column* column);
+        Block(const void* data, block_size_t size, const Column* column);
+        Block(object_t* data, block_size_t size, const Column* column);
 
         ~Block();
 
-        void SetData(const void* inputData, const block_size_t& inputSize);
-
+        void SetData(const void* inputData, block_size_t inputSize);
         [[nodiscard]] Errors::RuntimeStatus SetData(const Value& value);
 
-        [[nodiscard]] object_t* GetRawData() const;
+        [[nodiscard]] object_t* Data() const;
+        [[nodiscard]] block_size_t Size() const;
 
-        [[nodiscard]] block_size_t GetSize() const;
-
-        [[nodiscard]] bool GetBool() const;
-        [[nodiscard]] int8_t GetTinyInt() const;
-        [[nodiscard]] int16_t GetSmallInt() const;
-        [[nodiscard]] int32_t GetInt() const;
-        [[nodiscard]] int64_t GetBigInt() const;
-        [[nodiscard]] string GetString() const;
-        [[nodiscard]] u16string GetUnicodeString() const;
-        [[nodiscard]] DataTypes::Decimal GetDecimal() const;
-        [[nodiscard]] DataTypes::DateTime GetDateTime() const;
-        [[nodiscard]] DataTypes::Guid GetGuid() const;
-        [[nodiscard]] Pages::DataObjectPointer GetLargeObjectPointer() const;
-        [[nodiscard]] Pages::OverflowPointer GetOverflowPointer() const;
+        [[nodiscard]] bool AsBool() const;
+        [[nodiscard]] TinyInt AsTinyInt() const;
+        [[nodiscard]] SmallInt AsSmallInt() const;
+        [[nodiscard]] Int AsInt() const;
+        [[nodiscard]] BigInt AsBigInt() const;
+        [[nodiscard]] std::string AsString() const;
+        [[nodiscard]] std::u16string AsUnicodeString() const;
+        [[nodiscard]] DataTypes::Decimal AsDecimal() const;
+        [[nodiscard]] DataTypes::DateTime AsDateTime() const;
+        [[nodiscard]] DataTypes::Guid AsGuid() const;
+        [[nodiscard]] Pages::DataObjectPointer AsLargeObjectPointer() const;
+        [[nodiscard]] Pages::OverflowPointer AsOverflowPointer() const;
         
-        [[nodiscard]] const column_index_t& GetColumnIndex() const;
-
-        [[nodiscard]] const row_size_t& GetColumnSize() const;
-
-        [[nodiscard]] const DataType& GetColumnType() const;
+        [[nodiscard]] column_index_t ColumnIndex() const;
+        [[nodiscard]] row_size_t ColumnSize() const;
+        [[nodiscard]] DataType ColumnType() const;
+        [[nodiscard]] bool Null() const;
 
         [[nodiscard]] const Column* GetColumn() const;
-
-        [[nodiscard]] bool GetIsNull() const;
-
         void SetColumn(const Column* otherColumn);
     };
 
-    template <typename T> void Block::CopyToBuffer(const T &value){
+    template <typename T> void Block::CopyToBuffer(T value){
         this->size = sizeof(T);
         this->data = static_cast<object_t*>(std::malloc(this->size));
         std::memcpy(this->data, &value, this->size);

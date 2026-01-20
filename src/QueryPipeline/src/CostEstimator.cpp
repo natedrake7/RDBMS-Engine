@@ -159,7 +159,7 @@ namespace QueryPipeline{
         for (int i = 0;i < histograms.size(); i++){
             const auto& histogram = histograms[i];
 
-            if ((value < histogram.rangeEnd).GetBool())
+            if ((value < histogram.rangeEnd).AsBool())
                 return i;
         }
 

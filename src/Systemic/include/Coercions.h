@@ -12,7 +12,6 @@ namespace DataTypes{
     };
 
     class Coercions {
-
         static constexpr CoercionType TypeCoercionMatrix[][12] = {
             // To:        TinyInt  SmallInt Int     BigInt
             //            Decimal  String   UString  Bool
@@ -86,7 +85,7 @@ namespace DataTypes{
             "false", "0", "no", "n", "off"
         };
 
-    [[nodiscard]] static constexpr CoercionType GetCoercionType(const DataType& fromType, const DataType& toType);
+    [[nodiscard]] static constexpr CoercionType GetCoercionType(DataType fromType, DataType toType);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value, bool& outVal);
 
@@ -105,22 +104,20 @@ namespace DataTypes{
     static void DownCastFromInt(Value& value);
     static void DownCastFromBigInt(Value& value);
 
-
     public:
-        [[nodiscard]] static bool IsCoercionAllowed(const DataType& fromType, const DataType& toType, const bool& explicitCast = false);
+        [[nodiscard]] static bool IsCoercionAllowed(DataType fromType, DataType toType, bool explicitCast = false);
+        [[nodiscard]] static bool ToBool(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static TinyInt ToTinyInt(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static SmallInt ToSmallInt(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static Int ToInt(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static BigInt ToBigInt(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static std::string ToString(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static std::u16string ToUnicodeString(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static Guid ToGuid(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static DateTime ToDateTime(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static Decimal ToDecimal(const Value& value, bool explicitCast = false);
 
-        [[nodiscard]] static bool ToBool(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static int8_t ToTinyInt(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static int16_t ToSmallInt(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static int32_t ToInt(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static int64_t ToBigInt(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static std::string ToString(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static u16string ToUnicodeString(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static Guid ToGuid(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static DateTime ToDateTime(const Value& value, const bool& explicitCast = false);
-        [[nodiscard]] static Decimal ToDecimal(const Value& value, const bool& explicitCast = false);
-
-        [[nodiscard]] static bool CanBeParsedToType(const DataType& toType, const Value& value);
+        [[nodiscard]] static bool CanBeParsedToType(DataType toType, const Value& value);
         static void DeduceIntegerType(Value& value);
 
     };

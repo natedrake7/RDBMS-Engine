@@ -14,27 +14,27 @@ namespace ByteMaps {
         std::vector<byte_t> data;
 
     protected:
-        void CheckIndex(const byte_map_pos_t& pos) const;
+        void CheckIndex(byte_map_pos_t pos) const;
 
     public:
-        explicit ByteMap(const byte_map_size_t& size);
+        explicit ByteMap(byte_map_size_t size);
         ByteMap();
         ~ByteMap();
 
-        void SetPageIsAllocated(const byte_map_pos_t& pos, const bool& isAllocated);
-        [[nodiscard]] bool IsAllocated(const byte_map_pos_t& pos) const;
+        void SetPageIsAllocated(byte_map_pos_t pos, bool isAllocated);
+        [[nodiscard]] bool IsAllocated(byte_map_pos_t pos) const;
 
-        void SetPageType(const byte_map_pos_t& pos, const byte_t& type);
-        [[nodiscard]] byte_t GetPageType(const byte_map_pos_t& pos) const;
+        void SetPageType(byte_map_pos_t pos, byte_t type);
+        [[nodiscard]] byte_t GetPageType(byte_map_pos_t pos) const;
     
-        void SetFreeSpace(const byte_map_pos_t& pos, const byte_t& percentage);
-        [[nodiscard]] page_size_t GetFreeSpace(const byte_map_pos_t& pos) const;
+        void SetFreeSpace(byte_map_pos_t pos, byte_t percentage);
+        [[nodiscard]] page_size_t GetFreeSpace(byte_map_pos_t pos) const;
 
-        void GetDataFromFile(const std::vector<char> &otherData, page_offset_t &offset, const page_size_t& byteMapSize);
+        void GetDataFromFile(const std::vector<char> &otherData, page_offset_t &offset, page_size_t byteMapSize);
         void WriteDataToFile(std::fstream* filePtr) const;
         void Print() const;
 
-        void SetByte(const byte_map_pos_t& position, const byte_t& value);
+        void SetByte(byte_map_pos_t position, byte_t value);
     
     };
 }

@@ -8,22 +8,22 @@ namespace DatabaseEngine::StorageTypes
 {
   class IdentityManager {
     Headers::IdentityColumnsHeader header;
-    int64_t startingValue;
+    BigInt startingValue;
 
     mutable MultiThreading::ReadWriteMutex mutex;
 
-    [[nodiscard]] int64_t Generate();
-    void UpdateMasterDb(const int64_t& value)const;
+    [[nodiscard]] BigInt Generate();
+    void UpdateMasterDb(BigInt value)const;
 
     public:
       IdentityManager();
       ~IdentityManager();
 
-      void SetHeaderIds(const int32_t& tableId, const int32_t& columnId);
+      void SetHeaderIds(Int tableId, Int columnId);
       void SetHeader(const Headers::IdentityColumnsHeader& newHeader);
       [[nodiscard]] const Headers::IdentityColumnsHeader& GetHeader() const;
 
-      [[nodiscard]] bool TryGenerate(int64_t& value);
+      [[nodiscard]] bool TryGenerate(BigInt& value);
       void UpdateMasterDb()const;
 
       [[nodiscard]] bool IsValid()const;

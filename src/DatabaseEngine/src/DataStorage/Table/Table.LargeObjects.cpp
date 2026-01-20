@@ -25,7 +25,7 @@ namespace DatabaseEngine::StorageTypes {
             rowHeader->largeObjectBitMap->Set(largeBlockIndex, true);
 
             page_offset_t offset = 0;
-            block_size_t remainingBlockSize = rowData[largeBlockIndex]->GetSize();
+            block_size_t remainingBlockSize = rowData[largeBlockIndex]->Size();
 
             this->RecursiveInsertToLargePage(
                 row,
@@ -50,7 +50,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto &pageSize = largeDataPage->GetBytesLeft();
 
-        const auto &data = row->GetData()[columnIndex]->GetRawData();
+        const auto &data = row->GetData()[columnIndex]->Data();
 
         if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize)
         {
@@ -121,8 +121,11 @@ namespace DatabaseEngine::StorageTypes {
 
         const Pages::DataObjectPointer objectPointer(lastLargePageId);
 
-        auto *block = new Block(&objectPointer, sizeof(Pages::DataObjectPointer),
-                                this->columns[largeBlockIndex]);
+        auto *block = new Block(
+            &objectPointer,
+            sizeof(Pages::DataObjectPointer),
+            this->columns[largeBlockIndex]
+        );
 
         row->UpdateColumnData(block);
     }
@@ -134,8 +137,4 @@ namespace DatabaseEngine::StorageTypes {
     Pages::PageGuard<Pages::OverflowPage> Table::GetOverflowPage(const page_id_t & pageId) const{
       return Storage::StorageManager::Get().GetOverflowPage(this->database->GetFileName(), pageId, this);
     }
-
-    const Headers::Index& Table::GetNonClusteredIndexes(const int& indexPos) const { return this->header.nonClusteredIndexes.at(indexPos); }
-
-    const std::vector<column_index_t> & Table::GetClusteredIndex() const { return this->header.clusteredIndex.columns; }
 }

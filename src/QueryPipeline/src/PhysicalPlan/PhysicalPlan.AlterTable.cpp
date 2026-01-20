@@ -49,7 +49,7 @@ namespace QueryPipeline::PhysicalPlan{
       const auto columnId = columnResult.primaryKey.AsInt(1);
 
       if (!this->column->defaultValue.IsNull()) {
-        const auto value = this->column->defaultValue.GetString();
+        const auto value = this->column->defaultValue.AsString();
 
         const auto defaultValueResult =
             this->catalog->InsertDefaultValuesToMasterDb(
@@ -74,10 +74,10 @@ namespace QueryPipeline::PhysicalPlan{
     columnPtr->SetColumnId(columnId);
 
     tablePtr->AddColumn(columnPtr);
-    tablePtr->GetIdentityColumnById(columnId);
+    tablePtr->RetrieveIdentityColumnById(columnId);
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
-    tablePtr->GetDefaultValuesHeaders();
+    tablePtr->RetrieveDefaultValuesFromCatalog();
 
     return nullptr;
   }

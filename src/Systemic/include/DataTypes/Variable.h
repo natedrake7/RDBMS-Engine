@@ -25,7 +25,7 @@ class Variable {
       this->name = std::move(other.name);
       this->normalizedName = std::move(other.normalizedName);
 
-      other.value = {};
+      other.value = Value::Null();
       other.type = DataType::Unknown;
       other.name = {};
       other.normalizedName = {};
@@ -47,7 +47,7 @@ class Variable {
       this->name = std::move(other.name);
       this->normalizedName = std::move(other.normalizedName);
 
-      other.value = {};
+      other.value = Value::Null();
       other.name = {};
       other.normalizedName = {};
       other.type = DataType::Unknown;

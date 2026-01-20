@@ -44,7 +44,7 @@ namespace DatabaseEngine {
     return snapshot;
   }
 
-  void TransactionManager::SetTransactionId(const transaction_id_t &transactionId) {
+  void TransactionManager::SetTransactionId(const transaction_id_t transactionId) {
     std::unique_lock lock(this->transactionMutex);
 
     this->currentTransactionId = transactionId;

@@ -19,12 +19,12 @@ namespace DatabaseEngine {
     public:
       static StatisticsManager& Get();
 
-      Headers::TableStatistics GetTableStatistics(const Int& tableId);
+      Headers::TableStatistics GetTableStatistics(Int tableId);
       Headers::ColumnStatistics GetColumnStatistics(
-        const Int& tableId,
-        const Int &columnId
+        Int tableId,
+        Int columnId
       );
-      std::vector<Headers::IndexStatistics> GetIndexStatistics(const Int& tableId);
+      std::vector<Headers::IndexStatistics> GetIndexStatistics(Int tableId);
 
       void Update(
         const Headers::TableStatistics& tableStatistics,

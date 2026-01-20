@@ -32,7 +32,7 @@ public:
   static TransactionManager& Get();
 
   Snapshot BeginTransaction(const DataTypes::Guid& sessionId);
-  void SetTransactionId(const transaction_id_t& transactionId);
+  void SetTransactionId(transaction_id_t transactionId);
   void CommitTransaction(const Snapshot& snapshot);
   void RollbackTransaction(const Snapshot& snapshot);
   transaction_id_t GetOldestActiveTransactionId();
