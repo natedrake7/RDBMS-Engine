@@ -93,6 +93,8 @@
 
 //CHECK CACHE BLOCK 0
 
+//add peek header functionality on page rows to delay materialization
+
 int main(){
     // Tests::InitializeTester();
     // Tests::RunTest(&Tests::IndexPageUpdate);
