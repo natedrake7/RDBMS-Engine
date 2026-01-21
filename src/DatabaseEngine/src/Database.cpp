@@ -878,7 +878,7 @@ namespace DatabaseEngine
 
         const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, table);
 
-        vector<extent_id_t> allocatedExtents;
+        std::vector<extent_id_t> allocatedExtents;
         tableMapPage->GetAllocatedExtents(&allocatedExtents);
 
         for (const auto &extentId : allocatedExtents)
@@ -983,7 +983,7 @@ namespace DatabaseEngine
 
     const std::vector<StorageTypes::Table *> & Database::GetTables() const{ return this->tables; }
 
-    string Database::GetSystemFilename() const{ return this->systemFilename;}
+    std::string Database::GetSystemFilename() const{ return this->systemFilename; }
 
     DatabaseHeader::DatabaseHeader(){
         this->numberOfTables = 0;

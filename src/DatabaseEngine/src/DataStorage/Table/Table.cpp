@@ -520,7 +520,6 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->database->GetSystemFilename());
-
         headerPage->SetTableHeader(this);
 
         for (const auto &column : columns)

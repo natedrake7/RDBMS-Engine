@@ -57,7 +57,7 @@ namespace Pages{
 
         SlotDirectoryDefragment(
             SlotDirectory slotDirectory,
-            const Int& indexPosition
+            Int indexPosition
         ){
             this->slotDirectory = slotDirectory;
             this->indexPosition = indexPosition;
@@ -107,8 +107,8 @@ namespace Pages{
 
         void WritePageHeaderToDisk(std::fstream *filePtr) const;
         [[nodiscard]] page_offset_t NewInsertOffset()const;
-        [[nodiscard]] Int SlotDirectoryOffSet(const Int& indexPosition) const;
-        [[nodiscard]] Int SlotDirectoriesToMoveOffSet(const Int& indexPosition, const Int& slotToMove) const;
+        [[nodiscard]] Int SlotDirectoryOffSet(Int indexPosition) const;
+        [[nodiscard]] Int SlotDirectoriesToMoveOffSet(Int indexPosition, Int slotToMove) const;
 
         [[nodiscard]] Int RawDataSize()const;
 
@@ -117,7 +117,7 @@ namespace Pages{
         SlotDirectory GetSlotDirectory(Int indexPosition) const;
         DatabaseEngine::StorageTypes::Row MaterializeRow(
             const DatabaseEngine::StorageTypes::Table* table,
-            const Int& indexId
+            Int indexId
         ) const;
         void UpdateSlotDirectory(SlotDirectory slotDirectory, Int indexPosition) const;
 
@@ -172,7 +172,7 @@ namespace Pages{
         [[nodiscard]] Constants::PageType GetPageType() const;
         [[nodiscard]] DatabaseEngine::StorageTypes::Row GetRow(const DatabaseEngine::StorageTypes::Table* table, Int indexPosition)const;
 
-        void Defragment() const;
+        void Defragment();
 
         void IncreasePinCount();
         void DecreasePinCount();

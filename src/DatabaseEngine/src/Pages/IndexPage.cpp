@@ -118,6 +118,9 @@ DataTypes::Indexing::Key IndexPage::GetKey(page_offset_t& offSet) const{
     );
 }
 
+void IndexPage::AdjustRows(){
+}
+
 void IndexPage::InsertChild(const page_id_t child, const DataTypes::Indexing::Key* key){
     if (this->header.size == 0){
         this->InsertFirstChild(child);
@@ -320,10 +323,8 @@ void IndexPage::UpdateRow(
     const auto previousRowSize = slot.size - key.size;
     const auto currentRowSize = row->TotalSize();
 
-    const auto sizeDiff = static_cast<int>(currentRowSize) - static_cast<int>(previousRowSize);
-
     //if new row size is less than or equal to previous row size, update in place
-    if (sizeDiff <= 0){
+    if (currentRowSize <= previousRowSize){
         row->Serialize(this->data, offSet);
         return;
     }
@@ -334,8 +335,14 @@ void IndexPage::UpdateRow(
 
     //if next row cant fit in the remaining space, we need to compact the page
     const auto totalSize = key.size + currentRowSize;
-    if (this->header.bytesLeft - totalSize < 0){
+    //keep slot offset and set its size to 0 so defragmentation does nothing as it is last on the offset
+    if (this->header.bytesLeft < totalSize){
+        this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0), indexPosition);
         this->Defragment();
+
+        //even if after the defragment row cant fit, throw exception
+        if (this->header.bytesLeft < totalSize)
+            throw std::runtime_error("IndexPage::UpdateRow: Not enough space to update the row after defragmentation.");
 
         nextOffset = this->NewInsertOffset();
         offSetCopy = nextOffset;
@@ -348,8 +355,10 @@ void IndexPage::UpdateRow(
     const auto newSlot = SlotDirectory(offSetCopy, totalSize);
     this->UpdateSlotDirectory(newSlot, indexPosition);
 
-    //update bytes left
-    this->header.bytesLeft -= sizeDiff;
+    //update bytes
+    //Decrease by total size even though the previous offset is freed, as it becomes fragmented and no row can be inserted
+    //unless pages gets defragmented
+    this->header.bytesLeft -= totalSize;
     this->isDirty = true;
 }
 

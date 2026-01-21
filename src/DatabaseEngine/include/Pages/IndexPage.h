@@ -115,6 +115,8 @@ namespace Pages {
 
 			DataTypes::Indexing::Key GetKey(page_offset_t& offSet) const;
 
+			void AdjustRows();
+
 		public:
 			IndexPage(page_id_t pageId, bool isPageCreation, const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes = {});
 			explicit IndexPage(const PageHeader &pageHeader);

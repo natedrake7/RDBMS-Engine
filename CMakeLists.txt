@@ -10,6 +10,8 @@ add_executable(
         Database main.cpp
         Queries.h
         main.h
+        UnitTests/include/UnitTests.h
+        UnitTests/src/UnitTests.cpp
 )
 
 # Set this to the directory containing antlr4-runtimeConfig.cmake or antlr4-runtime-config.cmake

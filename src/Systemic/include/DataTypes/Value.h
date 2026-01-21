@@ -63,7 +63,7 @@ class Value {
         Value& operator=(Value&& other) noexcept;
         ~Value();
 
-        explicit Value(column_index_t index = 0);
+    explicit Value(column_index_t index = 0);
         explicit Value(const void* data, const int& size, const DataType& type);
         explicit Value(const unsigned char* data, const int& size, const DataType& type);
         explicit Value(bool data, column_index_t index = 0);

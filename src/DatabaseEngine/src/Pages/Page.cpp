@@ -31,7 +31,7 @@ namespace Pages{
         return defaultSize - this->header.bytesLeft - this->header.size * SlotDirectory::Size;
     }
 
-    Int Page::SlotDirectoryOffSet(const Int& indexPosition) const{
+    Int Page::SlotDirectoryOffSet(const Int indexPosition) const{
         const auto defaultSize = this->header.type == PageType::DATA
                                      ? PAGE_SIZE_WITHOUT_HEADER
                                      : INDEX_PAGE_DEFAULT_SIZE;
@@ -39,7 +39,7 @@ namespace Pages{
         return defaultSize - (indexPosition + 1) * SlotDirectory::Size;
     }
 
-    Int Page::SlotDirectoriesToMoveOffSet(const Int& indexPosition, const Int& slotToMove) const{
+    Int Page::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove) const{
         const auto defaultSize = this->header.type == PageType::DATA
                                      ? PAGE_SIZE_WITHOUT_HEADER
                                      : INDEX_PAGE_DEFAULT_SIZE;
@@ -79,7 +79,7 @@ namespace Pages{
 
     DatabaseEngine::StorageTypes::Row Page::MaterializeRow(
         const DatabaseEngine::StorageTypes::Table* table,
-        const Int& indexId
+        const Int indexId
     ) const{
         const auto slot = this->GetSlotDirectory(indexId);
 
@@ -250,10 +250,8 @@ namespace Pages{
         const auto previousRowSize = slot.size;
         const auto currentRowSize = row->TotalSize();
 
-        const auto sizeDiff = static_cast<int>(currentRowSize) - static_cast<int>(previousRowSize);
-
         //if new row size is less than or equal to previous row size, update in place
-        if (sizeDiff <= 0){
+        if (currentRowSize <= previousRowSize){
             page_offset_t pos = slot.offset;
             row->Serialize(this->data, pos);
             return;
@@ -269,8 +267,10 @@ namespace Pages{
         const auto newSlot = SlotDirectory(offSetCopy, currentRowSize);
         this->UpdateSlotDirectory(newSlot, indexPosition);
 
-        //update bytes left
-        this->header.bytesLeft -= sizeDiff;
+        //update bytes
+        //Decrease by total size even though the previous offset is freed, as it becomes fragmented and no row can be inserted
+        //unless pages gets defragmented
+        this->header.bytesLeft -= currentRowSize;
         this->isDirty = true;
     }
 
@@ -435,39 +435,43 @@ namespace Pages{
         return this->MaterializeRow(table, indexPosition);
     }
 
-    void Page::Defragment() const{
+    void Page::Defragment(){
         if (this->header.size <= 1)
             return;
 
         std::vector<SlotDirectoryDefragment> defragmentationSlots;
         defragmentationSlots.reserve(this->header.size);
 
-        for (int i = 0; i < this->header.size; i++)
-            defragmentationSlots.emplace_back(this->GetSlotDirectory(i), i);
+        for (Int i = 0; i < this->header.size; i++){
+            auto slot = this->GetSlotDirectory(i);
+            defragmentationSlots.emplace_back(slot, i);
+        }
 
         ranges::sort(defragmentationSlots, SlotDirectoryDefragment::OrderAscendingByOffSet);
 
-        auto& previousSlot = defragmentationSlots.front();
+        page_offset_t offset = 0;
+        for (Int i = 0;i < this->header.size;i++){
+            auto slot = defragmentationSlots[i];
 
-        for (int i = 1;i < this->header.size;i++){
-            auto& slot = defragmentationSlots[i];
-
-            //if slots are contiguous, continue
-            const auto previousSlotEndOffset = previousSlot.slotDirectory.offset + previousSlot.slotDirectory.size;
-            if (previousSlotEndOffset == slot.slotDirectory.offset){
-                previousSlot = slot;
+            if (slot.slotDirectory.offset == offset){
+                offset += slot.slotDirectory.size;
                 continue;
             }
 
             std::memmove(
-                this->data + previousSlotEndOffset,
+                this->data + offset,
                 this->data + slot.slotDirectory.offset,
                 slot.slotDirectory.size
             );
 
-            slot.slotDirectory.offset = previousSlotEndOffset;
+            slot.slotDirectory.offset = offset;
             this->UpdateSlotDirectory(slot.slotDirectory, slot.indexPosition);
+            offset += slot.slotDirectory.size;
         }
+
+        const auto usedBytes = offset + (this->header.size * SlotDirectory::Size);
+        this->header.bytesLeft = this->RawDataSize() - usedBytes;
+        this->isDirty = true;
     }
 
     void Page::IncreasePinCount() {

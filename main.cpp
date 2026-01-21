@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "UnitTests/include/UnitTests.h"
+
 
 //TODO
 //Add Decimal (division remains)
@@ -89,65 +91,13 @@
 //verify temp db flow implementation.
 //verify page implementation
 
-//VERFIY Page write to disk and read implementation
+//CHECK CACHE BLOCK 0
 
 int main(){
-    Pages::IndexPage page(0, false, {DataType::Int});
-
-    page.SetSubKeys(1);
-
-    auto columns = std::vector<DatabaseEngine::StorageTypes::Column*>();
-    columns.push_back(new DatabaseEngine::StorageTypes::Column("ID", DataType::Int, 4, 0, false));
-    columns.push_back(new DatabaseEngine::StorageTypes::Column("Name", DataType::String, 200, 1, false));
-
-    auto table = DatabaseEngine::StorageTypes::Table(0, 0, columns, nullptr);
-    auto* row = new DatabaseEngine::StorageTypes::Row(table);
-
-    auto* block = new DatabaseEngine::StorageTypes::Block(columns[0]);
-    block->SetData(Value(1, 0));
-
-
-    row->InsertColumnData(block, 0);
-
-    auto* secondBlock = new DatabaseEngine::StorageTypes::Block(columns[1]);
-    secondBlock->SetData(Value(std::string("Hello"), 0));
-
-    row->InsertColumnData(secondBlock, 1);
-
-    DataTypes::Indexing::Key key;
-    int keyVal = 1;
-    key.InsertKey(DataTypes::Indexing::Key(&keyVal, 4, DataType::Int));
-
-    auto tuple = Pages::LeafNodeTuple(*row, key);
-    for (int i = 0;i < 10; i++)
-        page.InsertTuple(tuple);
-
-    for (int i = 0;i < page.GetPageSize(); i++){
-        auto [pageKey, pageRow] = page.GetLeafTuple(&table, i);
-        pageRow.Print();
-    }
-
-    int diff = 0;
-
-    const std::vector updates = {
-        Value(std::string("Hello my name is bigger bro"), 1)
-    };
-
-    auto res = row->Update(updates, diff);
-
-    for (int i = 0;i < 10; i++)
-        page.UpdateRow(row, i);
-
-    for (int i = 0;i < page.GetPageSize(); i++){
-        auto [pageKey, pageRow] = page.GetLeafTuple(&table, i);
-        pageRow.Print();
-    }
-
-    delete row;
-    for (const auto& column : columns){
-        delete column;
-    }
-    return 0;
+    // Tests::InitializeTester();
+    // Tests::RunTest(&Tests::IndexPageUpdate);
+    //
+    // return 0;
     //Get table stats
     //SELECT TOP(1) TS.table_id AS ID, T.name AS Name, TS.row_count AS RowCount, TS.avg_record_size AS RowSize FROM masterDb.dbo.sys_table_stats AS TS INNER JOIN masterDb.dbo.sys_tables AS T ON T.table_id = TS.table_id AS TS ORDER BY ID DESC
     RegisterSignalHandlers();
@@ -276,4 +226,8 @@ void RegisterSignalHandlers(){
     signal(SIGINT, shutdownClient);   // Ctrl+C
     signal(SIGTERM, shutdownClient);  // kill command
     signal(SIGABRT, shutdownClient);  // abort()
+}
+
+void Testing(){
+
 }
