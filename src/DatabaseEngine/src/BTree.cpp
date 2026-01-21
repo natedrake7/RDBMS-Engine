@@ -101,35 +101,6 @@ namespace Indexing{
         return numberOfKeys;
     }
 
-    Int BTree::LowerBound(
-        const Pages::PageGuard<Pages::IndexPage>& page,
-        const DataTypes::Indexing::Key &key
-    ){
-        return (page->IsLeaf())
-            ? BTree::LeafLowerBound(page, key)
-            : BTree::InternalNodeLowerBound(page, key);
-    }
-
-    Int BTree::PartialLowerBound(
-        const Pages::PageGuard<Pages::IndexPage>& page,
-        const DataTypes::Indexing::Key &key
-    ) {
-        return (page->IsLeaf())
-            ? BTree::LeafPartialLowerBound(page, key)
-            : BTree::InternalNodePartialLowerBound(page, key);
-    }
-
-    bool BTree::IsDuplicateKey(
-        const std::vector<DataTypes::Indexing::Key *> *keys,
-        const DataTypes::Indexing::Key &key,
-        const Int indexPos
-    ) {
-        return !keys->empty() && (
-            (keys->size() > indexPos && key == *keys->at(indexPos))
-            || (indexPos > 0 && key == *keys->at(indexPos - 1))
-        );
-    }
-
     Errors::RuntimeStatus BTree::CreateDuplicateKeyError(const DataTypes::Indexing::Key &key) {
         ostringstream os;
         os << "BPlusTree::GetNonFullNode: Key " << key << " already exists" << std::endl;
@@ -293,7 +264,7 @@ namespace Indexing{
             if (parent->IsLeaf())
                 return this->InsertToNode(parent, tuple, indexPosition);
 
-            auto childIndex = BTree::LowerBound(parent, tuple.key);
+            auto childIndex = BTree::InternalNodeLowerBound(parent, tuple.key);
 
             auto childId = parent->GetChild(childIndex);
 
@@ -333,7 +304,7 @@ namespace Indexing{
         Int& indexPosition
     ) const
     {
-        indexPosition = this->LowerBound(parent, tuple.key);
+        indexPosition = this->LeafLowerBound(parent, tuple.key);
         if (indexPosition == -1)
             return BTree::CreateDuplicateKeyError(tuple.key);
 
@@ -342,8 +313,7 @@ namespace Indexing{
         return {};
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::SearchKey(const DataTypes::Indexing::Key &key) const
-    {
+    Pages::PageGuard<Pages::IndexPage> BTree::SearchKey(const DataTypes::Indexing::Key &key) const{
         auto currentNode = this->GetNode(this->rootPageId);
 
         while (true) {
@@ -352,7 +322,7 @@ namespace Indexing{
             if (currentNode->IsLeaf())
                 return currentNode;
 
-            const auto index = BTree::PartialLowerBound(currentNode, key);
+            const auto index = BTree::InternalNodePartialLowerBound(currentNode, key);
             currentNode = this->GetNode(currentNode->GetChild(index));
         }
     }
@@ -360,9 +330,8 @@ namespace Indexing{
     Pages::PageGuard<Pages::IndexPage> BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::PageGuard<Pages::IndexPage>> & ancestors) const{
       auto currentNode = this->GetNode(this->rootPageId);
 
-      while (!currentNode->IsLeaf())
-      {
-        const auto index = BTree::LowerBound(currentNode, key);
+      while (!currentNode->IsLeaf()){
+        const auto index = BTree::InternalNodePartialLowerBound(currentNode, key);
 
         ancestors.push_back(std::move(currentNode));
 
@@ -375,29 +344,24 @@ namespace Indexing{
     Pages::PageGuard<Pages::IndexPage> BTree::SearchLeftMostLeafNode() const{
         auto currentNode = this->GetNode(this->rootPageId);
 
-        while (true) {
+        while (!currentNode->IsLeaf()) {
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
-
-            if (currentNode->IsLeaf())
-                return currentNode;
-
             currentNode = this->GetNode(currentNode->GetChild(0));
         }
+
+        return currentNode;
     }
 
     Pages::PageGuard<Pages::IndexPage> BTree::SearchLeftMostLeafNode(TinyInt &depth) const{
         auto currentNode = this->GetNode(this->rootPageId);
 
-        while (true) {
+        while (!currentNode->IsLeaf()){
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
-
             depth++;
-
-            if (currentNode->IsLeaf())
-                return currentNode;
-
             currentNode = this->GetNode(currentNode->GetChild(0));
         }
+
+        return currentNode;
     }
 
     Pages::PageGuard<Pages::IndexPage> BTree::GetNode(const page_id_t pageId) const{
@@ -1122,8 +1086,6 @@ namespace Indexing{
 
         while (currentNode.Get()){
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
-
-            const auto numKeys = currentNode->NumberOfKeys();
             for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
                 auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
 

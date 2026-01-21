@@ -463,16 +463,16 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Row::ReadVersionHeaderFromDisk(const object_t* buffer, page_offset_t &offSet) {
-        memcpy(&this->versionHeader.createdTransactionId, buffer + offSet, sizeof(transaction_id_t));
+        std::memcpy(&this->versionHeader.createdTransactionId, buffer + offSet, sizeof(transaction_id_t));
         offSet += sizeof(transaction_id_t);
 
-        memcpy(&this->versionHeader.deletedTransactionId, buffer + offSet, sizeof(transaction_id_t));
+        std::memcpy(&this->versionHeader.deletedTransactionId, buffer + offSet, sizeof(transaction_id_t));
         offSet += sizeof(transaction_id_t);
 
-        memcpy(&this->versionHeader.olderVersionPointer.pageId, buffer + offSet, sizeof(page_id_t));
+        std::memcpy(&this->versionHeader.olderVersionPointer.pageId, buffer + offSet, sizeof(page_id_t));
         offSet += sizeof(page_id_t);
 
-        memcpy(&this->versionHeader.olderVersionPointer.offset, buffer + offSet, sizeof(page_offset_t));
+        std::memcpy(&this->versionHeader.olderVersionPointer.offset, buffer + offSet, sizeof(page_offset_t));
         offSet += sizeof(page_offset_t);
     }
 
@@ -480,9 +480,8 @@ namespace DatabaseEngine::StorageTypes {
         const object_t* buffer,
         page_offset_t &offSet,
         const std::vector<Column*>& columns
-    ) {
-        for (int j = 0; j < columns.size(); j++)
-        {
+    ){
+        for (int j = 0; j < columns.size(); j++){
             if (this->header.nullBitMap->Get(j))
             {
                 auto *block = new Block(columns[j]);

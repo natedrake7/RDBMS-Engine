@@ -54,13 +54,6 @@ namespace Indexing{
         static Int InternalNodeLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key& key);
         static Int InternalNodePartialLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key& key);
 
-        static Int LowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key& key);
-        static Int PartialLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key& key);
-        static bool IsDuplicateKey(
-            const std::vector<DataTypes::Indexing::Key*>* keys,
-            const DataTypes::Indexing::Key& key,
-            Int indexPos
-        );
         static Errors::RuntimeStatus CreateDuplicateKeyError(const DataTypes::Indexing::Key& key);
 
         Pages::PageGuard<Pages::IndexPage> CreateRootPage(Int& indexPosition, Int pagesToAllocate);
