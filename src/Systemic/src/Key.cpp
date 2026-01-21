@@ -1,5 +1,8 @@
 #include "../include/Key.h"
 #include "../include/DataTypes/Value.h"
+#include <array>
+#include <stdexcept>
+#include <ostream>
 
 namespace DataTypes::Indexing{
    QueryData::QueryData()

@@ -210,7 +210,7 @@ namespace QueryPipeline
         return physicalPlan;
     }
 
-    void Parser::CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId) {
+    void Parser::CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const PipelineConstants::cursor_id_t cursorId) {
         static const auto& server = Network::Server::Get();
 
         const auto _ = server.CloseCursor(sessionId, cursorId);

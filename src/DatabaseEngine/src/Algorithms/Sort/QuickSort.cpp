@@ -1,7 +1,7 @@
 #include "../../../include/Algorithms/Sort/QuickSort.h"
 #include "../../../include/Algorithms/Sort/SortingFunctions.h"
 
-void QuickSort::Sort(vector<QueryResult> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions)
+void QuickSort::Sort(vector<QueryResult> &rows, const Int low, const Int high, const vector<SortCondition>& sortConditions)
 {
     if (low >= high)
         return;
@@ -12,7 +12,7 @@ void QuickSort::Sort(vector<QueryResult> &rows, const int &low, const int &high,
     QuickSort::Sort(rows, pi + 1, high, sortConditions);
 }
 
-int QuickSort::Partition(vector<QueryResult> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions)
+int QuickSort::Partition(vector<QueryResult> &rows, const Int low, const Int high, const vector<SortCondition>& sortConditions)
 {
     const auto& pivot = rows[high];
   

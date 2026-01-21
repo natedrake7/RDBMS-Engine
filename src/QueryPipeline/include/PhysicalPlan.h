@@ -121,7 +121,7 @@ namespace QueryPipeline::PhysicalPlan{
     Int databaseId;
 
     public:
-      explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, const Int& databaseId);
+      explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, Int databaseId);
       ~PhysicalUseDatabase() override = default;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
@@ -131,7 +131,7 @@ namespace QueryPipeline::PhysicalPlan{
     Int databaseId;
 
     public:
-      explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int& databaseId, std::string& schemaName);
+      explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, std::string& schemaName);
       ~PhysicalSchemaCreate() override = default;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
@@ -244,8 +244,8 @@ namespace QueryPipeline::PhysicalPlan{
     bool isClustered;
 
   public:
-    explicit PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered = false);
-    explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, const bool& isClustered = false);
+    explicit PhysicalIndexScan(Statements::DataSource* table, bool isClustered = false);
+    explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, bool isClustered = false);
     ~PhysicalIndexScan()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
     void UpdateScanState(const Headers::RowIdentifier& rowId) override;
@@ -326,7 +326,7 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* child;
 
     public:
-      PhysicalTop(ExecutionNode* child, const int64_t& top);
+      PhysicalTop(ExecutionNode* child, BigInt top);
       ~PhysicalTop() override;
 
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
@@ -349,7 +349,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     PriorityQueue<MergeElement, MergeComparator> priorityQueue;
 
-    [[nodiscard]] bool CanBeSortedInMemory(const bool& canFetchMore)const;
+    [[nodiscard]] bool CanBeSortedInMemory(bool canFetchMore)const;
 
   public:
     PhysicalOrderBy(ExecutionNode* child, std::vector<Statements::OrderColumn*>& expressions);

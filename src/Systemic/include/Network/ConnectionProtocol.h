@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace Network {
-  enum ConnectionProtocolType : uint8_t {
+  enum ConnectionProtocolType : UnsignedTinyInt {
     Invalid = 0,
     Authorize = 1,
     Query = 2,
@@ -19,7 +19,7 @@ namespace Network {
     void Serialize(std::vector<char> &responseBuffer) override;
     void Deserialize(const std::vector<char> &responseBuffer) override;
 
-    constexpr static int GetSize() { return ConnectionHeader::Size() + sizeof(ConnectionProtocolType); }
+    constexpr static Int GetSize() { return ConnectionHeader::Size() + sizeof(ConnectionProtocolType); }
   }ConnectionProtocolHeader;
 
   class ConnectionProtocol {

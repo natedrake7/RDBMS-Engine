@@ -19,24 +19,24 @@ namespace DatabaseEngine {
    return this->databasesDictionary->ToVector();
  }
 
- int StatisticsScheduler::EstimateRowsPerPage(const int& totalRows, const int& allocatedPagesPerExtent) {
+ int StatisticsScheduler::EstimateRowsPerPage(const Int totalRows, const Int allocatedPagesPerExtent) {
   return (allocatedPagesPerExtent == 0)
     ? 0
     : static_cast<int>(std::ceil(static_cast<float>(totalRows) / static_cast<float>(allocatedPagesPerExtent)));
  }
 
- int StatisticsScheduler::EstimateAllocatedPagesPerExtent(const int& allocatedPagesPerExtent, const int& numberOfExtents) {
+ int StatisticsScheduler::EstimateAllocatedPagesPerExtent(const Int allocatedPagesPerExtent, const Int numberOfExtents) {
   return (numberOfExtents == 0)
      ? 0
      : static_cast<int>(std::ceil(static_cast<float>(allocatedPagesPerExtent) / static_cast<float>(numberOfExtents)));
  }
 
  bool StatisticsScheduler::GenerateColumnHistograms(
-  const SortedDictionary<Value, int64_t, ValueComparator>& sortedValues,
-  std::vector<Headers::ColumnHistograms>& histograms,
-  const Headers::ColumnStatistics& columnStatistics,
-  const int64_t& totalRows
-  ) {
+   const SortedDictionary<Value, BigInt, ValueComparator>& sortedValues,
+   std::vector<Headers::ColumnHistograms>& histograms,
+   const Headers::ColumnStatistics& columnStatistics,
+   const BigInt totalRows
+  ){
 
   if (totalRows < 10000)
    return false;
@@ -114,8 +114,8 @@ namespace DatabaseEngine {
 
   auto tableStatistics = Headers::TableStatistics(table->GetTableId());
 
-  Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>> sortedValues;
-  Dictionary<int32_t, std::vector<Headers::ColumnHistograms>> columnHistogramsDictionary;;
+  Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>> sortedValues;
+  Dictionary<Int, std::vector<Headers::ColumnHistograms>> columnHistogramsDictionary;;
   std::vector<Headers::ColumnStatistics> columnStatistics;
 
   for (const auto& column : table->GetColumns()) {
@@ -184,7 +184,7 @@ namespace DatabaseEngine {
   Headers::IndexStatistics& indexStatistics,
   Headers::TableStatistics& tableStatistics,
   std::vector<Headers::ColumnStatistics>& columnStatistics,
-  Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
+  Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
  )  {
   indexStatistics.Reset();
 
@@ -207,12 +207,12 @@ namespace DatabaseEngine {
 
  void StatisticsScheduler::UpdateHeapStatistics(
   const StorageTypes::Table *table,
-  const page_id_t& iamPageId,
+  const page_id_t iamPageId,
   const std::string& systemFilename,
   const std::string& filename,
   Headers::TableStatistics &tableStatistics,
   std::vector<Headers::ColumnStatistics> &columnStatistics,
-  Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
+  Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
  ) {
 
   const auto iamPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(table->GetFileName(), iamPageId, table);
@@ -297,7 +297,7 @@ namespace DatabaseEngine {
   const Headers::TableStatistics &tableStatistics,
   const std::vector<Headers::ColumnStatistics> &columnStatistics,
   const std::vector<Headers::IndexStatistics>& indexStatistics,
-  const Dictionary<int32_t, std::vector<Headers::ColumnHistograms>> &columnHistogramsDictionary
+  const Dictionary<Int, std::vector<Headers::ColumnHistograms>> &columnHistogramsDictionary
  )const {
 
   this->catalog->UpdateTableStatisticsById(
@@ -361,7 +361,7 @@ namespace DatabaseEngine {
  }
 
  StatisticsScheduler::StatisticsScheduler(
-   const Dictionary<int32_t, Database *> &databasesDictionary,
+   const Dictionary<Int, Database *> &databasesDictionary,
    MultiThreading::ReadWriteMutex &latch
    ){
     this->databasesDictionary = &databasesDictionary;
@@ -377,7 +377,7 @@ namespace DatabaseEngine {
 
  void StatisticsScheduler::Start(
   const std::atomic<bool> &isServerRunning,
-  const Dictionary<int32_t, Database*> &databasesDictionary,
+  const Dictionary<Int, Database*> &databasesDictionary,
   MultiThreading::ReadWriteMutex &latch
   ){
    const StatisticsScheduler scheduler(databasesDictionary, latch);
@@ -393,7 +393,7 @@ namespace DatabaseEngine {
  void StatisticsScheduler::UpdateColumnStatistics(
   Headers::ColumnStatistics &columnStatistics,
   const Value &value,
-  SortedDictionary<Value, int64_t, ValueComparator>& sortedValues
+  SortedDictionary<Value, BigInt, ValueComparator>& sortedValues
  ) {
   if (value.IsNull()) {
    columnStatistics.nullCount++;
@@ -411,7 +411,7 @@ namespace DatabaseEngine {
   if (columnStatistics.max.IsNull() || (value > columnStatistics.max).AsBool())
    columnStatistics.max = value;
 
-  int64_t frequency = 0;
+  BigInt frequency = 0;
   if (!sortedValues.TryGetValue(value, frequency))
    sortedValues.Add(value, 1);
   else

@@ -115,7 +115,7 @@ namespace DatabaseEngine {
 
   Pages::PageGuard<> VersionDatabase::TryGetLastUndoPage(
     const StorageTypes::Table *table,
-    const row_size_t &size
+    const row_size_t size
   ) {
     page_id_t pageId;
 
@@ -162,7 +162,7 @@ namespace DatabaseEngine {
      return Storage::StorageManager::Get().GetPage(this->filename, newPageId, nullptr);
    }
 
-  Pages::PageGuard<Pages::Page> VersionDatabase::GetLastUndoPage(const DatabaseEngine::StorageTypes::Table* table, const row_size_t &size) {
+  Pages::PageGuard<Pages::Page> VersionDatabase::GetLastUndoPage(const DatabaseEngine::StorageTypes::Table* table, const row_size_t size) {
     const auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
 
     auto cachedPage = this->TryGetLastUndoPage(table, size);
@@ -243,13 +243,13 @@ namespace DatabaseEngine {
     return row.GetVisibleVersionForTransaction(snapshot);
   }
 
-  std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t& startingExtentId) const {
+  std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t startingExtentId) const {
     auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->systemFilename, this->header.lastGamPageId);
 
     return gamPage->GetAllocatedExtents(startingExtentId);
   }
 
-  extent_id_t VersionDatabase::CleanupVersionedData(const transaction_id_t &transactionId, const extent_id_t& startingExtentId)const {
+  extent_id_t VersionDatabase::CleanupVersionedData(const transaction_id_t transactionId, const extent_id_t startingExtentId)const {
     const auto extents = this->GetAllocatedExtents(startingExtentId);
 
     for (const auto &extentId : extents){

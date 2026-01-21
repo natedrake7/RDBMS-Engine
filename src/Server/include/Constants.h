@@ -3,8 +3,8 @@
 namespace Network {
   class Constants {
     public:
-      static constexpr int INVALID_FILE_DESCRIPTOR = -1;
-      static constexpr int MAX_CONNECTIONS = 10;
+      static constexpr Int INVALID_FILE_DESCRIPTOR = -1;
+      static constexpr Int MAX_CONNECTIONS = 10;
   };
 
 }

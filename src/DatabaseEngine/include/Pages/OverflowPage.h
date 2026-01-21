@@ -14,7 +14,7 @@ namespace Pages {
     page_offset_t index;
 
     OverflowPointer();
-    explicit OverflowPointer(const page_id_t& pageId, const page_offset_t& index);
+    explicit OverflowPointer(page_id_t pageId, page_offset_t index);
     ~OverflowPointer();
   };
 
@@ -23,14 +23,14 @@ namespace Pages {
 
   public:
     explicit OverflowPage();
-    explicit OverflowPage(const page_id_t &pageId, const bool &isPageCreation = false);
+    explicit OverflowPage(page_id_t pageId, bool isPageCreation = false);
     explicit OverflowPage(const PageHeader &pageHeader);
     void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
     void WriteToDisk(fstream* filePtr) override;
     void UpdateBytesLeft() override;
-    OverflowRow* InsertObject(const object_t* object, const page_size_t& size, int& indexPos);
-    [[nodiscard]] OverflowRow* GetObject(const page_offset_t& index)const;
-    [[nodiscard]] OverflowRow* DeleteObject(const page_offset_t& index);
+    OverflowRow* InsertObject(const object_t* object, page_size_t size, Int& indexPos);
+    [[nodiscard]] OverflowRow* GetObject(page_offset_t index)const;
+    [[nodiscard]] OverflowRow* DeleteObject(page_offset_t index);
   };
 
 } // Pages

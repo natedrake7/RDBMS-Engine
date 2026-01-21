@@ -21,14 +21,14 @@ namespace Pages {
         this->pageId = 0;
     }
 
-    DataObjectPointer::DataObjectPointer(const page_id_t& pageId)
+    DataObjectPointer::DataObjectPointer(const page_id_t pageId)
     {
         this->pageId = pageId;
     }
 
     DataObjectPointer::~DataObjectPointer() = default;
 
-    LargeObjectPage::LargeObjectPage(const page_id_t& pageId, const bool& isPageCreation) : Page(pageId, isPageCreation)
+    LargeObjectPage::LargeObjectPage(const page_id_t pageId, const bool isPageCreation) : Page(pageId, isPageCreation)
     {
         this->header.type = PageType::LOB;
         this->data = nullptr;
@@ -50,21 +50,25 @@ namespace Pages {
         delete this->data;
     }
 
-    void LargeObjectPage::ReadFromDisk(const vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t& offSet, fstream* filePtr)
-    {
+    void LargeObjectPage::ReadFromDisk(
+        const std::vector<char> &buffer,
+        const DatabaseEngine::StorageTypes::Table *table,
+        page_offset_t& offSet,
+        fstream* filePtr
+    ){
       if(this->header.size == 0)
         return;
 
       this->data = new LargeDataObject();
 
-      memcpy(&this->data->objectSize, data.data() + offSet, sizeof(page_size_t));
+      std::memcpy(&this->data->objectSize, buffer.data() + offSet, sizeof(page_size_t));
       offSet += sizeof(page_size_t);
 
-      memcpy(&this->data->nextPageId, data.data() + offSet, sizeof(page_id_t));
+      std::memcpy(&this->data->nextPageId, buffer.data() + offSet, sizeof(page_id_t));
       offSet += sizeof(page_id_t);
 
       this->data->object = new unsigned char[this->data->objectSize];
-      memcpy(this->data->object, data.data() + offSet, this->data->objectSize);
+      std::memcpy(this->data->object, buffer.data() + offSet, this->data->objectSize);
       offSet += this->data->objectSize;
     }
 
@@ -80,7 +84,7 @@ namespace Pages {
         filePtr->write(reinterpret_cast<const char*>(this->data->object), this->data->objectSize);
     }
 
-    LargeDataObject* LargeObjectPage::InsertObject(const object_t *object, const page_size_t& size)
+    LargeDataObject* LargeObjectPage::InsertObject(const object_t *object, const page_size_t size)
     {
         this->data = new LargeDataObject();
         this->data->objectSize = size;

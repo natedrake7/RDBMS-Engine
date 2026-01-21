@@ -10,7 +10,7 @@
 
 
 namespace QueryPipeline {
-  LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId, const int32_t &databaseId)
+  LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId, const Int databaseId)
     : sessionId(sessionId), databaseId(databaseId) {}
 
   LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId)
@@ -52,7 +52,7 @@ namespace QueryPipeline {
     return new PhysicalPlan::PhysicalCreateDatabase(this->sessionId, this->dbName);
   }
 
-  LogicalUseDatabase::LogicalUseDatabase(const DataTypes::Guid &sessionId, const int32_t &databaseId)
+  LogicalUseDatabase::LogicalUseDatabase(const DataTypes::Guid &sessionId, const Int databaseId)
     : databaseId(databaseId), sessionId(sessionId) {}
 
   PhysicalPlan::PhysicalUseDatabase * LogicalUseDatabase::ToPhysical(){
@@ -216,9 +216,9 @@ namespace QueryPipeline {
     LogicalPlan *left,
     LogicalPlan *right,
     Expressions::Expression *condition,
-    const JoinType &type,
-    const Int &leftTableId,
-    const Int &rightTableId
+    const JoinType type,
+    const Int leftTableId,
+    const Int rightTableId
   ) : leftTableId(leftTableId), rightTableId(rightTableId),
       left(left), right(right),
       condition(condition), type(type){}
@@ -263,7 +263,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return new PhysicalPlan::PhysicalOrderBy(this->child->ToPhysical(), this->expressions);
   }
 
-  LogicalTop::LogicalTop(LogicalPlan *child, const int64_t &top)
+  LogicalTop::LogicalTop(LogicalPlan *child, const BigInt top)
     : child(child), top(top){}
 
   LogicalTop::~LogicalTop() {
@@ -304,7 +304,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return new PhysicalPlan::PhysicalInsert(this->table, this->fields, physicalSelect, this->columnsIndices);
   }
 
-  LogicalSchemaCreate::LogicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string &schemaName)
+  LogicalSchemaCreate::LogicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, std::string &schemaName)
     : LogicalPlan(sessionId), schemaName(std::move(schemaName)), databaseId(databaseId) {}
 
   PhysicalPlan::PhysicalSchemaCreate * LogicalSchemaCreate::ToPhysical(){

@@ -1,4 +1,5 @@
 #include "../../include/ThreadPool.h"
+#include "../../../Systemic/include/DataTypes/DataTypes.h"
 
 ThreadPool::ThreadPool() = default;
 
@@ -9,7 +10,7 @@ ThreadPool::~ThreadPool(){
     worker.join();
 }
 
-void ThreadPool::InitializeWorkers(const std::atomic<bool> &isServerRunning, const int &numberOfThreads){
+void ThreadPool::InitializeWorkers(const std::atomic<bool> &isServerRunning, const Int numberOfThreads){
   for (int i  = 0; i < numberOfThreads; i++) {
     this->workers.emplace_back([this, &isServerRunning] {
 

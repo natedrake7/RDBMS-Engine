@@ -96,7 +96,7 @@ void IndexPage::InsertKey(const DataTypes::Indexing::Key& key){
     this->header.bytesLeft -= (newSlot.size + SlotDirectory::Size);
 }
 
-void IndexPage::InsertFirstChild(const page_id_t& child){
+void IndexPage::InsertFirstChild(const page_id_t child){
     const auto nextOffset = this->NewInsertOffset();
 
     std::memcpy(this->data + nextOffset, &child, sizeof(page_id_t));
@@ -118,7 +118,7 @@ DataTypes::Indexing::Key IndexPage::GetKey(page_offset_t& offSet) const{
     );
 }
 
-void IndexPage::InsertChild(const page_id_t& child, const DataTypes::Indexing::Key* key){
+void IndexPage::InsertChild(const page_id_t child, const DataTypes::Indexing::Key* key){
     if (this->header.size == 0){
         this->InsertFirstChild(child);
         return;
@@ -139,8 +139,8 @@ void IndexPage::InsertChild(const page_id_t& child, const DataTypes::Indexing::K
 }
 
 IndexPage::IndexPage(
-    const page_id_t &pageId,
-    const bool &isPageCreation,
+    const page_id_t pageId,
+    const bool isPageCreation,
     const std::array<DataType, MAX_NUMBER_OF_SUB_KEYS>& keyTypes
 ) : Page(pageId, INDEX_PAGE_DEFAULT_SIZE, isPageCreation)
 {
@@ -174,14 +174,14 @@ void IndexPage::WriteToDisk(fstream *filePtr){
 
 void IndexPage::SetTreeType(const TreeType & treeType) { this->additionalHeader.SetTreeType(treeType); }
 
-void IndexPage::SetTreeId(const page_id_t & treeId) { this->additionalHeader.treeId = treeId; }
+void IndexPage::SetTreeId(const page_id_t  treeId) { this->additionalHeader.treeId = treeId; }
 
 void IndexPage::SetKeyTypes(const std::vector<DataType>& keyTypes){
     for (int i = 0;i < keyTypes.size(); i++)
         this->additionalHeader.keyTypes[i] = keyTypes[i];
 }
 
-const page_id_t & IndexPage::GetTreeId() const { return this->additionalHeader.treeId; }
+page_id_t IndexPage::GetTreeId() const { return this->additionalHeader.treeId; }
 
 void IndexPage::UpdateBytesLeft(){
     this->header.bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
@@ -211,26 +211,26 @@ UnsignedTinyInt IndexPage::SubKeys() const{
     return this->additionalHeader.SubKeys();
 }
 
-void IndexPage::SetIsLeaf(const bool& isLeaf) {
+void IndexPage::SetIsLeaf(const bool isLeaf) {
     this->additionalHeader.SetIsLeaf(isLeaf);
     this->additionalHeader.SetIsEmpty(false);
     this->isDirty = true;
 }
 
-void IndexPage::SetIsRoot(const bool &isRoot) {
+void IndexPage::SetIsRoot(const bool isRoot) {
     this->additionalHeader.SetIsRoot(isRoot);
     this->additionalHeader.SetIsEmpty(false);
     this->isDirty = true;
 }
 
-void IndexPage::SetSubKeys(const UnsignedTinyInt& numberOfKeys){
+void IndexPage::SetSubKeys(const UnsignedTinyInt numberOfKeys){
     this->additionalHeader.SetNumberOfSubKeys(numberOfKeys);
 }
 
 void IndexPage::InsertChild(
-    const page_id_t& child,
+    const page_id_t child,
     const DataTypes::Indexing::Key* key,
-    const int& indexPosition
+    const Int indexPosition
 ){
     if (this->IndexOutOfBounds(indexPosition)){
         this->InsertChild(child, key);
@@ -251,23 +251,23 @@ void IndexPage::InsertChild(
     this->isDirty = true;
 }
 
-void IndexPage::InsertChild(const page_id_t &child){
+void IndexPage::InsertChild(const page_id_t child){
     this->InsertFirstChild(child);
 }
 
-void IndexPage::SetPreviousPage(const page_id_t &previousPage){ this->additionalHeader.previousNode = previousPage; }
+void IndexPage::SetPreviousPage(const page_id_t previousPage){ this->additionalHeader.previousNode = previousPage; }
 
-void IndexPage::SetNextPage(const page_id_t &nextPage){ this->additionalHeader.nextNode = nextPage; }
+void IndexPage::SetNextPage(const page_id_t nextPage){ this->additionalHeader.nextNode = nextPage; }
 
-const page_id_t & IndexPage::GetPreviousPage()const{ return this->additionalHeader.previousNode; }
+page_id_t IndexPage::GetPreviousPage()const{ return this->additionalHeader.previousNode; }
 
-const page_id_t & IndexPage::GetNextPage()const{ return this->additionalHeader.nextNode; }
+page_id_t IndexPage::GetNextPage()const{ return this->additionalHeader.nextNode; }
 
 bool IndexPage::HasRightSibling() const{ return this->additionalHeader.nextNode != INVALID_PAGE_ID; }
 
 bool IndexPage::HasLeftSibling() const{ return this->additionalHeader.previousNode != INVALID_PAGE_ID; }
 
-void IndexPage::InsertKey(const DataTypes::Indexing::Key& key, const int& indexPosition){
+void IndexPage::InsertKey(const DataTypes::Indexing::Key& key, const Int indexPosition){
     if (this->IndexOutOfBounds(indexPosition)){
         this->InsertKey(key);
         return;
@@ -285,7 +285,7 @@ void IndexPage::InsertKey(const DataTypes::Indexing::Key& key, const int& indexP
     this->isDirty = true;
 }
 
-void IndexPage::InsertTuple(const LeafNodeTuple& tuple, const int& indexPosition){
+void IndexPage::InsertTuple(const LeafNodeTuple& tuple, const Int indexPosition){
     if (this->IndexOutOfBounds(indexPosition)){
         this->InsertTuple(tuple);
         return;
@@ -307,7 +307,7 @@ void IndexPage::InsertTuple(const LeafNodeTuple& tuple, const int& indexPosition
 
 void IndexPage::UpdateRow(
     DatabaseEngine::StorageTypes::Row*& row,
-    const int& indexPosition
+    const Int indexPosition
 ){
     if (this->IndexOutOfBounds(indexPosition))
         throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
@@ -353,12 +353,12 @@ void IndexPage::UpdateRow(
     this->isDirty = true;
 }
 
-DataTypes::Indexing::Key IndexPage::GetKey(const int& indexPosition) const{
+DataTypes::Indexing::Key IndexPage::GetKey(const Int indexPosition) const{
     auto slot = this->GetSlotDirectory(indexPosition);
     return this->GetKey(slot.offset);
 }
 
-LeafNodeTuple IndexPage::GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, const int& indexPosition) const{
+LeafNodeTuple IndexPage::GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, const Int indexPosition) const{
     auto slot = this->GetSlotDirectory(indexPosition);
 
     auto key = this->GetKey(slot.offset);
@@ -374,7 +374,7 @@ LeafNodeTuple IndexPage::GetLeafTuple(const DatabaseEngine::StorageTypes::Table*
     return LeafNodeTuple(row, key);
 }
 
-InternalNodeTuple IndexPage::GetInternalNodeTuple(const int& indexPosition) const{
+InternalNodeTuple IndexPage::GetInternalNodeTuple(const Int indexPosition) const{
     auto slot = this->GetSlotDirectory(indexPosition);
 
     DataTypes::Indexing::Key key;
@@ -387,7 +387,7 @@ InternalNodeTuple IndexPage::GetInternalNodeTuple(const int& indexPosition) cons
     return InternalNodeTuple(key, pageId);
 }
 
-page_id_t IndexPage::GetChild(const int& indexPosition) const{
+page_id_t IndexPage::GetChild(const Int indexPosition) const{
     auto slot = this->GetSlotDirectory(indexPosition);
 
     if (indexPosition != 0){
@@ -408,7 +408,7 @@ Int IndexPage::NumberOfKeys() const{
     return this->additionalHeader.IsLeaf() ? this->header.size : this->header.size - 1;
 }
 
-void IndexPage::Resize(const Int& size){
+void IndexPage::Resize(const Int size){
     for (int i = size; i < this->header.size; i++){
         const auto slot = this->GetSlotDirectory(i);
         this->header.bytesLeft += slot.size + SlotDirectory::Size;
@@ -451,19 +451,19 @@ void IndexPageAdditionalHeader::SetTreeType(const Constants::TreeType& type){
 	PackedByte::SetBits(flags._data, type, 0, TREE_TYPE_BIT_MASK);
 }
 
-void IndexPageAdditionalHeader::SetIsLeaf(const bool& value){
+void IndexPageAdditionalHeader::SetIsLeaf(const bool value){
 	PackedByte::SetBit(flags._data, IS_LEAF_BIT_POS, value);
 }
 
-void IndexPageAdditionalHeader::SetIsRoot(const bool& value){
+void IndexPageAdditionalHeader::SetIsRoot(const bool value){
     PackedByte::SetBit(flags._data, IS_ROOT_BIT_POS, value);
 }
 
-void IndexPageAdditionalHeader::SetIsEmpty(const bool& value){
+void IndexPageAdditionalHeader::SetIsEmpty(const bool value){
 	PackedByte::SetBit(flags._data, IS_EMPTY_BIT_POS, value);
 }
 
-void IndexPageAdditionalHeader::SetNumberOfSubKeys(const UnsignedTinyInt& count){
+void IndexPageAdditionalHeader::SetNumberOfSubKeys(const UnsignedTinyInt count){
 	PackedByte::SetBits(flags._data, count, NUMBER_OF_SUB_KEYS_BIT_POS, NUMBER_OF_SUB_KEYS_BIT_MASK);
 }
 
@@ -544,7 +544,7 @@ InternalNodeTuple::InternalNodeTuple(const InternalNodeTuple& other){
     this->pageId = other.pageId;
 }
 
-InternalNodeTuple::InternalNodeTuple(DataTypes::Indexing::Key& key, const page_id_t& pageId){
+InternalNodeTuple::InternalNodeTuple(DataTypes::Indexing::Key& key, const page_id_t pageId){
     this->key = std::move(key);
     this->pageId = pageId;
 }

@@ -3,7 +3,8 @@
 #include "Decimal.h"
 
 namespace DataTypes {
-  class Guid;
+    class DateTime;
+    class Guid;
 }
 
 static Dictionary<DataType, int> ColumnTypeRank{

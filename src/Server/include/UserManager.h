@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "../../Systemic/include/DataTypes/DataTypes.h"
+
 namespace Security {
   struct Role;
   struct User;
@@ -19,15 +21,15 @@ namespace Security {
       [[nodiscard]] User* Authenticate(const std::string& name, const std::string& password)const;
       [[nodiscard]] const User* GetUser(const std::string& name)const;
       [[nodiscard]] bool AddUser(
-        const int32_t& id,
+        Int id,
         const std::string &name,
         const std::string &passwordHash,
-        const Security::Role* role
+        const Role* role
       );
       [[nodiscard]] bool AddSystemUser(User* user);
       [[nodiscard]]bool RemoveUser(const std::string& name);
 
-      bool GrantRole(const std::string& name, const Security::Role* role, int32_t& outUserId)const;
+      bool GrantRole(const std::string& name, const Role* role, Int& outUserId)const;
 
       static bool HashPassword(const std::string& password, std::string& outHash);
   };

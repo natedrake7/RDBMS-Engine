@@ -26,7 +26,7 @@ namespace Pages {
         page_id_t pageId;
 
         DataObjectPointer();
-        explicit DataObjectPointer(const page_id_t& pageId);
+        explicit DataObjectPointer(page_id_t pageId);
         ~DataObjectPointer();
 
     };
@@ -35,13 +35,13 @@ namespace Pages {
         LargeDataObject* data;
 
     public:
-        explicit LargeObjectPage(const page_id_t& pageId, const bool& isPageCreation = false);
+        explicit LargeObjectPage(page_id_t pageId, bool isPageCreation = false);
         explicit LargeObjectPage();
         explicit LargeObjectPage(const PageHeader& pageHeader);
         ~LargeObjectPage() override;
-        void ReadFromDisk(const vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
+        void ReadFromDisk(const vector<char>& buffer, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WriteToDisk(fstream* filePtr) override;
-        LargeDataObject* InsertObject(const object_t* object, const page_size_t& size);
+        LargeDataObject* InsertObject(const object_t* object, page_size_t size);
         LargeDataObject* GetObject()const;
         LargeDataObject* DeleteObject();
     };

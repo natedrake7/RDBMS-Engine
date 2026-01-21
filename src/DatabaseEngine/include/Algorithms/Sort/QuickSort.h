@@ -12,8 +12,8 @@ using namespace std;
 using namespace Constants;
 
 class QuickSort {
-        static int Partition(vector<QueryResult> &rows, const int &low, const int &high, const vector<SortCondition>& sortConditions);
+        static int Partition(vector<QueryResult> &rows, Int low, Int high, const vector<SortCondition>& sortConditions);
     public:
-        static void Sort(vector<QueryResult>& rows, const int &low, const int &high, const vector<SortCondition>& sortConditions);
+        static void Sort(vector<QueryResult>& rows, Int low, Int high, const vector<SortCondition>& sortConditions);
     
 };

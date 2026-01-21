@@ -36,7 +36,7 @@ namespace Errors {
       this->primaryKey = DataTypes::Indexing::Key();
     }
 
-    RuntimeStatus(const RuntimeError& code, const std::string&  message){
+    RuntimeStatus(const RuntimeError code, const std::string&  message){
       this->code = code;
       this->message = message;
       this->primaryKey = DataTypes::Indexing::Key();
@@ -78,7 +78,7 @@ namespace Errors {
       this->message = "";
     }
 
-    ValidationStatus(const ValidationError& code, const std::string&  message){
+    ValidationStatus(const ValidationError code, const std::string&  message){
       this->code = code;
       this->message = message;
     }
@@ -105,7 +105,7 @@ namespace Errors {
       this->message = "";
     }
 
-    Error(const bool& hasError, const std::string&  message){
+    Error(const bool hasError, const std::string&  message){
       this->hasError = hasError;
       this->message = message;
     }

@@ -27,13 +27,13 @@ namespace Indexing{
         child->SetNextPage(newChild->GetPageId());
     }
 
-    int BTree::LeafLowerBound(
+    Int BTree::LeafLowerBound(
         const Pages::PageGuard<Pages::IndexPage>& page,
         const DataTypes::Indexing::Key& key
     ){
         const auto numberOfKeys = page->NumberOfKeys();
 
-        for (int i = 0; i < numberOfKeys; i++) {
+        for (Int i = 0; i < numberOfKeys; i++) {
             const auto tupleKey = page->GetKey(i);
 
             if (tupleKey == key){
@@ -48,13 +48,13 @@ namespace Indexing{
         return numberOfKeys;
     }
 
-    int BTree::LeafPartialLowerBound(
+    Int BTree::LeafPartialLowerBound(
         const Pages::PageGuard<Pages::IndexPage>& page,
         const DataTypes::Indexing::Key& key
     ){
         const auto numberOfKeys = page->NumberOfKeys();
 
-        for (int i = 0; i < numberOfKeys; i++) {
+        for (Int i = 0; i < numberOfKeys; i++) {
             const auto pageKey = page->GetKey(i);
 
             if (key <= pageKey)
@@ -64,13 +64,13 @@ namespace Indexing{
         return numberOfKeys;
     }
 
-    int BTree::InternalNodeLowerBound(
+    Int BTree::InternalNodeLowerBound(
         const Pages::PageGuard<Pages::IndexPage>& page,
         const DataTypes::Indexing::Key& key
     ){
         const auto numberOfKeys = page->NumberOfKeys();
 
-        for (int i = 0; i < numberOfKeys; i++) {
+        for (Int i = 0; i < numberOfKeys; i++) {
             const auto tupleKey = page->GetKey(i + 1);
 
             if (tupleKey == key){
@@ -85,13 +85,13 @@ namespace Indexing{
         return numberOfKeys;
     }
 
-    int BTree::InternalNodePartialLowerBound(
+    Int BTree::InternalNodePartialLowerBound(
         const Pages::PageGuard<Pages::IndexPage>& page,
         const DataTypes::Indexing::Key& key
     ){
         const auto numberOfKeys = page->NumberOfKeys();
 
-        for (int i = 0; i < numberOfKeys; i++) {
+        for (Int i = 0; i < numberOfKeys; i++) {
             const auto pageKey = page->GetKey(i + 1);
 
             if (key <= pageKey)
@@ -101,7 +101,7 @@ namespace Indexing{
         return numberOfKeys;
     }
 
-    int BTree::LowerBound(
+    Int BTree::LowerBound(
         const Pages::PageGuard<Pages::IndexPage>& page,
         const DataTypes::Indexing::Key &key
     ){
@@ -110,7 +110,7 @@ namespace Indexing{
             : BTree::InternalNodeLowerBound(page, key);
     }
 
-    int BTree::PartialLowerBound(
+    Int BTree::PartialLowerBound(
         const Pages::PageGuard<Pages::IndexPage>& page,
         const DataTypes::Indexing::Key &key
     ) {
@@ -122,7 +122,7 @@ namespace Indexing{
     bool BTree::IsDuplicateKey(
         const std::vector<DataTypes::Indexing::Key *> *keys,
         const DataTypes::Indexing::Key &key,
-        const int &indexPos
+        const Int indexPos
     ) {
         return !keys->empty() && (
             (keys->size() > indexPos && key == *keys->at(indexPos))
@@ -136,7 +136,7 @@ namespace Indexing{
         return {Errors::RuntimeError::DuplicateKey, os.str()};
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::CreateRootPage(int& indexPosition, const int& pagesToAllocate) {
+    Pages::PageGuard<Pages::IndexPage> BTree::CreateRootPage(Int& indexPosition, const Int pagesToAllocate) {
         //maybe root page is removed and need to be reopened
         auto root = this->AllocateNewPage(INVALID_PAGE_ID, pagesToAllocate);
 
@@ -154,7 +154,11 @@ namespace Indexing{
         return root;
     }
 
-    void BTree::SplitRoot(Pages::PageGuard<Pages::IndexPage>& root, MultiThreading::ReaderGuard& rootLock, const int& pagesToAllocate) {
+    void BTree::SplitRoot(
+        Pages::PageGuard<Pages::IndexPage>& root,
+        MultiThreading::ReaderGuard& rootLock,
+        const Int pagesToAllocate
+    ){
         {
             auto newRoot = this->AllocateNewPage(this->rootPageId, pagesToAllocate);
 
@@ -184,10 +188,10 @@ namespace Indexing{
     void BTree::SplitChild(
         Pages::PageGuard<Pages::IndexPage>& parent,
         MultiThreading::ReaderGuard& parentReadLock,
-        const int &index,
+        const Int index,
         Pages::PageGuard<Pages::IndexPage>& child,
         MultiThreading::ReaderGuard& childReadLock,
-        const int& pagesToAllocate
+        const Int pagesToAllocate
     ){
         auto parentLock = MultiThreading::WriterGuard::Promote(&parent->Latch(), parentReadLock);
         auto childLock = MultiThreading::WriterGuard::Promote(&child->Latch(), childReadLock);
@@ -199,7 +203,7 @@ namespace Indexing{
         Pages::PageGuard<Pages::IndexPage> &parent,
         Pages::PageGuard<Pages::IndexPage> &child,
         Pages::PageGuard<Pages::IndexPage> &newChild,
-        const int& index
+        const Int index
     )const {
         // Move the middle key from the child to the parent
         const auto childKey = child->GetKey(this->degree);
@@ -208,7 +212,7 @@ namespace Indexing{
 
         // Assign the second half of the child's keys to the new child
         if (this->type == TreeType::Clustered) {
-            for (int i = this->degree; i < child->GetPageSize(); i++){
+            for (Int i = this->degree; i < child->GetPageSize(); i++){
                 auto tuple = child->GetLeafTuple(this->table, i);
                 newChild->InsertTuple(tuple);
             }
@@ -218,7 +222,7 @@ namespace Indexing{
             return;
         }
 
-        // for (int i = this->degree; i < child->GetPageSize(); i++){
+        // for (Int i = this->degree; i < child->GetPageSize(); i++){
         //     auto rowId = child->GetLeafTuple(this->table, i).row;
         //     newChild->InsertTuple(LeafNodeTuple{child->GetKey(i), rowId});
         // }
@@ -236,7 +240,7 @@ namespace Indexing{
         Pages::PageGuard<Pages::IndexPage> &parent,
         Pages::PageGuard<Pages::IndexPage> &child,
         Pages::PageGuard<Pages::IndexPage> &newChild,
-        const int& index
+        const Int index
     ) const {
         const auto childKey = child->GetKey(this->degree - 1);
 
@@ -245,7 +249,7 @@ namespace Indexing{
         const auto middleChild = child->GetChild(this->degree);
         newChild->InsertChild(middleChild);
 
-        for (int i = this->degree; i < child->GetPageSize(); i++){
+        for (Int i = this->degree; i < child->GetPageSize(); i++){
             auto tuple = child->GetInternalNodeTuple(i);
             newChild->InsertChild(tuple.pageId, &tuple.key);
         }
@@ -256,9 +260,9 @@ namespace Indexing{
 
     void BTree::SplitChildNoLock(
         Pages::PageGuard<Pages::IndexPage> &parent,
-        const int &index,
+        const Int index,
         Pages::PageGuard<Pages::IndexPage> &child,
-        const int& pagesToAllocate
+        const Int pagesToAllocate
     ) {
         auto newChild = this->AllocateNewPage(parent->GetPageId(), pagesToAllocate);
 
@@ -279,10 +283,10 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::InsertToNonFullNode(
             Pages::PageGuard<Pages::IndexPage>& parent,
             const Pages::LeafNodeTuple& tuple,
-            const int& pagesToAllocate,
-            int& indexPosition
+            const Int pagesToAllocate,
+            Int& indexPosition
     ){
-        Pages::PageGuard<Pages::IndexPage> intermediateNode;
+        Pages::PageGuard<Pages::IndexPage> IntermediateNode;
         {
             MultiThreading::ReaderGuard parentLock(&parent->Latch());
 
@@ -311,22 +315,22 @@ namespace Indexing{
 
                     childId = parent->GetChild(childIndex);
 
-                    intermediateNode = this->GetNode(childId);
+                    IntermediateNode = this->GetNode(childId);
                 // }
                 // else
-                //     intermediateNode = std::move(parent);
+                //     IntermediateNode = std::move(parent);
             }
             else
-                intermediateNode = std::move(child);
+                IntermediateNode = std::move(child);
         }  // All locks released here
 
-        return this->InsertToNonFullNode(intermediateNode, tuple, pagesToAllocate, indexPosition);
+        return this->InsertToNonFullNode(IntermediateNode, tuple, pagesToAllocate, indexPosition);
     }
 
     Errors::RuntimeStatus BTree::InsertToNode(
         Pages::PageGuard<Pages::IndexPage> &parent,
         const Pages::LeafNodeTuple& tuple,
-        int& indexPosition
+        Int& indexPosition
     ) const
     {
         indexPosition = this->LowerBound(parent, tuple.key);
@@ -381,7 +385,7 @@ namespace Indexing{
         }
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::SearchLeftMostLeafNode(int8_t &depth) const{
+    Pages::PageGuard<Pages::IndexPage> BTree::SearchLeftMostLeafNode(TinyInt &depth) const{
         auto currentNode = this->GetNode(this->rootPageId);
 
         while (true) {
@@ -396,20 +400,23 @@ namespace Indexing{
         }
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::GetNode(const page_id_t& pageId) const{
+    Pages::PageGuard<Pages::IndexPage> BTree::GetNode(const page_id_t pageId) const{
         return Storage::StorageManager::Get().GetIndexPage(this->database->GetFileName(), pageId, this->table);
     }
 
-    int BTree::CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, const TreeType& treeType, const int& nonClusteredId)const
-    {
+    Int BTree::CalculateTreeDegree(
+        const DatabaseEngine::StorageTypes::Table* otherTable,
+        const TreeType treeType,
+        const Int nonClusteredId
+    )const{
         if(treeType == TreeType::Clustered){
           auto rowSize = otherTable->GetMaximumRowSize();
-          int calculatedDegree = static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
+          Int calculatedDegree = static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
 
           while(calculatedDegree < 2){
             rowSize = otherTable->ReduceMaximumRowSize();
 
-            calculatedDegree = static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
+            calculatedDegree = static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
           }
 
           return calculatedDegree;
@@ -419,7 +426,7 @@ namespace Indexing{
 
         const auto& index = otherTable->GetNonClusteredIndexes(nonClusteredId);
 
-        int computedKeySize = 0;
+        Int computedKeySize = 0;
         for(const auto& columnPos: index.columns)
         {
             const DatabaseEngine::StorageTypes::Column* column = columns.at(columnPos);
@@ -427,14 +434,14 @@ namespace Indexing{
             computedKeySize += column->GetColumnSize();
         }
 
-        return static_cast<int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
+        return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
     }
 
-    Pages::PageGuard<Pages::IndexPage> BTree::AllocateNewPage(const page_id_t& parentPageId, const int& pagesToAllocate){
+    Pages::PageGuard<Pages::IndexPage> BTree::AllocateNewPage(const page_id_t parentPageId, const Int pagesToAllocate){
         return this->database->FindOrAllocateNextIndexPage(this->table, parentPageId, pagesToAllocate, this->nonClusteredIndexId);
     }
 
-    void BTree::HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, int& parentIndex) {
+    void BTree::HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, Int& parentIndex) {
         if (node->IsRoot()) {
            this->HandleRootUnderflow();
            return;
@@ -442,11 +449,11 @@ namespace Indexing{
 
       //   auto& parent = ancestors.at(parentIndex);
       //
-      //   int index = -1;
+      //   Int index = -1;
       //
       //   const auto* children = parent->GetChildren();
       //
-      //   for (int i = 0; i < children->size(); i++) {
+      //   for (Int i = 0; i < children->size(); i++) {
       //    if (children->at(i) == node->GetPageId()) {
       //        index = i;
       //        break;
@@ -501,7 +508,7 @@ namespace Indexing{
         // root->MarkEmpty();
     }
 
-    bool BTree::TryBorrowFromLeftSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int& index)const{
+    bool BTree::TryBorrowFromLeftSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const Int index)const{
         // auto* children = parent->GetChildren();
         //
         // auto sibling = std::move(this->GetNode(children->at(index - 1)));
@@ -564,7 +571,7 @@ namespace Indexing{
         return true;
     }
 
-    bool BTree::TryBorrowFromRightSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const int &index) const{
+    bool BTree::TryBorrowFromRightSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, const Int index) const{
 
         //   auto* children = parent->GetChildren();
         //
@@ -630,7 +637,7 @@ namespace Indexing{
         MultiThreading::ReaderGuard &parentLock,
         Pages::PageGuard<Pages::IndexPage> &child,
         MultiThreading::ReaderGuard &childLock,
-        const int& childIndex
+        const Int childIndex
     )const {
         if (!child->IsLeaf())
             return {};
@@ -696,9 +703,9 @@ namespace Indexing{
         // auto* childKeys = child->GetKeysUnsafe();
         //
         // // Calculate balanced distribution
-        // const int totalKeys = static_cast<int>(siblingKeys->size() + childKeys->size());
-        // const int targetSiblingKeys = totalKeys / 2;
-        // const int keysToMove = targetSiblingKeys - static_cast<int>(siblingKeys->size());
+        // const Int totalKeys = static_cast<Int>(siblingKeys->size() + childKeys->size());
+        // const Int targetSiblingKeys = totalKeys / 2;
+        // const Int keysToMove = targetSiblingKeys - static_cast<Int>(siblingKeys->size());
         //
         // // Only redistribute if we actually need to move keys
         // if (keysToMove <= 0)
@@ -724,7 +731,7 @@ namespace Indexing{
         //     //
         //     // siblingRows.insert(siblingRows.end(), childRows.begin(), srcEnd);
         //
-        //     for (int i = 0; i < keysToMove; i++)
+        //     for (Int i = 0; i < keysToMove; i++)
         //         siblingRows.push_back(std::move(childRows.at(i)));
         //
         //     childRows.erase(childRows.begin(), srcEnd);
@@ -755,9 +762,9 @@ namespace Indexing{
         // auto* childKeys = child->GetKeysUnsafe();
         //
         // // Calculate balanced distribution
-        // const int totalKeys = static_cast<int>(siblingKeys->size() + childKeys->size());
-        // const int targetChildKeys = totalKeys / 2;
-        // const int keysToMove = static_cast<int>(childKeys->size()) - targetChildKeys;
+        // const Int totalKeys = static_cast<Int>(siblingKeys->size() + childKeys->size());
+        // const Int targetChildKeys = totalKeys / 2;
+        // const Int keysToMove = static_cast<Int>(childKeys->size()) - targetChildKeys;
         //
         // // Only redistribute if we actually need to move keys
         // if (keysToMove <= 0)
@@ -776,7 +783,7 @@ namespace Indexing{
         //     const auto srcBegin = childRows.end() - keysToMove;
         //     const auto index = childRows.size() - keysToMove;
         //
-        //     for (int i = index; i < childRows.size(); i++)
+        //     for (Int i = index; i < childRows.size(); i++)
         //         siblingRows.insert(siblingRows.begin(), std::move(childRows.at(i)));
         //
         //     // siblingRows.insert(siblingRows.begin(), srcBegin, childRows.end());
@@ -807,9 +814,9 @@ namespace Indexing{
        Pages::PageGuard<Pages::IndexPage>& leftNode,
        Pages::PageGuard<Pages::IndexPage>& rightNode,
        Pages::PageGuard<Pages::IndexPage>& parent,
-        int parentKeyIndex,
+        Int parentKeyIndex,
         std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors,
-        int& parentIndex){
+        Int& parentIndex){
          //  auto* leftNodeKeys = leftNode->GetKeysUnsafe();
          //  auto* rightNodeKeys = rightNode->GetKeysUnsafe();
          //
@@ -841,7 +848,7 @@ namespace Indexing{
          //      }
          // }
          // else {
-         //     // Merge internal nodes
+         //     // Merge Internal nodes
          //      leftNodeKeys->push_back(parentKeys->at(parentKeyIndex));
          //
          //      parentKeys->erase(parentKeys->begin() + parentKeyIndex);
@@ -854,7 +861,7 @@ namespace Indexing{
          //      leftNodeChildren->insert(leftNodeChildren->end(), rightNodeChildren->begin(), rightNodeChildren->end());
          // }
          //
-         // // Remove the parent key and right node pointer
+         // // Remove the parent key and right node poInter
          //  auto* parentChildrenHeaders = parent->GetChildren();
          //  parentChildrenHeaders->erase(parentChildrenHeaders->begin() + parentKeyIndex + 1);
          //
@@ -880,7 +887,7 @@ namespace Indexing{
         Headers::IndexStatistics& indexStatistics,
         Headers::TableStatistics& tableStatistics,
         std::vector<Headers::ColumnStatistics>& columnStatistics,
-        Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
+        Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const{
         while (currentNode.Get()) {
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
@@ -889,14 +896,14 @@ namespace Indexing{
             indexStatistics.leafPages++;
 
             const auto numOfRows = currentNode->GetPageSize();
-            tableStatistics.rowCount += static_cast<int>(numOfRows);
+            tableStatistics.rowCount += static_cast<Int>(numOfRows);
 
-            for (int i = 0;i < numOfRows; i++){
+            for (Int i = 0;i < numOfRows; i++){
                 auto tuple = currentNode->GetLeafTuple(this->table, i);
 
-                tableStatistics.averageRowSize += static_cast<int>(tuple.row.TotalSize());
+                tableStatistics.averageRowSize += static_cast<Int>(tuple.row.TotalSize());
 
-                for (int j = 0; j < columnStatistics.size(); j++) {
+                for (Int j = 0; j < columnStatistics.size(); j++) {
                     auto& columnStats = columnStatistics[j];
                     const auto& value = tuple.row.GetColumnByIndex(j);
 
@@ -914,7 +921,7 @@ namespace Indexing{
             currentNode = this->GetNode(currentNode->GetNextPage());
         }
 
-        tableStatistics.averageRowSize = static_cast<int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
+        tableStatistics.averageRowSize = static_cast<Int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
     }
 
     void BTree::UpdatePfsPage(Pages::PageGuard<Pages::IndexPage>& node) const{
@@ -926,7 +933,7 @@ namespace Indexing{
         pageFreeSpacePage->SetPageMetaData(node.Get());
     }
 
-    BTree::BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t& indexPageId, const TreeType& treeType, const int& nonClusteredIndexId)
+    BTree::BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t indexPageId, const TreeType treeType, const Int nonClusteredIndexId)
     {
         //handle degree here correctly based on indexed columns
         this->keySize = table->CalculateIndexKeySize(nonClusteredIndexId);
@@ -953,8 +960,8 @@ namespace Indexing{
 
     Errors::RuntimeStatus BTree::InsertRow(
         const Pages::LeafNodeTuple& tuple,
-        const int& pagesToAllocate,
-        int &indexPosition
+        const Int pagesToAllocate,
+        Int &indexPosition
     ){
         //base case scenario
         if (this->IsEmpty()) {
@@ -1037,7 +1044,7 @@ namespace Indexing{
         while (currentNode.Get()){
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-            for (int i = 0; i < currentNode->NumberOfKeys(); i++){
+            for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
                 auto [key, row] = currentNode->GetLeafTuple(this->table, i);
 
                 if (key.InClosedRange(minKey, maxKey)){
@@ -1078,7 +1085,7 @@ namespace Indexing{
 
             Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-            for (int i = 0; i < currentNode->NumberOfKeys(); i++){
+            for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
                 auto [key, row] = currentNode->GetLeafTuple(this->table, i);
 
                 if (key.InClosedRange(minKey, maxKey)){
@@ -1117,7 +1124,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             const auto numKeys = currentNode->NumberOfKeys();
-            for (int i = 0; i < currentNode->NumberOfKeys(); i++){
+            for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
                 auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
 
                 // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
@@ -1163,7 +1170,7 @@ namespace Indexing{
 
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-            for (int i = 0; i < currentNode->NumberOfKeys(); i++){
+            for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
                 const auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
 
                 if (key == tupleKey) {
@@ -1200,7 +1207,7 @@ namespace Indexing{
         {
             // auto* keys = currentNode->GetKeysUnsafe();
 
-            // for (int i = 0; i < keys->size(); i++)
+            // for (Int i = 0; i < keys->size(); i++)
             //     result.emplace_back(currentNode->dataPageId, i);
 
             if(!currentNode->HasRightSibling())
@@ -1227,7 +1234,7 @@ namespace Indexing{
         while (currentNode.Get()){
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-            for (int i = state.GetNextKeyIndex(); i < currentNode->GetPageSize(); i++) {
+            for (Int i = state.GetNextKeyIndex(); i < currentNode->GetPageSize(); i++) {
                 auto [_, row] = currentNode->GetLeafTuple(this->table, i);
 
                 auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
@@ -1275,7 +1282,7 @@ namespace Indexing{
         {
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-            for (int i = state.GetNextKeyIndex(); i < currentNode->NumberOfKeys(); i++) {
+            for (Int i = state.GetNextKeyIndex(); i < currentNode->NumberOfKeys(); i++) {
                 auto [_, row] = currentNode->GetLeafTuple(this->table, i);
 
                 auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
@@ -1320,7 +1327,7 @@ namespace Indexing{
         {
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-            for (int i = 0;i < currentNode->GetPageSize();i++){
+            for (Int i = 0;i < currentNode->GetPageSize();i++){
                 auto tuple = currentNode->GetLeafTuple(this->table, i);
                 auto row = tuple.row.GetVisibleVersionForTransaction(properties.snapshot);
 
@@ -1351,7 +1358,7 @@ namespace Indexing{
         {
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-            for (int i = 0;i < currentNode->GetPageSize();i++){
+            for (Int i = 0;i < currentNode->GetPageSize();i++){
                 auto tuple = currentNode->GetLeafTuple(this->table, i);
                 auto row = tuple.row.GetVisibleVersionForTransaction(properties.snapshot);
 
@@ -1371,7 +1378,7 @@ namespace Indexing{
     void BTree::IndexScan(
         vector<Headers::RowIdentifier> *result,
         DatabaseEngine::IndexState& state,
-        const int& rowsToSelect
+        const Int rowsToSelect
     )const{
 
         if (this->IsEmpty())
@@ -1381,7 +1388,7 @@ namespace Indexing{
                         ? this->SearchLeftMostLeafNode()
                         : this->GetNode(state.pageId);
 
-        const int startingPosition = state.GetNextKeyIndex();
+        const Int startingPosition = state.GetNextKeyIndex();
 
         while (currentNode.Get())
         {
@@ -1389,7 +1396,7 @@ namespace Indexing{
 
             // const auto* rowIds = currentNode->NonClusteredDataNoLock();
             //
-            // for (int i = startingPosition; i < rowIds->size(); i++) {
+            // for (Int i = startingPosition; i < rowIds->size(); i++) {
             //     const auto& rowId = rowIds->at(i);
             //
             //     result->emplace_back(rowId.pageId, rowId.indexId);
@@ -1462,7 +1469,7 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
+            for (Int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
                 auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
                 context.row = &tuple.row;
@@ -1509,7 +1516,7 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int i = 0;i < currentNode->GetPageSize();i++){
+            for (Int i = 0;i < currentNode->GetPageSize();i++){
                 auto tuple = currentNode->GetLeafTuple(this->table, i);
 
                 context.row = &tuple.row;
@@ -1556,7 +1563,7 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
+            for (Int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
                 auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
                 auto result = this->table->UpdateRowNoLock(
@@ -1595,7 +1602,7 @@ namespace Indexing{
         while (currentNode.Get()) {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int indexPosition = 0;indexPosition < currentNode->NumberOfKeys(); indexPosition++){
+            for (Int indexPosition = 0;indexPosition < currentNode->NumberOfKeys(); indexPosition++){
                 auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
                 if (key != tuple.key || key < tuple.key)
                     continue;
@@ -1643,7 +1650,7 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-              for (int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
+              for (Int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
                 auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
                 if (*minKey > tuple.key)
@@ -1693,7 +1700,7 @@ namespace Indexing{
         while (currentNode.Get()){
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
+            for (Int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
                 auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
                 if (*minKey > tuple.key)
@@ -1737,7 +1744,7 @@ namespace Indexing{
         //
         //     const auto iterator = ranges::lower_bound(*keys, &key);
         //
-        //     const int index = iterator - keys->begin();
+        //     const Int index = iterator - keys->begin();
         //
         //     auto* children = currentNode->GetChildren();
         //
@@ -1762,7 +1769,7 @@ namespace Indexing{
         //         return;
         //     }
         //
-        //     for (int i = 0; i < keys->size(); i++)
+        //     for (Int i = 0; i < keys->size(); i++)
         //     {
         //         if (key == *keys->at(i))
         //         {
@@ -1788,9 +1795,9 @@ namespace Indexing{
       //
       // auto* keys = currentNode->GetKeysUnsafe();
       //
-      // int keyIndex = -1;
+      // Int keyIndex = -1;
       //
-      // for (int i = 0; i < keys->size(); i++) {
+      // for (Int i = 0; i < keys->size(); i++) {
       //   if (*keys->at(i) == key) {
       //     keyIndex = i;
       //     break;
@@ -1818,20 +1825,20 @@ namespace Indexing{
       // if (keys->size() >= (degree - 1 ) / 2)
       //   return;
       //
-      // int parentIndex = ancestors.size() - 1;
+      // Int parentIndex = ancestors.size() - 1;
       // this->HandleUnderflow(currentNode, ancestors, parentIndex);
    }
 
-    void BTree::SetBranchingFactor(const int &branchingFactor) { this->degree = branchingFactor; }
+    void BTree::SetBranchingFactor(const Int branchingFactor) { this->degree = branchingFactor; }
 
-    const int &BTree::GetBranchingFactor() const { return this->degree; }
+    Int BTree::GetBranchingFactor() const { return this->degree; }
 
-    void BTree::SetTreeType(const TreeType & treeType) { this->type = treeType; }
+    void BTree::SetTreeType(const TreeType treeType) { this->type = treeType; }
 
-    const page_id_t & BTree::GetFirstIndexPageId() const { return this->rootPageId; }
+    page_id_t BTree::GetFirstIndexPageId() const { return this->rootPageId; }
 
     //escalate to table lock
-    void BTree::InsertRowsToOtherTree(const int& indexPos, const int& pagesToAllocate)const{
+    void BTree::InsertRowsToOtherTree(const Int indexPos, const Int pagesToAllocate)const{
         if (this->IsEmpty())
             return;
 
@@ -1840,7 +1847,7 @@ namespace Indexing{
         // while (currentNode.Get()){
         //     const auto rows = currentNode->DataRowsNoLock(this->table);
         //
-        //     for (int i = 0;i < rows.size(); i++) {
+        //     for (Int i = 0;i < rows.size(); i++) {
         //         const auto& row = rows.at(i);
         //
         //         this->table->NonClusteredIndexInsert(&row, indexPos, pagesToAllocate, Headers::RowIdentifier(currentNode->GetPageId(), i));
@@ -1853,7 +1860,7 @@ namespace Indexing{
         // }
     }
 
-  void BTree::InsertColumnToRow(const column_index_t& index, const Value &defaultValue)const{
+  void BTree::InsertColumnToRow(const column_index_t index, const Value &defaultValue)const{
         if (this->IsEmpty())
             return;
 
@@ -1871,7 +1878,7 @@ namespace Indexing{
         // }
     }
 
-    void BTree::RemoveColumnFromRow(const column_index_t &index)const{
+    void BTree::RemoveColumnFromRow(const column_index_t index)const{
         if (this->IsEmpty())
             return;
 
@@ -1898,7 +1905,7 @@ namespace Indexing{
         Headers::IndexStatistics& indexStatistics,
         Headers::TableStatistics& tableStatistics,
         std::vector<Headers::ColumnStatistics>& columnStatistics,
-        Dictionary<int32_t, SortedDictionary<Value, int64_t, ValueComparator>>& sortedValues
+        Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const {
         if (this->IsEmpty())
             return;

@@ -56,8 +56,8 @@ namespace Network {
     bool CreateUser(const DatabaseEngine::ExecutionProperties& properties, const std::string& userName, const std::string& password, const std::string& roleName);
     Errors::RuntimeStatus UpdateUserById(
       const DataTypes::Guid& callerSessionId,
-      const Int &userId,
-      const Int &roleId
+      Int userId,
+      Int roleId
     )const;
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
 
@@ -68,7 +68,7 @@ namespace Network {
     [[nodiscard]] const Network::Session* CreateSession(const Security::User* user);
     [[nodiscard]] const Network::Session* GetSession(const DataTypes::Guid& key)const;
     [[nodiscard]] bool CloseSession(const DataTypes::Guid& key);
-    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, const Int& databaseId)const;
+    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, Int databaseId)const;
     [[nodiscard]] bool AddOrSetVariable(const DataTypes::Guid& sessionId, const Variable& variable)const;
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
@@ -76,14 +76,14 @@ namespace Network {
       const DatabaseEngine::ExecutionProperties& properties,
       QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
     )const;
-    [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
+    [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
 
     //Cursor Functions
     // QueryPipeline::Cursor* CreateCursor(QueryPipeline::PhysicalPlan::PhysicalOperator* plan);
     // QueryPipeline::Cursor* GetCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
     // void DeleteCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
 
-    [[nodiscard]] DatabaseEngine::Database* UseDatabase(const Int & databaseId, const bool& isServerInitialization = false);
+    [[nodiscard]] DatabaseEngine::Database* UseDatabase(Int databaseId, bool isServerInitialization = false);
     const Dictionary<Int, DatabaseEngine::Database*>& GetDatabases()const;
     MultiThreading::ReadWriteMutex& GetDatabasesLatch();
     

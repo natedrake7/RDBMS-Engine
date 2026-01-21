@@ -413,8 +413,8 @@ namespace QueryPipeline{
 
     double CostEstimator::EstimateFilterCost(
         const Expressions::Expression* filterExpression,
-        const BigInt& inputRows,
-        const double& selectivity
+        const BigInt inputRows,
+        const double selectivity
     ){
         const auto expressionComplexity = CostEstimator::EstimateExpressionComplexity(filterExpression);
 
@@ -427,7 +427,7 @@ namespace QueryPipeline{
 
     double CostEstimator::EstimateProjectionCost(
         const std::vector<Expressions::Expression*>& projections,
-        const BigInt& inputRows
+        const BigInt inputRows
     ) {
         Int totalExpressionComplexity = 0;
 
@@ -438,7 +438,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateSortCost(
-        const BigInt& inputRows,
+        const BigInt inputRows,
         const std::vector<Expressions::Expression*>& sortExpressions
     ){
         if (inputRows <= 1) return 0.0;

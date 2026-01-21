@@ -23,7 +23,7 @@ StorageManager::StorageManager()
   this->clockHand = 0;
 }
 
-std::string StorageManager::CreateKey(const std::string &filename, const page_id_t &pageId){
+std::string StorageManager::CreateKey(const std::string &filename, const page_id_t pageId){
   return filename + to_string(pageId);
 }
 
@@ -52,7 +52,7 @@ void StorageManager::CreateFile(const string& fileName, const string& extension)
 
 Pages::Page *StorageManager::GetRawPage(
   const string& filename,
-  const page_id_t &pageId,
+  const page_id_t pageId,
   const DatabaseEngine::StorageTypes::Table *table) {
   {
     MultiThreading::ReaderGuard lock(&this->tableMutex);
@@ -68,7 +68,7 @@ Pages::Page *StorageManager::GetRawPage(
   return this->OpenExtent(pageId, filename, extentId, table);
 }
 
-Pages::PageGuard<Pages::Page> StorageManager::CreatePage(const string& filename, const page_id_t &pageId)
+Pages::PageGuard<Pages::Page> StorageManager::CreatePage(const string& filename, const page_id_t pageId)
 {
   auto *page = new Pages::Page(pageId, true);
   page->SetDirty();
@@ -78,11 +78,11 @@ Pages::PageGuard<Pages::Page> StorageManager::CreatePage(const string& filename,
   return Pages::PageGuard<Pages::Page>(page);
 }
 
-Pages::PageGuard<Pages::Page> StorageManager::GetPage(const std::string &filename, const page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table){
+Pages::PageGuard<Pages::Page> StorageManager::GetPage(const std::string &filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table){
   return Pages::PageGuard(this->GetRawPage(filename, pageId, table));
 }
 
-Pages::PageGuard<Pages::LargeObjectPage> StorageManager::GetLargeDataPage(const string& filename, const page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table)
+Pages::PageGuard<Pages::LargeObjectPage> StorageManager::GetLargeDataPage(const string& filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table)
 {
   auto* page = this->GetRawPage(filename, pageId, table);
 
@@ -92,7 +92,7 @@ Pages::PageGuard<Pages::LargeObjectPage> StorageManager::GetLargeDataPage(const 
   return Pages::PageGuard(static_cast<Pages::LargeObjectPage*>(page));
 }
 
-Pages::PageGuard<Pages::OverflowPage> StorageManager::GetOverflowPage(const string& filename, const page_id_t &pageId, const DatabaseEngine::StorageTypes::Table *table)
+Pages::PageGuard<Pages::OverflowPage> StorageManager::GetOverflowPage(const string& filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table)
 {
   auto* page = this->GetRawPage(filename, pageId, table);
 
@@ -102,7 +102,7 @@ Pages::PageGuard<Pages::OverflowPage> StorageManager::GetOverflowPage(const stri
   return Pages::PageGuard(static_cast<Pages::OverflowPage*>(page));
 }
 
-Pages::PageGuard<Pages::LargeObjectPage> StorageManager::CreateLargeDataPage(const string& filename, const page_id_t &pageId)
+Pages::PageGuard<Pages::LargeObjectPage> StorageManager::CreateLargeDataPage(const string& filename, const page_id_t pageId)
 {
   auto* page = new Pages::LargeObjectPage(pageId, true);
   page->SetDirty();
@@ -112,7 +112,7 @@ Pages::PageGuard<Pages::LargeObjectPage> StorageManager::CreateLargeDataPage(con
   return Pages::PageGuard<Pages::LargeObjectPage>(page);
 }
 
-Pages::PageGuard<Pages::OverflowPage> StorageManager::CreateOverflowPage(const string & filename, const page_id_t & pageId){
+Pages::PageGuard<Pages::OverflowPage> StorageManager::CreateOverflowPage(const string & filename, const page_id_t  pageId){
   auto* page = new Pages::OverflowPage(pageId, true);
   page->SetDirty();
 
@@ -183,7 +183,7 @@ void StorageManager::RemovePageWithoutKeyDeletion(Pages::Page *page){
 Pages::Page* StorageManager::OpenExtent(
   const page_id_t& pageId,
   const string& filename,
-  const extent_id_t &extentId,
+  const extent_id_t extentId,
   const DatabaseEngine::StorageTypes::Table *table
 ){
   Pages::Page* returnPage = nullptr;
@@ -268,10 +268,10 @@ Pages::PageGuard<Pages::HeaderPage> StorageManager::CreateHeaderPage(const strin
 
   this->InsertPageToCache(page, filename, Constants::HEADER_PAGE_ID);
 
-  return Pages::PageGuard<Pages::HeaderPage>(page);
+  return Pages::PageGuard(page);
 }
 
-Pages::PageGuard<Pages::GlobalAllocationMapPage> StorageManager::CreateGlobalAllocationMapPage(const string &filename, const page_id_t &pageId)
+Pages::PageGuard<Pages::GlobalAllocationMapPage> StorageManager::CreateGlobalAllocationMapPage(const string &filename, const page_id_t pageId)
 {
   auto *page = new Pages::GlobalAllocationMapPage(pageId);
 
@@ -281,38 +281,38 @@ Pages::PageGuard<Pages::GlobalAllocationMapPage> StorageManager::CreateGlobalAll
 }
 
 Pages::PageGuard<Pages::IndexAllocationMapPage> StorageManager::CreateIndexAllocationMapPage(
-  const string& filename,
-  const table_id_t &tableId,
-  const page_id_t &pageId,
-  const extent_id_t &startingExtentId)
-{
+  const std::string& filename,
+  const table_id_t tableId,
+  const page_id_t pageId,
+  const extent_id_t startingExtentId
+){
   auto *page = new Pages::IndexAllocationMapPage(tableId, pageId, startingExtentId);
 
   this->InsertPageToCache(page, filename, pageId);
 
-  return Pages::PageGuard<Pages::IndexAllocationMapPage>(page);
+  return Pages::PageGuard(page);
 }
 
 
-Pages::PageGuard<Pages::PageFreeSpacePage> StorageManager::CreatePageFreeSpacePage(const string &filename, const page_id_t &pageId)
+Pages::PageGuard<Pages::PageFreeSpacePage> StorageManager::CreatePageFreeSpacePage(const string &filename, const page_id_t pageId)
 {
   auto *page = new Pages::PageFreeSpacePage(pageId);
 
   this->InsertPageToCache(page, filename, pageId);
 
-  return Pages::PageGuard<Pages::PageFreeSpacePage>(page);
+  return Pages::PageGuard(page);
 }
 
-Pages::PageGuard<Pages::IndexPage> StorageManager::CreateIndexPage(const string& filename, const page_id_t &pageId)
+Pages::PageGuard<Pages::IndexPage> StorageManager::CreateIndexPage(const string& filename, const page_id_t pageId)
 {
   auto *page = new Pages::IndexPage(pageId, true);
 
   this->InsertPageToCache(page, filename, pageId);
 
-  return Pages::PageGuard<Pages::IndexPage>(page);
+  return Pages::PageGuard(page);
 }
 
-void StorageManager::InsertPageToCache(Pages::Page *page, const std::string &filename, const page_id_t &pageId){
+void StorageManager::InsertPageToCache(Pages::Page *page, const std::string &filename, const page_id_t pageId){
   MultiThreading::WriterGuard lock(&this->tableMutex);
 
   if (this->pageTable.size() >= MAX_NUMBER_OF_PAGES) {
@@ -338,7 +338,7 @@ Pages::PageGuard<Pages::HeaderPage> StorageManager::GetHeaderPage(const string &
   return Pages::PageGuard(static_cast<Pages::HeaderPage*>(page));
 }
 
-Pages::PageGuard<Pages::PageFreeSpacePage>StorageManager::GetPageFreeSpacePage(const string& filename, const page_id_t &pageId)
+Pages::PageGuard<Pages::PageFreeSpacePage>StorageManager::GetPageFreeSpacePage(const string& filename, const page_id_t pageId)
 {
   auto* page = this->GetRawPage(filename, pageId, nullptr);
 
@@ -348,7 +348,7 @@ Pages::PageGuard<Pages::PageFreeSpacePage>StorageManager::GetPageFreeSpacePage(c
   return Pages::PageGuard(static_cast<Pages::PageFreeSpacePage*>(page));
 }
 
-Pages::PageGuard<Pages::IndexPage> StorageManager::GetIndexPage(const string& filename, const page_id_t &pageId, const DatabaseEngine::StorageTypes::Table* table)
+Pages::PageGuard<Pages::IndexPage> StorageManager::GetIndexPage(const string& filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table* table)
 {
   auto* page = this->GetRawPage(filename, pageId, table);
 
@@ -360,7 +360,7 @@ Pages::PageGuard<Pages::IndexPage> StorageManager::GetIndexPage(const string& fi
 
 Pages::PageGuard<Pages::IndexAllocationMapPage> StorageManager::GetIndexAllocationMapPage(
   const string& filename,
-  const page_id_t &pageId,
+  const page_id_t pageId,
   const DatabaseEngine::StorageTypes::Table *table
 ){
   auto* page = this->GetRawPage(filename, pageId, table);
@@ -371,7 +371,7 @@ Pages::PageGuard<Pages::IndexAllocationMapPage> StorageManager::GetIndexAllocati
   return Pages::PageGuard(static_cast<Pages::IndexAllocationMapPage*>(page));
 }
 
-Pages::PageGuard<Pages::GlobalAllocationMapPage> StorageManager::GetGlobalAllocationMapPage(const string& filename, const page_id_t &pageId){
+Pages::PageGuard<Pages::GlobalAllocationMapPage> StorageManager::GetGlobalAllocationMapPage(const string& filename, const page_id_t pageId){
   auto* page = this->GetRawPage(filename, pageId,nullptr);
 
   if (page->GetPageType() != PageType::GAM)
@@ -458,7 +458,7 @@ Pages::PageHeader StorageManager::GetPageHeaderFromFile(
   return pageHeader;
 }
 
-bool StorageManager::IsPageCached(const string& filename, const page_id_t &pageId)const{
+bool StorageManager::IsPageCached(const string& filename, const page_id_t pageId)const{
     MultiThreading::ReaderGuard lock(&this->tableMutex);
     return this->pageTable.Contains(StorageManager::CreateKey(filename, pageId));
 }

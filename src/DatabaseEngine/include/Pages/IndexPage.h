@@ -61,10 +61,10 @@ namespace Pages {
 
 		// Setters
 		void SetTreeType(const Constants::TreeType& type);
-		void SetIsLeaf(const bool& value);
-		void SetIsRoot(const bool& value);
-		void SetIsEmpty(const bool& value);
-		void SetNumberOfSubKeys(const UnsignedTinyInt& count);
+		void SetIsLeaf(bool value);
+		void SetIsRoot(bool value);
+		void SetIsEmpty(bool value);
+		void SetNumberOfSubKeys(UnsignedTinyInt count);
 
 		IndexPageAdditionalHeader();
 	};
@@ -97,7 +97,7 @@ namespace Pages {
 		InternalNodeTuple& operator=(const InternalNodeTuple& other);
 		InternalNodeTuple(const InternalNodeTuple& other);
 
-		InternalNodeTuple(DataTypes::Indexing::Key& key, const page_id_t& pageId);
+		InternalNodeTuple(DataTypes::Indexing::Key& key, page_id_t pageId);
 	};
 
 	class IndexPage final : public Page {
@@ -111,12 +111,12 @@ namespace Pages {
 			void InsertFirstKey(const DataTypes::Indexing::Key& key);
 			void InsertKey(const DataTypes::Indexing::Key& key);
 
-			void InsertFirstChild(const page_id_t& child);
+			void InsertFirstChild(page_id_t child);
 
 			DataTypes::Indexing::Key GetKey(page_offset_t& offSet) const;
 
 		public:
-			IndexPage(const page_id_t &pageId, const bool &isPageCreation, const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes = {});
+			IndexPage(page_id_t pageId, bool isPageCreation, const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes = {});
 			explicit IndexPage(const PageHeader &pageHeader);
 
 			void ReadFromDisk(const std::vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, std::fstream *filePtr) override;
@@ -125,10 +125,10 @@ namespace Pages {
             void MarkEmpty();
 
 			void SetTreeType(const Constants::TreeType& treeType);
-			void SetTreeId(const page_id_t& treeId);
+			void SetTreeId(page_id_t treeId);
 			void SetKeyTypes(const std::vector<DataType>& keyTypes);
 
-			[[nodiscard]] const page_id_t& GetTreeId() const;
+			[[nodiscard]] page_id_t GetTreeId() const;
 
 			[[nodiscard]] bool isEmpty() const;
 
@@ -137,37 +137,37 @@ namespace Pages {
 			[[nodiscard]] bool IsRoot() const;
 
 			[[nodiscard]] UnsignedTinyInt SubKeys() const;
-			void SetSubKeys(const UnsignedTinyInt& numberOfKeys);
+			void SetSubKeys(UnsignedTinyInt numberOfKeys);
 
-			void SetIsLeaf(const bool& isLeaf);
-			void SetIsRoot(const bool& isRoot);
+			void SetIsLeaf(bool isLeaf);
+			void SetIsRoot(bool isRoot);
 
 
-			void InsertChild(const page_id_t& child, const DataTypes::Indexing::Key* key);
-			void InsertChild(const page_id_t& child, const DataTypes::Indexing::Key* key, const int& indexPosition);
-			void InsertChild(const page_id_t& child);
+			void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key);
+			void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key, Int indexPosition);
+			void InsertChild(page_id_t child);
 
-			void SetPreviousPage(const page_id_t& previousPage);
-			void SetNextPage(const page_id_t& nextPage);
+			void SetPreviousPage(page_id_t previousPage);
+			void SetNextPage(page_id_t nextPage);
 
-			[[nodiscard]] const page_id_t& GetPreviousPage()const;
-			[[nodiscard]] const page_id_t& GetNextPage()const;
+			[[nodiscard]] page_id_t GetPreviousPage()const;
+			[[nodiscard]] page_id_t GetNextPage()const;
 
 			[[nodiscard]] bool HasRightSibling() const;
 			[[nodiscard]] bool HasLeftSibling() const;
 
-			void InsertKey(const DataTypes::Indexing::Key& key, const int& indexPosition);
+			void InsertKey(const DataTypes::Indexing::Key& key, Int indexPosition);
 
 			void InsertTuple(const LeafNodeTuple& tuple);
-			void InsertTuple(const LeafNodeTuple& tuple, const int& indexPosition);
+			void InsertTuple(const LeafNodeTuple& tuple, Int indexPosition);
 
-			void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition) override;
+			void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, Int indexPosition) override;
 
-			DataTypes::Indexing::Key GetKey(const int& indexPosition) const;
-			LeafNodeTuple GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, const int& indexPosition) const;
-			InternalNodeTuple GetInternalNodeTuple(const int& indexPosition) const;
+			DataTypes::Indexing::Key GetKey(Int indexPosition) const;
+			LeafNodeTuple GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, Int indexPosition) const;
+			InternalNodeTuple GetInternalNodeTuple(Int indexPosition) const;
 
-			page_id_t GetChild(const int& indexPosition) const;
+			page_id_t GetChild(Int indexPosition) const;
 
 			void UpdateBytesLeft() override;
 
@@ -175,6 +175,6 @@ namespace Pages {
 
 			[[nodiscard]] Int NumberOfKeys()const;
 
-			void Resize(const Int& size);
+			void Resize(Int size);
 		};
 } // namespace Pages

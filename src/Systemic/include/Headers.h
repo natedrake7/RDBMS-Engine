@@ -103,14 +103,14 @@ namespace Headers {
       this->lastModified = DataTypes::DateTime::Now();
     }
 
-    explicit TableStatistics(const Int& tableId)
+    explicit TableStatistics(const Int tableId)
       : tableId(tableId),rowCount(0),averageRowSize(0), pageCount(0), lastModified(DataTypes::DateTime::Now()) {}
 
     TableStatistics(
-      const Int& tableId,
+      const Int tableId,
       const BigInt& rowCount,
-      const Int& averageRowSize,
-      const Int& pageCount,
+      const Int averageRowSize,
+      const Int pageCount,
       const DataTypes::DateTime& lastModified
     ) : tableId(tableId),
         rowCount(rowCount),
@@ -139,11 +139,11 @@ namespace Headers {
     Int distinctCount;
 
     ColumnHistograms(
-      const Int& columnId,
+      const Int columnId,
       const Value& rangeStart,
       const Value& rangeEnd,
-      const Int& rowCount,
-      const Int& distinctCount
+      const Int rowCount,
+      const Int distinctCount
     )
       : columnId(columnId),
         rangeStart(rangeStart),
@@ -155,12 +155,12 @@ namespace Headers {
     }
 
     ColumnHistograms(
-      const Int& columnId,
-      const Int& histogramId,
+      const Int columnId,
+      const Int histogramId,
       const Value& rangeStart,
       const Value& rangeEnd,
-      const Int& rowCount,
-      const Int& distinctCount
+      const Int rowCount,
+      const Int distinctCount
     )
       : columnId(columnId),
         histogramId(histogramId),
@@ -188,17 +188,17 @@ namespace Headers {
     }
 
     IndexStatistics(
-      const Int& tableId,
-      const Int& indexId
+      const Int tableId,
+      const Int indexId
     ) : IndexStatistics() {
       this->tableId = tableId;
       this->indexId = indexId;
     }
 
     IndexStatistics(
-      const Int& tableId,
-      const Int& indexId,
-      const Int& leafPages,
+      const Int tableId,
+      const Int indexId,
+      const Int leafPages,
       const TinyInt& depth,
       const DataTypes::Decimal& averageFragmentation,
       const DataTypes::DateTime& lastUpdated
@@ -307,7 +307,7 @@ namespace Headers {
       this->indexId = INVALID_PAGE_INDEX_ID;
     }
 
-    RowIdentifier(const Int& pageId, const Int& indexId) {
+    RowIdentifier(const Int pageId, const Int indexId) {
       this->pageId = pageId;
       this->indexId = indexId;
     }

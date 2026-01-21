@@ -33,16 +33,16 @@ using namespace std;
 namespace Network {
 
   struct ConnectionParameters {
-    int port;
-    int serverSocket;
-    int epollFileDescriptor;
-    string hostName;
+    Int port;
+    Int serverSocket;
+    Int epollFileDescriptor;
+    std::string hostName;
 
-    int numberOfConnections;
-    int timeoutTime;
+    Int numberOfConnections;
+    Int timeoutTime;
 
     ConnectionParameters();
-    ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime);
+    ConnectionParameters(const std::string& hostname, Int port, Int numberOfConnections, Int timeoutTime);
   };
 
 
@@ -55,22 +55,22 @@ namespace Network {
     ThreadPool threadPool;
 
     protected:
-      static void SendToClient(const int& clientSocket, Network::ResponseProtocol* protocol);
+      static void SendToClient(Int clientSocket, Network::ResponseProtocol* protocol);
 
-      void GetQueryFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader& header, const vector<char>& buffer);
-      void AuthorizeClientConnection(const int& clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const;
-      void HandleClientConnection(const int& clientSocket, mutex& clientMutex);
-      void ReadBodyFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader& header);
+      void GetQueryFromClient(Int clientSocket, const Network::ConnectionProtocolHeader& header, const vector<char>& buffer);
+      void AuthorizeClientConnection(Int clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const;
+      void HandleClientConnection(Int clientSocket, mutex& clientMutex);
+      void ReadBodyFromClient(Int clientSocket, const Network::ConnectionProtocolHeader& header);
       void CloseServerConnection() const;
-      void CloseClientConnection(const int& clientSocket) const;
+      void CloseClientConnection(Int clientSocket) const;
       void InitializeServerSocket();
 
-      static void ExecuteQuery(const std::string& query, const int& socket, const Network::ConnectionProtocolHeader &header);
+      static void ExecuteQuery(const std::string& query, Int socket, const Network::ConnectionProtocolHeader &header);
 
 #ifdef _WIN32
-      void HandleClientDisconnection(const SocketEvent& event, int& totalEvents, int& index);
+      void HandleClientDisconnection(const SocketEvent& event, Int& totalEvents, Int& index);
 #else
-    void HandleClientDisconnection(const int& socket, int& totalEvents, int& index);
+    void HandleClientDisconnection(Int socket, Int& totalEvents, Int& index);
 #endif
     public:
       explicit ConnectionManager(const ConnectionParameters& parameters);

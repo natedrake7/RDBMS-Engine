@@ -1,9 +1,9 @@
 #pragma once
 #include <algorithm>
-#include <codecvt>
 #include <locale>
 #include <string>
 #include <vector>
+#include "../DataTypes/DataTypes.h"
 
 namespace Functions::String {
   inline std::string NormalizeString(const std::string &str) {
@@ -53,9 +53,9 @@ namespace Functions::String {
         return str.front();
     }
 
-    inline std::string Char(const int &asciiCode) { return {0, static_cast<char>(asciiCode)}; }
+    inline std::string Char(const Int asciiCode) { return {0, static_cast<char>(asciiCode)}; }
 
-    inline int CharIndex(const std::string &subStr, const std::string &str, const int &startIndex)
+    inline int CharIndex(const std::string &subStr, const std::string &str, const Int startIndex)
     {
         if(subStr.empty()
             || str.empty()
@@ -69,7 +69,7 @@ namespace Functions::String {
 
     inline int DataLength(const std::string &str) { return static_cast<int>(str.size()); }
 
-    inline std::string Left(const std::string &str, const int &numberOfCharacters)
+    inline std::string Left(const std::string &str, const Int numberOfCharacters)
     {
         if(str.empty() || numberOfCharacters <= 0)
             return str;
@@ -77,7 +77,7 @@ namespace Functions::String {
         return str.substr(0, numberOfCharacters);
     }
 
-    inline std::string Right(const std::string &str, const int &numberOfCharacters)
+    inline std::string Right(const std::string &str, const Int numberOfCharacters)
     {
         if(str.empty() || numberOfCharacters <= 0)
             return str;
@@ -199,7 +199,7 @@ namespace Functions::String {
         return result;
     }
 
-    inline std::string SubString(const std::string &str, const int &startIndex, const int &endIndex)
+    inline std::string SubString(const std::string &str, const Int startIndex, const Int endIndex)
     {
         if(startIndex > str.size() -1 || endIndex > str.size() - 1)
             return str;

@@ -183,7 +183,7 @@ namespace QueryPipeline::PhysicalPlan {
     return new ExecutionResult();
   }
 
-  PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const Int &databaseId)
+  PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const Int databaseId)
     : sessionId(sessionId), databaseId(databaseId){}
 
   ExecutionResult * PhysicalUseDatabase::Execute(const DatabaseEngine::ExecutionProperties& properties) {
@@ -202,7 +202,7 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int& databaseId, std::string &schemaName)
+PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, std::string &schemaName)
   : ExecutionNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   ExecutionResult * PhysicalSchemaCreate::Execute(const DatabaseEngine::ExecutionProperties& properties){
@@ -251,10 +251,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     this->state.lastFetchedRowId = rowId;
   }
 
-  PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool& isClustered)
+  PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool isClustered)
     : table(table), expression(nullptr), isClustered(isClustered) {}
 
-  PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource *table, Expressions::Expression *expression, const bool & isClustered)
+  PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource *table, Expressions::Expression *expression, const bool isClustered)
     : table(table), expression(expression), isClustered(isClustered) {}
 
   PhysicalIndexScan::~PhysicalIndexScan(){
@@ -455,7 +455,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     this->child->UpdateScanState(rowId);
   }
 
-  PhysicalTop::PhysicalTop(ExecutionNode* child, const int64_t& top)
+  PhysicalTop::PhysicalTop(ExecutionNode* child, const BigInt top)
     : top(top), child(child){}
 
   PhysicalTop::~PhysicalTop(){
@@ -911,7 +911,7 @@ PhysicalInsert::PhysicalInsert(
     return nullptr;
   }
 
-  bool PhysicalOrderBy::CanBeSortedInMemory(const bool& canFetchMore) const{
+  bool PhysicalOrderBy::CanBeSortedInMemory(const bool canFetchMore) const{
     return !canFetchMore && !this->UsesExternalStorage();
   }
 

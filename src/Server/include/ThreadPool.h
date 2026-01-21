@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include <functional>
+#include "../../Systemic/include/DataTypes/DataTypes.h"
 
 class ThreadPool {
   std::mutex queueMutex;
@@ -14,7 +15,7 @@ class ThreadPool {
   public:
     ThreadPool();
     ~ThreadPool();
-    void InitializeWorkers(const std::atomic<bool> &isServerRunning, const int& numberOfThreads);
+    void InitializeWorkers(const std::atomic<bool> &isServerRunning, Int numberOfThreads);
     template<class F>
     void Enqueue(F&& task);
 };
@@ -23,7 +24,7 @@ template <class F>
 void ThreadPool::Enqueue(F &&task)
 {
   {
-    std::unique_lock<std::mutex> lock(this->queueMutex);
+    std::unique_lock lock(this->queueMutex);
 
     this->tasks.emplace(std::forward<F>(task));
   }

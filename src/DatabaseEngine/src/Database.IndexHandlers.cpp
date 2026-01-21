@@ -27,7 +27,7 @@ namespace DatabaseEngine {
     DataTypes::Indexing::Key Database::CreateKey(
         const std::vector<column_index_t>& indexedColumns,
         const StorageTypes::Row* row,
-        const Int& offSet
+        const Int offSet
     ){
         DataTypes::Indexing::Key key;
         for (const auto &columnId : indexedColumns){
@@ -56,11 +56,10 @@ namespace DatabaseEngine {
 
    Pages::PageGuard<Pages::IndexPage> Database::FindOrAllocateNextIndexPage(
         StorageTypes::Table*& table,
-	    const page_id_t &indexPageId,
-	    const int& pagesToAllocate,
-	    const int& nonClusteredIndexId
-	)
-    {
+	    const page_id_t indexPageId,
+	    const Int pagesToAllocate,
+	    const Int nonClusteredIndexId
+	){
         const auto& tableHeader = table->GetHeader();
 
         const bool isNonClusteredIndex = nonClusteredIndexId != -1;

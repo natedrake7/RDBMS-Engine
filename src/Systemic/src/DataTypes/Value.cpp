@@ -9,6 +9,8 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "DataTypes/DateTime.h"
+
 bool Value::TryParseAsBool()const{
     if (this->type == DataType::String || this->type == DataType::UnicodeString)
         return this->TryParseAsBoolFromString();
@@ -53,7 +55,7 @@ bool Value::TryParseDate(){
 
     DataTypes::DateTime parsedDate;
 
-    auto result = DataTypes::DateTime::FromString(parsedDate, strData);
+    const auto result = DataTypes::DateTime::FromString(parsedDate, strData);
 
     if (!result)
         return false;
@@ -414,7 +416,8 @@ Value::Value(const std::string &data, const column_index_t index){
 
 Value::Value(const DataTypes::DateTime &data, const column_index_t index){
     this->data = new object_t[DataTypes::DateTime::Size()];
-    std::memcpy(this->data, &data.GetUnixTimeStamp(), DataTypes::DateTime::Size());
+    const auto dt = data.GetUnixTimeStamp();
+    std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
 
     this->size = DataTypes::DateTime::Size();
     this->columnIndex = index;
@@ -520,7 +523,8 @@ void Value::SetData(const DataTypes::DateTime &otherData) {
     delete this->data;
 
     this->data = new object_t[DataTypes::DateTime::Size()];
-    std::memcpy(this->data, &otherData.GetUnixTimeStamp(), DataTypes::DateTime::Size());
+    const auto dt = otherData.GetUnixTimeStamp();
+    std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
 
     this->size = DataTypes::DateTime::Size();
     this->type = DataType::DateTime;

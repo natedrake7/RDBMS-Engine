@@ -40,9 +40,11 @@ struct DatabaseHeader {
   page_id_t lastGamPageId;
 
   DatabaseHeader();
-  DatabaseHeader(const table_number_t &numberOfTables,
-                 const page_id_t &lastPageFreeSpacePageId,
-                 const page_id_t &lastGamPageId);
+  DatabaseHeader(
+    table_number_t numberOfTables,
+    page_id_t lastPageFreeSpacePageId,
+    page_id_t lastGamPageId
+  );
   DatabaseHeader(const DatabaseHeader &dbHeader);
   DatabaseHeader &operator=(const DatabaseHeader &dbHeader);
 };
@@ -67,25 +69,25 @@ protected:
 
     void WriteHeaderToFile() const;
 
-    static bool IsSystemPage(const page_id_t &pageId);
+    static bool IsSystemPage(page_id_t pageId);
 
 
     std::vector<extent_id_t> AllocateNewExtents(
-      const int& pagesToAllocate,
-      const table_id_t &tableId,
+      Int pagesToAllocate,
+      table_id_t tableId,
       page_id_t& lowerLimit
     );
 
-    [[nodiscard]] const StorageTypes::Table *GetTable(const table_id_t &tableId) const;
+    [[nodiscard]] const StorageTypes::Table *GetTable(table_id_t tableId) const;
 
     // [[nodiscard]] bool ValidateLogIntegrity(const Logging::LogEntry& logEntry) const;
 
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry)const;
 
-    static int CalculateExtentsToAllocate(const int& pagesToAllocate);
+    static int CalculateExtentsToAllocate(Int pagesToAllocate);
 
 public:
-    explicit Database(const string &dbName, const bool& isServerInitialization = false);
+    explicit Database(const std::string &dbName, const bool& isServerInitialization = false);
 
     explicit Database(const std::string& dbName, const vector<Headers::sysTable>& tables);
 
@@ -99,14 +101,14 @@ public:
 
     [[nodiscard]] static Logging::CheckPoint LogRowInsert(
         const StorageTypes::Row* row,
-        const transaction_id_t& transactionId,
-        const table_id_t& tableOrdinal
+        transaction_id_t transactionId,
+        table_id_t tableOrdinal
     );
 
     [[nodiscard]] static Logging::CheckPoint LogRowBatchInsert(
       std::vector<char>& buffer,
-      const transaction_id_t& transactionId,
-      const table_id_t& tableOrdinal
+      transaction_id_t transactionId,
+      table_id_t tableOrdinal
     );
 
     static string CreateDatabasePath(const std::string& dbName);
@@ -119,29 +121,30 @@ public:
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
       const vector<column_index_t>& indexedColumns,
       const StorageTypes::Row* row,
-      const Int& offSet
+      Int offSet
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
         const vector<column_index_t>& indexedColumns,
         const StorageTypes::Row* row,
-        const Headers::RowIdentifier& rowId);
+        const Headers::RowIdentifier& rowId
+    );
 
-    [[nodiscard]] static Pages::PageGuard<Pages::PageFreeSpacePage> GetAssociatedPfsPage(const string& filename, const page_id_t& pageId);
+    [[nodiscard]] static Pages::PageGuard<Pages::PageFreeSpacePage> GetAssociatedPfsPage(const string& filename, page_id_t pageId);
 
-    static page_id_t GetGamAssociatedPage(const page_id_t &pageId);
+    static page_id_t GetGamAssociatedPage(page_id_t pageId);
 
-    static page_id_t GetPfsAssociatedPage(const page_id_t &pageId);
+    static page_id_t GetPfsAssociatedPage(page_id_t pageId);
 
-    static page_id_t CalculateSystemPageOffset(const page_id_t &pageId);
+    static page_id_t CalculateSystemPageOffset(page_id_t pageId);
 
-    static page_id_t CalculateNextGamPageId(const page_id_t &currentGamPageId);
+    static page_id_t CalculateNextGamPageId(page_id_t currentGamPageId);
 
     static byte_t GetObjectSizeToCategory(const row_size_t &size);
 
     StorageTypes::Table *CreateTable(
-      const table_id_t &tableId,
-      const int& ordinalPosition,
+      table_id_t tableId,
+      Int ordinalPosition,
       const vector<StorageTypes::Column *> &columns,
       const Headers::Index *clusteredKeyIndexes = nullptr,
       const vector<Headers::Index> *nonClusteredIndexes = nullptr);
@@ -152,40 +155,40 @@ public:
       const Headers::sysTable& sysHeader,
       const StorageTypes::TableHeader &tableHeader,
       const Headers::Index& primaryKey,
-      const int& ordinalPosition
+      Int ordinalPosition
     );
 
     static void InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns);
 
 //    [[nodiscard]] StorageTypes::Table *OpenTable(const string& schemaName, const string &tableName) const;
 
-    [[nodiscard]] StorageTypes::Table *OpenTable(const table_id_t& tableId) const;
+    [[nodiscard]] StorageTypes::Table *OpenTable(table_id_t tableId) const;
 
-    // [[nodiscard]] StorageTypes::Table *OpenTableById(const table_id_t& tableId) const;
+    // [[nodiscard]] StorageTypes::Table *OpenTableById(table_id_t tableId) const;
 
     void DeleteTable(const string& tableName);
 
     void DeleteDatabase() const;
 
-    void TruncateTable(const table_id_t& tableId);
+    void TruncateTable(table_id_t tableId);
 
-    Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(const int& pagesToAllocate, const table_id_t &tableOrdinalPosition);
+    Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
 
-    Pages::PageGuard<Pages::Page> CreateDataPage(const table_id_t &tableId, const int& pagesToAllocate);
+    Pages::PageGuard<Pages::Page> CreateDataPage(table_id_t tableId, Int pagesToAllocate);
 
-    Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(const int& pagesToAllocate, const table_id_t &tableOrdinalPosition);
+    Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
 
-    [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetTableLastLargeDataPage(const table_id_t &tableId)const;
+    [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetTableLastLargeDataPage(table_id_t tableId)const;
 
-    [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const;
+    [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(page_id_t pageId, table_id_t tableId)const;
 
-    Pages::PageGuard<Pages::OverflowPage> GetLastOverflowPage(const table_id_t &tableId, const block_size_t& size);
+    Pages::PageGuard<Pages::OverflowPage> GetLastOverflowPage(table_id_t tableId, const block_size_t& size);
 
     Pages::PageGuard<Pages::IndexPage> CreateIndexPage(
-      const table_id_t &tableOrdinalPosition,
-      const int& pageCount,
-      const TreeType& treeType,
-      const page_id_t& treeId = 0
+      table_id_t tableOrdinalPosition,
+      Int pageCount,
+      TreeType treeType,
+      page_id_t treeId = 0
     );
 
     [[nodiscard]] string GetFileName() const;
@@ -196,21 +199,21 @@ public:
 
     static page_id_t CalculateGamPageId(const extent_id_t &extentId);
 
-    static extent_id_t CalculateExtentId(const page_id_t &pageId);
+    static extent_id_t CalculateExtentId(page_id_t pageId);
 
     [[nodiscard]] Pages::PageGuard<Pages::Page> FindOrAllocateNextDataPage(
       Pages::PageGuard<Pages::PageFreeSpacePage> &pageFreeSpacePage,
-      const page_id_t &pageId,
-      const page_id_t &extentFirstPageId,
+      page_id_t pageId,
+      page_id_t extentFirstPageId,
       const StorageTypes::Table &table,
-      const int& pageToAllocate
+      Int pageToAllocate
     );
 
     [[nodiscard]] Pages::PageGuard<Pages::IndexPage> FindOrAllocateNextIndexPage(
       StorageTypes::Table*& table,
-      const page_id_t &indexPageId,
-      const int& pagesToAllocate,
-      const int& nonClusteredIndexId = -1
+      page_id_t indexPageId,
+      Int pagesToAllocate,
+      Int nonClusteredIndexId = -1
     );
 
     void GetIdentityColumns()const;

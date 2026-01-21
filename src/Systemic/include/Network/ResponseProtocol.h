@@ -7,7 +7,7 @@
 
 using namespace std;
 
-enum ResponseType : uint8_t {
+enum ResponseType : UnsignedTinyInt {
   InvalidResponse = 0,
   Unauthorized = 1,
   InvalidCredentials = 2,
@@ -33,7 +33,7 @@ namespace Network {
   class ResponseProtocol{
     protected:
       ResponseProtocolHeader header;
-      vector<char> buffer;
+      std::vector<char> buffer;
 
     public:
       explicit ResponseProtocol() = default;
@@ -43,9 +43,9 @@ namespace Network {
       [[nodiscard]] virtual int GetSize() const;
       virtual void Serialize();
       virtual void Deserialize(const vector<char>& responseBuffer);
-      virtual void DeserializeBody(const vector<char>& buffer);
+      virtual void DeserializeBody(const vector<char>& data);
       virtual const vector<char>& GetSerializedProtocol();
-      [[nodiscard]] const ResponseType& GetResponseType() const;
+      [[nodiscard]] ResponseType GetResponseType() const;
       [[nodiscard]] const DataTypes::Guid& GetSessionId() const;
   };
 

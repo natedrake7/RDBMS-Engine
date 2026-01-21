@@ -38,7 +38,7 @@ namespace Network {
     this->serverSocket = Constants::INVALID_FILE_DESCRIPTOR;
   }
 
-  ConnectionParameters::ConnectionParameters(const string& hostname, const int& port, const int& numberOfConnections, const int& timeoutTime){
+  ConnectionParameters::ConnectionParameters(const string& hostname, const Int port, const Int numberOfConnections, const Int timeoutTime){
     this->hostName = hostname;
     this->numberOfConnections = numberOfConnections;
     this->timeoutTime = timeoutTime;
@@ -69,10 +69,10 @@ namespace Network {
 
     this->threadPool.InitializeWorkers(isServerRunning, 20);
 
-    int eventCount = 0;
+    Int eventCount = 0;
     while (isServerRunning) {
 #ifdef _WIN32
-	    const int _ = WSAPoll(this->events.data(), this->events.size(), 10);
+	    const auto _ = WSAPoll(this->events.data(), this->events.size(), 10);
       eventCount = this->events.size();
 #else
         const int currentEvents = epoll_wait(this->parameters.epollFileDescriptor, this->events.data(), this->events.size(), 10);
@@ -259,7 +259,7 @@ void ConnectionManager::CloseServerConnection() const
     totalEvents--;
   }
 #else
-  void ConnectionManager::HandleClientDisconnection(const int &socket, int &totalEvents, int &index){
+  void ConnectionManager::HandleClientDisconnection(const Int socket, int &totalEvents, int &index){
     std::cout << "Client disconnected: " << socket << std::endl;
 
     this->CloseClientConnection(socket);
@@ -271,7 +271,7 @@ void ConnectionManager::CloseServerConnection() const
   }
 #endif
 
-  void ConnectionManager::CloseClientConnection(const int &clientSocket) const
+  void ConnectionManager::CloseClientConnection(const Int clientSocket) const
   {
 
 #ifdef _WIN32
@@ -284,7 +284,7 @@ void ConnectionManager::CloseServerConnection() const
 #endif
   }
 
-  void ConnectionManager::HandleClientConnection(const int &clientSocket, mutex& clientMutex){
+  void ConnectionManager::HandleClientConnection(const Int clientSocket, mutex& clientMutex){
     std::unique_lock<std::mutex> clientLock(clientMutex);
 
     std::vector<char> buffer(Network::ConnectionProtocolHeader::GetSize());
@@ -315,7 +315,7 @@ void ConnectionManager::CloseServerConnection() const
     perror("recv failed");
   }
 
-  void ConnectionManager::ReadBodyFromClient(const int& clientSocket, const Network::ConnectionProtocolHeader &header){
+  void ConnectionManager::ReadBodyFromClient(const Int clientSocket, const Network::ConnectionProtocolHeader &header){
     vector<char> buffer(header.size);
     
     if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
@@ -338,7 +338,7 @@ void ConnectionManager::CloseServerConnection() const
     //invalid request type
   }
 
-void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const {
+void ConnectionManager::AuthorizeClientConnection(const Int clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const {
     Network::AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
@@ -361,7 +361,7 @@ void ConnectionManager::AuthorizeClientConnection(const int &clientSocket, const
     ConnectionManager::SendToClient(clientSocket, &responseProtocol);
 }
 
-void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char> &buffer){
+void ConnectionManager::GetQueryFromClient(const Int clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char> &buffer){
     Network::QueryProtocol protocol(header);
 
     protocol.Deserialize(buffer);
@@ -369,7 +369,7 @@ void ConnectionManager::GetQueryFromClient(const int &clientSocket, const Networ
     this->threadPool.Enqueue([this, query = protocol.GetQuery(), clientSocket, header] {  this->ExecuteQuery(query, clientSocket, header); });
 }
 
-void ConnectionManager::ExecuteQuery(const std::string& query, const int& socket, const Network::ConnectionProtocolHeader &header){
+void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket, const Network::ConnectionProtocolHeader &header){
     auto parserResult = QueryPipeline::Parser::StartTransaction(query, header.sessionId);
 
     if (parserResult.status.hasError) {
@@ -405,7 +405,7 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const int& socket
     }
 }
 
-void ConnectionManager::SendToClient(const int &clientSocket, Network::ResponseProtocol *protocol){
+void ConnectionManager::SendToClient(const Int clientSocket, Network::ResponseProtocol *protocol){
     if (protocol == nullptr)
       return;
 

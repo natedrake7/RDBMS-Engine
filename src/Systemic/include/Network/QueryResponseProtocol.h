@@ -19,19 +19,19 @@ namespace Network {
     void SerializeResult();
     void AssignBufferSizeToProtocolSize();
 
-    void DeserializeMessage(const std::vector<char>& buffer, uint32_t& offSet);
-    void DeserializeResult(const std::vector<char>& buffer, uint32_t& offSet);
+    void DeserializeMessage(const std::vector<char>& buffer, UnsignedInt& offSet);
+    void DeserializeResult(const std::vector<char>& buffer, UnsignedInt& offSet);
 
     public:
       QueryResponseProtocol();
       ~QueryResponseProtocol() override;
 
       explicit QueryResponseProtocol(const ResponseProtocolHeader &header);
-      explicit QueryResponseProtocol(const ResponseType& statusCode, const DataTypes::Guid& sessionId);
+      explicit QueryResponseProtocol(ResponseType statusCode, const DataTypes::Guid& sessionId);
       explicit QueryResponseProtocol(const std::string& errorMessage);
       explicit QueryResponseProtocol(
-        const bool& hasError,
-        const bool& hasMore,
+        bool hasError,
+        bool hasMore,
         const std::string& message,
         const std::vector<std::string>& columns,
         std::vector<QueryResult>& rows

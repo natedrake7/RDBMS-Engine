@@ -1,5 +1,4 @@
 #pragma once
-#include "DateTime.h"
 #include <cstdint>
 #include <string>
 #include "../DataStructures/Dictionary.h"
@@ -79,12 +78,14 @@ enum class DataType : uint8_t{
   Unknown = 11
 };
 
+constexpr Int DATETIME_SIZE = sizeof(BigInt);
+
 static Dictionary<std::string, block_size_t> ColumnTypeSizes = {
   {"tinyint", sizeof(int8_t)},
   {"smallint", sizeof(int16_t)},
   {"int", sizeof(int32_t)},
   {"bigint", sizeof(int64_t)},
-  {"datetime", DataTypes::DateTime::Size()},
+  {"datetime", DATETIME_SIZE},
   {"bool", sizeof(bool)},
   {"string", 0},
   {"decimal", 0},

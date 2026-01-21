@@ -9,7 +9,7 @@
 namespace Network {
 
   struct ConnectionHeader {
-      uint16_t size;
+      UnsignedSmallInt size;
       DataTypes::Guid sessionId;
 
     ConnectionHeader()
@@ -18,7 +18,7 @@ namespace Network {
     virtual ~ConnectionHeader() = default;
 
     virtual void Serialize(std::vector<char>& responseBuffer) {
-      Vector::AppendToBuffer(responseBuffer, &this->size, sizeof(uint16_t));
+      Vector::AppendToBuffer(responseBuffer, &this->size, sizeof(UnsignedSmallInt));
       Vector::AppendToBuffer(responseBuffer, sessionId.GetDataUnsafe().data(), DataTypes::Guid::Size());
     }
 
@@ -26,10 +26,10 @@ namespace Network {
       if (responseBuffer.empty())
         return;
 
-      memcpy(&this->size, responseBuffer.data(), sizeof(uint16_t));
-      memcpy(this->sessionId.GetDataUnsafe().data(), responseBuffer.data() + sizeof(uint16_t), DataTypes::Guid::Size());
+      memcpy(&this->size, responseBuffer.data(), sizeof(UnsignedSmallInt));
+      memcpy(this->sessionId.GetDataUnsafe().data(), responseBuffer.data() + sizeof(UnsignedSmallInt), DataTypes::Guid::Size());
     }
 
-    constexpr static int Size(){ return sizeof(uint16_t) + DataTypes::Guid::Size(); }
+    constexpr static int Size(){ return sizeof(UnsignedSmallInt) + DataTypes::Guid::Size(); }
   };
 }

@@ -236,7 +236,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus JoinStatement::Validate(const int32_t& databaseId){
+  Errors::ValidationStatus JoinStatement::Validate(const Int databaseId){
     this->databaseId = databaseId;
 
     if (this->table == nullptr)
@@ -291,7 +291,7 @@ namespace QueryPipeline::Statements {
     this->scale = INVALID_DECIMAL_SCALE;
   }
 
-  DecimalType::DecimalType(const int8_t &precision, const int8_t &scale){
+  DecimalType::DecimalType(const TinyInt precision, const TinyInt scale){
     this->precision = precision;
     this->scale = scale;
   }
@@ -312,12 +312,12 @@ namespace QueryPipeline::Statements {
     this->size = 0;
   }
 
-  ColumnType::ColumnType(const std::string &name, const int &size){
+  ColumnType::ColumnType(const std::string &name, const Int size){
     this->name = name;
     this->size = size;
   }
 
-  ColumnType::ColumnType(const std::string &name, const DecimalType &decimal){
+  ColumnType::ColumnType(const std::string &name, const DecimalType decimal){
     this->name = name;
     this->decimal = decimal;
     this->size = 0;
@@ -396,7 +396,7 @@ namespace QueryPipeline::Statements {
     return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
   }
 
-  Errors::ValidationStatus DataSource::Validate(const int32_t& selectedDatabaseId) {
+  Errors::ValidationStatus DataSource::Validate(const Int selectedDatabaseId) {
     const auto tableHeader = (!this->database.empty())
                                ? this->catalog->SelectTable(this->database, this->name)
                                : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
@@ -415,7 +415,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus DataSource::ValidateTableCreate(const int32_t &selectedDatabaseId){
+  Errors::ValidationStatus DataSource::ValidateTableCreate(const Int selectedDatabaseId){
     const auto tableHeader = (!this->database.empty())
                                ? this->catalog->SelectTable(this->database, this->name)
                                : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
@@ -1999,7 +1999,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     return true;
   }
 
-  bool ValidateExpressionCoercionTypes(const DataType &type, const Expressions::Expression *expression) {
+  bool ValidateExpressionCoercionTypes(const DataType type, const Expressions::Expression *expression) {
     if (expression->IsConstant()) {
       auto* constantExpr = expression->AsConstant();
 
@@ -2455,7 +2455,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     expression->index = columnIndicesDictionary.Get(expression->alias);
   }
 
-  Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType &type) {
+  Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType type) {
     ostringstream os;
 
     os  << "Expression of type: " << ColumnTypesToStringDictionary.Get(type)

@@ -7,6 +7,8 @@
 #include <iostream>
 #include <ranges>
 
+#include "../../../Systemic/include/DataTypes/DataTypes.h"
+
 namespace Security {
   RoleManager::RoleManager() = default;
 
@@ -15,7 +17,7 @@ namespace Security {
      delete role;
   }
 
-  const Role * RoleManager::GetRole(const int32_t &roleId)const{
+  const Role * RoleManager::GetRole(const Int roleId)const{
     Role *role = nullptr;
 
     MultiThreading::ReaderGuard guard(&this->mutex);

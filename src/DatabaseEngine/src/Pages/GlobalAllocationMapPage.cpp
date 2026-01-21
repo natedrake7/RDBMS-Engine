@@ -5,7 +5,7 @@
 #include "Guards/WriterGuard.h"
 
 namespace Pages {
-    GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t& pageId) : Page(pageId)
+    GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t pageId) : Page(pageId)
     {
         this->header.type = Constants::PageType::GAM;
         this->extentsMap = new ByteMaps::BitMap(Constants::EXTENT_BIT_MAP_SIZE, 0xFF);
@@ -26,7 +26,7 @@ namespace Pages {
         delete this->extentsMap;
     }
 
-    int GlobalAllocationMapPage::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const int& numberOfExtents){
+    int GlobalAllocationMapPage::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const Int numberOfExtents){
         int allocatedExtents = 0;
 
         for (extent_id_t extentId = this->lastAllocatedExtentId; extentId < this->extentsMap->GetSize(); extentId++){
@@ -48,7 +48,7 @@ namespace Pages {
         return allocatedExtents;
     }
 
-    void GlobalAllocationMapPage::DeallocateExtent(const extent_id_t& extentId){
+    void GlobalAllocationMapPage::DeallocateExtent(const extent_id_t extentId){
         this->extentsMap->Set(extentId, true);
 
         this->isDirty = true;
@@ -75,7 +75,7 @@ namespace Pages {
         return !this->extentsMap->Get(extentsMap->GetSize() - 1);
     }
 //Locks Latch
-    std::vector<extent_id_t> GlobalAllocationMapPage::GetAllocatedExtents(const extent_id_t& startingIndex) const {
+    std::vector<extent_id_t> GlobalAllocationMapPage::GetAllocatedExtents(const extent_id_t startingIndex) const {
         std::vector<extent_id_t> allocatedExtents;
 
         if(startingIndex >= this->extentsMap->GetSize())

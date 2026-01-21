@@ -15,7 +15,7 @@ public:
   void AddColumn(Value& field);
   void Print()const;
   [[nodiscard]] const std::vector<Value>& GetData()const;
-  [[nodiscard]] Value GetColumnAt(const int& columnPos)const;
+  [[nodiscard]] Value GetColumnAt(Int columnPos)const;
   [[nodiscard]] Int GetSize()const;
   [[nodiscard]] Int GetByteSize()const;
   void SetColumnIndex(Int columnPos, column_index_t columnIndex);

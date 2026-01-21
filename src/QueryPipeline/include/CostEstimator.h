@@ -117,17 +117,17 @@ namespace QueryPipeline{
 
         [[nodiscard]] static double EstimateFilterCost(
             const Expressions::Expression* filterExpression,
-            const BigInt& inputRows,
-            const double& selectivity
+            BigInt inputRows,
+            double selectivity
         );
 
         [[nodiscard]] static double EstimateProjectionCost(
             const std::vector<Expressions::Expression*>& projections,
-            const BigInt& inputRows
+            BigInt inputRows
         );
 
         [[nodiscard]] static double EstimateSortCost(
-            const BigInt& inputRows,
+            BigInt inputRows,
             const std::vector<Expressions::Expression*>& sortExpressions
         );
     };

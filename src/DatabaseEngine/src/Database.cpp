@@ -32,9 +32,9 @@ namespace DatabaseEngine
         metaDataPage->SetDbHeader(this->header);
     }
 
-    bool Database::IsSystemPage(const page_id_t &pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % PAGE_FREE_SPACE_SIZE == 1 || pageId % GAM_NUMBER_OF_PAGES == 2; }
+    bool Database::IsSystemPage(const page_id_t pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % PAGE_FREE_SPACE_SIZE == 1 || pageId % GAM_NUMBER_OF_PAGES == 2; }
 
-    page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) {
+    page_id_t Database::GetPfsAssociatedPage(const page_id_t pageId) {
         const auto numOfGamPages = (pageId / GAM_NUMBER_OF_PAGES);
 
         const auto numOfPfsPages = (pageId / PAGE_FREE_SPACE_SIZE) + 1;
@@ -42,7 +42,7 @@ namespace DatabaseEngine
         return numOfPfsPages > 1 ? numOfPfsPages + numOfGamPages + 1 : numOfPfsPages + numOfGamPages;
     }
 
-    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) {
+    page_id_t Database::GetGamAssociatedPage(const page_id_t pageId) {
         const auto numOfGamPages = (pageId / GAM_NUMBER_OF_PAGES) + 2;
 
         const auto numOfPfsPages = (pageId / PAGE_FREE_SPACE_SIZE);
@@ -50,7 +50,7 @@ namespace DatabaseEngine
         return numOfGamPages > 2 ? numOfPfsPages + numOfGamPages + 1 : numOfPfsPages + numOfGamPages;
     }
 
-//    page_id_t Database::GetPfsAssociatedPage(const page_id_t &pageId) {
+//    page_id_t Database::GetPfsAssociatedPage(const page_id_t pageId) {
 //
 //      //TODO find how to track the pages correctly
 //      uint32_t numGamPages = (pageId / GAM_NUMBER_OF_PAGES) + 1;
@@ -74,7 +74,7 @@ namespace DatabaseEngine
 //      return pfsPageId;
 //    }
 //
-//    page_id_t Database::GetGamAssociatedPage(const page_id_t &pageId) {
+//    page_id_t Database::GetGamAssociatedPage(const page_id_t pageId) {
 //      uint32_t numGamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
 //      uint32_t numPfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
 //
@@ -87,7 +87,7 @@ namespace DatabaseEngine
 //      return gamPageId;
 //    }
 
-    page_id_t Database::CalculateSystemPageOffset(const page_id_t &pageId)
+    page_id_t Database::CalculateSystemPageOffset(const page_id_t pageId)
     {
         page_id_t pfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
 
@@ -102,7 +102,7 @@ namespace DatabaseEngine
         return pageId ;//+ pfsPages + gamPages + 1;
     }
 
-    page_id_t Database::CalculateNextGamPageId(const page_id_t &currentGamPageId) {
+    page_id_t Database::CalculateNextGamPageId(const page_id_t currentGamPageId) {
         return currentGamPageId + NEXT_GAM_PAGE_ID_OFFSET;
     }
 
@@ -122,7 +122,7 @@ namespace DatabaseEngine
         return static_cast<page_id_t>(std::ceil(static_cast<float>(extentId) / static_cast<float>(GAM_PAGE_SIZE)) + 2);
     }
 
-    extent_id_t Database::CalculateExtentId(const page_id_t &pageId){
+    extent_id_t Database::CalculateExtentId(const page_id_t pageId){
         return pageId / 8;
     }
 
@@ -230,7 +230,7 @@ namespace DatabaseEngine
 
     }
 
-    int Database::CalculateExtentsToAllocate(const int &pagesToAllocate) {
+    int Database::CalculateExtentsToAllocate(const Int pagesToAllocate) {
         return static_cast<int>(std::ceil(static_cast<float>(pagesToAllocate) / static_cast<float>(EXTENT_SIZE)));
     }
 
@@ -240,8 +240,8 @@ namespace DatabaseEngine
 
     Logging::CheckPoint Database::LogRowInsert(
         const StorageTypes::Row* row,
-        const transaction_id_t& transactionId,
-        const table_id_t& tableOrdinal
+        const transaction_id_t transactionId,
+        const table_id_t tableOrdinal
     ) {
         static auto& logger = Logging::WriteAheadLogger::Get();
 
@@ -261,8 +261,8 @@ namespace DatabaseEngine
 
     Logging::CheckPoint Database::LogRowBatchInsert(
         std::vector<char>& buffer,
-        const transaction_id_t& transactionId,
-        const table_id_t& tableOrdinal
+        const transaction_id_t transactionId,
+        const table_id_t tableOrdinal
     ){
         static auto& logger = Logging::WriteAheadLogger::Get();
 
@@ -277,8 +277,8 @@ namespace DatabaseEngine
     }
 
     StorageTypes::Table *Database::CreateTable(
-        const table_id_t &tableId,
-        const int& ordinalPosition,
+        const table_id_t tableId,
+        const Int ordinalPosition,
         const vector<StorageTypes::Column *> &columns,
         const Headers::Index *clusteredKeyIndexes,
         const vector<Headers::Index> *nonClusteredIndexes)
@@ -317,7 +317,7 @@ namespace DatabaseEngine
         this->tables.push_back(table);
     }
 
-    void Database::CreateTable(const Headers::sysTable &sysHeader, const StorageTypes::TableHeader &tableHeader, const Headers::Index& primaryKey, const int& ordinalPosition){
+    void Database::CreateTable(const Headers::sysTable &sysHeader, const StorageTypes::TableHeader &tableHeader, const Headers::Index& primaryKey, const Int ordinalPosition){
         this->tables.push_back(new StorageTypes::Table(sysHeader, tableHeader, primaryKey, this, ordinalPosition));
     }
 
@@ -339,11 +339,11 @@ namespace DatabaseEngine
 //        return nullptr;
 //    }
 
-    StorageTypes::Table * Database::OpenTable(const table_id_t &tableId) const{
+    StorageTypes::Table * Database::OpenTable(const table_id_t tableId) const{
         return this->tables.at(tableId);
     }
 
-    // StorageTypes::Table * Database::OpenTableById(const table_id_t &tableId) const{
+    // StorageTypes::Table * Database::OpenTableById(const table_id_t tableId) const{
     //     return this->tables.at(this->tableIdsDictionary.Get(tableId));
     // }
 
@@ -451,10 +451,10 @@ namespace DatabaseEngine
 
     Pages::PageGuard<> Database::FindOrAllocateNextDataPage(
         Pages::PageGuard<Pages::PageFreeSpacePage> &pageFreeSpacePage,
-        const page_id_t &pageId,
-        const page_id_t &extentFirstPageId,
+        const page_id_t pageId,
+        const page_id_t extentFirstPageId,
         const StorageTypes::Table &table,
-        const int& pageToAllocate
+        const Int pageToAllocate
     )
     {
         Pages::PageGuard<> page;
@@ -481,14 +481,14 @@ namespace DatabaseEngine
         return page;
     }
 
-    Pages::PageGuard<Pages::PageFreeSpacePage> Database::GetAssociatedPfsPage(const string& filename, const page_id_t & pageId)
+    Pages::PageGuard<Pages::PageFreeSpacePage> Database::GetAssociatedPfsPage(const string& filename, const page_id_t  pageId)
     {
         const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
 
         return Storage::StorageManager::Get().GetPageFreeSpacePage(filename, pageFreeSpacePageId);
     }
 
-    void Database::TruncateTable(const table_id_t & tableId)
+    void Database::TruncateTable(const table_id_t  tableId)
     {
         StorageTypes::Table *table = this->tables.at(tableId);
 
@@ -529,7 +529,7 @@ namespace DatabaseEngine
         table->UpdateIndexAllocationMapPageId(INVALID_PAGE_ID);
     }
 
-    Pages::PageGuard<Pages::OverflowPage> Database::CreateOverflowPage(const int& pagesToAllocate, const table_id_t &tableOrdinalPosition){
+    Pages::PageGuard<Pages::OverflowPage> Database::CreateOverflowPage(const Int pagesToAllocate, const table_id_t tableOrdinalPosition){
         page_id_t lowerLimit = 0;
 
         const auto extentsToAllocate =  static_cast<int>(std::ceil(static_cast<float>(pagesToAllocate) / EXTENT_SIZE));
@@ -563,8 +563,8 @@ namespace DatabaseEngine
     }
 
     Pages::PageGuard<> Database::CreateDataPage(
-        const table_id_t &tableId,
-        const int& pagesToAllocate
+        const table_id_t tableId,
+        const Int pagesToAllocate
     ) {
         page_id_t lowerLimit = INVALID_PAGE_ID;
 
@@ -597,7 +597,7 @@ namespace DatabaseEngine
         return page;
     }
 
-    Pages::PageGuard<Pages::LargeObjectPage> Database::CreateLargeDataPage(const int& pagesToAllocate, const table_id_t &tableOrdinalPosition){
+    Pages::PageGuard<Pages::LargeObjectPage> Database::CreateLargeDataPage(const Int pagesToAllocate, const table_id_t tableOrdinalPosition){
         page_id_t lowerLimit = 0;
 
         const auto extents = this->AllocateNewExtents(pagesToAllocate, tableOrdinalPosition, lowerLimit);
@@ -625,10 +625,10 @@ namespace DatabaseEngine
     }
 
     Pages::PageGuard<Pages::IndexPage> Database::CreateIndexPage(
-        const table_id_t &tableOrdinalPosition,
-        const int& pageCount,
-        const TreeType& treeType,
-        const page_id_t& treeId
+        const table_id_t tableOrdinalPosition,
+        const Int pageCount,
+        const TreeType treeType,
+        const page_id_t treeId
     ){
         page_id_t lowerLimit = 0;
 
@@ -672,8 +672,8 @@ namespace DatabaseEngine
     }
 
     std::vector<extent_id_t> Database::AllocateNewExtents(
-        const int& pagesToAllocate,
-        const table_id_t &tableId,
+        const Int pagesToAllocate,
+        const table_id_t tableId,
         page_id_t& lowerLimit
     ) {
         const auto extentsToAllocate =  Database::CalculateExtentsToAllocate(pagesToAllocate);
@@ -813,7 +813,7 @@ namespace DatabaseEngine
         return allocatedExtents;
     }
 
-    const StorageTypes::Table *Database::GetTable(const table_id_t &tableId) const
+    const StorageTypes::Table *Database::GetTable(const table_id_t tableId) const
     {
         if (tableId >= this->tables.size())
             throw out_of_range("No table with ID: " + to_string(tableId) + " exists");
@@ -821,7 +821,7 @@ namespace DatabaseEngine
         return this->tables[tableId];
     }
 
-    Pages::PageGuard<Pages::LargeObjectPage> Database::GetTableLastLargeDataPage(const table_id_t &tableId)const
+    Pages::PageGuard<Pages::LargeObjectPage> Database::GetTableLastLargeDataPage(const table_id_t tableId)const
     {
         if (tableId >= this->tables.size())
             return Pages::PageGuard<Pages::LargeObjectPage>();
@@ -863,7 +863,7 @@ namespace DatabaseEngine
         return {};
     }
 
-    Pages::PageGuard<Pages::OverflowPage> Database::GetLastOverflowPage(const table_id_t & tableId, const block_size_t& size){
+    Pages::PageGuard<Pages::OverflowPage> Database::GetLastOverflowPage(const table_id_t  tableId, const block_size_t& size){
         if (tableId >= this->tables.size())
             return {};
 
@@ -911,7 +911,7 @@ namespace DatabaseEngine
 
 
 
-    Pages::PageGuard<Pages::LargeObjectPage> Database::GetLargeDataPage(const page_id_t &pageId, const table_id_t &tableId)const
+    Pages::PageGuard<Pages::LargeObjectPage> Database::GetLargeDataPage(const page_id_t pageId, const table_id_t tableId)const
     {
         const auto extentId = Database::CalculateExtentId(pageId);
 
@@ -985,32 +985,28 @@ namespace DatabaseEngine
 
     string Database::GetSystemFilename() const{ return this->systemFilename;}
 
-    DatabaseHeader::DatabaseHeader()
-    {
+    DatabaseHeader::DatabaseHeader(){
         this->numberOfTables = 0;
         this->lastTableId = 0;
         this->lastPageFreeSpacePageId = 0;
         this->lastGamPageId = 0;
     }
 
-    DatabaseHeader::DatabaseHeader(const table_number_t &numberOfTables, const page_id_t &lastPageFreeSpacePageId, const page_id_t &lastGamPageId)
-    {
-        this->numberOfTables = 0;
+    DatabaseHeader::DatabaseHeader(const table_number_t numberOfTables, const page_id_t lastPageFreeSpacePageId, const page_id_t lastGamPageId){
+        this->numberOfTables = numberOfTables;
         this->lastTableId = 0;
         this->lastPageFreeSpacePageId = lastPageFreeSpacePageId;
         this->lastGamPageId = lastGamPageId;
     }
 
-    DatabaseHeader::DatabaseHeader(const DatabaseHeader &dbHeader)
-    {
+    DatabaseHeader::DatabaseHeader(const DatabaseHeader &dbHeader){
         this->numberOfTables = dbHeader.numberOfTables;
         this->lastTableId = dbHeader.lastTableId;
         this->lastPageFreeSpacePageId = dbHeader.lastPageFreeSpacePageId;
         this->lastGamPageId = dbHeader.lastGamPageId;
     }
 
-    DatabaseHeader &DatabaseHeader::operator=(const DatabaseHeader &dbHeader)
-    {
+    DatabaseHeader &DatabaseHeader::operator=(const DatabaseHeader &dbHeader){
         if (&dbHeader == this)
             return *this;
 

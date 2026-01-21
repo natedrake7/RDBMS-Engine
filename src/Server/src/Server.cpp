@@ -94,8 +94,8 @@ namespace Network {
 
   Errors::RuntimeStatus Server::UpdateUserById(
     const DataTypes::Guid& callerSessionId,
-    const Int &userId,
-    const Int &roleId
+    const Int userId,
+    const Int roleId
   )const{
 
       const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
@@ -177,7 +177,7 @@ namespace Network {
     return this->sessionManager.CloseSession(key);
   }
 
-  bool Server::UpdateSession(const DataTypes::Guid &key, const Int &databaseId)const{
+  bool Server::UpdateSession(const DataTypes::Guid &key, const Int databaseId)const{
     return this->sessionManager.UpdateSession(key, databaseId);
   }
 
@@ -193,7 +193,7 @@ namespace Network {
     return this->sessionManager.CreateCursor(id, properties, physicalPlan);
   }
 
-  bool Server::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t& cursorId) const {
+  bool Server::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t cursorId) const {
     return this->sessionManager.CloseCursor(id, cursorId);
   }
 
@@ -208,7 +208,7 @@ namespace Network {
     // this->versionDatabase->
   }
 
-  DatabaseEngine::Database* Server::UseDatabase(const Int & databaseId, const bool& isServerInitialization){
+  DatabaseEngine::Database* Server::UseDatabase(const Int databaseId, const bool isServerInitialization){
     DatabaseEngine::Database *db = nullptr;
 
     if (databaseId == CATALOG_ID)

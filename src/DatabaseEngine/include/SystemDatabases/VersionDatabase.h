@@ -16,7 +16,7 @@ namespace DatabaseEngine{
     MultiThreading::ReadWriteMutex gamPageMutex;
     MultiThreading::ReadWriteMutex pfsPageMutex;
 
-    static string CreateDatabasePath(const string & dbName);
+    static std::string CreateDatabasePath(const std::string& dbName);
 
     void PopulateFilenames();
     void WriteHeaderToFile()const;
@@ -26,13 +26,13 @@ namespace DatabaseEngine{
         extent_id_t& newExtentId
     );
 
-    Pages::PageGuard<Pages::Page> TryGetLastUndoPage(
-        const DatabaseEngine::StorageTypes::Table* table,
-        const row_size_t &size
+    Pages::PageGuard<> TryGetLastUndoPage(
+        const StorageTypes::Table* table,
+        row_size_t size
     );
 
-    Pages::PageGuard<Pages::Page> CreateUndoPage();
-    Pages::PageGuard<Pages::Page> GetLastUndoPage(const DatabaseEngine::StorageTypes::Table* table, const row_size_t &size);
+    Pages::PageGuard<> CreateUndoPage();
+    Pages::PageGuard<> GetLastUndoPage(const StorageTypes::Table* table, row_size_t size);
 
     VersionDatabase();
     ~VersionDatabase();
@@ -61,11 +61,11 @@ namespace DatabaseEngine{
         const Pages::RowVersionPointer& rowPointer,
         const StorageTypes::Table* table
       )const;
-      [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(const extent_id_t& startingExtentId)const;
+      [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;
 
       [[nodiscard]] extent_id_t CleanupVersionedData(
-        const transaction_id_t& transactionId,
-        const extent_id_t& startingExtentId = 0
+        transaction_id_t transactionId,
+        extent_id_t startingExtentId = 0
       )const;
   };
 }

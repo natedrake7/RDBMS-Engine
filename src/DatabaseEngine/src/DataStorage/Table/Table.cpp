@@ -6,7 +6,7 @@
 #include "../../../include/DataStorage/Row.h"
 #include "../../../include/DataStorage/Table.h"
 
-#include <assert.h>
+#include <cassert>
 
 #include "../../../include/SystemDatabases/CatalogSchema.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
@@ -15,7 +15,6 @@
 #include "../../../include/Pages/LargeObjectPage.h"
 #include "../../../include/Pages/IndexAllocationMapPage.h"
 #include "../../../include/Pages/PageFreeSpacePage.h"
-#include "../../../include/Pages/IndexPage.h"
 #include "../../../include/BufferPool/StorageManager.h"
 #include "../../../include/BTree.h"
 #include "../../../../Server/include/Server.h"
@@ -59,7 +58,7 @@ namespace DatabaseEngine::StorageTypes {
         return *this;
       }
 
-      bool Table::VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition){
+      bool Table::VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t index, int& indexPosition){
         for(int i = 0;i < vector.size(); i++)
           if(vector[i] == index)
           {
@@ -84,7 +83,7 @@ namespace DatabaseEngine::StorageTypes {
 
       Errors::RuntimeStatus Table::BatchCreateRow(
         Row*& rowPtr,
-        const transaction_id_t &transactionId,
+        const transaction_id_t transactionId,
         const vector<Value> &inputData,
         const std::vector<column_index_t> &columnIndices,
         std::vector<char>& buffer,
@@ -135,7 +134,7 @@ namespace DatabaseEngine::StorageTypes {
 
       Errors::RuntimeStatus Table::CreateRow(
         Row*& row,
-        const transaction_id_t& transactionId,
+        const transaction_id_t transactionId,
         const std::vector<Value>& inputData,
         Logging::CheckPoint* checkPoint
       )const
@@ -180,7 +179,7 @@ namespace DatabaseEngine::StorageTypes {
 
       Errors::RuntimeStatus Table::CreateRow(
         Row*& row,
-        const transaction_id_t &transactionId,
+        const transaction_id_t transactionId,
         const std::vector<Value> &inputData,
         const std::vector<column_index_t> &columnIndices,
         Logging::CheckPoint *checkPoint
@@ -227,7 +226,7 @@ namespace DatabaseEngine::StorageTypes {
 
       Errors::RuntimeStatus Table::CreateRow(
         Row*& row,
-        const transaction_id_t &transactionId,
+        const transaction_id_t transactionId,
         const std::vector<Expressions::Expression *> &inputData,
         const std::vector<column_index_t> &columnIndices,
         Logging::CheckPoint *checkPoint
@@ -343,14 +342,14 @@ namespace DatabaseEngine::StorageTypes {
         row->InsertColumnData(block, column->GetColumnIndex());
       }
 
-      void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t &indexPos, const int& pagesToAllocate){
+      void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const Int indexPos, const Int pagesToAllocate){
 
         const auto* clusteredTree = this->GetClusteredIndexedTree();
 
         clusteredTree->InsertRowsToOtherTree(indexPos, pagesToAllocate);
     }
 
-      void Table::InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos, const int& pagesToAllocate){
+      void Table::InsertExistingRowToNonClusteredIndexByHeap(const Int indexPos, const Int pagesToAllocate){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
           return;
 
@@ -398,14 +397,14 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-      void Table::RemoveColumnByClusteredIndex(const column_index_t &index){
+      void Table::RemoveColumnByClusteredIndex(const column_index_t index){
 
     const auto* tree = this->GetClusteredIndexedTree();
 
     tree->RemoveColumnFromRow(index);
   }
 
-     void Table::RemoveColumnByHeap(const column_index_t &index)const{
+     void Table::RemoveColumnByHeap(const column_index_t index)const{
     const auto& filename = this->GetFileName();
 
     const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
@@ -437,7 +436,7 @@ namespace DatabaseEngine::StorageTypes {
     }
   }
 
-     void Table::InsertToVersionDatabase(Row*& row, const transaction_id_t& transactionId) const{
+     void Table::InsertToVersionDatabase(Row*& row, const transaction_id_t transactionId) const{
         static auto& versionDatabase = VersionDatabase::Get();
 
         Pages::RowVersionPointer oldVersionPointer;
@@ -447,8 +446,8 @@ namespace DatabaseEngine::StorageTypes {
      }
 
      Table::Table(
-        const table_id_t &tableId,
-        const int& ordinalPosition,
+        const table_id_t tableId,
+        const Int ordinalPosition,
         const std::vector<Column*> &columns,
         Database *database,
         const Headers::Index* clusteredIndex,
@@ -497,7 +496,7 @@ namespace DatabaseEngine::StorageTypes {
         const TableHeader &tableHeader,
         const Headers::Index& primaryKey,
         DatabaseEngine::Database *database,
-        const int& ordinalPosition){
+        const Int ordinalPosition){
 
         this->header = tableHeader;
         this->header.clusteredIndex = primaryKey;
@@ -685,7 +684,7 @@ namespace DatabaseEngine::StorageTypes {
 
     }
 
-    Errors::RuntimeStatus Table::InsertRow(Row*& row, const int& pagesToAllocate){
+    Errors::RuntimeStatus Table::InsertRow(Row*& row, const Int pagesToAllocate){
         this->InsertLargeObjectToPage(row);
 
         //row_id
@@ -874,7 +873,7 @@ namespace DatabaseEngine::StorageTypes {
     void Table::TemporaryDatabaseHeapScan(
       std::vector<Row>* result,
       ScanState& state,
-      const int& batchSize
+      const Int batchSize
     ) const{
         auto properties = ExecutionProperties();
         properties.batchSize = batchSize;
@@ -941,7 +940,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    Errors::RuntimeStatus Table::HeapInsert(Row*& row, const int& pagesToAllocate)const{
+    Errors::RuntimeStatus Table::HeapInsert(Row*& row, const Int pagesToAllocate)const{
       const auto& filename = this->database->GetFileName();
 
       while(row->TotalSize() > Constants::PAGE_SIZE_WITHOUT_HEADER)
@@ -1185,21 +1184,20 @@ namespace DatabaseEngine::StorageTypes {
         this->database->TruncateTable(this->header.tableId);
     }
 
-  void Table::UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId)
-    {
-        this->header.indexAllocationMapPageId = indexAllocationMapPageId;
+    void Table::UpdateIndexAllocationMapPageId(const page_id_t indexAllocationMapPageId){
+      this->header.indexAllocationMapPageId = indexAllocationMapPageId;
     }
 
     page_id_t Table::GetIndexAllocationMapPageId() const{ return this->header.indexAllocationMapPageId; }
 
-    bool Table::IsColumnNullable(const column_index_t &columnIndex) const
+    bool Table::IsColumnNullable(const column_index_t columnIndex) const
     {
         return this->columns.at(columnIndex)->IsColumnNullable();
     }
 
     void Table::AddColumn(Column *column) { this->columns.push_back(column); }
 
-    const table_id_t &Table::GetTableId() const { return this->header.tableId; }
+    table_id_t Table::GetTableId() const { return this->header.tableId; }
 
     TableType Table::GetType() const{
         return !this->header.clusteredIndex.columns.empty()
@@ -1336,8 +1334,8 @@ namespace DatabaseEngine::StorageTypes {
       Row* row,
       const ExecutionProperties& properties,
       const std::vector<Value>& updates,
-      const int& indexPosition,
-      const bool& isHeap
+      const Int indexPosition,
+      const bool isHeap
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
@@ -1382,8 +1380,8 @@ namespace DatabaseEngine::StorageTypes {
       const ExecutionProperties& properties,
       const std::vector<QueryPipeline::Statements::UpdateColumn *>& updates,
       const HashSet<column_index_t>& updatedColumns,
-      const int& indexPosition,
-      const bool& isHeap
+      const Int indexPosition,
+      const bool isHeap
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
@@ -1536,12 +1534,12 @@ namespace DatabaseEngine::StorageTypes {
         column->UpdateMetadata();
     }
 
-  void Table::UpdateColumnName(const column_index_t &index, const std::string &name)const{
+  void Table::UpdateColumnName(const column_index_t index, const std::string &name)const{
       auto* column = this->columns.at(index);
 
       column->SetColumnName(name);
   }
-void Table::PopulateColumn(const column_index_t &index, const Value &defaultValue){
+void Table::PopulateColumn(const column_index_t index, const Value &defaultValue){
       if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
         return;
 
@@ -1553,13 +1551,13 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
       this->PopulateColumnByHeap(index, defaultValue);
   }
 
-  void Table::PopulateColumnByClusteredIndex(const column_index_t &index, const Value &defaultValue){
+  void Table::PopulateColumnByClusteredIndex(const column_index_t index, const Value &defaultValue){
         const auto* tree = this->GetClusteredIndexedTree();
 
         tree->InsertColumnToRow(index, defaultValue);
   }
 
-  void Table::PopulateColumnByHeap(const column_index_t &index, const Value &defaultValue){
+  void Table::PopulateColumnByHeap(const column_index_t index, const Value &defaultValue){
     const auto& filename = this->GetFileName();
 
     const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
@@ -1592,7 +1590,7 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
   }
 
   //TODO add heap insert if row still cant remain in page if heap
-  void Table::HandleAddColumn(Pages::Page* page,  Row* row, const column_index_t& index, const Value &defaultValue){
+  void Table::HandleAddColumn(Pages::Page* page,  Row* row, const column_index_t index, const Value &defaultValue){
         const auto& column = this->columns.at(index);
 
         auto* block = new Block(defaultValue.Data(), defaultValue.Size(), column);
@@ -1625,7 +1623,7 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
         }
   }
 
-  void Table::HandleRemoveColumn(Pages::Page* page, Row* row, const column_index_t &index){
+  void Table::HandleRemoveColumn(Pages::Page* page, Row* row, const column_index_t index){
         auto& data = row->GetData();
 
         data.erase(data.begin() + index);
@@ -1633,7 +1631,7 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
         page->UpdateBytesLeft();
   }
 
-  void Table::RemoveColumn(const column_index_t &index){
+  void Table::RemoveColumn(const column_index_t index){
     //add also last updated at deleted at etc...
     const auto* removedColumn = this->columns.at(index);
 
@@ -1668,7 +1666,7 @@ void Table::PopulateColumn(const column_index_t &index, const Value &defaultValu
     delete removedColumn;
   }
 
-  void Table::HandleRemoveColumn(const column_index_t &index){
+  void Table::HandleRemoveColumn(const column_index_t index){
     if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
       return;
 

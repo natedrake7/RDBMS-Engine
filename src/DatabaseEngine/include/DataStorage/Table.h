@@ -79,7 +79,7 @@ namespace DatabaseEngine::StorageTypes
         vector<Indexing::BTree*> nonClusteredIndexedTrees;
 
         protected:
-            static bool VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t& index, int& indexPosition);
+            static bool VectorContainsIndex(const vector<column_index_t>& vector, column_index_t index, int& indexPosition);
 
         /**
         * @name Index and Pages protected Functions
@@ -90,25 +90,25 @@ namespace DatabaseEngine::StorageTypes
             bool IsColumnAutoComputedPrimaryKey(const Column* column) const;
 
             void GetClusteredIndexFromDisk() const;
-            void GetNonClusteredIndexFromDisk(const int& indexId) const;
-            [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetIndexFromDisk(const page_id_t& indexPageId) const;
+            void GetNonClusteredIndexFromDisk(Int indexId) const;
+            [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetIndexFromDisk(page_id_t indexPageId) const;
 
             static void LinkLargePageDataObjectChunks(
                 Pages::LargeDataObject *dataObject,
-                const page_id_t &lastLargePageId
+                page_id_t lastLargePageId
             );
             void InsertLargeDataObjectPointerToRow(
                 Row* row,
-                const bool &isFirstRecursion,
-                const page_id_t &lastLargePageId,
-                const column_index_t &largeBlockIndex
+                bool isFirstRecursion,
+                page_id_t lastLargePageId,
+                column_index_t largeBlockIndex
             ) const;
             void RecursiveInsertToLargePage(
                 Row* row,
                 page_offset_t &offset,
-                const column_index_t &columnIndex,
+                column_index_t columnIndex,
                 block_size_t &remainingBlockSize,
-                const bool &isFirstRecursion,
+                bool isFirstRecursion,
                 Pages::LargeDataObject **previousDataObject
             );
             [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetOrCreateLargeDataPage() const;
@@ -122,7 +122,7 @@ namespace DatabaseEngine::StorageTypes
         */
             [[nodiscard]] Errors::RuntimeStatus BatchCreateRow(
                 Row*& rowPtr,
-                const transaction_id_t& transactionId,
+                transaction_id_t transactionId,
                 const std::vector<Value>& inputData,
                 const std::vector<column_index_t> &columnIndices,
                 std::vector<char>& buffer,
@@ -130,28 +130,27 @@ namespace DatabaseEngine::StorageTypes
             )const;
             [[nodiscard]] Errors::RuntimeStatus CreateRow(
                 Row*& row,
-                const transaction_id_t& transactionId,
+                transaction_id_t transactionId,
                 const std::vector<Value>& inputData,
                 Logging::CheckPoint* checkPoint
             )const;
             [[nodiscard]] Errors::RuntimeStatus CreateRow(
                 Row*& row,
-                const transaction_id_t& transactionId,
+                transaction_id_t transactionId,
                 const std::vector<Value>& inputData,
                 const std::vector<column_index_t>& columnIndices,
                 Logging::CheckPoint* checkPoint
             )const;
             [[nodiscard]] Errors::RuntimeStatus CreateRow(
                 Row*& row,
-                const transaction_id_t& transactionId,
+                transaction_id_t transactionId,
                 const std::vector<Expressions::Expression*>& inputData,
                 const std::vector<column_index_t>& columnIndices,
                 Logging::CheckPoint* checkPoint
             )const;
-
             static bool PopulateColumnIdentity(Row*& row, Column*& column, BigInt& outValue);
             static void PopulateDefaultValues(Row*& row, Column*& column);
-            static void InsertNullValues(Block *&block, Row* row, const column_index_t &columnIndex);
+            static void InsertNullValues(Block *&block, Row* row, column_index_t columnIndex);
             void PopulateAutoComputedColumns(Row*& row)const;
 
         /** @} End of: Class Constructors and Destructors*/
@@ -162,16 +161,11 @@ namespace DatabaseEngine::StorageTypes
                 Row*& row,
                 const int &indexPosition
             )const;
-
-            void InsertExistingRowsToNonClusteredIndexByClusteredIndex(const int32_t& indexPos, const int& pagesToAllocate);
-
-            void InsertExistingRowToNonClusteredIndexByHeap(const int& indexPos, const int& pagesToAllocate);
-
-            void RemoveColumnByClusteredIndex(const column_index_t& index);
-
-            void RemoveColumnByHeap(const column_index_t& index)const;
-
-            void InsertToVersionDatabase(Row*& row, const transaction_id_t& transactionId) const;
+            void InsertExistingRowsToNonClusteredIndexByClusteredIndex(Int indexPos, Int pagesToAllocate);
+            void InsertExistingRowToNonClusteredIndexByHeap(Int indexPos, Int pagesToAllocate);
+            void RemoveColumnByClusteredIndex(column_index_t index);
+            void RemoveColumnByHeap(column_index_t index)const;
+            void InsertToVersionDatabase(Row*& row, transaction_id_t transactionId) const;
 
         public:
         /**
@@ -180,25 +174,22 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             Table(
-              const table_id_t &tableId,
-              const int& ordinalPosition,
+              table_id_t tableId,
+              Int ordinalPosition,
               const vector<Column *> &columns,
               Database *database,
               const Headers::Index* clusteredIndex = nullptr,
-              const vector<Headers::Index> *nonClusteredIndexes = nullptr);
-
+              const vector<Headers::Index> *nonClusteredIndexes = nullptr
+            );
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
-
             Table(const std::string& tableName, const TableHeader &tableHeader, Database *database);
-
             Table(
                 const Headers::sysTable& systemHeader,
                 const TableHeader &tableHeader,
                 const Headers::Index& primaryKey,
                 Database *database,
-                const int& ordinalPosition
+                Int ordinalPosition
             );
-
             ~Table();
 
         /** @} End of: Class Constructors and Destructors*/
@@ -225,18 +216,18 @@ namespace DatabaseEngine::StorageTypes
                 const vector<Expressions::Expression*> &inputData,
                 const std::vector<column_index_t>& columnIndices
             );
-            Errors::RuntimeStatus InsertRow(Row*& row, const int& pagesToAllocate);
-            Errors::RuntimeStatus HeapInsert(Row*& row, const int& pagesToAllocate)const;
-            Errors::RuntimeStatus ClusteredIndexInsert(Row*& row, const int& pagesToAllocate);
+            Errors::RuntimeStatus InsertRow(Row*& row, Int pagesToAllocate);
+            Errors::RuntimeStatus HeapInsert(Row*& row, Int pagesToAllocate)const;
+            Errors::RuntimeStatus ClusteredIndexInsert(Row*& row, Int pagesToAllocate);
             Errors::RuntimeStatus NonClusteredIndexInsert(
                 const Row* row,
-                const int& nonClusteredIndexId,
-                const int& pagesToAllocate,
+                Int nonClusteredIndexId,
+                Int pagesToAllocate,
                 const Headers::RowIdentifier& data
             );
             Errors::RuntimeStatus NonClusteredIndexInsertExistingRows(
-                const int& indexPos,
-                const int& pagesToAllocate
+                Int indexPos,
+                Int pagesToAllocate
             );
 
         /** @} End of: Insert Functions*/
@@ -249,13 +240,13 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] std::string GetFileName() const;
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
             [[nodiscard]] const TableHeader &GetHeader() const;
-            [[nodiscard]] const vector<Column *> &GetColumns() const;
+            [[nodiscard]] const std::vector<Column *> &GetColumns() const;
             [[nodiscard]] std::vector<const Column*> GetConstantColumns() const;
-            [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(const int& indexPos) const;
-            [[nodiscard]] const vector<column_index_t>& GetClusteredIndex() const;
+            [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(Int indexPos) const;
+            [[nodiscard]] const std::vector<column_index_t>& GetClusteredIndex() const;
             [[nodiscard]] std::vector<DataType> GetColumnTypeByTreeId(const UnsignedTinyInt& treeId) const;
-            [[nodiscard]] bool IsColumnNullable(const column_index_t &columnIndex) const;
-            [[nodiscard]] const table_id_t &GetTableId() const;
+            [[nodiscard]] bool IsColumnNullable(column_index_t columnIndex) const;
+            [[nodiscard]] table_id_t GetTableId() const;
             [[nodiscard]] TableType GetType() const;
             [[nodiscard]] bool IsClustered()const;
 
@@ -293,7 +284,7 @@ namespace DatabaseEngine::StorageTypes
             void NonClusteredIndexScan(
                 const ExecutionProperties& properties,
                 std::vector<Row> *selectedRows,
-                const int& indexPos,
+                Int indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
@@ -305,7 +296,7 @@ namespace DatabaseEngine::StorageTypes
             void TemporaryDatabaseHeapScan(
                 std::vector<Row> *result,
                 ScanState& state,
-                const int& batchSize
+                Int batchSize
             )const;
 
 
@@ -354,8 +345,8 @@ namespace DatabaseEngine::StorageTypes
                 Row* row,
                 const ExecutionProperties& properties,
                 const std::vector<Value>& updates,
-                const int& indexPosition,
-                const bool& isHeap
+                Int indexPosition,
+                bool isHeap
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
@@ -364,8 +355,8 @@ namespace DatabaseEngine::StorageTypes
                 const ExecutionProperties& properties,
                 const std::vector<QueryPipeline::Statements::UpdateColumn*>& updates,
                 const HashSet<column_index_t>& updatedColumns,
-                const int& indexPosition,
-                const bool& isHeap
+                Int indexPosition,
+                bool isHeap
             );
         /** @} End of: Update Functions*/
 
@@ -405,24 +396,24 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             int CreateNonClusteredIndex(vector<column_index_t>& columnIndices);
-            void UpdateIndexAllocationMapPageId(const page_id_t &indexAllocationMapPageId);
+            void UpdateIndexAllocationMapPageId(page_id_t indexAllocationMapPageId);
             page_id_t GetIndexAllocationMapPageId()const;
 
-            [[nodiscard]] const page_id_t& GetClusteredIndexPageId() const;
-            void SetClusteredIndexPageId(const page_id_t &indexPageId);
+            [[nodiscard]] page_id_t GetClusteredIndexPageId() const;
+            void SetClusteredIndexPageId(page_id_t indexPageId);
 
-            [[nodiscard]] const page_id_t& GetNonClusteredIndexPageId(const int& indexPosition) const;
-            void SetNonClusteredIndexPageId(const page_id_t& indexPageId, const int& indexPosition);
+            [[nodiscard]] page_id_t GetNonClusteredIndexPageId(Int indexPosition) const;
+            void SetNonClusteredIndexPageId(page_id_t indexPageId, Int indexPosition);
 
             Indexing::BTree* GetClusteredIndexedTree();
-            Indexing::BTree* GetNonClusteredIndexTree(const int& nonClusteredIndexId);
+            Indexing::BTree* GetNonClusteredIndexTree(Int nonClusteredIndexId);
             [[nodiscard]] bool HasNonClusteredIndexes() const;
 
             void DeleteLargeObjectFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns)const;
             void DeleteOverflowedRowsFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns)const;
 
-            [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const page_id_t &pageId) const;
-            [[nodiscard]] Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(const page_id_t &pageId) const;
+            [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(page_id_t pageId) const;
+            [[nodiscard]] Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(page_id_t pageId) const;
 
         /** @} End of: Page and Index Management Functions*/
 
@@ -432,9 +423,9 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] row_size_t ReduceMaximumRowSize() const;
 
-            [[nodiscard]] key_size_t CalculateIndexKeySize(const int& indexPos = -1) const;
+            [[nodiscard]] key_size_t CalculateIndexKeySize(Int indexPos = -1) const;
 
-            [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(const int& indexPos) const;
+            [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(Int indexPos) const;
 
 //            void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
 
@@ -447,9 +438,9 @@ namespace DatabaseEngine::StorageTypes
 
             void InsertLargeObjectToPage(Row* row);
 
-            void PopulateColumn(const column_index_t& index, const Value& defaultValue);
-            void PopulateColumnByClusteredIndex(const column_index_t& index, const Value& defaultValue);
-            void PopulateColumnByHeap(const column_index_t& index, const Value& defaultValue);
+            void PopulateColumn(column_index_t index, const Value& defaultValue);
+            void PopulateColumnByClusteredIndex(column_index_t index, const Value& defaultValue);
+            void PopulateColumnByHeap(column_index_t index, const Value& defaultValue);
 
             void Rollback(const Snapshot& snapshot, const Headers::RowIdentifier& rowId)const;
         /**
@@ -458,11 +449,11 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             void AddColumn(Column *column);
-            void HandleAddColumn(Pages::Page* page, Row* row, const column_index_t& index, const Value& defaultValue);
-            void UpdateColumnName(const column_index_t& index, const std::string& name)const;
-            void RemoveColumn(const column_index_t& index);
-            static void HandleRemoveColumn(Pages::Page* page, Row* row, const column_index_t& index);
-            void HandleRemoveColumn(const column_index_t& index);
+            void HandleAddColumn(Pages::Page* page, Row* row, column_index_t index, const Value& defaultValue);
+            void UpdateColumnName(column_index_t index, const std::string& name)const;
+            void RemoveColumn(column_index_t index);
+            static void HandleRemoveColumn(Pages::Page* page, Row* row, column_index_t index);
+            void HandleRemoveColumn(column_index_t index);
 
         /** @} End of System Catalog Integration Functions */
 

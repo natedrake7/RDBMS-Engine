@@ -8,9 +8,9 @@ namespace QueryPipeline {
   class LogicalPlan {
     public:
       DataTypes::Guid sessionId;
-      int32_t databaseId;
+      Int databaseId;
 
-      LogicalPlan(const DataTypes::Guid& sessionId, const int32_t& databaseId);
+      LogicalPlan(const DataTypes::Guid& sessionId, Int databaseId);
       explicit LogicalPlan(const DataTypes::Guid& sessionId);
       LogicalPlan();
       virtual ~LogicalPlan();
@@ -61,10 +61,10 @@ namespace QueryPipeline {
 
   class LogicalUseDatabase final : public LogicalPlan {
     public:
-      int32_t databaseId;
+      Int databaseId;
       DataTypes::Guid sessionId;
 
-      explicit LogicalUseDatabase(const DataTypes::Guid& sessionId, const int32_t& databaseId);
+      explicit LogicalUseDatabase(const DataTypes::Guid& sessionId, Int databaseId);
       PhysicalPlan::PhysicalUseDatabase* ToPhysical()override;
   };
 
@@ -113,9 +113,9 @@ namespace QueryPipeline {
       LogicalPlan* left,
       LogicalPlan* right,
       Expressions::Expression* condition,
-      const JoinType& type,
-      const Int& leftTableId,
-      const Int& rightTableId
+      JoinType type,
+      Int leftTableId,
+      Int rightTableId
     );
 
     ~LogicalJoin() override;
@@ -147,9 +147,9 @@ namespace QueryPipeline {
   class LogicalTop final : public LogicalPlan {
     public:
       LogicalPlan* child;
-      int64_t top;
+      BigInt top;
 
-      explicit LogicalTop(LogicalPlan* child, const int64_t& top);
+      explicit LogicalTop(LogicalPlan* child, BigInt top);
       ~LogicalTop() override;
       PhysicalPlan::PhysicalTop* ToPhysical()override;
   };
@@ -184,8 +184,8 @@ namespace QueryPipeline {
   class LogicalSchemaCreate final : public LogicalPlan {
     public:
       std::string schemaName;
-      int32_t databaseId;
-      explicit LogicalSchemaCreate(const DataTypes::Guid& sessionId, const int32_t& databaseId, std::string& schemaName);
+      Int databaseId;
+      explicit LogicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, std::string& schemaName);
       PhysicalPlan::PhysicalSchemaCreate* ToPhysical()override;
   };
 

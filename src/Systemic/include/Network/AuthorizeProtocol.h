@@ -16,7 +16,7 @@ namespace Network {
 
       ~AuthorizeProtocol() override = default;
 
-      [[nodiscard]] int GetSize() const override;
+      [[nodiscard]] Int GetSize() const override;
       void Serialize() override;
       void Deserialize(const std::vector<char>& buffer) override;
 

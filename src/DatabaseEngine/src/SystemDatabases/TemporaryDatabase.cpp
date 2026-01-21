@@ -40,7 +40,7 @@ namespace DatabaseEngine {
         std::filesystem::remove_all(this->name + "/");
     }
 
-    int TemporaryDatabase::GetNextOrdinalPosition(){
+    Int TemporaryDatabase::GetNextOrdinalPosition(){
         return this->currentOrdinalPosition.fetch_add(1, std::memory_order_relaxed);
     }
 
@@ -80,7 +80,7 @@ namespace DatabaseEngine {
         );
     }
 
-    StorageTypes::Table* TemporaryDatabase::OpenTable(const Int& tableId) const{
+    StorageTypes::Table* TemporaryDatabase::OpenTable(const Int tableId) const{
         return this->db->OpenTable(tableId);
     }
 

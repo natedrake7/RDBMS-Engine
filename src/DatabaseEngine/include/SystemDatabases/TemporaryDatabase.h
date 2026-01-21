@@ -25,7 +25,7 @@ namespace DatabaseEngine {
         bool Exists()const;
         void ClearTemporaryFiles() const;
 
-        [[nodiscard]] int GetNextOrdinalPosition();
+        [[nodiscard]] Int GetNextOrdinalPosition();
 
         public:
             TemporaryDatabase(TemporaryDatabase const&) = delete;
@@ -37,7 +37,7 @@ namespace DatabaseEngine {
             void Initialize(const std::string& configPath);
 
             [[nodiscard]] StorageTypes::Table* CreateTable();
-            [[nodiscard]] StorageTypes::Table* OpenTable(const Int& tableId) const;
+            [[nodiscard]] StorageTypes::Table* OpenTable(Int tableId) const;
 
             void Shutdown();
     };

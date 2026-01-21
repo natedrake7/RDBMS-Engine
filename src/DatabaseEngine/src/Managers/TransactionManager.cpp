@@ -79,7 +79,7 @@ namespace DatabaseEngine {
   }
 
   transaction_id_t TransactionManager::GetOldestActiveTransactionId() {
-    std::unique_lock<std::mutex> lock(this->dictionaryMutex);
+    std::unique_lock lock(this->dictionaryMutex);
 
     return this->activeTransactions.FirstOrDefault().transactionId;
   }

@@ -3,7 +3,6 @@
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataTypes/Variable.h"
-#include "../../../Systemic/include/DataTypes/Pointer.h"
 #include <string>
 
 namespace DatabaseEngine::StorageTypes {

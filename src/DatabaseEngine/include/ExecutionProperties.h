@@ -17,13 +17,13 @@ namespace DatabaseEngine {
         this->canFetchMore = false;
       }
 
-      [[nodiscard]] int GetNextKeyIndex()const {
+      [[nodiscard]] Int GetNextKeyIndex()const {
         return (this->lastFetchedRowId.indexId == INVALID_PAGE_INDEX_ID)
                 ? 0
                 : this->lastFetchedRowId.indexId + 1;
       }
 
-      [[nodiscard]] page_id_t GetPageId(const extent_id_t& extentFirstPageId)const {
+      [[nodiscard]] page_id_t GetPageId(const extent_id_t extentFirstPageId)const {
         return this->lastFetchedRowId.pageId == INVALID_PAGE_ID
             ? extentFirstPageId
             : this->lastFetchedRowId.pageId;
@@ -39,7 +39,7 @@ namespace DatabaseEngine {
 
   struct IndexState {
     page_id_t pageId;
-    int32_t lastFetchedKeyIndex;
+    Int lastFetchedKeyIndex;
 
     bool canFetchMore;
 
@@ -49,7 +49,7 @@ namespace DatabaseEngine {
       this->canFetchMore = false;
     }
 
-    [[nodiscard]] int GetNextKeyIndex()const {
+    [[nodiscard]] Int GetNextKeyIndex()const {
       return this->lastFetchedKeyIndex == INVALID_PAGE_INDEX_ID
         ? 0
         : this->lastFetchedKeyIndex + 1;
@@ -80,11 +80,11 @@ namespace DatabaseEngine {
 
   struct ExecutionProperties {
     Snapshot snapshot;
-    int batchSize;
+    Int batchSize;
 
     const Dictionary<std::string, Variable>* variables;
 
-    ExecutionProperties(const Snapshot &snapshot, const int &batchSize, const Dictionary<std::string, Variable>& variables) {
+    ExecutionProperties(const Snapshot &snapshot, const Int batchSize, const Dictionary<std::string, Variable>& variables) {
       this->snapshot = snapshot;
       this->batchSize = batchSize;
       this->variables = &variables;

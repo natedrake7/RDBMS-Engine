@@ -71,7 +71,7 @@ namespace Pages{
         row->WriteDataToDisk(filePtr);
     }
 
-    SlotDirectory Page::GetSlotDirectory(const int& indexPosition) const{
+    SlotDirectory Page::GetSlotDirectory(const Int indexPosition) const{
         auto slot = SlotDirectory(0, 0);
         std::memcpy(&slot, this->data + this->SlotDirectoryOffSet(indexPosition), SlotDirectory::Size);
         return slot;
@@ -98,19 +98,19 @@ namespace Pages{
         return row;
     }
 
-    void Page::UpdateSlotDirectory(const SlotDirectory& slotDirectory, const int& indexPosition) const{
+    void Page::UpdateSlotDirectory(const SlotDirectory slotDirectory, const Int indexPosition) const{
         std::memcpy(this->data + this->SlotDirectoryOffSet(indexPosition), &slotDirectory, SlotDirectory::Size);
     }
 
-    void Page::InsertNewSlot(const SlotDirectory& slotDirectory) const{
+    void Page::InsertNewSlot(const SlotDirectory slotDirectory) const{
         std::memcpy(this->data + this->SlotDirectoryOffSet(this->header.size), &slotDirectory, SlotDirectory::Size);
     }
 
-    bool Page::IndexOutOfBounds(const int& indexPosition) const{
+    bool Page::IndexOutOfBounds(const Int indexPosition) const{
         return indexPosition >= this->header.size;
     }
 
-    void Page::AdjustSlotDirectories(const int& indexPosition, const page_offset_t& offset, const int& slotSize) const{
+    void Page::AdjustSlotDirectories(const Int indexPosition, const page_offset_t& offset, const Int slotSize) const{
         const auto slotsToMove = this->header.size - indexPosition;
         const auto slotBytesToMove = slotsToMove * SlotDirectory::Size;
         const auto srcOffset = this->SlotDirectoriesToMoveOffSet(indexPosition, slotsToMove);
@@ -126,7 +126,7 @@ namespace Pages{
         this->UpdateSlotDirectory(slot, indexPosition);
     }
 
-    Page::Page(const page_id_t &pageId, const bool &isPageCreation){
+    Page::Page(const page_id_t pageId, const bool isPageCreation){
         this->header.pageId = pageId;
         this->isDirty = isPageCreation;
         this->pinCount = 0;
@@ -137,7 +137,7 @@ namespace Pages{
         this->data = static_cast<object_t*>(std::malloc(PAGE_SIZE_WITHOUT_HEADER));
     }
 
-    Page::Page(const page_id_t& pageId, const page_size_t& size, const bool& isPageCreation){
+    Page::Page(const page_id_t pageId, const page_size_t size, const bool isPageCreation){
         this->header.pageId = pageId;
         this->isDirty = isPageCreation;
         this->pinCount = 0;
@@ -168,7 +168,7 @@ namespace Pages{
         this->data = static_cast<object_t*>(std::malloc(PAGE_SIZE_WITHOUT_HEADER));
     }
 
-    Page::Page(const PageHeader& pageHeader, const page_size_t& size){
+    Page::Page(const PageHeader& pageHeader, const page_size_t size){
         this->header = pageHeader;
         this->isDirty = false;
         this->pinCount = 0;
@@ -222,7 +222,7 @@ namespace Pages{
         return this->header.size - 1;
     }
 
-    void Page::InsertRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition){
+    void Page::InsertRow(DatabaseEngine::StorageTypes::Row*& row, const Int indexPosition){
         if (indexPosition >= this->header.size){
             this->InsertRow(row);
             return;
@@ -241,7 +241,7 @@ namespace Pages{
         this->isDirty = true;
     }
 
-    void Page::UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition){
+    void Page::UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const Int indexPosition){
         if (this->IndexOutOfBounds(indexPosition))
             throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
 
@@ -349,7 +349,7 @@ namespace Pages{
     //     this->UpdateBytesLeft();
     // }
 
-    void Page::Delete(const int &indexPosition) {
+    void Page::Delete(const Int indexPosition) {
         // this->rows.erase(this->rows.begin() + indexPosition);
 
         this->UpdateBytesLeft();
@@ -359,7 +359,7 @@ namespace Pages{
 
     void Page::SetFileName(const std::string &otherFilename) { this->filename = otherFilename; }
 
-    void Page::SetPageId(const page_id_t &pageId) { this->header.pageId = pageId; }
+    void Page::SetPageId(const page_id_t pageId) { this->header.pageId = pageId; }
 
     void Page::UpdatePageSize() { this->header.size = 0; }
 
@@ -371,8 +371,7 @@ namespace Pages{
         this->isDirty = true;
     }
 
-    void Page::UpdateBytesLeft(const row_size_t& previousRowSize, const row_size_t& currentRowSize)
-    {
+    void Page::UpdateBytesLeft(const row_size_t previousRowSize, const row_size_t currentRowSize){
         this->header.bytesLeft += static_cast<int64_t>(currentRowSize) -static_cast<int64_t>(previousRowSize);
 
         this->isDirty = true;
@@ -380,11 +379,11 @@ namespace Pages{
 
     const string &Page::GetFileName() const { return this->filename; }
 
-    const page_id_t &Page::GetPageId() const { return this->header.pageId; }
+    page_id_t Page::GetPageId() const { return this->header.pageId; }
 
-    const bool &Page::IsDirty() const { return this->isDirty; }
+    bool Page::IsDirty() const { return this->isDirty; }
 
-    const page_size_t &Page::GetBytesLeft() const { return this->header.bytesLeft; }
+    page_size_t Page::GetBytesLeft() const { return this->header.bytesLeft; }
 
     void Page::SetDirty(){ this->isDirty = true; }
 
@@ -396,7 +395,7 @@ namespace Pages{
 
     page_size_t Page::GetPageSize() const { return this->header.size; }
 
-    const PageType &Page::GetPageType() const { return this->header.type; }
+    PageType Page::GetPageType() const { return this->header.type; }
 
     // int Page::GetRows(
     //     std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
@@ -432,7 +431,7 @@ namespace Pages{
     //     return this->MaterializeRow()
     // }
 
-    DatabaseEngine::StorageTypes::Row Page::GetRow(const DatabaseEngine::StorageTypes::Table* table, const int& indexPosition) const{
+    DatabaseEngine::StorageTypes::Row Page::GetRow(const DatabaseEngine::StorageTypes::Table* table, const Int indexPosition) const{
         return this->MaterializeRow(table, indexPosition);
     }
 
@@ -491,7 +490,7 @@ namespace Pages{
         return this->hasSecondChance;
     }
 
-    void Page::SetHasSecondChanceUnsafe(const bool &secondChance) {
+    void Page::SetHasSecondChanceUnsafe(const bool secondChance) {
         this->hasSecondChance = secondChance;
     }
 

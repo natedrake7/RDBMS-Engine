@@ -16,13 +16,13 @@ namespace Pages {
       this->header.type = PageType::OVERFLOWTYPE;
   }
 
-  OverflowPage::OverflowPage(const page_id_t & pageId, const bool & isPageCreation): Page(pageId,isPageCreation){
+  OverflowPage::OverflowPage(const page_id_t pageId, const bool isPageCreation): Page(pageId,isPageCreation){
     this->header.type = PageType::OVERFLOWTYPE;
   }
 
-  OverflowRow* OverflowPage::GetObject(const page_offset_t & index)const{ return this->data.at(index); }
+  OverflowRow* OverflowPage::GetObject(const page_offset_t index)const{ return this->data.at(index); }
 
-  OverflowRow* OverflowPage::DeleteObject(const page_offset_t& index){
+  OverflowRow* OverflowPage::DeleteObject(const page_offset_t index){
     auto* object = this->data.at(index);
 
     if(this->data.size() == 1 || index == this->data.size() - 1)
@@ -35,7 +35,7 @@ namespace Pages {
     return object;
   }
 
-  OverflowRow* OverflowPage::InsertObject(const object_t *object, const page_size_t & size, int& indexPos){
+  OverflowRow* OverflowPage::InsertObject(const object_t *object, const page_size_t size, Int& indexPos){
     auto* row = new OverflowRow();
 
     row->object = new object_t[size];
@@ -98,7 +98,7 @@ namespace Pages {
     }
   }
 
-  OverflowPointer::OverflowPointer(const page_id_t & pageId, const page_offset_t& index): DataObjectPointer(pageId){
+  OverflowPointer::OverflowPointer(const page_id_t pageId, const page_offset_t index): DataObjectPointer(pageId){
     this->index = index;
   }
 

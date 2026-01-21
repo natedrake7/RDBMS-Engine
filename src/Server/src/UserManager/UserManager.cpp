@@ -9,6 +9,8 @@
 
 #include <argon2.h>
 
+#include "../../../Systemic/include/DataTypes/DataTypes.h"
+
 namespace Security {
   UserManager::UserManager() =  default;
 
@@ -92,10 +94,10 @@ namespace Security {
   }
 
   bool UserManager::AddUser(
-    const int32_t& id,
+    const Int id,
     const std::string &name,
     const std::string &passwordHash,
-    const Security::Role* role
+    const Role* role
   ){
     MultiThreading::WriterGuard guard(&this->mutex);
 
@@ -137,8 +139,8 @@ namespace Security {
 
   bool UserManager::GrantRole(
     const std::string &name,
-    const Security::Role *role,
-    int32_t& outUserId
+    const Role *role,
+    Int& outUserId
   )const{
     MultiThreading::WriterGuard guard(&this->mutex);
 

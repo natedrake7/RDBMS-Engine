@@ -2,6 +2,7 @@
 
 #include "../include/Converter.h"
 #include "../include/Functions/StringFunctions.h"
+#include "DataTypes/DateTime.h"
 
 namespace DataTypes{
   constexpr CoercionType Coercions::GetCoercionType(

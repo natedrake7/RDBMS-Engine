@@ -35,9 +35,9 @@ namespace Pages{
             // this->flags = FLAG_IS_VALID;
         }
          SlotDirectory(
-            const UnsignedSmallInt& offset,
-            const UnsignedSmallInt& size,
-            const UnsignedTinyInt& flags = FLAG_IS_VALID
+            const UnsignedSmallInt offset,
+            const UnsignedSmallInt size,
+            const UnsignedTinyInt flags = FLAG_IS_VALID
         ){
             this->offset = offset;
             this->size = size;
@@ -56,7 +56,7 @@ namespace Pages{
         SlotDirectory slotDirectory;
 
         SlotDirectoryDefragment(
-            const SlotDirectory& slotDirectory,
+            SlotDirectory slotDirectory,
             const Int& indexPosition
         ){
             this->slotDirectory = slotDirectory;
@@ -114,32 +114,32 @@ namespace Pages{
 
         static void WriteRowToDisk(std::fstream* filePtr, const Pointer<DatabaseEngine::StorageTypes::Row>& row);
 
-        SlotDirectory GetSlotDirectory(const int& indexPosition) const;
+        SlotDirectory GetSlotDirectory(Int indexPosition) const;
         DatabaseEngine::StorageTypes::Row MaterializeRow(
             const DatabaseEngine::StorageTypes::Table* table,
             const Int& indexId
         ) const;
-        void UpdateSlotDirectory(const SlotDirectory& slotDirectory, const int& indexPosition) const;
+        void UpdateSlotDirectory(SlotDirectory slotDirectory, Int indexPosition) const;
 
-        void InsertNewSlot(const SlotDirectory& slotDirectory) const;
+        void InsertNewSlot(SlotDirectory slotDirectory) const;
 
-        bool IndexOutOfBounds(const int& indexPosition) const;
+        bool IndexOutOfBounds(Int indexPosition) const;
 
-        void AdjustSlotDirectories(const int& indexPosition, const page_offset_t& offset, const int& slotSize) const;
+        void AdjustSlotDirectories(Int indexPosition, const page_offset_t& offset, Int slotSize) const;
 
     public:
-        explicit Page(const page_id_t &pageId, const bool &isPageCreation = false);
-        explicit Page(const page_id_t &pageId, const page_size_t& size, const bool &isPageCreation = false);
+        explicit Page(page_id_t pageId, bool isPageCreation = false);
+        explicit Page(page_id_t pageId, page_size_t size, bool isPageCreation = false);
         explicit Page();
         explicit Page(const PageHeader &pageHeader);
-        Page(const PageHeader &pageHeader, const page_size_t& size);
+        Page(const PageHeader &pageHeader, page_size_t size);
         virtual ~Page();
 
         void InsertFirstRow(DatabaseEngine::StorageTypes::Row*& row);
         Int InsertRow(DatabaseEngine::StorageTypes::Row*& row);
-        void InsertRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition);
+        void InsertRow(DatabaseEngine::StorageTypes::Row*& row, Int indexPosition);
 
-        virtual void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const int& indexPosition);
+        virtual void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, Int indexPosition);
 
         virtual void ReadFromDisk(
             const std::vector<char> &buffer,
@@ -151,26 +151,26 @@ namespace Pages{
 
         // void Delete(vector<DatabaseEngine::StorageTypes::Row*>& deletedRows, const Expressions::Expression* expression);
         // void Delete(const Expressions::Expression* expression);
-        void Delete(const int& indexPosition);
+        void Delete(Int indexPosition);
 
         void SetFileName(const std::string &otherFilename);
-        void SetPageId(const page_id_t &pageId);
+        void SetPageId(page_id_t pageId);
         virtual void UpdatePageSize();
         virtual void UpdateBytesLeft();
-        void UpdateBytesLeft(const row_size_t& previousRowSize, const row_size_t& currentRowSize);
+        void UpdateBytesLeft(row_size_t previousRowSize, row_size_t currentRowSize);
 
         [[nodiscard]] const std::string &GetFileName() const;
-        [[nodiscard]] const page_id_t &GetPageId() const;
-        [[nodiscard]] const bool &IsDirty() const;
-        [[nodiscard]] const page_size_t &GetBytesLeft() const;
+        [[nodiscard]] page_id_t GetPageId() const;
+        [[nodiscard]] bool IsDirty() const;
+        [[nodiscard]] page_size_t GetBytesLeft() const;
         void SetDirty();
 
         void SetLogSequenceNumber(const log_sequence_number_t &lsn);
         [[nodiscard]] const log_sequence_number_t &GetLogSequenceNumber() const;
 
         [[nodiscard]] page_size_t GetPageSize() const;
-        [[nodiscard]] const Constants::PageType &GetPageType() const;
-        [[nodiscard]] DatabaseEngine::StorageTypes::Row GetRow(const DatabaseEngine::StorageTypes::Table* table, const int& indexPosition)const;
+        [[nodiscard]] Constants::PageType GetPageType() const;
+        [[nodiscard]] DatabaseEngine::StorageTypes::Row GetRow(const DatabaseEngine::StorageTypes::Table* table, Int indexPosition)const;
 
         void Defragment() const;
 
@@ -181,7 +181,7 @@ namespace Pages{
         Constants::PagePriority GetPriority() const;
 
         bool HasSecondChance()const;
-        void SetHasSecondChanceUnsafe(const bool &secondChance);
+        void SetHasSecondChanceUnsafe(bool secondChance);
 
         void UniqueLock()const;
         void SharedLock()const;

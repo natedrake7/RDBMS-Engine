@@ -61,11 +61,11 @@ namespace QueryPipeline::Statements {
   };
 
   struct DecimalType {
-    int8_t precision;
-    int8_t scale;
+    TinyInt precision;
+    TinyInt scale;
 
     DecimalType();
-    DecimalType(const int8_t& precision, const int8_t& scale);
+    DecimalType(TinyInt precision, TinyInt scale);
     [[nodiscard]] bool Validate() const;
   };
 
@@ -76,8 +76,8 @@ namespace QueryPipeline::Statements {
     DecimalType decimal;
 
     explicit ColumnType(const std::string& name);
-    ColumnType(const std::string& name, const int& size);
-    ColumnType(const std::string& name, const DecimalType& decimal);
+    ColumnType(const std::string& name, Int size);
+    ColumnType(const std::string& name, DecimalType decimal);
   };
 
   struct Identity{
@@ -174,8 +174,8 @@ namespace QueryPipeline::Statements {
     DataSource();
     [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
-    [[nodiscard]] Errors::ValidationStatus Validate(const Int& selectedDatabaseId);
-    [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const Int& selectedDatabaseId);
+    [[nodiscard]] Errors::ValidationStatus Validate(Int selectedDatabaseId);
+    [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(Int selectedDatabaseId);
   };
 
   struct SubQuery : DataSource {
@@ -276,7 +276,7 @@ namespace QueryPipeline::Statements {
 
     JoinStatement();
     [[nodiscard]]Errors::ValidationStatus CompileDerived(ParserValidationScope& validationScope) override;
-    [[nodiscard]]Errors::ValidationStatus Validate(const Int& databaseId);
+    [[nodiscard]]Errors::ValidationStatus Validate(Int databaseId);
 
     [[nodiscard]]bool IsRightJoin()const;
     [[nodiscard]]bool IsInnerJoin()const;
@@ -561,7 +561,7 @@ namespace QueryPipeline::Statements {
   );
 
   static bool ValidateExpressionCoercionTypes(
-    const DataType& type,
+    DataType type,
     const Expressions::Expression* expression
   );
 
@@ -746,7 +746,7 @@ static void AssignConstantToExpression(Expressions::Expression*& expression);
    * @{
    */
 
-  static Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType& type);
+  static Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(DataType type);
 
   /** @} End of Helper Functions */
 }

@@ -3,8 +3,10 @@
 
 #include <stdexcept>
 
+#include "../DataTypes/DataTypes.h"
+
 namespace Functions::DateTime {
-  enum class DateInterval {
+  enum class DateInterval : UnsignedTinyInt {
     Year = 0,
     Quarter = 1,
     Month = 2,
@@ -18,7 +20,7 @@ namespace Functions::DateTime {
     Millisecond = 10,
   };
 
-  inline DataTypes::DateTime DateAdd(const DateInterval& interval, const int& number, const std::string& date) {
+  inline DataTypes::DateTime DateAdd(const DateInterval interval, const Int number, const std::string& date) {
 
     DataTypes::DateTime result;
     DataTypes::DateTime::FromString(result, date);

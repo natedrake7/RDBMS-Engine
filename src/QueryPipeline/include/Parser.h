@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <string>
 
+#include "DatabaseConstants.h"
+
 namespace QueryPipeline{
 
     namespace Statements {
@@ -54,7 +56,7 @@ namespace QueryPipeline{
 
         static std::vector<Statements::Statement*> Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
         static PhysicalPlan::ExecutionNode* BuildExecutionPlan(ParserResult& result, Statements::Statement* statement);
-        static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const uint16_t& cursorId);
+        static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, PipelineConstants::cursor_id_t cursorId);
 
         public:
             Parser();
@@ -70,8 +72,8 @@ namespace QueryPipeline{
 
             static ParserResult Execute(Cursor* cursor);
 
-            static void CommitTransaction(const DataTypes::Guid& sessionId, const QueryPipeline::Cursor* cursor);
-            static void RollbackTransaction(const DataTypes::Guid& sessionId, const QueryPipeline::Cursor* cursor);
+            static void CommitTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor);
+            static void RollbackTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor);
     };
 
 }

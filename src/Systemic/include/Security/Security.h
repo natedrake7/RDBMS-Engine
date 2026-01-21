@@ -1,9 +1,9 @@
 #pragma once
-#include <cstdint>
 #include <string>
+#include "../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace Security {
-  enum class Permission : uint32_t {
+  enum class Permission : UnsignedInt {
     NONE                  = 0,
     SELECT                = 1 << 0,
     INSERT                = 1 << 1,
@@ -19,60 +19,60 @@ namespace Security {
   };
 
   // Bitwise AND
-  inline constexpr Permission operator&(const Permission& lhs, const Permission& rhs) {
+  inline constexpr Permission operator&(const Permission lhs, const Permission rhs) {
     return static_cast<Permission>(
-        static_cast<uint32_t>(lhs) & static_cast<uint32_t>(rhs)
+        static_cast<UnsignedInt>(lhs) & static_cast<UnsignedInt>(rhs)
     );
 }
 
   // Bitwise OR
-  inline constexpr Permission operator|(const Permission& lhs, const Permission& rhs) {
+  inline constexpr Permission operator|(const Permission lhs, const Permission rhs) {
     return static_cast<Permission>(
-        static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs)
+        static_cast<UnsignedInt>(lhs) | static_cast<UnsignedInt>(rhs)
     );
   }
 
   // Bitwise XOR
-  inline constexpr Permission operator^(const Permission& lhs, const Permission& rhs) {
+  inline constexpr Permission operator^(const Permission lhs, const Permission rhs) {
     return static_cast<Permission>(
-        static_cast<uint32_t>(lhs) ^ static_cast<uint32_t>(rhs)
+        static_cast<UnsignedInt>(lhs) ^ static_cast<UnsignedInt>(rhs)
     );
   }
 
   // Bitwise NOT
-  inline constexpr Permission operator~(const Permission& lhs) {
+  inline constexpr Permission operator~(const Permission lhs) {
     return static_cast<Permission>(
-        ~static_cast<uint32_t>(lhs)
+        ~static_cast<UnsignedInt>(lhs)
     );
   }
 
   // AND assignment
-  inline Permission& operator&=(Permission &lhs, const Permission& rhs) {
+  inline Permission& operator&=(Permission &lhs, const Permission rhs) {
     lhs = lhs & rhs;
     return lhs;
   }
 
   // OR assignment
-  inline Permission& operator|=(Permission &lhs, const Permission& rhs) {
+  inline Permission& operator|=(Permission &lhs, const Permission rhs) {
     lhs = lhs | rhs;
     return lhs;
   }
 
   // XOR assignment
-  inline Permission& operator^=(Permission &lhs, const Permission& rhs) {
+  inline Permission& operator^=(Permission &lhs, const Permission rhs) {
     lhs = lhs ^ rhs;
     return lhs;
   }
 
   struct Role {
-    int32_t id;
+    Int id;
 
     std::string name;
     Permission permission;
 
     bool isSystem;
 
-    Role(const int32_t& id, const std::string& name, const Permission& permission, const bool& isSystem)
+    Role(const Int id, const std::string& name, const Permission permission, const bool isSystem)
       : id(id), name(name), permission(permission), isSystem(isSystem) {}
     Role(const Role& role) {
       id = role.id;
@@ -81,19 +81,19 @@ namespace Security {
       isSystem = role.isSystem;
     }
 
-    [[nodiscard]] bool HasPermission(const Permission& permissions) const {
+    [[nodiscard]] bool HasPermission(const Permission permissions) const {
       return permissions == Permission::NONE
         || (this->permission & permissions) != Permission::NONE;
     }
   };
 
   struct User {
-    int32_t id;
+    Int id;
 
     std::string name;
     std::string passwordHash;
 
-    int32_t roleId;
+    Int roleId;
     const Role* role;
 
     bool isActive;

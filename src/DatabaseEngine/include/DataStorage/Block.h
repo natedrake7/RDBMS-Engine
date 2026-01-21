@@ -119,7 +119,9 @@ namespace DatabaseEngine::StorageTypes {
     void Block::CopyToBuffer(const DataTypes::DateTime &src){
         this->size = DataTypes::DateTime::Size();
         this->data = static_cast<object_t*>(std::malloc(this->size));
-        std::memcpy(this->data, &src.GetUnixTimeStamp(), this->size);
+
+        const auto dt = src.GetUnixTimeStamp();
+        std::memcpy(this->data, &dt, this->size);
     }
 }
 

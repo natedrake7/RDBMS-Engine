@@ -38,7 +38,7 @@ namespace Network {
     bufferPtr += sizeof(int);
   }
 
-  void ResponseProtocol::DeserializeBody(const vector<char> &buffer){}
+  void ResponseProtocol::DeserializeBody(const vector<char> &data){}
 
   const vector<char> & ResponseProtocol::GetSerializedProtocol(){
     if (this->buffer.empty())
@@ -47,7 +47,7 @@ namespace Network {
     return this->buffer;
   }
 
-  const ResponseType & ResponseProtocol::GetResponseType() const{ return this->header.statusCode; }
+  ResponseType ResponseProtocol::GetResponseType() const{ return this->header.statusCode; }
 
   const DataTypes::Guid & ResponseProtocol::GetSessionId() const {
     return this->header.sessionId;

@@ -20,7 +20,7 @@ namespace Network {
     this->header.statusCode = ResponseType::QueryResponse;
   }
 
-  QueryResponseProtocol::QueryResponseProtocol(const ResponseType &statusCode, const DataTypes::Guid& sessionId) : ResponseProtocol(statusCode, sessionId) {
+  QueryResponseProtocol::QueryResponseProtocol(const ResponseType statusCode, const DataTypes::Guid& sessionId) : ResponseProtocol(statusCode, sessionId) {
     this->hasMore = false;
     this->hasError = false;
     this->header.size = sizeof(bool);
@@ -36,8 +36,8 @@ namespace Network {
   }
 
 QueryResponseProtocol::QueryResponseProtocol(
-    const bool& hasError,
-    const bool& hasMore,
+    const bool hasError,
+    const bool hasMore,
     const std::string& message,
     const std::vector<std::string>& columns,
     std::vector<QueryResult>& rows

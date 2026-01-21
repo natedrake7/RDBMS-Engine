@@ -2,15 +2,18 @@
 
 #include <chrono>
 #include <string>
+
+#include "../DataTypes/DataTypes.h"
+
 namespace DataTypes {
-	constexpr uint32_t SECONDS_PER_MINUTE = 60;
-	constexpr uint32_t SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
-	constexpr uint32_t SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
-	constexpr uint32_t SECONDS_PER_WEEK = SECONDS_PER_DAY * 7;
-	constexpr uint32_t SECONDS_PER_YEAR = SECONDS_PER_DAY * 365;
+	constexpr UnsignedInt SECONDS_PER_MINUTE = 60;
+	constexpr UnsignedInt SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
+	constexpr UnsignedInt SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
+	constexpr UnsignedInt SECONDS_PER_WEEK = SECONDS_PER_DAY * 7;
+	constexpr UnsignedInt SECONDS_PER_YEAR = SECONDS_PER_DAY * 365;
 
 	class DateTime {
-		int64_t timeStamp;
+		BigInt timeStamp;
 
 		static inline const std::array<std::string, 15> DateTimeFormats = {
 			// ISO 8601 with fractional seconds and timezone
@@ -40,36 +43,36 @@ namespace DataTypes {
 		    };
 
 	protected:
-		static void ValidateDate(int year, int month, int day, int hour, int minute, int second);
+		static void ValidateDate(Int year, Int month, Int day, Int hour, Int minute, Int second);
 
 	public:
 		DateTime();
-		explicit DateTime(const int64_t& timestamp);
+		explicit DateTime(BigInt timestamp);
 		~DateTime();
 
-		[[nodiscard]] int GetYears() const;
-		[[nodiscard]] unsigned int GetMonths() const;
-		[[nodiscard]] unsigned int  GetDays() const;
-		[[nodiscard]] long GetHours() const;
-		[[nodiscard]] long GetMinutes() const;
-		[[nodiscard]] long GetSeconds() const;
-		[[nodiscard]] long GetMilliseconds() const;
+		[[nodiscard]] Int GetYears() const;
+		[[nodiscard]] UnsignedInt GetMonths() const;
+		[[nodiscard]] UnsignedInt  GetDays() const;
+		[[nodiscard]] BigInt GetHours() const;
+		[[nodiscard]] BigInt GetMinutes() const;
+		[[nodiscard]] BigInt GetSeconds() const;
+		[[nodiscard]] BigInt GetMilliseconds() const;
 
-		void AddSeconds(const int& seconds);
-		void AddMinutes(const int& minutes);
-		void AddHours(const int& hours);
-		void AddDays(const int& days);
-		void AddWeeks(const int& weeks);
-		void AddMonths(const int& months);
-		void AddYears(const int& years);
+		void AddSeconds(Int seconds);
+		void AddMinutes(Int minutes);
+		void AddHours(Int hours);
+		void AddDays(Int days);
+		void AddWeeks(Int weeks);
+		void AddMonths(Int months);
+		void AddYears(Int years);
 
 		static DateTime Now();
 		static bool FromString(DateTime& outVal, const std::string& date, const std::string& format = "");
 		static bool FromString(const std::string& date);
-		inline static constexpr int Size(){ return sizeof(int64_t); }
+		inline static constexpr Int Size(){ return DATETIME_SIZE; }
 
 		[[nodiscard]] std::string ToString(const std::string& format = "%Y-%m-%d %H:%M:%S%OS") const;
-		[[nodiscard]] const int64_t& GetUnixTimeStamp()const;
+		[[nodiscard]] BigInt GetUnixTimeStamp()const;
 
 		static bool ValidateDate(const DateTime& datetime);
 

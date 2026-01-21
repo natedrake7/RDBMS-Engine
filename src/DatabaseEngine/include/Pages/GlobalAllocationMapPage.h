@@ -15,15 +15,15 @@ namespace Pages {
         extent_id_t lastAllocatedExtentId;
     
     public:
-        explicit GlobalAllocationMapPage(const page_id_t& pageId);
+        explicit GlobalAllocationMapPage(page_id_t pageId);
         explicit GlobalAllocationMapPage(const PageHeader& pageHeader);
         ~GlobalAllocationMapPage() override;
-        int AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const int& numberOfExtents);
-        void DeallocateExtent(const extent_id_t& extentId);
+        int AllocateExtentsNoLock(std::vector<extent_id_t>& extents, Int numberOfExtents);
+        void DeallocateExtent(extent_id_t extentId);
         void WriteToDisk(std::fstream *filePtr) override;
         void ReadFromDisk(const std::vector<char>& data, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, std::fstream* filePtr) override;
         [[nodiscard]] bool IsFull() const;
-        std::vector<extent_id_t> GetAllocatedExtents(const extent_id_t& startingIndex = 0) const;
+        std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingIndex = 0) const;
     };
 }
 

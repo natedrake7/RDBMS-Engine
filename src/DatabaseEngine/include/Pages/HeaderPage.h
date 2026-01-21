@@ -19,7 +19,7 @@ namespace Pages {
         std::vector<DatabaseEngine::StorageTypes::TableHeader> tablesHeaders;
 
     public:
-        explicit HeaderPage(const int &pageId);
+        explicit HeaderPage(page_id_t pageId);
         explicit HeaderPage();
         explicit HeaderPage(const PageHeader &pageHeader);
         ~HeaderPage() override;

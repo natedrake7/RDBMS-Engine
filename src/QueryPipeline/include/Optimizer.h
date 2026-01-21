@@ -91,8 +91,8 @@ namespace QueryPipeline {
     SeekRange(
       const Value& otherStart,
       const Value& otherEnd,
-      const bool& includeStart,
-      const bool& includeEnd
+      bool includeStart,
+      bool includeEnd
     );
 
     [[nodiscard]] bool HasStart() const;
@@ -157,9 +157,9 @@ namespace QueryPipeline {
     }
 
     JoinOrderAnalyzeInfo(
-      const table_id_t& tableId,
-      const int64_t& rowCount,
-      const bool& hasIndex
+      const table_id_t tableId,
+      const BigInt rowCount,
+      const bool hasIndex
     ){
       this->tableId = tableId;
       this->rowCount = rowCount;
@@ -168,9 +168,9 @@ namespace QueryPipeline {
     }
 
     JoinOrderAnalyzeInfo(
-      const table_id_t& tableId,
-      const int64_t& rowCount,
-      const bool& hasIndex,
+      const table_id_t tableId,
+      const BigInt rowCount,
+      const bool hasIndex,
       Statements::JoinStatement* joinStatement
     ){
       this->tableId = tableId;
@@ -195,7 +195,7 @@ namespace QueryPipeline {
       this->remainingPredicate = nullptr;
     }
 
-    Expressions::Expression* PushDownFilter(const table_id_t& tableId) const{
+    Expressions::Expression* PushDownFilter(const table_id_t tableId) const{
       Expressions::Expression* filter = nullptr;
       this->tablePredicatesDictionary.TryGetValue(tableId, filter);
       return filter;
@@ -242,14 +242,14 @@ namespace QueryPipeline {
         const Value& predicateValue,
         SeekRange& range,
         bool& canSeek,
-        const bool& inclusive
+        bool inclusive
       );
 
       static void DetermineCanSeekOnLessThan(
         const Value& predicateValue,
         SeekRange& range,
         bool& canSeek,
-        const bool& inclusive
+        bool inclusive
       );
 
       static void DetermineSeekRange(
@@ -258,7 +258,6 @@ namespace QueryPipeline {
         SeekRange& range,
         bool& canSeek
       );
-
 
       static void AnalyzeTableScan(
         IndexSeekColumnAnalysisResults& analyzeResult,
@@ -292,8 +291,8 @@ namespace QueryPipeline {
         const std::vector<JoinConditionInfo>& conditionsInfo,
         const std::vector<Int>& leftKeyColumns,
         const std::vector<Int>& rightKeyColumns,
-        const Int& leftTableId,
-        const Int& rightTableId
+        Int leftTableId,
+        Int rightTableId
       );
 
     public:
@@ -311,8 +310,8 @@ namespace QueryPipeline {
       );
 
       [[nodiscard]] static JoinAlgorithmAnalysisResult ChooseJoinAlgorithm(
-        const Int& leftTableId,
-        const Int& rightTableId,
+        Int leftTableId,
+        Int rightTableId,
         Expressions::Expression* joinCondition
       );
   };

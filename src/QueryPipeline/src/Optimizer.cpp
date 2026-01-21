@@ -44,8 +44,8 @@ namespace QueryPipeline {
   SeekRange::SeekRange(
     const Value &otherStart,
     const Value &otherEnd,
-    const bool &includeStart,
-    const bool &includeEnd
+    const bool includeStart,
+    const bool includeEnd
   ) {
     this->start = otherStart;
     this->end = otherEnd;
@@ -205,7 +205,7 @@ namespace QueryPipeline {
     const Value& predicateValue,
     SeekRange& range,
     bool& canSeek,
-    const bool& inclusive
+    const bool inclusive
   ){
     if ((predicateValue <= range.start).AsBool()
       && !range.start.IsNull()
@@ -222,7 +222,7 @@ namespace QueryPipeline {
     const Value& predicateValue,
     SeekRange& range,
     bool& canSeek,
-    const bool& inclusive
+    const bool inclusive
   ){
     if ((predicateValue >= range.end).AsBool()
       && !range.end.IsNull()
@@ -455,8 +455,8 @@ namespace QueryPipeline {
     const std::vector<JoinConditionInfo>& conditionsInfo,
     const std::vector<Int>& leftKeyColumns,
     const std::vector<Int>& rightKeyColumns,
-    const Int& leftTableId,
-    const Int& rightTableId
+    const Int leftTableId,
+    const Int rightTableId
   ){
     JoinAlgorithmAnalysisResult result(PipelineConstants::JoinAlgorithm::MergeJoin);
 
@@ -667,8 +667,8 @@ namespace QueryPipeline {
   }
 
    JoinAlgorithmAnalysisResult Optimizer::ChooseJoinAlgorithm(
-      const Int& leftTableId,
-      const Int& rightTableId,
+      const Int leftTableId,
+      const Int rightTableId,
       Expressions::Expression* joinCondition
     ){
       //if left or right table is a subquery or derived table, use nested loop join

@@ -29,8 +29,8 @@ struct MergeElement{
     Headers::RowIdentifier rowId;
     Int batchId;
 
-    MergeElement(const QueryResult& value, const Int& batchId);
-    MergeElement(QueryResult& value, const int& batchId, Headers::RowIdentifier& rowId);
+    MergeElement(const QueryResult& value, Int batchId);
+    MergeElement(QueryResult& value, Int batchId, const Headers::RowIdentifier& rowId);
     MergeElement(const MergeElement& other);
     MergeElement(MergeElement&& other) noexcept;
     MergeElement& operator=(const MergeElement& other);
