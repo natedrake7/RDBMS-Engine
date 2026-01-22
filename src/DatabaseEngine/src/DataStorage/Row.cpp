@@ -15,8 +15,33 @@
 #include "../../include/Pages/LargeObjectPage.h"
 #include "../../include/Pages/OverflowPage.h"
 #include "../../Server/include/Server.h"
+#include "BufferPool/StorageManager.h"
 
 namespace DatabaseEngine::StorageTypes {
+    bool RowVersioningHeader::IsVisibleForTransaction(const Snapshot& snapshot) const{
+        if (snapshot.IsSystemTransaction())
+            return true;
+
+        if (this->createdTransactionId < snapshot.minimumTransactionId)
+            return !this->IsDeletedForTransaction(snapshot);
+
+        if (this->createdTransactionId == snapshot.transactionId
+            || this->createdTransactionId >= snapshot.maximumTransactionId
+            || snapshot.activeTransactionIds.Contains(this->createdTransactionId))
+            return false;
+
+        return !this->IsDeletedForTransaction(snapshot);
+    }
+
+    bool RowVersioningHeader::IsDeletedForTransaction(const Snapshot& snapshot) const{
+        return this->deletedTransactionId != FIRST_TRANSACTION_ID
+            && this->deletedTransactionId < snapshot.maximumTransactionId
+            && !snapshot.activeTransactionIds.Contains(this->deletedTransactionId)
+            && this->deletedTransactionId != snapshot.transactionId;
+    }
+
+    RowHeader::RowHeader(){}
+
     RowHeader & RowHeader::operator=(const RowHeader &otherHeader){
         if (this == &otherHeader)
             return *this;
@@ -26,6 +51,33 @@ namespace DatabaseEngine::StorageTypes {
         this->overflowBitMap = ByteMaps::BitMap(otherHeader.overflowBitMap);
 
         this->version = otherHeader.version;
+
+        return *this;
+    }
+
+    RowHeader::RowHeader(const RowHeader& otherHeader){
+        this->version = otherHeader.version;
+
+        this->nullBitMap = otherHeader.nullBitMap;
+        this->largeObjectBitMap = otherHeader.largeObjectBitMap;
+        this->overflowBitMap = otherHeader.overflowBitMap;
+    }
+
+    RowHeader::RowHeader(RowHeader&& otherHeader) noexcept{
+        this->version = otherHeader.version;
+        this->nullBitMap = std::move(otherHeader.nullBitMap);
+        this->largeObjectBitMap = std::move(otherHeader.largeObjectBitMap);
+        this->overflowBitMap = std::move(otherHeader.overflowBitMap);
+    }
+
+    RowHeader& RowHeader::operator=(RowHeader&& otherHeader) noexcept{
+        if (this == &otherHeader)
+            return *this;
+
+        this->version = otherHeader.version;
+        this->nullBitMap = std::move(otherHeader.nullBitMap);
+        this->largeObjectBitMap = std::move(otherHeader.largeObjectBitMap);
+        this->overflowBitMap = std::move(otherHeader.overflowBitMap);
 
         return *this;
     }
@@ -51,34 +103,24 @@ namespace DatabaseEngine::StorageTypes {
         return Value(dataBlock->Data(), dataBlock->Size(), dataBlock->ColumnType());
     }
 
-    bool Row::IsDeleted(const Snapshot &snapshot) const{
-        const auto& versionHeader = this->header.version;
-        return versionHeader.deletedTransactionId != FIRST_TRANSACTION_ID
-            && versionHeader.deletedTransactionId < snapshot.maximumTransactionId
-            && !snapshot.activeTransactionIds.Contains(versionHeader.deletedTransactionId)
-            && versionHeader.deletedTransactionId != snapshot.transactionId;
-    }
-
     void Row::WriteVersionToBuffer(object_t*& buffer, page_offset_t& offSet) const{
-        std::memcpy(buffer + offSet, &this->header.version, RowVersioningHeader::Size);
-        offSet += RowVersioningHeader::Size;
+        std::memcpy(buffer + offSet, &this->header.version, Constants::ROW_VERSION_HEADER_SIZE);
+        offSet += Constants::ROW_VERSION_HEADER_SIZE;
     }
 
     void Row::WriteVersionToBuffer(std::vector<char>& buffer, page_offset_t& offSet) const{
-        std::memcpy(buffer.data() + offSet, &this->header.version, RowVersioningHeader::Size);
-        offSet += RowVersioningHeader::Size;
+        std::memcpy(buffer.data() + offSet, &this->header.version, Constants::ROW_VERSION_HEADER_SIZE);
+        offSet += Constants::ROW_VERSION_HEADER_SIZE;
     }
 
     Row::Row() {
-        this->table = nullptr;
         this->header.nullBitMap = ByteMaps::BitMap(0, true);
         this->header.overflowBitMap = ByteMaps::BitMap(0, false);
         this->header.largeObjectBitMap = ByteMaps::BitMap(0, false);
     }
 
     Row::Row(const Table& table){
-        this->table = &table;
-        const auto numberOfColumns = this->table->GetNumberOfColumns();
+        const auto numberOfColumns = table.GetNumberOfColumns();
 
         this->data.resize(numberOfColumns);
 
@@ -90,7 +132,6 @@ namespace DatabaseEngine::StorageTypes {
     Row::Row(const std::vector<const Column *> &columns){
         const auto& size = columns.size();
 
-        this->table = nullptr;
         this->header.nullBitMap = ByteMaps::BitMap(size, true);
         this->header.overflowBitMap = ByteMaps::BitMap(size, false);
         this->header.largeObjectBitMap = ByteMaps::BitMap(size, false);
@@ -99,8 +140,7 @@ namespace DatabaseEngine::StorageTypes {
             this->data.push_back(new Block(column));
     }
 
-    Row::Row(const Table& table, const vector<Block*>& data, const ByteMaps::BitMap* nullBitMap){
-        this->table = &table;
+    Row::Row(const vector<Block*>& data, const ByteMaps::BitMap* nullBitMap){
         this->header.nullBitMap = ByteMaps::BitMap(nullBitMap);
 
         for (const auto& block : data)
@@ -108,7 +148,6 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Row::Row(const Row *row){
-        this->table = row->table;
         this->header = row->header;
 
         for (const auto& block : row->data)
@@ -117,7 +156,6 @@ namespace DatabaseEngine::StorageTypes {
 
     Row::Row(const Row &copyRow){
         this->Id = copyRow.Id;
-        this->table = copyRow.table;
         this->header = copyRow.header;
 
         for (const auto& block : copyRow.data)
@@ -125,12 +163,8 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Row::Row(Row&& otherRow) noexcept{
+        this->header = std::move(otherRow.header);
         this->data = std::move(otherRow.data);
-        this->header = otherRow.header;
-        this->table = otherRow.table;
-
-        otherRow.table = nullptr;
-        otherRow.data = {};
     }
 
     Row & Row::operator=(const Row &copyRow){
@@ -139,7 +173,6 @@ namespace DatabaseEngine::StorageTypes {
 
         this->Id = copyRow.Id;
         this->header = copyRow.header;
-        this->table = copyRow.table;
         this->data.clear();
 
         for (const auto& block : copyRow.data)
@@ -153,12 +186,9 @@ namespace DatabaseEngine::StorageTypes {
             return *this;
 
         this->Id = otherRow.Id;
+        this->header = std::move(otherRow.header);
         this->data = std::move(otherRow.data);
-        this->header = otherRow.header;
-        this->table = otherRow.table;
-
-        otherRow.table = nullptr;
-        otherRow.data = {};
+        otherRow.data.clear();
 
         return *this;
     }
@@ -337,7 +367,6 @@ namespace DatabaseEngine::StorageTypes {
     row_header_size_t Row::GetHeaderSize() const{
         row_header_size_t rowHeaderSize = 0;
 
-        rowHeaderSize += sizeof(column_number_t);
         rowHeaderSize += this->header.nullBitMap.GetSizeInBytes();
 
         if(!this->header.largeObjectBitMap.Empty())
@@ -346,7 +375,7 @@ namespace DatabaseEngine::StorageTypes {
         if(!this->header.overflowBitMap.Empty())
             rowHeaderSize += this->header.overflowBitMap.GetSizeInBytes();
 
-        rowHeaderSize += RowVersioningHeader::Size;
+        rowHeaderSize += Constants::ROW_VERSION_HEADER_SIZE;
 
         return rowHeaderSize;
     }
@@ -373,22 +402,6 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         return largestColumn;
-    }
-
-    bool Row::IsVisibleForTransaction(const Snapshot& snapshot) const {
-        if (snapshot.IsSystemTransaction())
-            return true;
-
-        auto& versionHeader = this->header.version;
-        if (versionHeader.createdTransactionId < snapshot.minimumTransactionId)
-            return !this->IsDeleted(snapshot);
-
-        if (versionHeader.createdTransactionId == snapshot.transactionId
-            || versionHeader.createdTransactionId >= snapshot.maximumTransactionId
-            || snapshot.activeTransactionIds.Contains(versionHeader.createdTransactionId))
-            return false;
-
-        return !this->IsDeleted(snapshot);
     }
 
     QueryResult Row::AsQueryResult() const{
@@ -572,90 +585,93 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     unsigned char* Row::GetLargeObjectValue(const page_id_t pageId, UnsignedInt* objectSize) const{
-        auto page = this->table->GetLargeDataPage(pageId);
+        // auto page = Storage::StorageManager::Get().GetLargeDataPage(pageId, );
 
-        const auto* object = page->GetObject();
+        // const auto* object = page->GetObject();
+        //
+        // auto currentObjectSize = object->objectSize;
+        //
+        // auto* buffer = new unsigned char[currentObjectSize];
+        //
+        // std::memcpy(buffer, object->object, currentObjectSize);
+        //
+        // while (object->nextPageId != 0)
+        // {
+        //     const page_id_t nextPageId = object->nextPageId;
+        //
+        //     page = this->table->GetLargeDataPage(nextPageId);
+        //     object = page->GetObject();
+        //
+        //     const page_size_t nextObjectSize = object->objectSize;
+        //
+        //     const unsigned char* prevValue = buffer;
+        //
+        //     buffer = new unsigned char[currentObjectSize + nextObjectSize];
+        //
+        //     std::memcpy(buffer, prevValue, currentObjectSize);
+        //     delete[] prevValue;
+        //
+        //     std::memcpy(buffer + currentObjectSize, object->object, nextObjectSize);
+        //
+        //     currentObjectSize += object->objectSize;
+        // }
+        //
+        // *objectSize = currentObjectSize;
 
-        auto currentObjectSize = object->objectSize;
-
-        auto* buffer = new unsigned char[currentObjectSize];
-
-        std::memcpy(buffer, object->object, currentObjectSize);
-
-        while (object->nextPageId != 0)
-        {
-            const page_id_t nextPageId = object->nextPageId;
-
-            page = this->table->GetLargeDataPage(nextPageId);
-            object = page->GetObject();
-
-            const page_size_t nextObjectSize = object->objectSize;
-
-            const unsigned char* prevValue = buffer;
-
-            buffer = new unsigned char[currentObjectSize + nextObjectSize];
-
-            std::memcpy(buffer, prevValue, currentObjectSize);
-            delete[] prevValue;
-
-            std::memcpy(buffer + currentObjectSize, object->object, nextObjectSize);
-
-            currentObjectSize += object->objectSize;
-        }
-
-        *objectSize = currentObjectSize;
-
-        return buffer;
+        return nullptr;
     }
 
     Block * Row::GetLargeObject(const page_id_t pageId, const Column *column)const{
-        auto page = this->table->GetLargeDataPage(pageId);
-
-        const auto* object = page->GetObject();
-
-        UnsignedInt currentObjectSize = object->objectSize;
-
-        auto* buffer = new unsigned char[currentObjectSize];
-
-        memcpy(buffer, object->object, currentObjectSize);
-
-        while (object->nextPageId != 0)
-        {
-            const page_id_t nextPageId = object->nextPageId;
-
-            page = this->table->GetLargeDataPage(nextPageId);
-            object = page->GetObject();
-
-            const page_size_t nextObjectSize = object->objectSize;
-
-            unsigned char* prevValue = buffer;
-
-            buffer = new unsigned char[currentObjectSize + nextObjectSize];
-
-            memcpy(buffer, prevValue, currentObjectSize);
-            delete[] prevValue;
-
-            memcpy(buffer + currentObjectSize, object->object, nextObjectSize);
-
-            currentObjectSize += object->objectSize;
-        }
-
-        return new Block(buffer, currentObjectSize, column);
+        // auto page = this->table->GetLargeDataPage(pageId);
+        //
+        // const auto* object = page->GgeManageretObject();
+        //
+        // UnsignedInt currentObjectSize = object->objectSize;
+        //
+        // auto* buffer = new unsigned char[currentObjectSize];
+        //
+        // memcpy(buffer, object->object, currentObjectSize);
+        //
+        // while (object->nextPageId != 0)
+        // {
+        //     const page_id_t nextPageId = object->nextPageId;
+        //
+        //     page = this->table->GetLargeDataPage(nextPageId);
+        //     object = page->GetObject();
+        //
+        //     const page_size_t nextObjectSize = object->objectSize;
+        //
+        //     unsigned char* prevValue = buffer;
+        //
+        //     buffer = new unsigned char[currentObjectSize + nextObjectSize];
+        //
+        //     memcpy(buffer, prevValue, currentObjectSize);
+        //     delete[] prevValue;
+        //
+        //     memcpy(buffer + currentObjectSize, object->object, nextObjectSize);
+        //
+        //     currentObjectSize += object->objectSize;
+        // }
+        //
+        // return new Block(buffer, currentObjectSize, column);
+        return nullptr;
     }
 
     Pages::OverflowRow* Row::GetOverflowValue(const Pages::OverflowPointer& objectPointer) const{
-        const auto page = this->table->GetOverflowPage(objectPointer.pageId);
-        return page->GetObject(objectPointer.index);
+        // const auto page = this->table->GetOverflowPage(objectPointer.pageId);
+        // return page->GetObject(objectPointer.index);
+        return nullptr;
     }
 
-    Row Row::GetVisibleVersionForTransaction(const Snapshot& snapshot)const {
-        if (this->IsVisibleForTransaction(snapshot))
+    Row Row::GetVisibleVersionForTransaction(const Snapshot& snapshot){
+        if (this->header.version.IsVisibleForTransaction(snapshot))
             return *this;
 
         if (!this->HasOlderVersion())
             return Row();
 
-        return VersionDatabase::Get().RetrieveRow(snapshot, this->header.version.olderVersionPointer, this->table);
+        return Row();
+        // return VersionDatabase::Get().RetrieveRow(snapshot, this->header.version.olderVersionPointer, this->table);
     }
 
     void Row::SetId(const page_id_t pageId, const Int indexId){
@@ -687,10 +703,6 @@ namespace DatabaseEngine::StorageTypes {
     bool Row::GetNullBitMapValue(const bit_map_pos_t position) const { return this->header.nullBitMap.Get(position); }
 
     bool Row::GetOverflowBitMapValue(const bit_map_pos_t position) const{ return this->header.overflowBitMap.Get(position); }
-
-    const Table* Row::GetTable() const{
-        return this->table;
-    }
 
     void Row::Serialize(std::vector<char>* buffer, page_offset_t& pos)const{
         this->WriteHeaderToBuffer(*buffer, pos);
@@ -751,13 +763,13 @@ namespace DatabaseEngine::StorageTypes {
         this->header.overflowBitMap.WriteDataToFile(&buffer, offSet);
     }
 
-    void Row::Deserialize(const std::vector<char>& buffer, page_offset_t &pos){
+    void Row::Deserialize(const std::vector<char>& buffer, page_offset_t &pos, const Table& table){
         this->ReadVersionHeaderFromDisk(buffer, pos);
         this->header.nullBitMap.GetDataFromFile(buffer, pos);
         this->header.largeObjectBitMap.GetDataFromFile(buffer, pos);
         this->header.overflowBitMap.GetDataFromFile(buffer, pos);
 
-        const auto& columns = this->table->GetColumns();
+        const auto& columns = table.GetColumns();
 
         for (int j = 0; j < columns.size(); j++)
         {
@@ -788,18 +800,18 @@ namespace DatabaseEngine::StorageTypes {
 
     inline RowVersioningHeader Row::PeakVersionHeaderFromDisk(const object_t* buffer, const page_offset_t offSet){
         auto header = RowVersioningHeader();
-        std::memcpy(&header, buffer + offSet, RowVersioningHeader::Size);
+        std::memcpy(&header, buffer + offSet, Constants::ROW_VERSION_HEADER_SIZE);
         return header;
     }
 
     inline void Row::ReadVersionHeaderFromDisk(const object_t* buffer, page_offset_t &offSet) {
-        std::memcpy(&this->header.version, buffer + offSet, RowVersioningHeader::Size);
-        offSet += RowVersioningHeader::Size;
+        std::memcpy(&this->header.version, buffer + offSet, Constants::ROW_VERSION_HEADER_SIZE);
+        offSet += Constants::ROW_VERSION_HEADER_SIZE;
     }
 
     void Row::ReadVersionHeaderFromDisk(const std::vector<char>& buffer, page_offset_t& offSet){
-        std::memcpy(&this->header.version, buffer.data() + offSet, RowVersioningHeader::Size);
-        offSet += RowVersioningHeader::Size;
+        std::memcpy(&this->header.version, buffer.data() + offSet, Constants::ROW_VERSION_HEADER_SIZE);
+        offSet += Constants::ROW_VERSION_HEADER_SIZE;
     }
 
     void Row::ReadHeaderFromDisk(const object_t* buffer, page_offset_t &offSet){

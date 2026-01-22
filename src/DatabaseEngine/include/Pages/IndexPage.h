@@ -166,8 +166,14 @@ namespace Pages {
 			void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, Int indexPosition) override;
 
 			DataTypes::Indexing::Key GetKey(Int indexPosition) const;
-			LeafNodeTuple GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, Int indexPosition) const;
+			DatabaseEngine::StorageTypes::Row GetRow(Int indexPosition, Int offSet, const DatabaseEngine::StorageTypes::Table* table) const;
+			LeafNodeTuple GetLeafTuple(
+				const DatabaseEngine::StorageTypes::Table* table,
+				Int indexPosition
+			) const;
 			InternalNodeTuple GetInternalNodeTuple(Int indexPosition) const;
+
+			DatabaseEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(Int indexPosition, Int& outOffset) const;
 
 			page_id_t GetChild(Int indexPosition) const;
 
@@ -176,5 +182,12 @@ namespace Pages {
 			void UpdatePageSize()override;
 
 			[[nodiscard]] Int NumberOfKeys()const;
+
+			void AppendRowToBuffer(
+				std::vector<DatabaseEngine::StorageTypes::Row>* buffer,
+				const DatabaseEngine::StorageTypes::Table* table,
+				const DatabaseEngine::Snapshot& snapshot,
+				Int indexPosition
+			) const;
 		};
 } // namespace Pages

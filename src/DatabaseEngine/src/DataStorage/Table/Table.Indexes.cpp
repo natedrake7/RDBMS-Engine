@@ -204,7 +204,7 @@ namespace DatabaseEngine::StorageTypes {
 
                 MultiThreading::ReaderGuard lock(&page->Latch());
 
-                const auto& pageRow = page->GetRow(this, rowId.indexId);
+                auto pageRow = page->GetRow(this, rowId.indexId);
 
                 const auto& row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
 
@@ -223,9 +223,9 @@ namespace DatabaseEngine::StorageTypes {
 
             MultiThreading::ReaderGuard lock(&page->Latch());
 
-            const auto& pageRow = page->GetRow(this, rowId.indexId);
+            auto pageRow = page->GetRow(this, rowId.indexId);
 
-            const auto& row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
+            auto row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
 
             if (row.IsInvalid())
                 continue;

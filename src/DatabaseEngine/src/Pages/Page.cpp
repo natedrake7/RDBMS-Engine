@@ -189,6 +189,10 @@ namespace Pages{
         donorPage->Defragment();
     }
 
+    void Page::DistributeSingleSlotFromPage(Page* donorPage, Int donorIndexPosition, Int donorResizeVariant){
+
+    }
+
     void Page::Resize(const Int size){
         for (int i = size; i < this->header.size; i++){
             const auto slot = this->GetSlotDirectory(i);

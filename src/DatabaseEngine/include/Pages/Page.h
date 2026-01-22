@@ -203,6 +203,9 @@ namespace Pages{
 
         void DistributeFromPage(Page* donorPage, Int numberOfSlotsToMove, Int donorResizeVariant);
         void DistributeFromBeginningOfPage(Page* donorPage, Int numberOfSlotsToMove, Int donorResizeVariant);
+
+        void DistributeSingleSlotFromPage(Page* donorPage, Int donorIndexPosition, Int donorResizeVariant);
+
         void Resize(Int size);
         void ResizeFromBeginning(Int size);
     };

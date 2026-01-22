@@ -28,7 +28,7 @@ namespace DatabaseEngine::LoggingStructures {
     const StorageTypes::Table* table){
     this->row = StorageTypes::Row(*table);
 
-    this->row.Deserialize(*buffer, pos);
+    this->row.Deserialize(*buffer, pos, *table);
   }
 
   int RowInsertBody::GetSize() const{ return static_cast<int>(this->row.TotalSize()); }
@@ -74,11 +74,11 @@ namespace DatabaseEngine::LoggingStructures {
      const StorageTypes::Table* table){
       this->oldRow = new StorageTypes::Row(*table);
 
-      this->oldRow->Deserialize(*buffer, pos);
+      this->oldRow->Deserialize(*buffer, pos, *table);
 
       this->newRow = new StorageTypes::Row(*table);
 
-      this->newRow->Deserialize(*buffer, pos);
+      this->newRow->Deserialize(*buffer, pos, *table);
    }
 
    int RowUpdateBody::GetSize() const{ return static_cast<int>(this->oldRow->TotalSize() + this->newRow->TotalSize()); }
@@ -110,7 +110,7 @@ namespace DatabaseEngine::LoggingStructures {
       const StorageTypes::Table* table){
       this->row = new StorageTypes::Row(*table);
 
-      this->row->Deserialize(*buffer, pos);
+      this->row->Deserialize(*buffer, pos, *table);
     }
 
    int RowDeleteBody::GetSize() const{ return static_cast<int>(this->row->TotalSize()); }

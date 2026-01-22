@@ -25,6 +25,21 @@ namespace ByteMaps
         this->data.resize((size + 7) / 8, defaultValue);
     }
 
+    BitMap::BitMap(BitMap&& bitMap) noexcept{
+        this->data = std::move(bitMap.data);
+        this->size = bitMap.size;
+    }
+
+    BitMap& BitMap::operator=(BitMap&& bitMap) noexcept{
+        if (this == &bitMap)
+            return *this;
+
+        this->data = std::move(bitMap.data);
+        this->size = bitMap.size;
+
+        return *this;
+    }
+
     BitMap::~BitMap() = default;
 
     void BitMap::Set(const bit_map_pos_t position, const bool value){

@@ -201,6 +201,7 @@ namespace Indexing{
         BTree::AssignLeavesConnections(child, newChild);
     }
 
+    //TODO maybe optimize further
     void BTree::SplitInternalNodeNoLock(
         Pages::PageGuard<Pages::IndexPage> &parent,
         Pages::PageGuard<Pages::IndexPage> &child,
@@ -214,13 +215,6 @@ namespace Indexing{
         newChild->InsertChild(middleChild);
 
         newChild->DistributeFromPage(child.Get(), this->degree, this->degree - 1);
-        // for (Int i = this->degree; i < child->GetPageSize(); i++){
-        //     auto tuple = child->GetInternalNodeTuple(i);
-        //     newChild->InsertChild(tuple.pageId, &tuple.key);
-        // }
-        //
-        // //resize child
-        // child->Resize(this->degree - 1);
     }
 
     void BTree::SplitChildNoLock(
@@ -1116,7 +1110,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                const auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
+                auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
 
                 if (key == tupleKey) {
                     auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
@@ -1171,6 +1165,7 @@ namespace Indexing{
         if (this->IsEmpty())
             return;
 
+        result->reserve(properties.batchSize);
         auto currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
@@ -1179,27 +1174,18 @@ namespace Indexing{
         while (currentNode.Get()){
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
-            for (Int i = state.GetNextKeyIndex(); i < currentNode->GetPageSize(); i++) {
-                auto [_, row] = currentNode->GetLeafTuple(this->table, i);
-
-                auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
-
-                if (visibleRow.IsInvalid())
-                    continue;
-
-                result->push_back(std::move(visibleRow));
-
-                if (result->size() == properties.batchSize) {
-                    state.pageId = currentNode->GetPageId();
-                    state.lastFetchedKeyIndex = i;
-
-                    state.canFetchMore = true;
-                    return;
-                }
-            }
+            for (Int i = state.GetNextKeyIndex(); i < currentNode->GetPageSize(); i++)
+                currentNode->AppendRowToBuffer(result, this->table, properties.snapshot, i);
 
             if(!currentNode->HasRightSibling()) {
                 state.canFetchMore = false;
+                return;
+            }
+
+            if (result->size() >= properties.batchSize) {
+                state.pageId = currentNode->GetNextPage();
+                state.lastFetchedKeyIndex = INVALID_PAGE_INDEX_ID;
+                state.canFetchMore = true;
                 return;
             }
 

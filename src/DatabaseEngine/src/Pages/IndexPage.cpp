@@ -5,6 +5,7 @@
 
 #include "../../include/BTree.h"
 #include "../../include/DataStorage/Table.h"
+#include "SystemDatabases/VersionDatabase.h"
 
 namespace Pages {
 void IndexPage::WriteAdditionalHeaderToDisk(fstream * filePtr) const
@@ -366,6 +367,23 @@ DataTypes::Indexing::Key IndexPage::GetKey(const Int indexPosition) const{
     return this->GetKey(offSet);
 }
 
+DatabaseEngine::StorageTypes::Row IndexPage::GetRow(
+    const Int indexPosition,
+    const Int offSet,
+    const DatabaseEngine::StorageTypes::Table* table
+) const{
+    const auto& columns = table->GetColumns();
+
+    auto row = DatabaseEngine::StorageTypes::Row(*table);
+    page_offset_t offsetCopy = offSet;
+
+    row.SetId(this->header.pageId, indexPosition);
+    row.ReadHeaderFromDisk(this->data, offsetCopy);
+    row.ReadDataFromDisk(this->data, offsetCopy, columns);
+
+    return row;
+}
+
 LeafNodeTuple IndexPage::GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, const Int indexPosition) const{
     const auto slot = this->GetSlotDirectory(indexPosition);
 
@@ -379,7 +397,7 @@ LeafNodeTuple IndexPage::GetLeafTuple(const DatabaseEngine::StorageTypes::Table*
     row.ReadHeaderFromDisk(this->data, offset);
     row.ReadDataFromDisk(this->data, offset, columns);
 
-    return {row, key};
+    return LeafNodeTuple(row, key);
 }
 
 InternalNodeTuple IndexPage::GetInternalNodeTuple(const Int indexPosition) const{
@@ -395,6 +413,19 @@ InternalNodeTuple IndexPage::GetInternalNodeTuple(const Int indexPosition) const
     std::memcpy(&pageId, this->data + offset, sizeof(page_id_t));
 
     return InternalNodeTuple(key, pageId);
+}
+
+DatabaseEngine::StorageTypes::RowVersioningHeader IndexPage::PeekVersionHeader(const Int indexPosition, Int& outOffset) const{
+    const auto slot = this->GetSlotDirectory(indexPosition);
+
+    auto offset = slot.GetOffset();
+    auto key = this->GetKey(offset);
+
+    outOffset = offset;
+    DatabaseEngine::StorageTypes::RowVersioningHeader header;
+    std::memcpy(&header, this->data + offset, Constants::ROW_VERSION_HEADER_SIZE);
+
+    return header;
 }
 
 page_id_t IndexPage::GetChild(const Int indexPosition) const{
@@ -416,6 +447,31 @@ void IndexPage::UpdatePageSize(){
 
 Int IndexPage::NumberOfKeys() const{
     return this->additionalHeader.IsLeaf() ? this->header.size : this->header.size - 1;
+}
+
+void IndexPage::AppendRowToBuffer(
+    std::vector<DatabaseEngine::StorageTypes::Row>* buffer,
+    const DatabaseEngine::StorageTypes::Table* table,
+    const DatabaseEngine::Snapshot& snapshot,
+    const Int indexPosition
+) const{
+    Int outOffset = 0;
+    const auto versionHeader = this->PeekVersionHeader(indexPosition, outOffset);
+
+    if (!versionHeader.IsVisibleForTransaction(snapshot)) {
+        if (!versionHeader.HasOlderVersion())
+            return;
+
+        buffer->emplace_back(
+            DatabaseEngine::VersionDatabase::Get()
+                .RetrieveRow(snapshot, versionHeader.olderVersionPointer, table)
+        );
+        return;
+    }
+
+    buffer->emplace_back(
+        this->GetRow(indexPosition, outOffset, table)
+    );
 }
 
 void IndexPage::MarkEmpty(){

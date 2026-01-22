@@ -15,6 +15,9 @@ namespace ByteMaps{
         BitMap(const BitMap &bitMap);
         explicit BitMap(const BitMap *bitMap);
         explicit BitMap(bit_map_size_t size, byte_t defaultValue = 0);
+
+        BitMap(BitMap &&bitMap) noexcept;
+        BitMap& operator=(BitMap &&bitMap) noexcept;
         ~BitMap();
 
         void Set(bit_map_pos_t position, bool value);

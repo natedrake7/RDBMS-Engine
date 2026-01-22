@@ -35,9 +35,10 @@ namespace DatabaseEngine::StorageTypes
             this->deletedTransactionId = 0;
         }
 
-        [[nodiscard]] bool HasOlderVersion()const { return this->olderVersionPointer.pageId != INVALID_PAGE_ID; }
+        [[nodiscard]] bool IsVisibleForTransaction(const Snapshot& snapshot)const;
+        [[nodiscard]] bool IsDeletedForTransaction(const Snapshot& snapshot)const;
 
-        static constexpr row_header_size_t Size = sizeof(transaction_id_t) * 2 + sizeof(page_id_t) + sizeof(page_offset_t);
+        [[nodiscard]] bool HasOlderVersion()const { return this->olderVersionPointer.pageId != INVALID_PAGE_ID; }
     };
 
     struct RowHeader{
@@ -47,7 +48,11 @@ namespace DatabaseEngine::StorageTypes
 
         RowVersioningHeader version;
 
+        RowHeader();
         RowHeader& operator=(const RowHeader& otherHeader);
+        RowHeader(const RowHeader& otherHeader);
+        RowHeader(RowHeader&& otherHeader) noexcept;
+        RowHeader& operator=(RowHeader&& otherHeader) noexcept;
     };
 
     class Row{
@@ -56,11 +61,9 @@ namespace DatabaseEngine::StorageTypes
 
         std::vector<Block*> data;
 
-        const Table *table;
+        // const Table *table;
 
         [[nodiscard]] Value Materialize(Int indexPos)const;
-        [[nodiscard]] bool IsDeleted(const Snapshot& snapshot)const;
-
         inline void WriteVersionToBuffer(object_t*& buffer, page_offset_t& offSet)const;
         inline void WriteVersionToBuffer(std::vector<char>& buffer, page_offset_t& offSet)const;
 
@@ -74,7 +77,6 @@ namespace DatabaseEngine::StorageTypes
             explicit Row(const Table &table);
             explicit Row(const std::vector<const Column*>& columns);
             explicit Row(
-                const Table &table,
                 const std::vector<Block *> &data,
                 const ByteMaps::BitMap* nullBitMap
             );
@@ -107,7 +109,6 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] row_size_t TotalSize() const;
             [[nodiscard]] row_header_size_t GetHeaderSize() const;
             [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
-            [[nodiscard]] bool IsVisibleForTransaction(const Snapshot& snapshot) const;
             [[nodiscard]] QueryResult AsQueryResult()const;
             [[nodiscard]] bool IsInvalid()const;
             [[nodiscard]] bool HasOlderVersion()const;
@@ -156,7 +157,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Pages::OverflowRow* GetOverflowValue(const Pages::OverflowPointer &objectPointer) const;
 
-            [[nodiscard]] Row GetVisibleVersionForTransaction(const Snapshot& snapshot)const;
+            [[nodiscard]] Row GetVisibleVersionForTransaction(const Snapshot& snapshot);
         /** @} End of Data Retrieval Functions */
 
         /**
@@ -178,7 +179,6 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] bool GetNullBitMapValue(bit_map_pos_t position) const;
             [[nodiscard]] bool GetOverflowBitMapValue(bit_map_pos_t position) const;
 
-            [[nodiscard]] const Table* GetTable()const;
         /** @} End of Metadata Functions */
 
         /**
@@ -191,7 +191,7 @@ namespace DatabaseEngine::StorageTypes
             void WriteHeaderToBuffer(object_t*& buffer, page_offset_t& offSet)const;
             void WriteHeaderToBuffer(std::vector<char>& buffer, page_offset_t& offSet)const;
 
-            void Deserialize(const std::vector<char>& buffer, page_offset_t& pos);
+            void Deserialize(const std::vector<char>& buffer, page_offset_t& pos, const Table& table);
             static inline RowVersioningHeader PeakVersionHeaderFromDisk(const object_t* buffer, page_offset_t offSet);
             inline void ReadVersionHeaderFromDisk(const object_t* buffer, page_offset_t &offSet);
             inline void ReadVersionHeaderFromDisk(const std::vector<char>& buffer, page_offset_t &offSet);
