@@ -37,7 +37,7 @@ void IndexPage::InsertFirstTuple(const LeafNodeTuple& tuple){
     tuple.key.Serialize(this->data, pos);
     tuple.row.Serialize(this->data, pos);
 
-    const auto newSlot = SlotDirectory(0, rowSize + tuple.key.size);
+    const auto newSlot = SlotDirectory(0, rowSize + tuple.key.size, SlotDirectory::SLOT_USED);
     this->InsertNewSlot(newSlot);
 
     this->header.size++;
@@ -58,7 +58,7 @@ void IndexPage::InsertTuple(const LeafNodeTuple& tuple){
     tuple.key.Serialize(this->data, nextOffset);
     tuple.row.Serialize(this->data, nextOffset);
 
-    const auto newSlot = SlotDirectory(offSetCopy, rowSize + tuple.key.size);
+    const auto newSlot = SlotDirectory(offSetCopy, rowSize + tuple.key.size, SlotDirectory::SLOT_USED);
     this->InsertNewSlot(newSlot);
 
     this->header.size++;
@@ -70,7 +70,7 @@ void IndexPage::InsertFirstKey(const DataTypes::Indexing::Key& key){
     page_offset_t pos = 0;
     key.Serialize(this->data, pos);
 
-    const auto newSlot = SlotDirectory(0, key.size);
+    const auto newSlot = SlotDirectory(0, key.size, SlotDirectory::SLOT_USED);
     this->InsertNewSlot(newSlot);
 
     this->header.size++;
@@ -89,7 +89,7 @@ void IndexPage::InsertKey(const DataTypes::Indexing::Key& key){
 
     key.Serialize(this->data, nextOffset);
 
-    const auto newSlot = SlotDirectory(offSetCopy, key.size);
+    const auto newSlot = SlotDirectory(offSetCopy, key.size, SlotDirectory::SLOT_USED);
     this->InsertNewSlot(newSlot);
 
     this->header.size++;
@@ -102,12 +102,14 @@ void IndexPage::InsertFirstChild(const page_id_t child){
 
     std::memcpy(this->data + nextOffset, &child, sizeof(page_id_t));
 
-    const auto newSlot = SlotDirectory(0, sizeof(page_id_t));
+    const auto newSlot = SlotDirectory(0, sizeof(page_id_t), SlotDirectory::SLOT_USED);
     this->InsertNewSlot(newSlot);
+
+    auto slot = this->GetSlotDirectory(this->header.size);
 
     this->header.size++;
     this->isDirty = true;
-    this->header.bytesLeft -= (sizeof(page_id_t) + SlotDirectory::Size);
+    this->header.bytesLeft -= (newSlot.GetSize() + SlotDirectory::Size);
 }
 
 DataTypes::Indexing::Key IndexPage::GetKey(page_offset_t& offSet) const{
@@ -134,8 +136,10 @@ void IndexPage::InsertChild(const page_id_t child, const DataTypes::Indexing::Ke
     key->Serialize(this->data, nextOffset);
     std::memcpy(this->data + nextOffset, &child, sizeof(page_id_t));
 
-    const auto newSlot = SlotDirectory(offSetCopy, key->size + sizeof(page_id_t));
+    const auto newSlot = SlotDirectory(offSetCopy, key->size + sizeof(page_id_t), SlotDirectory::SLOT_USED);
     this->InsertNewSlot(newSlot);
+
+    auto slotSize = newSlot.GetSize();
 
     this->header.size++;
     this->isDirty = true;
@@ -192,13 +196,6 @@ void IndexPage::UpdateBytesLeft(){
 
     const auto lastSlot = this->GetSlotDirectory(this->header.size - 1);
     this->header.bytesLeft = INDEX_PAGE_DEFAULT_SIZE - lastSlot.GetOffset() + lastSlot.GetSize() + this->header.size * SlotDirectory::Size;
-    //
-    // if (this->additionalHeader.treeType == TreeType::Clustered) {
-    //     for (const auto& row: this->rows)
-    //         this->header.bytesLeft -= row->TotalSize();
-    // }
-    // else
-    //     this->header.bytesLeft -= this->nonClusteredData.size() * (sizeof(page_id_t) + sizeof(page_offset_t));
 
     this->header.bytesLeft -= 2 * sizeof(page_id_t);
 
@@ -338,7 +335,7 @@ void IndexPage::UpdateRow(
     const auto totalSize = key.size + currentRowSize;
     //keep slot offset and set its size to 0 so defragmentation does nothing as it is last on the offset
     if (this->header.bytesLeft < totalSize){
-        this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0), indexPosition);
+        this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0, SlotDirectory::SLOT_USED), indexPosition);
         this->Defragment();
 
         //even if after the defragment row cant fit, throw exception
@@ -353,7 +350,7 @@ void IndexPage::UpdateRow(
     row->Serialize(this->data, nextOffset);
 
     //update slot directory
-    const auto newSlot = SlotDirectory(offSetCopy, totalSize);
+    const auto newSlot = SlotDirectory(offSetCopy, totalSize, SlotDirectory::SLOT_USED);
     this->UpdateSlotDirectory(newSlot, indexPosition);
 
     //update bytes
@@ -366,23 +363,16 @@ void IndexPage::UpdateRow(
 DataTypes::Indexing::Key IndexPage::GetKey(const Int indexPosition) const{
     const auto slot = this->GetSlotDirectory(indexPosition);
     auto offSet = slot.GetOffset();
-
-    return DataTypes::Indexing::Key::Deserialize(
-        this->data,
-        offSet,
-        this->additionalHeader.SubKeys(),
-        this->additionalHeader.keyTypes
-    );
+    return this->GetKey(offSet);
 }
 
 LeafNodeTuple IndexPage::GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, const Int indexPosition) const{
     const auto slot = this->GetSlotDirectory(indexPosition);
 
-    auto key = this->GetKey(slot.GetOffset());
+    auto offset = slot.GetOffset();
+    auto key = this->GetKey(offset);
 
     const auto& columns = table->GetColumns();
-
-    auto offset = slot.GetOffset();
 
     auto row = DatabaseEngine::StorageTypes::Row(*table);
     row.SetId(this->header.pageId, indexPosition);
@@ -393,27 +383,29 @@ LeafNodeTuple IndexPage::GetLeafTuple(const DatabaseEngine::StorageTypes::Table*
 }
 
 InternalNodeTuple IndexPage::GetInternalNodeTuple(const Int indexPosition) const{
-    auto slot = this->GetSlotDirectory(indexPosition);
+    const auto slot = this->GetSlotDirectory(indexPosition);
 
     DataTypes::Indexing::Key key;
+    auto offset = slot.GetOffset();
+
     if (indexPosition != 0)
-        key = this->GetKey(slot.GetOffset());
+        key = this->GetKey(offset);
 
     page_id_t pageId = 0;
-    std::memcpy(&pageId, this->data + slot.GetOffset(), sizeof(page_id_t));
+    std::memcpy(&pageId, this->data + offset, sizeof(page_id_t));
 
     return InternalNodeTuple(key, pageId);
 }
 
 page_id_t IndexPage::GetChild(const Int indexPosition) const{
-    auto slot = this->GetSlotDirectory(indexPosition);
+    const auto slot = this->GetSlotDirectory(indexPosition);
 
-    if (indexPosition != 0){
-        auto key = this->GetKey(slot.GetOffset());
-    }
+    auto offset = slot.GetOffset();
+    if (indexPosition != 0)
+        auto key = this->GetKey(offset);
 
     page_id_t pageId = 0;
-    std::memcpy(&pageId, this->data + slot.GetOffset(), sizeof(page_id_t));
+    std::memcpy(&pageId, this->data + offset, sizeof(page_id_t));
     return pageId;
 }
 

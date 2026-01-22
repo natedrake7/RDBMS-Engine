@@ -41,13 +41,13 @@ namespace Pages{
             SlotDirectory(
                 UnsignedSmallInt offset,
                 UnsignedSmallInt size,
-                Flag flag = SLOT_USED
+                Flag flag
             );
 
-            inline UnsignedSmallInt GetOffset() const;
+            UnsignedSmallInt GetOffset() const;
             void SetOffset(UnsignedSmallInt otherOffset);
 
-            inline UnsignedSmallInt GetSize() const;
+            UnsignedSmallInt GetSize() const;
             void SetSize(UnsignedSmallInt otherSize);
 
             Flag GetFlag() const;
@@ -139,6 +139,8 @@ namespace Pages{
         explicit Page(const PageHeader &pageHeader);
         Page(const PageHeader &pageHeader, page_size_t size);
         virtual ~Page();
+
+        void DeleteRow(Int indexPosition) const;
 
         void InsertFirstRow(DatabaseEngine::StorageTypes::Row*& row);
         Int InsertRow(DatabaseEngine::StorageTypes::Row*& row);

@@ -267,7 +267,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard childLock(&child->Latch());
 
             if (child->NumberOfKeys() == 2 * this->degree - 1){
-                if (!this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex)) {
+                // if (!this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex)) {
                 // Redistribution failed, must split
                     this->SplitChild(parent, parentLock, childIndex, child, childLock, pagesToAllocate);
 
@@ -281,9 +281,9 @@ namespace Indexing{
                     childId = parent->GetChild(childIndex);
 
                     IntermediateNode = this->GetNode(childId);
-                }
-                else
-                    IntermediateNode = std::move(parent);
+                // }
+                // else
+                //     IntermediateNode = std::move(parent);
             }
             else
                 IntermediateNode = std::move(child);

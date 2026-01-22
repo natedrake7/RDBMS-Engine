@@ -26,6 +26,7 @@ namespace Pages{
         this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherOffset & OFFSET_MASK);
     }
 
+
     inline UnsignedSmallInt SlotDirectory::GetOffset() const{
         return this->flags_offset & OFFSET_MASK;
     }
@@ -39,7 +40,7 @@ namespace Pages{
     }
 
     void SlotDirectory::SetFlag(const Flag otherFlag){
-        this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherFlag & FLAGS_MASK);
+        this->flags_offset = (this->flags_offset & OFFSET_MASK) | ((otherFlag << 14) & FLAGS_MASK);
     }
 
     inline SlotDirectory::Flag SlotDirectory::GetFlag() const{
@@ -114,7 +115,7 @@ namespace Pages{
     }
 
     SlotDirectory Page::GetSlotDirectory(const Int indexPosition) const{
-        auto slot = SlotDirectory(0, 0);
+        SlotDirectory slot;
         std::memcpy(&slot, this->data + this->SlotDirectoryOffSet(indexPosition), SlotDirectory::Size);
         return slot;
     }
@@ -129,9 +130,6 @@ namespace Pages{
 
         auto row = DatabaseEngine::StorageTypes::Row(*table);
         page_offset_t offSet = slot.GetOffset();
-
-        std::cout << "Materializing row at slot " << indexPosition << " offset: " << slot.GetOffset() << " size: " << slot.GetSize() << std::endl;
-
         row.SetId(this->header.pageId, indexPosition);
         row.ReadHeaderFromDisk(this->data, offSet);
         row.ReadDataFromDisk(this->data, offSet, columns);
@@ -155,7 +153,7 @@ namespace Pages{
             const auto leftSlot = donorPage->GetSlotDirectory(index);
             std::memcpy(this->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
 
-            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize());
+            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize(), SlotDirectory::SLOT_USED);
             this->InsertNewSlot(rightSlot);
 
             offset += leftSlot.GetSize();
@@ -177,7 +175,7 @@ namespace Pages{
             const auto leftSlot = donorPage->GetSlotDirectory(index);
             std::memcpy(this->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
 
-            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize());
+            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize(), SlotDirectory::SLOT_USED);
             this->InsertNewSlot(rightSlot);
 
             offset += leftSlot.GetSize();
@@ -231,7 +229,7 @@ namespace Pages{
             slotBytesToMove
         );
 
-        const auto slot = SlotDirectory(offset, slotSize);
+        const auto slot = SlotDirectory(offset, slotSize, SlotDirectory::SLOT_USED);
         this->UpdateSlotDirectory(slot, indexPosition);
     }
 
@@ -292,13 +290,19 @@ namespace Pages{
         this->data = nullptr;
     }
 
+    void Page::DeleteRow(const Int indexPosition) const{
+        auto slot = this->GetSlotDirectory(indexPosition);
+        slot.SetFlag(SlotDirectory::SLOT_DEAD);
+        this->UpdateSlotDirectory(slot, indexPosition);
+    }
+
     void Page::InsertFirstRow(DatabaseEngine::StorageTypes::Row*& row){
         const auto rowSize = row->TotalSize();
 
         page_offset_t pos = 0;
         row->Serialize(this->data, pos);
 
-        const auto newSlot = SlotDirectory(0, rowSize);
+        const auto newSlot = SlotDirectory(0, rowSize, SlotDirectory::SLOT_USED);
         this->InsertNewSlot(newSlot);
 
         this->header.size++;
@@ -318,7 +322,7 @@ namespace Pages{
         const auto offSetCopy = nextOffset;
         row->Serialize(this->data, nextOffset);
 
-        const auto newSlot = SlotDirectory(offSetCopy, rowSize);
+        const auto newSlot = SlotDirectory(offSetCopy, rowSize, SlotDirectory::SLOT_USED);
         this->InsertNewSlot(newSlot);
 
         this->header.size++;
@@ -370,7 +374,7 @@ namespace Pages{
         row->Serialize(this->data, nextOffset);
 
         //update slot directory
-        const auto newSlot = SlotDirectory(offSetCopy, currentRowSize);
+        const auto newSlot = SlotDirectory(offSetCopy, currentRowSize, SlotDirectory::SLOT_USED);
         this->UpdateSlotDirectory(newSlot, indexPosition);
 
         //update bytes
