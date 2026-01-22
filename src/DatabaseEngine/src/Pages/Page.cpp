@@ -7,6 +7,54 @@
 #include "../../include/BufferPool/StorageManager.h"
 
 namespace Pages{
+    SlotDirectory::SlotDirectory(){
+        this->flags_offset = 0;
+        this->size = 0;
+    }
+
+    SlotDirectory::SlotDirectory(
+        const UnsignedSmallInt offset,
+        const UnsignedSmallInt size,
+        const Flag flag
+    ){
+        this->SetOffset(offset);
+        this->SetSize(size);
+        this->SetFlag(flag);
+    }
+
+    void SlotDirectory::SetOffset(const UnsignedSmallInt otherOffset){
+        this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherOffset & OFFSET_MASK);
+    }
+
+    inline UnsignedSmallInt SlotDirectory::GetOffset() const{
+        return this->flags_offset & OFFSET_MASK;
+    }
+
+    void SlotDirectory::SetSize(const UnsignedSmallInt otherSize){
+        this->size = otherSize;
+    }
+
+    inline UnsignedSmallInt SlotDirectory::GetSize() const{
+        return this->size;
+    }
+
+    void SlotDirectory::SetFlag(const Flag otherFlag){
+        this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherFlag & FLAGS_MASK);
+    }
+
+    inline SlotDirectory::Flag SlotDirectory::GetFlag() const{
+        return static_cast<Flag>((this->flags_offset & FLAGS_MASK) >> 14);
+    }
+
+    bool SlotDirectory::Empty() const { return this->GetFlag() == SLOT_EMPTY; }
+    bool SlotDirectory::Used() const { return this->GetFlag() == SLOT_USED; }
+    bool SlotDirectory::ForwardPointer() const { return this->GetFlag() == SLOT_FORWARDED; }
+    bool SlotDirectory::Dead() const { return this->GetFlag() == SLOT_DEAD; }
+
+    bool SlotDirectory::Default() const{
+        return this->flags_offset == 0 && this->size == 0;
+    }
+
     PageHeader::PageHeader(){
         this->type = PageType::DATA;
         this->pageId = INVALID_PAGE_ID;
@@ -65,12 +113,6 @@ namespace Pages{
         return PAGE_SIZE_WITHOUT_HEADER;
     }
 
-    void Page::WriteRowToDisk(fstream* filePtr, const Pointer<DatabaseEngine::StorageTypes::Row>& row){
-        row->WriteHeaderToDisk(filePtr);
-        row->WriteVersionHeaderToDisk(filePtr);
-        row->WriteDataToDisk(filePtr);
-    }
-
     SlotDirectory Page::GetSlotDirectory(const Int indexPosition) const{
         auto slot = SlotDirectory(0, 0);
         std::memcpy(&slot, this->data + this->SlotDirectoryOffSet(indexPosition), SlotDirectory::Size);
@@ -79,20 +121,19 @@ namespace Pages{
 
     DatabaseEngine::StorageTypes::Row Page::MaterializeRow(
         const DatabaseEngine::StorageTypes::Table* table,
-        const Int indexId
+        const Int indexPosition
     ) const{
-        const auto slot = this->GetSlotDirectory(indexId);
+        const auto slot = this->GetSlotDirectory(indexPosition);
 
         const auto& columns = table->GetColumns();
 
         auto row = DatabaseEngine::StorageTypes::Row(*table);
-        page_offset_t offSet = slot.offset;
+        page_offset_t offSet = slot.GetOffset();
 
-        std::cout << "Materializing row at slot " << indexId << " offset: " << slot.offset << " size: " << slot.size << std::endl;
+        std::cout << "Materializing row at slot " << indexPosition << " offset: " << slot.GetOffset() << " size: " << slot.GetSize() << std::endl;
 
-        row.SetId(this->header.pageId, indexId);
+        row.SetId(this->header.pageId, indexPosition);
         row.ReadHeaderFromDisk(this->data, offSet);
-        row.ReadVersionHeaderFromDisk(this->data, offSet);
         row.ReadDataFromDisk(this->data, offSet, columns);
 
         return row;
@@ -104,6 +145,74 @@ namespace Pages{
 
     void Page::InsertNewSlot(const SlotDirectory slotDirectory) const{
         std::memcpy(this->data + this->SlotDirectoryOffSet(this->header.size), &slotDirectory, SlotDirectory::Size);
+    }
+
+    void Page::DistributeFromPage(Page* donorPage, const Int numberOfSlotsToMove, const Int donorResizeVariant){
+        const auto* leftData = donorPage->GetData();
+        page_offset_t offset = this->NewInsertOffset();
+
+        for (Int index = numberOfSlotsToMove; index < donorPage->GetPageSize(); index++){
+            const auto leftSlot = donorPage->GetSlotDirectory(index);
+            std::memcpy(this->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
+
+            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize());
+            this->InsertNewSlot(rightSlot);
+
+            offset += leftSlot.GetSize();
+            this->header.size++;
+        }
+
+        this->header.bytesLeft -= this->header.size * SlotDirectory::Size + offset;
+        this->isDirty = true;
+
+        donorPage->Resize(donorResizeVariant);
+        donorPage->Defragment();
+    }
+
+    void Page::DistributeFromBeginningOfPage(Page* donorPage, const Int numberOfSlotsToMove, const Int donorResizeVariant){
+        const auto* leftData = donorPage->GetData();
+        page_offset_t offset = this->NewInsertOffset();
+
+        for (Int index = 0; index < numberOfSlotsToMove; index++){
+            const auto leftSlot = donorPage->GetSlotDirectory(index);
+            std::memcpy(this->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
+
+            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize());
+            this->InsertNewSlot(rightSlot);
+
+            offset += leftSlot.GetSize();
+            this->header.size++;
+            this->header.bytesLeft -= leftSlot.GetSize() + SlotDirectory::Size;
+        }
+
+        this->isDirty = true;
+
+        donorPage->Resize(donorResizeVariant);
+        donorPage->Defragment();
+    }
+
+    void Page::Resize(const Int size){
+        for (int i = size; i < this->header.size; i++){
+            const auto slot = this->GetSlotDirectory(i);
+            this->header.bytesLeft += slot.GetSize() + SlotDirectory::Size;
+        }
+
+        this->header.size = size;
+        this->isDirty = true;
+    }
+
+    void Page::ResizeFromBeginning(const Int size){
+        //mark slots as deleted from the beginning use flags
+        for (int i = 0; i < this->header.size; i++){
+            auto slot = this->GetSlotDirectory(i);
+            this->header.bytesLeft += slot.GetSize() + SlotDirectory::Size;
+
+            slot.SetSize(0);
+            this->UpdateSlotDirectory(slot, i);
+        }
+
+        this->header.size = size;
+        this->isDirty = true;
     }
 
     bool Page::IndexOutOfBounds(const Int indexPosition) const{
@@ -189,9 +298,6 @@ namespace Pages{
         page_offset_t pos = 0;
         row->Serialize(this->data, pos);
 
-        column_number_t val = 0;
-        std::memcpy(&val, this->data, sizeof(column_number_t));
-
         const auto newSlot = SlotDirectory(0, rowSize);
         this->InsertNewSlot(newSlot);
 
@@ -247,12 +353,12 @@ namespace Pages{
 
         const auto slot = this->GetSlotDirectory(indexPosition);
 
-        const auto previousRowSize = slot.size;
+        const auto previousRowSize = slot.GetSize();
         const auto currentRowSize = row->TotalSize();
 
         //if new row size is less than or equal to previous row size, update in place
         if (currentRowSize <= previousRowSize){
-            page_offset_t pos = slot.offset;
+            page_offset_t pos = slot.GetOffset();
             row->Serialize(this->data, pos);
             return;
         }
@@ -365,7 +471,7 @@ namespace Pages{
 
     void Page::UpdateBytesLeft(){
         const auto lastSlot = this->GetSlotDirectory(this->header.size - 1);
-        const auto usedBytes = lastSlot.offset + lastSlot.size + (this->header.size * SlotDirectory::Size);
+        const auto usedBytes = lastSlot.GetOffset() + lastSlot.GetSize() + (this->header.size * SlotDirectory::Size);
 
         this->header.bytesLeft = PAGE_SIZE_WITHOUT_HEADER - usedBytes;
         this->isDirty = true;
@@ -397,40 +503,6 @@ namespace Pages{
 
     PageType Page::GetPageType() const { return this->header.type; }
 
-    // int Page::GetRows(
-    //     std::vector<Pointer<DatabaseEngine::StorageTypes::Row>> *result,
-    //     const size_t &rowsToSelect,
-    //     const int32_t& startingPosition
-    // ) const
-    // {
-    //     if (startingPosition >= this->rows.size())
-    //         return -1;
-    //
-    //     for (int i = startingPosition; i < this->rows.size(); i++) {
-    //         result->push_back(this->rows.at(i));
-    //
-    //         if (result->size() == rowsToSelect)
-    //             return i;
-    //     }
-    //
-    //     return static_cast<int>(this->rows.size() - 1);
-    // }
-
-    // void Page::GetRowByIndex(std::vector<DatabaseEngine::StorageTypes::Row>* rows, const DatabaseEngine::StorageTypes::Table &table, const int &indexPosition) const
-    // {
-    //     const auto &row = this->rows[indexPosition];
-    //
-    //     const DatabaseEngine::StorageTypes::RowHeader *rowHeader = row->GetHeader();
-    //
-    //     std::vector<DatabaseEngine::StorageTypes::Block *> copyBlocks = row->GetBlockCopies();
-    //
-    //     rows->emplace_back(table, copyBlocks, rowHeader->nullBitMap);
-    // }
-    //
-    // DatabaseEngine::StorageTypes::Row* Page::GetRow(const int &indexPosition)const{
-    //     return this->MaterializeRow()
-    // }
-
     DatabaseEngine::StorageTypes::Row Page::GetRow(const DatabaseEngine::StorageTypes::Table* table, const Int indexPosition) const{
         return this->MaterializeRow(table, indexPosition);
     }
@@ -453,20 +525,20 @@ namespace Pages{
         for (Int i = 0;i < this->header.size;i++){
             auto slot = defragmentationSlots[i];
 
-            if (slot.slotDirectory.offset == offset){
-                offset += slot.slotDirectory.size;
+            if (slot.slotDirectory.GetOffset() == offset){
+                offset += slot.slotDirectory.GetSize();
                 continue;
             }
 
             std::memmove(
                 this->data + offset,
-                this->data + slot.slotDirectory.offset,
-                slot.slotDirectory.size
+                this->data + slot.slotDirectory.GetOffset(),
+                slot.slotDirectory.GetSize()
             );
 
-            slot.slotDirectory.offset = offset;
+            slot.slotDirectory.SetOffset(offset);
             this->UpdateSlotDirectory(slot.slotDirectory, slot.indexPosition);
-            offset += slot.slotDirectory.size;
+            offset += slot.slotDirectory.GetSize();
         }
 
         const auto usedBytes = offset + (this->header.size * SlotDirectory::Size);
@@ -517,4 +589,6 @@ namespace Pages{
     MultiThreading::ReadWriteMutex & Page::Latch() const {
         return this->latch;
     }
+
+    object_t* Page::GetData() const{ return this->data; }
 }

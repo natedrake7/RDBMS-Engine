@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include <cstdint>
 #include <cstddef>
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataTypes/PackedByte.h"
@@ -20,19 +19,19 @@ namespace Constants{
     constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
     constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
 
-    enum class AlterTableType: uint8_t {
+    enum class AlterTableType: UnsignedTinyInt {
         AddColumn = 0,
         AlterColumn = 1,
         DropColumn = 2,
         RenameColumn = 3,
     };
 
-    enum OrderType : uint8_t {
+    enum OrderType : UnsignedTinyInt {
         ASCENDING = 0,
         DESCENDING = 1,
     };
 
-    enum AggregateFunction: uint8_t {
+    enum AggregateFunction: UnsignedTinyInt {
         NONE = 0,
         SUM = 1,
         AVERAGE = 2,
@@ -41,7 +40,7 @@ namespace Constants{
         MAX = 5
     };
 
-    enum class PageType : uint8_t{
+    enum class PageType : UnsignedTinyInt{
         DATA = 0,
         IAM = 1,
         LOB = 2,
@@ -53,29 +52,29 @@ namespace Constants{
         UNDO = 8
     };
 
-    enum class PagePriority : uint8_t{
+    enum class PagePriority : UnsignedTinyInt{
         LOW = 0,
         MEDIUM = 1,
         HIGH = 2,
         SYSTEM = 3,
     };
 
-    enum class TableType : uint8_t{
+    enum class TableType : UnsignedTinyInt{
         HEAP = 0,
         CLUSTERED = 1,
     };
 
-    enum TreeType : uint8_t {
+    enum TreeType : UnsignedTinyInt {
         Clustered = 0,
         NonClustered = 1
     };
 
-    constexpr uint16_t OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
-    constexpr uint16_t PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t) + sizeof(PageType);
-    constexpr uint16_t OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
+    constexpr UnsignedSmallInt OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
+    constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t) + sizeof(PageType);
+    constexpr UnsignedSmallInt OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
 
-    constexpr uint16_t PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - 7;
-    constexpr uint16_t NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
+    constexpr UnsignedSmallInt PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - 7;
+    constexpr UnsignedSmallInt NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
     constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
     constexpr page_size_t INDEX_PAGE_SIBLINGS_SIZE = 2 * sizeof(page_id_t);
 	static constexpr UnsignedTinyInt MAX_NUMBER_OF_SUB_KEYS = 7;
@@ -83,17 +82,20 @@ namespace Constants{
     constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = 3 * sizeof(page_id_t) + PackedByte::Size + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);
     constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE - INDEX_PAGE_SIBLINGS_SIZE;
 
-    constexpr uint16_t GAM_PAGE_SIZE = 64000;
-    constexpr uint32_t GAM_NUMBER_OF_PAGES = 64000 * 8;
+    constexpr UnsignedSmallInt GAM_PAGE_SIZE = 64000;
+    constexpr UnsignedInt GAM_NUMBER_OF_PAGES = 64000 * 8;
     constexpr page_id_t HEADER_PAGE_ID = 0;
 
-    constexpr int32_t CATALOG_ID = 1;
+    constexpr Int CATALOG_ID = 1;
 
     constexpr page_id_t NEXT_GAM_PAGE_ID_OFFSET = (GAM_NUMBER_OF_PAGES + PAGE_FREE_SPACE_SIZE - 1) / PAGE_FREE_SPACE_SIZE + 1;
 
-    constexpr row_header_size_t ROW_VERSION_HEADER_SIZE = 2 * sizeof(transaction_id_t) + sizeof(page_id_t) + sizeof(page_offset_t);
+    constexpr Int ROW_VERSION_HEADER_SIZE = 2 * sizeof(transaction_id_t) + sizeof(page_id_t) + sizeof(page_offset_t);
 
-    enum class FunctionType : uint8_t {
+    constexpr Int LARGE_OBJECT_POINTER_SIZE = sizeof(page_id_t);
+    constexpr Int OVERFLOW_POINTER_TOTAL_SIZE = sizeof(page_id_t) + sizeof(page_offset_t);
+
+    enum class FunctionType : UnsignedTinyInt {
         // -----------------------
         // Date/Time Functions
         // -----------------------

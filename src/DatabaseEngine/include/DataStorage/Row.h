@@ -4,8 +4,7 @@
 #include "../../../QueryPipeline/include/Statements.h"
 #include "../../../Systemic/include/Errors.h"
 #include "../Pages/Page.h"
-#include "../Pages/LargeObjectPage.h"
-
+#include "../../../Systemic/include/DataStructures/BitMap.h"
 
 namespace DatabaseEngine {
     struct Snapshot;
@@ -37,172 +36,167 @@ namespace DatabaseEngine::StorageTypes
         }
 
         [[nodiscard]] bool HasOlderVersion()const { return this->olderVersionPointer.pageId != INVALID_PAGE_ID; }
+
+        static constexpr row_header_size_t Size = sizeof(transaction_id_t) * 2 + sizeof(page_id_t) + sizeof(page_offset_t);
     };
 
     struct RowHeader{
-        table_id_t tableId;
-        column_number_t numberOfColumns;
+        ByteMaps::BitMap nullBitMap;
+        ByteMaps::BitMap largeObjectBitMap;
+        ByteMaps::BitMap overflowBitMap;
 
-        ByteMaps::BitMap *nullBitMap;
-        ByteMaps::BitMap *largeObjectBitMap;
-        ByteMaps::BitMap *overflowBitMap;
+        RowVersioningHeader version;
 
-        RowHeader();
-        ~RowHeader();
-        RowHeader& operator= (const RowHeader& otherHeader);
-    };
-
-    struct CachedValue {
-        Value value;
-        bool isMaterialized;
-
-        CachedValue();
+        RowHeader& operator=(const RowHeader& otherHeader);
     };
 
     class Row{
-        RowHeader header;
         Headers::RowIdentifier Id;
-        RowVersioningHeader versionHeader;
+        RowHeader header;
 
         std::vector<Block*> data;
 
-        // mutable std::vector<CachedValue> cache;
         const Table *table;
 
-        bool isCopy;
-
-        // [[nodiscard]] bool IsBlockMaterialized(const int& indexPos)const;
-        // [[nodiscard]] const Value& GetMaterializedValue(const int& indexPos)const;
         [[nodiscard]] Value Materialize(Int indexPos)const;
+        [[nodiscard]] bool IsDeleted(const Snapshot& snapshot)const;
 
-        bool IsDeleted(const Snapshot& snapshot)const;
+        inline void WriteVersionToBuffer(object_t*& buffer, page_offset_t& offSet)const;
+        inline void WriteVersionToBuffer(std::vector<char>& buffer, page_offset_t& offSet)const;
 
     public:
-        explicit Row(const Table &table);
+        /**
+         * @name Constructors - Destructors Functions
+         * Constructor and Destructor functions
+         * @{
+         */
+            explicit Row();
+            explicit Row(const Table &table);
+            explicit Row(const std::vector<const Column*>& columns);
+            explicit Row(
+                const Table &table,
+                const std::vector<Block *> &data,
+                const ByteMaps::BitMap* nullBitMap
+            );
+            explicit Row(const Row* row);
 
-        explicit Row(
-            const Table &table,
-            const vector<Block *> &data,
-            const ByteMaps::BitMap* nullBitMap
-        );
+            Row(const Row &copyRow);
+            Row(Row &&otherRow)noexcept;
 
-        //constructors
-        explicit Row();
-        explicit Row(const Row* row);
-        Row(const Row &copyRow);
-        Row(Row &&otherRow)noexcept;
-        explicit Row(const std::vector<const Column*>& columns);
+            Row& operator=(const Row &copyRow);
+            Row& operator=(Row &&otherRow) noexcept;
 
-        //assignment operators
-        Row& operator=(const Row &copyRow);
-        Row& operator=(Row &&otherRow) noexcept;
+            ~Row();
+        /** @} End of Constructors - Destructors Functions */
 
-        ~Row();
+        /**
+         * @name Logging Functions
+         * Logging and debugging functions
+         * @{
+         */
+            void Print() const;
+            friend std::ostream& operator<<(std::ostream& os, const Row& row);
+        /** @} End of Logging Functions */
 
-        void InsertColumnData(Block *block, column_index_t columnIndex);
+        /**
+         * @name Helper Functions
+         * General helper functions for row operations
+         * @{
+         */
+            RowHeader* GetHeader();
+            [[nodiscard]] row_size_t TotalSize() const;
+            [[nodiscard]] row_header_size_t GetHeaderSize() const;
+            [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
+            [[nodiscard]] bool IsVisibleForTransaction(const Snapshot& snapshot) const;
+            [[nodiscard]] QueryResult AsQueryResult()const;
+            [[nodiscard]] bool IsInvalid()const;
+            [[nodiscard]] bool HasOlderVersion()const;
+        /** @} End of Helper Functions */
 
-        //used by versionDb
-        void InsertColumnAtEnd(Block* block);
+        /**
+         * @name Join Functions
+         * Functions used during join operations
+         * @{
+         */
+            void Join(const Row* row);
+            void LeftJoin(const std::vector<const Column*>& innerTableColumns);
+            void RightJoin(const std::vector<const Column*>& innerTableColumns);
+        /** @} End of Join Functions */
 
-        //primarily used by the join operation
-        Int InsertNewColumn(Block* block);
+        /**
+         * @name Insert - Update Functions
+         * Functions to insert or update row blocks
+         * @{
+         */
+            //User primarily by Version Database
+            void InsertColumnAtEnd(Block* block);
+            void InsertColumnData(Block *block, column_index_t columnIndex);
+            //primarily used by the join operation
+            Int InsertNewColumn(Block* block);
+            Int InsertNewColumnAtBeginning(Block* block);
+            void UpdateColumnData(Block *block);
 
-        Int InsertNewColumnAtBeginning(Block* block);
+            [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<Value> & updates, int& diff);
+            [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff);
+        /** @} End of Insert - Update Functions */
 
-        void UpdateColumnData(Block *block);
+        /**
+         * @name Data Retrieval Functions
+         * Functions to retrieve data from the row
+         * @{
+         */
+            [[nodiscard]] Value GetColumnByIndex(Int indexPos) const;
 
-        [[nodiscard]] const std::vector<Block *> &GetData() const;
+            [[nodiscard]] const std::vector<Block *> &GetData() const;
+            [[nodiscard]] std::vector<Block *> &GetData();
 
-        [[nodiscard]] std::vector<Block *> &GetData();
+            [[nodiscard]] std::vector<column_index_t> GetLargeBlocks()const;
+            unsigned char *GetLargeObjectValue(page_id_t pageId, UnsignedInt *objectSize) const;
+            [[nodiscard]] Block* GetLargeObject(page_id_t pageId, const Column* column)const;
 
-        void Print() const;
+            [[nodiscard]] Pages::OverflowRow* GetOverflowValue(const Pages::OverflowPointer &objectPointer) const;
 
-        [[nodiscard]] std::vector<column_index_t> GetLargeBlocks()const;
+            [[nodiscard]] Row GetVisibleVersionForTransaction(const Snapshot& snapshot)const;
+        /** @} End of Data Retrieval Functions */
 
-        unsigned char *GetLargeObjectValue(const Pages::DataObjectPointer &objectPointer, UnsignedInt *objectSize) const;
+        /**
+         * @name Metadata Functions
+         * Functions to set and retrieve metadata information
+         * @{
+         */
+            void SetId(page_id_t pageId, Int indexId);
 
-        [[nodiscard]] Block* GetLargeObject(const Pages::DataObjectPointer &objectPointer, const Column* column)const;
+            void SetCurrentTransactionId(transaction_id_t transactionId);
+            void SetDeletedTransactionId(transaction_id_t transactionId);
+            void SetOlderVersionPointer(page_id_t pageId, page_offset_t offset);
 
-        [[nodiscard]] Pages::OverflowRow* GetOverflowValue(const Pages::OverflowPointer &objectPointer) const;
+            void SetNullBitMapValue(bit_map_pos_t position, bool value);
+            void SetOverflowBitMapValue(bit_map_pos_t position, bool value);
 
-        void SetNullBitMapValue(bit_map_pos_t position, bool value) const;
+            [[nodiscard]] const Headers::RowIdentifier& GetId() const;
 
-        void SetOverflowBitMapValue(bit_map_pos_t position, bool value) const;
+            [[nodiscard]] bool GetNullBitMapValue(bit_map_pos_t position) const;
+            [[nodiscard]] bool GetOverflowBitMapValue(bit_map_pos_t position) const;
 
-        [[nodiscard]] bool GetNullBitMapValue(bit_map_pos_t position) const;
+            [[nodiscard]] const Table* GetTable()const;
+        /** @} End of Metadata Functions */
 
-        [[nodiscard]] bool GetOverflowBitMapValue(bit_map_pos_t position) const;
+        /**
+         * @name Serialization Functions
+         * Functions to serialize and deserialize rows to and from disk
+         * @{
+         */
+            void Serialize(std::vector<char>* buffer, page_offset_t& pos)const;
+            void Serialize(object_t*& buffer, page_offset_t &offSet)const;
+            void WriteHeaderToBuffer(object_t*& buffer, page_offset_t& offSet)const;
+            void WriteHeaderToBuffer(std::vector<char>& buffer, page_offset_t& offSet)const;
 
-        RowHeader* GetHeader();
-
-        [[nodiscard]] row_size_t TotalSize() const;
-
-        [[nodiscard]] row_header_size_t GetHeaderSize() const;
-
-        [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<Value> & updates, int& diff)const;
-
-        [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<QueryPipeline::Statements::UpdateColumn*> & updates, int& diff)const;
-
-        [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
-
-        [[nodiscard]] std::vector<Block*> GetBlockCopies() const;
-
-        [[nodiscard]] Value GetColumnByIndex(Int indexPos) const;
-
-        void Join(const Row* row);
-
-        void LeftJoin(const std::vector<const Column*>& innerTableColumns);
-
-        void RightJoin(const std::vector<const Column*>& innerTableColumns);
-
-        [[nodiscard]] const bool& IsCopy()const;
-
-        friend std::ostream& operator<<(std::ostream& os, const Row& row);
-
-        void SetCurrentTransactionId(transaction_id_t transactionId);
-
-        void SetDeletedTransactionId(transaction_id_t transactionId);
-
-        void SetOlderVersionPointer(page_id_t pageId, page_offset_t offset);
-
-        [[nodiscard]] Row GetVisibleVersionForTransaction(const Snapshot& snapshot)const;
-
-        bool IsVisibleForTransaction(const Snapshot& snapshot) const;
-
-        void SetId(page_id_t pageId, Int indexId);
-
-        [[nodiscard]] const Headers::RowIdentifier& GetId() const;
-
-        const RowVersioningHeader& GetVersionHeader() const;
-
-        bool HasOlderVersion()const;
-
-        const Table* GetTable()const;
-
-        //Getters Setters Serializers etc
-
-        void Serialize(std::vector<char>* buffer, page_offset_t& pos)const;
-
-        void Serialize(object_t*& buffer, page_offset_t &offSet)const;
-
-        void Deserialize(const std::vector<char>* buffer, page_offset_t& pos);
-
-        void ReadHeaderFromDisk(const object_t* buffer, page_offset_t &offSet);
-
-        void ReadVersionHeaderFromDisk(const object_t* buffer, page_offset_t &offSet);
-
-        void ReadDataFromDisk(const object_t* buffer, page_offset_t &offSet, const std::vector<Column*>& columns);
-
-        void ReadDataFromDisk(const object_t*& buffer, page_offset_t &offSet);
-
-        void WriteHeaderToDisk(fstream* filePtr)const;
-
-        void WriteVersionHeaderToDisk(fstream* filePtr)const;
-
-        void WriteDataToDisk(fstream* filePtr)const;
-
-        QueryResult AsQueryResult()const;
-
-        [[nodiscard]] bool IsInvalid()const;
+            void Deserialize(const std::vector<char>& buffer, page_offset_t& pos);
+            static inline RowVersioningHeader PeakVersionHeaderFromDisk(const object_t* buffer, page_offset_t offSet);
+            inline void ReadVersionHeaderFromDisk(const object_t* buffer, page_offset_t &offSet);
+            inline void ReadVersionHeaderFromDisk(const std::vector<char>& buffer, page_offset_t &offSet);
+            void ReadHeaderFromDisk(const object_t* buffer, page_offset_t &offSet);
+            void ReadDataFromDisk(const object_t* buffer, page_offset_t &offSet, const std::vector<Column*>& columns);
+        /** @} End of Serialization Functions */
     };
 }

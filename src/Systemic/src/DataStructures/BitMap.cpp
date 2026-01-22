@@ -52,7 +52,7 @@ namespace ByteMaps
     }
 
     void BitMap::GetDataFromFile(const object_t*& buffer, page_offset_t &offset){
-        memcpy(&this->size, buffer + offset, sizeof(bit_map_size_t));
+        std::memcpy(&this->size, buffer + offset, sizeof(bit_map_size_t));
         offset += sizeof(bit_map_size_t);
 
         const bit_map_size_t &bytesToRead = (this->size + 7) / 8;
@@ -63,7 +63,7 @@ namespace ByteMaps
         for (bit_map_size_t i = 0; i < bytesToRead; i++)
         {
             byte_t value;
-            memcpy(&value, buffer + offset, sizeof(byte_t));
+            std::memcpy(&value, buffer + offset, sizeof(byte_t));
             this->SetByte(i, value);
 
             offset += sizeof(byte_t);
@@ -71,7 +71,7 @@ namespace ByteMaps
     }
 
     void BitMap::GetDataFromFile(const std::vector<char> &buffer, page_offset_t &offset){
-        memcpy(&this->size, buffer.data() + offset, sizeof(bit_map_size_t));
+        std::memcpy(&this->size, buffer.data() + offset, sizeof(bit_map_size_t));
         offset += sizeof(bit_map_size_t);
 
         const bit_map_size_t &bytesToRead = (this->size + 7) / 8;
@@ -82,7 +82,7 @@ namespace ByteMaps
         for (bit_map_size_t i = 0; i < bytesToRead; i++)
         {
             byte_t value;
-            memcpy(&value, buffer.data() + offset, sizeof(byte_t));
+            std::memcpy(&value, buffer.data() + offset, sizeof(byte_t));
             this->SetByte(i, value);
 
             offset += sizeof(byte_t);
@@ -95,30 +95,40 @@ namespace ByteMaps
     }
 
     void BitMap::WriteDataToFile(std::vector<char>* buffer, page_offset_t& pos)const{
-        memcpy(buffer->data() + pos, &this->size, sizeof(bit_map_size_t));
+        std::memcpy(buffer->data() + pos, &this->size, sizeof(bit_map_size_t));
         pos += sizeof(bit_map_size_t);
 
-        memcpy(buffer->data() + pos, this->data.data(), this->data.size() * sizeof(byte_t));
+        std::memcpy(buffer->data() + pos, this->data.data(), this->data.size() * sizeof(byte_t));
         pos += this->data.size() * sizeof(byte_t);
     }
 
     void BitMap::WriteDataToBuffer(char *&buffer) const{
-        memcpy(buffer, &this->size, sizeof(bit_map_size_t));
+        std::memcpy(buffer, &this->size, sizeof(bit_map_size_t));
         buffer += sizeof(bit_map_size_t);
 
         const int dataSize = this->data.size() * sizeof(byte_t);
         
-        memcpy(buffer, this->data.data(), dataSize);
+        std::memcpy(buffer, this->data.data(), dataSize);
         buffer += dataSize;
     }
 
     void BitMap::WriteDataToBuffer(object_t*& buffer, page_offset_t& offSet) const{
-        memcpy(buffer + offSet, &this->size, sizeof(bit_map_size_t));
+        std::memcpy(buffer + offSet, &this->size, sizeof(bit_map_size_t));
         offSet += sizeof(bit_map_size_t);
 
         const int dataSize = this->data.size() * sizeof(byte_t);
 
-        memcpy(buffer + offSet, this->data.data(), dataSize);
+        std::memcpy(buffer + offSet, this->data.data(), dataSize);
+        offSet += dataSize;
+    }
+
+    void BitMap::WriteDataToBuffer(std::vector<char>& buffer, page_offset_t& offSet) const {
+        std::memcpy(buffer.data() + offSet, &this->size, sizeof(bit_map_size_t));
+        offSet += sizeof(bit_map_size_t);
+
+        const int dataSize = this->data.size() * sizeof(byte_t);
+
+        std::memcpy(buffer.data() + offSet, this->data.data(), dataSize);
         offSet += dataSize;
     }
 
@@ -127,6 +137,10 @@ namespace ByteMaps
             std::cout << this->Get(i);
 
         std::cout << std::endl;
+    }
+
+    bool BitMap::Empty() const{
+        return this->size == 0;
     }
 
     const std::vector<byte_t>& BitMap::GetData() const { return this->data; }

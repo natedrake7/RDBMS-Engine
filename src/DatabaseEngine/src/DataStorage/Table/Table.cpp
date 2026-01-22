@@ -707,28 +707,28 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-    void Table::DeleteLargeObjectFromPage( Row*& row, const HashSet<column_index_t>& updatedColumns)const{
+    void Table::DeleteLargeObjectFromPage( Row*& row, const HashSet<column_index_t>& updatedColumns){
       const auto& filename = this->database->GetFileName();
 
-      const RowHeader* rowHeader = row->GetHeader();
+      auto* rowHeader = row->GetHeader();
 
       for(const auto& block : row->GetData()){
         const auto& columnIndex = block->ColumnIndex();
 
         if(!updatedColumns.Contains(columnIndex)
-          || !rowHeader->largeObjectBitMap->Get(columnIndex))
+          || !rowHeader->largeObjectBitMap.Get(columnIndex))
           continue;
 
-        rowHeader->largeObjectBitMap->Set(columnIndex, false);
+        rowHeader->largeObjectBitMap.Set(columnIndex, false);
 
         auto objectPointer = block->AsLargeObjectPointer();
 
-        auto largeObjectPage = Storage::StorageManager::Get().GetLargeDataPage(filename, objectPointer.pageId, this);
+        auto largeObjectPage = Storage::StorageManager::Get().GetLargeDataPage(filename, objectPointer, this);
 
         auto* objectPtr = largeObjectPage->DeleteObject();
 
         {
-          auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
+          auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer);
 
           MultiThreading::WriterGuard lock(&pfsPage->Latch());
 
@@ -744,7 +744,7 @@ namespace DatabaseEngine::StorageTypes {
             objectPtr = nextLargeObjectPage->DeleteObject();
 
             {
-              auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer.pageId);
+              auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer);
 
               MultiThreading::WriterGuard lock(&pfsPage->Latch());
 
@@ -760,16 +760,16 @@ namespace DatabaseEngine::StorageTypes {
     void Table::DeleteOverflowedRowsFromPage( Row*& row, const HashSet<column_index_t> & updatedColumns)const{
       const auto& filename = this->database->GetFileName();
 
-      const RowHeader* rowHeader = row->GetHeader();
+      auto* rowHeader = row->GetHeader();
 
       for(const auto& block : row->GetData()){
         if(!updatedColumns.Contains(block->ColumnIndex())
-          || !rowHeader->overflowBitMap->Get(block->ColumnIndex()))
+          || !rowHeader->overflowBitMap.Get(block->ColumnIndex()))
             continue;
 
-        rowHeader->overflowBitMap->Set(block->ColumnIndex(), false);
+        rowHeader->overflowBitMap.Set(block->ColumnIndex(), false);
 
-        auto objectPointer = block->AsOverflowPointer();
+        const auto objectPointer = block->AsOverflowPointer();
 
         auto overflowPage = Storage::StorageManager::Get().GetOverflowPage(filename, objectPointer.pageId, this);
 
@@ -1214,7 +1214,7 @@ namespace DatabaseEngine::StorageTypes {
 
         for (const auto &column : this->columns)
             maximumRowSize += column->isColumnLOB()
-                ? sizeof(Pages::DataObjectPointer)
+                ? Constants::LARGE_OBJECT_POINTER_SIZE
                 : column->GetColumnSize();
 
         return maximumRowSize;
@@ -1236,9 +1236,9 @@ namespace DatabaseEngine::StorageTypes {
         const auto& columnSize = column->GetColumnSize();
 
         if (column->isColumnOverflowed())
-          maximumRowSize += sizeof(Pages::OverflowPointer);
+          maximumRowSize += Constants::OVERFLOW_POINTER_SIZE;
         else if (column->isColumnLOB())
-          maximumRowSize += sizeof(Pages::DataObjectPointer);
+          maximumRowSize += Constants::LARGE_OBJECT_POINTER_SIZE;
         else
           maximumRowSize += columnSize;
 
@@ -1253,7 +1253,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
       maximumRowSize -= largestVariableLengthColumnSize;
-      maximumRowSize += sizeof(Pages::OverflowPointer);
+      maximumRowSize += Constants::OVERFLOW_POINTER_SIZE;
 
       if (largestColumn != nullptr)
         largestColumn->SetIsOverflowed(true);
@@ -1277,7 +1277,7 @@ namespace DatabaseEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    int Table::HandleRowOverflow(const Row* row)const{
+    int Table::HandleRowOverflow(Row* row) const{
       auto* largestBlock = row->FindLargestVariableLengthColumn();
 
       if(largestBlock == nullptr)
@@ -1295,7 +1295,7 @@ namespace DatabaseEngine::StorageTypes {
       pfsPage->SetPageMetaData(overflowPage.Get());
 
       const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
-      largestBlock->SetData(&ptr, sizeof(Pages::OverflowPointer));
+      largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
 
       return largestBlock->Size();
     }
@@ -1322,7 +1322,7 @@ namespace DatabaseEngine::StorageTypes {
         pfsPage->SetPageMetaData(overflowPage.Get());
 
         const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
-        largestBlock->SetData(&ptr, sizeof(Pages::OverflowPointer));
+        largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
 
         return largestBlock->Size();
     }

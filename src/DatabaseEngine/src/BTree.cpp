@@ -178,17 +178,11 @@ namespace Indexing{
     )const {
         // Move the middle key from the child to the parent
         const auto childKey = child->GetKey(this->degree);
-
         parent->InsertChild(newChild->GetPageId(), &childKey, index + 1);
 
         // Assign the second half of the child's keys to the new child
         if (this->type == TreeType::Clustered) {
-            for (Int i = this->degree; i < child->GetPageSize(); i++){
-                auto tuple = child->GetLeafTuple(this->table, i);
-                newChild->InsertTuple(tuple);
-            }
-
-            child->Resize(this->degree);
+            newChild->DistributeFromPage(child.Get(), this->degree, this->degree);
             BTree::AssignLeavesConnections(child, newChild);
             return;
         }
@@ -214,19 +208,19 @@ namespace Indexing{
         const Int index
     ) const {
         const auto childKey = child->GetKey(this->degree - 1);
-
         parent->InsertChild(newChild->GetPageId(), &childKey, index + 1);
 
         const auto middleChild = child->GetChild(this->degree);
         newChild->InsertChild(middleChild);
 
-        for (Int i = this->degree; i < child->GetPageSize(); i++){
-            auto tuple = child->GetInternalNodeTuple(i);
-            newChild->InsertChild(tuple.pageId, &tuple.key);
-        }
-
-        //resize child
-        child->Resize(this->degree - 1);
+        newChild->DistributeFromPage(child.Get(), this->degree, this->degree - 1);
+        // for (Int i = this->degree; i < child->GetPageSize(); i++){
+        //     auto tuple = child->GetInternalNodeTuple(i);
+        //     newChild->InsertChild(tuple.pageId, &tuple.key);
+        // }
+        //
+        // //resize child
+        // child->Resize(this->degree - 1);
     }
 
     void BTree::SplitChildNoLock(
@@ -273,8 +267,8 @@ namespace Indexing{
             MultiThreading::ReaderGuard childLock(&child->Latch());
 
             if (child->NumberOfKeys() == 2 * this->degree - 1){
-                // if (!this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex)) {
-                //     // Redistribution failed, must split
+                if (!this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex)) {
+                // Redistribution failed, must split
                     this->SplitChild(parent, parentLock, childIndex, child, childLock, pagesToAllocate);
 
                     //split child will break the lock and we need to reacquire it
@@ -287,9 +281,9 @@ namespace Indexing{
                     childId = parent->GetChild(childIndex);
 
                     IntermediateNode = this->GetNode(childId);
-                // }
-                // else
-                //     IntermediateNode = std::move(parent);
+                }
+                else
+                    IntermediateNode = std::move(parent);
             }
             else
                 IntermediateNode = std::move(child);
@@ -611,23 +605,19 @@ namespace Indexing{
 
             MultiThreading::ReaderGuard siblingLock(&sibling->Latch());
 
-            // if (sibling->GetKeysUnsafe()->size() < 2 * this->degree - 1
-            //     && this->TryRedistributeLeafWithLeftSibling(child, sibling, childLock, siblingLock)) {
-            //
-            //     // Update parent separator key between left sibling and child
-            //     auto parentWriteLock = MultiThreading::WriterGuard::Promote(&parent->Latch(), parentLock);
-            //
-            //     auto* parentKeys = parent->GetKeysUnsafe();
-            //     const auto* childKeys = child->GetKeysUnsafe();
-            //
-            //     if (childIndex > 0) {
-            //         delete (*parentKeys)[childIndex - 1];
-            //         const auto* firstChildKey = childKeys->at(0);
-            //
-            //         parentKeys->at(childIndex - 1) = new DataTypes::Indexing::Key(firstChildKey);
-            //     }
-            //     return true;
-            // }
+            if (sibling->NumberOfKeys() < 2 * this->degree - 1
+                && this->TryRedistributeLeafWithLeftSibling(child, sibling, childLock, siblingLock)) {
+
+                // Update parent separator key between left sibling and child
+                auto parentWriteLock = MultiThreading::WriterGuard::Promote(&parent->Latch(), parentLock);
+
+                if (childIndex > 0) {
+                    const auto childKey = child->GetKey(childIndex - 1);
+                    parent->InsertKey(childKey, childIndex - 1);
+                }
+
+                return true;
+            }
         }
 
         if (child->HasRightSibling()) {
@@ -663,34 +653,27 @@ namespace Indexing{
         MultiThreading::ReaderGuard &childLock,
         MultiThreading::ReaderGuard &siblingLock
     )const {
-        // auto* siblingKeys = sibling->GetKeysUnsafe();
-        // auto* childKeys = child->GetKeysUnsafe();
-        //
-        // // Calculate balanced distribution
-        // const Int totalKeys = static_cast<Int>(siblingKeys->size() + childKeys->size());
-        // const Int targetSiblingKeys = totalKeys / 2;
-        // const Int keysToMove = targetSiblingKeys - static_cast<Int>(siblingKeys->size());
-        //
-        // // Only redistribute if we actually need to move keys
-        // if (keysToMove <= 0)
-        //     return false;
-        //
-        // MultiThreading::WriterGuard::Promote(&child->Latch(), childLock);
-        // MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
-        //
-        // auto childRows = child->DataRowsNoLock(this->table);
-        // auto siblingRows = sibling->DataRowsNoLock(this->table);
-        //
-        // auto* childNonClusteredData = child->NonClusteredDataNoLock();
-        // auto* siblingNonClusteredData = sibling->NonClusteredDataNoLock();
-        //
-        // // Move exactly keysToMove keys from child to sibling
+        // Calculate balanced distribution
+        const Int targetSiblingKeys = (sibling->NumberOfKeys() + child->NumberOfKeys()) / 2;
+        const Int keysToMove = targetSiblingKeys - sibling->NumberOfKeys();
+
+        // Only redistribute if we actually need to move keys
+        if (keysToMove <= 0)
+            return false;
+
+        MultiThreading::WriterGuard::Promote(&child->Latch(), childLock);
+        MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
+
+        // Move exactly keysToMove keys from child to sibling
         // const auto srcKeyEnd = childKeys->begin() + keysToMove;
         //
         // siblingKeys->insert(siblingKeys->end(), childKeys->begin(), srcKeyEnd);
         // childKeys->erase(childKeys->begin(), srcKeyEnd);
         //
         // if (this->type == TreeType::Clustered) {
+        //     sibling->DistributeFromPage(child.Get(), keysToMove, 0, );
+        //
+        //
         //     const auto srcEnd = childRows.begin() + keysToMove;
         //     //
         //     // siblingRows.insert(siblingRows.end(), childRows.begin(), srcEnd);

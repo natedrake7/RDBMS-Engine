@@ -179,7 +179,7 @@ namespace Indexing{
         void IndexSeekRange(
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            vector<DataTypes::Indexing::QueryData>& result
+            std::vector<DataTypes::Indexing::QueryData>& result
         )const;
 
         void IndexSeekRange(
@@ -210,7 +210,7 @@ namespace Indexing{
             const Expressions::Expression* expression
         )const;
 
-        void IndexScan(vector<DataTypes::Indexing::QueryData>& result)const;
+        void IndexScan(std::vector<DataTypes::Indexing::QueryData>& result)const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
@@ -237,28 +237,28 @@ namespace Indexing{
         )const;
 
         void IndexScan(
-            vector<Headers::RowIdentifier>* result,
+            std::vector<Headers::RowIdentifier>* result,
             DatabaseEngine::IndexState& state,
             Int rowsToSelect
         )const;
 
-        void IndexScan(vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression)const;
+        void IndexScan(std::vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void IndexScanUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
-            const vector<Value>& updates
+            const std::vector<Value>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
-            const vector<QueryPipeline::Statements::UpdateColumn*>&  updates
+            const std::vector<QueryPipeline::Statements::UpdateColumn*>&  updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
-            const vector<QueryPipeline::Statements::UpdateColumn*>&  updates
+            const std::vector<QueryPipeline::Statements::UpdateColumn*>&  updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexSeekUpdate(

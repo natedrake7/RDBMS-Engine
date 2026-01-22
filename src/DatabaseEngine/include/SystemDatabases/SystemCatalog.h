@@ -145,7 +145,7 @@ namespace DatabaseEngine {
     [[nodiscard]] Errors::RuntimeStatus InsertConstraintToMasterDb(
       const ExecutionProperties& properties,
         Int tableId,
-        const string& constraintName,
+        const std::string& constraintName,
         const Headers::ConstraintType& constraintType,
         bool isDisabled,
         const Int* constraintIndexId,
@@ -237,7 +237,7 @@ namespace DatabaseEngine {
 
     [[nodiscard]] std::vector<Security::Role> SelectRoles()const;
     [[nodiscard]] std::vector<Security::User> SelectUsers()const;
-    [[nodiscard]] bool DatabaseExists(const string& dbName) const;
+    [[nodiscard]] bool DatabaseExists(const std::string& dbName) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const std::string& name) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(Int databaseId) const;
     [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(Int databaseId) const;
@@ -247,14 +247,14 @@ namespace DatabaseEngine {
       const std::string& schema,
       int* schemaId = nullptr
     ) const;
-    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const string& dbName) const;
+    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const std::string& dbName) const;
     [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(Int databaseId) const;
-    [[nodiscard]] Headers::TableHeader SelectTable(const string& dbName, const string& tableName) const;
-    [[nodiscard]] Headers::TableHeader SelectTable(Int databaseId, const string &tableName, const std::string& schema) const;
+    [[nodiscard]] Headers::TableHeader SelectTable(const std::string& dbName, const std::string& tableName) const;
+    [[nodiscard]] Headers::TableHeader SelectTable(Int databaseId, const std::string &tableName, const std::string& schema) const;
     [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(Int tableId) const;
     [[nodiscard]] Headers::ColumnHeader SelectColumnById(Int tableId, Int columnId) const;
     [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(Int tableId) const;
-    [[nodiscard]] Dictionary<string, Headers::ColumnHeader> SelectColumnsToDictionary(Int tableId) const;
+    [[nodiscard]] Dictionary<std::string, Headers::ColumnHeader> SelectColumnsToDictionary(Int tableId) const;
     [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(Int tableId) const;
     [[nodiscard]] Headers::IndexHeader SelectIndexById(Int indexId) const;
     [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(Int indexId) const;

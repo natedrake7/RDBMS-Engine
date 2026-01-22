@@ -43,7 +43,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   void ExecutionNode::InsertToTemporaryDatabase(
-    const std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>& rows){
+    const std::vector<DatabaseEngine::StorageTypes::Row>& rows){
 
   }
 

@@ -256,8 +256,7 @@ namespace DatabaseEngine::StorageTypes {
         this->data = nullptr;
     }
 
-    void Block::SetData(const void* inputData, const block_size_t inputSize)
-    {
+    void Block::SetData(const void* inputData, const block_size_t inputSize){
         std::free(this->data);
         this->data = nullptr;
 
@@ -309,7 +308,7 @@ namespace DatabaseEngine::StorageTypes {
 
     DataTypes::Guid Block::AsGuid() const{  return { this->data, this->size }; }
 
-    Pages::DataObjectPointer Block::AsLargeObjectPointer() const { return *reinterpret_cast<Pages::DataObjectPointer*>(this->data); }
+    page_id_t Block::AsLargeObjectPointer() const { return *reinterpret_cast<page_id_t*>(this->data); }
 
     Pages::OverflowPointer Block::AsOverflowPointer() const { return *reinterpret_cast<Pages::OverflowPointer*>(this->data); }
 

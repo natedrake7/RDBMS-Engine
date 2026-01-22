@@ -176,7 +176,5 @@ namespace Pages {
 			void UpdatePageSize()override;
 
 			[[nodiscard]] Int NumberOfKeys()const;
-
-			void Resize(Int size);
 		};
 } // namespace Pages

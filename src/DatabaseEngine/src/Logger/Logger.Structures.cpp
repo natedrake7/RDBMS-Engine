@@ -4,6 +4,8 @@
 
 #include <cstring>
 
+#include "BufferPool/StorageManager.h"
+
 namespace DatabaseEngine::LoggingStructures {
 
   std::ostream& operator<<(std::ostream& os, const LogEntryBody& logEntry){
@@ -12,27 +14,27 @@ namespace DatabaseEngine::LoggingStructures {
 
    RowInsertBody::RowInsertBody(){}
 
-  RowInsertBody::RowInsertBody(const Pointer<StorageTypes::Row>& row){
+  RowInsertBody::RowInsertBody(const StorageTypes::Row& row){
    this->row = row;
   }
 
   void RowInsertBody::Serialize(std::vector<char> *buffer, page_offset_t&pos){
-   this->row->Serialize(buffer, pos);
+   this->row.Serialize(buffer, pos);
   }
 
   void RowInsertBody::Deserialize(
     const std::vector<char> *buffer,
     page_offset_t&pos,
     const StorageTypes::Table* table){
-    this->row = Pointer(new StorageTypes::Row(*table));
+    this->row = StorageTypes::Row(*table);
 
-    this->row->Deserialize(buffer, pos);
+    this->row.Deserialize(*buffer, pos);
   }
 
-  int RowInsertBody::GetSize() const{ return static_cast<int>(this->row->TotalSize()); }
+  int RowInsertBody::GetSize() const{ return static_cast<int>(this->row.TotalSize()); }
 
   std::ostream& RowInsertBody::Print(std::ostream& os)const{
-    os << *this->row << std::endl;
+    os << this->row << std::endl;
     return os;
   }
 
@@ -40,16 +42,16 @@ namespace DatabaseEngine::LoggingStructures {
     this->rows = nullptr;
   }
 
-  BatchRowInsertBody::BatchRowInsertBody(const std::vector<Pointer<StorageTypes::Row>>& rows){
+  BatchRowInsertBody::BatchRowInsertBody(const std::vector<StorageTypes::Row>& rows){
     this->rows = &rows;
   }
   void BatchRowInsertBody::Serialize(std::vector<char>* buffer, page_offset_t& pos){
     for (const auto& row : *this->rows){
-      row->Serialize(buffer, pos);
+      row.Serialize(buffer, pos);
     }
   }
 
-  const Pointer<StorageTypes::Row>& RowInsertBody::GetLastRowStatus() const{ return this->row; }
+  const StorageTypes::Row& RowInsertBody::GetLastRowStatus() const{ return this->row; }
 
   RowUpdateBody::RowUpdateBody(){
     this->oldRow = nullptr;
@@ -72,11 +74,11 @@ namespace DatabaseEngine::LoggingStructures {
      const StorageTypes::Table* table){
       this->oldRow = new StorageTypes::Row(*table);
 
-      this->oldRow->Deserialize(buffer, pos);
+      this->oldRow->Deserialize(*buffer, pos);
 
       this->newRow = new StorageTypes::Row(*table);
 
-      this->newRow->Deserialize(buffer, pos);
+      this->newRow->Deserialize(*buffer, pos);
    }
 
    int RowUpdateBody::GetSize() const{ return static_cast<int>(this->oldRow->TotalSize() + this->newRow->TotalSize()); }
@@ -88,7 +90,7 @@ namespace DatabaseEngine::LoggingStructures {
         return os;
     }
 
-    const Pointer<StorageTypes::Row>& RowUpdateBody::GetLastRowStatus() const{ return {}; }
+    const StorageTypes::Row& RowUpdateBody::GetLastRowStatus() const{ return StorageTypes::Row(); }
 
     RowDeleteBody::RowDeleteBody(){
        this->row = nullptr;
@@ -108,7 +110,7 @@ namespace DatabaseEngine::LoggingStructures {
       const StorageTypes::Table* table){
       this->row = new StorageTypes::Row(*table);
 
-      this->row->Deserialize(buffer, pos);
+      this->row->Deserialize(*buffer, pos);
     }
 
    int RowDeleteBody::GetSize() const{ return static_cast<int>(this->row->TotalSize()); }
@@ -118,7 +120,7 @@ namespace DatabaseEngine::LoggingStructures {
       return os;
     }
 
-    const Pointer<StorageTypes::Row>& RowDeleteBody::GetLastRowStatus() const{ return {}; }
+    const StorageTypes::Row& RowDeleteBody::GetLastRowStatus() const{ return StorageTypes::Row(); }
    TableCreateBody::TableCreateBody() = default;
 
    TableCreateBody::TableCreateBody(const std::string &query){
@@ -151,5 +153,5 @@ namespace DatabaseEngine::LoggingStructures {
       return os;
   }
 
-  const Pointer<StorageTypes::Row>& TableCreateBody::GetLastRowStatus() const{ return {}; }
+  const StorageTypes::Row& TableCreateBody::GetLastRowStatus() const{ return StorageTypes::Row(); }
 }

@@ -2,7 +2,6 @@
 #include <vector>
 #include <string>
 #include "../DatabaseConstants.h"
-#include "../../../Systemic/include/DataTypes/Pointer.h"
 #include "../../../Systemic/include/Guards/ReadWriteMutex.h"
 #include "../../../Systemic/include/Constants.h"
 
@@ -21,34 +20,44 @@ namespace DatabaseEngine::StorageTypes{
 
 namespace Pages{
     struct SlotDirectory{
-        UnsignedSmallInt offset;
-        UnsignedSmallInt size;
-        // UnsignedTinyInt flags : 1;
+        private:
+            UnsignedSmallInt flags_offset;
+            UnsignedSmallInt size;
 
-        static constexpr UnsignedTinyInt FLAG_IS_VALID = 0X00;
-        static constexpr UnsignedTinyInt FLAG_IS_DELETED = 0X01;
-        static constexpr UnsignedTinyInt Size = 4;
+            static constexpr UnsignedSmallInt OFFSET_MASK = 0x3FFF; // lower 14 bits
+            static constexpr UnsignedSmallInt FLAGS_MASK  = 0xC000; // upper 2 bits
 
-        SlotDirectory(){
-            this->offset = 0;
-            this->size = 0;
-            // this->flags = FLAG_IS_VALID;
-        }
-         SlotDirectory(
-            const UnsignedSmallInt offset,
-            const UnsignedSmallInt size,
-            const UnsignedTinyInt flags = FLAG_IS_VALID
-        ){
-            this->offset = offset;
-            this->size = size;
-            // this->flags = flags;
-        }
+        public:
+            enum Flag : UnsignedTinyInt {
+                SLOT_EMPTY      = 0,
+                SLOT_USED       = 1,
+                SLOT_FORWARDED  = 2,
+                SLOT_DEAD       = 3
+            };
 
-        [[nodiscard]] bool IsDefault() const{
-            return this->offset == 0 && this->size == 0;
-        }
+            static constexpr UnsignedTinyInt Size = 4;
 
+            SlotDirectory();
+            SlotDirectory(
+                UnsignedSmallInt offset,
+                UnsignedSmallInt size,
+                Flag flag = SLOT_USED
+            );
 
+            inline UnsignedSmallInt GetOffset() const;
+            void SetOffset(UnsignedSmallInt otherOffset);
+
+            inline UnsignedSmallInt GetSize() const;
+            void SetSize(UnsignedSmallInt otherSize);
+
+            Flag GetFlag() const;
+            void SetFlag(Flag otherFlag);
+
+            bool Empty() const;
+            bool Used() const;
+            bool ForwardPointer() const;
+            bool Dead() const;
+            bool Default() const;
     };
 
     struct SlotDirectoryDefragment{
@@ -56,15 +65,15 @@ namespace Pages{
         SlotDirectory slotDirectory;
 
         SlotDirectoryDefragment(
-            SlotDirectory slotDirectory,
-            Int indexPosition
+            const SlotDirectory slotDirectory,
+            const Int indexPosition
         ){
             this->slotDirectory = slotDirectory;
             this->indexPosition = indexPosition;
         }
 
         static bool OrderAscendingByOffSet(const SlotDirectoryDefragment& lhs, const SlotDirectoryDefragment& rhs){
-            return lhs.slotDirectory.offset < rhs.slotDirectory.offset;
+            return lhs.slotDirectory.GetOffset() < rhs.slotDirectory.GetOffset();
         }
     };
 
@@ -112,16 +121,12 @@ namespace Pages{
 
         [[nodiscard]] Int RawDataSize()const;
 
-        static void WriteRowToDisk(std::fstream* filePtr, const Pointer<DatabaseEngine::StorageTypes::Row>& row);
-
-        SlotDirectory GetSlotDirectory(Int indexPosition) const;
         DatabaseEngine::StorageTypes::Row MaterializeRow(
             const DatabaseEngine::StorageTypes::Table* table,
-            Int indexId
+            Int indexPosition
         ) const;
         void UpdateSlotDirectory(SlotDirectory slotDirectory, Int indexPosition) const;
 
-        void InsertNewSlot(SlotDirectory slotDirectory) const;
 
         bool IndexOutOfBounds(Int indexPosition) const;
 
@@ -189,5 +194,14 @@ namespace Pages{
         void SharedUnlock()const;
 
         [[nodiscard]] MultiThreading::ReadWriteMutex& Latch() const;
+
+        [[nodiscard]] object_t* GetData() const;
+        SlotDirectory GetSlotDirectory(Int indexPosition) const;
+        void InsertNewSlot(SlotDirectory slotDirectory) const;
+
+        void DistributeFromPage(Page* donorPage, Int numberOfSlotsToMove, Int donorResizeVariant);
+        void DistributeFromBeginningOfPage(Page* donorPage, Int numberOfSlotsToMove, Int donorResizeVariant);
+        void Resize(Int size);
+        void ResizeFromBeginning(Int size);
     };
 }

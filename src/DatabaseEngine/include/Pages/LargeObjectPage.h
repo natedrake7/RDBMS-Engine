@@ -21,16 +21,6 @@ namespace Pages {
         ~LargeDataObject();
     };
 
-    struct DataObjectPointer
-    {
-        page_id_t pageId;
-
-        DataObjectPointer();
-        explicit DataObjectPointer(page_id_t pageId);
-        ~DataObjectPointer();
-
-    };
-    
     class LargeObjectPage final : public Page{
         LargeDataObject* data;
 

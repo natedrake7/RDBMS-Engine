@@ -422,7 +422,7 @@ bool BinaryExpression::ValidateOperation() const {
   }
 
   void FunctionExpression::ConstructInvalidCastMessage(std::string &errorMessage, const DataType fromType, const DataType toType) {
-    ostringstream os;
+    std::ostringstream os;
 
     os  << "Cannot cast safely type: "
       << ColumnTypesToStringDictionary.Get(fromType)
@@ -458,7 +458,7 @@ bool BinaryExpression::ValidateOperation() const {
   }
 
   Value FunctionExpression::Concat(const std::vector<Value>& arguments){
-    Value value(string(""), 0);
+    Value value(std::string(""), 0);
 
     for (const auto& argument : arguments)
       value += Value(argument.AsString(), 0);
@@ -654,7 +654,7 @@ bool BinaryExpression::ValidateOperation() const {
       message << "Function: " << info.name
         << " expects number of arguments from: "
         << info.minArgs << " to "
-        << (info.maxArgs == UNLIMITED_ARGS ? "unlimited" : to_string(info.maxArgs))
+        << (info.maxArgs == UNLIMITED_ARGS ? "unlimited" : std::to_string(info.maxArgs))
         << " but " << argSize << " were given";
 
       errorMessage = message.str();

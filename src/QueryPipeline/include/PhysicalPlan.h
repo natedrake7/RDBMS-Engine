@@ -67,7 +67,7 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionNode();
       explicit ExecutionNode(const DataTypes::Guid& currentSessionId);
       virtual ~ExecutionNode() = default;
-      void InsertToTemporaryDatabase(const std::vector<Pointer<DatabaseEngine::StorageTypes::Row>>& rows);
+      void InsertToTemporaryDatabase(const std::vector<DatabaseEngine::StorageTypes::Row>& rows);
       void InsertPostProjectionResultsToTemporaryDatabase(
         const DatabaseEngine::ExecutionProperties& properties,
         ExecutionResult*& result,
@@ -164,7 +164,7 @@ namespace QueryPipeline::PhysicalPlan{
         const DataTypes::Guid& sessionId,
         Statements::DataSource*  table,
         std::string& constraintName,
-        vector<column_index_t>& columns
+        std::vector<column_index_t>& columns
     );
     ExecutionResult * Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };

@@ -272,10 +272,10 @@ namespace DatabaseEngine {
 
         for (int i = 0; i < page->GetPageSize(); i++) {
           auto row = page->GetRow(nullptr, i);
-          const auto& versionHeader = row.GetVersionHeader();
+          const auto* rowHeader = row.GetHeader();
 
           if (transactionId == FIRST_TRANSACTION_ID
-            || versionHeader.createdTransactionId <= transactionId) {
+            || rowHeader->version.createdTransactionId <= transactionId) {
             page->Delete(i);
             i--;
           }

@@ -9,7 +9,7 @@ namespace Network::Sessions {
   SessionManager::SessionManager() = default;
 
   SessionManager::~SessionManager(){
-    for (const auto &session : this->sessions | views::values)
+    for (const auto &session : this->sessions | std::views::values)
       delete session;
   }
 

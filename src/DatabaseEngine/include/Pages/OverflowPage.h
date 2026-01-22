@@ -7,15 +7,18 @@ namespace Pages {
     page_offset_t index;
 
     OverflowRow();
-    block_size_t GetSize()const;
+    [[nodiscard]] block_size_t GetSize()const;
   };
 
-  struct OverflowPointer : DataObjectPointer{
+  struct OverflowPointer{
+    page_id_t pageId;
     page_offset_t index;
 
     OverflowPointer();
     explicit OverflowPointer(page_id_t pageId, page_offset_t index);
     ~OverflowPointer();
+
+    static OverflowPointer FromBytes(const object_t* buffer);
   };
 
   class OverflowPage final : public Page{

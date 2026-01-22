@@ -98,7 +98,8 @@ namespace Pages {
     }
   }
 
-  OverflowPointer::OverflowPointer(const page_id_t pageId, const page_offset_t index): DataObjectPointer(pageId){
+  OverflowPointer::OverflowPointer(const page_id_t pageId, const page_offset_t index){
+    this->pageId = pageId;
     this->index = index;
   }
 
@@ -108,4 +109,11 @@ namespace Pages {
   }
 
   OverflowPointer::~OverflowPointer() = default;
+
+  OverflowPointer OverflowPointer::FromBytes(const object_t* buffer){
+    auto ptr = OverflowPointer();
+    std::memcpy(&ptr.pageId, buffer, sizeof(page_id_t));
+    std::memcpy(&ptr.index, buffer + sizeof(page_id_t), sizeof(page_offset_t));
+    return ptr;
+  }
 } // Pages

@@ -90,7 +90,7 @@ namespace DatabaseEngine::Logging {
 
     // [[nodiscard]] Pointer<StorageTypes::Row> GetRow()const;
 
-    friend ostream& operator<<(ostream& stream, const LogEntry& logEntry);
+    friend std::ostream& operator<<(std::ostream& stream, const LogEntry& logEntry);
   };
 
 

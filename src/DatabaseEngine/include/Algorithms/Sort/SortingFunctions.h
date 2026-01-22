@@ -42,7 +42,7 @@ class SortingFunctions{
            const DatabaseEngine::StorageTypes::Block*& firstBlock,
            const DatabaseEngine::StorageTypes::Block*& secondBlock
           );
-         [[nodiscard]] static string CreateGroupByKey(
+         [[nodiscard]] static std::string CreateGroupByKey(
            const DatabaseEngine::StorageTypes::Row* row,
            const std::vector<GroupCondition> &sortConditions
           );
@@ -55,7 +55,7 @@ class SortingFunctions{
          [[nodiscard]] static bool CompareRows(
            const QueryResult& firstRow,
            const QueryResult& secondRow,
-           const vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
+           const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
           );
          [[nodiscard]] static bool CompareRowsAscending(
            const DatabaseEngine::StorageTypes::Row* firstRow,

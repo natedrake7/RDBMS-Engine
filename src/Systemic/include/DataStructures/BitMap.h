@@ -30,7 +30,10 @@ namespace ByteMaps{
         void WriteDataToFile(std::vector<char>* buffer, page_offset_t& pos)const;
         void WriteDataToBuffer(char*& buffer)const;
         void WriteDataToBuffer(object_t*& buffer, page_offset_t& offSet)const;
+        void WriteDataToBuffer(std::vector<char> &buffer, page_offset_t& offSet)const;
         void Print() const;
+
+        [[nodiscard]] bool Empty() const;
 
         [[nodiscard]] const std::vector<byte_t> &GetData() const;
         [[nodiscard]] std::vector<byte_t>& GetDataUnsafe();

@@ -16,13 +16,13 @@ namespace DatabaseEngine::StorageTypes {
         if (largeBlockIndexes.empty())
             return;
 
-        const RowHeader *rowHeader = row->GetHeader();
+        auto* rowHeader = row->GetHeader();
 
         const auto &rowData = row->GetData();
 
         for (const auto &largeBlockIndex : largeBlockIndexes) 
         {
-            rowHeader->largeObjectBitMap->Set(largeBlockIndex, true);
+            rowHeader->largeObjectBitMap.Set(largeBlockIndex, true);
 
             page_offset_t offset = 0;
             block_size_t remainingBlockSize = rowData[largeBlockIndex]->Size();
@@ -125,11 +125,9 @@ namespace DatabaseEngine::StorageTypes {
         if (!isFirstRecursion)
             return;
 
-        const Pages::DataObjectPointer objectPointer(lastLargePageId);
-
         auto *block = new Block(
-            &objectPointer,
-            sizeof(Pages::DataObjectPointer),
+            &lastLargePageId,
+            Constants::LARGE_OBJECT_POINTER_SIZE,
             this->columns[largeBlockIndex]
         );
 

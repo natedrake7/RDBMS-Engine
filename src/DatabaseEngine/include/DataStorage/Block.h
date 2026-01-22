@@ -10,7 +10,6 @@ namespace DatabaseEngine {
 }
 
 namespace Pages {
- struct DataObjectPointer;
  struct OverflowPointer;
 }
 
@@ -74,7 +73,7 @@ namespace DatabaseEngine::StorageTypes {
         [[nodiscard]] DataTypes::Decimal AsDecimal() const;
         [[nodiscard]] DataTypes::DateTime AsDateTime() const;
         [[nodiscard]] DataTypes::Guid AsGuid() const;
-        [[nodiscard]] Pages::DataObjectPointer AsLargeObjectPointer() const;
+        [[nodiscard]] page_id_t AsLargeObjectPointer() const;
         [[nodiscard]] Pages::OverflowPointer AsOverflowPointer() const;
         
         [[nodiscard]] column_index_t ColumnIndex() const;

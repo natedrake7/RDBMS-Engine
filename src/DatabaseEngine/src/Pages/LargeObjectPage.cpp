@@ -4,38 +4,22 @@
 #include <cstring>
 
 namespace Pages {
-    LargeDataObject::LargeDataObject()
-    {
+    LargeDataObject::LargeDataObject(){
         this->objectSize = 0;
         this->nextPageId = 0;
         this->object = nullptr;
     }
 
-    LargeDataObject::~LargeDataObject()
-    {
+    LargeDataObject::~LargeDataObject(){
         delete this->object;
     }
 
-    DataObjectPointer::DataObjectPointer()
-    {
-        this->pageId = 0;
-    }
-
-    DataObjectPointer::DataObjectPointer(const page_id_t pageId)
-    {
-        this->pageId = pageId;
-    }
-
-    DataObjectPointer::~DataObjectPointer() = default;
-
-    LargeObjectPage::LargeObjectPage(const page_id_t pageId, const bool isPageCreation) : Page(pageId, isPageCreation)
-    {
+    LargeObjectPage::LargeObjectPage(const page_id_t pageId, const bool isPageCreation) : Page(pageId, isPageCreation){
         this->header.type = PageType::LOB;
         this->data = nullptr;
     }
 
-    LargeObjectPage::LargeObjectPage() : Page()
-    {
+    LargeObjectPage::LargeObjectPage() : Page(){
         this->isDirty = false;
         this->header.type = PageType::LOB;
         this->data = nullptr;
@@ -45,8 +29,7 @@ namespace Pages {
       this->data = nullptr;
     }
 
-    LargeObjectPage::~LargeObjectPage()
-    {
+    LargeObjectPage::~LargeObjectPage(){
         delete this->data;
     }
 

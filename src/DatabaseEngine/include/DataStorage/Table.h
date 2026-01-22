@@ -409,7 +409,7 @@ namespace DatabaseEngine::StorageTypes
             Indexing::BTree* GetNonClusteredIndexTree(Int nonClusteredIndexId);
             [[nodiscard]] bool HasNonClusteredIndexes() const;
 
-            void DeleteLargeObjectFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns)const;
+            void DeleteLargeObjectFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns);
             void DeleteOverflowedRowsFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns)const;
 
             [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(page_id_t pageId) const;
@@ -433,7 +433,7 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Database* GetDatabase() const;
 
-            int HandleRowOverflow(const Row* row)const;
+            int HandleRowOverflow(Row* row) const;
             int HandleRowOverflow(Row*& row, const Column* column)const;
 
             void InsertLargeObjectToPage(Row* row);
