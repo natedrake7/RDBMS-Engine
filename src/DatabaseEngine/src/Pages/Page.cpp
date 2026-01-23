@@ -120,21 +120,68 @@ namespace Pages{
         return slot;
     }
 
-    DatabaseEngine::StorageTypes::Row Page::MaterializeRow(
-        const DatabaseEngine::StorageTypes::Table* table,
-        const Int indexPosition
-    ) const{
+    QueryResult Page::MaterializeRow(const Int indexPosition, const Int offset) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         const auto& columns = table->GetColumns();
 
         auto row = DatabaseEngine::StorageTypes::Row(*table);
-        page_offset_t offSet = slot.GetOffset();
+        page_offset_t offSet = offset != 0 ? offset : slot.GetOffset();
         row.SetId(this->header.pageId, indexPosition);
         row.ReadHeaderFromDisk(this->data, offSet);
-        row.ReadDataFromDisk(this->data, offSet, columns);
+        // row.ReadDataFromDisk(this->data, offSet, columns);
 
-        return row;
+        auto result = QueryResult();
+
+        for (int i = 0;i < columns.size(); i++){
+            if (row.GetNullBitMapValue(i)){
+                auto value = Value::Null();
+                result.AddColumn(value);
+                continue;
+            }
+
+            block_size_t blockSize = 0;
+            std::memcpy(&blockSize, this->data + offSet, sizeof(block_size_t));
+            offSet += sizeof(block_size_t);
+
+            auto value = Value(this->data + offSet, blockSize, columns[i]->GetColumnType());
+            offSet += blockSize;
+
+            result.AddColumn(value);
+        }
+
+        return result;
+    }
+
+    Value Page::PartialMaterializeRow(const Int indexPosition, column_index_t columnIndex, const Int offset) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+
+        const auto& columns = table->GetColumns();
+
+        auto row = DatabaseEngine::StorageTypes::Row(*table);
+        page_offset_t offSet = offset != 0 ? offset : slot.GetOffset();
+        row.SetId(this->header.pageId, indexPosition);
+        row.ReadHeaderFromDisk(this->data, offSet);
+
+        for (int i = 0;i < columns.size(); i++){
+            if (row.GetNullBitMapValue(i)){
+                if (columnIndex == i)
+                    return Value::Null();
+
+                continue;
+            }
+
+            block_size_t blockSize = 0;
+            std::memcpy(&blockSize, this->data + offSet, sizeof(block_size_t));
+            offSet += sizeof(block_size_t);
+
+            if (i != columnIndex)
+                continue;
+
+            return Value(this->data + offSet, blockSize, columns[i]->GetColumnType());
+        }
+
+        throw std::runtime_error("Page::PartialMaterializeRow: Column index out of range");
     }
 
     void Page::UpdateSlotDirectory(const SlotDirectory slotDirectory, const Int indexPosition) const{
@@ -217,6 +264,103 @@ namespace Pages{
         this->isDirty = true;
     }
 
+    RowReference::RowReference(){
+        this->pagePtr = nullptr;
+        this->indexPosition = 0;
+        this->offset = 0;
+    }
+
+    RowReference::RowReference(Page* pagePtr, const Int indexPosition, const Int offset){
+        this->pagePtr = pagePtr;
+        this->indexPosition = indexPosition;
+        this->offset = offset;
+        this->pagePtr->IncreasePinCount();
+    }
+
+    RowReference::RowReference(const RowReference& other){
+        this->pagePtr = other.pagePtr;
+        this->indexPosition = other.indexPosition;
+        this->offset = other.offset;
+        this->pagePtr->IncreasePinCount();
+    }
+
+    RowReference& RowReference::operator=(const RowReference& other){
+        if (this == &other)
+            return *this;
+
+        this->pagePtr = other.pagePtr;
+        this->indexPosition = other.indexPosition;
+        this->offset = other.offset;
+        this->pagePtr->IncreasePinCount();
+
+        return *this;
+    }
+
+    RowReference::RowReference(RowReference&& other) noexcept{
+        this->pagePtr = other.pagePtr;
+        this->indexPosition = other.indexPosition;
+        this->offset = other.offset;
+        other.pagePtr = nullptr;
+        other.indexPosition = 0;
+        other.offset = 0;
+    }
+
+    RowReference& RowReference::operator=(RowReference&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->pagePtr = other.pagePtr;
+        this->indexPosition = other.indexPosition;
+        other.pagePtr = nullptr;
+        other.indexPosition = 0;
+        other.offset = 0;
+
+        return *this;
+    }
+
+    RowReference::~RowReference(){
+        if (this->pagePtr)
+            this->pagePtr->DecreasePinCount();
+
+        this->pagePtr = nullptr;
+    }
+
+    QueryResult RowReference::Materialize()const{
+        return this->pagePtr->MaterializeRow(this->indexPosition, this->offset);
+    }
+
+    Value RowReference::PartialMaterialize(const column_index_t columnIndex) const{
+        return this->pagePtr->PartialMaterializeRow(this->indexPosition, this->offset, columnIndex);
+    }
+
+    Errors::RuntimeStatus RowReference::Update(const std::vector<Value>& updates) const{
+        auto row = this->Materialize();
+        auto header = this->pagePtr->PeekRowHeader(this->indexPosition, this->offset);
+
+        for (int i = 0;i < updates.size(); i++){
+            const auto& value = updates[i];
+
+            if (value.IsNull()){
+                header.nullBitMap.Set(i, true);
+                continue;
+            }
+
+            auto result = row.UpdateColumnAt(value);
+
+            if (result.code != Errors::RuntimeError::Ok)
+                return result;
+        }
+
+        this->pagePtr->UpdateRow(
+            header,
+            row,
+            this->indexPosition,
+            this->offset
+        );
+
+        return {};
+    }
+
     bool Page::IndexOutOfBounds(const Int indexPosition) const{
         return indexPosition >= this->header.size;
     }
@@ -237,20 +381,65 @@ namespace Pages{
         this->UpdateSlotDirectory(slot, indexPosition);
     }
 
-    Page::Page(const page_id_t pageId, const bool isPageCreation){
+    DatabaseEngine::StorageTypes::RowHeader Page::PeekRowHeader(const Int indexPosition, const Int offSet) const{
+        auto rowHeader = DatabaseEngine::StorageTypes::RowHeader();
+        const auto slot = this->GetSlotDirectory(indexPosition);
+
+        page_offset_t offSetCopy = offSet == 0 ? slot.GetOffset() : offSet;
+        std::memcpy(&rowHeader.version, this->data + offSet, Constants::ROW_VERSION_HEADER_SIZE);
+        offSetCopy += Constants::ROW_VERSION_HEADER_SIZE;
+
+        rowHeader.nullBitMap.GetDataFromFile(this->data, offSetCopy);
+        rowHeader.largeObjectBitMap.GetDataFromFile(this->data, offSetCopy);
+        rowHeader.overflowBitMap.GetDataFromFile(this->data, offSetCopy);
+
+        return rowHeader;
+    }
+
+    void Page::SerializeRow(
+        const DatabaseEngine::StorageTypes::RowHeader& rowHeader,
+        const QueryResult& row,
+        page_offset_t& offSet
+    ){
+        std::memcpy(this->data + offSet, &rowHeader.version, Constants::ROW_VERSION_HEADER_SIZE);
+        offSet += Constants::ROW_VERSION_HEADER_SIZE;
+
+        rowHeader.nullBitMap.WriteDataToBuffer(this->data, offSet);
+        rowHeader.largeObjectBitMap.WriteDataToBuffer(this->data, offSet);
+        rowHeader.overflowBitMap.WriteDataToBuffer(this->data, offSet);
+
+        const auto& rowData = row.GetData();
+        for (Int indexPosition = 0; indexPosition < rowData.size(); indexPosition++){
+            if (rowHeader.nullBitMap.Get(indexPosition))
+                continue;
+
+            const auto& value = rowData[indexPosition];
+            const auto blockSize = value.Size();
+            std::memcpy(this->data + offSet, &blockSize, sizeof(block_size_t));
+            offSet += sizeof(block_size_t);
+
+            std::memcpy(this->data + offSet, value.Data(), blockSize);
+            offSet += blockSize;
+
+        }
+    }
+
+    Page::Page(const page_id_t pageId, const DatabaseEngine::StorageTypes::Table* table, const bool isPageCreation){
         this->header.pageId = pageId;
         this->isDirty = isPageCreation;
         this->pinCount = 0;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
+        this->table = table;
         this->header.type = PageType::DATA;
         this->priority = PagePriority::LOW;
         this->data = static_cast<object_t*>(std::malloc(PAGE_SIZE_WITHOUT_HEADER));
     }
 
-    Page::Page(const page_id_t pageId, const page_size_t size, const bool isPageCreation){
+    Page::Page(const page_id_t pageId, const page_size_t size, const DatabaseEngine::StorageTypes::Table* table, const bool isPageCreation){
         this->header.pageId = pageId;
         this->isDirty = isPageCreation;
+        this->table = table;
         this->pinCount = 0;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
@@ -267,6 +456,7 @@ namespace Pages{
         this->header.type = PageType::DATA;
         this->priority = PagePriority::LOW;
         this->data = static_cast<object_t*>(std::malloc(PAGE_SIZE_WITHOUT_HEADER));
+        this->table = nullptr;
     }
 
     Page::Page(const PageHeader &pageHeader){
@@ -355,19 +545,25 @@ namespace Pages{
         this->isDirty = true;
     }
 
-    void Page::UpdateRow(DatabaseEngine::StorageTypes::Row*& row, const Int indexPosition){
+    void Page::UpdateRow(
+        const DatabaseEngine::StorageTypes::RowHeader& rowHeader,
+        QueryResult& row,
+        const Int indexPosition,
+        const Int offset
+    ){
         if (this->IndexOutOfBounds(indexPosition))
             throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
 
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         const auto previousRowSize = slot.GetSize();
-        const auto currentRowSize = row->TotalSize();
+
+        const auto currentRowSize = row.GetPageByteSize() + rowHeader.Size();
 
         //if new row size is less than or equal to previous row size, update in place
         if (currentRowSize <= previousRowSize){
-            page_offset_t pos = slot.GetOffset();
-            row->Serialize(this->data, pos);
+            page_offset_t offSet = slot.GetOffset();
+            this->SerializeRow(rowHeader, row, offSet);
             return;
         }
 
@@ -375,7 +571,7 @@ namespace Pages{
         auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
 
-        row->Serialize(this->data, nextOffset);
+        this->SerializeRow(rowHeader, row, nextOffset);
 
         //update slot directory
         const auto newSlot = SlotDirectory(offSetCopy, currentRowSize, SlotDirectory::SLOT_USED);
@@ -390,7 +586,7 @@ namespace Pages{
 
     void Page::ReadFromDisk(
         const std::vector<char> &buffer,
-        const DatabaseEngine::StorageTypes::Table *table,
+        const DatabaseEngine::StorageTypes::Table *otherTable,
         page_offset_t &offSet,
         fstream *filePtr
     ){
@@ -511,10 +707,6 @@ namespace Pages{
 
     PageType Page::GetPageType() const { return this->header.type; }
 
-    DatabaseEngine::StorageTypes::Row Page::GetRow(const DatabaseEngine::StorageTypes::Table* table, const Int indexPosition) const{
-        return this->MaterializeRow(table, indexPosition);
-    }
-
     void Page::Defragment(){
         if (this->header.size <= 1)
             return;
@@ -592,6 +784,10 @@ namespace Pages{
 
     void Page::SharedUnlock() const {
         this->latch.SharedUnlock();
+    }
+
+    void Page::SetTable(const DatabaseEngine::StorageTypes::Table* otherTable){
+        this->table = otherTable;
     }
 
     MultiThreading::ReadWriteMutex & Page::Latch() const {

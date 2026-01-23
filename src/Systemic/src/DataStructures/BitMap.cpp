@@ -66,7 +66,7 @@ namespace ByteMaps
             data[position] = value;
     }
 
-    void BitMap::GetDataFromFile(const object_t*& buffer, page_offset_t &offset){
+    void BitMap::GetDataFromFile(const object_t* buffer, page_offset_t &offset){
         std::memcpy(&this->size, buffer + offset, sizeof(bit_map_size_t));
         offset += sizeof(bit_map_size_t);
 

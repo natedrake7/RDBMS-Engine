@@ -16,7 +16,10 @@ namespace Pages {
       this->header.type = PageType::OVERFLOWTYPE;
   }
 
-  OverflowPage::OverflowPage(const page_id_t pageId, const bool isPageCreation): Page(pageId,isPageCreation){
+  OverflowPage::OverflowPage(
+    const page_id_t pageId,
+    const bool isPageCreation
+  ): Page(pageId, nullptr, isPageCreation){
     this->header.type = PageType::OVERFLOWTYPE;
   }
 

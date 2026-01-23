@@ -7,6 +7,15 @@
 
 #include <atomic>
 
+#include "Errors.h"
+#include "../../Systemic/include/QueryResult.h"
+#include "DataStorage/Row.h"
+
+namespace Errors
+{
+    struct Error;
+}
+
 namespace Expressions {
     class Expression;
 }
@@ -109,6 +118,7 @@ namespace Pages{
         log_sequence_number_t logSequenceNumber;
 
         std::string filename;
+        const DatabaseEngine::StorageTypes::Table* table;
 
         //persisted to disk
         PageHeader header;
@@ -121,20 +131,21 @@ namespace Pages{
 
         [[nodiscard]] Int RawDataSize()const;
 
-        DatabaseEngine::StorageTypes::Row MaterializeRow(
-            const DatabaseEngine::StorageTypes::Table* table,
-            Int indexPosition
-        ) const;
         void UpdateSlotDirectory(SlotDirectory slotDirectory, Int indexPosition) const;
-
 
         bool IndexOutOfBounds(Int indexPosition) const;
 
         void AdjustSlotDirectories(Int indexPosition, const page_offset_t& offset, Int slotSize) const;
 
+        void SerializeRow(
+            const DatabaseEngine::StorageTypes::RowHeader& rowHeader,
+            const QueryResult& row,
+            page_offset_t& offSet
+        );
+
     public:
-        explicit Page(page_id_t pageId, bool isPageCreation = false);
-        explicit Page(page_id_t pageId, page_size_t size, bool isPageCreation = false);
+        explicit Page(page_id_t pageId, const DatabaseEngine::StorageTypes::Table* table, bool isPageCreation = false);
+        explicit Page(page_id_t pageId, page_size_t size, const DatabaseEngine::StorageTypes::Table* table, bool isPageCreation = false);
         explicit Page();
         explicit Page(const PageHeader &pageHeader);
         Page(const PageHeader &pageHeader, page_size_t size);
@@ -146,11 +157,16 @@ namespace Pages{
         Int InsertRow(DatabaseEngine::StorageTypes::Row*& row);
         void InsertRow(DatabaseEngine::StorageTypes::Row*& row, Int indexPosition);
 
-        virtual void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, Int indexPosition);
+        virtual void UpdateRow(
+            const DatabaseEngine::StorageTypes::RowHeader& rowHeader,
+            QueryResult& row,
+            Int indexPosition,
+            Int offset
+        );
 
         virtual void ReadFromDisk(
             const std::vector<char> &buffer,
-            const DatabaseEngine::StorageTypes::Table *table,
+            const DatabaseEngine::StorageTypes::Table *otherTable,
             page_offset_t &offSet,
             std::fstream *filePtr
         );
@@ -177,7 +193,6 @@ namespace Pages{
 
         [[nodiscard]] page_size_t GetPageSize() const;
         [[nodiscard]] Constants::PageType GetPageType() const;
-        [[nodiscard]] DatabaseEngine::StorageTypes::Row GetRow(const DatabaseEngine::StorageTypes::Table* table, Int indexPosition)const;
 
         void Defragment();
 
@@ -194,6 +209,7 @@ namespace Pages{
         void SharedLock()const;
         void UniqueUnlock()const;
         void SharedUnlock()const;
+        void SetTable(const DatabaseEngine::StorageTypes::Table* otherTable);
 
         [[nodiscard]] MultiThreading::ReadWriteMutex& Latch() const;
 
@@ -208,5 +224,29 @@ namespace Pages{
 
         void Resize(Int size);
         void ResizeFromBeginning(Int size);
+        QueryResult MaterializeRow(Int indexPosition, Int offset) const;
+        Value PartialMaterializeRow(Int indexPosition, column_index_t columnIndex, Int offset) const;
+        DatabaseEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition, Int offSet)const;
+    };
+
+    struct RowReference{
+        Page* pagePtr;
+        Int indexPosition;
+        Int offset;
+
+        RowReference();
+        RowReference(Page* pagePtr, Int indexPosition, Int offset);
+
+        RowReference(const RowReference& other);
+        RowReference& operator=(const RowReference& other);
+
+        RowReference(RowReference&& other) noexcept;
+        RowReference& operator=(RowReference&& other) noexcept;
+
+        ~RowReference();
+
+        QueryResult Materialize()const;
+        Value PartialMaterialize(column_index_t columnIndex)const;
+        Errors::RuntimeStatus Update(const std::vector<Value>& updates) const;
     };
 }

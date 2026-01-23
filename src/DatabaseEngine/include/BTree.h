@@ -11,6 +11,7 @@
 #include "DataStorage/Row.h"
 
 namespace Pages{
+    struct IndexInsertTuple;
     struct LeafNodeTuple;
 }
 
@@ -91,14 +92,14 @@ namespace Indexing{
         );
         Errors::RuntimeStatus InsertToNonFullNode(
             Pages::PageGuard<Pages::IndexPage>& parent,
-            const Pages::LeafNodeTuple& tuple,
+            const Pages::IndexInsertTuple& tuple,
             Int pagesToAllocate,
             Int& indexPosition
         );
 
         Errors::RuntimeStatus InsertToNode(
             Pages::PageGuard<Pages::IndexPage>& parent,
-            const Pages::LeafNodeTuple& tuple,
+            const Pages::IndexInsertTuple& tuple,
             Int& indexPosition
         ) const;
 
@@ -171,7 +172,7 @@ namespace Indexing{
         ~BTree();
 
         Errors::RuntimeStatus InsertRow(
-            const Pages::LeafNodeTuple& tuple,
+            const Pages::IndexInsertTuple& tuple,
             Int pagesToAllocate,
             Int& indexPosition
         );
@@ -186,27 +187,27 @@ namespace Indexing{
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            std::vector<DatabaseEngine::StorageTypes::Row>* result
+            std::vector<Pages::RowReference>* result
         )const;
 
         void IndexSeekRange(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            std::vector<DatabaseEngine::StorageTypes::Row>* result,
+            std::vector<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexSeek(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& key,
-            std::vector<DatabaseEngine::StorageTypes::Row>* result
+            std::vector<Pages::RowReference>* result
         )const;
 
         void IndexSeek(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& key,
-            std::vector<DatabaseEngine::StorageTypes::Row>* result,
+            std::vector<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
@@ -214,26 +215,26 @@ namespace Indexing{
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<DatabaseEngine::StorageTypes::Row>* result,
+            std::vector<Pages::RowReference>* result,
             DatabaseEngine::IndexState& state
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<DatabaseEngine::StorageTypes::Row>* result,
+            std::vector<Pages::RowReference>* result,
             DatabaseEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<DatabaseEngine::StorageTypes::Row>* result,
+            std::vector<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<DatabaseEngine::StorageTypes::Row>* result
+            std::vector<Pages::RowReference>* result
         )const;
 
         void IndexScan(

@@ -68,14 +68,14 @@ Pages::Page *StorageManager::GetRawPage(
   return this->OpenExtent(pageId, filename, extentId, table);
 }
 
-Pages::PageGuard<Pages::Page> StorageManager::CreatePage(const string& filename, const page_id_t pageId)
+Pages::PageGuard<> StorageManager::CreatePage(const std::string& filename, const DatabaseEngine::StorageTypes::Table *table, const page_id_t pageId)
 {
-  auto *page = new Pages::Page(pageId, true);
+  auto *page = new Pages::Page(pageId, table, true);
   page->SetDirty();
 
   this->InsertPageToCache(page, filename, pageId);
 
-  return Pages::PageGuard<Pages::Page>(page);
+  return Pages::PageGuard(page);
 }
 
 Pages::PageGuard<Pages::Page> StorageManager::GetPage(const std::string &filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table){
@@ -235,6 +235,7 @@ Pages::Page* StorageManager::OpenExtent(
       MultiThreading::WriterGuard pageLock(&page->Latch());
 
       page->ReadFromDisk(buffer, table, offSet, file);
+      page->SetTable(table);
       page->SetFileName(filename);
       page->SetHasSecondChanceUnsafe(true);
     }
@@ -303,9 +304,12 @@ Pages::PageGuard<Pages::PageFreeSpacePage> StorageManager::CreatePageFreeSpacePa
   return Pages::PageGuard(page);
 }
 
-Pages::PageGuard<Pages::IndexPage> StorageManager::CreateIndexPage(const string& filename, const page_id_t pageId)
-{
-  auto *page = new Pages::IndexPage(pageId, true);
+Pages::PageGuard<Pages::IndexPage> StorageManager::CreateIndexPage(
+  const std::string& filename,
+  const DatabaseEngine::StorageTypes::Table* table,
+  const page_id_t pageId
+){
+  auto *page = new Pages::IndexPage(pageId, table, true);
 
   this->InsertPageToCache(page, filename, pageId);
 
@@ -348,8 +352,11 @@ Pages::PageGuard<Pages::PageFreeSpacePage>StorageManager::GetPageFreeSpacePage(c
   return Pages::PageGuard(static_cast<Pages::PageFreeSpacePage*>(page));
 }
 
-Pages::PageGuard<Pages::IndexPage> StorageManager::GetIndexPage(const string& filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table* table)
-{
+Pages::PageGuard<Pages::IndexPage> StorageManager::GetIndexPage(
+  const string& filename,
+  const page_id_t pageId,
+  const DatabaseEngine::StorageTypes::Table* table
+){
   auto* page = this->GetRawPage(filename, pageId, table);
 
   if (page->GetPageType() != PageType::INDEX)

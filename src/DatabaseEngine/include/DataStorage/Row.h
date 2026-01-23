@@ -53,15 +53,15 @@ namespace DatabaseEngine::StorageTypes
         RowHeader(const RowHeader& otherHeader);
         RowHeader(RowHeader&& otherHeader) noexcept;
         RowHeader& operator=(RowHeader&& otherHeader) noexcept;
+
+        [[nodiscard]] bool Size()const;
     };
 
     class Row{
-        Headers::RowIdentifier Id;
+        DataTypes::RowIdentifier Id;
         RowHeader header;
 
-        std::vector<Block*> data;
-
-        // const Table *table;
+        std::vector<Value> data;
 
         [[nodiscard]] Value Materialize(Int indexPos)const;
         inline void WriteVersionToBuffer(object_t*& buffer, page_offset_t& offSet)const;
@@ -76,11 +76,11 @@ namespace DatabaseEngine::StorageTypes
             explicit Row();
             explicit Row(const Table &table);
             explicit Row(const std::vector<const Column*>& columns);
-            explicit Row(
-                const std::vector<Block *> &data,
-                const ByteMaps::BitMap* nullBitMap
-            );
-            explicit Row(const Row* row);
+            // explicit Row(
+            //     const std::vector<Block *> &data,
+            //     const ByteMaps::BitMap* nullBitMap
+            // );
+            // explicit Row(const Row* row);
 
             Row(const Row &copyRow);
             Row(Row &&otherRow)noexcept;
@@ -108,7 +108,7 @@ namespace DatabaseEngine::StorageTypes
             RowHeader* GetHeader();
             [[nodiscard]] row_size_t TotalSize() const;
             [[nodiscard]] row_header_size_t GetHeaderSize() const;
-            [[nodiscard]] Block* FindLargestVariableLengthColumn() const;
+            [[nodiscard]] Value FindLargestVariableLengthColumn() const;
             [[nodiscard]] QueryResult AsQueryResult()const;
             [[nodiscard]] bool IsInvalid()const;
             [[nodiscard]] bool HasOlderVersion()const;

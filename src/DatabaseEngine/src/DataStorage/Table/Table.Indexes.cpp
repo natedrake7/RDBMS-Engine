@@ -65,7 +65,7 @@ namespace DatabaseEngine::StorageTypes {
         const StorageTypes::Row* row,
         const Int nonClusteredIndexId,
         const Int pagesToAllocate,
-        const Headers::RowIdentifier & data
+        const DataTypes::RowIdentifier& data
     ){
 
         // const auto& indexedColumns = this->header.nonClusteredIndexes.at(nonClusteredIndexId).columns;
@@ -115,7 +115,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexSeekRange(
         const ExecutionProperties& properties,
-        std::vector<Row> *selectedRows,
+        std::vector<Pages::RowReference> *selectedRows,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
         const Expressions::Expression* expression
@@ -132,7 +132,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexSeek(
         const ExecutionProperties &properties,
-        std::vector<Row> *selectedRows,
+        std::vector<Pages::RowReference> *selectedRows,
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression
     ){
@@ -148,7 +148,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Row> *selectedRows,
+        std::vector<Pages::RowReference> *selectedRows,
         IndexState& state,
         const Expressions::Expression* expression
     ){
@@ -158,7 +158,7 @@ namespace DatabaseEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            tree->IndexScan(properties, selectedRows, state, expression);
+            // tree->IndexScan(properties, selectedRows, state, expression);
             return;
         }
 
@@ -167,7 +167,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Row> *selectedRows,
+        std::vector<Pages::RowReference> *selectedRows,
         const Expressions::Expression *expression
     ){
         if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
@@ -185,7 +185,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::NonClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Row> *selectedRows,
+        std::vector<Pages::RowReference> *selectedRows,
         const Int indexPos,
         IndexState& state,
         const Expressions::Expression *expression
@@ -204,15 +204,15 @@ namespace DatabaseEngine::StorageTypes {
 
                 MultiThreading::ReaderGuard lock(&page->Latch());
 
-                auto pageRow = page->GetRow(this, rowId.indexId);
+                // auto pageRow = page->GetRow(this, rowId.indexId);
+                //
+                // const auto& row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
 
-                const auto& row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
-
-                context.row = &row;
-                if (row.IsInvalid() || !expression->Evaluate(context).AsBool())
-                    continue;
-
-                selectedRows->push_back(row);
+                // context.row = &row;
+                // if (row.IsInvalid() || !expression->Evaluate(context).AsBool())
+                //     continue;
+                //
+                // selectedRows->push_back(row);
             }
 
             return;
@@ -223,14 +223,14 @@ namespace DatabaseEngine::StorageTypes {
 
             MultiThreading::ReaderGuard lock(&page->Latch());
 
-            auto pageRow = page->GetRow(this, rowId.indexId);
+            // auto pageRow = page->GetRow(this, rowId.indexId);
+            //
+            // auto row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
+            //
+            // if (row.IsInvalid())
+            //     continue;
 
-            auto row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
-
-            if (row.IsInvalid())
-                continue;
-
-            selectedRows->push_back(row);
+            // selectedRows->push_back(row);
         }
     }
 
@@ -241,8 +241,8 @@ namespace DatabaseEngine::StorageTypes {
     ){
         auto* tree = this->GetClusteredIndexedTree();
 
-        std::vector<Row> results;
-        tree->IndexScan(properties, &results, state);
+        std::vector<Pages::RowReference> results;
+        // tree->IndexScan(properties, &results, state);
 
         if(results.empty())
             return;
@@ -255,8 +255,8 @@ namespace DatabaseEngine::StorageTypes {
             const auto value = expression->Evaluate(context);
             if(value.AsBool())
             {
-                const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, &row);
-                tree->Remove(key);
+                // const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, &row);
+                // tree->Remove(key);
             }
         }
     }

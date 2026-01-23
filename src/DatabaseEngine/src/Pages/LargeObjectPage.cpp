@@ -14,7 +14,7 @@ namespace Pages {
         delete this->object;
     }
 
-    LargeObjectPage::LargeObjectPage(const page_id_t pageId, const bool isPageCreation) : Page(pageId, isPageCreation){
+    LargeObjectPage::LargeObjectPage(const page_id_t pageId, const bool isPageCreation) : Page(pageId, nullptr, isPageCreation){
         this->header.type = PageType::LOB;
         this->data = nullptr;
     }

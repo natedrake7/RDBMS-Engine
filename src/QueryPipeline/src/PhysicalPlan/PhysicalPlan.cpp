@@ -50,7 +50,7 @@ namespace QueryPipeline::PhysicalPlan {
   void ExecutionNode::InsertPostProjectionResultsToTemporaryDatabase(
     const DatabaseEngine::ExecutionProperties& properties,
     ExecutionResult*& result,
-    Headers::RowIdentifier& firstRowId
+    DataTypes::RowIdentifier& firstRowId
   ){
     static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
 
@@ -90,20 +90,19 @@ namespace QueryPipeline::PhysicalPlan {
 
     const auto* table = tempDb.OpenTable(this->temporaryTableId);
 
-    table->TemporaryDatabaseHeapScan(&result->rows, state, properties.batchSize);
+    // table->TemporaryDatabaseHeapScan(&result->rows, state, properties.batchSize);
 
     result->results.reserve(result->rows.size());
 
     for (const auto& row: result->rows){
-      auto resultRow = row.AsQueryResult();
-      result->results.push_back(std::move(resultRow));
+      result->results.emplace_back(row.Materialize());
     }
 
     return result;
   }
 
 
-  void ExecutionNode::UpdateScanState(const Headers::RowIdentifier& rowId){ }
+  void ExecutionNode::UpdateScanState(const DataTypes::RowIdentifier& rowId){ }
 
   bool ExecutionNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
@@ -247,7 +246,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  void PhysicalTableScan::UpdateScanState(const Headers::RowIdentifier& rowId){
+  void PhysicalTableScan::UpdateScanState(const DataTypes::RowIdentifier& rowId){
     this->state.lastFetchedRowId = rowId;
   }
 
@@ -290,7 +289,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  void PhysicalIndexScan::UpdateScanState(const Headers::RowIdentifier& rowId){
+  void PhysicalIndexScan::UpdateScanState(const DataTypes::RowIdentifier& rowId){
     this->state.pageId = rowId.pageId;
     this->state.lastFetchedKeyIndex = rowId.indexId;
   }
@@ -361,7 +360,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       QueryResult resultRow;
 
       for (const auto& expression : this->resultExpressions) {
-        context.row = &row;
+        // context.row = &row;
         auto field = expression->Evaluate(context);
         resultRow.AddColumn(field);
       }
@@ -369,11 +368,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       result->results.push_back(std::move(resultRow));
     }
 
-    ranges::sort(this->columnHeaders,
-      [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
-          return a.ordinalPosition < b.ordinalPosition;
-      }
-    );
+    // ranges::sort(this->columnHeaders,
+    //   [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
+    //       return a.ordinalPosition < b.ordinalPosition;
+    //   }
+    // );
 
     return result;
   }
@@ -416,7 +415,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         : this->ExecuteStatement(properties);
   }
 
-  void PhysicalProject::UpdateScanState(const Headers::RowIdentifier& rowId){
+  void PhysicalProject::UpdateScanState(const DataTypes::RowIdentifier& rowId){
     this->child->UpdateScanState(rowId);
   }
 
@@ -439,19 +438,19 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     std::vector<DatabaseEngine::StorageTypes::Row> filteredRows;
     for (auto& row : result->rows) {
-      context.row = &row;
+      // context.row = &row;
 
       if (!this->filter->Evaluate(context).AsBool())
         continue;
 
-      filteredRows.push_back(std::move(row));
+      // filteredRows.push_back(std::move(row));
     }
 
-    result->rows = std::move(filteredRows);
+    // result->rows = std::move(filteredRows);
     return result;
   }
 
-  void PhysicalFilter::UpdateScanState(const Headers::RowIdentifier& rowId){
+  void PhysicalFilter::UpdateScanState(const DataTypes::RowIdentifier& rowId){
     this->child->UpdateScanState(rowId);
   }
 
@@ -473,7 +472,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  void PhysicalTop::UpdateScanState(const Headers::RowIdentifier& rowId){
+  void PhysicalTop::UpdateScanState(const DataTypes::RowIdentifier& rowId){
     this->child->UpdateScanState(rowId);
   }
 
@@ -519,9 +518,37 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  void PhysicalDistinct::UpdateScanState(const Headers::RowIdentifier& rowId){
+  void PhysicalDistinct::UpdateScanState(const DataTypes::RowIdentifier& rowId){
     this->child->UpdateScanState(rowId);
   }
+
+  bool PhysicalInsert::SortInsertsAscending(const Value& lhs, const Value& rhs)
+  {
+    return lhs.GetColumnIndex() < rhs.GetColumnIndex();
+  }
+
+    std::vector<Value> PhysicalInsert::ConvertExpressionsToValues(
+        const DatabaseEngine::ExecutionProperties& properties,
+        const Int index
+    ) const{
+        auto& [expressions] = this->fields.at(index);
+
+        std::vector<Value> values;
+        values.reserve(expressions.size());
+        for (int i = 0; i < expressions.size(); i++) {
+            const Expressions::EvaluationContext context(
+                Expressions::EvaluationContext::EvaluationContextType::Constant,
+                properties.variables
+            );
+
+            auto value = expressions[i]->Evaluate(context);
+            value.SetColumnIndex(this->columnsIndices.at(index));
+            values.push_back(value);
+        }
+
+        ranges::sort(values, SortInsertsAscending);
+        return values;
+    }
 
   ExecutionResult* PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties)const{
     ExecutionResult* result = nullptr;
@@ -548,23 +575,28 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  ExecutionResult* PhysicalInsert::InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    ExecutionResult* PhysicalInsert::InsertFromFields(
+      DatabaseEngine::StorageTypes::Table* tablePtr,
+      const DatabaseEngine::ExecutionProperties& properties
+    ){
+        auto* result = new ExecutionResult();
 
-    for (const auto&[columns] : this->fields) {
-      const auto insertResult = tablePtr->InsertRow(properties, columns, this->columnsIndices);
+        for (int i = 0;i < this->fields.size(); i++){
+            auto values = this->ConvertExpressionsToValues(properties, i);
 
-      if (insertResult.code != Errors::RuntimeError::Ok) {
-        result->message = insertResult.message;
-        result->code = insertResult.code;
+            const auto insertResult = tablePtr->InsertRow(properties, values);
+
+            if (insertResult.code != Errors::RuntimeError::Ok) {
+              result->message = insertResult.message;
+              result->code = insertResult.code;
+              return result;
+            }
+        }
+
+        result->message = "Rows inserted: " + std::to_string(this->fields.size());
+        result->code = Errors::RuntimeError::Ok;
         return result;
-      }
     }
-
-    result->message = "Rows inserted: " + std::to_string(this->fields.size());
-    result->code = Errors::RuntimeError::Ok;
-    return result;
-  }
 
 PhysicalInsert::PhysicalInsert(
   Statements::DataSource* table,
@@ -943,7 +975,7 @@ PhysicalInsert::PhysicalInsert(
     while (result->canFetchMore || (result->canFetchMore == false && this->priorityQueue.Empty())) {
         SortingFunctions::OrderBy(result->results, this->expressions);
 
-        Headers::RowIdentifier rowId;
+        DataTypes::RowIdentifier rowId;
         this->InsertPostProjectionResultsToTemporaryDatabase(properties, result, rowId);
 
         auto element = MergeElement(
@@ -1002,7 +1034,7 @@ PhysicalInsert::PhysicalInsert(
     return result;
   }
 
-  void PhysicalOrderBy::UpdateScanState(const Headers::RowIdentifier& rowId){
+  void PhysicalOrderBy::UpdateScanState(const DataTypes::RowIdentifier& rowId){
     this->child->UpdateScanState(rowId);
   }
 

@@ -7,7 +7,11 @@
 #include <cstring>
 
 namespace Pages {
-    IndexAllocationMapPage::IndexAllocationMapPage(const table_id_t tableId, const page_id_t pageId, const extent_id_t startingExtentId) : Page(pageId){
+    IndexAllocationMapPage::IndexAllocationMapPage(
+        const table_id_t tableId,
+        const page_id_t pageId,
+        const extent_id_t startingExtentId
+    ) : Page(pageId, nullptr){
         this->additionalHeader.tableId = tableId;
         this->additionalHeader.startingExtentId = startingExtentId;
         this->header.bytesLeft -= (sizeof(table_id_t) + sizeof(extent_id_t));
@@ -19,7 +23,11 @@ namespace Pages {
         this->lastAllocatedExtentId = 0;
     }
 
-    IndexAllocationMapPage::IndexAllocationMapPage(const PageHeader& pageHeader, const extent_id_t startingExtentId, const table_id_t tableId) : Page(pageHeader){
+    IndexAllocationMapPage::IndexAllocationMapPage(
+        const PageHeader& pageHeader,
+        const extent_id_t startingExtentId,
+        const table_id_t tableId
+    ) : Page(pageHeader){
         this->additionalHeader.tableId = tableId;
         this->additionalHeader.startingExtentId = startingExtentId;
         this->lastAllocatedExtentId = 0;

@@ -449,6 +449,12 @@ bool Value::IsNull() const { return this->data == nullptr; }
 column_index_t Value::GetColumnIndex() const { return this->columnIndex;}
 DataType Value::GetType() const{ return this->type; }
 
+void Value::SetNull(){
+    std::free(this->data);
+    this->data = nullptr;
+    this->size = 0;
+}
+
 void Value::SetData(const bool otherData){
     delete this->data;
 
@@ -584,6 +590,10 @@ time_t Value::AsUnixTimeStamp() const{ return *reinterpret_cast<time_t *>(this->
 
 DataTypes::Guid Value::AsGuid() const {
     return DataTypes::Coercions::ToGuid(*this);
+}
+
+page_id_t Value::AsLargeObjectPointer() const{
+    return *reinterpret_cast<page_id_t *>(this->data);
 }
 
 void Value::SetColumnIndex(const column_index_t otherIndex) { this->columnIndex = otherIndex; }
@@ -993,6 +1003,189 @@ Value Value::EqualsIgnoreOrdinalCase(const Value &lhs, const Value &rhs){
         0
     );
 }
+
+Errors::RuntimeStatus Value::SetByDataType(const Value& other){
+    switch (this->type) {
+        case DataType::TinyInt:
+            return this->SetTinyInt(other);
+        case DataType::SmallInt:
+            return this->SetSmallInt(other);
+        case DataType::Int:
+            return this->SetInt(other);
+        case DataType::BigInt:
+            return this->SetBigInt(other);
+        case DataType::Decimal:
+            return this->SetDecimal(other);
+        case DataType::String:
+            return this->SetString(other);
+        case DataType::Bool:
+            return this->SetBool(other);
+        case DataType::DateTime:
+            return this->SetDateTime(other);
+        case DataType::Guid:
+            return this->SetGuid(other);
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+            throw std::runtime_error("Invalid Datatype for column");
+    }
+}
+
+    Errors::RuntimeStatus Value::SetTinyInt(const Value &value){
+        Errors::RuntimeStatus result;
+        const auto val = value.AsBigInt();
+        TinyInt convertedValue;
+
+        if (!Converter<TinyInt>::TryStoi(val, convertedValue)) {
+            std::ostringstream ss;
+
+            ss << "Value " << val << " out of range for TinyInt";
+
+            result.code = Errors::RuntimeError::Overflow;
+            result.message = ss.str();
+            return result;
+        }
+
+        this->CopyToBuffer<TinyInt>(convertedValue);
+        return result;
+    }
+
+    Errors::RuntimeStatus Value::SetSmallInt(const Value &value){
+        Errors::RuntimeStatus result;
+
+        const auto val = value.AsBigInt();
+        SmallInt convertedValue;
+
+        if (!Converter<SmallInt>::TryStoi(val, convertedValue)) {
+            std::ostringstream ss;
+
+            ss << "Value " << val << " out of range for SmallInt";
+
+            result.code = Errors::RuntimeError::Overflow;
+            result.message = ss.str();
+            return result;
+        }
+
+        this->CopyToBuffer<SmallInt>(convertedValue);
+        return result;
+    }
+
+    Errors::RuntimeStatus Value::SetInt(const Value &value){
+        Errors::RuntimeStatus result;
+
+        const auto val = value.AsBigInt();
+        Int convertedValue;
+
+        if (!Converter<Int>::TryStoi(val, convertedValue)) {
+            std::ostringstream ss;
+
+            ss << "Value " << val << " out of range for Int";
+
+            result.code = Errors::RuntimeError::Overflow;
+            result.message = ss.str();
+            return result;
+        }
+
+        this->CopyToBuffer<Int>(convertedValue);
+        return result;
+    }
+
+    Errors::RuntimeStatus Value::SetBigInt(const Value &value){
+        Errors::RuntimeStatus result;
+
+        const auto val = value.AsBigInt();
+
+        if (!Converter<BigInt>::TryStoi(val)) {
+            std::ostringstream ss;
+
+            ss << "Value " << val << " out of range for BigInt";
+
+            result.message = ss.str();
+            result.code = Errors::RuntimeError::Overflow;
+            return result;
+        }
+
+        this->CopyToBuffer<BigInt>(val);
+        return result;
+    }
+
+    Errors::RuntimeStatus Value::SetDecimal(const Value &value){
+        Errors::RuntimeStatus result;
+
+        const auto val = value.AsDecimal();
+        // const auto& columnHeader = this->column->GetColumnHeader();
+
+        // if (!Converter<DataTypes::Decimal>::TryStoi(val, this->column->GetColumnSize())) {
+        //     std::ostringstream ss;
+        //
+        //     ss  << "Value "
+        //         << val << " out of range for Decimal("
+        //         << columnHeader.precision << ","
+        //         << columnHeader.scale << ")";
+        //
+        //     result.message = ss.str();
+        //     result.code = Errors::RuntimeError::Overflow;
+        //     return result;
+        // }
+
+        this->CopyToBuffer(val);
+        return result;
+    }
+
+    Errors::RuntimeStatus Value::SetString(const Value &value){
+        Errors::RuntimeStatus result;
+
+        const auto val = value.AsString();
+        const auto& columnHeader = this->column->GetColumnHeader();
+
+        if (val.size() > columnHeader.recordSize) {
+            std::ostringstream ss;
+
+            ss  << "Value "
+                << val << " out of range for String("
+                << columnHeader.recordSize << ")";
+
+            result.message = ss.str();
+            result.code = Errors::RuntimeError::Overflow;
+            return result;
+        }
+
+        this->CopyToBuffer(val);
+        return result;
+    }
+
+    Errors::RuntimeStatus Value::SetBool(const Value &value){
+        Errors::RuntimeStatus result;
+
+        const auto val = value.AsBigInt();
+        bool convertedValue;
+
+        if (!Converter<bool>::TryStoi(val, convertedValue)) {
+            std::ostringstream ss;
+            ss << "Value " << val << " out of range for Bool";
+
+            result.message = ss.str();
+            result.code = Errors::RuntimeError::Overflow;
+            return result;
+        }
+
+        this->CopyToBuffer<bool>(convertedValue);
+        return result;
+    }
+
+    Errors::RuntimeStatus Value::SetDateTime(const Value &value){
+        Errors::RuntimeStatus result;
+
+        this->CopyToBuffer(value.AsDateTime());
+        return result;
+    }
+
+    Errors::RuntimeStatus Value::SetGuid(const Value &value){
+        Errors::RuntimeStatus result;
+
+        this->CopyToBuffer(value.AsGuid());
+        return result;
+    }
 
 int64_t Value::Hash() const {
     return static_cast<int64_t>(0);

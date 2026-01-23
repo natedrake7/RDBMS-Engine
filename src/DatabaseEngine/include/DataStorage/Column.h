@@ -90,7 +90,7 @@ namespace DatabaseEngine::StorageTypes
 
         void SetIsOverflowed(bool isOverflow);
 
-        [[nodiscard]] bool GenerateIdentityValue(BigInt& value);
+        [[nodiscard]] BigInt GenerateIdentityValue();
 
         void UpdateMetadata()const;
 

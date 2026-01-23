@@ -36,7 +36,7 @@ namespace QueryPipeline::PhysicalPlan{
 
       std::vector<const DatabaseEngine::StorageTypes::Column*> columns;
 
-      std::vector<DatabaseEngine::StorageTypes::Row> rows;
+      std::vector<Pages::RowReference> rows;
 
       std::vector<QueryResult> results;
 
@@ -71,14 +71,14 @@ namespace QueryPipeline::PhysicalPlan{
       void InsertPostProjectionResultsToTemporaryDatabase(
         const DatabaseEngine::ExecutionProperties& properties,
         ExecutionResult*& result,
-        Headers::RowIdentifier& firstRowId
+        DataTypes::RowIdentifier& firstRowId
       );
       [[nodiscard]] ExecutionResult* StreamFromTemporaryDatabase(
         const DatabaseEngine::ExecutionProperties& properties,
         DatabaseEngine::ScanState& state
       ) const;
       virtual ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) = 0;
-      virtual void UpdateScanState(const Headers::RowIdentifier& rowId);
+      virtual void UpdateScanState(const DataTypes::RowIdentifier& rowId);
 
       [[nodiscard]] bool UsesExternalStorage() const;
   };
@@ -234,7 +234,7 @@ namespace QueryPipeline::PhysicalPlan{
       explicit PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression);
       ~PhysicalTableScan()override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-      void UpdateScanState(const Headers::RowIdentifier& rowId) override;
+      void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
   class PhysicalIndexScan final : public ExecutionNode{
@@ -248,7 +248,7 @@ namespace QueryPipeline::PhysicalPlan{
     explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, bool isClustered = false);
     ~PhysicalIndexScan()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-    void UpdateScanState(const Headers::RowIdentifier& rowId) override;
+    void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
   class PhysicalIndexSeek final : public ExecutionNode{
@@ -307,7 +307,7 @@ namespace QueryPipeline::PhysicalPlan{
         std::vector<Headers::ColumnHeader>& columnHeaders);
       ~PhysicalProject() override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-      void UpdateScanState(const Headers::RowIdentifier& rowId) override;
+      void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
   class PhysicalFilter final : public ExecutionNode{
@@ -318,7 +318,7 @@ namespace QueryPipeline::PhysicalPlan{
       PhysicalFilter(ExecutionNode* child, Expressions::Expression* filter);
       ~PhysicalFilter() override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-      void UpdateScanState(const Headers::RowIdentifier& rowId) override;
+      void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
   class PhysicalTop final : public ExecutionNode {
@@ -330,7 +330,7 @@ namespace QueryPipeline::PhysicalPlan{
       ~PhysicalTop() override;
 
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-    void UpdateScanState(const Headers::RowIdentifier& rowId) override;
+    void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
   class PhysicalDistinct final : public ExecutionNode {
@@ -340,7 +340,7 @@ namespace QueryPipeline::PhysicalPlan{
       explicit PhysicalDistinct(ExecutionNode* child);
       ~PhysicalDistinct()override;
       ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-      void UpdateScanState(const Headers::RowIdentifier& rowId) override;
+      void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
   class PhysicalOrderBy final : public ExecutionNode{
@@ -355,7 +355,7 @@ namespace QueryPipeline::PhysicalPlan{
     PhysicalOrderBy(ExecutionNode* child, std::vector<Statements::OrderColumn*>& expressions);
     ~PhysicalOrderBy()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
-    void UpdateScanState(const Headers::RowIdentifier& rowId) override;
+    void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
   /** @} End of Select Processing Classes */
@@ -373,7 +373,12 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* child;
     std::vector<column_index_t> columnsIndices;
 
+    static bool SortInsertsAscending(const Value& lhs, const Value& rhs);
 
+    std::vector<Value> ConvertExpressionsToValues(
+      const DatabaseEngine::ExecutionProperties& properties,
+      Int index
+    )const;
     ExecutionResult* InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties)const;
     ExecutionResult* InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties);
   public:

@@ -258,21 +258,21 @@ namespace DatabaseEngine {
     allocatedPagesPerExtent++;
 
     for (int i = 0;i < pageSize;i++){
-      auto row = page->GetRow(table, i);
-
-      tableStatistics.averageRowSize += row.TotalSize();
-      sampleRowCount++;
-
-      for (int j = 0; j < columnStatistics.size(); j++){
-       auto& columnStats = columnStatistics[j];
-       const auto& value = row.GetColumnByIndex(j);
-
-       StatisticsScheduler::UpdateColumnStatistics(
-        columnStats,
-        value,
-        sortedValues[columnStats.columnId]
-       );
-      }
+      // auto row = page->GetRow(table, i);
+      //
+      // tableStatistics.averageRowSize += row.TotalSize();
+      // sampleRowCount++;
+      //
+      // for (int j = 0; j < columnStatistics.size(); j++){
+      //  auto& columnStats = columnStatistics[j];
+      //  const auto& value = row.GetColumnByIndex(j);
+      //
+      //  StatisticsScheduler::UpdateColumnStatistics(
+      //   columnStats,
+      //   value,
+      //   sortedValues[columnStats.columnId]
+      //  );
+      // }
     }
    }
   }

@@ -1067,7 +1067,7 @@ namespace QueryPipeline::Statements {
     //validate insert columns existance
     HashSet<int32_t> statementColumns;
     ostringstream os;
-    for (auto & column : this->columns) {
+    for (auto& column : this->columns) {
       Headers::ColumnHeader header;
 
       //check if columns exist on the table
@@ -1090,10 +1090,15 @@ namespace QueryPipeline::Statements {
     }
 
     for (const auto&[columnName, header]:  columnsDict) {
-      if (header.isSystem
-        || identityColumns.Contains(header.id)
-        || statementColumns.Contains(header.id))
-        continue;
+
+        if (identityColumns.Contains(header.id)){
+            for (auto& [insertColumns] : this->values)
+                insertColumns.emplace_back(new Expressions::ConstantExpression(Value::Null()));
+        }
+
+        if (header.isSystem
+            || statementColumns.Contains(header.id))
+            continue;
 
       this->columnIndices.emplace_back(static_cast<column_index_t>(header.ordinalPosition));
 
@@ -1123,12 +1128,11 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan* InsertStatement::ToLogical() {
-
     auto* logicalSelect = this->HasSelectStatement()
                             ? this->selectStatement->ToLogical()
                             : nullptr;
 
-    return new QueryPipeline::LogicalInsert(this->table, this->values, logicalSelect, this->columnIndices);
+    return new LogicalInsert(this->table, this->values, logicalSelect, this->columnIndices);
   }
 
   void InsertStatement::CleanUp() {

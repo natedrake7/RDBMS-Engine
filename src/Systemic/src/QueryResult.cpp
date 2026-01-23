@@ -90,6 +90,16 @@ Int QueryResult::GetByteSize() const{
   return totalSize;
 }
 
+Int QueryResult::GetPageByteSize() const{
+    Int totalSize = 0;
+    for (const auto& value : this->data) {
+        totalSize += sizeof(block_size_t); //size of block
+        totalSize += value.Size(); //data size
+    }
+
+    return totalSize;
+}
+
 void QueryResult::SetColumnIndex(const Int columnPos, const column_index_t columnIndex){
   if (columnPos >= this->data.size())
     return;
@@ -131,6 +141,16 @@ void QueryResult::Deserialize(const std::vector<char> &buffer, UnsignedInt& offs
 
     this->data.push_back(std::move(value));
   }
+}
+
+Errors::RuntimeStatus QueryResult::UpdateColumnAt(const Value& newValue){
+    auto& block = this->data.at(newValue.GetColumnIndex());
+    if (newValue.IsNull()){
+        block.SetNull();
+        return {};
+    }
+
+    return block.SetByDataType(newValue);
 }
 
 QueryResult& QueryResult::operator=(const QueryResult& other){

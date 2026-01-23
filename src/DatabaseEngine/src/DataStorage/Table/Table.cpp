@@ -224,13 +224,13 @@ namespace DatabaseEngine::StorageTypes {
         return {};
       }
 
-      Errors::RuntimeStatus Table::CreateRow(
-        Row*& row,
-        const transaction_id_t transactionId,
-        const std::vector<Expressions::Expression *> &inputData,
-        const std::vector<column_index_t> &columnIndices,
-        Logging::CheckPoint *checkPoint
-      ) const{
+        Errors::RuntimeStatus Table::CreateRow(
+            Row*& row,
+            const transaction_id_t transactionId,
+            const std::vector<Expressions::Expression *> &inputData,
+            const std::vector<column_index_t> &columnIndices,
+            Logging::CheckPoint *checkPoint
+        ) const{
         Errors::RuntimeStatus result;
 
         row = new Row(*this);
@@ -251,8 +251,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto *block = new Block(column);
 
-          if (input.IsNull())
-          {
+          if (input.IsNull()){
             Table::InsertNullValues(block, row, associatedColumnIndex);
             continue;
           }
@@ -275,7 +274,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
       void Table::PopulateAutoComputedColumns(Row*& row)const{
-        int64_t outValue = 0;
+        BigInt outValue = 0;
 
         for (auto* column: this->columns) {
           const auto result = Table::PopulateColumnIdentity(row, column, outValue);
@@ -318,7 +317,7 @@ namespace DatabaseEngine::StorageTypes {
     //   pageFreeSpacePage->SetPageMetaData(page);
     // }
 
-    bool Table::PopulateColumnIdentity( Row*& row, Column*& column, int64_t& outValue) {
+    bool Table::PopulateColumnIdentity(Row*& row, Column*& column, int64_t& outValue) {
         if (!column->GenerateIdentityValue(outValue))
           return false;
 
@@ -802,7 +801,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::HeapScan(
       const ExecutionProperties& properties,
-      std::vector<Row> *result,
+      std::vector<Pages::RowReference> *result,
       ScanState& state
     )const
     {
@@ -870,7 +869,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::TemporaryDatabaseHeapScan(
-      std::vector<Row>* result,
+      std::vector<Pages::RowReference>* result,
       ScanState& state,
       const Int batchSize
     ) const{
@@ -1278,26 +1277,26 @@ namespace DatabaseEngine::StorageTypes {
       }
 
     int Table::HandleRowOverflow(Row* row) const{
-      auto* largestBlock = row->FindLargestVariableLengthColumn();
+      auto largestBlock = row->FindLargestVariableLengthColumn();
 
-      if(largestBlock == nullptr)
-        return -1;
+      // if(largestBlock.IsNull())
+      //   return -1;
+      //
+      // auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->Size());
+      //
+      // int indexPos = 0;
+      // overflowPage->InsertObject(largestBlock.Data(), largestBlock.Size(), indexPos);
+      //
+      // row->SetOverflowBitMapValue(largestBlock.GetColumnIndex(), true);
+      //
+      // auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), overflowPage->GetPageId());
+      //
+      // pfsPage->SetPageMetaData(overflowPage.Get());
+      //
+      // const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
+      // largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
 
-      auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->Size());
-
-      int indexPos = 0;
-      overflowPage->InsertObject(largestBlock->Data(), largestBlock->Size(), indexPos);
-
-      row->SetOverflowBitMapValue(largestBlock->ColumnIndex(), true);
-
-      auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), overflowPage->GetPageId());
-
-      pfsPage->SetPageMetaData(overflowPage.Get());
-
-      const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
-      largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
-
-      return largestBlock->Size();
+      return largestBlock.Size();
     }
 
       int Table::HandleRowOverflow(Row*& row, const Column *column)const{
@@ -1330,7 +1329,7 @@ namespace DatabaseEngine::StorageTypes {
     //create differrent one to handle clustered updates
     Errors::RuntimeStatus Table::UpdateRowNoLock(
       Pages::Page* page,
-      Row* row,
+      Pages::RowReference& row,
       const ExecutionProperties& properties,
       const std::vector<Value>& updates,
       const Int indexPosition,
@@ -1345,10 +1344,10 @@ namespace DatabaseEngine::StorageTypes {
         // this->InsertToVersionDatabase(row, properties.snapshot.transactionId);
 
         int diff = 0;
-        auto result = row->Update(updates, diff);
-
-        if (result.code != Errors::RuntimeError::Ok)
-          return result;
+        // auto result = row.Update(updates, diff);
+        //
+        // if (result.code != Errors::RuntimeError::Ok)
+        //   return result;
 
         // if(page->GetBytesLeft() - diff > 0){
         //   page->UpdateBytesLeft();
@@ -1375,7 +1374,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::UpdateRowNoLock(
       Pages::Page* page,
-      Row* row,
+      Pages::RowReference& row,
       const ExecutionProperties& properties,
       const std::vector<QueryPipeline::Statements::UpdateColumn *>& updates,
       const HashSet<column_index_t>& updatedColumns,
@@ -1388,7 +1387,7 @@ namespace DatabaseEngine::StorageTypes {
         // this->InsertToVersionDatabase(row, properties.snapshot.transactionId);
 
         int diff = 0;
-        auto result = row->Update(updates, diff);
+        // auto result = row.Update(updates, diff);
 
         // if(page->GetBytesLeft() - diff > 0){
         //   page->UpdateBytesLeft();

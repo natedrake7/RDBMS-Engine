@@ -93,8 +93,8 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetIsOverflowed(const bool isOverflow){ this->isOverflowed = isOverflow; }
 
-    bool Column::GenerateIdentityValue(BigInt& value){
-        return this->identityManager.TryGenerate(value);
+    BigInt Column::GenerateIdentityValue(){
+        return this->identityManager.Generate();
     }
 
     void Column::UpdateMetadata()const{

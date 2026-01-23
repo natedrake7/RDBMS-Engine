@@ -5,7 +5,7 @@
 
 namespace Pages
 {
-    HeaderPage::HeaderPage(const page_id_t pageId) : Page(pageId){
+    HeaderPage::HeaderPage(const page_id_t pageId) : Page(pageId, nullptr){
         this->databaseHeader = new DatabaseEngine::DatabaseHeader();
         this->isDirty = true;
         this->header.type = Constants::PageType::METADATA;

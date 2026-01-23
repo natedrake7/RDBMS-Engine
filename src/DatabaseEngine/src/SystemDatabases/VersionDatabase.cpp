@@ -154,7 +154,7 @@ namespace DatabaseEngine {
 
        MultiThreading::WriterGuard lock(&pageFreeSpacePage->Latch());
 
-       auto undoPage = Storage::StorageManager::Get().CreatePage(this->filename, pageId);
+       auto undoPage = Storage::StorageManager::Get().CreatePage(this->filename, nullptr, pageId);
 
        pageFreeSpacePage->SetPageMetaData(undoPage.Get());
      }
@@ -270,25 +270,25 @@ namespace DatabaseEngine {
 
         MultiThreading::WriterGuard pageLatch(&page->Latch());
 
-        for (int i = 0; i < page->GetPageSize(); i++) {
-          auto row = page->GetRow(nullptr, i);
-          const auto* rowHeader = row.GetHeader();
-
-          if (transactionId == FIRST_TRANSACTION_ID
-            || rowHeader->version.createdTransactionId <= transactionId) {
-            page->Delete(i);
-            i--;
-          }
-        }
-
-        if (page->GetPageSize() == 0) {
-          MultiThreading::WriterGuard pfsWriterLock(&pfsPage->Latch());
-          pfsPage->SetPageFreed(pageId);
-
-          continue;
-        }
-
-        isExtentEmpty = false;
+        // for (int i = 0; i < page->GetPageSize(); i++) {
+        //   auto row = page->GetRow(nullptr, i);
+        //   const auto* rowHeader = row.GetHeader();
+        //
+        //   if (transactionId == FIRST_TRANSACTION_ID
+        //     || rowHeader->version.createdTransactionId <= transactionId) {
+        //     page->Delete(i);
+        //     i--;
+        //   }
+        // }
+        //
+        // if (page->GetPageSize() == 0) {
+        //   MultiThreading::WriterGuard pfsWriterLock(&pfsPage->Latch());
+        //   pfsPage->SetPageFreed(pageId);
+        //
+        //   continue;
+        // }
+      //
+      //   isExtentEmpty = false;
       }
 
       if (isExtentEmpty) {

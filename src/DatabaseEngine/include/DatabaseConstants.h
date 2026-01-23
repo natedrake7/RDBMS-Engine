@@ -79,8 +79,8 @@ namespace Constants{
     constexpr page_size_t INDEX_PAGE_SIBLINGS_SIZE = 2 * sizeof(page_id_t);
 	static constexpr UnsignedTinyInt MAX_NUMBER_OF_SUB_KEYS = 7;
 
-    constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = 3 * sizeof(page_id_t) + PackedByte::Size + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);
-    constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE - INDEX_PAGE_SIBLINGS_SIZE;
+    constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = INDEX_PAGE_SIBLINGS_SIZE +  sizeof(page_id_t) + PackedByte::Size + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);
+    constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
 
     constexpr UnsignedSmallInt GAM_PAGE_SIZE = 64000;
     constexpr UnsignedInt GAM_NUMBER_OF_PAGES = 64000 * 8;

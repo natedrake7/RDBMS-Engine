@@ -1,6 +1,11 @@
 #pragma once
+#include <cstring>
 #include <string>
+
+#include "DateTime.h"
 #include "Decimal.h"
+#include "Errors.h"
+#include "Guid.h"
 
 namespace DataTypes {
     class DateTime;
@@ -53,6 +58,55 @@ class Value {
 
     [[nodiscard]] long double InterpolateString() const;
 
+    inline Errors::RuntimeStatus SetTinyInt(const Value& value);
+    inline Errors::RuntimeStatus SetSmallInt(const Value& value);
+    inline Errors::RuntimeStatus SetInt(const Value& value);
+    inline Errors::RuntimeStatus SetBigInt(const Value& value);
+    inline Errors::RuntimeStatus SetDecimal(const Value& value);
+    inline Errors::RuntimeStatus SetString(const Value& value);
+    inline Errors::RuntimeStatus SetBool(const Value& value);
+    inline Errors::RuntimeStatus SetDateTime(const Value& value);
+    inline Errors::RuntimeStatus SetGuid(const Value& value);
+
+    template <typename T>
+    void CopyToBuffer(T value){
+        this->size = sizeof(T);
+        this->data = static_cast<object_t*>(std::malloc(this->size));
+        std::memcpy(this->data, &value, this->size);
+    }
+
+    void CopyToBuffer(const std::string &src) {
+        this->size = src.size();
+        this->data = static_cast<object_t*>(std::malloc(this->size));
+        std::memcpy(this->data, src.data(), this->size);
+    }
+
+    void CopyToBuffer(const std::u16string &src){
+        this->size = src.size();
+        this->data = static_cast<object_t*>(std::malloc(this->size));
+        std::memcpy(this->data, src.data(), this->size);
+    }
+
+    void CopyToBuffer(const DataTypes::Decimal &src){
+        this->size = src.GetRawDataSize();
+        this->data = static_cast<object_t*>(std::malloc(this->size));
+        std::memcpy(this->data, src.GetRawData(), this->size);
+    }
+
+    void CopyToBuffer(const DataTypes::Guid &src){
+        this->size = DataTypes::Guid::Size();
+        this->data = static_cast<object_t*>(std::malloc(this->size));
+        std::memcpy(this->data, src.GetData().data(), this->size);
+    }
+
+    void CopyToBuffer(const DataTypes::DateTime &src){
+        this->size = DataTypes::DateTime::Size();
+        this->data = static_cast<object_t*>(std::malloc(this->size));
+
+        const auto dt = src.GetUnixTimeStamp();
+        std::memcpy(this->data, &dt, this->size);
+    }
+
     public:
         Value(const Value& copyVal);
 
@@ -81,7 +135,8 @@ class Value {
         [[nodiscard]] bool IsNull() const;
         [[nodiscard]] column_index_t GetColumnIndex() const;
         [[nodiscard]] DataType GetType() const;
-      
+
+        void SetNull();
         void SetData(bool otherData);
         void SetData(TinyInt otherData);
         void SetData(SmallInt otherData);
@@ -106,6 +161,8 @@ class Value {
         [[nodiscard]] DataTypes::DateTime AsDateTime()const;
         [[nodiscard]] time_t AsUnixTimeStamp() const;
         [[nodiscard]] DataTypes::Guid AsGuid()const;
+        [[nodiscard]] page_id_t AsLargeObjectPointer() const;
+        // [[nodiscard]] Pages::OverflowPointer AsOverflowPointer() const;
 
         void SetColumnIndex(column_index_t otherIndex);
         void SetType(DataType otherType);
@@ -131,6 +188,8 @@ class Value {
         [[nodiscard]] bool ParseAsBoolFromString()const;
         [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);
 
+        Errors::RuntimeStatus SetByDataType(const Value& other);
+
         [[nodiscard]] BigInt Hash()const;
         [[nodiscard]] long double Interpolate()const;
 };
@@ -140,4 +199,3 @@ struct ValueComparator {
         return (a < b).AsBool();
     }
 };
-

@@ -8,30 +8,30 @@
 namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Block::SetDataByType(const Value &value){
         switch (this->ColumnType()) {
-        case DataType::TinyInt:
-            return this->SetTinyInt(value);
-        case DataType::SmallInt:
-            return this->SetSmallInt(value);
-        case DataType::Int:
-            return this->SetInt(value);
-        case DataType::BigInt:
-            return this->SetBigInt(value);
-        case DataType::Decimal:
-            return this->SetDecimal(value);
-        case DataType::String:
-            return this->SetString(value);
-        case DataType::UnicodeString:
-            return this->SetUnicodeString(value);
-        case DataType::Bool:
-            return this->SetBool(value);
-        case DataType::DateTime:
-            return this->SetDateTime(value);
-        case DataType::Guid:
-            return this->SetGuid(value);
-        case DataType::RowIdentifier:
-        case DataType::Unknown:
-        default:
-            throw std::runtime_error("Invalid Datatype for column");
+            case DataType::TinyInt:
+                return this->SetTinyInt(value);
+            case DataType::SmallInt:
+                return this->SetSmallInt(value);
+            case DataType::Int:
+                return this->SetInt(value);
+            case DataType::BigInt:
+                return this->SetBigInt(value);
+            case DataType::Decimal:
+                return this->SetDecimal(value);
+            case DataType::String:
+                return this->SetString(value);
+            case DataType::UnicodeString:
+                return this->SetUnicodeString(value);
+            case DataType::Bool:
+                return this->SetBool(value);
+            case DataType::DateTime:
+                return this->SetDateTime(value);
+            case DataType::Guid:
+                return this->SetGuid(value);
+            case DataType::RowIdentifier:
+            case DataType::Unknown:
+            default:
+                throw std::runtime_error("Invalid Datatype for column");
         }
     }
 

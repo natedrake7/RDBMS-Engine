@@ -12,7 +12,7 @@ namespace Pages {
         this->priority = Constants::PagePriority::SYSTEM;
     }
 
-    PageFreeSpacePage::PageFreeSpacePage(const page_id_t pageId) : Page(pageId, true){
+    PageFreeSpacePage::PageFreeSpacePage(const page_id_t pageId) : Page(pageId, nullptr, true){
         this->header.bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
         this->pageMap = new ByteMaps::ByteMap(Constants::PAGE_FREE_SPACE_SIZE);
         this->header.size = Constants::PAGE_FREE_SPACE_SIZE;
@@ -21,8 +21,7 @@ namespace Pages {
         this->priority = Constants::PagePriority::SYSTEM;
     }
 
-    PageFreeSpacePage::~PageFreeSpacePage()
-    {
+    PageFreeSpacePage::~PageFreeSpacePage(){
         delete this->pageMap;
     }
 

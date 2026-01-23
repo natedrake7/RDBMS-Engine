@@ -59,13 +59,16 @@ public:
   static StorageManager& Get();
   ~StorageManager();
   void CreateFile(const std::string& fileName, const std::string& extension)const;
-  Pages::PageGuard<> CreatePage(const std::string& filename, page_id_t pageId);
+  Pages::PageGuard<> CreatePage(const std::string& filename, const DatabaseEngine::StorageTypes::Table *table , page_id_t pageId);
   Pages::PageGuard<> GetPage(const std::string& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::PageGuard<Pages::HeaderPage> GetHeaderPage(const std::string &filename);
   Pages::PageGuard<Pages::HeaderPage> CreateHeaderPage(const std::string &filename);
   Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(const std::string& filename, page_id_t pageId);
   Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(const std::string& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
-  Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(const std::string& filename, page_id_t pageId);
+  Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(
+    const std::string& filename,
+    page_id_t pageId
+  );
   Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(const std::string& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::PageGuard<Pages::GlobalAllocationMapPage> CreateGlobalAllocationMapPage(const std::string &filename, page_id_t pageId);
   Pages::PageGuard<Pages::GlobalAllocationMapPage> GetGlobalAllocationMapPage(const std::string& filename, page_id_t pageId);
@@ -73,7 +76,7 @@ public:
   Pages::PageGuard<Pages::IndexAllocationMapPage> GetIndexAllocationMapPage(const std::string& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
   Pages::PageGuard<Pages::PageFreeSpacePage> CreatePageFreeSpacePage(const std::string &filename, page_id_t pageId);
   Pages::PageGuard<Pages::PageFreeSpacePage> GetPageFreeSpacePage(const std::string& filename, page_id_t pageId);
-  Pages::PageGuard<Pages::IndexPage> CreateIndexPage(const std::string& filename, page_id_t pageId);
+  Pages::PageGuard<Pages::IndexPage> CreateIndexPage(const std::string& filename, const DatabaseEngine::StorageTypes::Table* table, page_id_t pageId);
   Pages::PageGuard<Pages::IndexPage> GetIndexPage(const std::string& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table* table);
 };
 

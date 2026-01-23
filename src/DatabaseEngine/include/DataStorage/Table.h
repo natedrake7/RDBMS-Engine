@@ -1,11 +1,18 @@
 ﻿#pragma once
 #include <string>
 #include <vector>
+
+#include "InsertPayload.h"
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
 #include "../BTree.h"
 #include "../Logger/Logger.h"
 #include "../Pages/PageGuard.h"
+
+namespace DatabaseEngine::StorageTypes
+{
+    struct InsertPayload;
+}
 
 namespace QueryPipeline::Statements {
     struct Expression;
@@ -120,6 +127,10 @@ namespace DatabaseEngine::StorageTypes
         * Functions to create rows from input data.
         * @{
         */
+            Errors::RuntimeStatus CreateInsertPayload(
+                transaction_id_t transactionId,
+                const std::vector<Value> &inputData
+            );
             [[nodiscard]] Errors::RuntimeStatus BatchCreateRow(
                 Row*& rowPtr,
                 transaction_id_t transactionId,
@@ -223,7 +234,7 @@ namespace DatabaseEngine::StorageTypes
                 const Row* row,
                 Int nonClusteredIndexId,
                 Int pagesToAllocate,
-                const Headers::RowIdentifier& data
+                const DataTypes::RowIdentifier& data
             );
             Errors::RuntimeStatus NonClusteredIndexInsertExistingRows(
                 Int indexPos,
@@ -259,42 +270,42 @@ namespace DatabaseEngine::StorageTypes
         */
             void ClusteredIndexSeekRange(
                 const ExecutionProperties& properties,
-                std::vector<Row> *selectedRows,
+                std::vector<Pages::RowReference> *selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexSeek(
                 const ExecutionProperties& properties,
-                std::vector<Row> *selectedRows,
+                std::vector<Pages::RowReference> *selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Row> *selectedRows,
+                std::vector<Pages::RowReference> *selectedRows,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Row> *selectedRows,
+                std::vector<Pages::RowReference> *selectedRows,
                 const Expressions::Expression* expression
             );
             void NonClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Row> *selectedRows,
+                std::vector<Pages::RowReference> *selectedRows,
                 Int indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void HeapScan(
                 const ExecutionProperties& properties,
-                std::vector<Row> *result,
+                std::vector<Pages::RowReference> *result,
                 ScanState& state
             )const;
             void TemporaryDatabaseHeapScan(
-                std::vector<Row> *result,
+                std::vector<Pages::RowReference> *result,
                 ScanState& state,
                 Int batchSize
             )const;
@@ -342,7 +353,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 Pages::Page* page,
-                Row* row,
+                Pages::RowReference& row,
                 const ExecutionProperties& properties,
                 const std::vector<Value>& updates,
                 Int indexPosition,
@@ -351,7 +362,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 Pages::Page* page,
-                Row* row,
+                Pages::RowReference& row,
                 const ExecutionProperties& properties,
                 const std::vector<QueryPipeline::Statements::UpdateColumn*>& updates,
                 const HashSet<column_index_t>& updatedColumns,

@@ -583,7 +583,7 @@ namespace DatabaseEngine
 
                 auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
-                auto dataPage = Storage::StorageManager::Get().CreatePage(this->filename, pageId);
+                auto dataPage = Storage::StorageManager::Get().CreatePage(this->filename, this->tables[tableId], pageId);
 
                 MultiThreading::WriterGuard lock(&pageFreeSpacePage->Latch());
                 MultiThreading::WriterGuard dataPageLock(&dataPage->Latch());
@@ -648,7 +648,7 @@ namespace DatabaseEngine
                 if (pageId == lowerLimit)
                     continue;
 
-                auto indexPage = Storage::StorageManager::Get().CreateIndexPage(this->filename, pageId);
+                auto indexPage = Storage::StorageManager::Get().CreateIndexPage(this->filename, table, pageId);
                 auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, pageId);
 
                 MultiThreading::WriterGuard lock(&pageFreeSpacePage->Latch());

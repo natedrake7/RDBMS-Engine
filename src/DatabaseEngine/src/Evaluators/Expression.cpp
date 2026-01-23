@@ -70,7 +70,7 @@ namespace Expressions{
     this->variables = variables;
   }
 
-  EvaluationContext::EvaluationContext(const DatabaseEngine::StorageTypes::Row* row){
+  EvaluationContext::EvaluationContext(const Pages::RowReference* row){
     this->type = EvaluationContextType::SingleRow;
     this->row = row;
     this->outerRow = nullptr;
@@ -88,8 +88,8 @@ namespace Expressions{
   }
 
   EvaluationContext::EvaluationContext(
-    const DatabaseEngine::StorageTypes::Row* outerRow,
-    const DatabaseEngine::StorageTypes::Row* innerRow
+    const Pages::RowReference* outerRow,
+    const Pages::RowReference* innerRow
   ){
     this->type = EvaluationContextType::Join;
     this->row = nullptr;
@@ -150,14 +150,16 @@ namespace Expressions{
   Value ColumnExpression::Evaluate(const EvaluationContext& context) const{
     switch (context.type) {
     case EvaluationContext::EvaluationContextType::SingleRow:
-      return context.row->GetColumnByIndex(this->index);
+      return context.row->PartialMaterialize(this->index);
     case EvaluationContext::EvaluationContextType::MaterializedRow:
       return context.materializedRow.GetColumnAt(this->index);
     case EvaluationContext::EvaluationContextType::Join: {
-      const auto& outerRowData = context.outerRow->GetData();
-      return this->index < outerRowData.size()
-               ? context.outerRow->GetColumnByIndex(this->index)
-               : context.innerRow->GetColumnByIndex(this->index - outerRowData.size());
+      const auto outerRow = context.outerRow->Materialize();
+      const auto outerRowSize = outerRow.GetData().size();
+
+      return this->index < outerRowSize
+               ? context.outerRow->PartialMaterialize(this->index)
+               : context.innerRow->PartialMaterialize(this->index - outerRowSize);
     }
     case EvaluationContext::EvaluationContextType::Constant:
     case EvaluationContext::EvaluationContextType::Aggregate:

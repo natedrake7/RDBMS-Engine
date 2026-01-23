@@ -5,7 +5,7 @@
 #include "Guards/WriterGuard.h"
 
 namespace Pages {
-    GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t pageId) : Page(pageId)
+    GlobalAllocationMapPage::GlobalAllocationMapPage(const page_id_t pageId) : Page(pageId, nullptr)
     {
         this->header.type = Constants::PageType::GAM;
         this->extentsMap = new ByteMaps::BitMap(Constants::EXTENT_BIT_MAP_SIZE, 0xFF);

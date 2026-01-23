@@ -8,6 +8,7 @@
 #include "../../../include/BufferPool/StorageManager.h"
 #include "../../../include/Pages/Page.h"
 #include "../../../include/Pages/PageFreeSpacePage.h"
+#include "DataStorage/InsertPayload.h"
 
 namespace DatabaseEngine::StorageTypes {
     void Table::InsertLargeObjectToPage(Row* row) {

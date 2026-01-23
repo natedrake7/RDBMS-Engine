@@ -77,6 +77,7 @@ add_library(Systemic SHARED
         src/Systemic/include/Memory/Allocator.h
         src/Systemic/src/Memory/Allocator.cpp
         src/Systemic/include/DataTypes/PackedByte.h
+        src/Systemic/include/RowIdentifier.h
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)
@@ -157,6 +158,9 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Managers/StatisticsManager.cpp
         src/DatabaseEngine/src/SystemDatabases/TemporaryDatabase.cpp
         src/DatabaseEngine/src/Logger/UndoLogger.cpp
+        src/DatabaseEngine/src/DataStorage/Table/Table.Row.Creation.cpp
+        src/DatabaseEngine/include/DataStorage/InsertPayload.h
+        src/DatabaseEngine/src/DataStorage/InsertPayload.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

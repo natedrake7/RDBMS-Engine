@@ -31,9 +31,7 @@ namespace Tests{
     }
 
     void IndexPageUpdate(){
-        Pages::IndexPage page(0, false, {DataType::Int});
 
-        page.SetSubKeys(1);
 
         auto columns = std::vector<DatabaseEngine::StorageTypes::Column*>();
         columns.push_back(new DatabaseEngine::StorageTypes::Column("ID", DataType::Int, 4, 0, false));
@@ -42,6 +40,8 @@ namespace Tests{
         auto table = DatabaseEngine::StorageTypes::Table(0, 0, columns, nullptr);
         auto row = DatabaseEngine::StorageTypes::Row(table);
 
+        Pages::IndexPage page(0, &table, false, {DataType::Int});
+        page.SetSubKeys(1);
 
         auto* block = new DatabaseEngine::StorageTypes::Block(columns[0]);
         auto insertBlockRes = block->SetData(Value(1, 0));

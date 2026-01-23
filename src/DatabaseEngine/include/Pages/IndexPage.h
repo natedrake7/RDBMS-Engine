@@ -69,9 +69,19 @@ namespace Pages {
 		IndexPageAdditionalHeader();
 	};
 
+    struct IndexInsertTuple{
+        DataTypes::Indexing::Key key;
+        object_t* payload;
+        block_size_t payloadSize;
+
+        IndexInsertTuple();
+        IndexInsertTuple(DataTypes::Indexing::Key& key, object_t* payload, block_size_t payloadSize);
+        ~IndexInsertTuple();
+    };
+
 	struct LeafNodeTuple{
 		DataTypes::Indexing::Key key;
-		DatabaseEngine::StorageTypes::Row row;
+		RowReference row;
 
 		LeafNodeTuple& operator=(LeafNodeTuple&& other) noexcept;
 		LeafNodeTuple(LeafNodeTuple&& other) noexcept;
@@ -79,7 +89,7 @@ namespace Pages {
 		LeafNodeTuple& operator=(const LeafNodeTuple& other);
 		LeafNodeTuple(const LeafNodeTuple& other);
 
-		LeafNodeTuple(DatabaseEngine::StorageTypes::Row& row, DataTypes::Indexing::Key& key);
+		LeafNodeTuple(RowReference& row, DataTypes::Indexing::Key& key);
 	};
 
 	struct RowIdTuple{
@@ -106,7 +116,7 @@ namespace Pages {
 			void WriteAdditionalHeaderToDisk(std::fstream* filePtr) const;
 			void ReadAdditionalHeaderFromDisk(const std::vector<char>& data, page_offset_t &offSet);
 
-			void InsertFirstTuple(const LeafNodeTuple& tuple);
+			void InsertFirstTuple(const IndexInsertTuple& tuple);
 
 			void InsertFirstKey(const DataTypes::Indexing::Key& key);
 			void InsertKey(const DataTypes::Indexing::Key& key);
@@ -118,7 +128,7 @@ namespace Pages {
 			void AdjustRows();
 
 		public:
-			IndexPage(page_id_t pageId, bool isPageCreation, const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes = {});
+			IndexPage(page_id_t pageId, const DatabaseEngine::StorageTypes::Table* table, bool isPageCreation, const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes = {});
 			explicit IndexPage(const PageHeader &pageHeader);
 
 			void ReadFromDisk(const std::vector<char> &data, const DatabaseEngine::StorageTypes::Table *table, page_offset_t &offSet, std::fstream *filePtr) override;
@@ -160,17 +170,22 @@ namespace Pages {
 
 			void InsertKey(const DataTypes::Indexing::Key& key, Int indexPosition);
 
-			void InsertTuple(const LeafNodeTuple& tuple);
-			void InsertTuple(const LeafNodeTuple& tuple, Int indexPosition);
+			void InsertTuple(const IndexInsertTuple& tuple);
+			void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition);
 
-			void UpdateRow(DatabaseEngine::StorageTypes::Row*& row, Int indexPosition) override;
+	        void UpdateRow(
+	            const DatabaseEngine::StorageTypes::RowHeader& rowHeader,
+                QueryResult& row,
+                Int indexPosition,
+                Int offset
+            ) override;
 
 			DataTypes::Indexing::Key GetKey(Int indexPosition) const;
 			DatabaseEngine::StorageTypes::Row GetRow(Int indexPosition, Int offSet, const DatabaseEngine::StorageTypes::Table* table) const;
 			LeafNodeTuple GetLeafTuple(
 				const DatabaseEngine::StorageTypes::Table* table,
 				Int indexPosition
-			) const;
+			);
 			InternalNodeTuple GetInternalNodeTuple(Int indexPosition) const;
 
 			DatabaseEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(Int indexPosition, Int& outOffset) const;
@@ -184,10 +199,10 @@ namespace Pages {
 			[[nodiscard]] Int NumberOfKeys()const;
 
 			void AppendRowToBuffer(
-				std::vector<DatabaseEngine::StorageTypes::Row>* buffer,
+				std::vector<RowReference>* buffer,
 				const DatabaseEngine::StorageTypes::Table* table,
 				const DatabaseEngine::Snapshot& snapshot,
 				Int indexPosition
-			) const;
+			);
 		};
 } // namespace Pages

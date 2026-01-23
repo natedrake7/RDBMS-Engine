@@ -241,7 +241,7 @@ namespace Indexing{
 
     Errors::RuntimeStatus BTree::InsertToNonFullNode(
             Pages::PageGuard<Pages::IndexPage>& parent,
-            const Pages::LeafNodeTuple& tuple,
+            const Pages::IndexInsertTuple& tuple,
             const Int pagesToAllocate,
             Int& indexPosition
     ){
@@ -288,7 +288,7 @@ namespace Indexing{
 
     Errors::RuntimeStatus BTree::InsertToNode(
         Pages::PageGuard<Pages::IndexPage> &parent,
-        const Pages::LeafNodeTuple& tuple,
+        const Pages::IndexInsertTuple& tuple,
         Int& indexPosition
     ) const
     {
@@ -842,18 +842,18 @@ namespace Indexing{
             for (Int i = 0;i < numOfRows; i++){
                 auto tuple = currentNode->GetLeafTuple(this->table, i);
 
-                tableStatistics.averageRowSize += static_cast<Int>(tuple.row.TotalSize());
-
-                for (Int j = 0; j < columnStatistics.size(); j++) {
-                    auto& columnStats = columnStatistics[j];
-                    const auto& value = tuple.row.GetColumnByIndex(j);
-
-                    DatabaseEngine::StatisticsScheduler::UpdateColumnStatistics(
-                        columnStats,
-                        value,
-                        sortedValues[columnStats.columnId]
-                    );
-                }
+                // tableStatistics.averageRowSize += static_cast<Int>(tuple.row.TotalSize());
+                //
+                // for (Int j = 0; j < columnStatistics.size(); j++) {
+                //     auto& columnStats = columnStatistics[j];
+                //     const auto& value = tuple.row.GetColumnByIndex(j);
+                //
+                //     DatabaseEngine::StatisticsScheduler::UpdateColumnStatistics(
+                //         columnStats,
+                //         value,
+                //         sortedValues[columnStats.columnId]
+                //     );
+                // }
             }
 
             if(!currentNode->HasRightSibling())
@@ -900,7 +900,7 @@ namespace Indexing{
     BTree::~BTree() = default;
 
     Errors::RuntimeStatus BTree::InsertRow(
-        const Pages::LeafNodeTuple& tuple,
+        const Pages::IndexInsertTuple& tuple,
         const Int pagesToAllocate,
         Int &indexPosition
     ){
@@ -975,7 +975,7 @@ namespace Indexing{
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
-        std::vector<DatabaseEngine::StorageTypes::Row> *result
+        std::vector<Pages::RowReference> *result
     )const{
         if (this->IsEmpty())
             return;
@@ -989,12 +989,7 @@ namespace Indexing{
                 auto [key, row] = currentNode->GetLeafTuple(this->table, i);
 
                 if (key.InClosedRange(minKey, maxKey)){
-                    auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
-
-                    if (visibleRow.IsInvalid())
-                        continue;
-
-                    result->push_back(std::move(visibleRow));
+                    currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
                     continue;
                 }
 
@@ -1013,7 +1008,7 @@ namespace Indexing{
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
-        std::vector<DatabaseEngine::StorageTypes::Row> *result,
+        std::vector<Pages::RowReference> *result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1030,13 +1025,7 @@ namespace Indexing{
                 auto [key, row] = currentNode->GetLeafTuple(this->table, i);
 
                 if (key.InClosedRange(minKey, maxKey)){
-                    auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
-
-                    context.row = &visibleRow;
-                    if (visibleRow.IsInvalid() || !expression->Evaluate(context).AsBool())
-                        continue;
-
-                    result->push_back(std::move(visibleRow));
+                    currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
                     continue;
                 }
 
@@ -1054,7 +1043,7 @@ namespace Indexing{
     void BTree::IndexSeek(
         const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
-        std::vector<DatabaseEngine::StorageTypes::Row> *result
+        std::vector<Pages::RowReference> *result
     ) const {
         if (this->IsEmpty())
             return;
@@ -1069,12 +1058,7 @@ namespace Indexing{
                 // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
                 // std::cout << "Row: " << row << std::endl;
                 if (key == tupleKey){
-                    auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
-
-                    if (visibleRow.IsInvalid())
-                        continue;
-
-                    result->push_back(std::move(visibleRow));
+                    currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
                     continue;
                 }
 
@@ -1093,7 +1077,7 @@ namespace Indexing{
     void BTree::IndexSeek(
         const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
-        std::vector<DatabaseEngine::StorageTypes::Row> *result,
+        std::vector<Pages::RowReference> *result,
         const Expressions::Expression *expression
     ) const {
         if (this->IsEmpty())
@@ -1113,13 +1097,8 @@ namespace Indexing{
                 auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
 
                 if (key == tupleKey) {
-                    auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
-
-                    context.row = &visibleRow;
-                    if (visibleRow.IsInvalid() || !expression->Evaluate(context).AsBool())
-                        continue;
-
-                    result->push_back(std::move(visibleRow));
+                    currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                    continue;
                 }
 
                 if (key < tupleKey)
@@ -1159,7 +1138,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<DatabaseEngine::StorageTypes::Row> *result,
+        std::vector<Pages::RowReference> *result,
         DatabaseEngine::IndexState& state
     )const{
         if (this->IsEmpty())
@@ -1195,7 +1174,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<DatabaseEngine::StorageTypes::Row> *result,
+        std::vector<Pages::RowReference> *result,
         DatabaseEngine::IndexState& state,
         const Expressions::Expression *expression
     )const{
@@ -1214,15 +1193,10 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (Int i = state.GetNextKeyIndex(); i < currentNode->NumberOfKeys(); i++) {
-                auto [_, row] = currentNode->GetLeafTuple(this->table, i);
+                // if (row.IsInvalid() || !expression->Evaluate(context).AsBool())
+                //     continue;
 
-                auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
-
-                context.row = &row;
-                if (row.IsInvalid() || !expression->Evaluate(context).AsBool())
-                    continue;
-
-                result->push_back(std::move(row));
+                currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
 
                 if (result->size() == properties.batchSize) {
                     state.lastFetchedKeyIndex = i;
@@ -1245,7 +1219,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<DatabaseEngine::StorageTypes::Row> *result,
+        std::vector<Pages::RowReference> *result,
         const Expressions::Expression *expression
     )const{
         if (this->IsEmpty())
@@ -1259,14 +1233,11 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (Int i = 0;i < currentNode->GetPageSize();i++){
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
-                auto row = tuple.row.GetVisibleVersionForTransaction(properties.snapshot);
+                currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
 
-                context.row = &row;
-                if(row.IsInvalid() || !expression->Evaluate(context).AsBool())
-                    continue;
+                // if(row.IsInvalid() || !expression->Evaluate(context).AsBool())
+                //     continue;
 
-                result->push_back(std::move(row));
             }
 
             if(!currentNode->HasRightSibling())
@@ -1278,7 +1249,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<DatabaseEngine::StorageTypes::Row> *result
+        std::vector<Pages::RowReference> *result
     )const{
         if (this->IsEmpty())
             return;
@@ -1290,13 +1261,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (Int i = 0;i < currentNode->GetPageSize();i++){
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
-                auto row = tuple.row.GetVisibleVersionForTransaction(properties.snapshot);
-
-                if(row.IsInvalid())
-                    continue;
-
-                result->push_back(std::move(row));
+                currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
             }
 
             if(!currentNode->HasRightSibling())
@@ -1400,7 +1365,7 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
-            for (Int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
+            for (Int indexPosition = 0; indexPosition < currentNode->GetPageSize();indexPosition++){
                 auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
 
                 context.row = &tuple.row;
@@ -1410,7 +1375,7 @@ namespace Indexing{
 
                 const auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
-                    &tuple.row,
+                    tuple.row,
                     properties,
                     updates,
                     indexPosition,
@@ -1458,7 +1423,7 @@ namespace Indexing{
 
                 auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
-                    &tuple.row,
+                    tuple.row,
                     properties,
                     updates,
                     updatedColumns,
@@ -1499,7 +1464,7 @@ namespace Indexing{
 
                 auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
-                    &tuple.row,
+                    tuple.row,
                     properties,
                     updates,
                     updatedColumns,
@@ -1540,7 +1505,7 @@ namespace Indexing{
 
                 auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
-                    &tuple.row,
+                    tuple.row,
                     properties,
                     updates,
                     indexPosition,
@@ -1597,7 +1562,7 @@ namespace Indexing{
 
                 auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
-                    &tuple.row,
+                    tuple.row,
                     properties,
                     updates,
                     indexPosition,
@@ -1642,7 +1607,7 @@ namespace Indexing{
 
                 auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
-                    &tuple.row,
+                    tuple.row,
                     properties,
                     updates,
                     indexPosition,

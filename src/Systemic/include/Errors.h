@@ -2,8 +2,8 @@
 #include <cstdint>
 #include <string>
 
-#include "Headers.h"
 #include "Key.h"
+#include "RowIdentifier.h"
 
 namespace Errors {
   enum class RuntimeError : uint8_t {
@@ -28,7 +28,7 @@ namespace Errors {
     std::string message;
 
     DataTypes::Indexing::Key primaryKey;
-    Headers::RowIdentifier rowId;
+    DataTypes::RowIdentifier rowId;
 
     RuntimeStatus() {
       this->code = RuntimeError::Ok;
