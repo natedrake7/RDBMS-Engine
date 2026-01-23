@@ -2,6 +2,11 @@
 #include "Errors.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 
+namespace DatabaseEngine::StorageTypes
+{
+    class Column;
+}
+
 namespace DatabaseEngine::StorageTypes {
     class InsertPayload final{
         object_t* _data;
@@ -15,18 +20,17 @@ namespace DatabaseEngine::StorageTypes {
         inline void CopyToBuffer(const DataTypes::DateTime& src);
         inline void CopyToBuffer(const DataTypes::Guid& src);
 
-        inline Errors::RuntimeStatus SetTinyInt(const Value& value);
-        inline Errors::RuntimeStatus SetSmallInt(const Value& value);
-        inline Errors::RuntimeStatus SetInt(const Value& value);
-        inline Errors::RuntimeStatus SetBigInt(const Value& value);
-        inline Errors::RuntimeStatus SetDecimal(const Value& value);
-        inline Errors::RuntimeStatus SetString(const Value& value);
-        inline Errors::RuntimeStatus SetUnicodeString(const Value& value);
-        inline Errors::RuntimeStatus SetBool(const Value& value);
-        inline Errors::RuntimeStatus SetDateTime(const Value& value);
-        inline Errors::RuntimeStatus SetGuid(const Value& value);
+        inline Int SetTinyInt(const Value& value, Errors::RuntimeStatus& status);
+        inline Int SetSmallInt(const Value& value, Errors::RuntimeStatus& status);
+        inline Int SetInt(const Value& value, Errors::RuntimeStatus& status);
+        inline Int SetBigInt(const Value& value, Errors::RuntimeStatus& status);
+        inline Int SetDecimal(const Value& value, const Column* column, Errors::RuntimeStatus& status);
+        inline Int SetString(const Value& value, const Column* column, Errors::RuntimeStatus& status);
+        inline Int SetBool(const Value& value, Errors::RuntimeStatus& status);
+        inline Int SetDateTime(const Value& value);
+        inline Int SetGuid(const Value& value);
 
-        Errors::RuntimeStatus SetDataByType(const Value& value, DataType type);
+        Int SetDataByType(const Value& value, const Column* column, Errors::RuntimeStatus& status);
 
     public:
 
@@ -35,7 +39,7 @@ namespace DatabaseEngine::StorageTypes {
 
         void SetData(const void* otherData, UnsignedSmallInt dataSize);
         void SetData(const void* otherData, UnsignedSmallInt dataSize, Int offSet);
-        Errors::RuntimeStatus SetData(const Value& value, DataType type);
+        Int SetData(const Value& value, const Column* column, Errors::RuntimeStatus& status);
 
     };
 

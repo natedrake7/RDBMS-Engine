@@ -77,7 +77,7 @@ namespace DatabaseEngine::StorageTypes
     class Table final{
         TableHeader header;
 
-        std::vector<Column *> columns;
+        std::vector<Column*> columns;
         Database *database;
 
         HashSet<column_id_t> clusteredIndexColumnsCache;
