@@ -26,11 +26,11 @@ typedef struct AggregateResults {
 
 struct MergeElement{
     QueryResult value;
-    Headers::RowIdentifier rowId;
+    DataTypes::RowIdentifier rowId;
     Int batchId;
 
     MergeElement(const QueryResult& value, Int batchId);
-    MergeElement(QueryResult& value, Int batchId, const Headers::RowIdentifier& rowId);
+    MergeElement(QueryResult& value, Int batchId, const DataTypes::RowIdentifier& rowId);
     MergeElement(const MergeElement& other);
     MergeElement(MergeElement&& other) noexcept;
     MergeElement& operator=(const MergeElement& other);

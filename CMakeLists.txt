@@ -52,6 +52,9 @@ set(ANTLR_SRC
     ${GENERATED_DIR}/SQLVisitor.cpp
 )
 
+# Mark generated sources so CMake knows they will be created by the build process
+set_source_files_properties(${ANTLR_SRC} PROPERTIES GENERATED TRUE)
+
 add_library(Systemic SHARED
         src/Systemic/src/MultiThreading/Guards/ReadWriteMutex.cpp
         src/Systemic/src/MultiThreading/Guards/ReaderGuard.cpp
@@ -73,11 +76,7 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryProtocol.cpp
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
-        src/Systemic/include/DataStructures/PriorityQueue.h
-        src/Systemic/include/Memory/Allocator.h
         src/Systemic/src/Memory/Allocator.cpp
-        src/Systemic/include/DataTypes/PackedByte.h
-        src/Systemic/include/RowIdentifier.h
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)
@@ -159,7 +158,6 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/SystemDatabases/TemporaryDatabase.cpp
         src/DatabaseEngine/src/Logger/UndoLogger.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.Row.Creation.cpp
-        src/DatabaseEngine/include/DataStorage/InsertPayload.h
         src/DatabaseEngine/src/DataStorage/InsertPayload.cpp
 )
 
@@ -172,9 +170,9 @@ target_link_libraries(DatabaseEngine
 )
 
 add_library(Server STATIC
-        src/Server/src/ConnectionManager/ConnectionManager.cpp
-        src/Server/src/Threadpool/ThreadPool.cpp
         src/Server/src/Server.cpp
+        src/Server/src/Threadpool/ThreadPool.cpp
+        src/Server/src/ConnectionManager/ConnectionManager.cpp
         src/Server/src/SessionManager/SessionManager.cpp
         src/Server/src/RoleManager/RoleManager.cpp
         src/Server/src/UserManager/UserManager.cpp
@@ -191,6 +189,6 @@ target_link_libraries(Server PRIVATE QueryPipeline PRIVATE $<$<PLATFORM_ID:Windo
 
 target_include_directories(Client PUBLIC src/Client/include)
 
-target_link_libraries(Client PRIVATE Systemic $<$<PLATFORM_ID:Windows>:ws2_32> )
+target_link_libraries(Client PRIVATE Systemic $<$<PLATFORM_ID:Windows>:ws2_32>)
 
 target_link_libraries(Database PRIVATE Server)

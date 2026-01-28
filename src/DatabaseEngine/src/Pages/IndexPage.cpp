@@ -36,10 +36,11 @@ void IndexPage::InsertFirstTuple(const IndexInsertTuple& tuple){
     page_offset_t pos = 0;
     tuple.key.Serialize(this->data, pos);
 
-    std::memcpy(this->data + pos, tuple.payload, tuple.payloadSize);
-    pos += tuple.payloadSize;
+    const auto size = tuple.payload->Size();
+    std::memcpy(this->data + pos, tuple.payload->Data(), size);
+    pos += size;
 
-    const auto newSlot = SlotDirectory(0, tuple.payloadSize + tuple.key.size, SlotDirectory::SLOT_USED);
+    const auto newSlot = SlotDirectory(0, size + tuple.key.size, SlotDirectory::SLOT_USED);
     this->InsertNewSlot(newSlot);
 
     this->header.size++;
@@ -57,10 +58,12 @@ void IndexPage::InsertTuple(const IndexInsertTuple& tuple){
     const auto offSetCopy = nextOffset;
 
     tuple.key.Serialize(this->data, nextOffset);
-    std::memcpy(this->data + nextOffset, tuple.payload, tuple.payloadSize);
-    nextOffset += tuple.payloadSize;
 
-    const auto newSlot = SlotDirectory(offSetCopy, tuple.payloadSize + tuple.key.size, SlotDirectory::SLOT_USED);
+    const auto size = tuple.payload->Size();
+    std::memcpy(this->data + nextOffset, tuple.payload->Data(), size);
+    nextOffset += size;
+
+    const auto newSlot = SlotDirectory(offSetCopy, size + tuple.key.size, SlotDirectory::SLOT_USED);
     this->InsertNewSlot(newSlot);
 
     this->header.size++;
@@ -299,69 +302,15 @@ void IndexPage::InsertTuple(const IndexInsertTuple& tuple, const Int indexPositi
     const auto offSetCopy = nextOffset;
 
     tuple.key.Serialize(this->data, nextOffset);
-    std::memcpy(tuple.payload, this->data + nextOffset, tuple.payloadSize);
 
-    const auto slotSize = tuple.payloadSize + tuple.key.size;
+    const auto size = tuple.payload->Size();
+    std::memcpy(this->data + nextOffset, tuple.payload->Data(), size);
+
+    const auto slotSize = size + tuple.key.size;
     this->AdjustSlotDirectories(indexPosition, offSetCopy, slotSize);
 
     this->header.bytesLeft -= (slotSize + SlotDirectory::Size);
     this->header.size++;
-    this->isDirty = true;
-}
-
-void IndexPage::UpdateRow(
-    const DatabaseEngine::StorageTypes::RowHeader& rowHeader,
-    QueryResult& row,
-    const Int indexPosition,
-    const Int offset
-){
-    if (this->IndexOutOfBounds(indexPosition))
-        throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
-
-    const auto slot = this->GetSlotDirectory(indexPosition);
-
-    auto offSet = slot.GetOffset();
-    const auto key = this->GetKey(offSet);
-
-    const auto previousRowSize = slot.GetSize() - key.size;
-    const auto currentRowSize = row.GetPageByteSize() + rowHeader.Size();
-
-    //if new row size is less than or equal to previous row size, update in place
-    if (currentRowSize <= previousRowSize){
-        this->SerializeRow(rowHeader, row, offSet);
-        return;
-    }
-
-    //insert new row at the end
-    auto nextOffset = this->NewInsertOffset();
-    auto offSetCopy = nextOffset;
-
-    //if next row cant fit in the remaining space, we need to compact the page
-    const auto totalSize = key.size + currentRowSize;
-    //keep slot offset and set its size to 0 so defragmentation does nothing as it is last on the offset
-    if (this->header.bytesLeft < totalSize){
-        this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0, SlotDirectory::SLOT_USED), indexPosition);
-        this->Defragment();
-
-        //even if after the defragment row cant fit, throw exception
-        if (this->header.bytesLeft < totalSize)
-            throw std::runtime_error("IndexPage::UpdateRow: Not enough space to update the row after defragmentation.");
-
-        nextOffset = this->NewInsertOffset();
-        offSetCopy = nextOffset;
-    }
-
-    key.Serialize(this->data, nextOffset);
-    this->SerializeRow(rowHeader, row, nextOffset);
-
-    //update slot directory
-    const auto newSlot = SlotDirectory(offSetCopy, totalSize, SlotDirectory::SLOT_USED);
-    this->UpdateSlotDirectory(newSlot, indexPosition);
-
-    //update bytes
-    //Decrease by total size even though the previous offset is freed, as it becomes fragmented and no row can be inserted
-    //unless pages gets defragmented
-    this->header.bytesLeft -= totalSize;
     this->isDirty = true;
 }
 
@@ -388,17 +337,17 @@ DatabaseEngine::StorageTypes::Row IndexPage::GetRow(
     return row;
 }
 
-LeafNodeTuple IndexPage::GetLeafTuple(const DatabaseEngine::StorageTypes::Table* table, const Int indexPosition){
+LeafNodeTuple IndexPage::PeekLeafTuple(const Int indexPosition){
     const auto slot = this->GetSlotDirectory(indexPosition);
 
     auto offset = slot.GetOffset();
     auto key = this->GetKey(offset);
 
-    auto ref = RowReference(this, indexPosition, slot.GetOffset());
+    auto ref = RowReference(this, indexPosition, key.size);
     return LeafNodeTuple(ref, key);
 }
 
-InternalNodeTuple IndexPage::GetInternalNodeTuple(const Int indexPosition) const{
+InternalNodeTuple IndexPage::PeekInternalNodeTuple(const Int indexPosition) const{
     const auto slot = this->GetSlotDirectory(indexPosition);
 
     DataTypes::Indexing::Key key;
@@ -413,13 +362,13 @@ InternalNodeTuple IndexPage::GetInternalNodeTuple(const Int indexPosition) const
     return InternalNodeTuple(key, pageId);
 }
 
-DatabaseEngine::StorageTypes::RowVersioningHeader IndexPage::PeekVersionHeader(const Int indexPosition, Int& outOffset) const{
+DatabaseEngine::StorageTypes::RowVersioningHeader IndexPage::PeekVersionHeader(const Int indexPosition, Int& outKeySize) const{
     const auto slot = this->GetSlotDirectory(indexPosition);
 
     auto offset = slot.GetOffset();
-    auto key = this->GetKey(offset);
+    const auto key = this->GetKey(offset);
 
-    outOffset = offset;
+    outKeySize = key.size;
     DatabaseEngine::StorageTypes::RowVersioningHeader header;
     std::memcpy(&header, this->data + offset, Constants::ROW_VERSION_HEADER_SIZE);
 
@@ -453,8 +402,8 @@ void IndexPage::AppendRowToBuffer(
     const DatabaseEngine::Snapshot& snapshot,
     const Int indexPosition
 ){
-    Int outOffset = 0;
-    const auto versionHeader = this->PeekVersionHeader(indexPosition, outOffset);
+    Int outKeySize = 0;
+    const auto versionHeader = this->PeekVersionHeader(indexPosition, outKeySize);
 
     if (!versionHeader.IsVisibleForTransaction(snapshot)) {
         if (!versionHeader.HasOlderVersion())
@@ -467,7 +416,7 @@ void IndexPage::AppendRowToBuffer(
         return;
     }
 
-    buffer->emplace_back(this, indexPosition, outOffset);
+    buffer->emplace_back(this, indexPosition, outKeySize);
 }
 
 void IndexPage::MarkEmpty(){
@@ -531,18 +480,17 @@ IndexPageAdditionalHeader::IndexPageAdditionalHeader(){
 
 IndexInsertTuple::IndexInsertTuple(){
     this->payload = nullptr;
-    this->payloadSize = 0;
 }
 
 IndexInsertTuple::IndexInsertTuple(
     DataTypes::Indexing::Key& key,
-    object_t* payload,
-    const block_size_t payloadSize
+    DatabaseEngine::StorageTypes::InsertPayload* payload
 ){
     this->key = std::move(key);
     this->payload = payload;
-    this->payloadSize = payloadSize;
 }
+
+IndexInsertTuple::~IndexInsertTuple() = default;
 
 LeafNodeTuple& LeafNodeTuple::operator=(LeafNodeTuple&& other) noexcept
 {

@@ -5,6 +5,8 @@
 #include <vector>
 #include <ostream>
 
+#include "DataTypes/Value.h"
+
 namespace Headers {
   enum ConstraintType: UnsignedTinyInt {
     PrimaryKey = 0,

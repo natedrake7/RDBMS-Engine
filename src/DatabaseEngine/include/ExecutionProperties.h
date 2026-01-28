@@ -3,12 +3,12 @@
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/Headers.h"
-#include "DatabaseConstants.h"
+#include "../../Systemic/include/RowIdentifier.h"
 
 namespace DatabaseEngine {
   struct ScanState {
       extent_id_t extentId;
-      Headers::RowIdentifier lastFetchedRowId;
+      DataTypes::RowIdentifier lastFetchedRowId;
 
       bool canFetchMore;
 

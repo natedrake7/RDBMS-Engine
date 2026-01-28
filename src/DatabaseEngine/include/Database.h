@@ -115,7 +115,7 @@ public:
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
       const vector<column_index_t>& indexedColumns,
-      const StorageTypes::Row* row
+      const StorageTypes::InsertPayload& payload
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
@@ -127,7 +127,7 @@ public:
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
         const vector<column_index_t>& indexedColumns,
         const StorageTypes::Row* row,
-        const Headers::RowIdentifier& rowId
+        const DataTypes::RowIdentifier& rowId
     );
 
     [[nodiscard]] static Pages::PageGuard<Pages::PageFreeSpacePage> GetAssociatedPfsPage(const string& filename, page_id_t pageId);

@@ -3,7 +3,6 @@
 #include "../DatabaseConstants.h"
 #include "../../../QueryPipeline/include/Statements.h"
 #include "../../../Systemic/include/Errors.h"
-#include "../Pages/Page.h"
 #include "../../../Systemic/include/DataStructures/BitMap.h"
 
 namespace DatabaseEngine {
@@ -21,14 +20,25 @@ namespace ByteMaps{
 
 namespace DatabaseEngine::StorageTypes
 {
+    class Column;
     class Table;
     class Block;
+
+    struct RowVersionPointer {
+        page_id_t pageId;
+        page_offset_t offset;
+
+        RowVersionPointer() {
+            this->pageId = INVALID_PAGE_ID;
+            this->offset = 0;
+        }
+    };
 
     struct RowVersioningHeader {
         transaction_id_t createdTransactionId;
         transaction_id_t deletedTransactionId;
 
-        Pages::RowVersionPointer olderVersionPointer;
+        RowVersionPointer olderVersionPointer;
 
         RowVersioningHeader() {
             this->createdTransactionId = INVALID_TRANSACTION_ID;
@@ -48,7 +58,7 @@ namespace DatabaseEngine::StorageTypes
 
         RowVersioningHeader version;
 
-        RowHeader();
+        explicit RowHeader(Int bitMapsSize = 0);
         RowHeader& operator=(const RowHeader& otherHeader);
         RowHeader(const RowHeader& otherHeader);
         RowHeader(RowHeader&& otherHeader) noexcept;
@@ -62,6 +72,7 @@ namespace DatabaseEngine::StorageTypes
         RowHeader header;
 
         std::vector<Value> data;
+        std::vector<Block*> blocks;
 
         [[nodiscard]] Value Materialize(Int indexPos)const;
         inline void WriteVersionToBuffer(object_t*& buffer, page_offset_t& offSet)const;
@@ -174,7 +185,7 @@ namespace DatabaseEngine::StorageTypes
             void SetNullBitMapValue(bit_map_pos_t position, bool value);
             void SetOverflowBitMapValue(bit_map_pos_t position, bool value);
 
-            [[nodiscard]] const Headers::RowIdentifier& GetId() const;
+            [[nodiscard]] const DataTypes::RowIdentifier& GetId() const;
 
             [[nodiscard]] bool GetNullBitMapValue(bit_map_pos_t position) const;
             [[nodiscard]] bool GetOverflowBitMapValue(bit_map_pos_t position) const;

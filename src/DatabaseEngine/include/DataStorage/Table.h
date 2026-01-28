@@ -127,10 +127,6 @@ namespace DatabaseEngine::StorageTypes
         * Functions to create rows from input data.
         * @{
         */
-            Errors::RuntimeStatus CreateInsertPayload(
-                transaction_id_t transactionId,
-                const std::vector<Value> &inputData
-            );
             [[nodiscard]] Errors::RuntimeStatus BatchCreateRow(
                 Row*& rowPtr,
                 transaction_id_t transactionId,
@@ -178,7 +174,13 @@ namespace DatabaseEngine::StorageTypes
             void RemoveColumnByHeap(column_index_t index)const;
             void InsertToVersionDatabase(Row*& row, transaction_id_t transactionId) const;
 
+
         public:
+            InsertPayload CreateInsertPayload(
+                Errors::RuntimeStatus& status,
+                transaction_id_t transactionId,
+                const std::vector<Value> &inputData
+            ) const;
         /**
         * @name Class Constructors and Destructors
         * Functions to create and destroy Table objects.
@@ -216,20 +218,19 @@ namespace DatabaseEngine::StorageTypes
                 const std::vector<column_index_t>& columnIndices
             );
 
-            Errors::RuntimeStatus InsertRow(const ExecutionProperties& properties, const vector<Value> &inputData);
+            // Errors::RuntimeStatus InsertRow(const ExecutionProperties& properties, const vector<Value> &inputData);
             Errors::RuntimeStatus InsertRow(
                 const ExecutionProperties& properties,
-                const vector<Value> &inputData,
-                const std::vector<column_index_t>& columnIndices
+                const vector<Value> &inputData
             );
-            Errors::RuntimeStatus InsertRow(
-                const ExecutionProperties& properties,
-                const vector<Expressions::Expression*> &inputData,
-                const std::vector<column_index_t>& columnIndices
-            );
-            Errors::RuntimeStatus InsertRow(Row*& row, Int pagesToAllocate);
-            Errors::RuntimeStatus HeapInsert(Row*& row, Int pagesToAllocate)const;
-            Errors::RuntimeStatus ClusteredIndexInsert(Row*& row, Int pagesToAllocate);
+            // Errors::RuntimeStatus InsertRow(
+            //     const ExecutionProperties& properties,
+            //     const vector<Expressions::Expression*> &inputData,
+            //     const std::vector<column_index_t>& columnIndices
+            // );
+            Errors::RuntimeStatus InsertRow(InsertPayload& payload, Int pagesToAllocate);
+            Errors::RuntimeStatus HeapInsert(const InsertPayload& payload, Int pagesToAllocate)const;
+            Errors::RuntimeStatus ClusteredIndexInsert(InsertPayload& payload, Int pagesToAllocate);
             Errors::RuntimeStatus NonClusteredIndexInsert(
                 const Row* row,
                 Int nonClusteredIndexId,
@@ -256,7 +257,6 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(Int indexPos) const;
             [[nodiscard]] const std::vector<column_index_t>& GetClusteredIndex() const;
             [[nodiscard]] std::vector<DataType> GetColumnTypeByTreeId(const UnsignedTinyInt& treeId) const;
-            [[nodiscard]] bool IsColumnNullable(column_index_t columnIndex) const;
             [[nodiscard]] table_id_t GetTableId() const;
             [[nodiscard]] TableType GetType() const;
             [[nodiscard]] bool IsClustered()const;
@@ -331,7 +331,7 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexScanUpdate(
                 const ExecutionProperties& properties,
                 const Expressions::Expression* expression,
-                const vector<Value> &updates
+                std::vector<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexScanUpdate(
                 const ExecutionProperties& properties,
@@ -343,19 +343,19 @@ namespace DatabaseEngine::StorageTypes
                 const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
-                const vector<Value> &updates
+                std::vector<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
                 const ExecutionProperties& properties,
                 const DataTypes::Indexing::Key& key,
-                const std::vector<Value> &updates
+                std::vector<Value> &updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 Pages::Page* page,
-                Pages::RowReference& row,
+                const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
-                const std::vector<Value>& updates,
+                std::vector<Value>& updates,
                 Int indexPosition,
                 bool isHeap
             );
@@ -420,6 +420,11 @@ namespace DatabaseEngine::StorageTypes
             Indexing::BTree* GetNonClusteredIndexTree(Int nonClusteredIndexId);
             [[nodiscard]] bool HasNonClusteredIndexes() const;
 
+            DataTypes::Indexing::Key CreateKey(
+                const std::vector<column_index_t>& indexedColumns,
+                const InsertPayload& payload
+            ) const;
+
             void DeleteLargeObjectFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns);
             void DeleteOverflowedRowsFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns)const;
 
@@ -453,7 +458,7 @@ namespace DatabaseEngine::StorageTypes
             void PopulateColumnByClusteredIndex(column_index_t index, const Value& defaultValue);
             void PopulateColumnByHeap(column_index_t index, const Value& defaultValue);
 
-            void Rollback(const Snapshot& snapshot, const Headers::RowIdentifier& rowId)const;
+            void Rollback(const Snapshot& snapshot, const DataTypes::RowIdentifier& rowId)const;
         /**
         * @name Table Altering Functions
         * Functions that alter the structure of the table.

@@ -40,7 +40,11 @@ namespace DatabaseEngine::StorageTypes {
             && this->deletedTransactionId != snapshot.transactionId;
     }
 
-    RowHeader::RowHeader(){}
+    RowHeader::RowHeader(const Int bitMapsSize){
+        this->nullBitMap = ByteMaps::BitMap(bitMapsSize, false);
+        this->largeObjectBitMap = ByteMaps::BitMap(bitMapsSize, false);
+        this->overflowBitMap = ByteMaps::BitMap(bitMapsSize, false);
+    }
 
     RowHeader & RowHeader::operator=(const RowHeader &otherHeader){
         if (this == &otherHeader)
@@ -570,6 +574,14 @@ namespace DatabaseEngine::StorageTypes {
 
     Value Row::GetColumnByIndex(const Int indexPos) const{ return this->Materialize(indexPos);}
 
+    const std::vector<Block*>& Row::GetData() const{
+        return this->blocks;
+    }
+
+    std::vector<Block*>& Row::GetData(){
+        return this->blocks;
+    }
+
     // const vector<Block*> & Row::GetData() const { return this->data; }
     //
     // vector<Block*> &Row::GetData() { return this->data; }
@@ -698,7 +710,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Row::SetOverflowBitMapValue(const bit_map_pos_t position, const bool value){ this->header.overflowBitMap.Set(position, value); }
 
-    const Headers::RowIdentifier& Row::GetId() const{
+    const DataTypes::RowIdentifier& Row::GetId() const{
         return this->Id;
     }
 

@@ -341,7 +341,7 @@ Value::Value(const column_index_t index){
     this->type = DataType::Unknown;
 }
 
-Value::Value(const void *data, const int &size, const DataType &type){
+Value::Value(const void *data, const Int size, const DataType type){
     this->data = nullptr;
     this->size = size;
     this->type = type;
@@ -351,13 +351,13 @@ Value::Value(const void *data, const int &size, const DataType &type){
     std::memcpy(this->data, data, size);
 }
 
-Value::Value(const unsigned char *data, const int &size, const DataType &type){
+Value::Value(const object_t* data, const Int size, const DataType type, const column_index_t index){
     this->data = new object_t[size];
     std::memcpy(this->data, data, size);
 
     this->size = size;
     this->type = type;
-    this->columnIndex = 0;
+    this->columnIndex = index;
 }
 
 Value::Value(const bool data, const column_index_t index){
@@ -550,6 +550,10 @@ block_size_t Value::Size() const{ return this->size; }
 
 const object_t * Value::Data() const{ return this->data; }
 
+object_t* Value::DataUnsafe() const{
+    return this->data;
+}
+
 bool Value::AsBool() const {
     return DataTypes::Coercions::ToBool(*this);
 }
@@ -623,36 +627,36 @@ std::ostream & operator<<(std::ostream& os, const Value &field){
     }
 
     switch (field.type){
-        case DataType::TinyInt:
-            os << field.AsTinyInt();
-            break;
-        case DataType::SmallInt:
-            os << field.AsSmallInt();
-            break;
-        case DataType::Int:
-            os << field.AsInt();
-            break;
-        case DataType::BigInt:
-            os << field.AsBigInt();
-            break;
-        case DataType::Decimal:
-            os << field.AsDecimal();
-            break;
-        case DataType::String:
-        case DataType::UnicodeString:
-            os << field.AsString();
-            break;
-        case DataType::Bool:
-            os << field.AsBool();
-            break;
-        case DataType::DateTime:
-            os << field.AsDateTime();
-            break;
-        case DataType::Guid:
-            os << field.AsGuid();
-            break;
-        default:
-            break;
+    case DataType::TinyInt:
+        os << field.AsTinyInt();
+        break;
+    case DataType::SmallInt:
+        os << field.AsSmallInt();
+        break;
+    case DataType::Int:
+        os << field.AsInt();
+        break;
+    case DataType::BigInt:
+        os << field.AsBigInt();
+        break;
+    case DataType::Decimal:
+        os << field.AsDecimal();
+        break;
+    case DataType::String:
+    case DataType::UnicodeString:
+        os << field.AsString();
+        break;
+    case DataType::Bool:
+        os << field.AsBool();
+        break;
+    case DataType::DateTime:
+        os << field.AsDateTime();
+        break;
+    case DataType::Guid:
+        os << field.AsGuid();
+        break;
+    default:
+        break;
     }
 
     return os;
@@ -872,6 +876,7 @@ Value operator<=(const Value &lhs, const Value &rhs){
     }
 }
 
+
 Value operator>=(const Value &lhs, const Value &rhs){
     const auto& [returnOutput, value] = Value::PerformNullGreaterEqualComparison(lhs, rhs);
     if (returnOutput)
@@ -909,7 +914,6 @@ Value operator>=(const Value &lhs, const Value &rhs){
         );
     }
 }
-
 
 Value operator==(const Value &lhs, const Value &rhs){
     const auto& [returnOutput, output] = Value::PerformNullEqualityComparison(lhs, rhs);
@@ -1004,189 +1008,6 @@ Value Value::EqualsIgnoreOrdinalCase(const Value &lhs, const Value &rhs){
     );
 }
 
-Errors::RuntimeStatus Value::SetByDataType(const Value& other){
-    switch (this->type) {
-        case DataType::TinyInt:
-            return this->SetTinyInt(other);
-        case DataType::SmallInt:
-            return this->SetSmallInt(other);
-        case DataType::Int:
-            return this->SetInt(other);
-        case DataType::BigInt:
-            return this->SetBigInt(other);
-        case DataType::Decimal:
-            return this->SetDecimal(other);
-        case DataType::String:
-            return this->SetString(other);
-        case DataType::Bool:
-            return this->SetBool(other);
-        case DataType::DateTime:
-            return this->SetDateTime(other);
-        case DataType::Guid:
-            return this->SetGuid(other);
-        case DataType::RowIdentifier:
-        case DataType::Unknown:
-        default:
-            throw std::runtime_error("Invalid Datatype for column");
-    }
-}
-
-    Errors::RuntimeStatus Value::SetTinyInt(const Value &value){
-        Errors::RuntimeStatus result;
-        const auto val = value.AsBigInt();
-        TinyInt convertedValue;
-
-        if (!Converter<TinyInt>::TryStoi(val, convertedValue)) {
-            std::ostringstream ss;
-
-            ss << "Value " << val << " out of range for TinyInt";
-
-            result.code = Errors::RuntimeError::Overflow;
-            result.message = ss.str();
-            return result;
-        }
-
-        this->CopyToBuffer<TinyInt>(convertedValue);
-        return result;
-    }
-
-    Errors::RuntimeStatus Value::SetSmallInt(const Value &value){
-        Errors::RuntimeStatus result;
-
-        const auto val = value.AsBigInt();
-        SmallInt convertedValue;
-
-        if (!Converter<SmallInt>::TryStoi(val, convertedValue)) {
-            std::ostringstream ss;
-
-            ss << "Value " << val << " out of range for SmallInt";
-
-            result.code = Errors::RuntimeError::Overflow;
-            result.message = ss.str();
-            return result;
-        }
-
-        this->CopyToBuffer<SmallInt>(convertedValue);
-        return result;
-    }
-
-    Errors::RuntimeStatus Value::SetInt(const Value &value){
-        Errors::RuntimeStatus result;
-
-        const auto val = value.AsBigInt();
-        Int convertedValue;
-
-        if (!Converter<Int>::TryStoi(val, convertedValue)) {
-            std::ostringstream ss;
-
-            ss << "Value " << val << " out of range for Int";
-
-            result.code = Errors::RuntimeError::Overflow;
-            result.message = ss.str();
-            return result;
-        }
-
-        this->CopyToBuffer<Int>(convertedValue);
-        return result;
-    }
-
-    Errors::RuntimeStatus Value::SetBigInt(const Value &value){
-        Errors::RuntimeStatus result;
-
-        const auto val = value.AsBigInt();
-
-        if (!Converter<BigInt>::TryStoi(val)) {
-            std::ostringstream ss;
-
-            ss << "Value " << val << " out of range for BigInt";
-
-            result.message = ss.str();
-            result.code = Errors::RuntimeError::Overflow;
-            return result;
-        }
-
-        this->CopyToBuffer<BigInt>(val);
-        return result;
-    }
-
-    Errors::RuntimeStatus Value::SetDecimal(const Value &value){
-        Errors::RuntimeStatus result;
-
-        const auto val = value.AsDecimal();
-        // const auto& columnHeader = this->column->GetColumnHeader();
-
-        // if (!Converter<DataTypes::Decimal>::TryStoi(val, this->column->GetColumnSize())) {
-        //     std::ostringstream ss;
-        //
-        //     ss  << "Value "
-        //         << val << " out of range for Decimal("
-        //         << columnHeader.precision << ","
-        //         << columnHeader.scale << ")";
-        //
-        //     result.message = ss.str();
-        //     result.code = Errors::RuntimeError::Overflow;
-        //     return result;
-        // }
-
-        this->CopyToBuffer(val);
-        return result;
-    }
-
-    Errors::RuntimeStatus Value::SetString(const Value &value){
-        Errors::RuntimeStatus result;
-
-        const auto val = value.AsString();
-        const auto& columnHeader = this->column->GetColumnHeader();
-
-        if (val.size() > columnHeader.recordSize) {
-            std::ostringstream ss;
-
-            ss  << "Value "
-                << val << " out of range for String("
-                << columnHeader.recordSize << ")";
-
-            result.message = ss.str();
-            result.code = Errors::RuntimeError::Overflow;
-            return result;
-        }
-
-        this->CopyToBuffer(val);
-        return result;
-    }
-
-    Errors::RuntimeStatus Value::SetBool(const Value &value){
-        Errors::RuntimeStatus result;
-
-        const auto val = value.AsBigInt();
-        bool convertedValue;
-
-        if (!Converter<bool>::TryStoi(val, convertedValue)) {
-            std::ostringstream ss;
-            ss << "Value " << val << " out of range for Bool";
-
-            result.message = ss.str();
-            result.code = Errors::RuntimeError::Overflow;
-            return result;
-        }
-
-        this->CopyToBuffer<bool>(convertedValue);
-        return result;
-    }
-
-    Errors::RuntimeStatus Value::SetDateTime(const Value &value){
-        Errors::RuntimeStatus result;
-
-        this->CopyToBuffer(value.AsDateTime());
-        return result;
-    }
-
-    Errors::RuntimeStatus Value::SetGuid(const Value &value){
-        Errors::RuntimeStatus result;
-
-        this->CopyToBuffer(value.AsGuid());
-        return result;
-    }
-
 int64_t Value::Hash() const {
     return static_cast<int64_t>(0);
 }
@@ -1217,4 +1038,9 @@ long double Value::Interpolate() const{
     default:
         throw std::runtime_error("Value::Interpolate() called with unknown type");
     }
+}
+
+void Value::Resize(const Int newSize){
+    this->data = new object_t[newSize];
+    this->size = newSize;
 }

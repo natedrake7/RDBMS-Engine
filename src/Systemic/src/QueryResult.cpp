@@ -71,7 +71,7 @@ void QueryResult::Print() const{
   }
 }
 
-const std::vector<Value> & QueryResult::GetData()const{ return this->data; }
+const std::vector<Value> & QueryResult::Data()const{ return this->data; }
 
 Value QueryResult::GetColumnAt(const Int columnPos) const{
   return this->data.at(columnPos);
@@ -143,14 +143,11 @@ void QueryResult::Deserialize(const std::vector<char> &buffer, UnsignedInt& offs
   }
 }
 
-Errors::RuntimeStatus QueryResult::UpdateColumnAt(const Value& newValue){
-    auto& block = this->data.at(newValue.GetColumnIndex());
-    if (newValue.IsNull()){
-        block.SetNull();
-        return {};
+void QueryResult::Update(std::vector<Value>& updates){
+    for (auto& value : updates){
+        auto& otherValue = this->data.at(value.GetColumnIndex());
+        otherValue = std::move(value);
     }
-
-    return block.SetByDataType(newValue);
 }
 
 QueryResult& QueryResult::operator=(const QueryResult& other){

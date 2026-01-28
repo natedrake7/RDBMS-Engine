@@ -6,7 +6,7 @@
 
 
 namespace DatabaseEngine::StorageTypes {
-  int64_t IdentityManager::Generate(){
+  BigInt IdentityManager::Generate(){
     bool updateMasterDb = false;
 
     MultiThreading::WriterGuard guard(&this->mutex);

@@ -901,7 +901,7 @@ namespace DatabaseEngine
 
                 auto lastOverflowPage = Storage::StorageManager::Get().GetOverflowPage(this->filename, pageId, table);
 
-                if (lastOverflowPage->GetBytesLeft() >= size)
+                if (lastOverflowPage->BytesLeft() >= size)
                     return lastOverflowPage;
             }
         }

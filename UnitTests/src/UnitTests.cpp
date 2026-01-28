@@ -31,83 +31,181 @@ namespace Tests{
     }
 
     void IndexPageUpdate(){
-
-
         auto columns = std::vector<DatabaseEngine::StorageTypes::Column*>();
         columns.push_back(new DatabaseEngine::StorageTypes::Column("ID", DataType::Int, 4, 0, false));
         columns.push_back(new DatabaseEngine::StorageTypes::Column("Name", DataType::String, 200, 1, false));
 
         auto table = DatabaseEngine::StorageTypes::Table(0, 0, columns, nullptr);
-        auto row = DatabaseEngine::StorageTypes::Row(table);
-
         Pages::IndexPage page(0, &table, false, {DataType::Int});
         page.SetSubKeys(1);
 
-        auto* block = new DatabaseEngine::StorageTypes::Block(columns[0]);
-        auto insertBlockRes = block->SetData(Value(1, 0));
-
-        row.InsertColumnData(block, 0);
-
-        auto* secondBlock = new DatabaseEngine::StorageTypes::Block(columns[1]);
-        insertBlockRes = secondBlock->SetData(Value(std::string("Hello"), 0));
-
-        row.InsertColumnData(secondBlock, 1);
+        Errors::RuntimeStatus status;
+        const std::vector insertValues = {
+            Value(1, 0),
+            Value(std::string("Hello"), 1)
+        };
+        auto payload = table.CreateInsertPayload(status, 0, insertValues);
 
         DataTypes::Indexing::Key key;
         int keyVal = 1;
         key.InsertKey(DataTypes::Indexing::Key(&keyVal, 4, DataType::Int));
 
-        auto tuple = Pages::LeafNodeTuple(row, key);
+        auto tuple = Pages::IndexInsertTuple(key, &payload);
 
-        constexpr static auto numTuples = 65;
+        auto insertKey = table.CreateKey({0, 1}, *tuple.payload);
+
+        std::cout   << "Key size: " << insertKey.size << std::endl
+                    << "key: " << insertKey << std::endl;
+
+
+        constexpr static auto numTuples = 40;
         for (int i = 0;i < numTuples; i++)
             page.InsertTuple(tuple);
 
+
         for (int i = 0;i < page.GetPageSize(); i++){
-            auto [pageKey, pageRow] = page.GetLeafTuple(&table, i);
-            std::cout << pageRow << std::endl;
+            auto [pageKey, rowPtr] = page.PeekLeafTuple(i);
+            std::cout << rowPtr.indexPosition << std::endl;
+
+            auto row = rowPtr.Materialize();
+
+            std::cout << row << std::endl;
+
+            rowPtr.keySize = tuple.key.size;
+
+            std::cout << rowPtr.PartialMaterialize(0) << std::endl;
+            std::cout << rowPtr.PartialMaterialize(1) << std::endl;
         }
 
         int diff = 0;
 
-        auto usedBytes = page.GetPageSize() * (tuple.row.TotalSize() + key.size + Pages::SlotDirectory::Size);
+        auto usedBytes = page.GetPageSize() * (tuple.payload->Size() + key.size + Pages::SlotDirectory::Size);
 
-        std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.GetBytesLeft() << std::endl;
+        std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
 
-        std::cout << "Total page size: " << usedBytes + page.GetBytesLeft() << " = " << INDEX_PAGE_DEFAULT_SIZE << std::endl;
+        std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << INDEX_PAGE_DEFAULT_SIZE << std::endl;
 
-        const std::vector updates = {
+        std::vector updates = {
             Value(std::string("Hello my name is bigger bro"), 1)
         };
-        auto* rowPtr = &tuple.row;
 
-        auto res = rowPtr->Update(updates, diff);
+        auto [pageKey, rowPtr] = page.PeekLeafTuple(0);
 
-        for (int i = 0;i < numTuples; i++)
-            page.UpdateRow(rowPtr, i);
+        auto row = rowPtr.Materialize();
+
+        row.Update(updates);
+
+        std::cout << "After update: " << row << std::endl;
+
+        auto newPayload = table.CreateInsertPayload(status, 0, row.Data());
+        tuple.payload = &newPayload;
+
+        page.UpdateRow(*tuple.payload, rowPtr.indexPosition, rowPtr.keySize);
 
         std::cout << "After update:" << std::endl;
         for (int i = 0;i < page.GetPageSize(); i++){
-            auto [pageKey, pageRow] = page.GetLeafTuple(&table, i);
-            std::cout << pageRow << std::endl;
+            auto [_, pagePtr] = page.PeekLeafTuple(i);
+
+            auto updatedRow = pagePtr.Materialize();
+
+            std::cout << updatedRow << std::endl;
         }
 
         page.Defragment();
 
         std::cout << "After Defragmentation:" << std::endl;
         for (int i = 0;i < page.GetPageSize(); i++){
-            auto [pageKey, pageRow] = page.GetLeafTuple(&table, i);
-            std::cout << pageRow << std::endl;
+            auto [_, pagePtr] = page.PeekLeafTuple(i);
+            auto updatedRow = pagePtr.Materialize();
+
+            std::cout << updatedRow << std::endl;
         }
 
-        usedBytes = page.GetPageSize() * (tuple.row.TotalSize() + key.size + Pages::SlotDirectory::Size);
+        usedBytes = page.GetPageSize() * (tuple.payload->Size() + key.size + Pages::SlotDirectory::Size);
 
-        std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.GetBytesLeft() << std::endl;
+        std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
+        std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << INDEX_PAGE_DEFAULT_SIZE << std::endl;
+    }
 
-        std::cout << "Total page size: " << usedBytes + page.GetBytesLeft() << " = " << INDEX_PAGE_DEFAULT_SIZE << std::endl;
+    void PageUpdate(){
+        auto columns = std::vector<DatabaseEngine::StorageTypes::Column*>();
+        columns.push_back(new DatabaseEngine::StorageTypes::Column("ID", DataType::Int, 4, 0, false));
+        columns.push_back(new DatabaseEngine::StorageTypes::Column("Name", DataType::String, 200, 1, false));
 
-        for (const auto& column : columns){
-            delete column;
+        auto table = DatabaseEngine::StorageTypes::Table(0, 0, columns, nullptr);
+        Pages::Page page(0, &table, false);
+
+        Errors::RuntimeStatus status;
+        const std::vector insertValues = {
+            Value(1, 0),
+            Value(std::string("Hello"), 1)
+        };
+        auto payload = table.CreateInsertPayload(status, 0, insertValues);
+
+        constexpr static auto numTuples = 40;
+        for (int i = 0;i < numTuples; i++)
+            page.InsertRow(payload);
+
+
+        for (int i = 0;i < page.GetPageSize(); i++){
+            auto rowPtr = page.PeekRow(i, 0);
+            std::cout << rowPtr.indexPosition << std::endl;
+
+            auto row = rowPtr.Materialize();
+
+            std::cout << row << std::endl;
+
+            std::cout << rowPtr.PartialMaterialize(0) << std::endl;
+            std::cout << rowPtr.PartialMaterialize(1) << std::endl;
         }
+
+        int diff = 0;
+
+        auto usedBytes = page.GetPageSize() * (payload.Size() + Pages::SlotDirectory::Size);
+
+        std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
+
+        std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << INDEX_PAGE_DEFAULT_SIZE << std::endl;
+
+        std::vector updates = {
+            Value(std::string("Hello my name is bigger bro"), 1)
+        };
+
+        auto rowPtr = page.PeekRow(0, 0);
+
+        auto row = rowPtr.Materialize();
+
+        row.Update(updates);
+
+        std::cout << "After update: " << row << std::endl;
+
+       payload = table.CreateInsertPayload(status, 0, row.Data());
+
+        page.UpdateRow(payload, rowPtr.indexPosition, rowPtr.keySize);
+
+        std::cout << "After update:" << std::endl;
+        for (int i = 0;i < page.GetPageSize(); i++){
+            auto pagePtr = page.PeekRow(i, 0);
+
+            auto updatedRow = pagePtr.Materialize();
+
+            std::cout << updatedRow << std::endl;
+        }
+
+        page.Defragment();
+
+        std::cout << "After Defragmentation:" << std::endl;
+        for (int i = 0;i < page.GetPageSize(); i++){
+            auto pagePtr = page.PeekRow(i, 0);
+
+            auto updatedRow = pagePtr.Materialize();
+
+            std::cout << updatedRow << std::endl;
+        }
+
+        usedBytes = page.GetPageSize() * (payload.Size() + Pages::SlotDirectory::Size);
+
+        std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
+        std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << INDEX_PAGE_DEFAULT_SIZE << std::endl;
     }
 }

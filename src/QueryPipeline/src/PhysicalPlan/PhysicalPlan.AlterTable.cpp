@@ -131,7 +131,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const std::vector<Value> updates = {
+    std::vector updates = {
       Value(this->column->newName.name, static_cast<column_index_t>(DatabaseEngine::SysColumns::Name)),
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
       Value(this->session->user->name, static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
@@ -161,7 +161,7 @@ namespace QueryPipeline::PhysicalPlan{
         "Failed to retrieve user session"
       };
 
-    const std::vector<Value> updates = {
+    std::vector updates = {
       Value(this->column->type.size, static_cast<column_index_t>(DatabaseEngine::SysColumns::RecordSize)),
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
       Value(this->session->user->name, static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),

@@ -12,14 +12,14 @@
 namespace DatabaseEngine {
     DataTypes::Indexing::Key Database::CreateKey(
         const std::vector<column_index_t>& indexedColumns,
-        const StorageTypes::Row* row
+        const StorageTypes::InsertPayload& payload
     )
     {
         DataTypes::Indexing::Key key;
-        for (const auto &columnId : indexedColumns){
-            auto data = row->GetColumnByIndex(columnId);
-            key.InsertKey(DataTypes::Indexing::Key(data));
-        }
+        // for (const auto &columnId : indexedColumns){
+        //     auto data = row->GetColumnByIndex(columnId);
+        //     key.InsertKey(DataTypes::Indexing::Key(data));
+        // }
 
         return key;
     }
@@ -41,7 +41,7 @@ namespace DatabaseEngine {
     DataTypes::Indexing::Key Database::CreateKey(
         const std::vector<column_index_t> &indexedColumns,
         const StorageTypes::Row* row,
-        const Headers::RowIdentifier &rowId
+        const DataTypes::RowIdentifier &rowId
     ){
         DataTypes::Indexing::Key key;
         for (const auto &columnId : indexedColumns){

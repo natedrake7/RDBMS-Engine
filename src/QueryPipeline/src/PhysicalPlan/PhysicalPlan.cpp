@@ -66,7 +66,7 @@ namespace QueryPipeline::PhysicalPlan {
     columnIndices.reserve(columns.size());
 
     for (const auto& column : columns)
-      columnIndices.push_back(column->GetColumnIndex());
+      columnIndices.push_back(column->OrdinalPosition());
 
     const auto batchResult = table->BatchInsert(properties, result->results, columnIndices);
 
@@ -360,7 +360,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       QueryResult resultRow;
 
       for (const auto& expression : this->resultExpressions) {
-        // context.row = &row;
+        context.row = &row;
         auto field = expression->Evaluate(context);
         resultRow.AddColumn(field);
       }

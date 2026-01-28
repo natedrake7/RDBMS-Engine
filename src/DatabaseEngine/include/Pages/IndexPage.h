@@ -2,14 +2,11 @@
 #include "Page.h"
 #include "../../Systemic/include/DataTypes/PackedByte.h"
 #include "../DataStorage/Row.h"
+#include "../DataStorage/InsertPayload.h"
 
 namespace ByteMaps
 {
 	class BitMap;
-}
-
-namespace Headers{
-	struct RowIdentifier;
 }
 
 namespace DataTypes::Indexing{
@@ -71,11 +68,10 @@ namespace Pages {
 
     struct IndexInsertTuple{
         DataTypes::Indexing::Key key;
-        object_t* payload;
-        block_size_t payloadSize;
+        DatabaseEngine::StorageTypes::InsertPayload* payload;
 
         IndexInsertTuple();
-        IndexInsertTuple(DataTypes::Indexing::Key& key, object_t* payload, block_size_t payloadSize);
+        IndexInsertTuple(DataTypes::Indexing::Key& key, DatabaseEngine::StorageTypes::InsertPayload* payload);
         ~IndexInsertTuple();
     };
 
@@ -94,7 +90,7 @@ namespace Pages {
 
 	struct RowIdTuple{
 		DataTypes::Indexing::Key key;
-		Headers::RowIdentifier rowId;
+		DataTypes::RowIdentifier rowId;
 	};
 
 	struct InternalNodeTuple{
@@ -173,22 +169,12 @@ namespace Pages {
 			void InsertTuple(const IndexInsertTuple& tuple);
 			void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition);
 
-	        void UpdateRow(
-	            const DatabaseEngine::StorageTypes::RowHeader& rowHeader,
-                QueryResult& row,
-                Int indexPosition,
-                Int offset
-            ) override;
-
 			DataTypes::Indexing::Key GetKey(Int indexPosition) const;
 			DatabaseEngine::StorageTypes::Row GetRow(Int indexPosition, Int offSet, const DatabaseEngine::StorageTypes::Table* table) const;
-			LeafNodeTuple GetLeafTuple(
-				const DatabaseEngine::StorageTypes::Table* table,
-				Int indexPosition
-			);
-			InternalNodeTuple GetInternalNodeTuple(Int indexPosition) const;
+			LeafNodeTuple PeekLeafTuple(Int indexPosition);
+			InternalNodeTuple PeekInternalNodeTuple(Int indexPosition) const;
 
-			DatabaseEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(Int indexPosition, Int& outOffset) const;
+			DatabaseEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(Int indexPosition, Int& outKeySize) const;
 
 			page_id_t GetChild(Int indexPosition) const;
 

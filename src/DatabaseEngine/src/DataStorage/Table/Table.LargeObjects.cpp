@@ -49,7 +49,7 @@ namespace DatabaseEngine::StorageTypes {
     ){
         auto largeDataPage = this->GetOrCreateLargeDataPage();
 
-        const auto &pageSize = largeDataPage->GetBytesLeft();
+        const auto &pageSize = largeDataPage->BytesLeft();
 
         const auto &data = row->GetData()[columnIndex]->Data();
 

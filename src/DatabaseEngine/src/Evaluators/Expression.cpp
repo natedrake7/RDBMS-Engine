@@ -7,6 +7,8 @@
 #include "../../include/DataStorage/Row.h"
 #include <iostream>
 
+#include "Pages/Page.h"
+
 namespace Expressions{
      static Dictionary<Constants::FunctionType, std::function<Value(const std::vector<Value>& args)>> FunctionDictionary{
             //Date Functions
@@ -155,7 +157,7 @@ namespace Expressions{
       return context.materializedRow.GetColumnAt(this->index);
     case EvaluationContext::EvaluationContextType::Join: {
       const auto outerRow = context.outerRow->Materialize();
-      const auto outerRowSize = outerRow.GetData().size();
+      const auto outerRowSize = outerRow.Data().size();
 
       return this->index < outerRowSize
                ? context.outerRow->PartialMaterialize(this->index)

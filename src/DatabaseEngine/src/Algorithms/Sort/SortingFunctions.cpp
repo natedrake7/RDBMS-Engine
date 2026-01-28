@@ -48,7 +48,7 @@ MergeElement::MergeElement(const QueryResult& value, const Int batchId){
     this->batchId = batchId;
 }
 
-MergeElement::MergeElement(QueryResult& value, const Int batchId, const Headers::RowIdentifier& rowId)
+MergeElement::MergeElement(QueryResult& value, const Int batchId, const DataTypes::RowIdentifier& rowId)
     : value(std::move(value)), rowId(rowId), batchId(batchId) {}
 
 MergeElement::MergeElement(const MergeElement& other){

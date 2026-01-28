@@ -111,8 +111,8 @@ namespace DatabaseEngine {
         const std::string& columnName,
         DataType columnType,
         Int columnSize,
-        const TinyInt& precision,
-        const TinyInt& scale,
+        TinyInt precision,
+        TinyInt scale,
         bool isNullable,
         Int ordinalPosition,
         bool isSystem = false,
@@ -204,15 +204,15 @@ namespace DatabaseEngine {
       const Value& min,
       const Value& max,
       Int rowCount,
-      const BigInt& distinctCount
+      BigInt distinctCount
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexStatisticsToMasterDb(
       const ExecutionProperties& properties,
       Int tableId,
       Int indexId,
-      const BigInt& leafPages = 0,
-      const TinyInt& depth = 0,
+      BigInt leafPages = 0,
+      TinyInt depth = 0,
       const DataTypes::Decimal& averageFragmentation = DataTypes::Decimal(0)
     ) const;
 
@@ -304,7 +304,7 @@ namespace DatabaseEngine {
       Int rowCount,
       const BigInt& distinctCount
     ) const;
-    [[nodiscard]]Errors::RuntimeStatus UpdateColumnById(Int columnId, const std::vector<Value>& updates)const;
+    [[nodiscard]] Errors::RuntimeStatus UpdateColumnById(Int columnId, std::vector<Value>& updates)const;
 
     [[nodiscard]] Errors::RuntimeStatus UpdateUserById(
       const std::string& username,

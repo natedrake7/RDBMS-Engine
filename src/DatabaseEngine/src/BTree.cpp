@@ -103,7 +103,7 @@ namespace Indexing{
 
     Errors::RuntimeStatus BTree::CreateDuplicateKeyError(const DataTypes::Indexing::Key &key) {
         ostringstream os;
-        os << "BPlusTree::GetNonFullNode: Key " << key << " already exists" << std::endl;
+        os << "BTree::CreateDuplicateKeyError: Key " << key << " already exists" << std::endl;
         return {Errors::RuntimeError::DuplicateKey, os.str()};
     }
 
@@ -188,7 +188,7 @@ namespace Indexing{
         }
 
         // for (Int i = this->degree; i < child->GetPageSize(); i++){
-        //     auto rowId = child->GetLeafTuple(this->table, i).row;
+        //     auto rowId = child->GetLeafTuple(i).row;
         //     newChild->InsertTuple(LeafNodeTuple{child->GetKey(i), rowId});
         // }
         // auto* childRows = child->NonClusteredDataNoLock();
@@ -250,7 +250,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard parentLock(&parent->Latch());
 
             if (parent->IsLeaf())
-                return this->InsertToNode(parent, tuple, indexPosition);
+                return BTree::InsertToNode(parent, tuple, indexPosition);
 
             auto childIndex = BTree::InternalNodeLowerBound(parent, tuple.key);
 
@@ -290,9 +290,9 @@ namespace Indexing{
         Pages::PageGuard<Pages::IndexPage> &parent,
         const Pages::IndexInsertTuple& tuple,
         Int& indexPosition
-    ) const
+    )
     {
-        indexPosition = this->LeafLowerBound(parent, tuple.key);
+        indexPosition = BTree::LeafLowerBound(parent, tuple.key);
         if (indexPosition == -1)
             return BTree::CreateDuplicateKeyError(tuple.key);
 
@@ -383,7 +383,7 @@ namespace Indexing{
         {
             const DatabaseEngine::StorageTypes::Column* column = columns.at(columnPos);
 
-            computedKeySize += column->GetColumnSize();
+            computedKeySize += column->Size();
         }
 
         return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
@@ -840,7 +840,7 @@ namespace Indexing{
             tableStatistics.rowCount += static_cast<Int>(numOfRows);
 
             for (Int i = 0;i < numOfRows; i++){
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
+                auto tuple = currentNode->PeekLeafTuple(i);
 
                 // tableStatistics.averageRowSize += static_cast<Int>(tuple.row.TotalSize());
                 //
@@ -986,7 +986,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto [key, row] = currentNode->GetLeafTuple(this->table, i);
+                auto [key, row] = currentNode->PeekLeafTuple(i);
 
                 if (key.InClosedRange(minKey, maxKey)){
                     currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
@@ -1022,10 +1022,12 @@ namespace Indexing{
             Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
             for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto [key, row] = currentNode->GetLeafTuple(this->table, i);
+                auto [key, row] = currentNode->PeekLeafTuple(i);
 
                 if (key.InClosedRange(minKey, maxKey)){
-                    currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                    context.row = &row;
+                    if (expression->Evaluate(context).AsBool())
+                        currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
                     continue;
                 }
 
@@ -1053,7 +1055,7 @@ namespace Indexing{
         while (currentNode.Get()){
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
             for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
+                auto [tupleKey, row] = currentNode->PeekLeafTuple(i);
 
                 // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
                 // std::cout << "Row: " << row << std::endl;
@@ -1094,10 +1096,14 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto [tupleKey, row] = currentNode->GetLeafTuple(this->table, i);
+                auto [tupleKey, row] = currentNode->PeekLeafTuple(i);
 
-                if (key == tupleKey) {
-                    currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                if (key == tupleKey ){
+                    context.row = &row;
+
+                    if (expression->Evaluate(context).AsBool())
+                        currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+
                     continue;
                 }
 
@@ -1193,8 +1199,10 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (Int i = state.GetNextKeyIndex(); i < currentNode->NumberOfKeys(); i++) {
-                // if (row.IsInvalid() || !expression->Evaluate(context).AsBool())
-                //     continue;
+                auto [key, row] = currentNode->PeekLeafTuple(i);
+                context.row = &row;
+                if (!expression->Evaluate(context).AsBool())
+                    continue;
 
                 currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
 
@@ -1233,11 +1241,13 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode->Latch());
 
             for (Int i = 0;i < currentNode->GetPageSize();i++){
+
+                auto [key, row] = currentNode->PeekLeafTuple(i);
+                context.row = &row;
+                if(!expression->Evaluate(context).AsBool())
+                    continue;
+
                 currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
-
-                // if(row.IsInvalid() || !expression->Evaluate(context).AsBool())
-                //     continue;
-
             }
 
             if(!currentNode->HasRightSibling())
@@ -1272,7 +1282,7 @@ namespace Indexing{
     }
 
     void BTree::IndexScan(
-        vector<Headers::RowIdentifier> *result,
+        vector<DataTypes::RowIdentifier> *result,
         DatabaseEngine::IndexState& state,
         const Int rowsToSelect
     )const{
@@ -1324,7 +1334,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexScan(vector<Headers::RowIdentifier> *result, const Expressions::Expression *expression)const{
+    void BTree::IndexScan(vector<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
         if (this->IsEmpty())
             return;
 
@@ -1353,7 +1363,7 @@ namespace Indexing{
     void BTree::IndexScanUpdate(
         const DatabaseEngine::ExecutionProperties& properties,
         const Expressions::Expression *expression,
-        const vector<Value> & updates
+        std::vector<Value> & updates
     )const{
         if (this->IsEmpty())
             return;
@@ -1366,7 +1376,7 @@ namespace Indexing{
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
             for (Int indexPosition = 0; indexPosition < currentNode->GetPageSize();indexPosition++){
-                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
+                auto tuple = currentNode->PeekLeafTuple(indexPosition);
 
                 context.row = &tuple.row;
                 const auto value = expression->Evaluate(context);
@@ -1413,7 +1423,7 @@ namespace Indexing{
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
             for (Int i = 0;i < currentNode->GetPageSize();i++){
-                auto tuple = currentNode->GetLeafTuple(this->table, i);
+                auto tuple = currentNode->PeekLeafTuple(i);
 
                 context.row = &tuple.row;
 
@@ -1460,7 +1470,7 @@ namespace Indexing{
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
             for (Int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
-                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
+                auto tuple = currentNode->PeekLeafTuple(indexPosition);
 
                 auto result = this->table->UpdateRowNoLock(
                     currentNode.Get(),
@@ -1488,7 +1498,7 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::IndexSeekUpdate(
         const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
-        const std::vector<Value> &updates
+        std::vector<Value> &updates
     ) const {
         if (this->IsEmpty())
             return {};
@@ -1499,7 +1509,7 @@ namespace Indexing{
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
             for (Int indexPosition = 0;indexPosition < currentNode->NumberOfKeys(); indexPosition++){
-                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
+                auto tuple = currentNode->PeekLeafTuple(indexPosition);
                 if (key != tuple.key || key < tuple.key)
                     continue;
 
@@ -1530,7 +1540,7 @@ namespace Indexing{
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minKey,
         const DataTypes::Indexing::Key* maxKey,
-        const vector<Value> & updates
+        std::vector<Value> & updates
     )const{
         if (this->IsEmpty())
             return {};
@@ -1547,7 +1557,7 @@ namespace Indexing{
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
               for (Int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
-                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
+                auto tuple = currentNode->PeekLeafTuple(indexPosition);
 
                 if (*minKey > tuple.key)
                     continue;
@@ -1586,7 +1596,7 @@ namespace Indexing{
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key *minKey,
         const DataTypes::Indexing::Key *maxKey,
-        const std::vector<Value> &updates
+        std::vector<Value> &updates
     )const{
         if (this->IsEmpty())
             return {};
@@ -1597,7 +1607,7 @@ namespace Indexing{
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
             for (Int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
-                auto tuple = currentNode->GetLeafTuple(this->table, indexPosition);
+                auto tuple = currentNode->PeekLeafTuple(indexPosition);
 
                 if (*minKey > tuple.key)
                     continue;

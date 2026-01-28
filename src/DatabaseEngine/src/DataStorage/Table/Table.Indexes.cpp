@@ -26,32 +26,19 @@ namespace DatabaseEngine::StorageTypes {
         return Storage::StorageManager::Get().GetIndexPage(filename, indexPageId, this);
     }
 
-    Errors::RuntimeStatus Table::ClusteredIndexInsert(Row*& row, const Int pagesToAllocate){
+    Errors::RuntimeStatus Table::ClusteredIndexInsert(InsertPayload& payload, const Int pagesToAllocate){
         auto* tree = this->GetClusteredIndexedTree();
-        auto key = Database::CreateKey(this->GetClusteredIndex(), row);
+        // auto key = Database::CreateKey(this->GetClusteredIndex(), row);
+
+        auto key = this->CreateKey(this->GetClusteredIndex(), payload);
 
         int indexPosition = 0;
 
-        auto tuple = Pages::LeafNodeTuple(*row, key);
+        auto tuple = Pages::IndexInsertTuple(key, &payload);
         auto status = tree->InsertRow(tuple, pagesToAllocate, indexPosition);
 
         if (status.code != Errors::RuntimeError::Ok)
             return status;
-
-        // auto pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
-        //
-        // MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage->Latch());
-        // MultiThreading::WriterGuard pageLock(&node->Latch());
-
-        // should never fail
-        // this->InsertRowToClusteredPage(pageFreeSpacePage, node.Get(), key, row, indexPosition);
-
-        // auto* keys = node->GetKeysUnsafe();
-
-        // keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
-
-        // node->UpdateBytesLeft();
-        // node->UpdatePageSize();
 
         //TODO
         // rowId->indexId = indexPosition;
@@ -192,7 +179,7 @@ namespace DatabaseEngine::StorageTypes {
     ){
         const auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
-        std::vector<Headers::RowIdentifier> rowIds;
+        std::vector<DataTypes::RowIdentifier> rowIds;
         tree->IndexScan(&rowIds, state, properties.batchSize);
 
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
@@ -334,6 +321,22 @@ namespace DatabaseEngine::StorageTypes {
 
     bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredIndexes.empty(); }
 
+    DataTypes::Indexing::Key Table::CreateKey(
+        const std::vector<column_index_t>& indexedColumns,
+        const InsertPayload& payload
+    ) const{
+        auto key = DataTypes::Indexing::Key();
+        for (const auto columnId : indexedColumns){
+            auto value = payload.MaterializeColumn(
+                this->columns.at(columnId),
+                static_cast<Int>(this->columns.size())
+            );
+            key.InsertKey(DataTypes::Indexing::Key(value));
+        }
+
+        return key;
+    }
+
     key_size_t Table::CalculateIndexKeySize(const Int indexPos) const {
         HashSet<column_index_t> clusteredColumns;
 
@@ -345,8 +348,8 @@ namespace DatabaseEngine::StorageTypes {
             clusteredColumns.Add(column);
 
         for (const auto &column : this->columns)
-            if(clusteredColumns.Contains(column->GetColumnIndex()))
-                keySize += column->GetColumnSize();
+            if(clusteredColumns.Contains(column->OrdinalPosition()))
+                keySize += column->Size();
 
         return keySize;
     }
@@ -359,8 +362,8 @@ namespace DatabaseEngine::StorageTypes {
             clusteredColumns.Add(column);
 
         for (const auto &column : this->columns)
-            if(clusteredColumns.Contains(column->GetColumnIndex()))
-                keySize += column->GetColumnSize();
+            if(clusteredColumns.Contains(column->OrdinalPosition()))
+                keySize += column->Size();
 
         return keySize;
     }

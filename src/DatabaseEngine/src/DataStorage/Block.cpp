@@ -119,7 +119,7 @@ namespace DatabaseEngine::StorageTypes {
         const auto val = value.AsDecimal();
         const auto& columnHeader = this->column->GetColumnHeader();
 
-        if (!Converter<DataTypes::Decimal>::TryStoi(val, this->column->GetColumnSize())) {
+        if (!Converter<DataTypes::Decimal>::TryStoi(val, this->column->Size())) {
             ostringstream ss;
 
             ss  << "Value "
@@ -312,11 +312,11 @@ namespace DatabaseEngine::StorageTypes {
 
     Pages::OverflowPointer Block::AsOverflowPointer() const { return *reinterpret_cast<Pages::OverflowPointer*>(this->data); }
 
-    column_index_t Block::ColumnIndex() const { return this->column->GetColumnIndex(); }
+    column_index_t Block::ColumnIndex() const { return this->column->OrdinalPosition(); }
 
-    row_size_t Block::ColumnSize() const { return this->column->GetColumnSize(); }
+    row_size_t Block::ColumnSize() const { return this->column->Size(); }
 
-    DataType Block::ColumnType() const { return this->column->GetColumnType(); }
+    DataType Block::ColumnType() const { return this->column->Type(); }
 
     bool Block::Null() const{ return this->data == nullptr; }
 

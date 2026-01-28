@@ -14,7 +14,7 @@ public:
 
     void AddColumn(Value& field);
     void Print()const;
-    [[nodiscard]] const std::vector<Value>& GetData()const;
+    [[nodiscard]] const std::vector<Value>& Data()const;
     [[nodiscard]] Value GetColumnAt(Int columnPos)const;
     [[nodiscard]] Int GetSize()const;
     [[nodiscard]] Int GetByteSize()const;
@@ -25,7 +25,7 @@ public:
     void Serialize(std::vector<char>& buffer)const;
     void Deserialize(const std::vector<char>& buffer, UnsignedInt& offset, Int dataSize);
 
-    Errors::RuntimeStatus UpdateColumnAt(const Value& newValue);
+    void Update(std::vector<Value>& updates);
 
     QueryResult& operator=(const QueryResult& other);
     QueryResult& operator=(QueryResult&& other) noexcept;

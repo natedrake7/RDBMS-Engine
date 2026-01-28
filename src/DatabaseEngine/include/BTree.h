@@ -97,11 +97,11 @@ namespace Indexing{
             Int& indexPosition
         );
 
-        Errors::RuntimeStatus InsertToNode(
+        static Errors::RuntimeStatus InsertToNode(
             Pages::PageGuard<Pages::IndexPage>& parent,
             const Pages::IndexInsertTuple& tuple,
             Int& indexPosition
-        ) const;
+        );
 
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKey(const DataTypes::Indexing::Key& key) const;
         [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;
@@ -238,17 +238,17 @@ namespace Indexing{
         )const;
 
         void IndexScan(
-            std::vector<Headers::RowIdentifier>* result,
+            std::vector<DataTypes::RowIdentifier>* result,
             DatabaseEngine::IndexState& state,
             Int rowsToSelect
         )const;
 
-        void IndexScan(std::vector<Headers::RowIdentifier>* result, const Expressions::Expression* expression)const;
+        void IndexScan(std::vector<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void IndexScanUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
-            const std::vector<Value>& updates
+            std::vector<Value>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
@@ -265,7 +265,7 @@ namespace Indexing{
         [[nodiscard]] Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& key,
-            const std::vector<Value>& updates
+            std::vector<Value>& updates
         )const;
 
         Errors::RuntimeStatus IndexSeekUpdate(
@@ -273,13 +273,13 @@ namespace Indexing{
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
-            const std::vector<Value>& updates
+            std::vector<Value>& updates
         )const;
         Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
-            const std::vector<Value>& updates
+            std::vector<Value>& updates
         )const;
 
         void SearchKey(const DataTypes::Indexing::Key& key, DataTypes::Indexing::QueryData& result) const;

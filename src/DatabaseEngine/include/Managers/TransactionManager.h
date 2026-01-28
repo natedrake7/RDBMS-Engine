@@ -8,7 +8,7 @@ namespace DatabaseEngine {
 struct ModificationInfo {
   Int databaseId;
   Int tableId;
-  std::vector<Headers::RowIdentifier> rows;
+  std::vector<DataTypes::RowIdentifier> rows;
 };
 
 struct TransactionInfo {

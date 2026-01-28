@@ -56,17 +56,15 @@ namespace DatabaseEngine::StorageTypes
 
         void SetColumnName(const std::string& otherName);
 
-        [[nodiscard]] DataType GetColumnType() const;
+        [[nodiscard]] DataType Type() const;
 
-        [[nodiscard]] row_size_t GetColumnSize() const;
+        [[nodiscard]] row_size_t Size() const;
 
-        [[nodiscard]] bool IsColumnNullable() const;
+        [[nodiscard]] bool IsNullable() const;
 
-        [[nodiscard]] bool GetAllowNulls() const;
+        void SetOrdinalPosition(column_index_t columnIndex);
 
-        void SetColumnIndex(column_index_t columnIndex);
-
-        [[nodiscard]] column_index_t GetColumnIndex() const;
+        [[nodiscard]] column_index_t OrdinalPosition() const;
 
         [[nodiscard]] const ColumnHeader& GetColumnHeader() const;
 

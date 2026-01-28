@@ -4,12 +4,14 @@
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Guards/ReadWriteMutex.h"
 #include "../../../Systemic/include/Constants.h"
+#include "../../Systemic/include/QueryResult.h"
+#include "../../Systemic/include/Errors.h"
+#include "../DataStorage/Row.h"
 
 #include <atomic>
 
-#include "Errors.h"
-#include "../../Systemic/include/QueryResult.h"
-#include "DataStorage/Row.h"
+#include "../DataStorage/InsertPayload.h"
+
 
 namespace Errors
 {
@@ -21,6 +23,7 @@ namespace Expressions {
 }
 
 namespace DatabaseEngine::StorageTypes{
+    class InsertPayload;
     class Column;
     class Block;
     class Row;
@@ -53,20 +56,20 @@ namespace Pages{
                 Flag flag
             );
 
-            UnsignedSmallInt GetOffset() const;
+            [[nodiscard]] UnsignedSmallInt GetOffset() const;
             void SetOffset(UnsignedSmallInt otherOffset);
 
-            UnsignedSmallInt GetSize() const;
+            [[nodiscard]] UnsignedSmallInt GetSize() const;
             void SetSize(UnsignedSmallInt otherSize);
 
-            Flag GetFlag() const;
+            [[nodiscard]] Flag GetFlag() const;
             void SetFlag(Flag otherFlag);
 
-            bool Empty() const;
-            bool Used() const;
-            bool ForwardPointer() const;
-            bool Dead() const;
-            bool Default() const;
+            [[nodiscard]] bool Empty() const;
+            [[nodiscard]] bool Used() const;
+            [[nodiscard]] bool ForwardPointer() const;
+            [[nodiscard]] bool Dead() const;
+            [[nodiscard]] bool Default() const;
     };
 
     struct SlotDirectoryDefragment{
@@ -83,16 +86,6 @@ namespace Pages{
 
         static bool OrderAscendingByOffSet(const SlotDirectoryDefragment& lhs, const SlotDirectoryDefragment& rhs){
             return lhs.slotDirectory.GetOffset() < rhs.slotDirectory.GetOffset();
-        }
-    };
-
-    struct RowVersionPointer {
-        page_id_t pageId;
-        page_offset_t offset;
-
-        RowVersionPointer() {
-            this->pageId = INVALID_PAGE_ID;
-            this->offset = 0;
         }
     };
 
@@ -153,15 +146,14 @@ namespace Pages{
 
         void DeleteRow(Int indexPosition) const;
 
-        void InsertFirstRow(DatabaseEngine::StorageTypes::Row*& row);
-        Int InsertRow(DatabaseEngine::StorageTypes::Row*& row);
-        void InsertRow(DatabaseEngine::StorageTypes::Row*& row, Int indexPosition);
+        void InsertFirstRow(const DatabaseEngine::StorageTypes::InsertPayload& payload);
+        Int InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload);
+        void InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload, Int indexPosition);
 
-        virtual void UpdateRow(
-            const DatabaseEngine::StorageTypes::RowHeader& rowHeader,
-            QueryResult& row,
+        void UpdateRow(
+            const DatabaseEngine::StorageTypes::InsertPayload& payload,
             Int indexPosition,
-            Int offset
+            Int keySize
         );
 
         virtual void ReadFromDisk(
@@ -185,7 +177,7 @@ namespace Pages{
         [[nodiscard]] const std::string &GetFileName() const;
         [[nodiscard]] page_id_t GetPageId() const;
         [[nodiscard]] bool IsDirty() const;
-        [[nodiscard]] page_size_t GetBytesLeft() const;
+        [[nodiscard]] page_size_t BytesLeft() const;
         void SetDirty();
 
         void SetLogSequenceNumber(const log_sequence_number_t &lsn);
@@ -224,15 +216,27 @@ namespace Pages{
 
         void Resize(Int size);
         void ResizeFromBeginning(Int size);
-        QueryResult MaterializeRow(Int indexPosition, Int offset) const;
-        Value PartialMaterializeRow(Int indexPosition, column_index_t columnIndex, Int offset) const;
+        inline QueryResult MaterializeRow(Int indexPosition, Int keySize) const;
+
+        void InitializeRowReferenceCache(const RowReference* rowPtr, Int numberOfColumns) const;
+        Value PartialMaterializeRow(const RowReference* rowPtr, column_index_t columnIndex) const;
         DatabaseEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition, Int offSet)const;
+
+        [[nodiscard]] RowReference PeekRow(Int indexPosition, Int offSet);
+
+        [[nodiscard]] bool IsIndexPage()const;
+
     };
 
     struct RowReference{
         Page* pagePtr;
         Int indexPosition;
-        Int offset;
+        Int keySize;
+
+        mutable DatabaseEngine::StorageTypes::RowHeader header;
+        mutable std::vector<Int> sizes;
+        mutable page_offset_t dataOffset;
+        mutable bool isHeaderInitialized;
 
         RowReference();
         RowReference(Page* pagePtr, Int indexPosition, Int offset);
@@ -245,8 +249,8 @@ namespace Pages{
 
         ~RowReference();
 
-        QueryResult Materialize()const;
-        Value PartialMaterialize(column_index_t columnIndex)const;
-        Errors::RuntimeStatus Update(const std::vector<Value>& updates) const;
+        [[nodiscard]] QueryResult Materialize()const;
+        [[nodiscard]] Value PartialMaterialize(column_index_t columnIndex)const;
+        [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<Value>& updates) const;
     };
 }

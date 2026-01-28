@@ -85,6 +85,18 @@ namespace ByteMaps
         }
     }
 
+    void BitMap::GetDataFromFile(const object_t* buffer, page_offset_t& offset, const Int otherSize){
+        this->size = otherSize;
+
+        const bit_map_size_t bytesToRead = (this->size + 7) / 8;
+
+        if (this->data.empty())
+            this->data.resize(bytesToRead);
+
+        std::memcpy(this->data.data(), buffer + offset, bytesToRead * sizeof(byte_t));
+        offset += bytesToRead * sizeof(byte_t);
+    }
+
     void BitMap::GetDataFromFile(const std::vector<char> &buffer, page_offset_t &offset){
         std::memcpy(&this->size, buffer.data() + offset, sizeof(bit_map_size_t));
         offset += sizeof(bit_map_size_t);
@@ -161,6 +173,14 @@ namespace ByteMaps
     const std::vector<byte_t>& BitMap::GetData() const { return this->data; }
 
     std::vector<byte_t>& BitMap::GetDataUnsafe(){ return this->data; }
+
+    const byte_t* BitMap::DataPtr() const{
+        return this->data.data();
+    }
+
+    byte_t* BitMap::DataPtrUnsafe(){
+        return this->data.data();
+    }
 
     bit_map_size_t BitMap::GetSizeUnsafe() const { return this->size; }
 

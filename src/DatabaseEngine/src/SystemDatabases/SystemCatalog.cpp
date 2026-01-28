@@ -270,7 +270,7 @@ namespace DatabaseEngine {
 
   Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(const Pages::RowReference& rowPtr){
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::DatabaseHeader{
       .id = data[static_cast<column_index_t>(SysDatabases::DatabaseId)].AsInt(),
@@ -286,7 +286,7 @@ namespace DatabaseEngine {
     std::vector<Headers::SchemaHeader> &schemas
   ) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
    return  Headers::DatabaseHeader{
       .id = data[static_cast<column_index_t>(SysDatabases::DatabaseId)].AsInt(),
@@ -310,7 +310,7 @@ namespace DatabaseEngine {
 
   Headers::SchemaHeader SystemCatalog::ToSchemaHeader(const Pages::RowReference& rowPtr){
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::SchemaHeader{
       data[static_cast<column_index_t>(SysSchemas::SchemaId)].AsInt(),
@@ -324,7 +324,7 @@ namespace DatabaseEngine {
 
   Headers::TableHeader SystemCatalog::ToTableHeader(const Pages::RowReference& rowPtr) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::TableHeader{
       data[static_cast<column_index_t>(SysTables::DatabaseId)].AsInt(),
@@ -341,13 +341,13 @@ namespace DatabaseEngine {
 
   Headers::ColumnHeader SystemCatalog::ToColumnHeader(const Pages::RowReference& rowPtr) {
       const auto materializedRow = rowPtr.Materialize();
-      const auto& data = materializedRow.GetData();
+      const auto& data = materializedRow.Data();
 
       return Headers::ColumnHeader{
           .tableId = data[static_cast<column_index_t>(SysColumns::TableId)].AsInt(),
           .id = data[static_cast<column_index_t>(SysColumns::ColumnId)].AsInt(),
           .name = data[static_cast<column_index_t>(SysColumns::Name)].AsString(),
-          .dataType = static_cast<uint8_t>(data[static_cast<column_index_t>(SysColumns::DataType)].AsTinyInt()),
+          .dataType = static_cast<UnsignedTinyInt>(data[static_cast<column_index_t>(SysColumns::DataType)].AsTinyInt()),
           .recordSize = data[static_cast<column_index_t>(SysColumns::RecordSize)].AsInt(),
           .precision = data[static_cast<column_index_t>(SysColumns::Precision)].Data() == nullptr
               ? INVALID_DECIMAL_PRECISION
@@ -373,7 +373,7 @@ namespace DatabaseEngine {
 
   Headers::IndexHeader SystemCatalog::ToIndexHeader(const Pages::RowReference& rowPtr) {
       const auto materializedRow = rowPtr.Materialize();
-      const auto& data = materializedRow.GetData();
+      const auto& data = materializedRow.Data();
 
       return Headers::IndexHeader{
         .tableId = data[static_cast<column_index_t>(SysIndexes::TableId)].AsInt(),
@@ -396,7 +396,7 @@ namespace DatabaseEngine {
 
   Headers::IndexColumnsHeader SystemCatalog::ToIndexColumnsHeader(const Pages::RowReference& rowPtr) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::IndexColumnsHeader{
       .indexId = data[static_cast<column_index_t>(SysIndexColumns::IndexId)].AsInt(),
@@ -415,7 +415,7 @@ namespace DatabaseEngine {
 
   Headers::IdentityColumnsHeader SystemCatalog::ToIdentityColumnsHeader(const Pages::RowReference& rowPtr) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::IdentityColumnsHeader{
       .tableId = data[static_cast<column_index_t>(SysIdentityColumns::TableId)].AsInt(),
@@ -441,7 +441,7 @@ namespace DatabaseEngine {
     Headers::IndexHeader &indexHeader
   ) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::ConstraintsHeader{
       .tableId = data[static_cast<column_index_t>(SysConstraints::TableId)].AsInt(),
@@ -467,7 +467,7 @@ namespace DatabaseEngine {
 
   Headers::ConstraintsColumnsHeader SystemCatalog::ToConstraintsColumnsHeader(const Pages::RowReference& rowPtr){
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::ConstraintsColumnsHeader{
       .constraintId = data[static_cast<column_index_t>(SysConstraintColumns::ConstraintId)].AsInt(),
@@ -485,7 +485,7 @@ namespace DatabaseEngine {
 
   Headers::DefaultValuesHeader SystemCatalog::ToDefaultValuesHeader(const Pages::RowReference& rowPtr) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::DefaultValuesHeader{
       .columnId = data[static_cast<column_index_t>(SysDefaultValues::ColumnId)].AsInt(),
@@ -502,7 +502,7 @@ namespace DatabaseEngine {
 
   Headers::TableStatistics SystemCatalog::ToTableStatistics(const Pages::RowReference& rowPtr) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return {
       data[static_cast<column_index_t>(SysTableStats::TableId)].AsInt(),
@@ -515,7 +515,7 @@ namespace DatabaseEngine {
 
   Headers::ColumnStatistics SystemCatalog::ToColumnStatistics(const Pages::RowReference& rowPtr, const DataType columnType) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::ColumnStatistics{
       .columnId = data[static_cast<column_index_t>(SysColumnStats::ColumnId)].AsInt(),
@@ -528,7 +528,7 @@ namespace DatabaseEngine {
 
   Headers::ColumnHistograms SystemCatalog::ToColumnHistograms(const Pages::RowReference& rowPtr, const DataType columnType) {
     const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.GetData();
+    const auto& data = materializedRow.Data();
 
     return Headers::ColumnHistograms{
       data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)].AsInt(),
@@ -542,7 +542,7 @@ namespace DatabaseEngine {
 
   Headers::IndexStatistics SystemCatalog::ToIndexStatistics(const Pages::RowReference& rowPtr) {
    const auto materializedRow = rowPtr.Materialize();
-   const auto& data = materializedRow.GetData();
+   const auto& data = materializedRow.Data();
 
    return {
     data[static_cast<column_index_t>(SysIndexStats::TableId)].AsInt(),
@@ -737,11 +737,11 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const Int version,
     const bool isDeleted
   ) const{
-      StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysDatabases);
+      auto* table = this->masterDb->OpenTable(CatalogTables::SysDatabases);
 
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const vector<Value> fields = {
+      const std::vector fields = {
         Value(dbName, static_cast<column_index_t>(SysDatabases::Name)),
         Value(dbPath, static_cast<column_index_t>(SysDatabases::FilePath)),
         Value(isSystem, static_cast<column_index_t>(SysDatabases::IsSystem)),
@@ -771,7 +771,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const std::vector<Value> fields = {
+     const std::vector fields = {
         Value(databaseId, static_cast<column_index_t>(SysSchemas::DatabaseId)),
         Value(schemaName, static_cast<column_index_t>(SysSchemas::Name)),
         Value(currentDate, static_cast<column_index_t>(SysSchemas::CreatedAt)),
@@ -804,7 +804,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTables);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector<Value> fields = {
+      const std::vector fields = {
         Value(databaseId, static_cast<column_index_t>(SysTables::DatabaseId)),
         Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)),
         Value(tableName, static_cast<column_index_t>(SysTables::Name)),
@@ -828,15 +828,15 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   Errors::RuntimeStatus SystemCatalog::InsertColumnToMasterDb(
     const ExecutionProperties& properties,
     const Int tableId,
-    const string &columnName,
+    const std::string &columnName,
     const DataType columnType,
     const Int columnSize,
-    const int8_t& precision,
-    const int8_t& scale,
+    const TinyInt precision,
+    const TinyInt scale,
     const bool isNullable,
     const Int ordinalPosition,
     const bool isSystem,
-    const string& user,
+    const std::string& user,
     const Int version,
     const bool isDeleted
   ) const{
@@ -844,11 +844,21 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
       const auto currentDate = DataTypes::DateTime::Now();
 
-      std::vector<Value> fields = {
+     auto precisionField = precision != INVALID_DECIMAL_PRECISION
+         ? Value(precision, static_cast<column_index_t>(SysColumns::Precision))
+         : Value::Null(static_cast<column_index_t>(SysColumns::Precision));
+
+     auto scaleField = scale != INVALID_DECIMAL_SCALE
+         ? Value(scale, static_cast<column_index_t>(SysColumns::Scale))
+         : Value::Null(static_cast<column_index_t>(SysColumns::Scale));
+
+      const std::vector fields = {
         Value(tableId, static_cast<column_index_t>(SysColumns::TableId)),
         Value(columnName, static_cast<column_index_t>(SysColumns::Name)),
-        Value(static_cast<int8_t>(columnType), static_cast<column_index_t>(SysColumns::DataType)),
+        Value(static_cast<TinyInt>(columnType), static_cast<column_index_t>(SysColumns::DataType)),
         Value(columnSize, static_cast<column_index_t>(SysColumns::RecordSize)),
+        std::move(precisionField),
+        std::move(scaleField),
         Value(isNullable, static_cast<column_index_t>(SysColumns::IsNullable)),
         Value(ordinalPosition, static_cast<column_index_t>(SysColumns::OrdinalPosition)),
         Value(isSystem, static_cast<column_index_t>(SysColumns::IsSystemColumn)),
@@ -859,15 +869,6 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value(isDeleted, static_cast<column_index_t>(SysColumns::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt)),
       };
-
-      if (precision != INVALID_DECIMAL_PRECISION) {
-        fields.push_back(Value(precision, static_cast<column_index_t>(SysColumns::Precision)));
-        fields.push_back(Value(scale, static_cast<column_index_t>(SysColumns::Scale)));
-      }
-      else {
-        fields.push_back( Value::Null(static_cast<column_index_t>(SysColumns::Precision)));
-        fields.push_back(Value::Null(static_cast<column_index_t>(SysColumns::Scale)));
-      }
 
       auto result = table->InsertRow(properties, fields);
 
@@ -889,7 +890,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexes);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const std::vector<Value> fields = {
+     const std::vector fields = {
        Value(tableId, static_cast<column_index_t>(SysIndexes::TableId)),
        Value(indexName, static_cast<column_index_t>(SysIndexes::Name)),
        Value(isClustered, static_cast<column_index_t>(SysIndexes::IsClustered)),
@@ -920,7 +921,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::vector<Value> fields = {
+    const std::vector fields = {
       Value(indexId, static_cast<column_index_t>(SysIndexColumns::IndexId)),
       Value(columnId, static_cast<column_index_t>(SysIndexColumns::ColumnId)),
       Value(ordinalPosition, static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)),
@@ -949,32 +950,31 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       const bool isDeleted
   ) const{
 
-      auto* table = this->masterDb->OpenTable(CatalogTables::SysConstraints);
+    auto* table = this->masterDb->OpenTable(CatalogTables::SysConstraints);
 
-      const auto currentDate = DataTypes::DateTime::Now();
+    const auto currentDate = DataTypes::DateTime::Now();
 
-      std::vector<Value> fields = {
-          Value(tableId, static_cast<column_index_t>(SysConstraints::TableId)),
-          Value(constraintName, static_cast<column_index_t>(SysConstraints::Name)),
-          Value(static_cast<int8_t>(constraintType), static_cast<column_index_t>(SysConstraints::Type)),
-          Value(isDisabled, static_cast<column_index_t>(SysConstraints::IsDisabled)),
-          Value(currentDate, static_cast<column_index_t>(SysConstraints::CreatedAt)),
-          Value(currentDate, static_cast<column_index_t>(SysConstraints::LastModifiedAt)),
-          Value(user, static_cast<column_index_t>(SysConstraints::LastModifiedBy)),
-          Value(version, static_cast<column_index_t>(SysConstraints::Version)),
-          Value(isDeleted, static_cast<column_index_t>(SysConstraints::IsDeleted)),
-          Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt)),
-      };
+    auto constraintField = constraintIndexId != nullptr
+        ? Value(*constraintIndexId, static_cast<column_index_t>(SysConstraints::IndexId))
+        : Value::Null(static_cast<column_index_t>(SysConstraints::IndexId));
 
-      auto indexValue = (constraintIndexId != nullptr)
-          ? Value(*constraintIndexId, static_cast<column_index_t>(SysConstraints::IndexId))
-          : Value::Null(static_cast<column_index_t>(SysConstraints::IndexId));
-
-      fields.push_back(std::move(indexValue));
+    std::vector fields = {
+      Value(tableId, static_cast<column_index_t>(SysConstraints::TableId)),
+      Value(constraintName, static_cast<column_index_t>(SysConstraints::Name)),
+      Value(static_cast<TinyInt>(constraintType), static_cast<column_index_t>(SysConstraints::Type)),
+      Value(isDisabled, static_cast<column_index_t>(SysConstraints::IsDisabled)),
+      std::move(constraintField),
+      Value(currentDate, static_cast<column_index_t>(SysConstraints::CreatedAt)),
+      Value(currentDate, static_cast<column_index_t>(SysConstraints::LastModifiedAt)),
+      Value(user, static_cast<column_index_t>(SysConstraints::LastModifiedBy)),
+      Value(version, static_cast<column_index_t>(SysConstraints::Version)),
+      Value(isDeleted, static_cast<column_index_t>(SysConstraints::IsDeleted)),
+      Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt)),
+    };
 
     auto result = table->InsertRow(properties, fields);
 
-    cout << "Inserted constraint: "<< constraintName <<" to master db" << endl;
+    std::cout << "Inserted constraint: "<< constraintName <<" to master db" << std::endl;
 
     return result;
   }
@@ -991,7 +991,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     auto* table = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::vector<Value> fields = {
+    const std::vector fields = {
         Value(constraintId, static_cast<column_index_t>(SysConstraintColumns::ConstraintId)),
         Value(columnId, static_cast<column_index_t>(SysConstraintColumns::ColumnId)),
         Value(ordinalPosition, static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)),
@@ -1023,7 +1023,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector<Value> fields = {
+      const std::vector fields = {
         Value(tableId, static_cast<column_index_t>(SysIdentityColumns::TableId)),
         Value(columnId, static_cast<column_index_t>(SysIdentityColumns::ColumnId)),
         Value(seedValue, static_cast<column_index_t>(SysIdentityColumns::SeedValue)),
@@ -1053,7 +1053,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       auto* table = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector<Value> fields = {
+      const std::vector fields = {
         Value(columnId, static_cast<column_index_t>(SysDefaultValues::ColumnId)),
         Value(
       std::string(reinterpret_cast<const char*>(value.Data()), value.Size()),
@@ -1125,7 +1125,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const Value &min,
     const Value &max,
     const Int rowCount,
-    const int64_t &distinctCount
+    const BigInt distinctCount
   ) const {
 
     const std::vector fields = {
@@ -1149,8 +1149,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const ExecutionProperties &properties,
     const Int tableId,
     const Int indexId,
-    const int64_t &leafPages,
-    const int8_t &depth,
+    const BigInt leafPages,
+    const TinyInt depth,
     const DataTypes::Decimal &averageFragmentation
   ) const{
 
@@ -1186,7 +1186,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     const std::string lastModifiedBy = "system";
 
-    const vector<Value> fields = {
+    const vector fields = {
       Value(roleName, static_cast<column_index_t>(SysRoles::RoleName)),
       Value(static_cast<int>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
       Value(isSystem, static_cast<column_index_t>(SysRoles::IsSystemRole)),
@@ -1220,7 +1220,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     const std::string lastModifiedBy = "system";
 
-    const vector<Value> fields = {
+    const vector fields = {
       Value(username, static_cast<column_index_t>(SysUsers::UserName)),
       Value(passwordHash, static_cast<column_index_t>(SysUsers::PasswordHash)),
       Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
@@ -1252,7 +1252,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
    for (const auto& row : rows) {
      const auto materializedRow = row.Materialize();
-      const auto& data = materializedRow.GetData();
+      const auto& data = materializedRow.Data();
 
      roles.emplace_back(
        data[0].AsInt(),
@@ -1277,7 +1277,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
    for (const auto& row : rows) {
       const auto materializedRow = row.Materialize();
-      const auto& data = materializedRow.GetData();
+      const auto& data = materializedRow.Data();
 
 
      users.emplace_back(
@@ -1495,7 +1495,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int databaseId) 
 
     for (const auto& row : selectedConstraints) {
       const auto materializedRow = row.Materialize();
-      const auto& data = materializedRow.GetData();
+      const auto& data = materializedRow.Data();
 
       auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0].AsInt());
 
@@ -1827,7 +1827,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int databaseId) 
   void SystemCatalog::UpdateIdentityByColumnId(const Int tableId, const Int columnId, const int64_t& lastValue)const{
     auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
 
-    const std::vector updates{
+    std::vector updates = {
       Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue))
     };
 
@@ -1845,7 +1845,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     const Int pageCount
   ) const{
 
-    const std::vector updates = {
+    std::vector updates = {
       Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
       Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
       Value(pageCount, static_cast<column_index_t>(SysTableStats::PageCount)),
@@ -1867,7 +1867,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     const Value& min,
     const Value& max
   ) const{
-    const std::vector updates = {
+    std::vector updates = {
       Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
       Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount)),
       Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), static_cast<column_index_t>(SysColumnStats::MinimumValue)),
@@ -1886,10 +1886,10 @@ void SystemCatalog::UpdateTableStatisticsById(
     const Int tableId,
     const Int indexId,
     const int64_t &leafPages,
-    const int8_t &depth,
+    const TinyInt &depth,
     const DataTypes::Decimal &averageFragmentation
   ) const {
-   const std::vector updates = {
+   std::vector updates = {
      Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
      Value(depth, static_cast<column_index_t>(SysIndexStats::Depth)),
      Value(averageFragmentation, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
@@ -1913,7 +1913,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     const Int rowCount,
     const int64_t& distinctCount
   ) const{
-     const std::vector fields = {
+    std::vector updates = {
        Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
        Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
        Value(rowCount, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
@@ -1926,14 +1926,14 @@ void SystemCatalog::UpdateTableStatisticsById(
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
     key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int));
 
-    auto result = table->ClusteredIndexSeekUpdate(this->baseProperties, key, fields);
+    auto result = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
 
     std::cout << "Updated histogram Bucket for column: " << columnId << " and id: " << histogramId << std::endl;
 
     return result;
   }
 
-  Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const Int columnId, const std::vector<Value> &updates) const{
+  Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const Int columnId, std::vector<Value> &updates) const{
     using namespace StorageTypes;
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
@@ -1953,7 +1953,7 @@ void SystemCatalog::UpdateTableStatisticsById(
 
    const auto currentDate = DataTypes::DateTime::Now();
 
-   const std::vector updates = {
+   std::vector updates = {
      Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
      Value(currentDate, static_cast<column_index_t>(SysUsers::LastModifiedAt)),
      Value(username, static_cast<column_index_t>(SysUsers::LastModifiedBy))

@@ -132,7 +132,7 @@ namespace DatabaseEngine {
 
     MultiThreading::ReaderGuard lastUsedPageLatch(&lastUsedPage->Latch());
 
-    if (lastUsedPage->GetBytesLeft() >= size)
+    if (lastUsedPage->BytesLeft() >= size)
       return lastUsedPage;
 
     return {};
@@ -191,7 +191,7 @@ namespace DatabaseEngine {
 
          MultiThreading::ReaderGuard undoLatch(&undoPage->Latch());
 
-         if (undoPage->GetBytesLeft() >= size) {
+         if (undoPage->BytesLeft() >= size) {
            {
              MultiThreading::WriterGuard lock(&this->lastUsedPageMutex);
              this->lastUsedPageId = undoPage->GetPageId();
@@ -207,16 +207,16 @@ namespace DatabaseEngine {
 
   Errors::RuntimeStatus VersionDatabase::InsertRow(
     const StorageTypes::Row* row,
-    Pages::RowVersionPointer& rowPointer,
+    StorageTypes::RowVersionPointer& rowPointer,
     const StorageTypes::Table* table
   ){
-    auto* oldRow = new StorageTypes::Row(row);
+    auto* oldRow = new StorageTypes::Row(*row);
 
     auto page = this->GetLastUndoPage(table, row->TotalSize());
 
     MultiThreading::WriterGuard lock(&page->Latch());
 
-    const auto indexPosition = page->InsertRow(oldRow);
+    const auto indexPosition =  0;//page->InsertRow(oldRow);
 
     rowPointer.pageId = page->GetPageId();
     rowPointer.offset = indexPosition;
@@ -226,7 +226,7 @@ namespace DatabaseEngine {
 
   StorageTypes::Row VersionDatabase::RetrieveRow(
     const Snapshot& snapshot,
-    const Pages::RowVersionPointer &rowPointer,
+    const StorageTypes::RowVersionPointer &rowPointer,
     const StorageTypes::Table *table
   )const {
 

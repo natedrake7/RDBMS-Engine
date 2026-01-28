@@ -1,51 +1,103 @@
 ﻿#include <cmath>
-
 #include "../../../include/DataStorage/Table.h"
 #include "DataStorage/InsertPayload.h"
 
 
 namespace DatabaseEngine::StorageTypes{
-    Errors::RuntimeStatus Table::CreateInsertPayload(
-        transaction_id_t transactionId,
+    InsertPayload Table::CreateInsertPayload(
+        Errors::RuntimeStatus& status,
+        const transaction_id_t transactionId,
         const std::vector<Value> &inputData
-    ){
-        auto rowHeader = RowHeader();
-        auto payload = InsertPayload();
+    ) const{
+        auto rowHeader = RowHeader(this->columns.size());
+        rowHeader.version.createdTransactionId = transactionId;
+
+        // First pass: determine how many non-NULL columns we have
+        UnsignedSmallInt nonNullColumnCount = 0;
+        UnsignedSmallInt dataSize = 0;
+
+        UnsignedInt intermediateComputedColumns = 0;
+        for (const auto& column : this->columns){
+            dataSize += column->Size();
+
+            const auto columnOrdinal = column->OrdinalPosition();
+            const auto index = columnOrdinal - intermediateComputedColumns;
+
+            if (column->HasIdentity()){
+                nonNullColumnCount++;
+                intermediateComputedColumns++;
+                continue;
+            }
+
+            if (inputData.at(index).IsNull()){
+                rowHeader.nullBitMap.Set(columnOrdinal, true);
+                continue;
+            }
+
+            nonNullColumnCount++;
+        }
+
         //calculate header size and offset
-        Int dataSizesOffset = Constants::ROW_VERSION_HEADER_SIZE
-            + 3 * static_cast<Int>(std::ceil(this->columns.size() / 8));
+        // Header: version header + 3 bitmaps
+        const auto bitmapBytes = static_cast<Int>(std::ceil(static_cast<double>(this->columns.size()) / 8.0));
+        const auto bitmapSize = 3 * bitmapBytes;
+        Int dataSizesOffset = Constants::ROW_VERSION_HEADER_SIZE + bitmapSize;
 
-        //TODO figure out how to avoid unused bytes
-        auto dataOffSet = dataSizesOffset + this->columns.size() * sizeof(block_size_t);
+        // Only allocate offset space for non-NULL columns
+        const auto dataOffSet = dataSizesOffset + nonNullColumnCount * sizeof(block_size_t);
 
-        Errors::RuntimeStatus status;
-        for (const auto& value : inputData){
-            const auto& index = value.GetColumnIndex();
-            const auto& column = this->columns.at(index);
-
+        auto payload = InsertPayload(dataSize + dataOffSet, dataOffSet);
+        intermediateComputedColumns = 0;
+        for (const auto& column : this->columns){
             //ignore auto-computed columns even if specified
             if (column->HasIdentity()){
+                const auto columnSize = column->Size();
                 auto identityValue = column->GenerateIdentityValue();
-                payload.SetData(&identityValue, column->GetColumnSize());
+                payload.SetData(&identityValue, columnSize);
+
+                payload.SetData(&columnSize, sizeof(block_size_t), dataSizesOffset);
+                dataSizesOffset += sizeof(block_size_t);
+
+                intermediateComputedColumns++;
                 continue;
             }
 
-            if (value.IsNull()){
-                rowHeader.nullBitMap.Set(index, true);
+            const auto& index = column->OrdinalPosition() - intermediateComputedColumns;
+            const auto& value = inputData.at(index);
+
+            // Skip NULL values (already marked in bitmap)
+            if (value.IsNull())
                 continue;
-            }
 
             auto result = static_cast<block_size_t>(payload.SetData(value, column, status));
             if (!status.IsOk())
-                return status;
+                return payload;
 
+            // Write offset only for non-NULL columns
             payload.SetData(&result, sizeof(block_size_t), dataSizesOffset);
             dataSizesOffset += sizeof(block_size_t);
         }
 
+        payload.AlignSizeWithOffset();
 
+        auto headerOffset = 0;
+        payload.SetData(&rowHeader.version.createdTransactionId, sizeof(transaction_id_t), headerOffset);
+        headerOffset += sizeof(transaction_id_t);
+        payload.SetData(&rowHeader.version.deletedTransactionId, sizeof(transaction_id_t), headerOffset);
+        headerOffset += sizeof(transaction_id_t);
+        payload.SetData(&rowHeader.version.olderVersionPointer.pageId, sizeof(page_id_t), headerOffset);
+        headerOffset += sizeof(page_id_t);
+        payload.SetData(&rowHeader.version.olderVersionPointer.offset, sizeof(page_offset_t), headerOffset);
+        headerOffset += sizeof(page_offset_t);
 
+        // Set bitmaps
+        payload.SetData(rowHeader.nullBitMap.DataPtr(), bitmapBytes, headerOffset);
+        headerOffset += bitmapBytes;
+        payload.SetData(rowHeader.largeObjectBitMap.DataPtr(), bitmapBytes, headerOffset);
+        headerOffset += bitmapBytes;
+        payload.SetData(rowHeader.overflowBitMap.DataPtr(), bitmapBytes, headerOffset);
+        // headerOffset += bitmapBytes;
 
-        return Errors::RuntimeStatus();
+        return payload;
     }
 }

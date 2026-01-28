@@ -8,4 +8,5 @@ namespace Tests{
     void RunTest(TestFunctionPtr functionPtr);
 
     void IndexPageUpdate();
+    void PageUpdate();
 }

@@ -68,7 +68,7 @@ namespace Pages {
 
         this->SetPageAllocated(pageId);
         this->SetPageType(pageId, page->GetPageType());
-        this->SetPageAllocationStatus(pageId, page->GetBytesLeft());
+        this->SetPageAllocationStatus(pageId, page->BytesLeft());
 
         this->isDirty = true;
     }

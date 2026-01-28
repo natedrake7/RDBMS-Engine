@@ -53,12 +53,12 @@ namespace DatabaseEngine{
 
       Errors::RuntimeStatus InsertRow(
         const StorageTypes::Row* row,
-        Pages::RowVersionPointer& rowPointer,
+        StorageTypes::RowVersionPointer& rowPointer,
         const StorageTypes::Table* table
       );
       StorageTypes::Row RetrieveRow(
         const Snapshot& snapshot,
-        const Pages::RowVersionPointer& rowPointer,
+        const StorageTypes::RowVersionPointer& rowPointer,
         const StorageTypes::Table* table
       )const;
       [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;

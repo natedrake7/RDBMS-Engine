@@ -59,17 +59,15 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetColumnName(const std::string &otherName){ this->name = otherName;}
 
-    DataType Column::GetColumnType() const { return this->header.columnType; }
+    DataType Column::Type() const { return this->header.columnType; }
 
-    row_size_t Column::GetColumnSize() const { return this->header.recordSize; }
+    row_size_t Column::Size() const { return this->header.recordSize; }
 
-    bool Column::IsColumnNullable() const { return this->table->IsColumnNullable(this->header.columnIndex); }
+    bool Column::IsNullable() const { return this->allowNulls; }
 
-    bool Column::GetAllowNulls() const { return this->allowNulls; }
+    void Column::SetOrdinalPosition(const column_index_t columnIndex) { this->header.columnIndex = columnIndex; }
 
-    void Column::SetColumnIndex(const column_index_t columnIndex) { this->header.columnIndex = columnIndex; }
-
-    column_index_t Column::GetColumnIndex() const { return this->header.columnIndex; }
+    column_index_t Column::OrdinalPosition() const { return this->header.columnIndex; }
 
     const ColumnHeader& Column::GetColumnHeader() const { return this->header; }
 

@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include "Errors.h"
+#include "Row.h"
+#include "../../Systemic/include/Errors.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace DatabaseEngine::StorageTypes
@@ -12,6 +13,10 @@ namespace DatabaseEngine::StorageTypes {
         object_t* _data;
         UnsignedSmallInt size;
         UnsignedSmallInt offset;
+
+        mutable RowHeader header;
+        mutable bool isHeaderInitialized;
+        mutable std::vector<Value> materializedColumns;
 
         template <typename T>
         void CopyToBuffer(T value);
@@ -32,15 +37,30 @@ namespace DatabaseEngine::StorageTypes {
 
         Int SetDataByType(const Value& value, const Column* column, Errors::RuntimeStatus& status);
 
-    public:
+        page_offset_t DeserializeHeader(Int bitmapSize, Int numberOfColumns) const;
 
+    public:
         InsertPayload();
-        InsertPayload(object_t* payload, UnsignedSmallInt payloadSize);
+        InsertPayload(UnsignedSmallInt size, UnsignedSmallInt startingOffset);
+
+        InsertPayload& operator=(InsertPayload&& other)noexcept;
+        InsertPayload(InsertPayload&& other) noexcept;
+
+        // Copy operations perform deep copy to avoid double-free
+        InsertPayload(const InsertPayload& other);
+        InsertPayload& operator=(const InsertPayload& other);
+
+        ~InsertPayload();
 
         void SetData(const void* otherData, UnsignedSmallInt dataSize);
-        void SetData(const void* otherData, UnsignedSmallInt dataSize, Int offSet);
+        void SetData(const void* otherData, UnsignedSmallInt dataSize, Int offSet) const;
         Int SetData(const Value& value, const Column* column, Errors::RuntimeStatus& status);
 
+        void AlignSizeWithOffset();
+
+        Value MaterializeColumn(const Column* column, Int numberOfColumns) const;
+        object_t* Data()const;
+        UnsignedSmallInt Size()const;
     };
 
     template <typename T>
