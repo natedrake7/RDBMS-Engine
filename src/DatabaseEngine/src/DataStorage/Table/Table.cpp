@@ -82,57 +82,6 @@ namespace DatabaseEngine::StorageTypes {
           && this->clusteredIndexColumnsCache.Size() == 1;
       }
 
-      Errors::RuntimeStatus Table::BatchCreateRow(
-        Row*& rowPtr,
-        const transaction_id_t transactionId,
-        const vector<Value> &inputData,
-        const std::vector<column_index_t> &columnIndices,
-        std::vector<char>& buffer,
-        page_offset_t& bufferOffset
-      ) const{
-
-        rowPtr = new Row(*this);
-
-        this->PopulateAutoComputedColumns(rowPtr);
-
-        for (int i = 0;i < inputData.size(); i++) {
-          const auto& input = inputData[i];
-
-          const auto& columnIndex = columnIndices[i];
-
-          const auto& column = this->columns.at(columnIndex);
-
-          //ignore auto-computed columns even if specified
-          if (column->HasIdentity())
-            continue;
-
-          auto *block = new Block(column);
-
-          if (input.IsNull())
-          {
-            rowPtr->SetNullBitMapValue(columnIndex, true);
-            // Table::InsertNullValues(block, rowPtr, columnIndex);
-            continue;
-          }
-
-          auto insertResult = block->SetData(input);
-
-          if (insertResult.code != Errors::RuntimeError::Ok) {
-            delete block;
-            return insertResult;
-          }
-
-          rowPtr->InsertColumnData(block, columnIndex);
-        }
-
-        buffer.resize(buffer.size() + rowPtr->TotalSize());
-
-        rowPtr->Serialize(&buffer, bufferOffset);
-        rowPtr->SetCurrentTransactionId(transactionId);
-
-        return {};
-      }
-
       Errors::RuntimeStatus Table::CreateRow(
         Row*& row,
         const transaction_id_t transactionId,
@@ -530,7 +479,7 @@ namespace DatabaseEngine::StorageTypes {
         const std::vector<QueryResult> &input,
         const std::vector<column_index_t> &columnIndices
       ) {
-        std::vector<Row*> rows;
+        std::vector<InsertPayload> rows;
         rows.reserve(input.size());
 
         Int pagesNeeded = 0;
@@ -545,25 +494,21 @@ namespace DatabaseEngine::StorageTypes {
         Memory::Allocator allocator(allocationSize, Memory::AllocationType::Persistent);
 
         for (const auto& insertedRow : input) {
-          auto row = new Row(*this);
-          //TODO implement better to avoid multiple loggings
-          auto status = this->BatchCreateRow(
-            row,
-            properties.snapshot.transactionId,
-            insertedRow.Data(),
-            columnIndices,
-            buffer,
-            pos
-          );
+            Errors::RuntimeStatus status;
+            auto payload = this->CreateInsertPayload(status, properties.snapshot.transactionId, insertedRow.Data());
 
-          if (status.code != Errors::RuntimeError::Ok)
+          if (!status.IsOk())
             return status;
 
-          pagesNeeded += static_cast<Int>(row->TotalSize());
-          rows.push_back(row);
+            pagesNeeded += static_cast<Int>(payload.Size());
+            rows.push_back(std::move(payload));
         }
 
-        auto checkPoint = Database::LogRowBatchInsert(buffer, properties.snapshot.transactionId, this->header.ordinalPosition);
+        auto checkPoint = Database::LogRowBatchInsert(
+            buffer,
+            properties.snapshot.transactionId,
+            this->header.ordinalPosition
+        );
 
         if (this->IsClustered())
           pagesNeeded /= INDEX_PAGE_DEFAULT_SIZE;
@@ -573,24 +518,15 @@ namespace DatabaseEngine::StorageTypes {
         if (pagesNeeded == 0)
           pagesNeeded = 1;
 
-        DataTypes::RowIdentifier rowId;
-        for (int i = 0;i < rows.size(); i++){
-          auto& row = rows[i];
-
-          // auto result = this->InsertRow(row, pagesNeeded);
-          //
-          // if (result.code != Errors::RuntimeError::Ok)
-          //   return result;
-          //
-          // if (i == 0)
-          //   rowId = result.rowId;
+        Errors::RuntimeStatus result;
+        for (auto& payload: rows){
+            result = this->InsertRow(payload, pagesNeeded);
+            if (!result.IsOk())
+                return result;
         }
 
         Database::LogCheckPoint(checkPoint);
-
-        Errors::RuntimeStatus status;
-        status.rowId = rowId;
-        return status;
+        return result;
       }
 
     // Errors::RuntimeStatus Table::InsertRow(const ExecutionProperties& properties, const std::vector<Value> &inputData){
@@ -687,7 +623,7 @@ namespace DatabaseEngine::StorageTypes {
     //
     // }
 
-    Errors::RuntimeStatus Table::InsertRow(InsertPayload& payload, const Int pagesToAllocate){
+    Errors::RuntimeStatus Table:: InsertRow(InsertPayload& payload, const Int pagesToAllocate){
         // this->InsertLargeObjectToPage(row);
 
         //row_id

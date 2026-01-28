@@ -297,7 +297,7 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* child;
 
 
-    [[nodiscard]] inline ExecutionResult* ExecuteStatement(const DatabaseEngine::ExecutionProperties& properties);
+    [[nodiscard]] inline ExecutionResult* ExecuteStatement(const DatabaseEngine::ExecutionProperties& properties) const;
     [[nodiscard]] inline ExecutionResult* ExecuteConstantStatement(const DatabaseEngine::ExecutionProperties& properties)const;
 
     public:
@@ -380,7 +380,7 @@ namespace QueryPipeline::PhysicalPlan{
       Int index
     )const;
     ExecutionResult* InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties)const;
-    ExecutionResult* InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties);
+    ExecutionResult* InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties) const;
   public:
     PhysicalInsert(
       Statements::DataSource* table,

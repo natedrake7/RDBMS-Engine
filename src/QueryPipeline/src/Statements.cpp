@@ -1090,15 +1090,10 @@ namespace QueryPipeline::Statements {
     }
 
     for (const auto&[columnName, header]:  columnsDict) {
-
-        if (identityColumns.Contains(header.id)){
-            for (auto& [insertColumns] : this->values)
-                insertColumns.emplace_back(new Expressions::ConstantExpression(Value::Null()));
-        }
-
         if (header.isSystem
-            || statementColumns.Contains(header.id))
-            continue;
+            || identityColumns.Contains(header.id)
+            || statementColumns.Contains(header.id)
+        ) continue;
 
       this->columnIndices.emplace_back(static_cast<column_index_t>(header.ordinalPosition));
 

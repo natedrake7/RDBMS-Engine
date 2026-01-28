@@ -127,14 +127,6 @@ namespace DatabaseEngine::StorageTypes
         * Functions to create rows from input data.
         * @{
         */
-            [[nodiscard]] Errors::RuntimeStatus BatchCreateRow(
-                Row*& rowPtr,
-                transaction_id_t transactionId,
-                const std::vector<Value>& inputData,
-                const std::vector<column_index_t> &columnIndices,
-                std::vector<char>& buffer,
-                page_offset_t& bufferOffset
-            )const;
             [[nodiscard]] Errors::RuntimeStatus CreateRow(
                 Row*& row,
                 transaction_id_t transactionId,

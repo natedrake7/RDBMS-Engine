@@ -348,7 +348,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  ExecutionResult * PhysicalProject::ExecuteStatement(const DatabaseEngine::ExecutionProperties& properties){
+  ExecutionResult * PhysicalProject::ExecuteStatement(const DatabaseEngine::ExecutionProperties& properties) const{
     auto* result = this->child->Execute(properties);
 
     for (const auto& expression : this->resultExpressions)
@@ -522,8 +522,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     this->child->UpdateScanState(rowId);
   }
 
-  bool PhysicalInsert::SortInsertsAscending(const Value& lhs, const Value& rhs)
-  {
+  bool PhysicalInsert::SortInsertsAscending(const Value& lhs, const Value& rhs){
     return lhs.GetColumnIndex() < rhs.GetColumnIndex();
   }
 
@@ -578,7 +577,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult* PhysicalInsert::InsertFromFields(
       DatabaseEngine::StorageTypes::Table* tablePtr,
       const DatabaseEngine::ExecutionProperties& properties
-    ){
+    ) const{
         auto* result = new ExecutionResult();
 
         for (int i = 0;i < this->fields.size(); i++){
