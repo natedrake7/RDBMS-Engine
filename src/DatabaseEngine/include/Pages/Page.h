@@ -152,8 +152,7 @@ namespace Pages{
 
         void UpdateRow(
             const DatabaseEngine::StorageTypes::InsertPayload& payload,
-            Int indexPosition,
-            Int keySize
+            const RowReference& rowPtr
         );
 
         virtual void ReadFromDisk(

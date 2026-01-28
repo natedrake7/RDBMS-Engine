@@ -105,13 +105,12 @@ namespace DatabaseEngine::StorageTypes
                 page_id_t lastLargePageId
             );
             void InsertLargeDataObjectPointerToRow(
-                Row* row,
                 bool isFirstRecursion,
                 page_id_t lastLargePageId,
                 column_index_t largeBlockIndex
             ) const;
             void RecursiveInsertToLargePage(
-                Row* row,
+                Pages::RowReference& rowPtr,
                 page_offset_t &offset,
                 column_index_t columnIndex,
                 block_size_t &remainingBlockSize,
@@ -122,50 +121,11 @@ namespace DatabaseEngine::StorageTypes
 
         /** @} End of: Class Constructors and Destructors*/
 
-        /**
-        * @name Row Creation Functions
-        * Functions to create rows from input data.
-        * @{
-        */
-            [[nodiscard]] Errors::RuntimeStatus CreateRow(
-                Row*& row,
-                transaction_id_t transactionId,
-                const std::vector<Value>& inputData,
-                Logging::CheckPoint* checkPoint
-            )const;
-            [[nodiscard]] Errors::RuntimeStatus CreateRow(
-                Row*& row,
-                transaction_id_t transactionId,
-                const std::vector<Value>& inputData,
-                const std::vector<column_index_t>& columnIndices,
-                Logging::CheckPoint* checkPoint
-            )const;
-            [[nodiscard]] Errors::RuntimeStatus CreateRow(
-                Row*& row,
-                transaction_id_t transactionId,
-                const std::vector<Expressions::Expression*>& inputData,
-                const std::vector<column_index_t>& columnIndices,
-                Logging::CheckPoint* checkPoint
-            )const;
-            static bool PopulateColumnIdentity(Row*& row, Column*& column, BigInt& outValue);
-            static void PopulateDefaultValues(Row*& row, Column*& column);
-            static void InsertNullValues(Block *&block, Row* row, column_index_t columnIndex);
-            void PopulateAutoComputedColumns(Row*& row)const;
-
-        /** @} End of: Class Constructors and Destructors*/
-
-            void InsertRowToPage(
-                Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage,
-                Pages::PageGuard<>& page,
-                Row*& row,
-                const int &indexPosition
-            )const;
             void InsertExistingRowsToNonClusteredIndexByClusteredIndex(Int indexPos, Int pagesToAllocate);
             void InsertExistingRowToNonClusteredIndexByHeap(Int indexPos, Int pagesToAllocate);
             void RemoveColumnByClusteredIndex(column_index_t index);
             void RemoveColumnByHeap(column_index_t index)const;
-            void InsertToVersionDatabase(Row*& row, transaction_id_t transactionId) const;
-
+            void InsertToVersionDatabase(const Pages::RowReference& rowPtr, transaction_id_t transactionId) const;
 
         public:
             InsertPayload CreateInsertPayload(
@@ -417,8 +377,8 @@ namespace DatabaseEngine::StorageTypes
                 const InsertPayload& payload
             ) const;
 
-            void DeleteLargeObjectFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns);
-            void DeleteOverflowedRowsFromPage(Row*& row, const HashSet<column_index_t>& updatedColumns)const;
+            void DeleteLargeObjectFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t>& updatedColumns);
+            void DeleteOverflowedRowsFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t>& updatedColumns)const;
 
             [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(page_id_t pageId) const;
             [[nodiscard]] Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(page_id_t pageId) const;
@@ -441,10 +401,10 @@ namespace DatabaseEngine::StorageTypes
 
             [[nodiscard]] Database* GetDatabase() const;
 
-            int HandleRowOverflow(Row* row) const;
-            int HandleRowOverflow(Row*& row, const Column* column)const;
+            int HandleRowOverflow(Pages::RowReference& rowPtr) const;
+            int HandleRowOverflow(Pages::RowReference& rowPtr, const Column* column)const;
 
-            void InsertLargeObjectToPage(Row* row);
+            void InsertLargeObjectToPage(Pages::RowReference& rowPtr);
 
             void PopulateColumn(column_index_t index, const Value& defaultValue);
             void PopulateColumnByClusteredIndex(column_index_t index, const Value& defaultValue);
@@ -457,10 +417,15 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             void AddColumn(Column *column);
-            void HandleAddColumn(Pages::Page* page, Row* row, column_index_t index, const Value& defaultValue);
+            void HandleAddColumn(
+                Pages::Page* page,
+                const Pages::RowReference& rowPtr,
+                column_index_t index,
+                const Value& defaultValue
+            );
             void UpdateColumnName(column_index_t index, const std::string& name)const;
             void RemoveColumn(column_index_t index);
-            static void HandleRemoveColumn(Pages::Page* page, Row* row, column_index_t index);
+            static void HandleRemoveColumn(Pages::Page* page, QueryResult& row, column_index_t index);
             void HandleRemoveColumn(column_index_t index);
 
         /** @} End of System Catalog Integration Functions */

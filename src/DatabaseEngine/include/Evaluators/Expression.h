@@ -5,13 +5,8 @@
 #include "../../../Systemic/include/DataTypes/Variable.h"
 #include <string>
 
-namespace Pages
-{
+namespace Pages{
     struct RowReference;
-}
-
-namespace DatabaseEngine::StorageTypes {
-    class Row;
 }
 
 namespace Expressions{

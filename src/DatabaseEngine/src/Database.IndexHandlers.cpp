@@ -6,7 +6,6 @@
 #include "../include/DatabaseConstants.h"
 #include "../include/DataStorage/Table.h"
 #include "../include/BufferPool/StorageManager.h"
-#include "../include/DataStorage/Block.h"
 #include "Guards/ReaderGuard.h"
 
 namespace DatabaseEngine {
@@ -26,12 +25,12 @@ namespace DatabaseEngine {
 
     DataTypes::Indexing::Key Database::CreateKey(
         const std::vector<column_index_t>& indexedColumns,
-        const StorageTypes::Row* row,
+        const Pages::RowReference& rowPtr,
         const Int offSet
     ){
         DataTypes::Indexing::Key key;
-        for (const auto &columnId : indexedColumns){
-            auto data = row->GetColumnByIndex(columnId - offSet);
+        for (const auto ordinalPosition : indexedColumns){
+            auto data = rowPtr.PartialMaterialize(ordinalPosition - offSet);
             key.InsertKey(DataTypes::Indexing::Key(data));
         }
 
@@ -40,12 +39,12 @@ namespace DatabaseEngine {
 
     DataTypes::Indexing::Key Database::CreateKey(
         const std::vector<column_index_t> &indexedColumns,
-        const StorageTypes::Row* row,
+        const Pages::RowReference& rowPtr,
         const DataTypes::RowIdentifier &rowId
     ){
         DataTypes::Indexing::Key key;
-        for (const auto &columnId : indexedColumns){
-            auto data = row->GetColumnByIndex(columnId);
+        for (const auto ordinalPosition : indexedColumns){
+            auto data = rowPtr.PartialMaterialize(ordinalPosition);
             key.InsertKey(DataTypes::Indexing::Key(data));
         }
 

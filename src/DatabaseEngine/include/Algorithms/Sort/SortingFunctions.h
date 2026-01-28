@@ -38,16 +38,12 @@ struct MergeElement{
 };
 
 class SortingFunctions{
-         [[nodiscard]] static int CompareBlockByDataType(
-           const DatabaseEngine::StorageTypes::Block*& firstBlock,
-           const DatabaseEngine::StorageTypes::Block*& secondBlock
-          );
          [[nodiscard]] static std::string CreateGroupByKey(
-           const DatabaseEngine::StorageTypes::Row* row,
+           const Pages::RowReference& row,
            const std::vector<GroupCondition> &sortConditions
           );
          static long double ApplyAggregateFunctionToGroup(
-           const std::vector<DatabaseEngine::StorageTypes::Row*>& rowGroup,
+           const std::vector<Pages::RowReference>& rowGroup,
            const GroupCondition& condition
           );
 
@@ -58,13 +54,13 @@ class SortingFunctions{
            const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
           );
          [[nodiscard]] static bool CompareRowsAscending(
-           const DatabaseEngine::StorageTypes::Row* firstRow,
-           const DatabaseEngine::StorageTypes::Row* secondRow,
+           const Pages::RowReference& firstRow,
+           const Pages::RowReference& secondRow,
            const column_index_t& columnIndex
           );
          [[nodiscard]] static bool CompareRowsDescending(
-           const DatabaseEngine::StorageTypes::Row* firstRow,
-           const DatabaseEngine::StorageTypes::Row* secondRow,
+           const Pages::RowReference& firstRow,
+           const Pages::RowReference& secondRow,
            const column_index_t& columnIndex
           );
          static void OrderBy(
@@ -72,7 +68,7 @@ class SortingFunctions{
            const std::vector<QueryPipeline::Statements::OrderColumn*>& conditions
           );
          [[nodiscard]] static std::unordered_map<std::string, AggregateResults> GroupBy(
-           const std::vector<DatabaseEngine::StorageTypes::Row*>& rows,
+           const std::vector<Pages::RowReference>& rows,
            const std::vector<GroupCondition>& sortConditions
           );
 };

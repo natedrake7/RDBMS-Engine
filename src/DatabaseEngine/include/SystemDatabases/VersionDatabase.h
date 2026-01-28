@@ -52,11 +52,11 @@ namespace DatabaseEngine{
       void Initialize(const std::string& configPath);
 
       Errors::RuntimeStatus InsertRow(
-        const StorageTypes::Row* row,
+        const Pages::RowReference& rowPtr,
         StorageTypes::RowVersionPointer& rowPointer,
         const StorageTypes::Table* table
       );
-      StorageTypes::Row RetrieveRow(
+      Pages::RowReference RetrieveRowReference(
         const Snapshot& snapshot,
         const StorageTypes::RowVersionPointer& rowPointer,
         const StorageTypes::Table* table

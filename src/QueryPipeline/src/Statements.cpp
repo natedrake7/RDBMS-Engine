@@ -1113,7 +1113,7 @@ namespace QueryPipeline::Statements {
       this->InsertDefaultValuesForMissingColumns(header, defaultValue);
     }
 
-    return (this->HasSelectStatement())
+    return this->HasSelectStatement()
              ? this->ValidateSelectStatement(validationScope)
              : this->ResolveAliases(validationScope);
   }

@@ -18,6 +18,14 @@ void QueryResult::AddColumn(Value &field){
   this->data.push_back(std::move(field));
 }
 
+void QueryResult::AddColumn(const Value& field){
+    this->data.push_back(field);
+}
+
+void QueryResult::AddColumn(const Value& field, const column_index_t columnIndex){
+    this->data.insert(this->data.begin() + columnIndex, field);
+}
+
 void QueryResult::Print() const{
   for (int i = 0; i < this->data.size(); ++i) {
     const auto& column = this->data[i];

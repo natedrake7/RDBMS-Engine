@@ -26,10 +26,6 @@ namespace DatabaseEngine {
     class LogicalPlan;
   }
 
-  namespace DatabaseEngine::StorageTypes {
-    class Row;
-  }
-
 namespace QueryPipeline::PhysicalPlan{
   struct ExecutionResult {
       std::vector<std::string> displayColumnNames;
@@ -67,7 +63,7 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionNode();
       explicit ExecutionNode(const DataTypes::Guid& currentSessionId);
       virtual ~ExecutionNode() = default;
-      void InsertToTemporaryDatabase(const std::vector<DatabaseEngine::StorageTypes::Row>& rows);
+      void InsertToTemporaryDatabase(const std::vector<Pages::RowReference>& rows);
       void InsertPostProjectionResultsToTemporaryDatabase(
         const DatabaseEngine::ExecutionProperties& properties,
         ExecutionResult*& result,

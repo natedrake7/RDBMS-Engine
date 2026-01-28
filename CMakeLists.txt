@@ -121,11 +121,9 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Database.cpp
         src/DatabaseEngine/src/Database.IndexHandlers.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.cpp
-        src/DatabaseEngine/src/DataStorage/Table/Table.Additional.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.Indexes.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.LargeObjects.cpp
         src/DatabaseEngine/src/DataStorage/Row.cpp
-        src/DatabaseEngine/src/DataStorage/Block.cpp
         src/DatabaseEngine/src/DataStorage/Column.cpp
         src/DatabaseEngine/src/Pages/Page.cpp
         src/DatabaseEngine/src/Pages/HeaderPage.cpp

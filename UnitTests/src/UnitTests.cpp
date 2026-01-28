@@ -6,7 +6,6 @@
 #include "../../DatabaseEngine/include/Pages/IndexPage.h"
 #include "../../DatabaseEngine/include/DataStorage/Column.h"
 #include "../../DatabaseEngine/include/DataStorage/Table.h"
-#include "../../DatabaseEngine/include/DataStorage/Block.h"
 #include "../../DatabaseEngine/include/DataStorage/Row.h"
 
 namespace Tests{
@@ -100,7 +99,7 @@ namespace Tests{
         auto newPayload = table.CreateInsertPayload(status, 0, row.Data());
         tuple.payload = &newPayload;
 
-        page.UpdateRow(*tuple.payload, rowPtr.indexPosition, rowPtr.keySize);
+        page.UpdateRow(*tuple.payload, rowPtr);
 
         std::cout << "After update:" << std::endl;
         for (int i = 0;i < page.GetPageSize(); i++){
@@ -179,9 +178,9 @@ namespace Tests{
 
         std::cout << "After update: " << row << std::endl;
 
-       payload = table.CreateInsertPayload(status, 0, row.Data());
+        payload = table.CreateInsertPayload(status, 0, row.Data());
 
-        page.UpdateRow(payload, rowPtr.indexPosition, rowPtr.keySize);
+        page.UpdateRow(payload, rowPtr);
 
         std::cout << "After update:" << std::endl;
         for (int i = 0;i < page.GetPageSize(); i++){

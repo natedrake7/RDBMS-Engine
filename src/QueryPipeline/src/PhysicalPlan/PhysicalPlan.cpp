@@ -5,7 +5,6 @@
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
-#include "../../../DatabaseEngine/include/DataStorage/Block.h"
 #include "../../../DatabaseEngine/include/ExecutionProperties.h"
 #include "SystemDatabases/TemporaryDatabase.h"
 
@@ -42,8 +41,7 @@ namespace QueryPipeline::PhysicalPlan {
     this->temporaryTableId = INVALID_TABLE_ID;
   }
 
-  void ExecutionNode::InsertToTemporaryDatabase(
-    const std::vector<DatabaseEngine::StorageTypes::Row>& rows){
+  void ExecutionNode::InsertToTemporaryDatabase(const std::vector<Pages::RowReference>& rows){
 
   }
 
@@ -436,17 +434,18 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-    std::vector<DatabaseEngine::StorageTypes::Row> filteredRows;
+    std::vector<Pages::RowReference> filteredRows;
+    filteredRows.reserve(result->rows.size() / 2);
     for (auto& row : result->rows) {
-      // context.row = &row;
+      context.row = &row;
 
       if (!this->filter->Evaluate(context).AsBool())
         continue;
 
-      // filteredRows.push_back(std::move(row));
+      filteredRows.push_back(std::move(row));
     }
 
-    // result->rows = std::move(filteredRows);
+    result->rows = std::move(filteredRows);
     return result;
   }
 

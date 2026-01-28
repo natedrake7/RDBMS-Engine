@@ -100,7 +100,7 @@ public:
     static void LogCheckPoint(Logging::CheckPoint& checkPoint);
 
     [[nodiscard]] static Logging::CheckPoint LogRowInsert(
-        const StorageTypes::Row* row,
+        const StorageTypes::InsertPayload& payload,
         transaction_id_t transactionId,
         table_id_t tableOrdinal
     );
@@ -120,13 +120,13 @@ public:
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
       const vector<column_index_t>& indexedColumns,
-      const StorageTypes::Row* row,
+      const Pages::RowReference& rowPtr,
       Int offSet
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
         const vector<column_index_t>& indexedColumns,
-        const StorageTypes::Row* row,
+        const Pages::RowReference& rowPtr,
         const DataTypes::RowIdentifier& rowId
     );
 
@@ -234,10 +234,6 @@ public:
 };
 
 void CreateDatabase(const string &dbName);
-
-void PrintRows(const vector<StorageTypes::Row> &rows);
-
-void PrintRows(const vector<StorageTypes::Row*> &rows);
 
 Database* UseSystemDatabase(const std::string& dbName, const vector<Headers::sysTable>& tables);
 

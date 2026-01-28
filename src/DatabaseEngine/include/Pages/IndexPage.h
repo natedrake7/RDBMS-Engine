@@ -170,7 +170,6 @@ namespace Pages {
 			void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition);
 
 			DataTypes::Indexing::Key GetKey(Int indexPosition) const;
-			DatabaseEngine::StorageTypes::Row GetRow(Int indexPosition, Int offSet, const DatabaseEngine::StorageTypes::Table* table) const;
 			LeafNodeTuple PeekLeafTuple(Int indexPosition);
 			InternalNodeTuple PeekInternalNodeTuple(Int indexPosition) const;
 

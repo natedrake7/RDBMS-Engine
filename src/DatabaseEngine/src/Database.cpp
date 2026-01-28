@@ -239,15 +239,15 @@ namespace DatabaseEngine
     }
 
     Logging::CheckPoint Database::LogRowInsert(
-        const StorageTypes::Row* row,
+        const StorageTypes::InsertPayload& payload,
         const transaction_id_t transactionId,
         const table_id_t tableOrdinal
     ) {
         static auto& logger = Logging::WriteAheadLogger::Get();
 
-        std::vector<char> buffer(row->TotalSize());
-        page_offset_t pos = 0;
-        row->Serialize(&buffer, pos);
+        std::vector<char> buffer;
+        buffer.resize(payload.Size());
+        std::memcpy(buffer.data(), payload.Data(), payload.Size());
 
         const auto logEntry = logger.CreateLogEntry(
             transactionId,
@@ -411,30 +411,6 @@ namespace DatabaseEngine
         auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysDbName + ".db");
 
         headerPage->SetDbHeader(DatabaseHeader(0, firstPfsPageId, firstGamePageId));
-    }
-
-    void PrintRows(const vector<StorageTypes::Row> &rows)
-    {
-        uint16_t rowCount = 0;
-        for (const auto &row : rows)
-        {
-            row.Print();
-            rowCount++;
-        }
-
-        cout << "Rows printed: " << rowCount << endl;
-    }
-
-    void PrintRows(const vector<StorageTypes::Row*> &rows)
-    {
-        uint16_t rowCount = 0;
-        for (const auto &row : rows)
-        {
-            row->Print();
-            rowCount++;
-        }
-
-        cout << "Rows printed: " << rowCount << endl;
     }
 
     Database* UseSystemDatabase(const string & dbName, const vector<Headers::sysTable> & tables){

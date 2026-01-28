@@ -2,10 +2,7 @@
 
 #include <cmath>
 #include <iostream>
-#include <nlohmann/detail/input/parser.hpp>
-
 #include "../../include/Database.h"
-#include "../../include/DataStorage/Block.h"
 #include "../../include/BufferPool/StorageManager.h"
 
 namespace Pages{
@@ -602,20 +599,19 @@ namespace Pages{
 
     void Page::UpdateRow(
         const DatabaseEngine::StorageTypes::InsertPayload& payload,
-        const Int indexPosition,
-        const Int keySize
+        const RowReference& rowPtr
     ){
-        if (this->IndexOutOfBounds(indexPosition))
+        if (this->IndexOutOfBounds(rowPtr.indexPosition))
             throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
 
-        const auto slot = this->GetSlotDirectory(indexPosition);
+        const auto slot = this->GetSlotDirectory(rowPtr.indexPosition);
 
-        const auto rowOffset = keySize + slot.GetOffset();
+        const auto rowOffset = rowPtr.keySize + slot.GetOffset();
         // const auto key = this->GetKey(rowOffset);
 
-        const auto previousRowSize = slot.GetSize() - keySize;
+        const auto previousRowSize = slot.GetSize() - rowPtr.keySize;
         const auto size = payload.Size();
-        const auto totalSize = keySize + size;
+        const auto totalSize = rowPtr.keySize + size;
         //if new row size is less than or equal to previous row size, update in place
         if (size <= previousRowSize){
             std::memcpy(this->data + rowOffset, payload.Data(), size);
@@ -632,7 +628,7 @@ namespace Pages{
         //if next row cant fit in the remaining space, we need to compact the page
         //keep slot offset and set its size to 0 so defragmentation does nothing as it is last on the offset
         if (this->header.bytesLeft < totalSize){
-            this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0, SlotDirectory::SLOT_DEAD), indexPosition);
+            this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0, SlotDirectory::SLOT_DEAD), rowPtr.indexPosition);
             this->Defragment();
 
             //even if after the defragment row cant fit, throw exception
@@ -647,8 +643,8 @@ namespace Pages{
         // this->SerializeRow(rowHeader, row, nextOffset);
         // Use memmove instead of memcpy when copying within the same buffer to handle potential overlap
         if (this->IsIndexPage()){
-            std::memmove(this->data + nextOffset, this->data + slot.GetOffset(), keySize);
-            nextOffset += keySize;
+            std::memmove(this->data + nextOffset, this->data + slot.GetOffset(), rowPtr.keySize);
+            nextOffset += rowPtr.keySize;
         }
 
         // Use memcpy for payload since it's from a different buffer (no overlap possible)
@@ -656,7 +652,7 @@ namespace Pages{
 
         //update slot directory
         const auto newSlot = SlotDirectory(offSetCopy, totalSize, SlotDirectory::SLOT_USED);
-        this->UpdateSlotDirectory(newSlot, indexPosition);
+        this->UpdateSlotDirectory(newSlot, rowPtr.indexPosition);
 
         //update bytes
         //Decrease by total size even though the previous offset is freed, as it becomes fragmented and no row can be inserted

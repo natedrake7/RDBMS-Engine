@@ -206,13 +206,13 @@ namespace DatabaseEngine {
   }
 
   Errors::RuntimeStatus VersionDatabase::InsertRow(
-    const StorageTypes::Row* row,
+    const Pages::RowReference& rowPtr,
     StorageTypes::RowVersionPointer& rowPointer,
     const StorageTypes::Table* table
   ){
-    auto* oldRow = new StorageTypes::Row(*row);
 
-    auto page = this->GetLastUndoPage(table, row->TotalSize());
+    // auto row = rowPtr.Materialize();
+    auto page = this->GetLastUndoPage(table, 0);
 
     MultiThreading::WriterGuard lock(&page->Latch());
 
@@ -224,13 +224,13 @@ namespace DatabaseEngine {
     return {};
  }
 
-  StorageTypes::Row VersionDatabase::RetrieveRow(
+  Pages::RowReference VersionDatabase::RetrieveRowReference(
     const Snapshot& snapshot,
     const StorageTypes::RowVersionPointer &rowPointer,
     const StorageTypes::Table *table
   )const {
 
-    StorageTypes::Row row;
+    // StorageTypes::Row row;
 
     {
       auto page = Storage::StorageManager::Get().GetPage(this->filename, rowPointer.pageId, table);
@@ -240,7 +240,7 @@ namespace DatabaseEngine {
       // row = page->GetRow(rowPointer.offset);
     }
 
-    return row.GetVisibleVersionForTransaction(snapshot);
+    return {};
   }
 
   std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t startingExtentId) const {

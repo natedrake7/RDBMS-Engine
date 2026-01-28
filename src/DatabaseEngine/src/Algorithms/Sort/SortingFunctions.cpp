@@ -1,5 +1,4 @@
 ﻿#include "../../../../Systemic/include/GroupCondition.h"
-#include "../../../include/DataStorage/Block.h"
 #include "../../../include/DataStorage/Row.h"
 #include "../../../include/Algorithms/Sort/SortingFunctions.h"
 #include "../../../include/Algorithms/AggregateFunctions.h"
@@ -11,15 +10,11 @@
 
 using namespace DatabaseEngine::StorageTypes;
 
-bool SortingFunctions::CompareRowsAscending(const Row *firstRow, const Row *secondRow, const column_index_t& columnIndex)
-{
-    const Block* firstRowData = firstRow->GetData()[columnIndex];
-    const Block* secondRowData = secondRow->GetData()[columnIndex];
-    
-    return SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);
+bool SortingFunctions::CompareRowsAscending(const Pages::RowReference& firstRow, const Pages::RowReference& secondRow, const column_index_t& columnIndex){
+    return (firstRow.PartialMaterialize(columnIndex) < secondRow.PartialMaterialize(columnIndex)).AsBool();
 }
 
-bool SortingFunctions::CompareRowsDescending(const Row* firstRow, const Row* secondRow, const column_index_t &columnIndex)
+bool SortingFunctions::CompareRowsDescending(const Pages::RowReference& firstRow, const Pages::RowReference& secondRow, const column_index_t &columnIndex)
 {
     return !SortingFunctions::CompareRowsAscending(firstRow, secondRow, columnIndex);
 }
@@ -61,99 +56,6 @@ MergeElement::MergeElement(MergeElement&& other) noexcept {
     this->value = std::move(other.value);
     this->batchId = other.batchId;
     this->rowId = other.rowId;
-}
-
-int SortingFunctions::CompareBlockByDataType(const Block *&firstBlock, const Block *&secondBlock)
-{
-    switch (firstBlock->ColumnType())
-    {
-        case DataType::TinyInt:
-        {
-            const auto& firstBlockData = *reinterpret_cast<const int8_t*>(firstBlock->Data());
-            const auto& secondBlockData = *reinterpret_cast<const int8_t*>(secondBlock->Data());
-
-            if (firstBlockData < secondBlockData) return 1;
-            if (firstBlockData > secondBlockData) return -1;
-            return 0;
-        }
-        case DataType::SmallInt:
-        {
-            const auto& firstBlockData = *reinterpret_cast<const int16_t*>(firstBlock->Data());
-            const auto& secondBlockData = *reinterpret_cast<const int16_t*>(secondBlock->Data());
-
-            if (firstBlockData < secondBlockData) return 1;
-            if (firstBlockData > secondBlockData) return -1;
-            return 0;
-        }
-        case DataType::Int:
-        {
-            const auto& firstBlockData = *reinterpret_cast<const int32_t*>(firstBlock->Data());
-            const auto& secondBlockData = *reinterpret_cast<const int32_t*>(secondBlock->Data());
-
-            if (firstBlockData < secondBlockData) return 1;
-            if (firstBlockData > secondBlockData) return -1;
-            return 0;
-        }
-        case DataType::BigInt:
-        {
-            const auto& firstBlockData = *reinterpret_cast<const int64_t*>(firstBlock->Data());
-            const auto& secondBlockData = *reinterpret_cast<const int64_t*>(secondBlock->Data());
-
-            if (firstBlockData < secondBlockData) return 1;
-            if (firstBlockData > secondBlockData) return -1;
-            return 0;
-        }
-        case DataType::Decimal:
-        {
-            //implement support for decimal class operations
-            return true;
-        }
-        case DataType::DateTime:
-        {
-            const auto& firstBlockData = *reinterpret_cast<const time_t*>(firstBlock->Data());
-            const auto& secondBlockData = *reinterpret_cast<const time_t*>(secondBlock->Data());
-
-            if (firstBlockData < secondBlockData) return 1;
-            if (firstBlockData > secondBlockData) return -1;
-            return 0;
-        }
-        case DataType::Bool:
-        {
-            const auto& firstBlockData = firstBlock->AsBool();
-            const auto& secondBlockData = secondBlock->AsBool();
-
-            if (firstBlockData < secondBlockData) return 1;
-            if (firstBlockData > secondBlockData) return -1;
-            return 0;
-        }
-        case DataType::String:
-        {
-            const auto& firstBlockDataSize = firstBlock->Size();
-            const auto& secondBlockDataSize = secondBlock->Size();
-            
-            if (firstBlockDataSize < secondBlockDataSize) return 1;
-            if (firstBlockDataSize > secondBlockDataSize) return -1;
-
-            const int result = memcmp(firstBlock->Data(), secondBlock->Data(), firstBlockDataSize);
-
-            if (result > 0) return 1;
-            if (result < 0) return -1;
-            return 0;
-        }
-        case DataType::Guid:
-        {
-            //both guids are 16 bytes in memory
-            const auto& dataSize = firstBlock->Size();
-
-            const int result = memcmp(firstBlock->Data(), secondBlock->Data(), dataSize);
-
-            if (result > 0) return 1;
-            if (result < 0) return -1;
-            return 0;
-        }
-        default:
-            throw invalid_argument("AggregateFunctions::CompareMaxWithRow(): Unsupported column type");
-    }
 }
 
 bool SortingFunctions::CompareRows(
@@ -220,10 +122,12 @@ void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<QueryPipe
     MergeSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), conditions);
 }
 
-unordered_map<string, AggregateResults> SortingFunctions::GroupBy(const vector<Row*> &rows, const vector<GroupCondition> &sortConditions)
-{
+unordered_map<string, AggregateResults> SortingFunctions::GroupBy(
+    const vector<Pages::RowReference> &rows,
+    const vector<GroupCondition> &sortConditions
+){
     unordered_map<string, AggregateResults> groupedResults;
-    unordered_map<string, vector<Row*>> groupedRows;
+    unordered_map<string, vector<Pages::RowReference>> groupedRows;
 
     //add any aggregate function execution asWell by condition
     //also store the keys of the groupBy used in order to prin them.
@@ -275,22 +179,18 @@ bool MergeComparator::operator()(const MergeElement& first, const MergeElement& 
     );
 }
 
-string SortingFunctions::CreateGroupByKey(const Row* row, const vector<GroupCondition> &sortConditions)
+string SortingFunctions::CreateGroupByKey(const Pages::RowReference& row, const vector<GroupCondition> &sortConditions)
 {
     string hashKey;
-    const auto& rowData = row->GetData();
-
-    for(const auto& condition : sortConditions)
-    {
-        const auto& block = rowData[condition.GetColumnIndex()];
-        
-        hashKey.append(reinterpret_cast<const char*>(block->Data()), block->Size());
+    for(const auto& condition : sortConditions){
+        const auto value = row.PartialMaterialize(condition.GetColumnIndex());
+        hashKey.append(reinterpret_cast<const char*>(value.Data()), value.Size());
     }
 
     return hashKey;
 }
 
-long double SortingFunctions::ApplyAggregateFunctionToGroup(const vector<Row *> &rowGroup, const GroupCondition &condition)
+long double SortingFunctions::ApplyAggregateFunctionToGroup(const vector<Pages::RowReference> &rowGroup, const GroupCondition &condition)
 {
     switch (condition.GetAggregateFunction())
     {

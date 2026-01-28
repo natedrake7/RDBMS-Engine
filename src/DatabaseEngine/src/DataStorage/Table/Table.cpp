@@ -1,7 +1,6 @@
 ﻿#include "../../../include/DatabaseConstants.h"
 #include "../../../../Systemic/include/DataTypes/Value.h"
 #include "../../../../Systemic/include/DataStructures/BitMap.h"
-#include "../../../include/DataStorage//Block.h"
 #include "../../../include/DataStorage/Column.h"
 #include "../../../include/DataStorage/Row.h"
 #include "../../../include/DataStorage/Table.h"
@@ -80,214 +79,6 @@ namespace DatabaseEngine::StorageTypes {
       bool Table::IsColumnAutoComputedPrimaryKey(const Column *column) const{
         return this->clusteredIndexColumnsCache.Contains(column->GetColumnId())
           && this->clusteredIndexColumnsCache.Size() == 1;
-      }
-
-      Errors::RuntimeStatus Table::CreateRow(
-        Row*& row,
-        const transaction_id_t transactionId,
-        const std::vector<Value>& inputData,
-        Logging::CheckPoint* checkPoint
-      )const
-      {
-        row = new Row(*this);
-        this->PopulateAutoComputedColumns(row);
-
-        for(const auto& input : inputData){
-
-          const auto& associatedColumnIndex = input.GetColumnIndex();
-
-          const auto& column = this->columns.at(associatedColumnIndex);
-
-          //ignore auto-computed columns even if specified
-          if (column->HasIdentity())
-            continue;
-
-          auto *block = new Block(column);
-
-          if (input.IsNull())
-          {
-            Table::InsertNullValues(block, row, associatedColumnIndex);
-            continue;
-          }
-
-          auto insertResult = block->SetData(input);
-
-          if (insertResult.code != Errors::RuntimeError::Ok) {
-            delete block;
-            return insertResult;
-          }
-
-          row->InsertColumnData(block, associatedColumnIndex);
-        }
-
-        row->SetCurrentTransactionId(transactionId);
-
-        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
-
-        return {};
-      }
-
-      Errors::RuntimeStatus Table::CreateRow(
-        Row*& row,
-        const transaction_id_t transactionId,
-        const std::vector<Value> &inputData,
-        const std::vector<column_index_t> &columnIndices,
-        Logging::CheckPoint *checkPoint
-      ) const{
-        row = new Row(*this);
-
-        this->PopulateAutoComputedColumns(row);
-
-        for (int i = 0;i < inputData.size(); i++) {
-          const auto& input = inputData[i];
-
-          const auto& associatedColumnIndex = columnIndices.at(i);
-
-          const auto& column = this->columns.at(associatedColumnIndex);
-
-          //ignore auto-computed columns even if specified
-          if (column->GetIdentity().columnId != INVALID_COLUMN_ID)
-            continue;
-
-          auto *block = new Block(column);
-
-          if (input.IsNull())
-          {
-            Table::InsertNullValues(block, row, associatedColumnIndex);
-            continue;
-          }
-
-          auto result = block->SetData(input);
-
-          if (result.code != Errors::RuntimeError::Ok) {
-            delete block;
-            return result;
-          }
-
-          row->InsertColumnData(block, associatedColumnIndex);
-        }
-
-        row->SetCurrentTransactionId(transactionId);
-
-        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
-
-        return {};
-      }
-
-        Errors::RuntimeStatus Table::CreateRow(
-            Row*& row,
-            const transaction_id_t transactionId,
-            const std::vector<Expressions::Expression *> &inputData,
-            const std::vector<column_index_t> &columnIndices,
-            Logging::CheckPoint *checkPoint
-        ) const{
-        Errors::RuntimeStatus result;
-
-        row = new Row(*this);
-
-        this->PopulateAutoComputedColumns(row);
-        result.message = "Row created successfully";
-
-        for (int i = 0;i < inputData.size(); i++) {
-          const auto& input = inputData[i]->Evaluate({});
-
-          const auto& associatedColumnIndex = columnIndices.at(i);
-
-          const auto& column = this->columns.at(associatedColumnIndex);
-
-          //ignore auto-computed columns even if specified
-          if (column->HasIdentity())
-            continue;
-
-          auto *block = new Block(column);
-
-          if (input.IsNull()){
-            Table::InsertNullValues(block, row, associatedColumnIndex);
-            continue;
-          }
-
-          auto insertResult = block->SetData(input);
-
-          if (insertResult.code != Errors::RuntimeError::Ok) {
-            delete block;
-            return insertResult;
-          }
-
-          row->InsertColumnData(block, associatedColumnIndex);
-        }
-
-        row->SetCurrentTransactionId(transactionId);
-
-        *checkPoint = Database::LogRowInsert(row, transactionId, this->header.ordinalPosition);
-
-        return result;
-      }
-
-      void Table::PopulateAutoComputedColumns(Row*& row)const{
-        BigInt outValue = 0;
-
-        for (auto* column: this->columns) {
-          const auto result = Table::PopulateColumnIdentity(row, column, outValue);
-
-          if (result == true)
-            continue;
-
-          Table::PopulateDefaultValues(row, column);
-        }
-      }
-
-      void Table::InsertRowToPage(
-        Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage,
-        Pages::PageGuard<>& page,
-        Row*& row,
-        const int & indexPosition
-      )const{
-        while (row->TotalSize() > page->BytesLeft())
-          this->HandleRowOverflow(row);
-
-        // page->InsertRow(row, indexPosition);
-        pageFreeSpacePage->SetPageMetaData(page.Get());
-      }
-
-    // void Table::InsertRowToClusteredPage(
-    //   Pages::PageGuard<Pages::PageFreeSpacePage>& pageFreeSpacePage,
-    //   Pages::IndexPage* page,
-    //   const DataTypes::Indexing::Key &key,
-    //   Row* row,
-    //   const int & indexPosition
-    // )const{
-    //   for(const auto& column: this->columns){
-    //     if(!column->isColumnOverflowed())
-    //       continue;
-    //
-    //     this->HandleRowOverflow(row, column);
-    //   }
-    //
-    //   page->InsertTuple(key, row, indexPosition);
-    //   pageFreeSpacePage->SetPageMetaData(page);
-    // }
-
-    bool Table::PopulateColumnIdentity(Row*& row, Column*& column, int64_t& outValue) {
-        outValue = column->GenerateIdentityValue();
-
-        const auto& columnSize = column->Size();
-
-        auto* block = new Block(&outValue, columnSize ,column);
-
-        row->InsertColumnData(block, column->OrdinalPosition());
-
-        return true;
-      }
-
-    void Table::PopulateDefaultValues( Row*& row, Column*& column) {
-        const auto& defaultValue = column->GetDefaultValue();
-
-        if (defaultValue.columnId == INVALID_COLUMN_ID)
-          return;
-
-        auto* block = new Block(defaultValue.value.data(), defaultValue.value.size(), column);
-
-        row->InsertColumnData(block, column->OrdinalPosition());
       }
 
       void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const Int indexPos, const Int pagesToAllocate){
@@ -384,13 +175,13 @@ namespace DatabaseEngine::StorageTypes {
     }
   }
 
-     void Table::InsertToVersionDatabase(Row*& row, const transaction_id_t transactionId) const{
+     void Table::InsertToVersionDatabase(const Pages::RowReference& rowPtr, const transaction_id_t transactionId) const{
         static auto& versionDatabase = VersionDatabase::Get();
 
         RowVersionPointer oldVersionPointer;
-        versionDatabase.InsertRow(row, oldVersionPointer, this);
-        row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
-        row->SetCurrentTransactionId(transactionId);
+        versionDatabase.InsertRow(rowPtr, oldVersionPointer, this);
+        // row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
+        // row->SetCurrentTransactionId(transactionId);
      }
 
      Table::Table(
@@ -647,80 +438,79 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-    void Table::DeleteLargeObjectFromPage( Row*& row, const HashSet<column_index_t>& updatedColumns){
+    void Table::DeleteLargeObjectFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t>& updatedColumns){
       const auto& filename = this->database->GetFileName();
 
-      auto* rowHeader = row->GetHeader();
-
-      for(const auto& block : row->GetData()){
-        const auto& columnIndex = block->ColumnIndex();
-
-        if(!updatedColumns.Contains(columnIndex)
-          || !rowHeader->largeObjectBitMap.Get(columnIndex))
-          continue;
-
-        rowHeader->largeObjectBitMap.Set(columnIndex, false);
-
-        auto objectPointer = block->AsLargeObjectPointer();
-
-        auto largeObjectPage = Storage::StorageManager::Get().GetLargeDataPage(filename, objectPointer, this);
-
-        auto* objectPtr = largeObjectPage->DeleteObject();
-
-        {
-          auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer);
-
-          MultiThreading::WriterGuard lock(&pfsPage->Latch());
-
-          pfsPage->SetPageMetaData(largeObjectPage.Get());
-          pfsPage->SetPageFreed(largeObjectPage->GetPageId());
-        }
-
-
-        while(objectPtr->nextPageId != 0){
-            auto nextLargeObjectPage = Storage::StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, this);
-
-            auto* prevObject = objectPtr;
-            objectPtr = nextLargeObjectPage->DeleteObject();
-
-            {
-              auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer);
-
-              MultiThreading::WriterGuard lock(&pfsPage->Latch());
-
-              pfsPage->SetPageMetaData(nextLargeObjectPage.Get());
-              pfsPage->SetPageFreed(nextLargeObjectPage->GetPageId());
-
-            }
-
-        }
-      }
+      // auto* rowHeader = row->GetHeader();
+      //
+      // for(const auto& block : row->GetData()){
+      //   const auto& columnIndex = block->ColumnIndex();
+      //
+      //   if(!updatedColumns.Contains(columnIndex)
+      //     || !rowHeader->largeObjectBitMap.Get(columnIndex))
+      //     continue;
+      //
+      //   rowHeader->largeObjectBitMap.Set(columnIndex, false);
+      //
+      //   auto objectPointer = block->AsLargeObjectPointer();
+      //
+      //   auto largeObjectPage = Storage::StorageManager::Get().GetLargeDataPage(filename, objectPointer, this);
+      //
+      //   auto* objectPtr = largeObjectPage->DeleteObject();
+      //
+      //   {
+      //     auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer);
+      //
+      //     MultiThreading::WriterGuard lock(&pfsPage->Latch());
+      //
+      //     pfsPage->SetPageMetaData(largeObjectPage.Get());
+      //     pfsPage->SetPageFreed(largeObjectPage->GetPageId());
+      //   }
+      //
+      //
+      //   while(objectPtr->nextPageId != 0){
+      //       auto nextLargeObjectPage = Storage::StorageManager::Get().GetLargeDataPage(filename, objectPtr->nextPageId, this);
+      //
+      //       auto* prevObject = objectPtr;
+      //       objectPtr = nextLargeObjectPage->DeleteObject();
+      //
+      //       {
+      //         auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), objectPointer);
+      //
+      //         MultiThreading::WriterGuard lock(&pfsPage->Latch());
+      //
+      //         pfsPage->SetPageMetaData(nextLargeObjectPage.Get());
+      //         pfsPage->SetPageFreed(nextLargeObjectPage->GetPageId());
+      //
+      //       }
+      //   }
+      // }
     }
 
-    void Table::DeleteOverflowedRowsFromPage( Row*& row, const HashSet<column_index_t> & updatedColumns)const{
+    void Table::DeleteOverflowedRowsFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t> & updatedColumns)const{
       const auto& filename = this->database->GetFileName();
 
-      auto* rowHeader = row->GetHeader();
-
-      for(const auto& block : row->GetData()){
-        if(!updatedColumns.Contains(block->ColumnIndex())
-          || !rowHeader->overflowBitMap.Get(block->ColumnIndex()))
-            continue;
-
-        rowHeader->overflowBitMap.Set(block->ColumnIndex(), false);
-
-        const auto objectPointer = block->AsOverflowPointer();
-
-        auto overflowPage = Storage::StorageManager::Get().GetOverflowPage(filename, objectPointer.pageId, this);
-
-        const auto* overflowRow = overflowPage->DeleteObject(objectPointer.index);
-
-        auto pfsPage = Storage::StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
-
-        pfsPage->SetPageMetaData(overflowPage.Get());
-
-        delete overflowRow;
-      }
+      // auto* rowHeader = row->GetHeader();
+      //
+      // for(const auto& block : row->GetData()){
+      //   if(!updatedColumns.Contains(block->ColumnIndex())
+      //     || !rowHeader->overflowBitMap.Get(block->ColumnIndex()))
+      //       continue;
+      //
+      //   rowHeader->overflowBitMap.Set(block->ColumnIndex(), false);
+      //
+      //   const auto objectPointer = block->AsOverflowPointer();
+      //
+      //   auto overflowPage = Storage::StorageManager::Get().GetOverflowPage(filename, objectPointer.pageId, this);
+      //
+      //   const auto* overflowRow = overflowPage->DeleteObject(objectPointer.index);
+      //
+      //   auto pfsPage = Storage::StorageManager::Get().GetPageFreeSpacePage(filename, Database::GetPfsAssociatedPage(objectPointer.pageId));
+      //
+      //   pfsPage->SetPageMetaData(overflowPage.Get());
+      //
+      //   delete overflowRow;
+      // }
     }
 
     string Table::GetFileName() const{ return this->database->GetFileName(); }
@@ -1213,8 +1003,8 @@ namespace DatabaseEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    int Table::HandleRowOverflow(Row* row) const{
-      auto largestBlock = row->FindLargestVariableLengthColumn();
+    int Table::HandleRowOverflow(Pages::RowReference& rowPtr) const{
+      // auto largestBlock = row->FindLargestVariableLengthColumn();
 
       // if(largestBlock.IsNull())
       //   return -1;
@@ -1233,34 +1023,34 @@ namespace DatabaseEngine::StorageTypes {
       // const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
       // largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
 
-      return largestBlock.Size();
+      // return largestBlock.Size();
     }
 
-      int Table::HandleRowOverflow(Row*& row, const Column *column)const{
-        auto& data = row->GetData();
-
-        if(data.size() < column->OrdinalPosition())
-          return -1;
-
-        auto* largestBlock = row->GetData().at(column->OrdinalPosition());
-
-        auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->Size());
-
-        int indexPos = 0;
-        overflowPage->InsertObject(largestBlock->Data(), largestBlock->Size(), indexPos);
-
-        row->SetOverflowBitMapValue(largestBlock->ColumnIndex(), true);
-
-        const auto pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(overflowPage->GetPageId());
-
-        auto pfsPage = Storage::StorageManager::Get().GetPageFreeSpacePage(this->database->GetFileName(), pfsPageId);
-
-        pfsPage->SetPageMetaData(overflowPage.Get());
-
-        const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
-        largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
-
-        return largestBlock->Size();
+      int Table::HandleRowOverflow(Pages::RowReference& rowPtr, const Column *column)const{
+        // auto& data = row->GetData();
+        //
+        // if(data.size() < column->OrdinalPosition())
+        //   return -1;
+        //
+        // auto* largestBlock = row->GetData().at(column->OrdinalPosition());
+        //
+        // auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->Size());
+        //
+        // int indexPos = 0;
+        // overflowPage->InsertObject(largestBlock->Data(), largestBlock->Size(), indexPos);
+        //
+        // row->SetOverflowBitMapValue(largestBlock->ColumnIndex(), true);
+        //
+        // const auto pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(overflowPage->GetPageId());
+        //
+        // auto pfsPage = Storage::StorageManager::Get().GetPageFreeSpacePage(this->database->GetFileName(), pfsPageId);
+        //
+        // pfsPage->SetPageMetaData(overflowPage.Get());
+        //
+        // const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
+        // largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
+        //
+        // return largestBlock->Size();
     }
 
     //create differrent one to handle clustered updates
@@ -1291,7 +1081,7 @@ namespace DatabaseEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        page->UpdateRow(newPayload, indexPosition, rowPtr.keySize);
+        page->UpdateRow(newPayload, rowPtr);
 
         // if(page->GetBytesLeft() - diff > 0){
         //   page->UpdateBytesLeft();
@@ -1531,20 +1321,23 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
     }
   }
 
-  //TODO add heap insert if row still cant remain in page if heap
-  void Table::HandleAddColumn(Pages::Page* page,  Row* row, const column_index_t index, const Value &defaultValue){
-        const auto& column = this->columns.at(index);
+    //TODO add heap insert if row still cant remain in page if heap
+    void Table::HandleAddColumn(
+        Pages::Page* page,
+        const Pages::RowReference& rowPtr,
+        const column_index_t index,
+        const Value &defaultValue
+    ){
+        auto materializedRow = rowPtr.Materialize();
 
-        auto* block = new Block(defaultValue.Data(), defaultValue.Size(), column);
+        materializedRow.AddColumn(defaultValue, index);
 
-        int diff = row->InsertNewColumn(block);
+        Errors::RuntimeStatus status;
+        const auto payload = this->CreateInsertPayload(status, 0, materializedRow.Data());
 
-        if(page->BytesLeft() - diff > 0){
-          page->UpdateBytesLeft();
-          return;
-        }
+        page->UpdateRow(payload, rowPtr);
 
-        this->InsertLargeObjectToPage(row);
+        // this->InsertLargeObjectToPage(row);
 
         // if(isHeap && (PAGE_SIZE - PageHeader::GetPageHeaderSize() - row->GetTotalRowSize()) > 0){
         //   vector<extent_id_t> allocatedExtents;
@@ -1555,22 +1348,22 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
         //   return;
         // }
 
-        while(page->BytesLeft() - diff < 0){
-          const int result = this->HandleRowOverflow(row);
+        // while(page->BytesLeft() - diff < 0){
+        //     const int result = this->HandleRowOverflow(row);
+        //
+        //     if(result == -1)
+        //     break;
+        //
+        //     diff -= result;
+        // }
+    }
 
-          if(result == -1)
-            break;
+  void Table::HandleRemoveColumn(Pages::Page* page, QueryResult& row, const column_index_t index){
+        // auto& data = row->GetData();
 
-          diff -= result;
-        }
-  }
+        // data.erase(data.begin() + index);
 
-  void Table::HandleRemoveColumn(Pages::Page* page, Row* row, const column_index_t index){
-        auto& data = row->GetData();
-
-        data.erase(data.begin() + index);
-
-        page->UpdateBytesLeft();
+        // page->UpdateBytesLeft();
   }
 
     void Table::RemoveColumn(const column_index_t index){
@@ -1661,4 +1454,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
 
         page->UpdateBytesLeft();
   }
+
+  Database* Table::GetDatabase() const { return this->database; }
+
 }

@@ -320,23 +320,6 @@ DataTypes::Indexing::Key IndexPage::GetKey(const Int indexPosition) const{
     return this->GetKey(offSet);
 }
 
-DatabaseEngine::StorageTypes::Row IndexPage::GetRow(
-    const Int indexPosition,
-    const Int offSet,
-    const DatabaseEngine::StorageTypes::Table* table
-) const{
-    const auto& columns = table->GetColumns();
-
-    auto row = DatabaseEngine::StorageTypes::Row(*table);
-    page_offset_t offsetCopy = offSet;
-
-    row.SetId(this->header.pageId, indexPosition);
-    row.ReadHeaderFromDisk(this->data, offsetCopy);
-    row.ReadDataFromDisk(this->data, offsetCopy, columns);
-
-    return row;
-}
-
 LeafNodeTuple IndexPage::PeekLeafTuple(const Int indexPosition){
     const auto slot = this->GetSlotDirectory(indexPosition);
 
