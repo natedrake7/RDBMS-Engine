@@ -254,12 +254,12 @@ namespace Indexing{
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
-            const std::vector<QueryPipeline::Statements::UpdateColumn*>&  updates
+           const std::vector<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
-            const std::vector<QueryPipeline::Statements::UpdateColumn*>&  updates
+           const std::vector<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexSeekUpdate(

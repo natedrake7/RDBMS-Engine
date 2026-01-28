@@ -102,7 +102,13 @@ namespace Expressions{
 
   Expression::Expression(){
     this->expressionType = ExpressionType::Expression;
+    this->columnIndex = 0;
   }
+
+  void Expression::SetIndex(const column_index_t index){
+      this->columnIndex = index;
+  }
+
   bool Expression::IsBinary() const{ return this->expressionType == ExpressionType::Binary; }
   bool Expression::IsLogical() const{ return this->expressionType == ExpressionType::Logical; }
   bool Expression::IsConstant() const{ return this->expressionType == ExpressionType::Constant; }
@@ -197,21 +203,21 @@ namespace Expressions{
     const auto rightType = this->right->GetReturnType();
 
     switch (Value::PromoteType(leftType, rightType)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt:
-    case DataType::Decimal:
-    case DataType::String:
-    case DataType::UnicodeString:
-    case DataType::Bool:
-      return true;
-    case DataType::DateTime:
-    case DataType::Guid:
-    case DataType::RowIdentifier:
-    case DataType::Unknown:
-    default:
-      return false;
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Decimal:
+        case DataType::String:
+        case DataType::UnicodeString:
+        case DataType::Bool:
+          return true;
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+          return false;
     }
   }
 
@@ -220,21 +226,21 @@ namespace Expressions{
     const auto rightType = this->right->GetReturnType();
 
     switch (Value::PromoteType(leftType, rightType)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt:
-    case DataType::Decimal:
-    case DataType::Bool:
-      return true;
-    case DataType::String:
-    case DataType::UnicodeString:
-    case DataType::DateTime:
-    case DataType::Guid:
-    case DataType::RowIdentifier:
-    case DataType::Unknown:
-    default:
-      return false;
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Decimal:
+        case DataType::Bool:
+          return true;
+        case DataType::String:
+        case DataType::UnicodeString:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+          return false;
     }
   }
 
@@ -243,21 +249,21 @@ namespace Expressions{
     const auto rightType = this->right->GetReturnType();
 
     switch (Value::PromoteType(leftType, rightType)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt:
-    case DataType::Decimal:
-    case DataType::Bool:
-      return true;
-    case DataType::String:
-    case DataType::UnicodeString:
-    case DataType::DateTime:
-    case DataType::Guid:
-    case DataType::RowIdentifier:
-    case DataType::Unknown:
-    default:
-      return false;
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Decimal:
+        case DataType::Bool:
+          return true;
+        case DataType::String:
+        case DataType::UnicodeString:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+          return false;
     }
   }
 
@@ -271,21 +277,21 @@ namespace Expressions{
     const auto rightType = this->right->GetReturnType();
 
     switch (Value::PromoteType(leftType, rightType)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt:
-    case DataType::Bool:
-    case DataType::Decimal:
-      return true;
-    case DataType::String:
-    case DataType::UnicodeString:
-    case DataType::DateTime:
-    case DataType::Guid:
-    case DataType::RowIdentifier:
-    case DataType::Unknown:
-    default:
-      return false;
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Bool:
+        case DataType::Decimal:
+          return true;
+        case DataType::String:
+        case DataType::UnicodeString:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+          return false;
     }
   }
 

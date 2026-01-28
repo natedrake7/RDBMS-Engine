@@ -162,6 +162,18 @@ void QueryResult::Update(std::vector<Value>& updates){
     }
 }
 
+void QueryResult::Update(const std::vector<Value>& updates){
+    for (const auto& value : updates){
+        auto& otherValue = this->data.at(value.GetColumnIndex());
+        otherValue = value;
+    }
+}
+
+void QueryResult::Update(Value& update){
+    const auto index = update.GetColumnIndex();
+    this->data[index] = std::move(update);
+}
+
 QueryResult& QueryResult::operator=(const QueryResult& other){
   if (this == &other)
     return *this;

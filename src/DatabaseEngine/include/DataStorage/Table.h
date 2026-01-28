@@ -264,12 +264,12 @@ namespace DatabaseEngine::StorageTypes
             Errors::RuntimeStatus HeapUpdate(
                 const ExecutionProperties& properties,
                 const Expressions::Expression* expression,
-                const vector<Value> &updates
+                std::vector<Value> &updates
             );
             Errors::RuntimeStatus HeapUpdate(
                 const ExecutionProperties& properties,
                 const Expressions::Expression* expression,
-                const vector<QueryPipeline::Statements::UpdateColumn*> &updates
+                const std::vector<Expressions::Expression*> &updates
             );
             void ClusteredIndexScanUpdate(
                 const ExecutionProperties& properties,
@@ -279,7 +279,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexScanUpdate(
                 const ExecutionProperties& properties,
                 const Expressions::Expression* expression,
-                const vector<QueryPipeline::Statements::UpdateColumn*> &updates
+                const std::vector<Expressions::Expression*> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
                 const ExecutionProperties& properties,
@@ -298,20 +298,17 @@ namespace DatabaseEngine::StorageTypes
                 Pages::Page* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
-                std::vector<Value>& updates,
-                Int indexPosition,
+                const std::vector<Value>& updates,
                 bool isHeap
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 Pages::Page* page,
-                Pages::RowReference& row,
+                const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
-                const std::vector<QueryPipeline::Statements::UpdateColumn*>& updates,
-                const HashSet<column_index_t>& updatedColumns,
-                Int indexPosition,
+                const std::vector<Expressions::Expression*>& updates,
                 bool isHeap
-            );
+            ) const;
         /** @} End of: Update Functions*/
 
         /**

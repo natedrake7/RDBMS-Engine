@@ -590,147 +590,156 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         return result;
     }
 
-PhysicalInsert::PhysicalInsert(
-  Statements::DataSource* table,
-  std::vector<Statements::Inserts> &fields,
-  ExecutionNode* child,
-  std::vector<column_index_t>& columnsIndices)
-    : table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnsIndices)) {}
+    PhysicalInsert::PhysicalInsert(
+        Statements::DataSource* table,
+        std::vector<Statements::Inserts> &fields,
+        ExecutionNode* child,
+        std::vector<column_index_t>& columnsIndices
+    ): table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnsIndices)) {}
 
-  PhysicalInsert::~PhysicalInsert(){
-    for (auto&[columns] : this->fields) {
-      for (const auto& value: columns)
-        delete value;
+    PhysicalInsert::~PhysicalInsert(){
+        for (auto&[columns] : this->fields) {
+          for (const auto& value: columns)
+            delete value;
+        }
+
+        delete this->table;
+        delete this->child;
     }
 
-    delete this->table;
-    delete this->child;
-  }
+    ExecutionResult* PhysicalInsert::Execute(const DatabaseEngine::ExecutionProperties& properties){
+        const auto* db =  this->server->UseDatabase(this->table->databaseId);
 
-  ExecutionResult* PhysicalInsert::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        return (this->child != nullptr)
+            ? this->InsertFromChild(tablePtr, properties)
+            : this->InsertFromFields(tablePtr, properties);
+    }
 
-    return (this->child != nullptr)
-        ? this->InsertFromChild(tablePtr, properties)
-        : this->InsertFromFields(tablePtr, properties);
-  }
-
-  PhysicalHeapDelete::PhysicalHeapDelete(Statements::DataSource *table, Expressions::Expression *expression)
+    PhysicalHeapDelete::PhysicalHeapDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
-  PhysicalHeapDelete::~PhysicalHeapDelete(){
-    delete this->expression;
-    delete this->table;
-  }
+    PhysicalHeapDelete::~PhysicalHeapDelete(){
+        delete this->expression;
+        delete this->table;
+    }
 
-  ExecutionResult * PhysicalHeapDelete::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    ExecutionResult * PhysicalHeapDelete::Execute(const DatabaseEngine::ExecutionProperties& properties){
+        auto* result = new ExecutionResult();
 
-    const auto* db = Network::Server::Get().UseDatabase(this->table->databaseId);
+        const auto* db = Network::Server::Get().UseDatabase(this->table->databaseId);
 
-    const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->HeapDelete(properties, this->expression);
+        tablePtr->HeapDelete(properties, this->expression);
 
-    return result;
-  }
+        return result;
+    }
 
-  PhysicalIndexScanDelete::PhysicalIndexScanDelete(Statements::DataSource *table, Expressions::Expression *expression)
+    PhysicalIndexScanDelete::PhysicalIndexScanDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
-  PhysicalIndexScanDelete::~PhysicalIndexScanDelete(){
+    PhysicalIndexScanDelete::~PhysicalIndexScanDelete(){
       delete this->expression;
       delete this->table;
-  }
+    }
 
-  ExecutionResult * PhysicalIndexScanDelete::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    ExecutionResult * PhysicalIndexScanDelete::Execute(const DatabaseEngine::ExecutionProperties& properties){
+        auto* result = new ExecutionResult();
 
-    const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(this->table->databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexScanDelete(properties, this->expression, state);
+        tablePtr->ClusteredIndexScanDelete(properties, this->expression, state);
 
-    return result;
-  }
+        return result;
+    }
 
-  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(Statements::DataSource *table, Expressions::Expression *expression)
+    PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
-  PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete(){
-    delete this->expression;
-    delete this->table;
-  }
+    PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete(){
+        delete this->expression;
+        delete this->table;
+    }
 
-  ExecutionResult * PhysicalIndexSeekDelete::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    ExecutionResult * PhysicalIndexSeekDelete::Execute(const DatabaseEngine::ExecutionProperties& properties){
+        auto* result = new ExecutionResult();
 
-    const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(this->table->databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->ClusteredIndexSeekDelete(properties, this->expression, this->state);
+        tablePtr->ClusteredIndexSeekDelete(properties, this->expression, this->state);
 
-    return result;
-  }
+        return result;
+    }
 
-  PhysicalHeapUpdate::PhysicalHeapUpdate(Statements::DataSource *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-  : table(table), updates(std::move(updates)), expression(expression) {}
+    PhysicalHeapUpdate::PhysicalHeapUpdate(
+        Statements::DataSource *table,
+        Expressions::Expression *expression,
+        std::vector<Expressions::Expression*>& updates
+    ) : table(table), updates(std::move(updates)), expression(expression) {}
 
-  PhysicalHeapUpdate::~PhysicalHeapUpdate(){
-    delete this->expression;
-    delete this->table;
+    PhysicalHeapUpdate::~PhysicalHeapUpdate(){
+        delete this->expression;
+        delete this->table;
 
-    for (const auto* update : this->updates)
-      delete update;
-  }
+        for (const auto* update : this->updates)
+          delete update;
+    }
 
-  ExecutionResult* PhysicalHeapUpdate::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    ExecutionResult* PhysicalHeapUpdate::Execute(const DatabaseEngine::ExecutionProperties& properties){
+        auto* result = new ExecutionResult();
 
-    const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(this->table->databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto insertResult = tablePtr->HeapUpdate(properties, this->expression, this->updates);
+        const auto insertResult = tablePtr->HeapUpdate(properties, this->expression, this->updates);
 
-    result->code = insertResult.code;
-    result->message = insertResult.message;
+        result->code = insertResult.code;
+        result->message = insertResult.message;
 
-    return result;
-  }
+        return result;
+    }
 
-  PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(Statements::DataSource *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-  : table(table), updates(std::move(updates)), expression(expression) {}
+    PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(
+      Statements::DataSource *table,
+      Expressions::Expression *expression,
+      std::vector<Expressions::Expression*>& updates
+    ): table(table), updates(std::move(updates)), expression(expression) {}
 
-  PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
-    delete this->expression;
-    delete this->table;
+    PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate(){
+        delete this->expression;
+        delete this->table;
 
-    for (const auto* update : this->updates)
-      delete update;
-  }
+        for (const auto* update : this->updates)
+          delete update;
+    }
 
-  ExecutionResult* PhysicalIndexScanUpdate::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    ExecutionResult* PhysicalIndexScanUpdate::Execute(const DatabaseEngine::ExecutionProperties& properties){
+        auto* result = new ExecutionResult();
 
-    const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(this->table->databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(properties, this->expression, this->updates);
+        const auto updateResult = tablePtr->ClusteredIndexScanUpdate(properties, this->expression, this->updates);
 
-    result->code = updateResult.code;
-    result->message = updateResult.message;
+        result->code = updateResult.code;
+        result->message = updateResult.message;
 
-    return result;
-  }
+        return result;
+    }
 
-  PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(Statements::DataSource *table, Expressions::Expression *expression, std::vector<Statements::UpdateColumn*> & updates)
-    : table(table), updates(std::move(updates)), expression(expression) {}
+    PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(
+      Statements::DataSource *table,
+      Expressions::Expression *expression,
+      std::vector<Expressions::Expression*>& updates
+    ): table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate(){
     delete this->expression;

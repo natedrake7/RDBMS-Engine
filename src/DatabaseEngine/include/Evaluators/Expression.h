@@ -47,11 +47,14 @@ namespace Expressions{
 
     class Expression {
     public:
+        column_index_t columnIndex;
         ExpressionType expressionType;
         std::string name;
 
         virtual ~Expression() = default;
         Expression();
+
+        void SetIndex(column_index_t index);
 
         [[nodiscard]] virtual Value Evaluate(const EvaluationContext& context) const = 0;
         [[nodiscard]] virtual DataType GetReturnType() const = 0;

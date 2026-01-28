@@ -1339,8 +1339,7 @@ namespace Indexing{
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode.Get())
-        {
+        while (currentNode.Get()){
             // for(auto* row: *currentNode->GetDataRowsUnsafe()){
             //     if(!row->Evaluate(expression))
             //         continue;
@@ -1370,8 +1369,7 @@ namespace Indexing{
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-        while (currentNode.Get())
-        {
+        while (currentNode.Get()){
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
             for (Int indexPosition = 0; indexPosition < currentNode->GetPageSize();indexPosition++){
@@ -1387,7 +1385,6 @@ namespace Indexing{
                     tuple.row,
                     properties,
                     updates,
-                    indexPosition,
                     false
                 );
 
@@ -1405,20 +1402,15 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::IndexScanUpdate(
         const DatabaseEngine::ExecutionProperties& properties,
         const Expressions::Expression *expression,
-        const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
+        const std::vector<Expressions::Expression*>& updates
     )const{
         if (this->IsEmpty())
             return {};
 
-        HashSet<column_index_t> updatedColumns;
-        for(const auto& update : updates)
-            updatedColumns.Add(update->name.index);
-
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-        while (currentNode.Get())
-        {
+        while (currentNode.Get()){
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
             for (Int i = 0;i < currentNode->GetPageSize();i++){
@@ -1435,12 +1427,10 @@ namespace Indexing{
                     tuple.row,
                     properties,
                     updates,
-                    updatedColumns,
-                    i,
                     false
                 );
 
-                if (result.code != Errors::RuntimeError::Ok)
+                if (!result.IsOk())
                     return result;
             }
 
@@ -1453,19 +1443,16 @@ namespace Indexing{
         return {};
     }
 
-   Errors::RuntimeStatus BTree::IndexScanUpdate(const DatabaseEngine::ExecutionProperties& properties, const vector<QueryPipeline::Statements::UpdateColumn *> &updates)const{
+   Errors::RuntimeStatus BTree::IndexScanUpdate(
+       const DatabaseEngine::ExecutionProperties& properties,
+       const std::vector<Expressions::Expression*>& updates
+    )const{
         if (this->IsEmpty())
             return {};
 
-        HashSet<column_index_t> updatedColumns;
-
-        for(const auto& update : updates)
-            updatedColumns.Add(update->name.index);
-
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode.Get())
-        {
+        while (currentNode.Get()){
             MultiThreading::WriterGuard lock(&currentNode->Latch());
 
             for (Int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
@@ -1476,12 +1463,10 @@ namespace Indexing{
                     tuple.row,
                     properties,
                     updates,
-                    updatedColumns,
-                    indexPosition,
                     false
                 );
 
-                if (result.code != Errors::RuntimeError::Ok)
+                if (!result.IsOk())
                   return result;
             }
 
@@ -1517,7 +1502,6 @@ namespace Indexing{
                     tuple.row,
                     properties,
                     updates,
-                    indexPosition,
                     false
                 );
 
@@ -1574,7 +1558,6 @@ namespace Indexing{
                     tuple.row,
                     properties,
                     updates,
-                    indexPosition,
                     false
                 );
 
@@ -1619,7 +1602,6 @@ namespace Indexing{
                     tuple.row,
                     properties,
                     updates,
-                    indexPosition,
                     false
                 );
 

@@ -197,15 +197,19 @@ namespace QueryPipeline {
     PhysicalPlan::ExecutionNode* ToPhysical()override;
   };
 
-  class LogicalUpdate final : public LogicalPlan {
+    class LogicalUpdate final : public LogicalPlan {
     public:
-      Statements::DataSource* table;
-      std::vector<Statements::UpdateColumn*> updates;
-      Expressions::Expression* expression;
+        Statements::DataSource* table;
+        std::vector<Expressions::Expression*> updates;
+        Expressions::Expression* expression;
 
-      explicit LogicalUpdate(Statements::DataSource* table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression* expression);
-      PhysicalPlan::ExecutionNode* ToPhysical()override;
-  };
+        explicit LogicalUpdate(
+          Statements::DataSource* table,
+          std::vector<Expressions::Expression*>& updates,
+          Expressions::Expression* expression
+        );
+        PhysicalPlan::ExecutionNode* ToPhysical()override;
+    };
 
   class LogicalTableCreate final : public LogicalPlan {
     public:

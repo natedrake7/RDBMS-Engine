@@ -1168,12 +1168,10 @@ namespace QueryPipeline::Statements {
     ostringstream os;
 
     const auto valueType = update->value->GetReturnType();
-
     if (DataTypes::Coercions::IsCoercionAllowed(
         valueType,
         update->name.returnType)
-    )
-      return {};
+    ) return {};
 
     if (update->value->IsConstant()) {
       const auto* constantExpr = update->value->AsConstant();
@@ -1200,49 +1198,49 @@ namespace QueryPipeline::Statements {
     return {Errors::ValidationError::Error, os.str()};
   }
 
-  Errors::ValidationStatus UpdateStatement::ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
-    //Add Base Table to the dictionaries
-    tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
-    this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(this->table->tableId));
+    Errors::ValidationStatus UpdateStatement::ResolveAliases(ParserValidationScope& validationScope, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+        //Add Base Table to the dictionaries
+        tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
+        this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(this->table->tableId));
 
-    auto statementValidationScope = StatementValidationScope(
-      tableAliasesDictionary,
-      this->tableColumnsDictionary,
-      this,
-      nullptr
-    );
+        auto statementValidationScope = StatementValidationScope(
+            tableAliasesDictionary,
+        this->tableColumnsDictionary,
+        this,
+        nullptr
+        );
 
-    //start resolving aliases
-    for (const auto& update : this->updates) {
-      auto columnAliasStatus = CompileColumnExpression(update->name, statementValidationScope);
-      if (!columnAliasStatus.IsOk())
-        return columnAliasStatus;
+        //start resolving aliases
+        for (const auto& update : this->updates) {
+            auto columnAliasStatus = CompileColumnExpression(update->name, statementValidationScope);
+            if (!columnAliasStatus.IsOk())
+                return columnAliasStatus;
 
-      auto expressionStatus = CompileExpression(validationScope, statementValidationScope, update->value);
-      if (!expressionStatus.IsOk())
-        return expressionStatus;
+            auto expressionStatus = CompileExpression(validationScope, statementValidationScope, update->value);
+            if (!expressionStatus.IsOk())
+                return expressionStatus;
 
-      auto returnTypeResult = this->ValidateReturnType(update);
-      if (!returnTypeResult.IsOk())
-        return returnTypeResult;
+            auto returnTypeResult = this->ValidateReturnType(update);
+            if (!returnTypeResult.IsOk())
+                return returnTypeResult;
+
+            update->value->SetIndex(update->name.index);
+        }
+
+        if (this->where.expression == nullptr)
+            return {};
+
+        if (!this->where.IsValid())
+            return {
+                Errors::ValidationError::Error,
+                "Where expression must be either a logical or a binary expression"
+            };
+
+        return CompileExpression(validationScope, statementValidationScope, this->where.expression);
     }
-
-    //validate all expressions are valid
-    if (this->where.expression != nullptr) {
-      if (!this->where.IsValid())
-        return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
-
-      auto expressionStatus = CompileExpression(validationScope, statementValidationScope, this->where.expression);
-      if (!expressionStatus.IsOk())
-        return expressionStatus;
-    }
-
-    return {};
-  }
 
 
 Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& validationScope){
-
   if (this->table == nullptr)
     return {Errors::ValidationError::Error, "Table was not specified"};
 
@@ -1259,7 +1257,13 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   LogicalPlan* UpdateStatement::ToLogical(){
-    return new QueryPipeline::LogicalUpdate(this->table, this->updates, this->where.expression);
+    std::vector<Expressions::Expression*> expressions;
+    expressions.reserve(this->updates.size());
+
+    for (const auto& update : this->updates)
+        expressions.push_back(update->value);
+
+    return new QueryPipeline::LogicalUpdate(this->table, expressions, this->where.expression);
   }
 
   void UpdateStatement::CleanUp() {

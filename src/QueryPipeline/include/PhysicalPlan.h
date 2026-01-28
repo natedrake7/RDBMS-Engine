@@ -388,35 +388,39 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
-  class PhysicalHeapUpdate final : public ExecutionNode{
+  class PhysicalHeapUpdate final: public ExecutionNode{
     Statements::DataSource* table;
-    std::vector<Statements::UpdateColumn*>  updates;
+    std::vector<Expressions::Expression*>  updates;
     Expressions::Expression* expression;
 
   public:
-    PhysicalHeapUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
+    PhysicalHeapUpdate(
+        Statements::DataSource* table,
+        Expressions::Expression* expression,
+        std::vector<Expressions::Expression*> & updates
+    );
     ~PhysicalHeapUpdate()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
   class PhysicalIndexScanUpdate final : public ExecutionNode{
     Statements::DataSource* table;
-    std::vector<Statements::UpdateColumn*>  updates;
+    std::vector<Expressions::Expression*>  updates;
     Expressions::Expression* expression;
 
   public:
-    PhysicalIndexScanUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
+    PhysicalIndexScanUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Expressions::Expression*> & updates);
     ~PhysicalIndexScanUpdate()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };
 
   class PhysicalIndexSeekUpdate final : public ExecutionNode{
     Statements::DataSource* table;
-    std::vector<Statements::UpdateColumn*>  updates;
+    std::vector<Expressions::Expression*>  updates;
     Expressions::Expression* expression;
 
   public:
-    PhysicalIndexSeekUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Statements::UpdateColumn*> & updates);
+    PhysicalIndexSeekUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Expressions::Expression*> & updates);
     ~PhysicalIndexSeekUpdate()override;
     ExecutionResult* Execute(const DatabaseEngine::ExecutionProperties& properties) override;
   };

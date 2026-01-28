@@ -349,116 +349,119 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return new PhysicalPlan::PhysicalHeapDelete(this->table, this->expression);
   }
 
-  LogicalUpdate::LogicalUpdate(Statements::DataSource *table, std::vector<Statements::UpdateColumn*>& updates, Expressions::Expression *expression)
-    : table(table), updates(std::move(updates)), expression(expression) {}
+    LogicalUpdate::LogicalUpdate(
+        Statements::DataSource *table,
+        std::vector<Expressions::Expression*>& updates,
+        Expressions::Expression *expression
+    ): table(table), updates(std::move(updates)), expression(expression) {}
 
-  PhysicalPlan::ExecutionNode* LogicalUpdate::ToPhysical(){
-    const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
+    PhysicalPlan::ExecutionNode* LogicalUpdate::ToPhysical(){
+        const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
 
-    //if no indexes are available heap scan
-    if (indexes.empty())
-      return new PhysicalPlan::PhysicalHeapUpdate(this->table, this->expression, this->updates);
+        //if no indexes are available heap scan
+        if (indexes.empty())
+            return new PhysicalPlan::PhysicalHeapUpdate(this->table, this->expression, this->updates);
 
-    //if expression is complex defer from index seek
-    const bool canIndexSeek = expression != nullptr; //&& !expression->IsComplex();
+        //if expression is complex defer from index seek
+        const bool canIndexSeek = expression != nullptr; //&& !expression->IsComplex();
 
-    HashSet<column_index_t> expressionColumns;
-    //
-    // if (expression != nullptr)
-    //   expression->GetColumns(expressionColumns);
+        HashSet<column_index_t> expressionColumns;
+        //
+        // if (expression != nullptr)
+        //   expression->GetColumns(expressionColumns);
 
-    for (const auto& index: indexes) {
-      const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(index.id);
+        for (const auto& index: indexes) {
+            const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(index.id);
 
-      if (canIndexSeek) {
-        for (const auto& column: indexHeader.columns) {
-          //if columns is first prefer it, else break because index scan will occur
-          //index seek
-          if (expressionColumns.Contains(column.ordinalPosition))
-            return new PhysicalPlan::PhysicalIndexSeekUpdate(this->table, this->expression, this->updates);
+            if (canIndexSeek) {
+                for (const auto& column: indexHeader.columns) {
+                    //if columns is first prefer it, else break because index scan will occur
+                    //index seek
+                    if (expressionColumns.Contains(column.ordinalPosition))
+                    return new PhysicalPlan::PhysicalIndexSeekUpdate(this->table, this->expression, this->updates);
 
-          break;
+                    break;
+                }
+            }
+
+        //find the first non clustered and use it
+            return new PhysicalPlan::PhysicalIndexScanUpdate(this->table, this->expression, this->updates);
         }
-      }
 
-      //find the first non clustered and use it
-      return new PhysicalPlan::PhysicalIndexScanUpdate(this->table, this->expression, this->updates);
+        return new PhysicalPlan::PhysicalHeapUpdate(this->table, this->expression, this->updates);
     }
 
-    return new PhysicalPlan::PhysicalHeapUpdate(this->table, this->expression, this->updates);
-  }
-
-  LogicalTableCreate::LogicalTableCreate(
-    const DataTypes::Guid& sessionId,
-    Statements::DataSource*  table,
-    std::vector<Statements::NewColumn*>& columns,
-    std::vector<column_index_t> primaryKey,
-    std::string  constraintName)
-    : LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)),
+    LogicalTableCreate::LogicalTableCreate(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource*  table,
+        std::vector<Statements::NewColumn*>& columns,
+        std::vector<column_index_t> primaryKey,
+        std::string  constraintName
+    ): LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
-  PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(){
-    Headers::Index index;
+    PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(){
+        Headers::Index index;
 
-    index.columns = std::move(primaryKey);
+        index.columns = std::move(primaryKey);
 
-    return new PhysicalPlan::PhysicalTableCreate(this->sessionId, this->table, this->columns, index, this->constraintName);
-  }
+        return new PhysicalPlan::PhysicalTableCreate(this->sessionId, this->table, this->columns, index, this->constraintName);
+    }
 
-  LogicalIndexCreate::LogicalIndexCreate(
-    const DataTypes::Guid& sessionId,
-    Statements::DataSource *table,
-    std::string &constraintName,
-    std::vector<column_index_t> &columns)
-    : LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+    LogicalIndexCreate::LogicalIndexCreate(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource *table,
+        std::string &constraintName,
+        std::vector<column_index_t> &columns
+    ): LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
-  PhysicalPlan::ExecutionNode * LogicalIndexCreate::ToPhysical(){
-    return new PhysicalPlan::PhysicalIndexCreate(this->sessionId, this->table, this->constraintName, this->columns);
-  }
+    PhysicalPlan::ExecutionNode * LogicalIndexCreate::ToPhysical(){
+        return new PhysicalPlan::PhysicalIndexCreate(this->sessionId, this->table, this->constraintName, this->columns);
+    }
 
-  LogicalAlterTable::LogicalAlterTable(
-    const DataTypes::Guid& sessionId,
-    Statements::DataSource *table,
-    const AlterTableType& type,
-    Statements::NewColumn *column
-  ): LogicalPlan(sessionId), table(table), type(type) {
-    this->column = {
-      .addColumn = column
-    };
-  }
+    LogicalAlterTable::LogicalAlterTable(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource *table,
+        const AlterTableType& type,
+        Statements::NewColumn *column
+    ): LogicalPlan(sessionId), table(table), type(type) {
+        this->column = {
+          .addColumn = column
+        };
+    }
 
-  LogicalAlterTable::LogicalAlterTable(
-    const DataTypes::Guid& sessionId,
-    Statements::DataSource *table,
-    const AlterTableType& type,
-    Statements::AlterColumn *column
-  ): LogicalPlan(sessionId), table(table), type(type) {
-    this->column = {
-      .alterColumn = column
-    };
-  }
+    LogicalAlterTable::LogicalAlterTable(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource *table,
+        const AlterTableType& type,
+        Statements::AlterColumn *column
+    ): LogicalPlan(sessionId), table(table), type(type) {
+        this->column = {
+          .alterColumn = column
+        };
+    }
 
-  LogicalAlterTable::LogicalAlterTable(
-    const DataTypes::Guid& sessionId,
-    Statements::DataSource *table,
-    const AlterTableType& type,
-    Statements::RenameColumn *column
-  ): LogicalPlan(sessionId), table(table), type(type) {
-    this->column = {
-      .renameColumn = column
-    };
-  }
+    LogicalAlterTable::LogicalAlterTable(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource *table,
+        const AlterTableType& type,
+        Statements::RenameColumn *column
+    ): LogicalPlan(sessionId), table(table), type(type) {
+        this->column = {
+          .renameColumn = column
+        };
+    }
 
-  LogicalAlterTable::LogicalAlterTable(
-    const DataTypes::Guid& sessionId,
-    Statements::DataSource *table,
-    const AlterTableType& type,
-    Statements::DropColumn *column
-  ): LogicalPlan(sessionId), table(table), type(type) {
-    this->column = {
-      .dropColumn = column
-    };
-  }
+    LogicalAlterTable::LogicalAlterTable(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource *table,
+        const AlterTableType& type,
+        Statements::DropColumn *column
+    ): LogicalPlan(sessionId), table(table), type(type) {
+        this->column = {
+          .dropColumn = column
+        };
+    }
 
     PhysicalPlan::ExecutionNode * LogicalAlterTable::ToPhysical(){
       switch (this->type) {

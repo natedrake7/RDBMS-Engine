@@ -275,9 +275,8 @@ namespace DatabaseEngine::StorageTypes {
         Int pagesNeeded = 0;
 
         std::vector<char> buffer;
-        page_offset_t pos = 0;
 
-        auto allocationSize = 0;
+        Int allocationSize = 0;
         for (const auto& row : input)
           allocationSize += row.GetByteSize();
 
@@ -541,28 +540,21 @@ namespace DatabaseEngine::StorageTypes {
             state.extentId = extentId;
             state.lastFetchedRowId.pageId = extentPageId;
 
-            // auto pageRows = page->DataRowsNoLock(this);
-            //
-            // for (int i = state.GetNextKeyIndex(); i < page->GetPageSize(); i++) {
-            //   auto row = page->GetRow(this, i);
-            //
-            //   auto visibleRow = row.GetVisibleVersionForTransaction(properties.snapshot);
-            //
-            //   if (visibleRow.IsInvalid())
-            //     continue;
-            //
-            //   result->push_back(std::move(visibleRow));
-            //
-            //   state.lastFetchedRowId.indexId = i;
-            //
-            //   if (result->size() == properties.batchSize) {
-            //     state.canFetchMore = true;
-            //     return;
-            //   }
-            //
-            //   //if can fetch more in current batch reset index
-            //   state.lastFetchedRowId.indexId = INVALID_INDEX_ID;
-            // }
+            for (int i = state.GetNextKeyIndex(); i < page->GetPageSize(); i++) {
+              auto rowPtr = page->PeekRow(i, 0);
+
+              result->push_back(std::move(rowPtr));
+
+              state.lastFetchedRowId.indexId = i;
+
+              if (result->size() == properties.batchSize) {
+                state.canFetchMore = true;
+                return;
+              }
+
+              //if can fetch more in current batch reset index
+              state.lastFetchedRowId.indexId = INVALID_INDEX_ID;
+            }
           }
         }
     }
@@ -641,22 +633,19 @@ namespace DatabaseEngine::StorageTypes {
         const auto& filename = this->database->GetFileName();
 
         Errors::RuntimeStatus status;
-      // while(row->TotalSize() > Constants::PAGE_SIZE_WITHOUT_HEADER)
-      //   this->HandleRowOverflow(row);
-      //
-      //   Errors::RuntimeStatus status;
-      //
-      // if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
-      // {
-      //     auto newPage = this->database->CreateDataPage(this->header.ordinalPosition, pagesToAllocate);
-      //
-      //     MultiThreading::WriterGuard pageLock(&newPage->Latch());
-      //
-      //     status.rowId.indexId = newPage->InsertRow(row);
-      //     status.rowId.pageId = newPage->GetPageId();
-      //
-      //     return status;
-      // }
+        // while(payload.Size() > Constants::PAGE_SIZE_WITHOUT_HEADER)
+        // this->HandleRowOverflow(row);
+
+      if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID){
+          auto newPage = this->database->CreateDataPage(this->header.ordinalPosition, pagesToAllocate);
+
+          MultiThreading::WriterGuard pageLock(&newPage->Latch());
+
+          status.rowId.indexId = newPage->InsertRow(payload);
+          status.rowId.pageId = newPage->PageId();
+
+          return status;
+      }
 
       const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
@@ -715,70 +704,68 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::HeapUpdate(
-    const ExecutionProperties& properties,
-    const Expressions::Expression *expression,
-    const vector<Value> & updates
-  ){
+        const ExecutionProperties& properties,
+        const Expressions::Expression *expression,
+        std::vector<Value>& updates
+    ){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
-          return {};
+            return {};
 
         const auto& filename = this->database->GetFileName();
 
         const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
 
-        vector<extent_id_t> tableExtentIds;
+        std::vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto& extentId : tableExtentIds){
-          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+            const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-          const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+            const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
-          const page_id_t pageId = (tableMapPage->PageId() != extentFirstPageId)
+            const auto pageId = (tableMapPage->PageId() != extentFirstPageId)
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
-          {
-            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
-              break;
+            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
+                if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+                  break;
 
-            auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
+                auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
 
-            if (page->GetPageSize() == 0)
-              continue;
+                if (page->GetPageSize() == 0)
+                  continue;
 
-            // auto rows = page->DataRowsNoLock(this);
-            //
-            // std::vector<extent_id_t> allocatedExtents;
-            //
-            // for(auto& row : rows){
-            //
-            //   context.row = &row;
-            //   const auto value = expression->Evaluate(context);
-            //   if(!value.GetBool())
-            //       continue;
-            //
-            //     const auto result = this->HandleRowUpdate(page.Get(), &row, properties, updates);
-            //
-            //     if (result.code != Errors::RuntimeError::Ok)
-            //       return result;
-            // }
-          }
+
+                std::vector<extent_id_t> allocatedExtents;
+                for (int i = 0; i < page->GetPageSize(); i++) {
+                    auto row = page->PeekRow(i, 0);
+
+                    context.row = &row;
+                    const auto value = expression->Evaluate(context);
+                    if(!value.AsBool())
+                        continue;
+
+                    auto result = this->UpdateRowNoLock(page.Get(), row, properties, updates, true);
+
+                    if (result.code != Errors::RuntimeError::Ok)
+                        return result;
+                }
+            }
         }
 
         return {};
     }
 
     Errors::RuntimeStatus Table::HeapUpdate(
-      const ExecutionProperties& properties,
-      const Expressions::Expression *expression,
-      const vector<QueryPipeline::Statements::UpdateColumn *> &updates
+        const ExecutionProperties& properties,
+        const Expressions::Expression *expression,
+        const std::vector<Expressions::Expression*> &updates
     ){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
-          return {};
+            return {};
 
         const auto& filename = this->database->GetFileName();
 
@@ -787,47 +774,36 @@ namespace DatabaseEngine::StorageTypes {
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
 
-        HashSet<column_index_t> updatedColumns;
-        for(const auto& update : updates)
-              updatedColumns.Add(update->name.index);
-
         for (const auto& extentId : tableExtentIds){
-          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-          const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+            const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
-          const page_id_t pageId = (tableMapPage->PageId() != extentFirstPageId)
+            const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
+
+            const page_id_t pageId = (tableMapPage->PageId() != extentFirstPageId)
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-          Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
-          {
-            if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
-              break;
+            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
+                if (pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+                  break;
 
-            auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
+                auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
 
-            if (page->GetPageSize() == 0)
-              continue;
+                for (int i = 0;i < page->GetPageSize(); i++){
+                    auto rowPtr = page->PeekRow(i, 0);
+                    context.row = &rowPtr;
 
-            // auto rows = page->DataRowsNoLock(this);
-            //
-            // std::vector<extent_id_t> allocatedExtents;
-            // extent_id_t startingExtentIndex = 0;
-            //
-            // for(auto& row : rows){
-            //   context.row = &row;
-            //   const auto value = expression->Evaluate(context);
-            //   if(!value.GetBool())
-            //       continue;
-            //
-            //     const auto result = this->HandleRowUpdate(page.Get(), &row, properties, updates, updatedColumns);
-            //
-            //     if (result.code != Errors::RuntimeError::Ok)
-            //       return result;
-            // }
-          }
+                    const auto value = expression->Evaluate(context);
+                    if(!value.AsBool())
+                        continue;
+
+                    auto result = this->UpdateRowNoLock(page.Get(), rowPtr, properties, updates, true);
+                    if (!result.IsOk())
+                        return result;
+                }
+            }
         }
 
         return {};
@@ -845,7 +821,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
       const ExecutionProperties& properties,
       const Expressions::Expression *expression,
-      const std::vector<QueryPipeline::Statements::UpdateColumn *> &updates
+      const std::vector<Expressions::Expression*>& updates
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -1026,8 +1002,7 @@ namespace DatabaseEngine::StorageTypes {
         Pages::Page* page,
         const Pages::RowReference& rowPtr,
         const ExecutionProperties& properties,
-        std::vector<Value>& updates,
-        const Int indexPosition,
+        const std::vector<Value>& updates,
         const bool isHeap
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
@@ -1075,44 +1050,33 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::UpdateRowNoLock(
-      Pages::Page* page,
-      Pages::RowReference& row,
-      const ExecutionProperties& properties,
-      const std::vector<QueryPipeline::Statements::UpdateColumn *>& updates,
-      const HashSet<column_index_t>& updatedColumns,
-      const Int indexPosition,
-      const bool isHeap
-    ){
-        // this->DeleteLargeObjectFromPage(row, updatedColumns);
-        // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+        Pages::Page* page,
+        const Pages::RowReference& rowPtr,
+        const ExecutionProperties& properties,
+        const std::vector<Expressions::Expression*>& updates,
+        bool isHeap
+    ) const{
+        auto materializedRow = rowPtr.Materialize();
 
-        // this->InsertToVersionDatabase(row, properties.snapshot.transactionId);
+        for (const auto& updateExpr : updates) {
+            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+            context.row = &rowPtr;
 
-        int diff = 0;
-        // auto result = row.Update(updates, diff);
+            auto updatedValue = updateExpr->Evaluate(context);
 
-        // if(page->GetBytesLeft() - diff > 0){
-        //   page->UpdateBytesLeft();
-        //   return result;
-        // }
+            materializedRow.Update(updatedValue);
+        }
 
-        // this->InsertLargeObjectToPage(row);
+        Errors::RuntimeStatus status;
+        const auto newPayload = this->CreateInsertPayload(status, properties.snapshot.transactionId, materializedRow.Data());
 
-        // if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0)
-        //   return this->InsertRow(row, 1);
-        //
-        // while(page->GetBytesLeft() - diff < 0){
-        //   const auto overflowResult = this->HandleRowOverflow(row);
-        //   if(overflowResult == -1)
-        //     break;
-        //
-        //   diff -= overflowResult;
-        // }
+        if (!status.IsOk())
+            return status;
 
-        // page->UpdateRow(row, indexPosition);
+        page->UpdateRow(newPayload, rowPtr);
 
-        return {};
-  }
+        return status;
+    }
 
     void Table::RetrieveDefaultValuesFromCatalog() const{
         for(const auto& column: this->columns) {

@@ -29,6 +29,8 @@ public:
     void Deserialize(const std::vector<char>& buffer, UnsignedInt& offset, Int dataSize);
 
     void Update(std::vector<Value>& updates);
+    void Update(const std::vector<Value>& updates);
+    void Update(Value& update);
 
     QueryResult& operator=(const QueryResult& other);
     QueryResult& operator=(QueryResult&& other) noexcept;
