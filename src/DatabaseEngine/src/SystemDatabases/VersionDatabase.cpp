@@ -85,7 +85,7 @@ namespace DatabaseEngine {
 
         gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(this->systemFilename, nextGamPageId);
 
-        this->header.lastGamPageId = gamPage->GetPageId();
+        this->header.lastGamPageId = gamPage->PageId();
       }
 
       std::vector<extent_id_t> extents;
@@ -194,7 +194,7 @@ namespace DatabaseEngine {
          if (undoPage->BytesLeft() >= size) {
            {
              MultiThreading::WriterGuard lock(&this->lastUsedPageMutex);
-             this->lastUsedPageId = undoPage->GetPageId();
+             this->lastUsedPageId = undoPage->PageId();
            }
 
            return undoPage;
@@ -218,7 +218,7 @@ namespace DatabaseEngine {
 
     const auto indexPosition =  0;//page->InsertRow(oldRow);
 
-    rowPointer.pageId = page->GetPageId();
+    rowPointer.pageId = page->PageId();
     rowPointer.offset = indexPosition;
 
     return {};

@@ -64,7 +64,7 @@ namespace Pages {
 
     void PageFreeSpacePage::SetPageMetaData(const Page *page)
     {
-        const page_id_t& pageId = page->GetPageId();
+        const page_id_t& pageId = page->PageId();
 
         this->SetPageAllocated(pageId);
         this->SetPageType(pageId, page->GetPageType());

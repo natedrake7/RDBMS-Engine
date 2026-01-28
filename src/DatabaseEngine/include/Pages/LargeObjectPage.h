@@ -22,7 +22,7 @@ namespace Pages {
     };
 
     class LargeObjectPage final : public Page{
-        LargeDataObject* data;
+        LargeDataObject data;
 
     public:
         explicit LargeObjectPage(page_id_t pageId, bool isPageCreation = false);
@@ -32,7 +32,7 @@ namespace Pages {
         void ReadFromDisk(const vector<char>& buffer, const DatabaseEngine::StorageTypes::Table* table, page_offset_t& offSet, fstream* filePtr) override;
         void WriteToDisk(fstream* filePtr) override;
         LargeDataObject* InsertObject(const object_t* object, page_size_t size);
-        LargeDataObject* GetObject()const;
+        LargeDataObject* GetObject();
         LargeDataObject* DeleteObject();
     };
 }

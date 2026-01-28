@@ -7,9 +7,9 @@ namespace DatabaseEngine::StorageTypes{
     InsertPayload Table::CreateInsertPayload(
         Errors::RuntimeStatus& status,
         const transaction_id_t transactionId,
-        const std::vector<Value> &inputData
+        std::vector<Value> &inputData
     ) const{
-        auto rowHeader = RowHeader(this->columns.size());
+        auto rowHeader = RowHeader(static_cast<Int>(this->columns.size()));
         rowHeader.version.createdTransactionId = transactionId;
 
         // First pass: determine how many non-NULL columns we have
@@ -29,9 +29,25 @@ namespace DatabaseEngine::StorageTypes{
                 continue;
             }
 
-            if (inputData.at(index).IsNull()){
+            auto& value = inputData.at(index);
+            if (value.IsNull()){
                 rowHeader.nullBitMap.Set(columnOrdinal, true);
                 continue;
+            }
+
+            if (value.Size() >= LARGE_OBJECT_THRESHOLD_SIZE){
+                rowHeader.largeObjectBitMap.Set(columnOrdinal, true);
+
+                block_size_t size = value.Size();
+                page_offset_t offSet = 0;
+                const auto pageId = this->StoreLargeObject(
+                    value,
+                    offSet,
+                    size,
+                    nullptr
+                );
+
+                value.SetData(pageId);
             }
 
             nonNullColumnCount++;
@@ -68,6 +84,16 @@ namespace DatabaseEngine::StorageTypes{
             // Skip NULL values (already marked in bitmap)
             if (value.IsNull())
                 continue;
+
+            if (rowHeader.largeObjectBitMap.Get(index)){
+                auto pageId = value.AsLargeObjectPointer();
+                payload.SetData(&pageId, sizeof(page_id_t));
+
+                auto size = value.Size();
+                payload.SetData(&size, sizeof(block_size_t), dataSizesOffset);
+                dataSizesOffset += sizeof(block_size_t);
+                continue;
+            }
 
             auto result = static_cast<block_size_t>(payload.SetData(value, column, status));
             if (!status.IsOk())

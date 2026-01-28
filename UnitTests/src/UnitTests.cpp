@@ -39,7 +39,7 @@ namespace Tests{
         page.SetSubKeys(1);
 
         Errors::RuntimeStatus status;
-        const std::vector insertValues = {
+        std::vector insertValues = {
             Value(1, 0),
             Value(std::string("Hello"), 1)
         };
@@ -135,7 +135,7 @@ namespace Tests{
         Pages::Page page(0, &table, false);
 
         Errors::RuntimeStatus status;
-        const std::vector insertValues = {
+        std::vector insertValues = {
             Value(1, 0),
             Value(std::string("Hello"), 1)
         };

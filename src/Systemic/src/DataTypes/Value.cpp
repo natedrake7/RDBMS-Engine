@@ -546,6 +546,16 @@ void Value::SetData(const DataTypes::Guid &otherData){
     this->type = DataType::Guid;
 }
 
+void Value::SetData(const page_id_t pageId){
+    delete this->data;
+
+    this->size = sizeof(page_id_t);
+    this->data = new object_t[this->size];
+    std::memcpy(this->data, &pageId, this->size);
+
+    this->type = DataType::Int;
+}
+
 block_size_t Value::Size() const{ return this->size; }
 
 const object_t * Value::Data() const{ return this->data; }

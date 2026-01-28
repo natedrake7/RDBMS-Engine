@@ -97,6 +97,8 @@ class Value {
         void SetData(const DataTypes::DateTime& otherData);
         void SetData(const DataTypes::Guid& otherData);
 
+        void SetData(page_id_t pageId);
+
         [[nodiscard]] block_size_t Size() const;
         [[nodiscard]] const object_t* Data() const;
         [[nodiscard]] object_t* DataUnsafe() const;

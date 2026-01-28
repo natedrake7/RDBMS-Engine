@@ -451,7 +451,7 @@ namespace DatabaseEngine
 
         if (!page.IsValid() || page->GetPageSize() > 0){
             page = this->CreateDataPage(table.GetTableId(), pageToAllocate);
-            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, page->GetPageId());
+            pageFreeSpacePage = Database::GetAssociatedPfsPage(this->filename, page->PageId());
         }
 
         return page;
@@ -635,7 +635,7 @@ namespace DatabaseEngine
                 if (!page.IsValid())
                     page = indexPage;
 
-                const auto parentPageId = treeId == INVALID_PAGE_ID ? page->GetPageId() : treeId;
+                const auto parentPageId = treeId == INVALID_PAGE_ID ? page->PageId() : treeId;
 
                 indexPage->SetTreeId(parentPageId);
                 indexPage->SetTreeType(treeType);
@@ -678,7 +678,7 @@ namespace DatabaseEngine
                 if (gamPage->IsFull()) {
                     newGamPageCreated = true;
 
-                    const auto nextGamPageId = Database::CalculateNextGamPageId(gamPage->GetPageId());
+                    const auto nextGamPageId = Database::CalculateNextGamPageId(gamPage->PageId());
 
                     gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(this->systemFilename, nextGamPageId);
 
@@ -730,14 +730,14 @@ namespace DatabaseEngine
 
                     // Update GAM for the IAM page itself
                     MultiThreading::WriterGuard gamLock(&previousIamPage->Latch());
-                    previousIamPage->SetNextPageId(tableMapPage->GetPageId());
+                    previousIamPage->SetNextPageId(tableMapPage->PageId());
                 }
 
                 // Update PFS for the IAM page itself
                 {
                     auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
                         this->systemFilename,
-                        tableMapPage->GetPageId()
+                        tableMapPage->PageId()
                     );
 
                     MultiThreading::WriterGuard pageIdLock(&pageFreeSpacePage->Latch());

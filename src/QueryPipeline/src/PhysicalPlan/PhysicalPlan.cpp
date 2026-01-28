@@ -60,13 +60,7 @@ namespace QueryPipeline::PhysicalPlan {
     this->temporaryTableId = table->GetTableId();
 
     const auto& columns = table->GetColumns();
-    std::vector<column_index_t> columnIndices;
-    columnIndices.reserve(columns.size());
-
-    for (const auto& column : columns)
-      columnIndices.push_back(column->OrdinalPosition());
-
-    const auto batchResult = table->BatchInsert(properties, result->results, columnIndices);
+    const auto batchResult = table->BatchInsert(properties, result->results);
 
     firstRowId = batchResult.rowId;
 
@@ -556,7 +550,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     while (canFetchMore) {
       result = this->child->Execute(properties);
 
-      auto insertResult = tablePtr->BatchInsert(properties, result->results, this->columnsIndices);
+      const auto insertResult = tablePtr->BatchInsert(properties, result->results);
 
       if (insertResult.code != Errors::RuntimeError::Ok) {
         result->message = insertResult.message;

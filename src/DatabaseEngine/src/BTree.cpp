@@ -21,9 +21,9 @@ namespace Indexing{
         Pages::PageGuard<Pages::IndexPage>& newChild
     ){
         newChild->SetNextPage(child->GetNextPage());
-        newChild->SetPreviousPage(child->GetPageId());
+        newChild->SetPreviousPage(child->PageId());
 
-        child->SetNextPage(newChild->GetPageId());
+        child->SetNextPage(newChild->PageId());
     }
 
     Int BTree::LeafLowerBound(
@@ -36,7 +36,7 @@ namespace Indexing{
             const auto tupleKey = page->GetKey(i);
 
             if (tupleKey == key){
-                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page->GetPageId() << std::endl;
+                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page->PageId() << std::endl;
                 return -1;
             }
 
@@ -73,7 +73,7 @@ namespace Indexing{
             const auto tupleKey = page->GetKey(i + 1);
 
             if (tupleKey == key){
-                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page->GetPageId() << std::endl;
+                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page->PageId() << std::endl;
                 return -1;
             }
 
@@ -118,7 +118,7 @@ namespace Indexing{
             root->SetTreeType(this->type);
         }
 
-        this->rootPageId = root->GetPageId();
+        this->rootPageId = root->PageId();
         indexPosition = 0;
 
         return root;
@@ -140,9 +140,9 @@ namespace Indexing{
 
             auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root->Latch(), rootLock);
 
-            newRoot->InsertChild(root->GetPageId());
+            newRoot->InsertChild(root->PageId());
             root->SetIsRoot(false);
-            this->rootPageId = newRoot->GetPageId();
+            this->rootPageId = newRoot->PageId();
 
             this->SplitChildNoLock(newRoot, 0, root, pagesToAllocate);
             root = newRoot;
@@ -177,7 +177,7 @@ namespace Indexing{
     )const {
         // Move the middle key from the child to the parent
         const auto childKey = child->GetKey(this->degree);
-        parent->InsertChild(newChild->GetPageId(), &childKey, index + 1);
+        parent->InsertChild(newChild->PageId(), &childKey, index + 1);
 
         // Assign the second half of the child's keys to the new child
         if (this->type == TreeType::Clustered) {
@@ -208,7 +208,7 @@ namespace Indexing{
         const Int index
     ) const {
         const auto childKey = child->GetKey(this->degree - 1);
-        parent->InsertChild(newChild->GetPageId(), &childKey, index + 1);
+        parent->InsertChild(newChild->PageId(), &childKey, index + 1);
 
         const auto middleChild = child->GetChild(this->degree);
         newChild->InsertChild(middleChild);
@@ -222,7 +222,7 @@ namespace Indexing{
         Pages::PageGuard<Pages::IndexPage> &child,
         const Int pagesToAllocate
     ) {
-        auto newChild = this->AllocateNewPage(parent->GetPageId(), pagesToAllocate);
+        auto newChild = this->AllocateNewPage(parent->PageId(), pagesToAllocate);
 
         MultiThreading::WriterGuard newChildLock(&newChild->Latch());
 
@@ -865,7 +865,7 @@ namespace Indexing{
     }
 
     void BTree::UpdatePfsPage(Pages::PageGuard<Pages::IndexPage>& node) const{
-        auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
+        auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->PageId());
 
         MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage->Latch());
         MultiThreading::WriterGuard pageLock(&node->Latch());
@@ -1207,7 +1207,7 @@ namespace Indexing{
 
                 if (result->size() == properties.batchSize) {
                     state.lastFetchedKeyIndex = i;
-                    state.pageId = currentNode->GetPageId();
+                    state.pageId = currentNode->PageId();
                     state.canFetchMore = true;
 
                     return;

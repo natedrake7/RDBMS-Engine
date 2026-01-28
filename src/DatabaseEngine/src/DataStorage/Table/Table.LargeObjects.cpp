@@ -38,69 +38,64 @@ namespace DatabaseEngine::StorageTypes {
         // }
     }
 
-    void Table::RecursiveInsertToLargePage(
-        Pages::RowReference& rowPtr,
+    page_id_t Table::StoreLargeObject(
+        const Value& value,
         page_offset_t &offset,
-        const column_index_t columnIndex,
-        block_size_t &remainingBlockSize,
-        const bool isFirstRecursion,
-        Pages::LargeDataObject **previousDataObject
-    ){
-        // auto largeDataPage = this->GetOrCreateLargeDataPage();
-        //
-        // const auto &pageSize = largeDataPage->BytesLeft();
-        //
-        // const auto &data = row->GetData()[columnIndex]->Data();
-        //
-        // if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize)
-        // {
-        //     largeDataPage->InsertObject(data + offset, remainingBlockSize);
-        //
-        //     const auto pfsPageId = Database::GetPfsAssociatedPage(largeDataPage->GetPageId());
-        //
-        //     auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pfsPageId);
-        //
-        //     pfsPage->SetPageMetaData(largeDataPage.Get());
-        //
-        //     Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion,largeDataPage->GetPageId(),columnIndex);
-        //
-        //     if (previousDataObject != nullptr)
-        //     {
-        //       (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
-        //     }
-        //
-        //     return;
-        // }
+        block_size_t& remainingBlockSize,
+        Pages::LargeDataObject* previousDataObject
+    )const{
+        auto page = this->GetOrCreateLargeDataPage();
+
+        const auto pageSize = page->BytesLeft();
+
+        const auto& data = value.Data();
+
+        //can fit in page
+        if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize){
+            page->InsertObject(data + offset, remainingBlockSize);
+
+            auto pfsPage = Database::GetAssociatedPfsPage(
+                this->database->GetSystemFilename(),
+                page->PageId()
+            );
+            pfsPage->SetPageMetaData(page.Get());
+
+            if (previousDataObject != nullptr){
+                previousDataObject->nextPageId = page->PageId();
+                return 0;
+            }
+
+            //if previous object is null, it is first pass so we return the pageId
+            return page->PageId();
+        }
         //
         // // blockSize < pageSize
-        // const auto bytesToBeInserted = pageSize - OBJECT_METADATA_SIZE_T;
-        //
-        // remainingBlockSize -= bytesToBeInserted;
-        //
-        // Pages::LargeDataObject *dataObject = largeDataPage->InsertObject(
-        //     data + offset, bytesToBeInserted);
-        //
-        // const auto pfsPageId = Database::GetPfsAssociatedPage(largeDataPage->GetPageId());
-        //
-        // auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), pfsPageId);
-        //
-        // pfsPage->SetPageMetaData(largeDataPage.Get());
-        //
-        // if (previousDataObject != nullptr)
-        //     (*previousDataObject)->nextPageId = largeDataPage->GetPageId();
-        //
-        // offset += bytesToBeInserted;
-        //
-        // this->RecursiveInsertToLargePage(
-        //     row,
-        //     offset,
-        //     columnIndex,
-        //     remainingBlockSize,
-        //     false,
-        //     &dataObject
-        // );
-        //
-        // Table::InsertLargeDataObjectPointerToRow(row, isFirstRecursion,largeDataPage->GetPageId(),columnIndex);
+        const auto bytesToBeInserted = pageSize - OBJECT_METADATA_SIZE_T;
+
+        remainingBlockSize -= bytesToBeInserted;
+
+        auto* dataObject = page->InsertObject(
+            data + offset, bytesToBeInserted
+        );
+
+        auto pfsPage = Database::GetAssociatedPfsPage(
+            this->database->GetSystemFilename(),
+            page->PageId()
+        );
+        pfsPage->SetPageMetaData(page.Get());
+
+        if (previousDataObject != nullptr)
+            previousDataObject->nextPageId = page->PageId();
+
+        offset += bytesToBeInserted;
+
+        this->StoreLargeObject(
+            value,
+            offset,
+            remainingBlockSize,
+            dataObject
+        );
+        return page->PageId();
     }
 
     Pages::PageGuard<Pages::LargeObjectPage> Table::GetOrCreateLargeDataPage() const{

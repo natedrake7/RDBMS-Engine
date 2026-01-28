@@ -230,7 +230,7 @@ namespace DatabaseEngine {
 
    const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(systemFilename, extentFirstPageId);
 
-   const auto firstDataPageId = (iamPage->GetPageId() != extentFirstPageId)
+   const auto firstDataPageId = (iamPage->PageId() != extentFirstPageId)
                                ? extentFirstPageId
                                : extentFirstPageId + 1;
 

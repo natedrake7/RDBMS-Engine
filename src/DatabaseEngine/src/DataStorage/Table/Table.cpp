@@ -106,7 +106,7 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
-          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+          const page_id_t pageId = (tableMapPage->PageId() != extentFirstPageId)
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
@@ -154,7 +154,7 @@ namespace DatabaseEngine::StorageTypes {
     for (const auto& extentId: allocatedExtents) {
       const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
 
-      const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+      const page_id_t firstDataPageId = (tableMapPage->PageId() != extentFirstPageId)
                                             ? extentFirstPageId
                                             : extentFirstPageId + 1;
 
@@ -267,8 +267,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::BatchInsert(
         const ExecutionProperties &properties,
-        const std::vector<QueryResult> &input,
-        const std::vector<column_index_t> &columnIndices
+        std::vector<QueryResult> &input
       ) {
         std::vector<InsertPayload> rows;
         rows.reserve(input.size());
@@ -284,9 +283,13 @@ namespace DatabaseEngine::StorageTypes {
 
         Memory::Allocator allocator(allocationSize, Memory::AllocationType::Persistent);
 
-        for (const auto& insertedRow : input) {
+        for (auto& insertedRow : input) {
             Errors::RuntimeStatus status;
-            auto payload = this->CreateInsertPayload(status, properties.snapshot.transactionId, insertedRow.Data());
+            auto payload = this->CreateInsertPayload(
+                status,
+                properties.snapshot.transactionId,
+                insertedRow.Data()
+            );
 
           if (!status.IsOk())
             return status;
@@ -320,34 +323,9 @@ namespace DatabaseEngine::StorageTypes {
         return result;
       }
 
-    // Errors::RuntimeStatus Table::InsertRow(const ExecutionProperties& properties, const std::vector<Value> &inputData){
-    //     Logging::CheckPoint checkPoint;
-    //     auto* row = new Row(*this);
-    //
-    //     auto result = this->CreateRow(
-    //       row,
-    //       properties.snapshot.transactionId,
-    //       inputData,
-    //       &checkPoint
-    //     );
-    //
-    //     if (result.code != Errors::RuntimeError::Ok)
-    //       return result;
-    //
-    //     result = this->InsertRow(row, 1);
-    //
-    //     if (result.code != Errors::RuntimeError::Ok)
-    //       return result;
-    //
-    //     Database::LogCheckPoint(checkPoint);
-    //
-    //     result.message = "Rows affected: 1";
-    //     return result;
-    // }
-
   Errors::RuntimeStatus Table::InsertRow(
-      const ExecutionProperties& properties,
-      const vector<Value> &inputData
+        const ExecutionProperties& properties,
+        std::vector<Value> &inputData
     ){
         Logging::CheckPoint checkPoint;
 
@@ -356,16 +334,6 @@ namespace DatabaseEngine::StorageTypes {
 
         checkPoint.transactionId = properties.snapshot.transactionId;
         Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
-
-        // auto* row = new Row(*this);
-        //
-        // auto result = this->CreateRow(
-        //   row,
-        //   properties.snapshot.transactionId,
-        //   inputData,
-        //   columnIndices,
-        //   &checkPoint
-        // );
 
         if (!status.IsOk())
             return status;
@@ -552,7 +520,7 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
-          const auto extentStartingPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+          const auto extentStartingPageId = (tableMapPage->PageId() != extentFirstPageId)
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
@@ -639,7 +607,7 @@ namespace DatabaseEngine::StorageTypes {
 
           auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
-          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+          const page_id_t pageId = (tableMapPage->PageId() != extentFirstPageId)
                                        ? extentFirstPageId
                                        : extentFirstPageId + 1;
 
@@ -701,7 +669,7 @@ namespace DatabaseEngine::StorageTypes {
       {
           const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
 
-          const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+          const page_id_t firstDataPageId = (tableMapPage->PageId() != extentFirstPageId)
                                                 ? extentFirstPageId
                                                 : extentFirstPageId + 1;
 
@@ -741,7 +709,7 @@ namespace DatabaseEngine::StorageTypes {
       MultiThreading::WriterGuard pageLock(&newPage->Latch());
 
       status.rowId.indexId = newPage->InsertRow(payload);
-      status.rowId.pageId = newPage->GetPageId();
+      status.rowId.pageId = newPage->PageId();
 
       return {};
     }
@@ -766,7 +734,7 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
-          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+          const page_id_t pageId = (tableMapPage->PageId() != extentFirstPageId)
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
@@ -828,7 +796,7 @@ namespace DatabaseEngine::StorageTypes {
 
           const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
-          const page_id_t pageId = (tableMapPage->GetPageId() != extentFirstPageId)
+          const page_id_t pageId = (tableMapPage->PageId() != extentFirstPageId)
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
@@ -1300,7 +1268,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
     for (const auto& extentId: allocatedExtents) {
       const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
 
-      const page_id_t firstDataPageId = (tableMapPage->GetPageId() != extentFirstPageId)
+      const page_id_t firstDataPageId = (tableMapPage->PageId() != extentFirstPageId)
                                             ? extentFirstPageId
                                             : extentFirstPageId + 1;
 

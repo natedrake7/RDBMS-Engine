@@ -81,6 +81,10 @@ void QueryResult::Print() const{
 
 const std::vector<Value> & QueryResult::Data()const{ return this->data; }
 
+std::vector<Value>& QueryResult::Data(){
+    return this->data;
+}
+
 Value QueryResult::GetColumnAt(const Int columnPos) const{
   return this->data.at(columnPos);
 }

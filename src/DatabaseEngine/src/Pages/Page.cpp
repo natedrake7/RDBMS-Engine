@@ -25,8 +25,7 @@ namespace Pages{
         this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherOffset & OFFSET_MASK);
     }
 
-
-    inline UnsignedSmallInt SlotDirectory::GetOffset() const{
+    UnsignedSmallInt SlotDirectory::GetOffset() const{
         return this->flags_offset & OFFSET_MASK;
     }
 
@@ -34,7 +33,7 @@ namespace Pages{
         this->size = otherSize;
     }
 
-    inline UnsignedSmallInt SlotDirectory::GetSize() const{
+    UnsignedSmallInt SlotDirectory::GetSize() const{
         return this->size;
     }
 
@@ -42,7 +41,7 @@ namespace Pages{
         this->flags_offset = (this->flags_offset & OFFSET_MASK) | ((otherFlag << 14) & FLAGS_MASK);
     }
 
-    inline SlotDirectory::Flag SlotDirectory::GetFlag() const{
+    SlotDirectory::Flag SlotDirectory::GetFlag() const{
         return static_cast<Flag>((this->flags_offset & FLAGS_MASK) >> 14);
     }
 
@@ -766,7 +765,7 @@ namespace Pages{
 
     const string &Page::GetFileName() const { return this->filename; }
 
-    page_id_t Page::GetPageId() const { return this->header.pageId; }
+    page_id_t Page::PageId() const { return this->header.pageId; }
 
     bool Page::IsDirty() const { return this->isDirty; }
 

@@ -160,7 +160,7 @@ void StorageManager::RemovePage(Pages::Page *page){
 
   MultiThreading::WriterGuard lock(&this->tableMutex);
 
-  this->pageTable.Remove(StorageManager::CreateKey(filename, page->GetPageId()));
+  this->pageTable.Remove(StorageManager::CreateKey(filename, page->PageId()));
 
   delete page;
 }
@@ -171,7 +171,7 @@ void StorageManager::RemovePageWithoutKeyDeletion(Pages::Page *page){
   auto* file = this->fileManager.GetFile(filename);
 
   if (page->IsDirty()) {
-    StorageManager::SetWriteFilePointerToOffset(file, page->GetPageId() * Constants::PAGE_SIZE);
+    StorageManager::SetWriteFilePointerToOffset(file, page->PageId() * Constants::PAGE_SIZE);
 
     page->WriteToDisk(file);
     file->flush();

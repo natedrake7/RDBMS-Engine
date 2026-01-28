@@ -298,7 +298,7 @@ namespace DatabaseEngine {
         .lastModifiedBy = data[static_cast<column_index_t>(SysDatabases::LastModifiedBy)].AsString(),
         .version = data[static_cast<column_index_t>(SysDatabases::Version)].AsInt(),
         .isDeleted = data[static_cast<column_index_t>(SysDatabases::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysDatabases::DeletedAt)].Data() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysDatabases::DeletedAt)].IsNull()
                   ? DataTypes::DateTime()
                   : data[static_cast<column_index_t>(SysDatabases::DeletedAt)].AsDateTime(),
         },
@@ -348,10 +348,10 @@ namespace DatabaseEngine {
           .name = data[static_cast<column_index_t>(SysColumns::Name)].AsString(),
           .dataType = static_cast<UnsignedTinyInt>(data[static_cast<column_index_t>(SysColumns::DataType)].AsTinyInt()),
           .recordSize = data[static_cast<column_index_t>(SysColumns::RecordSize)].AsInt(),
-          .precision = data[static_cast<column_index_t>(SysColumns::Precision)].Data() == nullptr
+          .precision = data[static_cast<column_index_t>(SysColumns::Precision)].IsNull()
               ? INVALID_DECIMAL_PRECISION
               : data[static_cast<column_index_t>(SysColumns::Precision)].AsTinyInt(),
-          .scale = data[static_cast<column_index_t>(SysColumns::Scale)].Data() == nullptr
+          .scale = data[static_cast<column_index_t>(SysColumns::Scale)].IsNull()
               ? INVALID_DECIMAL_SCALE
               : data[static_cast<column_index_t>(SysColumns::Scale)].AsTinyInt(),
           .isNullable = data[static_cast<column_index_t>(SysColumns::IsNullable)].AsBool(),
@@ -363,7 +363,7 @@ namespace DatabaseEngine {
             .lastModifiedBy = data[static_cast<column_index_t>(SysColumns::LastModifiedBy)].AsString(),
             .version = data[static_cast<column_index_t>(SysColumns::Version)].AsInt(),
             .isDeleted = data[static_cast<column_index_t>(SysColumns::IsDeleted)].AsBool(),
-            .deletedAt = data[static_cast<column_index_t>(SysColumns::DeletedAt)].Data() == nullptr
+            .deletedAt = data[static_cast<column_index_t>(SysColumns::DeletedAt)].IsNull()
                       ? DataTypes::DateTime::Now()
                       : data[static_cast<column_index_t>(SysColumns::DeletedAt)].AsDateTime(),
             }
@@ -386,7 +386,7 @@ namespace DatabaseEngine {
           .lastModifiedBy = data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)].AsString(),
           .version = data[static_cast<column_index_t>(SysIndexes::Version)].AsInt(),
           .isDeleted = data[static_cast<column_index_t>(SysIndexes::IsDeleted)].AsBool(),
-          .deletedAt = data[static_cast<column_index_t>(SysIndexes::DeletedAt)].Data() == nullptr
+          .deletedAt = data[static_cast<column_index_t>(SysIndexes::DeletedAt)].IsNull()
                 ? DataTypes::DateTime()
                 : data[static_cast<column_index_t>(SysIndexes::DeletedAt)].AsDateTime()
           },
@@ -405,7 +405,7 @@ namespace DatabaseEngine {
       .additionalInfo{
         .version = data[static_cast<column_index_t>(SysIndexColumns::Version)].AsInt(),
         .isDeleted = data[static_cast<column_index_t>(SysIndexColumns::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].Data() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].AsDateTime()
       }
@@ -427,7 +427,7 @@ namespace DatabaseEngine {
       .additionalInfo{
         .version = data[static_cast<column_index_t>(SysIdentityColumns::Version)].AsInt(),
         .isDeleted = data[static_cast<column_index_t>(SysIdentityColumns::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].Data() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].AsDateTime()
       }
@@ -457,7 +457,7 @@ namespace DatabaseEngine {
         .lastModifiedBy = data[static_cast<column_index_t>(SysConstraints::LastModifiedBy)].AsString(),
         .version = data[static_cast<column_index_t>(SysConstraints::Version)].AsInt(),
         .isDeleted = data[static_cast<column_index_t>(SysConstraints::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysConstraints::DeletedAt)].Data() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysConstraints::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysConstraints::DeletedAt)].AsDateTime() //might crash, is nullable
       },
@@ -475,7 +475,7 @@ namespace DatabaseEngine {
       .additionalInfo{
         .version = data[static_cast<column_index_t>(SysConstraintColumns::Version)].AsInt(),
         .isDeleted = data[static_cast<column_index_t>(SysConstraintColumns::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)].Data() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)].AsDateTime()
       },
@@ -492,7 +492,7 @@ namespace DatabaseEngine {
       .additionalInfo{
         .version = data[static_cast<column_index_t>(SysDefaultValues::Version)].AsInt(),
         .isDeleted = data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].Data() == nullptr
+        .deletedAt = data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].AsDateTime()
       },
@@ -740,7 +740,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector fields = {
+      std::vector fields = {
         Value(dbName, static_cast<column_index_t>(SysDatabases::Name)),
         Value(dbPath, static_cast<column_index_t>(SysDatabases::FilePath)),
         Value(isSystem, static_cast<column_index_t>(SysDatabases::IsSystem)),
@@ -770,7 +770,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const std::vector fields = {
+     std::vector fields = {
         Value(databaseId, static_cast<column_index_t>(SysSchemas::DatabaseId)),
         Value(schemaName, static_cast<column_index_t>(SysSchemas::Name)),
         Value(currentDate, static_cast<column_index_t>(SysSchemas::CreatedAt)),
@@ -803,7 +803,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTables);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector fields = {
+      std::vector fields = {
         Value(databaseId, static_cast<column_index_t>(SysTables::DatabaseId)),
         Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)),
         Value(tableName, static_cast<column_index_t>(SysTables::Name)),
@@ -851,7 +851,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
          ? Value(scale, static_cast<column_index_t>(SysColumns::Scale))
          : Value::Null(static_cast<column_index_t>(SysColumns::Scale));
 
-      const std::vector fields = {
+      std::vector fields = {
         Value(tableId, static_cast<column_index_t>(SysColumns::TableId)),
         Value(columnName, static_cast<column_index_t>(SysColumns::Name)),
         Value(static_cast<TinyInt>(columnType), static_cast<column_index_t>(SysColumns::DataType)),
@@ -889,7 +889,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexes);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const std::vector fields = {
+     std::vector fields = {
        Value(tableId, static_cast<column_index_t>(SysIndexes::TableId)),
        Value(indexName, static_cast<column_index_t>(SysIndexes::Name)),
        Value(isClustered, static_cast<column_index_t>(SysIndexes::IsClustered)),
@@ -920,7 +920,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::vector fields = {
+    std::vector fields = {
       Value(indexId, static_cast<column_index_t>(SysIndexColumns::IndexId)),
       Value(columnId, static_cast<column_index_t>(SysIndexColumns::ColumnId)),
       Value(ordinalPosition, static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)),
@@ -990,7 +990,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     auto* table = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::vector fields = {
+    std::vector fields = {
         Value(constraintId, static_cast<column_index_t>(SysConstraintColumns::ConstraintId)),
         Value(columnId, static_cast<column_index_t>(SysConstraintColumns::ColumnId)),
         Value(ordinalPosition, static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)),
@@ -1022,7 +1022,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector fields = {
+      std::vector fields = {
         Value(tableId, static_cast<column_index_t>(SysIdentityColumns::TableId)),
         Value(columnId, static_cast<column_index_t>(SysIdentityColumns::ColumnId)),
         Value(seedValue, static_cast<column_index_t>(SysIdentityColumns::SeedValue)),
@@ -1052,7 +1052,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       auto* table = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector fields = {
+      std::vector fields = {
         Value(columnId, static_cast<column_index_t>(SysDefaultValues::ColumnId)),
         Value(
       std::string(reinterpret_cast<const char*>(value.Data()), value.Size()),
@@ -1080,7 +1080,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
 
-    const std::vector fields = {
+    std::vector fields = {
       Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)),
       Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
       Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
@@ -1104,7 +1104,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
 
-    const std::vector fields = {
+    std::vector fields = {
       Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)),
       Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
       Value::Null(static_cast<column_index_t>(SysColumnStats::MinimumValue)),
@@ -1127,7 +1127,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const BigInt distinctCount
   ) const {
 
-    const std::vector fields = {
+    std::vector fields = {
       Value(columnId, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
       Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
       Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
@@ -1155,7 +1155,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
-   const std::vector fields = {
+   std::vector fields = {
      Value(tableId, static_cast<column_index_t>(SysIndexStats::TableId)),
      Value(indexId, static_cast<column_index_t>(SysIndexStats::IndexId)),
      Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
@@ -1185,7 +1185,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     const std::string lastModifiedBy = "system";
 
-    const vector fields = {
+    std::vector fields = {
       Value(roleName, static_cast<column_index_t>(SysRoles::RoleName)),
       Value(static_cast<int>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
       Value(isSystem, static_cast<column_index_t>(SysRoles::IsSystemRole)),
@@ -1219,7 +1219,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     const std::string lastModifiedBy = "system";
 
-    const vector fields = {
+    std::vector fields = {
       Value(username, static_cast<column_index_t>(SysUsers::UserName)),
       Value(passwordHash, static_cast<column_index_t>(SysUsers::PasswordHash)),
       Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
@@ -1498,7 +1498,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int databaseId) 
 
       auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0].AsInt());
 
-      const auto indexId =(data[static_cast<column_index_t>(SysConstraints::IndexId)].Data() == nullptr)
+      const auto indexId =(data[static_cast<column_index_t>(SysConstraints::IndexId)].IsNull())
               ? -1
               : data[static_cast<column_index_t>(SysConstraints::IndexId)].AsInt();
 

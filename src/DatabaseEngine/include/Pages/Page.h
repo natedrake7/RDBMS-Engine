@@ -174,7 +174,7 @@ namespace Pages{
         void UpdateBytesLeft(row_size_t previousRowSize, row_size_t currentRowSize);
 
         [[nodiscard]] const std::string &GetFileName() const;
-        [[nodiscard]] page_id_t GetPageId() const;
+        [[nodiscard]] page_id_t PageId() const;
         [[nodiscard]] bool IsDirty() const;
         [[nodiscard]] page_size_t BytesLeft() const;
         void SetDirty();

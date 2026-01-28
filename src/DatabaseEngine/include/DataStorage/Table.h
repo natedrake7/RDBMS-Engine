@@ -109,14 +109,12 @@ namespace DatabaseEngine::StorageTypes
                 page_id_t lastLargePageId,
                 column_index_t largeBlockIndex
             ) const;
-            void RecursiveInsertToLargePage(
-                Pages::RowReference& rowPtr,
+            page_id_t StoreLargeObject(
+                const Value& value,
                 page_offset_t &offset,
-                column_index_t columnIndex,
                 block_size_t &remainingBlockSize,
-                bool isFirstRecursion,
-                Pages::LargeDataObject **previousDataObject
-            );
+                Pages::LargeDataObject* previousDataObject
+            )const;
             [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetOrCreateLargeDataPage() const;
 
         /** @} End of: Class Constructors and Destructors*/
@@ -131,7 +129,7 @@ namespace DatabaseEngine::StorageTypes
             InsertPayload CreateInsertPayload(
                 Errors::RuntimeStatus& status,
                 transaction_id_t transactionId,
-                const std::vector<Value> &inputData
+                std::vector<Value> &inputData
             ) const;
         /**
         * @name Class Constructors and Destructors
@@ -166,20 +164,13 @@ namespace DatabaseEngine::StorageTypes
         */
             Errors::RuntimeStatus BatchInsert(
                 const ExecutionProperties& properties,
-                const std::vector<QueryResult>& input,
-                const std::vector<column_index_t>& columnIndices
+                std::vector<QueryResult>& input
             );
 
-            // Errors::RuntimeStatus InsertRow(const ExecutionProperties& properties, const vector<Value> &inputData);
             Errors::RuntimeStatus InsertRow(
                 const ExecutionProperties& properties,
-                const vector<Value> &inputData
+                std::vector<Value> &inputData
             );
-            // Errors::RuntimeStatus InsertRow(
-            //     const ExecutionProperties& properties,
-            //     const vector<Expressions::Expression*> &inputData,
-            //     const std::vector<column_index_t>& columnIndices
-            // );
             Errors::RuntimeStatus InsertRow(InsertPayload& payload, Int pagesToAllocate);
             Errors::RuntimeStatus HeapInsert(const InsertPayload& payload, Int pagesToAllocate)const;
             Errors::RuntimeStatus ClusteredIndexInsert(InsertPayload& payload, Int pagesToAllocate);
