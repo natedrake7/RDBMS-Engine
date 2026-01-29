@@ -269,7 +269,7 @@ namespace DatabaseEngine::StorageTypes
             Errors::RuntimeStatus HeapUpdate(
                 const ExecutionProperties& properties,
                 const Expressions::Expression* expression,
-                std::vector<Value> &updates
+                const std::vector<Value> &updates
             );
             Errors::RuntimeStatus HeapUpdate(
                 const ExecutionProperties& properties,
@@ -279,7 +279,7 @@ namespace DatabaseEngine::StorageTypes
             void ClusteredIndexScanUpdate(
                 const ExecutionProperties& properties,
                 const Expressions::Expression* expression,
-                std::vector<Value> &updates
+                const std::vector<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexScanUpdate(
                 const ExecutionProperties& properties,
@@ -291,29 +291,27 @@ namespace DatabaseEngine::StorageTypes
                 const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
-                std::vector<Value> &updates
+                const std::vector<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
                 const ExecutionProperties& properties,
                 const DataTypes::Indexing::Key& key,
-                std::vector<Value> &updates
+                const std::vector<Value> &updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 Pages::Page* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
-                const std::vector<Value>& updates,
-                bool isHeap
+                const std::vector<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 Pages::Page* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
-                const std::vector<Expressions::Expression*>& updates,
-                bool isHeap
-            ) const;
+                const std::vector<Expressions::Expression*>& updates
+            );
         /** @} End of: Update Functions*/
 
         /**

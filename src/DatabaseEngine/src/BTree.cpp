@@ -1361,7 +1361,7 @@ namespace Indexing{
     void BTree::IndexScanUpdate(
         const DatabaseEngine::ExecutionProperties& properties,
         const Expressions::Expression *expression,
-        std::vector<Value> & updates
+        const std::vector<Value> &updates
     )const{
         if (this->IsEmpty())
             return;
@@ -1384,11 +1384,10 @@ namespace Indexing{
                     currentNode.Get(),
                     tuple.row,
                     properties,
-                    updates,
-                    false
+                    updates
                 );
 
-                if (result.code != Errors::RuntimeError::Ok)
+                if (!result.IsOk())
                     return;
             }
 
@@ -1426,8 +1425,7 @@ namespace Indexing{
                     currentNode.Get(),
                     tuple.row,
                     properties,
-                    updates,
-                    false
+                    updates
                 );
 
                 if (!result.IsOk())
@@ -1462,8 +1460,7 @@ namespace Indexing{
                     currentNode.Get(),
                     tuple.row,
                     properties,
-                    updates,
-                    false
+                    updates
                 );
 
                 if (!result.IsOk())
@@ -1482,7 +1479,7 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::IndexSeekUpdate(
         const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
-        std::vector<Value> &updates
+        const std::vector<Value> &updates
     ) const {
         if (this->IsEmpty())
             return {};
@@ -1501,11 +1498,10 @@ namespace Indexing{
                     currentNode.Get(),
                     tuple.row,
                     properties,
-                    updates,
-                    false
+                    updates
                 );
 
-                if (result.code != Errors::RuntimeError::Ok)
+                if (!result.IsOk())
                     return result;
             }
 
@@ -1523,14 +1519,10 @@ namespace Indexing{
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minKey,
         const DataTypes::Indexing::Key* maxKey,
-        std::vector<Value> & updates
+        const std::vector<Value>& updates
     )const{
         if (this->IsEmpty())
             return {};
-
-        HashSet<column_index_t> updatedColumns;
-        for(const auto& update : updates)
-            updatedColumns.Add(update.GetColumnIndex());
 
         auto currentNode = this->SearchKey(*minKey);
 
@@ -1557,11 +1549,10 @@ namespace Indexing{
                     currentNode.Get(),
                     tuple.row,
                     properties,
-                    updates,
-                    false
+                    updates
                 );
 
-                if (result.code != Errors::RuntimeError::Ok)
+                if (!result.IsOk())
                   return result;
               }
 
@@ -1578,7 +1569,7 @@ namespace Indexing{
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key *minKey,
         const DataTypes::Indexing::Key *maxKey,
-        std::vector<Value> &updates
+        const std::vector<Value> &updates
     )const{
         if (this->IsEmpty())
             return {};
@@ -1601,11 +1592,10 @@ namespace Indexing{
                     currentNode.Get(),
                     tuple.row,
                     properties,
-                    updates,
-                    false
+                    updates
                 );
 
-                if (result.code != Errors::RuntimeError::Ok)
+                if (!result.IsOk())
                   return result;
             }
 

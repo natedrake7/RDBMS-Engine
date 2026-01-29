@@ -381,25 +381,13 @@ namespace Pages{
     }
 
     Value RowReference::PartialMaterialize(const column_index_t columnIndex) const{
-        return this->pagePtr->PartialMaterializeRow(this, columnIndex);
-    }
+        Value value;
+        if (this->cache.TryGetValue(columnIndex, value))
+            return value;
 
-    Errors::RuntimeStatus RowReference::Update(const std::vector<Value>& updates) const{
-        auto row = this->Materialize();
-        auto header = this->pagePtr->PeekRowHeader(this->indexPosition, this->keySize);
-
-        // row.Update(updates);
-        //
-        // this->pagePtr->UpdateRow();
-
-        // this->pagePtr->UpdateRow(
-        //     header,
-        //     row,
-        //     this->indexPosition,
-        //     this->offset
-        // );
-
-        return {};
+        value = this->pagePtr->PartialMaterializeRow(this, columnIndex);
+        this->cache.Add(columnIndex, std::move(value));
+        return  this->cache.Get(columnIndex);
     }
 
     bool Page::IndexOutOfBounds(const Int indexPosition) const{
@@ -596,7 +584,7 @@ namespace Pages{
         this->isDirty = true;
     }
 
-    void Page::UpdateRow(
+    bool Page::UpdateRow(
         const DatabaseEngine::StorageTypes::InsertPayload& payload,
         const RowReference& rowPtr
     ){
@@ -617,7 +605,7 @@ namespace Pages{
             // this->SerializeRow(rowHeader, row, offSet);
             this->header.bytesLeft -= totalSize;
             this->isDirty = true;
-            return;
+            return true;
         }
 
         //insert new row at the end
@@ -632,7 +620,7 @@ namespace Pages{
 
             //even if after the defragment row cant fit, throw exception
             if (this->header.bytesLeft < totalSize)
-                throw std::runtime_error("IndexPage::UpdateRow: Not enough space to update the row after defragmentation.");
+                return false;
 
             nextOffset = this->NewInsertOffset();
             offSetCopy = nextOffset;
@@ -658,6 +646,17 @@ namespace Pages{
         //unless pages gets defragmented
         this->header.bytesLeft -= totalSize;
         this->isDirty = true;
+        return true;
+    }
+
+    void Page::SetForwardPointer(const Int indexPosition, const DataTypes::RowIdentifier& rowId) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+
+        const auto offSet = slot.GetOffset();
+
+        std::memcpy(this->data + offSet, &rowId, ROW_ID_SIZE);
+
+        this->UpdateSlotDirectory(SlotDirectory(offSet, ROW_ID_SIZE, SlotDirectory::SLOT_FORWARDED), indexPosition);
     }
 
     void Page::ReadFromDisk(

@@ -40,6 +40,7 @@ namespace Expressions{
 
         EvaluationContext();
         explicit EvaluationContext(EvaluationContextType type, const Dictionary<std::string, Variable>* variables);
+        explicit EvaluationContext(const Pages::RowReference* row, const Dictionary<std::string, Variable>* variables);
         explicit EvaluationContext(const Pages::RowReference* row);
         explicit EvaluationContext(const QueryResult& row);
         EvaluationContext(const Pages::RowReference* outerRow, const Pages::RowReference* innerRow);
@@ -208,7 +209,7 @@ namespace Expressions{
         LogicalExpression(
           Expression *leftExpression,
           Expression *RightExpression,
-          const LogicalType &logicalType
+          LogicalType logicalType
         );
         LogicalExpression();
         ~LogicalExpression()override;

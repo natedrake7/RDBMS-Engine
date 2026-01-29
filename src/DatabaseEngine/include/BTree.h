@@ -248,7 +248,7 @@ namespace Indexing{
         void IndexScanUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const Expressions::Expression* expression,
-            std::vector<Value>& updates
+            const std::vector<Value> &updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
@@ -259,13 +259,13 @@ namespace Indexing{
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
-           const std::vector<Expressions::Expression*>& updates
+            const std::vector<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& key,
-            std::vector<Value>& updates
+            const std::vector<Value>& updates
         )const;
 
         Errors::RuntimeStatus IndexSeekUpdate(
@@ -273,13 +273,13 @@ namespace Indexing{
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
-            std::vector<Value>& updates
+            const std::vector<Value>& updates
         )const;
         Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
-            std::vector<Value>& updates
+            const std::vector<Value>& updates
         )const;
 
         void SearchKey(const DataTypes::Indexing::Key& key, DataTypes::Indexing::QueryData& result) const;

@@ -92,6 +92,7 @@
 //verify page implementation
 
 //CHECK CACHE BLOCK 0
+//Implement full Forward Ptr Functionality
 
 //add peek header functionality on page rows to delay materialization
 

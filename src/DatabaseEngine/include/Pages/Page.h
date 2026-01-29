@@ -150,10 +150,15 @@ namespace Pages{
         Int InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload);
         void InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload, Int indexPosition);
 
-        void UpdateRow(
+        [[nodiscard]]
+        bool UpdateRow(
             const DatabaseEngine::StorageTypes::InsertPayload& payload,
             const RowReference& rowPtr
         );
+        void SetForwardPointer(
+            Int indexPosition,
+            const DataTypes::RowIdentifier& rowId
+        ) const;
 
         virtual void ReadFromDisk(
             const std::vector<char> &buffer,
@@ -233,6 +238,8 @@ namespace Pages{
         Int keySize;
 
         mutable DatabaseEngine::StorageTypes::RowHeader header;
+
+        mutable Dictionary<column_index_t, Value> cache;
         mutable std::vector<Int> sizes;
         mutable page_offset_t dataOffset;
         mutable bool isHeaderInitialized;

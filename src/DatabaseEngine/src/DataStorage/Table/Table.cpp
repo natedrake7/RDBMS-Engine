@@ -381,7 +381,7 @@ namespace DatabaseEngine::StorageTypes {
     //
     // }
 
-    Errors::RuntimeStatus Table:: InsertRow(InsertPayload& payload, const Int pagesToAllocate){
+    Errors::RuntimeStatus Table::InsertRow(InsertPayload& payload, const Int pagesToAllocate){
         // this->InsertLargeObjectToPage(row);
 
         //row_id
@@ -405,7 +405,10 @@ namespace DatabaseEngine::StorageTypes {
         return status;
       }
 
-    void Table::DeleteLargeObjectFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t>& updatedColumns){
+    void Table::DeleteLargeObjectFromPage(
+        Pages::RowReference& rowPtr,
+        const HashSet<column_index_t>& updatedColumns
+    ){
       const auto& filename = this->database->GetFileName();
 
       // auto* rowHeader = row->GetHeader();
@@ -595,11 +598,11 @@ namespace DatabaseEngine::StorageTypes {
 
         for (const auto &extentId : tableExtentIds)
         {
-          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+          const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
 
           auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), extentFirstPageId);
 
-          const page_id_t pageId = (tableMapPage->PageId() != extentFirstPageId)
+          const auto pageId = (tableMapPage->PageId() != extentFirstPageId)
                                        ? extentFirstPageId
                                        : extentFirstPageId + 1;
 
@@ -706,7 +709,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::HeapUpdate(
         const ExecutionProperties& properties,
         const Expressions::Expression *expression,
-        std::vector<Value>& updates
+        const std::vector<Value> &updates
     ){
         if(this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
             return {};
@@ -748,7 +751,7 @@ namespace DatabaseEngine::StorageTypes {
                     if(!value.AsBool())
                         continue;
 
-                    auto result = this->UpdateRowNoLock(page.Get(), row, properties, updates, true);
+                    auto result = this->UpdateRowNoLock(page.Get(), row, properties, updates);
 
                     if (result.code != Errors::RuntimeError::Ok)
                         return result;
@@ -799,7 +802,7 @@ namespace DatabaseEngine::StorageTypes {
                     if(!value.AsBool())
                         continue;
 
-                    auto result = this->UpdateRowNoLock(page.Get(), rowPtr, properties, updates, true);
+                    auto result = this->UpdateRowNoLock(page.Get(), rowPtr, properties, updates);
                     if (!result.IsOk())
                         return result;
                 }
@@ -812,7 +815,7 @@ namespace DatabaseEngine::StorageTypes {
     void Table::ClusteredIndexScanUpdate(
       const ExecutionProperties& properties,
       const Expressions::Expression *expression,
-      std::vector<Value> & updates
+      const std::vector<Value> &updates
     ){
       const auto* tree = this->GetClusteredIndexedTree();
       tree->IndexScanUpdate(properties, expression, updates);
@@ -835,7 +838,7 @@ namespace DatabaseEngine::StorageTypes {
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
-        std::vector<Value>& updates
+        const std::vector<Value> &updates
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -847,7 +850,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
       const ExecutionProperties &properties,
       const DataTypes::Indexing::Key &key,
-      std::vector<Value> &updates
+      const std::vector<Value> &updates
     ) {
         const auto* tree = this->GetClusteredIndexedTree();
         return tree->IndexSeekUpdate(properties, key, updates);
@@ -997,70 +1000,53 @@ namespace DatabaseEngine::StorageTypes {
         // return largestBlock->Size();
     }
 
-    //create differrent one to handle clustered updates
+    //Handle overflow too dynamically probably during row insert
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         Pages::Page* page,
         const Pages::RowReference& rowPtr,
         const ExecutionProperties& properties,
-        const std::vector<Value>& updates,
-        const bool isHeap
+        const std::vector<Value>& updates
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
 
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
-
         // this->InsertToVersionDatabase(row, properties.snapshot.transactionId);
-
-        int diff = 0;
 
         auto materializedRow = rowPtr.Materialize();
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        const auto newPayload = this->CreateUpdatePayload(status, properties.snapshot.transactionId, materializedRow.Data());
+        auto newPayload = this->CreateUpdatePayload(status, properties.snapshot.transactionId, materializedRow.Data());
 
         if (!status.IsOk())
             return status;
 
-        page->UpdateRow(newPayload, rowPtr);
+          if (page->UpdateRow(newPayload, rowPtr))
+              return status;
 
-        // if(page->GetBytesLeft() - diff > 0){
-        //   page->UpdateBytesLeft();
-        //   return result;
-        // }
+          //only for heap tables
+          auto insertResult = this->InsertRow(newPayload, 1);
 
-        // this->InsertLargeObjectToPage(row);
+          if (!insertResult.IsOk())
+              return insertResult;
 
-        // if(isHeap && (Constants::PAGE_SIZE_WITHOUT_HEADER - row->TotalSize()) > 0)
-        //   return this->InsertRow(row, 1);
-        //
-        // while(page->GetBytesLeft() - diff < 0){
-        //   const auto overflowResult = this->HandleRowOverflow(row);
-        //   if(overflowResult == -1)
-        //     break;
-        //
-        //   diff -= overflowResult;
-        // }
-
-        // page->UpdateRow(row, indexPosition);
-
-        return {};
+          //install forward referencing ptr to older row pos
+          page->SetForwardPointer(rowPtr.indexPosition, insertResult.rowId);
+          return insertResult;
     }
 
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         Pages::Page* page,
         const Pages::RowReference& rowPtr,
         const ExecutionProperties& properties,
-        const std::vector<Expressions::Expression*>& updates,
-        bool isHeap
-    ) const{
+        const std::vector<Expressions::Expression*>& updates
+    ){
         auto materializedRow = rowPtr.Materialize();
 
+        const Expressions::EvaluationContext context(&rowPtr, properties.variables);
         for (const auto& updateExpr : updates) {
-            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-            context.row = &rowPtr;
             auto updatedValue = updateExpr->Evaluate(context);
             updatedValue.SetColumnIndex(updateExpr->columnIndex);
             materializedRow.Update(updatedValue);
@@ -1068,14 +1054,24 @@ namespace DatabaseEngine::StorageTypes {
 
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
-        const auto newPayload = this->CreateUpdatePayload(status, properties.snapshot.transactionId, materializedRow.Data());
+        auto newPayload = this->CreateUpdatePayload(status, properties.snapshot.transactionId, materializedRow.Data());
 
         if (!status.IsOk())
             return status;
 
-        page->UpdateRow(newPayload, rowPtr);
+        if (page->UpdateRow(newPayload, rowPtr))
+            return status;
 
-        return status;
+        //only for heap tables
+        auto insertResult = this->InsertRow(newPayload, 1);
+
+        if (!insertResult.IsOk())
+            return insertResult;
+
+        //install forward referencing ptr to older row pos
+        page->SetForwardPointer(rowPtr.indexPosition, insertResult.rowId);
+
+        return insertResult;
     }
 
     void Table::RetrieveDefaultValuesFromCatalog() const{
