@@ -129,7 +129,12 @@ namespace DatabaseEngine::StorageTypes
             InsertPayload CreateInsertPayload(
                 Errors::RuntimeStatus& status,
                 transaction_id_t transactionId,
-                std::vector<Value> &inputData
+                const std::vector<Value> &inputData
+            ) const;
+            InsertPayload CreateUpdatePayload(
+                Errors::RuntimeStatus& status,
+                transaction_id_t transactionId,
+                const std::vector<Value> &inputData
             ) const;
         /**
         * @name Class Constructors and Destructors

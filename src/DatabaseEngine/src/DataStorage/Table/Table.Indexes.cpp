@@ -145,7 +145,7 @@ namespace DatabaseEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            // tree->IndexScan(properties, selectedRows, state, expression);
+            tree->IndexScan(properties, selectedRows, state, expression);
             return;
         }
 

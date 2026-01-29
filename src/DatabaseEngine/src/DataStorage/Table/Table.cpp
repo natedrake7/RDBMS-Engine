@@ -1019,7 +1019,7 @@ namespace DatabaseEngine::StorageTypes {
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        const auto newPayload = this->CreateInsertPayload(status, properties.snapshot.transactionId, materializedRow.Data());
+        const auto newPayload = this->CreateUpdatePayload(status, properties.snapshot.transactionId, materializedRow.Data());
 
         if (!status.IsOk())
             return status;
@@ -1061,14 +1061,14 @@ namespace DatabaseEngine::StorageTypes {
         for (const auto& updateExpr : updates) {
             Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
             context.row = &rowPtr;
-
             auto updatedValue = updateExpr->Evaluate(context);
-
+            updatedValue.SetColumnIndex(updateExpr->columnIndex);
             materializedRow.Update(updatedValue);
         }
 
         Errors::RuntimeStatus status;
-        const auto newPayload = this->CreateInsertPayload(status, properties.snapshot.transactionId, materializedRow.Data());
+        //update function here (all columns will be present on the materialized row now)
+        const auto newPayload = this->CreateUpdatePayload(status, properties.snapshot.transactionId, materializedRow.Data());
 
         if (!status.IsOk())
             return status;
