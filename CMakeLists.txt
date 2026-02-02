@@ -157,6 +157,10 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Logger/UndoLogger.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.Row.Creation.cpp
         src/DatabaseEngine/src/DataStorage/InsertPayload.cpp
+        src/DatabaseEngine/include/BufferPool/BufferPoolMemory.h
+        src/DatabaseEngine/src/BufferPool/BufferPoolMemory.cpp
+        src/DatabaseEngine/include/Pages/PageView.h
+        src/DatabaseEngine/src/Pages/PageView.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

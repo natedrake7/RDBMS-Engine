@@ -109,7 +109,6 @@ int main(){
 
     // return 0;
     RegisterSignalHandlers();
-
     static auto& server = Network::Server::Get();
 
     // External::Plugin plugin;

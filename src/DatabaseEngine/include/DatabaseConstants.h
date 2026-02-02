@@ -9,6 +9,8 @@ namespace Constants{
     constexpr std::string_view WRITE_AHEAD_LOG_FILE = "wal.log";
     constexpr std::string_view UNDO_LOG_FILE = "undo.log";
 
+    constexpr std::string_view DATA_FILE_EXTENSION = ".data";
+
     constexpr size_t PAGE_SIZE = 8 * 1024;
     constexpr size_t MAX_NUMBER_OF_PAGES = 10000;
     constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;

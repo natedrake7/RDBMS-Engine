@@ -99,6 +99,22 @@ namespace Pages{
         ~PageHeader();
     };
 
+    struct Frame{
+        bool isDirty;
+        std::atomic<int> pinCount;
+        std::atomic<Constants::PagePriority> priority;
+        bool hasSecondChance;
+
+        mutable MultiThreading::ReadWriteMutex latch;
+
+        log_sequence_number_t logSequenceNumber;
+
+        std::string filename;
+        const DatabaseEngine::StorageTypes::Table* table;
+
+        object_t* data;
+    };
+
     class Page{
     protected:
         bool isDirty;
@@ -137,8 +153,17 @@ namespace Pages{
         );
 
     public:
-        explicit Page(page_id_t pageId, const DatabaseEngine::StorageTypes::Table* table, bool isPageCreation = false);
-        explicit Page(page_id_t pageId, page_size_t size, const DatabaseEngine::StorageTypes::Table* table, bool isPageCreation = false);
+        explicit Page(
+            page_id_t pageId,
+            const DatabaseEngine::StorageTypes::Table* table,
+            bool isPageCreation = false
+        );
+        explicit Page(
+            page_id_t pageId,
+            page_size_t size,
+            const DatabaseEngine::StorageTypes::Table* table,
+            bool isPageCreation = false
+        );
         explicit Page();
         explicit Page(const PageHeader &pageHeader);
         Page(const PageHeader &pageHeader, page_size_t size);
@@ -188,7 +213,7 @@ namespace Pages{
         [[nodiscard]] const log_sequence_number_t &GetLogSequenceNumber() const;
 
         [[nodiscard]] page_size_t GetPageSize() const;
-        [[nodiscard]] Constants::PageType GetPageType() const;
+        [[nodiscard]] PageType GetPageType() const;
 
         void Defragment();
 
@@ -196,7 +221,7 @@ namespace Pages{
         void DecreasePinCount();
 
         int GetPinCount() const;
-        Constants::PagePriority GetPriority() const;
+        PagePriority GetPriority() const;
 
         bool HasSecondChance()const;
         void SetHasSecondChanceUnsafe(bool secondChance);
@@ -229,7 +254,6 @@ namespace Pages{
         [[nodiscard]] RowReference PeekRow(Int indexPosition, Int offSet);
 
         [[nodiscard]] bool IsIndexPage()const;
-
     };
 
     struct RowReference{
@@ -257,6 +281,5 @@ namespace Pages{
 
         [[nodiscard]] QueryResult Materialize()const;
         [[nodiscard]] Value PartialMaterialize(column_index_t columnIndex)const;
-        [[nodiscard]] Errors::RuntimeStatus Update(const std::vector<Value>& updates) const;
     };
 }

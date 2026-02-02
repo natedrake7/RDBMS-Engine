@@ -16,19 +16,18 @@
 #include <ranges>
 
 namespace Storage {
-StorageManager::StorageManager()
-{
-  this->frames.resize(Constants::MAX_NUMBER_OF_PAGES, nullptr);
-  this->capacity = Constants::MAX_NUMBER_OF_PAGES;
-  this->clockHand = 0;
+StorageManager::StorageManager(){
+    this->frames.resize(Constants::MAX_NUMBER_OF_PAGES, nullptr);
+    this->capacity = Constants::MAX_NUMBER_OF_PAGES;
+    this->clockHand = 0;
+    // this->memoryPool = DatabaseEngine::BufferPoolMemory(Constants::MAX_NUMBER_OF_PAGES);
 }
 
 std::string StorageManager::CreateKey(const std::string &filename, const page_id_t pageId){
   return filename + to_string(pageId);
 }
 
-StorageManager::~StorageManager() 
-{
+StorageManager::~StorageManager() {
   for (const auto &frame : this->pageTable | views::values) {
     auto* page = this->frames[frame];
 
@@ -39,10 +38,8 @@ StorageManager::~StorageManager()
   }
 }
 
-StorageManager& StorageManager::Get()
-{
+StorageManager& StorageManager::Get(){
   static StorageManager storageManager;
-
   return storageManager;
 }
 
@@ -53,11 +50,12 @@ void StorageManager::CreateFile(const string& fileName, const string& extension)
 Pages::Page *StorageManager::GetRawPage(
   const string& filename,
   const page_id_t pageId,
-  const DatabaseEngine::StorageTypes::Table *table) {
-  {
+  const DatabaseEngine::StorageTypes::Table *table
+) {
+{
     MultiThreading::ReaderGuard lock(&this->tableMutex);
 
-    int frame = 0;
+    auto frame = 0;
     if (this->pageTable.TryGetValue(StorageManager::CreateKey(filename, pageId), frame))
       return this->frames[frame];
   }
@@ -78,7 +76,7 @@ Pages::PageGuard<> StorageManager::CreatePage(const std::string& filename, const
   return Pages::PageGuard(page);
 }
 
-Pages::PageGuard<Pages::Page> StorageManager::GetPage(const std::string &filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table){
+Pages::PageGuard<> StorageManager::GetPage(const std::string &filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table){
   return Pages::PageGuard(this->GetRawPage(filename, pageId, table));
 }
 
@@ -96,7 +94,7 @@ Pages::PageGuard<Pages::OverflowPage> StorageManager::GetOverflowPage(const stri
 {
   auto* page = this->GetRawPage(filename, pageId, table);
 
-  if (page->GetPageType() != PageType::LOB)
+  if (page->GetPageType() != PageType::OVERFLOWTYPE)
     return {};
 
   return Pages::PageGuard(static_cast<Pages::OverflowPage*>(page));
@@ -109,7 +107,7 @@ Pages::PageGuard<Pages::LargeObjectPage> StorageManager::CreateLargeDataPage(con
 
   this->InsertPageToCache(page, filename, pageId);
 
-  return Pages::PageGuard<Pages::LargeObjectPage>(page);
+  return Pages::PageGuard(page);
 }
 
 Pages::PageGuard<Pages::OverflowPage> StorageManager::CreateOverflowPage(const string & filename, const page_id_t  pageId){
@@ -118,7 +116,7 @@ Pages::PageGuard<Pages::OverflowPage> StorageManager::CreateOverflowPage(const s
 
   this->InsertPageToCache(page, filename, pageId);
 
-  return Pages::PageGuard<Pages::OverflowPage>(page);
+  return Pages::PageGuard(page);
 }
 
 Pages::Page* StorageManager::EvictPage() {
@@ -176,13 +174,11 @@ void StorageManager::RemovePageWithoutKeyDeletion(Pages::Page *page){
     page->WriteToDisk(file);
     file->flush();
   }
-
-  delete page;
 }
 
 Pages::Page* StorageManager::OpenExtent(
   const page_id_t& pageId,
-  const string& filename,
+  const std::string& filename,
   const extent_id_t extentId,
   const DatabaseEngine::StorageTypes::Table *table
 ){
@@ -204,7 +200,7 @@ Pages::Page* StorageManager::OpenExtent(
 
   page_offset_t offSet = 0;
 
-  const auto &bytesRead = file->gcount();
+  const auto bytesRead = file->gcount();
 
   for (int i = 0; i < EXTENT_SIZE; i++){
     offSet = i * PAGE_SIZE;
@@ -226,28 +222,29 @@ Pages::Page* StorageManager::OpenExtent(
 
     Pages::Page *page = nullptr;
 
-    if(!StorageManager::AllocateMemoryBasedOnPageType(&page, pageHeader)){
-      std::cerr << "Failed to read page id: " << currentPageId << endl;
-      return nullptr;
-    }
-
-    {
-      MultiThreading::WriterGuard pageLock(&page->Latch());
-
-      page->ReadFromDisk(buffer, table, offSet, file);
-      page->SetTable(table);
-      page->SetFileName(filename);
-      page->SetHasSecondChanceUnsafe(true);
-    }
-
-    if (pageHeader.pageId == pageId)
-      returnPage = page;
-
     {
       const auto key = StorageManager::CreateKey(filename, currentPageId);
 
       MultiThreading::WriterGuard tableLock(&this->tableMutex);
       const auto frame = this->clockHand % this->capacity;
+
+        if(!StorageManager::AllocateMemoryBasedOnPageType(&page, pageHeader)){
+          std::cerr << "Failed to read page id: " << currentPageId << endl;
+          return nullptr;
+        }
+
+        {
+          MultiThreading::WriterGuard pageLock(&page->Latch());
+
+          page->ReadFromDisk(buffer, table, offSet, file);
+          page->SetTable(table);
+          page->SetFileName(filename);
+          page->SetHasSecondChanceUnsafe(true);
+        }
+
+        if (pageHeader.pageId == pageId)
+          returnPage = page;
+
 
       this->frames[frame] = page;
       this->pageTable[key] = frame;
@@ -412,8 +409,10 @@ void StorageManager::AllocateMemoryBasedOnSystemPageType(Pages::Page **page, con
 /////////////////////////Globally Used Functions///////////////////
 //////////////////////////////////////////////////////////////////
 
-bool StorageManager::AllocateMemoryBasedOnPageType(Pages::Page **page, const Pages::PageHeader &pageHeader)
-{
+bool StorageManager::AllocateMemoryBasedOnPageType(
+    Pages::Page **page,
+    const Pages::PageHeader &pageHeader
+){
   switch (pageHeader.type) {
     case PageType::FREESPACE:
       *page = new Pages::PageFreeSpacePage(pageHeader);

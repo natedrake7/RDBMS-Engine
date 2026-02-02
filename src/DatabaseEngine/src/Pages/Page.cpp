@@ -821,11 +821,11 @@ namespace Pages{
         this->isDirty = true;
     }
 
-    void Page::IncreasePinCount() {
+    void Page::IncreasePinCount(){
         this->pinCount.fetch_add(1, std::memory_order_relaxed);
     }
 
-    void Page::DecreasePinCount() {
+    void Page::DecreasePinCount(){
         this->pinCount.fetch_sub(1, std::memory_order_relaxed);
     }
 
