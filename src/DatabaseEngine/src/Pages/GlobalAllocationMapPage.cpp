@@ -33,7 +33,7 @@ namespace Pages {
             if (allocatedExtents == numberOfExtents)
                 break;
 
-            if (!this->extentsMap ->Get(extentId))
+            if (!this->extentsMap->Get(extentId))
                 continue;
 
             this->lastAllocatedExtentId = extentId;

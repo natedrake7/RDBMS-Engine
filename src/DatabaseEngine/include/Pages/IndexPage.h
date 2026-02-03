@@ -139,17 +139,13 @@ namespace Pages {
 			[[nodiscard]] page_id_t GetTreeId() const;
 
 			[[nodiscard]] bool isEmpty() const;
-
 			[[nodiscard]] bool IsLeaf() const;
-
 			[[nodiscard]] bool IsRoot() const;
-
 			[[nodiscard]] UnsignedTinyInt SubKeys() const;
-			void SetSubKeys(UnsignedTinyInt numberOfKeys);
 
 			void SetIsLeaf(bool isLeaf);
 			void SetIsRoot(bool isRoot);
-
+			void SetSubKeys(UnsignedTinyInt numberOfKeys);
 
 			void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key);
 			void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key, Int indexPosition);

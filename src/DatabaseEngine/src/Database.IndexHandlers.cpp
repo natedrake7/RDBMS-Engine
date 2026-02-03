@@ -74,7 +74,7 @@ namespace DatabaseEngine {
         if(indexPageId == INVALID_PAGE_ID)
             return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
 
-        const auto indexAllocationMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(
+        const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
             this->filename,
             tableHeader.indexAllocationMapPageId,
             table

@@ -33,35 +33,35 @@ namespace Pages {
 } // namespace Pages
 
 namespace DatabaseEngine {
-struct DatabaseHeader {
-  table_number_t numberOfTables;
-  table_id_t lastTableId;
-  page_id_t lastPageFreeSpacePageId;
-  page_id_t lastGamPageId;
+    struct DatabaseHeader {
+        table_number_t numberOfTables;
+        table_id_t lastTableId;
+        page_id_t lastPageFreeSpacePageId;
+        page_id_t lastGamPageId;
 
-  DatabaseHeader();
-  DatabaseHeader(
-    table_number_t numberOfTables,
-    page_id_t lastPageFreeSpacePageId,
-    page_id_t lastGamPageId
-  );
-  DatabaseHeader(const DatabaseHeader &dbHeader);
-  DatabaseHeader &operator=(const DatabaseHeader &dbHeader);
-};
+        DatabaseHeader();
+        DatabaseHeader(
+            table_number_t numberOfTables,
+            page_id_t lastPageFreeSpacePageId,
+            page_id_t lastGamPageId
+        );
+        DatabaseHeader(const DatabaseHeader &dbHeader);
+        DatabaseHeader &operator=(const DatabaseHeader &dbHeader);
+    };
 
 class Database {
-  DatabaseHeader header;
-  std::string name;
-  std::string filename;
-  std::string fileExtension;
-  std::string systemFilename;
+    DatabaseHeader header;
+    std::string name;
+    std::string filename;
+    std::string fileExtension;
+    std::string systemFilename;
 
-  Dictionary<int32_t, table_id_t> tableIdsDictionary;
+    Dictionary<int32_t, table_id_t> tableIdsDictionary;
 
-  vector<StorageTypes::Table *> tables;
+    vector<StorageTypes::Table *> tables;
 
-  MultiThreading::ReadWriteMutex gamPageMutex;
-  MultiThreading::ReadWriteMutex pfsPageMutex;
+    MultiThreading::ReadWriteMutex gamPageMutex;
+    MultiThreading::ReadWriteMutex pfsPageMutex;
 
 protected:
 

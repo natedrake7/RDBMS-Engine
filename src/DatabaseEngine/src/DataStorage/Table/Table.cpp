@@ -94,7 +94,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -146,7 +146,7 @@ namespace DatabaseEngine::StorageTypes {
      void Table::RemoveColumnByHeap(const column_index_t index)const{
     const auto& filename = this->GetFileName();
 
-    const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+    const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
     std::vector<extent_id_t> allocatedExtents;
     tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);
@@ -511,7 +511,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, state.extentId);
@@ -584,7 +584,7 @@ namespace DatabaseEngine::StorageTypes {
         const auto& filename = this->database->GetFileName();
 
         const auto tableMapPage =
-            Storage::StorageManager::Get().GetIndexAllocationMapPage(
+            Storage::StorageManager::Get().GetAllocationPage(
               filename,
               this->header.indexAllocationMapPageId,
               this
@@ -650,7 +650,7 @@ namespace DatabaseEngine::StorageTypes {
           return status;
       }
 
-      const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+      const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
       std::vector<extent_id_t> tableExtentIds;
       tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -716,7 +716,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
         std::vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -772,7 +772,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto& filename = this->database->GetFileName();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
         vector<extent_id_t> tableExtentIds;
         tableMapPage->GetAllocatedExtents(&tableExtentIds, 0);
@@ -1220,7 +1220,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
   void Table::PopulateColumnByHeap(const column_index_t index, const Value &defaultValue){
     const auto& filename = this->GetFileName();
 
-    const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(filename, this->header.indexAllocationMapPageId, this);
+    const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
     std::vector<extent_id_t> allocatedExtents;
     tableMapPage->GetAllocatedExtents(&allocatedExtents, 0);

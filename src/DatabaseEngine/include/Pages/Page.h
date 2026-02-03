@@ -113,6 +113,10 @@ namespace Pages{
         const DatabaseEngine::StorageTypes::Table* table;
 
         object_t* data;
+
+        Frame();
+        Frame(object_t* data, const DatabaseEngine::StorageTypes::Table* table);
+        Frame& operator=(const Frame& other);
     };
 
     class Page{

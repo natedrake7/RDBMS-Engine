@@ -368,7 +368,7 @@ namespace DatabaseEngine
 
         const auto extentId = Database::CalculateExtentId(tableHeader.indexAllocationMapPageId);
 
-        const auto indexAllocationMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableHeader.indexAllocationMapPageId, table);
+        const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(this->filename, tableHeader.indexAllocationMapPageId, table);
 
         if (indexAllocationMapPage.Get() == nullptr)
         {
@@ -474,7 +474,7 @@ namespace DatabaseEngine
         {
             const auto iamExtentId = Database::CalculateExtentId(indexAllocationMapPageId);
 
-            const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(this->filename, indexAllocationMapPageId, table);
+            const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(this->filename, indexAllocationMapPageId, table);
 
             vector<extent_id_t> allocatedExtents;
             tableMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -712,7 +712,7 @@ namespace DatabaseEngine
 
             if (isFirstExtent || newGamPageCreated) {
                 // First extent for this table - create new IAM page
-                tableMapPage = Storage::StorageManager::Get().CreateIndexAllocationMapPage(
+                tableMapPage = Storage::StorageManager::Get().CreateAllocationPage(
                     this->filename,
                     tableId,
                     newPageId,
@@ -722,7 +722,7 @@ namespace DatabaseEngine
                 lowerLimit = newPageId;
 
                 if (newGamPageCreated) {
-                    auto previousIamPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(
+                    auto previousIamPage = Storage::StorageManager::Get().GetAllocationPage(
                         this->filename,
                         indexAllocationMapPageId,
                         table
@@ -749,7 +749,7 @@ namespace DatabaseEngine
             }
             else {
                 // Table already has IAM page - get it
-                tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(
+                tableMapPage = Storage::StorageManager::Get().GetAllocationPage(
                     this->filename,
                     indexAllocationMapPageId,
                     table
@@ -811,7 +811,7 @@ namespace DatabaseEngine
 
         const auto iamExtentId = Database::CalculateExtentId(tableMapPageId);
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, table);
+        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(this->filename, tableMapPageId, table);
 
         vector<extent_id_t> allocatedExtents;
         tableMapPage->GetAllocatedExtents(&allocatedExtents);
@@ -852,7 +852,7 @@ namespace DatabaseEngine
 
         const auto iamExtentId = Database::CalculateExtentId(tableMapPageId);
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId, table);
+        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(this->filename, tableMapPageId, table);
 
         std::vector<extent_id_t> allocatedExtents;
         tableMapPage->GetAllocatedExtents(&allocatedExtents);

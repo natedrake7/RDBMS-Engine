@@ -9,6 +9,7 @@
 
 #include "Pages/PageGuard.h"
 #include "DataStorage/Row.h"
+#include "Pages/IndexPageView.h"
 
 namespace Pages{
     struct IndexInsertTuple;
@@ -45,121 +46,121 @@ namespace Indexing{
         DatabaseEngine::StorageTypes::Table* table;
 
         static void AssignLeavesConnections(
-            Pages::PageGuard<Pages::IndexPage>& child,
-            Pages::PageGuard<Pages::IndexPage>& newChild
+            Pages::IndexPageView& child,
+            Pages::IndexPageView& newChild
         );
 
-        static Int LeafLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key& key);
-        static Int LeafPartialLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key& key);
+        static Int LeafLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
+        static Int LeafPartialLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
 
-        static Int InternalNodeLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key& key);
-        static Int InternalNodePartialLowerBound(const Pages::PageGuard<Pages::IndexPage>& page, const DataTypes::Indexing::Key& key);
+        static Int InternalNodeLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
+        static Int InternalNodePartialLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
 
         static Errors::RuntimeStatus CreateDuplicateKeyError(const DataTypes::Indexing::Key& key);
 
-        Pages::PageGuard<Pages::IndexPage> CreateRootPage(Int& indexPosition, Int pagesToAllocate);
+        Pages::IndexPageView CreateRootPage(Int& indexPosition, Int pagesToAllocate);
 
-        void SplitRoot(Pages::PageGuard<Pages::IndexPage>& root, MultiThreading::ReaderGuard& rootLock, Int pagesToAllocate);
+        void SplitRoot(Pages::IndexPageView& root, MultiThreading::ReaderGuard& rootLock, Int pagesToAllocate);
 
         void SplitChild(
-            Pages::PageGuard<Pages::IndexPage>& parent,
+            Pages::IndexPageView& parent,
             MultiThreading::ReaderGuard& parentReadLock,
             Int index,
-            Pages::PageGuard<Pages::IndexPage>& child,
+            Pages::IndexPageView& child,
             MultiThreading::ReaderGuard& childReadLock,
             Int pagesToAllocate
         );
 
         void SplitLeafNoLock(
-            Pages::PageGuard<Pages::IndexPage>& parent,
-            Pages::PageGuard<Pages::IndexPage>& child,
-            Pages::PageGuard<Pages::IndexPage>& newChild,
+            Pages::IndexPageView& parent,
+            Pages::IndexPageView& child,
+            Pages::IndexPageView& newChild,
             Int index
         )const;
 
         void SplitInternalNodeNoLock(
-            Pages::PageGuard<Pages::IndexPage>& parent,
-            Pages::PageGuard<Pages::IndexPage>& child,
-            Pages::PageGuard<Pages::IndexPage>& newChild,
+            Pages::IndexPageView& parent,
+            Pages::IndexPageView& child,
+            Pages::IndexPageView& newChild,
             Int index
         )const;
 
         void SplitChildNoLock(
-            Pages::PageGuard<Pages::IndexPage>& parent,
+            Pages::IndexPageView& parent,
             Int index,
-            Pages::PageGuard<Pages::IndexPage>& child,
+            Pages::IndexPageView& child,
             Int pagesToAllocate
         );
         Errors::RuntimeStatus InsertToNonFullNode(
-            Pages::PageGuard<Pages::IndexPage>& parent,
+            Pages::IndexPageView& parent,
             const Pages::IndexInsertTuple& tuple,
             Int pagesToAllocate,
             Int& indexPosition
         );
 
         static Errors::RuntimeStatus InsertToNode(
-            Pages::PageGuard<Pages::IndexPage>& parent,
+            Pages::IndexPageView& parent,
             const Pages::IndexInsertTuple& tuple,
             Int& indexPosition
         );
 
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKey(const DataTypes::Indexing::Key& key) const;
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors) const;
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchLeftMostLeafNode() const;
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> SearchLeftMostLeafNode(TinyInt& depth) const;
+        [[nodiscard]] Pages::IndexPageView SearchKey(const DataTypes::Indexing::Key& key) const;
+        [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, std::vector<Pages::IndexPageView>& ancestors) const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode() const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(TinyInt& depth) const;
 
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetNode(page_id_t pageId) const;
+        [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
         [[nodiscard]] Int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, TreeType treeType, Int nonClusteredId)const;
 
-        [[nodiscard]] Pages::PageGuard<Pages::IndexPage> AllocateNewPage(page_id_t parentPageId, Int pagesToAllocate);
+        [[nodiscard]] Pages::IndexPageView AllocateNewPage(page_id_t parentPageId, Int pagesToAllocate);
 
-        void HandleUnderflow(Pages::PageGuard<Pages::IndexPage>& node, std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors, Int& parentIndex);
+        void HandleUnderflow(Pages::IndexPageView& node, std::vector<Pages::IndexPageView>& ancestors, Int& parentIndex);
         void HandleRootUnderflow();
 
-        bool TryBorrowFromLeftSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, Int index)const;
-        bool TryBorrowFromRightSibling(Pages::PageGuard<Pages::IndexPage>& node, Pages::PageGuard<Pages::IndexPage>& parent, Int index)const;
+        bool TryBorrowFromLeftSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int index)const;
+        bool TryBorrowFromRightSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int index)const;
 
         // Leaf redistribution methods for improved space utilization
         [[nodiscard]] bool TryRedistributeLeaf(
-            Pages::PageGuard<Pages::IndexPage>& parent,
+            Pages::IndexPageView& parent,
             MultiThreading::ReaderGuard& parentLock,
-            Pages::PageGuard<Pages::IndexPage>& child,
+            Pages::IndexPageView& child,
             MultiThreading::ReaderGuard& childLock,
             Int childIndex
         )const;
 
         [[nodiscard]] bool TryRedistributeLeafWithLeftSibling(
-            Pages::PageGuard<Pages::IndexPage>& child,
-            Pages::PageGuard<Pages::IndexPage>& sibling,
+            Pages::IndexPageView& child,
+            Pages::IndexPageView& sibling,
             MultiThreading::ReaderGuard& childLock,
             MultiThreading::ReaderGuard& siblingLock
         )const;
 
         [[nodiscard]] bool TryRedistributeLeafWithRightSibling(
-            Pages::PageGuard<Pages::IndexPage>& child,
-            Pages::PageGuard<Pages::IndexPage>& sibling,
+            Pages::IndexPageView& child,
+            Pages::IndexPageView& sibling,
             MultiThreading::ReaderGuard& childLock,
             MultiThreading::ReaderGuard& siblingLock
         )const;
 
         void MergeNodes(
-            Pages::PageGuard<Pages::IndexPage>& leftNode,
-            Pages::PageGuard<Pages::IndexPage>& rightNode,
-            Pages::PageGuard<Pages::IndexPage>& parent,
+            Pages::IndexPageView& leftNode,
+            Pages::IndexPageView& rightNode,
+            Pages::IndexPageView& parent,
             Int parentKeyIndex,
-            std::vector<Pages::PageGuard<Pages::IndexPage>>& ancestors,
+            std::vector<Pages::IndexPageView>& ancestors,
             Int& parentIndex
         );
 
         void CalculateClusteredStatistics(
-            Pages::PageGuard<Pages::IndexPage>& currentNode,
+            Pages::IndexPageView& currentNode,
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
             std::vector<Headers::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;
 
-        void UpdatePfsPage(Pages::PageGuard<Pages::IndexPage>& node)const;
+        void UpdatePfsPage(Pages::IndexPageView& node)const;
 
     public:
         explicit BTree(

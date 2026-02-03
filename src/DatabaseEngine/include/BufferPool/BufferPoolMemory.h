@@ -3,13 +3,17 @@
 
 namespace DatabaseEngine{
     class BufferPoolMemory{
-        char* _data;
+        object_t* _data;
 
         public:
-            explicit BufferPoolMemory(Int numberOfPages);
+            explicit BufferPoolMemory();
             ~BufferPoolMemory();
 
-            [[nodiscard]] char* Data() const;
+            void Allocate(Int numberOfPages);
+
+            [[nodiscard]] object_t* Data() const;
+
+            object_t* CopyToMemory(const char* buffer, page_offset_t offset, page_offset_t bufferOffset) const;
 
     };
 

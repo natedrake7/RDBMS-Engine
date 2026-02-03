@@ -308,4 +308,64 @@ namespace Pages{
         this->headerPtr->size = size;
         this->framePtr->isDirty = true;
     }
+
+    void PageView::DistributeFromPage(const PageView* donorPage, const Int numberOfSlotsToMove, const Int donorResizeVariant) const{
+        const auto* leftData = donorPage->GetData();
+        page_offset_t offset = this->NewInsertOffset();
+
+        for (Int index = numberOfSlotsToMove; index < donorPage->PageSize(); index++){
+            const auto leftSlot = donorPage->GetSlotDirectory(index);
+            std::memcpy(this->framePtr->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
+
+            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize(), SlotDirectory::SLOT_USED);
+            this->InsertNewSlot(rightSlot);
+
+            offset += leftSlot.GetSize();
+            this->headerPtr->size++;
+        }
+
+        this->headerPtr->bytesLeft -= this->headerPtr->size * SlotDirectory::Size + offset;
+        this->framePtr->isDirty = true;
+
+        donorPage->Resize(donorResizeVariant);
+        donorPage->Defragment();
+    }
+
+    void PageView::DistributeFromBeginningOfPage(const PageView* donorPage, const Int numberOfSlotsToMove, const Int donorResizeVariant) const{
+        const auto* leftData = donorPage->GetData();
+        page_offset_t offset = this->NewInsertOffset();
+
+        for (Int index = 0; index < numberOfSlotsToMove; index++){
+            const auto leftSlot = donorPage->GetSlotDirectory(index);
+            std::memcpy(this->framePtr->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
+
+            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize(), SlotDirectory::SLOT_USED);
+            this->InsertNewSlot(rightSlot);
+
+            offset += leftSlot.GetSize();
+            this->headerPtr->size++;
+            this->headerPtr->bytesLeft -= leftSlot.GetSize() + SlotDirectory::Size;
+        }
+
+        this->framePtr->isDirty = true;
+
+        donorPage->Resize(donorResizeVariant);
+        donorPage->Defragment();
+    }
+
+    void PageView::DistributeSingleSlotFromPage(PageView* donorPage, Int donorIndexPosition, Int donorResizeVariant)
+    {
+    }
+
+    page_id_t PageView::PageId() const{
+        return this->headerPtr->pageId;
+    }
+
+    page_size_t PageView::PageSize() const{
+        return this->headerPtr->size;
+    }
+
+    object_t* PageView::GetData() const{
+        return this->framePtr->data;
+    }
 }

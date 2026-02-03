@@ -1,0 +1,95 @@
+﻿#include "../../include/Pages/AllocationPageView.h"
+
+#include "Database.h"
+#include "Guards/ReaderGuard.h"
+#include "Pages/IndexAllocationMapPage.h"
+
+namespace Pages{
+    bool AllocationPageView::GetBit(const std::size_t bitIndex) const noexcept{
+        const std::size_t byteIndex = bitIndex >> 3;                 // / 8
+        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
+        return (this->framePtr->data[byteIndex] & mask) != 0;
+    }
+
+    void AllocationPageView::SetBit(const std::size_t bitIndex) const noexcept{
+        const std::size_t byteIndex = bitIndex >> 3;
+        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
+        const auto byte = static_cast<UnsignedTinyInt>(this->framePtr->data[byteIndex] | mask);
+        this->framePtr->data[byteIndex] = static_cast<char>(byte);
+    }
+
+    void AllocationPageView::ClearBit(const std::size_t bitIndex) const noexcept{
+        const std::size_t byteIndex = bitIndex >> 3;
+        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
+        auto byte = this->framePtr->data[byteIndex];
+        byte = static_cast<UnsignedTinyInt>(byte & static_cast<UnsignedTinyInt>(~mask));
+        this->framePtr->data[byteIndex] = static_cast<char>(byte);
+    }
+
+    AllocationPageView::AllocationPageView(Frame* framePtr) : PageView(framePtr) {
+        this->additionalHeaderPtr = reinterpret_cast<IndexAllocationPageAdditionalHeader*>(
+            framePtr->data + PAGE_HEADER_SIZE
+        );
+        this->lastAllocatedExtentId = 0;
+    }
+
+    AllocationPageView::~AllocationPageView() = default;
+
+    extent_id_t AllocationPageView::SetExtentsAllocated(
+        const std::vector<extent_id_t>& extentIds,
+        const page_id_t globalAllocationMapPageId
+    ){
+        for (const auto& extentId : extentIds){
+            const extent_id_t bitMapId = extentId - IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
+
+            if (bitMapId >= EXTENT_BIT_MAP_SIZE)
+                return extentId;
+
+            this->SetBit(bitMapId);
+            this->lastAllocatedExtentId = bitMapId;
+            this->framePtr->isDirty = true;
+        }
+
+        return INVALID_EXTENT_ID;
+    }
+
+    void AllocationPageView::SetDeallocatedExtent(const extent_id_t extentId) const{
+        this->ClearBit(extentId);
+        this->framePtr->isDirty = true;
+    }
+
+    void AllocationPageView::GetAllocatedExtents(std::vector<extent_id_t>* allocatedExtents) const{
+        this->GetAllocatedExtents(allocatedExtents, 0);
+    }
+
+    void AllocationPageView::GetAllocatedExtents(
+        std::vector<extent_id_t>* allocatedExtents,
+        const extent_id_t startingExtentIndex
+    ) const{
+        allocatedExtents->clear();
+
+        const page_id_t globalAllocationMapPageId = DatabaseEngine::Database::GetGamAssociatedPage(this->headerPtr->pageId);
+        const page_id_t offSet = IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
+
+        if(startingExtentIndex >= EXTENT_BIT_MAP_SIZE)
+            return;
+
+        MultiThreading::ReaderGuard lock(&this->framePtr->latch);
+        for (extent_id_t id = startingExtentIndex; id < this->lastAllocatedExtentId; id++){
+            if (this->GetBit(id))
+                allocatedExtents->push_back(offSet + id);
+        }
+    }
+
+    void AllocationPageView::SetNextPageId(const page_id_t nextPageId) const{
+        this->additionalHeaderPtr->nextPageId = nextPageId;
+    }
+
+    page_id_t AllocationPageView::NextPageId() const{
+        return this->additionalHeaderPtr->nextPageId;
+    }
+
+    page_id_t AllocationPageView::CalculatePageIdOffsetByGamPageId(const page_id_t globalAllocationMapPageId) {
+        return (globalAllocationMapPageId - 2) * GAM_PAGE_SIZE;
+    }
+}

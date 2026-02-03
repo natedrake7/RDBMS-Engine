@@ -161,6 +161,16 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/BufferPool/BufferPoolMemory.cpp
         src/DatabaseEngine/include/Pages/PageView.h
         src/DatabaseEngine/src/Pages/PageView.cpp
+        src/DatabaseEngine/include/Pages/IndexPageView.h
+        src/DatabaseEngine/src/Pages/IndexPageView.cpp
+        src/DatabaseEngine/include/Pages/GlobalAllocationPageView.h
+        src/DatabaseEngine/src/Pages/GlobalAllocationPageView.cpp
+        src/DatabaseEngine/include/Pages/PageFreeSpaceView.h
+        src/DatabaseEngine/src/Pages/PageFreeSpaceView.cpp
+        src/DatabaseEngine/include/Pages/AllocationPageView.h
+        src/DatabaseEngine/src/Pages/AllocationPageView.cpp
+        src/DatabaseEngine/include/Pages/HeadePageView.h
+        src/DatabaseEngine/src/Pages/HeaderPageView.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)
