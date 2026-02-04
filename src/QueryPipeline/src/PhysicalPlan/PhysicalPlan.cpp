@@ -6,6 +6,7 @@
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
 #include "../../../DatabaseEngine/include/ExecutionProperties.h"
+#include "../../../DatabaseEngine/include/DataStorage/Table.h"
 #include "SystemDatabases/TemporaryDatabase.h"
 
 namespace QueryPipeline::PhysicalPlan {
@@ -538,7 +539,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
             values.push_back(value);
         }
 
-        ranges::sort(values, SortInsertsAscending);
+        std::ranges::sort(values, SortInsertsAscending);
         return values;
     }
 
@@ -789,7 +790,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     auto* db =  this->server->UseDatabase(this->table->databaseId);
 
-    vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
+    std::vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
     columnsPtrs.reserve(columns.size());
 
     for (const auto& column: this->columns)
@@ -1043,7 +1044,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     const DataTypes::Guid& sessionId,
     Statements::DataSource *table,
     std::string &constraintName,
-    vector<column_index_t> &columns)
+    std::vector<column_index_t> &columns)
     : ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
   ExecutionResult * PhysicalIndexCreate::Execute(const DatabaseEngine::ExecutionProperties& properties){

@@ -3,7 +3,6 @@
 #include "../../../include/DataStorage/Column.h"
 #include "../../../include/Database.h"
 
-#include "../../../include/Pages/IndexPage.h"
 #include "../../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../include/BufferPool/StorageManager.h"
 
@@ -256,7 +255,7 @@ namespace DatabaseEngine::StorageTypes {
 
     }
 
-    int Table::CreateNonClusteredIndex(vector<column_index_t> &columnIndices){
+    int Table::CreateNonClusteredIndex(std::vector<column_index_t> &columnIndices){
         Headers::Index index;
         index.columns = std::move(columnIndices);
 

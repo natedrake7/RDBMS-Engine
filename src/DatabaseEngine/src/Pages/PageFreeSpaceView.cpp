@@ -1,5 +1,7 @@
 ﻿#include "../../include/Pages/PageFreeSpaceView.h"
 
+#include "Pages/Additional/Frame.h"
+
 namespace Pages{
     PageFreeSpaceView::PageFreeSpaceView(Frame* frame) : PageView(frame) {}
 
@@ -22,7 +24,7 @@ namespace Pages{
         const auto* header = page->GetHeader();
 
         this->SetPageAllocated(header->pageId);
-        this->SetPageType(header->pageId, header->type);
+        this->SetPageType(header->pageId, page->GetPageType());
         this->SetPageAllocationStatus(header->pageId, header->bytesLeft);
 
         this->framePtr->isDirty = true;

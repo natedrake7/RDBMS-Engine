@@ -2,11 +2,15 @@
 #include "../../include/DataStorage/Column.h"
 #include "../../include/DataStorage/Row.h"
 
-#include <limits>
-#include <stdexcept>
+#include "../../include/Pages/Additional/RowReference.h"
 
-long double AggregateFunctions::Average(const std::vector<Pages::RowReference>& rows, const column_index_t& columnIndex, const long double* constantValue)
-{
+#include <limits>
+
+long double AggregateFunctions::Average(
+    const std::vector<Pages::RowReference>& rows,
+    const column_index_t& columnIndex,
+    const long double* constantValue
+){
     if (constantValue != nullptr)
         return *constantValue ;
     

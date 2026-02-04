@@ -1,8 +1,5 @@
 #include "../include/Database.h"
 #include <vector>
-#include "../include/Pages/PageFreeSpacePage.h"
-#include "../include/Pages/IndexAllocationMapPage.h"
-#include "../include/Pages/IndexPage.h"
 #include "../include/DatabaseConstants.h"
 #include "../include/DataStorage/Table.h"
 #include "../include/BufferPool/StorageManager.h"

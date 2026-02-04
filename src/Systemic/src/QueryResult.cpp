@@ -4,6 +4,9 @@
 
 #include <iostream>
 
+#include "DataTypes/DateTime.h"
+#include "DataTypes/Decimal.h"
+
 QueryResult::QueryResult() = default;
 
 QueryResult::QueryResult(const QueryResult& other){
@@ -56,10 +59,7 @@ void QueryResult::Print() const{
       std::cout << column.AsDecimal();
       break;
     case DataType::String:
-      std::cout << column.AsString();
-      break;
     case DataType::UnicodeString:
-      //TODO
       std::cout << column.AsString();
       break;
     case DataType::Bool:

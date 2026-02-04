@@ -4,34 +4,20 @@
 #include <vector>
 #include "DataStorage/Column.h"
 #include "Logger/Logger.h"
-#include "Pages/IndexPage.h"
-#include "DataStorage/Table.h"
-#include "Pages/OverflowPage.h"
+#include "Pages/IndexPageView.h"
+#include "Pages/LargeObjectView.h"
+#include "Pages/OverflowPageView.h"
 #include "Pages/PageFreeSpaceView.h"
-#include "Pages/PageGuard.h"
 
 namespace Indexing {
-  struct Node;
-  class BTree;
-  struct BPlusTreeNonClusteredData;
-  struct NodeHeader;
+    class BTree;
 } // namespace Indexing
 
 namespace DatabaseEngine::StorageTypes {
-  class Table;
-  class Block;
-  class Column;
-  class Row;
-  struct TableHeader;
+    class Table;
+    class Column;
+    struct TableHeader;
 } // namespace DatabaseEngine::StorageTypes
-
-namespace Pages {
-  class Page;
-  class LargeObjectPage;
-  class PageFreeSpacePage;
-  class IndexAllocationMapPage;
-  class IndexPage;
-} // namespace Pages
 
 namespace DatabaseEngine {
     struct DatabaseHeader {
@@ -59,7 +45,7 @@ class Database {
 
     Dictionary<int32_t, table_id_t> tableIdsDictionary;
 
-    vector<StorageTypes::Table *> tables;
+    std::vector<StorageTypes::Table *> tables;
 
     MultiThreading::ReadWriteMutex gamPageMutex;
     MultiThreading::ReadWriteMutex pfsPageMutex;
@@ -90,7 +76,7 @@ protected:
 public:
     explicit Database(const std::string &dbName, const bool& isServerInitialization = false);
 
-    explicit Database(const std::string& dbName, const vector<Headers::sysTable>& tables);
+    explicit Database(const std::string& dbName, const std::vector<Headers::sysTable>& tables);
 
     ~Database();
 
@@ -112,26 +98,26 @@ public:
       table_id_t tableOrdinal
     );
 
-    static string CreateDatabasePath(const std::string& dbName);
+    static std::string CreateDatabasePath(const std::string& dbName);
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
-      const vector<column_index_t>& indexedColumns,
+      const std::vector<column_index_t>& indexedColumns,
       const StorageTypes::InsertPayload& payload
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
-      const vector<column_index_t>& indexedColumns,
+      const std::vector<column_index_t>& indexedColumns,
       const Pages::RowReference& rowPtr,
       Int offSet
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
-        const vector<column_index_t>& indexedColumns,
+        const std::vector<column_index_t>& indexedColumns,
         const Pages::RowReference& rowPtr,
         const DataTypes::RowIdentifier& rowId
     );
 
-    [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(const string& filename, page_id_t pageId);
+    [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(const std::string& filename, page_id_t pageId);
 
     static page_id_t GetGamAssociatedPage(page_id_t pageId);
 
@@ -146,9 +132,9 @@ public:
     StorageTypes::Table *CreateTable(
       table_id_t tableId,
       Int ordinalPosition,
-      const vector<StorageTypes::Column *> &columns,
+      const std::vector<StorageTypes::Column *> &columns,
       const Headers::Index *clusteredKeyIndexes = nullptr,
-      const vector<Headers::Index> *nonClusteredIndexes = nullptr);
+      const std::vector<Headers::Index> *nonClusteredIndexes = nullptr);
 
     void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
 
@@ -167,23 +153,23 @@ public:
 
     // [[nodiscard]] StorageTypes::Table *OpenTableById(table_id_t tableId) const;
 
-    void DeleteTable(const string& tableName);
+    void DeleteTable(const std::string& tableName);
 
     void DeleteDatabase() const;
 
     void TruncateTable(table_id_t tableId) const;
 
-    Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
+    Pages::OverflowPageView CreateOverflowPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
 
     Pages::PageView CreateDataPage(table_id_t tableId, Int pagesToAllocate);
 
-    Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
+    Pages::LargeObjectView CreateLargeDataPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
 
-    [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetTableLastLargeDataPage(table_id_t tableId)const;
+    [[nodiscard]] Pages::LargeObjectView GetTableLastLargeDataPage(table_id_t tableId)const;
 
-    [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(page_id_t pageId, table_id_t tableId)const;
+    [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId, table_id_t tableId)const;
 
-    Pages::PageGuard<Pages::OverflowPage> GetLastOverflowPage(table_id_t tableId, const block_size_t& size);
+    Pages::OverflowPageView GetLastOverflowPage(table_id_t tableId, const block_size_t& size);
 
     Pages::IndexPageView CreateIndexPage(
       table_id_t tableOrdinalPosition,
@@ -192,9 +178,9 @@ public:
       page_id_t treeId = 0
     );
 
-    [[nodiscard]] string GetFileName() const;
+    [[nodiscard]] std::string GetFileName() const;
 
-    [[nodiscard]] string GetSystemFilename() const;
+    [[nodiscard]] std::string GetSystemFilename() const;
 
     static page_id_t CalculateExtentFirstPageId(const extent_id_t &extentId);
 
@@ -234,8 +220,8 @@ public:
     const std::vector<StorageTypes::Table*>& GetTables() const;
 };
 
-void CreateDatabase(const string &dbName);
+void CreateDatabase(const std::string &dbName);
 
-Database* UseSystemDatabase(const std::string& dbName, const vector<Headers::sysTable>& tables);
+Database* UseSystemDatabase(const std::string& dbName, const std::vector<Headers::sysTable>& tables);
 
 }; // namespace DatabaseEngine

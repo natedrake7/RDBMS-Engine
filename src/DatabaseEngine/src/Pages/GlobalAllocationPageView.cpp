@@ -1,7 +1,7 @@
 ﻿#include "../../include/Pages/GlobalAllocationPageView.h"
-
 #include "Guards/ReaderGuard.h"
-#include "Pages/IndexAllocationMapPage.h"
+#include "Pages/AllocationPageView.h"
+#include "Pages/Additional/Frame.h"
 
 namespace Pages{
     bool GlobalAllocationPageView::GetBit(const std::size_t bitIndex) const noexcept{
@@ -27,9 +27,8 @@ namespace Pages{
 
     GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame) {
         this->lastAllocatedExtentId = 0;
+        this->type = PageType::GAM;
     }
-
-    GlobalAllocationPageView::~GlobalAllocationPageView() = default;
 
     int GlobalAllocationPageView::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const Int numberOfExtents){
         int allocatedExtents = 0;
@@ -47,7 +46,7 @@ namespace Pages{
 
             allocatedExtents++;
 
-            extents.push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(this->headerPtr->pageId) + extentId);
+            extents.push_back(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->headerPtr->pageId) + extentId);
         }
 
         return allocatedExtents;
@@ -76,7 +75,7 @@ namespace Pages{
             if (this->GetBit(id))
                 continue;
 
-            allocatedExtents.push_back(IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(this->headerPtr->pageId) + id);
+            allocatedExtents.push_back(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->headerPtr->pageId) + id);
         }
 
         return allocatedExtents;

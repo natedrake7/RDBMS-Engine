@@ -6,16 +6,18 @@
 #include "../../include/Managers/TransactionManager.h"
 
 namespace DatabaseEngine {
-  void GarbageCollector::Collect(const std::atomic<bool>& isServerRunning){
-    auto& transactionManager = TransactionManager::Get();
-    static const auto& versionDatabase = VersionDatabase::Get();
+    using namespace std::chrono_literals;
 
-    extent_id_t lastScannedExtentId = 0;
+    void GarbageCollector::Collect(const std::atomic<bool>& isServerRunning){
+        auto& transactionManager = TransactionManager::Get();
+        static const auto& versionDatabase = VersionDatabase::Get();
 
-    while (isServerRunning) {
-      std::this_thread::sleep_for(20000ms);
-      const auto oldestTransactionId = transactionManager.GetOldestActiveTransactionId();
-      lastScannedExtentId = versionDatabase.CleanupVersionedData(oldestTransactionId, lastScannedExtentId);
+        extent_id_t lastScannedExtentId = 0;
+
+        while (isServerRunning) {
+            std::this_thread::sleep_for(20000ms);
+            const auto oldestTransactionId = transactionManager.GetOldestActiveTransactionId();
+            lastScannedExtentId = versionDatabase.CleanupVersionedData(oldestTransactionId, lastScannedExtentId);
+        }
     }
-  }
 }

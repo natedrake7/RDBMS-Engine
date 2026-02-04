@@ -305,7 +305,7 @@ namespace DataTypes::Indexing{
         const object_t* buffer,
         page_offset_t& offset,
         const UnsignedTinyInt& numberOfSubKeys,
-        const std::array<DataType, MAX_NUMBER_OF_SUB_KEYS>& keyTypes
+        const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes
     ){
         std::vector<Key> subKeys;
         subKeys.reserve(numberOfSubKeys);

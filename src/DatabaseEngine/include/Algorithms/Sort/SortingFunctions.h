@@ -1,19 +1,21 @@
 ﻿#pragma once
 #include <unordered_map>
 #include <vector>
+
+#include "../../../../Systemic/include/RowIdentifier.h"
 #include "../../../../Systemic/include/QueryResult.h"
 #include "../../../include/DataStorage/Column.h"
+
+namespace Pages{
+    struct RowReference;
+}
+
+class GroupCondition;
 
 namespace QueryPipeline::Statements {
   struct OrderColumn;
 }
 
-class GroupCondition;
-
-namespace DatabaseEngine::StorageTypes {
-    class Block;
-    class Row;
-}
 
 typedef struct AggregateResults {
     uint64_t count;

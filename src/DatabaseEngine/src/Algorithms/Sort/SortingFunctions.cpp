@@ -8,7 +8,9 @@
 #include <ranges>
 #include <cstring>
 
-using namespace DatabaseEngine::StorageTypes;
+#include "Evaluators/Expression.h"
+
+#include "../../QueryPipeline/include/Statements.h"
 
 bool SortingFunctions::CompareRowsAscending(const Pages::RowReference& firstRow, const Pages::RowReference& secondRow, const column_index_t& columnIndex){
     return (firstRow.PartialMaterialize(columnIndex) < secondRow.PartialMaterialize(columnIndex)).AsBool();

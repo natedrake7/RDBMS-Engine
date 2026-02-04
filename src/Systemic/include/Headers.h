@@ -5,6 +5,7 @@
 #include <vector>
 #include <ostream>
 
+#include "DataTypes/Decimal.h"
 #include "DataTypes/Value.h"
 
 namespace Headers {

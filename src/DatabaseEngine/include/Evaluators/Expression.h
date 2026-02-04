@@ -157,9 +157,9 @@ namespace Expressions{
 
     public:
         std::vector<Expression*> arguments;
-        FunctionType functionType;
+        Constants::FunctionType functionType;
 
-        FunctionExpression(FunctionType functionType, std::vector<Expression*>& arguments);
+        FunctionExpression(Constants::FunctionType functionType, std::vector<Expression*>& arguments);
         ~FunctionExpression()override;
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;

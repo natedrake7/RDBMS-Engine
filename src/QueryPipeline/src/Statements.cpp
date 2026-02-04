@@ -27,7 +27,7 @@ namespace QueryPipeline::Statements {
       return {Errors::ValidationError::Error, "Failed to get user session"};
 
     if (!session->user->role->HasPermission(this->RequiredPermissions())) {
-      ostringstream os;
+        std::ostringstream os;
       os  << "User: " << session->user->name << " is not authorized to perform this action.";
 
       return {Errors::ValidationError::Error, os.str()};
@@ -59,8 +59,7 @@ namespace QueryPipeline::Statements {
         return res;
 
       if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
-
-        ostringstream os;
+          std::ostringstream os;
 
         os  << "Cannot convert from: "
           << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
@@ -106,7 +105,7 @@ namespace QueryPipeline::Statements {
 
       if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
 
-        ostringstream os;
+          std::ostringstream os;
 
         os  << "Cannot convert from: "
           << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
@@ -147,7 +146,7 @@ namespace QueryPipeline::Statements {
     if (this->role.empty())
       return {Errors::ValidationError::Error,  "role cannot be empty"};
 
-    ostringstream os;
+      std::ostringstream os;
     if (this->server->UserExists(this->username)) {
       os << "User with username: " << this->username << " already exists.";
 
@@ -174,7 +173,7 @@ namespace QueryPipeline::Statements {
   void CreateUserStatement::CleanUp(){ }
 
   Errors::ValidationStatus GrantRoleStatement::CompileDerived(ParserValidationScope& validationScope){
-    ostringstream os;
+      std::ostringstream os;
     if (!this->server->UserExists(this->username)) {
       os << "User: " << this->username << " does not exist.";
       return {Errors::ValidationError::Error, os.str()};
@@ -402,7 +401,7 @@ namespace QueryPipeline::Statements {
                                : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id == INVALID_TABLE_ID){
-      ostringstream os;
+        std::ostringstream os;
 
       os << "Table " + this->GetFullName() + " does not exist";
       return {Errors::ValidationError::Error, os.str()};
@@ -421,7 +420,7 @@ namespace QueryPipeline::Statements {
                                : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id != INVALID_TABLE_ID){
-      ostringstream os;
+        std::ostringstream os;
       os << "Table " + this->GetFullName() + " exists";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -448,7 +447,7 @@ namespace QueryPipeline::Statements {
     Headers::SchemaHeader schemaHeader;
 
     if (!schemasDict.TryGetValue(Functions::String::Lower(this->table->schema), schemaHeader)) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Schema: " << this->table->schema << "does not exist.";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -459,12 +458,12 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus CreateTableStatement::CompileColumnExpression(
     NewColumn*& column,
-    Dictionary<string, column_index_t>& columnNamesToIndexes,
+    Dictionary<std::string, column_index_t>& columnNamesToIndexes,
     bool& primaryKeyFound,
     column_index_t& index
   ){
     UnsignedSmallInt columnSize;
-    ostringstream os;
+      std::ostringstream os;
 
     if (!ColumnTypeSizes.TryGetValue(column->type.name, columnSize)) {
       os << "Column Type: " + column->type.name + " does not exist";
@@ -520,7 +519,7 @@ namespace QueryPipeline::Statements {
 
     column_index_t indexPosition = 0;
     bool primaryKeyFound = false;
-    Dictionary<string, column_index_t> columnNamesToIndexes;
+    Dictionary<std::string, column_index_t> columnNamesToIndexes;
 
     for (auto& column: this->columns)
       this->CompileColumnExpression(
@@ -534,7 +533,7 @@ namespace QueryPipeline::Statements {
       return {};
 
     if (primaryKeyFound) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Cannot have a primary key and a constraint declared";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -662,7 +661,7 @@ namespace QueryPipeline::Statements {
         continue;
 
       if (postProjectionAliases.Contains(resultExpr->name)) {
-        ostringstream os;
+          std::ostringstream os;
 
         os << resultExpr->name << " already exists on result set";
         return {Errors::ValidationError::Error, os.str()};
@@ -770,7 +769,7 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus SelectStatement::CompileDerived(ParserValidationScope& validationScope){
     if (!this->joins.empty() && this->table == nullptr) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Joins were specified but no calling table was not specified";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -840,7 +839,7 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus CreateDbStatement::CompileDerived(ParserValidationScope& validationScope){
     if (this->catalog->DatabaseExists(this->name)) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Database " + this->name + " already exists";
 
       return {Errors::ValidationError::Error, os.str()};
@@ -860,7 +859,7 @@ namespace QueryPipeline::Statements {
   void CreateDbStatement::CleanUp(){}
 
    Errors::ValidationStatus DropDbStatement::CompileDerived(ParserValidationScope& validationScope){
-     ostringstream os;
+       std::ostringstream os;
 
      const auto database = this->catalog->SelectDatabase(this->name);
 
@@ -891,7 +890,7 @@ namespace QueryPipeline::Statements {
     const auto dbHeader = this->catalog->SelectDatabase(this->name);
 
     if (dbHeader.id == INVALID_DATABASE_ID) {
-      ostringstream os;
+        std::ostringstream os;
 
       os << "Database " + this->name + " does not exist";
       return {Errors::ValidationError::Error, os.str()};
@@ -968,7 +967,7 @@ namespace QueryPipeline::Statements {
     ))
       return {};
 
-    ostringstream os;
+      std::ostringstream os;
 
     if (expression->IsConstant()) {
       auto* constantExpr = expression->AsConstant();
@@ -1066,7 +1065,7 @@ namespace QueryPipeline::Statements {
 
     //validate insert columns existance
     HashSet<int32_t> statementColumns;
-    ostringstream os;
+      std::ostringstream os;
     for (auto& column : this->columns) {
       Headers::ColumnHeader header;
 
@@ -1136,7 +1135,7 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus CreateSchemaStatement::CompileDerived(ParserValidationScope& validationScope){
     if (this->catalog->SchemaExists(this->databaseId, this->name)) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Schema " << this->name << " already exists";
 
       return {Errors::ValidationError::Error, os.str()};
@@ -1165,7 +1164,7 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus UpdateStatement::ValidateReturnType(const UpdateColumn* update) const{
-    ostringstream os;
+      std::ostringstream os;
 
     const auto valueType = update->value->GetReturnType();
     if (DataTypes::Coercions::IsCoercionAllowed(
@@ -1281,7 +1280,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
 
     const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
 
-    ostringstream os;
+      std::ostringstream os;
     for(auto& column: this->columns) {
       Headers::ColumnHeader header;
 
@@ -1323,7 +1322,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Errors::ValidationStatus AlterTableStatement::CompileAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
-    ostringstream os;
+      std::ostringstream os;
 
     auto* newColumn = this->column.newColumn;
 
@@ -1368,7 +1367,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
 
   Errors::ValidationStatus AlterTableStatement::CompileAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
-    ostringstream os;
+      std::ostringstream os;
 
     auto* alterColumn = this->column.alterColumn;
 
@@ -1407,7 +1406,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
-    ostringstream os;
+      std::ostringstream os;
     Headers::ColumnHeader header;
 
     auto* dropColumn = this->column.dropColumn;
@@ -1439,7 +1438,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     auto* renameColumn = this->column.renameColumn;
 
     if (!headers.TryGetValue(Functions::String::NormalizeString(renameColumn->oldName.name), header)) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Column " << renameColumn->oldName.name << " does not exist on table: " << this->table->GetFullName();
       return {Errors::ValidationError::Error, os.str()};;
     }
@@ -1568,7 +1567,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
 
     //validate binary expression action
     if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
-      ostringstream os;
+        std::ostringstream os;
 
       const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
       const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
@@ -1578,7 +1577,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     }
 
     if (!binaryExpr->ValidateOperation()) {
-      ostringstream os;
+        std::ostringstream os;
       os  << "Invalid operation between datatypes: "
         << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
         << " and "
@@ -1604,7 +1603,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
       return result;
 
     if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
-      ostringstream os;
+        std::ostringstream os;
 
       const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
       const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
@@ -1614,7 +1613,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     }
 
     if (!binaryExpr->ValidateOperation()) {
-      ostringstream os;
+        std::ostringstream os;
       os  << "Invalid operation between datatypes: "
         << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
         << " and "
@@ -1728,7 +1727,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
         return result;
 
       if (!ValidateExpressionCoercionTypes(DataType::Bool, branch)) {
-        ostringstream os;
+          std::ostringstream os;
 
         os  << "Expression of type: "
           << ColumnTypesToStringDictionary.Get(branch->GetReturnType())
@@ -1809,7 +1808,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Errors::ValidationStatus CompileColumnExpression(const Expressions::ColumnExpression *columnExpr){
-    ostringstream os;
+      std::ostringstream os;
 
     os << "No table was specified but column with name: " << columnExpr->alias << " was specified.";
 
@@ -1841,7 +1840,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   ){
     DataType type;
     if (!validationScope.variables.TryGetValue(variableExpr->normalizedName, type)) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Variable: " << variableExpr->name <<" was not declared in this scope";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -1855,7 +1854,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     ColumnName &column,
     StatementValidationScope& statementValidationScope
   ){
-    ostringstream os;
+      std::ostringstream os;
     if (!column.alias.empty()) {
       table_id_t tableId;
 
@@ -1899,7 +1898,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     Expressions::ColumnExpression *column,
     const StatementValidationScope& statementValidationScope
   ){
-    ostringstream os;
+      std::ostringstream os;
 
     table_id_t tableId;
     Headers::ColumnHeader columnHeader;
@@ -1932,12 +1931,12 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     Expressions::ColumnExpression *column,
     const StatementValidationScope& statementValidationScope
   ){
-    ostringstream os;
+      std::ostringstream os;
 
     Headers::ColumnHeader columnHeader;
     bool columnExistsOnStatement = false;
 
-    for (const auto &columns : *statementValidationScope.tablesColumnsDictionary | views::values) {
+    for (const auto &columns : *statementValidationScope.tablesColumnsDictionary | std::views::values) {
       if (!columns.TryGetValue(Functions::String::Lower(column->alias), columnHeader))
         continue;
 
@@ -2031,7 +2030,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     if (column->tableAlias.empty()) {
       statement->results.erase(statement->results.begin() + *statementValidationScope.indexPos);
 
-      for (const auto &columnsDict : statement->tableColumnsDictionary | views::values) {
+      for (const auto &columnsDict : statement->tableColumnsDictionary | std::views::values) {
         AssignColumnsFromWildCardExpression(columnsDict, column->tableAlias, statementValidationScope, statement->results);
         *statementValidationScope.indexPos += static_cast<int>(columnsDict.size());
       }
@@ -2044,7 +2043,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
     table_id_t tableId = 0;
     if (!column->tableAlias.empty()
       && !statementValidationScope.tableAliasesDictionary->TryGetValue(column->tableAlias, tableId)) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Alias " << column->tableAlias << " does on exist on statement";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -2065,7 +2064,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   ) {
     results.insert(results.begin() + *statementValidationScope.indexPos, columnsDict.size(), nullptr);
     // results.resize(results.size() + columnsDict.size());
-    for (const auto &header: columnsDict | views::values) {
+    for (const auto &header: columnsDict | std::views::values) {
 
       auto* columnExpression = new Expressions::ColumnExpression(
         header.name,
@@ -2291,7 +2290,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   ){
     const Expressions::Expression* expression;
     if (!postProjectionAliases.TryGetValue(column->alias, expression)) {
-      ostringstream os;
+        std::ostringstream os;
       os << "Column: " << column->alias << " does not exist in the statement";
 
       return {Errors::ValidationError::Error, os.str()};
@@ -2459,7 +2458,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(ParserValidationScope& 
   }
 
   Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType type) {
-    ostringstream os;
+      std::ostringstream os;
 
     os  << "Expression of type: " << ColumnTypesToStringDictionary.Get(type)
         << " cannot be converted to type: Bool";

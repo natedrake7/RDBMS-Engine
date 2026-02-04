@@ -1,82 +1,8 @@
 ﻿#pragma once
-#include "IndexPage.h"
 #include "PageView.h"
-
+#include "Additional/IndexPageStructs.h"
 
 namespace Pages{
-    struct IndexPageAdditionalHeader {
-		static constexpr UnsignedTinyInt TREE_TYPE_BIT_POS = 0;
-		static constexpr UnsignedTinyInt IS_LEAF_BIT_POS = 2;
-		static constexpr UnsignedTinyInt IS_ROOT_BIT_POS = 3;
-		static constexpr UnsignedTinyInt IS_EMPTY_BIT_POS = 4;
-		static constexpr UnsignedTinyInt NUMBER_OF_SUB_KEYS_BIT_POS = 5;
-
-		static constexpr UnsignedTinyInt TREE_TYPE_BIT_MASK = 0x03;        // 0000 0011
-		static constexpr UnsignedTinyInt NUMBER_OF_SUB_KEYS_BIT_MASK = 0x07; //
-
-		std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS> keyTypes;
-		PackedByte flags;
-		page_id_t treeId;
-
-		page_id_t previousNode;
-		page_id_t nextNode;
-
-		Constants::TreeType GetTreeType() const;
-		bool IsLeaf() const;
-		bool IsRoot() const;
-		bool IsEmpty() const;
-		UnsignedTinyInt SubKeys() const;
-
-		// Setters
-		void SetTreeType(const Constants::TreeType& type);
-		void SetIsLeaf(bool value);
-		void SetIsRoot(bool value);
-		void SetIsEmpty(bool value);
-		void SetNumberOfSubKeys(UnsignedTinyInt count);
-
-		IndexPageAdditionalHeader();
-	};
-
-    struct IndexInsertTuple{
-        DataTypes::Indexing::Key key;
-        DatabaseEngine::StorageTypes::InsertPayload* payload;
-
-        IndexInsertTuple();
-        IndexInsertTuple(DataTypes::Indexing::Key& key, DatabaseEngine::StorageTypes::InsertPayload* payload);
-        ~IndexInsertTuple();
-    };
-
-	struct LeafNodeTuple{
-		DataTypes::Indexing::Key key;
-		RowReference row;
-
-		LeafNodeTuple& operator=(LeafNodeTuple&& other) noexcept;
-		LeafNodeTuple(LeafNodeTuple&& other) noexcept;
-
-		LeafNodeTuple& operator=(const LeafNodeTuple& other);
-		LeafNodeTuple(const LeafNodeTuple& other);
-
-		LeafNodeTuple(RowReference& row, DataTypes::Indexing::Key& key);
-	};
-
-	struct RowIdTuple{
-		DataTypes::Indexing::Key key;
-		DataTypes::RowIdentifier rowId;
-	};
-
-	struct InternalNodeTuple{
-		DataTypes::Indexing::Key key;
-		page_id_t pageId;
-
-		InternalNodeTuple& operator=(InternalNodeTuple&& other) noexcept;
-		InternalNodeTuple(InternalNodeTuple&& other) noexcept;
-
-		InternalNodeTuple& operator=(const InternalNodeTuple& other);
-		InternalNodeTuple(const InternalNodeTuple& other);
-
-		InternalNodeTuple(DataTypes::Indexing::Key& key, page_id_t pageId);
-	};
-
     class IndexPageView final : public PageView {
         IndexPageAdditionalHeader* additionalHeaderPtr;
 
@@ -93,7 +19,7 @@ namespace Pages{
             IndexPageView();
             explicit IndexPageView(Frame* framePtr);
 
-            void SetTreeType(TreeType treeType) const;
+            void SetTreeType(Constants::TreeType treeType) const;
             void SetTreeId(page_id_t treeId) const;
             void SetKeyTypes(const std::vector<DataType>& keyTypes) const;
 

@@ -1,5 +1,7 @@
 ﻿#include "../../../include/Pages/Additional/RowReference.h"
 
+#include "Pages/PageView.h"
+
 namespace Pages{
    RowReference::RowReference(){
         this->pagePtr = nullptr;

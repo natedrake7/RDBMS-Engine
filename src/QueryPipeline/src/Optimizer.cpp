@@ -549,7 +549,7 @@ namespace QueryPipeline {
       );
     }
 
-    ranges::sort(infoVector, JoinOrderAnalyzeInfo());
+    std::ranges::sort(infoVector, JoinOrderAnalyzeInfo());
 
     auto* baseSource = statement->table;
     Statements::JoinStatement* reorderedJoin = nullptr;
@@ -660,7 +660,7 @@ namespace QueryPipeline {
         return Optimizer::BuildSeekKeys(candidate.analyzeInfo, conjunctions);
     }
 
-    ranges::sort(candidates, IndexCandidate());
+    std::ranges::sort(candidates, IndexCandidate());
 
     const auto& candidate = candidates[0];
     return Optimizer::BuildSeekKeys(candidate.analyzeInfo, conjunctions);

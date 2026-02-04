@@ -1,5 +1,4 @@
 #pragma once
-#include "../../Systemic/include/Headers.h"
 #include "../../Systemic/include/Errors.h"
 #include "../../DatabaseEngine/include/Database.h"
 #include "../../DatabaseEngine/include/SystemDatabases/VersionDatabase.h"
@@ -9,7 +8,6 @@
 #include "UserManager.h"
 
 #include <string>
-#include <vector>
 
 namespace DatabaseEngine {
   class TemporaryDatabase;

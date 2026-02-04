@@ -7,7 +7,6 @@
 #include "DatabaseConstants.h"
 #include "../../QueryPipeline/include/PhysicalPlan.h"
 
-#include "Pages/PageGuard.h"
 #include "DataStorage/Row.h"
 #include "Pages/IndexPageView.h"
 
@@ -46,8 +45,8 @@ namespace Indexing{
         DatabaseEngine::StorageTypes::Table* table;
 
         static void AssignLeavesConnections(
-            Pages::IndexPageView& child,
-            Pages::IndexPageView& newChild
+            const Pages::IndexPageView& child,
+            const Pages::IndexPageView& newChild
         );
 
         static Int LeafLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
@@ -63,18 +62,18 @@ namespace Indexing{
         void SplitRoot(Pages::IndexPageView& root, MultiThreading::ReaderGuard& rootLock, Int pagesToAllocate);
 
         void SplitChild(
-            Pages::IndexPageView& parent,
+            const Pages::IndexPageView& parent,
             MultiThreading::ReaderGuard& parentReadLock,
             Int index,
-            Pages::IndexPageView& child,
+            const Pages::IndexPageView& child,
             MultiThreading::ReaderGuard& childReadLock,
             Int pagesToAllocate
         );
 
         void SplitLeafNoLock(
-            Pages::IndexPageView& parent,
-            Pages::IndexPageView& child,
-            Pages::IndexPageView& newChild,
+            const Pages::IndexPageView& parent,
+            const Pages::IndexPageView& child,
+            const Pages::IndexPageView& newChild,
             Int index
         )const;
 
@@ -86,13 +85,13 @@ namespace Indexing{
         )const;
 
         void SplitChildNoLock(
-            Pages::IndexPageView& parent,
+            const Pages::IndexPageView& parent,
             Int index,
-            Pages::IndexPageView& child,
+            const Pages::IndexPageView& child,
             Int pagesToAllocate
         );
         Errors::RuntimeStatus InsertToNonFullNode(
-            Pages::IndexPageView& parent,
+            const Pages::IndexPageView& parent,
             const Pages::IndexInsertTuple& tuple,
             Int pagesToAllocate,
             Int& indexPosition

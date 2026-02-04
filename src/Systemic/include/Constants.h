@@ -1,6 +1,5 @@
 #pragma once
 #include "DataTypes/DataTypes.h"
-#include <cstdint>
 #include <limits>
 
 constexpr Int NUMBER_OF_HISTOGRAM_BUCKETS = 100;

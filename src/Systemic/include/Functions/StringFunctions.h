@@ -1,6 +1,5 @@
 #pragma once
 #include <algorithm>
-#include <locale>
 #include <string>
 #include <vector>
 #include "../DataTypes/DataTypes.h"

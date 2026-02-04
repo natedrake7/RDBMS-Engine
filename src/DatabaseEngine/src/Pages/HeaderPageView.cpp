@@ -1,6 +1,7 @@
 ﻿#include "Database.h"
-#include "../../include/Pages/HeadePageView.h"
+#include "../../include/Pages/HeaderPageView.h"
 #include "DataStorage/Table.h"
+#include "Pages/Additional/Frame.h"
 
 namespace Pages{
     void HeaderPageView::ReadTableHeadersFromDisk(){
@@ -45,9 +46,9 @@ namespace Pages{
         );
 
         this->ReadTableHeadersFromDisk();
-    }
 
-    HeaderPageView::~HeaderPageView() = default;
+        this->type = PageType::METADATA;
+    }
 
     DatabaseEngine::DatabaseHeader* HeaderPageView::GetDatabaseHeaderPtr() const{
         return this->databaseHeaderPtr;

@@ -1,18 +1,12 @@
 ﻿#pragma once
 #include "PageView.h"
+#include "../../include/DataStorage/Table.h"
 
-namespace DatabaseEngine::StorageTypes
-{
-    struct TableHeader;
-}
-
-namespace DatabaseEngine
-{
+namespace DatabaseEngine{
     struct DatabaseHeader;
 }
 
-namespace Pages
-{
+namespace Pages{
     struct Frame;
 
     class HeaderPageView final : public PageView{
@@ -24,8 +18,6 @@ namespace Pages
 
         public:
             explicit HeaderPageView(Frame* framePtr);
-            ~HeaderPageView() override;
-
             [[nodiscard]] DatabaseEngine::DatabaseHeader* GetDatabaseHeaderPtr() const;
 
             const std::vector<DatabaseEngine::StorageTypes::TableHeader>& GetTableHeaders() const;

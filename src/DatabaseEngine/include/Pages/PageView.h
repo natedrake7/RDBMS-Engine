@@ -1,11 +1,23 @@
 ﻿#pragma once
-#include "RowIdentifier.h"
+#include "../DatabaseConstants.h"
+#include "../../Systemic/include/QueryResult.h"
+#include "../DataStorage/Row.h"
 #include "Additional/SlotDirectory.h"
-#include "DataStorage/InsertPayload.h"
-#include "DataTypes/DataTypes.h"
-#include "Guards/ReadWriteMutex.h"
+
+namespace DataTypes{
+    struct RowIdentifier;
+}
+
+namespace DatabaseEngine::StorageTypes{
+    class InsertPayload;
+}
+
+namespace MultiThreading{
+    class ReadWriteMutex;
+}
 
 namespace Pages{
+    struct RowReference;
     struct Frame;
 
     struct PageHeader{
@@ -23,7 +35,7 @@ namespace Pages{
         Frame* framePtr;
         PageHeader* headerPtr;
 
-        PageType type;
+        Constants::PageType type;
 
         void SetFileName(const std::string &otherFilename) const;
         void SetPageId(page_id_t pageId) const;
@@ -84,9 +96,15 @@ namespace Pages{
 
         [[nodiscard]] MultiThreading::ReadWriteMutex& Latch()const;
 
-        QueryResult MaterializeRow(Int indexPosition) const;
-        Value PartialMaterializeRow(Int indexPosition, column_index_t columnIndex) const;
+        void InitializeRowReferenceCache(const RowReference* rowPtr, Int numberOfColumns)const;
+        [[nodiscard]] QueryResult MaterializeRow(Int indexPosition, Int keySize) const;
+        Value PartialMaterializeRow(const RowReference* rowPtr, column_index_t columnIndex) const;
 
         [[nodiscard]] bool IsValid()const;
+
+        [[nodiscard]] Constants::PageType GetPageType() const;
+
+        void IncreasePinCount() const;
+        void DecreasePinCount() const;
     };
 }

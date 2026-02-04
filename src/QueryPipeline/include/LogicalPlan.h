@@ -216,7 +216,7 @@ namespace QueryPipeline {
       Statements::DataSource* table;
       std::string constraintName;
       std::vector<Statements::NewColumn*> columns;
-      vector<column_index_t> primaryKey;
+      std::vector<column_index_t> primaryKey;
 
       explicit LogicalTableCreate(
         const DataTypes::Guid& sessionId,

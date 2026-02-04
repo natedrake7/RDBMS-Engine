@@ -1,8 +1,5 @@
 #include "../../include/SystemDatabases/VersionDatabase.h"
 
-#include "../../include/Pages/HeaderPage.h"
-#include "../../include/Pages/GlobalAllocationMapPage.h"
-#include "../../include/Pages/PageFreeSpacePage.h"
 #include "../../include/BufferPool/StorageManager.h"
 #include "../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../Systemic/include/Guards/WriterGuard.h"
@@ -10,10 +7,10 @@
 #include <nlohmann/json.hpp>
 
 namespace DatabaseEngine {
-  VersionDatabase& VersionDatabase::Get(){
-    static VersionDatabase instance;
-    return instance;
-  }
+      VersionDatabase& VersionDatabase::Get(){
+        static VersionDatabase instance;
+        return instance;
+      }
 
   void VersionDatabase::Initialize(const std::string& configPath){
     this->ReadConfiguration(configPath);
@@ -32,7 +29,7 @@ namespace DatabaseEngine {
 
   VersionDatabase::~VersionDatabase() = default;
 
-  void VersionDatabase::ReadConfiguration(const string& configPath){
+  void VersionDatabase::ReadConfiguration(const std::string& configPath){
     std::ifstream file(configPath);
 
     if (!file.is_open())
@@ -56,7 +53,7 @@ namespace DatabaseEngine {
     return std::filesystem::exists(this->filename);
   }
 
-  string VersionDatabase::CreateDatabasePath(const string & dbName){ return dbName + "/" + dbName; }
+  std::string VersionDatabase::CreateDatabasePath(const std::string & dbName){ return dbName + "/" + dbName; }
 
   void VersionDatabase::PopulateFilenames(){
      const auto& path = Database::CreateDatabasePath(this->name);

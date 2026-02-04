@@ -2,11 +2,9 @@
 #include "Row.h"
 #include "../../Systemic/include/Errors.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
-
-namespace DatabaseEngine::StorageTypes
-{
-    class Column;
-}
+#include "../../../Systemic/include/DataTypes/DateTime.h"
+#include "../../../Systemic/include/DataTypes/Decimal.h"
+#include "../../../Systemic/include/DataTypes/Guid.h"
 
 namespace DatabaseEngine::StorageTypes {
     class InsertPayload final{

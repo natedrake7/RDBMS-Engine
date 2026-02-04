@@ -1,12 +1,6 @@
 #include "../../../include/DataStorage/Table.h"
-#include "../../../../Systemic/include/DataStructures/BitMap.h"
-#include "../../../include/DataStorage/Row.h"
-#include "../../../include/DatabaseConstants.h"
 #include "../../../include/Database.h"
-#include "../../../include/Pages/LargeObjectPage.h"
 #include "../../../include/BufferPool/StorageManager.h"
-#include "../../../include/Pages/Page.h"
-#include "../../../include/Pages/PageFreeSpacePage.h"
 #include "DataStorage/InsertPayload.h"
 
 namespace DatabaseEngine::StorageTypes {
@@ -42,7 +36,7 @@ namespace DatabaseEngine::StorageTypes {
         const Value& value,
         page_offset_t &offset,
         block_size_t& remainingBlockSize,
-        Pages::LargeDataObject* previousDataObject
+        Pages::LargeObjectView* previousDataObject
     )const{
         // auto page = this->GetOrCreateLargeDataPage();
         //
@@ -98,7 +92,7 @@ namespace DatabaseEngine::StorageTypes {
         // return page->PageId();
     }
 
-    Pages::PageGuard<Pages::LargeObjectPage> Table::GetOrCreateLargeDataPage() const{
+    Pages::LargeObjectView Table::GetOrCreateLargeDataPage() const{
         auto largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId);
 
         return !largeDataPage.IsValid()
@@ -106,9 +100,11 @@ namespace DatabaseEngine::StorageTypes {
                     : largeDataPage;
     }
 
-    void Table::LinkLargePageDataObjectChunks(Pages::LargeDataObject *dataObject, const page_id_t lastLargePageId){
-        if (dataObject != nullptr) 
-            dataObject->nextPageId = lastLargePageId;
+    void Table::LinkLargePageDataObjectChunks(const Pages::LargeObjectView* dataObject, const page_id_t lastLargePageId){
+        if (dataObject == nullptr)
+            return;
+
+        dataObject->SetNextPageId(lastLargePageId);
     }
 
     void Table::InsertLargeDataObjectPointerToRow(
@@ -122,11 +118,11 @@ namespace DatabaseEngine::StorageTypes {
         // row->UpdateColumnData(block);
     }
 
-    Pages::PageGuard<Pages::LargeObjectPage> Table::GetLargeDataPage(const page_id_t pageId) const {
+    Pages::LargeObjectView Table::GetLargeDataPage(const page_id_t pageId) const {
       return Storage::StorageManager::Get().GetLargeDataPage(this->database->GetFileName(), pageId, this);
     }
 
-    Pages::PageGuard<Pages::OverflowPage> Table::GetOverflowPage(const page_id_t pageId) const{
+    Pages::OverflowPageView Table::GetOverflowPage(const page_id_t pageId) const{
       return Storage::StorageManager::Get().GetOverflowPage(this->database->GetFileName(), pageId, this);
     }
 }

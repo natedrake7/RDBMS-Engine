@@ -7,21 +7,20 @@
 #include "../../../Systemic/include/Headers.h"
 #include "../BTree.h"
 #include "../Logger/Logger.h"
-#include "../Pages/PageGuard.h"
+#include "../Pages/OverflowPageView.h"
 
-namespace DatabaseEngine::StorageTypes
-{
-    struct InsertPayload;
+namespace Pages{
+    class LargeObjectView;
+}
+
+namespace DatabaseEngine::StorageTypes{
+    class InsertPayload;
 }
 
 namespace QueryPipeline::Statements {
     struct Expression;
 }
 
-using namespace std;
-using namespace Constants;
-
-class RowCondition;
 class Value;
 
 namespace Indexing{
@@ -34,15 +33,6 @@ namespace DatabaseEngine{
     namespace StorageTypes{
         class Row;
     }
-}
-
-namespace Pages{
-    class Page;
-    class LargeObjectPage;
-    class PageFreeSpacePage;
-    class IndexPage;
-    class OverflowPage;
-    struct LargeDataObject;
 }
 
 namespace ByteMaps{
@@ -83,10 +73,10 @@ namespace DatabaseEngine::StorageTypes
         HashSet<column_id_t> clusteredIndexColumnsCache;
 
         Indexing::BTree* clusteredIndexedTree;
-        vector<Indexing::BTree*> nonClusteredIndexedTrees;
+        std::vector<Indexing::BTree*> nonClusteredIndexedTrees;
 
         protected:
-            static bool VectorContainsIndex(const vector<column_index_t>& vector, column_index_t index, int& indexPosition);
+            static bool VectorContainsIndex(const std::vector<column_index_t>& vector, column_index_t index, int& indexPosition);
 
         /**
         * @name Index and Pages protected Functions
@@ -101,7 +91,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] Pages::IndexPageView GetIndexFromDisk(page_id_t indexPageId) const;
 
             static void LinkLargePageDataObjectChunks(
-                Pages::LargeDataObject *dataObject,
+                const Pages::LargeObjectView* dataObject,
                 page_id_t lastLargePageId
             );
             void InsertLargeDataObjectPointerToRow(
@@ -113,9 +103,9 @@ namespace DatabaseEngine::StorageTypes
                 const Value& value,
                 page_offset_t &offset,
                 block_size_t &remainingBlockSize,
-                Pages::LargeDataObject* previousDataObject
+                Pages::LargeObjectView* previousDataObject
             )const;
-            [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetOrCreateLargeDataPage() const;
+            [[nodiscard]] Pages::LargeObjectView GetOrCreateLargeDataPage() const;
 
         /** @} End of: Class Constructors and Destructors*/
 
@@ -144,10 +134,10 @@ namespace DatabaseEngine::StorageTypes
             Table(
               table_id_t tableId,
               Int ordinalPosition,
-              const vector<Column *> &columns,
+              const std::vector<Column *> &columns,
               Database *database,
               const Headers::Index* clusteredIndex = nullptr,
-              const vector<Headers::Index> *nonClusteredIndexes = nullptr
+              const std::vector<Headers::Index> *nonClusteredIndexes = nullptr
             );
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
             Table(const std::string& tableName, const TableHeader &tableHeader, Database *database);
@@ -349,7 +339,7 @@ namespace DatabaseEngine::StorageTypes
         * Functions that manage indexes and pages
         * @{
         */
-            int CreateNonClusteredIndex(vector<column_index_t>& columnIndices);
+            int CreateNonClusteredIndex(std::vector<column_index_t>& columnIndices);
             void UpdateIndexAllocationMapPageId(page_id_t indexAllocationMapPageId);
             page_id_t GetIndexAllocationMapPageId()const;
 
@@ -371,8 +361,8 @@ namespace DatabaseEngine::StorageTypes
             void DeleteLargeObjectFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t>& updatedColumns);
             void DeleteOverflowedRowsFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t>& updatedColumns)const;
 
-            [[nodiscard]] Pages::PageGuard<Pages::LargeObjectPage> GetLargeDataPage(page_id_t pageId) const;
-            [[nodiscard]] Pages::PageGuard<Pages::OverflowPage> GetOverflowPage(page_id_t pageId) const;
+            [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId) const;
+            [[nodiscard]] Pages::OverflowPageView GetOverflowPage(page_id_t pageId) const;
 
         /** @} End of: Page and Index Management Functions*/
 
@@ -416,7 +406,7 @@ namespace DatabaseEngine::StorageTypes
             );
             void UpdateColumnName(column_index_t index, const std::string& name)const;
             void RemoveColumn(column_index_t index);
-            static void HandleRemoveColumn(Pages::Page* page, QueryResult& row, column_index_t index);
+            static void HandleRemoveColumn(Pages::PageView* page, QueryResult& row, column_index_t index);
             void HandleRemoveColumn(column_index_t index);
 
         /** @} End of System Catalog Integration Functions */

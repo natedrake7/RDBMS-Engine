@@ -14,14 +14,14 @@ namespace Pages{
             explicit PageFreeSpaceView(Frame* frame);
 
             [[nodiscard]] bool IsPageAllocated(page_id_t pageId) const;
-            [[nodiscard]] PageType GetPageType(page_id_t pageId) const;
+            [[nodiscard]] Constants::PageType GetPageType(page_id_t pageId) const;
             [[nodiscard]] byte_t GetPageSizeCategory(page_id_t pageId) const;
 
             void SetPageMetaData(const PageView* page) const;
             void SetPageFreed(page_id_t pageId)const;
             void SetPageAllocated(page_id_t pageId)const;
             void SetPageAllocationStatus(page_id_t pageId, page_size_t bytesLeft) const;
-            void SetPageType(page_id_t pageId, PageType pageType) const;
+            void SetPageType(page_id_t pageId, Constants::PageType pageType) const;
             [[nodiscard]] bool IsFull() const;
     };
 }

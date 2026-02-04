@@ -1,6 +1,7 @@
 #pragma once
 #include "../Database.h"
 #include <string>
+#include "../../Systemic/include/Errors.h"
 
 namespace DatabaseEngine{
   class VersionDatabase {

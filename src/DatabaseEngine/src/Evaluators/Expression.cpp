@@ -6,8 +6,10 @@
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../include/DataStorage/Row.h"
 #include <iostream>
+#include <sstream>
 
-#include "Pages/Page.h"
+#include "DataTypes/DateTime.h"
+#include "Pages/Additional/RowReference.h"
 
 namespace Expressions{
      static Dictionary<Constants::FunctionType, std::function<Value(const std::vector<Value>& args)>> FunctionDictionary{
@@ -457,7 +459,7 @@ namespace Expressions{
         return FunctionAdditionalValidationsDictionary.Get(this->functionType)(this->arguments, errorMessage);
     }
 
-    FunctionExpression::FunctionExpression(const FunctionType functionType, std::vector<Expression*>& arguments) {
+    FunctionExpression::FunctionExpression(const Constants::FunctionType functionType, std::vector<Expression*>& arguments) {
         this->functionType = functionType;
         this->arguments = std::move(arguments);
         this->expressionType = ExpressionType::Function;

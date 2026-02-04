@@ -30,7 +30,7 @@ namespace DataTypes{
     };
 
     inline std::ostream& operator<<(std::ostream& os, const RowIdentifier& rowId) {
-        os << "(" << rowId.pageId << "," << rowId.indexId << ")";
+        // os << "(" << rowId.pageId << "," << rowId.indexId << ")";
         return os;
     }
 

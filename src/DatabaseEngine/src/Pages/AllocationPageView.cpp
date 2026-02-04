@@ -2,7 +2,7 @@
 
 #include "Database.h"
 #include "Guards/ReaderGuard.h"
-#include "Pages/IndexAllocationMapPage.h"
+#include "Pages/Additional/Frame.h"
 
 namespace Pages{
     bool AllocationPageView::GetBit(const std::size_t bitIndex) const noexcept{
@@ -38,14 +38,12 @@ namespace Pages{
         this->lastAllocatedExtentId = 0;
     }
 
-    AllocationPageView::~AllocationPageView() = default;
-
     extent_id_t AllocationPageView::SetExtentsAllocated(
         const std::vector<extent_id_t>& extentIds,
         const page_id_t globalAllocationMapPageId
     ){
         for (const auto& extentId : extentIds){
-            const extent_id_t bitMapId = extentId - IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
+            const extent_id_t bitMapId = extentId - AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
             if (bitMapId >= EXTENT_BIT_MAP_SIZE)
                 return extentId;
@@ -74,7 +72,7 @@ namespace Pages{
         allocatedExtents->clear();
 
         const page_id_t globalAllocationMapPageId = DatabaseEngine::Database::GetGamAssociatedPage(this->headerPtr->pageId);
-        const page_id_t offSet = IndexAllocationMapPage::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
+        const page_id_t offSet = AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
         if(startingExtentIndex >= EXTENT_BIT_MAP_SIZE)
             return;

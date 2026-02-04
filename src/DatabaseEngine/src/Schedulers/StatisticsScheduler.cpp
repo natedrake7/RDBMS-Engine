@@ -5,13 +5,13 @@
 #include "DataStructures/Dictionary.h"
 #include "Guards/ReaderGuard.h"
 #include "Managers/StatisticsManager.h"
-#include "Pages/IndexAllocationMapPage.h"
-#include "Pages/PageFreeSpacePage.h"
 #include "SystemDatabases/SystemCatalog.h"
 
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+
+#include "DataStorage/Table.h"
 
 namespace DatabaseEngine {
  std::vector<Database *> StatisticsScheduler::GetDatabases()const {
@@ -380,14 +380,15 @@ namespace DatabaseEngine {
   const Dictionary<Int, Database*> &databasesDictionary,
   MultiThreading::ReadWriteMutex &latch
   ){
-   const StatisticsScheduler scheduler(databasesDictionary, latch);
+    using namespace std::chrono_literals;
+    const StatisticsScheduler scheduler(databasesDictionary, latch);
 
-   std::cout << "Statistics Scheduler started." << std::endl;
+    std::cout << "Statistics Scheduler started." << std::endl;
 
-   while (isServerRunning) {
-    std::this_thread::sleep_for(10000ms);
-    scheduler.UpdateStatistics();
-   }
+    while (isServerRunning) {
+        std::this_thread::sleep_for(10000ms);
+        scheduler.UpdateStatistics();
+    }
  }
 
  void StatisticsScheduler::UpdateColumnStatistics(

@@ -304,7 +304,7 @@ namespace DatabaseEngine {
       Int rowCount,
       const BigInt& distinctCount
     ) const;
-    [[nodiscard]] Errors::RuntimeStatus UpdateColumnById(Int columnId, std::vector<Value>& updates)const;
+    [[nodiscard]] Errors::RuntimeStatus UpdateColumnById(Int columnId, const std::vector<Value>& updates)const;
 
     [[nodiscard]] Errors::RuntimeStatus UpdateUserById(
       const std::string& username,

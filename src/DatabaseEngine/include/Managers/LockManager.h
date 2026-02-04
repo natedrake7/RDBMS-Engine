@@ -2,7 +2,14 @@
 #include <shared_mutex>
 #include <string>
 #include <memory>
-#include "../Pages/Page.h"
+
+#include "DataStructures/Dictionary.h"
+#include "DataTypes/DataTypes.h"
+
+namespace Pages
+{
+    class PageView;
+}
 
 namespace DatabaseEngine::Lock {
 
@@ -38,7 +45,7 @@ namespace DatabaseEngine::Lock {
     std::shared_mutex locksMutex;
 
     static void LockResourceByType(Lock* lock);
-    std::shared_ptr<Pages::Page> GetPagePointer(const std::string& key, Pages::Page *page);
+    std::shared_ptr<Pages::PageView> GetPagePointer(const std::string& key, Pages::PageView *page);
 
   public:
     LockManager(const LockManager&) = delete;
@@ -54,7 +61,7 @@ namespace DatabaseEngine::Lock {
 
     void Release(const std::string& key);
 
-    std::shared_ptr<Pages::Page> GetPage(const std::string& filename, const page_id_t & pageId, const ResourceType& resourceType, const LockType& lockType);
+    std::shared_ptr<Pages::PageView> GetPage(const std::string& filename, const page_id_t & pageId, const ResourceType& resourceType, const LockType& lockType);
 //    std::shared_ptr<Pages::Page> GetLargeObjectPage(const string& filename, const page_id_t & pageId);
 //    std::shared_ptr<Pages::Page> GetIndexPage(const string& filename, const page_id_t & pageId);
 //    std::shared_ptr<Pages::Page> GetHeaderPage(const string& filename, const page_id_t & pageId);

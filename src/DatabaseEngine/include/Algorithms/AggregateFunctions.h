@@ -2,12 +2,9 @@
 #include <cstdint>
 #include <vector>
 #include "DataTypes/DataTypes.h"
-#include "Pages/Page.h"
 
-
-namespace DatabaseEngine::StorageTypes {
-    class Block;
-    class Row;
+namespace Pages{
+    struct RowReference;
 }
 
 class AggregateFunctions {

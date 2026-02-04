@@ -126,7 +126,6 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/DataStorage/Table/Table.LargeObjects.cpp
         src/DatabaseEngine/src/DataStorage/Row.cpp
         src/DatabaseEngine/src/DataStorage/Column.cpp
-        src/DatabaseEngine/src/Pages/LargeObjectPage.cpp
         src/DatabaseEngine/src/BufferPool/FileManager.cpp
         src/DatabaseEngine/src/BufferPool/StorageManager.cpp
         src/DatabaseEngine/src/BTree.cpp
@@ -151,26 +150,19 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Logger/UndoLogger.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.Row.Creation.cpp
         src/DatabaseEngine/src/DataStorage/InsertPayload.cpp
-        src/DatabaseEngine/include/BufferPool/BufferPoolMemory.h
         src/DatabaseEngine/src/BufferPool/BufferPoolMemory.cpp
-        src/DatabaseEngine/include/Pages/PageView.h
         src/DatabaseEngine/src/Pages/PageView.cpp
-        src/DatabaseEngine/include/Pages/IndexPageView.h
         src/DatabaseEngine/src/Pages/IndexPageView.cpp
-        src/DatabaseEngine/include/Pages/GlobalAllocationPageView.h
         src/DatabaseEngine/src/Pages/GlobalAllocationPageView.cpp
-        src/DatabaseEngine/include/Pages/PageFreeSpaceView.h
         src/DatabaseEngine/src/Pages/PageFreeSpaceView.cpp
-        src/DatabaseEngine/include/Pages/AllocationPageView.h
         src/DatabaseEngine/src/Pages/AllocationPageView.cpp
-        src/DatabaseEngine/include/Pages/HeadePageView.h
         src/DatabaseEngine/src/Pages/HeaderPageView.cpp
-        src/DatabaseEngine/include/Pages/Additional/SlotDirectory.h
         src/DatabaseEngine/src/Pages/Additional/SlotDirectory.cpp
-        src/DatabaseEngine/include/Pages/Additional/Frame.h
         src/DatabaseEngine/src/Pages/Additional/Frame.cpp
-        src/DatabaseEngine/include/Pages/Additional/RowReference.h
         src/DatabaseEngine/src/Pages/Additional/RowReference.cpp
+        src/DatabaseEngine/src/Pages/Additional/IndexPageStructs.cpp
+        src/DatabaseEngine/src/Pages/LargeObjectView.cpp
+        src/DatabaseEngine/src/Pages/OverflowPageView.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

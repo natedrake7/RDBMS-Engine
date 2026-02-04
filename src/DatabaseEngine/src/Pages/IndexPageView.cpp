@@ -1,6 +1,7 @@
 ﻿#include "../../include/Pages/IndexPageView.h"
 
-#include "Pages/IndexPage.h"
+#include "DataStorage/InsertPayload.h"
+#include "Pages/Additional/Frame.h"
 
 namespace Pages{
     void IndexPageView::InsertFirstChild(const page_id_t child) const{
@@ -74,12 +75,15 @@ namespace Pages{
 
     IndexPageView::IndexPageView() : PageView() {
         this->additionalHeaderPtr = nullptr;
+        this->type = PageType::INDEX;
     }
 
     IndexPageView::IndexPageView(Frame* framePtr) : PageView(framePtr) {
         this->additionalHeaderPtr = reinterpret_cast<IndexPageAdditionalHeader*>(
             this->framePtr->data + PAGE_HEADER_SIZE
         );
+
+        this->type = PageType::INDEX;
     }
 
     void IndexPageView::SetTreeType(const TreeType treeType) const{

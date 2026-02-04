@@ -1,6 +1,7 @@
 ﻿#pragma once
-#include "../../Database.h"
+#include "../../../../Systemic/include/QueryResult.h"
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
+#include "../../DataStorage/Row.h"
 
 class Value;
 

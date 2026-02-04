@@ -3,6 +3,7 @@
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
+#include "../../../DatabaseEngine/include/DataStorage/Table.h"
 
 namespace QueryPipeline::PhysicalPlan{
 

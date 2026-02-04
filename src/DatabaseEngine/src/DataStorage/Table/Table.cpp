@@ -9,11 +9,6 @@
 
 #include "../../../include/SystemDatabases/CatalogSchema.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
-#include "../../../include/Pages/Page.h"
-#include "../../../include/Pages/HeaderPage.h"
-#include "../../../include/Pages/LargeObjectPage.h"
-#include "../../../include/Pages/IndexAllocationMapPage.h"
-#include "../../../include/Pages/PageFreeSpacePage.h"
 #include "../../../include/BufferPool/StorageManager.h"
 #include "../../../include/BTree.h"
 #include "../../../../Server/include/Server.h"
@@ -26,8 +21,7 @@
 #include "Memory/Allocator.h"
 
 namespace DatabaseEngine::StorageTypes {
-      TableHeader::TableHeader() 
-      {
+      TableHeader::TableHeader() {
         this->indexAllocationMapPageId = INVALID_PAGE_ID;
         this->tableId = 0;
         this->numberOfColumns = 0;
@@ -37,8 +31,7 @@ namespace DatabaseEngine::StorageTypes {
 
       TableHeader::~TableHeader() = default;
 
-      TableHeader &TableHeader::operator=(const TableHeader &tableHeader) 
-      {
+      TableHeader &TableHeader::operator=(const TableHeader &tableHeader) {
         if (this == &tableHeader)
           return *this;
 
@@ -58,7 +51,7 @@ namespace DatabaseEngine::StorageTypes {
         return *this;
       }
 
-      bool Table::VectorContainsIndex(const vector<column_index_t>& vector, const column_index_t index, int& indexPosition){
+      bool Table::VectorContainsIndex(const std::vector<column_index_t>& vector, const column_index_t index, int& indexPosition){
         for(int i = 0;i < vector.size(); i++)
           if(vector[i] == index)
           {
@@ -96,7 +89,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
-        vector<extent_id_t> tableExtentIds;
+        std::vector<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         const auto& indexedColumns = this->header.nonClusteredIndexes.at(indexPos).columns;
@@ -483,13 +476,13 @@ namespace DatabaseEngine::StorageTypes {
       // }
     }
 
-    string Table::GetFileName() const{ return this->database->GetFileName(); }
+    std::string Table::GetFileName() const{ return this->database->GetFileName(); }
 
     column_number_t Table::GetNumberOfColumns() const { return this->columns.size(); }
 
     const TableHeader &Table::GetHeader() const { return this->header; }
 
-    const vector<Column *> &Table::GetColumns() const { return this->columns; }
+    const std::vector<Column *> &Table::GetColumns() const { return this->columns; }
 
     std::vector<const Column *> Table::GetConstantColumns() const {
         std::vector<const Column*> constColumns;
@@ -513,7 +506,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
-        vector<extent_id_t> tableExtentIds;
+        std::vector<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, state.extentId);
 
         state.canFetchMore = false;
@@ -590,10 +583,10 @@ namespace DatabaseEngine::StorageTypes {
               this
             );
 
-        vector<extent_id_t> tableExtentIds;
+        std::vector<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
-        vector<Row*> rowsToBeInserted;
+        std::vector<Row*> rowsToBeInserted;
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         for (const auto &extentId : tableExtentIds)
@@ -774,7 +767,7 @@ namespace DatabaseEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.indexAllocationMapPageId, this);
 
-        vector<extent_id_t> tableExtentIds;
+        std::vector<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto& extentId : tableExtentIds){
@@ -934,7 +927,7 @@ namespace DatabaseEngine::StorageTypes {
       return maximumRowSize;
     }
 
-    vector<DataType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const{
+    std::vector<DataType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const{
           std::vector<DataType> columnDatatypes;
 
           if(treeId == 0){
@@ -1286,7 +1279,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
         // }
     }
 
-  void Table::HandleRemoveColumn(Pages::Page* page, QueryResult& row, const column_index_t index){
+  void Table::HandleRemoveColumn(Pages::PageView* page, QueryResult& row, const column_index_t index){
         // auto& data = row->GetData();
 
         // data.erase(data.begin() + index);

@@ -5,7 +5,6 @@
 #include "../include/DataStorage/Column.h"
 #include "../include/DataStorage/Row.h"
 #include "../include/DataStorage/Table.h"
-#include "../include/Pages/IndexPage.h"
 #include "../include/BufferPool/StorageManager.h"
 #include "../include/Database.h"
 #include "../../Systemic/include/Guards/ReaderGuard.h"
@@ -13,12 +12,10 @@
 #include "Schedulers/StatisticsScheduler.h"
 #include <cmath>
 
-#include "Pages/PageFreeSpacePage.h"
-
 namespace Indexing{
     void BTree::AssignLeavesConnections(
-        Pages::IndexPageView& child,
-        Pages::IndexPageView& newChild
+        const Pages::IndexPageView& child,
+        const Pages::IndexPageView& newChild
     ){
         newChild.SetRightSibling(child.RightSibling());
         newChild.SetLeftSibling(child.PageId());
@@ -101,7 +98,7 @@ namespace Indexing{
     }
 
     Errors::RuntimeStatus BTree::CreateDuplicateKeyError(const DataTypes::Indexing::Key &key) {
-        ostringstream os;
+        std::ostringstream os;
         os << "BTree::CreateDuplicateKeyError: Key " << key << " already exists" << std::endl;
         return {Errors::RuntimeError::DuplicateKey, os.str()};
     }
@@ -156,10 +153,10 @@ namespace Indexing{
     }
 
     void BTree::SplitChild(
-        Pages::IndexPageView& parent,
+        const Pages::IndexPageView& parent,
         MultiThreading::ReaderGuard& parentReadLock,
         const Int index,
-        Pages::IndexPageView& child,
+        const Pages::IndexPageView& child,
         MultiThreading::ReaderGuard& childReadLock,
         const Int pagesToAllocate
     ){
@@ -170,9 +167,9 @@ namespace Indexing{
     }
 
     void BTree::SplitLeafNoLock(
-        Pages::IndexPageView &parent,
-        Pages::IndexPageView &child,
-        Pages::IndexPageView &newChild,
+        const Pages::IndexPageView &parent,
+        const Pages::IndexPageView &child,
+        const Pages::IndexPageView &newChild,
         const Int index
     )const {
         // Move the middle key from the child to the parent
@@ -217,12 +214,12 @@ namespace Indexing{
     }
 
     void BTree::SplitChildNoLock(
-        Pages::IndexPageView &parent,
+        const Pages::IndexPageView &parent,
         const Int index,
-        Pages::IndexPageView &child,
+        const Pages::IndexPageView &child,
         const Int pagesToAllocate
     ) {
-        auto newChild = this->AllocateNewPage(parent.PageId(), pagesToAllocate);
+        const auto newChild = this->AllocateNewPage(parent.PageId(), pagesToAllocate);
 
         MultiThreading::WriterGuard newChildLock(&newChild.Latch());
 
@@ -239,7 +236,7 @@ namespace Indexing{
     }
 
     Errors::RuntimeStatus BTree::InsertToNonFullNode(
-            Pages::IndexPageView& parent,
+            const Pages::IndexPageView& parent,
             const Pages::IndexInsertTuple& tuple,
             const Int pagesToAllocate,
             Int& indexPosition
@@ -314,7 +311,7 @@ namespace Indexing{
         }
     }
 
-    Pages::IndexPageView BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::IndexPageView> & ancestors) const{
+    Pages::IndexPageView BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, std::vector<Pages::IndexPageView> & ancestors) const{
       auto currentNode = this->GetNode(this->rootPageId);
 
       while (!currentNode.IsLeaf()){
@@ -373,7 +370,7 @@ namespace Indexing{
           return calculatedDegree;
         }
 
-        const vector<DatabaseEngine::StorageTypes::Column*>& columns = otherTable->GetColumns();
+        const std::vector<DatabaseEngine::StorageTypes::Column*>& columns = otherTable->GetColumns();
 
         const auto& index = otherTable->GetNonClusteredIndexes(nonClusteredId);
 
@@ -935,7 +932,7 @@ namespace Indexing{
     }
 
     //TODO fix non clusteredIndex Seek
-    void BTree::IndexSeekRange(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, vector<DataTypes::Indexing::QueryData> &result) const{
+    void BTree::IndexSeekRange(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, std::vector<DataTypes::Indexing::QueryData> &result) const{
         if (this->IsEmpty())
             return;
 
@@ -1120,7 +1117,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexScan(vector<DataTypes::Indexing::QueryData> &result)const
+    void BTree::IndexScan(std::vector<DataTypes::Indexing::QueryData> &result)const
     {
         if (this->IsEmpty())
             return;
@@ -1283,7 +1280,7 @@ namespace Indexing{
     }
 
     void BTree::IndexScan(
-        vector<DataTypes::RowIdentifier> *result,
+        std::vector<DataTypes::RowIdentifier> *result,
         DatabaseEngine::IndexState& state,
         const Int rowsToSelect
     )const{
@@ -1335,7 +1332,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexScan(vector<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
+    void BTree::IndexScan(std::vector<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
         if (this->IsEmpty())
             return;
 

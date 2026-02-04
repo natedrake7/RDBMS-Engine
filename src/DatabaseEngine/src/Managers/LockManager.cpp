@@ -9,12 +9,12 @@ namespace DatabaseEngine::Lock {
     }
   }
 
-  std::shared_ptr<Pages::Page> LockManager::GetPage(
-      const string& filename,
+  std::shared_ptr<Pages::PageView> LockManager::GetPage(
+      const std::string& filename,
       const page_id_t & pageId,
       const ResourceType& resourceType,
       const LockType& lockType){
-    const auto key = filename + to_string(pageId);
+    const auto key = filename + std::to_string(pageId);
 
     this->locksMutex.lock_shared();
 
@@ -35,17 +35,17 @@ namespace DatabaseEngine::Lock {
 
         lock->mutex.lock();
 
-        Pages::Page* page = nullptr;
+        Pages::PageView* page = nullptr;
 
-        return std::shared_ptr<Pages::Page>(page);
+        return std::shared_ptr<Pages::PageView>(page);
       }
 
       if(lockType == LockType::Shared){
         lock->mutex.lock_shared();
 
-        Pages::Page* page = nullptr;
+        Pages::PageView* page = nullptr;
 
-        return std::shared_ptr<Pages::Page>(page);
+        return std::shared_ptr<Pages::PageView>(page);
       }
     }
 
@@ -66,9 +66,9 @@ namespace DatabaseEngine::Lock {
 
     LockManager::LockResourceByType(lock);
 
-    Pages::Page* page = nullptr;//Storage::StorageManager::Get().GetPage(filename, pageId, );
+    Pages::PageView* page = nullptr;//Storage::StorageManager::Get().GetPage(filename, pageId, );
 
-    return std::shared_ptr<Pages::Page>(page);
+    return std::shared_ptr<Pages::PageView>(page);
   }
 
   void LockManager::LockResourceByType(Lock *lock){
@@ -80,16 +80,16 @@ namespace DatabaseEngine::Lock {
         lock->mutex.lock();
         return;
       default:
-        throw runtime_error("Invalid Lock type");
+        throw std::runtime_error("Invalid Lock type");
     }
   }
 
-  void LockManager::Release(const string & key){
+  void LockManager::Release(const std::string & key){
 
   }
 
-  std::shared_ptr<Pages::Page> LockManager::GetPagePointer(const string& key, Pages::Page *page) {
-      auto deleter = [this, key](Pages::Page* p) {
+  std::shared_ptr<Pages::PageView> LockManager::GetPagePointer(const std::string& key, Pages::PageView *page) {
+      auto deleter = [this, key](Pages::PageView* p) {
           this->Release(key);
       };
 

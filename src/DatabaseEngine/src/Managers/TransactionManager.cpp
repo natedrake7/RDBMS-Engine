@@ -32,7 +32,7 @@ namespace DatabaseEngine {
 
       snapshot.minimumTransactionId = this->activeTransactions.FirstOrDefault().transactionId;
 
-      for (const auto &[activeTransactionId, _, modifications] : this->activeTransactions | views::values)
+      for (const auto &[activeTransactionId, _, modifications] : this->activeTransactions | std::views::values)
         snapshot.activeTransactionIds.Add(activeTransactionId);
 
       this->activeTransactions.Add(snapshot.transactionId, TransactionInfo(

@@ -7,7 +7,6 @@
 #include "../../Systemic/include/Guards/WriterGuard.h"
 
 #include <iostream>
-#include <ranges>
 
 namespace Network {
    Server::Server(){
@@ -48,7 +47,7 @@ namespace Network {
     return instance;
   }
 
-  void Server::Initialize(const string &configPath){
+  void Server::Initialize(const std::string &configPath){
     this->temporaryDatabase = &DatabaseEngine::TemporaryDatabase::Get();
     this->temporaryDatabase->Initialize(configPath);
 
@@ -197,7 +196,7 @@ namespace Network {
   }
 
   void Server::Shutdown(){
-    for (const auto &database: this->databases | views::values){
+    for (const auto &database: this->databases | std::views::values){
       database->UpdateMasterDatabase();
       delete database;
     }

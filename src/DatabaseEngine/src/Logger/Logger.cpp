@@ -247,7 +247,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     this->currentTransactionId = transactionId;
   }
 
-  ostream & operator<<(ostream &stream, const LogEntry &logEntry){
+  std::ostream & operator<<(std::ostream &stream, const LogEntry &logEntry){
     stream << "Log Entry:" << std::endl;
     stream << "Transaction ID: " << logEntry.transactionId << " "
           << " Log Sequence Number: " << logEntry.logSequenceNumber << std::endl;

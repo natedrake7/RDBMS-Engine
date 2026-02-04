@@ -23,7 +23,6 @@ namespace Pages{
         public:
             AllocationPageView();
             explicit AllocationPageView(Frame* framePtr);
-            ~AllocationPageView() override;
 
             extent_id_t SetExtentsAllocated(
                 const std::vector<extent_id_t>& extentIds,

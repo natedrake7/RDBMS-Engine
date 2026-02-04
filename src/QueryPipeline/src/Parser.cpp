@@ -111,8 +111,7 @@ namespace QueryPipeline
         const auto* session = Network::Server::Get().GetSession(sessionId);
 
          for (const auto& query: castQueries) {
-
-             function<Statements::Statement *(const any &)> handler;
+             std::function<Statements::Statement *(const std::any &)> handler;
 
              if (!handlers.TryGetValue(query.type(), handler))
                  return {};
@@ -171,10 +170,10 @@ namespace QueryPipeline
 
             statements = CreateStatement(response, sessionId);
         }
-        catch (const exception& e) {
+        catch (const std::exception& e) {
             Parser::ClearQuery(statements);
 
-            ostringstream os;
+            std::ostringstream os;
             os << "Parser exception: " << e.what();
 
             result.status = {true, os.str()};
@@ -216,7 +215,7 @@ namespace QueryPipeline
         const auto _ = server.CloseCursor(sessionId, cursorId);
     }
 
-    ParserResult Parser::StartTransaction(const string &query, const DataTypes::Guid &sessionId){
+    ParserResult Parser::StartTransaction(const std::string &query, const DataTypes::Guid &sessionId){
         static const auto& server = Network::Server::Get();
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 

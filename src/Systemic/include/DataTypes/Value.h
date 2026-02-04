@@ -2,11 +2,10 @@
 #include <cstring>
 #include <string>
 
-#include "DateTime.h"
-#include "Decimal.h"
-#include "Guid.h"
+#include "DataTypes.h"
 
 namespace DataTypes {
+    class Decimal;
     class DateTime;
     class Guid;
 }

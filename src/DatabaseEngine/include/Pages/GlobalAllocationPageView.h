@@ -11,7 +11,6 @@ namespace Pages{
 
         public:
             explicit GlobalAllocationPageView(Frame* frame);
-            ~GlobalAllocationPageView() override;
             int AllocateExtentsNoLock(std::vector<extent_id_t>& extents, Int numberOfExtents);
             void DeallocateExtent(extent_id_t extentId) const;
             // void WriteToDisk(std::fstream *filePtr) override;

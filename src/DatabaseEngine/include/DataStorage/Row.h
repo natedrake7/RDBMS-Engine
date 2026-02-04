@@ -1,8 +1,6 @@
 ﻿#pragma once
-#include <vector>
+#include "../../Systemic/include/Constants.h"
 #include "../DatabaseConstants.h"
-#include "../../../QueryPipeline/include/Statements.h"
-#include "../../../Systemic/include/Errors.h"
 #include "../../../Systemic/include/DataStructures/BitMap.h"
 
 namespace DatabaseEngine {

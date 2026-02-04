@@ -55,7 +55,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::~Column() = default;
 
-    const string& Column::GetColumnName() const{ return this->name; }
+    const std::string& Column::GetColumnName() const{ return this->name; }
 
     void Column::SetColumnName(const std::string &otherName){ this->name = otherName;}
 
