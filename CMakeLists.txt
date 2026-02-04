@@ -50,6 +50,7 @@ set(ANTLR_SRC
     ${GENERATED_DIR}/SQLLexer.cpp
     ${GENERATED_DIR}/SQLBaseVisitor.cpp
     ${GENERATED_DIR}/SQLVisitor.cpp
+        src/DatabaseEngine/include/Pages/Additional/RowReference.h
 )
 
 # Mark generated sources so CMake knows they will be created by the build process
@@ -125,14 +126,7 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/DataStorage/Table/Table.LargeObjects.cpp
         src/DatabaseEngine/src/DataStorage/Row.cpp
         src/DatabaseEngine/src/DataStorage/Column.cpp
-        src/DatabaseEngine/src/Pages/Page.cpp
-        src/DatabaseEngine/src/Pages/HeaderPage.cpp
         src/DatabaseEngine/src/Pages/LargeObjectPage.cpp
-        src/DatabaseEngine/src/Pages/IndexAllocationMapPage.cpp
-        src/DatabaseEngine/src/Pages/PageFreeSpacePage.cpp
-        src/DatabaseEngine/src/Pages/GlobalAllocationMapPage.cpp
-        src/DatabaseEngine/src/Pages/IndexPage.cpp
-        src/DatabaseEngine/src/Pages/OverflowPage.cpp
         src/DatabaseEngine/src/BufferPool/FileManager.cpp
         src/DatabaseEngine/src/BufferPool/StorageManager.cpp
         src/DatabaseEngine/src/BTree.cpp
@@ -171,6 +165,12 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Pages/AllocationPageView.cpp
         src/DatabaseEngine/include/Pages/HeadePageView.h
         src/DatabaseEngine/src/Pages/HeaderPageView.cpp
+        src/DatabaseEngine/include/Pages/Additional/SlotDirectory.h
+        src/DatabaseEngine/src/Pages/Additional/SlotDirectory.cpp
+        src/DatabaseEngine/include/Pages/Additional/Frame.h
+        src/DatabaseEngine/src/Pages/Additional/Frame.cpp
+        src/DatabaseEngine/include/Pages/Additional/RowReference.h
+        src/DatabaseEngine/src/Pages/Additional/RowReference.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

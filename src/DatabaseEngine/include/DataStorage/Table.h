@@ -98,7 +98,7 @@ namespace DatabaseEngine::StorageTypes
 
             void GetClusteredIndexFromDisk() const;
             void GetNonClusteredIndexFromDisk(Int indexId) const;
-            [[nodiscard]] Pages::PageGuard<Pages::IndexPage> GetIndexFromDisk(page_id_t indexPageId) const;
+            [[nodiscard]] Pages::IndexPageView GetIndexFromDisk(page_id_t indexPageId) const;
 
             static void LinkLargePageDataObjectChunks(
                 Pages::LargeDataObject *dataObject,
@@ -300,14 +300,14 @@ namespace DatabaseEngine::StorageTypes
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
-                Pages::Page* page,
+                Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
                 const std::vector<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
-                Pages::Page* page,
+                Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
                 const std::vector<Expressions::Expression*>& updates
@@ -409,7 +409,7 @@ namespace DatabaseEngine::StorageTypes
         */
             void AddColumn(Column *column);
             void HandleAddColumn(
-                Pages::Page* page,
+                const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 column_index_t index,
                 const Value& defaultValue

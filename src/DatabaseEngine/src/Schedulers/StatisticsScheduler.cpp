@@ -218,7 +218,7 @@ namespace DatabaseEngine {
   const auto iamPage = Storage::StorageManager::Get().GetAllocationPage(table->GetFileName(), iamPageId, table);
 
   std::vector<extent_id_t> extents;
-  iamPage->GetAllocatedExtents(&extents, 0);
+  iamPage.GetAllocatedExtents(&extents, 0);
 
   int estimatedRowCount = 1000;
 
@@ -230,29 +230,29 @@ namespace DatabaseEngine {
 
    const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(systemFilename, extentFirstPageId);
 
-   const auto firstDataPageId = (iamPage->PageId() != extentFirstPageId)
+   const auto firstDataPageId = (iamPage.PageId() != extentFirstPageId)
                                ? extentFirstPageId
                                : extentFirstPageId + 1;
 
    bool successfulPfsLock = false;
-   auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage->Latch(), successfulPfsLock);
+   auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage.Latch(), successfulPfsLock);
 
    for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
      if (successfulPfsLock
-      && pageFreeSpacePage->GetPageType(extentPageId) != PageType::DATA)
+      && pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
       break;
 
     auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, table);
 
     bool successfulLock = false;
-    auto lock = MultiThreading::ReaderGuard::TryLock(&page->Latch(), successfulLock);
+    auto lock = MultiThreading::ReaderGuard::TryLock(&page.Latch(), successfulLock);
     if (!successfulLock)
      continue;
 
-    const auto pageSize = page->GetPageSize();
-    const auto fallBackPageType = page->GetPageType();
-    if (pageSize == 0 || (fallBackPageType != PageType::INDEX && fallBackPageType != PageType::DATA))
-     continue;
+    const auto pageSize = page.PageSize();
+    // const auto fallBackPageType = page.Pag();
+    // if (pageSize == 0 || (fallBackPageType != PageType::INDEX && fallBackPageType != PageType::DATA))
+    //  continue;
 
     averageRowsPerPage += pageSize;
     allocatedPagesPerExtent++;

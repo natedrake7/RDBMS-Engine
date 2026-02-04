@@ -26,13 +26,13 @@ namespace DatabaseEngine{
         extent_id_t& newExtentId
     );
 
-    Pages::PageGuard<> TryGetLastUndoPage(
+    Pages::PageView TryGetLastUndoPage(
         const StorageTypes::Table* table,
         row_size_t size
     );
 
-    Pages::PageGuard<> CreateUndoPage();
-    Pages::PageGuard<> GetLastUndoPage(const StorageTypes::Table* table, row_size_t size);
+    Pages::PageView CreateUndoPage();
+    Pages::PageView GetLastUndoPage(const StorageTypes::Table* table, row_size_t size);
 
     VersionDatabase();
     ~VersionDatabase();

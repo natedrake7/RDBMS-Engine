@@ -53,6 +53,10 @@ namespace Pages{
         return this->databaseHeaderPtr;
     }
 
+    const std::vector<DatabaseEngine::StorageTypes::TableHeader>& HeaderPageView::GetTableHeaders()const{
+        return this->tablesHeaders;
+    }
+
     const DatabaseEngine::StorageTypes::TableHeader& HeaderPageView::GetTableHeader(const Int indexPosition) const{
         return this->tablesHeaders[indexPosition];
     }

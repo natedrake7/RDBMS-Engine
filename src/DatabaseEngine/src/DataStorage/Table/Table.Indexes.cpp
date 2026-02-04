@@ -20,7 +20,7 @@ namespace DatabaseEngine::StorageTypes {
         this->nonClusteredIndexedTrees[indexId]->SetTreeType(TreeType::NonClustered);
     }
 
-    Pages::PageGuard<Pages::IndexPage> Table::GetIndexFromDisk(const page_id_t indexPageId) const{
+    Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
         const auto& filename = this->database->GetFileName();
 
         return Storage::StorageManager::Get().GetIndexPage(filename, indexPageId, this);
@@ -189,7 +189,7 @@ namespace DatabaseEngine::StorageTypes {
             for (const auto& rowId : rowIds) {
                 const auto page = Storage::StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
-                MultiThreading::ReaderGuard lock(&page->Latch());
+                MultiThreading::ReaderGuard lock(&page.Latch());
 
                 // auto pageRow = page->GetRow(this, rowId.indexId);
                 //
@@ -208,7 +208,7 @@ namespace DatabaseEngine::StorageTypes {
         for (const auto& rowId : rowIds) {
             const auto page = Storage::StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
 
-            MultiThreading::ReaderGuard lock(&page->Latch());
+            MultiThreading::ReaderGuard lock(&page.Latch());
 
             // auto pageRow = page->GetRow(this, rowId.indexId);
             //

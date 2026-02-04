@@ -20,23 +20,23 @@ namespace Indexing{
         Pages::IndexPageView& child,
         Pages::IndexPageView& newChild
     ){
-        newChild.SetNextPage(child.GetNextPage());
-        newChild.SetPreviousPage(child.PageId());
+        newChild.SetRightSibling(child.RightSibling());
+        newChild.SetLeftSibling(child.PageId());
 
-        child.SetNextPage(newChild.PageId());
+        child.SetRightSibling(newChild.PageId());
     }
 
     Int BTree::LeafLowerBound(
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page->NumberOfKeys();
+        const auto numberOfKeys = page.SubKeys();
 
         for (Int i = 0; i < numberOfKeys; i++) {
-            const auto tupleKey = page->GetKey(i);
+            const auto tupleKey = page.GetKey(i);
 
             if (tupleKey == key){
-                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page->PageId() << std::endl;
+                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page.PageId() << std::endl;
                 return -1;
             }
 
@@ -67,13 +67,13 @@ namespace Indexing{
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page->NumberOfKeys();
+        const auto numberOfKeys = page.SubKeys();
 
         for (Int i = 0; i < numberOfKeys; i++) {
-            const auto tupleKey = page->GetKey(i + 1);
+            const auto tupleKey = page.GetKey(i + 1);
 
             if (tupleKey == key){
-                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page->PageId() << std::endl;
+                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page.PageId() << std::endl;
                 return -1;
             }
 
@@ -88,10 +88,10 @@ namespace Indexing{
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page->NumberOfKeys();
+        const auto numberOfKeys = page.SubKeys();
 
         for (Int i = 0; i < numberOfKeys; i++) {
-            const auto pageKey = page->GetKey(i + 1);
+            const auto pageKey = page.GetKey(i + 1);
 
             if (key <= pageKey)
                 return i;
@@ -111,14 +111,14 @@ namespace Indexing{
         auto root = this->AllocateNewPage(INVALID_PAGE_ID, pagesToAllocate);
 
         {
-            MultiThreading::WriterGuard lock(&root->Latch());
+            MultiThreading::WriterGuard lock(&root.Latch());
 
-            root->SetIsRoot(true);
-            root->SetIsLeaf(true);
-            root->SetTreeType(this->type);
+            root.SetIsRoot(true);
+            root.SetIsLeaf(true);
+            root.SetTreeType(this->type);
         }
 
-        this->rootPageId = root->PageId();
+        this->rootPageId = root.PageId();
         indexPosition = 0;
 
         return root;
@@ -132,17 +132,17 @@ namespace Indexing{
         {
             auto newRoot = this->AllocateNewPage(this->rootPageId, pagesToAllocate);
 
-            MultiThreading::WriterGuard newRootLock(&newRoot->Latch());
+            MultiThreading::WriterGuard newRootLock(&newRoot.Latch());
 
-            newRoot->SetIsRoot(true);
-            newRoot->SetIsLeaf(false);
-            newRoot->SetTreeType(this->type);
+            newRoot.SetIsRoot(true);
+            newRoot.SetIsLeaf(false);
+            newRoot.SetTreeType(this->type);
 
-            auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root->Latch(), rootLock);
+            auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root.Latch(), rootLock);
 
-            newRoot->InsertChild(root->PageId());
-            root->SetIsRoot(false);
-            this->rootPageId = newRoot->PageId();
+            newRoot.InsertChild(root.PageId());
+            root.SetIsRoot(false);
+            this->rootPageId = newRoot.PageId();
 
             this->SplitChildNoLock(newRoot, 0, root, pagesToAllocate);
             root = newRoot;
@@ -181,7 +181,7 @@ namespace Indexing{
 
         // Assign the second half of the child's keys to the new child
         if (this->type == TreeType::Clustered) {
-            newChild.DistributeFromPage(child.Get(), this->degree, this->degree);
+            newChild.DistributeFromPage(&child, this->degree, this->degree);
             BTree::AssignLeavesConnections(child, newChild);
             return;
         }
@@ -202,9 +202,9 @@ namespace Indexing{
 
     //TODO maybe optimize further
     void BTree::SplitInternalNodeNoLock(
-        Pages::IndexPageView &parent,
-        Pages::IndexPageView &child,
-        Pages::IndexPageView &newChild,
+        const Pages::IndexPageView &parent,
+        const Pages::IndexPageView &child,
+        const Pages::IndexPageView &newChild,
         const Int index
     ) const {
         const auto childKey = child.GetKey(this->degree - 1);
@@ -213,7 +213,7 @@ namespace Indexing{
         const auto middleChild = child.GetChild(this->degree);
         newChild.InsertChild(middleChild);
 
-        newChild.DistributeFromPage(child.Get(), this->degree, this->degree - 1);
+        newChild.DistributeFromPage(&child, this->degree, this->degree - 1);
     }
 
     void BTree::SplitChildNoLock(
@@ -259,7 +259,7 @@ namespace Indexing{
 
             MultiThreading::ReaderGuard childLock(&child.Latch());
 
-            if (child.NumberOfKeys() == 2 * this->degree - 1){
+            if (child.SubKeys() == 2 * this->degree - 1){
                 // if (!this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex)) {
                 // Redistribution failed, must split
                     this->SplitChild(parent, parentLock, childIndex, child, childLock, pagesToAllocate);
@@ -286,7 +286,7 @@ namespace Indexing{
     }
 
     Errors::RuntimeStatus BTree::InsertToNode(
-        Pages::IndexPageView &parent,
+        const Pages::IndexPageView &parent,
         const Pages::IndexInsertTuple& tuple,
         Int& indexPosition
     )
@@ -304,25 +304,25 @@ namespace Indexing{
         auto currentNode = this->GetNode(this->rootPageId);
 
         while (true) {
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            if (currentNode->IsLeaf())
+            if (currentNode.IsLeaf())
                 return currentNode;
 
             const auto index = BTree::InternalNodePartialLowerBound(currentNode, key);
-            currentNode = this->GetNode(currentNode->GetChild(index));
+            currentNode = this->GetNode(currentNode.GetChild(index));
         }
     }
 
     Pages::IndexPageView BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, vector<Pages::IndexPageView> & ancestors) const{
       auto currentNode = this->GetNode(this->rootPageId);
 
-      while (!currentNode->IsLeaf()){
+      while (!currentNode.IsLeaf()){
         const auto index = BTree::InternalNodePartialLowerBound(currentNode, key);
 
         ancestors.push_back(std::move(currentNode));
 
-        currentNode = std::move(this->GetNode(currentNode->GetChild(index)));
+        currentNode = std::move(this->GetNode(currentNode.GetChild(index)));
       }
 
       return currentNode;
@@ -331,9 +331,9 @@ namespace Indexing{
     Pages::IndexPageView BTree::SearchLeftMostLeafNode() const{
         auto currentNode = this->GetNode(this->rootPageId);
 
-        while (!currentNode->IsLeaf()) {
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
-            currentNode = this->GetNode(currentNode->GetChild(0));
+        while (!currentNode.IsLeaf()) {
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
+            currentNode = this->GetNode(currentNode.GetChild(0));
         }
 
         return currentNode;
@@ -342,10 +342,10 @@ namespace Indexing{
     Pages::IndexPageView BTree::SearchLeftMostLeafNode(TinyInt &depth) const{
         auto currentNode = this->GetNode(this->rootPageId);
 
-        while (!currentNode->IsLeaf()){
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+        while (!currentNode.IsLeaf()){
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
             depth++;
-            currentNode = this->GetNode(currentNode->GetChild(0));
+            currentNode = this->GetNode(currentNode.GetChild(0));
         }
 
         return currentNode;
@@ -389,11 +389,16 @@ namespace Indexing{
     }
 
     Pages::IndexPageView BTree::AllocateNewPage(const page_id_t parentPageId, const Int pagesToAllocate){
-        return this->database->FindOrAllocateNextIndexPage(this->table, parentPageId, pagesToAllocate, this->nonClusteredIndexId);
+        return this->database->FindOrAllocateNextIndexPage(
+            this->table,
+            parentPageId,
+            pagesToAllocate,
+            this->nonClusteredIndexId
+        );
     }
 
-    void BTree::HandleUnderflow(Pages::IndexPageView& node, std::vector<Pages::IndexPageView>& ancestors, Int& parentIndex) {
-        if (node->IsRoot()) {
+    void BTree::HandleUnderflow(const Pages::IndexPageView& node, std::vector<Pages::IndexPageView>& ancestors, Int& parentIndex) {
+        if (node.IsRoot()) {
            this->HandleRootUnderflow();
            return;
         }
@@ -584,7 +589,7 @@ namespace Indexing{
     }
 
     bool BTree::TryRedistributeLeaf(
-        Pages::IndexPageView &parent,
+        const Pages::IndexPageView &parent,
         MultiThreading::ReaderGuard &parentLock,
         Pages::IndexPageView &child,
         MultiThreading::ReaderGuard &childLock,
@@ -594,11 +599,11 @@ namespace Indexing{
             return {};
 
         if (child.HasLeftSibling()) {
-            auto sibling = this->GetNode(child.GetPreviousPage());
+            auto sibling = this->GetNode(child.LeftSibling());
 
-            MultiThreading::ReaderGuard siblingLock(&sibling->Latch());
+            MultiThreading::ReaderGuard siblingLock(&sibling.Latch());
 
-            if (sibling->NumberOfKeys() < 2 * this->degree - 1
+            if (sibling.SubKeys() < 2 * this->degree - 1
                 && this->TryRedistributeLeafWithLeftSibling(child, sibling, childLock, siblingLock)) {
 
                 // Update parent separator key between left sibling and child
@@ -614,9 +619,9 @@ namespace Indexing{
         }
 
         if (child.HasRightSibling()) {
-            auto sibling = this->GetNode(child.GetNextPage());
+            auto sibling = this->GetNode(child.RightSibling());
 
-            MultiThreading::ReaderGuard siblingLock(&sibling->Latch());
+            MultiThreading::ReaderGuard siblingLock(&sibling.Latch());
             //
             // if (sibling->GetKeysUnsafe()->size() < 2 * this->degree - 1
             //     && this->TryRedistributeLeafWithRightSibling(child, sibling, childLock, siblingLock)) {
@@ -647,15 +652,15 @@ namespace Indexing{
         MultiThreading::ReaderGuard &siblingLock
     )const {
         // Calculate balanced distribution
-        const Int targetSiblingKeys = (sibling->NumberOfKeys() + child.NumberOfKeys()) / 2;
-        const Int keysToMove = targetSiblingKeys - sibling->NumberOfKeys();
+        const Int targetSiblingKeys = (sibling.SubKeys() + child.SubKeys()) / 2;
+        const Int keysToMove = targetSiblingKeys - sibling.SubKeys();
 
         // Only redistribute if we actually need to move keys
         if (keysToMove <= 0)
             return false;
 
         MultiThreading::WriterGuard::Promote(&child.Latch(), childLock);
-        MultiThreading::WriterGuard::Promote(&sibling->Latch(), siblingLock);
+        MultiThreading::WriterGuard::Promote(&sibling.Latch(), siblingLock);
 
         // Move exactly keysToMove keys from child to sibling
         // const auto srcKeyEnd = childKeys->begin() + keysToMove;
@@ -779,12 +784,12 @@ namespace Indexing{
          //        leftNodeNonClusteredData->clear();
          //     }
          //
-         //      leftNode->SetNextPage(rightNode->GetNextPage());
+         //      leftNode->SetRightSibling(rightNode.GetRightSibling());
          //
          //
-         //      if(rightNode->GetNextPage() != INVALID_PAGE_ID){
-         //        auto nextNode = this->GetNode(rightNode->GetNextPage());
-         //        nextNode->SetPreviousPage(leftNode->GetPageId());
+         //      if(rightNode.GetRightSibling() != INVALID_PAGE_ID){
+         //        auto nextNode = this->GetNode(rightNode.GetRightSibling());
+         //        nextNode->SetLeftSibling(leftNode->GetPageId());
          //      }
          // }
          // else {
@@ -829,17 +834,17 @@ namespace Indexing{
         std::vector<Headers::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const{
-        while (currentNode.Get()) {
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+        while (true) {
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             tableStatistics.pageCount++;
             indexStatistics.leafPages++;
 
-            const auto numOfRows = currentNode->GetPageSize();
+            const auto numOfRows = currentNode.PageSize();
             tableStatistics.rowCount += static_cast<Int>(numOfRows);
 
             for (Int i = 0;i < numOfRows; i++){
-                auto tuple = currentNode->PeekLeafTuple(i);
+                auto tuple = currentNode.PeekLeafTuple(i);
 
                 // tableStatistics.averageRowSize += static_cast<Int>(tuple.row.TotalSize());
                 //
@@ -855,22 +860,22 @@ namespace Indexing{
                 // }
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 break;
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
 
         tableStatistics.averageRowSize = static_cast<Int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
     }
 
-    void BTree::UpdatePfsPage(Pages::IndexPageView& node) const{
-        auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->PageId());
+    void BTree::UpdatePfsPage(const Pages::IndexPageView& node) const{
+        const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node.PageId());
 
-        MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage->Latch());
-        MultiThreading::WriterGuard pageLock(&node->Latch());
+        MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage.Latch());
+        MultiThreading::WriterGuard pageLock(&node.Latch());
 
-        pageFreeSpacePage->SetPageMetaData(node.Get());
+        pageFreeSpacePage.SetPageMetaData(&node);
     }
 
     BTree::BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t indexPageId, const TreeType treeType, const Int nonClusteredIndexId)
@@ -912,7 +917,7 @@ namespace Indexing{
             else
                 this->table->SetClusteredIndexPageId(this->rootPageId);
 
-            root->InsertTuple(tuple);
+            root.InsertTuple(tuple);
             this->UpdatePfsPage(root);
             return {};
         }
@@ -920,9 +925,9 @@ namespace Indexing{
         auto root = this->GetNode(this->rootPageId);
 
         {
-            MultiThreading::ReaderGuard rootLock(&root->Latch());
+            MultiThreading::ReaderGuard rootLock(&root.Latch());
 
-            if (root->NumberOfKeys() == 2 * this->degree - 1) // root is full,
+            if (root.SubKeys() == 2 * this->degree - 1) // root is full,
                 this->SplitRoot(root, rootLock, pagesToAllocate);
         }
 
@@ -937,7 +942,7 @@ namespace Indexing{
         auto currentNode = this->SearchKey(minKey);
         Pages::IndexPageView previousNode;
 
-        while (currentNode.Get())
+        while (true)
         {
             // auto* keys = currentNode->GetKeysUnsafe();
 
@@ -962,11 +967,11 @@ namespace Indexing{
             //         return;
             // }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
             previousNode = currentNode;
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -981,14 +986,14 @@ namespace Indexing{
 
         auto currentNode = this->SearchKey(minKey);
 
-        while (currentNode.Get()){
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+        while (true){
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto [key, row] = currentNode->PeekLeafTuple(i);
+            for (Int i = 0; i < currentNode.SubKeys(); i++){
+                auto [key, row] = currentNode.PeekLeafTuple(i);
 
                 if (key.InClosedRange(minKey, maxKey)){
-                    currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                    currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
                     continue;
                 }
 
@@ -996,10 +1001,10 @@ namespace Indexing{
                     return;
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1015,18 +1020,18 @@ namespace Indexing{
 
         auto currentNode = this->SearchKey(minKey);
 
-        while (currentNode.Get()){
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+        while (true){
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-            for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto [key, row] = currentNode->PeekLeafTuple(i);
+            for (Int i = 0; i < currentNode.SubKeys(); i++){
+                auto [key, row] = currentNode.PeekLeafTuple(i);
 
                 if (key.InClosedRange(minKey, maxKey)){
                     context.row = &row;
                     if (expression->Evaluate(context).AsBool())
-                        currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                        currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
                     continue;
                 }
 
@@ -1034,10 +1039,10 @@ namespace Indexing{
                     return;
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1051,15 +1056,15 @@ namespace Indexing{
 
         auto currentNode = this->SearchKey(key);
 
-        while (currentNode.Get()){
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
-            for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto [tupleKey, row] = currentNode->PeekLeafTuple(i);
+        while (true){
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
+            for (Int i = 0; i < currentNode.SubKeys(); i++){
+                auto [tupleKey, row] = currentNode.PeekLeafTuple(i);
 
                 // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
                 // std::cout << "Row: " << row << std::endl;
                 if (key == tupleKey){
-                    currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                    currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
                     continue;
                 }
 
@@ -1067,11 +1072,11 @@ namespace Indexing{
                     return;
             }
 
-            const auto& nextNodeId = currentNode->GetNextPage();
-            if(nextNodeId == INVALID_PAGE_ID)
+            const auto rightSibling = currentNode.RightSibling();
+            if(rightSibling == INVALID_PAGE_ID)
                 return;
 
-            currentNode = this->GetNode(nextNodeId);
+            currentNode = this->GetNode(rightSibling);
         }
     }
 
@@ -1089,19 +1094,16 @@ namespace Indexing{
         auto context = Expressions::EvaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         while (true){
-            if (!currentNode.Get())
-                break;
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
-
-            for (Int i = 0; i < currentNode->NumberOfKeys(); i++){
-                auto [tupleKey, row] = currentNode->PeekLeafTuple(i);
+            for (Int i = 0; i < currentNode.SubKeys(); i++){
+                auto [tupleKey, row] = currentNode.PeekLeafTuple(i);
 
                 if (key == tupleKey ){
                     context.row = &row;
 
                     if (expression->Evaluate(context).AsBool())
-                        currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                        currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
 
                     continue;
                 }
@@ -1110,11 +1112,11 @@ namespace Indexing{
                     return;
             }
 
-            const auto& nextNodeId = currentNode->GetNextPage();
-            if(nextNodeId == INVALID_PAGE_ID)
+            const auto rightSibling = currentNode.RightSibling();
+            if(rightSibling == INVALID_PAGE_ID)
                 return;
 
-            currentNode = this->GetNode(nextNodeId);
+            currentNode = this->GetNode(rightSibling);
         }
     }
 
@@ -1126,18 +1128,18 @@ namespace Indexing{
         auto currentNode = this->SearchLeftMostLeafNode();
         Pages::IndexPageView previousNode;
 
-        while (currentNode.Get())
+        while (true)
         {
             // auto* keys = currentNode->GetKeysUnsafe();
 
             // for (Int i = 0; i < keys->size(); i++)
             //     result.emplace_back(currentNode->dataPageId, i);
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
             // previousNode = currentNode;
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1155,25 +1157,25 @@ namespace Indexing{
                                 : this->GetNode(state.pageId);
 
         state.canFetchMore = false;
-        while (currentNode.Get()){
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+        while (true){
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = state.GetNextKeyIndex(); i < currentNode->GetPageSize(); i++)
-                currentNode->AppendRowToBuffer(result, this->table, properties.snapshot, i);
+            for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++)
+                currentNode.AppendRowToBuffer(result, this->table, properties.snapshot, i);
 
-            if(!currentNode->HasRightSibling()) {
+            if(!currentNode.HasRightSibling()) {
                 state.canFetchMore = false;
                 return;
             }
 
             if (result->size() >= properties.batchSize) {
-                state.pageId = currentNode->GetNextPage();
+                state.pageId = currentNode.RightSibling();
                 state.lastFetchedKeyIndex = INVALID_PAGE_INDEX_ID;
                 state.canFetchMore = true;
                 return;
             }
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1193,33 +1195,33 @@ namespace Indexing{
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
         state.canFetchMore = false;
-        while (currentNode.Get())
+        while (true)
         {
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = state.GetNextKeyIndex(); i < currentNode->NumberOfKeys(); i++) {
-                auto [key, row] = currentNode->PeekLeafTuple(i);
+            for (Int i = state.GetNextKeyIndex(); i < currentNode.SubKeys(); i++) {
+                auto [key, row] = currentNode.PeekLeafTuple(i);
                 context.row = &row;
                 if (!expression->Evaluate(context).AsBool())
                     continue;
 
-                currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
 
                 if (result->size() == properties.batchSize) {
                     state.lastFetchedKeyIndex = i;
-                    state.pageId = currentNode->PageId();
+                    state.pageId = currentNode.PageId();
                     state.canFetchMore = true;
 
                     return;
                 }
             }
 
-            if(!currentNode->HasRightSibling()) {
+            if(!currentNode.HasRightSibling()) {
                 state.canFetchMore = false;
                 return;
             }
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
       }
     }
 
@@ -1235,24 +1237,24 @@ namespace Indexing{
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-        while (currentNode.Get())
+        while (true)
         {
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = 0;i < currentNode->GetPageSize();i++){
+            for (Int i = 0;i < currentNode.PageSize();i++){
 
-                auto [key, row] = currentNode->PeekLeafTuple(i);
+                auto [key, row] = currentNode.PeekLeafTuple(i);
                 context.row = &row;
                 if(!expression->Evaluate(context).AsBool())
                     continue;
 
-                currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+                currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1265,18 +1267,18 @@ namespace Indexing{
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode.Get())
+        while (true)
         {
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = 0;i < currentNode->GetPageSize();i++){
-                currentNode->AppendRowToBuffer(result, table, properties.snapshot, i);
+            for (Int i = 0;i < currentNode.PageSize();i++){
+                currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1295,9 +1297,9 @@ namespace Indexing{
 
         const Int startingPosition = state.GetNextKeyIndex();
 
-        while (currentNode.Get())
+        while (true)
         {
-            MultiThreading::ReaderGuard lock(&currentNode->Latch());
+            MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             // const auto* rowIds = currentNode->NonClusteredDataNoLock();
             //
@@ -1326,10 +1328,10 @@ namespace Indexing{
             //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
             // }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1339,7 +1341,7 @@ namespace Indexing{
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode.Get()){
+        while (true){
             // for(auto* row: *currentNode->GetDataRowsUnsafe()){
             //     if(!row->Evaluate(expression))
             //         continue;
@@ -1351,10 +1353,10 @@ namespace Indexing{
             //     result->emplace_back(*table, copyBlocks, rowHeader->nullBitMap);
             // }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1369,11 +1371,11 @@ namespace Indexing{
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-        while (currentNode.Get()){
-            MultiThreading::WriterGuard lock(&currentNode->Latch());
+        while (true){
+            MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int indexPosition = 0; indexPosition < currentNode->GetPageSize();indexPosition++){
-                auto tuple = currentNode->PeekLeafTuple(indexPosition);
+            for (Int indexPosition = 0; indexPosition < currentNode.PageSize();indexPosition++){
+                auto tuple = currentNode.PeekLeafTuple(indexPosition);
 
                 context.row = &tuple.row;
                 const auto value = expression->Evaluate(context);
@@ -1381,7 +1383,7 @@ namespace Indexing{
                     continue;
 
                 const auto result = this->table->UpdateRowNoLock(
-                    currentNode.Get(),
+                    &currentNode,
                     tuple.row,
                     properties,
                     updates
@@ -1391,10 +1393,10 @@ namespace Indexing{
                     return;
             }
 
-          if(!currentNode->HasRightSibling())
+          if(!currentNode.HasRightSibling())
             return;
 
-          currentNode = this->GetNode(currentNode->GetNextPage());
+          currentNode = this->GetNode(currentNode.RightSibling());
         }
     }
 
@@ -1409,11 +1411,11 @@ namespace Indexing{
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-        while (currentNode.Get()){
-            MultiThreading::WriterGuard lock(&currentNode->Latch());
+        while (true){
+            MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int i = 0;i < currentNode->GetPageSize();i++){
-                auto tuple = currentNode->PeekLeafTuple(i);
+            for (Int i = 0;i < currentNode.PageSize();i++){
+                auto tuple = currentNode.PeekLeafTuple(i);
 
                 context.row = &tuple.row;
 
@@ -1422,7 +1424,7 @@ namespace Indexing{
                     continue;
 
                 auto result = this->table->UpdateRowNoLock(
-                    currentNode.Get(),
+                    &currentNode,
                     tuple.row,
                     properties,
                     updates
@@ -1432,10 +1434,10 @@ namespace Indexing{
                     return result;
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return {};
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
 
         return {};
@@ -1450,14 +1452,14 @@ namespace Indexing{
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode.Get()){
-            MultiThreading::WriterGuard lock(&currentNode->Latch());
+        while (true){
+            MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int indexPosition = 0;indexPosition < currentNode->GetPageSize();indexPosition++){
-                auto tuple = currentNode->PeekLeafTuple(indexPosition);
+            for (Int indexPosition = 0;indexPosition < currentNode.PageSize();indexPosition++){
+                auto tuple = currentNode.PeekLeafTuple(indexPosition);
 
                 auto result = this->table->UpdateRowNoLock(
-                    currentNode.Get(),
+                    &currentNode,
                     tuple.row,
                     properties,
                     updates
@@ -1467,10 +1469,10 @@ namespace Indexing{
                   return result;
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return {};
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
 
         return {};
@@ -1486,16 +1488,16 @@ namespace Indexing{
 
         auto currentNode = this->SearchKey(key);
 
-        while (currentNode.Get()) {
-            MultiThreading::WriterGuard lock(&currentNode->Latch());
+        while (true) {
+            MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int indexPosition = 0;indexPosition < currentNode->NumberOfKeys(); indexPosition++){
-                auto tuple = currentNode->PeekLeafTuple(indexPosition);
+            for (Int indexPosition = 0;indexPosition < currentNode.SubKeys(); indexPosition++){
+                auto tuple = currentNode.PeekLeafTuple(indexPosition);
                 if (key != tuple.key || key < tuple.key)
                     continue;
 
                 auto result = this->table->UpdateRowNoLock(
-                    currentNode.Get(),
+                    &currentNode,
                     tuple.row,
                     properties,
                     updates
@@ -1505,10 +1507,10 @@ namespace Indexing{
                     return result;
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return {};
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
 
         return {};
@@ -1527,12 +1529,12 @@ namespace Indexing{
         auto currentNode = this->SearchKey(*minKey);
 
         Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
-        while (currentNode.Get())
+        while (true)
         {
-            MultiThreading::WriterGuard lock(&currentNode->Latch());
+            MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-              for (Int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
-                auto tuple = currentNode->PeekLeafTuple(indexPosition);
+              for (Int indexPosition = 0; indexPosition < currentNode.SubKeys(); indexPosition++){
+                auto tuple = currentNode.PeekLeafTuple(indexPosition);
 
                 if (*minKey > tuple.key)
                     continue;
@@ -1546,7 +1548,7 @@ namespace Indexing{
                     continue;
 
                 auto result = this->table->UpdateRowNoLock(
-                    currentNode.Get(),
+                    &currentNode,
                     tuple.row,
                     properties,
                     updates
@@ -1556,10 +1558,10 @@ namespace Indexing{
                   return result;
               }
 
-          if(!currentNode->HasRightSibling())
+          if(!currentNode.HasRightSibling())
             return {};
 
-          currentNode = this->GetNode(currentNode->GetNextPage());
+          currentNode = this->GetNode(currentNode.RightSibling());
         }
 
         return {};
@@ -1576,11 +1578,11 @@ namespace Indexing{
 
         auto currentNode = this->SearchKey(*minKey);
 
-        while (currentNode.Get()){
-            MultiThreading::WriterGuard lock(&currentNode->Latch());
+        while (true){
+            MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int indexPosition = 0; indexPosition < currentNode->NumberOfKeys(); indexPosition++){
-                auto tuple = currentNode->PeekLeafTuple(indexPosition);
+            for (Int indexPosition = 0; indexPosition < currentNode.SubKeys(); indexPosition++){
+                auto tuple = currentNode.PeekLeafTuple(indexPosition);
 
                 if (*minKey > tuple.key)
                     continue;
@@ -1589,7 +1591,7 @@ namespace Indexing{
                     break;
 
                 auto result = this->table->UpdateRowNoLock(
-                    currentNode.Get(),
+                    &currentNode,
                     tuple.row,
                     properties,
                     updates
@@ -1599,10 +1601,10 @@ namespace Indexing{
                   return result;
             }
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return {};
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
 
         return {};
@@ -1633,7 +1635,7 @@ namespace Indexing{
         // Pages::IndexPageView previousNode;
         // while (true)
         // {
-        //     if (currentNode.Get() == nullptr)
+        //     if (currentNode == nullptr)
         //         return;
         //
         //     // MultiThreading::ReaderGuard
@@ -1658,7 +1660,7 @@ namespace Indexing{
         //     }
         //
         //     previousNode = currentNode;
-        //     currentNode = this->GetNode(currentNode->GetNextPage());
+        //     currentNode = this->GetNode(currentNode.GetRightSibling());
         // }
     }
 
@@ -1721,7 +1723,7 @@ namespace Indexing{
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        // while (currentNode.Get()){
+        // while (currentNode){
         //     const auto rows = currentNode->DataRowsNoLock(this->table);
         //
         //     for (Int i = 0;i < rows.size(); i++) {
@@ -1733,7 +1735,7 @@ namespace Indexing{
         //     if(!currentNode->HasRightSibling())
         //         return;
         //
-        //     currentNode = this->GetNode(currentNode->GetNextPage());
+        //     currentNode = this->GetNode(currentNode.GetRightSibling());
         // }
     }
 
@@ -1743,15 +1745,15 @@ namespace Indexing{
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        // while (currentNode.Get())
+        // while (currentNode)
         // {
         //     for(auto& row: currentNode->DataRowsNoLock(this->table))
-        //         this->table->HandleAddColumn(currentNode.Get(), &row, index, defaultValue);
+        //         this->table->HandleAddColumn(currentNode, &row, index, defaultValue);
         //
         //     if(!currentNode->HasRightSibling())
         //         return;
         //
-        //     currentNode = this->GetNode(currentNode->GetNextPage());
+        //     currentNode = this->GetNode(currentNode.GetRightSibling());
         // }
     }
 
@@ -1763,15 +1765,15 @@ namespace Indexing{
 
         auto currentNode = this->SearchLeftMostLeafNode();
 
-        while (currentNode.Get())
+        while (true)
         {
             // for(auto& row: currentNode->DataRowsNoLock(this->table))
-            //     DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode.Get(), &row, index);
+            //     DatabaseEngine::StorageTypes::Table::HandleRemoveColumn(currentNode, &row, index);
 
-            if(!currentNode->HasRightSibling())
+            if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode->GetNextPage());
+            currentNode = this->GetNode(currentNode.RightSibling());
         }
 
     }

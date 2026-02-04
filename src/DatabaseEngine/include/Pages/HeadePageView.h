@@ -26,9 +26,10 @@ namespace Pages
             explicit HeaderPageView(Frame* framePtr);
             ~HeaderPageView() override;
 
-            DatabaseEngine::DatabaseHeader* GetDatabaseHeaderPtr() const;
+            [[nodiscard]] DatabaseEngine::DatabaseHeader* GetDatabaseHeaderPtr() const;
 
-            const DatabaseEngine::StorageTypes::TableHeader& GetTableHeader(Int indexPosition) const;
+            const std::vector<DatabaseEngine::StorageTypes::TableHeader>& GetTableHeaders() const;
+            [[nodiscard]] const DatabaseEngine::StorageTypes::TableHeader& GetTableHeader(Int indexPosition) const;
 
             void SetDatabaseHeader(const DatabaseEngine::DatabaseHeader& header) const;
             void SetTableHeader(Int indexPosition, const DatabaseEngine::StorageTypes::TableHeader& header);

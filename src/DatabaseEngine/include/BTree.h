@@ -79,9 +79,9 @@ namespace Indexing{
         )const;
 
         void SplitInternalNodeNoLock(
-            Pages::IndexPageView& parent,
-            Pages::IndexPageView& child,
-            Pages::IndexPageView& newChild,
+            const Pages::IndexPageView& parent,
+            const Pages::IndexPageView& child,
+            const Pages::IndexPageView& newChild,
             Int index
         )const;
 
@@ -99,7 +99,7 @@ namespace Indexing{
         );
 
         static Errors::RuntimeStatus InsertToNode(
-            Pages::IndexPageView& parent,
+            const Pages::IndexPageView& parent,
             const Pages::IndexInsertTuple& tuple,
             Int& indexPosition
         );
@@ -114,7 +114,7 @@ namespace Indexing{
 
         [[nodiscard]] Pages::IndexPageView AllocateNewPage(page_id_t parentPageId, Int pagesToAllocate);
 
-        void HandleUnderflow(Pages::IndexPageView& node, std::vector<Pages::IndexPageView>& ancestors, Int& parentIndex);
+        void HandleUnderflow(const Pages::IndexPageView& node, std::vector<Pages::IndexPageView>& ancestors, Int& parentIndex);
         void HandleRootUnderflow();
 
         bool TryBorrowFromLeftSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int index)const;
@@ -122,7 +122,7 @@ namespace Indexing{
 
         // Leaf redistribution methods for improved space utilization
         [[nodiscard]] bool TryRedistributeLeaf(
-            Pages::IndexPageView& parent,
+            const Pages::IndexPageView& parent,
             MultiThreading::ReaderGuard& parentLock,
             Pages::IndexPageView& child,
             MultiThreading::ReaderGuard& childLock,
@@ -160,7 +160,7 @@ namespace Indexing{
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;
 
-        void UpdatePfsPage(Pages::IndexPageView& node)const;
+        void UpdatePfsPage(const Pages::IndexPageView& node)const;
 
     public:
         explicit BTree(

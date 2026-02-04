@@ -53,7 +53,7 @@ namespace DatabaseEngine {
         return key;
     }
 
-   Pages::PageGuard<Pages::IndexPage> Database::FindOrAllocateNextIndexPage(
+   Pages::IndexPageView Database::FindOrAllocateNextIndexPage(
         StorageTypes::Table*& table,
 	    const page_id_t indexPageId,
 	    const Int pagesToAllocate,
@@ -81,7 +81,7 @@ namespace DatabaseEngine {
         );
 
         std::vector<extent_id_t> allocatedExtents;
-        indexAllocationMapPage->GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentId(indexPageId));
+        indexAllocationMapPage.GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentId(indexPageId));
 
         for(const auto& extentId: allocatedExtents){
             const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
@@ -90,25 +90,25 @@ namespace DatabaseEngine {
                 {
                     const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextIndexPageId);
 
-                    MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage->Latch());
+                    MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage.Latch());
 
-                    if (pageFreeSpacePage->GetPageType(nextIndexPageId) != PageType::INDEX)
+                    if (pageFreeSpacePage.GetPageType(nextIndexPageId) != PageType::INDEX)
                         continue;
 
                     //page is free
-                    if(pageFreeSpacePage->GetPageSizeCategory(nextIndexPageId) == 0)
+                    if(pageFreeSpacePage.GetPageSizeCategory(nextIndexPageId) == 0)
                         continue;
                 }
 
                 auto indexPage = Storage::StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, table);
 
-                if (!indexPage.IsValid())
-                    continue;
+                // if (!indexPage.IsValid())
+                //     continue;
 
                 bool successfulLock = false;
-                auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage->Latch(), successfulLock);
+                auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage.Latch(), successfulLock);
 
-                if(!successfulLock || !indexPage->isEmpty())
+                if(!successfulLock || !indexPage.IsEmpty())
                     continue;
 
                 return indexPage;

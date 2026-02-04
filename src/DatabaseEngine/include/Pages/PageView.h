@@ -1,11 +1,29 @@
 ﻿#pragma once
-#include "Page.h"
+#include "RowIdentifier.h"
+#include "Additional/SlotDirectory.h"
+#include "DataStorage/InsertPayload.h"
+#include "DataTypes/DataTypes.h"
+#include "Guards/ReadWriteMutex.h"
 
 namespace Pages{
+    struct Frame;
+
+    struct PageHeader{
+        page_id_t pageId;
+        page_size_t size;
+        page_size_t bytesLeft;
+        // Constants::PageType type;
+
+        PageHeader();
+        ~PageHeader();
+    };
+
     class PageView{
     protected:
         Frame* framePtr;
         PageHeader* headerPtr;
+
+        PageType type;
 
         void SetFileName(const std::string &otherFilename) const;
         void SetPageId(page_id_t pageId) const;
@@ -21,22 +39,11 @@ namespace Pages{
         [[nodiscard]] Int RawDataSize()const;
 
         void InsertFirstRow(const DatabaseEngine::StorageTypes::InsertPayload& payload) const;
-        [[nodiscard]] Int InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload) const;
-        void InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload, Int indexPosition) const;
-
-        [[nodiscard]]
-        bool UpdateRow(
-            const DatabaseEngine::StorageTypes::InsertPayload& payload,
-            const RowReference& rowPtr
-        );
-        void SetForwardPointer(
-            Int indexPosition,
-            const DataTypes::RowIdentifier& rowId
-        ) const;
 
         [[nodiscard]] bool IsIndexPage()const;
 
     public:
+        PageView();
         explicit PageView(Frame* framePtr);
         virtual ~PageView();
 
@@ -56,9 +63,30 @@ namespace Pages{
 
         void DistributeSingleSlotFromPage(PageView* donorPage, Int donorIndexPosition, Int donorResizeVariant);
 
-        page_id_t PageId()const;
-        page_size_t PageSize()const;
+        [[nodiscard]] Int InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload) const;
+        void InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload, Int indexPosition) const;
 
-        object_t* GetData() const;
+        [[nodiscard]]
+        bool UpdateRow(
+            const DatabaseEngine::StorageTypes::InsertPayload& payload,
+            const RowReference& rowPtr
+        ) const;
+        void SetForwardPointer(
+            Int indexPosition,
+            const DataTypes::RowIdentifier& rowId
+        ) const;
+
+        [[nodiscard]] page_id_t PageId()const;
+        [[nodiscard]] page_size_t PageSize()const;
+        [[nodiscard]] page_size_t BytesLeft()const;
+
+        [[nodiscard]] object_t* GetData() const;
+
+        [[nodiscard]] MultiThreading::ReadWriteMutex& Latch()const;
+
+        QueryResult MaterializeRow(Int indexPosition) const;
+        Value PartialMaterializeRow(Int indexPosition, column_index_t columnIndex) const;
+
+        [[nodiscard]] bool IsValid()const;
     };
 }

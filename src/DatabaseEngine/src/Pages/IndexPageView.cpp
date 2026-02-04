@@ -72,6 +72,10 @@ namespace Pages{
         );
     }
 
+    IndexPageView::IndexPageView() : PageView() {
+        this->additionalHeaderPtr = nullptr;
+    }
+
     IndexPageView::IndexPageView(Frame* framePtr) : PageView(framePtr) {
         this->additionalHeaderPtr = reinterpret_cast<IndexPageAdditionalHeader*>(
             this->framePtr->data + PAGE_HEADER_SIZE

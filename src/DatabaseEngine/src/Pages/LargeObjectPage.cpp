@@ -15,12 +15,12 @@ namespace Pages {
     }
 
     LargeObjectPage::LargeObjectPage(const page_id_t pageId, const bool isPageCreation) : Page(pageId, nullptr, isPageCreation){
-        this->header.type = PageType::LOB;
+        // this->header.type = PageType::LOB;
     }
 
     LargeObjectPage::LargeObjectPage() : Page(){
         this->isDirty = false;
-        this->header.type = PageType::LOB;
+        // this->header.type = PageType::LOB;
     }
 
     LargeObjectPage::LargeObjectPage(const PageHeader& pageHeader) : Page(pageHeader) {}

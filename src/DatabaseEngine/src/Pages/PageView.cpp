@@ -1,5 +1,8 @@
 ﻿#include "../include/Pages/PageView.h"
 
+#include "Pages/Additional/Frame.h"
+#include "Pages/Additional/RowReference.h"
+
 namespace Pages{
     void PageView::SetFileName(const std::string& otherFilename) const{
         this->framePtr->filename = otherFilename;
@@ -10,7 +13,7 @@ namespace Pages{
     }
 
     page_offset_t PageView::NewInsertOffset() const{
-        const auto defaultSize = this->headerPtr->type == PageType::DATA
+        const auto defaultSize = this->type == PageType::DATA
                              ? PAGE_SIZE_WITHOUT_HEADER
                              : INDEX_PAGE_DEFAULT_SIZE;
 
@@ -18,7 +21,7 @@ namespace Pages{
     }
 
     Int PageView::SlotDirectoryOffSet(const Int indexPosition) const{
-        const auto defaultSize = this->headerPtr->type == PageType::DATA
+        const auto defaultSize = this->type == PageType::DATA
                              ? PAGE_SIZE_WITHOUT_HEADER
                              : INDEX_PAGE_DEFAULT_SIZE;
 
@@ -26,7 +29,7 @@ namespace Pages{
     }
 
     Int PageView::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove) const{
-        const auto defaultSize = this->headerPtr->type == PageType::DATA
+        const auto defaultSize = this->type == PageType::DATA
                              ? PAGE_SIZE_WITHOUT_HEADER
                              : INDEX_PAGE_DEFAULT_SIZE;
 
@@ -65,7 +68,7 @@ namespace Pages{
     }
 
     Int PageView::RawDataSize() const{
-        return this->headerPtr->type == PageType::INDEX
+        return this->type == PageType::INDEX
                    ? INDEX_PAGE_DEFAULT_SIZE
                    : PAGE_SIZE_WITHOUT_HEADER;
     }
@@ -130,7 +133,7 @@ namespace Pages{
     bool PageView::UpdateRow(
         const DatabaseEngine::StorageTypes::InsertPayload& payload,
         const RowReference& rowPtr
-    ){
+    ) const{
         if (this->IndexOutOfBounds(rowPtr.indexPosition))
             throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
 
@@ -203,13 +206,20 @@ namespace Pages{
     }
 
     bool PageView::IsIndexPage() const{
-        return this->headerPtr->type == PageType::INDEX;
+        return this->type == PageType::INDEX;
+    }
+
+    PageView::PageView(){
+        this->framePtr = nullptr;
+        this->headerPtr = nullptr;
+        this->type = PageType::DATA;
     }
 
     PageView::PageView(Frame* framePtr){
         this->framePtr = framePtr;
         this->framePtr->pinCount.fetch_add(1, std::memory_order_relaxed);
         this->headerPtr = reinterpret_cast<PageHeader*>(this->framePtr->data);
+        this->type = PageType::DATA;
     }
 
     PageView::~PageView(){
@@ -235,9 +245,8 @@ namespace Pages{
         return rowHeader;
     }
 
-    RowReference PageView::PeekRow(Int indexPosition, Int offSet){
-        return RowReference();
-        // return RowReference(this, indexPosition, offSet);
+    RowReference PageView::PeekRow(const Int indexPosition, const Int offSet){
+        return RowReference(this, indexPosition, offSet);
     }
 
     SlotDirectory PageView::GetSlotDirectory(const Int indexPosition) const{
@@ -365,7 +374,25 @@ namespace Pages{
         return this->headerPtr->size;
     }
 
+    page_size_t PageView::BytesLeft() const{
+        return this->headerPtr->bytesLeft;
+    }
+
     object_t* PageView::GetData() const{
         return this->framePtr->data;
+    }
+
+    MultiThreading::ReadWriteMutex& PageView::Latch() const{
+        return this->framePtr->latch;
+    }
+
+    QueryResult PageView::MaterializeRow(Int indexPosition) const{
+    }
+
+    Value PageView::PartialMaterializeRow(Int indexPosition, column_index_t columnIndex) const{
+    }
+
+    bool PageView::IsValid() const{
+        return this->framePtr != nullptr;
     }
 }

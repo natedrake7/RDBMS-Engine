@@ -7,6 +7,7 @@
 #include "Pages/IndexPage.h"
 #include "DataStorage/Table.h"
 #include "Pages/OverflowPage.h"
+#include "Pages/PageFreeSpaceView.h"
 #include "Pages/PageGuard.h"
 
 namespace Indexing {
@@ -130,7 +131,7 @@ public:
         const DataTypes::RowIdentifier& rowId
     );
 
-    [[nodiscard]] static Pages::PageGuard<Pages::PageFreeSpacePage> GetAssociatedPfsPage(const string& filename, page_id_t pageId);
+    [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(const string& filename, page_id_t pageId);
 
     static page_id_t GetGamAssociatedPage(page_id_t pageId);
 
@@ -170,11 +171,11 @@ public:
 
     void DeleteDatabase() const;
 
-    void TruncateTable(table_id_t tableId);
+    void TruncateTable(table_id_t tableId) const;
 
     Pages::PageGuard<Pages::OverflowPage> CreateOverflowPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
 
-    Pages::PageGuard<Pages::Page> CreateDataPage(table_id_t tableId, Int pagesToAllocate);
+    Pages::PageView CreateDataPage(table_id_t tableId, Int pagesToAllocate);
 
     Pages::PageGuard<Pages::LargeObjectPage> CreateLargeDataPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
 
@@ -184,7 +185,7 @@ public:
 
     Pages::PageGuard<Pages::OverflowPage> GetLastOverflowPage(table_id_t tableId, const block_size_t& size);
 
-    Pages::PageGuard<Pages::IndexPage> CreateIndexPage(
+    Pages::IndexPageView CreateIndexPage(
       table_id_t tableOrdinalPosition,
       Int pageCount,
       TreeType treeType,
@@ -201,15 +202,15 @@ public:
 
     static extent_id_t CalculateExtentId(page_id_t pageId);
 
-    [[nodiscard]] Pages::PageGuard<Pages::Page> FindOrAllocateNextDataPage(
-      Pages::PageGuard<Pages::PageFreeSpacePage> &pageFreeSpacePage,
+    [[nodiscard]] Pages::PageView FindOrAllocateNextDataPage(
+      Pages::PageFreeSpaceView &pageFreeSpacePage,
       page_id_t pageId,
       page_id_t extentFirstPageId,
       const StorageTypes::Table &table,
       Int pageToAllocate
     );
 
-    [[nodiscard]] Pages::PageGuard<Pages::IndexPage> FindOrAllocateNextIndexPage(
+    [[nodiscard]] Pages::IndexPageView FindOrAllocateNextIndexPage(
       StorageTypes::Table*& table,
       page_id_t indexPageId,
       Int pagesToAllocate,

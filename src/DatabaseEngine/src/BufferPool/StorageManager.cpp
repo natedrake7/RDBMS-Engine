@@ -1,8 +1,5 @@
 #include "../../include/BufferPool/StorageManager.h"
 #include "../../include/Pages/Page.h"
-#include "../../include/Pages/HeaderPage.h"
-#include "../../include/Pages/GlobalAllocationMapPage.h"
-#include "../../include/Pages/IndexAllocationMapPage.h"
 #include "../../include/Pages/IndexPage.h"
 #include "../../include/Pages/LargeObjectPage.h"
 #include "../../include/Pages/PageFreeSpacePage.h"
@@ -16,14 +13,26 @@
 #include <ranges>
 
 #include "Pages/GlobalAllocationPageView.h"
+#include "Pages/HeadePageView.h"
 #include "Pages/IndexPageView.h"
 
 namespace Storage {
 StorageManager::StorageManager(){
-    this->frames.resize(Constants::MAX_NUMBER_OF_PAGES);
+    this->frames.clear();
+    this->frames.reserve(Constants::MAX_NUMBER_OF_PAGES);
+    this->memoryPool.Allocate(Constants::MAX_NUMBER_OF_PAGES);
+
+    for (auto i = 0; i < Constants::MAX_NUMBER_OF_PAGES; ++i) {
+        auto frame = new Pages::Frame(
+            this->memoryPool.Data() + i * PAGE_SIZE,
+            nullptr
+        );
+
+        this->frames.push_back(frame);
+    }
+
     this->capacity = Constants::MAX_NUMBER_OF_PAGES;
     this->clockHand = 0;
-    this->memoryPool.Allocate(Constants::MAX_NUMBER_OF_PAGES);
 }
 
 std::string StorageManager::CreateKey(const std::string &filename, const page_id_t pageId){
@@ -31,15 +40,15 @@ std::string StorageManager::CreateKey(const std::string &filename, const page_id
 }
 
 StorageManager::~StorageManager() {
-  for (const auto frame : this->pageTable | views::values) {
-    auto* page = &this->frames[frame];
+    for (const auto frame : this->pageTable | views::values) {
+        const auto* page = this->frames[frame];
 
+        if (page == nullptr)
+        continue;
 
-    if (page == nullptr)
-      continue;
-
-    this->RemovePageWithoutKeyDeletion(page);
-  }
+        this->RemovePageWithoutKeyDeletion(page);
+        delete page;
+    }
 }
 
 StorageManager& StorageManager::Get(){
@@ -61,7 +70,7 @@ Pages::Frame* StorageManager::GetRawPage(
 
     auto frame = 0;
     if (this->pageTable.TryGetValue(StorageManager::CreateKey(filename, pageId), frame))
-      return &this->frames[frame];
+      return this->frames[frame];
   }
 
   const auto extentId = DatabaseEngine::Database::CalculateExtentId(pageId);
@@ -74,7 +83,7 @@ Pages::PageView StorageManager::CreatePage(const std::string& filename, const Da
   // auto *page = new Pages::Page(pageId, table, true);
   // page->SetDirty();
 
-  auto* frame = this->CreateFrame(filename, pageId);
+  auto* frame = this->CreateFrame(filename, pageId, table);
   return Pages::PageView(frame);
 }
 
@@ -126,7 +135,7 @@ Pages::Frame* StorageManager::EvictPage() {
     MultiThreading::WriterGuard lock(&this->clockMutex_);
 
     while (true) {
-        auto* page = &this->frames[this->clockHand];
+        auto* page = this->frames[this->clockHand];
 
         if (page == nullptr || page->pinCount.load() > 0 || page->priority.load() >= PagePriority::HIGH) {
         this->clockHand = (this->clockHand + 1) % this->capacity;
@@ -143,7 +152,7 @@ Pages::Frame* StorageManager::EvictPage() {
     }
 
         this->clockHand = (this->clockHand + 1) % this->capacity;
-        return &this->frames[this->clockHand];
+        return this->frames[this->clockHand];
     }
 }
 
@@ -226,14 +235,18 @@ Pages::Frame* StorageManager::OpenExtent(
             const auto frame = this->clockHand % this->capacity;
 
             auto* pageDataPtr = this->memoryPool.CopyToMemory(buffer.data(), frame * PAGE_SIZE, offSet);
+            auto* newFramePtr = this->frames[frame];
 
-            this->frames[frame] = Pages::Frame(
-                pageDataPtr,
-                table
-            );
+            newFramePtr->data = pageDataPtr;
+            newFramePtr->filename = filename;
+            newFramePtr->isDirty = false;
+            newFramePtr->hasSecondChance = false;
+            newFramePtr->pinCount.store(0);
+            newFramePtr->priority.store(PagePriority::LOW);
+            newFramePtr->table = table;
 
             if (currentPageId == pageId)
-                framePtr = &this->frames[frame];
+                framePtr = this->frames[frame];
 
             this->pageTable[key] = frame;
             this->clockHand = (this->clockHand + 1) % this->capacity;
@@ -247,20 +260,20 @@ Pages::Frame* StorageManager::OpenExtent(
 ////////////////////System Pages///////////////////
 //////////////////////////////////////////////////
 
-Pages::PageGuard<Pages::HeaderPage> StorageManager::CreateHeaderPage(const string &filename)
+Pages::HeaderPageView StorageManager::CreateHeaderPage(const string &filename)
 {
   // auto *page = new Pages::HeaderPage(Constants::HEADER_PAGE_ID);
 
-  auto* frame = this->CreateFrame(filename, Constants::HEADER_PAGE_ID);
+  auto* frame = this->CreateFrame(filename, Constants::HEADER_PAGE_ID, nullptr);
 
-  return Pages::PageGuard(page);
+  return Pages::HeaderPageView(frame);
 }
 
 Pages::GlobalAllocationPageView StorageManager::CreateGlobalAllocationMapPage(const string &filename, const page_id_t pageId)
 {
   // auto *page = new Pages::GlobalAllocationMapPage(pageId);
 
-  auto* frame = this->CreateFrame(filename, pageId);
+  auto* frame = this->CreateFrame(filename, pageId, nullptr);
 
   return Pages::GlobalAllocationPageView(frame);
 }
@@ -273,7 +286,7 @@ Pages::AllocationPageView StorageManager::CreateAllocationPage(
 ){
   // auto *page = new Pages::IndexAllocationMapPage(tableId, pageId, startingExtentId);
 
-  auto* frame = this->CreateFrame(filename, pageId);
+  auto* frame = this->CreateFrame(filename, pageId, nullptr);
 
   return Pages::AllocationPageView(frame);
 }
@@ -283,7 +296,7 @@ Pages::PageFreeSpaceView StorageManager::CreatePageFreeSpacePage(const string &f
 {
     // auto *page = new Pages::PageFreeSpacePage(pageId);
 
-    auto* frame = this->CreateFrame(filename, pageId);
+    auto* frame = this->CreateFrame(filename, pageId, nullptr);
 
     return Pages::PageFreeSpaceView(frame);
 }
@@ -295,41 +308,50 @@ Pages::IndexPageView StorageManager::CreateIndexPage(
 ){
   // auto *frame = new Pages::IndexPage(pageId, table, true);
 
-  auto* frame = this->CreateFrame(filename, pageId);
+  auto* frame = this->CreateFrame(filename, pageId, table);
 
   return Pages::IndexPageView(frame);
 }
 
-Pages::Frame* StorageManager::CreateFrame(const std::string &filename, const page_id_t pageId){
+Pages::Frame* StorageManager::CreateFrame(const std::string &filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table){
     MultiThreading::WriterGuard lock(&this->tableMutex);
 
     if (this->pageTable.size() >= MAX_NUMBER_OF_PAGES) {
         auto* victim = this->EvictPage();
         // this->RemovePage(victim);
     }
-
     // page->SetFileName(filename);
 
     const size_t frameIndex = clockHand % capacity;
 
-    this->frames[frameIndex] = Pages::Frame(
-        this->memoryPool.Data() + frameIndex * PAGE_SIZE,
-        page->GetTable()
-    );
+    auto* framePtr = this->frames[frameIndex];
+
+    framePtr->data = this->memoryPool.Data() + frameIndex * PAGE_SIZE;
+    framePtr->table = table;
+    framePtr->filename = filename;
+    framePtr->isDirty = true;
+    framePtr->hasSecondChance = false;
+    framePtr->pinCount.store(0);
+    framePtr->priority.store(PagePriority::LOW);
+
     this->pageTable[StorageManager::CreateKey(filename, pageId)] = frameIndex;
     clockHand = (clockHand + 1) % capacity;
 
-    return &this->frames[frameIndex];
+    return framePtr;
 }
 
-Pages::PageGuard<Pages::HeaderPage> StorageManager::GetHeaderPage(const string &filename)
+Pages::HeaderPageView StorageManager::GetHeaderPage(const string &filename)
 {
-  auto* page = this->GetRawPage(filename, Constants::HEADER_PAGE_ID, nullptr);
+  // auto* page = this->GetRawPage(filename, Constants::HEADER_PAGE_ID, nullptr);
+
+    auto* frame = this->GetRawPage(filename, Constants::HEADER_PAGE_ID, nullptr);
+
+    return Pages::HeaderPageView(frame);
 
   // if (page->GetPageType() != PageType::METADATA)
   //   return {};
 
-  return Pages::PageGuard(static_cast<Pages::HeaderPage*>(page));
+  // return Pages::PageGuard(static_cast<Pages::HeaderPage*>(page));
 }
 
 Pages::PageFreeSpaceView StorageManager::GetPageFreeSpacePage(const string& filename, const page_id_t pageId)
@@ -379,86 +401,9 @@ Pages::GlobalAllocationPageView StorageManager::GetGlobalAllocationMapPage(const
     return Pages::GlobalAllocationPageView(frame);
 }
 
-void StorageManager::AllocateMemoryBasedOnSystemPageType(Pages::Page **page, const Pages::PageHeader &pageHeader)
-{
-  switch (pageHeader.type) 
-  {
-    case PageType::GAM:
-      *page = new Pages::GlobalAllocationMapPage(pageHeader);
-      break;
-    case PageType::IAM:
-      *page = new Pages::IndexAllocationMapPage(pageHeader, 0, 0);
-      break;
-    case PageType::METADATA:
-      *page = new Pages::HeaderPage(pageHeader);
-      break;
-    case PageType::FREESPACE:
-      *page = new Pages::PageFreeSpacePage(pageHeader);
-      break;
-    default:
-      throw runtime_error("Page type not recognized");
-  }
-}
-
 ////////////////////////////////////////////////////////////////////
 /////////////////////////Globally Used Functions///////////////////
 //////////////////////////////////////////////////////////////////
-
-bool StorageManager::AllocateMemoryBasedOnPageType(
-    Pages::Page **page,
-    const Pages::PageHeader &pageHeader
-){
-  switch (pageHeader.type) {
-    case PageType::FREESPACE:
-      *page = new Pages::PageFreeSpacePage(pageHeader);
-      break;
-    case PageType::METADATA:
-      *page = new Pages::HeaderPage(pageHeader);
-      break;
-    case PageType::GAM:
-      *page = new Pages::GlobalAllocationMapPage(pageHeader);
-      break;
-    case PageType::DATA:
-      *page = new Pages::Page(pageHeader);
-      break;
-    case PageType::LOB:
-      *page = new Pages::LargeObjectPage(pageHeader);
-      break;
-    case PageType::IAM:
-      *page = new Pages::IndexAllocationMapPage(pageHeader, 0, 0);
-      break;
-    case PageType::INDEX:
-      *page = new Pages::IndexPage(pageHeader);
-      break;
-    case PageType::OVERFLOWTYPE:
-      *page = new Pages::OverflowPage(pageHeader);
-      break;
-    default:
-      return false;
-  }
-  return true;
-}
-
-Pages::PageHeader StorageManager::GetPageHeaderFromFile(
-  const vector<char> &data,
-  page_offset_t &offSet
-){
-  Pages::PageHeader pageHeader;
-  memcpy(&pageHeader.pageId, data.data() + offSet, sizeof(page_id_t));
-  offSet += sizeof(page_id_t);
-
-  memcpy(&pageHeader.size, data.data() + offSet, sizeof(page_size_t));
-  offSet += sizeof(page_size_t);
-
-  memcpy(&pageHeader.bytesLeft, data.data() + offSet, sizeof(page_size_t));
-  offSet += sizeof(page_size_t);
-
-  memcpy(&pageHeader.type, data.data() + offSet, sizeof(PageType));
-  offSet += sizeof(PageType);
-
-  return pageHeader;
-}
-
 bool StorageManager::IsPageCached(const string& filename, const page_id_t pageId)const{
     MultiThreading::ReaderGuard lock(&this->tableMutex);
     return this->pageTable.Contains(StorageManager::CreateKey(filename, pageId));

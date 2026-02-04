@@ -26,6 +26,11 @@ namespace Pages{
         this->framePtr->data[byteIndex] = static_cast<char>(byte);
     }
 
+    AllocationPageView::AllocationPageView() : PageView() {
+        this->additionalHeaderPtr = nullptr;
+        this->lastAllocatedExtentId = 0;
+    }
+
     AllocationPageView::AllocationPageView(Frame* framePtr) : PageView(framePtr) {
         this->additionalHeaderPtr = reinterpret_cast<IndexAllocationPageAdditionalHeader*>(
             framePtr->data + PAGE_HEADER_SIZE
