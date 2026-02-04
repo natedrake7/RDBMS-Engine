@@ -19,6 +19,9 @@ namespace Pages{
             IndexPageView();
             explicit IndexPageView(Frame* framePtr);
 
+            IndexPageView(IndexPageView&& other) noexcept;
+            IndexPageView& operator=(IndexPageView&& other) noexcept;
+
             void SetTreeType(Constants::TreeType treeType) const;
             void SetTreeId(page_id_t treeId) const;
             void SetKeyTypes(const std::vector<DataType>& keyTypes) const;

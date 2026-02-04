@@ -57,6 +57,10 @@ namespace Pages{
     public:
         PageView();
         explicit PageView(Frame* framePtr);
+
+        PageView& operator=(PageView&& other) noexcept;
+        PageView(PageView&& other) noexcept;
+
         virtual ~PageView();
 
         [[nodiscard]] PageHeader* GetHeader()const;

@@ -5,6 +5,27 @@
 namespace Pages{
     PageFreeSpaceView::PageFreeSpaceView(Frame* frame) : PageView(frame) {}
 
+    PageFreeSpaceView::PageFreeSpaceView(PageFreeSpaceView&& other) noexcept{
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+    }
+
+    PageFreeSpaceView& PageFreeSpaceView::operator=(PageFreeSpaceView&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+
+        return *this;
+    }
+
     bool PageFreeSpaceView::IsPageAllocated(const page_id_t pageId) const{
         const auto byte = this->framePtr->data + pageId;
         return PackedByte::ExtractBits<bool>(*byte, 0, ALLOCATION_MASK);

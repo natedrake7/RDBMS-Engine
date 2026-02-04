@@ -30,6 +30,31 @@ namespace Pages{
         this->type = PageType::GAM;
     }
 
+    GlobalAllocationPageView::GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept{
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->type = other.type;
+        this->lastAllocatedExtentId = other.lastAllocatedExtentId;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+    }
+
+    GlobalAllocationPageView& GlobalAllocationPageView::operator=(GlobalAllocationPageView&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->type = other.type;
+        this->lastAllocatedExtentId = other.lastAllocatedExtentId;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+
+        return *this;
+    }
+
     int GlobalAllocationPageView::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const Int numberOfExtents){
         int allocatedExtents = 0;
 

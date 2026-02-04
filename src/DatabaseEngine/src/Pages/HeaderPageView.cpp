@@ -50,6 +50,31 @@ namespace Pages{
         this->type = PageType::METADATA;
     }
 
+    HeaderPageView::HeaderPageView(HeaderPageView&& other) noexcept{
+        this->databaseHeaderPtr = other.databaseHeaderPtr;
+        this->tablesHeaders = std::move(other.tablesHeaders);
+        this->framePtr = other.framePtr;
+        this->type = other.type;
+
+        other.databaseHeaderPtr = nullptr;
+        other.framePtr = nullptr;
+    }
+
+    HeaderPageView& HeaderPageView::operator=(HeaderPageView&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->databaseHeaderPtr = other.databaseHeaderPtr;
+        this->tablesHeaders = std::move(other.tablesHeaders);
+        this->framePtr = other.framePtr;
+        this->type = other.type;
+
+        other.databaseHeaderPtr = nullptr;
+        other.framePtr = nullptr;
+
+        return *this;
+    }
+
     DatabaseEngine::DatabaseHeader* HeaderPageView::GetDatabaseHeaderPtr() const{
         return this->databaseHeaderPtr;
     }

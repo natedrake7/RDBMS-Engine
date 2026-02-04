@@ -520,7 +520,7 @@ namespace DatabaseEngine
                 // pageFreeSpacePage.SetPageMetaData(overflowPage.Get());
 
                 if (!firstPage.IsValid())
-                    firstPage = overflowPage;
+                    firstPage = std::move(overflowPage);
             }
         }
 
@@ -556,7 +556,7 @@ namespace DatabaseEngine
                 pageFreeSpacePage.SetPageMetaData(&dataPage);
 
                 if (!pageAllocated){
-                    page = dataPage;
+                    page = std::move(dataPage);
                     pageAllocated = true;
                 }
             }
@@ -585,7 +585,7 @@ namespace DatabaseEngine
                 pageFreeSpacePage.SetPageMetaData(&dataPage);
 
                 if (!page.IsValid())
-                    page = dataPage;
+                    page = std::move(dataPage);
             }
         }
 
@@ -626,7 +626,7 @@ namespace DatabaseEngine
                 pageFreeSpacePage.SetPageMetaData(&indexPage);
 
                 if (!pageAssigned){
-                    page = indexPage;
+                    page = std::move(indexPage);
                     pageAssigned = true;
                 }
 
@@ -716,7 +716,7 @@ namespace DatabaseEngine
 
                 lowerLimit = newPageId;
 
-                if (newGamPageCreated) {
+                if (newGamPageCreated && !isFirstExtent) {
                     const auto previousIamPage = Storage::StorageManager::Get().GetAllocationPage(
                         this->filename,
                         indexAllocationMapPageId,

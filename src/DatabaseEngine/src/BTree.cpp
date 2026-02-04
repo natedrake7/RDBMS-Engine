@@ -142,7 +142,7 @@ namespace Indexing{
             this->rootPageId = newRoot.PageId();
 
             this->SplitChildNoLock(newRoot, 0, root, pagesToAllocate);
-            root = newRoot;
+            root = std::move(newRoot);
         }
 
         //let table mutexes handle this
@@ -967,7 +967,7 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return;
 
-            previousNode = currentNode;
+            previousNode = std::move(currentNode);
             currentNode = this->GetNode(currentNode.RightSibling());
         }
     }

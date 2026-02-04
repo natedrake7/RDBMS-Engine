@@ -95,9 +95,10 @@ namespace DatabaseEngine::StorageTypes {
     Pages::LargeObjectView Table::GetOrCreateLargeDataPage() const{
         auto largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId);
 
-        return !largeDataPage.IsValid()
-                    ? this->database->CreateLargeDataPage(this->header.tableId, 1)
-                    : largeDataPage;
+        if (largeDataPage.IsValid())
+            return largeDataPage;
+
+        return this->database->CreateLargeDataPage(this->header.tableId, 1);
     }
 
     void Table::LinkLargePageDataObjectChunks(const Pages::LargeObjectView* dataObject, const page_id_t lastLargePageId){

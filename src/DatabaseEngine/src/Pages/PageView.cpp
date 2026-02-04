@@ -231,8 +231,32 @@ namespace Pages{
         this->type = PageType::DATA;
     }
 
+    PageView& PageView::operator=(PageView&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->type = other.type;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+
+        return *this;
+    }
+
+    PageView::PageView(PageView&& other) noexcept{
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->type = other.type;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+    }
+
     PageView::~PageView(){
-        this->framePtr->pinCount.fetch_sub(1, std::memory_order_relaxed);
+        if (this->IsValid())
+            this->framePtr->pinCount.fetch_sub(1, std::memory_order_relaxed);
     }
 
     PageHeader* PageView::GetHeader() const{

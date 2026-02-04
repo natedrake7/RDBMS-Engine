@@ -29,6 +29,7 @@ namespace Pages{
     AllocationPageView::AllocationPageView() : PageView() {
         this->additionalHeaderPtr = nullptr;
         this->lastAllocatedExtentId = 0;
+        this->type = PageType::IAM;
     }
 
     AllocationPageView::AllocationPageView(Frame* framePtr) : PageView(framePtr) {
@@ -36,6 +37,36 @@ namespace Pages{
             framePtr->data + PAGE_HEADER_SIZE
         );
         this->lastAllocatedExtentId = 0;
+        this->type = PageType::IAM;
+    }
+
+    AllocationPageView::AllocationPageView(AllocationPageView&& other) noexcept{
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->additionalHeaderPtr = other.additionalHeaderPtr;
+        this->lastAllocatedExtentId = other.lastAllocatedExtentId;
+        this->type = other.type;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+        other.additionalHeaderPtr = nullptr;
+    }
+
+    AllocationPageView& AllocationPageView::operator=(AllocationPageView&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->additionalHeaderPtr = other.additionalHeaderPtr;
+        this->lastAllocatedExtentId = other.lastAllocatedExtentId;
+        this->type = other.type;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+        other.additionalHeaderPtr = nullptr;
+
+        return *this;
     }
 
     extent_id_t AllocationPageView::SetExtentsAllocated(

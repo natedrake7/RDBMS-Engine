@@ -18,6 +18,10 @@ namespace Pages{
 
         public:
             explicit HeaderPageView(Frame* framePtr);
+
+            HeaderPageView(HeaderPageView&& other) noexcept;
+            HeaderPageView& operator=(HeaderPageView&& other) noexcept;
+
             [[nodiscard]] DatabaseEngine::DatabaseHeader* GetDatabaseHeaderPtr() const;
 
             const std::vector<DatabaseEngine::StorageTypes::TableHeader>& GetTableHeaders() const;

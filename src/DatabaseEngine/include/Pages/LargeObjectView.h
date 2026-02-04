@@ -10,6 +10,9 @@ namespace Pages{
             LargeObjectView();
             explicit LargeObjectView(Frame* framePtr);
 
+            LargeObjectView(LargeObjectView&& other) noexcept;
+            LargeObjectView& operator=(LargeObjectView&& other) noexcept;
+
             [[nodiscard]] page_size_t GetObjectSize() const;
             [[nodiscard]] page_id_t GetNextPageId() const;
 

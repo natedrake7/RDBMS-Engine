@@ -6,5 +6,8 @@ namespace Pages{
         public:
             OverflowPageView();
             explicit OverflowPageView(Frame* frame);
+
+            OverflowPageView(OverflowPageView&& other) noexcept;
+            OverflowPageView& operator=(OverflowPageView&& other) noexcept;
     };
 }

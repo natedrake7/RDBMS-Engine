@@ -3,12 +3,11 @@
 
 namespace Pages{
     struct IndexAllocationPageAdditionalHeader {
-        table_id_t tableId;
         extent_id_t startingExtentId;
         page_id_t nextPageId;
 
         IndexAllocationPageAdditionalHeader();
-        IndexAllocationPageAdditionalHeader(table_id_t tableId, extent_id_t extentId, page_id_t nextPageId);
+        IndexAllocationPageAdditionalHeader(extent_id_t extentId, page_id_t nextPageId);
         ~IndexAllocationPageAdditionalHeader();
     };
 
@@ -23,6 +22,8 @@ namespace Pages{
         public:
             AllocationPageView();
             explicit AllocationPageView(Frame* framePtr);
+            AllocationPageView(AllocationPageView&& other) noexcept;
+            AllocationPageView& operator=(AllocationPageView&& other) noexcept;
 
             extent_id_t SetExtentsAllocated(
                 const std::vector<extent_id_t>& extentIds,

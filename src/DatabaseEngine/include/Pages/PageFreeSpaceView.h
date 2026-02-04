@@ -13,6 +13,9 @@ namespace Pages{
         public:
             explicit PageFreeSpaceView(Frame* frame);
 
+            PageFreeSpaceView(PageFreeSpaceView&& other) noexcept;
+            PageFreeSpaceView& operator=(PageFreeSpaceView&& other) noexcept;
+
             [[nodiscard]] bool IsPageAllocated(page_id_t pageId) const;
             [[nodiscard]] Constants::PageType GetPageType(page_id_t pageId) const;
             [[nodiscard]] byte_t GetPageSizeCategory(page_id_t pageId) const;

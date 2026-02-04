@@ -16,6 +16,37 @@ namespace Pages{
         this->type = PageType::LOB;
     }
 
+    LargeObjectView::LargeObjectView(LargeObjectView&& other) noexcept{
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->objectSizePtr = other.objectSizePtr;
+        this->nextPageIdPtr = other.nextPageIdPtr;
+        this->type = other.type;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+        other.objectSizePtr = nullptr;
+        other.nextPageIdPtr = nullptr;
+    }
+
+    LargeObjectView& LargeObjectView::operator=(LargeObjectView&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->objectSizePtr = other.objectSizePtr;
+        this->nextPageIdPtr = other.nextPageIdPtr;
+        this->type = other.type;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+        other.objectSizePtr = nullptr;
+        other.nextPageIdPtr = nullptr;
+
+        return *this;
+    }
+
     page_size_t LargeObjectView::GetObjectSize() const{
         return *this->objectSizePtr;
     }

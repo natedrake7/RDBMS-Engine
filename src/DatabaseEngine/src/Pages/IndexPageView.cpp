@@ -86,6 +86,33 @@ namespace Pages{
         this->type = PageType::INDEX;
     }
 
+    IndexPageView::IndexPageView(IndexPageView&& other) noexcept{
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->additionalHeaderPtr = other.additionalHeaderPtr;
+        this->type = other.type;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+        other.additionalHeaderPtr = nullptr;
+    }
+
+    IndexPageView& IndexPageView::operator=(IndexPageView&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->framePtr = other.framePtr;
+        this->headerPtr = other.headerPtr;
+        this->additionalHeaderPtr = other.additionalHeaderPtr;
+        this->type = other.type;
+
+        other.framePtr = nullptr;
+        other.headerPtr = nullptr;
+        other.additionalHeaderPtr = nullptr;
+
+        return *this;
+    }
+
     void IndexPageView::SetTreeType(const TreeType treeType) const{
         this->additionalHeaderPtr->SetTreeType(treeType);
     }
