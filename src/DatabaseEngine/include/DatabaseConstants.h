@@ -12,7 +12,7 @@ namespace Constants{
     constexpr std::string_view DATA_FILE_EXTENSION = ".data";
 
     constexpr size_t PAGE_SIZE = 8 * 1024;
-    constexpr size_t MAX_NUMBER_OF_PAGES = 10000;
+    constexpr size_t MAX_NUMBER_OF_PAGES = 100000;
     constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;
     constexpr size_t EXTENT_SIZE = 8;
     constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
@@ -74,12 +74,14 @@ namespace Constants{
 
     constexpr UnsignedSmallInt OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
     constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t);
+    constexpr UnsignedSmallInt ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(extent_id_t) + sizeof(page_id_t);
     constexpr UnsignedSmallInt OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
 
     constexpr UnsignedSmallInt PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - 7;
     constexpr UnsignedSmallInt NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
     constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
     constexpr page_size_t INDEX_PAGE_SIBLINGS_SIZE = 2 * sizeof(page_id_t);
+    constexpr UnsignedSmallInt LARGE_OBJECT_PAGE_SIZE = PAGE_SIZE_WITHOUT_HEADER - 2 * sizeof(page_id_t);
 	static constexpr UnsignedTinyInt MAX_NUMBER_OF_SUB_KEYS = 7;
 
     constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = INDEX_PAGE_SIBLINGS_SIZE +  sizeof(page_id_t) + PackedByte::Size + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);

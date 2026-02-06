@@ -9,6 +9,10 @@ namespace Pages{
         this->priority = PagePriority::LOW;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
+        this->headerPtr = nullptr;
+        this->type = PageType::DATA;
+        this->additionalHeader.indexHeaderPtr = nullptr;
+        this->additionalHeader.allocationHeaderPtr = nullptr;
     }
 
     Frame::Frame(object_t* data, const DatabaseEngine::StorageTypes::Table* table){
@@ -19,6 +23,10 @@ namespace Pages{
         this->priority = PagePriority::LOW;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
+        this->headerPtr = reinterpret_cast<PageHeader*>(data);
+        this->type = PageType::DATA;
+        this->additionalHeader.indexHeaderPtr = nullptr;
+        this->additionalHeader.allocationHeaderPtr = nullptr;
     }
 
     Frame& Frame::operator=(const Frame& other){
@@ -32,6 +40,10 @@ namespace Pages{
         this->priority = other.priority.load();
         this->hasSecondChance = other.hasSecondChance;
         this->logSequenceNumber = other.logSequenceNumber;
+        this->type = other.type;
+        this->headerPtr = other.headerPtr;
+        this->additionalHeader.indexHeaderPtr = other.additionalHeader.indexHeaderPtr;
+        this->additionalHeader.allocationHeaderPtr = other.additionalHeader.allocationHeaderPtr;
 
         return *this;
     }

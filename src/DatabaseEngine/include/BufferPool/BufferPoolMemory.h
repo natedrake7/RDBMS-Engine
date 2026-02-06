@@ -13,7 +13,7 @@ namespace DatabaseEngine{
 
             [[nodiscard]] object_t* Data() const;
 
-            object_t* CopyToMemory(const char* buffer, page_offset_t offset, page_offset_t bufferOffset) const;
+            object_t* CopyToMemory(const char* buffer, UnsignedBigInt offset, page_offset_t bufferOffset) const;
 
     };
 

@@ -174,13 +174,17 @@ namespace DatabaseEngine
             this->CreateTable(masterDbData[i], headerPageTables[i]);
     }
 
-    Database::~Database()
-    {
+    Database::~Database(){
         // save db header;
-        this->WriteHeaderToFile();
+        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFilename);
+        headerPage.SetDatabaseHeader(this->header);
 
-        for (const auto &dbTable : this->tables)
+        for (const auto* dbTable : this->tables){
+            headerPage.SetTableHeader(dbTable->GetHeader());
             delete dbTable;
+        }
+
+        headerPage.WriteTableHeadersToDisk();
     }
 
     std::vector<Logging::LogEntry> Database::RecoverLogs(){
@@ -356,7 +360,7 @@ namespace DatabaseEngine
 
         const auto& tableHeader = table->GetHeader();
 
-        const auto extentId = Database::CalculateExtentId(tableHeader.indexAllocationMapPageId);
+        const auto extentId = Database::CalculateExtentId(tableHeader.allocationPageId);
 
         // const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(this->filename, tableHeader.indexAllocationMapPageId, table);
         //
@@ -367,7 +371,7 @@ namespace DatabaseEngine
         //     return;
         // }
 
-        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(tableHeader.indexAllocationMapPageId);
+        const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(tableHeader.allocationPageId);
 
         const auto globalAllocationMapPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->filename, globalAllocationMapPageId);
 
@@ -392,15 +396,15 @@ namespace DatabaseEngine
 
         Storage::StorageManager::Get().CreateFile(sysDbName, ".db");
 
-        constexpr page_id_t firstGamePageId = 2;
+        constexpr page_id_t firstGamPageId = 2;
         constexpr page_id_t firstPfsPageId = 1;
         
-        Storage::StorageManager::Get().CreateGlobalAllocationMapPage(sysDbName + ".db", firstGamePageId);
+        Storage::StorageManager::Get().CreateGlobalAllocationMapPage(sysDbName + ".db", firstGamPageId);
         Storage::StorageManager::Get().CreatePageFreeSpacePage(sysDbName + ".db", firstPfsPageId);
 
         const auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysDbName + ".db");
 
-        headerPage.SetDatabaseHeader(DatabaseHeader(0, firstPfsPageId, firstGamePageId));
+        headerPage.SetDatabaseHeader(DatabaseHeader(0, firstPfsPageId, firstGamPageId));
     }
 
     Database* UseSystemDatabase(const std::string & dbName, const std::vector<Headers::sysTable> & tables){
@@ -447,17 +451,15 @@ namespace DatabaseEngine
         return page;
     }
 
-    Pages::PageFreeSpaceView Database::GetAssociatedPfsPage(const std::string& filename, const page_id_t  pageId)
-    {
-        const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
-
+    Pages::PageFreeSpaceView Database::GetAssociatedPfsPage(const std::string& filename, const page_id_t  pageId){
+        const auto pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
         return Storage::StorageManager::Get().GetPageFreeSpacePage(filename, pageFreeSpacePageId);
     }
 
     void Database::TruncateTable(const table_id_t  tableId) const{
         auto* table = this->tables.at(tableId);
 
-        auto indexAllocationMapPageId = table->GetHeader().indexAllocationMapPageId;
+        auto indexAllocationMapPageId = table->GetHeader().allocationPageId;
 
         while (indexAllocationMapPageId != INVALID_PAGE_ID)
         {
@@ -625,17 +627,19 @@ namespace DatabaseEngine
 
                 pageFreeSpacePage.SetPageMetaData(&indexPage);
 
-                if (!pageAssigned){
-                    page = std::move(indexPage);
-                    pageAssigned = true;
-                }
-
-                const auto parentPageId = treeId == INVALID_PAGE_ID ? page.PageId() : treeId;
+                const auto parentPageId = treeId == INVALID_PAGE_ID
+                    ? page.PageId()
+                    : treeId;
 
                 indexPage.SetTreeId(parentPageId);
                 indexPage.SetTreeType(treeType);
                 indexPage.SetKeyTypes(indexedColumnDatatypes);
                 indexPage.SetSubKeys(indexedColumnDatatypes.size());
+
+                if (!pageAssigned){
+                    page = std::move(indexPage);
+                    pageAssigned = true;
+                }
             }
         }
 
@@ -653,7 +657,7 @@ namespace DatabaseEngine
         allocatedExtents.reserve(extentsToAllocate);
 
         const auto* table = this->tables[tableId];
-        const page_id_t indexAllocationMapPageId = table->GetHeader().indexAllocationMapPageId;
+        const page_id_t indexAllocationMapPageId = table->GetHeader().allocationPageId;
         bool newGamPageCreated = false;
 
         // Step 1: Allocate extents from GAM page
@@ -799,7 +803,7 @@ namespace DatabaseEngine
 
         const auto* table = this->tables[tableId];
 
-        const auto& tableMapPageId = table->GetHeader().indexAllocationMapPageId;
+        const auto& tableMapPageId = table->GetHeader().allocationPageId;
 
         if(tableMapPageId == INVALID_PAGE_ID)
             return Pages::LargeObjectView();
@@ -840,7 +844,7 @@ namespace DatabaseEngine
 
         const auto& table = this->tables[tableId];
 
-        const auto& tableMapPageId = table->GetHeader().indexAllocationMapPageId;
+        const auto& tableMapPageId = table->GetHeader().allocationPageId;
 
         if(tableMapPageId == INVALID_PAGE_ID)
             return {};

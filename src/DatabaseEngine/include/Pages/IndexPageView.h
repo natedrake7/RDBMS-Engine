@@ -4,10 +4,6 @@
 
 namespace Pages{
     class IndexPageView final : public PageView {
-        IndexPageAdditionalHeader* additionalHeaderPtr;
-
-            void InsertFirstChild(page_id_t child) const;
-
             void InsertFirstKey(const DataTypes::Indexing::Key& key) const;
             void InsertKey(const DataTypes::Indexing::Key& key) const;
 
@@ -30,6 +26,7 @@ namespace Pages{
             [[nodiscard]] bool IsLeaf() const;
             [[nodiscard]] bool IsRoot() const;
             [[nodiscard]] UnsignedTinyInt SubKeys() const;
+            [[nodiscard]] UnsignedSmallInt Keys() const;
 
             void SetIsLeaf(bool isLeaf) const;
             void SetIsRoot(bool isRoot) const;
@@ -37,7 +34,7 @@ namespace Pages{
 
             void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key) const;
             void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key, Int indexPosition) const;
-            void InsertChild(page_id_t child) const;
+            void InsertFirstChild(page_id_t child) const;
 
             void SetLeftSibling(page_id_t previousPage) const;
             void SetRightSibling(page_id_t nextPage) const;

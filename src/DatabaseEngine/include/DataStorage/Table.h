@@ -49,7 +49,7 @@ namespace DatabaseEngine::StorageTypes
         table_id_t tableId;
         int16_t ordinalPosition;
 
-        page_id_t indexAllocationMapPageId;
+        page_id_t allocationPageId;
         column_number_t numberOfColumns;
 
         page_id_t clusteredIndexPageId;

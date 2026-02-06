@@ -1,30 +1,30 @@
 ﻿#include "../../../include/Pages/Additional/RowReference.h"
 
+#include "BufferPool/StorageManager.h"
 #include "Pages/PageView.h"
+#include "Pages/Additional/Frame.h"
 
 namespace Pages{
    RowReference::RowReference(){
-        this->pagePtr = nullptr;
+        this->pageView = PageView();
         this->indexPosition = 0;
         this->keySize = 0;
         this->isHeaderInitialized = false;
         this->dataOffset = 0;
     }
 
-    RowReference::RowReference(PageView* pagePtr, const Int indexPosition, const Int offset){
-        this->pagePtr = pagePtr;
+    RowReference::RowReference(Frame* framePtr, const Int indexPosition, const Int offset){
+        this->pageView = PageView(framePtr);
         this->indexPosition = indexPosition;
         this->keySize = offset;
-        this->pagePtr->IncreasePinCount();
         this->isHeaderInitialized = false;
         this->dataOffset = 0;
     }
 
     RowReference::RowReference(const RowReference& other){
-        this->pagePtr = other.pagePtr;
+        this->pageView = PageView(other.pageView.GetFrame());
         this->indexPosition = other.indexPosition;
         this->keySize = other.keySize;
-        this->pagePtr->IncreasePinCount();
         this->header = other.header;
         this->isHeaderInitialized = other.isHeaderInitialized;
         this->sizes = other.sizes;
@@ -35,10 +35,9 @@ namespace Pages{
         if (this == &other)
             return *this;
 
-        this->pagePtr = other.pagePtr;
+        this->pageView = PageView(other.pageView.GetFrame());
         this->indexPosition = other.indexPosition;
         this->keySize = other.keySize;
-        this->pagePtr->IncreasePinCount();
         this->header = other.header;
         this->isHeaderInitialized = other.isHeaderInitialized;
         this->sizes = other.sizes;
@@ -48,7 +47,7 @@ namespace Pages{
     }
 
     RowReference::RowReference(RowReference&& other) noexcept{
-        this->pagePtr = other.pagePtr;
+        this->pageView = std::move(other.pageView);
         this->indexPosition = other.indexPosition;
         this->keySize = other.keySize;
         this->header = other.header;
@@ -58,7 +57,6 @@ namespace Pages{
 
         other.isHeaderInitialized = false;
         other.sizes.clear();
-        other.pagePtr = nullptr;
         other.indexPosition = 0;
         other.keySize = 0;
         other.dataOffset = 0;
@@ -68,7 +66,7 @@ namespace Pages{
         if (this == &other)
             return *this;
 
-        this->pagePtr = other.pagePtr;
+        this->pageView = std::move(other.pageView);
         this->indexPosition = other.indexPosition;
         this->keySize = other.keySize;
         this->header = other.header;
@@ -78,7 +76,6 @@ namespace Pages{
 
         other.isHeaderInitialized = false;
         other.sizes.clear();
-        other.pagePtr = nullptr;
         other.indexPosition = 0;
         other.keySize = 0;
         other.dataOffset = 0;
@@ -86,15 +83,10 @@ namespace Pages{
         return *this;
     }
 
-    RowReference::~RowReference(){
-        if (this->pagePtr)
-            this->pagePtr->DecreasePinCount();
-
-        this->pagePtr = nullptr;
-    }
+    RowReference::~RowReference() = default;
 
     QueryResult RowReference::Materialize()const{
-        return this->pagePtr->MaterializeRow(this->indexPosition, this->keySize);
+        return this->pageView.MaterializeRow(this->indexPosition, this->keySize);
     }
 
     Value RowReference::PartialMaterialize(const column_index_t columnIndex) const{
@@ -102,7 +94,7 @@ namespace Pages{
         if (this->cache.TryGetValue(columnIndex, value))
             return value;
 
-        value = this->pagePtr->PartialMaterializeRow(this, columnIndex);
+        value = this->pageView.PartialMaterializeRow(this, columnIndex);
         this->cache.Add(columnIndex, std::move(value));
         return  this->cache.Get(columnIndex);
     }

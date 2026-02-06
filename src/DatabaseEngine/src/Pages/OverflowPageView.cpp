@@ -1,18 +1,11 @@
 ﻿#include "../../include/Pages/OverflowPageView.h"
 namespace Pages{
-    OverflowPageView::OverflowPageView() : PageView() {
-        this->type = Constants::PageType::OVERFLOWTYPE;
-    }
+    OverflowPageView::OverflowPageView() : PageView() {}
 
-    OverflowPageView::OverflowPageView(Frame* frame) : PageView(frame) {
-        this->type = Constants::PageType::OVERFLOWTYPE;
-    }
+    OverflowPageView::OverflowPageView(Frame* frame) : PageView(frame) {}
 
     OverflowPageView::OverflowPageView(OverflowPageView&& other) noexcept{
-        this->headerPtr = other.headerPtr;
         this->framePtr = other.framePtr;
-
-        other.headerPtr = nullptr;
         other.framePtr = nullptr;
     }
 
@@ -20,10 +13,7 @@ namespace Pages{
         if(this == &other)
             return *this;
 
-        this->headerPtr = other.headerPtr;
         this->framePtr = other.framePtr;
-
-        other.headerPtr = nullptr;
         other.framePtr = nullptr;
 
         return *this;

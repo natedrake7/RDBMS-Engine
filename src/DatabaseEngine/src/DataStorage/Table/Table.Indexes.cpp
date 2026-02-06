@@ -138,7 +138,7 @@ namespace DatabaseEngine::StorageTypes {
         IndexState& state,
         const Expressions::Expression* expression
     ){
-        if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+        if (this->header.allocationPageId == INVALID_PAGE_ID)
             return;
 
         const auto* tree = this->GetClusteredIndexedTree();
@@ -156,7 +156,7 @@ namespace DatabaseEngine::StorageTypes {
         std::vector<Pages::RowReference> *selectedRows,
         const Expressions::Expression *expression
     ){
-        if (this->header.indexAllocationMapPageId == INVALID_PAGE_ID)
+        if (this->header.allocationPageId == INVALID_PAGE_ID)
             return;
 
         const auto* tree = this->GetClusteredIndexedTree();

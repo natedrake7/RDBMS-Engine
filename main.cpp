@@ -108,7 +108,7 @@ int main(){
     // Tests::RunTest(&Tests::IndexPageUpdate);
 
     // return 0;
-    RegisterSignalHandlers();
+    // RegisterSignalHandlers();
     static auto& server = Network::Server::Get();
 
     // External::Plugin plugin;

@@ -28,9 +28,8 @@ namespace Pages{
             [[nodiscard]] const DatabaseEngine::StorageTypes::TableHeader& GetTableHeader(Int indexPosition) const;
 
             void SetDatabaseHeader(const DatabaseEngine::DatabaseHeader& header) const;
-            void SetTableHeader(Int indexPosition, const DatabaseEngine::StorageTypes::TableHeader& header);
+            void SetTableHeader(const DatabaseEngine::StorageTypes::TableHeader& header);
 
             void WriteTableHeadersToDisk() const;
-
     };
 }

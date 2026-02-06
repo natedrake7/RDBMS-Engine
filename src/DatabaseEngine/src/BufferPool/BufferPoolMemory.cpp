@@ -28,7 +28,7 @@ namespace DatabaseEngine{
         return this->_data;
     }
 
-    object_t* BufferPoolMemory::CopyToMemory(const char* buffer, const page_offset_t offset, const page_offset_t bufferOffset) const{
+    object_t* BufferPoolMemory::CopyToMemory(const char* buffer, const UnsignedBigInt offset, const page_offset_t bufferOffset) const{
         auto* destination = this->_data + offset;
         std::memcpy(destination, buffer + bufferOffset, Constants::PAGE_SIZE);
         return destination;

@@ -6,25 +6,22 @@ namespace Pages{
     LargeObjectView::LargeObjectView() : PageView(){
         this->objectSizePtr = nullptr;
         this->nextPageIdPtr = nullptr;
-        this->type = PageType::LOB;
+        this->initialOffset = LARGE_OBJECT_METADATA_SIZE;
     }
 
     LargeObjectView::LargeObjectView(Frame* framePtr) : PageView(framePtr){
         this->objectSizePtr = reinterpret_cast<page_size_t*>(this->framePtr->data + PAGE_HEADER_SIZE);
         this->nextPageIdPtr = reinterpret_cast<page_id_t*>(this->framePtr->data + PAGE_HEADER_SIZE + sizeof(page_size_t));
-
-        this->type = PageType::LOB;
+        this->initialOffset = LARGE_OBJECT_METADATA_SIZE;
     }
 
     LargeObjectView::LargeObjectView(LargeObjectView&& other) noexcept{
         this->framePtr = other.framePtr;
-        this->headerPtr = other.headerPtr;
         this->objectSizePtr = other.objectSizePtr;
         this->nextPageIdPtr = other.nextPageIdPtr;
-        this->type = other.type;
+        this->initialOffset = other.initialOffset;
 
         other.framePtr = nullptr;
-        other.headerPtr = nullptr;
         other.objectSizePtr = nullptr;
         other.nextPageIdPtr = nullptr;
     }
@@ -34,13 +31,11 @@ namespace Pages{
             return *this;
 
         this->framePtr = other.framePtr;
-        this->headerPtr = other.headerPtr;
         this->objectSizePtr = other.objectSizePtr;
         this->nextPageIdPtr = other.nextPageIdPtr;
-        this->type = other.type;
+        this->initialOffset = other.initialOffset;
 
         other.framePtr = nullptr;
-        other.headerPtr = nullptr;
         other.objectSizePtr = nullptr;
         other.nextPageIdPtr = nullptr;
 

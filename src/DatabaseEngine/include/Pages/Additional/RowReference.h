@@ -2,14 +2,18 @@
 #include "../../../../Systemic/include/QueryResult.h"
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../DataStorage/Row.h"
+#include "../PageView.h"
+
+namespace Pages
+{
+    struct Frame;
+}
 
 class Value;
 
 namespace Pages{
-    class PageView;
-
     struct RowReference{
-        PageView* pagePtr;
+        PageView pageView;
         Int indexPosition;
         Int keySize;
 
@@ -21,7 +25,7 @@ namespace Pages{
         mutable bool isHeaderInitialized;
 
         RowReference();
-        RowReference(PageView* pagePtr, Int indexPosition, Int offset);
+        RowReference(Frame* framePtr, Int indexPosition, Int offset);
 
         RowReference(const RowReference& other);
         RowReference& operator=(const RowReference& other);

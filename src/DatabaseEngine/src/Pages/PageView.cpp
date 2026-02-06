@@ -18,31 +18,19 @@ namespace Pages{
     }
 
     void PageView::SetPageId(const page_id_t pageId) const{
-        this->headerPtr->pageId = pageId;
+        this->framePtr->headerPtr->pageId = pageId;
     }
 
     page_offset_t PageView::NewInsertOffset() const{
-        const auto defaultSize = this->type == PageType::DATA
-                             ? PAGE_SIZE_WITHOUT_HEADER
-                             : INDEX_PAGE_DEFAULT_SIZE;
-
-        return defaultSize - this->headerPtr->bytesLeft - this->headerPtr->size * SlotDirectory::Size;
+        return PAGE_SIZE - this->framePtr->headerPtr->bytesLeft - this->framePtr->headerPtr->size * SlotDirectory::Size;
     }
 
-    Int PageView::SlotDirectoryOffSet(const Int indexPosition) const{
-        const auto defaultSize = this->type == PageType::DATA
-                             ? PAGE_SIZE_WITHOUT_HEADER
-                             : INDEX_PAGE_DEFAULT_SIZE;
-
-        return defaultSize - (indexPosition + 1) * SlotDirectory::Size;
+    Int PageView::SlotDirectoryOffSet(const Int indexPosition){
+        return PAGE_SIZE - (indexPosition + 1) * SlotDirectory::Size;
     }
 
-    Int PageView::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove) const{
-        const auto defaultSize = this->type == PageType::DATA
-                             ? PAGE_SIZE_WITHOUT_HEADER
-                             : INDEX_PAGE_DEFAULT_SIZE;
-
-        return defaultSize - (indexPosition + slotToMove) * SlotDirectory::Size;
+    Int PageView::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove){
+        return PAGE_SIZE - (indexPosition + slotToMove) * SlotDirectory::Size;
     }
 
     void PageView::UpdateSlotDirectory(
@@ -57,11 +45,11 @@ namespace Pages{
     }
 
     bool PageView::IndexOutOfBounds(const Int indexPosition) const{
-        return indexPosition >= this->headerPtr->size;
+        return indexPosition >= this->framePtr->headerPtr->size;
     }
 
     void PageView::AdjustSlotDirectories(const Int indexPosition, const page_offset_t& offset, const Int slotSize) const{
-        const auto slotsToMove = this->headerPtr->size - indexPosition;
+        const auto slotsToMove = this->framePtr->headerPtr->size - indexPosition;
         const auto slotBytesToMove = slotsToMove * SlotDirectory::Size;
         const auto srcOffset = this->SlotDirectoriesToMoveOffSet(indexPosition, slotsToMove);
         const auto dstOffset = srcOffset - SlotDirectory::Size;
@@ -77,7 +65,7 @@ namespace Pages{
     }
 
     Int PageView::RawDataSize() const{
-        return this->type == PageType::INDEX
+        return this->framePtr->type == PageType::INDEX
                    ? INDEX_PAGE_DEFAULT_SIZE
                    : PAGE_SIZE_WITHOUT_HEADER;
     }
@@ -85,21 +73,21 @@ namespace Pages{
     void PageView::InsertFirstRow(const DatabaseEngine::StorageTypes::InsertPayload& payload) const{
         const auto rowSize = payload.Size();
 
-        std::memcpy(this->framePtr->data, payload.Data(), rowSize);
+        std::memcpy(this->framePtr->data + this->initialOffset, payload.Data(), rowSize);
 
         const auto newSlot = SlotDirectory(0, rowSize, SlotDirectory::SLOT_USED);
         this->InsertNewSlot(newSlot);
 
-        this->headerPtr->size++;
+        this->framePtr->headerPtr->size++;
         this->framePtr->isDirty = true;
-        this->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
+        this->framePtr->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
     }
 
     Int PageView::InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload) const{
-        if (this->headerPtr->size == 0){
-            this->InsertFirstRow(payload);
-            return 0;
-        }
+        // if (this->framePtr->headerPtr->size == 0){
+        //     this->InsertFirstRow(payload);
+        //     return 0;
+        // }
 
         const auto rowSize = payload.Size();
 
@@ -112,15 +100,15 @@ namespace Pages{
         const auto newSlot = SlotDirectory(offSetCopy, rowSize, SlotDirectory::SLOT_USED);
         this->InsertNewSlot(newSlot);
 
-        this->headerPtr->size++;
+        this->framePtr->headerPtr->size++;
         this->framePtr->isDirty = true;
-        this->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
+        this->framePtr->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
 
-        return this->headerPtr->size - 1;
+        return this->framePtr->headerPtr->size - 1;
     }
 
     void PageView::InsertRow(const DatabaseEngine::StorageTypes::InsertPayload& payload, const Int indexPosition) const{
-        if (indexPosition >= this->headerPtr->size){
+        if (indexPosition >= this->framePtr->headerPtr->size){
             const auto _ = this->InsertRow(payload);
             return;
         }
@@ -134,8 +122,8 @@ namespace Pages{
 
         this->AdjustSlotDirectories(indexPosition, offSetCopy, rowSize);
 
-        this->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
-        this->headerPtr->size++;
+        this->framePtr->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
+        this->framePtr->headerPtr->size++;
         this->framePtr->isDirty = true;
     }
 
@@ -158,7 +146,7 @@ namespace Pages{
         if (size <= previousRowSize){
             std::memcpy(this->framePtr->data + rowOffset, payload.Data(), size);
             // this->SerializeRow(rowHeader, row, offSet);
-            this->headerPtr->bytesLeft -= totalSize;
+            this->framePtr->headerPtr->bytesLeft -= totalSize;
             this->framePtr->isDirty = true;
             return true;
         }
@@ -169,12 +157,12 @@ namespace Pages{
 
         //if next row cant fit in the remaining space, we need to compact the page
         //keep slot offset and set its size to 0 so defragmentation does nothing as it is last on the offset
-        if (this->headerPtr->bytesLeft < totalSize){
+        if (this->framePtr->headerPtr->bytesLeft < totalSize){
             this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0, SlotDirectory::SLOT_DEAD), rowPtr.indexPosition);
             this->Defragment();
 
             //even if after the defragment row cant fit, throw exception
-            if (this->headerPtr->bytesLeft < totalSize)
+            if (this->framePtr->headerPtr->bytesLeft < totalSize)
                 return false;
 
             nextOffset = this->NewInsertOffset();
@@ -199,7 +187,7 @@ namespace Pages{
         //update bytes
         //Decrease by total size even though the previous offset is freed, as it becomes fragmented and no row can be inserted
         //unless pages gets defragmented
-        this->headerPtr->bytesLeft -= totalSize;
+        this->framePtr->headerPtr->bytesLeft -= totalSize;
         this->framePtr->isDirty = true;
         return true;
     }
@@ -215,20 +203,18 @@ namespace Pages{
     }
 
     bool PageView::IsIndexPage() const{
-        return this->type == PageType::INDEX;
+        return this->framePtr->type == PageType::INDEX;
     }
 
     PageView::PageView(){
         this->framePtr = nullptr;
-        this->headerPtr = nullptr;
-        this->type = PageType::DATA;
+        this->initialOffset = PAGE_HEADER_SIZE;
     }
 
     PageView::PageView(Frame* framePtr){
         this->framePtr = framePtr;
         this->framePtr->pinCount.fetch_add(1, std::memory_order_relaxed);
-        this->headerPtr = reinterpret_cast<PageHeader*>(this->framePtr->data);
-        this->type = PageType::DATA;
+        this->initialOffset = PAGE_HEADER_SIZE;
     }
 
     PageView& PageView::operator=(PageView&& other) noexcept{
@@ -236,22 +222,13 @@ namespace Pages{
             return *this;
 
         this->framePtr = other.framePtr;
-        this->headerPtr = other.headerPtr;
-        this->type = other.type;
-
         other.framePtr = nullptr;
-        other.headerPtr = nullptr;
-
         return *this;
     }
 
     PageView::PageView(PageView&& other) noexcept{
         this->framePtr = other.framePtr;
-        this->headerPtr = other.headerPtr;
-        this->type = other.type;
-
         other.framePtr = nullptr;
-        other.headerPtr = nullptr;
     }
 
     PageView::~PageView(){
@@ -260,7 +237,7 @@ namespace Pages{
     }
 
     PageHeader* PageView::GetHeader() const{
-        return this->headerPtr;
+        return this->framePtr->headerPtr;
     }
 
     DatabaseEngine::StorageTypes::RowHeader PageView::PeekRowHeader(const Int indexPosition, const Int offSet) const{
@@ -278,8 +255,8 @@ namespace Pages{
         return rowHeader;
     }
 
-    RowReference PageView::PeekRow(const Int indexPosition, const Int offSet){
-        return RowReference(this, indexPosition, offSet);
+    RowReference PageView::PeekRow(const Int indexPosition, const Int offSet) const{
+        return RowReference(this->framePtr, indexPosition, offSet);
     }
 
     SlotDirectory PageView::GetSlotDirectory(const Int indexPosition) const{
@@ -294,14 +271,14 @@ namespace Pages{
 
     void PageView::InsertNewSlot(const SlotDirectory slotDirectory) const{
         std::memcpy(
-            this->framePtr->data + this->SlotDirectoryOffSet(this->headerPtr->size),
+            this->framePtr->data + this->SlotDirectoryOffSet(this->framePtr->headerPtr->size),
             &slotDirectory,
             SlotDirectory::Size
         );
     }
 
     void PageView::Defragment() const{
-        auto* header = this->headerPtr;
+        auto* header = this->framePtr->headerPtr;
 
         if (header->size <= 1)
             return;
@@ -316,7 +293,7 @@ namespace Pages{
 
         std::ranges::sort(defragmentationSlots, SlotDirectoryDefragment::OrderAscendingByOffSet);
 
-        page_offset_t offset = 0;
+        page_offset_t offset = this->initialOffset;
         for (Int i = 0;i < header->size;i++){
             auto slot = defragmentationSlots[i];
 
@@ -342,12 +319,12 @@ namespace Pages{
     }
 
     void PageView::Resize(const Int size) const{
-        for (int i = size; i < this->headerPtr->size; i++){
+        for (int i = size; i < this->framePtr->headerPtr->size; i++){
             const auto slot = this->GetSlotDirectory(i);
-            this->headerPtr->bytesLeft += slot.GetSize() + SlotDirectory::Size;
+            this->framePtr->headerPtr->bytesLeft += slot.GetSize() + SlotDirectory::Size;
         }
 
-        this->headerPtr->size = size;
+        this->framePtr->headerPtr->size = size;
         this->framePtr->isDirty = true;
     }
 
@@ -363,10 +340,10 @@ namespace Pages{
             this->InsertNewSlot(rightSlot);
 
             offset += leftSlot.GetSize();
-            this->headerPtr->size++;
+            this->framePtr->headerPtr->size++;
         }
 
-        this->headerPtr->bytesLeft -= this->headerPtr->size * SlotDirectory::Size + offset;
+        this->framePtr->headerPtr->bytesLeft -= this->framePtr->headerPtr->size * SlotDirectory::Size + offset;
         this->framePtr->isDirty = true;
 
         donorPage->Resize(donorResizeVariant);
@@ -385,8 +362,8 @@ namespace Pages{
             this->InsertNewSlot(rightSlot);
 
             offset += leftSlot.GetSize();
-            this->headerPtr->size++;
-            this->headerPtr->bytesLeft -= leftSlot.GetSize() + SlotDirectory::Size;
+            this->framePtr->headerPtr->size++;
+            this->framePtr->headerPtr->bytesLeft -= leftSlot.GetSize() + SlotDirectory::Size;
         }
 
         this->framePtr->isDirty = true;
@@ -400,19 +377,23 @@ namespace Pages{
     }
 
     page_id_t PageView::PageId() const{
-        return this->headerPtr->pageId;
+        return this->framePtr->headerPtr->pageId;
     }
 
     page_size_t PageView::PageSize() const{
-        return this->headerPtr->size;
+        return this->framePtr->headerPtr->size;
     }
 
     page_size_t PageView::BytesLeft() const{
-        return this->headerPtr->bytesLeft;
+        return this->framePtr->headerPtr->bytesLeft;
     }
 
     object_t* PageView::GetData() const{
         return this->framePtr->data;
+    }
+
+    Frame* PageView::GetFrame() const{
+        return this->framePtr;
     }
 
     MultiThreading::ReadWriteMutex& PageView::Latch() const{
@@ -512,7 +493,7 @@ namespace Pages{
     }
 
     PageType PageView::GetPageType() const{
-        return this->type;
+        return this->framePtr->type;
     }
 
     void PageView::IncreasePinCount() const{

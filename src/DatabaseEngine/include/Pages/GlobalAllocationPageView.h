@@ -5,6 +5,7 @@ namespace Pages{
     class GlobalAllocationPageView final : public PageView{
         extent_id_t lastAllocatedExtentId;
 
+        [[nodiscard]] size_t GetBitIndex(extent_id_t extentId) const noexcept;
         [[nodiscard]] inline bool GetBit(std::size_t bitIndex) const noexcept;
         inline void SetBit(std::size_t bitIndex) const noexcept;
         inline void ClearBit(std::size_t bitIndex) const noexcept;

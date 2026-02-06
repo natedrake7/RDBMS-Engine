@@ -33,16 +33,14 @@ namespace Pages{
     class PageView{
     protected:
         Frame* framePtr;
-        PageHeader* headerPtr;
-
-        Constants::PageType type;
+        UnsignedSmallInt initialOffset;
 
         void SetFileName(const std::string &otherFilename) const;
         void SetPageId(page_id_t pageId) const;
 
         [[nodiscard]] page_offset_t NewInsertOffset() const;
-        [[nodiscard]] Int SlotDirectoryOffSet(Int indexPosition) const;
-        [[nodiscard]] Int SlotDirectoriesToMoveOffSet(Int indexPosition, Int slotToMove) const;
+        [[nodiscard]] static Int SlotDirectoryOffSet(Int indexPosition);
+        [[nodiscard]] static Int SlotDirectoriesToMoveOffSet(Int indexPosition, Int slotToMove);
         void UpdateSlotDirectory(SlotDirectory slotDirectory, Int indexPosition)const;
 
         [[nodiscard]] bool IndexOutOfBounds(Int indexPosition) const;
@@ -66,7 +64,7 @@ namespace Pages{
         [[nodiscard]] PageHeader* GetHeader()const;
 
         [[nodiscard]] DatabaseEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition, Int offSet)const;
-        [[nodiscard]] RowReference PeekRow(Int indexPosition, Int offSet);
+        [[nodiscard]] RowReference PeekRow(Int indexPosition, Int offSet) const;
 
         [[nodiscard]] SlotDirectory GetSlotDirectory(Int indexPosition) const;
         void InsertNewSlot(SlotDirectory slotDirectory) const;
@@ -97,6 +95,8 @@ namespace Pages{
         [[nodiscard]] page_size_t BytesLeft()const;
 
         [[nodiscard]] object_t* GetData() const;
+
+        [[nodiscard]] Frame* GetFrame()const;
 
         [[nodiscard]] MultiThreading::ReadWriteMutex& Latch()const;
 

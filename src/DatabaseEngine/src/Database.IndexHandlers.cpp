@@ -73,7 +73,7 @@ namespace DatabaseEngine {
 
         const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
             this->filename,
-            tableHeader.indexAllocationMapPageId,
+            tableHeader.allocationPageId,
             table
         );
 

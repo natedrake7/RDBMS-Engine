@@ -15,7 +15,7 @@ namespace Pages{
             std::memcpy(&tableHeader.tableId, this->framePtr->data + offSet, sizeof(table_id_t));
             offSet += sizeof(table_id_t);
 
-            std::memcpy(&tableHeader.indexAllocationMapPageId, this->framePtr->data + offSet, sizeof(page_id_t));
+            std::memcpy(&tableHeader.allocationPageId, this->framePtr->data + offSet, sizeof(page_id_t));
             offSet += sizeof(page_id_t);
 
             std::memcpy(&tableHeader.numberOfColumns, this->framePtr->data + offSet, sizeof(column_number_t));
@@ -46,15 +46,12 @@ namespace Pages{
         );
 
         this->ReadTableHeadersFromDisk();
-
-        this->type = PageType::METADATA;
     }
 
     HeaderPageView::HeaderPageView(HeaderPageView&& other) noexcept{
         this->databaseHeaderPtr = other.databaseHeaderPtr;
         this->tablesHeaders = std::move(other.tablesHeaders);
         this->framePtr = other.framePtr;
-        this->type = other.type;
 
         other.databaseHeaderPtr = nullptr;
         other.framePtr = nullptr;
@@ -67,7 +64,6 @@ namespace Pages{
         this->databaseHeaderPtr = other.databaseHeaderPtr;
         this->tablesHeaders = std::move(other.tablesHeaders);
         this->framePtr = other.framePtr;
-        this->type = other.type;
 
         other.databaseHeaderPtr = nullptr;
         other.framePtr = nullptr;
@@ -91,8 +87,11 @@ namespace Pages{
         *this->databaseHeaderPtr = header;
     }
 
-    void HeaderPageView::SetTableHeader(const Int indexPosition, const DatabaseEngine::StorageTypes::TableHeader& header){
-        this->tablesHeaders[indexPosition] = header;
+    void HeaderPageView::SetTableHeader(const DatabaseEngine::StorageTypes::TableHeader& header){
+        if (this->tablesHeaders.empty())
+            this->tablesHeaders.resize(this->databaseHeaderPtr->numberOfTables);
+
+        this->tablesHeaders[header.ordinalPosition] = header;
     }
 
     void HeaderPageView::WriteTableHeadersToDisk() const{
@@ -102,7 +101,7 @@ namespace Pages{
             std::memcpy(this->framePtr->data + offSet, &tableHeader.tableId, sizeof(table_id_t));
             offSet += sizeof(table_id_t);
 
-            std::memcpy(this->framePtr->data + offSet, &tableHeader.indexAllocationMapPageId, sizeof(page_id_t));
+            std::memcpy(this->framePtr->data + offSet, &tableHeader.allocationPageId, sizeof(page_id_t));
             offSet += sizeof(page_id_t);
 
             std::memcpy(this->framePtr->data + offSet, &tableHeader.numberOfColumns, sizeof(column_number_t));
@@ -111,7 +110,7 @@ namespace Pages{
             std::memcpy(this->framePtr->data + offSet, &tableHeader.clusteredIndexPageId, sizeof(page_id_t));
             offSet += sizeof(page_id_t);
 
-            uint8_t numberOfNonClusteredIndexes = static_cast<UnsignedTinyInt>(tableHeader.nonClusteredIndexPageIds.size());
+            auto numberOfNonClusteredIndexes = static_cast<UnsignedTinyInt>(tableHeader.nonClusteredIndexPageIds.size());
             std::memcpy(this->framePtr->data + offSet, &numberOfNonClusteredIndexes, sizeof(UnsignedTinyInt));
             offSet += sizeof(UnsignedTinyInt);
 

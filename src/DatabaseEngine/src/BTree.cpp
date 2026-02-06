@@ -27,13 +27,17 @@ namespace Indexing{
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page.SubKeys();
+        const auto numberOfKeys = page.Keys();
 
         for (Int i = 0; i < numberOfKeys; i++) {
             const auto tupleKey = page.GetKey(i);
 
             if (tupleKey == key){
-                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page.PageId() << std::endl;
+                std::cout   << "Found duplicate key: "
+                            << key << " and: "
+                            << tupleKey << " at position " << i
+                            << " in page " << page.PageId()
+                            << std::endl;
                 return -1;
             }
 
@@ -48,7 +52,7 @@ namespace Indexing{
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page.SubKeys();
+        const auto numberOfKeys = page.Keys();
 
         for (Int i = 0; i < numberOfKeys; i++) {
             const auto pageKey = page.GetKey(i);
@@ -64,7 +68,7 @@ namespace Indexing{
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page.SubKeys();
+        const auto numberOfKeys = page.Keys();
 
         for (Int i = 0; i < numberOfKeys; i++) {
             const auto tupleKey = page.GetKey(i + 1);
@@ -85,7 +89,7 @@ namespace Indexing{
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page.SubKeys();
+        const auto numberOfKeys = page.Keys();
 
         for (Int i = 0; i < numberOfKeys; i++) {
             const auto pageKey = page.GetKey(i + 1);
@@ -137,7 +141,8 @@ namespace Indexing{
 
             auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root.Latch(), rootLock);
 
-            newRoot.InsertChild(root.PageId());
+            newRoot.InsertFirstChild(root.PageId());
+
             root.SetIsRoot(false);
             this->rootPageId = newRoot.PageId();
 
@@ -208,7 +213,7 @@ namespace Indexing{
         parent.InsertChild(newChild.PageId(), &childKey, index + 1);
 
         const auto middleChild = child.GetChild(this->degree);
-        newChild.InsertChild(middleChild);
+        newChild.InsertFirstChild(middleChild);
 
         newChild.DistributeFromPage(&child, this->degree, this->degree - 1);
     }
@@ -256,7 +261,7 @@ namespace Indexing{
 
             MultiThreading::ReaderGuard childLock(&child.Latch());
 
-            if (child.SubKeys() == 2 * this->degree - 1){
+            if (child.Keys() == 2 * this->degree - 1){
                 // if (!this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex)) {
                 // Redistribution failed, must split
                     this->SplitChild(parent, parentLock, childIndex, child, childLock, pagesToAllocate);
@@ -286,8 +291,7 @@ namespace Indexing{
         const Pages::IndexPageView &parent,
         const Pages::IndexInsertTuple& tuple,
         Int& indexPosition
-    )
-    {
+    ){
         indexPosition = BTree::LeafLowerBound(parent, tuple.key);
         if (indexPosition == -1)
             return BTree::CreateDuplicateKeyError(tuple.key);
@@ -307,7 +311,8 @@ namespace Indexing{
                 return currentNode;
 
             const auto index = BTree::InternalNodePartialLowerBound(currentNode, key);
-            currentNode = this->GetNode(currentNode.GetChild(index));
+            const auto childId = currentNode.GetChild(index);
+            currentNode = this->GetNode(childId);
         }
     }
 
@@ -600,7 +605,7 @@ namespace Indexing{
 
             MultiThreading::ReaderGuard siblingLock(&sibling.Latch());
 
-            if (sibling.SubKeys() < 2 * this->degree - 1
+            if (sibling.Keys() < 2 * this->degree - 1
                 && this->TryRedistributeLeafWithLeftSibling(child, sibling, childLock, siblingLock)) {
 
                 // Update parent separator key between left sibling and child
@@ -649,8 +654,8 @@ namespace Indexing{
         MultiThreading::ReaderGuard &siblingLock
     )const {
         // Calculate balanced distribution
-        const Int targetSiblingKeys = (sibling.SubKeys() + child.SubKeys()) / 2;
-        const Int keysToMove = targetSiblingKeys - sibling.SubKeys();
+        const Int targetSiblingKeys = (sibling.Keys() + child.Keys()) / 2;
+        const Int keysToMove = targetSiblingKeys - sibling.Keys();
 
         // Only redistribute if we actually need to move keys
         if (keysToMove <= 0)
@@ -907,7 +912,7 @@ namespace Indexing{
     ){
         //base case scenario
         if (this->IsEmpty()) {
-            auto root =  this->CreateRootPage(indexPosition, pagesToAllocate);
+            const auto root =  this->CreateRootPage(indexPosition, pagesToAllocate);
 
             if(this->nonClusteredIndexId != -1)
                 this->table->SetNonClusteredIndexPageId(this->rootPageId, this->nonClusteredIndexId);
@@ -924,7 +929,7 @@ namespace Indexing{
         {
             MultiThreading::ReaderGuard rootLock(&root.Latch());
 
-            if (root.SubKeys() == 2 * this->degree - 1) // root is full,
+            if (root.Keys() == 2 * this->degree - 1) // root is full,
                 this->SplitRoot(root, rootLock, pagesToAllocate);
         }
 
@@ -986,7 +991,7 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = 0; i < currentNode.SubKeys(); i++){
+            for (Int i = 0; i < currentNode.Keys(); i++){
                 auto [key, row] = currentNode.PeekLeafTuple(i);
 
                 if (key.InClosedRange(minKey, maxKey)){
@@ -1022,7 +1027,7 @@ namespace Indexing{
 
             Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
 
-            for (Int i = 0; i < currentNode.SubKeys(); i++){
+            for (Int i = 0; i < currentNode.Keys(); i++){
                 auto [key, row] = currentNode.PeekLeafTuple(i);
 
                 if (key.InClosedRange(minKey, maxKey)){
@@ -1055,7 +1060,7 @@ namespace Indexing{
 
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
-            for (Int i = 0; i < currentNode.SubKeys(); i++){
+            for (Int i = 0; i < currentNode.Keys(); i++){
                 auto [tupleKey, row] = currentNode.PeekLeafTuple(i);
 
                 // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
@@ -1093,7 +1098,7 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = 0; i < currentNode.SubKeys(); i++){
+            for (Int i = 0; i < currentNode.Keys(); i++){
                 auto [tupleKey, row] = currentNode.PeekLeafTuple(i);
 
                 if (key == tupleKey ){
@@ -1196,7 +1201,7 @@ namespace Indexing{
         {
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = state.GetNextKeyIndex(); i < currentNode.SubKeys(); i++) {
+            for (Int i = state.GetNextKeyIndex(); i < currentNode.Keys(); i++) {
                 auto [key, row] = currentNode.PeekLeafTuple(i);
                 context.row = &row;
                 if (!expression->Evaluate(context).AsBool())
@@ -1488,7 +1493,7 @@ namespace Indexing{
         while (true) {
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int indexPosition = 0;indexPosition < currentNode.SubKeys(); indexPosition++){
+            for (Int indexPosition = 0; indexPosition < currentNode.Keys(); indexPosition++){
                 auto tuple = currentNode.PeekLeafTuple(indexPosition);
                 if (key != tuple.key || key < tuple.key)
                     continue;
@@ -1530,7 +1535,7 @@ namespace Indexing{
         {
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-              for (Int indexPosition = 0; indexPosition < currentNode.SubKeys(); indexPosition++){
+              for (Int indexPosition = 0; indexPosition < currentNode.Keys(); indexPosition++){
                 auto tuple = currentNode.PeekLeafTuple(indexPosition);
 
                 if (*minKey > tuple.key)
@@ -1578,7 +1583,7 @@ namespace Indexing{
         while (true){
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int indexPosition = 0; indexPosition < currentNode.SubKeys(); indexPosition++){
+            for (Int indexPosition = 0; indexPosition < currentNode.Keys(); indexPosition++){
                 auto tuple = currentNode.PeekLeafTuple(indexPosition);
 
                 if (*minKey > tuple.key)
