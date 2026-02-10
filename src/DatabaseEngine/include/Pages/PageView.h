@@ -2,6 +2,7 @@
 #include "../DatabaseConstants.h"
 #include "../../Systemic/include/QueryResult.h"
 #include "../DataStorage/Row.h"
+#include "Additional/RawRowReference.h"
 #include "Additional/SlotDirectory.h"
 
 namespace DataTypes{
@@ -24,7 +25,6 @@ namespace Pages{
         page_id_t pageId;
         page_size_t size;
         page_size_t bytesLeft;
-        // Constants::PageType type;
 
         PageHeader();
         ~PageHeader();
@@ -90,6 +90,8 @@ namespace Pages{
             const DataTypes::RowIdentifier& rowId
         ) const;
 
+        void Delete(Int indexPosition) const;
+
         [[nodiscard]] page_id_t PageId()const;
         [[nodiscard]] page_size_t PageSize()const;
         [[nodiscard]] page_size_t BytesLeft()const;
@@ -103,6 +105,8 @@ namespace Pages{
         void InitializeRowReferenceCache(const RowReference* rowPtr, Int numberOfColumns)const;
         [[nodiscard]] QueryResult MaterializeRow(Int indexPosition, Int keySize) const;
         Value PartialMaterializeRow(const RowReference* rowPtr, column_index_t columnIndex) const;
+
+        [[nodiscard]] RawRowReference RowRawData(Int indexPosition, Int offSet) const;
 
         [[nodiscard]] bool IsValid()const;
 

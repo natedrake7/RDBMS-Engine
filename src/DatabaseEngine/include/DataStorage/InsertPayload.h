@@ -6,6 +6,11 @@
 #include "../../../Systemic/include/DataTypes/Decimal.h"
 #include "../../../Systemic/include/DataTypes/Guid.h"
 
+namespace Pages
+{
+    struct RawRowReference;
+}
+
 namespace DatabaseEngine::StorageTypes {
     class InsertPayload final{
         object_t* _data;
@@ -15,6 +20,8 @@ namespace DatabaseEngine::StorageTypes {
         mutable RowHeader header;
         mutable bool isHeaderInitialized;
         mutable std::vector<Value> materializedColumns;
+
+        bool isReferencingExternalData;
 
         template <typename T>
         void CopyToBuffer(T value);
@@ -43,6 +50,8 @@ namespace DatabaseEngine::StorageTypes {
 
         InsertPayload& operator=(InsertPayload&& other)noexcept;
         InsertPayload(InsertPayload&& other) noexcept;
+
+        static InsertPayload FromRowPtr(const Pages::RawRowReference& rowPtr);
 
         // Copy operations perform deep copy to avoid double-free
         InsertPayload(const InsertPayload& other);

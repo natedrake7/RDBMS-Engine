@@ -83,7 +83,11 @@ Pages::PageView StorageManager::CreatePage(
     return Pages::PageView(frame);
 }
 
-Pages::PageView StorageManager::GetPage(const std::string &filename, const page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table){
+Pages::PageView StorageManager::GetPage(
+    const std::string &filename,
+    const page_id_t pageId,
+    const DatabaseEngine::StorageTypes::Table *table
+){
     auto* frame = this->GetRawPage(filename, pageId, table);
     frame->type = PageType::DATA;
     return Pages::PageView(frame);

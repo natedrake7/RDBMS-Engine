@@ -113,7 +113,7 @@ namespace DatabaseEngine::StorageTypes
             void InsertExistingRowToNonClusteredIndexByHeap(Int indexPos, Int pagesToAllocate);
             void RemoveColumnByClusteredIndex(column_index_t index);
             void RemoveColumnByHeap(column_index_t index)const;
-            void InsertToVersionDatabase(const Pages::RowReference& rowPtr, transaction_id_t transactionId) const;
+            void InsertToVersionDatabase(const Pages::RawRowReference& rowRef) const;
 
         public:
             InsertPayload CreateInsertPayload(
@@ -324,7 +324,7 @@ namespace DatabaseEngine::StorageTypes
                 IndexState& state
             );
 
-        /** @} End of: Update Functions*/
+        /** @} End of: Delete Functions*/
 
         /**
         * @name Calculation and Utility Functions

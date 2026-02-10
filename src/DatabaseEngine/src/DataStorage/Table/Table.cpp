@@ -168,14 +168,11 @@ namespace DatabaseEngine::StorageTypes {
     }
   }
 
-     void Table::InsertToVersionDatabase(const Pages::RowReference& rowPtr, const transaction_id_t transactionId) const{
+    void Table::InsertToVersionDatabase(const Pages::RawRowReference& rowRef)const{
         static auto& versionDatabase = VersionDatabase::Get();
-
-        RowVersionPointer oldVersionPointer;
-        versionDatabase.InsertRow(rowPtr, oldVersionPointer, this);
-        // row->SetOlderVersionPointer(oldVersionPointer.pageId, oldVersionPointer.offset);
-        // row->SetCurrentTransactionId(transactionId);
-     }
+        RowVersionPointer versionPtr;
+        versionDatabase.InsertRow(rowRef, versionPtr, this);
+    }
 
      Table::Table(
         const table_id_t tableId,
@@ -1007,7 +1004,9 @@ namespace DatabaseEngine::StorageTypes {
 
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
-        // this->InsertToVersionDatabase(row, properties.snapshot.transactionId);
+
+        auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
+        this->InsertToVersionDatabase(rowRawData);
 
         auto materializedRow = rowPtr.Materialize();
         materializedRow.Update(updates);
@@ -1038,10 +1037,14 @@ namespace DatabaseEngine::StorageTypes {
         const ExecutionProperties& properties,
         const std::vector<Expressions::Expression*>& updates
     ){
+
+        auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
+        this->InsertToVersionDatabase(rowRawData);
+
         auto materializedRow = rowPtr.Materialize();
 
         const Expressions::EvaluationContext context(&rowPtr, properties.variables);
-        for (const auto& updateExpr : updates) {
+        for (const auto* updateExpr : updates) {
             auto updatedValue = updateExpr->Evaluate(context);
             updatedValue.SetColumnIndex(updateExpr->columnIndex);
             materializedRow.Update(updatedValue);

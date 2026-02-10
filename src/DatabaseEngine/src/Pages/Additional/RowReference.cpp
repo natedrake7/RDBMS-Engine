@@ -9,26 +9,33 @@ namespace Pages{
         this->pageView = PageView();
         this->indexPosition = 0;
         this->keySize = 0;
-        this->isHeaderInitialized = false;
-        this->dataOffset = 0;
+        this->lazyState = nullptr;
     }
 
     RowReference::RowReference(Frame* framePtr, const Int indexPosition, const Int offset){
         this->pageView = PageView(framePtr);
         this->indexPosition = indexPosition;
         this->keySize = offset;
-        this->isHeaderInitialized = false;
-        this->dataOffset = 0;
+
+        this->lazyState = new RowLazyState();
+        this->lazyState->dataOffset = 0;
+        this->lazyState->isHeaderInitialized = false;
     }
 
     RowReference::RowReference(const RowReference& other){
         this->pageView = PageView(other.pageView.GetFrame());
         this->indexPosition = other.indexPosition;
         this->keySize = other.keySize;
-        this->header = other.header;
-        this->isHeaderInitialized = other.isHeaderInitialized;
-        this->sizes = other.sizes;
-        this->dataOffset = other.dataOffset;
+        this->lazyState = nullptr;
+
+        if (other.lazyState != nullptr){
+            this->lazyState = new RowLazyState();
+             this->lazyState->header = other.lazyState->header;
+             this->lazyState->dataOffset = other.lazyState->dataOffset;
+             this->lazyState->isHeaderInitialized = other.lazyState->isHeaderInitialized;
+             this->lazyState->sizes = other.lazyState->sizes;
+             this->lazyState->cache = other.lazyState->cache;
+       }
     }
 
     RowReference& RowReference::operator=(const RowReference& other){
@@ -38,10 +45,16 @@ namespace Pages{
         this->pageView = PageView(other.pageView.GetFrame());
         this->indexPosition = other.indexPosition;
         this->keySize = other.keySize;
-        this->header = other.header;
-        this->isHeaderInitialized = other.isHeaderInitialized;
-        this->sizes = other.sizes;
-        this->dataOffset = other.dataOffset;
+        this->lazyState = nullptr;
+
+        if (other.lazyState != nullptr){
+            this->lazyState = new RowLazyState();
+            this->lazyState->header = other.lazyState->header;
+            this->lazyState->dataOffset = other.lazyState->dataOffset;
+            this->lazyState->isHeaderInitialized = other.lazyState->isHeaderInitialized;
+            this->lazyState->sizes = other.lazyState->sizes;
+            this->lazyState->cache = other.lazyState->cache;
+        }
 
         return *this;
     }
@@ -50,16 +63,11 @@ namespace Pages{
         this->pageView = std::move(other.pageView);
         this->indexPosition = other.indexPosition;
         this->keySize = other.keySize;
-        this->header = other.header;
-        this->isHeaderInitialized = other.isHeaderInitialized;
-        this->sizes = other.sizes;
-        this->dataOffset = other.dataOffset;
+        this->lazyState = other.lazyState;
 
-        other.isHeaderInitialized = false;
-        other.sizes.clear();
         other.indexPosition = 0;
         other.keySize = 0;
-        other.dataOffset = 0;
+        other.lazyState = nullptr;
     }
 
     RowReference& RowReference::operator=(RowReference&& other) noexcept{
@@ -69,21 +77,19 @@ namespace Pages{
         this->pageView = std::move(other.pageView);
         this->indexPosition = other.indexPosition;
         this->keySize = other.keySize;
-        this->header = other.header;
-        this->isHeaderInitialized = other.isHeaderInitialized;
-        this->sizes = other.sizes;
-        this->dataOffset = other.dataOffset;
+        this->lazyState = other.lazyState;
 
-        other.isHeaderInitialized = false;
-        other.sizes.clear();
         other.indexPosition = 0;
         other.keySize = 0;
-        other.dataOffset = 0;
+        other.lazyState = nullptr;
 
         return *this;
     }
 
-    RowReference::~RowReference() = default;
+    RowReference::~RowReference(){
+        if (this->lazyState != nullptr)
+            delete this->lazyState;
+    }
 
     QueryResult RowReference::Materialize()const{
         return this->pageView.MaterializeRow(this->indexPosition, this->keySize);
@@ -91,11 +97,11 @@ namespace Pages{
 
     Value RowReference::PartialMaterialize(const column_index_t columnIndex) const{
         Value value;
-        if (this->cache.TryGetValue(columnIndex, value))
+        if (this->lazyState->cache.TryGetValue(columnIndex, value))
             return value;
 
         value = this->pageView.PartialMaterializeRow(this, columnIndex);
-        this->cache.Add(columnIndex, std::move(value));
-        return  this->cache.Get(columnIndex);
+        this->lazyState->cache.Add(columnIndex, std::move(value));
+        return this->lazyState->cache.Get(columnIndex);
     }
 }

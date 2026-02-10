@@ -6,6 +6,7 @@
 #include "Converter.h"
 #include "DataStorage/Column.h"
 #include "DataStorage/Row.h"
+#include "Pages/Additional/RawRowReference.h"
 
 namespace DatabaseEngine::StorageTypes{
     Int InsertPayload::SetDataByType(const Value& value, const Column* column, Errors::RuntimeStatus& status){
@@ -58,6 +59,7 @@ namespace DatabaseEngine::StorageTypes{
         this->size = 0;
         this->offset = 0;
         this->isHeaderInitialized = false;
+        this->isReferencingExternalData = false;
     }
 
     Int InsertPayload::SetTinyInt(const Value &value, Errors::RuntimeStatus& status){
@@ -213,6 +215,7 @@ namespace DatabaseEngine::StorageTypes{
         this->size = size;
         this->offset = startingOffset;
         this->isHeaderInitialized = false;
+        this->isReferencingExternalData = false;
     }
 
     InsertPayload& InsertPayload::operator=(InsertPayload&& other) noexcept{
@@ -224,6 +227,7 @@ namespace DatabaseEngine::StorageTypes{
         this->offset = other.offset;
         this->isHeaderInitialized = other.isHeaderInitialized;
         this->header = other.header;
+        this->isReferencingExternalData = other.isReferencingExternalData;
 
         other._data = nullptr;
         other.size = 0;
@@ -239,11 +243,24 @@ namespace DatabaseEngine::StorageTypes{
         this->offset = other.offset;
         this->isHeaderInitialized = other.isHeaderInitialized;
         this->header = other.header;
+        this->isReferencingExternalData = other.isReferencingExternalData;
 
         other._data = nullptr;
         other.size = 0;
         other.offset = 0;
         other.isHeaderInitialized = false;
+    }
+
+    InsertPayload InsertPayload::FromRowPtr(const Pages::RawRowReference& rowPtr){
+        auto payload = InsertPayload();
+
+        payload._data = rowPtr._data;
+        payload.size = rowPtr.size;
+        payload.offset = 0;
+        payload.isHeaderInitialized = false;
+        payload.isReferencingExternalData = true;
+
+        return payload;
     }
 
     InsertPayload::InsertPayload(const InsertPayload& other){
@@ -258,6 +275,7 @@ namespace DatabaseEngine::StorageTypes{
         this->offset = other.offset;
         this->isHeaderInitialized = other.isHeaderInitialized;
         this->header = other.header;
+        this->isReferencingExternalData = other.isReferencingExternalData;
     }
 
     InsertPayload& InsertPayload::operator=(const InsertPayload& other){
@@ -279,12 +297,14 @@ namespace DatabaseEngine::StorageTypes{
         this->offset = other.offset;
         this->isHeaderInitialized = other.isHeaderInitialized;
         this->header = other.header;
+        this->isReferencingExternalData = other.isReferencingExternalData;
 
         return *this;
     }
 
     InsertPayload::~InsertPayload(){
-        std::free(this->_data);
+        if (!this->isReferencingExternalData)
+            std::free(this->_data);
         this->_data = nullptr;
     }
 

@@ -4,25 +4,27 @@
 #include "../../DataStorage/Row.h"
 #include "../PageView.h"
 
-namespace Pages
-{
-    struct Frame;
-}
-
 class Value;
 
 namespace Pages{
+    struct Frame;
+
+    struct RowLazyState{
+        DatabaseEngine::StorageTypes::RowHeader header;
+
+        Dictionary<column_index_t, Value> cache;
+        std::vector<Int> sizes;
+        page_offset_t dataOffset;
+
+        bool isHeaderInitialized;
+    };
+
     struct RowReference{
         PageView pageView;
         Int indexPosition;
         Int keySize;
 
-        mutable DatabaseEngine::StorageTypes::RowHeader header;
-
-        mutable Dictionary<column_index_t, Value> cache;
-        mutable std::vector<Int> sizes;
-        mutable page_offset_t dataOffset;
-        mutable bool isHeaderInitialized;
+        RowLazyState* lazyState;
 
         RowReference();
         RowReference(Frame* framePtr, Int indexPosition, Int offset);

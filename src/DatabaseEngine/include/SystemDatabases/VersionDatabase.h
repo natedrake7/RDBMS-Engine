@@ -53,7 +53,7 @@ namespace DatabaseEngine{
       void Initialize(const std::string& configPath);
 
       Errors::RuntimeStatus InsertRow(
-        const Pages::RowReference& rowPtr,
+        const Pages::RawRowReference& rowRef,
         StorageTypes::RowVersionPointer& rowPointer,
         const StorageTypes::Table* table
       );

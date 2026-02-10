@@ -2,6 +2,7 @@
 
 #include "DataStorage/Table.h"
 #include "Pages/Additional/Frame.h"
+#include "Pages/Additional/RawRowReference.h"
 #include "Pages/Additional/RowReference.h"
 
 namespace Pages{
@@ -200,6 +201,11 @@ namespace Pages{
         std::memcpy(this->framePtr->data + offSet, &rowId, ROW_ID_SIZE);
 
         this->UpdateSlotDirectory(SlotDirectory(offSet, ROW_ID_SIZE, SlotDirectory::SLOT_FORWARDED), indexPosition);
+    }
+
+    void PageView::Delete(const Int indexPosition) const{
+        auto slot = this->GetSlotDirectory(indexPosition);
+        slot.SetFlag(SlotDirectory::SLOT_DEAD);
     }
 
     bool PageView::IsIndexPage() const{
@@ -440,7 +446,6 @@ namespace Pages{
             result.AddColumn(value);
         }
 
-
         return result;
     }
 
@@ -449,43 +454,48 @@ namespace Pages{
 
         page_offset_t offSet = rowPtr->keySize + slot.GetOffset() + Constants::ROW_VERSION_HEADER_SIZE;
 
-        rowPtr->isHeaderInitialized = true;
-        rowPtr->header = DatabaseEngine::StorageTypes::RowHeader();
-        rowPtr->header.nullBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
-        rowPtr->header.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
-        rowPtr->header.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
+        rowPtr->lazyState->isHeaderInitialized = true;
+        rowPtr->lazyState->header = DatabaseEngine::StorageTypes::RowHeader();
+        rowPtr->lazyState->header.nullBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
+        rowPtr->lazyState->header.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
+        rowPtr->lazyState->header.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
 
-        rowPtr->sizes.resize(numberOfColumns, 0);
+        rowPtr->lazyState->sizes.resize(numberOfColumns, 0);
 
         for (int i = 0; i < numberOfColumns; i++){
-            if (rowPtr->header.nullBitMap.Get(i))
+            if (rowPtr->lazyState->header.nullBitMap.Get(i))
                 continue;
 
-            std::memcpy(&rowPtr->sizes[i], this->framePtr->data + offSet, sizeof(block_size_t));
+            std::memcpy(&rowPtr->lazyState->sizes[i], this->framePtr->data + offSet, sizeof(block_size_t));
             offSet += sizeof(block_size_t);
         }
 
-        rowPtr->dataOffset = offSet;
+        rowPtr->lazyState->dataOffset = offSet;
     }
 
     Value PageView::PartialMaterializeRow(const RowReference* rowPtr,const column_index_t columnIndex) const{
         const auto& columns = this->framePtr->table->GetColumns();
 
-        if (!rowPtr->isHeaderInitialized)
+        if (!rowPtr->lazyState->isHeaderInitialized)
             this->InitializeRowReferenceCache(rowPtr, static_cast<Int>(columns.size()));
 
-        block_size_t offSet = rowPtr->dataOffset;
+        block_size_t offSet = rowPtr->lazyState->dataOffset;
         for (int i = 0; i < columnIndex; i++){
-            if (rowPtr->header.nullBitMap.Get(i))
+            if (rowPtr->lazyState->header.nullBitMap.Get(i))
                 continue;
 
-            offSet += rowPtr->sizes[i];
+            offSet += rowPtr->lazyState->sizes[i];
         }
 
-        if (rowPtr->header.nullBitMap.Get(columnIndex))
+        if (rowPtr->lazyState->header.nullBitMap.Get(columnIndex))
             return Value::Null();
 
-        return Value(this->framePtr->data + offSet, rowPtr->sizes[columnIndex], columns[columnIndex]->Type());
+        return Value(this->framePtr->data + offSet, rowPtr->lazyState->sizes[columnIndex], columns[columnIndex]->Type());
+    }
+
+    RawRowReference PageView::RowRawData(const Int indexPosition, const Int offSet) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+        return RawRowReference(this->framePtr->data + slot.GetOffset() + offSet, slot.GetSize() - offSet);
     }
 
     bool PageView::IsValid() const{

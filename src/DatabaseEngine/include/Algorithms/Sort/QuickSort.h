@@ -1,19 +1,17 @@
 #pragma once
 #include <vector>
-#include "../../../include/Database.h"
 
+#include "DataTypes/DataTypes.h"
+class QueryResult;
 class SortCondition;
 
 namespace DatabaseEngine::StorageTypes {
     class Row;
 }
 
-using namespace std;
-using namespace Constants;
-
 class QuickSort {
-        static int Partition(vector<QueryResult> &rows, Int low, Int high, const vector<SortCondition>& sortConditions);
+        static int Partition(std::vector<QueryResult> &rows, Int low, Int high, const std::vector<SortCondition>& sortConditions);
     public:
-        static void Sort(vector<QueryResult>& rows, Int low, Int high, const vector<SortCondition>& sortConditions);
+        static void Sort(std::vector<QueryResult>& rows, Int low, Int high, const std::vector<SortCondition>& sortConditions);
     
 };

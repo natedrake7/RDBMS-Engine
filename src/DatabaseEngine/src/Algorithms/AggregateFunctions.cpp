@@ -1,7 +1,5 @@
 ﻿#include "../../include/Algorithms/AggregateFunctions.h"
 #include "../../include/DataStorage/Column.h"
-#include "../../include/DataStorage/Row.h"
-
 #include "../../include/Pages/Additional/RowReference.h"
 
 #include <limits>

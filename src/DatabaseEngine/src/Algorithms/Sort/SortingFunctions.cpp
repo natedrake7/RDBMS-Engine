@@ -11,6 +11,7 @@
 #include "Evaluators/Expression.h"
 
 #include "../../QueryPipeline/include/Statements.h"
+#include "Pages/Additional/RowReference.h"
 
 bool SortingFunctions::CompareRowsAscending(const Pages::RowReference& firstRow, const Pages::RowReference& secondRow, const column_index_t& columnIndex){
     return (firstRow.PartialMaterialize(columnIndex) < secondRow.PartialMaterialize(columnIndex)).AsBool();
@@ -63,7 +64,7 @@ MergeElement::MergeElement(MergeElement&& other) noexcept {
 bool SortingFunctions::CompareRows(
     const QueryResult& firstRow,
     const QueryResult& secondRow,
-    const vector<QueryPipeline::Statements::OrderColumn*> &sortConditions
+    const std::vector<QueryPipeline::Statements::OrderColumn*> &sortConditions
 ){
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::MaterializedRow, {});
     for (const auto& condition : sortConditions)
@@ -94,7 +95,7 @@ bool SortingFunctions::CompareRows(
     return false;
 }
 
-void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<QueryPipeline::Statements::OrderColumn*> &conditions){
+void SortingFunctions::OrderBy(std::vector<QueryResult> &rows, const std::vector<QueryPipeline::Statements::OrderColumn*> &conditions){
     if(rows.empty())
         return;
 
@@ -124,12 +125,12 @@ void SortingFunctions::OrderBy(vector<QueryResult> &rows, const vector<QueryPipe
     MergeSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), conditions);
 }
 
-unordered_map<string, AggregateResults> SortingFunctions::GroupBy(
-    const vector<Pages::RowReference> &rows,
-    const vector<GroupCondition> &sortConditions
+std::unordered_map<std::string, AggregateResults> SortingFunctions::GroupBy(
+    const std::vector<Pages::RowReference> &rows,
+    const std::vector<GroupCondition> &sortConditions
 ){
-    unordered_map<string, AggregateResults> groupedResults;
-    unordered_map<string, vector<Pages::RowReference>> groupedRows;
+    std::unordered_map<std::string, AggregateResults> groupedResults;
+    std::unordered_map<std::string, std::vector<Pages::RowReference>> groupedRows;
 
     //add any aggregate function execution asWell by condition
     //also store the keys of the groupBy used in order to prin them.
@@ -181,9 +182,9 @@ bool MergeComparator::operator()(const MergeElement& first, const MergeElement& 
     );
 }
 
-string SortingFunctions::CreateGroupByKey(const Pages::RowReference& row, const vector<GroupCondition> &sortConditions)
+std::string SortingFunctions::CreateGroupByKey(const Pages::RowReference& row, const std::vector<GroupCondition> &sortConditions)
 {
-    string hashKey;
+    std::string hashKey;
     for(const auto& condition : sortConditions){
         const auto value = row.PartialMaterialize(condition.GetColumnIndex());
         hashKey.append(reinterpret_cast<const char*>(value.Data()), value.Size());
@@ -192,7 +193,7 @@ string SortingFunctions::CreateGroupByKey(const Pages::RowReference& row, const 
     return hashKey;
 }
 
-long double SortingFunctions::ApplyAggregateFunctionToGroup(const vector<Pages::RowReference> &rowGroup, const GroupCondition &condition)
+long double SortingFunctions::ApplyAggregateFunctionToGroup(const std::vector<Pages::RowReference> &rowGroup, const GroupCondition &condition)
 {
     switch (condition.GetAggregateFunction())
     {
