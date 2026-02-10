@@ -25,6 +25,8 @@ namespace DatabaseEngine::StorageTypes {
             && this->deletedTransactionId != snapshot.transactionId;
     }
 
+    RowHeader::RowHeader() = default;
+
     RowHeader::RowHeader(const Int bitMapsSize){
         this->nullBitMap = ByteMaps::BitMap(bitMapsSize, false);
         this->largeObjectBitMap = ByteMaps::BitMap(bitMapsSize, false);

@@ -417,9 +417,19 @@ namespace Pages{
         auto rowHeader = DatabaseEngine::StorageTypes::RowHeader();
 
         offSet += Constants::ROW_VERSION_HEADER_SIZE;
-        rowHeader.nullBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
-        rowHeader.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
-        rowHeader.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
+
+        const auto bitmapsSize = ByteMaps::BitMap::HeapSize(columnsSize);
+
+        rowHeader.nullBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, columnsSize);
+        offSet += bitmapsSize;
+        rowHeader.largeObjectBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, columnsSize);
+        offSet += bitmapsSize;
+        rowHeader.overflowBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, columnsSize);
+        offSet += bitmapsSize;
+
+        // rowHeader.nullBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
+        // rowHeader.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
+        // rowHeader.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
 
         auto result = QueryResult();
 
@@ -456,9 +466,18 @@ namespace Pages{
 
         rowPtr->lazyState->isHeaderInitialized = true;
         rowPtr->lazyState->header = DatabaseEngine::StorageTypes::RowHeader();
-        rowPtr->lazyState->header.nullBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
-        rowPtr->lazyState->header.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
-        rowPtr->lazyState->header.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
+
+        const auto bitmapsSize = ByteMaps::BitMap::HeapSize(numberOfColumns);
+        rowPtr->lazyState->header.nullBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        offSet += bitmapsSize;
+        rowPtr->lazyState->header.largeObjectBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        offSet += bitmapsSize;
+        rowPtr->lazyState->header.overflowBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        offSet += bitmapsSize;
+
+        // rowPtr->lazyState->header.nullBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
+        // rowPtr->lazyState->header.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
+        // rowPtr->lazyState->header.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
 
         rowPtr->lazyState->sizes.resize(numberOfColumns, 0);
 

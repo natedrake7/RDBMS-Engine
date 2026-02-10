@@ -1,14 +1,19 @@
 ﻿#pragma once
 #include <vector>
-#include "../../../DatabaseEngine/include/DatabaseConstants.h"
+#include "../DataTypes/DataTypes.h"
 
 namespace ByteMaps{
-    class BitMap{
-        std::vector<byte_t> data;
+    class BitMap final{
+        object_t* _data;
         bit_map_size_t size;
 
+        bool isReferencingData;
+
     protected:
-        void Resize(const bit_map_size_t &newSize);
+        void Resize(bit_map_size_t newSize);
+        Int HeapSize()const;
+
+        BitMap(object_t* data, bit_map_size_t size);
 
     public:
         BitMap();
@@ -16,13 +21,15 @@ namespace ByteMaps{
         explicit BitMap(const BitMap *bitMap);
         explicit BitMap(bit_map_size_t size, byte_t defaultValue = 0);
 
-        BitMap(BitMap &&bitMap) noexcept;
-        BitMap& operator=(BitMap &&bitMap) noexcept;
+        static BitMap FromExistingData(object_t *data, bit_map_size_t size);
+
+        BitMap &operator=(const BitMap &other);
+
+        BitMap(BitMap &&other) noexcept;
+        BitMap& operator=(BitMap &&other) noexcept;
         ~BitMap();
 
         void Set(bit_map_pos_t position, bool value);
-        void SetByte(bit_map_pos_t position, byte_t value);
-
         [[nodiscard]] bool Get(bit_map_pos_t position) const;
         [[nodiscard]] bit_map_size_t GetSize() const;
         [[nodiscard]] bit_map_size_t GetSizeInBytes() const;
@@ -39,14 +46,15 @@ namespace ByteMaps{
 
         [[nodiscard]] bool Empty() const;
 
-        [[nodiscard]] const std::vector<byte_t> &GetData() const;
-        [[nodiscard]] std::vector<byte_t>& GetDataUnsafe();
+        // [[nodiscard]] const std::vector<byte_t> &GetData() const;
+        // [[nodiscard]] std::vector<byte_t>& GetDataUnsafe();
 
         [[nodiscard]] const byte_t* DataPtr() const;
-        [[nodiscard]] byte_t* DataPtrUnsafe();
+        [[nodiscard]] byte_t* DataPtrUnsafe() const;
 
         [[nodiscard]] bit_map_size_t GetSizeUnsafe() const;
 
-        BitMap &operator=(const BitMap &bitMap);
+        static Int HeapSize(Int size);
+
     };
 }

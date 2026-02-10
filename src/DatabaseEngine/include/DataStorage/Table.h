@@ -164,7 +164,7 @@ namespace DatabaseEngine::StorageTypes
 
             Errors::RuntimeStatus InsertRow(
                 const ExecutionProperties& properties,
-                std::vector<Value> &inputData
+                const std::vector<Value> &inputData
             );
             Errors::RuntimeStatus InsertRow(InsertPayload& payload, Int pagesToAllocate);
             Errors::RuntimeStatus HeapInsert(const InsertPayload& payload, Int pagesToAllocate)const;

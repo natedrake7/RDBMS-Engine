@@ -50,13 +50,14 @@ namespace DatabaseEngine::StorageTypes
     };
 
     struct RowHeader{
+        RowVersioningHeader version;
+
         ByteMaps::BitMap nullBitMap;
         ByteMaps::BitMap largeObjectBitMap;
         ByteMaps::BitMap overflowBitMap;
 
-        RowVersioningHeader version;
-
-        explicit RowHeader(Int bitMapsSize = 0);
+        explicit RowHeader();
+        explicit RowHeader(Int bitMapsSize);
         RowHeader& operator=(const RowHeader& otherHeader);
         RowHeader(const RowHeader& otherHeader);
         RowHeader(RowHeader&& otherHeader) noexcept;

@@ -3,7 +3,6 @@
 #include "DataTypes/DateTime.h"
 #include <string>
 #include <vector>
-#include <ostream>
 
 #include "DataTypes/Decimal.h"
 #include "DataTypes/Value.h"

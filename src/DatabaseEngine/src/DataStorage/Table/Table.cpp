@@ -6,6 +6,7 @@
 #include "../../../include/DataStorage/Table.h"
 
 #include <cassert>
+#include <cmath>
 
 #include "../../../include/SystemDatabases/CatalogSchema.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
@@ -268,11 +269,11 @@ namespace DatabaseEngine::StorageTypes {
 
         std::vector<char> buffer;
 
-        Int allocationSize = 0;
-        for (const auto& row : input)
-          allocationSize += row.GetByteSize();
-
-        Memory::Allocator allocator(allocationSize, Memory::AllocationType::Persistent);
+        // Int allocationSize = 0;
+        // for (const auto& row : input)
+        //   allocationSize += row.GetByteSize();
+        //
+        // Memory::Allocator allocator(allocationSize, Memory::AllocationType::Persistent);
 
         for (auto& insertedRow : input) {
             Errors::RuntimeStatus status;
@@ -295,13 +296,12 @@ namespace DatabaseEngine::StorageTypes {
             this->header.ordinalPosition
         );
 
-        if (this->IsClustered())
-          pagesNeeded /= INDEX_PAGE_DEFAULT_SIZE;
-        else
-          pagesNeeded /= PAGE_SIZE_WITHOUT_HEADER;
+        // if (this->IsClustered())
+        //   pagesNeeded /= INDEX_PAGE_DEFAULT_SIZE;
+        // else
+        //   pagesNeeded /= PAGE_SIZE_WITHOUT_HEADER;
 
-        if (pagesNeeded == 0)
-          pagesNeeded = 1;
+        pagesNeeded = static_cast<Int>(std::ceil(pagesNeeded / rows.size()));
 
         Errors::RuntimeStatus result;
         for (auto& payload: rows){
@@ -316,7 +316,7 @@ namespace DatabaseEngine::StorageTypes {
 
   Errors::RuntimeStatus Table::InsertRow(
         const ExecutionProperties& properties,
-        std::vector<Value> &inputData
+        const std::vector<Value> &inputData
     ){
         Logging::CheckPoint checkPoint;
 

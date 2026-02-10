@@ -12,7 +12,6 @@ namespace Pages{
     struct RowLazyState{
         DatabaseEngine::StorageTypes::RowHeader header;
 
-        Dictionary<column_index_t, Value> cache;
         std::vector<Int> sizes;
         page_offset_t dataOffset;
 

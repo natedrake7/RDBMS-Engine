@@ -34,7 +34,7 @@ namespace Pages{
              this->lazyState->dataOffset = other.lazyState->dataOffset;
              this->lazyState->isHeaderInitialized = other.lazyState->isHeaderInitialized;
              this->lazyState->sizes = other.lazyState->sizes;
-             this->lazyState->cache = other.lazyState->cache;
+             // this->lazyState->cache = other.lazyState->cache;
        }
     }
 
@@ -49,11 +49,11 @@ namespace Pages{
 
         if (other.lazyState != nullptr){
             this->lazyState = new RowLazyState();
-            this->lazyState->header = other.lazyState->header;
+            // this->lazyState->header = other.lazyState->header;
             this->lazyState->dataOffset = other.lazyState->dataOffset;
             this->lazyState->isHeaderInitialized = other.lazyState->isHeaderInitialized;
             this->lazyState->sizes = other.lazyState->sizes;
-            this->lazyState->cache = other.lazyState->cache;
+            // this->lazyState->cache = other.lazyState->cache;
         }
 
         return *this;
@@ -96,12 +96,12 @@ namespace Pages{
     }
 
     Value RowReference::PartialMaterialize(const column_index_t columnIndex) const{
-        Value value;
-        if (this->lazyState->cache.TryGetValue(columnIndex, value))
-            return value;
+        // Value value;
+        // if (this->lazyState->cache.TryGetValue(columnIndex, value))
+        //     return value;
 
-        value = this->pageView.PartialMaterializeRow(this, columnIndex);
-        this->lazyState->cache.Add(columnIndex, std::move(value));
-        return this->lazyState->cache.Get(columnIndex);
+        return this->pageView.PartialMaterializeRow(this, columnIndex);
+        // this->lazyState->cache.Add(columnIndex, std::move(value));
+        // return this->lazyState->cache.Get(columnIndex);
     }
 }

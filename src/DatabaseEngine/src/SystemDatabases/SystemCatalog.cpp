@@ -1544,7 +1544,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     if (selectedColumns.empty())
       return {};
 
-     std::vector<Headers::ColumnHeader> selectedColumnHeaders;
+    std::vector<Headers::ColumnHeader> selectedColumnHeaders;
     selectedColumnHeaders.reserve(selectedColumns.size());
 
     for (const auto& row : selectedColumns)

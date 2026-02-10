@@ -83,7 +83,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     const auto* table = tempDb.OpenTable(this->temporaryTableId);
 
-    // table->TemporaryDatabaseHeapScan(&result->rows, state, properties.batchSize);
+    table->TemporaryDatabaseHeapScan(&result->rows, state, properties.batchSize);
 
     result->results.reserve(result->rows.size());
 
@@ -93,7 +93,6 @@ namespace QueryPipeline::PhysicalPlan {
 
     return result;
   }
-
 
   void ExecutionNode::UpdateScanState(const DataTypes::RowIdentifier& rowId){ }
 

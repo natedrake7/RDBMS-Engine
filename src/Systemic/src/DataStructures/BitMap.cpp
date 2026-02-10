@@ -4,159 +4,213 @@
 
 #include <fstream>
 
-namespace ByteMaps
-{
+namespace ByteMaps{
+    void BitMap::Resize(const bit_map_size_t newSize){
+        if (this->isReferencingData)
+            throw std::runtime_error("BitMap::Resize: Cannot resize a BitMap that is referencing external data.");
+
+        const auto newByteCount = (newSize + 7) / 8;
+        this->_data = static_cast<object_t*>(std::realloc(this->_data, newByteCount));
+
+        for (int i = this->size; i < newSize; i++)
+            this->Set(i, false);
+
+        this->size = newSize;
+    }
+
+    Int BitMap::HeapSize() const{
+        return (this->size + 7) / 8;
+    }
+
     BitMap::BitMap(){
+        this->_data = nullptr;
         this->size = 0;
+
+        this->isReferencingData = false;
     }
 
     BitMap::BitMap(const BitMap &bitMap){
         this->size = bitMap.size;
-        this->data = bitMap.data;
+
+        const auto heapSize = this->HeapSize();
+        this->_data = static_cast<object_t*>(std::malloc(heapSize));
+        std::memcpy(this->_data, bitMap._data, heapSize);
+
+        this->isReferencingData = false;
     }
 
     BitMap::BitMap(const BitMap *bitMap){
         this->size = bitMap->size;
-        this->data = bitMap->data;
+
+        const auto heapSize = this->HeapSize();
+        this->_data = static_cast<object_t*>(std::malloc(heapSize));
+        std::memcpy(this->_data, bitMap->_data, heapSize);
+
+        this->isReferencingData = false;
     }
 
     BitMap::BitMap(const bit_map_size_t size, const byte_t defaultValue){
         this->size = size;
-        this->data.resize((size + 7) / 8, defaultValue);
+
+        const auto heapSize = this->HeapSize();
+        this->_data = static_cast<object_t*>(std::malloc(heapSize));
+
+        std::memset(this->_data, defaultValue, heapSize);
+        this->isReferencingData = false;
     }
 
-    BitMap::BitMap(BitMap&& bitMap) noexcept{
-        this->data = std::move(bitMap.data);
-        this->size = bitMap.size;
+    BitMap BitMap::FromExistingData(object_t* data, const bit_map_size_t size){
+        return BitMap(data, size);
     }
 
-    BitMap& BitMap::operator=(BitMap&& bitMap) noexcept{
-        if (this == &bitMap)
+    BitMap::BitMap(object_t* data, const bit_map_size_t size){
+        this->_data = data;
+        this->size = size;
+        this->isReferencingData = true;
+    }
+
+    BitMap &BitMap::operator=(const BitMap &other){
+        if (&other == this)
             return *this;
 
-        this->data = std::move(bitMap.data);
-        this->size = bitMap.size;
+        this->size = other.GetSize();
+
+        const auto heapSize = this->HeapSize();
+        this->_data = static_cast<object_t*>(std::malloc(heapSize));
+        std::memcpy(this->_data, other._data, heapSize);
 
         return *this;
     }
 
-    BitMap::~BitMap() = default;
+    BitMap::BitMap(BitMap&& other) noexcept{
+        this->_data = other._data;
+        this->size = other.size;
+        this->isReferencingData = other.isReferencingData;
+
+        other._data = nullptr;
+    }
+
+    BitMap& BitMap::operator=(BitMap&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->_data = other._data;
+        this->size = other.size;
+        this->isReferencingData = other.isReferencingData;
+
+        other._data = nullptr;
+
+        return *this;
+    }
+
+    BitMap::~BitMap(){
+        if (!this->isReferencingData)
+            std::free(this->_data);
+    }
 
     void BitMap::Set(const bit_map_pos_t position, const bool value){
         if (position >= this->size)
             this->Resize(position + 1);
 
-        if (value)
-        {
-            data[position / 8] |= (1 << (position % 8)); // Set the bit
+        if (value){
+            this->_data[position / 8] |= (1 << (position % 8)); // Set the bit
             return;
         }
 
-        data[position / 8] &= ~(1 << (position % 8)); // Clear the bit
+        this->_data[position / 8] &= ~(1 << (position % 8)); // Clear the bit
     }
 
-    bool BitMap::Get(const bit_map_pos_t position) const { return data[position / 8] & (1 << (position % 8)); }
+    bool BitMap::Get(const bit_map_pos_t position) const { return this->_data[position / 8] & (1 << (position % 8)); }
 
     bit_map_size_t BitMap::GetSize() const { return this->size; }
 
-    bit_map_size_t BitMap::GetSizeInBytes() const { return this->data.size() + sizeof(bit_map_size_t); }
-
-    void BitMap::SetByte(const bit_map_pos_t position, const byte_t value){
-        if (position < this->data.size())
-            data[position] = value;
+    bit_map_size_t BitMap::GetSizeInBytes() const{
+        return this->HeapSize() + sizeof(bit_map_size_t);
     }
 
     void BitMap::GetDataFromFile(const object_t* buffer, page_offset_t &offset){
         std::memcpy(&this->size, buffer + offset, sizeof(bit_map_size_t));
         offset += sizeof(bit_map_size_t);
 
-        const bit_map_size_t &bytesToRead = (this->size + 7) / 8;
+        const bit_map_size_t bytesToRead = this->HeapSize();
 
-        if (this->data.empty())
-            this->data.resize(bytesToRead);
-
-        for (bit_map_size_t i = 0; i < bytesToRead; i++)
-        {
-            byte_t value;
-            std::memcpy(&value, buffer + offset, sizeof(byte_t));
-            this->SetByte(i, value);
-
-            offset += sizeof(byte_t);
-        }
+        this->_data = static_cast<object_t*>(std::malloc(bytesToRead));
+        std::memcpy(this->_data, buffer + offset, bytesToRead);
+        // for (bit_map_size_t i = 0; i < bytesToRead; i++)
+        // {
+        //     byte_t value;
+        //     std::memcpy(&value, buffer + offset, sizeof(byte_t));
+        //     this->SetByte(i, value);
+        //
+        //     offset += sizeof(byte_t);
+        // }
     }
 
     void BitMap::GetDataFromFile(const object_t* buffer, page_offset_t& offset, const Int otherSize){
         this->size = otherSize;
+        const bit_map_size_t bytesToRead = this->HeapSize();
 
-        const bit_map_size_t bytesToRead = (this->size + 7) / 8;
+        this->_data = static_cast<object_t*>(std::malloc(bytesToRead));
+        std::memcpy(this->_data, buffer + offset, bytesToRead);
 
-        if (this->data.empty())
-            this->data.resize(bytesToRead);
-
-        std::memcpy(this->data.data(), buffer + offset, bytesToRead * sizeof(byte_t));
-        offset += bytesToRead * sizeof(byte_t);
+        offset += bytesToRead * sizeof(object_t);
     }
 
     void BitMap::GetDataFromFile(const std::vector<char> &buffer, page_offset_t &offset){
         std::memcpy(&this->size, buffer.data() + offset, sizeof(bit_map_size_t));
         offset += sizeof(bit_map_size_t);
 
-        const bit_map_size_t &bytesToRead = (this->size + 7) / 8;
+        const bit_map_size_t &bytesToRead = this->HeapSize();
 
-        if (this->data.empty())
-            this->data.resize(bytesToRead);
+        this->_data = static_cast<object_t*>(std::malloc(bytesToRead));
+        std::memcpy(this->_data, buffer.data() + offset, bytesToRead);
 
-        for (bit_map_size_t i = 0; i < bytesToRead; i++)
-        {
-            byte_t value;
-            std::memcpy(&value, buffer.data() + offset, sizeof(byte_t));
-            this->SetByte(i, value);
-
-            offset += sizeof(byte_t);
-        }
+        offset += bytesToRead * sizeof(object_t);
     }
 
     void BitMap::WriteDataToFile(std::fstream *filePtr){
         filePtr->write(reinterpret_cast<char *>(&this->size), sizeof(bit_map_size_t));
-        filePtr->write(reinterpret_cast<char *>(this->data.data()), this->data.size() * sizeof(byte_t));
+        filePtr->write(reinterpret_cast<char *>(this->_data),  this->HeapSize() * sizeof(byte_t));
     }
 
     void BitMap::WriteDataToFile(std::vector<char>* buffer, page_offset_t& pos)const{
         std::memcpy(buffer->data() + pos, &this->size, sizeof(bit_map_size_t));
         pos += sizeof(bit_map_size_t);
 
-        std::memcpy(buffer->data() + pos, this->data.data(), this->data.size() * sizeof(byte_t));
-        pos += this->data.size() * sizeof(byte_t);
+        const auto heapSize = this->HeapSize();
+
+        std::memcpy(buffer->data() + pos, this->_data, heapSize * sizeof(byte_t));
+        pos += heapSize * sizeof(byte_t);
     }
 
     void BitMap::WriteDataToBuffer(char *&buffer) const{
         std::memcpy(buffer, &this->size, sizeof(bit_map_size_t));
         buffer += sizeof(bit_map_size_t);
 
-        const int dataSize = this->data.size() * sizeof(byte_t);
-        
-        std::memcpy(buffer, this->data.data(), dataSize);
-        buffer += dataSize;
+        const auto heapSize = this->HeapSize();
+
+        std::memcpy(buffer, this->_data, heapSize);
+        buffer += heapSize;
     }
 
     void BitMap::WriteDataToBuffer(object_t*& buffer, page_offset_t& offSet) const{
         std::memcpy(buffer + offSet, &this->size, sizeof(bit_map_size_t));
         offSet += sizeof(bit_map_size_t);
 
-        const int dataSize = this->data.size() * sizeof(byte_t);
+        const auto heapSize = this->HeapSize();
 
-        std::memcpy(buffer + offSet, this->data.data(), dataSize);
-        offSet += dataSize;
+        std::memcpy(buffer + offSet, this->_data, heapSize);
+        offSet += heapSize;
     }
 
     void BitMap::WriteDataToBuffer(std::vector<char>& buffer, page_offset_t& offSet) const {
         std::memcpy(buffer.data() + offSet, &this->size, sizeof(bit_map_size_t));
         offSet += sizeof(bit_map_size_t);
 
-        const int dataSize = this->data.size() * sizeof(byte_t);
+        const auto heapSize = this->HeapSize();
 
-        std::memcpy(buffer.data() + offSet, this->data.data(), dataSize);
-        offSet += dataSize;
+        std::memcpy(buffer.data() + offSet, this->_data, heapSize);
+        offSet += heapSize;
     }
 
     void BitMap::Print() const{
@@ -170,33 +224,17 @@ namespace ByteMaps
         return this->size == 0;
     }
 
-    const std::vector<byte_t>& BitMap::GetData() const { return this->data; }
-
-    std::vector<byte_t>& BitMap::GetDataUnsafe(){ return this->data; }
-
     const byte_t* BitMap::DataPtr() const{
-        return this->data.data();
+        return this->_data;
     }
 
-    byte_t* BitMap::DataPtrUnsafe(){
-        return this->data.data();
+    byte_t* BitMap::DataPtrUnsafe() const{
+        return this->_data;
     }
 
     bit_map_size_t BitMap::GetSizeUnsafe() const { return this->size; }
 
-    BitMap &BitMap::operator=(const BitMap &bitMap){
-        if (&bitMap == this)
-            return *this;
-
-        this->data = bitMap.GetData();
-        this->size = bitMap.GetSize();
-
-        return *this;
-    }
-
-    void BitMap::Resize(const bit_map_size_t &newSize){
-        const uint16_t newByteCount = (newSize + 7) / 8;
-        this->data.resize(newByteCount, 0);
-        this->size = newSize;
+    Int BitMap::HeapSize(const Int size){
+        return (size + 7) / 8;
     }
 }

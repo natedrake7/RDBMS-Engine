@@ -29,11 +29,8 @@ namespace DatabaseEngine {
 namespace QueryPipeline::PhysicalPlan{
   struct ExecutionResult {
       std::vector<std::string> displayColumnNames;
-
       std::vector<const DatabaseEngine::StorageTypes::Column*> columns;
-
       std::vector<Pages::RowReference> rows;
-
       std::vector<QueryResult> results;
 
       std::string message;
