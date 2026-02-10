@@ -5,6 +5,12 @@
 #include "../../../../Systemic/include/RowIdentifier.h"
 #include "../../../../Systemic/include/QueryResult.h"
 #include "../../../include/DataStorage/Column.h"
+#include "DataStructures/Array.h"
+
+namespace DatabaseEngine
+{
+    struct ExecutionProperties;
+}
 
 namespace Pages{
     struct RowReference;
@@ -51,23 +57,27 @@ class SortingFunctions{
 
     public:
          [[nodiscard]] static bool CompareRows(
-           const QueryResult& firstRow,
-           const QueryResult& secondRow,
-           const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
+            const DatabaseEngine::ExecutionProperties& properties,
+            const QueryResult& firstRow,
+            const QueryResult& secondRow,
+            const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
           );
          [[nodiscard]] static bool CompareRowsAscending(
-           const Pages::RowReference& firstRow,
-           const Pages::RowReference& secondRow,
-           const column_index_t& columnIndex
+            const DatabaseEngine::ExecutionProperties& properties,
+            const Pages::RowReference& firstRow,
+            const Pages::RowReference& secondRow,
+            const column_index_t& columnIndex
           );
          [[nodiscard]] static bool CompareRowsDescending(
-           const Pages::RowReference& firstRow,
-           const Pages::RowReference& secondRow,
-           const column_index_t& columnIndex
+            const DatabaseEngine::ExecutionProperties& properties,
+            const Pages::RowReference& firstRow,
+            const Pages::RowReference& secondRow,
+            const column_index_t& columnIndex
           );
          static void OrderBy(
-           std::vector<QueryResult>& rows,
-           const std::vector<QueryPipeline::Statements::OrderColumn*>& conditions
+            const DatabaseEngine::ExecutionProperties& properties,
+            DataStructures::Array<QueryResult>& rows,
+            const std::vector<QueryPipeline::Statements::OrderColumn*>& conditions
           );
          [[nodiscard]] static std::unordered_map<std::string, AggregateResults> GroupBy(
            const std::vector<Pages::RowReference>& rows,
@@ -76,14 +86,18 @@ class SortingFunctions{
 };
 
 class MergeComparator final{
-    const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
+        const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
+        const DatabaseEngine::ExecutionProperties* properties;
 
     public:
         explicit MergeComparator(
-          const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions
+          const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions,
+          const DatabaseEngine::ExecutionProperties* properties
         );
         bool operator()(
           const MergeElement& first,
           const MergeElement& second
-         ) const;
+        ) const;
+        void SetProperties(const DatabaseEngine::ExecutionProperties* properties);
+        bool HasProperties() const;
 };

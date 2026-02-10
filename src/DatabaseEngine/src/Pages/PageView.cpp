@@ -492,7 +492,11 @@ namespace Pages{
         rowPtr->lazyState->dataOffset = offSet;
     }
 
-    Value PageView::PartialMaterializeRow(const RowReference* rowPtr,const column_index_t columnIndex) const{
+    Value PageView::PartialMaterializeRow(
+        const Memory::Allocator* allocator,
+        const RowReference* rowPtr,
+        const column_index_t columnIndex
+    ) const{
         const auto& columns = this->framePtr->table->GetColumns();
 
         if (!rowPtr->lazyState->isHeaderInitialized)
@@ -509,7 +513,12 @@ namespace Pages{
         if (rowPtr->lazyState->header.nullBitMap.Get(columnIndex))
             return Value::Null();
 
-        return Value(this->framePtr->data + offSet, rowPtr->lazyState->sizes[columnIndex], columns[columnIndex]->Type());
+        return Value::FromExternalStorage(
+            this->framePtr->data + offSet,
+            rowPtr->lazyState->sizes[columnIndex],
+            columns[columnIndex]->Type(),
+            allocator
+        );
     }
 
     RawRowReference PageView::RowRawData(const Int indexPosition, const Int offSet) const{

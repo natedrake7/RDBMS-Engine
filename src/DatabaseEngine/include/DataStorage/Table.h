@@ -118,6 +118,7 @@ namespace DatabaseEngine::StorageTypes
         public:
             InsertPayload CreateInsertPayload(
                 Errors::RuntimeStatus& status,
+                const Memory::Allocator& allocator,
                 transaction_id_t transactionId,
                 const std::vector<Value> &inputData
             ) const;
@@ -159,16 +160,24 @@ namespace DatabaseEngine::StorageTypes
         */
             Errors::RuntimeStatus BatchInsert(
                 const ExecutionProperties& properties,
-                std::vector<QueryResult>& input
+                DataStructures::Array<QueryResult> &input
             );
 
             Errors::RuntimeStatus InsertRow(
                 const ExecutionProperties& properties,
                 const std::vector<Value> &inputData
             );
-            Errors::RuntimeStatus InsertRow(InsertPayload& payload, Int pagesToAllocate);
+            Errors::RuntimeStatus InsertRow(
+                const ExecutionProperties& properties,
+                InsertPayload& payload,
+                Int pagesToAllocate
+            );
             Errors::RuntimeStatus HeapInsert(const InsertPayload& payload, Int pagesToAllocate)const;
-            Errors::RuntimeStatus ClusteredIndexInsert(InsertPayload& payload, Int pagesToAllocate);
+            Errors::RuntimeStatus ClusteredIndexInsert(
+                const ExecutionProperties& properties,
+                InsertPayload& payload,
+                Int pagesToAllocate
+            );
             Errors::RuntimeStatus NonClusteredIndexInsert(
                 const Row* row,
                 Int nonClusteredIndexId,
@@ -290,14 +299,14 @@ namespace DatabaseEngine::StorageTypes
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
-                Pages::PageView* page,
+                const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
                 const std::vector<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
-                Pages::PageView* page,
+                const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionProperties& properties,
                 const std::vector<Expressions::Expression*>& updates
@@ -354,6 +363,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] bool HasNonClusteredIndexes() const;
 
             DataTypes::Indexing::Key CreateKey(
+                const ExecutionProperties& properties,
                 const std::vector<column_index_t>& indexedColumns,
                 const InsertPayload& payload
             ) const;
@@ -399,11 +409,12 @@ namespace DatabaseEngine::StorageTypes
         */
             void AddColumn(Column *column);
             void HandleAddColumn(
+                const ExecutionProperties& properties,
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 column_index_t index,
                 const Value& defaultValue
-            );
+            ) const;
             void UpdateColumnName(column_index_t index, const std::string& name)const;
             void RemoveColumn(column_index_t index);
             static void HandleRemoveColumn(Pages::PageView* page, QueryResult& row, column_index_t index);

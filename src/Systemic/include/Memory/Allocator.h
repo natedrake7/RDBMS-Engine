@@ -2,26 +2,19 @@
 #include "../DataTypes/DataTypes.h"
 
 namespace Memory {
-
-    enum class AllocationType : uint8_t{
-        Temporary = 0,
-        Persistent = 1
-    };
-
     class Allocator {
-        object_t* _buffer;
-        BigInt _capacity;
-        BigInt _offset;
-
-        AllocationType _allocationType;
+        mutable object_t* _buffer;
+        mutable UnsignedInt _capacity;
+        mutable UnsignedInt _offset;
 
         public:
-            explicit Allocator(const BigInt& capacity = 1024 * 1024, const AllocationType& allocationType = AllocationType::Temporary);
+            explicit Allocator(UnsignedInt capacity = 1024 * 1024);
             ~Allocator();
 
-            void* Allocate(const BigInt& size);
+            Allocator(Allocator&& other) noexcept;
+            Allocator& operator=(Allocator&& other) noexcept;
 
-
-            void Reset();
+            void* Allocate(UnsignedInt size)const;
+            void Reset() const;
     };
 }

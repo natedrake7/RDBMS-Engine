@@ -10,6 +10,7 @@
 #include <stdexcept>
 
 #include "DataTypes/DateTime.h"
+#include "Memory/Allocator.h"
 
 bool Value::TryParseAsBool()const{
     if (this->type == DataType::String || this->type == DataType::UnicodeString)
@@ -298,6 +299,8 @@ Value::Value(const Value &copyVal){
 
     this->data = new object_t[this->size];
     std::memcpy(this->data, copyVal.data, this->size);
+
+    this->usesExternalStorage = false;
 }
 Value::Value(Value &&other)noexcept {
     if (this == &other)
@@ -307,6 +310,7 @@ Value::Value(Value &&other)noexcept {
     this->type = other.type;
     this->data = other.data;
     this->columnIndex = other.columnIndex;
+    this->usesExternalStorage = other.usesExternalStorage;
 
     other.data = nullptr;
     other.size = 0;
@@ -322,6 +326,7 @@ Value & Value::operator=(Value &&other) noexcept{
     this->type = other.type;
     this->data = other.data;
     this->columnIndex = other.columnIndex;
+    this->usesExternalStorage = other.usesExternalStorage;
 
     other.data = nullptr;
     other.size = 0;
@@ -330,7 +335,9 @@ Value & Value::operator=(Value &&other) noexcept{
     return *this;
 }
 Value::~Value(){
-    delete this->data;
+    if (!this->usesExternalStorage)
+        delete this->data;
+
     this->data = nullptr;
 }
 
@@ -339,6 +346,7 @@ Value::Value(const column_index_t index){
     this->columnIndex = index;
     this->size = 0;
     this->type = DataType::Unknown;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const void *data, const Int size, const DataType type){
@@ -349,15 +357,24 @@ Value::Value(const void *data, const Int size, const DataType type){
 
     this->data = new object_t[size];
     std::memcpy(this->data, data, size);
+    this->usesExternalStorage = false;
 }
 
-Value::Value(const object_t* data, const Int size, const DataType type, const column_index_t index){
-    this->data = new object_t[size];
+Value::Value(
+    const object_t* data,
+    const Int size,
+    const DataType type,
+    const Memory::Allocator* allocator,
+    const column_index_t index
+){
+    this->data = static_cast<object_t*>(allocator->Allocate(size));
+    // this->data = new object_t[size];
     std::memcpy(this->data, data, size);
 
     this->size = size;
     this->type = type;
     this->columnIndex = index;
+    this->usesExternalStorage = true;
 }
 
 Value::Value(const bool data, const column_index_t index){
@@ -367,6 +384,7 @@ Value::Value(const bool data, const column_index_t index){
     this->size = sizeof(bool);
     this->columnIndex = index;
     this->type = DataType::Bool;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const int8_t data, const column_index_t index){
@@ -376,6 +394,7 @@ Value::Value(const int8_t data, const column_index_t index){
     this->size = sizeof(int8_t);
     this->columnIndex = index;
     this->type = DataType::TinyInt;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const SmallInt data, const column_index_t index){
@@ -385,6 +404,7 @@ Value::Value(const SmallInt data, const column_index_t index){
     this->size = sizeof(SmallInt);
     this->columnIndex = index;
     this->type = DataType::SmallInt;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const Int data, const column_index_t index){
@@ -394,6 +414,7 @@ Value::Value(const Int data, const column_index_t index){
     this->size = sizeof(Int);
     this->columnIndex = index;
     this->type = DataType::Int;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const int64_t data, const column_index_t index){
@@ -403,6 +424,7 @@ Value::Value(const int64_t data, const column_index_t index){
     this->size = sizeof(int64_t);
     this->columnIndex = index;
     this->type = DataType::BigInt;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const std::string &data, const column_index_t index){
@@ -412,6 +434,7 @@ Value::Value(const std::string &data, const column_index_t index){
 
     this->columnIndex = index;
     this->type = DataType::String;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const DataTypes::DateTime &data, const column_index_t index){
@@ -422,6 +445,7 @@ Value::Value(const DataTypes::DateTime &data, const column_index_t index){
     this->size = DataTypes::DateTime::Size();
     this->columnIndex = index;
     this->type = DataType::DateTime;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const DataTypes::Decimal &data, const column_index_t index){
@@ -431,6 +455,7 @@ Value::Value(const DataTypes::Decimal &data, const column_index_t index){
     std::memcpy(this->data, data.GetRawData(), this->size);
     this->columnIndex = index;
     this->type = DataType::Decimal;
+    this->usesExternalStorage = false;
 }
 
 Value::Value(const DataTypes::Guid &data, const column_index_t index){
@@ -440,6 +465,17 @@ Value::Value(const DataTypes::Guid &data, const column_index_t index){
 
     this->columnIndex = index;
     this->type = DataType::Guid;
+    this->usesExternalStorage = false;
+}
+
+Value Value::FromExternalStorage(
+    const object_t* data,
+    const Int size,
+    const DataType type,
+    const Memory::Allocator* allocator,
+    const column_index_t index
+){
+    return Value(data, size, type, allocator, index);
 }
 
 Value Value::Null(const column_index_t columnIndex) { return Value(columnIndex); }

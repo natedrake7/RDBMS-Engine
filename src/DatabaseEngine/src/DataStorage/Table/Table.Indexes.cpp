@@ -25,11 +25,15 @@ namespace DatabaseEngine::StorageTypes {
         return Storage::StorageManager::Get().GetIndexPage(filename, indexPageId, this);
     }
 
-    Errors::RuntimeStatus Table::ClusteredIndexInsert(InsertPayload& payload, const Int pagesToAllocate){
+    Errors::RuntimeStatus Table::ClusteredIndexInsert(
+        const ExecutionProperties& properties,
+        InsertPayload& payload,
+        const Int pagesToAllocate
+    ){
         auto* tree = this->GetClusteredIndexedTree();
         // auto key = Database::CreateKey(this->GetClusteredIndex(), row);
 
-        auto key = this->CreateKey(this->GetClusteredIndex(), payload);
+        auto key = this->CreateKey(properties, this->GetClusteredIndex(), payload);
 
         int indexPosition = 0;
 
@@ -181,7 +185,10 @@ namespace DatabaseEngine::StorageTypes {
         std::vector<DataTypes::RowIdentifier> rowIds;
         tree->IndexScan(&rowIds, state, properties.batchSize);
 
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        Expressions::EvaluationContext context(
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            properties
+        );
 
         if (expression != nullptr) {
 
@@ -233,7 +240,10 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        Expressions::EvaluationContext context(
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            properties
+        );
 
         for(const auto& row : results){
 
@@ -321,15 +331,18 @@ namespace DatabaseEngine::StorageTypes {
     bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredIndexes.empty(); }
 
     DataTypes::Indexing::Key Table::CreateKey(
+        const ExecutionProperties& properties,
         const std::vector<column_index_t>& indexedColumns,
         const InsertPayload& payload
     ) const{
         auto key = DataTypes::Indexing::Key();
         for (const auto columnId : indexedColumns){
             auto value = payload.MaterializeColumn(
+                properties,
                 this->columns.at(columnId),
                 static_cast<Int>(this->columns.size())
             );
+
             key.InsertKey(DataTypes::Indexing::Key(value));
         }
 

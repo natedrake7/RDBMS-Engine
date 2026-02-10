@@ -4,6 +4,11 @@
 #include "../../DataStorage/Row.h"
 #include "../PageView.h"
 
+namespace Memory
+{
+    class Allocator;
+}
+
 class Value;
 
 namespace Pages{
@@ -37,6 +42,7 @@ namespace Pages{
         ~RowReference();
 
         [[nodiscard]] QueryResult Materialize()const;
-        [[nodiscard]] Value PartialMaterialize(column_index_t columnIndex)const;
+        [[nodiscard]] Value PartialMaterialize(const Memory::Allocator* allocator, column_index_t columnIndex)const;
+        [[nodiscard]] Int Size()const;
     };
 }

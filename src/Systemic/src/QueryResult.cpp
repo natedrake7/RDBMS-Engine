@@ -89,6 +89,10 @@ Value QueryResult::GetColumnAt(const Int columnPos) const{
   return this->data.at(columnPos);
 }
 
+const Value& QueryResult::GetColumnReferenceAt(const Int columnPos) const{
+    return this->data.at(columnPos);
+}
+
 int QueryResult::GetSize() const{ return this->data.size(); }
 
 Int QueryResult::GetByteSize() const{

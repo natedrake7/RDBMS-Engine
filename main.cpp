@@ -117,6 +117,8 @@ int main(){
     //
     // return 0;
 
+    serverRunning.store(true);
+
     Network::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
 
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
@@ -132,7 +134,6 @@ int main(){
 
     server.Initialize("configuration.json");
 
-    serverRunning.store(true);
 
     const auto* user = server.Authenticate("admin", "admin");
 

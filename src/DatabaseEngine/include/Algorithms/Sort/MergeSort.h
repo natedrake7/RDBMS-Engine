@@ -1,6 +1,12 @@
 #pragma once
 #include <vector>
 #include "../../../../Systemic/include/DataTypes/SortCondition.h"
+#include "DataStructures/Array.h"
+
+namespace DatabaseEngine
+{
+    struct ExecutionProperties;
+}
 
 namespace QueryPipeline::Statements {
   struct OrderColumn;
@@ -16,8 +22,17 @@ namespace DatabaseEngine::StorageTypes {
     class Row;
 }
 
+struct MergeSortParameters{
+    const DatabaseEngine::ExecutionProperties* properties;
+    DataStructures::Array<QueryResult>* rows;
+    const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
+    Int left;
+    Int right;
+    Int mid;
+};
+
 class MergeSort {
-        static void Merge(std::vector<QueryResult>& rows, Int left, Int mid, Int right, const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions);
+        static void Merge(const MergeSortParameters& parameters);
     public:
-        static void Sort(std::vector<QueryResult>& rows, Int left, Int right, const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions);
+        static void Sort(MergeSortParameters& parameters);
 };

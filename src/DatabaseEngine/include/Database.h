@@ -20,6 +20,8 @@ namespace DatabaseEngine::StorageTypes {
 } // namespace DatabaseEngine::StorageTypes
 
 namespace DatabaseEngine {
+    struct ExecutionProperties;
+
     struct DatabaseHeader {
         table_number_t numberOfTables;
         table_id_t lastTableId;
@@ -106,12 +108,14 @@ public:
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
-      const std::vector<column_index_t>& indexedColumns,
-      const Pages::RowReference& rowPtr,
-      Int offSet
+        const ExecutionProperties& properties,
+        const std::vector<column_index_t>& indexedColumns,
+        const Pages::RowReference& rowPtr,
+        Int offSet
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
+        const ExecutionProperties& properties,
         const std::vector<column_index_t>& indexedColumns,
         const Pages::RowReference& rowPtr,
         const DataTypes::RowIdentifier& rowId

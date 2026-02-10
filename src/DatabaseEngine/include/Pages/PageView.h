@@ -5,6 +5,11 @@
 #include "Additional/RawRowReference.h"
 #include "Additional/SlotDirectory.h"
 
+namespace Memory
+{
+    class Allocator;
+}
+
 namespace DataTypes{
     struct RowIdentifier;
 }
@@ -104,7 +109,7 @@ namespace Pages{
 
         void InitializeRowReferenceCache(const RowReference* rowPtr, Int numberOfColumns)const;
         [[nodiscard]] QueryResult MaterializeRow(Int indexPosition, Int keySize) const;
-        Value PartialMaterializeRow(const RowReference* rowPtr, column_index_t columnIndex) const;
+        Value PartialMaterializeRow(const Memory::Allocator* allocator, const RowReference* rowPtr, column_index_t columnIndex) const;
 
         [[nodiscard]] RawRowReference RowRawData(Int indexPosition, Int offSet) const;
 

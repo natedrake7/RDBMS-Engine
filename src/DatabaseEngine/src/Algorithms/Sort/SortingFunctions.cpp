@@ -8,18 +8,29 @@
 #include <ranges>
 #include <cstring>
 
+#include "ExecutionProperties.h"
 #include "Evaluators/Expression.h"
 
 #include "../../QueryPipeline/include/Statements.h"
+#include "DataStructures/Array.h"
 #include "Pages/Additional/RowReference.h"
 
-bool SortingFunctions::CompareRowsAscending(const Pages::RowReference& firstRow, const Pages::RowReference& secondRow, const column_index_t& columnIndex){
-    return (firstRow.PartialMaterialize(columnIndex) < secondRow.PartialMaterialize(columnIndex)).AsBool();
+bool SortingFunctions::CompareRowsAscending(
+    const DatabaseEngine::ExecutionProperties& properties,
+    const Pages::RowReference& firstRow,
+    const Pages::RowReference& secondRow,
+    const column_index_t& columnIndex
+){
+    return (firstRow.PartialMaterialize(&properties.allocator, columnIndex) < secondRow.PartialMaterialize(&properties.allocator, columnIndex)).AsBool();
 }
 
-bool SortingFunctions::CompareRowsDescending(const Pages::RowReference& firstRow, const Pages::RowReference& secondRow, const column_index_t &columnIndex)
-{
-    return !SortingFunctions::CompareRowsAscending(firstRow, secondRow, columnIndex);
+bool SortingFunctions::CompareRowsDescending(
+    const DatabaseEngine::ExecutionProperties& properties,
+    const Pages::RowReference& firstRow,
+    const Pages::RowReference& secondRow,
+    const column_index_t &columnIndex
+){
+    return !SortingFunctions::CompareRowsAscending(properties, firstRow, secondRow, columnIndex);
 }
 
 AggregateResults::AggregateResults()
@@ -62,11 +73,16 @@ MergeElement::MergeElement(MergeElement&& other) noexcept {
 }
 
 bool SortingFunctions::CompareRows(
+    const DatabaseEngine::ExecutionProperties& properties,
     const QueryResult& firstRow,
     const QueryResult& secondRow,
     const std::vector<QueryPipeline::Statements::OrderColumn*> &sortConditions
 ){
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::MaterializedRow, {});
+    Expressions::EvaluationContext context(
+        Expressions::EvaluationContext::EvaluationContextType::MaterializedRow,
+        properties
+    );
+
     for (const auto& condition : sortConditions)
     {
         context.materializedRow = firstRow;
@@ -95,8 +111,12 @@ bool SortingFunctions::CompareRows(
     return false;
 }
 
-void SortingFunctions::OrderBy(std::vector<QueryResult> &rows, const std::vector<QueryPipeline::Statements::OrderColumn*> &conditions){
-    if(rows.empty())
+void SortingFunctions::OrderBy(
+    const DatabaseEngine::ExecutionProperties& properties,
+    DataStructures::Array<QueryResult> &rows,
+    const std::vector<QueryPipeline::Statements::OrderColumn*> &conditions
+){
+    if(rows.Empty())
         return;
 
     //handle multiple conditions priority
@@ -121,8 +141,19 @@ void SortingFunctions::OrderBy(std::vector<QueryResult> &rows, const std::vector
     //     return;
     // }
     //else mergesort
+
+    const auto right = static_cast<int>(rows.Size() - 1);
+
+    MergeSortParameters parameters = {
+        .properties = &properties,
+        .rows = &rows,
+        .sortConditions = &conditions,
+        .left = 0,
+        .right = right,
+        .mid = 0
+    };
     
-    MergeSort::Sort(rows, 0, static_cast<int>(rows.size() - 1), conditions);
+    MergeSort::Sort(parameters);
 }
 
 std::unordered_map<std::string, AggregateResults> SortingFunctions::GroupBy(
@@ -171,23 +202,34 @@ std::unordered_map<std::string, AggregateResults> SortingFunctions::GroupBy(
     return groupedResults;
 }
 
-MergeComparator::MergeComparator(const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions)
-    : sortConditions(sortConditions){}
+MergeComparator::MergeComparator(
+    const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions,
+    const DatabaseEngine::ExecutionProperties* properties
+): sortConditions(sortConditions), properties(properties){}
 
 bool MergeComparator::operator()(const MergeElement& first, const MergeElement& second) const{
     return SortingFunctions::CompareRows(
+        *this->properties,
         first.value,
         second.value,
         *this->sortConditions
     );
 }
 
+void MergeComparator::SetProperties(const DatabaseEngine::ExecutionProperties* properties){
+    this->properties = properties;
+}
+
+bool MergeComparator::HasProperties() const{
+    return this->properties != nullptr;
+}
+
 std::string SortingFunctions::CreateGroupByKey(const Pages::RowReference& row, const std::vector<GroupCondition> &sortConditions)
 {
     std::string hashKey;
     for(const auto& condition : sortConditions){
-        const auto value = row.PartialMaterialize(condition.GetColumnIndex());
-        hashKey.append(reinterpret_cast<const char*>(value.Data()), value.Size());
+        // const auto value = row.PartialMaterialize(condition.GetColumnIndex());
+        // hashKey.append(reinterpret_cast<const char*>(value.Data()), value.Size());
     }
 
     return hashKey;

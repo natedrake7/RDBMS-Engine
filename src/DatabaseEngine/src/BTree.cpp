@@ -846,20 +846,20 @@ namespace Indexing{
             tableStatistics.rowCount += static_cast<Int>(numOfRows);
 
             for (Int i = 0;i < numOfRows; i++){
-                auto tuple = currentNode.PeekLeafTuple(i);
+                auto [_, rowPtr] = currentNode.PeekLeafTuple(i);
 
-                // tableStatistics.averageRowSize += static_cast<Int>(tuple.row.TotalSize());
-                //
-                // for (Int j = 0; j < columnStatistics.size(); j++) {
-                //     auto& columnStats = columnStatistics[j];
-                //     const auto& value = tuple.row.GetColumnByIndex(j);
-                //
-                //     DatabaseEngine::StatisticsScheduler::UpdateColumnStatistics(
-                //         columnStats,
-                //         value,
-                //         sortedValues[columnStats.columnId]
-                //     );
-                // }
+                auto materializedRow = rowPtr.Materialize();
+                tableStatistics.averageRowSize += rowPtr.Size();
+
+                for (Int j = 0; j < columnStatistics.size(); j++) {
+                    auto& columnStats = columnStatistics[j];
+
+                    DatabaseEngine::StatisticsScheduler::UpdateColumnStatistics(
+                        columnStats,
+                        materializedRow.GetColumnReferenceAt(j),
+                        sortedValues[columnStats.columnId]
+                    );
+                }
             }
 
             if(!currentNode.HasRightSibling())
@@ -1025,7 +1025,7 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
             for (Int i = 0; i < currentNode.Keys(); i++){
                 auto [key, row] = currentNode.PeekLeafTuple(i);
@@ -1093,7 +1093,7 @@ namespace Indexing{
 
         auto currentNode = this->SearchKey(key);
 
-        auto context = Expressions::EvaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        auto context = Expressions::EvaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
@@ -1194,7 +1194,7 @@ namespace Indexing{
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
         state.canFetchMore = false;
         while (true)
@@ -1237,7 +1237,7 @@ namespace Indexing{
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
         while (true)
         {
@@ -1371,7 +1371,7 @@ namespace Indexing{
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
         while (true){
             MultiThreading::WriterGuard lock(&currentNode.Latch());
@@ -1411,7 +1411,7 @@ namespace Indexing{
             return {};
 
         auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
         while (true){
             MultiThreading::WriterGuard lock(&currentNode.Latch());
@@ -1530,7 +1530,7 @@ namespace Indexing{
 
         auto currentNode = this->SearchKey(*minKey);
 
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
         while (true)
         {
             MultiThreading::WriterGuard lock(&currentNode.Latch());

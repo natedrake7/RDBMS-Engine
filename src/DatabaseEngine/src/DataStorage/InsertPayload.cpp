@@ -4,64 +4,12 @@
 #include <iostream>
 
 #include "Converter.h"
+#include "ExecutionProperties.h"
 #include "DataStorage/Column.h"
 #include "DataStorage/Row.h"
 #include "Pages/Additional/RawRowReference.h"
 
 namespace DatabaseEngine::StorageTypes{
-    Int InsertPayload::SetDataByType(const Value& value, const Column* column, Errors::RuntimeStatus& status){
-        switch (column->Type()) {
-            case DataType::TinyInt:
-                return this->SetTinyInt(value, status);
-            case DataType::SmallInt:
-                return this->SetSmallInt(value, status);
-            case DataType::Int:
-                return this->SetInt(value, status);
-            case DataType::BigInt:
-                return this->SetBigInt(value, status);
-            case DataType::Decimal:
-                return this->SetDecimal(value, column, status);
-            case DataType::String:
-            case DataType::UnicodeString:
-                return this->SetString(value, column, status);
-            case DataType::Bool:
-                return this->SetBool(value, status);
-            case DataType::DateTime:
-                return this->SetDateTime(value);
-            case DataType::Guid:
-                return this->SetGuid(value);
-            case DataType::RowIdentifier:
-            case DataType::Unknown:
-            default:
-                throw std::runtime_error("Invalid Datatype for column");
-        }
-    }
-
-    page_offset_t InsertPayload::DeserializeHeader(const Int bitmapSize, const Int numberOfColumns) const{
-        this->header = RowHeader(numberOfColumns);
-
-        page_offset_t offSet = Constants::ROW_VERSION_HEADER_SIZE;
-
-        std::memcpy(header.nullBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
-        offSet += bitmapSize;
-        std::memcpy(header.largeObjectBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
-        offSet += bitmapSize;
-        std::memcpy(header.overflowBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
-        offSet += bitmapSize;
-
-        this->isHeaderInitialized = true;
-
-        return offSet;
-    }
-
-    InsertPayload::InsertPayload(){
-        this->_data = nullptr;
-        this->size = 0;
-        this->offset = 0;
-        this->isHeaderInitialized = false;
-        this->isReferencingExternalData = false;
-    }
-
     Int InsertPayload::SetTinyInt(const Value &value, Errors::RuntimeStatus& status){
         const auto val = value.AsBigInt();
         TinyInt convertedValue;
@@ -210,6 +158,71 @@ namespace DatabaseEngine::StorageTypes{
         return DataTypes::GUID_SIZE;
     }
 
+    Int InsertPayload::SetDataByType(const Value& value, const Column* column, Errors::RuntimeStatus& status){
+        switch (column->Type()) {
+        case DataType::TinyInt:
+            return this->SetTinyInt(value, status);
+        case DataType::SmallInt:
+            return this->SetSmallInt(value, status);
+        case DataType::Int:
+            return this->SetInt(value, status);
+        case DataType::BigInt:
+            return this->SetBigInt(value, status);
+        case DataType::Decimal:
+            return this->SetDecimal(value, column, status);
+        case DataType::String:
+        case DataType::UnicodeString:
+            return this->SetString(value, column, status);
+        case DataType::Bool:
+            return this->SetBool(value, status);
+        case DataType::DateTime:
+            return this->SetDateTime(value);
+        case DataType::Guid:
+            return this->SetGuid(value);
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+            throw std::runtime_error("Invalid Datatype for column");
+        }
+    }
+
+    page_offset_t InsertPayload::DeserializeHeader(const Int bitmapSize, const Int numberOfColumns) const{
+        this->header = RowHeader(numberOfColumns);
+
+        page_offset_t offSet = Constants::ROW_VERSION_HEADER_SIZE;
+
+        std::memcpy(header.nullBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
+        offSet += bitmapSize;
+        std::memcpy(header.largeObjectBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
+        offSet += bitmapSize;
+        std::memcpy(header.overflowBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
+        offSet += bitmapSize;
+
+        this->isHeaderInitialized = true;
+
+        return offSet;
+    }
+
+    InsertPayload::InsertPayload(){
+        this->_data = nullptr;
+        this->size = 0;
+        this->offset = 0;
+        this->isHeaderInitialized = false;
+        this->isReferencingExternalData = false;
+    }
+
+    InsertPayload::InsertPayload(
+        const Memory::Allocator& allocator,
+        const UnsignedSmallInt size,
+        const UnsignedSmallInt startingOffset
+    ){
+        this->_data = static_cast<object_t*>(allocator.Allocate(size));
+        this->size = size;
+        this->offset = startingOffset;
+        this->isHeaderInitialized = false;
+        this->isReferencingExternalData = true;
+    }
+
     InsertPayload::InsertPayload(const UnsignedSmallInt size, const UnsignedSmallInt startingOffset){
         this->_data = static_cast<object_t*>(std::malloc(size));
         this->size = size;
@@ -328,13 +341,17 @@ namespace DatabaseEngine::StorageTypes{
         this->size = this->offset;
     }
 
-    Value InsertPayload::MaterializeColumn(const Column* column, const Int numberOfColumns) const{
+    Value InsertPayload::MaterializeColumn(
+        const ExecutionProperties& properties,
+        const Column* column,
+        const Int numberOfColumns
+    ) const{
         // Calculate bitmap size once
         const auto bitmapSize = static_cast<Int>(std::ceil(static_cast<double>(numberOfColumns) / 8.0));
 
         page_offset_t offSet = !this->isHeaderInitialized
-                ? this->DeserializeHeader(bitmapSize, numberOfColumns)
-                : Constants::ROW_VERSION_HEADER_SIZE + 3 * bitmapSize;
+                                   ? this->DeserializeHeader(bitmapSize, numberOfColumns)
+                                   : Constants::ROW_VERSION_HEADER_SIZE + 3 * bitmapSize;
 
         const auto columnOrdinal = column->OrdinalPosition();
 
@@ -368,7 +385,13 @@ namespace DatabaseEngine::StorageTypes{
         offSet += blockOffset;
 
         // Create and populate the value
-        return Value(this->_data + offSet, blockSize, column->Type(), columnOrdinal);
+        return Value::FromExternalStorage(
+            this->_data + offSet,
+            blockSize,
+            column->Type(),
+            &properties.allocator,
+            columnOrdinal
+        );
     }
 
     object_t* InsertPayload::Data() const{

@@ -26,7 +26,7 @@ namespace Network::Sessions {
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,
-      const DatabaseEngine::ExecutionProperties& properties,
+      DatabaseEngine::ExecutionProperties& properties,
       QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan)const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
   };

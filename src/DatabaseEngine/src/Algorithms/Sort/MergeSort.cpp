@@ -2,39 +2,36 @@
 #include "../../../include/Algorithms/Sort/MergeSort.h"
 #include "../../../include/Algorithms/Sort/SortingFunctions.h"
 
-void MergeSort::Merge(
-    std::vector<QueryResult> &rows,
-    const Int left,
-    const Int mid,
-    const Int right,
-    const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
-){
+void MergeSort::Merge(const MergeSortParameters& parameters){
     Int i, j;
-    const Int n1 = mid - left + 1;
-    const Int n2 = right - mid;
+    const Int n1 = parameters.mid - parameters.left + 1;
+    const Int n2 = parameters.right - parameters.mid;
 
     std::vector<QueryResult> leftVec, rightVec;
 
     for (i = 0; i < n1; i++)
-        leftVec.push_back(std::move(rows[left + i]));
+        leftVec.push_back(std::move((*parameters.rows)[parameters.left + i]));
     
     for (j = 0; j < n2; j++)
-        rightVec.push_back(std::move(rows[mid + 1 + j]));
+        rightVec.push_back(std::move((*parameters.rows)[parameters.mid + 1 + j]));
 
     i = 0;
     j = 0;
-    Int k = left;
+    Int k = parameters.left;
 
-    while (i < n1 && j < n2)
-    {
-        if (SortingFunctions::CompareRows(leftVec[i], rightVec[j], sortConditions))
-        {
-            rows[k] = leftVec[i];
+    while (i < n1 && j < n2){
+        if (SortingFunctions::CompareRows(
+            *parameters.properties,
+            leftVec[i],
+            rightVec[j],
+            *parameters.sortConditions
+        )){
+            (*parameters.rows)[k] = leftVec[i];
             i++;
         }
         else
         {
-            rows[k] = rightVec[j];
+            (*parameters.rows)[k] = rightVec[j];
             j++;
         }
         k++;
@@ -42,35 +39,35 @@ void MergeSort::Merge(
 
     while (i < n1)
     {
-        rows[k] = leftVec[i];
+        (*parameters.rows)[k] = leftVec[i];
         i++;
         k++;
     }
 
     while (j < n2)
     {
-        rows[k] = rightVec[j];
+        (*parameters.rows)[k] = rightVec[j];
         j++;
         k++;
     }
 }
 
-void MergeSort::Sort(
-    std::vector<QueryResult> &rows,
-    const Int left,
-    const Int right,
-    const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
-){
-    if(left >= right)
+void MergeSort::Sort(MergeSortParameters& parameters){
+    if(parameters.left >= parameters.right)
         return;
 
     // Calculate the midpoint
-    const int mid = left + (right - left) / 2;
+    const int mid = parameters.left + (parameters.right - parameters.left) / 2;
 
-    // Sort first and second halves
-    MergeSort::Sort(rows, left, mid, sortConditions);
-    MergeSort::Sort(rows, mid + 1, right, sortConditions);
+    const auto prevRight = parameters.right;
+
+    parameters.right = mid;
+    MergeSort::Sort(parameters);
+
+    parameters.left = mid + 1;
+    parameters.right = prevRight;
+    MergeSort::Sort(parameters);
 
     // Merge the sorted halves
-    MergeSort::Merge(rows, left, mid, right, sortConditions);
+    MergeSort::Merge(parameters);
 }

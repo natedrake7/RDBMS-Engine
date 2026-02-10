@@ -4,6 +4,11 @@
 
 #include "DataTypes.h"
 
+namespace Memory
+{
+    class Allocator;
+}
+
 namespace DataTypes {
     class Decimal;
     class DateTime;
@@ -27,6 +32,8 @@ class Value {
     object_t* data;
     block_size_t size;
     DataType type;
+
+    bool usesExternalStorage;
 
     [[nodiscard]] bool TryParseAsBool()const;
     [[nodiscard]] bool TryParseAsBoolFromString()const;
@@ -56,6 +63,14 @@ class Value {
 
     [[nodiscard]] long double InterpolateString() const;
 
+    explicit Value(
+        const object_t* data,
+        Int size,
+        DataType type,
+        const Memory::Allocator* allocator,
+        column_index_t index = 0
+    );
+
     public:
         Value(const Value& copyVal);
 
@@ -68,7 +83,6 @@ class Value {
 
     explicit Value(column_index_t index = 0);
         explicit Value(const void* data, Int size, DataType type);
-        explicit Value(const object_t* data, Int size, DataType type, column_index_t index = 0);
         explicit Value(bool data, column_index_t index = 0);
         explicit Value(TinyInt data, column_index_t index = 0);
         explicit Value(SmallInt data, column_index_t index = 0);
@@ -78,6 +92,14 @@ class Value {
         explicit Value(const DataTypes::DateTime& data, column_index_t index = 0);
         explicit Value(const DataTypes::Decimal& data, column_index_t index = 0);
         explicit Value(const DataTypes::Guid& data, column_index_t index = 0);
+
+        static Value FromExternalStorage(
+            const object_t* data,
+            Int size,
+            DataType type,
+            const Memory::Allocator* allocator,
+            column_index_t index = 0
+        );
 
         static Value Null(column_index_t columnIndex = 0);
 

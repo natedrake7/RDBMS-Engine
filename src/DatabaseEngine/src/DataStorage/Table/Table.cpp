@@ -17,9 +17,8 @@
 #include "../../../../Systemic/include/Guards/WriterGuard.h"
 #include "../../../../QueryPipeline/include/Statements.h"
 #include "../../../include/Database.h"
+#include "DataStructures/Array.h"
 #include "Logger/WriteAheadLogger.h"
-
-#include "Memory/Allocator.h"
 
 namespace DatabaseEngine::StorageTypes {
       TableHeader::TableHeader() {
@@ -175,7 +174,7 @@ namespace DatabaseEngine::StorageTypes {
         versionDatabase.InsertRow(rowRef, versionPtr, this);
     }
 
-     Table::Table(
+    Table::Table(
         const table_id_t tableId,
         const Int ordinalPosition,
         const std::vector<Column*> &columns,
@@ -260,25 +259,25 @@ namespace DatabaseEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::BatchInsert(
         const ExecutionProperties &properties,
-        std::vector<QueryResult> &input
+        DataStructures::Array<QueryResult> &input
       ) {
-        std::vector<InsertPayload> rows;
-        rows.reserve(input.size());
+        if (input.Empty())
+            return Errors::RuntimeStatus(Errors::RuntimeError::Ok, "No rows to insert");
+
+        // std::pmr::vector<InsertPayload> rows(&properties.allocator);
+
+        DataStructures::Array<InsertPayload> rows(properties.allocator, input.Size());
+        // rows.reserve(input.size());
 
         Int pagesNeeded = 0;
 
         std::vector<char> buffer;
 
-        // Int allocationSize = 0;
-        // for (const auto& row : input)
-        //   allocationSize += row.GetByteSize();
-        //
-        // Memory::Allocator allocator(allocationSize, Memory::AllocationType::Persistent);
-
         for (auto& insertedRow : input) {
             Errors::RuntimeStatus status;
             auto payload = this->CreateInsertPayload(
                 status,
+                properties.allocator,
                 properties.snapshot.transactionId,
                 insertedRow.Data()
             );
@@ -287,7 +286,7 @@ namespace DatabaseEngine::StorageTypes {
             return status;
 
             pagesNeeded += static_cast<Int>(payload.Size());
-            rows.push_back(std::move(payload));
+            rows.Push(std::move(payload));
         }
 
         auto checkPoint = Database::LogRowBatchInsert(
@@ -301,11 +300,11 @@ namespace DatabaseEngine::StorageTypes {
         // else
         //   pagesNeeded /= PAGE_SIZE_WITHOUT_HEADER;
 
-        pagesNeeded = static_cast<Int>(std::ceil(pagesNeeded / rows.size()));
+        pagesNeeded = static_cast<Int>(std::ceil(pagesNeeded / rows.Size()));
 
         Errors::RuntimeStatus result;
         for (auto& payload: rows){
-            result = this->InsertRow(payload, pagesNeeded);
+            result = this->InsertRow(properties, payload, pagesNeeded);
             if (!result.IsOk())
                 return result;
         }
@@ -321,7 +320,12 @@ namespace DatabaseEngine::StorageTypes {
         Logging::CheckPoint checkPoint;
 
         Errors::RuntimeStatus status;
-        auto payload = this->CreateInsertPayload(status, properties.snapshot.transactionId, inputData);
+        auto payload = this->CreateInsertPayload(
+            status,
+            properties.allocator,
+            properties.snapshot.transactionId,
+            inputData
+        );
 
         checkPoint.transactionId = properties.snapshot.transactionId;
         Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
@@ -329,7 +333,7 @@ namespace DatabaseEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        status =  this->InsertRow(payload, 1);
+        status =  this->InsertRow(properties, payload, 1);
 
         if (!status.IsOk())
           return status;
@@ -373,12 +377,16 @@ namespace DatabaseEngine::StorageTypes {
     //
     // }
 
-    Errors::RuntimeStatus Table::InsertRow(InsertPayload& payload, const Int pagesToAllocate){
+    Errors::RuntimeStatus Table::InsertRow(
+        const ExecutionProperties& properties,
+        InsertPayload& payload,
+        const Int pagesToAllocate
+    ){
         // this->InsertLargeObjectToPage(row);
 
         //row_id
         auto status = this->IsClustered()
-            ? this->ClusteredIndexInsert(payload, pagesToAllocate)
+            ? this->ClusteredIndexInsert(properties, payload, pagesToAllocate)
             : this->HeapInsert(payload, pagesToAllocate);
 
         const auto rowId = status.rowId;
@@ -586,7 +594,7 @@ namespace DatabaseEngine::StorageTypes {
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         std::vector<Row*> rowsToBeInserted;
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
         for (const auto &extentId : tableExtentIds)
         {
@@ -722,7 +730,7 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
             for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
                 if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
@@ -779,7 +787,7 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
             for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
                 if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
                   break;
@@ -994,7 +1002,7 @@ namespace DatabaseEngine::StorageTypes {
 
     //Handle overflow too dynamically probably during row insert
     Errors::RuntimeStatus Table::UpdateRowNoLock(
-        Pages::PageView* page,
+        const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const ExecutionProperties& properties,
         const std::vector<Value>& updates
@@ -1021,7 +1029,7 @@ namespace DatabaseEngine::StorageTypes {
               return status;
 
           //only for heap tables
-          auto insertResult = this->InsertRow(newPayload, 1);
+          auto insertResult = this->InsertRow(properties, newPayload, 1);
 
           if (!insertResult.IsOk())
               return insertResult;
@@ -1032,18 +1040,18 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::UpdateRowNoLock(
-        Pages::PageView* page,
+        const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const ExecutionProperties& properties,
         const std::vector<Expressions::Expression*>& updates
     ){
 
-        auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
+        const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
         this->InsertToVersionDatabase(rowRawData);
 
         auto materializedRow = rowPtr.Materialize();
 
-        const Expressions::EvaluationContext context(&rowPtr, properties.variables);
+        const Expressions::EvaluationContext context(&rowPtr, properties);
         for (const auto* updateExpr : updates) {
             auto updatedValue = updateExpr->Evaluate(context);
             updatedValue.SetColumnIndex(updateExpr->columnIndex);
@@ -1061,7 +1069,7 @@ namespace DatabaseEngine::StorageTypes {
             return status;
 
         //only for heap tables
-        auto insertResult = this->InsertRow(newPayload, 1);
+        auto insertResult = this->InsertRow(properties, newPayload, 1);
 
         if (!insertResult.IsOk())
             return insertResult;
@@ -1249,17 +1257,18 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
 
     //TODO add heap insert if row still cant remain in page if heap
     void Table::HandleAddColumn(
+        const ExecutionProperties& properties,
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const column_index_t index,
         const Value &defaultValue
-    ){
+    ) const{
         auto materializedRow = rowPtr.Materialize();
 
         materializedRow.AddColumn(defaultValue, index);
 
         Errors::RuntimeStatus status;
-        const auto payload = this->CreateInsertPayload(status, 0, materializedRow.Data());
+        const auto payload = this->CreateInsertPayload(status, properties.allocator, 0, materializedRow.Data());
 
         page->UpdateRow(payload, rowPtr);
 

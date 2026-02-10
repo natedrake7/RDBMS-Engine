@@ -14,7 +14,7 @@ namespace QueryPipeline {
   public:
     Cursor(
       PipelineConstants::cursor_id_t cursorId,
-      const DatabaseEngine::ExecutionProperties& properties,
+      DatabaseEngine::ExecutionProperties& properties,
       PhysicalPlan::ExecutionNode* plan
     );
     ~Cursor();

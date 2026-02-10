@@ -5,6 +5,16 @@
 #include "../../../Systemic/include/DataTypes/Variable.h"
 #include <string>
 
+namespace DatabaseEngine
+{
+    struct ExecutionProperties;
+}
+
+namespace Memory
+{
+    class Allocator;
+}
+
 namespace Pages{
     struct RowReference;
 }
@@ -36,14 +46,26 @@ namespace Expressions{
 
         QueryResult materializedRow;
 
-        const Dictionary<std::string, Variable>* variables;
+        const DatabaseEngine::ExecutionProperties* properties;
 
         EvaluationContext();
-        explicit EvaluationContext(EvaluationContextType type, const Dictionary<std::string, Variable>* variables);
-        explicit EvaluationContext(const Pages::RowReference* row, const Dictionary<std::string, Variable>* variables);
-        explicit EvaluationContext(const Pages::RowReference* row);
-        explicit EvaluationContext(const QueryResult& row);
-        EvaluationContext(const Pages::RowReference* outerRow, const Pages::RowReference* innerRow);
+        explicit EvaluationContext(
+            EvaluationContextType type,
+            const DatabaseEngine::ExecutionProperties& properties
+        );
+        explicit EvaluationContext(
+            const Pages::RowReference* row,
+            const DatabaseEngine::ExecutionProperties& properties
+        );
+        explicit EvaluationContext(
+            const QueryResult& row,
+            const DatabaseEngine::ExecutionProperties& properties
+        );
+        EvaluationContext(
+            const Pages::RowReference* outerRow,
+            const Pages::RowReference* innerRow,
+            const DatabaseEngine::ExecutionProperties& properties
+        );
     };
 
     class Expression {

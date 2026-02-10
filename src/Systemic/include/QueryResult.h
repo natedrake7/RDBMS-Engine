@@ -19,6 +19,7 @@ public:
     [[nodiscard]] const std::vector<Value>& Data()const;
     [[nodiscard]] std::vector<Value>& Data();
     [[nodiscard]] Value GetColumnAt(Int columnPos)const;
+    [[nodiscard]] const Value& GetColumnReferenceAt(Int columnPos)const;
     [[nodiscard]] Int GetSize()const;
     [[nodiscard]] Int GetByteSize()const;
     [[nodiscard]] Int GetPageByteSize()const;

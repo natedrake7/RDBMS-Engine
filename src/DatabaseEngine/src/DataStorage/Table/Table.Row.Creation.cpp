@@ -6,6 +6,7 @@
 namespace DatabaseEngine::StorageTypes{
     InsertPayload Table::CreateInsertPayload(
         Errors::RuntimeStatus& status,
+        const Memory::Allocator& allocator,
         const transaction_id_t transactionId,
         const std::vector<Value> &inputData
     ) const{
@@ -50,7 +51,7 @@ namespace DatabaseEngine::StorageTypes{
         // Only allocate offset space for non-NULL columns
         const auto dataOffSet = dataSizesOffset + nonNullColumnCount * sizeof(block_size_t);
 
-        auto payload = InsertPayload(dataSize + dataOffSet, dataOffSet);
+        auto payload = InsertPayload(allocator, dataSize + dataOffSet, dataOffSet);
         intermediateComputedColumns = 0;
         for (const auto& column : this->columns){
             //ignore auto-computed columns even if specified

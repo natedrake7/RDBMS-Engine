@@ -3,9 +3,9 @@
 namespace QueryPipeline {
   Cursor::Cursor(
     const PipelineConstants::cursor_id_t cursorId,
-    const DatabaseEngine::ExecutionProperties& properties,
+    DatabaseEngine::ExecutionProperties& properties,
     PhysicalPlan::ExecutionNode *plan
-  ) : id(cursorId), properties(properties), canFetchMore(true), plan(plan) {}
+  ) : id(cursorId), properties(std::move(properties)), canFetchMore(true), plan(plan) {}
 
   Cursor::~Cursor(){ delete this->plan; }
 

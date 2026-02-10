@@ -85,10 +85,10 @@ namespace QueryPipeline::PhysicalPlan {
 
     table->TemporaryDatabaseHeapScan(&result->rows, state, properties.batchSize);
 
-    result->results.reserve(result->rows.size());
+    result->results.Reserve(result->rows.size());
 
     for (const auto& row: result->rows){
-      result->results.emplace_back(row.Materialize());
+      result->results.Push(row.Materialize());
     }
 
     return result;
@@ -104,7 +104,10 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult * PhysicalDeclareVariable::Execute(const DatabaseEngine::ExecutionProperties &properties) {
     auto* result = new ExecutionResult();
 
-    const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant, properties.variables);
+    const Expressions::EvaluationContext context(
+        Expressions::EvaluationContext::EvaluationContextType::Constant,
+        properties
+    );
 
     auto value = this->expression->Evaluate(context);
     this->variable.SetValue(value);
@@ -346,8 +349,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     for (const auto& expression : this->resultExpressions)
       result->displayColumnNames.emplace_back(expression->name);
 
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+    Expressions::EvaluationContext context(
+        Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+        properties
+    );
 
+    result->results.Reserve(result->rows.size());
     for (const auto& row: result->rows) {
       QueryResult resultRow;
 
@@ -357,7 +364,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         resultRow.AddColumn(field);
       }
 
-      result->results.push_back(std::move(resultRow));
+      result->results.Push(std::move(resultRow));
     }
 
     // ranges::sort(this->columnHeaders,
@@ -374,7 +381,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     QueryResult resultRow;
 
-    const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant, properties.variables);
+    const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant, properties);
 
     for (const auto& expression : this->resultExpressions) {
       result->displayColumnNames.emplace_back(expression->name);
@@ -383,7 +390,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       resultRow.AddColumn(field);
     }
 
-    result->results.push_back(std::move(resultRow));
+    result->results.Push(std::move(resultRow));
 
     return result;
   }
@@ -426,7 +433,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr)
       return result;
 
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties.variables);
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
     std::vector<Pages::RowReference> filteredRows;
     filteredRows.reserve(result->rows.size() / 2);
@@ -457,10 +464,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   ExecutionResult * PhysicalTop::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
 
-    if (this->top > result->results.size())
+    if (this->top > result->results.Size())
       return result;
 
-    result->results.erase(result->results.begin() + this->top, result->results.end());
+    result->results.RemoveFrom(this->top);
 
     return result;
   }
@@ -479,17 +486,16 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   ExecutionResult * PhysicalDistinct::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
 
-    std::vector<QueryResult> results;
+    DataStructures::Array<QueryResult> results;
 
     HashSet<int64_t> computedHashes;
 
     for (auto& row : result->results) {
-
       const auto hash = row.ComputeHash();
 
       //if no collision occurs
       if (!computedHashes.Contains(hash)) {
-        results.push_back(std::move(row));
+        results.Push(std::move(row));
         computedHashes.Add(hash);
         continue;
       }
@@ -503,7 +509,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       }
 
       if (!isDuplicate)
-        results.push_back(std::move(row));
+        results.Push(std::move(row));
     }
 
     result->results = std::move(results);
@@ -530,7 +536,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         for (int i = 0; i < expressions.size(); i++) {
             const Expressions::EvaluationContext context(
                 Expressions::EvaluationContext::EvaluationContextType::Constant,
-                properties.variables
+                properties
             );
 
             auto value = expressions[i]->Evaluate(context);
@@ -559,7 +565,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       }
 
       canFetchMore = result->canFetchMore;
-      rowCount += result->results.size();
+      rowCount += result->results.Size();
     }
 
     result->message = "Rows inserted: " + std::to_string(rowCount);
@@ -951,9 +957,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   PhysicalOrderBy::PhysicalOrderBy(
       ExecutionNode *child,
       std::vector<Statements::OrderColumn*>& expressions
-  ) : child(child),
-      expressions(std::move(expressions)),
-      priorityQueue(MergeComparator(&this->expressions)) {}
+  )   : child(child)
+   , expressions(std::move(expressions))
+   , comparator(&this->expressions, nullptr)
+   , priorityQueue(this->comparator){}
 
   PhysicalOrderBy::~PhysicalOrderBy(){
     for (const auto* column : this->expressions) {
@@ -964,23 +971,26 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   ExecutionResult* PhysicalOrderBy::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    if (!this->comparator.HasProperties())
+        this->comparator.SetProperties(&properties);
+
     auto* result = this->child->Execute(properties);
 
     // Case 1: In-memory sort (no external storage needed)
     if (!result->canFetchMore && !this->UsesExternalStorage()){
-        SortingFunctions::OrderBy(result->results, this->expressions);
+        SortingFunctions::OrderBy(properties, result->results, this->expressions);
         return result;
     }
 
     // Case 2: Build phase - collect and sort batches
     while (result->canFetchMore || (result->canFetchMore == false && this->priorityQueue.Empty())) {
-        SortingFunctions::OrderBy(result->results, this->expressions);
+        SortingFunctions::OrderBy(properties, result->results, this->expressions);
 
         DataTypes::RowIdentifier rowId;
         this->InsertPostProjectionResultsToTemporaryDatabase(properties, result, rowId);
 
         auto element = MergeElement(
-            result->results.front(),
+            result->results[0],
             static_cast<int>(this->priorityQueue.Size()),
             rowId
         );
@@ -994,21 +1004,21 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
     // Case 3: Merge phase - k-way merge
-    result->results.clear();
+    result->results.Clear();
 
-    std::vector<std::vector<QueryResult>> batches;
-    batches.resize(this->priorityQueue.Size());
+    DataStructures::Array<DataStructures::Array<QueryResult>> batches;
+    batches.Resize(this->priorityQueue.Size());
 
     while (!this->priorityQueue.Empty()){
         auto top = this->priorityQueue.Top();
         this->priorityQueue.Remove();
 
-        result->results.push_back(std::move(top.value));
+        result->results.Push(std::move(top.value));
 
         const auto batchId = top.batchId;
 
         // Lazy load batch if needed
-        if (batches[batchId].empty()) {
+        if (batches[batchId].Empty()) {
             auto state = DatabaseEngine::ScanState();
             state.lastFetchedRowId = top.rowId;
             state.extentId = DatabaseEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
@@ -1019,12 +1029,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         }
 
         // Remove consumed element
-        batches[batchId].erase(batches[batchId].begin());
+        batches[batchId].Remove(0);
 
         // Add next element from same batch if available
-        if (!batches[batchId].empty()) {
+        if (!batches[batchId].Empty()) {
             auto nextElement = MergeElement(
-                batches[batchId].front(),
+                batches[batchId][0],
                 batchId,
                 top.rowId // Update with proper next rowId if needed
             );

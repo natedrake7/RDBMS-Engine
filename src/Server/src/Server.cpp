@@ -185,7 +185,7 @@ namespace Network {
 
   QueryPipeline::Cursor * Server::CreateCursor(
     const DataTypes::Guid &id,
-    const DatabaseEngine::ExecutionProperties& properties,
+    DatabaseEngine::ExecutionProperties& properties,
     QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
   ) const {
     return this->sessionManager.CreateCursor(id, properties, physicalPlan);

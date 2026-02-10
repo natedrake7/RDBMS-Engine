@@ -83,7 +83,7 @@ namespace Network::Sessions {
 
   QueryPipeline::Cursor* SessionManager::CreateCursor(
     const DataTypes::Guid &id,
-    const DatabaseEngine::ExecutionProperties& properties,
+    DatabaseEngine::ExecutionProperties& properties,
     QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
   )const{
     MultiThreading::WriterGuard guard(&this->mutex);

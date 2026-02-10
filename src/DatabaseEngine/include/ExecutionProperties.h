@@ -4,6 +4,7 @@
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/RowIdentifier.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
+#include "../../Systemic/include/Memory/Allocator.h"
 
 namespace DatabaseEngine {
     struct ScanState {
@@ -62,37 +63,70 @@ namespace DatabaseEngine {
         }
     };
 
-  struct Snapshot {
-    transaction_id_t transactionId;
+    struct Snapshot {
+        transaction_id_t transactionId;
 
-    transaction_id_t minimumTransactionId;
-    transaction_id_t maximumTransactionId;
-    HashSet<transaction_id_t> activeTransactionIds;
+        transaction_id_t minimumTransactionId;
+        transaction_id_t maximumTransactionId;
+        HashSet<transaction_id_t> activeTransactionIds;
 
-    Snapshot() {
-      this->transactionId = FIRST_TRANSACTION_ID;
-      this->minimumTransactionId = FIRST_TRANSACTION_ID;
-      this->maximumTransactionId = FIRST_TRANSACTION_ID;
-    }
+        Snapshot() {
+            this->transactionId = FIRST_TRANSACTION_ID;
+            this->minimumTransactionId = FIRST_TRANSACTION_ID;
+            this->maximumTransactionId = FIRST_TRANSACTION_ID;
+        }
 
-    [[nodiscard]] bool IsSystemTransaction()const{ return this->transactionId == FIRST_TRANSACTION_ID; }
-  };
+        [[nodiscard]] bool IsSystemTransaction()const{ return this->transactionId == FIRST_TRANSACTION_ID; }
+    };
 
-  struct ExecutionProperties {
-    Snapshot snapshot;
-    Int batchSize;
+    struct ExecutionProperties {
+        Snapshot snapshot;
+        Int batchSize;
 
-    const Dictionary<std::string, Variable>* variables;
+        const Dictionary<std::string, Variable>* variables;
+        Memory::Allocator allocator;
 
-    ExecutionProperties(const Snapshot &snapshot, const Int batchSize, const Dictionary<std::string, Variable>& variables) {
-      this->snapshot = snapshot;
-      this->batchSize = batchSize;
-      this->variables = &variables;
-    }
+        constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10; //10MB
 
-    ExecutionProperties() {
-      this->batchSize = 0;
-      this->variables = nullptr;
-    }
-  };
+        ExecutionProperties(
+            const Snapshot &snapshot,
+            const Int batchSize,
+            const Dictionary<std::string, Variable>& variables,
+            const Int initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
+        ) {
+            this->snapshot = snapshot;
+            this->batchSize = batchSize;
+            this->variables = &variables;
+
+            this->allocator = Memory::Allocator(initialAllocatorSize);
+        }
+
+        ExecutionProperties() {
+            this->batchSize = 0;
+            this->variables = nullptr;
+        }
+
+        ExecutionProperties(ExecutionProperties&& other) noexcept{
+            this->snapshot = other.snapshot;
+            this->batchSize = other.batchSize;
+            this->variables = other.variables;
+            this->allocator = std::move(other.allocator);
+
+            other.variables = nullptr;
+        }
+
+        ExecutionProperties& operator=(ExecutionProperties&& other) noexcept{
+            if (this == &other)
+                return *this;
+
+            this->snapshot = other.snapshot;
+            this->batchSize = other.batchSize;
+            this->variables = other.variables;
+            this->allocator = std::move(other.allocator);
+
+            other.variables = nullptr;
+
+            return *this;
+        }
+    };
 }

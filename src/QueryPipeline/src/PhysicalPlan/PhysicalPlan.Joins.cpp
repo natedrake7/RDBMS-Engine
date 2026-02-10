@@ -4,12 +4,12 @@
 namespace QueryPipeline::PhysicalPlan {
   ExecutionResult* PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    ExecutionResult* leftResult
+    const ExecutionResult* leftResult
   ) const
   {
     auto* result = new ExecutionResult();
 
-    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
+    Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties);
     bool canFetchMore = true;
 
     while (canFetchMore){
@@ -19,8 +19,8 @@ namespace QueryPipeline::PhysicalPlan {
       for (auto& outerRow: leftResult->rows) {
         for (auto& innerRow: rightResult->rows) {
 
-          // context.outerRow = &outerRow;
-          // context.innerRow = &innerRow;
+          context.outerRow = &outerRow;
+          context.innerRow = &innerRow;
           if (!this->expression->Evaluate(context).AsBool())
             continue;
 

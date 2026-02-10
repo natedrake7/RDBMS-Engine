@@ -8,6 +8,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "ExecutionProperties.h"
 #include "DataTypes/DateTime.h"
 #include "Pages/Additional/RowReference.h"
 
@@ -57,60 +58,67 @@ namespace Expressions{
 
     EvaluationContext::EvaluationContext(){
         this->type = EvaluationContextType::Constant;
-        this->variables = nullptr;
+        this->properties = nullptr;
         this->row = nullptr;
         this->outerRow = nullptr;
         this->innerRow = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
-    const EvaluationContextType type,
-    const Dictionary<std::string, Variable>* variables
+        const EvaluationContextType type,
+        const DatabaseEngine::ExecutionProperties& properties
     ){
         this->type = type;
+        this->properties = &properties;
         this->row = nullptr;
         this->outerRow = nullptr;
         this->innerRow = nullptr;
-        this->variables = variables;
     }
 
     EvaluationContext::EvaluationContext(
       const Pages::RowReference* row,
-      const Dictionary<std::string, Variable>* variables
+      const DatabaseEngine::ExecutionProperties& properties
     ){
         this->type = EvaluationContextType::SingleRow;
         this->row = row;
-        this->variables = variables;
+        this->properties = &properties;
         this->outerRow = nullptr;
         this->innerRow = nullptr;
     }
 
-    EvaluationContext::EvaluationContext(const Pages::RowReference* row){
-        this->type = EvaluationContextType::SingleRow;
-        this->row = row;
-        this->outerRow = nullptr;
-        this->innerRow = nullptr;
-        this->variables = nullptr;
-    }
+    // EvaluationContext::EvaluationContext(
+    //     const Pages::RowReference* row,
+    //     const DatabaseEngine::ExecutionProperties& properties
+    // ){
+    //     this->type = EvaluationContextType::SingleRow;
+    //     this->properties = &properties;
+    //     this->row = row;
+    //     this->outerRow = nullptr;
+    //     this->innerRow = nullptr;
+    // }
 
-    EvaluationContext::EvaluationContext(const QueryResult &row) {
+    EvaluationContext::EvaluationContext(
+        const QueryResult &row,
+        const DatabaseEngine::ExecutionProperties& properties
+    ) {
         this->type = EvaluationContextType::MaterializedRow;
+        this->properties = &properties;
         this->materializedRow = row;
-        this->variables = nullptr;
         this->outerRow = nullptr;
         this->innerRow = nullptr;
         this->row = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
-    const Pages::RowReference* outerRow,
-    const Pages::RowReference* innerRow
+        const Pages::RowReference* outerRow,
+        const Pages::RowReference* innerRow,
+        const DatabaseEngine::ExecutionProperties& properties
     ){
         this->type = EvaluationContextType::Join;
+        this->properties = &properties;
         this->row = nullptr;
         this->outerRow = outerRow;
         this->innerRow = innerRow;
-        this->variables = nullptr;
     }
 
     Expression::Expression(){
@@ -171,7 +179,7 @@ namespace Expressions{
     Value ColumnExpression::Evaluate(const EvaluationContext& context) const{
         switch (context.type) {
             case EvaluationContext::EvaluationContextType::SingleRow:
-              return context.row->PartialMaterialize(this->index);
+              return context.row->PartialMaterialize(&context.properties->allocator, this->index);
             case EvaluationContext::EvaluationContextType::MaterializedRow:
               return context.materializedRow.GetColumnAt(this->index);
             case EvaluationContext::EvaluationContextType::Join: {
@@ -179,8 +187,8 @@ namespace Expressions{
               const auto outerRowSize = outerRow.Data().size();
 
               return this->index < outerRowSize
-                       ? context.outerRow->PartialMaterialize(this->index)
-                       : context.innerRow->PartialMaterialize(this->index - outerRowSize);
+                       ? context.outerRow->PartialMaterialize(&context.properties->allocator, this->index)
+                       : context.innerRow->PartialMaterialize(&context.properties->allocator, this->index - outerRowSize);
         }
         case EvaluationContext::EvaluationContextType::Constant:
         case EvaluationContext::EvaluationContextType::Aggregate:
@@ -815,7 +823,7 @@ namespace Expressions{
     }
 
     Value VariableExpression::Evaluate(const EvaluationContext &context) const {
-        return context.variables->Get(this->normalizedName).GetValue();
+        return context.properties->variables->Get(this->normalizedName).GetValue();
     }
 
     DataType VariableExpression::GetReturnType() const { return this->dataType; }

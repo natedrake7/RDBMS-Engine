@@ -230,7 +230,6 @@ namespace DatabaseEngine {
 
             MultiThreading::ReaderGuard lock(&page.Latch());
 
-
             return page.PeekRow(rowPointer.offset, 0);
         }
 

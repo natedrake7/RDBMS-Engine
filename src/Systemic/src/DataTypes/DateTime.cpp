@@ -169,7 +169,7 @@ namespace DataTypes{
 		this->timeStamp = duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
 	}
 
-	DateTime DateTime::Now() { return {}; }
+	DateTime DateTime::Now() { return DateTime(); }
 
 	bool DateTime::FromString(DateTime& outVal, const std::string &date, const std::string &format)
 	{

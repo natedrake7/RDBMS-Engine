@@ -10,6 +10,7 @@
 #include "../../DatabaseEngine/include/ExecutionProperties.h"
 #include "../../Systemic/include/DataStructures/PriorityQueue.h"
 #include "../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
+#include "../../Systemic/include/DataStructures/Array.h"
 
 struct MergeElement;
 
@@ -31,7 +32,7 @@ namespace QueryPipeline::PhysicalPlan{
       std::vector<std::string> displayColumnNames;
       std::vector<const DatabaseEngine::StorageTypes::Column*> columns;
       std::vector<Pages::RowReference> rows;
-      std::vector<QueryResult> results;
+      DataStructures::Array<QueryResult> results;
 
       std::string message;
       Errors::RuntimeError code;
@@ -340,6 +341,7 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* child;
     std::vector<Statements::OrderColumn*> expressions;
 
+    MergeComparator comparator;
     PriorityQueue<MergeElement, MergeComparator> priorityQueue;
 
     [[nodiscard]] bool CanBeSortedInMemory(bool canFetchMore)const;
@@ -469,7 +471,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     ExecutionResult* ExecuteBatchJoin(
       const DatabaseEngine::ExecutionProperties& properties,
-      ExecutionResult* leftResult
+      const ExecutionResult* leftResult
     ) const;
 
     public:

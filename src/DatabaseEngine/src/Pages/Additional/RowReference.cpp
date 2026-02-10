@@ -95,13 +95,12 @@ namespace Pages{
         return this->pageView.MaterializeRow(this->indexPosition, this->keySize);
     }
 
-    Value RowReference::PartialMaterialize(const column_index_t columnIndex) const{
-        // Value value;
-        // if (this->lazyState->cache.TryGetValue(columnIndex, value))
-        //     return value;
+    Value RowReference::PartialMaterialize(const Memory::Allocator* allocator, const column_index_t columnIndex) const{
+        return this->pageView.PartialMaterializeRow(allocator, this, columnIndex);
+    }
 
-        return this->pageView.PartialMaterializeRow(this, columnIndex);
-        // this->lazyState->cache.Add(columnIndex, std::move(value));
-        // return this->lazyState->cache.Get(columnIndex);
+    Int RowReference::Size() const{
+       const auto pageSlot = this->pageView.GetSlotDirectory(this->indexPosition);
+       return pageSlot.GetSize();
     }
 }

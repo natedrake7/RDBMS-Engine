@@ -6,6 +6,11 @@
 #include "../../../Systemic/include/DataTypes/Decimal.h"
 #include "../../../Systemic/include/DataTypes/Guid.h"
 
+namespace DatabaseEngine
+{
+    struct ExecutionProperties;
+}
+
 namespace Pages
 {
     struct RawRowReference;
@@ -46,6 +51,11 @@ namespace DatabaseEngine::StorageTypes {
 
     public:
         InsertPayload();
+        InsertPayload(
+            const Memory::Allocator& allocator,
+            UnsignedSmallInt size,
+            UnsignedSmallInt startingOffset
+        );
         InsertPayload(UnsignedSmallInt size, UnsignedSmallInt startingOffset);
 
         InsertPayload& operator=(InsertPayload&& other)noexcept;
@@ -65,7 +75,11 @@ namespace DatabaseEngine::StorageTypes {
 
         void AlignSizeWithOffset();
 
-        Value MaterializeColumn(const Column* column, Int numberOfColumns) const;
+        Value MaterializeColumn(
+            const ExecutionProperties& properties,
+            const Column* column,
+            Int numberOfColumns
+        ) const;
         object_t* Data()const;
         UnsignedSmallInt Size()const;
     };

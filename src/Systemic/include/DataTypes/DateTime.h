@@ -48,7 +48,13 @@ namespace DataTypes {
 	public:
 		DateTime();
 		explicit DateTime(BigInt timestamp);
-		~DateTime();
+
+        DateTime(const DateTime& other) = default;
+        DateTime& operator=(const DateTime& other) = default;
+	    DateTime(DateTime&& other) = default;
+	    DateTime& operator=(DateTime&& other) = default;
+
+	    ~DateTime();
 
 		[[nodiscard]] Int GetYears() const;
 		[[nodiscard]] UnsignedInt GetMonths() const;

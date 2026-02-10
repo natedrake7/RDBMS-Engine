@@ -6,9 +6,9 @@
 template<typename Value, typename Compare = std::greater<Value>>
 class PriorityQueue : std::priority_queue<Value, std::vector<Value>, Compare>{
 public:
-    PriorityQueue() = default;
+    PriorityQueue(): std::priority_queue<Value, std::vector<Value>, Compare>(){}
 
-    explicit PriorityQueue(const Compare& comp) : std::priority_queue<Value, std::vector<Value>, Compare>(comp) {}
+    explicit PriorityQueue(Compare& comp) : std::priority_queue<Value, std::vector<Value>, Compare>(comp) {}
 
     void Add(const Value& value) {
         this->push(value);
