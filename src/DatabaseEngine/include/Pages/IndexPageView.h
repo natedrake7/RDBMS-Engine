@@ -2,6 +2,11 @@
 #include "PageView.h"
 #include "Additional/IndexPageStructs.h"
 
+namespace DataStructures{
+    template<typename T>
+    class Array;
+}
+
 namespace Pages{
     class IndexPageView final : public PageView {
             void InsertFirstKey(const DataTypes::Indexing::Key& key) const;
@@ -59,10 +64,9 @@ namespace Pages{
             page_id_t GetChild(Int indexPosition) const;
 
             void AppendRowToBuffer(
-                std::vector<RowReference>* buffer,
-                const DatabaseEngine::StorageTypes::Table* table,
+                DataStructures::Array<RowReference>* buffer,
                 const DatabaseEngine::Snapshot& snapshot,
                 Int indexPosition
-            );
+            ) const;
     };
 }

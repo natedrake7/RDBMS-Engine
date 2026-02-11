@@ -25,7 +25,7 @@ namespace QueryPipeline::PhysicalPlan {
             continue;
 
           // outerRow.Join(&innerRow);
-          result->rows.push_back(outerRow);
+          result->rows.Push(outerRow);
         }
       }
 

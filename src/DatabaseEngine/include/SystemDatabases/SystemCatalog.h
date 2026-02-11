@@ -31,9 +31,9 @@ namespace DatabaseEngine {
 
     static Headers::DatabaseHeader ToDatabaseHeader(const Pages::RowReference& rowPtr);
     static Headers::DatabaseHeader ToDatabaseHeader(
-      const Pages::RowReference& rowPtr,
-      std::vector<Headers::TableHeader>& dbTables,
-      std::vector<Headers::SchemaHeader>& schemas
+        const Pages::RowReference& rowPtr,
+        std::vector<Headers::TableHeader>& dbTables,
+        std::vector<Headers::SchemaHeader>& schemas
     );
     static Headers::SchemaHeader ToSchemaHeader(const Pages::RowReference& rowPtr);
     static Headers::TableHeader ToTableHeader(const Pages::RowReference& rowPtr);
@@ -42,9 +42,9 @@ namespace DatabaseEngine {
     static Headers::IndexColumnsHeader ToIndexColumnsHeader(const Pages::RowReference& rowPtr);
     static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const Pages::RowReference& rowPtr);
     static Headers::ConstraintsHeader ToConstraintsHeader(
-      const Pages::RowReference& rowPtr,
-      std::vector<Headers::ConstraintsColumnsHeader>& constraintColumns,
-      Headers::IndexHeader& indexHeader
+        const Pages::RowReference& rowPtr,
+        std::vector<Headers::ConstraintsColumnsHeader>& constraintColumns,
+        Headers::IndexHeader& indexHeader
     );
     static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const Pages::RowReference& rowPtr);
     static Headers::DefaultValuesHeader ToDefaultValuesHeader(const Pages::RowReference& rowPtr);

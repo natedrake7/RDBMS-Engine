@@ -187,27 +187,27 @@ namespace Indexing{
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            std::vector<Pages::RowReference>* result
+            DataStructures::Array<Pages::RowReference>* result
         )const;
 
         void IndexSeekRange(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            std::vector<Pages::RowReference>* result,
+            DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexSeek(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& key,
-            std::vector<Pages::RowReference>* result
+            DataStructures::Array<Pages::RowReference>* result
         )const;
 
         void IndexSeek(
             const DatabaseEngine::ExecutionProperties& properties,
             const DataTypes::Indexing::Key& key,
-            std::vector<Pages::RowReference>* result,
+            DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
@@ -215,26 +215,26 @@ namespace Indexing{
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<Pages::RowReference>* result,
+            DataStructures::Array<Pages::RowReference>* result,
             DatabaseEngine::IndexState& state
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<Pages::RowReference>* result,
+            DataStructures::Array<Pages::RowReference>* result,
             DatabaseEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<Pages::RowReference>* result,
+            DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const DatabaseEngine::ExecutionProperties& properties,
-            std::vector<Pages::RowReference>* result
+            DataStructures::Array<Pages::RowReference>* result
         )const;
 
         void IndexScan(

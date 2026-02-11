@@ -1,6 +1,7 @@
 #pragma once
 #include "../QueryResult.h"
 #include "ResponseProtocol.h"
+#include "../DataStructures/PolymorphicArray.h"
 
 namespace Network {
   //add to body table headers for response
@@ -12,8 +13,8 @@ namespace Network {
     bool hasError;
     std::string message;
 
-    std::vector<std::string> columns;
-    std::vector<QueryResult> rows;
+    DataStructures::PolymorphicArray<std::string> columns;
+    DataStructures::PolymorphicArray<QueryResult> rows;
 
     void SerializeMessage();
     void SerializeResult();
@@ -33,8 +34,8 @@ namespace Network {
         bool hasError,
         bool hasMore,
         const std::string& message,
-        const std::vector<std::string>& columns,
-        std::vector<QueryResult>& rows
+        const DataStructures::PolymorphicArray<std::string>& columns,
+        DataStructures::PolymorphicArray<QueryResult>& rows
       );
       [[nodiscard]] int GetSize() const override;
       void Serialize() override;

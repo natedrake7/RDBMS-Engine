@@ -39,8 +39,8 @@ QueryResponseProtocol::QueryResponseProtocol(
     const bool hasError,
     const bool hasMore,
     const std::string& message,
-    const std::vector<std::string>& columns,
-    std::vector<QueryResult>& rows
+    const DataStructures::PolymorphicArray<std::string>& columns,
+    DataStructures::PolymorphicArray<QueryResult>& rows
   ){
     this->hasError = hasError;
     this->hasMore = hasMore;
@@ -62,7 +62,7 @@ QueryResponseProtocol::QueryResponseProtocol(
   }
 
   void QueryResponseProtocol::SerializeResult(){
-    const int numOfTableColumns = static_cast<int>(this->columns.size());
+    const int numOfTableColumns = static_cast<int>(this->columns.Size());
     Vector::AppendToBuffer(this->buffer, &numOfTableColumns, sizeof(int));
 
     for (const auto& column: this->columns) {
@@ -71,7 +71,7 @@ QueryResponseProtocol::QueryResponseProtocol(
       Vector::AppendToBuffer(this->buffer, column.data(), columnSize);
     }
 
-    const int numOfRows = static_cast<int>(this->rows.size());
+    const int numOfRows = static_cast<int>(this->rows.Size());
     Vector::AppendToBuffer(this->buffer, &numOfRows, sizeof(int));
 
     for (const auto& row: this->rows)
@@ -112,8 +112,8 @@ QueryResponseProtocol::QueryResponseProtocol(
     memcpy(&numOfColumns, buffer.data() + offSet, sizeof(int));
     offSet += sizeof(int);
 
-    this->columns.clear();
-    this->columns.resize(numOfColumns);
+    this->columns.Clear();
+    this->columns.Resize(numOfColumns);
 
     for (int i = 0;i < numOfColumns; i++) {
       int columnSize = 0;
@@ -129,14 +129,14 @@ QueryResponseProtocol::QueryResponseProtocol(
     memcpy(&numOfRows, buffer.data() + offSet, sizeof(int));
     offSet += sizeof(int);
 
-    this->rows.clear();
-    this->rows.reserve(numOfRows);
+    this->rows.Clear();
+    this->rows.Reserve(numOfRows);
 
     for (int i = 0; i < numOfRows; i++) {
       auto row = QueryResult();
 
       row.Deserialize(buffer, offSet, numOfColumns);
-      this->rows.push_back(std::move(row));
+      this->rows.Push(std::move(row));
     }
   }
 

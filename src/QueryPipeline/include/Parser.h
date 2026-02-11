@@ -8,6 +8,7 @@
 #include <string>
 
 #include "DatabaseConstants.h"
+#include "../../Systemic/include/DataStructures/PolymorphicArray.h"
 
 namespace QueryPipeline{
 
@@ -32,8 +33,8 @@ namespace QueryPipeline{
 
     struct ParserResult {
         Errors::Error status;
-        std::vector<QueryResult> rows;
-        std::vector<std::string> columns;
+        DataStructures::PolymorphicArray<QueryResult> rows;
+        DataStructures::PolymorphicArray<std::string> columns;
         std::vector<Cursor*> cursors;
 
         ParserValidationScope validationScope;

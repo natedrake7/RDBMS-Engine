@@ -366,7 +366,7 @@ void ConnectionManager::GetQueryFromClient(const Int clientSocket, const Network
 
     protocol.Deserialize(buffer);
 
-    this->threadPool.Enqueue([this, query = protocol.GetQuery(), clientSocket, header] {  this->ExecuteQuery(query, clientSocket, header); });
+    this->threadPool.Enqueue([query = protocol.GetQuery(), clientSocket, header] {  ConnectionManager::ExecuteQuery(query, clientSocket, header); });
 }
 
 void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket, const Network::ConnectionProtocolHeader &header){

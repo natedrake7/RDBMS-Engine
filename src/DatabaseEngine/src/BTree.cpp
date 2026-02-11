@@ -937,7 +937,11 @@ namespace Indexing{
     }
 
     //TODO fix non clusteredIndex Seek
-    void BTree::IndexSeekRange(const DataTypes::Indexing::Key &minKey, const DataTypes::Indexing::Key &maxKey, std::vector<DataTypes::Indexing::QueryData> &result) const{
+    void BTree::IndexSeekRange(
+        const DataTypes::Indexing::Key &minKey,
+        const DataTypes::Indexing::Key &maxKey,
+        std::vector<DataTypes::Indexing::QueryData> &result
+    ) const{
         if (this->IsEmpty())
             return;
 
@@ -981,7 +985,7 @@ namespace Indexing{
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
-        std::vector<Pages::RowReference> *result
+        DataStructures::Array<Pages::RowReference>* result
     )const{
         if (this->IsEmpty())
             return;
@@ -995,7 +999,7 @@ namespace Indexing{
                 auto [key, row] = currentNode.PeekLeafTuple(i);
 
                 if (key.InClosedRange(minKey, maxKey)){
-                    currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
+                    currentNode.AppendRowToBuffer(result, properties.snapshot, i);
                     continue;
                 }
 
@@ -1014,7 +1018,7 @@ namespace Indexing{
         const DatabaseEngine::ExecutionProperties& properties,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
-        std::vector<Pages::RowReference> *result,
+        DataStructures::Array<Pages::RowReference>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1033,7 +1037,7 @@ namespace Indexing{
                 if (key.InClosedRange(minKey, maxKey)){
                     context.row = &row;
                     if (expression->Evaluate(context).AsBool())
-                        currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
+                        currentNode.AppendRowToBuffer(result, properties.snapshot, i);
                     continue;
                 }
 
@@ -1051,7 +1055,7 @@ namespace Indexing{
     void BTree::IndexSeek(
         const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
-        std::vector<Pages::RowReference> *result
+        DataStructures::Array<Pages::RowReference>* result
     ) const {
         if (this->IsEmpty())
             return;
@@ -1066,7 +1070,7 @@ namespace Indexing{
                 // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
                 // std::cout << "Row: " << row << std::endl;
                 if (key == tupleKey){
-                    currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
+                    currentNode.AppendRowToBuffer(result, properties.snapshot, i);
                     continue;
                 }
 
@@ -1085,7 +1089,7 @@ namespace Indexing{
     void BTree::IndexSeek(
         const DatabaseEngine::ExecutionProperties &properties,
         const DataTypes::Indexing::Key &key,
-        std::vector<Pages::RowReference> *result,
+        DataStructures::Array<Pages::RowReference>* result,
         const Expressions::Expression *expression
     ) const {
         if (this->IsEmpty())
@@ -1105,7 +1109,7 @@ namespace Indexing{
                     context.row = &row;
 
                     if (expression->Evaluate(context).AsBool())
-                        currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
+                        currentNode.AppendRowToBuffer(result, properties.snapshot, i);
 
                     continue;
                 }
@@ -1147,13 +1151,13 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<Pages::RowReference> *result,
+        DataStructures::Array<Pages::RowReference>* result,
         DatabaseEngine::IndexState& state
     )const{
         if (this->IsEmpty())
             return;
 
-        result->reserve(properties.batchSize);
+        result->Reserve(properties.batchSize);
         auto currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
@@ -1163,14 +1167,14 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++)
-                currentNode.AppendRowToBuffer(result, this->table, properties.snapshot, i);
+                currentNode.AppendRowToBuffer(result, properties.snapshot, i);
 
             if(!currentNode.HasRightSibling()) {
                 state.canFetchMore = false;
                 return;
             }
 
-            if (result->size() >= properties.batchSize) {
+            if (result->Size() >= properties.batchSize) {
                 state.pageId = currentNode.RightSibling();
                 state.lastFetchedKeyIndex = INVALID_PAGE_INDEX_ID;
                 state.canFetchMore = true;
@@ -1183,7 +1187,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<Pages::RowReference> *result,
+        DataStructures::Array<Pages::RowReference>* result,
         DatabaseEngine::IndexState& state,
         const Expressions::Expression *expression
     )const{
@@ -1207,9 +1211,9 @@ namespace Indexing{
                 if (!expression->Evaluate(context).AsBool())
                     continue;
 
-                currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
+                currentNode.AppendRowToBuffer(result, properties.snapshot, i);
 
-                if (result->size() == properties.batchSize) {
+                if (result->Size() == properties.batchSize) {
                     state.lastFetchedKeyIndex = i;
                     state.pageId = currentNode.PageId();
                     state.canFetchMore = true;
@@ -1230,7 +1234,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<Pages::RowReference> *result,
+        DataStructures::Array<Pages::RowReference>* result,
         const Expressions::Expression *expression
     )const{
         if (this->IsEmpty())
@@ -1250,7 +1254,7 @@ namespace Indexing{
                 if(!expression->Evaluate(context).AsBool())
                     continue;
 
-                currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
+                currentNode.AppendRowToBuffer(result, properties.snapshot, i);
             }
 
             if(!currentNode.HasRightSibling())
@@ -1262,7 +1266,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const DatabaseEngine::ExecutionProperties& properties,
-        std::vector<Pages::RowReference> *result
+        DataStructures::Array<Pages::RowReference>* result
     )const{
         if (this->IsEmpty())
             return;
@@ -1274,7 +1278,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = 0;i < currentNode.PageSize();i++){
-                currentNode.AppendRowToBuffer(result, table, properties.snapshot, i);
+                currentNode.AppendRowToBuffer(result, properties.snapshot, i);
             }
 
             if(!currentNode.HasRightSibling())

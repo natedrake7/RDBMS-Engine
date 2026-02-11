@@ -5,10 +5,9 @@
 #include "../../../../Systemic/include/RowIdentifier.h"
 #include "../../../../Systemic/include/QueryResult.h"
 #include "../../../include/DataStorage/Column.h"
-#include "DataStructures/Array.h"
+#include "../../../../Systemic/include/DataStructures/PolymorphicArray.h"
 
-namespace DatabaseEngine
-{
+namespace DatabaseEngine{
     struct ExecutionProperties;
 }
 
@@ -76,7 +75,7 @@ class SortingFunctions{
           );
          static void OrderBy(
             const DatabaseEngine::ExecutionProperties& properties,
-            DataStructures::Array<QueryResult>& rows,
+            DataStructures::PolymorphicArray<QueryResult>& rows,
             const std::vector<QueryPipeline::Statements::OrderColumn*>& conditions
           );
          [[nodiscard]] static std::unordered_map<std::string, AggregateResults> GroupBy(

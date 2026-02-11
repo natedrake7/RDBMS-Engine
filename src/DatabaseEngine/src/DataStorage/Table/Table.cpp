@@ -17,7 +17,7 @@
 #include "../../../../Systemic/include/Guards/WriterGuard.h"
 #include "../../../../QueryPipeline/include/Statements.h"
 #include "../../../include/Database.h"
-#include "DataStructures/Array.h"
+#include "DataStructures/PolymorphicArray.h"
 #include "Logger/WriteAheadLogger.h"
 
 namespace DatabaseEngine::StorageTypes {
@@ -259,14 +259,14 @@ namespace DatabaseEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::BatchInsert(
         const ExecutionProperties &properties,
-        DataStructures::Array<QueryResult> &input
+        DataStructures::PolymorphicArray<QueryResult> &input
       ) {
         if (input.Empty())
             return Errors::RuntimeStatus(Errors::RuntimeError::Ok, "No rows to insert");
 
         // std::pmr::vector<InsertPayload> rows(&properties.allocator);
 
-        DataStructures::Array<InsertPayload> rows(properties.allocator, input.Size());
+        DataStructures::PolymorphicArray<InsertPayload> rows(properties.allocator, input.Size());
         // rows.reserve(input.size());
 
         Int pagesNeeded = 0;
@@ -491,18 +491,14 @@ namespace DatabaseEngine::StorageTypes {
 
     const std::vector<Column *> &Table::GetColumns() const { return this->columns; }
 
-    std::vector<const Column *> Table::GetConstantColumns() const {
-        std::vector<const Column*> constColumns;
-
+    void Table::GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const {
         for (const auto* column : this->columns)
-          constColumns.push_back(column);
-
-        return constColumns;
+          array->Push(column);
       }
 
     void Table::HeapScan(
       const ExecutionProperties& properties,
-      std::vector<Pages::RowReference> *result,
+      DataStructures::PolymorphicArray<Pages::RowReference> *result,
       ScanState& state
     )const
     {
@@ -546,11 +542,11 @@ namespace DatabaseEngine::StorageTypes {
             for (int i = state.GetNextKeyIndex(); i < page.PageSize(); i++) {
               auto rowPtr = page.PeekRow(i, 0);
 
-              result->push_back(std::move(rowPtr));
+              result->Push(std::move(rowPtr));
 
               state.lastFetchedRowId.indexId = i;
 
-              if (result->size() == properties.batchSize) {
+              if (result->Size() == properties.batchSize) {
                 state.canFetchMore = true;
                 return;
               }
@@ -563,9 +559,9 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::TemporaryDatabaseHeapScan(
-      std::vector<Pages::RowReference>* result,
-      ScanState& state,
-      const Int batchSize
+        DataStructures::PolymorphicArray<Pages::RowReference> *result,
+        ScanState& state,
+        const Int batchSize
     ) const{
         auto properties = ExecutionProperties();
         properties.batchSize = batchSize;

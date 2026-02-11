@@ -160,7 +160,7 @@ namespace DatabaseEngine::StorageTypes
         */
             Errors::RuntimeStatus BatchInsert(
                 const ExecutionProperties& properties,
-                DataStructures::Array<QueryResult> &input
+                DataStructures::PolymorphicArray<QueryResult> &input
             );
 
             Errors::RuntimeStatus InsertRow(
@@ -200,7 +200,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
             [[nodiscard]] const TableHeader &GetHeader() const;
             [[nodiscard]] const std::vector<Column *> &GetColumns() const;
-            [[nodiscard]] std::vector<const Column*> GetConstantColumns() const;
+            void GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const;
             [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(Int indexPos) const;
             [[nodiscard]] const std::vector<column_index_t>& GetClusteredIndex() const;
             [[nodiscard]] std::vector<DataType> GetColumnTypeByTreeId(const UnsignedTinyInt& treeId) const;
@@ -217,42 +217,42 @@ namespace DatabaseEngine::StorageTypes
         */
             void ClusteredIndexSeekRange(
                 const ExecutionProperties& properties,
-                std::vector<Pages::RowReference> *selectedRows,
+                DataStructures::Array<Pages::RowReference>* selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexSeek(
                 const ExecutionProperties& properties,
-                std::vector<Pages::RowReference> *selectedRows,
+                DataStructures::Array<Pages::RowReference>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Pages::RowReference> *selectedRows,
+                DataStructures::Array<Pages::RowReference>* selectedRows,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Pages::RowReference> *selectedRows,
+                DataStructures::Array<Pages::RowReference>* selectedRows,
                 const Expressions::Expression* expression
             );
             void NonClusteredIndexScan(
                 const ExecutionProperties& properties,
-                std::vector<Pages::RowReference> *selectedRows,
+                DataStructures::Array<Pages::RowReference>* selectedRows,
                 Int indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void HeapScan(
                 const ExecutionProperties& properties,
-                std::vector<Pages::RowReference> *result,
+                DataStructures::PolymorphicArray<Pages::RowReference> *result,
                 ScanState& state
             )const;
             void TemporaryDatabaseHeapScan(
-                std::vector<Pages::RowReference> *result,
+                DataStructures::PolymorphicArray<Pages::RowReference> *result,
                 ScanState& state,
                 Int batchSize
             )const;

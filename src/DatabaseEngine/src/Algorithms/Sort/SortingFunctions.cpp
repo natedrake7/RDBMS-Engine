@@ -12,7 +12,7 @@
 #include "Evaluators/Expression.h"
 
 #include "../../QueryPipeline/include/Statements.h"
-#include "DataStructures/Array.h"
+#include "DataStructures/PolymorphicArray.h"
 #include "Pages/Additional/RowReference.h"
 
 bool SortingFunctions::CompareRowsAscending(
@@ -113,7 +113,7 @@ bool SortingFunctions::CompareRows(
 
 void SortingFunctions::OrderBy(
     const DatabaseEngine::ExecutionProperties& properties,
-    DataStructures::Array<QueryResult> &rows,
+    DataStructures::PolymorphicArray<QueryResult> &rows,
     const std::vector<QueryPipeline::Statements::OrderColumn*> &conditions
 ){
     if(rows.Empty())

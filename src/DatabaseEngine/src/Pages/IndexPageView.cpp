@@ -335,11 +335,10 @@ namespace Pages{
     }
 
     void IndexPageView::AppendRowToBuffer(
-        std::vector<RowReference>* buffer,
-        const DatabaseEngine::StorageTypes::Table* table,
+        DataStructures::Array<RowReference>* buffer,
         const DatabaseEngine::Snapshot& snapshot,
         const Int indexPosition
-    ){
+    ) const{
         Int outKeySize = 0;
         const auto versionHeader = this->PeekVersionHeader(indexPosition, outKeySize);
 
@@ -354,6 +353,7 @@ namespace Pages{
             return;
         }
 
-        buffer->emplace_back(this->framePtr, indexPosition, outKeySize);
+        buffer->Push(RowReference(this->framePtr, indexPosition, outKeySize));
+        // buffer->emplace_back(this->framePtr, indexPosition, outKeySize);
     }
 }

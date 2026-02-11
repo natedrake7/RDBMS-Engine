@@ -101,7 +101,7 @@ namespace Network::Sessions {
     return cursor;
   }
 
-  bool SessionManager::CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId) const{
+  bool SessionManager::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t cursorId) const{
     MultiThreading::WriterGuard guard(&this->mutex);
 
     auto* session = this->TryGetSessionWithoutLock(id);

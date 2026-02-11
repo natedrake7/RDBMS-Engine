@@ -3,44 +3,30 @@
 #include <stdexcept>
 
 #include "../DataTypes/DataTypes.h"
-#include "../Memory/Allocator.h"
 
-namespace DataStructures
-{
-    template <typename T>
+namespace DataStructures{
+    template<typename T>
     class Array{
-        const Memory::Allocator* _allocator;
-
+    protected:
         T* _data;
         Int _size;
         Int _capacity;
 
     public:
         Array(){
-            this->_allocator = nullptr;
-
             this->_data = nullptr;
             this->_size = 0;
             this->_capacity = 0;
         }
 
-        explicit Array(const Memory::Allocator& allocator){
-            this->_allocator = &allocator;
-            this->_data = nullptr;
-            this->_size = 0;
-            this->_capacity = 0;
-        }
-
-        Array(const Memory::Allocator& allocator, Int capacity){
-            this->_allocator = &allocator;
-            this->_data = static_cast<T*>(this->_allocator->Allocate(capacity * sizeof(T)));
+        explicit Array(Int capacity){
+            this->_data = static_cast<T*>(std::malloc(capacity * sizeof(T)));
             this->_size = 0;
             this->_capacity = capacity;
         }
 
-        Array(const Memory::Allocator& allocator, Int capacity, T value){
-            this->_allocator = &allocator;
-            this->_data = static_cast<T*>(this->_allocator->Allocate(capacity * sizeof(T)));
+        Array(Int capacity, T value){
+            this->_data = static_cast<T*>(std::malloc(capacity * sizeof(T)));
             this->_size = 0;
             this->_capacity = capacity;
 
@@ -49,8 +35,7 @@ namespace DataStructures
         }
 
         Array(const Array& other){
-            this->_allocator = other._allocator;
-            this->_data = static_cast<T*>(this->_allocator->Allocate(other._capacity * sizeof(T)));
+            this->_data = static_cast<T*>(std::malloc(other._capacity * sizeof(T)));
             std::memcpy(this->_data, other._data, other._size * sizeof(T));
 
             this->_size = other._size;
@@ -61,8 +46,7 @@ namespace DataStructures
             if (this == &other)
                 return *this;
 
-            this->_allocator = other._allocator;
-            this->_data = static_cast<T*>(this->_allocator->Allocate(other._capacity * sizeof(T)));
+            this->_data = static_cast<T*>(std::malloc(other._capacity * sizeof(T)));
             std::memcpy(this->_data, other._data, other._size * sizeof(T));
 
             this->_size = other._size;
@@ -72,7 +56,6 @@ namespace DataStructures
         }
 
         Array(Array&& other) noexcept{
-            this->_allocator = other._allocator;
             this->_data = other._data;
             this->_size = other._size;
             this->_capacity = other._capacity;
@@ -84,7 +67,6 @@ namespace DataStructures
             if (this == &other)
                 return *this;
 
-            this->_allocator = other._allocator;
             this->_data = other._data;
             this->_size = other._size;
             this->_capacity = other._capacity;
@@ -94,6 +76,10 @@ namespace DataStructures
             return *this;
         }
 
+        virtual ~Array(){
+            std::free(this->_data);
+        }
+
         void Push(T&& value){
             if (this->_size >= this->_capacity){
                 auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;
@@ -101,6 +87,15 @@ namespace DataStructures
             }
 
             this->_data[this->_size++] = std::move(value);
+        }
+
+        void Push(const T& value){
+            if (this->_size >= this->_capacity){
+                auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;
+                this->Resize(newCapacity);
+            }
+
+            this->_data[this->_size++] = value;
         }
 
         void Remove(Int index){
@@ -121,21 +116,21 @@ namespace DataStructures
             this->_size = index;
         }
 
-        void Resize(Int newCapacity){
+        virtual void Resize(Int newCapacity){
             if (newCapacity <= this->_capacity)
                 return;
 
-            T* newData = static_cast<T*>(this->_allocator->Allocate(newCapacity * sizeof(T)));
+            T* newData = static_cast<T*>(std::malloc(newCapacity * sizeof(T)));
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
             this->_data = newData;
             this->_capacity = newCapacity;
         }
 
-        void Reserve(Int newCapacity){
+        virtual void Reserve(Int newCapacity){
             if (newCapacity <= this->_capacity)
                 return;
 
-            T* newData = static_cast<T*>(this->_allocator->Allocate(newCapacity * sizeof(T)));
+            T* newData = static_cast<T*>(std::malloc(newCapacity * sizeof(T)));
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
             this->_data = newData;
             this->_capacity = newCapacity;
@@ -168,17 +163,26 @@ namespace DataStructures
         [[nodiscard]] Int Capacity() const { return this->_capacity; }
         [[nodiscard]] bool Empty() const { return this->_size == 0; }
 
-
-
         //STL Compatibility
         using iterator = T*;
         using const_iterator = const T*;
 
         iterator begin() { return this->_data; }
-        iterator end() { return this->_data + this->_size * sizeof(T); }
+        iterator end() { return this->_data + this->_size; }
 
         const_iterator begin() const { return this->_data; }
-        const_iterator end() const { return this->_data + this->_size * sizeof(T); }
+        const_iterator end() const { return this->_data + this->_size; }
 
+        const_iterator cbegin() const { return this->_data; }
+        const_iterator cend() const { return this->_data + this->_size; }
+
+        iterator erase(iterator pos){
+            if (pos < this->begin() || pos >= this->end())
+                throw std::out_of_range("Iterator out of range.");
+
+            Int index = pos - this->begin();
+            this->Remove(index);
+            return this->begin() + index;
+        }
     };
 }

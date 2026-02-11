@@ -81,7 +81,7 @@ class Value {
         Value& operator=(Value&& other) noexcept;
         ~Value();
 
-    explicit Value(column_index_t index = 0);
+        explicit Value(column_index_t index = 0);
         explicit Value(const void* data, Int size, DataType type);
         explicit Value(bool data, column_index_t index = 0);
         explicit Value(TinyInt data, column_index_t index = 0);

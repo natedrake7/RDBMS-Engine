@@ -15,6 +15,15 @@ namespace QueryPipeline::PhysicalPlan {
     this->canFetchMore = false;
   }
 
+  ExecutionResult::ExecutionResult(const DatabaseEngine::ExecutionProperties& properties){
+      this->code = Errors::RuntimeError::Ok;
+      this->canFetchMore = false;
+      this->results.SetAllocator(properties.allocator);
+      this->rows.SetAllocator(properties.allocator);
+      this->columns.SetAllocator(properties.allocator);
+      this->displayColumnNames.SetAllocator(properties.allocator);
+  }
+
   ExecutionResult::ExecutionResult(const Errors::RuntimeError &code, const std::string &message) {
     this->code = code;
     this->message = message;
@@ -77,6 +86,7 @@ namespace QueryPipeline::PhysicalPlan {
     static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
 
     auto* result = new ExecutionResult();
+    result->rows.TrySetAllocator(properties.allocator);
 
     if (this->temporaryTableId == INVALID_TABLE_ID)
       return result;
@@ -85,7 +95,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     table->TemporaryDatabaseHeapScan(&result->rows, state, properties.batchSize);
 
-    result->results.Reserve(result->rows.size());
+    result->results.Reserve(result->rows.Size());
 
     for (const auto& row: result->rows){
       result->results.Push(row.Materialize());
@@ -128,6 +138,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult * PhysicalCreateUser::Execute(const DatabaseEngine::ExecutionProperties& properties) {
     auto* result = new ExecutionResult();
+    result->rows.TrySetAllocator(properties.allocator);
 
     if (!this->server->CreateUser(properties, this->username, this->password, this->roleName)) {
       result->code = Errors::RuntimeError::Error;
@@ -142,6 +153,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult * PhysicalGrantRole::Execute(const DatabaseEngine::ExecutionProperties& properties) {
     auto* result = new ExecutionResult();
+    result->rows.TrySetAllocator(properties.allocator);
 
     const auto* role = this->server->GetRole(this->roleName);
 
@@ -182,6 +194,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult * PhysicalUseDatabase::Execute(const DatabaseEngine::ExecutionProperties& properties) {
     auto* result = new ExecutionResult();
+    result->rows.TrySetAllocator(properties.allocator);
 
     if (this->server->UpdateSession(this->sessionId, this->databaseId)) {
       result->code = Errors::RuntimeError::Ok;
@@ -223,13 +236,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   ExecutionResult* PhysicalTableScan::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    auto* result = new ExecutionResult(properties);
 
     const auto* db = this->server->UseDatabase(this->table->databaseId);
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    result->columns = tablePtr->GetConstantColumns();
+    tablePtr->GetConstantColumns(&result->columns);
 
     tablePtr->HeapScan(properties, &result->rows, this->state);
 
@@ -257,13 +270,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   ExecutionResult * PhysicalIndexScan::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    auto* result = new ExecutionResult(properties);
 
     const auto* db =  this->server->UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    result->columns = tablePtr->GetConstantColumns();
+    tablePtr->GetConstantColumns(&result->columns);
 
     if (this->isClustered) {
       tablePtr->ClusteredIndexScan(properties, &result->rows, this->state, this->expression);
@@ -301,13 +314,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   ExecutionResult* PhysicalIndexSeek::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    auto* result = new ExecutionResult(properties);
 
     const auto* db = Network::Server::Get().UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    result->columns = tablePtr->GetConstantColumns();
+    tablePtr->GetConstantColumns(&result->columns);
 
     //select if to use clustered or non clustered index here
     tablePtr->ClusteredIndexSeek(properties, &result->rows, this->key, this->expression);
@@ -329,13 +342,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   ExecutionResult* PhysicalIndexSeekRange::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    auto* result = new ExecutionResult(properties);
 
     const auto* db = Network::Server::Get().UseDatabase(this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    result->columns = tablePtr->GetConstantColumns();
+    tablePtr->GetConstantColumns(&result->columns);
 
     //select if to use clustered or non clustered index here
     tablePtr->ClusteredIndexSeekRange(properties, &result->rows, this->minKey, this->maxKey, this->expression);
@@ -347,14 +360,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     auto* result = this->child->Execute(properties);
 
     for (const auto& expression : this->resultExpressions)
-      result->displayColumnNames.emplace_back(expression->name);
+      result->displayColumnNames.Push(expression->name);
 
     Expressions::EvaluationContext context(
         Expressions::EvaluationContext::EvaluationContextType::SingleRow,
         properties
     );
 
-    result->results.Reserve(result->rows.size());
+    result->results.Reserve(result->rows.Size());
     for (const auto& row: result->rows) {
       QueryResult resultRow;
 
@@ -377,14 +390,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   ExecutionResult * PhysicalProject::ExecuteConstantStatement(const DatabaseEngine::ExecutionProperties& properties)const{
-    auto* result = new ExecutionResult();
-
+    auto* result = new ExecutionResult(properties);
     QueryResult resultRow;
 
     const Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Constant, properties);
 
     for (const auto& expression : this->resultExpressions) {
-      result->displayColumnNames.emplace_back(expression->name);
+      result->displayColumnNames.Push(expression->name);
 
       auto field = expression->Evaluate(context);
       resultRow.AddColumn(field);
@@ -435,15 +447,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
 
-    std::vector<Pages::RowReference> filteredRows;
-    filteredRows.reserve(result->rows.size() / 2);
+    DataStructures::PolymorphicArray<Pages::RowReference> filteredRows(properties.allocator, result->rows.Size() / 2);
     for (auto& row : result->rows) {
       context.row = &row;
 
       if (!this->filter->Evaluate(context).AsBool())
         continue;
 
-      filteredRows.push_back(std::move(row));
+      filteredRows.Push(std::move(row));
     }
 
     result->rows = std::move(filteredRows);
@@ -486,7 +497,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   ExecutionResult * PhysicalDistinct::Execute(const DatabaseEngine::ExecutionProperties& properties){
     auto* result = this->child->Execute(properties);
 
-    DataStructures::Array<QueryResult> results;
+    DataStructures::PolymorphicArray<QueryResult> results;
 
     HashSet<int64_t> computedHashes;
 
@@ -1006,7 +1017,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     // Case 3: Merge phase - k-way merge
     result->results.Clear();
 
-    DataStructures::Array<DataStructures::Array<QueryResult>> batches;
+    DataStructures::PolymorphicArray<DataStructures::PolymorphicArray<QueryResult>> batches;
     batches.Resize(this->priorityQueue.Size());
 
     while (!this->priorityQueue.Empty()){
@@ -1049,80 +1060,80 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     this->child->UpdateScanState(rowId);
   }
 
-  PhysicalIndexCreate::PhysicalIndexCreate(
-    const DataTypes::Guid& sessionId,
-    Statements::DataSource *table,
-    std::string &constraintName,
-    std::vector<column_index_t> &columns)
-    : ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+    PhysicalIndexCreate::PhysicalIndexCreate(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource *table,
+        std::string &constraintName,
+        std::vector<column_index_t> &columns
+    ): ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
-  ExecutionResult * PhysicalIndexCreate::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+    ExecutionResult * PhysicalIndexCreate::Execute(const DatabaseEngine::ExecutionProperties& properties){
+        auto* result = new ExecutionResult();
 
-    const auto* db = this->server->UseDatabase(this->table->databaseId);
+        const auto* db = this->server->UseDatabase(this->table->databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto columnsHeaders =this->catalog->SelectColumns(this->table->tableId);
+        const auto columnsHeaders =this->catalog->SelectColumns(this->table->tableId);
 
-    const auto indexResult =this->catalog->InsertIndexToMasterDb(
-        properties,
-        this->table->tableId,
-        this->constraintName,
-        false,
-        false,
-        this->session->user->name
-    );
-
-    const auto indexId = indexResult.primaryKey.AsInt(1);
-
-    const auto constraintResult =this->catalog->InsertConstraintToMasterDb(
-      properties,
-      this->table->tableId,
-      this->constraintName,
-      Headers::ConstraintType::IndexKey,
-      false,
-      &indexId,
-      this->session->user->name
-    );
-
-    const auto constraintId = constraintResult.primaryKey.AsInt(1);
-
-    for (const auto& columnPos : this->columns) {
-      const auto& header = columnsHeaders.at(columnPos);
-
-      const auto indexColumnResult =
-       this->catalog->InsertIndexColumnToMasterDb(
-             properties,
-            indexId,
-            header.id,
-            columnPos,
-            true
-      );
-
-      const auto constraintColumnResult =
-         this->catalog->InsertConstraintColumnToMasterDb(
-                properties,
-              constraintId,
-              header.id,
-          columnPos
+        const auto indexResult =this->catalog->InsertIndexToMasterDb(
+            properties,
+            this->table->tableId,
+            this->constraintName,
+            false,
+            false,
+            this->session->user->name
         );
+
+        const auto indexId = indexResult.primaryKey.AsInt(1);
+
+        const auto constraintResult =this->catalog->InsertConstraintToMasterDb(
+            properties,
+            this->table->tableId,
+            this->constraintName,
+            Headers::ConstraintType::IndexKey,
+            false,
+            &indexId,
+            this->session->user->name
+        );
+
+        const auto constraintId = constraintResult.primaryKey.AsInt(1);
+
+        for (const auto& columnPos : this->columns) {
+        const auto& header = columnsHeaders.at(columnPos);
+
+        const auto indexColumnResult =
+            this->catalog->InsertIndexColumnToMasterDb(
+                properties,
+                indexId,
+                header.id,
+                columnPos,
+                true
+            );
+
+        const auto constraintColumnResult =
+        this->catalog->InsertConstraintColumnToMasterDb(
+            properties,
+            constraintId,
+            header.id,
+            columnPos
+            );
+        }
+
+        const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
+            properties,
+            this->table->tableId,
+            indexId
+        );
+
+        const auto indexPos = tablePtr->CreateNonClusteredIndex(this->columns);
+
+        const auto pages = 1;
+        tablePtr->NonClusteredIndexInsertExistingRows(indexPos, pages);
+
+        //if there are rows in the table update the index
+        //do stuff here
+
+        return result;
     }
-
-    const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
-      properties,
-      this->table->tableId,
-      indexId
-    );
-
-    const auto indexPos = tablePtr->CreateNonClusteredIndex(this->columns);
-
-    const auto pages = 1;
-    tablePtr->NonClusteredIndexInsertExistingRows(indexPos, pages);
-
-    //if there are rows in the table update the index
-    //do stuff here
-
-    return result;
-  }
 }

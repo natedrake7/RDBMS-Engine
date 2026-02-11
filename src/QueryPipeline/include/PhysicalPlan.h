@@ -10,7 +10,7 @@
 #include "../../DatabaseEngine/include/ExecutionProperties.h"
 #include "../../Systemic/include/DataStructures/PriorityQueue.h"
 #include "../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
-#include "../../Systemic/include/DataStructures/Array.h"
+#include "../../Systemic/include/DataStructures/PolymorphicArray.h"
 
 struct MergeElement;
 
@@ -29,10 +29,10 @@ namespace DatabaseEngine {
 
 namespace QueryPipeline::PhysicalPlan{
   struct ExecutionResult {
-      std::vector<std::string> displayColumnNames;
-      std::vector<const DatabaseEngine::StorageTypes::Column*> columns;
-      std::vector<Pages::RowReference> rows;
-      DataStructures::Array<QueryResult> results;
+      DataStructures::PolymorphicArray<std::string> displayColumnNames;
+      DataStructures::PolymorphicArray<const DatabaseEngine::StorageTypes::Column*> columns;
+      DataStructures::PolymorphicArray<Pages::RowReference> rows;
+      DataStructures::PolymorphicArray<QueryResult> results;
 
       std::string message;
       Errors::RuntimeError code;
@@ -40,6 +40,7 @@ namespace QueryPipeline::PhysicalPlan{
       bool canFetchMore;
 
       ExecutionResult();
+      ExecutionResult(const DatabaseEngine::ExecutionProperties& properties);
       ExecutionResult(const Errors::RuntimeError& code, const std::string& message);
       ~ExecutionResult();
 

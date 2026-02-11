@@ -51,4 +51,8 @@ namespace Memory{
     void Allocator::Reset() const{
         this->_offset = 0;
     }
+
+    // void Allocator::Deallocate(const void* ptr) const{
+    //     //no-op, memory will be reused on next allocation
+    // }
 }

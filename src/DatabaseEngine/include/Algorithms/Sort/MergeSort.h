@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "../../../../Systemic/include/DataTypes/SortCondition.h"
-#include "DataStructures/Array.h"
+#include "DataStructures/PolymorphicArray.h"
 
 namespace DatabaseEngine
 {
@@ -24,7 +24,7 @@ namespace DatabaseEngine::StorageTypes {
 
 struct MergeSortParameters{
     const DatabaseEngine::ExecutionProperties* properties;
-    DataStructures::Array<QueryResult>* rows;
+    DataStructures::PolymorphicArray<QueryResult>* rows;
     const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
     Int left;
     Int right;

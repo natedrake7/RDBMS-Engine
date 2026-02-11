@@ -35,7 +35,7 @@ namespace Headers {
 
 namespace DatabaseEngine {
  SystemCatalog::SystemCatalog() {
-   this->masterDb = nullptr;
+    this->masterDb = nullptr;
  }
 
  SystemCatalog::~SystemCatalog() = default;
@@ -588,14 +588,14 @@ namespace DatabaseEngine {
  std::vector<Headers::DatabaseHeader> SystemCatalog::RetrieveCatalog() const {
    auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
 
-   std::vector<Pages::RowReference> selectedDatabases;
+   DataStructures::Array<Pages::RowReference> selectedDatabases;
 
    IndexState state;
    sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, state, nullptr);
 
    std::vector<Headers::DatabaseHeader> databasesHeaders;
 
-   if (selectedDatabases.empty())
+   if (selectedDatabases.Empty())
      return {};
 
    // for (const auto& row : selectedDatabases) {
@@ -1244,7 +1244,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   std::vector<Security::Role> SystemCatalog::SelectRoles() const{
-   std::vector<Pages::RowReference> rows;
+   DataStructures::Array<Pages::RowReference> rows;
 
    std::vector<Security::Role> roles;
 
@@ -1269,7 +1269,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
  }
 
   std::vector<Security::User> SystemCatalog::SelectUsers() const{
-   std::vector<Pages::RowReference> rows;
+   DataStructures::Array<Pages::RowReference> rows;
 
    std::vector<Security::User> users;
 
@@ -1299,7 +1299,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
  bool SystemCatalog::DatabaseExists(const std::string &dbName) const{
       auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-      std::vector<Pages::RowReference> selectedDatabases;
+      DataStructures::Array<Pages::RowReference> selectedDatabases;
 
       auto* columnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
       auto* constantExpr = new Expressions::ConstantExpression(Value(dbName, static_cast<column_index_t>(SysDatabases::Name)));
@@ -1308,7 +1308,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
       sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
 
-      return !selectedDatabases.empty();
+      return !selectedDatabases.Empty();
 }
 
 Headers::DatabaseHeader SystemCatalog::SelectDatabase(const std::string &name) const{
@@ -1318,11 +1318,11 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabase(const std::string &name) c
   const Expressions::BinaryExpression binaryExpr(columnExpr, constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
   auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-  std::vector<Pages::RowReference> selectedDatabases;
+  DataStructures::Array<Pages::RowReference> selectedDatabases;
 
   sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
 
-  if (selectedDatabases.empty())
+  if (selectedDatabases.Empty())
     return {};
 
   return SystemCatalog::ToDatabaseHeader(selectedDatabases[0]);
@@ -1332,14 +1332,14 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int databaseId) 
   using namespace StorageTypes;
 
   Table* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-  std::vector<Pages::RowReference> selectedDatabases;
+  DataStructures::Array<Pages::RowReference> selectedDatabases;
 
   DataTypes::Indexing::Key key;
   key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
   sysDatabases->ClusteredIndexSeek(this->baseProperties, &selectedDatabases, key, nullptr);
 
-  if (selectedDatabases.empty())
+  if (selectedDatabases.Empty())
     return {};
 
   return SystemCatalog::ToDatabaseHeader(selectedDatabases[0]);
@@ -1347,14 +1347,14 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int databaseId) 
 
 std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databaseId) const{
      auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
-     std::vector<Pages::RowReference> selectedSchemas;
+     DataStructures::Array<Pages::RowReference> selectedSchemas;
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
     sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key, nullptr);
 
-    if (selectedSchemas.empty())
+    if (selectedSchemas.Empty())
       return {};
 
      std::vector<Headers::SchemaHeader> schemas;
@@ -1377,7 +1377,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
   }
 
   bool SystemCatalog::SchemaExists(const Int databaseId, const std::string &schema, int* schemaId) const{
-    std::vector<Pages::RowReference> selectedSchemas;
+    DataStructures::Array<Pages::RowReference> selectedSchemas;
 
     auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
 
@@ -1410,7 +1410,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
   }
 
   std::vector<Headers::TableHeader> SystemCatalog::SelectTables(const Int databaseId) const{
-    std::vector<Pages::RowReference> selectedTables;
+    DataStructures::Array<Pages::RowReference> selectedTables;
 
     auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
@@ -1419,11 +1419,11 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
 
     sysTablesPtr->ClusteredIndexSeek(this->baseProperties, &selectedTables, key, nullptr);
 
-    if (selectedTables.empty())
+    if (selectedTables.Empty())
       return {};
 
     std::vector<Headers::TableHeader> selectedTableHeaders;
-    selectedTableHeaders.reserve(selectedTables.size());
+    selectedTableHeaders.reserve(selectedTables.Size());
 
     for (const auto& row : selectedTables)
       selectedTableHeaders.emplace_back(SystemCatalog::ToTableHeader(row));
@@ -1455,7 +1455,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     if (!this->SchemaExists(databaseId, schema, &schemaId) && !schema.empty())
       return {};
 
-    std::vector<Pages::RowReference> selectedTables;
+    DataStructures::Array<Pages::RowReference> selectedTables;
     auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
     auto* leftColumnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId));
@@ -1475,14 +1475,14 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
 
     sysTablesPtr->ClusteredIndexSeek(this->baseProperties, &selectedTables, key, logicalExpr);
 
-    if (selectedTables.empty())
+    if (selectedTables.Empty())
       return {};
 
     return SystemCatalog::ToTableHeader(selectedTables[0]);
   }
 
    std::vector<Headers::ConstraintsHeader> SystemCatalog::SelectConstraints(const Int tableId) const{
-    std::vector<Pages::RowReference> selectedConstraints;
+    DataStructures::Array<Pages::RowReference> selectedConstraints;
     auto* constraintsTable = this->masterDb->OpenTable(CatalogTables::SysConstraints);
 
     DataTypes::Indexing::Key key;
@@ -1490,11 +1490,11 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
 
     constraintsTable->ClusteredIndexSeek(this->baseProperties, &selectedConstraints, key, nullptr);
 
-    if (selectedConstraints.empty())
+    if (selectedConstraints.Empty())
       return {};
 
      std::vector<Headers::ConstraintsHeader> selectedConstraintsHeader;
-    selectedConstraintsHeader.reserve(selectedConstraints.size());
+    selectedConstraintsHeader.reserve(selectedConstraints.Size());
 
     for (const auto& row : selectedConstraints) {
       const auto materializedRow = row.Materialize();
@@ -1517,7 +1517,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
   }
 
   Headers::ColumnHeader SystemCatalog::SelectColumnById(const Int tableId, const Int columnId) const{
-    std::vector<Pages::RowReference> selectedColumns;
+    DataStructures::Array<Pages::RowReference> selectedColumns;
     auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
     DataTypes::Indexing::Key key;
@@ -1526,14 +1526,14 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
 
     sysColumns->ClusteredIndexSeek(this->baseProperties, &selectedColumns, key, nullptr);
 
-    if (selectedColumns.empty())
+    if (selectedColumns.Empty())
       return {};
 
-    return SystemCatalog::ToColumnHeader(selectedColumns.front());
+    return SystemCatalog::ToColumnHeader(selectedColumns.Start());
   }
 
    std::vector<Headers::ColumnHeader> SystemCatalog::SelectColumns(const Int tableId) const{
-    std::vector<Pages::RowReference> selectedColumns;
+    DataStructures::Array<Pages::RowReference> selectedColumns;
     auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
     DataTypes::Indexing::Key key;
@@ -1541,11 +1541,11 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
 
     sysColumns->ClusteredIndexSeek(this->baseProperties, &selectedColumns, key, nullptr);
 
-    if (selectedColumns.empty())
+    if (selectedColumns.Empty())
       return {};
 
     std::vector<Headers::ColumnHeader> selectedColumnHeaders;
-    selectedColumnHeaders.reserve(selectedColumns.size());
+    selectedColumnHeaders.reserve(selectedColumns.Size());
 
     for (const auto& row : selectedColumns)
       selectedColumnHeaders.emplace_back(SystemCatalog::ToColumnHeader(row));
@@ -1574,7 +1574,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
       using namespace StorageTypes;
 
       Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
-      std::vector<Pages::RowReference> selectedIndexes;
+      DataStructures::Array<Pages::RowReference> selectedIndexes;
 
       DataTypes::Indexing::Key key;
       key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
@@ -1599,21 +1599,21 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     using namespace StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
-    std::vector<Pages::RowReference> selectedIndexes;
+    DataStructures::Array<Pages::RowReference> selectedIndexes;
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key, nullptr);
 
-    if(selectedIndexes.empty())
+    if(selectedIndexes.Empty())
       return {};
 
     auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
 
      std::vector<Headers::IndexHeader> selectedIndexHeaders;
 
-    auto header = SystemCatalog::ToIndexHeader(selectedIndexes.at(0));
+    auto header = SystemCatalog::ToIndexHeader(selectedIndexes[0]);
     header.columns = std::move(indexColumns);
 
     return header;
@@ -1623,14 +1623,14 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     using namespace StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
-    std::vector<Pages::RowReference> rows;
+    DataStructures::Array<Pages::RowReference> rows;
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
-    if(rows.empty())
+    if(rows.Empty())
       return {};
 
      std::vector<Headers::IndexColumnsHeader> indexColumns;
@@ -1662,14 +1662,14 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
       using namespace StorageTypes;
 
       Table* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
-      std::vector<Pages::RowReference> rows;
+      DataStructures::Array<Pages::RowReference> rows;
 
       DataTypes::Indexing::Key key;
       key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
       table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
-      if(rows.empty())
+      if(rows.Empty())
         return {};
 
        std::vector<Headers::IdentityColumnsHeader> columns;
@@ -1701,17 +1701,17 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     using namespace StorageTypes;
 
     Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
-    std::vector<Pages::RowReference> rows;
+    DataStructures::Array<Pages::RowReference> rows;
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
-    if(rows.empty())
+    if(rows.Empty())
       return {};
 
-     std::vector<Headers::ConstraintsColumnsHeader> constraintColumns;
+    std::vector<Headers::ConstraintsColumnsHeader> constraintColumns;
 
     for(const auto& row : rows)
       constraintColumns.emplace_back(SystemCatalog::ToConstraintsColumnsHeader(row));
@@ -1740,32 +1740,32 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     using namespace StorageTypes;
 
     Table* sysValues = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
-    std::vector<Pages::RowReference> rows;
+    DataStructures::Array<Pages::RowReference> rows;
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
     sysValues->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
-    if(rows.empty())
+    if(rows.Empty())
       return {};
 
-    return SystemCatalog::ToDefaultValuesHeader(rows.at(0));
+    return SystemCatalog::ToDefaultValuesHeader(rows[0]);
   }
 
   Headers::TableStatistics SystemCatalog::SelectTableStatisticsById(const Int tableId) const{
     auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysTableStats);
-    std::vector<Pages::RowReference> selectedStats;
+    DataStructures::Array<Pages::RowReference> selectedStats;
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
     sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedStats, key, nullptr);
 
-    if (selectedStats.empty())
+    if (selectedStats.Empty())
       return {};
 
-    return SystemCatalog::ToTableStatistics(selectedStats.front());
+    return SystemCatalog::ToTableStatistics(selectedStats.Start());
   }
 
   Headers::ColumnStatistics SystemCatalog::SelectColumnStatisticsById(
@@ -1773,17 +1773,17 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     const DataType columnType
   ) const{
     auto* sysColumnStats = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
-    std::vector<Pages::RowReference> selectedStats;
+    DataStructures::Array<Pages::RowReference> selectedStats;
 
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
     sysColumnStats->ClusteredIndexSeek(this->baseProperties, &selectedStats, key, nullptr);
 
-    if (selectedStats.empty())
+    if (selectedStats.Empty())
       return {};
 
-    return SystemCatalog::ToColumnStatistics(selectedStats.front(), columnType);
+    return SystemCatalog::ToColumnStatistics(selectedStats.Start(), columnType);
   }
 
   std::vector<Headers::ColumnHistograms> SystemCatalog::SelectColumnHistogramsByColumnId(
@@ -1801,7 +1801,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    std::vector<Pages::RowReference> rows;
+    DataStructures::Array<Pages::RowReference> rows;
     table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
     for (const auto& row : rows)
@@ -1818,7 +1818,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
    DataTypes::Indexing::Key key;
    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-   std::vector<Pages::RowReference> rows;
+   DataStructures::Array<Pages::RowReference> rows;
    table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
 
    for (const auto& row : rows)

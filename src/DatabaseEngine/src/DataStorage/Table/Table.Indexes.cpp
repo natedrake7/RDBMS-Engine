@@ -105,7 +105,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexSeekRange(
         const ExecutionProperties& properties,
-        std::vector<Pages::RowReference> *selectedRows,
+        DataStructures::Array<Pages::RowReference>* selectedRows,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
         const Expressions::Expression* expression
@@ -122,7 +122,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexSeek(
         const ExecutionProperties &properties,
-        std::vector<Pages::RowReference> *selectedRows,
+        DataStructures::Array<Pages::RowReference>* selectedRows,
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression
     ){
@@ -138,7 +138,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Pages::RowReference> *selectedRows,
+        DataStructures::Array<Pages::RowReference> *selectedRows,
         IndexState& state,
         const Expressions::Expression* expression
     ){
@@ -157,7 +157,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Pages::RowReference> *selectedRows,
+        DataStructures::Array<Pages::RowReference> *selectedRows,
         const Expressions::Expression *expression
     ){
         if (this->header.allocationPageId == INVALID_PAGE_ID)
@@ -175,7 +175,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::NonClusteredIndexScan(
         const ExecutionProperties& properties,
-        std::vector<Pages::RowReference> *selectedRows,
+        DataStructures::Array<Pages::RowReference> *selectedRows,
         const Int indexPos,
         IndexState& state,
         const Expressions::Expression *expression

@@ -14,9 +14,13 @@
 #include <string>
 #include <vector>
 
-#include "UnitTests/include/UnitTests.h"
-
-
+// #include <memory_resource>
+//
+// #include "UnitTests/include/UnitTests.h"
+//
+// struct QueryContext {
+//     std::pmr::monotonic_buffer_resource arena;
+// };
 //TODO
 //Add Decimal (division remains)
 //Add Alter table (test alter drop and rename)
@@ -134,7 +138,6 @@ int main(){
 
     server.Initialize("configuration.json");
 
-
     const auto* user = server.Authenticate("admin", "admin");
 
     if (user == nullptr) {
@@ -162,7 +165,6 @@ int main(){
     // const auto& databases = server.GetCatalog();
 
     serverRunning.store(false, std::memory_order_relaxed);
-
 
     connectionThread.join();
     statisticsThread.join();
@@ -195,13 +197,13 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
                 break;
             }
 
-            count += static_cast<int>(batchResult.rows.size());
+            count += batchResult.rows.Size();
             for (const auto& column : batchResult.columns)
                 std::cout << column << " || ";
 
             std::cout << std::endl;
 
-            for (const auto& row: batchResult.rows)
+            for (const auto& row : batchResult.rows)
                 std::cout << row;
         }
 
