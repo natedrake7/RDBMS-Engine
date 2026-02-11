@@ -26,6 +26,7 @@ namespace DatabaseEngine {
         const Pages::RowReference& rowPtr,
         const Int offSet
     ){
+
         DataTypes::Indexing::Key key;
         for (const auto ordinalPosition : indexedColumns){
             auto data = rowPtr.PartialMaterialize(&properties.allocator, ordinalPosition - offSet);

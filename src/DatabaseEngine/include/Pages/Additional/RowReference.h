@@ -3,6 +3,7 @@
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../DataStorage/Row.h"
 #include "../PageView.h"
+#include "DataStructures/Array.h"
 
 namespace Memory
 {
@@ -21,6 +22,8 @@ namespace Pages{
         page_offset_t dataOffset;
 
         bool isHeaderInitialized;
+
+        DataStructures::Array<RowReference> joinedRows;
     };
 
     struct RowReference{
@@ -44,5 +47,7 @@ namespace Pages{
         [[nodiscard]] QueryResult Materialize()const;
         [[nodiscard]] Value PartialMaterialize(const Memory::Allocator* allocator, column_index_t columnIndex)const;
         [[nodiscard]] Int Size()const;
+
+        void Join(const RowReference& other) const;
     };
 }

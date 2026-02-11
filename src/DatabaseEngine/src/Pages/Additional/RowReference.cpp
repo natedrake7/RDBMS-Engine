@@ -103,4 +103,8 @@ namespace Pages{
        const auto pageSlot = this->pageView.GetSlotDirectory(this->indexPosition);
        return pageSlot.GetSize();
     }
+
+    void RowReference::Join(const RowReference& other) const{
+       this->lazyState->joinedRows.Push(other);
+    }
 }

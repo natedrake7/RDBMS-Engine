@@ -99,6 +99,8 @@
 //Implement full Forward Ptr Functionality
 
 //add peek header functionality on page rows to delay materialization
+//TODO make join usable again
+//maybe use an allocator even for execution nodes etc...
 
 int main(){
     // Tests::InitializeTester();
