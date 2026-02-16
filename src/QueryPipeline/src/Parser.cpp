@@ -15,8 +15,7 @@
 #include <SQLLexer.h>
 
 
-namespace QueryPipeline
-{
+namespace QueryPipeline{
     static Dictionary<std::type_index, std::function<Statements::Statement*(const std::any&)>> handlers = {
     {
         typeid(Statements::CreateUserStatement*),
@@ -104,7 +103,6 @@ namespace QueryPipeline
      }
 
     std::vector<Statements::Statement*> Parser::CreateStatement(const std::any &queries, const DataTypes::Guid& sessionId){
-
         std::vector<Statements::Statement*> statements;
 
         const auto castQueries = std::any_cast<std::vector<std::any>>(queries);
@@ -230,6 +228,7 @@ namespace QueryPipeline
         if (result.status.hasError)
             return result;
 
+        result.cursors.reserve(statements.size());
         for (auto* statement: statements) {
             auto* physicalPlan = Parser::BuildExecutionPlan(result, statement);
 
@@ -261,20 +260,15 @@ namespace QueryPipeline
     ParserResult Parser::Execute(Cursor* cursor){
         ParserResult result;
         //return the cursor to allow the thread to fetch more
-        auto* executionResult = cursor->fetchNextBatch();
+        auto executionResult = cursor->FetchNextBatch();
 
-        if (executionResult == nullptr) {
-            result.status  = {false, "Command completed Successfully"};
+        if (!executionResult.IsOk()){
+            result.status  = {true, executionResult.message};
             return result;
         }
 
-        if (!executionResult->IsOk()){
-            result.status  = {true, executionResult->message};
-            return result;
-        }
-
-        result.columns = std::move(executionResult->displayColumnNames);
-        result.rows = std::move(executionResult->results);
+        result.columns = std::move(executionResult.displayColumnNames);
+        result.rows = std::move(executionResult.results);
 
         return result;
     }

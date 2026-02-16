@@ -1,3 +1,4 @@
+#include "ValidationMessages.h"
 #include "../../../DatabaseEngine/include/SystemDatabases/CatalogSchema.h"
 #include "../../include/PhysicalPlan.h"
 #include "../../../Server/include/Server.h"
@@ -15,14 +16,14 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult * PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
+  ExecutionResult PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
 
     if (this->session == nullptr || this->session->user == nullptr)
-      return new ExecutionResult{
+      return ExecutionResult(
         Errors::RuntimeError::Error,
-        "Failed to retrieve user session"
-      };
+        Messages::FAILED_TO_RETRIEVE_USER_SESSION
+      );
 
     //if add occurs in a different index pos chaos ensues
     const auto columnResult =
@@ -41,9 +42,9 @@ namespace QueryPipeline::PhysicalPlan{
           );
 
       if (columnResult.code != Errors::RuntimeError::Ok) {
-        auto* result = new ExecutionResult();
-        result->code = columnResult.code;
-        result->message = columnResult.message;
+        auto result = ExecutionResult();
+        result.code = columnResult.code;
+        result.message = columnResult.message;
         return result;
       }
 
@@ -80,7 +81,7 @@ namespace QueryPipeline::PhysicalPlan{
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
     tablePtr->RetrieveDefaultValuesFromCatalog();
 
-    return nullptr;
+    return ExecutionResult();
   }
 
   PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::DropColumn *column)
@@ -91,14 +92,14 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult * PhysicalDropColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+  ExecutionResult PhysicalDropColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    auto result = ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)
-      return new ExecutionResult{
+      return ExecutionResult(
         Errors::RuntimeError::Error,
-        "Failed to retrieve user session"
-      };
+        Messages::FAILED_TO_RETRIEVE_USER_SESSION
+      );
 
     //update master db set isDeleted to 1
     //remove it from table, remove it from rows. Adjust column indexes if need be.
@@ -119,20 +120,20 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult * PhysicalRenameColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+  ExecutionResult PhysicalRenameColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    auto result = ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)
-      return new ExecutionResult{
+      return ExecutionResult(
         Errors::RuntimeError::Error,
-        "Failed to retrieve user session"
-      };
+        Messages::FAILED_TO_RETRIEVE_USER_SESSION
+      );
 
     const auto* db = this->server->UseDatabase(this->table->databaseId);
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    std::vector updates = {
+    const std::vector updates = {
       Value(this->column->newName.name, static_cast<column_index_t>(DatabaseEngine::SysColumns::Name)),
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
       Value(this->session->user->name, static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
@@ -153,16 +154,16 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult * PhysicalAlterColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* result = new ExecutionResult();
+  ExecutionResult PhysicalAlterColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    auto result = ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)
-      return new ExecutionResult{
+      return ExecutionResult(
         Errors::RuntimeError::Error,
-        "Failed to retrieve user session"
-      };
+        Messages::FAILED_TO_RETRIEVE_USER_SESSION
+      );
 
-    std::vector updates = {
+    const std::vector updates = {
       Value(this->column->type.size, static_cast<column_index_t>(DatabaseEngine::SysColumns::RecordSize)),
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
       Value(this->session->user->name, static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),

@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "src/Systemic/include/Memory/Functions.h"
+
 // #include <memory_resource>
 //
 // #include "UnitTests/include/UnitTests.h"
@@ -103,6 +105,11 @@
 //maybe use an allocator even for execution nodes etc...
 
 int main(){
+    // const auto memoryInfo = Memory::GetOSMemoryInfo();
+    //
+    // memoryInfo.Log(std::cout, Memory::MemoryLogLevel::GigaBytes);
+    //
+    // return 0;
     // Tests::InitializeTester();
     // Tests::RunTest(&Tests::IndexPageUpdate);
     //
@@ -190,7 +197,7 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
 
     auto count = 0;
     for (auto* cursor : parserResult.cursors) {
-        while (cursor->canFetch()) {
+        while (cursor->CanFetch()) {
             auto batchResult = QueryPipeline::Parser::Execute(cursor);
 
             if (batchResult.status.hasError) {

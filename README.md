@@ -14,6 +14,35 @@ The project is open-source and welcomes contributions from the community.
 
 The Engine is still under development.
 
+## Build dependencies (vcpkg)
+
+This project uses CMake `find_package(... CONFIG REQUIRED)` for:
+
+- `antlr4-runtime`
+- `nlohmann-json`
+- `argon2` (exports CMake target `unofficial::argon2::libargon2`)
+
+### Windows setup
+
+1) Install vcpkg (one-time):
+
+- Clone: `git clone https://github.com/microsoft/vcpkg C:\vcpkg`
+- Bootstrap: `C:\vcpkg\bootstrap-vcpkg.bat`
+- Set env var `VCPKG_ROOT=C:\vcpkg`
+
+2) Install packages (MSVC triplet):
+
+- `C:\vcpkg\vcpkg.exe install antlr4-runtime nlohmann-json argon2 --triplet x64-windows`
+
+(`clang-cl` uses the MSVC ABI, so `x64-windows` is the expected triplet for this project.)
+
+3) Configure CMake with the vcpkg toolchain:
+
+- If you use the provided `CMakeSettings.json`, it will pick up vcpkg automatically via `VCPKG_ROOT`.
+- Otherwise pass: `-DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake`
+
+Note: if you already configured a build directory without vcpkg, delete the build folder (or choose a fresh one) and re-configure so the toolchain is applied.
+
 ## Currently Supported Statements
 
 1. **[SELECT](#select-query)**

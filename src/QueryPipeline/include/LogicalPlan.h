@@ -1,5 +1,4 @@
 #pragma once
-#include "../../DatabaseEngine/include/Database.h"
 #include "PhysicalPlan.h"
 
 namespace QueryPipeline {

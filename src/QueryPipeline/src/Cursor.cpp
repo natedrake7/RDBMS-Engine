@@ -9,15 +9,13 @@ namespace QueryPipeline {
 
     Cursor::~Cursor(){ delete this->plan; }
 
-    PhysicalPlan::ExecutionResult* Cursor::fetchNextBatch(){
-        auto* result = this->plan->Execute(this->properties);
-
-        this->canFetchMore = result != nullptr && result->canFetchMore;
-
+    PhysicalPlan::ExecutionResult Cursor::FetchNextBatch(){
+        auto result = this->plan->Execute(this->properties);
+        this->canFetchMore = result.canFetchMore;
         return result;
     }
 
-    bool Cursor::canFetch() const{ return this->canFetchMore; }
+    bool Cursor::CanFetch() const{ return this->canFetchMore; }
 
     const DatabaseEngine::Snapshot& Cursor::GetSnapshot() const{ return this->properties.snapshot; }
 

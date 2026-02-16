@@ -2,22 +2,21 @@
 #include "../../include/PhysicalPlan.h"
 
 namespace QueryPipeline::PhysicalPlan {
-  ExecutionResult* PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
+  ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    const ExecutionResult* leftResult
-  ) const
-  {
-    auto* result = new ExecutionResult();
+    const ExecutionResult& leftResult
+  ) const{
+    auto result = ExecutionResult();
 
     Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties);
     bool canFetchMore = true;
 
     while (canFetchMore){
-      auto* rightResult = this->right->Execute(properties);
-      canFetchMore = rightResult->canFetchMore;
+      auto rightResult = this->right->Execute(properties);
+      canFetchMore = rightResult.canFetchMore;
 
-      for (auto& outerRow: leftResult->rows) {
-        for (auto& innerRow: rightResult->rows) {
+      for (auto& outerRow: leftResult.rows) {
+        for (auto& innerRow: rightResult.rows) {
 
           context.outerRow = &outerRow;
           context.innerRow = &innerRow;
@@ -25,11 +24,9 @@ namespace QueryPipeline::PhysicalPlan {
             continue;
 
           outerRow.Join(innerRow);
-          result->rows.Push(outerRow);
+          result.rows.Push(outerRow);
         }
       }
-
-      delete rightResult;
     }
 
     return result;
@@ -47,85 +44,81 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
 
-  ExecutionResult * PhysicalNestedLoopInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* leftResult = this->left->Execute(properties);
-
-    auto* result = this->ExecuteBatchJoin(properties, leftResult);
-
-    result->canFetchMore = leftResult->canFetchMore;
-
-    delete leftResult;
+  ExecutionResult PhysicalNestedLoopInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    const auto leftResult = this->left->Execute(properties);
+    auto result = this->ExecuteBatchJoin(properties, leftResult);
+    result.canFetchMore = leftResult.canFetchMore;
     return result;
   }
 
-  ExecutionResult* PhysicalMergeInnerJoin::ExecuteBatchJoin(
+  ExecutionResult PhysicalMergeInnerJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    ExecutionResult* leftResult
+    ExecutionResult& leftResult
   ) const
   {
     using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
 
-    auto* result = new ExecutionResult();
+    auto result = ExecutionResult();
 
     Expressions::EvaluationContext context(
       Expressions::EvaluationContext::EvaluationContextType::Join,
       properties
     );
 
-    auto* rightResult = this->right->Execute(properties);
+    auto rightResult = this->right->Execute(properties);
 
-    Int leftIndex = 0;
-    Int rightIndex = 0;
-
-    const auto leftRowsCount = leftResult->rows.Size();
-    const auto rightRowsCount = rightResult->rows.Size();
-
-    const auto outerRowSize = leftResult->columns.Size();
-
-    while (leftIndex < leftRowsCount){
-      auto& outerRow = leftResult->rows[leftIndex];
-      const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
-
-      while (rightIndex < rightRowsCount){
-        const auto& innerRow = rightResult->rows[rightIndex];
-
-        const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
-
-        const auto comparison = leftKey.CompareCompositeKeys(rightKey);
-
-        if (comparison == CompOperator::Less)
-          break;
-
-        if (comparison == CompOperator::Greater){
-          rightIndex++;
-          continue;
-        }
-
-        outerRow.Join(&innerRow);
-        result->rows.push_back(outerRow);
-
-        rightIndex++;
-      }
-
-      if (rightIndex >= rightRowsCount
-          && leftIndex < leftRowsCount
-          && rightResult->canFetchMore
-      ){
-        delete rightResult;
-        rightResult = this->right->Execute(properties);
-        rightIndex = 0;
-      }
-
-      leftIndex++;
-    }
-
-    if (rightIndex < rightRowsCount){
-      const auto& lastUsedRow = rightResult->rows[rightIndex];
-      this->right->UpdateScanState(lastUsedRow.GetId());
-    }
-
-    delete rightResult;
-    result->canFetchMore = leftResult->canFetchMore;
+    // Int leftIndex = 0;
+    // Int rightIndex = 0;
+    //
+    // const auto leftRowsCount = leftResult->rows.Size();
+    // const auto rightRowsCount = rightResult->rows.Size();
+    //
+    // const auto outerRowSize = leftResult->columns.Size();
+    //
+    // while (leftIndex < leftRowsCount){
+    //   auto& outerRow = leftResult->rows[leftIndex];
+    //   const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
+    //
+    //   while (rightIndex < rightRowsCount){
+    //     const auto& innerRow = rightResult->rows[rightIndex];
+    //
+    //     const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
+    //
+    //     const auto comparison = leftKey.CompareCompositeKeys(rightKey);
+    //
+    //     if (comparison == CompOperator::Less)
+    //       break;
+    //
+    //     if (comparison == CompOperator::Greater){
+    //       rightIndex++;
+    //       continue;
+    //     }
+    //
+    //     outerRow.Join(&innerRow);
+    //     result->rows.push_back(outerRow);
+    //
+    //     rightIndex++;
+    //   }
+    //
+    //   if (rightIndex >= rightRowsCount
+    //       && leftIndex < leftRowsCount
+    //       && rightResult->canFetchMore
+    //   ){
+    //     delete rightResult;
+    //     rightResult = this->right->Execute(properties);
+    //     rightIndex = 0;
+    //   }
+    //
+    //   leftIndex++;
+    // }
+    //
+    // if (rightIndex < rightRowsCount){
+    //   const auto& lastUsedRow = rightResult->rows[rightIndex];
+    //   this->right->UpdateScanState(lastUsedRow.GetId());
+    // }
+    //
+    // delete rightResult;
+    // result->canFetchMore = leftResult->canFetchMore;
 
     return result;
   }
@@ -145,20 +138,17 @@ namespace QueryPipeline::PhysicalPlan {
     delete this->expression;
   }
 
-  ExecutionResult* PhysicalMergeInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* leftResult = this->left->Execute(properties);
+  ExecutionResult PhysicalMergeInnerJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    auto leftResult = this->left->Execute(properties);
+    auto result = this->ExecuteBatchJoin(properties, leftResult);
 
-    auto* result = this->ExecuteBatchJoin(properties, leftResult);
-
-    result->canFetchMore = leftResult->canFetchMore;
-
-    delete leftResult;
+    result.canFetchMore = leftResult.canFetchMore;
     return result;
   }
 
-  ExecutionResult* PhysicalMergeLeftJoin::ExecuteBatchJoin(
+  ExecutionResult PhysicalMergeLeftJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    ExecutionResult* leftResult
+    ExecutionResult& leftResult
   ) const{
     // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
     //
@@ -203,7 +193,7 @@ namespace QueryPipeline::PhysicalPlan {
     //     hasMatch = true;
     //
     //     outerRow.Join(&innerRow);
-    //     result->rows.push_back(outerRow);
+    //     result.rows.push_back(outerRow);
     //
     //     rightIndex++;
     //   }
@@ -251,20 +241,17 @@ namespace QueryPipeline::PhysicalPlan {
     delete this->expression;
   }
 
-  ExecutionResult* PhysicalMergeLeftJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* leftResult = this->left->Execute(properties);
+  ExecutionResult PhysicalMergeLeftJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    auto leftResult = this->left->Execute(properties);
+    auto result = this->ExecuteBatchJoin(properties, leftResult);
 
-    auto* result = this->ExecuteBatchJoin(properties, leftResult);
-
-    result->canFetchMore = leftResult->canFetchMore;
-
-    delete leftResult;
+    result.canFetchMore = leftResult.canFetchMore;
     return result;
   }
 
-  ExecutionResult* PhysicalMergeFullJoin::ExecuteBatchJoin(
+  ExecutionResult PhysicalMergeFullJoin::ExecuteBatchJoin(
     const DatabaseEngine::ExecutionProperties& properties,
-    ExecutionResult* leftResult
+    ExecutionResult& leftResult
   ) const{
     // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
     //
@@ -358,14 +345,11 @@ namespace QueryPipeline::PhysicalPlan {
     delete this->expression;
   }
 
-  ExecutionResult* PhysicalMergeFullJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
-    auto* leftResult = this->left->Execute(properties);
+  ExecutionResult PhysicalMergeFullJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
+    auto leftResult = this->left->Execute(properties);
+    auto result = this->ExecuteBatchJoin(properties, leftResult);
 
-    auto* result = this->ExecuteBatchJoin(properties, leftResult);
-
-    result->canFetchMore = leftResult->canFetchMore;
-
-    delete leftResult;
+    result.canFetchMore = leftResult.canFetchMore;
     return result;
   }
 
@@ -380,7 +364,7 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  ExecutionResult * PhysicalNestedLoopLeftJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
+  ExecutionResult PhysicalNestedLoopLeftJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
       // auto* result = new ExecutionResult();
       //
       // auto* leftResult = this->left->Execute(properties);
@@ -435,7 +419,7 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  ExecutionResult * PhysicalNestedLoopFullJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
+  ExecutionResult PhysicalNestedLoopFullJoin::Execute(const DatabaseEngine::ExecutionProperties& properties){
       // auto* result = new ExecutionResult();
       //
       // auto* leftResult = this->left->Execute(properties);

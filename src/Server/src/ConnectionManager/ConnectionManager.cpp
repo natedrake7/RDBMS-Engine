@@ -382,10 +382,10 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket,
     bool hasError = false;
 
     for (auto* cursor : parserResult.cursors) {
-      while (cursor->canFetch()) {
+      while (cursor->CanFetch()) {
         auto batchResult = QueryPipeline::Parser::Execute(cursor);
 
-        bool hasMore = !batchResult.status.hasError && cursor->canFetch();
+        bool hasMore = !batchResult.status.hasError && cursor->CanFetch();
 
         Network::QueryResponseProtocol response(batchResult.status.hasError, hasMore, batchResult.status.message, batchResult.columns, batchResult.rows);
         ConnectionManager::SendToClient(socket, &response);

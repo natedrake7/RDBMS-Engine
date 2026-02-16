@@ -1,4 +1,12 @@
 ﻿cmake_minimum_required(VERSION 3.10)
+
+# --- vcpkg integration (Windows/Linux/macOS) ---
+# If VCPKG_ROOT is set and no toolchain was provided, use vcpkg's toolchain file.
+# Note: This must run before project() on a fresh build directory to take effect.
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND DEFINED ENV{VCPKG_ROOT})
+        set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "vcpkg toolchain file")
+endif()
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -78,6 +86,7 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
         src/Systemic/src/Memory/Allocator.cpp
+        src/Systemic/src/Memory/Functions.cpp
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)
