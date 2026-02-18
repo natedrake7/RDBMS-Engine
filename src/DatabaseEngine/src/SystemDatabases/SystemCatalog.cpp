@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include "DataStorage/Table.h"
+#include "Managers/GlobalMemoryManager.h"
 
 namespace Headers {
  void from_json(const nlohmann::json& j, sysColumn& c) {
@@ -34,46 +35,47 @@ namespace Headers {
 }
 
 namespace DatabaseEngine {
- SystemCatalog::SystemCatalog() {
-    this->masterDb = nullptr;
- }
+    SystemCatalog::SystemCatalog() {
+        this->masterDb = nullptr;
+    }
 
- SystemCatalog::~SystemCatalog() = default;
+    SystemCatalog::~SystemCatalog() = default;
 
- void SystemCatalog::ReadConfiguration(const std::string &configPath) {
-  std::ifstream file(configPath);
+    void SystemCatalog::ReadConfiguration(const std::string_view configPath) {
+        std::ifstream file(configPath.data());
 
-  if (!file.is_open())
-   throw std::runtime_error("System Tables file: " + configPath + " could not be opened");
+        if (!file.is_open())
+            throw std::runtime_error("System Tables file: " + std::string(configPath) + " could not be opened");
 
-  nlohmann::json jsonFile;
+        nlohmann::json jsonFile;
 
-  try {
-   file >> jsonFile;
-  }
-  catch (std::exception &e)
-  {
-   throw std::runtime_error(e.what());
-  }
+        try {
+            file >> jsonFile;
+        }
+        catch (std::exception &e)
+        {
+            throw std::runtime_error(e.what());
+        }
 
-  this->sysDbName = jsonFile.at("db_name");
-  this->sysDbPath = jsonFile.at("db_path");
+        this->sysDbName = jsonFile.at("db_name");
+        this->sysDbPath = jsonFile.at("db_path");
 
-  jsonFile.at("tables").get_to(this->sysTables);
- }
+        jsonFile.at("tables").get_to(this->sysTables);
+    }
 
- bool SystemCatalog::CatalogExists()const { return std::filesystem::exists(this->sysDbPath); }
+    bool SystemCatalog::CatalogExists()const{
+        return std::filesystem::exists(static_cast<std::filesystem::path>(this->sysDbPath));
+    }
 
- void SystemCatalog::UseCatalogDatabase() {
-  this->masterDb = new Database(this->sysDbName, this->sysTables);
-  this->masterDb->GetColumnsHeaders();
-  this->masterDb->GetIdentityColumns();
- }
+    void SystemCatalog::UseCatalogDatabase() {
+        this->masterDb = AllocateMiscEntity<Database>(this->sysDbName, this->sysTables);
+        this->masterDb->GetColumnsHeaders();
+        this->masterDb->GetIdentityColumns();
+    }
 
  void SystemCatalog::CreateCatalogDatabase() {
   CreateDatabase(this->sysDbName);
-
-  this->masterDb = new Database(this->sysDbName, true);
+  this->masterDb = AllocateMiscEntity<Database>(this->sysDbName, true);
 
   for (int i = 0;i < this->sysTables.size(); i++) {
    const auto& tableHeader = this->sysTables[i];
@@ -103,7 +105,12 @@ namespace DatabaseEngine {
      primaryKeyIndexes.push_back(columnIndex);
     }
 
-    auto* columnPtr = new StorageTypes::Column(columnHeader.name, columnType, columnSize, columnIndex, columnHeader.nullable);
+    auto* columnPtr = AllocateMiscEntity<StorageTypes::Column>(
+        columnHeader.name,
+        columnType, columnSize,
+        columnIndex,
+        columnHeader.nullable
+    );
 
     if (columnHeader.hasIdentity)
      columnPtr->SetIdentity(Headers::IdentityColumnsHeader(tableHeader.id, columnIndex, 1, 1, 1, true, 10000));
@@ -149,7 +156,7 @@ namespace DatabaseEngine {
           databaseId,
           schemaId,
           table.name,
-          static_cast<int16_t>(i),
+          static_cast<SmallInt>(i),
           true
         );
 
@@ -564,7 +571,7 @@ namespace DatabaseEngine {
 
   Database * SystemCatalog::GetDatabase() const{ return this->masterDb; }
 
-  bool SystemCatalog::Initialize(const std::string &configPath) {
+  bool SystemCatalog::Initialize(const std::string_view configPath) {
     this->ReadConfiguration(configPath);
 
     if (this->CatalogExists()) {
@@ -648,7 +655,7 @@ namespace DatabaseEngine {
       Constants::ADMIN_PERMISSIONS
     );
 
-   roles.push_back(new Security::Role(
+   roles.push_back(AllocateMiscEntity<Security::Role>(
         result.primaryKey.AsInt(),
         admin,
         Constants::ADMIN_PERMISSIONS,
@@ -661,7 +668,7 @@ namespace DatabaseEngine {
       Constants::DB_OWNER_PERMISSIONS
     );
 
-   roles.push_back(new Security::Role(
+   roles.push_back(AllocateMiscEntity<Security::Role>(
         result.primaryKey.AsInt(),
         dbOwner,
         Constants::DB_OWNER_PERMISSIONS,
@@ -674,7 +681,7 @@ namespace DatabaseEngine {
       Constants::DB_WRITER_PERMISSIONS
     );
 
-     roles.push_back(new Security::Role(
+     roles.push_back(AllocateMiscEntity<Security::Role>(
        result.primaryKey.AsInt(),
        dbWriter,
        Constants::DB_WRITER_PERMISSIONS,
@@ -687,7 +694,7 @@ namespace DatabaseEngine {
       Constants::DB_READER_PERMISSIONS
     );
 
-    roles.push_back(new Security::Role(
+    roles.push_back(AllocateMiscEntity<Security::Role>(
       result.primaryKey.AsInt(),
       dbReader,
       Constants::DB_READER_PERMISSIONS,
@@ -700,7 +707,7 @@ namespace DatabaseEngine {
       Constants::GUEST_PERMISSIONS
     );
 
-    roles.push_back(new Security::Role(
+    roles.push_back(AllocateMiscEntity<Security::Role>(
        result.primaryKey.AsInt(),
        guest,
        Constants::GUEST_PERMISSIONS,
@@ -1189,9 +1196,9 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     const std::string lastModifiedBy = "system";
 
-    std::vector fields = {
+    const std::vector fields = {
       Value(roleName, static_cast<column_index_t>(SysRoles::RoleName)),
-      Value(static_cast<int>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
+      Value(static_cast<Int>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
       Value(isSystem, static_cast<column_index_t>(SysRoles::IsSystemRole)),
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysRoles::CreatedAt)),
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysRoles::LastModifiedAt)),

@@ -19,7 +19,6 @@ namespace DatabaseEngine {
 
 namespace DatabaseEngine {
   class Database;
-
 }
 
 namespace Network {
@@ -45,7 +44,7 @@ namespace Network {
 
   public:
     [[nodiscard]] static Server& Get();
-    void Initialize(const std::string& configPath);
+    void Initialize(std::string_view configPath);
     void Shutdown();
 
     //Security Functions

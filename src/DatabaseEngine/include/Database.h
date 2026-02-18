@@ -45,7 +45,7 @@ class Database {
     std::string fileExtension;
     std::string systemFilename;
 
-    Dictionary<int32_t, table_id_t> tableIdsDictionary;
+    Dictionary<Int, table_id_t> tableIdsDictionary;
 
     std::vector<StorageTypes::Table *> tables;
 

@@ -12,7 +12,7 @@ namespace DatabaseEngine {
         return instance;
     }
 
-    void VersionDatabase::Initialize(const std::string& configPath){
+    void VersionDatabase::Initialize(const std::string_view configPath){
         this->ReadConfiguration(configPath);
         this->PopulateFilenames();
 
@@ -31,11 +31,11 @@ namespace DatabaseEngine {
 
     VersionDatabase::~VersionDatabase() = default;
 
-    void VersionDatabase::ReadConfiguration(const std::string& configPath){
-        std::ifstream file(configPath);
+    void VersionDatabase::ReadConfiguration(const std::string_view configPath){
+        std::ifstream file(configPath.data());
 
         if (!file.is_open())
-            throw std::runtime_error("System Tables file: " + configPath + " could not be opened");
+            throw std::runtime_error("System Tables file: " + std::string(configPath.data()) + " could not be opened");
 
         nlohmann::json jsonFile;
 

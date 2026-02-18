@@ -47,7 +47,7 @@ namespace Network {
     return instance;
   }
 
-  void Server::Initialize(const std::string &configPath){
+  void Server::Initialize(const std::string_view configPath){
     this->temporaryDatabase = &DatabaseEngine::TemporaryDatabase::Get();
     this->temporaryDatabase->Initialize(configPath);
 

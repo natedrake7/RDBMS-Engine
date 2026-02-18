@@ -23,7 +23,7 @@ namespace DatabaseEngine {
     std::vector<Headers::sysTable> sysTables;
     ExecutionProperties baseProperties;
 
-    void ReadConfiguration(const std::string& configPath);
+    void ReadConfiguration(std::string_view configPath);
     [[nodiscard]] bool CatalogExists()const;
     void UseCatalogDatabase();
     void CreateCatalogDatabase();
@@ -63,7 +63,7 @@ namespace DatabaseEngine {
 
       Database* GetDatabase()const;
 
-      [[nodiscard]]bool Initialize(const std::string& configPath);
+      [[nodiscard]]bool Initialize(std::string_view configPath);
       void Shutdown();
 
       std::vector<Headers::DatabaseHeader> RetrieveCatalog()const;

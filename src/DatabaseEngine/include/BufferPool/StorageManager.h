@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "BufferPoolMemory.h"
+#include "BufferPoolMemoryManager.h"
 #include "FileManager.h"
 #include "Pages/AllocationPageView.h"
 #include "Pages/GlobalAllocationPageView.h"
@@ -25,10 +25,10 @@ namespace Storage {
     class StorageManager final{
         Int capacity;
         Int clockHand;
-        std::vector<Pages::Frame*> frames;
+        // std::vector<Pages::Frame*> frames;
         Dictionary<std::string, Int> pageTable; // pageId -> frame index
 
-        DatabaseEngine::BufferPoolMemory memoryPool;
+        DatabaseEngine::BufferPoolMemoryManager* _memoryManager;
 
         mutable MultiThreading::ReadWriteMutex clockMutex_; // protects eviction sweep
         mutable MultiThreading::ReadWriteMutex tableMutex; // protects pageTable_ and frame insertion

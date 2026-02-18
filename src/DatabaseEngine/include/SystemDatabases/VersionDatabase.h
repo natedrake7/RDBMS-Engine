@@ -38,7 +38,7 @@ namespace DatabaseEngine{
     VersionDatabase();
     ~VersionDatabase();
 
-    void ReadConfiguration(const std::string& configPath);
+    void ReadConfiguration(std::string_view configPath);
 
     [[nodiscard]] bool VersionDatabaseExists()const;
 
@@ -50,7 +50,7 @@ namespace DatabaseEngine{
 
       static VersionDatabase& Get();
 
-      void Initialize(const std::string& configPath);
+      void Initialize(std::string_view configPath);
 
       Errors::RuntimeStatus InsertRow(
         const Pages::RawRowReference& rowRef,

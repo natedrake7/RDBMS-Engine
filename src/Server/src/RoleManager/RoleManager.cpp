@@ -5,19 +5,17 @@
 #include "../../../Systemic/include/Security/Security.h"
 
 #include <iostream>
-#include <ranges>
-
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace Security {
   RoleManager::RoleManager() = default;
 
   RoleManager::~RoleManager(){
-   for (const auto &role: this->roles | std::views::values)
-     delete role;
+   // for (const auto &role: this->roles | std::views::values)
+   //   delete role;
   }
 
-  const Role * RoleManager::GetRole(const Int roleId)const{
+  const Role* RoleManager::GetRole(const Int roleId)const{
     Role *role = nullptr;
 
     MultiThreading::ReaderGuard guard(&this->mutex);
@@ -28,18 +26,18 @@ namespace Security {
   }
 
   const Role* RoleManager::GetRole(const std::string &name)const{
-    Role *role = nullptr;
+    Role* role = nullptr;
 
     MultiThreading::ReaderGuard guard(&this->mutex);
 
-    int roleId = -1;
+    auto roleId = -1;
     this->rolesNames.TryGetValue(name, roleId);
     this->roles.TryGetValue(roleId, role);
 
     return role;
   }
 
-  bool RoleManager::AddRole(const std::string &name, Role *role){
+  bool RoleManager::AddRole(const std::string &name, Role* role){
     MultiThreading::WriterGuard guard(&this->mutex);
 
     if (this->rolesNames.Contains(name)){
@@ -58,7 +56,7 @@ namespace Security {
 
     Role *role = nullptr;
 
-    int32_t roleId = -1;
+    Int roleId = -1;
     if (!this->rolesNames.TryGetValue(name, roleId))
       return false;
 

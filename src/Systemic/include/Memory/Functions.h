@@ -9,14 +9,18 @@ namespace Memory{
         GigaBytes = 3
     };
 
+    constexpr Int BYTES_TO_KB = 1024;
+    constexpr Int BYTES_TO_MB = 1024 * 1024;
+    constexpr Int BYTES_TO_GB = 1024 * 1024 * 1024;
+
     struct OSMemoryInfo{
-        BigInt totalPhysicalBytes;
-        BigInt availablePhysicalBytes;
-        BigInt totalVirtualBytes;
-        BigInt availableVirtualBytes;
+        UnsignedBigInt totalPhysicalBytes;
+        UnsignedBigInt availablePhysicalBytes;
+        UnsignedBigInt totalVirtualBytes;
+        UnsignedBigInt availableVirtualBytes;
 
         OSMemoryInfo();
-        std::ostream& Log(std::ostream& os, MemoryLogLevel level) const;
+        void Log(std::ostream& os, MemoryLogLevel level) const;
     };
 
     OSMemoryInfo GetOSMemoryInfo();

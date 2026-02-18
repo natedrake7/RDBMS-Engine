@@ -18,7 +18,7 @@ namespace DatabaseEngine {
         Database* db;
         std::atomic<int> currentOrdinalPosition;
 
-        void ReadConfiguration(const std::string& configPath);
+        void ReadConfiguration(std::string_view configPath);
         TemporaryDatabase();
         ~TemporaryDatabase();
 
@@ -34,7 +34,7 @@ namespace DatabaseEngine {
             void operator=(TemporaryDatabase&&) = delete;
 
             static TemporaryDatabase &Get();
-            void Initialize(const std::string& configPath);
+            void Initialize(std::string_view configPath);
 
             [[nodiscard]] StorageTypes::Table* CreateTable();
             [[nodiscard]] StorageTypes::Table* OpenTable(Int tableId) const;

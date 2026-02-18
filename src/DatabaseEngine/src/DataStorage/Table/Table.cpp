@@ -19,6 +19,7 @@
 #include "../../../include/Database.h"
 #include "DataStructures/PolymorphicArray.h"
 #include "Logger/WriteAheadLogger.h"
+#include "Managers/GlobalMemoryManager.h"
 
 namespace DatabaseEngine::StorageTypes {
       TableHeader::TableHeader() {
@@ -235,8 +236,10 @@ namespace DatabaseEngine::StorageTypes {
         this->header.ordinalPosition = ordinalPosition;
         this->clusteredIndexedTree = nullptr;
 
-        for (int i = 0;i < systemHeader.columns.size(); i++)
-            this->AddColumn(new Column(systemHeader.columns[i], i,  this));
+        for (int i = 0;i < systemHeader.columns.size(); i++){
+            auto* column = AllocateMiscEntity<Column>(systemHeader.columns[i], i,  this);
+            this->AddColumn(column);
+        }
 
         this->PopulateClusteredIndexCache(this->header.clusteredIndex);
     }
@@ -254,7 +257,7 @@ namespace DatabaseEngine::StorageTypes {
         // headerPage.SetTableHeader(this->header.ordinalPosition, this->header);
 
         for (const auto* column : this->columns)
-            delete column;
+            DeallocateMiscEntity(column);
     }
 
     Errors::RuntimeStatus Table::BatchInsert(

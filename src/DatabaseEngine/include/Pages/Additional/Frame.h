@@ -16,20 +16,8 @@ namespace DatabaseEngine::StorageTypes{
 
 namespace Pages{
     struct Frame{
-        bool isDirty;
-        std::atomic<int> pinCount;
-        std::atomic<PagePriority> priority;
-        bool hasSecondChance;
-
         mutable MultiThreading::ReadWriteMutex latch;
-
-        log_sequence_number_t logSequenceNumber;
-
         std::string filename;
-        const DatabaseEngine::StorageTypes::Table* table;
-
-        PageHeader* headerPtr;
-        PageType type;
 
         union{
             IndexPageAdditionalHeader* indexHeaderPtr;
@@ -37,6 +25,17 @@ namespace Pages{
         }additionalHeader;
 
         object_t* data;
+
+        const DatabaseEngine::StorageTypes::Table* table;
+        PageHeader* headerPtr;
+        log_sequence_number_t logSequenceNumber;
+
+        std::atomic<int> pinCount;
+
+        std::atomic<PagePriority> priority;
+        PageType type;
+        bool hasSecondChance;
+        bool isDirty;
 
         Frame();
         Frame(object_t* data, const DatabaseEngine::StorageTypes::Table* table);

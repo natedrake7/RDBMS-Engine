@@ -2,19 +2,19 @@
 
 #include "../include/SystemDatabases/SystemCatalog.h"
 
-#include <cstdint>
 #include <stdexcept>
 #include <vector>
 #include "../include/DatabaseConstants.h"
 #include "../include/DataStorage/Table.h"
 #include "../include/DataStorage/Column.h"
 #include "../include/BufferPool/StorageManager.h"
-#include "../../Server/include/Server.h"
 #include "../../Systemic/include/Guards/WriterGuard.h"
 #include "../include/Logger/WriteAheadLogger.h"
 
 #include <cmath>
 #include <iostream>
+
+#include "Managers/GlobalMemoryManager.h"
 
 namespace DatabaseEngine
 {
@@ -181,7 +181,7 @@ namespace DatabaseEngine
 
         for (const auto* dbTable : this->tables){
             headerPage.SetTableHeader(dbTable->GetHeader());
-            delete dbTable;
+            DeallocateMiscEntity(dbTable);
         }
 
         headerPage.WriteTableHeadersToDisk();
@@ -277,8 +277,7 @@ namespace DatabaseEngine
         const Headers::Index *clusteredKeyIndexes,
         const std::vector<Headers::Index> *nonClusteredIndexes)
     {
-        auto *table = new StorageTypes::Table(tableId, ordinalPosition, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
-
+        auto* table = AllocateMiscEntity<StorageTypes::Table>(tableId, ordinalPosition, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
         this->tables.push_back(table);
         this->header.numberOfTables = this->tables.size();
 
@@ -290,15 +289,15 @@ namespace DatabaseEngine
     void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader){
         static auto& catalog = SystemCatalog::Get();
 
-        auto *table = new StorageTypes::Table(masterDbHeader, tableHeader, this);
+        auto* table = AllocateMiscEntity<StorageTypes::Table>(masterDbHeader, tableHeader, this);
 
         const auto& masterDbColumns = catalog.SelectColumns(masterDbHeader.id);
-
         for (const auto & masterDbColumn : masterDbColumns) {
             if (masterDbColumn.isSystem)
                 continue;
 
-            table->AddColumn(new StorageTypes::Column(masterDbColumn, table));
+            auto* column = AllocateMiscEntity<StorageTypes::Column>(masterDbColumn, table);
+            table->AddColumn(column);
         }
 
         //TODO
@@ -311,8 +310,14 @@ namespace DatabaseEngine
         this->tables.push_back(table);
     }
 
-    void Database::CreateTable(const Headers::sysTable &sysHeader, const StorageTypes::TableHeader &tableHeader, const Headers::Index& primaryKey, const Int ordinalPosition){
-        this->tables.push_back(new StorageTypes::Table(sysHeader, tableHeader, primaryKey, this, ordinalPosition));
+    void Database::CreateTable(
+        const Headers::sysTable &sysHeader,
+        const StorageTypes::TableHeader &tableHeader,
+        const Headers::Index& primaryKey,
+        const Int ordinalPosition
+    ){
+        auto* table = AllocateMiscEntity<StorageTypes::Table>(sysHeader, tableHeader, primaryKey, this, ordinalPosition);
+        this->tables.push_back(table);
     }
 
     void Database::InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns){
@@ -411,8 +416,7 @@ namespace DatabaseEngine
       return nullptr;
     }
 
-    void Database::DeleteDatabase() const
-    {
+    void Database::DeleteDatabase() const{
         const std::string path = this->filename;
 
         if (remove(path.c_str()) != 0)

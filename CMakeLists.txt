@@ -159,7 +159,7 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Logger/UndoLogger.cpp
         src/DatabaseEngine/src/DataStorage/Table/Table.Row.Creation.cpp
         src/DatabaseEngine/src/DataStorage/InsertPayload.cpp
-        src/DatabaseEngine/src/BufferPool/BufferPoolMemory.cpp
+        src/DatabaseEngine/src/BufferPool/BufferPoolMemoryManager.cpp
         src/DatabaseEngine/src/Pages/PageView.cpp
         src/DatabaseEngine/src/Pages/IndexPageView.cpp
         src/DatabaseEngine/src/Pages/GlobalAllocationPageView.cpp
@@ -172,6 +172,7 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Pages/Additional/IndexPageStructs.cpp
         src/DatabaseEngine/src/Pages/LargeObjectView.cpp
         src/DatabaseEngine/src/Pages/OverflowPageView.cpp
+        src/DatabaseEngine/src/Managers/GlobalMemoryManager.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

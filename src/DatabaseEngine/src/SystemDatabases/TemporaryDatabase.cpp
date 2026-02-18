@@ -4,13 +4,14 @@
 #include <nlohmann/json.hpp>
 
 #include "Database.h"
+#include "Managers/GlobalMemoryManager.h"
 
 namespace DatabaseEngine {
-    void TemporaryDatabase::ReadConfiguration(const std::string& configPath){
-        std::ifstream file(configPath);
+    void TemporaryDatabase::ReadConfiguration(const std::string_view configPath){
+        std::ifstream file(configPath.data());
 
         if (!file.is_open())
-            throw std::runtime_error("System Tables file: " + configPath + " could not be opened");
+            throw std::runtime_error("System Tables file: " + std::string(configPath) + " could not be opened");
 
         nlohmann::json jsonFile;
 
@@ -49,7 +50,7 @@ namespace DatabaseEngine {
         return instance;
     }
 
-    void TemporaryDatabase::Initialize(const std::string& configPath){
+    void TemporaryDatabase::Initialize(const std::string_view configPath){
         this->ReadConfiguration(configPath);
 
         if (this->Exists())
@@ -57,7 +58,8 @@ namespace DatabaseEngine {
 
         CreateDatabase(this->name);
 
-        this->db = new Database(this->name, true);
+        this->db = AllocateMiscEntity<Database>(this->name, true);
+        // this->db = new Database(this->name, true);
     }
 
     StorageTypes::Table* TemporaryDatabase::CreateTable(){
@@ -85,9 +87,8 @@ namespace DatabaseEngine {
     }
 
     void TemporaryDatabase::Shutdown(){
-        delete this->db;
+        DeallocateMiscEntity<Database>(this->db);
         this->db = nullptr;
-
         // this->ClearTemporaryFiles();
     }
 }

@@ -15,6 +15,15 @@ namespace Memory {
             Allocator& operator=(Allocator&& other) noexcept;
 
             void* Allocate(UnsignedInt size)const;
+
+            template <typename Entity, typename... Args>
+            Entity* Allocate(Args&&... args)const;
+
             void Reset() const;
     };
+
+    template <typename Entity, typename... Args>
+    Entity* Allocator::Allocate(Args&&... args) const{
+        return new (Allocate(sizeof(Entity))) Entity(std::forward<Args>(args)...);
+    }
 }

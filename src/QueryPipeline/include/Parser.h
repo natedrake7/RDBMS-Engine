@@ -56,7 +56,8 @@ namespace QueryPipeline{
         static void ClearQuery(const std::vector<Statements::Statement*>& statements);
 
         static std::vector<Statements::Statement*> Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
-        static PhysicalPlan::ExecutionNode* BuildExecutionPlan(ParserResult& result, Statements::Statement* statement);
+        static LogicalPlan* BuildLogicalPlan(ParserResult& result, Statements::Statement* statement);
+        static PhysicalPlan::ExecutionNode* BuildExecutionPlan(ParserResult& result, LogicalPlan* logicalPlan);
         static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, PipelineConstants::cursor_id_t cursorId);
 
         public:

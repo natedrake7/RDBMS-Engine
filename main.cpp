@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include "src/DatabaseEngine/include/BufferPool/BufferPoolMemoryManager.h"
+#include "src/DatabaseEngine/include/Managers/GlobalMemoryManager.h"
 #include "src/Systemic/include/Memory/Functions.h"
 
 // #include <memory_resource>
@@ -105,10 +107,17 @@
 //maybe use an allocator even for execution nodes etc...
 
 int main(){
-    // const auto memoryInfo = Memory::GetOSMemoryInfo();
-    //
+    const auto memoryInfo = Memory::GetOSMemoryInfo();
     // memoryInfo.Log(std::cout, Memory::MemoryLogLevel::GigaBytes);
-    //
+
+    static auto& globalMemoryManager = DatabaseEngine::GlobalMemoryManager::Get();
+    globalMemoryManager.Initialize(memoryInfo);
+
+    globalMemoryManager.Log(std::cout, Memory::MemoryLogLevel::Bytes);
+
+    static auto& bufferPoolMemoryManager = DatabaseEngine::BufferPoolMemoryManager::Get();
+    bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
+
     // return 0;
     // Tests::InitializeTester();
     // Tests::RunTest(&Tests::IndexPageUpdate);
@@ -171,6 +180,7 @@ int main(){
         ExecuteQuery(input, session->sessionId);
     }
 
+    globalMemoryManager.Log(std::cout, Memory::MemoryLogLevel::Bytes);
     // const auto& databases = server.GetCatalog();
 
     serverRunning.store(false, std::memory_order_relaxed);

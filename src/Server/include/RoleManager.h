@@ -6,9 +6,9 @@
 #include <string>
 
 namespace Security {
-  struct Role;
+    struct Role;
 
-  class RoleManager {
+    class RoleManager {
     Dictionary<Int, Role*> roles;
     Dictionary<std::string, Int> rolesNames;
 

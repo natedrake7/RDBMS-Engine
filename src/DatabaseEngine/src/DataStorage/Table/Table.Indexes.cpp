@@ -5,6 +5,7 @@
 
 #include "../../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../include/BufferPool/StorageManager.h"
+#include "Managers/GlobalMemoryManager.h"
 
 namespace DatabaseEngine::StorageTypes {
     void Table::GetClusteredIndexFromDisk() const{
@@ -265,13 +266,13 @@ namespace DatabaseEngine::StorageTypes {
 
     }
 
-    int Table::CreateNonClusteredIndex(std::vector<column_index_t> &columnIndices){
+    Int Table::CreateNonClusteredIndex(std::vector<column_index_t> &columnIndices){
         Headers::Index index;
         index.columns = std::move(columnIndices);
 
         this->header.nonClusteredIndexes.push_back(std::move(index));
 
-        return static_cast<int>(this->header.nonClusteredIndexes.size() - 1);
+        return static_cast<Int>(this->header.nonClusteredIndexes.size() - 1);
     }
 
     page_id_t Table::GetClusteredIndexPageId() const { return this->header.clusteredIndexPageId; }
@@ -292,7 +293,7 @@ namespace DatabaseEngine::StorageTypes {
         if(this->clusteredIndexedTree != nullptr)
             return this->clusteredIndexedTree;
 
-        this->clusteredIndexedTree = new Indexing::BTree(this, this->header.clusteredIndexPageId, TreeType::Clustered);
+        this->clusteredIndexedTree = AllocateMiscEntity<Indexing::BTree>(this, this->header.clusteredIndexPageId, TreeType::Clustered);
 
         if (this->header.clusteredIndexPageId == INVALID_PAGE_ID)
             return this->clusteredIndexedTree;
@@ -313,11 +314,9 @@ namespace DatabaseEngine::StorageTypes {
 
           Indexing::BTree*& nonClusteredTree = this->nonClusteredIndexedTrees.at(nonClusteredIndexId);
 
-          if (nonClusteredTree == nullptr)
-          {
-              const auto& indexPageId = this->header.nonClusteredIndexPageIds.at(nonClusteredIndexId);
-
-              nonClusteredTree = new Indexing::BTree(this, indexPageId, TreeType::NonClustered, nonClusteredIndexId);
+          if (nonClusteredTree == nullptr){
+              const auto indexPageId = this->header.nonClusteredIndexPageIds.at(nonClusteredIndexId);
+              nonClusteredTree = AllocateMiscEntity<Indexing::BTree>(this, indexPageId, TreeType::NonClustered, nonClusteredIndexId);
 
               if (indexPageId == INVALID_PAGE_ID)
                   return nonClusteredTree;

@@ -181,7 +181,7 @@ namespace QueryPipeline{
         return statements;
      }
 
-    PhysicalPlan::ExecutionNode * Parser::BuildExecutionPlan(ParserResult &result, Statements::Statement *statement) {
+    LogicalPlan* Parser::BuildLogicalPlan(ParserResult& result, Statements::Statement* statement){
         auto validation = statement->Compile(result.validationScope);
         if (!validation.IsOk()) {
 
@@ -196,8 +196,11 @@ namespace QueryPipeline{
             return nullptr;
         }
 
-        auto* physicalPlan = logicalPlan->ToPhysical();
+        return logicalPlan;
+    }
 
+    PhysicalPlan::ExecutionNode* Parser::BuildExecutionPlan(ParserResult &result, LogicalPlan *logicalPlan) {
+        auto* physicalPlan = logicalPlan->ToPhysical();
         delete logicalPlan;
         if(physicalPlan == nullptr){
             result.status  = {true, "Unexpected error occurred during physical plan build"};
@@ -220,7 +223,6 @@ namespace QueryPipeline{
         ParserResult result;
 
         const auto* session = server.GetSession(sessionId);
-
         result.CreateValidationScope(session->variables);
 
         const auto statements = Parser::Parse(result, sessionId, query);
@@ -230,7 +232,11 @@ namespace QueryPipeline{
 
         result.cursors.reserve(statements.size());
         for (auto* statement: statements) {
-            auto* physicalPlan = Parser::BuildExecutionPlan(result, statement);
+            auto* logicalPlan = Parser::BuildLogicalPlan(result, statement);
+            if (result.status.hasError)
+                break;
+
+            auto* physicalPlan = Parser::BuildExecutionPlan(result, logicalPlan);
 
             if (result.status.hasError)
                 break;

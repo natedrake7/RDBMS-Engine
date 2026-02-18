@@ -11,20 +11,21 @@
 
 namespace Storage {
 StorageManager::StorageManager(){
-    this->frames.clear();
-    this->frames.reserve(Constants::MAX_NUMBER_OF_PAGES);
-    this->memoryPool.Allocate(Constants::MAX_NUMBER_OF_PAGES);
+    // this->frames.clear();
+    // this->frames.reserve(Constants::MAX_NUMBER_OF_PAGES);
+    // this->_memoryManager.AllocatePagePool(Constants::MAX_NUMBER_OF_PAGES);
 
-    for (auto i = 0; i < Constants::MAX_NUMBER_OF_PAGES; ++i) {
-        auto frame = new Pages::Frame(
-            this->memoryPool.Data() + i * PAGE_SIZE,
-            nullptr
-        );
+    // for (auto i = 0; i < Constants::MAX_NUMBER_OF_PAGES; ++i) {
+    //     auto frame = new Pages::Frame(
+    //         this->_memoryManager.Data() + i * PAGE_SIZE,
+    //         nullptr
+    //     );
+    //
+    //     this->frames.push_back(frame);
+    // }
 
-        this->frames.push_back(frame);
-    }
-
-    this->capacity = Constants::MAX_NUMBER_OF_PAGES;
+    this->_memoryManager = &DatabaseEngine::BufferPoolMemoryManager::Get();
+    this->capacity = this->_memoryManager->FramesCount();
     this->clockHand = 0;
 }
 
@@ -34,13 +35,13 @@ std::string StorageManager::CreateKey(const std::string &filename, const page_id
 
 StorageManager::~StorageManager() {
     for (const auto frame : this->pageTable | std::views::values) {
-        const auto* page = this->frames[frame];
+        const auto* page = this->_memoryManager->GetFrame(frame);
 
         if (page == nullptr)
             continue;
 
         this->RemovePageWithoutKeyDeletion(page);
-        delete page;
+        // delete page;
     }
 }
 
@@ -63,7 +64,7 @@ Pages::Frame* StorageManager::GetRawPage(
 
     auto frame = 0;
     if (this->pageTable.TryGetValue(StorageManager::CreateKey(filename, pageId), frame))
-      return this->frames[frame];
+      return this->_memoryManager->GetFrame(frame);
   }
 
   const auto extentId = DatabaseEngine::Database::CalculateExtentId(pageId);
@@ -131,7 +132,7 @@ Pages::Frame* StorageManager::EvictPage() {
     MultiThreading::WriterGuard lock(&this->clockMutex_);
 
     while (true) {
-        auto* page = this->frames[this->clockHand];
+        auto* page = this->_memoryManager->GetFrame(this->clockHand);
 
         if (page == nullptr || page->pinCount.load() > 0 || page->priority.load() >= PagePriority::HIGH) {
         this->clockHand = (this->clockHand + 1) % this->capacity;
@@ -148,7 +149,7 @@ Pages::Frame* StorageManager::EvictPage() {
     }
 
         this->clockHand = (this->clockHand + 1) % this->capacity;
-        return this->frames[this->clockHand];
+        return this->_memoryManager->GetFrame(this->clockHand);
     }
 }
 
@@ -214,8 +215,8 @@ Pages::Frame* StorageManager::OpenExtent(
             const auto frame = this->clockHand % this->capacity;
 
             const auto pageDataOffset = frame * PAGE_SIZE;
-            auto* pageDataPtr = this->memoryPool.CopyToMemory(buffer.data(), pageDataOffset, offSet);
-            auto* newFramePtr = this->frames[frame];
+            auto* pageDataPtr = this->_memoryManager->CopyToMemory(buffer.data(), pageDataOffset, offSet);
+            auto* newFramePtr = this->_memoryManager->GetFrame(frame);
 
             newFramePtr->data = pageDataPtr;
             newFramePtr->filename = filename;
@@ -227,7 +228,7 @@ Pages::Frame* StorageManager::OpenExtent(
             newFramePtr->headerPtr = reinterpret_cast<Pages::PageHeader*>(pageDataPtr);
 
             if (currentPageId == pageId)
-                framePtr = this->frames[frame];
+                framePtr = this->_memoryManager->GetFrame(frame);
 
             this->pageTable[key] = frame;
             this->clockHand = (this->clockHand + 1) % this->capacity;
@@ -304,9 +305,9 @@ Pages::Frame* StorageManager::CreateFrame(const std::string &filename, const pag
 
     const size_t frameIndex = clockHand % capacity;
 
-    auto* framePtr = this->frames[frameIndex];
+    auto* framePtr = this->_memoryManager->GetFrame(frameIndex);
 
-    framePtr->data = this->memoryPool.Data() + frameIndex * PAGE_SIZE;
+    framePtr->data = this->_memoryManager->Data() + frameIndex * PAGE_SIZE;
     framePtr->table = table;
     framePtr->filename = filename;
     framePtr->isDirty = true;

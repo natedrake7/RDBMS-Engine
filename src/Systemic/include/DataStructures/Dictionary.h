@@ -22,6 +22,18 @@ class Dictionary : public std::unordered_map<Key, Value>
             return false;
         }
 
+        bool TryGetValue(const Key& key, Value*& value) const
+        {
+            auto it = this->find(key);
+            if (it != this->end())
+            {
+                value = &it->second;
+                return true;
+            }
+
+            return false;
+        }
+
         bool Contains(const Key& key) const 
         {
             return this->find(key) != this->end();

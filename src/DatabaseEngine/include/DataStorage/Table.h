@@ -348,7 +348,7 @@ namespace DatabaseEngine::StorageTypes
         * Functions that manage indexes and pages
         * @{
         */
-            int CreateNonClusteredIndex(std::vector<column_index_t>& columnIndices);
+            Int CreateNonClusteredIndex(std::vector<column_index_t>& columnIndices);
             void UpdateIndexAllocationMapPageId(page_id_t indexAllocationMapPageId);
             page_id_t GetIndexAllocationMapPageId()const;
 

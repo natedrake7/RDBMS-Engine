@@ -5,115 +5,118 @@
 
 #include <ranges>
 
+#include "../../../DatabaseEngine/include/Managers/GlobalMemoryManager.h"
+
 namespace Network::Sessions {
-  SessionManager::SessionManager() = default;
+    SessionManager::SessionManager() = default;
 
-  SessionManager::~SessionManager(){
-    for (const auto &session : this->sessions | std::views::values)
-      delete session;
-  }
-
-  const Network::Session * SessionManager::CreateSession(const Security::User* user){
-    MultiThreading::WriterGuard guard(&this->mutex);
-
-    auto* session = new Network::Session(user);
-
-    this->sessions.Add(session->sessionId, session);
-
-    return session;
-  }
-
-  const Network::Session * SessionManager::GetSession(const DataTypes::Guid &id)const{
-    Network::Session* session = nullptr;
-
-    MultiThreading::ReaderGuard guard(&this->mutex);
-
-    this->sessions.TryGetValue(id, session);
-
-    return session;
-  }
-
-  Network::Session * SessionManager::TryGetSessionWithoutLock(const DataTypes::Guid &id)const{
-    Network::Session* session = nullptr;
-
-    this->sessions.TryGetValue(id, session);
-
-    return session;
-  }
-
-  bool SessionManager::CloseSession(const DataTypes::Guid &id){
-    Network::Session* session = nullptr;
-
-    MultiThreading::WriterGuard guard(&this->mutex);
-
-    if (this->sessions.TryGetValue(id, session)) {
-      this->sessions.Remove(id);
-      delete session;
-
-      return true;
+    SessionManager::~SessionManager(){
+        for (const auto* session : this->sessions | std::views::values)
+            DatabaseEngine::DeallocateMiscEntity(session);
     }
 
-    return false;
-  }
+    const Session * SessionManager::CreateSession(const Security::User* user){
+        MultiThreading::WriterGuard guard(&this->mutex);
 
-  bool SessionManager::UpdateSession(const DataTypes::Guid &id, const Int databaseId)const{
-    MultiThreading::WriterGuard guard(&this->mutex);
+        auto* session = DatabaseEngine::AllocateMiscEntity<Session>(user);
 
-    auto* session = this->TryGetSessionWithoutLock(id);
+        this->sessions.Add(session->sessionId, session);
 
-    if (session == nullptr)
-      return false;
+        return session;
+    }
 
-    session->databaseId = databaseId;
+    const Session * SessionManager::GetSession(const DataTypes::Guid &id)const{
+        Session* session = nullptr;
 
-    return true;
-  }
+        MultiThreading::ReaderGuard guard(&this->mutex);
+        this->sessions.TryGetValue(id, session);
 
-  bool SessionManager::AddOrSetVariable(const DataTypes::Guid &id, const Variable& variable)const {
-    MultiThreading::WriterGuard guard(&this->mutex);
+        return session;
+    }
 
-    auto* session = this->TryGetSessionWithoutLock(id);
+    Session* SessionManager::TryGetSessionWithoutLock(const DataTypes::Guid &id)const{
+        Session* session = nullptr;
+        this->sessions.TryGetValue(id, session);
+        return session;
+    }
 
-    if (session == nullptr)
-      return false;
+    bool SessionManager::CloseSession(const DataTypes::Guid &id){
+        Session* session = nullptr;
 
-    session->variables.AddOrUpdate(variable.GetNormalizedName(), variable);
-    return true;
-  }
+        MultiThreading::WriterGuard guard(&this->mutex);
 
-  QueryPipeline::Cursor* SessionManager::CreateCursor(
-    const DataTypes::Guid &id,
-    DatabaseEngine::ExecutionProperties& properties,
-    QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
-  )const{
-    MultiThreading::WriterGuard guard(&this->mutex);
+        if (this->sessions.TryGetValue(id, session)) {
+            this->sessions.Remove(id);
+            DatabaseEngine::DeallocateMiscEntity(session);
+            return true;
+        }
 
-    auto* session = this->TryGetSessionWithoutLock(id);
+        return false;
+    }
 
-    if (session == nullptr)
-      return nullptr;
+    bool SessionManager::UpdateSession(const DataTypes::Guid &id, const Int databaseId)const{
+        MultiThreading::WriterGuard guard(&this->mutex);
 
-    const auto cursorId = session->nextCursorId++;
+        auto* session = this->TryGetSessionWithoutLock(id);
 
-    auto* cursor = new QueryPipeline::Cursor(cursorId, properties, physicalPlan);
+        if (session == nullptr)
+            return false;
 
-    session->cursors.Add(cursorId, cursor);
-    return cursor;
-  }
+        session->databaseId = databaseId;
 
-  bool SessionManager::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t cursorId) const{
-    MultiThreading::WriterGuard guard(&this->mutex);
+        return true;
+    }
 
-    auto* session = this->TryGetSessionWithoutLock(id);
+    bool SessionManager::AddOrSetVariable(const DataTypes::Guid &id, const Variable& variable)const {
+        MultiThreading::WriterGuard guard(&this->mutex);
 
-    if (session == nullptr)
-      return false;
+        auto* session = this->TryGetSessionWithoutLock(id);
 
-    const auto* cursor = session->cursors.Get(cursorId);
-    delete cursor;
+        if (session == nullptr)
+            return false;
 
-    session->cursors.Remove(cursorId);
-    return true;
-  }
+        session->variables.AddOrUpdate(variable.GetNormalizedName(), variable);
+        return true;
+    }
 
+    QueryPipeline::Cursor* SessionManager::CreateCursor(
+        const DataTypes::Guid &id,
+        DatabaseEngine::ExecutionProperties& properties,
+        QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
+    )const{
+        MultiThreading::WriterGuard guard(&this->mutex);
+
+        auto* session = this->TryGetSessionWithoutLock(id);
+
+        if (session == nullptr)
+            return nullptr;
+
+        auto cursorId = session->nextCursorId++;
+        auto* cursor = properties.allocator.Allocate<QueryPipeline::Cursor>(
+            cursorId,
+            properties,
+            physicalPlan
+        );
+        session->cursors.Add(cursorId, cursor);
+        return cursor;
+    }
+
+    bool SessionManager::CloseCursor(
+        const DataTypes::Guid &id,
+        const QueryPipeline::PipelineConstants::cursor_id_t cursorId
+    ) const{
+        MultiThreading::WriterGuard guard(&this->mutex);
+
+        auto* session = this->TryGetSessionWithoutLock(id);
+
+        if (session == nullptr)
+            return false;
+
+        //freed by arena
+        // const auto* cursor = session->cursors.Get(cursorId);
+        // delete cursor;
+
+        session->cursors.Remove(cursorId);
+        return true;
+    }
 }

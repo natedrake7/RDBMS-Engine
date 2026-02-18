@@ -5,13 +5,11 @@
 #include "../../../Systemic/include/DataTypes/Variable.h"
 #include <string>
 
-namespace DatabaseEngine
-{
+namespace DatabaseEngine{
     struct ExecutionProperties;
 }
 
-namespace Memory
-{
+namespace Memory{
     class Allocator;
 }
 
@@ -38,15 +36,15 @@ namespace Expressions{
             Window = 5,
         };
 
-        EvaluationContextType type;
+        QueryResult materializedRow;
 
         const Pages::RowReference* row;
         const Pages::RowReference* outerRow;
         const Pages::RowReference* innerRow;
 
-        QueryResult materializedRow;
-
         const DatabaseEngine::ExecutionProperties* properties;
+
+        EvaluationContextType type;
 
         EvaluationContext();
         explicit EvaluationContext(
@@ -70,9 +68,9 @@ namespace Expressions{
 
     class Expression {
     public:
+        std::string name;
         column_index_t columnIndex;
         ExpressionType expressionType;
-        std::string name;
 
         virtual ~Expression() = default;
         Expression();
@@ -164,7 +162,6 @@ namespace Expressions{
     };
 
     class FunctionExpression final : public Expression {
-
         [[nodiscard]] bool ValidateUnlimitedArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const;
         [[nodiscard]] bool ValidateArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const;
         [[nodiscard]] static bool ValidateReturnType(
@@ -212,10 +209,10 @@ namespace Expressions{
 
         //Null Checking Functions
         [[nodiscard]] static Value NullIf(const std::vector<Value>& arguments);
-        [[nodiscard]] static bool ValidateNullIf(const std::vector<Expressions::Expression*>& arguments, std::string& errorMessage);
+        [[nodiscard]] static bool ValidateNullIf(const std::vector<Expression*>& arguments, std::string& errorMessage);
 
         [[nodiscard]] static Value Coalesce(const std::vector<Value>& arguments);
-        [[nodiscard]] static bool ValidateCoalesce(const std::vector<Expressions::Expression*>& arguments, std::string& errorMessage);
+        [[nodiscard]] static bool ValidateCoalesce(const std::vector<Expression*>& arguments, std::string& errorMessage);
 
         [[nodiscard]] bool ValidateNumberOfArguments(std::string& errorMessage)const;
         [[nodiscard]] DataType GetReturnType() const override;

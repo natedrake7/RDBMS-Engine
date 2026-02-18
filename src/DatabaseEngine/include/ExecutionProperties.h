@@ -86,7 +86,7 @@ namespace DatabaseEngine {
         const Dictionary<std::string, Variable>* variables;
         Memory::Allocator allocator;
 
-        constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10; //10MB
+        constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10;
 
         ExecutionProperties(
             const Snapshot &snapshot,
