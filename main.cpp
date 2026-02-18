@@ -110,12 +110,12 @@ int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
     // memoryInfo.Log(std::cout, Memory::MemoryLogLevel::GigaBytes);
 
-    static auto& globalMemoryManager = DatabaseEngine::GlobalMemoryManager::Get();
+    static auto& globalMemoryManager = QueryPipeline::GlobalMemoryManager::Get();
     globalMemoryManager.Initialize(memoryInfo);
 
     globalMemoryManager.Log(std::cout, Memory::MemoryLogLevel::Bytes);
 
-    static auto& bufferPoolMemoryManager = DatabaseEngine::BufferPoolMemoryManager::Get();
+    static auto& bufferPoolMemoryManager = QueryPipeline::BufferPoolMemoryManager::Get();
     bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
     // return 0;
@@ -145,10 +145,10 @@ int main(){
 
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
-    std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
+    std::thread garbageCollectorThread(QueryPipeline::GarbageCollector::Collect, std::ref(serverRunning));
 
     std::thread statisticsThread(
-        DatabaseEngine::StatisticsScheduler::Start,
+        QueryPipeline::StatisticsScheduler::Start,
         std::ref(serverRunning),
         std::ref(server.GetDatabases()),
         std::ref(server.GetDatabasesLatch())

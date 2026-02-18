@@ -14,6 +14,8 @@
 #include <SQLBaseListener.h>
 #include <SQLLexer.h>
 
+#include "../include/CompileContext.h"
+
 
 namespace QueryPipeline{
     static Dictionary<std::type_index, std::function<Statements::Statement*(const std::any&)>> handlers = {
@@ -102,33 +104,55 @@ namespace QueryPipeline{
         this->hasMore = false;
      }
 
-    std::vector<Statements::Statement*> Parser::CreateStatement(const std::any &queries, const DataTypes::Guid& sessionId){
-        std::vector<Statements::Statement*> statements;
+    ParserResult::ParserResult(ParserResult&& other) noexcept{
+         this->status = other.status;
+         this->hasMore = other.hasMore;
+         this->validationScope = std::move(other.validationScope);
+         this->columns = std::move(other.columns);
+         this->rows = std::move(other.rows);
+         this->cursors = std::move(other.cursors);
+    }
 
+    ParserResult& ParserResult::operator=(ParserResult&& other) noexcept{
+         if (this == &other) return *this;
+
+         this->status = other.status;
+         this->hasMore = other.hasMore;
+         this->validationScope = std::move(other.validationScope);
+         this->columns = std::move(other.columns);
+         this->rows = std::move(other.rows);
+         this->cursors = std::move(other.cursors);
+
+         return *this;
+    }
+
+    void Parser::CreateStatements(
+        CompileContext& context,
+        const std::any &queries,
+        const DataTypes::Guid& sessionId
+    ){
         const auto castQueries = std::any_cast<std::vector<std::any>>(queries);
         const auto* session = Network::Server::Get().GetSession(sessionId);
 
+         context.Reserve(castQueries.size());
          for (const auto& query: castQueries) {
              std::function<Statements::Statement *(const std::any &)> handler;
 
              if (!handlers.TryGetValue(query.type(), handler))
-                 return {};
+                 return;
 
              Statements::Statement* statement = handler(query);
 
             if (session == nullptr) {
-                statement->CleanUp();
-                delete statement;
+                // statement->CleanUp();
                 continue;
             }
 
             statement->databaseId = session->databaseId;
             statement->sessionId = session->sessionId;
 
-            statements.push_back(statement);
+            context.Push(statement);
          }
-
-        return statements;
     }
 
     void Parser::ClearQuery(const std::vector<Statements::Statement*>& statements) {
@@ -140,7 +164,7 @@ namespace QueryPipeline{
 
     Parser::~Parser() = default;
 
-    std::vector<Statements::Statement*> Parser::Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query) {
+    CompileContext Parser::Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query) {
         static auto errorListener = ErrorListener();
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
@@ -158,27 +182,27 @@ namespace QueryPipeline{
         parser.addErrorListener(&errorListener); // Add custom
 
         // Start parsing, typically using the start rule of the grammar
-        std::vector<Statements::Statement*> statements;
+        CompileContext compileContext;
         try {
             SQLParser::SqlStatementContext *tree = parser.sqlStatement();
 
-            SQLVisitorImplementation visitor;
+            SQLVisitorImplementation visitor(compileContext);
 
             const auto response = visitor.visit(tree);
 
-            statements = CreateStatement(response, sessionId);
+            CreateStatements(compileContext, response, sessionId);
         }
         catch (const std::exception& e) {
-            Parser::ClearQuery(statements);
+            // Parser::ClearQuery(statements);
 
             std::ostringstream os;
             os << "Parser exception: " << e.what();
 
             result.status = {true, os.str()};
-            return {};
+            return compileContext;
         }
 
-        return statements;
+        return compileContext;
      }
 
     LogicalPlan* Parser::BuildLogicalPlan(ParserResult& result, Statements::Statement* statement){
@@ -225,13 +249,13 @@ namespace QueryPipeline{
         const auto* session = server.GetSession(sessionId);
         result.CreateValidationScope(session->variables);
 
-        const auto statements = Parser::Parse(result, sessionId, query);
-
+        result._compileContext = Parser::Parse(result, sessionId, query);
         if (result.status.hasError)
             return result;
 
-        result.cursors.reserve(statements.size());
-        for (auto* statement: statements) {
+        const auto* statements = result._compileContext.GetStatements();
+        result.cursors.reserve(statements->Size());
+        for (auto* statement: *statements) {
             auto* logicalPlan = Parser::BuildLogicalPlan(result, statement);
             if (result.status.hasError)
                 break;
@@ -257,8 +281,8 @@ namespace QueryPipeline{
             result.cursors.push_back(server.CreateCursor(sessionId, properties, physicalPlan));
         }
 
-        if (result.status.hasError)
-            Parser::ClearQuery(statements);
+        // if (result.status.hasError)
+        //     Parser::ClearQuery(statements);
 
         return result;
     }

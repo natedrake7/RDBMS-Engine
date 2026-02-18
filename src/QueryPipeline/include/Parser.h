@@ -9,6 +9,7 @@
 
 #include "DatabaseConstants.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
+#include "CompileContext.h"
 
 namespace QueryPipeline{
 
@@ -32,12 +33,13 @@ namespace QueryPipeline{
     // };
 
     struct ParserResult {
-        Errors::Error status;
+        ParserValidationScope validationScope;
+        CompileContext _compileContext;
         DataStructures::PolymorphicArray<QueryResult> rows;
         DataStructures::PolymorphicArray<std::string> columns;
         std::vector<Cursor*> cursors;
 
-        ParserValidationScope validationScope;
+        Errors::Error status;
 
         bool hasMore;
 
@@ -48,14 +50,22 @@ namespace QueryPipeline{
         void CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables);
 
         explicit ParserResult(const Errors::Error& error);
+        ParserResult(const ParserResult&) = delete;
+        ParserResult& operator=(const ParserResult&) = delete;
+        ParserResult(ParserResult&& other) noexcept;
+        ParserResult& operator=(ParserResult&& other) noexcept;
     };
 
 
     class Parser{
-        static std::vector<Statements::Statement*> CreateStatement(const std::any &queries, const DataTypes::Guid& sessionId);
+        static void CreateStatements(
+            CompileContext& context,
+            const std::any &queries,
+            const DataTypes::Guid& sessionId
+        );
         static void ClearQuery(const std::vector<Statements::Statement*>& statements);
 
-        static std::vector<Statements::Statement*> Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
+        static QueryPipeline::CompileContext Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
         static LogicalPlan* BuildLogicalPlan(ParserResult& result, Statements::Statement* statement);
         static PhysicalPlan::ExecutionNode* BuildExecutionPlan(ParserResult& result, LogicalPlan* logicalPlan);
         static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, PipelineConstants::cursor_id_t cursorId);

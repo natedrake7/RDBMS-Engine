@@ -105,6 +105,7 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/Statements.cpp
         src/QueryPipeline/src/ErrorListener.cpp
         src/QueryPipeline/src/CostEstimator.cpp
+        src/QueryPipeline/src/Contexts/CompileContext.cpp
         ${ANTLR_SRC}
 )
 

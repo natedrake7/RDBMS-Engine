@@ -10,6 +10,7 @@
 #include <ranges>
 
 #include "Optimizer.h"
+#include "Parser.h"
 
 namespace QueryPipeline::Statements {
 
@@ -306,6 +307,10 @@ namespace QueryPipeline::Statements {
     );
   }
 
+  ColumnType::ColumnType(){
+      this->size = 0;
+  }
+
   ColumnType::ColumnType(const std::string &name){
     this->name = name;
     this->size = 0;
@@ -316,8 +321,18 @@ namespace QueryPipeline::Statements {
     this->size = size;
   }
 
-  ColumnType::ColumnType(const std::string &name, const DecimalType decimal){
-    this->name = name;
+  ColumnType::ColumnType(std::string& name, const Int size){
+      this->name = std::move(name);
+      this->size = size;
+  }
+
+  ColumnType::ColumnType(const std::string& name, const DecimalType decimal){
+      this->name = name;
+      this->decimal = decimal;
+  }
+
+  ColumnType::ColumnType(std::string &name, const DecimalType decimal){
+    this->name = std::move(name);
     this->decimal = decimal;
     this->size = 0;
   }
@@ -338,6 +353,11 @@ namespace QueryPipeline::Statements {
 
   OrderColumn::~OrderColumn(){
     delete this->expression;
+  }
+
+  AlterColumn::AlterColumn(){
+      this->columnId = INVALID_COLUMN_ID;
+      this->index = INVALID_ORDINAL_POS;
   }
 
   WhereClause::WhereClause() { this->expression = nullptr; }
@@ -382,7 +402,7 @@ namespace QueryPipeline::Statements {
     this->ordinalPosition = INVALID_ORDINAL_POS;
     this->schema = "dbo";
     this->server = &Network::Server::Get();
-    this->catalog = &DatabaseEngine::SystemCatalog::Get();
+    this->catalog = &QueryPipeline::SystemCatalog::Get();
   }
 
   std::string DataSource::GetAlias() const{

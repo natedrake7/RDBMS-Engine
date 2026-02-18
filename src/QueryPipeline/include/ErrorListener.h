@@ -14,7 +14,7 @@ namespace QueryPipeline {
 
   class SyntaxError final : public std::runtime_error {
     public:
-      explicit SyntaxError(const std::string &msg, const std::string& posMsg)
-        : std::runtime_error(msg + posMsg) {}
+      explicit SyntaxError(const std::string_view msg, const std::string& posMsg)
+        : std::runtime_error(std::string(msg) + posMsg) {}
   };
 }

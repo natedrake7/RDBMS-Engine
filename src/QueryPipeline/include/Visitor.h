@@ -4,13 +4,23 @@
 
 #include <SQLVisitor.h>
 
+namespace QueryPipeline
+{
+    class CompileContext;
+}
+
 namespace QueryPipeline {
-  static std::string String = "string";
-  static std::string UnicodeString = "unicodestring";
-  static std::string Decimal = "decimal";
+  static constexpr std::string_view String = "string";
+  static constexpr std::string_view UnicodeString = "unicodestring";
+  static constexpr std::string_view Decimal = "decimal";
 
   class SQLVisitorImplementation final : public SQLVisitor {
+      QueryPipeline::CompileContext* _compileContext;
     public:
+      explicit SQLVisitorImplementation(QueryPipeline::CompileContext& compileContext){
+          this->_compileContext = &compileContext;
+      }
+
       antlrcpp::Any visitStatement(SQLParser::StatementContext *context) override;
 
       //Statements

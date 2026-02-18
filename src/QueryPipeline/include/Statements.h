@@ -8,14 +8,13 @@
 #include "../../Systemic/include/Security/Security.h"
 #include "../../Systemic/include/Errors.h"
 #include "../../Systemic/include/Headers.h"
-#include "Parser.h"
 
 namespace QueryPipeline {
   struct JoinOrderAnalyzeResult;
   struct PredicatePushDownResult;
 }
 
-namespace DatabaseEngine {
+namespace QueryPipeline {
   class SystemCatalog;
 }
 
@@ -33,8 +32,9 @@ namespace QueryPipeline {
 }
 
 namespace QueryPipeline::Statements {
+    struct Statement;
 
-  struct SelectStatement;
+    struct SelectStatement;
 
   struct ColumnName {
     std::string name;
@@ -69,16 +69,20 @@ namespace QueryPipeline::Statements {
     [[nodiscard]] bool Validate() const;
   };
 
-  struct ColumnType {
-    std::string name;
-    int size;
+    struct ColumnType {
+        std::string name;
+        int size;
 
-    DecimalType decimal;
+        DecimalType decimal;
 
-    explicit ColumnType(const std::string& name);
-    ColumnType(const std::string& name, Int size);
-    ColumnType(const std::string& name, DecimalType decimal);
-  };
+
+        ColumnType();
+        explicit ColumnType(const std::string& name);
+        ColumnType(const std::string& name, Int size);
+        ColumnType(std::string& name, Int size);
+        ColumnType(const std::string& name, DecimalType decimal);
+        ColumnType(std::string& name, DecimalType decimal);
+    };
 
   struct Identity{
     uint16_t seed;
@@ -113,13 +117,15 @@ namespace QueryPipeline::Statements {
     ~OrderColumn();
   };
 
-  struct AlterColumn {
-    ColumnName name;
-    ColumnType type;
+    struct AlterColumn {
+        ColumnName name;
+        ColumnType type;
 
-    Int columnId;
-    column_index_t index;
-  };
+        Int columnId;
+        column_index_t index;
+
+        AlterColumn();
+    };
 
   struct DropColumn {
     ColumnName name;
@@ -169,7 +175,7 @@ namespace QueryPipeline::Statements {
     int16_t ordinalPosition;
 
     Network::Server* server;
-    DatabaseEngine::SystemCatalog* catalog;
+    QueryPipeline::SystemCatalog* catalog;
 
     DataSource();
     [[nodiscard]] std::string GetAlias() const;
@@ -187,14 +193,12 @@ namespace QueryPipeline::Statements {
   };
 
   struct Statement {
-    DataTypes::Guid sessionId;
-
-    Int databaseId;
-
-    DataSource* table;
     Dictionary<Int, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
+    DataTypes::Guid sessionId;
     Network::Server* server;
     DatabaseEngine::SystemCatalog* catalog;
+    DataSource* table;
+    Int databaseId;
 
     Statement();
     virtual ~Statement() = default;
@@ -309,15 +313,13 @@ namespace QueryPipeline::Statements {
   };
 
   struct SelectStatement final: Statement{
+    std::vector<Headers::ColumnHeader> columnHeaders;
+    std::vector<Expressions::Expression*> results;
+    std::vector<JoinStatement*> joins;
+    OrderByStatement* orderBy;
+    WhereClause where;
     BigInt top;
     bool distinct;
-    std::vector<Expressions::Expression*> results;
-    std::vector<Headers::ColumnHeader> columnHeaders;
-
-    std::vector<JoinStatement*> joins;
-
-    WhereClause where;
-    OrderByStatement* orderBy;
 
     SelectStatement();
     ~SelectStatement() override;
