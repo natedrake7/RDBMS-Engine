@@ -2,6 +2,7 @@
 
 #include "CostEstimator.h"
 #include "DatabaseConstants.h"
+#include "Parser.h"
 #include "../include/LogicalPlan.h"
 #include "Managers/StatisticsManager.h"
 #include "SystemDatabases/SystemCatalog.h"
@@ -93,7 +94,7 @@ namespace QueryPipeline {
       //should delete logical expression?
       logicalExpr->left = nullptr;
       logicalExpr->right = nullptr;
-      delete logicalExpr;
+      // delete logicalExpr;
       return;
     }
 
@@ -133,7 +134,7 @@ namespace QueryPipeline {
   void Optimizer::CombineExpressionsWithAnd(
     Expressions::Expression*& baseExpression,
     Expressions::Expression* newExpression
-  ){
+  ) const{
     if (baseExpression == nullptr){
         baseExpression = newExpression;
         return;
@@ -141,7 +142,7 @@ namespace QueryPipeline {
 
     auto* left = baseExpression;
 
-    baseExpression =  new Expressions::LogicalExpression(
+    baseExpression =  this->context->_context.Allocate<Expressions::LogicalExpression>(
       left,
       newExpression,
       Expressions::LogicalType::And
@@ -356,8 +357,8 @@ namespace QueryPipeline {
           continue;
 
 
-        //if expression is used in range, remove it from conjunctions
-        delete expression;
+        // //if expression is used in range, remove it from conjunctions
+        // delete expression;
         expression = nullptr;
         break;
       }
@@ -457,7 +458,7 @@ namespace QueryPipeline {
     const std::vector<Int>& rightKeyColumns,
     const Int leftTableId,
     const Int rightTableId
-  ){
+  ) const{
     JoinAlgorithmAnalysisResult result(PipelineConstants::JoinAlgorithm::MergeJoin);
 
     const auto leftSize = leftKeyColumns.size();
@@ -497,6 +498,10 @@ namespace QueryPipeline {
     }
 
     return result;
+  }
+
+  Optimizer::Optimizer(CompileResult& context){
+      this->context = &context;
   }
 
   JoinOrderAnalyzeResult Optimizer::DetermineJoinOrder(Statements::SelectStatement* statement){
@@ -583,7 +588,6 @@ namespace QueryPipeline {
 
     //remove the first which is always null
     result.orderedJoins.erase(result.orderedJoins.begin());
-
     result.isReordered = result.order[0] != statement->table->tableId;
 
     return result;
@@ -701,7 +705,7 @@ namespace QueryPipeline {
       if (!leftBestMatch.empty() && !rightBestMatch.empty()){
 
         //expression should be consumed by the best index as keys will be used match
-        return Optimizer::CreateMergeJoinKeys(
+        return this->CreateMergeJoinKeys(
           conditionsInfo,
           leftBestMatch,
           rightBestMatch,

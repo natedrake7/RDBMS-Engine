@@ -24,7 +24,7 @@ namespace QueryPipeline{
     class LogicalPlan;
     class Cursor;
 
-    struct ParserValidationScope {
+    struct CompileValidationScope {
         Dictionary<std::string, DataType> variables;
     };
 
@@ -32,30 +32,22 @@ namespace QueryPipeline{
     //     Dictionary<std::string, table_id_t> tableAliasesDictionary;
     // };
 
-    struct ParserResult {
-        ParserValidationScope validationScope;
-        CompileContext _compileContext;
-        DataStructures::PolymorphicArray<QueryResult> rows;
-        DataStructures::PolymorphicArray<std::string> columns;
-        std::vector<Cursor*> cursors;
-
+    struct CompileResult {
+        CompileValidationScope _scope;
+        CompileContext _context;
+        DataStructures::PolymorphicArray<Cursor*> cursors;
         Errors::Error status;
-
         bool hasMore;
 
-        ParserResult() {
-            this->hasMore = false;
-        }
+        CompileResult();
+        explicit CompileResult(const Errors::Error& error);
+        CompileResult(const CompileResult&) = delete;
+        CompileResult& operator=(const CompileResult&) = delete;
+        CompileResult(CompileResult&& other) noexcept;
+        CompileResult& operator=(CompileResult&& other) noexcept;
 
         void CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables);
-
-        explicit ParserResult(const Errors::Error& error);
-        ParserResult(const ParserResult&) = delete;
-        ParserResult& operator=(const ParserResult&) = delete;
-        ParserResult(ParserResult&& other) noexcept;
-        ParserResult& operator=(ParserResult&& other) noexcept;
     };
-
 
     class Parser{
         static void CreateStatements(
@@ -63,11 +55,9 @@ namespace QueryPipeline{
             const std::any &queries,
             const DataTypes::Guid& sessionId
         );
-        static void ClearQuery(const std::vector<Statements::Statement*>& statements);
-
-        static QueryPipeline::CompileContext Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query);
-        static LogicalPlan* BuildLogicalPlan(ParserResult& result, Statements::Statement* statement);
-        static PhysicalPlan::ExecutionNode* BuildExecutionPlan(ParserResult& result, LogicalPlan* logicalPlan);
+        static void Parse(CompileResult& result, const DataTypes::Guid& sessionId, const std::string& query);
+        static LogicalPlan* BuildLogicalPlan(CompileResult& result, Statements::Statement* statement);
+        static PhysicalPlan::ExecutionNode* BuildExecutionPlan(CompileResult& result, LogicalPlan* logicalPlan);
         static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, PipelineConstants::cursor_id_t cursorId);
 
         public:
@@ -80,9 +70,7 @@ namespace QueryPipeline{
                 return instance;
             }
 
-            static ParserResult StartTransaction(const std::string& query, const DataTypes::Guid& sessionId);
-
-            static ParserResult Execute(Cursor* cursor);
+            static CompileResult StartTransaction(const std::string& query, const DataTypes::Guid& sessionId);
 
             static void CommitTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor);
             static void RollbackTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor);

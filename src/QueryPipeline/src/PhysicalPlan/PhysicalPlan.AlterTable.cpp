@@ -19,14 +19,15 @@ namespace QueryPipeline::PhysicalPlan{
   ExecutionResult PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
 
-    if (this->session == nullptr || this->session->user == nullptr)
-      return ExecutionResult(
-        Errors::RuntimeError::Error,
-        Messages::FAILED_TO_RETRIEVE_USER_SESSION
-      );
+    auto result = ExecutionResult();
 
-    //if add occurs in a different index pos chaos ensues
-    const auto columnResult =
+    if (this->session == nullptr || this->session->user == nullptr){
+        result.status = Errors::RuntimeStatus(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION);
+        return result;
+    }
+
+      //if add occurs in a different index pos chaos ensues
+    result.status =
         this->catalog->InsertColumnToMasterDb(
           properties,
           this->table->tableId,
@@ -41,14 +42,10 @@ namespace QueryPipeline::PhysicalPlan{
           this->session->user->name
           );
 
-      if (columnResult.code != Errors::RuntimeError::Ok) {
-        auto result = ExecutionResult();
-        result.code = columnResult.code;
-        result.message = columnResult.message;
+      if (!result.status.IsOk())
         return result;
-      }
 
-      const auto columnId = columnResult.primaryKey.AsInt(1);
+      const auto columnId = result.status.primaryKey.AsInt(1);
 
       if (!this->column->defaultValue.IsNull()) {
         const auto value = this->column->defaultValue.AsString();

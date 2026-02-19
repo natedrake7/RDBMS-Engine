@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cmath>
 
+#include "ValidationMessages.h"
 #include "../../../include/SystemDatabases/CatalogSchema.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../include/BufferPool/StorageManager.h"
@@ -265,7 +266,7 @@ namespace DatabaseEngine::StorageTypes {
         DataStructures::PolymorphicArray<QueryResult> &input
       ) {
         if (input.Empty())
-            return Errors::RuntimeStatus(Errors::RuntimeError::Ok, "No rows to insert");
+            return Errors::RuntimeStatus(Errors::RuntimeError::Ok, Messages::NO_ROWS_TO_INSERT);
 
         // std::pmr::vector<InsertPayload> rows(&properties.allocator);
 

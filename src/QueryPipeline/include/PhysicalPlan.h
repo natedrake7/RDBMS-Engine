@@ -34,8 +34,7 @@ namespace QueryPipeline::PhysicalPlan{
       DataStructures::PolymorphicArray<Pages::RowReference> rows;
       DataStructures::PolymorphicArray<QueryResult> results;
 
-      std::string message;
-      Errors::RuntimeError code;
+      Errors::RuntimeStatus status;
 
       bool canFetchMore;
 

@@ -3,15 +3,13 @@
 #include <vector>
 
 template<typename Key, typename Value>
-class Dictionary : public std::unordered_map<Key, Value>
-{
+class Dictionary : public std::unordered_map<Key, Value>{
     public:
         Dictionary() : std::unordered_map<Key, Value>() {}
 
         Dictionary(const std::initializer_list<std::pair<const Key, Value>>& values) : std::unordered_map<Key, Value>(values) {}
 
-        bool TryGetValue(const Key& key, Value& value) const
-        {
+        bool TryGetValue(const Key& key, Value& value) const{
             auto it = this->find(key);
             if (it != this->end()) 
             {
@@ -22,8 +20,7 @@ class Dictionary : public std::unordered_map<Key, Value>
             return false;
         }
 
-        bool TryGetValue(const Key& key, Value*& value) const
-        {
+        bool TryGetValue(const Key& key, Value*& value) const{
             auto it = this->find(key);
             if (it != this->end())
             {
@@ -34,23 +31,19 @@ class Dictionary : public std::unordered_map<Key, Value>
             return false;
         }
 
-        bool Contains(const Key& key) const 
-        {
+        bool Contains(const Key& key) const {
             return this->find(key) != this->end();
         }
 
-        void Remove(const Key& key) 
-        {
+        void Remove(const Key& key) {
             this->erase(key);
         }
 
-        void Add(const Key& key, const Value& value)
-        {
+        void Add(const Key& key, const Value& value){
             this->insert(std::make_pair(key, value));
         }
 
-        void Add(const Key& key, Value&& value)
-        {
+        void Add(const Key& key, Value&& value){
             this->insert(std::make_pair(key, std::move(value)));
         }
 
@@ -76,8 +69,7 @@ class Dictionary : public std::unordered_map<Key, Value>
             this->at(key) = value;
         }
 
-        void Update(const Key& key, Value&& value)
-        {
+        void Update(const Key& key, Value&& value){
             if (!this->Contains(key))
                 return;
 
@@ -102,18 +94,15 @@ class Dictionary : public std::unordered_map<Key, Value>
             this->Update(key, std::move(value));
         }
 
-        Value& Get(const Key& key)
-        {
+        Value& Get(const Key& key){
             return this->at(key);
         }
 
-        Value Get(const Key& key) const
-        {
+        Value Get(const Key& key) const{
             return this->at(key);
         }
 
-        std::vector<Value> ToVector() const
-        {
+        std::vector<Value> ToVector() const{
             std::vector<Value> values;
             for (const auto& pair : *this)
                 values.push_back(pair.second);

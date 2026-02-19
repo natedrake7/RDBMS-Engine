@@ -8,6 +8,8 @@
 
 #include <iostream>
 
+#include "ValidationMessages.h"
+
 namespace Network {
    Server::Server(){
     this->temporaryDatabase = nullptr;
@@ -99,10 +101,7 @@ namespace Network {
       const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
 
       if (currentSession == nullptr || currentSession->user == nullptr)
-        return{
-          Errors::RuntimeError::InvalidSession,
-          "Failed to validate session"
-      };
+        return Errors::RuntimeStatus(Errors::RuntimeError::InvalidSession, Messages::FAILED_TO_GET_USER_SESSION);
 
       return this->systemCatalog->UpdateUserById(
         currentSession->user->name,

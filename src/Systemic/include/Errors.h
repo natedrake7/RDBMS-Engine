@@ -36,6 +36,18 @@ namespace Errors {
       this->primaryKey = DataTypes::Indexing::Key();
     }
 
+    RuntimeStatus(const RuntimeError code, std::string& message){
+        this->code = code;
+        this->message = std::move(message);
+        this->primaryKey = DataTypes::Indexing::Key();
+    }
+
+    RuntimeStatus(const RuntimeError code, const std::string_view message){
+        this->code = code;
+        this->message = std::string(message);
+        this->primaryKey = DataTypes::Indexing::Key();
+    }
+
     RuntimeStatus(const RuntimeError code, const std::string&  message){
       this->code = code;
       this->message = message;

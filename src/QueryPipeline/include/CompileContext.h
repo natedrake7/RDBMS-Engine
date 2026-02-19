@@ -22,6 +22,7 @@ namespace QueryPipeline{
             void Reserve(Int size);
             void Push(Statements::Statement* statement);
             DataStructures::PolymorphicArray<Statements::Statement*>* GetStatements();
+            const Memory::Allocator& GetAllocator()const;
 
             void* Allocate(Int size) const;
             template<typename T>

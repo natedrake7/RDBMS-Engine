@@ -18,7 +18,9 @@ namespace Headers {
 }
 
 namespace QueryPipeline {
-  namespace PipelineConstants {
+    struct CompileResult;
+
+    namespace PipelineConstants {
     enum class JoinAlgorithm : UnsignedTinyInt;
   }
 
@@ -203,6 +205,8 @@ namespace QueryPipeline {
   };
 
   class Optimizer final{
+      CompileResult* context;
+
       static void SplitConjunctions(
         Expressions::Expression* expression,
         std::vector<Expressions::Expression*>& conjunctions
@@ -215,12 +219,12 @@ namespace QueryPipeline {
 
       static std::vector<table_id_t> GetInvolvedTables(const Expressions::Expression* expression);
 
-      static void CombineExpressionsWithAnd(
+      void CombineExpressionsWithAnd(
         Expressions::Expression*& baseExpression,
         Expressions::Expression* newExpression
-      );
+      ) const;
 
-      static void ProcessPredicate(
+      void ProcessPredicate(
         Expressions::Expression* baseExpression,
         Expressions::Expression*& remainingPredicate,
         Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary
@@ -271,7 +275,7 @@ namespace QueryPipeline {
         const std::vector<Expressions::Expression*>& conjunctions
       );
 
-      static Range BuildSeekKeys(
+      Range BuildSeekKeys(
         const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
         std::vector<Expressions::Expression*>& conjunctions
       );
@@ -287,33 +291,33 @@ namespace QueryPipeline {
         const std::vector<JoinConditionInfo>& joinConditions
       );
 
-      static JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
+      JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
         const std::vector<JoinConditionInfo>& conditionsInfo,
         const std::vector<Int>& leftKeyColumns,
         const std::vector<Int>& rightKeyColumns,
         Int leftTableId,
         Int rightTableId
-      );
+      ) const;
 
     public:
-      [[nodiscard]] static JoinOrderAnalyzeResult DetermineJoinOrder(Statements::SelectStatement* statement);
-      [[nodiscard]] static PredicatePushDownResult PushDownPredicates(
-        const std::vector<table_id_t>& tables,
-        Expressions::Expression* expression,
-        const std::vector<Statements::JoinStatement*>& joins
-      );
+        Optimizer(CompileResult& context);
 
-      [[nodiscard]] static Range PerformIndexAnalysis(
-        std::vector<Headers::IndexHeader>& indexes,
-        Expressions::Expression* expression,
-        const Headers::TableStatistics& tableStatistics
-      );
-
-      [[nodiscard]] static JoinAlgorithmAnalysisResult ChooseJoinAlgorithm(
-        Int leftTableId,
-        Int rightTableId,
-        Expressions::Expression* joinCondition
-      );
+        [[nodiscard]] static JoinOrderAnalyzeResult DetermineJoinOrder(Statements::SelectStatement* statement);
+        [[nodiscard]] PredicatePushDownResult PushDownPredicates(
+            const std::vector<table_id_t>& tables,
+            Expressions::Expression* expression,
+            const std::vector<Statements::JoinStatement*>& joins
+        );
+        [[nodiscard]] Range PerformIndexAnalysis(
+            std::vector<Headers::IndexHeader>& indexes,
+            Expressions::Expression* expression,
+            const Headers::TableStatistics& tableStatistics
+        );
+        [[nodiscard]] JoinAlgorithmAnalysisResult ChooseJoinAlgorithm(
+            Int leftTableId,
+            Int rightTableId,
+            Expressions::Expression* joinCondition
+        );
   };
 
 

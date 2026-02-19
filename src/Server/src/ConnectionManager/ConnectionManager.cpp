@@ -370,27 +370,32 @@ void ConnectionManager::GetQueryFromClient(const Int clientSocket, const Network
 }
 
 void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket, const Network::ConnectionProtocolHeader &header){
-    auto parserResult = QueryPipeline::Parser::StartTransaction(query, header.sessionId);
+    auto compileResult = QueryPipeline::Parser::StartTransaction(query, header.sessionId);
 
-    if (parserResult.status.hasError) {
-      Network::QueryResponseProtocol response(parserResult.status.hasError, false, parserResult.status.message, parserResult.columns, parserResult.rows);
-      ConnectionManager::SendToClient(socket, &response);
-
-      return;
+    if (compileResult.status.hasError) {
+        DataStructures::PolymorphicArray<QueryResult> results;
+        Network::QueryResponseProtocol response(compileResult.status.hasError, false, compileResult.status.message, {}, results);
+        ConnectionManager::SendToClient(socket, &response);
+        return;
     }
 
     bool hasError = false;
-
-    for (auto* cursor : parserResult.cursors) {
+    for (auto* cursor : compileResult.cursors) {
       while (cursor->CanFetch()) {
-        auto batchResult = QueryPipeline::Parser::Execute(cursor);
+        auto batchResult = cursor->FetchNextBatch();
 
-        bool hasMore = !batchResult.status.hasError && cursor->CanFetch();
+        bool hasMore = batchResult.status.IsOk() && cursor->CanFetch();
 
-        Network::QueryResponseProtocol response(batchResult.status.hasError, hasMore, batchResult.status.message, batchResult.columns, batchResult.rows);
+        Network::QueryResponseProtocol response(
+        batchResult.status.IsOk(),
+                hasMore,
+                batchResult.status.message,
+                batchResult.displayColumnNames,
+             batchResult.results
+            );
         ConnectionManager::SendToClient(socket, &response);
 
-        if (batchResult.status.hasError) {
+        if (!batchResult.status.IsOk()) {
           hasError = true;
           break;
         }

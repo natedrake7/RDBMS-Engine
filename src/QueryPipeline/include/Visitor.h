@@ -15,9 +15,9 @@ namespace QueryPipeline {
   static constexpr std::string_view Decimal = "decimal";
 
   class SQLVisitorImplementation final : public SQLVisitor {
-      QueryPipeline::CompileContext* _compileContext;
+      CompileContext* _compileContext;
     public:
-      explicit SQLVisitorImplementation(QueryPipeline::CompileContext& compileContext){
+      explicit SQLVisitorImplementation(CompileContext& compileContext){
           this->_compileContext = &compileContext;
       }
 

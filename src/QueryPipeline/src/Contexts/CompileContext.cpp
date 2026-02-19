@@ -36,5 +36,10 @@ namespace QueryPipeline{
         return &this->statements;
     }
 
+    const Memory::Allocator& CompileContext::GetAllocator() const{
+        return this->allocator;
+    }
+
+
     void* CompileContext::Allocate(const Int size) const{ return this->allocator.Allocate(size); }
 }

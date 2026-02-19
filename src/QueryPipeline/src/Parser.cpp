@@ -94,33 +94,41 @@ namespace QueryPipeline{
 
     Parser::Parser() = default;
 
-     void ParserResult::CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables){
-        for (const auto& [key, variable] : sessionVariables)
-            this->validationScope.variables.ForceAdd(key, variable.GetType());
+    CompileResult::CompileResult(){
+        this->hasMore = false;
+        this->cursors.SetAllocator(this->_context.GetAllocator());
     }
 
-    ParserResult::ParserResult(const Errors::Error &error){
+     void CompileResult::CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables){
+        for (const auto& [key, variable] : sessionVariables)
+            this->_scope.variables.ForceAdd(key, variable.GetType());
+    }
+
+    CompileResult::CompileResult(const Errors::Error &error){
         this->status = error;
         this->hasMore = false;
-     }
+        this->cursors.SetAllocator(this->_context.GetAllocator());
+        // this->columns.SetAllocator(this->_context.GetAllocator());
+        // this->rows.SetAllocator(this->_context.GetAllocator());
+    }
 
-    ParserResult::ParserResult(ParserResult&& other) noexcept{
+    CompileResult::CompileResult(CompileResult&& other) noexcept{
          this->status = other.status;
          this->hasMore = other.hasMore;
-         this->validationScope = std::move(other.validationScope);
-         this->columns = std::move(other.columns);
-         this->rows = std::move(other.rows);
+         this->_scope = std::move(other._scope);
+         // this->columns = std::move(other.columns);
+         // this->rows = std::move(other.rows);
          this->cursors = std::move(other.cursors);
     }
 
-    ParserResult& ParserResult::operator=(ParserResult&& other) noexcept{
+    CompileResult& CompileResult::operator=(CompileResult&& other) noexcept{
          if (this == &other) return *this;
 
          this->status = other.status;
          this->hasMore = other.hasMore;
-         this->validationScope = std::move(other.validationScope);
-         this->columns = std::move(other.columns);
-         this->rows = std::move(other.rows);
+         this->_scope = std::move(other._scope);
+         // this->columns = std::move(other.columns);
+         // this->rows = std::move(other.rows);
          this->cursors = std::move(other.cursors);
 
          return *this;
@@ -155,16 +163,9 @@ namespace QueryPipeline{
          }
     }
 
-    void Parser::ClearQuery(const std::vector<Statements::Statement*>& statements) {
-        for (auto* statement: statements) {
-             statement->CleanUp();
-             delete statement;
-         }
-    }
-
     Parser::~Parser() = default;
 
-    CompileContext Parser::Parse(ParserResult& result, const DataTypes::Guid& sessionId, const std::string& query) {
+    void Parser::Parse(CompileResult& result, const DataTypes::Guid& sessionId, const std::string& query) {
         static auto errorListener = ErrorListener();
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
@@ -182,15 +183,12 @@ namespace QueryPipeline{
         parser.addErrorListener(&errorListener); // Add custom
 
         // Start parsing, typically using the start rule of the grammar
-        CompileContext compileContext;
         try {
-            SQLParser::SqlStatementContext *tree = parser.sqlStatement();
-
-            SQLVisitorImplementation visitor(compileContext);
+            auto* tree = parser.sqlStatement();
+            SQLVisitorImplementation visitor(result._context);
 
             const auto response = visitor.visit(tree);
-
-            CreateStatements(compileContext, response, sessionId);
+            CreateStatements(result._context, response, sessionId);
         }
         catch (const std::exception& e) {
             // Parser::ClearQuery(statements);
@@ -198,36 +196,31 @@ namespace QueryPipeline{
             std::ostringstream os;
             os << "Parser exception: " << e.what();
 
-            result.status = {true, os.str()};
-            return compileContext;
+            result.status = Errors::Error(true, os.str());
         }
-
-        return compileContext;
      }
 
-    LogicalPlan* Parser::BuildLogicalPlan(ParserResult& result, Statements::Statement* statement){
-        auto validation = statement->Compile(result.validationScope);
+    LogicalPlan* Parser::BuildLogicalPlan(CompileResult& result, Statements::Statement* statement){
+        auto validation = statement->Compile(result);
         if (!validation.IsOk()) {
-
-            result.status  = {true, validation.message};
+            result.status = Errors::Error(true, validation.message);
             return nullptr;
         }
 
-        auto* logicalPlan = statement->ToLogical();
+        auto* logicalPlan = statement->ToLogical(result);
 
         if (logicalPlan == nullptr) {
-            result.status  = {true, "Unexpected error occurred during plan build"};
+            result.status = Errors::Error(true, "Unexpected error occurred during plan build");
             return nullptr;
         }
 
         return logicalPlan;
     }
 
-    PhysicalPlan::ExecutionNode* Parser::BuildExecutionPlan(ParserResult &result, LogicalPlan *logicalPlan) {
-        auto* physicalPlan = logicalPlan->ToPhysical();
-        delete logicalPlan;
+    PhysicalPlan::ExecutionNode* Parser::BuildExecutionPlan(CompileResult &result, LogicalPlan *logicalPlan) {
+        auto* physicalPlan = logicalPlan->ToPhysical(result);
         if(physicalPlan == nullptr){
-            result.status  = {true, "Unexpected error occurred during physical plan build"};
+            result.status = Errors::Error(true, "Unexpected error occurred during physical plan build");
             return nullptr;
         }
 
@@ -236,25 +229,25 @@ namespace QueryPipeline{
 
     void Parser::CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const PipelineConstants::cursor_id_t cursorId) {
         static const auto& server = Network::Server::Get();
-
         const auto _ = server.CloseCursor(sessionId, cursorId);
     }
 
-    ParserResult Parser::StartTransaction(const std::string &query, const DataTypes::Guid &sessionId){
+    CompileResult Parser::StartTransaction(const std::string &query, const DataTypes::Guid &sessionId){
         static const auto& server = Network::Server::Get();
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
-        ParserResult result;
-
+        CompileResult result;
         const auto* session = server.GetSession(sessionId);
-        result.CreateValidationScope(session->variables);
 
-        result._compileContext = Parser::Parse(result, sessionId, query);
+        result.CreateValidationScope(session->variables);
+        Parser::Parse(result, sessionId, query);
+
+        result.status.hasError = false;
         if (result.status.hasError)
             return result;
 
-        const auto* statements = result._compileContext.GetStatements();
-        result.cursors.reserve(statements->Size());
+        const auto* statements = result._context.GetStatements();
+        result.cursors.Reserve(statements->Size());
         for (auto* statement: *statements) {
             auto* logicalPlan = Parser::BuildLogicalPlan(result, statement);
             if (result.status.hasError)
@@ -278,27 +271,11 @@ namespace QueryPipeline{
             //     std::this_thread::sleep_for(5000ms);
             // }
 
-            result.cursors.push_back(server.CreateCursor(sessionId, properties, physicalPlan));
+            result.cursors.Push(server.CreateCursor(sessionId, properties, physicalPlan));
         }
 
         // if (result.status.hasError)
         //     Parser::ClearQuery(statements);
-
-        return result;
-    }
-
-    ParserResult Parser::Execute(Cursor* cursor){
-        ParserResult result;
-        //return the cursor to allow the thread to fetch more
-        auto executionResult = cursor->FetchNextBatch();
-
-        if (!executionResult.IsOk()){
-            result.status  = {true, executionResult.message};
-            return result;
-        }
-
-        result.columns = std::move(executionResult.displayColumnNames);
-        result.rows = std::move(executionResult.results);
 
         return result;
     }

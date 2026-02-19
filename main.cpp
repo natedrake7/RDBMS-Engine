@@ -110,12 +110,12 @@ int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
     // memoryInfo.Log(std::cout, Memory::MemoryLogLevel::GigaBytes);
 
-    static auto& globalMemoryManager = QueryPipeline::GlobalMemoryManager::Get();
+    static auto& globalMemoryManager = DatabaseEngine::GlobalMemoryManager::Get();
     globalMemoryManager.Initialize(memoryInfo);
 
     globalMemoryManager.Log(std::cout, Memory::MemoryLogLevel::Bytes);
 
-    static auto& bufferPoolMemoryManager = QueryPipeline::BufferPoolMemoryManager::Get();
+    static auto& bufferPoolMemoryManager = DatabaseEngine::BufferPoolMemoryManager::Get();
     bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
     // return 0;
@@ -145,10 +145,10 @@ int main(){
 
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
-    std::thread garbageCollectorThread(QueryPipeline::GarbageCollector::Collect, std::ref(serverRunning));
+    std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
     std::thread statisticsThread(
-        QueryPipeline::StatisticsScheduler::Start,
+        DatabaseEngine::StatisticsScheduler::Start,
         std::ref(serverRunning),
         std::ref(server.GetDatabases()),
         std::ref(server.GetDatabasesLatch())
@@ -196,33 +196,32 @@ int main(){
 void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
     const auto start = std::chrono::high_resolution_clock::now();
 
-    const auto parserResult = QueryPipeline::Parser::StartTransaction(query, sessionId);
+    const auto parseResult = QueryPipeline::Parser::StartTransaction(query, sessionId);
 
-    if (parserResult.status.hasError) {
-        std::cerr << "Error: " << parserResult.status.message << std::endl;
+    if (parseResult.status.hasError) {
+        std::cerr << "Error: " << parseResult.status.message << std::endl;
         return;
     }
 
     bool hasError = false;
 
     auto count = 0;
-    for (auto* cursor : parserResult.cursors) {
+    for (auto* cursor : parseResult.cursors) {
         while (cursor->CanFetch()) {
-            auto batchResult = QueryPipeline::Parser::Execute(cursor);
-
-            if (batchResult.status.hasError) {
-                std::cerr << "Error: " << batchResult.status.message << std::endl;
+            auto batch = cursor->FetchNextBatch();
+            if (!batch.status.IsOk()) {
+                std::cerr << "Error: " << batch.status.message << std::endl;
                 hasError = true;
                 break;
             }
 
-            count += batchResult.rows.Size();
-            for (const auto& column : batchResult.columns)
+            count += batch.rows.Size();
+            for (const auto& column : batch.displayColumnNames)
                 std::cout << column << " || ";
 
             std::cout << std::endl;
 
-            for (const auto& row : batchResult.rows)
+            for (const auto& row : batch.results)
                 std::cout << row;
         }
 
