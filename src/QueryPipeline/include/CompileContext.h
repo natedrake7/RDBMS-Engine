@@ -13,6 +13,7 @@ namespace QueryPipeline{
 
         public:
             explicit CompileContext(Int size = DEFAULT_COMPILATION_ALLOCATION_SIZE);
+            ~CompileContext();
             CompileContext(const CompileContext&) = delete;
             CompileContext& operator=(const CompileContext&) = delete;
             CompileContext(CompileContext&& other) noexcept;
@@ -27,11 +28,11 @@ namespace QueryPipeline{
             void* Allocate(Int size) const;
             template<typename T>
             T* Allocate() const{
-                return new (this->allocator.Allocate(sizeof(T))) T;
+                return new (this->Allocate(sizeof(T))) T;
             }
             template<typename T, typename... Args>
             T* Allocate(Args&&... args) const{
-                return new (this->allocator.Allocate(sizeof(T))) T(std::forward<Args>(args)...);
+                return new (this->Allocate(sizeof(T))) T(std::forward<Args>(args)...);
             }
 
     };

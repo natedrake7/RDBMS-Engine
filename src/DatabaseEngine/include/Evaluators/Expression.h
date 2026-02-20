@@ -2,11 +2,13 @@
 #include "Expressions.Additional.h"
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
-#include "../../../Systemic/include/DataTypes/Variable.h"
+#include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include <string>
 
+
 namespace DatabaseEngine{
-    struct ExecutionProperties;
+    class ExecutionContext;
+    class ScanState;
 }
 
 namespace Memory{
@@ -42,27 +44,27 @@ namespace Expressions{
         const Pages::RowReference* outerRow;
         const Pages::RowReference* innerRow;
 
-        const DatabaseEngine::ExecutionProperties* properties;
+        const DatabaseEngine::ExecutionContext* executionContext;
 
         EvaluationContextType type;
 
         EvaluationContext();
         explicit EvaluationContext(
             EvaluationContextType type,
-            const DatabaseEngine::ExecutionProperties& properties
+            const DatabaseEngine::ExecutionContext& executionContext
         );
         explicit EvaluationContext(
             const Pages::RowReference* row,
-            const DatabaseEngine::ExecutionProperties& properties
+            const DatabaseEngine::ExecutionContext& executionContext
         );
         explicit EvaluationContext(
             const QueryResult& row,
-            const DatabaseEngine::ExecutionProperties& properties
+            const DatabaseEngine::ExecutionContext& executionContext
         );
         EvaluationContext(
             const Pages::RowReference* outerRow,
             const Pages::RowReference* innerRow,
-            const DatabaseEngine::ExecutionProperties& properties
+            const DatabaseEngine::ExecutionContext& executionContext
         );
     };
 
@@ -184,34 +186,34 @@ namespace Expressions{
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
 
         //String Function
-        [[nodiscard]] static Value Concat(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Length(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value TrimLeft(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value TrimRight(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Trim(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value AsciiValue(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Char(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value CharIndex(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Lower(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Upper(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Replace(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Substr(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Left(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Right(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Reverse(const std::vector<Value>& arguments);
-        [[nodiscard]] static Value Space(const std::vector<Value>& arguments);
+        [[nodiscard]] static Value Concat(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Length(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value TrimLeft(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value TrimRight(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Trim(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value AsciiValue(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Char(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value CharIndex(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Lower(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Upper(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Replace(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Substr(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Left(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Right(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Reverse(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
+        [[nodiscard]] static Value Space(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
 
         //DateTime Functions
-        [[nodiscard]] static Value GetDate(const std::vector<Value>& arguments);
+        [[nodiscard]] static Value GetDate(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
 
         //Guid Functions
-        [[nodiscard]] static Value NewGuid(const std::vector<Value>& arguments);
+        [[nodiscard]] static Value NewGuid(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
 
         //Null Checking Functions
-        [[nodiscard]] static Value NullIf(const std::vector<Value>& arguments);
+        [[nodiscard]] static Value NullIf(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
         [[nodiscard]] static bool ValidateNullIf(const std::vector<Expression*>& arguments, std::string& errorMessage);
 
-        [[nodiscard]] static Value Coalesce(const std::vector<Value>& arguments);
+        [[nodiscard]] static Value Coalesce(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
         [[nodiscard]] static bool ValidateCoalesce(const std::vector<Expression*>& arguments, std::string& errorMessage);
 
         [[nodiscard]] bool ValidateNumberOfArguments(std::string& errorMessage)const;

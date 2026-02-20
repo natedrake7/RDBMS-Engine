@@ -8,7 +8,8 @@
 
 namespace DatabaseEngine
 {
-    struct ExecutionProperties;
+    class ExecutionContext;
+    struct ScanState;
 }
 
 namespace Pages
@@ -76,7 +77,7 @@ namespace DatabaseEngine::StorageTypes {
         void AlignSizeWithOffset();
 
         Value MaterializeColumn(
-            const ExecutionProperties& properties,
+            const ExecutionContext& context,
             const Column* column,
             Int numberOfColumns
         ) const;

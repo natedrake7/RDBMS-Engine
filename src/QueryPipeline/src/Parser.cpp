@@ -264,14 +264,14 @@ namespace QueryPipeline{
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
 
-            DatabaseEngine::ExecutionProperties properties(snapshot, 10000, session->variables);
+            DatabaseEngine::ExecutionContext context(snapshot, 10000, session->variables);
 
             //for test
             // if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {
             //     std::this_thread::sleep_for(5000ms);
             // }
 
-            result.cursors.Push(server.CreateCursor(sessionId, properties, physicalPlan));
+            result.cursors.Push(server.CreateCursor(sessionId, context, physicalPlan));
         }
 
         // if (result.status.hasError)

@@ -8,7 +8,8 @@
 #include "../../../../Systemic/include/DataStructures/PolymorphicArray.h"
 
 namespace DatabaseEngine{
-    struct ExecutionProperties;
+    class ExecutionContext;
+    struct ScanState;
 }
 
 namespace Pages{
@@ -56,25 +57,25 @@ class SortingFunctions{
 
     public:
          [[nodiscard]] static bool CompareRows(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& context,
             const QueryResult& firstRow,
             const QueryResult& secondRow,
             const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
           );
          [[nodiscard]] static bool CompareRowsAscending(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::RowReference& firstRow,
             const Pages::RowReference& secondRow,
             const column_index_t& columnIndex
           );
          [[nodiscard]] static bool CompareRowsDescending(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::RowReference& firstRow,
             const Pages::RowReference& secondRow,
             const column_index_t& columnIndex
           );
          static void OrderBy(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& context,
             DataStructures::PolymorphicArray<QueryResult>& rows,
             const std::vector<QueryPipeline::Statements::OrderColumn*>& conditions
           );
@@ -86,17 +87,17 @@ class SortingFunctions{
 
 class MergeComparator final{
         const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
-        const DatabaseEngine::ExecutionProperties* properties;
+        const DatabaseEngine::ExecutionContext* context;
 
     public:
         explicit MergeComparator(
           const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions,
-          const DatabaseEngine::ExecutionProperties* properties
+          const DatabaseEngine::ExecutionContext* context
         );
         bool operator()(
           const MergeElement& first,
           const MergeElement& second
         ) const;
-        void SetProperties(const DatabaseEngine::ExecutionProperties* properties);
+        void SetExecutionContext(const DatabaseEngine::ExecutionContext* otherContext);
         bool HasProperties() const;
 };

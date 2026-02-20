@@ -114,7 +114,12 @@ namespace Network {
     return this->userManager.GetUser(userName) != nullptr;
   }
 
-  bool Server::CreateUser(const DatabaseEngine::ExecutionProperties& properties, const std::string &userName, const std::string &password, const std::string& roleName){
+  bool Server::CreateUser(
+      const DatabaseEngine::ExecutionContext& context,
+      const std::string &userName,
+      const std::string &password,
+      const std::string& roleName
+    ){
     if (this->userManager.GetUser(userName) != nullptr)
       return false;
 
@@ -131,7 +136,7 @@ namespace Network {
 
     const auto result =
       this->systemCatalog->InsertUserToMasterDb(
-        properties,
+        context,
         userName,
         hashedPassword,
         role->id,
@@ -184,10 +189,10 @@ namespace Network {
 
   QueryPipeline::Cursor * Server::CreateCursor(
     const DataTypes::Guid &id,
-    DatabaseEngine::ExecutionProperties& properties,
+    DatabaseEngine::ExecutionContext& context,
     QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
   ) const {
-    return this->sessionManager.CreateCursor(id, properties, physicalPlan);
+    return this->sessionManager.CreateCursor(id, context, physicalPlan);
   }
 
   bool Server::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t cursorId) const {

@@ -104,7 +104,9 @@
 
 //add peek header functionality on page rows to delay materialization
 //TODO make join usable again
-//maybe use an allocator even for execution nodes etc...
+//maybe use an allocator even for execution nodes etc..
+
+//use string_views on Value AsString to avoid heap allocations //or use char[size] for stack allocation
 
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
@@ -230,6 +232,7 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
             continue;
         }
 
+        DatabaseEngine::GlobalMemoryManager::Get().Log(std::cout, Memory::MemoryLogLevel::Bytes);
         QueryPipeline::Parser::CommitTransaction(sessionId, cursor);
     }
 

@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "../../../QueryPipeline/include/PhysicalPlan.h"
+#include "../Contexts/ExecutionContext.h"
 
 namespace Headers {
   struct sysTable;
@@ -21,7 +22,7 @@ namespace DatabaseEngine {
     std::string sysDbPath;
 
     std::vector<Headers::sysTable> sysTables;
-    ExecutionProperties baseProperties;
+    ExecutionContext baseExecutionContext;
 
     void ReadConfiguration(std::string_view configPath);
     [[nodiscard]] bool CatalogExists()const;
@@ -75,7 +76,7 @@ namespace DatabaseEngine {
       )const;
 
       [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(
-          const ExecutionProperties& properties,
+          const ExecutionContext& executionContext,
           const std::string& dbName,
           const std::string& dbPath,
           bool isSystem = false,
@@ -85,7 +86,7 @@ namespace DatabaseEngine {
       ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertSchemaToMasterDb(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         Int databaseId,
         const std::string& schemaName,
         const std::string& user = "system",
@@ -94,7 +95,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertTableToMasterDb(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         Int databaseId,
         Int schemaId,
         const std::string& tableName,
@@ -106,7 +107,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnToMasterDb(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         Int tableId,
         const std::string& columnName,
         DataType columnType,
@@ -122,7 +123,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexToMasterDb(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         Int tableId,
         const std::string &indexName,
         bool isClustered,
@@ -133,7 +134,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexColumnToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
         Int indexId,
         Int columnId,
         const int16_t& ordinalPosition,
@@ -143,7 +144,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertConstraintToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
         Int tableId,
         const std::string& constraintName,
         const Headers::ConstraintType& constraintType,
@@ -155,7 +156,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertConstraintColumnToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
         Int constraintId,
         Int columnId,
         Int ordinalPosition,
@@ -164,7 +165,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIdentityColumnToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
         Int tableId,
         Int columnId,
         Int seedValue,
@@ -177,7 +178,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertDefaultValuesToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
         Int columnId,
         const Value& value,
         Int version = 0,
@@ -185,7 +186,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertTableStatisticsToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       Int tableId,
       const BigInt& rowCount = 0,
       Int rowSize = 0,
@@ -193,7 +194,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       Int columnId,
       const BigInt& distinctCount = 0,
       const BigInt& nullCount = 0
@@ -208,7 +209,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertIndexStatisticsToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       Int tableId,
       Int indexId,
       BigInt leafPages = 0,
@@ -217,7 +218,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertRoleToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       const std::string& roleName,
       const Security::Permission& permissions,
       bool isSystem = true,
@@ -226,7 +227,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertUserToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       const std::string& username,
       const std::string& passwordHash,
       Int roleId,

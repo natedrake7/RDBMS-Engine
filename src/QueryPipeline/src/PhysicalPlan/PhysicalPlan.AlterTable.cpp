@@ -16,7 +16,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
+  ExecutionResult PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionContext& context){
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
 
     auto result = ExecutionResult();
@@ -29,7 +29,7 @@ namespace QueryPipeline::PhysicalPlan{
       //if add occurs in a different index pos chaos ensues
     result.status =
         this->catalog->InsertColumnToMasterDb(
-          properties,
+          context,
           this->table->tableId,
           this->column->name.name,
           columnType,
@@ -52,7 +52,7 @@ namespace QueryPipeline::PhysicalPlan{
 
         const auto defaultValueResult =
             this->catalog->InsertDefaultValuesToMasterDb(
-              properties,
+              context,
               columnId,
               this->column->defaultValue
             );
@@ -89,7 +89,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult PhysicalDropColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
+  ExecutionResult PhysicalDropColumn::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -117,7 +117,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult PhysicalRenameColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
+  ExecutionResult PhysicalRenameColumn::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -151,7 +151,7 @@ namespace QueryPipeline::PhysicalPlan{
     delete this->column;
   }
 
-  ExecutionResult PhysicalAlterColumn::Execute(const DatabaseEngine::ExecutionProperties& properties){
+  ExecutionResult PhysicalAlterColumn::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult();
 
     if (this->session == nullptr || this->session->user == nullptr)

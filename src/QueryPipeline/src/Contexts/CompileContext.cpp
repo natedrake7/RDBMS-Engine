@@ -1,9 +1,18 @@
 ﻿#include "../../../QueryPipeline/include/CompileContext.h"
+#include "Managers/GlobalMemoryManager.h"
 
 namespace QueryPipeline{
     CompileContext::CompileContext(const Int size){
         this->allocator = Memory::Allocator(size);
+
+        if (!DatabaseEngine::GlobalMemoryManager::Get().TryReserveForExecution(size))
+            throw std::bad_alloc();
+
         this->statements.SetAllocator(this->allocator);
+    }
+
+    CompileContext::~CompileContext(){
+        DatabaseEngine::GlobalMemoryManager::Get().ReleaseExecutionReservation(this->allocator.GetCapacity());
     }
 
     CompileContext::CompileContext(CompileContext&& other) noexcept{
@@ -40,6 +49,16 @@ namespace QueryPipeline{
         return this->allocator;
     }
 
+    void* CompileContext::Allocate(const Int size) const{
+        if (this->allocator.WillReallocate(size)){
+            const auto prevCapacity = this->allocator.GetCapacity();
+            const auto newCapacity = this->allocator.SetNewCapacity(size);
+            this->allocator.Reallocate();
 
-    void* CompileContext::Allocate(const Int size) const{ return this->allocator.Allocate(size); }
+            if (!DatabaseEngine::GlobalMemoryManager::Get().TryReserveForExecution(newCapacity - prevCapacity))
+                throw std::bad_alloc();
+        }
+
+        return this->allocator.Allocate(size);
+    }
 }

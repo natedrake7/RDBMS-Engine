@@ -184,14 +184,14 @@ namespace Indexing{
         )const;
 
         void IndexSeekRange(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
             DataStructures::Array<Pages::RowReference>* result
         )const;
 
         void IndexSeekRange(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
             DataStructures::Array<Pages::RowReference>* result,
@@ -199,13 +199,13 @@ namespace Indexing{
         )const;
 
         void IndexSeek(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const DataTypes::Indexing::Key& key,
             DataStructures::Array<Pages::RowReference>* result
         )const;
 
         void IndexSeek(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const DataTypes::Indexing::Key& key,
             DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
@@ -214,26 +214,26 @@ namespace Indexing{
         void IndexScan(std::vector<DataTypes::Indexing::QueryData>& result)const;
 
         void IndexScan(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             DataStructures::Array<Pages::RowReference>* result,
             DatabaseEngine::IndexState& state
         )const;
 
         void IndexScan(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             DataStructures::Array<Pages::RowReference>* result,
             DatabaseEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             DataStructures::Array<Pages::RowReference>* result
         )const;
 
@@ -246,37 +246,37 @@ namespace Indexing{
         void IndexScan(std::vector<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void IndexScanUpdate(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const Expressions::Expression* expression,
             const std::vector<Value> &updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const Expressions::Expression* expression,
            const std::vector<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const std::vector<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexSeekUpdate(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const DataTypes::Indexing::Key& key,
             const std::vector<Value>& updates
         )const;
 
         Errors::RuntimeStatus IndexSeekUpdate(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const std::vector<Value>& updates
         )const;
         Errors::RuntimeStatus IndexSeekUpdate(
-            const DatabaseEngine::ExecutionProperties& properties,
+            const DatabaseEngine::ExecutionContext& executionContext,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const std::vector<Value>& updates

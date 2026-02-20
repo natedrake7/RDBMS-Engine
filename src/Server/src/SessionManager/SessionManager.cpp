@@ -81,7 +81,7 @@ namespace Network::Sessions {
 
     QueryPipeline::Cursor* SessionManager::CreateCursor(
         const DataTypes::Guid &id,
-        DatabaseEngine::ExecutionProperties& properties,
+        DatabaseEngine::ExecutionContext& context,
         QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
     )const{
         MultiThreading::WriterGuard guard(&this->mutex);
@@ -92,9 +92,9 @@ namespace Network::Sessions {
             return nullptr;
 
         auto cursorId = session->nextCursorId++;
-        auto* cursor = properties.allocator.Allocate<QueryPipeline::Cursor>(
+        auto* cursor = context.Allocate<QueryPipeline::Cursor>(
             cursorId,
-            properties,
+            context,
             physicalPlan
         );
         session->cursors.Add(cursorId, cursor);

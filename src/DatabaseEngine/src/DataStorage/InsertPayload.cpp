@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "Converter.h"
-#include "ExecutionProperties.h"
+#include "Contexts/ExecutionContext.h"
 #include "DataStorage/Column.h"
 #include "DataStorage/Row.h"
 #include "Pages/Additional/RawRowReference.h"
@@ -342,7 +342,7 @@ namespace DatabaseEngine::StorageTypes{
     }
 
     Value InsertPayload::MaterializeColumn(
-        const ExecutionProperties& properties,
+        const ExecutionContext& context,
         const Column* column,
         const Int numberOfColumns
     ) const{
@@ -389,7 +389,7 @@ namespace DatabaseEngine::StorageTypes{
             this->_data + offSet,
             blockSize,
             column->Type(),
-            &properties.allocator,
+            &context.GetAllocator(),
             columnOrdinal
         );
     }

@@ -128,7 +128,7 @@ namespace DatabaseEngine {
 
  void SystemCatalog::StoreSystemTablesToCatalog()const {
     const auto dbInsertResult = this->InsertDbToMasterDb(
-        this->baseProperties,
+        this->baseExecutionContext,
         this->sysDbName,
         this->sysDbPath,
         true
@@ -137,7 +137,7 @@ namespace DatabaseEngine {
     const auto databaseId = dbInsertResult.primaryKey.AsInt();
 
     const auto schemaInsertResult = this->InsertSchemaToMasterDb(
-      this->baseProperties,
+      this->baseExecutionContext,
       databaseId,
       "dbo"
     );
@@ -152,7 +152,7 @@ namespace DatabaseEngine {
 
       const auto tableResult =
         this->InsertTableToMasterDb(
-            this->baseProperties,
+            this->baseExecutionContext,
           databaseId,
           schemaId,
           table.name,
@@ -184,7 +184,7 @@ namespace DatabaseEngine {
 
         const auto columnResult =
           this->InsertColumnToMasterDb(
-              this->baseProperties,
+              this->baseExecutionContext,
              tableId,
              column.name,
              type,
@@ -203,7 +203,7 @@ namespace DatabaseEngine {
 
         if (column.hasIdentity)
           const auto _ = this->InsertIdentityColumnToMasterDb(
-                this->baseProperties,
+                this->baseExecutionContext,
                 tableId,
                 columnId,
                 1,
@@ -238,7 +238,7 @@ namespace DatabaseEngine {
       //TODO keep the last value keys
       const auto indexResult =
         this->InsertIndexToMasterDb(
-          this->baseProperties,
+          this->baseExecutionContext,
           tableId,
           "PK" + _columns,
           true
@@ -248,7 +248,7 @@ namespace DatabaseEngine {
 
       const auto constraintResult =
         this->InsertConstraintToMasterDb(
-          this->baseProperties,
+          this->baseExecutionContext,
           tableId,
           "PK" + _columns,
           Headers::ConstraintType::PrimaryKey,
@@ -258,7 +258,7 @@ namespace DatabaseEngine {
 
       for(int j = 0;j < table.primaryKey.size(); j++){
         auto _ = this->InsertIndexColumnToMasterDb(
-            this->baseProperties,
+            this->baseExecutionContext,
             indexId,
             columnIdsDict.Get(table.primaryKey[j]),
             static_cast<int16_t>(j),
@@ -266,7 +266,7 @@ namespace DatabaseEngine {
         );
 
         _ = this->InsertConstraintColumnToMasterDb(
-          this->baseProperties,
+          this->baseExecutionContext,
           constraintResult.primaryKey.AsInt(1),
           columnIdsDict.Get(table.primaryKey[j]),
           static_cast<int16_t>(j)
@@ -598,7 +598,7 @@ namespace DatabaseEngine {
    DataStructures::Array<Pages::RowReference> selectedDatabases;
 
    IndexState state;
-   sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, state, nullptr);
+   sysDatabases->ClusteredIndexScan(this->baseExecutionContext, &selectedDatabases, state, nullptr);
 
    std::vector<Headers::DatabaseHeader> databasesHeaders;
 
@@ -650,7 +650,7 @@ namespace DatabaseEngine {
    std::vector<Security::Role*> roles;
 
     auto result = this->InsertRoleToMasterDb(
-      this->baseProperties,
+      this->baseExecutionContext,
       admin,
       Constants::ADMIN_PERMISSIONS
     );
@@ -663,7 +663,7 @@ namespace DatabaseEngine {
     ));
 
     result = this->InsertRoleToMasterDb(
-      this->baseProperties,
+      this->baseExecutionContext,
       dbOwner,
       Constants::DB_OWNER_PERMISSIONS
     );
@@ -676,7 +676,7 @@ namespace DatabaseEngine {
     ));
 
     result = this->InsertRoleToMasterDb(
-      this->baseProperties,
+      this->baseExecutionContext,
       dbWriter,
       Constants::DB_WRITER_PERMISSIONS
     );
@@ -689,7 +689,7 @@ namespace DatabaseEngine {
     ));
 
     result = this->InsertRoleToMasterDb(
-      this->baseProperties,
+      this->baseExecutionContext,
       dbReader,
       Constants::DB_READER_PERMISSIONS
     );
@@ -702,7 +702,7 @@ namespace DatabaseEngine {
     ));
 
     result = this->InsertRoleToMasterDb(
-      this->baseProperties,
+      this->baseExecutionContext,
       guest,
       Constants::GUEST_PERMISSIONS
     );
@@ -722,7 +722,7 @@ namespace DatabaseEngine {
 
     const auto result =
       this->InsertUserToMasterDb(
-          this->baseProperties,
+          this->baseExecutionContext,
         admin,
         hashedPassword,
         defaultRoleId,
@@ -739,7 +739,7 @@ namespace DatabaseEngine {
   }
 
 Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const std::string& dbName,
     const std::string& dbPath,
     const bool isSystem,
@@ -763,7 +763,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysDatabases::DeletedAt))
     };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
     std::cout << "Inserted database: "<< dbName << " to master db" << std::endl;
 
@@ -771,7 +771,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus  SystemCatalog::InsertSchemaToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int databaseId,
     const std::string &schemaName,
     const std::string &user,
@@ -792,7 +792,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysSchemas::DeletedAt)),
      };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
       std::cout << "Inserted schema: "<< schemaName << " to master db" << std::endl;
 
@@ -800,7 +800,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertTableToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int databaseId,
     const Int schemaId,
     const std::string& tableName,
@@ -828,7 +828,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysTables::DeletedAt)),
       };
 
-      auto result = table->InsertRow(properties, fields);
+      auto result = table->InsertRow(executionContext, fields);
 
         std::cout << "Inserted table: "<< tableName << " to master db" << std::endl;
 
@@ -836,7 +836,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertColumnToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int tableId,
     const std::string &columnName,
     const DataType columnType,
@@ -880,7 +880,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt)),
       };
 
-      auto result = table->InsertRow(properties, fields);
+      auto result = table->InsertRow(executionContext, fields);
 
         std::cout << "Inserted column: "<< columnName << " to master db" << std::endl;
 
@@ -888,7 +888,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertIndexToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int tableId,
     const std::string &indexName,
     const bool isClustered,
@@ -913,7 +913,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt)),
      };
 
-      auto result = table->InsertRow(properties, fields);
+      auto result = table->InsertRow(executionContext, fields);
 
         std::cout << "Inserted index: "<< indexName << " to master db" << std::endl;
 
@@ -921,7 +921,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertIndexColumnToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int indexId,
     const Int columnId,
     const int16_t & ordinalPosition,
@@ -941,7 +941,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysIndexColumns::DeletedAt)),
     };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
       std::cout << "Inserted index column to master db" << std::endl;
 
@@ -949,7 +949,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertConstraintToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       const Int tableId,
       const std::string & constraintName,
       const Headers::ConstraintType & constraintType,
@@ -982,7 +982,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt)),
     };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
     std::cout << "Inserted constraint: "<< constraintName <<" to master db" << std::endl;
 
@@ -990,7 +990,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertConstraintColumnToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int constraintId,
     const Int columnId,
     const Int ordinalPosition,
@@ -1010,7 +1010,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysConstraintColumns::DeletedAt)),
     };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
       std::cout << "Inserted constraint column to master db" << std::endl;
 
@@ -1018,7 +1018,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertIdentityColumnToMasterDb(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       const Int tableId,
       const Int columnId,
       const Int seedValue,
@@ -1046,7 +1046,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysIdentityColumns::DeletedAt)),
       };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
       std::cout << "Inserted identity column to master db" << std::endl;
 
@@ -1054,7 +1054,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertDefaultValuesToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int columnId,
     const Value &value,
     const Int version,
@@ -1074,7 +1074,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value::Null(static_cast<column_index_t>(SysDefaultValues::DeletedAt)),
       };
 
-      auto result = table->InsertRow(properties, fields);
+      auto result = table->InsertRow(executionContext, fields);
 
       std::cout << "Inserted default value " << value << " to master db" << std::endl;
 
@@ -1082,7 +1082,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertTableStatisticsToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int tableId,
     const int64_t& rowCount,
     const Int rowSize,
@@ -1099,7 +1099,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt)),
     };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
     std::cout << "Inserted table stats for table with id: " << tableId << std::endl;
 
@@ -1107,7 +1107,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertColumnStatisticsToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const Int columnId,
     const int64_t &distinctCount,
     const int64_t &nullCount
@@ -1123,7 +1123,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount))
     };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
     std::cout << "Inserted column stats for column with id: " << columnId << std::endl;
 
@@ -1148,7 +1148,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-    auto result = table->InsertRow(this->baseProperties, fields);
+    auto result = table->InsertRow(this->baseExecutionContext, fields);
 
     std::cout << "Inserted histogram Bucket for column: " << columnId << std::endl;
 
@@ -1156,7 +1156,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertIndexStatisticsToMasterDb(
-    const ExecutionProperties &properties,
+    const ExecutionContext& executionContext,
     const Int tableId,
     const Int indexId,
     const BigInt leafPages,
@@ -1175,7 +1175,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated)),
    };
 
-   auto result = table->InsertRow(properties, fields);
+   auto result = table->InsertRow(executionContext, fields);
 
    std::cout << "Inserted index statistics for index: " << indexId << std::endl;
 
@@ -1183,7 +1183,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertRoleToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const std::string &roleName,
     const Security::Permission &permissions,
     const bool isSystem,
@@ -1208,7 +1208,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysRoles::DeletedAt)),
     };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
     std::cout << "Inserted Role " << roleName << std::endl;
 
@@ -1216,7 +1216,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertUserToMasterDb(
-    const ExecutionProperties& properties,
+    const ExecutionContext& executionContext,
     const std::string &username,
     const std::string &passwordHash,
     const Int roleId,
@@ -1243,7 +1243,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value::Null(static_cast<column_index_t>(SysUsers::DeletedAt)),
     };
 
-    auto result = table->InsertRow(properties, fields);
+    auto result = table->InsertRow(executionContext, fields);
 
     std::cout << "Inserted User " << username << std::endl;
 
@@ -1258,7 +1258,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
    auto* table = this->masterDb->OpenTable(CatalogTables::SysRoles);
 
    IndexState state;
-   table->ClusteredIndexScan(this->baseProperties, &rows, state, nullptr);
+   table->ClusteredIndexScan(this->baseExecutionContext, &rows, state, nullptr);
 
    for (const auto& row : rows) {
      const auto materializedRow = row.Materialize();
@@ -1283,7 +1283,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
    auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
 
    IndexState state;
-   table->ClusteredIndexScan(this->baseProperties, &rows, state, nullptr);
+   table->ClusteredIndexScan(this->baseExecutionContext, &rows, state, nullptr);
 
    for (const auto& row : rows) {
       const auto materializedRow = row.Materialize();
@@ -1313,7 +1313,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
       const Expressions::BinaryExpression binaryExpr(columnExpr, constantExpr, Expressions::BinaryOperator::Equal);
 
-      sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
+      sysDatabases->ClusteredIndexScan(this->baseExecutionContext, &selectedDatabases, &binaryExpr);
 
       return !selectedDatabases.Empty();
 }
@@ -1327,7 +1327,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabase(const std::string &name) c
   auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
   DataStructures::Array<Pages::RowReference> selectedDatabases;
 
-  sysDatabases->ClusteredIndexScan(this->baseProperties, &selectedDatabases, &binaryExpr);
+  sysDatabases->ClusteredIndexScan(this->baseExecutionContext, &selectedDatabases, &binaryExpr);
 
   if (selectedDatabases.Empty())
     return {};
@@ -1344,7 +1344,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int databaseId) 
   DataTypes::Indexing::Key key;
   key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-  sysDatabases->ClusteredIndexSeek(this->baseProperties, &selectedDatabases, key, nullptr);
+  sysDatabases->ClusteredIndexSeek(this->baseExecutionContext, &selectedDatabases, key, nullptr);
 
   if (selectedDatabases.Empty())
     return {};
@@ -1359,7 +1359,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key, nullptr);
+    sysSchemas->ClusteredIndexSeek(this->baseExecutionContext, &selectedSchemas, key, nullptr);
 
     if (selectedSchemas.Empty())
       return {};
@@ -1391,7 +1391,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    sysSchemas->ClusteredIndexSeek(this->baseProperties, &selectedSchemas, key, nullptr);
+    sysSchemas->ClusteredIndexSeek(this->baseExecutionContext, &selectedSchemas, key, nullptr);
 
     for (const auto& row : selectedSchemas) {
       const auto materializedRow = row.Materialize();
@@ -1424,7 +1424,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    sysTablesPtr->ClusteredIndexSeek(this->baseProperties, &selectedTables, key, nullptr);
+    sysTablesPtr->ClusteredIndexSeek(this->baseExecutionContext, &selectedTables, key, nullptr);
 
     if (selectedTables.Empty())
       return {};
@@ -1480,7 +1480,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
 
-    sysTablesPtr->ClusteredIndexSeek(this->baseProperties, &selectedTables, key, logicalExpr);
+    sysTablesPtr->ClusteredIndexSeek(this->baseExecutionContext, &selectedTables, key, logicalExpr);
 
     if (selectedTables.Empty())
       return {};
@@ -1495,7 +1495,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    constraintsTable->ClusteredIndexSeek(this->baseProperties, &selectedConstraints, key, nullptr);
+    constraintsTable->ClusteredIndexSeek(this->baseExecutionContext, &selectedConstraints, key, nullptr);
 
     if (selectedConstraints.Empty())
       return {};
@@ -1531,7 +1531,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    sysColumns->ClusteredIndexSeek(this->baseProperties, &selectedColumns, key, nullptr);
+    sysColumns->ClusteredIndexSeek(this->baseExecutionContext, &selectedColumns, key, nullptr);
 
     if (selectedColumns.Empty())
       return {};
@@ -1546,7 +1546,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    sysColumns->ClusteredIndexSeek(this->baseProperties, &selectedColumns, key, nullptr);
+    sysColumns->ClusteredIndexSeek(this->baseExecutionContext, &selectedColumns, key, nullptr);
 
     if (selectedColumns.Empty())
       return {};
@@ -1586,7 +1586,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
       DataTypes::Indexing::Key key;
       key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-      sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key, nullptr);
+      sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &selectedIndexes, key, nullptr);
 
        std::vector<Headers::IndexHeader> selectedIndexHeaders;
 
@@ -1611,7 +1611,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedIndexes, key, nullptr);
+    sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &selectedIndexes, key, nullptr);
 
     if(selectedIndexes.Empty())
       return {};
@@ -1635,7 +1635,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
+    sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
 
     if(rows.Empty())
       return {};
@@ -1674,7 +1674,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
       DataTypes::Indexing::Key key;
       key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-      table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
+      table->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
 
       if(rows.Empty())
         return {};
@@ -1713,7 +1713,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
+    sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
 
     if(rows.Empty())
       return {};
@@ -1752,7 +1752,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    sysValues->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
+    sysValues->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
 
     if(rows.Empty())
       return {};
@@ -1767,7 +1767,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    sysIndexes->ClusteredIndexSeek(this->baseProperties, &selectedStats, key, nullptr);
+    sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &selectedStats, key, nullptr);
 
     if (selectedStats.Empty())
       return {};
@@ -1785,7 +1785,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    sysColumnStats->ClusteredIndexSeek(this->baseProperties, &selectedStats, key, nullptr);
+    sysColumnStats->ClusteredIndexSeek(this->baseExecutionContext, &selectedStats, key, nullptr);
 
     if (selectedStats.Empty())
       return {};
@@ -1809,7 +1809,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
     DataStructures::Array<Pages::RowReference> rows;
-    table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
+    table->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
 
     for (const auto& row : rows)
       result.emplace_back(SystemCatalog::ToColumnHistograms(row, static_cast<DataType>(columnHeader.dataType)));
@@ -1826,7 +1826,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
    DataStructures::Array<Pages::RowReference> rows;
-   table->ClusteredIndexSeek(this->baseProperties, &rows, key, nullptr);
+   table->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
 
    for (const auto& row : rows)
      result.emplace_back(SystemCatalog::ToIndexStatistics(row));
@@ -1845,7 +1845,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
+    const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
   }
 
 void SystemCatalog::UpdateTableStatisticsById(
@@ -1867,7 +1867,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
 
-    const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
+    const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
   }
 
   void SystemCatalog::UpdateColumnStatisticsById(
@@ -1889,7 +1889,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
+    const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
   }
 
   void SystemCatalog::UpdateIndexStatisticsById(
@@ -1912,7 +1912,7 @@ void SystemCatalog::UpdateTableStatisticsById(
    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
 
-   const auto _ = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
+   const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
  }
 
   Errors::RuntimeStatus SystemCatalog::UpdateHistogramBucket(
@@ -1936,7 +1936,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
     key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int));
 
-    auto result = table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
+    auto result = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
 
     std::cout << "Updated histogram Bucket for column: " << columnId << " and id: " << histogramId << std::endl;
 
@@ -1949,7 +1949,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     DataTypes::Indexing::Key key;
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
 
-    return table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
+    return table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
   }
 
   Errors::RuntimeStatus SystemCatalog::UpdateUserById(
@@ -1970,6 +1970,6 @@ void SystemCatalog::UpdateTableStatisticsById(
    DataTypes::Indexing::Key key;
    key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int));
 
-   return table->ClusteredIndexSeekUpdate(this->baseProperties, key, updates);
+   return table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
  }
 }

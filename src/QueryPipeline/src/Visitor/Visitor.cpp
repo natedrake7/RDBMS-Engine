@@ -168,13 +168,13 @@ namespace QueryPipeline {
     antlrcpp::Any SQLVisitorImplementation::visitLiteralValue(SQLParser::LiteralValueContext *context){
         if (context->STRING()) {
             const auto& str = context->STRING()->getText();
-            auto value = Value(Functions::String::RemoveQuotesFromString(str), 0);
+            auto value = Value(Functions::String::RemoveQuotesFromString(str), this->_compileContext->GetAllocator(), 0);
             return std::any(value);
         }
 
         if (context->UNICODESTRING()) {
             const auto& str = context->UNICODESTRING()->getText();
-            auto value = Value(Functions::String::RemoveQuotesFromString(str), 0);
+            auto value = Value(Functions::String::RemoveQuotesFromString(str), this->_compileContext->GetAllocator(), 0);
             return std::any(value);
         }
 
@@ -184,7 +184,7 @@ namespace QueryPipeline {
                 : context->NUMBER()->getText();
 
             const auto number = Converter<BigInt>::Stoi(numberStr);
-            auto value = Value(number, 0);
+            auto value = Value(number, this->_compileContext->GetAllocator(), 0);
             return std::any(value);
         }
 
@@ -193,7 +193,7 @@ namespace QueryPipeline {
                 ? context->sign()->getText() + context->DECIMAL_REGEX()->getText()
                 : context->DECIMAL_REGEX()->getText();
 
-            auto value = Value(DataTypes::Decimal(decimalStr), 0);
+            auto value = Value(DataTypes::Decimal(decimalStr), this->_compileContext->GetAllocator(), 0);
             return std::any(value);
         }
 
@@ -203,12 +203,12 @@ namespace QueryPipeline {
         }
 
         if (context->TRUE()){
-            auto value = Value(true, 0);
+            auto value = Value(true, this->_compileContext->GetAllocator(), 0);
             return std::any(value);
         }
 
         if (context->FALSE()){
-            auto value = Value(false, 0);
+            auto value = Value(false, this->_compileContext->GetAllocator(), 0);
             return std::any(value);
         }
 

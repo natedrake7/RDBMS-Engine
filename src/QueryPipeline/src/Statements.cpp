@@ -139,7 +139,7 @@ namespace QueryPipeline::Statements {
     if (this->role.empty())
       return {Errors::ValidationError::Error,  "role cannot be empty"};
 
-      std::ostringstream os;
+    std::ostringstream os;
     if (this->server->UserExists(this->username)) {
       os << "User with username: " << this->username << " already exists.";
 
@@ -305,6 +305,7 @@ namespace QueryPipeline::Statements {
   }
 
   ColumnType::ColumnType(const std::string& name, const DecimalType decimal){
+      this->size = 0;
       this->name = name;
       this->decimal = decimal;
   }
@@ -881,30 +882,38 @@ namespace QueryPipeline::Statements {
     return context._context.Allocate<LogicalUseDatabase>(this->sessionId, this->databaseId);
   }
 
-   InsertStatement::~InsertStatement() = default;
+    InsertStatement::~InsertStatement() = default;
 
-  void InsertStatement::InsertDefaultValuesForMissingColumns(const Headers::ColumnHeader &header, const Headers::DefaultValuesHeader& defaultValue){
-    this->columns.emplace_back(ColumnName{
-      .name = header.name,
-      .alias = header.name,
-      .tableId = this->table->tableId,
-      .columnId = header.id,
-      .index = static_cast<column_index_t>(header.ordinalPosition),
-      .returnType = static_cast<DataType>(header.dataType),
-    });
+    void InsertStatement::InsertDefaultValuesForMissingColumns(
+        const CompileResult& context,
+        const Headers::ColumnHeader &header,
+        const Headers::DefaultValuesHeader& defaultValue
+    ){
+        this->columns.emplace_back(ColumnName{
+            .name = header.name,
+            .alias = header.name,
+            .tableId = this->table->tableId,
+            .columnId = header.id,
+            .index = static_cast<column_index_t>(header.ordinalPosition),
+            .returnType = static_cast<DataType>(header.dataType),
+            }
+        );
 
-    //Insert the default value
-    for (auto& [insertColumns] : this->values) {
-      const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
+        //Insert the default value
+        for (auto& [insertColumns] : this->values) {
+            const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
 
-      insertColumns.emplace_back(
-        new Expressions::ConstantExpression(Value(
-          data,
-          static_cast<int>(defaultValue.value.size()),
-          static_cast<DataType>(header.dataType)
-        )));
+            auto value = Value::FromExternalStorage(
+                data,
+                static_cast<Int>(defaultValue.value.size()),
+                static_cast<DataType>(header.dataType),
+                &context._context.GetAllocator(),
+                0
+            );
+
+            insertColumns.emplace_back(context._context.Allocate<Expressions::ConstantExpression>(value));
+        }
     }
-  }
 
   void InsertStatement::InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header){
     this->columns.emplace_back(ColumnName{
@@ -932,10 +941,9 @@ namespace QueryPipeline::Statements {
     if (DataTypes::Coercions::IsCoercionAllowed(
       valueType,
       columnType
-    ))
-      return {};
+    )) return {};
 
-      std::ostringstream os;
+    std::ostringstream os;
 
     if (expression->IsConstant()) {
       auto* constantExpr = expression->AsConstant();
@@ -1077,7 +1085,7 @@ namespace QueryPipeline::Statements {
         return {Errors::ValidationError::Error, os.str()};
       }
 
-      this->InsertDefaultValuesForMissingColumns(header, defaultValue);
+      this->InsertDefaultValuesForMissingColumns(context, header, defaultValue);
     }
 
     return this->HasSelectStatement()
@@ -2112,7 +2120,8 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   void AssignConstantToExpression(const CompileResult& context, Expressions::Expression *&expression) {
-    expression = context._context.Allocate<Expressions::ConstantExpression>(Value(true, 0));
+    auto value = Value(true, context._context.GetAllocator(), 0);
+    expression = context._context.Allocate<Expressions::ConstantExpression>(value);
   }
 
   void AssignColumnIndicesToExpression(
@@ -2295,124 +2304,120 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     return {};
   }
 
-  void AssignPostProjectionIndicesToExpression(
+    void AssignPostProjectionIndicesToExpression(
     const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
     Expressions::Expression *expression
-  ){
-    switch (expression->expressionType) {
-    case Expressions::ExpressionType::Binary:
-      AssignPostProjectionIndicesToBinaryExpression(columnIndicesDictionary, expression->AsBinary());
-      break;
-    case Expressions::ExpressionType::Logical:
-      AssignPostProjectionIndicesToLogicalExpression(columnIndicesDictionary, expression->AsLogical());
-      break;
-    case Expressions::ExpressionType::Branch:
-      AssignPostProjectionIndicesToBranchExpression(columnIndicesDictionary, expression->AsBranch());
-      break;
-    case Expressions::ExpressionType::Function:
-      AssignPostProjectionIndicesToFunctionExpression(columnIndicesDictionary, expression->AsFunction());
-      break;
-    case Expressions::ExpressionType::Column:
-      AssignPostProjectionIndicesToColumnExpression(columnIndicesDictionary, expression->AsColumn());
-      break;
-    case Expressions::ExpressionType::Expression:
-    case Expressions::ExpressionType::Constant:
-    case Expressions::ExpressionType::Variable:
-    default:
-      break;
+    ){
+        switch (expression->expressionType) {
+            case Expressions::ExpressionType::Binary:
+                AssignPostProjectionIndicesToBinaryExpression(columnIndicesDictionary, expression->AsBinary());
+                break;
+            case Expressions::ExpressionType::Logical:
+                AssignPostProjectionIndicesToLogicalExpression(columnIndicesDictionary, expression->AsLogical());
+                break;
+            case Expressions::ExpressionType::Branch:
+                AssignPostProjectionIndicesToBranchExpression(columnIndicesDictionary, expression->AsBranch());
+                break;
+            case Expressions::ExpressionType::Function:
+                AssignPostProjectionIndicesToFunctionExpression(columnIndicesDictionary, expression->AsFunction());
+                break;
+            case Expressions::ExpressionType::Column:
+                AssignPostProjectionIndicesToColumnExpression(columnIndicesDictionary, expression->AsColumn());
+                break;
+            case Expressions::ExpressionType::Expression:
+            case Expressions::ExpressionType::Constant:
+            case Expressions::ExpressionType::Variable:
+            default:
+                break;
+        }
     }
-  }
 
-  void AssignPostProjectionIndicesToBinaryExpression(
-    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
-    const Expressions::BinaryExpression *expression
-  ){
-    AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
-    AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->right);
-  }
+    void AssignPostProjectionIndicesToBinaryExpression(
+        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Expressions::BinaryExpression *expression
+    ){
+        AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
+        AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->right);
+    }
 
-  void AssignPostProjectionIndicesToLogicalExpression(
-    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
-    const Expressions::LogicalExpression *expression
-  ){
-    AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
-    AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->right);
-  }
+    void AssignPostProjectionIndicesToLogicalExpression(
+        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Expressions::LogicalExpression *expression
+    ){
+        AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
+        AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->right);
+    }
 
-  void AssignPostProjectionIndicesToFunctionExpression(
-    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
-    const Expressions::FunctionExpression *expression
-  ){
-    for (auto* childExpr : expression->arguments)
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, childExpr);
-  }
+    void AssignPostProjectionIndicesToFunctionExpression(
+        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Expressions::FunctionExpression *expression
+    ){
+        for (auto* childExpr : expression->arguments)
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, childExpr);
+    }
 
-  void AssignPostProjectionIndicesToBranchExpression(
-    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
-    const Expressions::BranchExpression *expression
-  ) {
-    for (auto* argument : expression->arguments)
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, argument);
+    void AssignPostProjectionIndicesToBranchExpression(
+        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Expressions::BranchExpression *expression
+    ) {
+        for (auto* argument : expression->arguments)
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, argument);
 
-    for (auto* branch : expression->branches)
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, branch);
+        for (auto* branch : expression->branches)
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, branch);
 
-    for (auto* result : expression->results)
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, result);
+        for (auto* result : expression->results)
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, result);
 
-    if (expression->HasBaseCase())
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->baseCase);
-  }
+        if (expression->HasBaseCase())
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->baseCase);
+    }
 
-  void AssignPostProjectionIndicesToBranchExpression(
-    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
-    Expressions::BranchExpression *expression
-  ){
+    void AssignPostProjectionIndicesToBranchExpression(
+        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        Expressions::BranchExpression *expression
+    ){
+        for (auto*& argument : expression->arguments)
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, argument);
+        for (auto*& branch : expression->branches)
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, branch);
+        for (auto*& resultExpr : expression->results)
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, resultExpr);
+        if (expression->HasBaseCase())
+            AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->baseCase);
+    }
 
-    for (auto*& argument : expression->arguments)
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, argument);
+    void AssignPostProjectionIndicesToColumnExpression(
+        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        Expressions::ColumnExpression *expression
+    ) {
+        expression->index = columnIndicesDictionary.Get(expression->alias);
+    }
 
-    for (auto*& branch : expression->branches)
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, branch);
+    Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType type) {
+        std::ostringstream os;
+        os  << "Expression of type: " << ColumnTypesToStringDictionary.Get(type)
+            << " cannot be converted to type: Bool";
 
-    for (auto*& resultExpr : expression->results)
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, resultExpr);
+        return Errors::ValidationStatus(Errors::ValidationError::Error, os.str());
+    }
 
-    if (expression->HasBaseCase())
-      AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->baseCase);
-  }
+    void TryPropagateChildExpression(
+        Expressions::Expression*& expression,
+        Expressions::Expression*& leftExpr,
+        Expressions::Expression*& rightExpr
+    ){
+        const auto* left = leftExpr->AsConstant();
+        if (left->value.IsNull()) return;
 
-  void AssignPostProjectionIndicesToColumnExpression(
-    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
-    Expressions::ColumnExpression *expression
-  ) {
-    expression->index = columnIndicesDictionary.Get(expression->alias);
-  }
+        if(
+            DataTypes::Coercions::CanBeParsedToType(DataType::Bool, left->value)
+            && left->value.AsBool() == false
+        ) {
+            PropagateExpression(expression, leftExpr);
+            return;
+        }
 
-  Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType type) {
-      std::ostringstream os;
-
-    os  << "Expression of type: " << ColumnTypesToStringDictionary.Get(type)
-        << " cannot be converted to type: Bool";
-
-    return {Errors::ValidationError::Error, os.str()};
-  }
-
-  void TryPropagateChildExpression(
-    Expressions::Expression*& expression,
-    Expressions::Expression*& leftExpr,
-    Expressions::Expression*& rightExpr
-  ){
-    const auto* left = leftExpr->AsConstant();
-    if (left->value.IsNull())
-      return;
-
-    if(DataTypes::Coercions::CanBeParsedToType(DataType::Bool, left->value)
-      && left->value.AsBool() == false) {
-      PropagateExpression(expression, leftExpr);
-      return;
-      }
-
-    PropagateExpression(expression, rightExpr);
-  }
+        PropagateExpression(expression, rightExpr);
+    }
 }

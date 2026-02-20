@@ -21,10 +21,10 @@ namespace Network {
 
     int32_t databaseId;
 
-    SortedDictionary<uint16_t, QueryPipeline::Cursor*> cursors;
+    SortedDictionary<UnsignedSmallInt, QueryPipeline::Cursor*> cursors;
     Dictionary<std::string, Variable> variables;
 
-    uint16_t nextCursorId;
+    UnsignedSmallInt nextCursorId;
 
     transaction_id_t transactionId;
 

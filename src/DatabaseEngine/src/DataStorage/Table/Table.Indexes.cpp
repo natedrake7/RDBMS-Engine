@@ -5,6 +5,7 @@
 
 #include "../../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../include/BufferPool/StorageManager.h"
+#include "Contexts/ExecutionContext.h"
 #include "Managers/GlobalMemoryManager.h"
 
 namespace DatabaseEngine::StorageTypes {
@@ -27,14 +28,14 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         InsertPayload& payload,
         const Int pagesToAllocate
     ){
         auto* tree = this->GetClusteredIndexedTree();
         // auto key = Database::CreateKey(this->GetClusteredIndex(), row);
 
-        auto key = this->CreateKey(properties, this->GetClusteredIndex(), payload);
+        auto key = this->CreateKey(executionContext, this->GetClusteredIndex(), payload);
 
         int indexPosition = 0;
 
@@ -105,7 +106,7 @@ namespace DatabaseEngine::StorageTypes {
     const std::vector<column_index_t> & Table::GetClusteredIndex() const { return this->header.clusteredIndex.columns; }
 
     void Table::ClusteredIndexSeekRange(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         DataStructures::Array<Pages::RowReference>* selectedRows,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
@@ -114,15 +115,15 @@ namespace DatabaseEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr) {
-            tree->IndexSeekRange(properties, minKey, maxKey, selectedRows, expression);
+            tree->IndexSeekRange(executionContext, minKey, maxKey, selectedRows, expression);
             return;
         }
 
-        tree->IndexSeekRange(properties, minKey, maxKey, selectedRows);
+        tree->IndexSeekRange(executionContext, minKey, maxKey, selectedRows);
     }
 
     void Table::ClusteredIndexSeek(
-        const ExecutionProperties &properties,
+        const ExecutionContext& executionContext,
         DataStructures::Array<Pages::RowReference>* selectedRows,
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression
@@ -130,15 +131,15 @@ namespace DatabaseEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr) {
-            tree->IndexSeek(properties, key, selectedRows, expression);
+            tree->IndexSeek(executionContext, key, selectedRows, expression);
             return;
         }
 
-        tree->IndexSeek(properties, key, selectedRows);
+        tree->IndexSeek(executionContext, key, selectedRows);
     }
 
     void Table::ClusteredIndexScan(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         DataStructures::Array<Pages::RowReference> *selectedRows,
         IndexState& state,
         const Expressions::Expression* expression
@@ -149,15 +150,15 @@ namespace DatabaseEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            tree->IndexScan(properties, selectedRows, state, expression);
+            tree->IndexScan(executionContext, selectedRows, state, expression);
             return;
         }
 
-        tree->IndexScan(properties, selectedRows, state);
+        tree->IndexScan(executionContext, selectedRows, state);
     }
 
     void Table::ClusteredIndexScan(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         DataStructures::Array<Pages::RowReference> *selectedRows,
         const Expressions::Expression *expression
     ){
@@ -167,15 +168,15 @@ namespace DatabaseEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            tree->IndexScan(properties, selectedRows, expression);
+            tree->IndexScan(executionContext, selectedRows, expression);
             return;
         }
 
-        tree->IndexScan(properties, selectedRows);
+        tree->IndexScan(executionContext, selectedRows);
     }
 
     void Table::NonClusteredIndexScan(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         DataStructures::Array<Pages::RowReference> *selectedRows,
         const Int indexPos,
         IndexState& state,
@@ -184,11 +185,11 @@ namespace DatabaseEngine::StorageTypes {
         const auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
         std::vector<DataTypes::RowIdentifier> rowIds;
-        tree->IndexScan(&rowIds, state, properties.batchSize);
+        tree->IndexScan(&rowIds, state, executionContext.GetBatchSize());
 
-        Expressions::EvaluationContext context(
+        Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            properties
+            executionContext
         );
 
         if (expression != nullptr) {
@@ -229,7 +230,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanDelete(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const Expressions::Expression *expression,
         IndexState& state
     ){
@@ -241,15 +242,15 @@ namespace DatabaseEngine::StorageTypes {
         if(results.empty())
             return;
 
-        Expressions::EvaluationContext context(
+        Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            properties
+            executionContext
         );
 
         for(const auto& row : results){
 
-            context.row = &row;
-            const auto value = expression->Evaluate(context);
+            evaluationContext.row = &row;
+            const auto value = expression->Evaluate(evaluationContext);
             if(value.AsBool())
             {
                 // const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, &row);
@@ -259,7 +260,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexSeekDelete(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const Expressions::Expression *expression,
         IndexState &state
     ){
@@ -330,14 +331,14 @@ namespace DatabaseEngine::StorageTypes {
     bool Table::HasNonClusteredIndexes() const { return !this->header.nonClusteredIndexes.empty(); }
 
     DataTypes::Indexing::Key Table::CreateKey(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const std::vector<column_index_t>& indexedColumns,
         const InsertPayload& payload
     ) const{
         auto key = DataTypes::Indexing::Key();
         for (const auto columnId : indexedColumns){
             auto value = payload.MaterializeColumn(
-                properties,
+                executionContext,
                 this->columns.at(columnId),
                 static_cast<Int>(this->columns.size())
             );

@@ -3,9 +3,8 @@
 #include "../../../../Systemic/include/DataTypes/SortCondition.h"
 #include "DataStructures/PolymorphicArray.h"
 
-namespace DatabaseEngine
-{
-    struct ExecutionProperties;
+namespace DatabaseEngine{
+    class ExecutionContext;
 }
 
 namespace QueryPipeline::Statements {
@@ -23,7 +22,7 @@ namespace DatabaseEngine::StorageTypes {
 }
 
 struct MergeSortParameters{
-    const DatabaseEngine::ExecutionProperties* properties;
+    const DatabaseEngine::ExecutionContext* properties;
     DataStructures::PolymorphicArray<QueryResult>* rows;
     const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
     Int left;

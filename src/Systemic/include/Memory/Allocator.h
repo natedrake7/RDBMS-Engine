@@ -14,12 +14,18 @@ namespace Memory {
             Allocator(Allocator&& other) noexcept;
             Allocator& operator=(Allocator&& other) noexcept;
 
+            [[nodiscard]] bool WillReallocate(UnsignedInt size)const;
+            [[nodiscard]] UnsignedInt SetNewCapacity(UnsignedInt size)const;
+            void Reallocate() const;
+
             void* Allocate(UnsignedInt size)const;
 
             template <typename Entity, typename... Args>
             Entity* Allocate(Args&&... args)const;
 
             void Reset() const;
+
+            [[nodiscard]] UnsignedInt GetCapacity()const;
     };
 
     template <typename Entity, typename... Args>

@@ -468,6 +468,97 @@ Value::Value(const DataTypes::Guid &data, const column_index_t index){
     this->usesExternalStorage = false;
 }
 
+Value::Value(const bool data, const Memory::Allocator& allocator, const column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(sizeof(bool)));
+    std::memcpy(this->data, &data, sizeof(bool));
+
+    this->size = sizeof(bool);
+    this->columnIndex = index;
+    this->type = DataType::Bool;
+    this->usesExternalStorage = true;
+}
+
+Value::Value(const TinyInt data, const Memory::Allocator& allocator, const column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(sizeof(TinyInt)));
+    std::memcpy(this->data, &data, sizeof(TinyInt));
+
+    this->size = sizeof(TinyInt);
+    this->columnIndex = index;
+    this->type = DataType::TinyInt;
+    this->usesExternalStorage = true;
+}
+
+Value::Value(const SmallInt data, const Memory::Allocator& allocator, const column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(sizeof(SmallInt)));
+    std::memcpy(this->data, &data, sizeof(SmallInt));
+
+    this->size = sizeof(SmallInt);
+    this->columnIndex = index;
+    this->type = DataType::SmallInt;
+    this->usesExternalStorage = true;
+}
+
+Value::Value(const Int data, const Memory::Allocator& allocator, const column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(sizeof(Int)));
+    std::memcpy(this->data, &data, sizeof(Int));
+
+    this->size = sizeof(Int);
+    this->columnIndex = index;
+    this->type = DataType::Int;
+    this->usesExternalStorage = true;
+}
+
+Value::Value(const BigInt data, const Memory::Allocator& allocator, const column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(sizeof(BigInt)));
+    std::memcpy(this->data, &data, sizeof(BigInt));
+
+    this->size = sizeof(BigInt);
+    this->columnIndex = index;
+    this->type = DataType::BigInt;
+    this->usesExternalStorage = true;
+}
+
+Value::Value(const std::string& data, const Memory::Allocator& allocator, column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(data.size()));
+    std::memcpy(this->data, data.data(), data.size());
+    this->size = data.size();
+
+    this->columnIndex = index;
+    this->type = DataType::String;
+    this->usesExternalStorage = true;
+}
+
+Value::Value(const DataTypes::DateTime& data, const Memory::Allocator& allocator, column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(DataTypes::DateTime::Size()));
+    const auto dt = data.GetUnixTimeStamp();
+    std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
+
+    this->size = DataTypes::DateTime::Size();
+    this->columnIndex = index;
+    this->type = DataType::DateTime;
+    this->usesExternalStorage = true;
+}
+
+Value::Value(const DataTypes::Decimal& data, const Memory::Allocator& allocator, const column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(data.GetRawDataSize()));
+    std::memcpy(this->data, data.GetRawData(), data.GetRawDataSize());
+
+    this->size = data.GetRawDataSize();
+    this->columnIndex = index;
+    this->type = DataType::Decimal;
+    this->usesExternalStorage = true;
+}
+
+Value::Value(const DataTypes::Guid& data, const Memory::Allocator& allocator, const column_index_t index){
+    this->data = static_cast<object_t*>(allocator.Allocate(data.Size()));
+    std::memcpy(this->data, data.GetData().data(), data.Size());
+
+    this->size = data.Size();
+    this->columnIndex = index;
+    this->type = DataType::Guid;
+    this->usesExternalStorage = true;
+}
+
 Value Value::FromExternalStorage(
     const object_t* data,
     const Int size,

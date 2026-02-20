@@ -18,6 +18,7 @@
 #include "../../../../Systemic/include/Guards/WriterGuard.h"
 #include "../../../../QueryPipeline/include/Statements.h"
 #include "../../../include/Database.h"
+#include "Contexts/ExecutionContext.h"
 #include "DataStructures/PolymorphicArray.h"
 #include "Logger/WriteAheadLogger.h"
 #include "Managers/GlobalMemoryManager.h"
@@ -262,7 +263,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::BatchInsert(
-        const ExecutionProperties &properties,
+        const ExecutionContext& executionContext,
         DataStructures::PolymorphicArray<QueryResult> &input
       ) {
         if (input.Empty())
@@ -270,7 +271,7 @@ namespace DatabaseEngine::StorageTypes {
 
         // std::pmr::vector<InsertPayload> rows(&properties.allocator);
 
-        DataStructures::PolymorphicArray<InsertPayload> rows(properties.allocator, input.Size());
+        DataStructures::PolymorphicArray<InsertPayload> rows(executionContext.GetAllocator(), input.Size());
         // rows.reserve(input.size());
 
         Int pagesNeeded = 0;
@@ -281,8 +282,8 @@ namespace DatabaseEngine::StorageTypes {
             Errors::RuntimeStatus status;
             auto payload = this->CreateInsertPayload(
                 status,
-                properties.allocator,
-                properties.snapshot.transactionId,
+                executionContext.GetAllocator(),
+                executionContext.GetCurrentTransactionId(),
                 insertedRow.Data()
             );
 
@@ -295,7 +296,7 @@ namespace DatabaseEngine::StorageTypes {
 
         auto checkPoint = Database::LogRowBatchInsert(
             buffer,
-            properties.snapshot.transactionId,
+            executionContext.GetCurrentTransactionId(),
             this->header.ordinalPosition
         );
 
@@ -308,7 +309,7 @@ namespace DatabaseEngine::StorageTypes {
 
         Errors::RuntimeStatus result;
         for (auto& payload: rows){
-            result = this->InsertRow(properties, payload, pagesNeeded);
+            result = this->InsertRow(executionContext, payload, pagesNeeded);
             if (!result.IsOk())
                 return result;
         }
@@ -318,7 +319,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
   Errors::RuntimeStatus Table::InsertRow(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const std::vector<Value> &inputData
     ){
         Logging::CheckPoint checkPoint;
@@ -326,18 +327,18 @@ namespace DatabaseEngine::StorageTypes {
         Errors::RuntimeStatus status;
         auto payload = this->CreateInsertPayload(
             status,
-            properties.allocator,
-            properties.snapshot.transactionId,
+            executionContext.GetAllocator(),
+            executionContext.GetCurrentTransactionId(),
             inputData
         );
 
-        checkPoint.transactionId = properties.snapshot.transactionId;
+        checkPoint.transactionId = executionContext.GetCurrentTransactionId();
         Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
 
         if (!status.IsOk())
             return status;
 
-        status =  this->InsertRow(properties, payload, 1);
+        status =  this->InsertRow(executionContext, payload, 1);
 
         if (!status.IsOk())
           return status;
@@ -382,7 +383,7 @@ namespace DatabaseEngine::StorageTypes {
     // }
 
     Errors::RuntimeStatus Table::InsertRow(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         InsertPayload& payload,
         const Int pagesToAllocate
     ){
@@ -390,7 +391,7 @@ namespace DatabaseEngine::StorageTypes {
 
         //row_id
         auto status = this->IsClustered()
-            ? this->ClusteredIndexInsert(properties, payload, pagesToAllocate)
+            ? this->ClusteredIndexInsert(executionContext, payload, pagesToAllocate)
             : this->HeapInsert(payload, pagesToAllocate);
 
         const auto rowId = status.rowId;
@@ -501,7 +502,7 @@ namespace DatabaseEngine::StorageTypes {
       }
 
     void Table::HeapScan(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       DataStructures::PolymorphicArray<Pages::RowReference> *result,
       ScanState& state
     )const
@@ -550,7 +551,7 @@ namespace DatabaseEngine::StorageTypes {
 
               state.lastFetchedRowId.indexId = i;
 
-              if (result->Size() == properties.batchSize) {
+              if (result->Size() == executionContext.GetBatchSize()) {
                 state.canFetchMore = true;
                 return;
               }
@@ -567,14 +568,14 @@ namespace DatabaseEngine::StorageTypes {
         ScanState& state,
         const Int batchSize
     ) const{
-        auto properties = ExecutionProperties();
-        properties.batchSize = batchSize;
+        auto properties = ExecutionContext();
+        properties.SetBatchSize(batchSize);
 
         this->HeapScan(properties, result, state);
     }
 
     void Table::HeapDelete(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       const Expressions::Expression* expression
     ) const
     {
@@ -594,7 +595,7 @@ namespace DatabaseEngine::StorageTypes {
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         std::vector<Row*> rowsToBeInserted;
-        Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
+        Expressions::EvaluationContext evaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, executionContext);
 
         for (const auto &extentId : tableExtentIds)
         {
@@ -618,9 +619,9 @@ namespace DatabaseEngine::StorageTypes {
             // for (int i = 0; i < rows.size(); i++) {
             //   const auto& row = rows.at(i);
             //
-            //   context.row = &row;
+            //   executionContext.row = &row;
             //
-            //   if (expression->Evaluate(context).GetBool())
+            //   if (expression->Evaluate(executionContext).GetBool())
             //     page.Delete(i);
             // }
 
@@ -707,7 +708,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::HeapUpdate(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const Expressions::Expression *expression,
         const std::vector<Value> &updates
     ){
@@ -730,7 +731,10 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
+            Expressions::EvaluationContext evaluationContext(
+                Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+                executionContext
+            );
 
             for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
                 if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
@@ -746,12 +750,12 @@ namespace DatabaseEngine::StorageTypes {
                 for (int i = 0; i < page.PageSize(); i++) {
                     auto row = page.PeekRow(i, 0);
 
-                    context.row = &row;
-                    const auto value = expression->Evaluate(context);
+                    evaluationContext.row = &row;
+                    const auto value = expression->Evaluate(evaluationContext);
                     if(!value.AsBool())
                         continue;
 
-                    auto result = this->UpdateRowNoLock(&page, row, properties, updates);
+                    auto result = this->UpdateRowNoLock(&page, row, executionContext, updates);
 
                     if (result.code != Errors::RuntimeError::Ok)
                         return result;
@@ -763,7 +767,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::HeapUpdate(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const Expressions::Expression *expression,
         const std::vector<Expressions::Expression*> &updates
     ){
@@ -787,7 +791,10 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-            Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::SingleRow, properties);
+            Expressions::EvaluationContext evaluationContext(
+                Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+                executionContext
+            );
             for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
                 if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
                   break;
@@ -796,13 +803,13 @@ namespace DatabaseEngine::StorageTypes {
 
                 for (int i = 0;i < page.PageSize(); i++){
                     auto rowPtr = page.PeekRow(i, 0);
-                    context.row = &rowPtr;
+                    evaluationContext.row = &rowPtr;
 
-                    const auto value = expression->Evaluate(context);
+                    const auto value = expression->Evaluate(evaluationContext);
                     if(!value.AsBool())
                         continue;
 
-                    auto result = this->UpdateRowNoLock(&page, rowPtr, properties, updates);
+                    auto result = this->UpdateRowNoLock(&page, rowPtr, executionContext, updates);
                     if (!result.IsOk())
                         return result;
                 }
@@ -813,28 +820,28 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::ClusteredIndexScanUpdate(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       const Expressions::Expression *expression,
       const std::vector<Value> &updates
     ){
       const auto* tree = this->GetClusteredIndexedTree();
-      tree->IndexScanUpdate(properties, expression, updates);
+      tree->IndexScanUpdate(executionContext, expression, updates);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
-      const ExecutionProperties& properties,
+      const ExecutionContext& executionContext,
       const Expressions::Expression *expression,
       const std::vector<Expressions::Expression*>& updates
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
         return (expression == nullptr)
-          ? tree->IndexScanUpdate(properties, updates)
-          : tree->IndexScanUpdate(properties, expression, updates);
+          ? tree->IndexScanUpdate(executionContext, updates)
+          : tree->IndexScanUpdate(executionContext, expression, updates);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
@@ -843,17 +850,17 @@ namespace DatabaseEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         return (expression == nullptr)
-            ? tree->IndexSeekUpdate(properties, minimumValue, maximumValue, updates)
-            : tree->IndexSeekUpdate(properties, expression, minimumValue, maximumValue, updates);
+            ? tree->IndexSeekUpdate(executionContext, minimumValue, maximumValue, updates)
+            : tree->IndexSeekUpdate(executionContext, expression, minimumValue, maximumValue, updates);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
-      const ExecutionProperties &properties,
-      const DataTypes::Indexing::Key &key,
-      const std::vector<Value> &updates
+        const ExecutionContext& executionContext,
+        const DataTypes::Indexing::Key &key,
+        const std::vector<Value> &updates
     ) {
         const auto* tree = this->GetClusteredIndexedTree();
-        return tree->IndexSeekUpdate(properties, key, updates);
+        return tree->IndexSeekUpdate(executionContext, key, updates);
       }
 
     void Table::Truncate()
@@ -1004,7 +1011,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const std::vector<Value>& updates
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
@@ -1020,7 +1027,7 @@ namespace DatabaseEngine::StorageTypes {
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        auto newPayload = this->CreateUpdatePayload(status, properties.snapshot.transactionId, materializedRow.Data());
+        auto newPayload = this->CreateUpdatePayload(status, executionContext.GetCurrentTransactionId(), materializedRow.Data());
 
         if (!status.IsOk())
             return status;
@@ -1029,7 +1036,7 @@ namespace DatabaseEngine::StorageTypes {
               return status;
 
           //only for heap tables
-          auto insertResult = this->InsertRow(properties, newPayload, 1);
+          auto insertResult = this->InsertRow(executionContext, newPayload, 1);
 
           if (!insertResult.IsOk())
               return insertResult;
@@ -1042,7 +1049,7 @@ namespace DatabaseEngine::StorageTypes {
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const std::vector<Expressions::Expression*>& updates
     ){
 
@@ -1051,16 +1058,16 @@ namespace DatabaseEngine::StorageTypes {
 
         auto materializedRow = rowPtr.Materialize();
 
-        const Expressions::EvaluationContext context(&rowPtr, properties);
+        const Expressions::EvaluationContext evaluationContext(&rowPtr, executionContext);
         for (const auto* updateExpr : updates) {
-            auto updatedValue = updateExpr->Evaluate(context);
+            auto updatedValue = updateExpr->Evaluate(evaluationContext);
             updatedValue.SetColumnIndex(updateExpr->columnIndex);
             materializedRow.Update(updatedValue);
         }
 
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
-        auto newPayload = this->CreateUpdatePayload(status, properties.snapshot.transactionId, materializedRow.Data());
+        auto newPayload = this->CreateUpdatePayload(status, executionContext.GetCurrentTransactionId(), materializedRow.Data());
 
         if (!status.IsOk())
             return status;
@@ -1069,7 +1076,7 @@ namespace DatabaseEngine::StorageTypes {
             return status;
 
         //only for heap tables
-        auto insertResult = this->InsertRow(properties, newPayload, 1);
+        auto insertResult = this->InsertRow(executionContext, newPayload, 1);
 
         if (!insertResult.IsOk())
             return insertResult;
@@ -1257,7 +1264,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
 
     //TODO add heap insert if row still cant remain in page if heap
     void Table::HandleAddColumn(
-        const ExecutionProperties& properties,
+        const ExecutionContext& executionContext,
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const column_index_t index,
@@ -1268,7 +1275,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
         materializedRow.AddColumn(defaultValue, index);
 
         Errors::RuntimeStatus status;
-        const auto payload = this->CreateInsertPayload(status, properties.allocator, 0, materializedRow.Data());
+        const auto payload = this->CreateInsertPayload(status, executionContext.GetAllocator(), 0, materializedRow.Data());
 
         page->UpdateRow(payload, rowPtr);
 

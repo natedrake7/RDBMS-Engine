@@ -1,11 +1,12 @@
 #pragma once
 #include "DatabaseConstants.h"
 #include "PhysicalPlan.h"
+#include "../../DatabaseEngine/include/Contexts/ExecutionContext.h"
 
 namespace QueryPipeline {
   class Cursor {
     PipelineConstants::cursor_id_t id;
-    DatabaseEngine::ExecutionProperties properties;
+    DatabaseEngine::ExecutionContext executionContext;
 
     bool canFetchMore;
 
@@ -14,7 +15,7 @@ namespace QueryPipeline {
   public:
     Cursor(
       PipelineConstants::cursor_id_t cursorId,
-      DatabaseEngine::ExecutionProperties& properties,
+      DatabaseEngine::ExecutionContext& executionContext,
       PhysicalPlan::ExecutionNode* plan
     );
     ~Cursor();

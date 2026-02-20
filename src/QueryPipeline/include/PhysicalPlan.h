@@ -7,7 +7,7 @@
 #include "../../Systemic/include/QueryResult.h"
 #include "../../Systemic/include/Headers.h"
 #include "../../DatabaseEngine/include/DataStorage/Row.h"
-#include "../../DatabaseEngine/include/ExecutionProperties.h"
+#include "../../DatabaseEngine/include/ScanState.h"
 #include "../../Systemic/include/DataStructures/PriorityQueue.h"
 #include "../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
@@ -15,7 +15,7 @@
 struct MergeElement;
 
 namespace DatabaseEngine {
-  struct ExecutionProperties;
+    class ExecutionContext;
     class SystemCatalog;
   }
 
@@ -39,7 +39,7 @@ namespace QueryPipeline::PhysicalPlan{
       bool canFetchMore;
 
       ExecutionResult();
-      explicit ExecutionResult(const DatabaseEngine::ExecutionProperties& properties);
+      explicit ExecutionResult(const DatabaseEngine::ExecutionContext& context);
       ExecutionResult(const Errors::RuntimeError& code, const std::string& message);
       ExecutionResult(const Errors::RuntimeError& code, std::string_view message);
 
@@ -68,15 +68,15 @@ namespace QueryPipeline::PhysicalPlan{
       virtual ~ExecutionNode() = default;
       void InsertToTemporaryDatabase(const std::vector<Pages::RowReference>& rows);
       void InsertPostProjectionResultsToTemporaryDatabase(
-        const DatabaseEngine::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionContext& context,
         ExecutionResult& result,
         DataTypes::RowIdentifier& firstRowId
       );
       [[nodiscard]] ExecutionResult StreamFromTemporaryDatabase(
-        const DatabaseEngine::ExecutionProperties& properties,
+        const DatabaseEngine::ExecutionContext& context,
         DatabaseEngine::ScanState& state
       ) const;
-      virtual ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) = 0;
+      virtual ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) = 0;
       virtual void UpdateScanState(const DataTypes::RowIdentifier& rowId);
 
       [[nodiscard]] bool UsesExternalStorage() const;
@@ -95,7 +95,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalCreateUser(std::string& username, std::string& password, std::string& role);
       ~PhysicalCreateUser()override = default;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties)override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context)override;
   };
 
   class PhysicalGrantRole final : public ExecutionNode {
@@ -104,7 +104,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalGrantRole(const DataTypes::Guid& sessionId, std::string& username, std::string& roleName);
       ~PhysicalGrantRole()override = default;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties)override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context)override;
   };
 
   class PhysicalCreateDatabase final : public ExecutionNode{
@@ -112,7 +112,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& name);
       ~PhysicalCreateDatabase() override = default;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalUseDatabase final : public ExecutionNode{
@@ -122,7 +122,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, Int databaseId);
       ~PhysicalUseDatabase() override = default;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalSchemaCreate final : public ExecutionNode{
@@ -132,7 +132,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, std::string& schemaName);
       ~PhysicalSchemaCreate() override = default;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalTableCreate final : public ExecutionNode{
@@ -150,7 +150,7 @@ namespace QueryPipeline::PhysicalPlan{
       std::string& constraintName
     );
     ~PhysicalTableCreate()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalIndexCreate final : public ExecutionNode {
@@ -165,7 +165,7 @@ namespace QueryPipeline::PhysicalPlan{
         std::string& constraintName,
         std::vector<column_index_t>& columns
     );
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   /** @} End of Catalog Altering Classes */
@@ -183,7 +183,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::NewColumn* column);
     ~PhysicalAddColumn()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalDropColumn final : public ExecutionNode {
@@ -193,7 +193,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::DropColumn* column);
     ~PhysicalDropColumn()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalRenameColumn final : public ExecutionNode {
@@ -203,7 +203,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::RenameColumn* column);
     ~PhysicalRenameColumn()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalAlterColumn final : public ExecutionNode {
@@ -213,7 +213,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::AlterColumn* column);
     ~PhysicalAlterColumn()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   /** @} End of Table Alter Classes */
@@ -232,7 +232,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression);
       ~PhysicalTableScan()override;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
       void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
@@ -246,7 +246,7 @@ namespace QueryPipeline::PhysicalPlan{
     explicit PhysicalIndexScan(Statements::DataSource* table, bool isClustered = false);
     explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, bool isClustered = false);
     ~PhysicalIndexScan()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
     void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
@@ -262,7 +262,7 @@ namespace QueryPipeline::PhysicalPlan{
       Expressions::Expression* expression
     );
     ~PhysicalIndexSeek()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalIndexSeekRange final : public ExecutionNode{
@@ -279,7 +279,7 @@ namespace QueryPipeline::PhysicalPlan{
         Expressions::Expression* expression
       );
       ~PhysicalIndexSeekRange()override;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   /** @} End of Table Scan Classes */
@@ -296,8 +296,8 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* child;
 
 
-    [[nodiscard]] inline ExecutionResult ExecuteStatement(const DatabaseEngine::ExecutionProperties& properties) const;
-    [[nodiscard]] inline ExecutionResult ExecuteConstantStatement(const DatabaseEngine::ExecutionProperties& properties)const;
+    [[nodiscard]] inline ExecutionResult ExecuteStatement(const DatabaseEngine::ExecutionContext& context) const;
+    [[nodiscard]] inline ExecutionResult ExecuteConstantStatement(const DatabaseEngine::ExecutionContext& context)const;
 
     public:
       PhysicalProject(
@@ -305,7 +305,7 @@ namespace QueryPipeline::PhysicalPlan{
         std::vector<Expressions::Expression*>& resultExpressions,
         std::vector<Headers::ColumnHeader>& columnHeaders);
       ~PhysicalProject() override;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
       void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
@@ -316,7 +316,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalFilter(ExecutionNode* child, Expressions::Expression* filter);
       ~PhysicalFilter() override;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
       void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
@@ -328,7 +328,7 @@ namespace QueryPipeline::PhysicalPlan{
       PhysicalTop(ExecutionNode* child, BigInt top);
       ~PhysicalTop() override;
 
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
     void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
@@ -338,7 +338,7 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       explicit PhysicalDistinct(ExecutionNode* child);
       ~PhysicalDistinct()override;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
       void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
@@ -354,7 +354,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalOrderBy(ExecutionNode* child, std::vector<Statements::OrderColumn*>& expressions);
     ~PhysicalOrderBy()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
     void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
   };
 
@@ -376,11 +376,11 @@ namespace QueryPipeline::PhysicalPlan{
     static bool SortInsertsAscending(const Value& lhs, const Value& rhs);
 
     std::vector<Value> ConvertExpressionsToValues(
-      const DatabaseEngine::ExecutionProperties& properties,
+      const DatabaseEngine::ExecutionContext& context,
       Int index
     )const;
-    ExecutionResult InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties)const;
-    ExecutionResult InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionProperties& properties) const;
+    ExecutionResult InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionContext& context)const;
+    ExecutionResult InsertFromFields(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionContext& context) const;
   public:
     PhysicalInsert(
       Statements::DataSource* table,
@@ -389,7 +389,7 @@ namespace QueryPipeline::PhysicalPlan{
       std::vector<column_index_t>& columnsIndices
     );
     ~PhysicalInsert()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalHeapUpdate final: public ExecutionNode{
@@ -404,7 +404,7 @@ namespace QueryPipeline::PhysicalPlan{
         std::vector<Expressions::Expression*> & updates
     );
     ~PhysicalHeapUpdate()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalIndexScanUpdate final : public ExecutionNode{
@@ -415,7 +415,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalIndexScanUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Expressions::Expression*> & updates);
     ~PhysicalIndexScanUpdate()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalIndexSeekUpdate final : public ExecutionNode{
@@ -426,7 +426,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalIndexSeekUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Expressions::Expression*> & updates);
     ~PhysicalIndexSeekUpdate()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalHeapDelete final : public ExecutionNode{
@@ -436,7 +436,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalHeapDelete(Statements::DataSource* table, Expressions::Expression* expression);
     ~PhysicalHeapDelete()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalIndexScanDelete final : public ExecutionNode{
@@ -447,7 +447,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalIndexScanDelete(Statements::DataSource* table, Expressions::Expression* expression);
     ~PhysicalIndexScanDelete()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalIndexSeekDelete final : public ExecutionNode{
@@ -458,7 +458,7 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalIndexSeekDelete(Statements::DataSource* table, Expressions::Expression* expression);
     ~PhysicalIndexSeekDelete()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   /** @} End of Insert and Update Classes */
@@ -475,7 +475,7 @@ namespace QueryPipeline::PhysicalPlan{
     Expressions::Expression* expression;
 
     ExecutionResult ExecuteBatchJoin(
-      const DatabaseEngine::ExecutionProperties& properties,
+      const DatabaseEngine::ExecutionContext& context,
       const ExecutionResult& leftResult
     ) const;
 
@@ -486,7 +486,7 @@ namespace QueryPipeline::PhysicalPlan{
         Expressions::Expression* joinCondition
       );
       ~PhysicalNestedLoopInnerJoin()override;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalMergeInnerJoin final : public ExecutionNode {
@@ -498,7 +498,7 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<column_index_t> rightKeyColumns;
 
     ExecutionResult ExecuteBatchJoin(
-      const DatabaseEngine::ExecutionProperties& properties,
+      const DatabaseEngine::ExecutionContext& context,
       ExecutionResult& leftResult
     ) const;
 
@@ -511,7 +511,7 @@ namespace QueryPipeline::PhysicalPlan{
       std::vector<column_index_t>& rightKeyColumns
     );
     ~PhysicalMergeInnerJoin()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalMergeLeftJoin final : public ExecutionNode {
@@ -523,7 +523,7 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<column_index_t> rightKeyColumns;
 
     ExecutionResult ExecuteBatchJoin(
-      const DatabaseEngine::ExecutionProperties& properties,
+      const DatabaseEngine::ExecutionContext& context,
       ExecutionResult& leftResult
     ) const;
 
@@ -537,7 +537,7 @@ namespace QueryPipeline::PhysicalPlan{
       );
 
       ~PhysicalMergeLeftJoin()override;
-      ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+      ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalMergeFullJoin final : public ExecutionNode {
@@ -549,7 +549,7 @@ namespace QueryPipeline::PhysicalPlan{
     std::vector<column_index_t> rightKeyColumns;
 
     ExecutionResult ExecuteBatchJoin(
-      const DatabaseEngine::ExecutionProperties& properties,
+      const DatabaseEngine::ExecutionContext& context,
       ExecutionResult& leftResult
     ) const;
 
@@ -563,7 +563,7 @@ namespace QueryPipeline::PhysicalPlan{
     );
 
     ~PhysicalMergeFullJoin()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalNestedLoopLeftJoin final : public ExecutionNode {
@@ -578,7 +578,7 @@ namespace QueryPipeline::PhysicalPlan{
       Expressions::Expression* expression
     );
     ~PhysicalNestedLoopLeftJoin()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalNestedLoopFullJoin final : public ExecutionNode {
@@ -593,7 +593,7 @@ namespace QueryPipeline::PhysicalPlan{
       Expressions::Expression* joinCondition
     );
     ~PhysicalNestedLoopFullJoin()override;
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties) override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   /** @} End of Join Classes */
@@ -610,7 +610,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   public:
     explicit PhysicalDeclareVariable(const DataTypes::Guid& currentSessionId, Variable& variable, Expressions::Expression* expression);
-    ExecutionResult Execute(const DatabaseEngine::ExecutionProperties& properties)override;
+    ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context)override;
   };
 
   /** @} End of Variable Classes */

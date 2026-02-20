@@ -159,22 +159,21 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             Errors::RuntimeStatus BatchInsert(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 DataStructures::PolymorphicArray<QueryResult> &input
             );
-
             Errors::RuntimeStatus InsertRow(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const std::vector<Value> &inputData
             );
             Errors::RuntimeStatus InsertRow(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 InsertPayload& payload,
                 Int pagesToAllocate
             );
             Errors::RuntimeStatus HeapInsert(const InsertPayload& payload, Int pagesToAllocate)const;
             Errors::RuntimeStatus ClusteredIndexInsert(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 InsertPayload& payload,
                 Int pagesToAllocate
             );
@@ -216,38 +215,38 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             void ClusteredIndexSeekRange(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 DataStructures::Array<Pages::RowReference>* selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexSeek(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 DataStructures::Array<Pages::RowReference>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 DataStructures::Array<Pages::RowReference>* selectedRows,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 DataStructures::Array<Pages::RowReference>* selectedRows,
                 const Expressions::Expression* expression
             );
             void NonClusteredIndexScan(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 DataStructures::Array<Pages::RowReference>* selectedRows,
                 Int indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void HeapScan(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 DataStructures::PolymorphicArray<Pages::RowReference> *result,
                 ScanState& state
             )const;
@@ -266,34 +265,34 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             Errors::RuntimeStatus HeapUpdate(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 const std::vector<Value> &updates
             );
             Errors::RuntimeStatus HeapUpdate(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 const std::vector<Expressions::Expression*> &updates
             );
             void ClusteredIndexScanUpdate(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 const std::vector<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexScanUpdate(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 const std::vector<Expressions::Expression*> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
                 const std::vector<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const DataTypes::Indexing::Key& key,
                 const std::vector<Value> &updates
             );
@@ -301,14 +300,14 @@ namespace DatabaseEngine::StorageTypes
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const std::vector<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const std::vector<Expressions::Expression*>& updates
             );
         /** @} End of: Update Functions*/
@@ -319,16 +318,16 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             void HeapDelete(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Expressions::Expression* expression
             ) const;
             void ClusteredIndexScanDelete(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 IndexState& state
             );
             void ClusteredIndexSeekDelete(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 IndexState& state
             );
@@ -363,7 +362,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] bool HasNonClusteredIndexes() const;
 
             DataTypes::Indexing::Key CreateKey(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const std::vector<column_index_t>& indexedColumns,
                 const InsertPayload& payload
             ) const;
@@ -409,7 +408,7 @@ namespace DatabaseEngine::StorageTypes
         */
             void AddColumn(Column *column);
             void HandleAddColumn(
-                const ExecutionProperties& properties,
+                const ExecutionContext& executionContext,
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 column_index_t index,

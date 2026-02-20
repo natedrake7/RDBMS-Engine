@@ -28,9 +28,9 @@ static Dictionary<DataType, int> ColumnTypeRank{
 };
 
 class Value {
-    column_index_t columnIndex;
     object_t* data;
     block_size_t size;
+    column_index_t columnIndex;
     DataType type;
 
     bool usesExternalStorage;
@@ -92,6 +92,16 @@ class Value {
         explicit Value(const DataTypes::DateTime& data, column_index_t index = 0);
         explicit Value(const DataTypes::Decimal& data, column_index_t index = 0);
         explicit Value(const DataTypes::Guid& data, column_index_t index = 0);
+
+        Value(bool data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(TinyInt data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(SmallInt data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(Int data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(BigInt data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(const std::string& data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(const DataTypes::DateTime& data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(const DataTypes::Decimal& data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(const DataTypes::Guid& data, const Memory::Allocator& allocator, column_index_t index = 0);
 
         static Value FromExternalStorage(
             const object_t* data,

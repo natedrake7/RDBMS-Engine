@@ -50,7 +50,12 @@ namespace Network {
     //Security Functions
     [[nodiscard]]Errors::RuntimeStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
     bool UserExists(const std::string& userName)const;
-    bool CreateUser(const DatabaseEngine::ExecutionProperties& properties, const std::string& userName, const std::string& password, const std::string& roleName);
+    bool CreateUser(
+        const DatabaseEngine::ExecutionContext& context,
+        const std::string& userName,
+        const std::string& password,
+        const std::string& roleName
+    );
     Errors::RuntimeStatus UpdateUserById(
       const DataTypes::Guid& callerSessionId,
       Int userId,
@@ -70,7 +75,7 @@ namespace Network {
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,
-      DatabaseEngine::ExecutionProperties& properties,
+      DatabaseEngine::ExecutionContext& context,
       QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
     )const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;

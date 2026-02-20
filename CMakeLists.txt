@@ -174,6 +174,7 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Pages/LargeObjectView.cpp
         src/DatabaseEngine/src/Pages/OverflowPageView.cpp
         src/DatabaseEngine/src/Managers/GlobalMemoryManager.cpp
+        src/DatabaseEngine/src/Contexts/ExecutionContext.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

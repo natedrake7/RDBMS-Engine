@@ -1,6 +1,7 @@
 ﻿#include "../../include/DataStorage/Row.h"
 #include "../../../Systemic/include/DataStructures/BitMap.h"
-#include "ExecutionProperties.h"
+#include "ScanState.h"
+#include "Contexts/ExecutionContext.h"
 
 namespace DatabaseEngine::StorageTypes {
     bool RowVersioningHeader::IsVisibleForTransaction(const Snapshot& snapshot) const{

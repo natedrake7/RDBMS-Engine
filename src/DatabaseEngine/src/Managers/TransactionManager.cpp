@@ -3,6 +3,7 @@
 #include <ranges>
 
 #include "../../../Server/include/Server.h"
+#include "Contexts/ExecutionContext.h"
 
 namespace DatabaseEngine {
   TransactionManager::TransactionManager(){
