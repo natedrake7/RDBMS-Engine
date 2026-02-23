@@ -8,8 +8,7 @@ class Pointer{
     T* _ptr;
     const Pointer* _ownerPtr;
 
-    mutable int references;
-    mutable MultiThreading::ReadWriteMutex _referencesMutex;
+    mutable std::atomic<int> references;
 
     public:
     Pointer()
@@ -51,7 +50,7 @@ class Pointer{
     Pointer(Pointer&& other) noexcept{
         this->_ptr = other._ptr;
         this->_ownerPtr = other._ownerPtr;
-        this->references = other.references;
+        this->references.store(other.references.load(), std::memory_order_relaxed);
 
         other._ptr = nullptr;
         other.references = 0;
@@ -67,7 +66,7 @@ class Pointer{
 
         this->_ptr = other._ptr;
         this->_ownerPtr = other._ownerPtr;
-        this->references = other.references;
+        this->references.store(other.references.load(), std::memory_order_relaxed);
 
         other._ptr = nullptr;
         other.references = 0;
@@ -77,21 +76,18 @@ class Pointer{
     }
 
     void IncreaseReference() const {
-        MultiThreading::WriterGuard guard(&this->_referencesMutex);
-        this->references += 1;
+        this->references.store(this->references.load() + 1, std::memory_order_relaxed);
     }
 
     void DecreaseReference() const{
-        MultiThreading::WriterGuard guard(&this->_referencesMutex);
-        this->references -= 1;
+        this->references.store(this->references.load() - 1, std::memory_order_relaxed);
     }
 
     int GetReference() const{
         if (this->_ownerPtr != nullptr)
             return this->_ownerPtr->GetReference();
 
-        MultiThreading::ReaderGuard guard(&this->_referencesMutex);
-        return this->references;
+        return this->references.load();
     }
 
     bool IsOwner() const{

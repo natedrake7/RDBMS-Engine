@@ -15,8 +15,9 @@ namespace DatabaseEngine{
 #ifdef _WIN32
         _aligned_free(this->_data);
         _aligned_free(this->_framesData);
-#elif
-
+#else
+        std::free(this->_data);
+        std::free(this->_framesData);
 #endif
     }
 
@@ -37,8 +38,8 @@ namespace DatabaseEngine{
     void BufferPoolMemoryManager::AllocatePagePool(){
 #ifdef _WIN32
         this->_data =  static_cast<object_t*>(_aligned_malloc(this->_framesCount * Constants::PAGE_SIZE, Constants::PAGE_SIZE));
-#elif
-
+#else
+        this->_data = static_cast<object_t*>(std::aligned_alloc(Constants::PAGE_SIZE, this->_framesCount * Constants::PAGE_SIZE));
 #endif
 
         std::memset(this->_data, 0, this->_framesCount * Constants::PAGE_SIZE);
@@ -47,8 +48,8 @@ namespace DatabaseEngine{
     void BufferPoolMemoryManager::AllocateFramePool(){
 #ifdef _WIN32
         this->_framesData =  static_cast<Pages::Frame*>(_aligned_malloc(this->_framesCount * sizeof(Pages::Frame),alignof(Pages::Frame)));
-#elif
-
+#else
+        this->_framesData = static_cast<Pages::Frame*>(std::aligned_alloc(alignof(Pages::Frame), this->_framesCount * sizeof(Pages::Frame)));
 #endif
     }
 

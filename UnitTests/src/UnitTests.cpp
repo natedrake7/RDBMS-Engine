@@ -5,6 +5,9 @@
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../DatabaseEngine/include/DataStorage/Column.h"
 #include "../../DatabaseEngine/include/DataStorage/Table.h"
+#ifdef __linux__
+    #include <csignal>
+#endif
 
 namespace Tests{
     void SignalHandler(const int signal){
