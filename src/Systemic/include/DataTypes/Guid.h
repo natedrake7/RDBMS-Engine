@@ -5,7 +5,8 @@
 #include "DataTypes.h"
 
 namespace DataTypes {
-  constexpr Int GUID_SIZE = 16;
+    class String;
+    constexpr Int GUID_SIZE = 16;
 
   class Guid {
     std::array<UnsignedTinyInt, GUID_SIZE> data;
@@ -20,7 +21,7 @@ namespace DataTypes {
 
       [[nodiscard]] std::string ToString() const;
       static Guid Parse(const std::string& str);
-      static bool Validate(const std::string& str);
+      static bool Validate(const String& str);
 
       friend std::ostream& operator<<(std::ostream& os, const Guid& guid);
       static Guid NewGuid();

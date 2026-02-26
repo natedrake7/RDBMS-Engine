@@ -4,6 +4,7 @@
 #include <limits>
 #include <stdexcept>
 #include "DataTypes/Decimal.h"
+#include "DataTypes/String.h"
 
 template<typename T>
 class Converter {
@@ -34,10 +35,10 @@ public:
         return DataTypes::Decimal(input);
     }
 
-    static bool TryStoi(const std::string& input) {
+    static bool TryStoi(const DataTypes::String& input) {
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
-        const char* str = input.c_str();
+        const auto* str = input.GetDataAsChar();
         char* endptr = nullptr;
         errno = 0;  // Reset errno before the conversion
 

@@ -111,7 +111,7 @@ namespace DataTypes{
         [[nodiscard]] static SmallInt ToSmallInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Int ToInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static BigInt ToBigInt(const Value& value, bool explicitCast = false);
-        [[nodiscard]] static std::string ToString(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static String ToString(const Value& value, bool explicitCast = false);
         [[nodiscard]] static std::u16string ToUnicodeString(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Guid ToGuid(const Value& value, bool explicitCast = false);
         [[nodiscard]] static DateTime ToDateTime(const Value& value, bool explicitCast = false);

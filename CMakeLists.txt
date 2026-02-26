@@ -86,7 +86,7 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
         src/Systemic/src/Memory/Functions.cpp
-        src/Systemic/src/DataTypes/StringView.cpp
+        src/Systemic/src/DataTypes/String.cpp
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)

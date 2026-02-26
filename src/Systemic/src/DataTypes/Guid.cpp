@@ -8,6 +8,8 @@
 #include <regex>
 #include <sstream>
 
+#include "DataTypes/String.h"
+
 namespace DataTypes {
   Guid::Guid() {
     this->data = std::array<uint8_t, GUID_SIZE>{0};
@@ -39,39 +41,37 @@ namespace DataTypes {
     return oss.str();
   }
 
-  Guid Guid::Parse(const std::string &str){
-    if (!Guid::Validate(str))
-      return {};
+    Guid Guid::Parse(const std::string &str){
+        if (!Guid::Validate(str)) return Guid();
 
-    std::string hex;
-    hex.reserve(32);
+        std::string hex;
+        hex.reserve(32);
 
-    for (const char& c : str) {
-      if (c == '-')
-        continue;
+        for (const auto& c : str) {
+            if (c == '-') continue;
+            hex += c;
+        }
 
-      hex += c;
+        std::array <UnsignedTinyInt, GUID_SIZE> data{};
+        for (size_t i = 0; i < GUID_SIZE; i++) {
+            std::string byteStr = hex.substr(i * 2, 2);
+            data[i] = static_cast<UnsignedTinyInt>(
+                std::stoul(byteStr, nullptr, 16)
+            );
+        }
+
+        return Guid(data);
     }
 
-    std::array <uint8_t, GUID_SIZE> data{};
-
-    for (size_t i = 0; i < GUID_SIZE; i++) {
-      std::string byteStr = hex.substr(i * 2, 2);
-      data[i] = static_cast<uint8_t>(std::stoul(byteStr, nullptr, 16));
-    }
-
-    return Guid(data);
-  }
-
-  bool Guid::Validate(const std::string& str){
+  bool Guid::Validate(const String& str){
     static std::regex pattern("^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$");
 
-    if (str.empty()) {
+    if (str.Empty()) {
       std::cerr << "Expected Guid but got empty string instead" << std::endl;
       return false;
     }
 
-    if(!regex_match(str, pattern)) {
+    if(!regex_match(str.GetDataAsChar(), pattern)) {
       std::cerr << "Invalid Guid specified" << std::endl;
       return false;
     }
@@ -101,10 +101,10 @@ namespace DataTypes {
     std::mt19937 gen(rd());
     std::uniform_int_distribution<int> dist(0, 255);
 
-    std::array<uint8_t, GUID_SIZE> data {};
+    std::array<UnsignedTinyInt, GUID_SIZE> data{};
 
     for (auto& byte : data)
-      byte = static_cast<uint8_t>(dist(gen));
+      byte = static_cast<UnsignedTinyInt>(dist(gen));
 
     // Set UUID version to 4 (random)
     data[6] = (data[6] & 0x0F) | 0x40;

@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <chrono>
 #include <cmath>
+#include <spanstream>
 
 namespace DataTypes{
 	DateTime::DateTime(){
@@ -207,13 +208,13 @@ namespace DataTypes{
 		return true;
 	}
 
-	bool DateTime::FromString(const std::string &date)
+	bool DateTime::FromString(const String& str)
 	{
 		std::chrono::system_clock::time_point tp;
 
 		bool parsedDate = false;
 		for (const auto& validFormat: DateTimeFormats) {
-			std::istringstream ss(date);
+			std::ispanstream ss(str);
 
 			ss >> std::chrono::parse(validFormat, tp);
 
@@ -223,10 +224,7 @@ namespace DataTypes{
 			}
 		}
 
-		if (!parsedDate)
-			return false;
-
-		return true;
+	    return parsedDate;
 	}
 
 	std::string DateTime::ToString(const std::string &format) const

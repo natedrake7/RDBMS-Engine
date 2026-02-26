@@ -12,33 +12,33 @@ namespace DataTypes{
     return Coercions::TypeCoercionMatrix[static_cast<Int>(fromType)][static_cast<Int>(toType)];
   }
 
-  bool Coercions::ParseAsBoolFromString(const Value &value){
-    const auto strData = Functions::String::Lower(value.AsString());
+    bool Coercions::ParseAsBoolFromString(const Value &value){
+        const auto strData = Functions::String::Lower(value.AsString());
 
-    if (TrueStrings.Contains(strData))
-      return true;
+        if (TrueStrings.Contains(strData))
+            return true;
 
-    if (FalseStrings.Contains(strData))
-      return false;
+        if (FalseStrings.Contains(strData))
+            return false;
 
-    return false;
-  }
-
-  bool Coercions::ParseAsBoolFromString(const Value &value, bool &outVal){
-    const auto strData = Functions::String::Lower(value.AsString());
-
-    if (TrueStrings.Contains(strData)) {
-      outVal = true;
-      return true;
+        return false;
     }
 
-    if (FalseStrings.Contains(strData)) {
-      outVal = false;
-      return true;
-    }
+    bool Coercions::ParseAsBoolFromString(const Value &value, bool &outVal){
+        const auto strData = Functions::String::Lower(value.AsString());
 
-    return false;
-  }
+        if (TrueStrings.Contains(strData)) {
+            outVal = true;
+            return true;
+        }
+
+        if (FalseStrings.Contains(strData)) {
+            outVal = false;
+            return true;
+        }
+
+        return false;
+    }
 
   bool Coercions::CanGetTinyInt(const Value &value){
     switch (value.GetType()) {
@@ -146,37 +146,37 @@ namespace DataTypes{
     }
   }
 
-  bool Coercions::CanGetString(const Value &value){ return true;}
+    bool Coercions::CanGetString(const Value &value){ return true;}
 
-  bool Coercions::CanGetUnicodeString(const Value &value){ return true;}
+        bool Coercions::CanGetUnicodeString(const Value &value){ return true;}
 
-  bool Coercions::CanGetGuid(const Value &value){
-    switch (value.GetType()) {
-    case DataType::Guid:
-      return true;
-    case DataType::String:
-    case DataType::UnicodeString:
-      return Guid::Validate(value.AsString());
-    default:
-      return false;
+    bool Coercions::CanGetGuid(const Value &value){
+        switch (value.GetType()) {
+        case DataType::Guid:
+            return true;
+        case DataType::String:
+        case DataType::UnicodeString:
+            return Guid::Validate(value.AsString());
+        default:
+            return false;
+        }
     }
-  }
 
-  bool Coercions::CanGetDateTime(const Value &value){
-    switch (value.GetType()) {
-    case DataType::DateTime:
-      return true;
-    case DataType::String:
-    case DataType::UnicodeString:
-      return DateTime::FromString(value.AsString());
-    default:
-      return false;
+    bool Coercions::CanGetDateTime(const Value &value){
+        switch (value.GetType()) {
+            case DataType::DateTime:
+                return true;
+            case DataType::String:
+            case DataType::UnicodeString:
+                return DateTime::FromString(value.AsString());
+            default:
+                return false;
+        }
     }
-  }
 
-  bool Coercions::CanGetDecimal(const Value &value){
-    return false;
-  }
+    bool Coercions::CanGetDecimal(const Value &value){
+        return false;
+    }
 
   void Coercions::DownCastFromSmallInt(Value &value){
     const auto smallInt = value.AsSmallInt();
