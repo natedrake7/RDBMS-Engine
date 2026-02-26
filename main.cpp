@@ -111,6 +111,8 @@
 //TODO next steps, need to avoid string and decimal allocations and use "views" Decimal view and string view.
 //Binary operations should allocate a new value but only then.
 
+//Make MemoryAllocator needs to be abstract on systemic and  implement in database engine.
+
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
     // memoryInfo.Log(std::cout, Memory::MemoryLogLevel::GigaBytes);
