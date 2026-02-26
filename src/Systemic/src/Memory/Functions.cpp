@@ -4,7 +4,7 @@
 #ifdef _WIN32
     #include <windows.h>
 #else
-
+    #include <sys/sysinfo.h>
 #endif
 
 namespace Memory{
@@ -63,9 +63,17 @@ namespace Memory{
             return info;
         }
 #else
-
+        struct sysinfo s = {};
+        if (sysinfo(&s) == 0) {
+            const auto unit = s.mem_unit
+                ? s.mem_unit
+                : 1ULL;
+            info.totalPhysicalBytes = s.totalram * unit;
+            info.availablePhysicalBytes = s.freeram * unit;
+            info.totalVirtualBytes = s.totalram + s.totalswap * unit;
+            info.availableVirtualBytes = s.freeram + s.freeswap * unit;
+        }
 #endif
-
         return info;
     }
 }

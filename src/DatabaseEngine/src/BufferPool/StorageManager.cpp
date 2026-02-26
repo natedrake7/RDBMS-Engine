@@ -303,7 +303,7 @@ Pages::Frame* StorageManager::CreateFrame(const std::string &filename, const pag
         auto* victim = this->EvictPage();
     }
 
-    const size_t frameIndex = clockHand % capacity;
+    const size_t frameIndex = this->clockHand % this->capacity;
 
     auto* framePtr = this->_memoryManager->GetFrame(frameIndex);
 
