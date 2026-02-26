@@ -3,6 +3,11 @@
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/DataStructures/BitMap.h"
 
+namespace Memory
+{
+    class IAllocator;
+}
+
 namespace DatabaseEngine {
     struct Snapshot;
 }
@@ -57,9 +62,9 @@ namespace DatabaseEngine::StorageTypes
         ByteMaps::BitMap overflowBitMap;
 
         explicit RowHeader();
-        explicit RowHeader(Int bitMapsSize);
-        RowHeader& operator=(const RowHeader& otherHeader);
-        RowHeader(const RowHeader& otherHeader);
+        explicit RowHeader(const ::Memory::IAllocator* allocator, Int bitMapsSize);
+        // RowHeader& operator=(const RowHeader& otherHeader);
+        // RowHeader(const RowHeader& otherHeader);
         RowHeader(RowHeader&& otherHeader) noexcept;
         RowHeader& operator=(RowHeader&& otherHeader) noexcept;
 

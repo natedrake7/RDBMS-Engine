@@ -4,6 +4,8 @@
 
 #include <fstream>
 
+#include "Memory/IAllocator.h"
+
 namespace ByteMaps{
     void BitMap::Resize(const bit_map_size_t newSize){
         if (this->isReferencingData)
@@ -49,14 +51,18 @@ namespace ByteMaps{
         this->isReferencingData = false;
     }
 
-    BitMap::BitMap(const bit_map_size_t size, const byte_t defaultValue){
+    BitMap::BitMap(
+        const ::Memory::IAllocator* allocator,
+        const bit_map_size_t size,
+        const byte_t defaultValue
+    ){
         this->size = size;
 
         const auto heapSize = this->HeapSize();
-        this->_data = static_cast<object_t*>(std::malloc(heapSize));
+        this->_data = static_cast<object_t*>(allocator->AllocateRaw(heapSize));
 
         std::memset(this->_data, defaultValue, heapSize);
-        this->isReferencingData = false;
+        this->isReferencingData = true;
     }
 
     BitMap BitMap::FromExistingData(object_t* data, const bit_map_size_t size){

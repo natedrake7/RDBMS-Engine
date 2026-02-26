@@ -6,36 +6,29 @@ namespace DatabaseEngine{
         const Int batchSize,
         const Dictionary<std::string, Variable>& variables,
         const Int initialAllocatorSize
-    ){
-        this->snapshot = snapshot;
-        this->batchSize = batchSize;
-        this->variables = &variables;
+    )   : snapshot(snapshot),
+          allocator(initialAllocatorSize),
+          variables(&variables),
+          batchSize(batchSize) {}
 
-        if (!GlobalMemoryManager::Get().TryReserveForExecution(initialAllocatorSize))
-            throw std::bad_alloc();
+    ExecutionContext::ExecutionContext()
+    : variables(nullptr), batchSize(0){}
 
-        this->allocator = Memory::Allocator(initialAllocatorSize);
-    }
-
-    ExecutionContext::ExecutionContext(){
-        this->batchSize = 0;
-        this->variables = nullptr;
-    }
-
-    ExecutionContext::ExecutionContext(ExecutionContext&& other) noexcept{
-        this->snapshot = other.snapshot;
-        this->batchSize = other.batchSize;
-        this->variables = other.variables;
-        this->allocator = std::move(other.allocator);
-
+    ExecutionContext::ExecutionContext(ExecutionContext&& other) noexcept
+        : snapshot(std::move(other.snapshot)),
+          allocator(std::move(other.allocator)),
+          variables(other.variables),
+          batchSize(other.batchSize)
+    {
         other.variables = nullptr;
     }
+
 
     ExecutionContext& ExecutionContext::operator=(ExecutionContext&& other) noexcept{
         if (this == &other)
             return *this;
 
-        this->snapshot = other.snapshot;
+        this->snapshot  = std::move(other.snapshot);
         this->batchSize = other.batchSize;
         this->variables = other.variables;
         this->allocator = std::move(other.allocator);
@@ -45,16 +38,14 @@ namespace DatabaseEngine{
         return *this;
     }
 
-    ExecutionContext::~ExecutionContext(){
-        // GlobalMemoryManager::Get().ReleaseExecutionReservation(this->allocationSize);
-    }
+    ExecutionContext::~ExecutionContext() = default;
 
     void ExecutionContext::SetBatchSize(const Int size){
         this->batchSize = size;
     }
 
-    const Memory::Allocator& ExecutionContext::GetAllocator() const{
-        return this->allocator;
+    const ::Memory::IAllocator* ExecutionContext::GetAllocator() const{
+        return &this->allocator;
     }
 
     const Dictionary<std::string, Variable>* ExecutionContext::GetVariables() const{
@@ -73,10 +64,11 @@ namespace DatabaseEngine{
         return this->snapshot;
     }
 
-    void* ExecutionContext::Allocate(const Int size) const{
-        if (!GlobalMemoryManager::Get().TryReserveForExecution(size))
-            throw std::bad_alloc();
+    void ExecutionContext::ResetAllocator() const{
+        this->allocator.Reset();
+    }
 
-        return this->allocator.Allocate(size);
+    void* ExecutionContext::Allocate(const Int size) const{
+        return this->allocator.AllocateRaw(size);
     }
 }

@@ -147,7 +147,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::SystemClusteredIndexSeek(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         DataStructures::Array<Pages::RowReference>* selectedRows,
         const DataTypes::Indexing::Key& key,
         const Expressions::Expression* expression
@@ -200,7 +200,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::SystemClusteredIndexScan(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         DataStructures::Array<Pages::RowReference>* selectedRows,
         const Expressions::Expression* expression
     ){

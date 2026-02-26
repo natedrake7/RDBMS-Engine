@@ -18,7 +18,7 @@ namespace Headers {
 }
 
 namespace QueryPipeline {
-    struct CompileResult;
+    struct QueryContext;
     class CompileContext;
 
     namespace PipelineConstants {
@@ -206,7 +206,7 @@ namespace QueryPipeline {
   };
 
   class Optimizer final{
-      CompileResult* context;
+      QueryContext* context;
 
       static void SplitConjunctions(
         Expressions::Expression* expression,
@@ -301,7 +301,7 @@ namespace QueryPipeline {
       ) const;
 
     public:
-        Optimizer(CompileResult& context);
+        Optimizer(QueryContext& context);
 
         [[nodiscard]] static JoinOrderAnalyzeResult DetermineJoinOrder(Statements::SelectStatement* statement);
         [[nodiscard]] PredicatePushDownResult PushDownPredicates(

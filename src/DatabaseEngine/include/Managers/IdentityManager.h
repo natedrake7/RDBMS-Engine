@@ -2,10 +2,7 @@
 #include "../../../Systemic/include/Headers.h"
 #include "../../../Systemic/include/Guards/ReadWriteMutex.h"
 
-#include <mutex>
-
-namespace DatabaseEngine
-{
+namespace DatabaseEngine{
     class ExecutionContext;
 }
 
@@ -16,7 +13,7 @@ namespace DatabaseEngine::StorageTypes{
 
         mutable MultiThreading::ReadWriteMutex mutex;
 
-        void UpdateMasterDb(const Memory::Allocator& allocator, BigInt value)const;
+        void UpdateMasterDb(const ::Memory::IAllocator* allocator, BigInt value)const;
 
     public:
         IdentityManager();
@@ -26,9 +23,9 @@ namespace DatabaseEngine::StorageTypes{
         void SetHeader(const Headers::IdentityColumnsHeader& newHeader);
         [[nodiscard]] const Headers::IdentityColumnsHeader& GetHeader() const;
 
-        [[nodiscard]] BigInt Generate(const Memory::Allocator& allocator);
-        [[nodiscard]] bool TryGenerate(const Memory::Allocator& allocator, BigInt& value);
-        void UpdateMasterDb(const Memory::Allocator& allocator)const;
+        [[nodiscard]] BigInt Generate(const ::Memory::IAllocator* allocator);
+        [[nodiscard]] bool TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value);
+        void UpdateMasterDb(const ::Memory::IAllocator* allocator)const;
 
         [[nodiscard]] bool IsValid()const;
     };

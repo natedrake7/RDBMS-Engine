@@ -2,8 +2,12 @@
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../../Systemic/include/Memory/Allocator.h"
 #include "../Managers/GlobalMemoryManager.h"
+#include "../Memory/Allocator.h"
+
+namespace Memory{
+    class IAllocator;
+}
 
 class Variable;
 
@@ -21,6 +25,28 @@ namespace DatabaseEngine {
             this->transactionId = FIRST_TRANSACTION_ID;
             this->minimumTransactionId = FIRST_TRANSACTION_ID;
             this->maximumTransactionId = FIRST_TRANSACTION_ID;
+        }
+
+        Snapshot(const Snapshot& other) = default;
+        Snapshot& operator=(const Snapshot& other) = default;
+
+        Snapshot(Snapshot&& other) noexcept{
+            this->transactionId = other.transactionId;
+            this->minimumTransactionId = other.minimumTransactionId;
+            this->maximumTransactionId = other.maximumTransactionId;
+            this->activeTransactionIds = std::move(other.activeTransactionIds);
+        }
+
+        Snapshot& operator=(Snapshot&& other) noexcept{
+            if (this == &other)
+                return *this;
+
+            this->transactionId = other.transactionId;
+            this->minimumTransactionId = other.minimumTransactionId;
+            this->maximumTransactionId = other.maximumTransactionId;
+            this->activeTransactionIds = std::move(other.activeTransactionIds);
+
+            return *this;
         }
 
         [[nodiscard]] bool IsSystemTransaction()const{ return this->transactionId == FIRST_TRANSACTION_ID; }
@@ -49,11 +75,13 @@ namespace DatabaseEngine {
 
             void SetBatchSize(Int size);
 
-            [[nodiscard]] const Memory::Allocator& GetAllocator()const;
+            [[nodiscard]] const ::Memory::IAllocator* GetAllocator()const;
             const Dictionary<std::string, Variable>* GetVariables()const;
             [[nodiscard]] Int GetBatchSize()const;
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;
             [[nodiscard]] const Snapshot& GetSnapshot()const;
+
+            void ResetAllocator()const;
 
             void* Allocate(Int size) const;
             template<typename T>

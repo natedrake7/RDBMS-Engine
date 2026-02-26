@@ -218,7 +218,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateSelectivityByHistograms(
-        const CompileResult* context,
+        const QueryContext* context,
         const SeekRange& range,
         const Headers::TableStatistics& tableStats,
         const Headers::ColumnStatistics& columnStats
@@ -351,7 +351,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateSelectivity(
-        const CompileResult* context,
+        const QueryContext* context,
         const SeekRange& range,
         const Headers::ColumnStatistics& columnStats,
         const Headers::TableStatistics& tableStats
@@ -369,7 +369,7 @@ namespace QueryPipeline{
     }
 
     void CostEstimator::EstimateIndexCost(
-        const CompileResult* context,
+        const QueryContext* context,
         IndexCandidate& candidate,
         const Headers::TableStatistics& tableStats
     ){

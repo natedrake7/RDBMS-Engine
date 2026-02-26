@@ -863,6 +863,15 @@ namespace DatabaseEngine::StorageTypes {
         return tree->IndexSeekUpdate(executionContext, key, updates);
       }
 
+    Errors::RuntimeStatus Table::SystemClusteredIndexSeekUpdate(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::Indexing::Key& key,
+        const std::vector<Value>& updates
+    ){
+          const auto* tree = this->GetClusteredIndexedTree();
+          return tree->SystemIndexSeekUpdate(allocator, key, updates);
+    }
+
     void Table::Truncate()
     {
         this->database->TruncateTable(this->header.tableId);
@@ -1023,17 +1032,22 @@ namespace DatabaseEngine::StorageTypes {
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
         this->InsertToVersionDatabase(rowRawData);
 
-        auto materializedRow = rowPtr.Materialize(&executionContext.GetAllocator());
+        auto materializedRow = rowPtr.Materialize(executionContext.GetAllocator());
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        auto newPayload = this->CreateUpdatePayload(status, executionContext.GetCurrentTransactionId(), materializedRow.Data());
+        auto newPayload = this->CreateUpdatePayload(
+            status,
+            executionContext.GetAllocator(),
+            executionContext.GetCurrentTransactionId(),
+            materializedRow.Data()
+        );
 
         if (!status.IsOk())
             return status;
 
-          if (page->UpdateRow(newPayload, rowPtr))
-              return status;
+        if (page->UpdateRow(newPayload, rowPtr))
+            return status;
 
           //only for heap tables
           auto insertResult = this->InsertRow(executionContext, newPayload, 1);
@@ -1056,7 +1070,7 @@ namespace DatabaseEngine::StorageTypes {
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
         this->InsertToVersionDatabase(rowRawData);
 
-        auto materializedRow = rowPtr.Materialize(&executionContext.GetAllocator());
+        auto materializedRow = rowPtr.Materialize(executionContext.GetAllocator());
 
         const Expressions::EvaluationContext evaluationContext(&rowPtr, executionContext);
         for (const auto* updateExpr : updates) {
@@ -1067,7 +1081,12 @@ namespace DatabaseEngine::StorageTypes {
 
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
-        auto newPayload = this->CreateUpdatePayload(status, executionContext.GetCurrentTransactionId(), materializedRow.Data());
+        auto newPayload = this->CreateUpdatePayload(
+            status,
+            executionContext.GetAllocator(),
+            executionContext.GetCurrentTransactionId(),
+            materializedRow.Data()
+        );
 
         if (!status.IsOk())
             return status;
@@ -1087,7 +1106,40 @@ namespace DatabaseEngine::StorageTypes {
         return insertResult;
     }
 
-    void Table::RetrieveDefaultValuesFromCatalog(const Memory::Allocator& allocator) const{
+    Errors::RuntimeStatus Table::SystemUpdateRowNoLock(
+        const Pages::PageView* page,
+        const Pages::RowReference& rowPtr,
+        const ::Memory::IAllocator* allocator,
+        const std::vector<Value>& updates
+    ) const{
+        // this->DeleteLargeObjectFromPage(row, updatedColumns);
+        // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
+
+        //copy row for old transactions
+        //this has the pointers of the old row to LOBS and overflow pages
+
+        const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
+        this->InsertToVersionDatabase(rowRawData);
+
+        auto materializedRow = rowPtr.Materialize(allocator);
+        materializedRow.Update(updates);
+
+        Errors::RuntimeStatus status;
+        const auto newPayload = this->CreateUpdatePayload(
+            status,
+            allocator,
+            FIRST_TRANSACTION_ID,
+            materializedRow.Data()
+        );
+
+        if (!status.IsOk())
+            return status;
+
+        const auto _ = page->UpdateRow(newPayload, rowPtr);
+        return status;
+    }
+
+    void Table::RetrieveDefaultValuesFromCatalog(const ::Memory::IAllocator* allocator) const{
         for(const auto& column: this->columns) {
           const auto systemHeader = SystemCatalog::Get().SelectDefaultValueByColumnId(allocator, column->GetColumnId());
 
@@ -1098,7 +1150,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::RetrieveColumnHeadersFromCatalog(const Memory::Allocator& allocator)const{
+    void Table::RetrieveColumnHeadersFromCatalog(const ::Memory::IAllocator* allocator)const{
       const auto headers = SystemCatalog::Get().SelectColumns(allocator, this->header.tableId);
 
       assert(headers.size() == this->columns.size());
@@ -1113,7 +1165,7 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-    void Table::UpdateCatalogIdentityColumns(const Memory::Allocator& allocator) const{
+    void Table::UpdateCatalogIdentityColumns(const ::Memory::IAllocator* allocator) const{
         static auto& catalog = SystemCatalog::Get();
 
         const auto headers = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
@@ -1132,7 +1184,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::RetrieveIdentityColumnsFromCatalog(const Memory::Allocator& allocator)const{
+    void Table::RetrieveIdentityColumnsFromCatalog(const ::Memory::IAllocator* allocator)const{
       static auto& catalog = SystemCatalog::Get();
 
       const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
@@ -1152,7 +1204,7 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-    void Table::RetrieveIdentityColumnById(const Memory::Allocator& allocator, const Int columnId)const{
+    void Table::RetrieveIdentityColumnById(const ::Memory::IAllocator* allocator, const Int columnId)const{
         static auto& catalog = SystemCatalog::Get();
 
         const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
@@ -1175,7 +1227,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-  void Table::RetrieveIndexesFromCatalog(const Memory::Allocator& allocator){
+  void Table::RetrieveIndexesFromCatalog(const ::Memory::IAllocator* allocator){
         Dictionary<Int, Column*> columnsDict;
 
         for (auto& column: this->columns)
@@ -1202,7 +1254,7 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::UpdateSystemCatalog(const Memory::Allocator& allocator) const{
+    void Table::UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const{
         for (const auto& column: this->columns)
             column->UpdateMetadata(allocator);
     }
@@ -1270,7 +1322,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
         const column_index_t index,
         const Value &defaultValue
     ) const{
-        auto materializedRow = rowPtr.Materialize(&executionContext.GetAllocator());
+        auto materializedRow = rowPtr.Materialize(executionContext.GetAllocator());
 
         materializedRow.AddColumn(defaultValue, index);
 

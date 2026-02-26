@@ -30,7 +30,7 @@ namespace DatabaseEngine {
 
         DataTypes::Indexing::Key key;
         for (const auto ordinalPosition : indexedColumns){
-            auto data = rowPtr.PartialMaterialize(&context.GetAllocator(), ordinalPosition - offSet);
+            auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition - offSet);
             key.InsertKey(DataTypes::Indexing::Key(data));
         }
 
@@ -45,7 +45,7 @@ namespace DatabaseEngine {
     ){
         DataTypes::Indexing::Key key;
         for (const auto ordinalPosition : indexedColumns){
-            auto data = rowPtr.PartialMaterialize(&context.GetAllocator(), ordinalPosition);
+            auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition);
             key.InsertKey(DataTypes::Indexing::Key(data));
         }
 

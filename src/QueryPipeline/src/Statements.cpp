@@ -37,7 +37,7 @@ namespace QueryPipeline::Statements {
     return {Errors::ValidationError::Ok, ""};
   }
 
-  Errors::ValidationStatus Statement::Compile(CompileResult& context){
+  Errors::ValidationStatus Statement::Compile(QueryContext& context){
     auto result = this->CompileBase();
 
     if (!result.IsOk())
@@ -50,7 +50,7 @@ namespace QueryPipeline::Statements {
      this->expression = nullptr;
    }
 
-  Errors::ValidationStatus DeclareVariableStatement::CompileDerived(CompileResult& context) {
+  Errors::ValidationStatus DeclareVariableStatement::CompileDerived(QueryContext& context) {
     const auto& type = this->variable.GetType();
 
     if (this->expression) {
@@ -83,7 +83,7 @@ namespace QueryPipeline::Statements {
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
-  LogicalPlan * DeclareVariableStatement::ToLogical(CompileResult& context) {
+  LogicalPlan * DeclareVariableStatement::ToLogical(QueryContext& context) {
     return context._context.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
   }
 
@@ -91,7 +91,7 @@ namespace QueryPipeline::Statements {
      this->expression = nullptr;
    }
 
-  Errors::ValidationStatus SetVariableStatement::CompileDerived(CompileResult& context) {
+  Errors::ValidationStatus SetVariableStatement::CompileDerived(QueryContext& context) {
     const auto& type = this->variable.GetType();
 
     if (this->expression) {
@@ -125,11 +125,11 @@ namespace QueryPipeline::Statements {
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
-  LogicalPlan * SetVariableStatement::ToLogical(CompileResult& context) {
+  LogicalPlan * SetVariableStatement::ToLogical(QueryContext& context) {
     return context._context.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
   }
 
-  Errors::ValidationStatus CreateUserStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus CreateUserStatement::CompileDerived(QueryContext& context){
     if (this->username.empty())
       return {Errors::ValidationError::Error,  "username cannot be empty"};
 
@@ -159,11 +159,11 @@ namespace QueryPipeline::Statements {
     return Constants::ADMIN_PERMISSIONS;
   }
 
-  LogicalPlan* CreateUserStatement::ToLogical(CompileResult& context){
+  LogicalPlan* CreateUserStatement::ToLogical(QueryContext& context){
     return context._context.Allocate<LogicalCreateUser>(this->sessionId, this->username, this->password, this->role);
   }
 
-  Errors::ValidationStatus GrantRoleStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus GrantRoleStatement::CompileDerived(QueryContext& context){
       std::ostringstream os;
     if (!this->server->UserExists(this->username)) {
       os << "User: " << this->username << " does not exist.";
@@ -182,11 +182,11 @@ namespace QueryPipeline::Statements {
     return Constants::ADMIN_PERMISSIONS;
   }
 
-  LogicalPlan * GrantRoleStatement::ToLogical(CompileResult& context){
+  LogicalPlan * GrantRoleStatement::ToLogical(QueryContext& context){
     return context._context.Allocate<LogicalGrantRole>(this->sessionId, this->username, this->role);
   }
 
-  Errors::ValidationStatus DeleteStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus DeleteStatement::CompileDerived(QueryContext& context){
     auto result = this->table->Validate(context, this->databaseId);
 
     if (!result.IsOk())
@@ -208,7 +208,7 @@ namespace QueryPipeline::Statements {
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
-  LogicalPlan * DeleteStatement::ToLogical(CompileResult& context){
+  LogicalPlan * DeleteStatement::ToLogical(QueryContext& context){
     return context._context.Allocate<LogicalDelete>(this->table, this->where.expression);
   }
 
@@ -218,11 +218,11 @@ namespace QueryPipeline::Statements {
     this->expression = nullptr;
   }
 
-  Errors::ValidationStatus JoinStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus JoinStatement::CompileDerived(QueryContext& context){
     return {};
   }
 
-  Errors::ValidationStatus JoinStatement::Validate(const CompileResult& context, const Int databaseId){
+  Errors::ValidationStatus JoinStatement::Validate(const QueryContext& context, const Int databaseId){
     this->databaseId = databaseId;
 
     if (this->table == nullptr)
@@ -243,7 +243,7 @@ namespace QueryPipeline::Statements {
     return this->type == JoinType::Full;
   }
 
-  LogicalPlan * JoinStatement::ToLogical(CompileResult& context){
+  LogicalPlan * JoinStatement::ToLogical(QueryContext& context){
     return context._context.Allocate<LogicalTableScan>(this->table, nullptr);
   }
 
@@ -392,7 +392,7 @@ namespace QueryPipeline::Statements {
     return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
   }
 
-  Errors::ValidationStatus DataSource::Validate(const CompileResult& context, const Int selectedDatabaseId) {
+  Errors::ValidationStatus DataSource::Validate(const QueryContext& context, const Int selectedDatabaseId) {
     const auto tableHeader = (!this->database.empty())
                                ? this->catalog->SelectTable(context.GetAllocator(), this->database, this->name)
                                : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name, this->schema);
@@ -411,7 +411,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus DataSource::ValidateTableCreate(const CompileResult& context, const Int selectedDatabaseId){
+  Errors::ValidationStatus DataSource::ValidateTableCreate(const QueryContext& context, const Int selectedDatabaseId){
     const auto tableHeader = (!this->database.empty())
                                ? this->catalog->SelectTable(context.GetAllocator(), this->database, this->name)
                                : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name, this->schema);
@@ -433,7 +433,7 @@ namespace QueryPipeline::Statements {
 
   CreateTableStatement::~CreateTableStatement() = default;
 
-  Errors::ValidationStatus CreateTableStatement::CompileSchema(const CompileResult& context) const{
+  Errors::ValidationStatus CreateTableStatement::CompileSchema(const QueryContext& context) const{
     const auto& schemasDict = this->catalog->SelectSchemasToDictionary(context.GetAllocator(), this->databaseId);
     Headers::SchemaHeader schemaHeader;
 
@@ -499,7 +499,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus CreateTableStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus CreateTableStatement::CompileDerived(QueryContext& context){
     auto result = this->table->ValidateTableCreate(context, this->databaseId);
     if (!result.IsOk())
       return result;
@@ -536,7 +536,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  LogicalPlan * CreateTableStatement::ToLogical(CompileResult& context){
+  LogicalPlan * CreateTableStatement::ToLogical(QueryContext& context){
     const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
 
     return context._context.Allocate<LogicalTableCreate>(this->sessionId, this->table, this->columns, this->primaryKey, constraintName);
@@ -577,7 +577,7 @@ namespace QueryPipeline::Statements {
 
   bool SelectStatement::IsConstant() const{ return this->table == nullptr; }
 
-  Errors::ValidationStatus SelectStatement::CompileNoTableStatement(CompileResult& context){
+  Errors::ValidationStatus SelectStatement::CompileNoTableStatement(QueryContext& context){
     for (auto& resultExpr : this->results){
       auto exprResult = CompileExpression(context, resultExpr);
 
@@ -591,7 +591,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus SelectStatement::Compile(CompileResult& context, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+  Errors::ValidationStatus SelectStatement::Compile(QueryContext& context, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
     this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId));
@@ -661,7 +661,7 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus SelectStatement::CompileWhereClause(
-    CompileResult &context,
+    QueryContext &context,
     StatementValidationScope& statementValidationScope
   ) {
     if (!this->HasWhere())
@@ -681,7 +681,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan* SelectStatement::BuildTableScanPlan(
-      const CompileResult& context,
+      const QueryContext& context,
       DataSource* table,
       const PredicatePushDownResult& predicatesResult
     ){
@@ -689,7 +689,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan* SelectStatement::BuildJoinsPlan(
-    const CompileResult& context,
+    const QueryContext& context,
     const JoinOrderAnalyzeResult& joinReorderResult,
     const PredicatePushDownResult& predicatesResult
   ) const{
@@ -706,7 +706,7 @@ namespace QueryPipeline::Statements {
   }
 
     Dictionary<int32_t, column_index_t> SelectStatement::BuildColumnsIndicesDictionary(
-        const CompileResult& context,
+        const QueryContext& context,
         const std::vector<table_id_t>& joinOrder
     ) const{
         Dictionary<int32_t, column_index_t> result;
@@ -729,7 +729,7 @@ namespace QueryPipeline::Statements {
         return result;
     }
 
-  void SelectStatement::AssignColumnsToIndices(const CompileResult& context, const std::vector<table_id_t>& order)const {
+  void SelectStatement::AssignColumnsToIndices(const QueryContext& context, const std::vector<table_id_t>& order)const {
     const auto columnIndicesDictionary = this->BuildColumnsIndicesDictionary(context, order);
 
     for (const auto& resultExpr : this->results)
@@ -755,7 +755,7 @@ namespace QueryPipeline::Statements {
     current = new LogicalOrder(current, this->orderBy->columns);
   }
 
-  Errors::ValidationStatus SelectStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus SelectStatement::CompileDerived(QueryContext& context){
     if (!this->joins.empty() && this->table == nullptr) {
         std::ostringstream os;
       os << "Joins were specified but no calling table was not specified";
@@ -785,7 +785,7 @@ namespace QueryPipeline::Statements {
     return Constants::DB_READER_PERMISSIONS;
   }
 
-  LogicalPlan * SelectStatement::ToLogical(CompileResult& context){
+  LogicalPlan * SelectStatement::ToLogical(QueryContext& context){
     if (this->IsConstant())
       return context._context.Allocate<LogicalProject>(nullptr, this->results, this->columnHeaders);
 
@@ -819,7 +819,7 @@ namespace QueryPipeline::Statements {
     return current;
   }
 
-  Errors::ValidationStatus CreateDbStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus CreateDbStatement::CompileDerived(QueryContext& context){
     if (this->catalog->DatabaseExists(context.GetAllocator(), this->name)) {
         std::ostringstream os;
       os << "Database " + this->name + " already exists";
@@ -834,11 +834,11 @@ namespace QueryPipeline::Statements {
     return Constants::ADMIN_PERMISSIONS;
   }
 
-  LogicalPlan* CreateDbStatement::ToLogical(CompileResult& context){
+  LogicalPlan* CreateDbStatement::ToLogical(QueryContext& context){
     return context._context.Allocate<LogicalCreateDatabase>(this->sessionId, this->name);
   }
 
-   Errors::ValidationStatus DropDbStatement::CompileDerived(CompileResult& context){
+   Errors::ValidationStatus DropDbStatement::CompileDerived(QueryContext& context){
        std::ostringstream os;
 
      const auto database = this->catalog->SelectDatabase(context.GetAllocator(), this->name);
@@ -860,11 +860,11 @@ namespace QueryPipeline::Statements {
     return Constants::ADMIN_PERMISSIONS;
   }
 
-  LogicalPlan * DropDbStatement::ToLogical(CompileResult& context){
+  LogicalPlan * DropDbStatement::ToLogical(QueryContext& context){
     return nullptr;
   }
 
-  Errors::ValidationStatus UseDatabaseStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus UseDatabaseStatement::CompileDerived(QueryContext& context){
     const auto dbHeader = this->catalog->SelectDatabase(context.GetAllocator(), this->name);
 
     if (dbHeader.id == INVALID_DATABASE_ID) {
@@ -883,14 +883,14 @@ namespace QueryPipeline::Statements {
     return Constants::GUEST_PERMISSIONS;
   }
 
-  LogicalPlan * UseDatabaseStatement::ToLogical(CompileResult& context){
+  LogicalPlan * UseDatabaseStatement::ToLogical(QueryContext& context){
     return context._context.Allocate<LogicalUseDatabase>(this->sessionId, this->databaseId);
   }
 
     InsertStatement::~InsertStatement() = default;
 
     void InsertStatement::InsertDefaultValuesForMissingColumns(
-        const CompileResult& context,
+        const QueryContext& context,
         const Headers::ColumnHeader &header,
         const Headers::DefaultValuesHeader& defaultValue
     ){
@@ -912,7 +912,7 @@ namespace QueryPipeline::Statements {
                 data,
                 static_cast<Int>(defaultValue.value.size()),
                 static_cast<DataType>(header.dataType),
-                &context._context.GetAllocator(),
+                context._context.GetAllocator(),
                 0
             );
 
@@ -974,7 +974,7 @@ namespace QueryPipeline::Statements {
     return {Errors::ValidationError::Error, os.str()};
   }
 
-  Errors::ValidationStatus InsertStatement::ValidateSelectStatement(CompileResult& context)const{
+  Errors::ValidationStatus InsertStatement::ValidateSelectStatement(QueryContext& context)const{
     if (this->selectStatement == nullptr)
       return {};
 
@@ -1000,7 +1000,7 @@ namespace QueryPipeline::Statements {
 
   bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
-  Errors::ValidationStatus InsertStatement::ResolveAliases(CompileResult& context){
+  Errors::ValidationStatus InsertStatement::ResolveAliases(QueryContext& context){
     Dictionary<std::string, table_id_t> tableAliasesDictionary{
       {this->table->GetAlias(), this->table->tableId}
     };
@@ -1030,7 +1030,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
   //TODO validate length of columns to match max record_size from master DB
-  Errors::ValidationStatus InsertStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus InsertStatement::CompileDerived(QueryContext& context){
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "No table was specified"};
 
@@ -1105,14 +1105,14 @@ namespace QueryPipeline::Statements {
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
-  LogicalPlan* InsertStatement::ToLogical(CompileResult& context) {
+  LogicalPlan* InsertStatement::ToLogical(QueryContext& context) {
     auto* logicalSelect = this->HasSelectStatement()
                             ? this->selectStatement->ToLogical(context)
                             : nullptr;
     return context._context.Allocate<LogicalInsert>(this->table, this->values, logicalSelect, this->columnIndices);
   }
 
-  Errors::ValidationStatus CreateSchemaStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus CreateSchemaStatement::CompileDerived(QueryContext& context){
     if (this->catalog->SchemaExists(context.GetAllocator(), this->databaseId, this->name)) {
         std::ostringstream os;
       os << "Schema " << this->name << " already exists";
@@ -1127,7 +1127,7 @@ namespace QueryPipeline::Statements {
     return Constants::DB_OWNER_PERMISSIONS;
   }
 
-  LogicalPlan * CreateSchemaStatement::ToLogical(CompileResult& context){
+  LogicalPlan * CreateSchemaStatement::ToLogical(QueryContext& context){
     return context._context.Allocate<LogicalSchemaCreate>(this->sessionId, this->databaseId, this->name);
   }
 
@@ -1172,7 +1172,7 @@ namespace QueryPipeline::Statements {
     return {Errors::ValidationError::Error, os.str()};
   }
 
-    Errors::ValidationStatus UpdateStatement::ResolveAliases(CompileResult& context, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+    Errors::ValidationStatus UpdateStatement::ResolveAliases(QueryContext& context, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
         //Add Base Table to the dictionaries
         tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
         this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId));
@@ -1214,7 +1214,7 @@ namespace QueryPipeline::Statements {
     }
 
 
-Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context){
+Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
   if (this->table == nullptr)
     return {Errors::ValidationError::Error, "Table was not specified"};
 
@@ -1230,7 +1230,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     return Constants::DB_WRITER_PERMISSIONS;
   }
 
-  LogicalPlan* UpdateStatement::ToLogical(CompileResult& context){
+  LogicalPlan* UpdateStatement::ToLogical(QueryContext& context){
     std::vector<Expressions::Expression*> expressions;
     expressions.reserve(this->updates.size());
 
@@ -1240,7 +1240,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     return new QueryPipeline::LogicalUpdate(this->table, expressions, this->where.expression);
   }
 
-  Errors::ValidationStatus CreateIndexStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus CreateIndexStatement::CompileDerived(QueryContext& context){
     auto tableStatus = this->table->Validate(context, this->databaseId);
     if (!tableStatus.IsOk())
       return tableStatus;
@@ -1280,7 +1280,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     return Constants::DB_OWNER_PERMISSIONS;
   }
 
-  LogicalPlan * CreateIndexStatement::ToLogical(CompileResult& context){
+  LogicalPlan * CreateIndexStatement::ToLogical(QueryContext& context){
     return context._context.Allocate<LogicalIndexCreate>(this->sessionId, this->table, this->name, this->columnIndices);
   }
 
@@ -1368,7 +1368,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const CompileResult& context, const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const QueryContext& context, const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
       std::ostringstream os;
     Headers::ColumnHeader header;
 
@@ -1415,7 +1415,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::CompileDerived(CompileResult& context){
+  Errors::ValidationStatus AlterTableStatement::CompileDerived(QueryContext& context){
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "Table was not specified"};
 
@@ -1444,7 +1444,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     return Constants::DB_OWNER_PERMISSIONS;
   }
 
-  LogicalPlan * AlterTableStatement::ToLogical(CompileResult& context){
+  LogicalPlan * AlterTableStatement::ToLogical(QueryContext& context){
     switch (this->type) {
     case AlterTableType::AddColumn:
       return context._context.Allocate<LogicalAlterTable>(this->sessionId, this->table, this->type,this->column.newColumn);
@@ -1459,7 +1459,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     }
   }
 
-  Errors::ValidationStatus CompileExpression(CompileResult& context, Expressions::Expression*& expression){
+  Errors::ValidationStatus CompileExpression(QueryContext& context, Expressions::Expression*& expression){
     switch (expression->expressionType) {
     case Expressions::ExpressionType::Binary:
       return CompileBinaryExpression(context, expression->AsBinary(), expression);
@@ -1484,7 +1484,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileExpression(
-    CompileResult& context,
+    QueryContext& context,
     StatementValidationScope& statementValidationScope,
     Expressions::Expression*& expression
   ){
@@ -1513,7 +1513,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileBinaryExpression(
-    CompileResult& context,
+    QueryContext& context,
     Expressions::BinaryExpression *binaryExpr,
     Expressions::Expression *&expression
   ) {
@@ -1549,7 +1549,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileBinaryExpression(
-    CompileResult& context,
+    QueryContext& context,
     Expressions::BinaryExpression* binaryExpr,
     Expressions::Expression*& expression,
     StatementValidationScope& statementValidationScope
@@ -1585,7 +1585,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileLogicalExpression(
-    CompileResult &context,
+    QueryContext &context,
     Expressions::LogicalExpression *logicalExpr,
     Expressions::Expression *&expression
   ) {
@@ -1606,7 +1606,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileLogicalExpression(
-    CompileResult& context,
+    QueryContext& context,
     Expressions::LogicalExpression* logicalExpr,
     Expressions::Expression*& expression,
     StatementValidationScope& statementValidationScope
@@ -1627,7 +1627,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileFunctionExpression(
-    CompileResult &context,
+    QueryContext &context,
     const Expressions::FunctionExpression *funcExpr,
     Expressions::Expression *&expression
   ) {
@@ -1648,7 +1648,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileFunctionExpression(
-    CompileResult &context,
+    QueryContext &context,
     const Expressions::FunctionExpression *funcExpr,
     Expressions::Expression *&expression,
     StatementValidationScope& statementValidationScope
@@ -1671,7 +1671,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileBranchExpression(
-    CompileResult &context,
+    QueryContext &context,
     Expressions::BranchExpression *branchExpr,
     Expressions::Expression *&expression,
     StatementValidationScope& statementValidationScope
@@ -1724,7 +1724,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileBranchExpression(
-    CompileResult &context,
+    QueryContext &context,
     Expressions::BranchExpression *branchExpr,
     Expressions::Expression *&expression
   ){
@@ -1793,7 +1793,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CompileVariableExpression(
-    const CompileResult &context,
+    const QueryContext &context,
     Expressions::VariableExpression* variableExpr
   ){
     DataType type;
@@ -2038,7 +2038,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     }
   }
 
-  void FoldExpression(const CompileResult& context, Expressions::Expression *&expression) {
+  void FoldExpression(const QueryContext& context, Expressions::Expression *&expression) {
     switch (expression->expressionType) {
     case Expressions::ExpressionType::Binary:
       FoldExpression(context, expression->AsBinary(), expression);
@@ -2060,7 +2060,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     }
   }
 
-  void FoldExpression(const CompileResult& context, const Expressions::BinaryExpression *castExpr, Expressions::Expression *&expression){
+  void FoldExpression(const QueryContext& context, const Expressions::BinaryExpression *castExpr, Expressions::Expression *&expression){
     if (!castExpr->left->IsConstant()
       || !castExpr->right->IsConstant())
       return;
@@ -2068,7 +2068,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     EvaluateExpression(context, expression);
   }
 
-  void FoldExpression(const CompileResult& context, Expressions::LogicalExpression *castExpr, Expressions::Expression *&expression){
+  void FoldExpression(const QueryContext& context, Expressions::LogicalExpression *castExpr, Expressions::Expression *&expression){
     //If expression is of type OR and either right or left is a constant, it will always be true
     if (castExpr->IsOr()) {
       if (castExpr->left->IsConstant()) {
@@ -2094,7 +2094,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
       TryPropagateChildExpression(expression, castExpr->right, castExpr->left);
   }
 
-  void FoldExpression(const CompileResult& context, const Expressions::FunctionExpression *castExpr, Expressions::Expression *&expression){
+  void FoldExpression(const QueryContext& context, const Expressions::FunctionExpression *castExpr, Expressions::Expression *&expression){
     for (const auto& argument : castExpr->arguments) {
       if (!argument->IsConstant())
         return;
@@ -2103,7 +2103,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     EvaluateExpression(context, expression);
   }
 
-  void FoldExpression(const CompileResult& context, Expressions::BranchExpression *castExpr, Expressions::Expression *&expression){
+  void FoldExpression(const QueryContext& context, Expressions::BranchExpression *castExpr, Expressions::Expression *&expression){
     for (int i = 0;i < castExpr->branches.size(); i++) {
       const auto* branch = castExpr->branches[i];
 
@@ -2125,12 +2125,12 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     expression = expr;
   }
 
-  void EvaluateExpression(const CompileResult& context, Expressions::Expression *&expression) {
+  void EvaluateExpression(const QueryContext& context, Expressions::Expression *&expression) {
     auto value = expression->Evaluate({});
     expression = context._context.Allocate<Expressions::ConstantExpression>(value);
   }
 
-  void AssignConstantToExpression(const CompileResult& context, Expressions::Expression *&expression) {
+  void AssignConstantToExpression(const QueryContext& context, Expressions::Expression *&expression) {
     auto value = Value(true, context._context.GetAllocator(), 0);
     expression = context._context.Allocate<Expressions::ConstantExpression>(value);
   }

@@ -500,7 +500,7 @@ namespace QueryPipeline {
     return result;
   }
 
-  Optimizer::Optimizer(CompileResult& context){
+  Optimizer::Optimizer(QueryContext& context){
       this->context = &context;
   }
 

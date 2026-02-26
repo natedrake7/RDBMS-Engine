@@ -7,6 +7,7 @@
 #include "Contexts/ExecutionContext.h"
 #include "DataStorage/Column.h"
 #include "DataStorage/Row.h"
+#include "Memory/IAllocator.h"
 #include "Pages/Additional/RawRowReference.h"
 
 namespace DatabaseEngine::StorageTypes{
@@ -186,8 +187,12 @@ namespace DatabaseEngine::StorageTypes{
         }
     }
 
-    page_offset_t InsertPayload::DeserializeHeader(const Int bitmapSize, const Int numberOfColumns) const{
-        this->header = RowHeader(numberOfColumns);
+    page_offset_t InsertPayload::DeserializeHeader(
+        const ::Memory::IAllocator* allocator,
+        const Int bitmapSize,
+        const Int numberOfColumns
+    ) const{
+        this->header = RowHeader(allocator, numberOfColumns);
 
         page_offset_t offSet = Constants::ROW_VERSION_HEADER_SIZE;
 
@@ -212,11 +217,11 @@ namespace DatabaseEngine::StorageTypes{
     }
 
     InsertPayload::InsertPayload(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const UnsignedSmallInt size,
         const UnsignedSmallInt startingOffset
     ){
-        this->_data = static_cast<object_t*>(allocator.Allocate(size));
+        this->_data = static_cast<object_t*>(allocator->AllocateRaw(size));
         this->size = size;
         this->offset = startingOffset;
         this->isHeaderInitialized = false;
@@ -239,7 +244,7 @@ namespace DatabaseEngine::StorageTypes{
         this->size = other.size;
         this->offset = other.offset;
         this->isHeaderInitialized = other.isHeaderInitialized;
-        this->header = other.header;
+        this->header = std::move(other.header);
         this->isReferencingExternalData = other.isReferencingExternalData;
 
         other._data = nullptr;
@@ -255,7 +260,7 @@ namespace DatabaseEngine::StorageTypes{
         this->size = other.size;
         this->offset = other.offset;
         this->isHeaderInitialized = other.isHeaderInitialized;
-        this->header = other.header;
+        this->header = std::move(other.header);
         this->isReferencingExternalData = other.isReferencingExternalData;
 
         other._data = nullptr;
@@ -276,44 +281,44 @@ namespace DatabaseEngine::StorageTypes{
         return payload;
     }
 
-    InsertPayload::InsertPayload(const InsertPayload& other){
-        if (other._data != nullptr) {
-            this->_data = static_cast<object_t*>(std::malloc(other.size));
-            std::memcpy(this->_data, other._data, other.size);
-        }
-        else
-            this->_data = nullptr;
-
-        this->size = other.size;
-        this->offset = other.offset;
-        this->isHeaderInitialized = other.isHeaderInitialized;
-        this->header = other.header;
-        this->isReferencingExternalData = other.isReferencingExternalData;
-    }
-
-    InsertPayload& InsertPayload::operator=(const InsertPayload& other){
-        if (this == &other)
-            return *this;
-
-        // Free existing data to prevent memory leak
-        std::free(this->_data);
-
-        // Deep copy: allocate new memory and copy contents
-        if (other._data != nullptr) {
-            this->_data = static_cast<object_t*>(std::malloc(other.size));
-            std::memcpy(this->_data, other._data, other.size);
-        }
-        else
-            this->_data = nullptr;
-
-        this->size = other.size;
-        this->offset = other.offset;
-        this->isHeaderInitialized = other.isHeaderInitialized;
-        this->header = other.header;
-        this->isReferencingExternalData = other.isReferencingExternalData;
-
-        return *this;
-    }
+    // InsertPayload::InsertPayload(const InsertPayload& other){
+    //     if (other._data != nullptr) {
+    //         this->_data = static_cast<object_t*>(std::malloc(other.size));
+    //         std::memcpy(this->_data, other._data, other.size);
+    //     }
+    //     else
+    //         this->_data = nullptr;
+    //
+    //     this->size = other.size;
+    //     this->offset = other.offset;
+    //     this->isHeaderInitialized = other.isHeaderInitialized;
+    //     this->header = other.header;
+    //     this->isReferencingExternalData = other.isReferencingExternalData;
+    // }
+    //
+    // InsertPayload& InsertPayload::operator=(const InsertPayload& other){
+    //     if (this == &other)
+    //         return *this;
+    //
+    //     // Free existing data to prevent memory leak
+    //     std::free(this->_data);
+    //
+    //     // Deep copy: allocate new memory and copy contents
+    //     if (other._data != nullptr) {
+    //         this->_data = static_cast<object_t*>(std::malloc(other.size));
+    //         std::memcpy(this->_data, other._data, other.size);
+    //     }
+    //     else
+    //         this->_data = nullptr;
+    //
+    //     this->size = other.size;
+    //     this->offset = other.offset;
+    //     this->isHeaderInitialized = other.isHeaderInitialized;
+    //     this->header = other.header;
+    //     this->isReferencingExternalData = other.isReferencingExternalData;
+    //
+    //     return *this;
+    // }
 
     InsertPayload::~InsertPayload(){
         if (!this->isReferencingExternalData)
@@ -350,7 +355,7 @@ namespace DatabaseEngine::StorageTypes{
         const auto bitmapSize = static_cast<Int>(std::ceil(static_cast<double>(numberOfColumns) / 8.0));
 
         page_offset_t offSet = !this->isHeaderInitialized
-                                   ? this->DeserializeHeader(bitmapSize, numberOfColumns)
+                                   ? this->DeserializeHeader(context.GetAllocator(), bitmapSize, numberOfColumns)
                                    : Constants::ROW_VERSION_HEADER_SIZE + 3 * bitmapSize;
 
         const auto columnOrdinal = column->OrdinalPosition();
@@ -389,7 +394,7 @@ namespace DatabaseEngine::StorageTypes{
             this->_data + offSet,
             blockSize,
             column->Type(),
-            &context.GetAllocator(),
+            context.GetAllocator(),
             columnOrdinal
         );
     }

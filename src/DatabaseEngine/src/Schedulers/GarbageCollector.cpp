@@ -2,8 +2,8 @@
 #include <bits/this_thread_sleep.h>
 
 #include "../../../Server/include/Server.h"
-#include "../../include/BufferPool/StorageManager.h"
 #include "../../include/Managers/TransactionManager.h"
+#include "Memory/Allocator.h"
 
 namespace DatabaseEngine {
     using namespace std::chrono_literals;
@@ -18,9 +18,8 @@ namespace DatabaseEngine {
             std::this_thread::sleep_for(20000ms);
 
             const Memory::Allocator allocator;
-
             const auto oldestTransactionId = transactionManager.GetOldestActiveTransactionId();
-            lastScannedExtentId = versionDatabase.CleanupVersionedData(allocator, oldestTransactionId, lastScannedExtentId);
+            lastScannedExtentId = versionDatabase.CleanupVersionedData(&allocator, oldestTransactionId, lastScannedExtentId);
         }
     }
 }

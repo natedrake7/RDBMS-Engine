@@ -126,7 +126,7 @@ namespace QueryPipeline::PhysicalPlan {
     result.results.Reserve(result.rows.Size());
 
     for (const auto& row: result.rows){
-      result.results.Push(row.Materialize(&context.GetAllocator()));
+      result.results.Push(row.Materialize(context.GetAllocator()));
     }
 
     return result;

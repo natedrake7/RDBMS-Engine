@@ -69,10 +69,10 @@ namespace Expressions{
 
     EvaluationContext::EvaluationContext(
         const EvaluationContextType type,
-        const Memory::Allocator& allocator
+        const ::Memory::IAllocator* allocator
     ){
         this->type = type;
-        this->allocator = &allocator;
+        this->allocator = allocator;
         this->variables = nullptr;
         this->row = nullptr;
         this->outerRow = nullptr;
@@ -84,7 +84,7 @@ namespace Expressions{
         const DatabaseEngine::ExecutionContext& executionContext
     ){
         this->type = type;
-        this->allocator = &executionContext.GetAllocator();
+        this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
         this->row = nullptr;
         this->outerRow = nullptr;
@@ -97,7 +97,7 @@ namespace Expressions{
     ){
         this->type = EvaluationContextType::SingleRow;
         this->row = row;
-        this->allocator = &executionContext.GetAllocator();
+        this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
         this->outerRow = nullptr;
         this->innerRow = nullptr;
@@ -119,7 +119,7 @@ namespace Expressions{
         const DatabaseEngine::ExecutionContext& executionContext
     ) {
         this->type = EvaluationContextType::MaterializedRow;
-        this->allocator = &executionContext.GetAllocator();
+        this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
         this->materializedRow = row;
         this->outerRow = nullptr;
@@ -133,7 +133,7 @@ namespace Expressions{
         const DatabaseEngine::ExecutionContext& executionContext
     ){
         this->type = EvaluationContextType::Join;
-        this->allocator = &executionContext.GetAllocator();
+        this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
         this->row = nullptr;
         this->outerRow = outerRow;
@@ -495,7 +495,7 @@ namespace Expressions{
     }
 
     Value FunctionExpression::Evaluate(const EvaluationContext& context) const {
-        DataStructures::PolymorphicArray<Value> evaluatedArguments(*context.allocator, this->arguments.size());
+        DataStructures::PolymorphicArray<Value> evaluatedArguments(context.allocator, this->arguments.size());
         for (const auto& arg : this->arguments)
           evaluatedArguments.Push(std::move(arg->Evaluate(context)));
 
@@ -503,42 +503,42 @@ namespace Expressions{
     }
 
     Value FunctionExpression::Concat(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        Value value(std::string(""), *context.allocator, 0);
+        Value value(std::string(""), context.allocator, 0);
 
         for (const auto& argument : arguments)
-          value += Value(argument.AsString(), *context.allocator, 0);
+          value += Value(argument.AsString(), context.allocator, 0);
 
         return value;
     }
 
     Value FunctionExpression::Length(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Length(field.AsString()), *context.allocator, 0);
+        return Value(Functions::String::Length(field.AsString()), context.allocator, 0);
     }
 
     Value FunctionExpression::TrimLeft(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::TrimLeft(field.AsString()), *context.allocator, 0);
+        return Value(Functions::String::TrimLeft(field.AsString()), context.allocator, 0);
     }
 
     Value FunctionExpression::TrimRight(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::TrimRight(field.AsString()), *context.allocator, 0);
+        return Value(Functions::String::TrimRight(field.AsString()), context.allocator, 0);
     }
 
     Value FunctionExpression::Trim(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Trim(field.AsString()), *context.allocator, 0);
+        return Value(Functions::String::Trim(field.AsString()), context.allocator, 0);
     }
 
     Value FunctionExpression::AsciiValue(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Ascii(field.AsString()), *context.allocator, 0);
+        return Value(Functions::String::Ascii(field.AsString()), context.allocator, 0);
     }
 
     Value FunctionExpression::Char(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Char(field.AsInt()), *context.allocator, 0);
+        return Value(Functions::String::Char(field.AsInt()), context.allocator, 0);
     }
 
     Value FunctionExpression::CharIndex(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -550,17 +550,17 @@ namespace Expressions{
                           ? arguments[2].AsInt()
                           : 0;
 
-        return Value(Functions::String::CharIndex(subStr, str, pos), *context.allocator, 0);
+        return Value(Functions::String::CharIndex(subStr, str, pos), context.allocator, 0);
     }
 
     Value FunctionExpression::Lower(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Lower(field.AsString()), *context.allocator, 0);
+        return Value(Functions::String::Lower(field.AsString()), context.allocator, 0);
     }
 
     Value FunctionExpression::Upper(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Upper(field.AsString()), *context.allocator, 0);
+        return Value(Functions::String::Upper(field.AsString()), context.allocator, 0);
     }
 
     Value FunctionExpression::Replace(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -568,7 +568,7 @@ namespace Expressions{
         const auto& subStr = arguments[1].AsString();
         const auto& replaceStr = arguments[2].AsString();
 
-        return Value(Functions::String::Replace(str, subStr, replaceStr), *context.allocator, 0);
+        return Value(Functions::String::Replace(str, subStr, replaceStr), context.allocator, 0);
     }
 
     Value FunctionExpression::Substr(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -576,40 +576,40 @@ namespace Expressions{
         const auto& startPos = arguments[1].AsInt();
         const auto& endPos = arguments[2].AsInt();
 
-        return Value(Functions::String::SubString(field, startPos, endPos), *context.allocator, 0);
+        return Value(Functions::String::SubString(field, startPos, endPos), context.allocator, 0);
     }
 
     Value FunctionExpression::Left(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0].AsString();
         const auto& startPos = arguments[1].AsInt();
 
-        return Value(Functions::String::Left(field, startPos), *context.allocator, 0);
+        return Value(Functions::String::Left(field, startPos), context.allocator, 0);
     }
 
     Value FunctionExpression::Right(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0].AsString();
         const auto& startPos = arguments[1].AsInt();
 
-        return Value(Functions::String::Right(field, startPos), *context.allocator, 0);
+        return Value(Functions::String::Right(field, startPos), context.allocator, 0);
     }
 
     Value FunctionExpression::Reverse(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& str = arguments[0].AsString();
-        return Value(Functions::String::Reverse(str), *context.allocator, 0);
+        return Value(Functions::String::Reverse(str), context.allocator, 0);
     }
 
     Value FunctionExpression::Space(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& size = arguments[0].AsInt();
 
-        return Value(Functions::String::Space(size), *context.allocator, 0);
+        return Value(Functions::String::Space(size), context.allocator, 0);
     }
 
     Value FunctionExpression::GetDate(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        return Value(DataTypes::DateTime::Now(), *context.allocator, 0);
+        return Value(DataTypes::DateTime::Now(), context.allocator, 0);
     }
 
     Value FunctionExpression::NewGuid(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        return Value(DataTypes::Guid::NewGuid(), *context.allocator, 0);
+        return Value(DataTypes::Guid::NewGuid(), context.allocator, 0);
     }
 
     Value FunctionExpression::NullIf(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments) {
@@ -740,13 +740,13 @@ namespace Expressions{
               const auto leftValue = this->left->Evaluate(context);
               const auto rightValue = this->right->Evaluate(context);
 
-              return Value(leftValue.AsBool() && rightValue.AsBool(), *context.allocator, 0);
+              return Value(leftValue.AsBool() && rightValue.AsBool(), context.allocator, 0);
             }
             case LogicalType::Or:{
               const auto leftValue = this->left->Evaluate(context);
               const auto rightValue = this->right->Evaluate(context);
 
-              return Value(leftValue.AsBool() || rightValue.AsBool(), *context.allocator, 0);
+              return Value(leftValue.AsBool() || rightValue.AsBool(), context.allocator, 0);
             }
             case LogicalType::Invalid:
             default:

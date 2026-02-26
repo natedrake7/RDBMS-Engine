@@ -4,7 +4,6 @@
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../Server/include/Server.h"
 #include "../../include/DataStorage/Table.h"
-#include "Guards/WriterGuard.h"
 
 namespace DatabaseEngine::StorageTypes {
      Column::Column(
@@ -91,11 +90,11 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetIsOverflowed(const bool isOverflow){ this->isOverflowed = isOverflow; }
 
-    BigInt Column::GenerateIdentityValue(const Memory::Allocator& allocator){
+    BigInt Column::GenerateIdentityValue(const ::Memory::IAllocator* allocator){
         return this->identityManager.Generate(allocator);
     }
 
-    void Column::UpdateMetadata(const Memory::Allocator& allocator)const{
+    void Column::UpdateMetadata(const ::Memory::IAllocator* allocator)const{
         this->identityManager.UpdateMasterDb(allocator);
     }
 

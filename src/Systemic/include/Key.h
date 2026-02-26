@@ -15,7 +15,12 @@ namespace DataTypes::Indexing {
     key_size_t size;
 
     Key();
-    Key(const void *keyValue, key_size_t keySize, DataType keyType, const Memory::Allocator& allocator);
+    Key(
+        const void *keyValue,
+        key_size_t keySize,
+        DataType keyType,
+        const Memory::IAllocator* allocator
+    );
     explicit Key(const Value& field);
     explicit Key(Value& field);
     explicit Key(const std::vector<Key>& subKeys);
@@ -52,13 +57,13 @@ namespace DataTypes::Indexing {
 
     void Serialize(object_t*& buffer, page_offset_t& offset) const;
     static Key DeserializeNonComposite(
-        const Memory::Allocator& allocator,
+        const Memory::IAllocator* allocator,
         const object_t* buffer,
         page_offset_t& offset,
         DataType type
     );
     static Key Deserialize(
-        const Memory::Allocator& allocator,
+        const Memory::IAllocator* allocator,
         const object_t* buffer,
         page_offset_t& offset,
         const UnsignedTinyInt& numberOfSubKeys,

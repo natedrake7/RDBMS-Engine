@@ -14,7 +14,7 @@ namespace DatabaseEngine{
 }
 
 namespace Memory{
-    class Allocator;
+    class IAllocator;
 }
 
 namespace Pages{
@@ -46,7 +46,7 @@ namespace Expressions{
         const Pages::RowReference* outerRow;
         const Pages::RowReference* innerRow;
 
-        const Memory::Allocator* allocator;
+        const Memory::IAllocator* allocator;
         const Dictionary<std::string, Variable>* variables;
 
         EvaluationContextType type;
@@ -54,7 +54,7 @@ namespace Expressions{
         EvaluationContext();
         EvaluationContext(
             EvaluationContextType type,
-            const Memory::Allocator& allocator
+            const ::Memory::IAllocator* allocator
         );
         explicit EvaluationContext(
             EvaluationContextType type,

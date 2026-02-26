@@ -7,9 +7,8 @@
 
 #include "DataTypes.h"
 
-namespace Memory
-{
-    class Allocator;
+namespace Memory{
+    class IAllocator;
 }
 
 namespace DataTypes {
@@ -32,7 +31,7 @@ inline Dictionary<DataType, int> ColumnTypeRank{
 
 class Value {
     object_t* data;
-    const Memory::Allocator* _allocator;
+    const Memory::IAllocator* _allocator;
     block_size_t size;
     column_index_t columnIndex;
     DataType type;
@@ -76,7 +75,7 @@ class Value {
             const void* data,
             Int size,
             DataType type,
-            const Memory::Allocator* allocator,
+            const Memory::IAllocator* allocator,
             column_index_t index = 0
         );
         ~Value();
@@ -90,21 +89,21 @@ class Value {
         // explicit Value(const DataTypes::Decimal& data, column_index_t index = 0);
         // explicit Value(const DataTypes::Guid& data, column_index_t index = 0);
 
-        Value(bool data, const Memory::Allocator& allocator, column_index_t index = 0);
-        Value(TinyInt data, const Memory::Allocator& allocator, column_index_t index = 0);
-        Value(SmallInt data, const Memory::Allocator& allocator, column_index_t index = 0);
-        Value(Int data, const Memory::Allocator& allocator, column_index_t index = 0);
-        Value(BigInt data, const Memory::Allocator& allocator, column_index_t index = 0);
-        Value(const std::string& data, const Memory::Allocator& allocator, column_index_t index = 0);
-        Value(const DataTypes::DateTime& data, const Memory::Allocator& allocator, column_index_t index = 0);
-        Value(const DataTypes::Decimal& data, const Memory::Allocator& allocator, column_index_t index = 0);
-        Value(const DataTypes::Guid& data, const Memory::Allocator& allocator, column_index_t index = 0);
+        Value(bool data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(TinyInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(SmallInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(Int data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(BigInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(const std::string& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(const DataTypes::DateTime& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(const DataTypes::Decimal& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(const DataTypes::Guid& data, const Memory::IAllocator* allocator, column_index_t index = 0);
 
         static Value FromExternalStorage(
             const object_t* data,
             Int size,
             DataType type,
-            const Memory::Allocator* allocator,
+            const Memory::IAllocator* allocator,
             column_index_t index = 0
         );
 
@@ -166,7 +165,7 @@ class Value {
         friend Value operator==(const Value& lhs, const Value& rhs);
         friend Value operator!=(const Value& lhs, const Value& rhs);
 
-        [[nodiscard]] const Memory::Allocator* GetAllocator() const;
+        [[nodiscard]] const Memory::IAllocator* GetAllocator() const;
 
         [[nodiscard]] bool ParseAsBoolFromString()const;
         [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);

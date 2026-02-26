@@ -94,21 +94,21 @@ namespace QueryPipeline{
 
     Parser::Parser() = default;
 
-    CompileResult::CompileResult(){
+    QueryContext::QueryContext(){
         this->hasMore = false;
         this->cursors.SetAllocator(this->_context.GetAllocator());
     }
 
-     void CompileResult::CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables){
+     void QueryContext::CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables){
         for (const auto& [key, variable] : sessionVariables)
             this->_scope.variables.ForceAdd(key, variable.GetType());
     }
 
-     const Memory::Allocator& CompileResult::GetAllocator() const{
+     const ::Memory::IAllocator* QueryContext::GetAllocator() const{
         return this->_context.GetAllocator();
      }
 
-     CompileResult::CompileResult(const Errors::Error &error){
+     QueryContext::QueryContext(const Errors::Error &error){
         this->status = error;
         this->hasMore = false;
         this->cursors.SetAllocator(this->_context.GetAllocator());
@@ -116,7 +116,7 @@ namespace QueryPipeline{
         // this->rows.SetAllocator(this->_context.GetAllocator());
     }
 
-    CompileResult::CompileResult(CompileResult&& other) noexcept{
+    QueryContext::QueryContext(QueryContext&& other) noexcept{
          this->status = other.status;
          this->hasMore = other.hasMore;
          this->_scope = std::move(other._scope);
@@ -125,7 +125,7 @@ namespace QueryPipeline{
          this->cursors = std::move(other.cursors);
     }
 
-    CompileResult& CompileResult::operator=(CompileResult&& other) noexcept{
+    QueryContext& QueryContext::operator=(QueryContext&& other) noexcept{
          if (this == &other) return *this;
 
          this->status = other.status;
@@ -169,7 +169,7 @@ namespace QueryPipeline{
 
     Parser::~Parser() = default;
 
-    void Parser::Parse(CompileResult& result, const DataTypes::Guid& sessionId, const std::string& query) {
+    void Parser::Parse(QueryContext& result, const DataTypes::Guid& sessionId, const std::string& query) {
         static auto errorListener = ErrorListener();
         // Create an ANTLR input stream from the file
         antlr4::ANTLRInputStream input(query);
@@ -204,7 +204,7 @@ namespace QueryPipeline{
         }
      }
 
-    LogicalPlan* Parser::BuildLogicalPlan(CompileResult& result, Statements::Statement* statement){
+    LogicalPlan* Parser::BuildLogicalPlan(QueryContext& result, Statements::Statement* statement){
         auto validation = statement->Compile(result);
         if (!validation.IsOk()) {
             result.status = Errors::Error(true, validation.message);
@@ -221,7 +221,7 @@ namespace QueryPipeline{
         return logicalPlan;
     }
 
-    PhysicalPlan::ExecutionNode* Parser::BuildExecutionPlan(CompileResult &result, LogicalPlan *logicalPlan) {
+    PhysicalPlan::ExecutionNode* Parser::BuildExecutionPlan(QueryContext &result, LogicalPlan *logicalPlan) {
         auto* physicalPlan = logicalPlan->ToPhysical(result);
         if(physicalPlan == nullptr){
             result.status = Errors::Error(true, "Unexpected error occurred during physical plan build");
@@ -236,30 +236,30 @@ namespace QueryPipeline{
         const auto _ = server.CloseCursor(sessionId, cursorId);
     }
 
-    CompileResult Parser::StartTransaction(const std::string &query, const DataTypes::Guid &sessionId){
+    QueryContext Parser::StartTransaction(const std::string &query, const DataTypes::Guid &sessionId){
         static const auto& server = Network::Server::Get();
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
-        CompileResult result;
+        QueryContext queryContext;
         const auto* session = server.GetSession(sessionId);
 
-        result.CreateValidationScope(session->variables);
-        Parser::Parse(result, sessionId, query);
+        queryContext.CreateValidationScope(session->variables);
+        Parser::Parse(queryContext, sessionId, query);
 
-        result.status.hasError = false;
-        if (result.status.hasError)
-            return result;
+        queryContext.status.hasError = false;
+        if (queryContext.status.hasError)
+            return queryContext;
 
-        const auto* statements = result._context.GetStatements();
-        result.cursors.Reserve(statements->Size());
+        const auto* statements = queryContext._context.GetStatements();
+        queryContext.cursors.Reserve(statements->Size());
         for (auto* statement: *statements) {
-            auto* logicalPlan = Parser::BuildLogicalPlan(result, statement);
-            if (result.status.hasError)
+            auto* logicalPlan = Parser::BuildLogicalPlan(queryContext, statement);
+            if (queryContext.status.hasError)
                 break;
 
-            auto* physicalPlan = Parser::BuildExecutionPlan(result, logicalPlan);
+            auto* physicalPlan = Parser::BuildExecutionPlan(queryContext, logicalPlan);
 
-            if (result.status.hasError)
+            if (queryContext.status.hasError)
                 break;
 
             const auto snapshot = transactionManager.BeginTransaction(sessionId);
@@ -268,35 +268,22 @@ namespace QueryPipeline{
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
 
-            DatabaseEngine::ExecutionContext context(snapshot, 10000, session->variables);
-
-            //for test
-            // if (dynamic_cast<Statements::SelectStatement *>(statement) != nullptr) {
-            //     std::this_thread::sleep_for(5000ms);
-            // }
-
-            result.cursors.Push(server.CreateCursor(sessionId, context, physicalPlan));
+            DatabaseEngine::ExecutionContext executionContext(snapshot, 10000, session->variables);
+            queryContext.cursors.Push(server.CreateCursor(sessionId, executionContext, physicalPlan));
         }
 
-        // if (result.status.hasError)
-        //     Parser::ClearQuery(statements);
-
-        return result;
+        return queryContext;
     }
 
     void Parser::CommitTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor) {
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
-
         transactionManager.CommitTransaction(cursor->GetSnapshot());
-
         Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }
 
     void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const Cursor* cursor) {
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
-
         transactionManager.RollbackTransaction(cursor->GetExecutionContext());
-
         Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }
 }

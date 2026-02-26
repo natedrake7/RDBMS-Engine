@@ -7,7 +7,7 @@
 
 namespace Memory
 {
-    class Allocator;
+    class IAllocator;
 }
 
 namespace DataTypes{
@@ -70,7 +70,7 @@ namespace Pages{
 
         [[nodiscard]] DatabaseEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition, Int offSet)const;
         [[nodiscard]] RowReference PeekRow(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             Int indexPosition,
             Int offSet
         ) const;
@@ -113,11 +113,11 @@ namespace Pages{
 
         void InitializeRowReferenceCache(const RowReference* rowPtr, Int numberOfColumns)const;
         [[nodiscard]] QueryResult MaterializeRow(
-            const Memory::Allocator* allocator,
+            const Memory::IAllocator* allocator,
             Int indexPosition,
             Int keySize
         ) const;
-        Value PartialMaterializeRow(const Memory::Allocator* allocator, const RowReference* rowPtr, column_index_t columnIndex) const;
+        Value PartialMaterializeRow(const Memory::IAllocator* allocator, const RowReference* rowPtr, column_index_t columnIndex) const;
 
         [[nodiscard]] RawRowReference RowRawData(Int indexPosition, Int offSet) const;
 

@@ -12,6 +12,7 @@
 #include <iostream>
 
 #include "DataStorage/Table.h"
+#include "Memory/Allocator.h"
 
 namespace DatabaseEngine {
     std::vector<Database *> StatisticsScheduler::GetDatabases()const {
@@ -133,7 +134,7 @@ namespace DatabaseEngine {
             );
 
             sortedValues.Add(columnId, {});
-            auto histograms = this->catalog->SelectColumnHistogramsByColumnId(allocator, tableStatistics.tableId, columnId);
+            auto histograms = this->catalog->SelectColumnHistogramsByColumnId(&allocator, tableStatistics.tableId, columnId);
             columnHistogramsDictionary.Add(columnId, std::move(histograms));
         }
 
@@ -141,7 +142,7 @@ namespace DatabaseEngine {
 
         bool clusteredIndexUpdated = false;
         if (indexStatistics.empty()){
-            const auto indexes = SystemCatalog::Get().SelectIndexes(allocator, tableStatistics.tableId);
+            const auto indexes = SystemCatalog::Get().SelectIndexes(&allocator, tableStatistics.tableId);
 
             for (const auto& index : indexes){
                 auto indexStats = Headers::IndexStatistics(tableStatistics.tableId, index.id);
@@ -199,7 +200,7 @@ namespace DatabaseEngine {
 
         //Update catalog
         this->UpdateCache(tableStatistics, columnStatistics, indexStatistics);
-        this->UpdateCatalogStatistics(allocator, tableStatistics, columnStatistics, indexStatistics, columnHistogramsDictionary);
+        this->UpdateCatalogStatistics(&allocator, tableStatistics, columnStatistics, indexStatistics, columnHistogramsDictionary);
     }
 
     bool StatisticsScheduler::UpdateIndexStatistics(
@@ -283,7 +284,7 @@ namespace DatabaseEngine {
                 allocatedPagesPerExtent++;
 
                 for (int i = 0;i < pageSize;i++){
-                    auto row = page.PeekRow(allocator, i, 0);
+                    auto row = page.PeekRow(&allocator, i, 0);
                     auto materializedRow = row.Materialize(&allocator);
 
                     tableStatistics.averageRowSize += row.Size();
@@ -318,7 +319,7 @@ namespace DatabaseEngine {
     }
 
     void StatisticsScheduler::UpdateCatalogStatistics(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Headers::TableStatistics &tableStatistics,
         const std::vector<Headers::ColumnStatistics> &columnStatistics,
         const std::vector<Headers::IndexStatistics>& indexStatistics,

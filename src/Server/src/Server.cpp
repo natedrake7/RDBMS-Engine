@@ -66,11 +66,11 @@ namespace Network {
     const auto lastCheckpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
     DatabaseEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
 
-    const Memory::Allocator allocator;
-    for (auto& role : this->systemCatalog->SelectRoles(allocator))
+    const DatabaseEngine::Memory::Allocator allocator;
+    for (auto& role : this->systemCatalog->SelectRoles(&allocator))
       const auto _ = this->roleManager.AddRole(role.name, new Security::Role(std::move(role)));
 
-    for (const auto& user : this->systemCatalog->SelectUsers(allocator)) {
+    for (const auto& user : this->systemCatalog->SelectUsers(&allocator)) {
       const auto* role = this->roleManager.GetRole(user.roleId);
       const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
     }
@@ -189,7 +189,7 @@ namespace Network {
     return this->sessionManager.AddOrSetVariable(sessionId, variable);
   }
 
-  QueryPipeline::Cursor * Server::CreateCursor(
+  QueryPipeline::Cursor* Server::CreateCursor(
     const DataTypes::Guid &id,
     DatabaseEngine::ExecutionContext& context,
     QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
@@ -202,9 +202,9 @@ namespace Network {
   }
 
   void Server::Shutdown(){
-    const Memory::Allocator allocator;
+    const DatabaseEngine::Memory::Allocator allocator;
     for (const auto &database: this->databases | std::views::values){
-          database->UpdateMasterDatabase(allocator);
+          database->UpdateMasterDatabase(&allocator);
           delete database;
     }
 

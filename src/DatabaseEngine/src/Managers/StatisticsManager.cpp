@@ -2,6 +2,7 @@
 
 #include "Guards/ReaderGuard.h"
 #include "Guards/WriterGuard.h"
+#include "Memory/Allocator.h"
 #include "SystemDatabases/SystemCatalog.h"
 
 namespace DatabaseEngine {
@@ -18,7 +19,7 @@ namespace DatabaseEngine {
       return stats;
 
     const Memory::Allocator allocator;
-    auto catalogStats = SystemCatalog::Get().SelectTableStatisticsById(allocator, tableId);
+    auto catalogStats = SystemCatalog::Get().SelectTableStatisticsById(&allocator, tableId);
 
     if (catalogStats.tableId == INVALID_TABLE_ID)
       return stats;
@@ -41,9 +42,9 @@ namespace DatabaseEngine {
       return stats;
 
     const Memory::Allocator allocator;
-    auto columnHeader = SystemCatalog::Get().SelectColumnById(allocator, tableId, columnId);
+    auto columnHeader = SystemCatalog::Get().SelectColumnById(&allocator, tableId, columnId);
 
-    auto catalogStats = SystemCatalog::Get().SelectColumnStatisticsById(allocator, columnId, static_cast<DataType>(columnHeader.dataType));
+    auto catalogStats = SystemCatalog::Get().SelectColumnStatisticsById(&allocator, columnId, static_cast<DataType>(columnHeader.dataType));
 
     if (catalogStats.columnId == INVALID_TABLE_ID)
       return stats;
@@ -63,7 +64,7 @@ namespace DatabaseEngine {
       return stats;
 
     const Memory::Allocator allocator;
-    auto catalogStats = SystemCatalog::Get().SelectIndexStatisticsByTableId(allocator, tableId);
+    auto catalogStats = SystemCatalog::Get().SelectIndexStatisticsByTableId(&allocator, tableId);
 
     if (catalogStats.empty())
       return stats;

@@ -75,7 +75,7 @@ namespace DatabaseEngine {
     );
 
     void UpdateCatalogStatistics(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Headers::TableStatistics& tableStatistics,
         const std::vector<Headers::ColumnStatistics>& columnStatistics,
         const std::vector<Headers::IndexStatistics>& indexStatistics,

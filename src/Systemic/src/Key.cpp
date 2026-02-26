@@ -28,9 +28,9 @@ namespace DataTypes::Indexing{
         const void *keyValue,
         const key_size_t keySize,
         const DataType keyType,
-        const Memory::Allocator& allocator
+        const Memory::IAllocator* allocator
     ){
-        this->value = Value(keyValue, keySize, keyType, &allocator);
+        this->value = Value(keyValue, keySize, keyType, allocator);
         this->size = keySize;
     }
 
@@ -291,7 +291,7 @@ namespace DataTypes::Indexing{
     }
 
     Key Key::DeserializeNonComposite(
-        const Memory::Allocator& allocator,
+        const Memory::IAllocator* allocator,
         const object_t* buffer,
         page_offset_t& offset,
         const DataType type
@@ -304,14 +304,14 @@ namespace DataTypes::Indexing{
         memcpy(valueData, buffer + offset, valueSize);
         offset += valueSize;
 
-        Value value(valueData, valueSize, type, &allocator);
+        Value value(valueData, valueSize, type, allocator);
         std::free(valueData);
 
         return Key(value);
     }
 
     Key Key::Deserialize(
-        const Memory::Allocator& allocator,
+        const Memory::IAllocator* allocator,
         const object_t* buffer,
         page_offset_t& offset,
         const UnsignedTinyInt& numberOfSubKeys,

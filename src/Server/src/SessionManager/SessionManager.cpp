@@ -91,12 +91,13 @@ namespace Network::Sessions {
         if (session == nullptr)
             return nullptr;
 
-        auto cursorId = session->nextCursorId++;
+        const auto cursorId = session->nextCursorId++;
         auto* cursor = context.Allocate<QueryPipeline::Cursor>(
             cursorId,
             context,
             physicalPlan
         );
+
         session->cursors.Add(cursorId, cursor);
         return cursor;
     }
@@ -112,9 +113,8 @@ namespace Network::Sessions {
         if (session == nullptr)
             return false;
 
-        //freed by arena
-        // const auto* cursor = session->cursors.Get(cursorId);
-        // delete cursor;
+        const auto* cursor = session->cursors.Get(cursorId);
+        cursor->GetExecutionContext().ResetAllocator();
 
         session->cursors.Remove(cursorId);
         return true;

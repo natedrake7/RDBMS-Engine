@@ -12,7 +12,7 @@ namespace DatabaseEngine
 
 namespace Memory
 {
-    class Allocator;
+    class IAllocator;
 }
 
 class Value;
@@ -41,7 +41,7 @@ namespace Pages{
         RowReference();
         RowReference(
             Frame* framePtr,
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             Int indexPosition,
             Int offset
         );
@@ -54,8 +54,8 @@ namespace Pages{
 
         ~RowReference();
 
-        [[nodiscard]] QueryResult Materialize(const Memory::Allocator* allocator)const;
-        [[nodiscard]] Value PartialMaterialize(const Memory::Allocator* allocator, column_index_t columnIndex)const;
+        [[nodiscard]] QueryResult Materialize(const Memory::IAllocator* allocator)const;
+        [[nodiscard]] Value PartialMaterialize(const Memory::IAllocator* allocator, column_index_t columnIndex)const;
         [[nodiscard]] Int Size()const;
 
         void Join(const RowReference& other) const;

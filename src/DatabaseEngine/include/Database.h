@@ -9,6 +9,11 @@
 #include "Pages/OverflowPageView.h"
 #include "Pages/PageFreeSpaceView.h"
 
+
+namespace Memory{
+    class IAllocator;
+}
+
 namespace Indexing {
     class BTree;
 } // namespace Indexing
@@ -220,7 +225,7 @@ public:
 
     void GetTableHeaders()const;
 
-    void UpdateMasterDatabase(const Memory::Allocator& allocator)const;
+    void UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const;
 
     const std::vector<StorageTypes::Table*>& GetTables() const;
 };

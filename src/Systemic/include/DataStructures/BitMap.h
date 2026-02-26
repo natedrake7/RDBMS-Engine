@@ -2,6 +2,11 @@
 #include <vector>
 #include "../DataTypes/DataTypes.h"
 
+namespace Memory
+{
+    class IAllocator;
+}
+
 namespace ByteMaps{
     class BitMap final{
         object_t* _data;
@@ -19,7 +24,7 @@ namespace ByteMaps{
         BitMap();
         BitMap(const BitMap &bitMap);
         explicit BitMap(const BitMap *bitMap);
-        explicit BitMap(bit_map_size_t size, byte_t defaultValue = 0);
+        explicit BitMap(const ::Memory::IAllocator* allocator, bit_map_size_t size, byte_t defaultValue = 0);
 
         static BitMap FromExistingData(object_t *data, bit_map_size_t size);
 

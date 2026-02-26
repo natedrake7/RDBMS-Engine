@@ -27,7 +27,7 @@ namespace QueryPipeline {
   LogicalDeclareVariable::LogicalDeclareVariable(const DataTypes::Guid &sessionId, Variable& variable, Expressions::Expression* expression)
     : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression){}
 
-  PhysicalPlan::ExecutionNode * LogicalDeclareVariable::ToPhysical(CompileResult& context) {
+  PhysicalPlan::ExecutionNode * LogicalDeclareVariable::ToPhysical(QueryContext& context) {
     return context._context.Allocate<PhysicalPlan::PhysicalDeclareVariable>(this->sessionId, this->variable, this->expression);
   }
 
@@ -36,27 +36,27 @@ namespace QueryPipeline {
 
   LogicalCreateUser::~LogicalCreateUser() = default;
 
-  PhysicalPlan::ExecutionNode * LogicalCreateUser::ToPhysical(CompileResult& context) {
+  PhysicalPlan::ExecutionNode * LogicalCreateUser::ToPhysical(QueryContext& context) {
     return context._context.Allocate<PhysicalPlan::PhysicalCreateUser>(this->username, this->password, this->role);
   }
 
   LogicalGrantRole::LogicalGrantRole(const DataTypes::Guid& sessionId, std::string &username, std::string &role)
     : LogicalPlan(sessionId), username(std::move(username)), role(std::move(role)) {}
 
-  PhysicalPlan::ExecutionNode * LogicalGrantRole::ToPhysical(CompileResult& context) {
+  PhysicalPlan::ExecutionNode * LogicalGrantRole::ToPhysical(QueryContext& context) {
     return context._context.Allocate<PhysicalPlan::PhysicalGrantRole>(this->sessionId, this->username, this->role);
   }
 
   LogicalCreateDatabase::LogicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& dbName) : LogicalPlan(sessionId), dbName(std::move(dbName)) {}
 
-  PhysicalPlan::PhysicalCreateDatabase * LogicalCreateDatabase::ToPhysical(CompileResult& context){
+  PhysicalPlan::PhysicalCreateDatabase * LogicalCreateDatabase::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalCreateDatabase>(this->sessionId, this->dbName);
   }
 
   LogicalUseDatabase::LogicalUseDatabase(const DataTypes::Guid &sessionId, const Int databaseId)
     : databaseId(databaseId), sessionId(sessionId) {}
 
-  PhysicalPlan::PhysicalUseDatabase * LogicalUseDatabase::ToPhysical(CompileResult& context){
+  PhysicalPlan::PhysicalUseDatabase * LogicalUseDatabase::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalUseDatabase>(this->sessionId, this->databaseId);
   }
 
@@ -70,7 +70,7 @@ namespace QueryPipeline {
     delete this->child;
   }
 
-  PhysicalPlan::PhysicalProject * LogicalProject::ToPhysical(CompileResult& context){
+  PhysicalPlan::PhysicalProject * LogicalProject::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalProject>(
       (this->child != nullptr) ? this->child->ToPhysical(context) : nullptr,
       this->resultExpressions,
@@ -85,7 +85,7 @@ namespace QueryPipeline {
   LogicalTableScan::LogicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
     : table(table), expression(expression) {}
 
-  PhysicalPlan::ExecutionNode* LogicalTableScan::ToPhysical(CompileResult& context){
+  PhysicalPlan::ExecutionNode* LogicalTableScan::ToPhysical(QueryContext& context){
     auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
     // If no indexes are available, use heap scan
@@ -126,7 +126,7 @@ namespace QueryPipeline {
     return context._context.Allocate<PhysicalPlan::PhysicalIndexSeek>(this->table, result.start, result.remainingPredicate);
   }
 
-  PhysicalPlan::ExecutionNode* LogicalJoin::CreateInnerJoinPhysicalPlan(CompileResult& context, JoinAlgorithmAnalysisResult& analysis) const{
+  PhysicalPlan::ExecutionNode* LogicalJoin::CreateInnerJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{
     switch (analysis.algorithm) {
       case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
       case PipelineConstants::JoinAlgorithm::HashJoin:
@@ -148,7 +148,7 @@ namespace QueryPipeline {
      throw std::runtime_error("LogicalJoin::ToPhysical(CompileResult& context): Unknown Join Algorithm");
   }
 
-  PhysicalPlan::ExecutionNode* LogicalJoin::CreateLeftJoinPhysicalPlan(CompileResult& context, JoinAlgorithmAnalysisResult& analysis) const{
+  PhysicalPlan::ExecutionNode* LogicalJoin::CreateLeftJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{
     switch (analysis.algorithm) {
       case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
       case PipelineConstants::JoinAlgorithm::HashJoin:
@@ -170,7 +170,7 @@ namespace QueryPipeline {
      throw std::runtime_error("LogicalJoin::ToPhysical(CompileResult& context): Unknown Join Algorithm");
   }
 
-  PhysicalPlan::ExecutionNode* LogicalJoin::CreateRightJoinPhysicalPlan(CompileResult& context, JoinAlgorithmAnalysisResult& analysis) const{
+  PhysicalPlan::ExecutionNode* LogicalJoin::CreateRightJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{
     switch (analysis.algorithm) {
     case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
     case PipelineConstants::JoinAlgorithm::HashJoin:
@@ -192,7 +192,7 @@ namespace QueryPipeline {
      throw std::runtime_error("LogicalJoin::ToPhysical(CompileResult& context): Unknown Join Algorithm");
   }
 
-  PhysicalPlan::ExecutionNode* LogicalJoin::CreateFullJoinPhysicalPlan(CompileResult& context, JoinAlgorithmAnalysisResult& analysis) const{
+  PhysicalPlan::ExecutionNode* LogicalJoin::CreateFullJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{
     switch (analysis.algorithm) {
       case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
       case PipelineConstants::JoinAlgorithm::HashJoin:
@@ -230,7 +230,7 @@ namespace QueryPipeline {
     delete this->right;
   }
 
-  PhysicalPlan::ExecutionNode * LogicalJoin::ToPhysical(CompileResult& context){
+  PhysicalPlan::ExecutionNode * LogicalJoin::ToPhysical(QueryContext& context){
     Optimizer optimizer(context);
 
     auto analysisResult = optimizer.ChooseJoinAlgorithm(
@@ -256,14 +256,14 @@ namespace QueryPipeline {
 LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter)
   : child(child), filter(filter) {}
 
-  PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(CompileResult& context){
+  PhysicalPlan::PhysicalFilter * LogicalFilter::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalFilter>(this->child->ToPhysical(context), this->filter);
   }
 
   LogicalOrder::LogicalOrder(LogicalPlan *child, std::vector<Statements::OrderColumn*>& expressions)
     : child(child), expressions(std::move(expressions)) {}
 
-  PhysicalPlan::ExecutionNode* LogicalOrder::ToPhysical(CompileResult& context){
+  PhysicalPlan::ExecutionNode* LogicalOrder::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalOrderBy>(this->child->ToPhysical(context), this->expressions);
   }
 
@@ -274,7 +274,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     delete this->child;
   }
 
-  PhysicalPlan::PhysicalTop * LogicalTop::ToPhysical(CompileResult& context){
+  PhysicalPlan::PhysicalTop * LogicalTop::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalTop>(this->child->ToPhysical(context), this->top);
   }
 
@@ -285,7 +285,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     delete this->child;
   }
 
-  PhysicalPlan::PhysicalDistinct * LogicalDistinct::ToPhysical(CompileResult& context){
+  PhysicalPlan::PhysicalDistinct * LogicalDistinct::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalDistinct>(this->child->ToPhysical(context));
   }
 
@@ -300,7 +300,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     delete this->child;
   }
 
-  PhysicalPlan::PhysicalInsert * LogicalInsert::ToPhysical(CompileResult& context){
+  PhysicalPlan::PhysicalInsert * LogicalInsert::ToPhysical(QueryContext& context){
     auto* physicalSelect = this->child != nullptr
                              ? this->child->ToPhysical(context)
                              : nullptr;
@@ -311,14 +311,14 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
   LogicalSchemaCreate::LogicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, std::string &schemaName)
     : LogicalPlan(sessionId), schemaName(std::move(schemaName)), databaseId(databaseId) {}
 
-  PhysicalPlan::PhysicalSchemaCreate * LogicalSchemaCreate::ToPhysical(CompileResult& context){
+  PhysicalPlan::PhysicalSchemaCreate * LogicalSchemaCreate::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalSchemaCreate>(this->sessionId, this->databaseId, this->schemaName);
   }
 
   LogicalDelete::LogicalDelete(Statements::DataSource *table, Expressions::Expression *expression)
     : table(table), expression(expression) {}
 
-  PhysicalPlan::ExecutionNode * LogicalDelete::ToPhysical(CompileResult& context){
+  PhysicalPlan::ExecutionNode * LogicalDelete::ToPhysical(QueryContext& context){
     const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
     //if no indexes are available heap scan
@@ -359,7 +359,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
         Expressions::Expression *expression
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
-    PhysicalPlan::ExecutionNode* LogicalUpdate::ToPhysical(CompileResult& context){
+    PhysicalPlan::ExecutionNode* LogicalUpdate::ToPhysical(QueryContext& context){
         const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
         //if no indexes are available heap scan
@@ -404,7 +404,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     ): LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
-    PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(CompileResult& context){
+    PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(QueryContext& context){
         Headers::Index index;
 
         index.columns = std::move(primaryKey);
@@ -419,7 +419,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
         std::vector<column_index_t> &columns
     ): LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
-    PhysicalPlan::ExecutionNode * LogicalIndexCreate::ToPhysical(CompileResult& context){
+    PhysicalPlan::ExecutionNode * LogicalIndexCreate::ToPhysical(QueryContext& context){
         return context._context.Allocate<PhysicalPlan::PhysicalIndexCreate>(this->sessionId, this->table, this->constraintName, this->columns);
     }
 
@@ -467,7 +467,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
         };
     }
 
-    PhysicalPlan::ExecutionNode * LogicalAlterTable::ToPhysical(CompileResult& context){
+    PhysicalPlan::ExecutionNode * LogicalAlterTable::ToPhysical(QueryContext& context){
       switch (this->type) {
       case AlterTableType::AddColumn:
         return context._context.Allocate<PhysicalPlan::PhysicalAddColumn>(this->sessionId, this->table, this->column.addColumn);

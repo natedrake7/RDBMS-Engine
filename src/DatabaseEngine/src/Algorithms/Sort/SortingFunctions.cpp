@@ -19,7 +19,7 @@ bool SortingFunctions::CompareRowsAscending(
     const Pages::RowReference& secondRow,
     const column_index_t& columnIndex
 ){
-    return (firstRow.PartialMaterialize(&context.GetAllocator(), columnIndex) < secondRow.PartialMaterialize(&context.GetAllocator(), columnIndex)).AsBool();
+    return (firstRow.PartialMaterialize(context.GetAllocator(), columnIndex) < secondRow.PartialMaterialize(context.GetAllocator(), columnIndex)).AsBool();
 }
 
 bool SortingFunctions::CompareRowsDescending(

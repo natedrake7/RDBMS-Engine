@@ -118,12 +118,13 @@ namespace DatabaseEngine::StorageTypes
         public:
             InsertPayload CreateInsertPayload(
                 Errors::RuntimeStatus& status,
-                const Memory::Allocator& allocator,
+                const ::Memory::IAllocator* allocator,
                 transaction_id_t transactionId,
                 const std::vector<Value> &inputData
             ) const;
             InsertPayload CreateUpdatePayload(
                 Errors::RuntimeStatus& status,
+                const ::Memory::IAllocator* allocator,
                 transaction_id_t transactionId,
                 const std::vector<Value> &inputData
             ) const;
@@ -228,7 +229,7 @@ namespace DatabaseEngine::StorageTypes
                 const Expressions::Expression* expression
             );
             void SystemClusteredIndexSeek(
-                const Memory::Allocator& allocator,
+                const ::Memory::IAllocator* allocator,
                 DataStructures::Array<Pages::RowReference>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
@@ -245,7 +246,7 @@ namespace DatabaseEngine::StorageTypes
                 const Expressions::Expression* expression
             );
             void SystemClusteredIndexScan(
-                const Memory::Allocator& allocator,
+                const ::Memory::IAllocator* allocator,
                 DataStructures::Array<Pages::RowReference>* selectedRows,
                 const Expressions::Expression* expression
             );
@@ -307,6 +308,11 @@ namespace DatabaseEngine::StorageTypes
                 const DataTypes::Indexing::Key& key,
                 const std::vector<Value> &updates
             );
+            [[nodiscard]] Errors::RuntimeStatus SystemClusteredIndexSeekUpdate(
+                const ::Memory::IAllocator* allocator,
+                const DataTypes::Indexing::Key& key,
+                const std::vector<Value> &updates
+            );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
@@ -321,6 +327,13 @@ namespace DatabaseEngine::StorageTypes
                 const ExecutionContext& executionContext,
                 const std::vector<Expressions::Expression*>& updates
             );
+            [[nodiscard]]
+            Errors::RuntimeStatus SystemUpdateRowNoLock(
+                const Pages::PageView* page,
+                const Pages::RowReference& rowPtr,
+                const ::Memory::IAllocator* allocator,
+                const std::vector<Value>& updates
+            ) const;
         /** @} End of: Update Functions*/
 
         /**
@@ -437,13 +450,13 @@ namespace DatabaseEngine::StorageTypes
         * Functions to retrieve and update system catalog information related to the table.
         * @{
         */
-            void UpdateSystemCatalog(const Memory::Allocator& allocator) const;
-            void RetrieveDefaultValuesFromCatalog(const Memory::Allocator& allocator)const;
-            void RetrieveColumnHeadersFromCatalog(const Memory::Allocator& allocator)const;
-            void UpdateCatalogIdentityColumns(const Memory::Allocator& allocator)const;
-            void RetrieveIdentityColumnsFromCatalog(const Memory::Allocator& allocator)const;
-            void RetrieveIdentityColumnById(const Memory::Allocator& allocator, Int columnId)const;
-            void RetrieveIndexesFromCatalog(const Memory::Allocator& allocator);
+            void UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const;
+            void RetrieveDefaultValuesFromCatalog(const ::Memory::IAllocator* allocator)const;
+            void RetrieveColumnHeadersFromCatalog(const ::Memory::IAllocator* allocator)const;
+            void UpdateCatalogIdentityColumns(const ::Memory::IAllocator* allocator)const;
+            void RetrieveIdentityColumnsFromCatalog(const ::Memory::IAllocator* allocator)const;
+            void RetrieveIdentityColumnById(const ::Memory::IAllocator* allocator, Int columnId)const;
+            void RetrieveIndexesFromCatalog(const ::Memory::IAllocator* allocator);
 
         /** @} End of System Catalog Integration Functions */
 

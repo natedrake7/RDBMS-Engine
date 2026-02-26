@@ -221,7 +221,7 @@ namespace DatabaseEngine {
     }
 
     Pages::RowReference VersionDatabase::RetrieveRowReference(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Snapshot& snapshot,
         const StorageTypes::RowVersionPointer &rowPointer,
         const StorageTypes::Table *table
@@ -241,7 +241,7 @@ namespace DatabaseEngine {
     }
 
     extent_id_t VersionDatabase::CleanupVersionedData(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
         const extent_id_t startingExtentId
     )const {

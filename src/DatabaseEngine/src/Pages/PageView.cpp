@@ -262,7 +262,7 @@ namespace Pages{
     }
 
     RowReference PageView::PeekRow(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Int indexPosition,
         const Int offSet
     ) const{
@@ -411,7 +411,7 @@ namespace Pages{
     }
 
     QueryResult PageView::MaterializeRow(
-        const Memory::Allocator* allocator,
+        const Memory::IAllocator* allocator,
         const Int indexPosition,
         const Int keySize
     ) const{
@@ -501,7 +501,7 @@ namespace Pages{
     }
 
     Value PageView::PartialMaterializeRow(
-        const Memory::Allocator* allocator,
+        const Memory::IAllocator* allocator,
         const RowReference* rowPtr,
         const column_index_t columnIndex
     ) const{

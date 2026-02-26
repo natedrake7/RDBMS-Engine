@@ -53,7 +53,7 @@ namespace Pages{
     }
 
     DataTypes::Indexing::Key IndexPageView::GetKeyByOffset(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         page_offset_t& offSet
     ) const {
         return DataTypes::Indexing::Key::Deserialize(
@@ -280,13 +280,13 @@ namespace Pages{
         this->framePtr->isDirty = true;
     }
 
-    DataTypes::Indexing::Key IndexPageView::GetKeyByIndex(const Memory::Allocator& allocator, const Int indexPosition) const{
+    DataTypes::Indexing::Key IndexPageView::GetKeyByIndex(const ::Memory::IAllocator* allocator, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         auto offSet = slot.GetOffset();
         return this->GetKeyByOffset(allocator, offSet);
     }
 
-    LeafNodeTuple IndexPageView::PeekLeafTuple(const Memory::Allocator& allocator, const Int indexPosition) const{
+    LeafNodeTuple IndexPageView::PeekLeafTuple(const ::Memory::IAllocator* allocator, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         auto offset = slot.GetOffset();
@@ -296,7 +296,7 @@ namespace Pages{
         return LeafNodeTuple(ref, key);
     }
 
-    InternalNodeTuple IndexPageView::PeekInternalNodeTuple(const Memory::Allocator& allocator, const Int indexPosition) const{
+    InternalNodeTuple IndexPageView::PeekInternalNodeTuple(const ::Memory::IAllocator* allocator, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         DataTypes::Indexing::Key key;
@@ -312,7 +312,7 @@ namespace Pages{
     }
 
     DatabaseEngine::StorageTypes::RowVersioningHeader IndexPageView::PeekVersionHeader(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Int indexPosition,
         Int& outKeySize
     ) const{
@@ -328,7 +328,10 @@ namespace Pages{
         return header;
     }
 
-    page_id_t IndexPageView::GetChild(const Memory::Allocator& allocator, const Int indexPosition) const{
+    page_id_t IndexPageView::GetChild(
+        const ::Memory::IAllocator* allocator,
+        const Int indexPosition
+    ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         auto offset = slot.GetOffset();
@@ -341,7 +344,7 @@ namespace Pages{
     }
 
     void IndexPageView::AppendRowToBuffer(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         DataStructures::Array<RowReference>* buffer,
         const DatabaseEngine::Snapshot& snapshot,
         const Int indexPosition
@@ -365,7 +368,7 @@ namespace Pages{
     }
 
     void IndexPageView::AppendRowToBuffer(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         DataStructures::Array<RowReference>* buffer,
         const Int indexPosition
     ) const{

@@ -6,11 +6,11 @@
 namespace DatabaseEngine::StorageTypes{
     InsertPayload Table::CreateInsertPayload(
         Errors::RuntimeStatus& status,
-        const Memory::Allocator& allocator,
+        const Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
         const std::vector<Value> &inputData
     ) const{
-        auto rowHeader = RowHeader(static_cast<Int>(this->columns.size()));
+        auto rowHeader = RowHeader(allocator, static_cast<Int>(this->columns.size()));
         rowHeader.version.createdTransactionId = transactionId;
 
         // First pass: determine how many non-NULL columns we have
@@ -125,10 +125,11 @@ namespace DatabaseEngine::StorageTypes{
 
     InsertPayload Table::CreateUpdatePayload(
         Errors::RuntimeStatus& status,
+        const ::Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
         const std::vector<Value>& inputData
     ) const{
-        auto rowHeader = RowHeader(static_cast<Int>(this->columns.size()));
+        auto rowHeader = RowHeader(allocator, static_cast<Int>(this->columns.size()));
         rowHeader.version.createdTransactionId = transactionId;
 
         // First pass: determine how many non-NULL columns we have
@@ -161,7 +162,7 @@ namespace DatabaseEngine::StorageTypes{
         // Only allocate offset space for non-NULL columns
         const auto dataOffSet = dataSizesOffset + nonNullColumnCount * sizeof(block_size_t);
 
-        auto payload = InsertPayload(dataSize + dataOffSet, dataOffSet);
+        auto payload = InsertPayload(allocator, dataSize + dataOffSet, dataOffSet);
         for (const auto& column : this->columns){
             const auto& index = column->OrdinalPosition();
             const auto& value = inputData.at(index);

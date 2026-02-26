@@ -39,7 +39,7 @@ namespace DatabaseEngine{
             GlobalMemoryManager(GlobalMemoryManager&&) = delete;
             GlobalMemoryManager& operator=(GlobalMemoryManager&&) = delete;
 
-            void Initialize(const Memory::OSMemoryInfo& memoryInfo);
+            void Initialize(const ::Memory::OSMemoryInfo& memoryInfo);
             static GlobalMemoryManager& Get();
 
             [[nodiscard]] bool TryReserveForExecution(UnsignedBigInt size);
@@ -55,7 +55,7 @@ namespace DatabaseEngine{
             UnsignedBigInt GetExecutionCapacity()const;
             UnsignedBigInt GetExecutionReservation()const;
 
-            void Log(std::ostream& os, Memory::MemoryLogLevel level)const;
+            void Log(std::ostream& os, ::Memory::MemoryLogLevel level)const;
     };
 
 

@@ -2,12 +2,12 @@
 #include <cstring>
 #include "Array.h"
 #include "../DataTypes/DataTypes.h"
-#include "../Memory/Allocator.h"
+#include "../Memory/IAllocator.h"
 
 namespace DataStructures{
     template <typename T>
     class PolymorphicArray final : public Array<T>{
-        const Memory::Allocator* _allocator;
+        const Memory::IAllocator* _allocator;
 
     public:
         PolymorphicArray(){
@@ -18,23 +18,23 @@ namespace DataStructures{
             this->_capacity = 0;
         }
 
-        explicit PolymorphicArray(const Memory::Allocator& allocator){
-            this->_allocator = &allocator;
+        explicit PolymorphicArray(const Memory::IAllocator* allocator){
+            this->_allocator = allocator;
             this->_data = nullptr;
             this->_size = 0;
             this->_capacity = 0;
         }
 
-        PolymorphicArray(const Memory::Allocator& allocator, Int capacity){
-            this->_allocator = &allocator;
-            this->_data = static_cast<T*>(this->_allocator->Allocate(capacity * sizeof(T)));
+        PolymorphicArray(const Memory::IAllocator* allocator, Int capacity){
+            this->_allocator = allocator;
+            this->_data = static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T)));
             this->_size = 0;
             this->_capacity = capacity;
         }
 
-        PolymorphicArray(const Memory::Allocator& allocator, Int capacity, T value){
-            this->_allocator = &allocator;
-            this->_data = static_cast<T*>(this->_allocator->Allocate(capacity * sizeof(T)));
+        PolymorphicArray(const Memory::IAllocator* allocator, Int capacity, T value){
+            this->_allocator = allocator;
+            this->_data = static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T)));
             this->_size = 0;
             this->_capacity = capacity;
 
@@ -44,7 +44,7 @@ namespace DataStructures{
 
         PolymorphicArray(const PolymorphicArray& other){
             this->_allocator = other._allocator;
-            this->_data = static_cast<T*>(this->_allocator->Allocate(other._capacity * sizeof(T)));
+            this->_data = static_cast<T*>(this->_allocator->AllocateRaw(other._capacity * sizeof(T)));
             std::memcpy(this->_data, other._data, other._size * sizeof(T));
 
             this->_size = other._size;
@@ -56,7 +56,7 @@ namespace DataStructures{
                 return *this;
 
             this->_allocator = other._allocator;
-            this->_data = static_cast<T*>(this->_allocator->Allocate(other._capacity * sizeof(T)));
+            this->_data = static_cast<T*>(this->_allocator->AllocateRaw(other._capacity * sizeof(T)));
             std::memcpy(this->_data, other._data, other._size * sizeof(T));
 
             this->_size = other._size;
@@ -97,7 +97,7 @@ namespace DataStructures{
             if (newCapacity <= this->_capacity)
                 return;
 
-            T* newData = static_cast<T*>(this->_allocator->Allocate(newCapacity * sizeof(T)));
+            T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T)));
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
             this->_data = newData;
             this->_capacity = newCapacity;
@@ -107,19 +107,19 @@ namespace DataStructures{
             if (newCapacity <= this->_capacity)
                 return;
 
-            T* newData = static_cast<T*>(this->_allocator->Allocate(newCapacity * sizeof(T)));
+            T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T)));
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
             this->_data = newData;
             this->_capacity = newCapacity;
         }
 
-        void TrySetAllocator(const Memory::Allocator& allocator){
+        void TrySetAllocator(const Memory::IAllocator* allocator){
             if (this->_allocator != nullptr)
                 return;
 
-            this->_allocator = &allocator;
+            this->_allocator = allocator;
         }
 
-        void SetAllocator(const Memory::Allocator& allocator) { this->_allocator = &allocator; }
+        void SetAllocator(const Memory::IAllocator* allocator) { this->_allocator = allocator; }
     };
 }

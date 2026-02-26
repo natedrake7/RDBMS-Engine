@@ -36,41 +36,41 @@ namespace DatabaseEngine {
     void StoreSystemTablesToCatalog()const;
 
     static Headers::DatabaseHeader ToDatabaseHeader(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::RowReference& rowPtr
     );
     static Headers::DatabaseHeader ToDatabaseHeader(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::RowReference& rowPtr,
         std::vector<Headers::TableHeader>& dbTables,
         std::vector<Headers::SchemaHeader>& schemas
     );
-    static Headers::SchemaHeader ToSchemaHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
-    static Headers::TableHeader ToTableHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
-    static Headers::ColumnHeader ToColumnHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
-    static Headers::IndexHeader ToIndexHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
-    static Headers::IndexColumnsHeader ToIndexColumnsHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
-    static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
+    static Headers::SchemaHeader ToSchemaHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+    static Headers::TableHeader ToTableHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+    static Headers::ColumnHeader ToColumnHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+    static Headers::IndexHeader ToIndexHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+    static Headers::IndexColumnsHeader ToIndexColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+    static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
     static Headers::ConstraintsHeader ToConstraintsHeader(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::RowReference& rowPtr,
         std::vector<Headers::ConstraintsColumnsHeader>& constraintColumns,
         Headers::IndexHeader& indexHeader
     );
-    static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
-    static Headers::DefaultValuesHeader ToDefaultValuesHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
-    static Headers::TableStatistics ToTableStatistics(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
+    static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+    static Headers::DefaultValuesHeader ToDefaultValuesHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+    static Headers::TableStatistics ToTableStatistics(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
     static Headers::ColumnStatistics ToColumnStatistics(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::RowReference& rowPtr,
         DataType columnType
     );
     static Headers::ColumnHistograms ToColumnHistograms(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::RowReference& rowPtr,
         DataType columnType
     );
-    static Headers::IndexStatistics ToIndexStatistics(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr);
+    static Headers::IndexStatistics ToIndexStatistics(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
 
     public:
       SystemCatalog(SystemCatalog const&) = delete;
@@ -219,7 +219,7 @@ namespace DatabaseEngine {
     ) const;
 
     [[nodiscard]] Errors::RuntimeStatus InsertColumnHistogramsToMasterDb(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int columnId,
         const Value& min,
         const Value& max,
@@ -255,76 +255,76 @@ namespace DatabaseEngine {
       bool isDeleted = false
     ) const;
 
-    [[nodiscard]] std::vector<Security::Role> SelectRoles(const Memory::Allocator& allocator)const;
-    [[nodiscard]] std::vector<Security::User> SelectUsers(const Memory::Allocator& allocator)const;
-    [[nodiscard]] bool DatabaseExists(const Memory::Allocator& allocator, const std::string& dbName) const;
-    [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const Memory::Allocator& allocator, const std::string& name) const;
-    [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const Memory::Allocator& allocator, Int databaseId) const;
-    [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const Memory::Allocator& allocator, Int databaseId) const;
-    [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const Memory::Allocator& allocator, Int databaseId) const;
+    [[nodiscard]] std::vector<Security::Role> SelectRoles(const ::Memory::IAllocator* allocator)const;
+    [[nodiscard]] std::vector<Security::User> SelectUsers(const ::Memory::IAllocator* allocator)const;
+    [[nodiscard]] bool DatabaseExists(const ::Memory::IAllocator* allocator, const std::string& dbName) const;
+    [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const ::Memory::IAllocator* allocator, const std::string& name) const;
+    [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const ::Memory::IAllocator* allocator, Int databaseId) const;
+    [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const ::Memory::IAllocator* allocator, Int databaseId) const;
+    [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, Int databaseId) const;
     [[nodiscard]] bool SchemaExists(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int databaseId,
         const std::string& schema,
         int* schemaId = nullptr
     ) const;
-    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const Memory::Allocator& allocator, const std::string& dbName) const;
+    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const ::Memory::IAllocator* allocator, const std::string& dbName) const;
     [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int databaseId
     ) const;
     [[nodiscard]] Headers::TableHeader SelectTable(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const std::string& dbName,
         const std::string& tableName
     ) const;
     [[nodiscard]] Headers::TableHeader SelectTable(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int databaseId,
         const std::string& tableName,
         const std::string& schema
     ) const;
-    [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const Memory::Allocator& allocator, Int tableId) const;
-    [[nodiscard]] Headers::ColumnHeader SelectColumnById(const Memory::Allocator& allocator, Int tableId, Int columnId) const;
-    [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(const Memory::Allocator& allocator, Int tableId) const;
-    [[nodiscard]] Dictionary<std::string, Headers::ColumnHeader> SelectColumnsToDictionary(const Memory::Allocator& allocator, Int tableId) const;
-    [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(const Memory::Allocator& allocator, Int tableId) const;
-    [[nodiscard]] Headers::IndexHeader SelectIndexById(const Memory::Allocator& allocator, Int indexId) const;
-    [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const Memory::Allocator& allocator, Int indexId) const;
-    [[nodiscard]] Dictionary<Int, Headers::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const Memory::Allocator& allocator, Int indexId) const;
-    [[nodiscard]] std::vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const Memory::Allocator& allocator, Int tableId) const;
-    [[nodiscard]] Dictionary<Int , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const Memory::Allocator& allocator, Int tableId) const;
-    [[nodiscard]] std::vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const Memory::Allocator& allocator, Int constraintId) const;
-    [[nodiscard]] Dictionary<Int, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const Memory::Allocator& allocator, Int constraintId) const;
-    [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const Memory::Allocator& allocator, Int columnId) const;
-    [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const Memory::Allocator& allocator, Int tableId)const;
+    [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const ::Memory::IAllocator* allocator, Int tableId) const;
+    [[nodiscard]] Headers::ColumnHeader SelectColumnById(const ::Memory::IAllocator* allocator, Int tableId, Int columnId) const;
+    [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(const ::Memory::IAllocator* allocator, Int tableId) const;
+    [[nodiscard]] Dictionary<std::string, Headers::ColumnHeader> SelectColumnsToDictionary(const ::Memory::IAllocator* allocator, Int tableId) const;
+    [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(const ::Memory::IAllocator* allocator, Int tableId) const;
+    [[nodiscard]] Headers::IndexHeader SelectIndexById(const ::Memory::IAllocator* allocator, Int indexId) const;
+    [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const ::Memory::IAllocator* allocator, Int indexId) const;
+    [[nodiscard]] Dictionary<Int, Headers::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const ::Memory::IAllocator* allocator, Int indexId) const;
+    [[nodiscard]] std::vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const ::Memory::IAllocator* allocator, Int tableId) const;
+    [[nodiscard]] Dictionary<Int , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const ::Memory::IAllocator* allocator, Int tableId) const;
+    [[nodiscard]] std::vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const ::Memory::IAllocator* allocator, Int constraintId) const;
+    [[nodiscard]] Dictionary<Int, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const ::Memory::IAllocator* allocator, Int constraintId) const;
+    [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const ::Memory::IAllocator* allocator, Int columnId) const;
+    [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const ::Memory::IAllocator* allocator, Int tableId)const;
     [[nodiscard]] Headers::ColumnStatistics SelectColumnStatisticsById(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int columnId,
         DataType columnType
     )const;
     [[nodiscard]] std::vector<Headers::ColumnHistograms> SelectColumnHistogramsByColumnId(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int tableId,
         Int columnId
     )const;
-    [[nodiscard]] std::vector<Headers::IndexStatistics> SelectIndexStatisticsByTableId(const Memory::Allocator& allocator, Int tableId)const;
+    [[nodiscard]] std::vector<Headers::IndexStatistics> SelectIndexStatisticsByTableId(const ::Memory::IAllocator* allocator, Int tableId)const;
 
     void UpdateIdentityByColumnId(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int tableId,
         Int columnId,
         BigInt lastValue
     )const;
     void UpdateTableStatisticsById(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int tableId,
         BigInt rowCount,
         Int rowSize,
         Int pageCount
     )const;
     void UpdateColumnStatisticsById(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int columnId,
         BigInt distinctCount,
         BigInt nullCount,
@@ -332,7 +332,7 @@ namespace DatabaseEngine {
         const Value& max
     )const;
     void UpdateIndexStatisticsById(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int tableId,
         Int indexId,
         BigInt leafPages,
@@ -340,7 +340,7 @@ namespace DatabaseEngine {
         const DataTypes::Decimal& averageFragmentation
     )const;
     [[nodiscard]] Errors::RuntimeStatus UpdateHistogramBucket(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int columnId,
         Int histogramId,
         const Value& min,
@@ -349,7 +349,7 @@ namespace DatabaseEngine {
         const BigInt& distinctCount
     ) const;
     [[nodiscard]] Errors::RuntimeStatus UpdateColumnById(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Int columnId,
         const std::vector<Value>& updates
     )const;

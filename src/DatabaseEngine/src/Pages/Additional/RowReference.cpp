@@ -1,6 +1,4 @@
 ﻿#include "../../../include/Pages/Additional/RowReference.h"
-
-#include "BufferPool/StorageManager.h"
 #include "Pages/PageView.h"
 #include "Pages/Additional/Frame.h"
 
@@ -14,15 +12,15 @@ namespace Pages{
 
     RowReference::RowReference(
         Frame* framePtr,
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Int indexPosition,
         const Int offset
     ){
-        this->pageView = allocator.Allocate<PageView>(framePtr);
+        this->pageView = allocator->Allocate<PageView>(framePtr);
         this->indexPosition = indexPosition;
         this->keySize = offset;
 
-        this->lazyState = allocator.Allocate<RowLazyState>();
+        this->lazyState = allocator->Allocate<RowLazyState>();
         this->lazyState->dataOffset = 0;
         this->lazyState->isHeaderInitialized = false;
     }
@@ -99,11 +97,11 @@ namespace Pages{
     //     //     delete this->lazyState;
     // }
 
-    QueryResult RowReference::Materialize(const Memory::Allocator* allocator)const{
+    QueryResult RowReference::Materialize(const Memory::IAllocator* allocator)const{
         return this->pageView->MaterializeRow(allocator, this->indexPosition, this->keySize);
     }
 
-    Value RowReference::PartialMaterialize(const Memory::Allocator* allocator, const column_index_t columnIndex) const{
+    Value RowReference::PartialMaterialize(const Memory::IAllocator* allocator, const column_index_t columnIndex) const{
         return this->pageView->PartialMaterializeRow(allocator, this, columnIndex);
     }
 

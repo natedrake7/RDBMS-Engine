@@ -187,7 +187,7 @@ int main(){
         ExecuteQuery(input, session->sessionId);
     }
 
-    globalMemoryManager.Log(std::cout, Memory::MemoryLogLevel::Bytes);
+    globalMemoryManager.Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
     // const auto& databases = server.GetCatalog();
 
     serverRunning.store(false, std::memory_order_relaxed);
@@ -227,7 +227,6 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
                 std::cout << column << " || ";
 
             std::cout << std::endl;
-
             for (const auto& row : batch.results)
                 std::cout << row;
         }
@@ -237,7 +236,7 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
             continue;
         }
 
-        DatabaseEngine::GlobalMemoryManager::Get().Log(std::cout, Memory::MemoryLogLevel::Bytes);
+        DatabaseEngine::GlobalMemoryManager::Get().Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
         QueryPipeline::Parser::CommitTransaction(sessionId, cursor);
     }
 

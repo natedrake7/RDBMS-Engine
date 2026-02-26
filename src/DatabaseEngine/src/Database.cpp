@@ -15,6 +15,7 @@
 #include <iostream>
 
 #include "Managers/GlobalMemoryManager.h"
+#include "Memory/Allocator.h"
 
 namespace DatabaseEngine
 {
@@ -165,7 +166,7 @@ namespace DatabaseEngine
 
         //query get from masterDb
         const Memory::Allocator allocator;
-        const auto masterDbData = catalog.SelectTables(allocator, dbName);
+        const auto masterDbData = catalog.SelectTables(&allocator, dbName);
         const auto& headerPageTables = headerPage.GetTableHeaders();
 
         if (headerPageTables.size() != masterDbData.size())
@@ -293,7 +294,7 @@ namespace DatabaseEngine
         auto* table = AllocateMiscEntity<StorageTypes::Table>(masterDbHeader, tableHeader, this);
 
         const Memory::Allocator allocator;
-        const auto& masterDbColumns = catalog.SelectColumns(allocator, masterDbHeader.id);
+        const auto& masterDbColumns = catalog.SelectColumns(&allocator, masterDbHeader.id);
         for (const auto & masterDbColumn : masterDbColumns) {
             if (masterDbColumn.isSystem)
                 continue;
@@ -304,10 +305,10 @@ namespace DatabaseEngine
 
         //TODO
         //maybe add in a single function
-        table->RetrieveColumnHeadersFromCatalog(allocator);
-        table->RetrieveIdentityColumnsFromCatalog(allocator);
-        table->RetrieveIndexesFromCatalog(allocator);
-        table->RetrieveDefaultValuesFromCatalog(allocator);
+        table->RetrieveColumnHeadersFromCatalog(&allocator);
+        table->RetrieveIdentityColumnsFromCatalog(&allocator);
+        table->RetrieveIndexesFromCatalog(&allocator);
+        table->RetrieveDefaultValuesFromCatalog(&allocator);
 
         this->tables.push_back(table);
     }
@@ -930,39 +931,39 @@ namespace DatabaseEngine
     void Database::GetIdentityColumns()const{
         const Memory::Allocator allocator;
         for(const auto& table: this->tables)
-            table->RetrieveIdentityColumnsFromCatalog(allocator);
+            table->RetrieveIdentityColumnsFromCatalog(&allocator);
     }
 
     void Database::UpdateIdentityManagersIds()const{
         const Memory::Allocator allocator;
         for(const auto& table: this->tables)
-            table->UpdateCatalogIdentityColumns(allocator);
+            table->UpdateCatalogIdentityColumns(&allocator);
     }
 
     void Database::GetColumnsHeaders() const{
         const Memory::Allocator allocator;
         for (const auto& table : this->tables)
-            table->RetrieveColumnHeadersFromCatalog(allocator);
+            table->RetrieveColumnHeadersFromCatalog(&allocator);
     }
 
     void Database::GetDefaultValues() const{
         const Memory::Allocator allocator;
         for (const auto& table : this->tables)
-            table->RetrieveDefaultValuesFromCatalog(allocator);
+            table->RetrieveDefaultValuesFromCatalog(&allocator);
     }
 
     void Database::GetIndexes() const{
         const Memory::Allocator allocator;
         for (const auto& table : this->tables)
-            table->RetrieveIndexesFromCatalog(allocator);
+            table->RetrieveIndexesFromCatalog(&allocator);
     }
 
     void Database::GetTableHeaders() const{
     }
 
-    void Database::UpdateMasterDatabase(const Memory::Allocator& allocator)const{
-            for(const auto& table: this->tables)
-                table->UpdateSystemCatalog(allocator);
+    void Database::UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const{
+        for(const auto& table: this->tables)
+            table->UpdateSystemCatalog(allocator);
     }
 
     const std::vector<StorageTypes::Table *> & Database::GetTables() const{ return this->tables; }

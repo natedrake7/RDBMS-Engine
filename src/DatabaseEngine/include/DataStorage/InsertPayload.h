@@ -48,12 +48,16 @@ namespace DatabaseEngine::StorageTypes {
 
         Int SetDataByType(const Value& value, const Column* column, Errors::RuntimeStatus& status);
 
-        page_offset_t DeserializeHeader(Int bitmapSize, Int numberOfColumns) const;
+        page_offset_t DeserializeHeader(
+            const ::Memory::IAllocator* allocator,
+            Int bitmapSize,
+            Int numberOfColumns
+        ) const;
 
     public:
         InsertPayload();
         InsertPayload(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             UnsignedSmallInt size,
             UnsignedSmallInt startingOffset
         );
@@ -65,8 +69,8 @@ namespace DatabaseEngine::StorageTypes {
         static InsertPayload FromRowPtr(const Pages::RawRowReference& rowPtr);
 
         // Copy operations perform deep copy to avoid double-free
-        InsertPayload(const InsertPayload& other);
-        InsertPayload& operator=(const InsertPayload& other);
+        // InsertPayload(const InsertPayload& other);
+        // InsertPayload& operator=(const InsertPayload& other);
 
         ~InsertPayload();
 

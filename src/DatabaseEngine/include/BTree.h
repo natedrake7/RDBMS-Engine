@@ -50,23 +50,23 @@ namespace Indexing{
         );
 
         static Int LeafLowerBound(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );
         static Int LeafPartialLowerBound(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );
 
         static Int InternalNodeLowerBound(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );
         static Int InternalNodePartialLowerBound(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );
@@ -130,10 +130,10 @@ namespace Indexing{
             Int& indexPosition
         );
 
-        [[nodiscard]] Pages::IndexPageView SearchKey(const Memory::Allocator& allocator, const DataTypes::Indexing::Key& key) const;
+        [[nodiscard]] Pages::IndexPageView SearchKey(const ::Memory::IAllocator* allocator, const DataTypes::Indexing::Key& key) const;
         [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, std::vector<Pages::IndexPageView>& ancestors) const;
-        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const Memory::Allocator& allocator) const;
-        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const Memory::Allocator& allocator, TinyInt& depth) const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator) const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator, TinyInt& depth) const;
 
         [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
         [[nodiscard]] Int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, TreeType treeType, Int nonClusteredId)const;
@@ -180,7 +180,7 @@ namespace Indexing{
         );
 
         void CalculateClusteredStatistics(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             Pages::IndexPageView& currentNode,
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
@@ -241,12 +241,12 @@ namespace Indexing{
             const Expressions::Expression* expression
         )const;
         void SystemIndexSeek(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
             DataStructures::Array<Pages::RowReference>* result
         )const;
         void SystemIndexSeek(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
             DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
@@ -277,12 +277,12 @@ namespace Indexing{
             const Expressions::Expression* expression
         )const;
         void SystemIndexScan(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexScan(
-            const Memory::Allocator& allocator,
+            const ::Memory::IAllocator* allocator,
             DataStructures::Array<Pages::RowReference>* result
         )const;
         void IndexScan(
@@ -305,17 +305,19 @@ namespace Indexing{
            const std::vector<Expressions::Expression*>& updates
         )const;
 
-        [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
+        [[nodiscard]]
+        Errors::RuntimeStatus IndexScanUpdate(
             const DatabaseEngine::ExecutionContext& context,
             const std::vector<Expressions::Expression*>& updates
         )const;
 
-        [[nodiscard]] Errors::RuntimeStatus IndexSeekUpdate(
+        [[nodiscard]]
+        Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
             const std::vector<Value>& updates
         )const;
-
+        [[nodiscard]]
         Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionContext& context,
             const Expressions::Expression* expression,
@@ -323,10 +325,17 @@ namespace Indexing{
             const DataTypes::Indexing::Key* maxKey,
             const std::vector<Value>& updates
         )const;
+        [[nodiscard]]
         Errors::RuntimeStatus IndexSeekUpdate(
             const DatabaseEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
+            const std::vector<Value>& updates
+        )const;
+        [[nodiscard]]
+        Errors::RuntimeStatus SystemIndexSeekUpdate(
+            const ::Memory::IAllocator* allocator,
+            const DataTypes::Indexing::Key& key,
             const std::vector<Value>& updates
         )const;
 

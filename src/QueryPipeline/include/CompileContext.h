@@ -1,12 +1,12 @@
 ﻿#pragma once
 #include "Statements.h"
-#include "../../Systemic/include/Memory/Allocator.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
+#include "../../DatabaseEngine/include/Memory/Allocator.h"
 
 namespace QueryPipeline{
     class CompileContext{
-        Memory::Allocator allocator;
+        DatabaseEngine::Memory::Allocator allocator;
         DataStructures::PolymorphicArray<Statements::Statement*> statements;
 
         static constexpr Int DEFAULT_COMPILATION_ALLOCATION_SIZE = 1024 * 1024 * 2; //2MB
@@ -23,16 +23,12 @@ namespace QueryPipeline{
             void Reserve(Int size);
             void Push(Statements::Statement* statement);
             DataStructures::PolymorphicArray<Statements::Statement*>* GetStatements();
-            const Memory::Allocator& GetAllocator()const;
+            const Memory::IAllocator* GetAllocator()const;
 
             void* Allocate(Int size) const;
-            template<typename T>
-            T* Allocate() const{
-                return new (this->Allocate(sizeof(T))) T;
-            }
             template<typename T, typename... Args>
             T* Allocate(Args&&... args) const{
-                return new (this->Allocate(sizeof(T))) T(std::forward<Args>(args)...);
+                return this->allocator.Allocate<T>(std::forward<Args>(args)...);
             }
 
     };

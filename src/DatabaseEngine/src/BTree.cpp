@@ -12,6 +12,7 @@
 #include <cmath>
 
 #include "Contexts/ExecutionContext.h"
+#include "Memory/Allocator.h"
 
 namespace Indexing{
     void BTree::AssignLeavesConnections(
@@ -25,7 +26,7 @@ namespace Indexing{
     }
 
     Int BTree::LeafLowerBound(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
@@ -51,7 +52,7 @@ namespace Indexing{
     }
 
     Int BTree::LeafPartialLowerBound(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
@@ -68,7 +69,7 @@ namespace Indexing{
     }
 
     Int BTree::InternalNodeLowerBound(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
@@ -90,7 +91,7 @@ namespace Indexing{
     }
 
     Int BTree::InternalNodePartialLowerBound(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
@@ -314,7 +315,7 @@ namespace Indexing{
     }
 
     Pages::IndexPageView BTree::SearchKey(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key &key
     ) const{
         auto currentNode = this->GetNode(this->rootPageId);
@@ -345,7 +346,7 @@ namespace Indexing{
       return currentNode;
     }
 
-    Pages::IndexPageView BTree::SearchLeftMostLeafNode(const Memory::Allocator& allocator) const{
+    Pages::IndexPageView BTree::SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator) const{
         auto currentNode = this->GetNode(this->rootPageId);
 
         while (!currentNode.IsLeaf()) {
@@ -357,7 +358,7 @@ namespace Indexing{
     }
 
     Pages::IndexPageView BTree::SearchLeftMostLeafNode(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         TinyInt &depth
     ) const{
         auto currentNode = this->GetNode(this->rootPageId);
@@ -849,7 +850,7 @@ namespace Indexing{
     }
 
     void BTree::CalculateClusteredStatistics(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         Pages::IndexPageView& currentNode,
         Headers::IndexStatistics& indexStatistics,
         Headers::TableStatistics& tableStatistics,
@@ -869,7 +870,7 @@ namespace Indexing{
             for (Int i = 0;i < numOfRows; i++){
                 auto [_, rowPtr] = currentNode.PeekLeafTuple(allocator, i);
 
-                auto materializedRow = rowPtr.Materialize(&allocator);
+                auto materializedRow = rowPtr.Materialize(allocator);
                 tableStatistics.averageRowSize += rowPtr.Size();
 
                 for (Int j = 0; j < columnStatistics.size(); j++) {
@@ -1159,7 +1160,7 @@ namespace Indexing{
     }
 
     void BTree::SystemIndexSeek(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
         DataStructures::Array<Pages::RowReference>* result
     ) const{
@@ -1193,7 +1194,7 @@ namespace Indexing{
     }
 
     void BTree::SystemIndexSeek(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
         DataStructures::Array<Pages::RowReference>* result,
         const Expressions::Expression* expression
@@ -1384,7 +1385,7 @@ namespace Indexing{
     }
 
     void BTree::SystemIndexScan(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         DataStructures::Array<Pages::RowReference>* result,
         const Expressions::Expression* expression
     ) const{
@@ -1419,7 +1420,7 @@ namespace Indexing{
     }
 
     void BTree::SystemIndexScan(
-        const Memory::Allocator& allocator,
+        const ::Memory::IAllocator* allocator,
         DataStructures::Array<Pages::RowReference>* result
     ) const{
         if (this->IsEmpty())
@@ -1703,8 +1704,6 @@ namespace Indexing{
 
             currentNode = this->GetNode(currentNode.RightSibling());
         }
-
-        return {};
     }
 
     Errors::RuntimeStatus BTree::IndexSeekUpdate(
@@ -1802,8 +1801,42 @@ namespace Indexing{
 
             currentNode = this->GetNode(currentNode.RightSibling());
         }
+    }
 
-        return {};
+    Errors::RuntimeStatus BTree::SystemIndexSeekUpdate(
+        const Memory::IAllocator* allocator,
+        const DataTypes::Indexing::Key& key,
+        const std::vector<Value>& updates
+    ) const{
+        if (this->IsEmpty())
+            return {};
+
+        auto currentNode = this->SearchKey(allocator, key);
+
+        while (true) {
+            MultiThreading::WriterGuard lock(&currentNode.Latch());
+
+            for (Int indexPosition = 0; indexPosition < currentNode.Keys(); indexPosition++){
+                auto tuple = currentNode.PeekLeafTuple(allocator, indexPosition);
+                if (key != tuple.key || key < tuple.key)
+                    continue;
+
+                auto result = this->table->SystemUpdateRowNoLock(
+                    &currentNode,
+                    tuple.row,
+                    allocator,
+                    updates
+                );
+
+                if (!result.IsOk())
+                    return result;
+            }
+
+            if(!currentNode.HasRightSibling())
+                return {};
+
+            currentNode = this->GetNode(currentNode.RightSibling());
+        }
     }
 
     void BTree::SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const
@@ -1985,12 +2018,12 @@ namespace Indexing{
         if (this->IsEmpty())
             return;
 
-        const Memory::Allocator allocator;
-        auto currentNode = this->SearchLeftMostLeafNode(allocator, indexStatistics.depth);
+        const DatabaseEngine::Memory::Allocator allocator;
+        auto currentNode = this->SearchLeftMostLeafNode(&allocator, indexStatistics.depth);
 
         if (this->type == TreeType::Clustered){
             this->CalculateClusteredStatistics(
-                allocator,
+                &allocator,
                 currentNode,
                 indexStatistics,
                 tableStatistics,
